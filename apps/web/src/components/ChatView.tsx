@@ -396,6 +396,8 @@ import {
   deriveSelectedContextWindowSnapshot,
 } from "../lib/contextWindow";
 import {
+  buildLatticeProjectHistoryCheckpoints,
+  embedWorkspaceMatches,
   LATTICE_AGENT_PERMISSION_MODE_REQUEST,
   LATTICE_AGENT_PERMISSION_MODE_SET,
   postAgentPermissionModeToLattice,
@@ -4814,42 +4816,25 @@ export default function ChatView({
     const embedConfig = readEmbedMode();
     if (
       !embedConfig?.hostOrigin ||
-      !workspaceRootsEqual(activeProject.workspaceRoot, embedConfig.workspaceRoot)
+      !embedWorkspaceMatches(embedConfig, activeProject.cwd)
     ) {
       return;
     }
-    const promptsByTurnId = new Map(
-      activeThread.messages
-        .filter((message) => message.role === "user" && message.turnId)
-        .map((message) => [message.turnId, message.text] as const),
-    );
-    const entries = activeThread.checkpoints
-      .filter((checkpoint) => checkpoint.status === "ready" && checkpoint.files.length > 0)
-      .map((checkpoint) => {
-        const prompt = promptsByTurnId
-          .get(checkpoint.turnId)
-          ?.replace(/\s+/g, " ")
-          .trim();
-        const compactPrompt = prompt && prompt.length > 82 ? `${prompt.slice(0, 81)}…` : prompt;
-        return {
-          id: `agent:${activeThread.id}:${checkpoint.turnId}`,
-          label: compactPrompt ? `Agent: ${compactPrompt}` : "Agent updated project files",
-          timestamp: checkpoint.completedAt,
-          threadId: activeThread.id,
-          threadTitle: activeThread.title,
-          turnId: checkpoint.turnId,
-          turnCount: checkpoint.checkpointTurnCount,
-          checkpointRef: checkpoint.checkpointRef,
-          files: checkpoint.files.map((file) => ({
-            path: file.path,
-            kind: file.kind,
-            additions: file.additions,
-            deletions: file.deletions,
-          })),
-        };
-      });
+    const entries = buildLatticeProjectHistoryCheckpoints({
+      threadId: activeThread.id,
+      threadTitle: activeThread.title,
+      messages: activeThread.messages,
+      summaries: turnDiffSummaries,
+      inferredCheckpointTurnCountByTurnId,
+    });
     postProjectHistoryToLattice(embedConfig, activeThread.id, entries);
-  }, [activeProject, activeThread, isEmbed]);
+  }, [
+    activeProject,
+    activeThread,
+    inferredCheckpointTurnCountByTurnId,
+    isEmbed,
+    turnDiffSummaries,
+  ]);
 
   const handleInteractionModeChange = useCallback(
     (mode: ProviderInteractionMode) => {

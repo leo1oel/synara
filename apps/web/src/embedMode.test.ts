@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  buildLatticeProjectHistoryCheckpoints,
+  embedWorkspaceMatches,
   initializeEmbedMode,
   postEmbedReadyToLattice,
   postProjectHistoryToLattice,
@@ -84,6 +86,63 @@ describe("Lattice embed mode", () => {
     postEmbedReadyToLattice(config!);
 
     expect(postMessage).toHaveBeenCalledWith({ type: SYNARA_EMBED_READY }, "http://localhost:1420");
+  });
+
+  it("matches the embedded workspace without crashing on partially hydrated projects", () => {
+    installBrowserStubs();
+    initializeEmbedMode();
+    const config = readEmbedMode();
+    expect(config).not.toBeNull();
+
+    expect(embedWorkspaceMatches(config!, undefined)).toBe(false);
+    expect(embedWorkspaceMatches(config!, null)).toBe(false);
+    expect(embedWorkspaceMatches(config!, "  ")).toBe(false);
+    expect(embedWorkspaceMatches(config!, "/Users/me/paper/")).toBe(true);
+  });
+
+  it("builds project history from normalized summaries and tolerates partial hydration", () => {
+    const baseInput = {
+      threadId: "thread-1",
+      threadTitle: "Revise introduction",
+      inferredCheckpointTurnCountByTurnId: {},
+    };
+    expect(buildLatticeProjectHistoryCheckpoints({
+      ...baseInput,
+      messages: undefined,
+      summaries: undefined,
+    })).toEqual([]);
+
+    expect(buildLatticeProjectHistoryCheckpoints({
+      ...baseInput,
+      messages: [{
+        role: "user",
+        turnId: "turn-1",
+        text: "Improve   the introduction",
+      }],
+      summaries: [{
+        turnId: "turn-1",
+        completedAt: "2026-07-29T12:00:00Z",
+        status: "ready",
+        checkpointRef: "refs/lattice/checkpoints/one",
+        checkpointTurnCount: 1,
+        files: [{ path: "main.tex", additions: 4, deletions: 2 }],
+      }],
+    })).toEqual([{
+      id: "agent:thread-1:turn-1",
+      label: "Agent: Improve the introduction",
+      timestamp: "2026-07-29T12:00:00Z",
+      threadId: "thread-1",
+      threadTitle: "Revise introduction",
+      turnId: "turn-1",
+      turnCount: 1,
+      checkpointRef: "refs/lattice/checkpoints/one",
+      files: [{
+        path: "main.tex",
+        kind: "modified",
+        additions: 4,
+        deletions: 2,
+      }],
+    }]);
   });
 
   it("shares checkpoint summaries with Lattice and validates restore requests", () => {

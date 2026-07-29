@@ -1,4 +1,5 @@
 import type { RuntimeMode } from "@synara/contracts";
+import { workspaceRootsEqual } from "@synara/shared/threadWorkspace";
 
 const EMBED_MODE_STORAGE_KEY = "synara.poc.embed-mode";
 const EMBED_AUTH_TOKEN_STORAGE_KEY = "synara.poc.embed-auth-token";
@@ -22,6 +23,17 @@ export interface EmbedModeConfig {
   workspaceRoot: string;
   theme: "light" | "dark";
   hostOrigin: string | null;
+}
+
+export function embedWorkspaceMatches(
+  config: EmbedModeConfig,
+  projectCwd: unknown,
+): boolean {
+  return (
+    typeof projectCwd === "string" &&
+    projectCwd.trim().length > 0 &&
+    workspaceRootsEqual(projectCwd, config.workspaceRoot)
+  );
 }
 
 export type LatticeAgentPermissionModeMessage =
@@ -48,6 +60,82 @@ export interface LatticeProjectHistoryCheckpoint {
     additions: number;
     deletions: number;
   }>;
+}
+
+interface LatticeProjectHistoryMessageSource {
+  role: string;
+  turnId?: string | null;
+  text: string;
+}
+
+interface LatticeProjectHistorySummarySource {
+  turnId: string;
+  completedAt: string;
+  status?: string;
+  checkpointRef?: string;
+  checkpointTurnCount?: number;
+  files?: ReadonlyArray<{
+    path: string;
+    kind?: string;
+    additions?: number;
+    deletions?: number;
+  }>;
+}
+
+export function buildLatticeProjectHistoryCheckpoints(input: {
+  threadId: string;
+  threadTitle: string;
+  messages: ReadonlyArray<LatticeProjectHistoryMessageSource> | null | undefined;
+  summaries: ReadonlyArray<LatticeProjectHistorySummarySource> | null | undefined;
+  inferredCheckpointTurnCountByTurnId: Readonly<Record<string, number | undefined>>;
+}): LatticeProjectHistoryCheckpoint[] {
+  const messages = Array.isArray(input.messages) ? input.messages : [];
+  const summaries = Array.isArray(input.summaries) ? input.summaries : [];
+  const promptsByTurnId = new Map(
+    messages
+      .filter(
+        (message) =>
+          message.role === "user" &&
+          typeof message.turnId === "string" &&
+          typeof message.text === "string",
+      )
+      .map((message) => [message.turnId!, message.text] as const),
+  );
+
+  return summaries.flatMap((summary) => {
+    const files = Array.isArray(summary.files) ? summary.files : [];
+    const turnCount =
+      summary.checkpointTurnCount ??
+      input.inferredCheckpointTurnCountByTurnId[summary.turnId];
+    if (
+      summary.status !== "ready" ||
+      files.length === 0 ||
+      typeof summary.checkpointRef !== "string" ||
+      typeof turnCount !== "number" ||
+      !Number.isInteger(turnCount) ||
+      turnCount < 0
+    ) {
+      return [];
+    }
+    const prompt = promptsByTurnId.get(summary.turnId)?.replace(/\s+/g, " ").trim();
+    const compactPrompt = prompt && prompt.length > 82 ? `${prompt.slice(0, 81)}…` : prompt;
+    return [{
+      id: `agent:${input.threadId}:${summary.turnId}`,
+      label: compactPrompt ? `Agent: ${compactPrompt}` : "Agent updated project files",
+      timestamp: summary.completedAt,
+      threadId: input.threadId,
+      threadTitle: input.threadTitle,
+      turnId: summary.turnId,
+      turnCount,
+      checkpointRef: summary.checkpointRef,
+      files: files.map((file) => ({
+        path: file.path,
+        kind: file.kind ?? "modified",
+        additions: file.additions ?? 0,
+        deletions: file.deletions ?? 0,
+      })),
+    }];
+  });
 }
 
 export interface LatticeCheckpointRestoreMessage {
