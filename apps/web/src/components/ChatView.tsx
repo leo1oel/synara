@@ -390,6 +390,14 @@ import {
   deriveLatestContextWindowSnapshot,
   deriveSelectedContextWindowSnapshot,
 } from "../lib/contextWindow";
+import {
+  LATTICE_AGENT_PERMISSION_MODE_REQUEST,
+  LATTICE_AGENT_PERMISSION_MODE_SET,
+  postAgentPermissionModeToLattice,
+  postLayoutMetricsToLattice,
+  readEmbedMode,
+  readLatticeAgentPermissionModeMessage,
+} from "../embedMode";
 import { useComposerVoiceController } from "./chat/useComposerVoiceController";
 import {
   composerFooterPlanForTier,
@@ -1022,6 +1030,30 @@ function ComposerModelLoadingControl(props: { widthClassName: string }) {
   );
 }
 
+function intrinsicFlexRowWidth(row: HTMLElement): number {
+  const style = window.getComputedStyle(row);
+  const gap = Number.parseFloat(style.columnGap || style.gap) || 0;
+  const padding = (Number.parseFloat(style.paddingLeft) || 0)
+    + (Number.parseFloat(style.paddingRight) || 0);
+  const children = Array.from(row.children).filter(
+    (child): child is HTMLElement => {
+      if (!(child instanceof HTMLElement)) return false;
+      const childStyle = window.getComputedStyle(child);
+      return childStyle.display !== "none"
+        && childStyle.position !== "absolute"
+        && childStyle.position !== "fixed";
+    },
+  );
+  const childrenWidth = children.reduce(
+    (width, child) => width + Math.max(child.scrollWidth, child.getBoundingClientRect().width),
+    0,
+  );
+  // The row is right-aligned in a flexible grid track. Its scrollWidth includes
+  // all currently assigned empty track space, so it is not an intrinsic width
+  // and made a wide sidebar report itself as its own minimum.
+  return childrenWidth + Math.max(0, children.length - 1) * gap + padding;
+}
+
 interface PlanFollowUpSubmission {
   text: string;
   interactionMode: "default" | "plan";
@@ -1058,7 +1090,7 @@ interface ChatViewProps {
   threadId: ThreadId;
   paneScopeId?: string;
   surfaceMode?: "single" | "split";
-  presentationMode?: "default" | "editor";
+  presentationMode?: "default" | "editor" | "embed";
   isFocusedPane?: boolean;
   panelState?: SplitViewPanePanelState;
   onToggleDiffPanel?: () => void;
@@ -1170,6 +1202,7 @@ export default function ChatView({
     gitCreateDetachedWorktreeMutationOptions({ queryClient }),
   );
   const isEditorRail = presentationMode === "editor";
+  const isEmbed = presentationMode === "embed";
   const isInactiveSplitPane = surfaceMode === "split" && !isFocusedPane;
   const composerDraft = useComposerThreadDraft(threadId);
   const prompt = composerDraft.prompt;
@@ -1366,6 +1399,8 @@ export default function ChatView({
   const [composerFooterTier, setComposerFooterTier] = useState(0);
   const composerFooterTierRef = useRef(0);
   const composerFooterDemotionWidthsRef = useRef<ReadonlyArray<number | undefined>>([]);
+  const composerFooterMinimumWidthRef = useRef<number | null>(null);
+  const embedComposerMinimumWidthRef = useRef<number | null>(null);
   const composerFooterLayoutSyncRef = useRef<(() => void) | null>(null);
   const [confirmedCustomBinaryPathsByProvider, setConfirmedCustomBinaryPathsByProvider] = useState<
     Partial<Record<ProviderKind, string>>
@@ -3271,7 +3306,7 @@ export default function ChatView({
   // Stable identity: this element is forwarded to the memoized MessagesTimeline, so
   // building it inline in JSX would defeat its `memo()` on every keystroke.
   const transcriptEmptyStateContent = useMemo((): ReactNode => {
-    if (isEditorRail) {
+    if (isEditorRail || isEmbed) {
       return <span aria-hidden="true" />;
     }
     if (threadDetailHydration !== "ready") {
@@ -3283,7 +3318,7 @@ export default function ChatView({
       );
     }
     return undefined;
-  }, [handleRetryThreadDetailSync, isEditorRail, threadDetailHydration]);
+  }, [handleRetryThreadDetailSync, isEditorRail, isEmbed, threadDetailHydration]);
   // Empty top-level threads render the centered landing composer instead of the transcript pane.
   // Home-scoped chats get the global "What should we work on?" copy plus the project picker,
   // while project-scoped drafts reuse the same centered layout with folder-specific copy.
@@ -3291,6 +3326,7 @@ export default function ChatView({
     timelineEntries.length === 0 &&
     !activeThread?.parentThreadId &&
     !isEditorRail &&
+    !isEmbed &&
     threadDetailHydration === "ready";
   const isEmptyChatLanding =
     isCenteredEmptyLanding && Boolean(homeDir) && isContainerLandingProject;
@@ -4698,6 +4734,46 @@ export default function ChatView({
     selectedRuntimeModel,
   ]);
 
+  useEffect(() => {
+    if (!isEmbed) return;
+    const embedConfig = readEmbedMode();
+    if (!embedConfig?.hostOrigin) return;
+    const autoModeAvailable = providerModelSupportsAutoRuntimeMode(
+      selectedProvider,
+      selectedRuntimeModel,
+      activeProviderStatus,
+    );
+    const postCurrentMode = () =>
+      postAgentPermissionModeToLattice(embedConfig, runtimeMode, autoModeAvailable);
+    const handleHostMessage = (event: MessageEvent) => {
+      const message = readLatticeAgentPermissionModeMessage(event, embedConfig);
+      if (!message) return;
+      if (message.type === LATTICE_AGENT_PERMISSION_MODE_REQUEST) {
+        postCurrentMode();
+        return;
+      }
+      if (
+        message.type === LATTICE_AGENT_PERMISSION_MODE_SET &&
+        message.mode !== runtimeMode &&
+        (message.mode !== "auto" || autoModeAvailable)
+      ) {
+        handleRuntimeModeChange(message.mode);
+        return;
+      }
+      postCurrentMode();
+    };
+    postCurrentMode();
+    window.addEventListener("message", handleHostMessage);
+    return () => window.removeEventListener("message", handleHostMessage);
+  }, [
+    activeProviderStatus,
+    handleRuntimeModeChange,
+    isEmbed,
+    runtimeMode,
+    selectedProvider,
+    selectedRuntimeModel,
+  ]);
+
   const handleInteractionModeChange = useCallback(
     (mode: ProviderInteractionMode) => {
       if (mode === interactionMode) return;
@@ -5093,10 +5169,34 @@ export default function ChatView({
           nextCompact &&
           leadingCluster !== null &&
           leadingCluster.scrollWidth > leadingCluster.clientWidth + 1;
+        const actions = footerRow.querySelector<HTMLElement>("[data-chat-composer-actions='right']");
+        const actionsClip = actions !== null
+          && intrinsicFlexRowWidth(actions) > actions.clientWidth + 1;
+        const composerSurface = composerForm.querySelector<HTMLElement>(".chat-composer-surface");
+        const actionsCrossSurfaceEdge = actions !== null
+          && composerSurface !== null
+          && actions.getBoundingClientRect().right
+            > composerSurface.getBoundingClientRect().right - 8;
+        // Tier 3 is the last layout where the add button remains beside the
+        // model controls. Capture its intrinsic width before tier 4 relocates
+        // that button; the current clientWidth only says where a fast drag
+        // happened to land and can substantially understate what the row needs.
+        if (composerFooterTierRef.current === 3 && leadingCluster) {
+          if (actions) {
+            const style = window.getComputedStyle(footerRow);
+            const gap = Number.parseFloat(style.columnGap || style.gap) || 0;
+            const padding = (Number.parseFloat(style.paddingLeft) || 0)
+              + (Number.parseFloat(style.paddingRight) || 0);
+            composerFooterMinimumWidthRef.current = Math.max(
+              composerFooterMinimumWidthRef.current ?? 0,
+              leadingCluster.scrollWidth + intrinsicFlexRowWidth(actions) + gap + padding,
+            );
+          }
+        }
         const nextStep = resolveNextComposerFooterTier({
           currentTier: composerFooterTierRef.current,
           clientWidth: footerRow.clientWidth,
-          isOverflowing: rowOverflows || leadingClips,
+          isOverflowing: rowOverflows || leadingClips || actionsClip || actionsCrossSurfaceEdge,
           demotionWidths: composerFooterDemotionWidthsRef.current,
         });
         composerFooterDemotionWidthsRef.current = nextStep.demotionWidths;
@@ -8845,8 +8945,11 @@ export default function ChatView({
   );
   const useSplitComposerPickerControls = isLocalDraftThread && !hasThreadStarted;
   const composerFooterControlsPlan = useMemo(
-    () => composerFooterPlanForTier(composerFooterTier, Boolean(runtimeUsageContextWindow)),
-    [composerFooterTier, runtimeUsageContextWindow],
+    () => composerFooterPlanForTier(
+      isEmbed ? Math.min(composerFooterTier, 3) : composerFooterTier,
+      Boolean(runtimeUsageContextWindow),
+    ),
+    [composerFooterTier, isEmbed, runtimeUsageContextWindow],
   );
   // The displayed labels changed (model switch, effort change, picker layout):
   // recorded overflow widths no longer apply, so reset to the richest tier and
@@ -8873,6 +8976,7 @@ export default function ChatView({
   ].join(":");
   useLayoutEffect(() => {
     composerFooterDemotionWidthsRef.current = [];
+    composerFooterMinimumWidthRef.current = null;
     composerFooterTierRef.current = 0;
     setComposerFooterTier(0);
     composerFooterLayoutSyncRef.current?.();
@@ -8882,6 +8986,64 @@ export default function ChatView({
   useLayoutEffect(() => {
     composerFooterLayoutSyncRef.current?.();
   }, [composerFooterTier]);
+  useLayoutEffect(() => {
+    if (!isEmbed) return;
+    const embedConfig = readEmbedMode();
+    const composerForm = composerFormRef.current;
+    if (!embedConfig?.hostOrigin || !composerForm) return;
+    let frame = 0;
+    const reportMinimumWidth = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        const footer = composerForm.querySelector<HTMLElement>("[data-chat-composer-footer]");
+        if (!footer || footer.clientWidth <= 0) return;
+        const outsideFooterWidth = Math.max(0, window.innerWidth - footer.clientWidth);
+        const tierThreeMinimumWidth = composerFooterMinimumWidthRef.current;
+        const leading = footer.querySelector<HTMLElement>("[data-chat-composer-leading]");
+        const actions = footer.querySelector<HTMLElement>("[data-chat-composer-actions='right']");
+        if (!leading || !actions) return;
+        const footerStyle = window.getComputedStyle(footer);
+        const gap = Number.parseFloat(footerStyle.columnGap || footerStyle.gap) || 0;
+        const intrinsicMinimum = (tierThreeMinimumWidth ?? (
+          leading.scrollWidth + intrinsicFlexRowWidth(actions) + gap
+        )) + outsideFooterWidth + 6;
+
+        // The intrinsic sum is the normal minimum, but browser subpixel/grid
+        // rounding can still put the final send control beyond the composer's
+        // right edge. Measure that invariant directly and retain the first
+        // width at which the requested 8px inset would be violated.
+        const surface = composerForm.querySelector<HTMLElement>(".chat-composer-surface");
+        const sendControl = actions.lastElementChild instanceof HTMLElement
+          ? actions.lastElementChild
+          : null;
+        if (surface && sendControl) {
+          const currentInset = surface.getBoundingClientRect().right
+            - sendControl.getBoundingClientRect().right;
+          const missingInset = Math.max(0, 8 - currentInset);
+          if (missingInset > 0) {
+            embedComposerMinimumWidthRef.current = Math.max(
+              embedComposerMinimumWidthRef.current ?? 0,
+              window.innerWidth + missingInset,
+            );
+          }
+        }
+        postLayoutMetricsToLattice(
+          embedConfig,
+          Math.max(intrinsicMinimum, embedComposerMinimumWidthRef.current ?? 0),
+        );
+      });
+    };
+    reportMinimumWidth();
+    if (typeof ResizeObserver === "undefined") {
+      return () => window.cancelAnimationFrame(frame);
+    }
+    const observer = new ResizeObserver(reportMinimumWidth);
+    observer.observe(composerForm);
+    return () => {
+      observer.disconnect();
+      window.cancelAnimationFrame(frame);
+    };
+  }, [composerFooterTier, isEmbed]);
   const composerModelPickerWidthClassName = isComposerFooterCompact ? "w-32" : "w-36 sm:w-44";
   const composerOptionsPickerWidthClassName = isComposerFooterCompact ? "w-28" : "w-32";
   const composerModelEffortPickerWidthClassName = isComposerFooterCompact ? "w-40" : "w-44 sm:w-52";
@@ -8951,6 +9113,7 @@ export default function ChatView({
   ) : (
     <ComposerModelEffortPicker
       compact={isComposerFooterCompact}
+      dense={isEmbed}
       hideModelLabel={!composerFooterControlsPlan.showModelLabel}
       hideStatusLabel={!composerFooterControlsPlan.showTraitsLabel}
       provider={selectedProvider}
@@ -9320,6 +9483,11 @@ export default function ChatView({
         detectComposerTrigger(next.text, expandCollapsedComposerCursor(next.text, nextCursor)),
       );
       window.requestAnimationFrame(() => {
+        // A pending generic focus request restores the composer at the end. Picker
+        // insertions have a more precise caret, so don't let that request race this
+        // focus restoration (WebKit is especially prone to delivering it one frame
+        // after a popover closes).
+        pendingComposerFocusRef.current = false;
         composerEditorRef.current?.focusAt(nextCursor);
       });
       return nextCursor;
@@ -9832,6 +10000,12 @@ export default function ChatView({
           : null;
 
       if (slashTriggerText === "/" && snapshot.expandedCursor === trigger?.rangeEnd) {
+        // WKWebView delivers beforeinput (and therefore the Lexical insertion)
+        // before this keydown command. Treating the now-present slash as a second
+        // press immediately clears the draft and makes `/` appear to do nothing.
+        if (isEmbed) {
+          return false;
+        }
         // Pressing `/` again on a lone `/` dismisses the picker. Only wipe the
         // draft when the slash IS the whole prompt; a mid-line slash (e.g. after
         // an existing chip) must keep surrounding content, so let it type through.
@@ -10055,6 +10229,12 @@ export default function ChatView({
       search: (previous) => ({ ...stripDiffSearchParams(previous), view: "editor" }),
     });
   }, [activeProjectIdForNewChat, handleNewThread]);
+  const onNewEmbedChat = useCallback(() => {
+    if (!activeProjectIdForNewChat) return;
+    void handleNewThread(activeProjectIdForNewChat, { fresh: true }, {
+      search: (previous) => stripDiffSearchParams(previous),
+    });
+  }, [activeProjectIdForNewChat, handleNewThread]);
   const onOpenEditorChat = useCallback(
     (nextThreadId: ThreadId) => {
       storeOpenChatThreadPage(nextThreadId);
@@ -10232,10 +10412,9 @@ export default function ChatView({
     activeContextWindowLabel: contextWindowSelectionStatus.activeLabel,
     pendingContextWindowLabel: contextWindowSelectionStatus.pendingSelectedLabel,
   };
-  // The composer's leading controls (extras "+" menu, access-rules/runtime
-  // indicator). At the narrowest footer tier they relocate from the footer to
-  // the branch-toolbar row below the input instead of getting clipped; the
-  // relocated variant is icon-only since relocation means space is minimal.
+  // The composer's leading controls relocate below the input at the narrowest
+  // footer tier instead of getting clipped. Lattice owns the access-mode menu
+  // in embed mode, so Synara only keeps the extras "+" menu in this cluster.
   const relocateComposerLeadingControls = composerFooterControlsPlan.relocateLeadingControls;
   const renderComposerLeadingControls = (options: { iconOnly: boolean }) => (
     <>
@@ -10247,7 +10426,7 @@ export default function ChatView({
         onToggleFastMode={toggleFastMode}
         onSetPlanMode={setPlanMode}
       />
-      {!isVoiceRecording && !isVoiceTranscribing ? (
+      {!isEmbed && !isVoiceRecording && !isVoiceTranscribing ? (
         <RuntimeUsageControls
           {...runtimeUsageControlsProps}
           className="shrink-0"
@@ -10451,9 +10630,10 @@ export default function ChatView({
   // Full-width single chat: overlay plus transcript/composer inset. Floating overlay when the
   // column is already narrow — right dock open or a split pane (same as header compact mode).
   // Terminal surfaces always float so opening Environment never resizes the terminal workspace.
-  const environmentAppliesContentInset = environmentPanelVisible && !environmentUsesFloatingOverlay;
+  const environmentAppliesContentInset =
+    !isEmbed && environmentPanelVisible && !environmentUsesFloatingOverlay;
   const environmentOverlayVariant = environmentUsesFloatingOverlay ? "floating" : "docked";
-  const environmentHeaderState = environmentEnabled
+  const environmentHeaderState = environmentEnabled && !isEmbed
     ? {
         open: environmentPanelVisible,
         onOpenChange: setEnvironmentPanelOpenPreference,
@@ -10738,9 +10918,11 @@ export default function ChatView({
                     className={cn(
                       "@container",
                       COMPOSER_FOOTER_ROW_CLASS_NAME,
-                      isComposerFooterCompact
-                        ? "gap-1.5"
-                        : "flex-wrap gap-1.5 sm:flex-nowrap sm:gap-0",
+                      isEmbed
+                        ? "!grid grid-cols-[auto_max-content] gap-0"
+                        : isComposerFooterCompact
+                          ? "gap-1.5"
+                          : "flex-wrap gap-1.5 sm:flex-nowrap sm:gap-0",
                     )}
                   >
                     <div
@@ -10749,9 +10931,11 @@ export default function ChatView({
                         "flex items-center",
                         isVoiceRecording || isVoiceTranscribing
                           ? "min-w-0 shrink-0 gap-1"
-                          : isComposerFooterCompact
-                            ? "min-w-0 flex-1 gap-1 overflow-hidden"
-                            : "min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:min-w-max sm:overflow-visible",
+                          : isEmbed
+                            ? "min-w-max gap-1"
+                            : isComposerFooterCompact
+                              ? "min-w-0 flex-1 gap-1 overflow-hidden"
+                              : "min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:min-w-max sm:overflow-visible",
                       )}
                     >
                       {relocateComposerLeadingControls
@@ -10797,8 +10981,15 @@ export default function ChatView({
                     <div
                       data-chat-composer-actions="right"
                       className={cn(
-                        "flex items-center gap-2",
-                        isVoiceRecording || isVoiceTranscribing ? "min-w-0 flex-1" : "shrink-0",
+                        "flex items-center",
+                        isEmbed && !isVoiceRecording && !isVoiceTranscribing
+                          ? "min-w-max shrink-0 justify-end gap-0.5 overflow-visible"
+                          : "gap-2",
+                        isVoiceRecording || isVoiceTranscribing
+                          ? "min-w-0 flex-1"
+                          : isEmbed
+                            ? "min-w-max shrink-0"
+                            : "shrink-0",
                       )}
                     >
                       {!isVoiceRecording &&
@@ -11057,8 +11248,11 @@ export default function ChatView({
             ? { className: cn(CHAT_SURFACE_HEADER_PADDING_X_CLASS, "h-full") }
             : {})}
           isSidechat={Boolean(activeThread.sidechatSourceThreadId)}
-          hideSidebarControls={isEditorRail}
-          hideHandoffControls={terminalWorkspaceTerminalTabActive || isEditorRail}
+          hideSidebarControls={isEditorRail || isEmbed}
+          hideHandoffControls={terminalWorkspaceTerminalTabActive || isEditorRail || isEmbed}
+          hideWorkspaceControls={isEmbed}
+          {...(isEmbed && activeProject ? { historyProjectId: activeProject.id } : {})}
+          {...(isEmbed ? { onNewChat: onNewEmbedChat } : {})}
           isGitRepo={isGitRepo}
           openInTarget={threadWorkspaceCwd}
           activeProjectScripts={isEditorRail ? undefined : activeProjectScripts}
@@ -11076,14 +11270,14 @@ export default function ChatView({
           handoffBadgeTargetProvider={handoffBadgeTargetProvider}
           gitCwd={threadWorkspaceCwd}
           diffTotals={repoDiffTotals}
-          showGitActions={showGitActions && !isEditorRail}
-          showDiffToggle={!isEditorRail}
+          showGitActions={showGitActions && !isEditorRail && !isEmbed}
+          showDiffToggle={!isEditorRail && !isEmbed}
           diffOpen={resolvedDiffOpen}
           diffDisabledReason={diffDisabledReason}
           environment={isEditorRail ? null : environmentHeaderState}
           surfaceMode={surfaceMode}
           chatLayoutAction={
-            surfaceMode === "single" && onSplitSurface
+            !isEmbed && surfaceMode === "single" && onSplitSurface
               ? {
                   kind: "split",
                   label: "Split chat",
@@ -11417,7 +11611,7 @@ export default function ChatView({
           ) : null}
 
           {/* Environment overlay — always mounted so open/close can transition in lockstep with inset. */}
-          {environmentEnabled ? (
+          {environmentEnabled && !isEmbed ? (
             <EnvironmentPanel
               {...environmentPanelProps}
               open={environmentPanelVisible}

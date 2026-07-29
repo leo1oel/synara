@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <script>
+      if (new URLSearchParams(window.location.search).has("embed")) {
+        document.documentElement.dataset.synaraEmbedBoot = "true";
+      }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -43,6 +48,9 @@
         animation:
           app-boot-splash-in 420ms ease-out forwards,
           app-boot-splash-pulse 2.4s ease-in-out 420ms infinite;
+      }
+      html[data-synara-embed-boot="true"] .app-boot-splash__icon {
+        display: none;
       }
       @keyframes app-boot-splash-in {
         to {

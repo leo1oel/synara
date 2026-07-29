@@ -7,6 +7,9 @@ import { TurnId } from "@synara/contracts";
 export type ChatRightPanel = "browser" | "diff";
 
 export interface DiffRouteSearch {
+  embed?: "1" | undefined;
+  workspaceRoot?: string | undefined;
+  theme?: "light" | "dark" | undefined;
   splitViewId?: string | undefined;
   view?: "editor" | undefined;
   editorFilePath?: string | undefined;
@@ -42,6 +45,10 @@ export function stripDiffSearchParams<T extends Record<string, unknown>>(
 }
 
 export function parseDiffRouteSearch(search: Record<string, unknown>): DiffRouteSearch {
+  const embed = isDiffOpenValue(search.embed) ? "1" : undefined;
+  const workspaceRoot = embed ? normalizeSearchString(search.workspaceRoot) : undefined;
+  const themeRaw = embed ? normalizeSearchString(search.theme) : undefined;
+  const theme = themeRaw === "dark" ? "dark" : themeRaw === "light" ? "light" : undefined;
   const splitViewId = normalizeSearchString(search.splitViewId);
   const viewRaw = normalizeSearchString(search.view);
   const view = viewRaw === "editor" ? "editor" : undefined;
@@ -56,6 +63,9 @@ export function parseDiffRouteSearch(search: Record<string, unknown>): DiffRoute
   const diffFilePath = diff ? normalizeSearchString(search.diffFilePath) : undefined;
 
   return {
+    ...(embed ? { embed } : {}),
+    ...(workspaceRoot ? { workspaceRoot } : {}),
+    ...(theme ? { theme } : {}),
     ...(splitViewId ? { splitViewId } : {}),
     ...(view ? { view } : {}),
     ...(editorFilePath ? { editorFilePath } : {}),

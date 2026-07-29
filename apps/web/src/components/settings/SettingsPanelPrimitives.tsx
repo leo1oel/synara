@@ -37,6 +37,7 @@ export function SettingsCard({
   const divided = dividedProp ?? true;
   return (
     <div
+      data-slot="settings-card"
       className={cn(
         SETTINGS_CARD_CLASS_NAME,
         divided && SETTINGS_STACKED_ROWS_DIVIDER_CLASS_NAME,

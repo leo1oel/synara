@@ -30,8 +30,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type MouseEvent, type ReactNode, useCallback, useMemo, useState } from "react";
 
 import type { AppSettings, AppSettingsBinding } from "~/appSettings";
+import { postExternalLinkToLattice, readEmbedMode } from "~/embedMode";
 import { CentralIcon } from "~/lib/central-icons";
 import { DownloadIcon, ExternalLinkIcon, Loader2Icon } from "~/lib/icons";
+import { openExternalLink } from "~/lib/linkChips";
 import {
   serverConfigQueryOptions,
   serverQueryKeys,
@@ -502,7 +504,21 @@ function ProviderDocsLinks({ docs }: { docs: ProviderInstallSettings["docs"] }) 
               key={`${doc.label}:${doc.href}`}
               variant="outline"
               size="sm"
-              render={<a href={doc.href} target="_blank" rel="noreferrer" />}
+              render={
+                <a
+                  href={doc.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const embedConfig = readEmbedMode();
+                    if (!embedConfig || !postExternalLinkToLattice(embedConfig, doc.href)) {
+                      openExternalLink(doc.href);
+                    }
+                  }}
+                />
+              }
             >
               <span>{doc.label}</span>
               <ExternalLinkIcon className="size-3" />

@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildFileDiffRenderKey,
   buildPatchCacheKey,
+  buildDiffPanelUnsafeCSS,
   fileDiffStatsByPath,
   getRenderablePatch,
   resolveDiffCopyText,
@@ -16,6 +17,17 @@ import {
   splitRepoRelativePath,
   summarizePatchTotals,
 } from "./diffRendering";
+
+describe("buildDiffPanelUnsafeCSS", () => {
+  it("injects Lattice-style scrollbars into Pierre's shadow DOM", () => {
+    const css = buildDiffPanelUnsafeCSS("light");
+
+    expect(css).toContain("*::-webkit-scrollbar-thumb:vertical");
+    expect(css).toContain("*::-webkit-scrollbar-thumb:horizontal");
+    expect(css).toContain("border-bottom-width: 5px");
+    expect(css).toContain("scrollbar-color: color-mix(in srgb, var(--foreground) 8%");
+  });
+});
 
 describe("buildPatchCacheKey", () => {
   it("returns a stable cache key for identical content", () => {

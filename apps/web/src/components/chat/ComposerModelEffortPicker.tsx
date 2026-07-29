@@ -48,6 +48,7 @@ type ComposerModelEffortPickerProps = {
   hiddenProviders?: ReadonlyArray<ProviderKind>;
   providerOrder?: ReadonlyArray<ProviderKind>;
   compact?: boolean;
+  dense?: boolean;
   // Narrow-composer degradation: drop the model name (provider icon stays)
   // and/or the effort/status label; both remain available to assistive tech.
   hideModelLabel?: boolean;
@@ -152,7 +153,8 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
       variant="chrome"
       disabled={props.disabled ?? false}
       className={cn(
-        "min-w-0 shrink-0 justify-start gap-1.5 whitespace-nowrap px-2 sm:px-2.5 [&_svg]:mx-0",
+        "min-w-0 justify-start gap-1.5 whitespace-nowrap px-2 sm:px-2.5 [&_svg]:mx-0",
+        props.dense ? "shrink" : "shrink-0",
         COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME,
       )}
       aria-label="Change model and reasoning"
@@ -161,7 +163,12 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
   );
 
   const triggerContent = (
-    <span className="flex min-w-0 items-center gap-1.5 overflow-hidden">
+    <span
+      className={cn(
+        "flex min-w-0 items-center overflow-hidden",
+        props.dense ? "gap-[3px]" : "gap-1.5",
+      )}
+    >
       <ProviderIcon
         aria-hidden="true"
         className={cn(

@@ -84,6 +84,9 @@ interface ChatHeaderProps {
   className?: string;
   hideSidebarControls?: boolean;
   hideHandoffControls?: boolean;
+  hideWorkspaceControls?: boolean;
+  historyProjectId?: ProjectId;
+  onNewChat?: () => void;
   isGitRepo: boolean;
   openInTarget: string | null;
   activeProjectScripts: ProjectScript[] | undefined;
@@ -166,6 +169,8 @@ function EditorChatHistoryMenu(props: {
   projectId: ProjectId;
   activeThreadId: ThreadId;
   onNavigateToThread: (threadId: ThreadId) => void;
+  triggerTitle?: string;
+  onNewChat?: () => void;
 }) {
   const { settings } = useAppSettings();
   const selectDisplayThreads = createSidebarDisplayThreadsSelector();
@@ -179,18 +184,35 @@ function EditorChatHistoryMenu(props: {
     <Menu modal={false}>
       <MenuTrigger
         render={
-          <IconButton
-            variant="ghost"
-            size="icon-xs"
-            label="Chat history"
-            title="Chat history"
-            className="size-5 shrink-0 text-muted-foreground hover:text-foreground"
-          >
-            <HistoryIcon className="size-3.5" />
-          </IconButton>
+          props.triggerTitle ? (
+            <button
+              type="button"
+              className="flex min-w-0 items-center gap-1.5 rounded-md px-1 py-0.5 text-left text-[length:var(--app-font-size-ui,12px)] font-normal text-foreground transition-colors hover:bg-secondary"
+              aria-label={`${props.triggerTitle}, open chat history`}
+            >
+              <span className="max-w-[clamp(12rem,42vw,36rem)] truncate">{props.triggerTitle}</span>
+              <HistoryIcon className="size-3 shrink-0 text-muted-foreground" />
+            </button>
+          ) : (
+            <IconButton
+              variant="ghost"
+              size="icon-xs"
+              label="Chat history"
+              title="Chat history"
+              className="size-5 shrink-0 text-muted-foreground hover:text-foreground"
+            >
+              <HistoryIcon className="size-3.5" />
+            </IconButton>
+          )
         }
       />
       <ComposerPickerMenuPopup align="start" side="bottom" sideOffset={6} className="w-72 min-w-72">
+        {props.onNewChat ? (
+          <MenuItem onClick={props.onNewChat}>
+            <PlusIcon className="size-3.5 shrink-0 text-muted-foreground" />
+            <span>New chat</span>
+          </MenuItem>
+        ) : null}
         {historyThreads.length === 0 ? (
           <MenuItem disabled>No chats in this project yet</MenuItem>
         ) : (
@@ -500,6 +522,9 @@ export function ChatHeader({
   className,
   hideSidebarControls: hideSidebarControlsProp,
   hideHandoffControls: hideHandoffControlsProp,
+  hideWorkspaceControls: hideWorkspaceControlsProp,
+  historyProjectId,
+  onNewChat,
   isGitRepo,
   openInTarget,
   activeProjectScripts,
@@ -538,6 +563,7 @@ export function ChatHeader({
 }: ChatHeaderProps) {
   const hideSidebarControls = hideSidebarControlsProp ?? false;
   const hideHandoffControls = hideHandoffControlsProp ?? false;
+  const hideWorkspaceControls = hideWorkspaceControlsProp ?? false;
   const showGitActions = showGitActionsProp ?? true;
   const showDiffToggle = showDiffToggleProp ?? true;
   const diffDisabledReason = diffDisabledReasonProp ?? null;
@@ -702,13 +728,23 @@ export function ChatHeader({
                     )}
                   </span>
                 )}
-                <h2
-                  className="max-w-[clamp(12rem,42vw,36rem)] truncate font-system-ui text-[length:var(--app-font-size-ui,12px)] font-normal text-foreground"
-                  title={activeThreadTitle}
-                  onDoubleClick={() => onRenameThread()}
-                >
-                  {activeThreadTitle}
-                </h2>
+                {historyProjectId ? (
+                  <EditorChatHistoryMenu
+                    projectId={historyProjectId}
+                    activeThreadId={activeThreadId}
+                    onNavigateToThread={onNavigateToThread}
+                    triggerTitle={activeThreadTitle}
+                    {...(onNewChat ? { onNewChat } : {})}
+                  />
+                ) : (
+                  <h2
+                    className="max-w-[clamp(12rem,42vw,36rem)] truncate font-system-ui text-[length:var(--app-font-size-ui,12px)] font-normal text-foreground"
+                    title={activeThreadTitle}
+                    onDoubleClick={() => onRenameThread()}
+                  >
+                    {activeThreadTitle}
+                  </h2>
+                )}
                 {showSidechatTitleChip && onCloseThreadPane ? (
                   <IconButton
                     variant="chrome"
@@ -806,7 +842,7 @@ export function ChatHeader({
             </ComposerPickerMenuPopup>
           </Menu>
         ) : null}
-        {activeProjectScripts ? (
+        {!hideWorkspaceControls && activeProjectScripts ? (
           <ProjectScriptsControl
             scripts={activeProjectScripts}
             keybindings={keybindings}
@@ -858,7 +894,7 @@ export function ChatHeader({
             Environment panel. The right-side diff toggle stays beside it so the familiar
             "open the diff on the right" control is preserved. Falls back to the legacy split
             controls when no environment is resolved. */}
-        {environment ? (
+        {hideWorkspaceControls ? null : environment ? (
           <>
             <EnvironmentToggle environment={environment} />
             {diffToggleControl}

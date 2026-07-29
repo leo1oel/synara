@@ -38,9 +38,11 @@ import { IconButton } from "../ui/icon-button";
 import { DOCK_HEADER_ICON_BUTTON_CLASS } from "./chatHeaderControls";
 import { DiffStat } from "./DiffStatLabel";
 import { DockPaneHeader } from "./DockPaneHeader";
-import { FileDiffCard, FileDiffSurface } from "./FileDiffView";
+import { FileDiffHeader } from "./FileDiffHeader";
+import { SingleFileDiffBody } from "./FileDiffView";
 import { FileEntryIcon } from "./FileEntryIcon";
 import { PanelStateMessage } from "./PanelStateMessage";
+import GitActionsControl from "../GitActionsControl";
 
 type GitPanelSection = "staged" | "unstaged";
 
@@ -76,14 +78,14 @@ function GitFileRow(props: {
   return (
     <div
       className={cn(
-        "group flex items-center gap-1.5 rounded-md px-1.5 py-1 text-left",
+        "group flex cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-1 text-left",
         props.isSelected ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60",
       )}
+      onClick={() => props.onSelect(props.fileDiff)}
     >
       <button
         type="button"
         className="flex min-w-0 flex-1 items-center gap-1.5"
-        onClick={() => props.onSelect(props.fileDiff)}
         title={filePath}
       >
         <FileEntryIcon pathValue={filePath} kind="file" theme={props.theme} className="size-4" />
@@ -104,7 +106,10 @@ function GitFileRow(props: {
         label={props.actionLabel}
         tooltip={props.actionLabel}
         disabled={props.actionDisabled}
-        onClick={() => props.onAction([filePath])}
+        onClick={(event) => {
+          event.stopPropagation();
+          props.onAction([filePath]);
+        }}
       >
         {props.actionIcon === "stage" ? (
           <PlusIcon className="size-3.5" />
@@ -182,18 +187,25 @@ function GitFileSection(props: {
 
 function SelectedFileDiff(props: { fileDiff: FileDiffMetadata; theme: "light" | "dark" }) {
   return (
-    <FileDiffSurface className="h-full min-h-0 overflow-auto px-2 py-2">
-      <div className="diff-render-file rounded-md">
-        <FileDiffCard fileDiff={props.fileDiff} theme={props.theme} />
+    <div className="h-full min-h-0 p-2">
+      <div className="diff-render-file grid max-h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-md">
+        <div className="border-b border-border bg-background">
+          <FileDiffHeader fileDiff={props.fileDiff} theme={props.theme} />
+        </div>
+        <div className="min-h-0 min-w-0 overflow-x-hidden overflow-y-auto">
+          <SingleFileDiffBody fileDiff={props.fileDiff} theme={props.theme} />
+        </div>
       </div>
-    </FileDiffSurface>
+    </div>
   );
 }
 
 export function GitPanel(props: {
-  hostThreadId: ThreadId;
+  hostThreadId?: ThreadId | null;
   projectId: ProjectId | null;
+  cwdOverride?: string | null;
   onClose?: () => void;
+  showActions?: boolean;
 }) {
   const queryClient = useQueryClient();
   const { resolvedTheme } = useTheme();
@@ -204,7 +216,7 @@ export function GitPanel(props: {
   const project = useStore(
     useMemo(() => createProjectSelector(props.projectId), [props.projectId]),
   );
-  const cwd = thread?.worktreePath ?? project?.cwd ?? null;
+  const cwd = props.cwdOverride ?? thread?.worktreePath ?? project?.cwd ?? null;
 
   const [selected, setSelected] = useState<SelectedFile | null>(null);
 
@@ -267,6 +279,9 @@ export function GitPanel(props: {
     }
   }
   const selectedFileDiff = selectedResolved?.file ?? null;
+  const selectedFileRenderKey = selectedResolved
+    ? `${selectedResolved.section}:${buildFileDiffRenderKey(selectedResolved.file)}`
+    : null;
   const selectedPath = selected?.path ?? null;
 
   const isLoading = stagedQuery.isLoading || unstagedQuery.isLoading;
@@ -283,7 +298,12 @@ export function GitPanel(props: {
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col">
+    <div
+      className={cn(
+        "flex h-full min-h-0 w-full flex-col",
+        props.showActions && "lattice-source-control",
+      )}
+    >
       <DockPaneHeader
         title="Source control"
         onClose={props.onClose}
@@ -301,6 +321,16 @@ export function GitPanel(props: {
           </IconButton>
         }
       />
+
+      {props.showActions ? (
+        <div className="border-b border-border/70 px-2 py-1.5">
+          <GitActionsControl
+            gitCwd={cwd}
+            activeThreadId={props.hostThreadId ?? null}
+            variant="panel"
+          />
+        </div>
+      ) : null}
 
       <div className="flex max-h-[48%] min-h-0 shrink-0 flex-col gap-2 overflow-auto px-1.5 py-2">
         {error ? (
@@ -351,8 +381,12 @@ export function GitPanel(props: {
       </div>
 
       <div className="diff-panel-viewport min-h-0 min-w-0 flex-1 overflow-hidden border-t border-border/70">
-        {selectedFileDiff ? (
-          <SelectedFileDiff fileDiff={selectedFileDiff} theme={theme} />
+        {selectedFileDiff && selectedFileRenderKey ? (
+          <SelectedFileDiff
+            key={selectedFileRenderKey}
+            fileDiff={selectedFileDiff}
+            theme={theme}
+          />
         ) : (
           <PanelStateMessage density="compact">Select a file to view its diff.</PanelStateMessage>
         )}

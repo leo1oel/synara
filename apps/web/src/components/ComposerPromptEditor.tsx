@@ -29,9 +29,12 @@ import {
   TextNode,
   $getRoot,
   $nodesOfType,
+  type EditorConfig,
   type ElementNode,
   type LexicalNode,
   type EditorState,
+  type NodeKey,
+  type SerializedTextNode,
 } from "lexical";
 import {
   createContext,
@@ -96,6 +99,54 @@ const ComposerRemoveTerminalContextContext = createContext<(contextId: string) =
 
 // Node classes imported from ./composer-nodes
 
+// WebKit paints a collapsed element selection after a contenteditable=false inline
+// token at the far edge of the paragraph. Keep the fallback caret inside Lexical's
+// document so reconciliation cannot discard it as an unexpected DOM mutation.
+class ComposerWebkitCaretNode extends TextNode {
+  static override getType(): string {
+    return "composer-webkit-caret";
+  }
+
+  static override clone(node: ComposerWebkitCaretNode): ComposerWebkitCaretNode {
+    return new ComposerWebkitCaretNode(node.__text, node.__key);
+  }
+
+  static override importJSON(_serializedNode: SerializedTextNode): ComposerWebkitCaretNode {
+    return new ComposerWebkitCaretNode();
+  }
+
+  constructor(text = "\u200b", key?: NodeKey) {
+    super(text, key);
+  }
+
+  override exportJSON(): SerializedTextNode {
+    return {
+      ...super.exportJSON(),
+      text: "",
+      type: "composer-webkit-caret",
+      version: 1,
+    };
+  }
+
+  override getTextContent(): string {
+    return "";
+  }
+
+  override createDOM(config: EditorConfig): HTMLElement {
+    const dom = super.createDOM(config);
+    dom.dataset.synaraWebkitCaret = "true";
+    return dom;
+  }
+
+  getRawText(): string {
+    return this.getLatest().__text;
+  }
+}
+
+function $createComposerWebkitCaretNode(): ComposerWebkitCaretNode {
+  return new ComposerWebkitCaretNode();
+}
+
 function terminalContextSignature(contexts: ReadonlyArray<TerminalContextDraft>): string {
   return contexts
     .map((context) =>
@@ -149,7 +200,7 @@ function getExpandedAbsoluteOffsetForInlineTokenPoint(
 function findSelectionPointForInlineToken(
   node: ComposerInlineTokenNode,
   remainingRef: { value: number },
-): { key: string; offset: number; type: "element" } | null {
+): { key: string; offset: number; type: "text" | "element" } | null {
   const parent = node.getParent();
   if (!parent || !$isElementNode(parent)) return null;
   const index = node.getIndexWithinParent();
@@ -161,6 +212,14 @@ function findSelectionPointForInlineToken(
     };
   }
   if (remainingRef.value === getComposerInlineTokenTextLength(node)) {
+    const nextSibling = node.getNextSibling();
+    if (nextSibling instanceof ComposerWebkitCaretNode) {
+      return {
+        key: nextSibling.getKey(),
+        offset: 1,
+        type: "text",
+      };
+    }
     return {
       key: parent.getKey(),
       offset: index + 1,
@@ -172,6 +231,9 @@ function findSelectionPointForInlineToken(
 }
 
 function getComposerNodeTextLength(node: LexicalNode): number {
+  if (node instanceof ComposerWebkitCaretNode) {
+    return 0;
+  }
   if (isComposerInlineTokenNode(node)) {
     return getComposerInlineTokenTextLength(node);
   }
@@ -188,6 +250,9 @@ function getComposerNodeTextLength(node: LexicalNode): number {
 }
 
 function getComposerNodeExpandedTextLength(node: LexicalNode): number {
+  if (node instanceof ComposerWebkitCaretNode) {
+    return 0;
+  }
   if (isComposerInlineTokenNode(node)) {
     return getComposerInlineTokenExpandedTextLength(node);
   }
@@ -222,6 +287,10 @@ function getAbsoluteOffsetForPoint(node: LexicalNode, pointOffset: number): numb
       offset += getComposerNodeTextLength(sibling);
     }
     current = nextParent;
+  }
+
+  if (node instanceof ComposerWebkitCaretNode) {
+    return offset;
   }
 
   if (node instanceof ComposerLinkNode || node instanceof ComposerTerminalContextNode) {
@@ -277,6 +346,10 @@ function getExpandedAbsoluteOffsetForPoint(node: LexicalNode, pointOffset: numbe
     current = nextParent;
   }
 
+  if (node instanceof ComposerWebkitCaretNode) {
+    return offset;
+  }
+
   if (node instanceof ComposerLinkNode || node instanceof ComposerTerminalContextNode) {
     return getExpandedAbsoluteOffsetForInlineTokenPoint(node, offset, pointOffset);
   }
@@ -315,6 +388,13 @@ function findSelectionPointAtOffset(
   node: LexicalNode,
   remainingRef: { value: number },
 ): { key: string; offset: number; type: "text" | "element" } | null {
+  if (node instanceof ComposerWebkitCaretNode) {
+    if (remainingRef.value === 0) {
+      return { key: node.getKey(), offset: 1, type: "text" };
+    }
+    return null;
+  }
+
   if (
     node instanceof ComposerMentionNode ||
     node instanceof ComposerSkillNode ||
@@ -591,7 +671,10 @@ function ComposerCommandKeyPlugin(props: {
     const unregisterSlash = editor.registerCommand(
       KEY_DOWN_COMMAND,
       (event) =>
-        event instanceof KeyboardEvent && event.key === "/" ? handleCommand("Slash", event) : false,
+        event instanceof KeyboardEvent &&
+        (event.key === "/" || (event.code === "Slash" && !event.shiftKey))
+          ? handleCommand("Slash", event)
+          : false,
       COMMAND_PRIORITY_HIGH,
     );
 
@@ -677,6 +760,56 @@ function ComposerInlineTokenSelectionNormalizePlugin() {
   const [editor] = useLexicalComposerContext();
 
   useEffect(() => {
+    // Chromium needs the token-end selection normalized to a parent element
+    // boundary. WKWebView paints that boundary at the far edge of the paragraph,
+    // so give it an editor-owned text anchor immediately after the token instead.
+    if (document.documentElement.dataset.synaraEmbed === "true") {
+      return editor.registerUpdateListener(({ editorState }) => {
+        let tokenKey: string | null = null;
+        let keepCaretKey: string | null = null;
+        editorState.read(() => {
+          const selection = $getSelection();
+          if (!$isRangeSelection(selection) || !selection.isCollapsed()) return;
+          const anchorNode = selection.anchor.getNode();
+          if (anchorNode instanceof ComposerWebkitCaretNode) {
+            keepCaretKey = anchorNode.getKey();
+            return;
+          }
+          if (isComposerInlineTokenNode(anchorNode) && selection.anchor.offset > 0) {
+            tokenKey = anchorNode.getKey();
+            return;
+          }
+          if (!$isElementNode(anchorNode) || selection.anchor.offset <= 0) return;
+          const previous = anchorNode.getChildAtIndex(selection.anchor.offset - 1);
+          if (isComposerInlineTokenNode(previous)) {
+            tokenKey = previous.getKey();
+          }
+        });
+
+        if (keepCaretKey !== null) return;
+
+        queueMicrotask(() => {
+          editor.update(() => {
+            for (const caret of $nodesOfType(ComposerWebkitCaretNode)) {
+              if (caret.getKey() !== keepCaretKey) caret.remove();
+            }
+            if (!tokenKey) return;
+            const token = $getRoot().getAllTextNodes().find((node) => node.getKey() === tokenKey);
+            if (!token || !isComposerInlineTokenNode(token)) return;
+            const existing = token.getNextSibling();
+            const caret =
+              existing instanceof ComposerWebkitCaretNode
+                ? existing
+                : $createComposerWebkitCaretNode();
+            if (caret !== existing) token.insertAfter(caret);
+            const selection = $createRangeSelection();
+            selection.anchor.set(caret.getKey(), 1, "text");
+            selection.focus.set(caret.getKey(), 1, "text");
+            $setSelection(selection);
+          });
+        });
+      });
+    }
     return editor.registerUpdateListener(({ editorState }) => {
       let afterOffset: number | null = null;
       editorState.read(() => {
@@ -728,9 +861,27 @@ function ComposerInlineTokenBackspacePlugin() {
           } else {
             $setSelectionAtComposerOffset(tokenStart);
           }
+          const restoreOffset =
+            candidate instanceof ComposerTerminalContextNode ? selectionOffset : tokenStart;
+          // WebKit may move the DOM selection to the end while reconciling the
+          // removed decorator node. Restore the logical Lexical offset after that
+          // reconciliation, rather than trusting the synchronous selection alone.
+          window.requestAnimationFrame(() => {
+            editor.update(() => {
+              $setSelectionAtComposerOffset(restoreOffset);
+            });
+          });
           event?.preventDefault();
+          event?.stopPropagation();
           return true;
         };
+        if (anchorNode instanceof ComposerWebkitCaretNode) {
+          const previous = anchorNode.getPreviousSibling();
+          if (removeInlineTokenNode(previous)) {
+            anchorNode.remove();
+            return true;
+          }
+        }
         if (removeInlineTokenNode(anchorNode)) {
           return true;
         }
@@ -772,7 +923,17 @@ function ComposerSlashCommandTransformPlugin() {
   const [editor] = useLexicalComposerContext();
 
   useEffect(() => {
-    return editor.registerNodeTransform(TextNode, (node) => {
+    const unregisterCaretTransform = editor.registerNodeTransform(
+      ComposerWebkitCaretNode,
+      (node) => {
+        const text = node.getRawText().replaceAll("\u200b", "");
+        if (text.length === 0) return;
+        const replacement = $createTextNode(text);
+        node.replace(replacement);
+        replacement.selectEnd();
+      },
+    );
+    const unregisterSlashTransform = editor.registerNodeTransform(TextNode, (node) => {
       if (isComposerInlineTokenNode(node)) {
         return;
       }
@@ -784,6 +945,10 @@ function ComposerSlashCommandTransformPlugin() {
       const commandNode = match.start === 0 ? splitNodes[0] : splitNodes[1];
       commandNode?.replace($createComposerSlashCommandNode(match.command));
     });
+    return () => {
+      unregisterCaretTransform();
+      unregisterSlashTransform();
+    };
   }, [editor]);
 
   return null;
@@ -1147,8 +1312,9 @@ function ComposerPromptEditorInner({
       const selection = $getSelection();
       const selectionCollapsed = !$isRangeSelection(selection) || selection.isCollapsed();
       const nextValue = $getRoot().getTextContent();
+      const previousSnapshot = snapshotRef.current;
       const fallbackCursor = clampCollapsedComposerCursor(nextValue, snapshotRef.current.cursor);
-      const nextCursor = clampCollapsedComposerCursor(
+      let nextCursor = clampCollapsedComposerCursor(
         nextValue,
         $readSelectionOffsetFromEditorState(fallbackCursor),
       );
@@ -1156,12 +1322,24 @@ function ComposerPromptEditorInner({
         nextValue,
         snapshotRef.current.expandedCursor,
       );
-      const nextExpandedCursor = clampExpandedCursor(
+      let nextExpandedCursor = clampExpandedCursor(
         nextValue,
         $readExpandedSelectionOffsetFromEditorState(fallbackExpandedCursor),
       );
+      if (nextValue.length === previousSnapshot.value.length + 1) {
+        let insertionIndex = 0;
+        while (
+          insertionIndex < previousSnapshot.value.length &&
+          previousSnapshot.value[insertionIndex] === nextValue[insertionIndex]
+        ) {
+          insertionIndex += 1;
+        }
+        if (nextValue[insertionIndex] === "/") {
+          nextExpandedCursor = insertionIndex + 1;
+          nextCursor = collapseExpandedComposerCursor(nextValue, nextExpandedCursor);
+        }
+      }
       const terminalContextIds = collectTerminalContextIds($getRoot());
-      const previousSnapshot = snapshotRef.current;
       if (
         previousSnapshot.value === nextValue &&
         previousSnapshot.cursor === nextCursor &&
@@ -1274,7 +1452,7 @@ export const ComposerPromptEditor = forwardRef<
   const initialConfig: InitialConfigType = {
     namespace: "synara-composer-editor",
     editable: true,
-    nodes: [...COMPOSER_NODE_CLASSES],
+    nodes: [...COMPOSER_NODE_CLASSES, ComposerWebkitCaretNode],
     editorState: () => {
       $setComposerEditorPrompt(
         initialValueRef.current,

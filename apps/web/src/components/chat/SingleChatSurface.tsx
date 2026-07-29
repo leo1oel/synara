@@ -168,6 +168,7 @@ export function SingleChatSurface(props: {
   threadId: ThreadId;
   search: DiffRouteSearch;
   projectId: ProjectId | null;
+  embedMode?: boolean;
 }) {
   const navigate = useNavigate();
   const createSplitView = useSplitViewStore((store) => store.createFromThread);
@@ -927,6 +928,7 @@ export function SingleChatSurface(props: {
               paneScopeId={SINGLE_CHAT_PANE_SCOPE_ID}
               deferMount={isBrandNewDraftThread}
               surfaceMode="single"
+              {...(props.embedMode ? { presentationMode: "embed" as const } : {})}
               isFocusedPane
               panelState={chatPanelState}
               onToggleDiff={handleToggleDiff}
@@ -942,7 +944,7 @@ export function SingleChatSurface(props: {
             />
           </RouteInsetSurface>
         </ChatPaneDropOverlay>
-        <RightDock
+        {!props.embedMode ? <RightDock
           state={dockState}
           minWidth={SINGLE_PANEL_MIN_WIDTH}
           defaultWidth={DIFF_INLINE_DEFAULT_WIDTH}
@@ -958,7 +960,7 @@ export function SingleChatSurface(props: {
           onOpenChange={(open) => setDockOpen(props.threadId, open)}
           onAddPane={handleAddDockPane}
           renderPane={renderDockPane}
-        />
+        /> : null}
       </div>
     </WorkspaceFileOpenerContext.Provider>
   );

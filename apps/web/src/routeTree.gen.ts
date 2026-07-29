@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ChatRouteImport } from './routes/_chat'
 import { Route as ChatIndexRouteImport } from './routes/_chat.index'
+import { Route as ChatSourceControlRouteImport } from './routes/_chat.source-control'
 import { Route as ChatSettingsRouteImport } from './routes/_chat.settings'
 import { Route as ChatPullRequestsRouteImport } from './routes/_chat.pull-requests'
 import { Route as ChatPluginsRouteImport } from './routes/_chat.plugins'
@@ -30,6 +31,11 @@ const ChatRoute = ChatRouteImport.update({
 const ChatIndexRoute = ChatIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => ChatRoute,
+} as any)
+const ChatSourceControlRoute = ChatSourceControlRouteImport.update({
+  id: '/source-control',
+  path: '/source-control',
   getParentRoute: () => ChatRoute,
 } as any)
 const ChatSettingsRoute = ChatSettingsRouteImport.update({
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/plugins': typeof ChatPluginsRoute
   '/pull-requests': typeof ChatPullRequestsRouteWithChildren
   '/settings': typeof ChatSettingsRoute
+  '/source-control': typeof ChatSourceControlRoute
   '/automations/$automationId': typeof ChatAutomationsAutomationIdRoute
   '/kanban/$projectId': typeof ChatKanbanProjectIdRoute
   '/automations/': typeof ChatAutomationsIndexRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/$threadId': typeof ChatThreadIdRoute
   '/plugins': typeof ChatPluginsRoute
   '/settings': typeof ChatSettingsRoute
+  '/source-control': typeof ChatSourceControlRoute
   '/': typeof ChatIndexRoute
   '/automations/$automationId': typeof ChatAutomationsAutomationIdRoute
   '/kanban/$projectId': typeof ChatKanbanProjectIdRoute
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   '/_chat/plugins': typeof ChatPluginsRoute
   '/_chat/pull-requests': typeof ChatPullRequestsRouteWithChildren
   '/_chat/settings': typeof ChatSettingsRoute
+  '/_chat/source-control': typeof ChatSourceControlRoute
   '/_chat/': typeof ChatIndexRoute
   '/_chat/automations/$automationId': typeof ChatAutomationsAutomationIdRoute
   '/_chat/kanban/$projectId': typeof ChatKanbanProjectIdRoute
@@ -140,6 +149,7 @@ export interface FileRouteTypes {
     | '/plugins'
     | '/pull-requests'
     | '/settings'
+    | '/source-control'
     | '/automations/$automationId'
     | '/kanban/$projectId'
     | '/automations/'
@@ -151,6 +161,7 @@ export interface FileRouteTypes {
     | '/$threadId'
     | '/plugins'
     | '/settings'
+    | '/source-control'
     | '/'
     | '/automations/$automationId'
     | '/kanban/$projectId'
@@ -166,6 +177,7 @@ export interface FileRouteTypes {
     | '/_chat/plugins'
     | '/_chat/pull-requests'
     | '/_chat/settings'
+    | '/_chat/source-control'
     | '/_chat/'
     | '/_chat/automations/$automationId'
     | '/_chat/kanban/$projectId'
@@ -193,6 +205,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof ChatIndexRouteImport
+      parentRoute: typeof ChatRoute
+    }
+    '/_chat/source-control': {
+      id: '/_chat/source-control'
+      path: '/source-control'
+      fullPath: '/source-control'
+      preLoaderRoute: typeof ChatSourceControlRouteImport
       parentRoute: typeof ChatRoute
     }
     '/_chat/settings': {
@@ -306,6 +325,7 @@ interface ChatRouteChildren {
   ChatPluginsRoute: typeof ChatPluginsRoute
   ChatPullRequestsRoute: typeof ChatPullRequestsRouteWithChildren
   ChatSettingsRoute: typeof ChatSettingsRoute
+  ChatSourceControlRoute: typeof ChatSourceControlRoute
   ChatIndexRoute: typeof ChatIndexRoute
   ChatKanbanProjectIdRoute: typeof ChatKanbanProjectIdRoute
   ChatKanbanIndexRoute: typeof ChatKanbanIndexRoute
@@ -318,6 +338,7 @@ const ChatRouteChildren: ChatRouteChildren = {
   ChatPluginsRoute: ChatPluginsRoute,
   ChatPullRequestsRoute: ChatPullRequestsRouteWithChildren,
   ChatSettingsRoute: ChatSettingsRoute,
+  ChatSourceControlRoute: ChatSourceControlRoute,
   ChatIndexRoute: ChatIndexRoute,
   ChatKanbanProjectIdRoute: ChatKanbanProjectIdRoute,
   ChatKanbanIndexRoute: ChatKanbanIndexRoute,

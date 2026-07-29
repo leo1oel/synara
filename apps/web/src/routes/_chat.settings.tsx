@@ -6,8 +6,8 @@
 import { PROVIDER_DISPLAY_NAMES, type ProviderKind } from "@synara/contracts";
 import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
 import { sameAppSnapShortcut } from "@synara/shared/appSnapShortcut";
-import { createFileRoute, useSearch } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 
 import {
   type AppSettings,
@@ -87,6 +87,13 @@ import { isUiDensity } from "../lib/appDensity";
 import { DeviceLaptopIcon, MoonIcon, RotateCcwIcon, SunIcon } from "../lib/icons";
 import { cn, isMacPlatform } from "../lib/utils";
 import { ensureNativeApi, readNativeApi } from "../nativeApi";
+import {
+  isSynaraEmbedMode,
+  postSettingsContentHeightToLattice,
+  postSettingsWheelToLattice,
+  readEmbedMode,
+  readLatticeSettingsSectionMessage,
+} from "../embedMode";
 import { sameProviderOrder } from "../providerOrdering";
 import {
   normalizeSettingsSection,
@@ -181,6 +188,8 @@ type BooleanSettingKey = {
 // ── Route screen ───────────────────────────────────────────────────────────
 
 function SettingsRouteView() {
+  const isEmbed = isSynaraEmbedMode();
+  const navigate = useNavigate();
   const routeSearch = useSearch({ strict: false }) as Record<string, unknown>;
   const activeSection = normalizeSettingsSection(routeSearch.section);
   const settingsTarget = typeof routeSearch.target === "string" ? routeSearch.target : null;
@@ -214,6 +223,59 @@ function SettingsRouteView() {
   const isInstallSettingsDirty = isProviderInstallSettingsDirty(settings, defaults);
   const hiddenProviderCount = new Set(settings.hiddenProviders).size;
   const isProviderOrderDirty = !sameProviderOrder(settings.providerOrder, defaults.providerOrder);
+
+  useEffect(() => {
+    if (!isEmbed) return;
+    const embedConfig = readEmbedMode();
+    if (!embedConfig?.hostOrigin) return;
+    const receiveHostMessage = (event: MessageEvent) => {
+      const message = readLatticeSettingsSectionMessage(event, embedConfig);
+      if (!message || !SETTINGS_NAV_ITEMS.some((item) => item.id === message.section)) return;
+      void navigate({
+        to: "/settings",
+        search: { section: message.section },
+        replace: true,
+      });
+    };
+    window.addEventListener("message", receiveHostMessage);
+    return () => window.removeEventListener("message", receiveHostMessage);
+  }, [isEmbed, navigate]);
+
+  useLayoutEffect(() => {
+    if (!isEmbed) return;
+    const embedConfig = readEmbedMode();
+    const content = document.querySelector<HTMLElement>(".synara-settings-content");
+    if (!embedConfig?.hostOrigin || !content) return;
+    let frame = 0;
+    const reportHeight = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        postSettingsContentHeightToLattice(
+          embedConfig,
+          Math.max(470, content.getBoundingClientRect().height),
+        );
+      });
+    };
+    reportHeight();
+    const observer = new ResizeObserver(reportHeight);
+    observer.observe(content);
+    return () => {
+      observer.disconnect();
+      window.cancelAnimationFrame(frame);
+    };
+  }, [activeSection, isEmbed]);
+
+  useEffect(() => {
+    if (!isEmbed) return;
+    const embedConfig = readEmbedMode();
+    if (!embedConfig?.hostOrigin) return;
+    const forwardWheel = (event: WheelEvent) => {
+      postSettingsWheelToLattice(embedConfig, event);
+      event.preventDefault();
+    };
+    window.addEventListener("wheel", forwardWheel, { passive: false });
+    return () => window.removeEventListener("wheel", forwardWheel);
+  }, [isEmbed]);
 
   // Deep links and sidebar search targets all resolve to stable DOM ids in the active panel.
   useEffect(() => {
@@ -1032,28 +1094,31 @@ function SettingsRouteView() {
           content (hence absolute, not a layout-occupying header row). The strip stays a
           drag-region so the Windows frameless window can be moved by its top edge; the
           caption buttons themselves are a separate fixed cluster (see root route). */}
-        <div
-          className={cn(
-            "drag-region absolute inset-x-0 top-0 z-10 flex items-center",
-            CHAT_SURFACE_HEADER_PADDING_X_CLASS,
-            CHAT_SURFACE_HEADER_HEIGHT_CLASS,
-            desktopTopBarTrafficLightGutterClassName,
-          )}
-        >
-          <div className="pointer-events-auto">
-            <SidebarHeaderNavigationControls />
+        {!isEmbed ? (
+          <div
+            className={cn(
+              "drag-region absolute inset-x-0 top-0 z-10 flex items-center",
+              CHAT_SURFACE_HEADER_PADDING_X_CLASS,
+              CHAT_SURFACE_HEADER_HEIGHT_CLASS,
+              desktopTopBarTrafficLightGutterClassName,
+            )}
+          >
+            <div className="pointer-events-auto">
+              <SidebarHeaderNavigationControls />
+            </div>
           </div>
-        </div>
+        ) : null}
         <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
-          <div className="flex-1 overflow-y-auto">
+          <div className="synara-settings-scroll flex-1 overflow-y-auto">
             <div
               className={cn(
+                "synara-settings-content",
                 "mx-auto w-full px-6 py-8",
                 activeSection === "profile" ? "max-w-3xl" : "max-w-2xl",
               )}
             >
               {activeSection !== "profile" ? (
-                <div className="mb-8 flex items-start justify-between gap-4">
+                <div className="synara-settings-heading mb-8 flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <h1 className="text-xl font-medium tracking-tight text-foreground">
                       {activeSectionItem.label}
@@ -1062,16 +1127,18 @@ function SettingsRouteView() {
                       {activeSectionItem.description}
                     </p>
                   </div>
-                  <Button
-                    size="xs"
-                    variant="outline"
-                    className="shrink-0"
-                    disabled={changedSettingLabels.length === 0}
-                    onClick={() => void restoreDefaults()}
-                  >
-                    <RotateCcwIcon className="size-3.5" />
-                    Restore defaults
-                  </Button>
+                  {!isEmbed ? (
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      className="shrink-0"
+                      disabled={changedSettingLabels.length === 0}
+                      onClick={() => void restoreDefaults()}
+                    >
+                      <RotateCcwIcon className="size-3.5" />
+                      Restore defaults
+                    </Button>
+                  ) : null}
                 </div>
               ) : null}
 

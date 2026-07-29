@@ -38,6 +38,9 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
   /* Route diff hunks through the chat code font; keep file headers on the UI stack. */
   --diffs-font-family: var(--font-chat-code-family);
   --diffs-header-font-family: var(--font-ui-family);
+  /* Keep horizontal scrolling available for long lines without painting an
+     empty scrollbar track when every line already fits the viewport. */
+  --diffs-overflow-override: auto;
   /* Honor the user-chosen chat code font size from settings instead of the library default (13px). */
   --diffs-font-size: var(--app-font-size-chat-code, 11px);
   /* Match the app chrome — set on :host so hunk rows/gutters/separators inherit. */
@@ -173,6 +176,51 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
 [data-unmodified-lines] {
   font-family: var(--font-ui-family) !important;
   font-variant-numeric: tabular-nums !important;
+}
+
+/* Pierre renders its overflow viewport inside shadow DOM, beyond the reach of
+   the embed document's scrollbar selectors. Mirror Lattice's inset scrollbar
+   here so both axes look and align like the host's editor and paper panes. */
+@media (pointer: fine) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--foreground) 8%, transparent) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--foreground) 8%, transparent);
+    background-clip: content-box;
+  }
+
+  *::-webkit-scrollbar-thumb:vertical {
+    border-right-width: 5px;
+    border-left-width: 1px;
+  }
+
+  *::-webkit-scrollbar-thumb:horizontal {
+    border-top-width: 1px;
+    border-bottom-width: 5px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in srgb, var(--foreground) 12%, transparent);
+  }
+
+  *::-webkit-scrollbar-thumb:active {
+    background-color: color-mix(in srgb, var(--foreground) 16%, transparent);
+  }
 }
 `;
   diffPanelUnsafeCssCache.set(theme, css);

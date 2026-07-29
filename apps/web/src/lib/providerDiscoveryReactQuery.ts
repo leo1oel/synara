@@ -9,7 +9,18 @@ import type {
   ProviderSkillsCatalogResult,
 } from "@synara/contracts";
 import { queryOptions } from "@tanstack/react-query";
+import { isSynaraEmbedMode } from "~/embedMode";
 import { ensureNativeApi } from "~/nativeApi";
+
+const LATTICE_SKILL_NAMES = new Set(["humanize-writing", "research-taste"]);
+
+function skillsForCurrentClient<T extends { skills: ReadonlyArray<{ name: string }> }>(result: T): T {
+  if (!isSynaraEmbedMode()) return result;
+  return {
+    ...result,
+    skills: result.skills.filter((skill) => LATTICE_SKILL_NAMES.has(skill.name.toLocaleLowerCase())),
+  };
+}
 
 const EMPTY_SKILLS_RESULT: ProviderListSkillsResult = {
   skills: [],
@@ -107,12 +118,13 @@ export function providerSkillsQueryOptions(input: {
       if (!input.cwd) {
         throw new Error("Skill discovery is unavailable.");
       }
-      return api.provider.listSkills({
+      const result = await api.provider.listSkills({
         provider: input.provider,
         cwd: input.cwd,
         ...(input.threadId ? { threadId: input.threadId } : {}),
         ...(input.agentDir ? { agentDir: input.agentDir } : {}),
       });
+      return skillsForCurrentClient(result);
     },
     enabled: (input.enabled ?? true) && input.cwd !== null,
     staleTime: 30_000,
@@ -129,7 +141,8 @@ export function skillsCatalogQueryOptions(input?: { cwd?: string | null; enabled
     queryKey: providerDiscoveryQueryKeys.skillsCatalog(cwd),
     queryFn: async (): Promise<ProviderSkillsCatalogResult> => {
       const api = ensureNativeApi();
-      return api.provider.listSkillsCatalog(cwd ? { cwd } : {});
+      const result = await api.provider.listSkillsCatalog(cwd ? { cwd } : {});
+      return skillsForCurrentClient(result);
     },
     enabled: input?.enabled ?? true,
     staleTime: 30_000,

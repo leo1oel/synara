@@ -13,6 +13,7 @@ import { RecentViewSwitcher } from "../components/RecentViewSwitcher";
 import { shouldRenderTerminalWorkspace } from "../components/ChatView.logic";
 import ThreadSidebar from "../components/Sidebar";
 import { isElectron } from "../env";
+import { isSynaraEmbedMode } from "../embedMode";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
 import { useHandleNewStudioChat } from "../hooks/useHandleNewStudioChat";
 import { useTemporaryThreadLifecycle } from "../hooks/useTemporaryThreadLifecycle";
@@ -551,11 +552,12 @@ const SIDEBAR_GAP_CLASS =
 const SIDEBAR_INNER_CLASS = "app-sidebar-surface";
 
 function ChatRouteLayout() {
+  const isEmbed = isSynaraEmbedMode();
   const isEditorView = useLocation({
     select: (location) => (location.search as { view?: unknown }).view === "editor",
   });
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const resolvedSidebarOpen = isEditorView ? false : sidebarOpen;
+  const resolvedSidebarOpen = isEditorView || isEmbed ? false : sidebarOpen;
 
   // The thread sidebar always lives on the left; the right dock is a separate surface.
   const sidebarElement = (
@@ -582,7 +584,7 @@ function ChatRouteLayout() {
   // `data-sidebar-side` on the provider selects the seam geometry.
   const mainContentShell = (
     <div className="chat-content-card-backing relative flex h-svh min-h-0 min-w-0 flex-1">
-      {isEditorView ? null : (
+      {isEditorView || isEmbed ? null : (
         <SidebarInstanceProvider side="left" resizable={THREAD_SIDEBAR_RESIZABLE}>
           <SidebarRail placement="content-seam" />
         </SidebarInstanceProvider>
@@ -601,7 +603,7 @@ function ChatRouteLayout() {
     >
       <ThreadRetentionMaintenanceToast />
       <ChatRouteGlobalShortcuts />
-      {sidebarElement}
+      {isEmbed ? null : sidebarElement}
       {mainContentShell}
     </SidebarProvider>
   );

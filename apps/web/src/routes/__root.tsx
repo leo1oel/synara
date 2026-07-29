@@ -23,6 +23,7 @@ import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Throttler } from "@tanstack/react-pacer";
 
 import { APP_DISPLAY_NAME, APP_VERSION } from "../branding";
+import { isSynaraEmbedMode } from "../embedMode";
 import { DesktopWindowControls } from "../components/DesktopWindowControls";
 import { AppSnapCoordinator } from "../components/AppSnapCoordinator";
 import { AppSnapWelcomeDialog } from "../components/AppSnapWelcomeDialog";
@@ -486,6 +487,7 @@ async function runProviderUpdateAll(params: {
 }
 
 function ProviderUpdateNotifications() {
+  const isEmbed = isSynaraEmbedMode();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { settings } = useAppSettings();
@@ -530,6 +532,7 @@ function ProviderUpdateNotifications() {
     }
 
     if (
+      isEmbed ||
       outdatedProviders.length === 0 ||
       oneClickProviders.length === 0 ||
       !notificationKey ||
@@ -592,7 +595,7 @@ function ProviderUpdateNotifications() {
       },
     });
     activeToastRef.current = { kind: "prompt", key: notificationKey, toastId };
-  }, [isUpdatingAll, navigate, notificationKey, oneClickProviders, outdatedProviders, updateAll]);
+  }, [isEmbed, isUpdatingAll, navigate, notificationKey, oneClickProviders, outdatedProviders, updateAll]);
 
   return null;
 }
