@@ -400,8 +400,10 @@ import {
   LATTICE_AGENT_PERMISSION_MODE_SET,
   postAgentPermissionModeToLattice,
   postLayoutMetricsToLattice,
+  postProjectHistoryToLattice,
   readEmbedMode,
   readLatticeAgentPermissionModeMessage,
+  readLatticeCheckpointRestoreMessage,
 } from "../embedMode";
 import { useComposerVoiceController } from "./chat/useComposerVoiceController";
 import {
@@ -4807,6 +4809,48 @@ export default function ChatView({
     selectedRuntimeModel,
   ]);
 
+  useEffect(() => {
+    if (!isEmbed || !activeThread || !activeProject) return;
+    const embedConfig = readEmbedMode();
+    if (
+      !embedConfig?.hostOrigin ||
+      !workspaceRootsEqual(activeProject.workspaceRoot, embedConfig.workspaceRoot)
+    ) {
+      return;
+    }
+    const promptsByTurnId = new Map(
+      activeThread.messages
+        .filter((message) => message.role === "user" && message.turnId)
+        .map((message) => [message.turnId, message.text] as const),
+    );
+    const entries = activeThread.checkpoints
+      .filter((checkpoint) => checkpoint.status === "ready" && checkpoint.files.length > 0)
+      .map((checkpoint) => {
+        const prompt = promptsByTurnId
+          .get(checkpoint.turnId)
+          ?.replace(/\s+/g, " ")
+          .trim();
+        const compactPrompt = prompt && prompt.length > 82 ? `${prompt.slice(0, 81)}…` : prompt;
+        return {
+          id: `agent:${activeThread.id}:${checkpoint.turnId}`,
+          label: compactPrompt ? `Agent: ${compactPrompt}` : "Agent updated project files",
+          timestamp: checkpoint.completedAt,
+          threadId: activeThread.id,
+          threadTitle: activeThread.title,
+          turnId: checkpoint.turnId,
+          turnCount: checkpoint.checkpointTurnCount,
+          checkpointRef: checkpoint.checkpointRef,
+          files: checkpoint.files.map((file) => ({
+            path: file.path,
+            kind: file.kind,
+            additions: file.additions,
+            deletions: file.deletions,
+          })),
+        };
+      });
+    postProjectHistoryToLattice(embedConfig, activeThread.id, entries);
+  }, [activeProject, activeThread, isEmbed]);
+
   const handleInteractionModeChange = useCallback(
     (mode: ProviderInteractionMode) => {
       if (mode === interactionMode) return;
@@ -6524,6 +6568,19 @@ export default function ChatView({
     },
     [activeThread, hasLiveTurn, isConnecting, isRevertingCheckpoint, isSendBusy, setThreadError],
   );
+
+  useEffect(() => {
+    if (!isEmbed || !activeThread) return;
+    const embedConfig = readEmbedMode();
+    if (!embedConfig?.hostOrigin) return;
+    const handleHistoryRestore = (event: MessageEvent) => {
+      const request = readLatticeCheckpointRestoreMessage(event, embedConfig);
+      if (!request || request.threadId !== activeThread.id) return;
+      void onUndoTurnFiles([request.turnCount]);
+    };
+    window.addEventListener("message", handleHistoryRestore);
+    return () => window.removeEventListener("message", handleHistoryRestore);
+  }, [activeThread, isEmbed, onUndoTurnFiles]);
 
   const onCreateHandoffThread = useCallback(
     async (targetProvider: ProviderKind) => {

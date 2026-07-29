@@ -9,6 +9,8 @@ export const LATTICE_AGENT_PERMISSION_MODE_REQUEST =
   "lattice:request-agent-permission-mode";
 export const LATTICE_AGENT_PERMISSION_MODE_SET = "lattice:set-agent-permission-mode";
 export const LATTICE_SETTINGS_SECTION_SET = "lattice:set-settings-section";
+export const LATTICE_PROJECT_HISTORY = "lattice:project-history";
+export const LATTICE_RESTORE_AGENT_CHECKPOINT = "lattice:restore-agent-checkpoint";
 export const SYNARA_AGENT_PERMISSION_MODE_STATUS = "synara:agent-permission-mode";
 export const SYNARA_LAYOUT_METRICS = "synara:layout-metrics";
 export const SYNARA_SETTINGS_CONTENT_HEIGHT = "synara:settings-content-height";
@@ -29,6 +31,29 @@ export type LatticeAgentPermissionModeMessage =
 export interface LatticeSettingsSectionMessage {
   type: typeof LATTICE_SETTINGS_SECTION_SET;
   section: string;
+}
+
+export interface LatticeProjectHistoryCheckpoint {
+  id: string;
+  label: string;
+  timestamp: string;
+  threadId: string;
+  threadTitle: string;
+  turnId: string;
+  turnCount: number;
+  checkpointRef: string;
+  files: ReadonlyArray<{
+    path: string;
+    kind: string;
+    additions: number;
+    deletions: number;
+  }>;
+}
+
+export interface LatticeCheckpointRestoreMessage {
+  type: typeof LATTICE_RESTORE_AGENT_CHECKPOINT;
+  threadId: string;
+  turnCount: number;
 }
 
 function normalizedOrigin(value: string | null): string | null {
@@ -83,6 +108,44 @@ export function postAgentPermissionModeToLattice(
     },
     config.hostOrigin,
   );
+}
+
+export function postProjectHistoryToLattice(
+  config: EmbedModeConfig,
+  activeThreadId: string,
+  entries: ReadonlyArray<LatticeProjectHistoryCheckpoint>,
+): void {
+  if (!config.hostOrigin) return;
+  window.parent.postMessage(
+    {
+      type: LATTICE_PROJECT_HISTORY,
+      activeThreadId,
+      entries,
+    },
+    config.hostOrigin,
+  );
+}
+
+export function readLatticeCheckpointRestoreMessage(
+  event: MessageEvent,
+  config: EmbedModeConfig,
+): LatticeCheckpointRestoreMessage | null {
+  if (
+    !config.hostOrigin ||
+    event.source !== window.parent ||
+    event.origin !== config.hostOrigin ||
+    event.data?.type !== LATTICE_RESTORE_AGENT_CHECKPOINT ||
+    typeof event.data.threadId !== "string" ||
+    !Number.isInteger(event.data.turnCount) ||
+    event.data.turnCount < 0
+  ) {
+    return null;
+  }
+  return {
+    type: LATTICE_RESTORE_AGENT_CHECKPOINT,
+    threadId: event.data.threadId,
+    turnCount: event.data.turnCount,
+  };
 }
 
 export function postLayoutMetricsToLattice(

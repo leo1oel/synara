@@ -3,8 +3,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   initializeEmbedMode,
   postEmbedReadyToLattice,
+  postProjectHistoryToLattice,
   readEmbedMode,
   readEmbeddedHostWsUrl,
+  readLatticeCheckpointRestoreMessage,
+  LATTICE_PROJECT_HISTORY,
+  LATTICE_RESTORE_AGENT_CHECKPOINT,
   SYNARA_EMBED_READY,
 } from "./embedMode";
 
@@ -80,5 +84,43 @@ describe("Lattice embed mode", () => {
     postEmbedReadyToLattice(config!);
 
     expect(postMessage).toHaveBeenCalledWith({ type: SYNARA_EMBED_READY }, "http://localhost:1420");
+  });
+
+  it("shares checkpoint summaries with Lattice and validates restore requests", () => {
+    const { postMessage } = installBrowserStubs();
+    initializeEmbedMode();
+    const config = readEmbedMode();
+    expect(config).not.toBeNull();
+    const entries = [{
+      id: "agent:thread-1:turn-1",
+      label: "Agent revised the introduction",
+      timestamp: "2026-07-29T12:00:00Z",
+      threadId: "thread-1",
+      threadTitle: "Revise introduction",
+      turnId: "turn-1",
+      turnCount: 1,
+      checkpointRef: "refs/lattice/checkpoints/one",
+      files: [{ path: "main.tex", kind: "modified", additions: 4, deletions: 2 }],
+    }];
+
+    postProjectHistoryToLattice(config!, "thread-1", entries);
+
+    expect(postMessage).toHaveBeenCalledWith(
+      { type: LATTICE_PROJECT_HISTORY, activeThreadId: "thread-1", entries },
+      "http://localhost:1420",
+    );
+    expect(readLatticeCheckpointRestoreMessage({
+      source: window.parent,
+      origin: "http://localhost:1420",
+      data: {
+        type: LATTICE_RESTORE_AGENT_CHECKPOINT,
+        threadId: "thread-1",
+        turnCount: 1,
+      },
+    } as MessageEvent, config!)).toEqual({
+      type: LATTICE_RESTORE_AGENT_CHECKPOINT,
+      threadId: "thread-1",
+      turnCount: 1,
+    });
   });
 });
