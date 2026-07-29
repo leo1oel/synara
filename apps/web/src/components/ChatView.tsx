@@ -145,6 +145,7 @@ import {
   readFileAsDataUrl,
 } from "../lib/composerSend";
 import { composerImageBlobKey, persistComposerImageBlob } from "../lib/composerImageBlobStore";
+import { deleteActiveThreadFromClient } from "../lib/activeThreadDelete";
 import { reconcileDeletedThreadFromClient } from "../lib/deletedThreadClientReconciliation";
 import { extractChatAutomationInvocation } from "../lib/automationIntent";
 import {
@@ -10341,6 +10342,54 @@ export default function ChatView({
       search: (previous) => stripDiffSearchParams(previous),
     });
   }, [activeProjectIdForNewChat, handleNewThread]);
+  const onDeleteEmbedChat = useCallback(
+    async (targetThreadId: ThreadId, targetThreadTitle: string) => {
+      if (!isEmbed) return;
+      const api = readNativeApi();
+      if (!api) return;
+      const confirmed = await api.dialogs.confirm(
+        [
+          `Delete "${targetThreadTitle}"?`,
+          "This permanently clears this conversation history.",
+          "This action cannot be undone.",
+        ].join("\n"),
+      );
+      if (!confirmed) return;
+
+      try {
+        await deleteActiveThreadFromClient({
+          threadId: targetThreadId,
+          onDeleted: ({ thread }) => {
+            const draftStore = useComposerDraftStore.getState();
+            draftStore.clearDraftThread(thread.id);
+            draftStore.clearProjectDraftThreadById(thread.projectId, thread.id);
+            useTerminalStateStore.getState().clearTerminalState(thread.id);
+            removeThreadFromSplitViews(thread.id);
+            clearTemporaryThread(thread.id);
+            if (thread.id === activeThread?.id) {
+              onNewEmbedChat();
+            }
+          },
+          removeWorktree: (worktree) => api.git.removeWorktree(worktree),
+          unknownWorktreeErrorMessage: "Unknown error.",
+        });
+      } catch (error) {
+        toastManager.add({
+          type: "error",
+          title: "Could not delete thread",
+          description:
+            error instanceof Error ? error.message : "The conversation could not be deleted.",
+        });
+      }
+    },
+    [
+      activeThread?.id,
+      clearTemporaryThread,
+      isEmbed,
+      onNewEmbedChat,
+      removeThreadFromSplitViews,
+    ],
+  );
   const onOpenEditorChat = useCallback(
     (nextThreadId: ThreadId) => {
       storeOpenChatThreadPage(nextThreadId);
@@ -11362,6 +11411,7 @@ export default function ChatView({
           hideWorkspaceControls={isEmbed}
           {...(isEmbed && activeProject ? { historyProjectId: activeProject.id } : {})}
           {...(isEmbed ? { onNewChat: onNewEmbedChat } : {})}
+          {...(isEmbed ? { onDeleteChat: onDeleteEmbedChat } : {})}
           isGitRepo={isGitRepo}
           openInTarget={threadWorkspaceCwd}
           activeProjectScripts={isEditorRail ? undefined : activeProjectScripts}

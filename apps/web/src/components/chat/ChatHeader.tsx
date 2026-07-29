@@ -28,6 +28,7 @@ import {
   PanelRightCloseIcon,
   PlusIcon,
   TerminalIcon,
+  Trash2,
   XIcon,
 } from "~/lib/icons";
 import { formatRelativeTime } from "~/lib/relativeTime";
@@ -87,6 +88,7 @@ interface ChatHeaderProps {
   hideWorkspaceControls?: boolean;
   historyProjectId?: ProjectId;
   onNewChat?: () => void;
+  onDeleteChat?: (threadId: ThreadId, threadTitle: string) => void;
   isGitRepo: boolean;
   openInTarget: string | null;
   activeProjectScripts: ProjectScript[] | undefined;
@@ -171,6 +173,7 @@ function EditorChatHistoryMenu(props: {
   onNavigateToThread: (threadId: ThreadId) => void;
   triggerTitle?: string;
   onNewChat?: () => void;
+  onDeleteChat?: (threadId: ThreadId, threadTitle: string) => void;
 }) {
   const { settings } = useAppSettings();
   const selectDisplayThreads = createSidebarDisplayThreadsSelector();
@@ -190,7 +193,9 @@ function EditorChatHistoryMenu(props: {
               className="flex min-w-0 items-center gap-1.5 rounded-md px-1 py-0.5 text-left text-[length:var(--app-font-size-ui,12px)] font-normal text-foreground transition-colors hover:bg-secondary"
               aria-label={`${props.triggerTitle}, open chat history`}
             >
-              <span className="max-w-[clamp(12rem,42vw,36rem)] truncate">{props.triggerTitle}</span>
+              <span className="max-w-[min(10rem,calc(100vw-5.5rem))] truncate">
+                {props.triggerTitle}
+              </span>
               <HistoryIcon className="size-3 shrink-0 text-muted-foreground" />
             </button>
           ) : (
@@ -219,6 +224,7 @@ function EditorChatHistoryMenu(props: {
           historyThreads.map((thread) => (
             <MenuItem
               key={thread.id}
+              className="group"
               onClick={() => {
                 if (thread.id !== props.activeThreadId) {
                   props.onNavigateToThread(thread.id);
@@ -238,6 +244,25 @@ function EditorChatHistoryMenu(props: {
                   {formatRelativeTime(thread.updatedAt ?? thread.createdAt)}
                 </span>
               )}
+              {props.onDeleteChat ? (
+                <button
+                  type="button"
+                  className="ml-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-60 transition-[color,background-color,opacity] hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
+                  aria-label={`Delete thread "${thread.title}"`}
+                  title="Delete thread"
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    props.onDeleteChat?.(thread.id, thread.title);
+                  }}
+                >
+                  <Trash2 className="size-3.25" />
+                </button>
+              ) : null}
             </MenuItem>
           ))
         )}
@@ -525,6 +550,7 @@ export function ChatHeader({
   hideWorkspaceControls: hideWorkspaceControlsProp,
   historyProjectId,
   onNewChat,
+  onDeleteChat,
   isGitRepo,
   openInTarget,
   activeProjectScripts,
@@ -735,6 +761,7 @@ export function ChatHeader({
                     onNavigateToThread={onNavigateToThread}
                     triggerTitle={activeThreadTitle}
                     {...(onNewChat ? { onNewChat } : {})}
+                    {...(onDeleteChat ? { onDeleteChat } : {})}
                   />
                 ) : (
                   <h2
