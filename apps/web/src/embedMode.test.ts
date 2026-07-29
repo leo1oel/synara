@@ -1,0 +1,84 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import {
+  initializeEmbedMode,
+  postEmbedReadyToLattice,
+  readEmbedMode,
+  readEmbeddedHostWsUrl,
+  SYNARA_EMBED_READY,
+} from "./embedMode";
+
+function installBrowserStubs() {
+  const values = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => values.set(key, value),
+    removeItem: (key: string) => values.delete(key),
+  };
+  const replaceState = vi.fn();
+  const postMessage = vi.fn();
+  Object.defineProperty(globalThis, "sessionStorage", {
+    configurable: true,
+    value: storage,
+  });
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      location: {
+        origin: "http://127.0.0.1:4567",
+        pathname: "/",
+        search: "?embed=1&workspaceRoot=%2FUsers%2Fme%2Fpaper&theme=dark&hostOrigin=http%3A%2F%2Flocalhost%3A1420",
+        hash: "#lattice-auth=secret-token",
+      },
+      history: { state: null, replaceState },
+      parent: { postMessage },
+    },
+  });
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: {
+      referrer: "",
+      documentElement: {
+        dataset: {},
+        classList: { toggle: vi.fn() },
+        style: { setProperty: vi.fn() },
+      },
+    },
+  });
+  return { postMessage, replaceState };
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe("Lattice embed mode", () => {
+  it("moves the sidecar credential out of the fragment before opening WebSocket RPC", () => {
+    const { replaceState } = installBrowserStubs();
+
+    initializeEmbedMode();
+
+    expect(readEmbedMode()).toEqual({
+      workspaceRoot: "/Users/me/paper",
+      theme: "dark",
+      hostOrigin: "http://localhost:1420",
+    });
+    expect(readEmbeddedHostWsUrl()).toBe("ws://127.0.0.1:4567/?token=secret-token");
+    expect(replaceState).toHaveBeenCalledWith(
+      null,
+      "",
+      "/?embed=1&workspaceRoot=%2FUsers%2Fme%2Fpaper&theme=dark&hostOrigin=http%3A%2F%2Flocalhost%3A1420",
+    );
+  });
+
+  it("reports readiness only to the configured Lattice origin", () => {
+    const { postMessage } = installBrowserStubs();
+    initializeEmbedMode();
+    const config = readEmbedMode();
+    expect(config).not.toBeNull();
+
+    postEmbedReadyToLattice(config!);
+
+    expect(postMessage).toHaveBeenCalledWith({ type: SYNARA_EMBED_READY }, "http://localhost:1420");
+  });
+});

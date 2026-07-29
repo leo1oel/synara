@@ -1,6 +1,7 @@
 import type { RuntimeMode } from "@synara/contracts";
 
 const EMBED_MODE_STORAGE_KEY = "synara.poc.embed-mode";
+const EMBED_AUTH_TOKEN_STORAGE_KEY = "synara.poc.embed-auth-token";
 export const EMBED_UI_FONT_STACK =
   '"Inter Variable", Inter, "Avenir Next", "Segoe UI", sans-serif';
 
@@ -13,6 +14,7 @@ export const SYNARA_LAYOUT_METRICS = "synara:layout-metrics";
 export const SYNARA_SETTINGS_CONTENT_HEIGHT = "synara:settings-content-height";
 export const SYNARA_SETTINGS_WHEEL = "synara:settings-wheel";
 export const SYNARA_OPEN_EXTERNAL = "synara:open-external";
+export const SYNARA_EMBED_READY = "synara:embed-ready";
 
 export interface EmbedModeConfig {
   workspaceRoot: string;
@@ -149,6 +151,36 @@ export function postExternalLinkToLattice(config: EmbedModeConfig, url: string):
   return true;
 }
 
+export function postEmbedReadyToLattice(config: EmbedModeConfig): void {
+  if (!config.hostOrigin) return;
+  window.parent.postMessage({ type: SYNARA_EMBED_READY }, config.hostOrigin);
+}
+
+function readFragmentAuthToken(): string | null {
+  const fragment = new URLSearchParams(window.location.hash.slice(1));
+  const token = fragment.get("lattice-auth")?.trim() ?? "";
+  if (!token) return null;
+  fragment.delete("lattice-auth");
+  const cleanFragment = fragment.toString();
+  window.history.replaceState(
+    window.history.state,
+    "",
+    `${window.location.pathname}${window.location.search}${cleanFragment ? `#${cleanFragment}` : ""}`,
+  );
+  return token;
+}
+
+export function readEmbeddedHostWsUrl(): string | null {
+  if (typeof window === "undefined" || !readEmbedMode()) return null;
+  const token = sessionStorage.getItem(EMBED_AUTH_TOKEN_STORAGE_KEY)?.trim();
+  if (!token) return null;
+  const url = new URL(window.location.origin);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  url.pathname = "/";
+  url.searchParams.set("token", token);
+  return url.toString();
+}
+
 export function applyEmbedTheme(config: EmbedModeConfig): void {
   const root = document.documentElement;
   root.dataset.synaraEmbed = "true";
@@ -227,10 +259,15 @@ export function initializeEmbedMode(): void {
     const hostOrigin =
       normalizedOrigin(search.get("hostOrigin")) || normalizedOrigin(document.referrer);
     const config: EmbedModeConfig = { workspaceRoot, theme, hostOrigin };
+    const authToken = readFragmentAuthToken();
+    if (authToken) {
+      sessionStorage.setItem(EMBED_AUTH_TOKEN_STORAGE_KEY, authToken);
+    }
     sessionStorage.setItem(EMBED_MODE_STORAGE_KEY, JSON.stringify(config));
     applyEmbedTheme(config);
   } else {
     sessionStorage.removeItem(EMBED_MODE_STORAGE_KEY);
+    sessionStorage.removeItem(EMBED_AUTH_TOKEN_STORAGE_KEY);
   }
 }
 

@@ -79,6 +79,7 @@ function consumeDesktopShutdownTokenFromProcessEnvironment(): string | undefined
 
 interface CliInput {
   readonly mode: Option.Option<RuntimeMode>;
+  readonly dynamicPort: BooleanFlagInput;
   readonly port: Option.Option<number>;
   readonly host: Option.Option<string>;
   readonly synaraHome: Option.Option<string>;
@@ -145,6 +146,7 @@ const CliEnvConfig = Config.all({
       }),
     ),
   ),
+  dynamicPort: optionalBooleanEnvironmentConfig("SYNARA_DYNAMIC_PORT"),
   port: Config.port("SYNARA_PORT").pipe(Config.option, Config.map(Option.getOrUndefined)),
   host: Config.string("SYNARA_HOST").pipe(Config.option, Config.map(Option.getOrUndefined)),
   synaraHome: Config.string("SYNARA_HOME").pipe(Config.option, Config.map(Option.getOrUndefined)),
@@ -172,7 +174,7 @@ const ServerConfigLive = (input: CliInput) =>
     ServerConfig,
     Effect.gen(function* () {
       const cliConfig = yield* CliConfig;
-      const { findAvailablePort } = yield* NetService;
+      const { findAvailablePort, reserveLoopbackPort } = yield* NetService;
       const env = yield* CliEnvConfig.asEffect().pipe(
         Effect.mapError(
           (cause) =>
@@ -184,6 +186,7 @@ const ServerConfigLive = (input: CliInput) =>
       );
 
       const mode = Option.getOrElse(input.mode, () => env.mode);
+      const dynamicPort = resolveBooleanConfig(input.dynamicPort, env.dynamicPort, false);
 
       const port = yield* Option.match(input.port, {
         onSome: (value) => Effect.succeed(value),
@@ -192,7 +195,9 @@ const ServerConfigLive = (input: CliInput) =>
             return Effect.succeed(env.port);
           }
           if (mode === "desktop") {
-            return Effect.succeed(DEFAULT_PORT);
+            return dynamicPort
+              ? reserveLoopbackPort("127.0.0.1")
+              : Effect.succeed(DEFAULT_PORT);
           }
           return findAvailablePort(DEFAULT_PORT);
         },
@@ -465,6 +470,10 @@ const modeFlag = Flag.choice("mode", ["web", "desktop"]).pipe(
   Flag.withDescription("Runtime mode. `desktop` keeps loopback defaults unless overridden."),
   Flag.optional,
 );
+const dynamicPortFlag = optionalBooleanFlag("dynamic-port", {
+  description:
+    "Select an available localhost port at startup (equivalent to SYNARA_DYNAMIC_PORT).",
+});
 const portFlag = Flag.integer("port").pipe(
   Flag.withSchema(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 65535 }))),
   Flag.withDescription("Port for the HTTP/WebSocket server."),
@@ -531,6 +540,7 @@ const mcpIntegrationFlag = Flag.string("integration").pipe(
 // leaves the subcommand flag unset.
 const baseServerCommand = Command.make("synara", {
   mode: modeFlag,
+  dynamicPort: dynamicPortFlag,
   port: portFlag,
   host: hostFlag,
   synaraHome: synaraHomeFlag,

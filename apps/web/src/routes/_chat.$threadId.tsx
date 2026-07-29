@@ -3,6 +3,7 @@
 // Layer: Route container
 
 import { type ProjectId, ThreadId } from "@synara/contracts";
+import { workspaceRootsEqual } from "@synara/shared/threadWorkspace";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -17,7 +18,7 @@ import {
 } from "../chatRouteRecovery";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { parseDiffRouteSearch, stripDiffSearchParams } from "../diffRouteSearch";
-import { readEmbedMode } from "../embedMode";
+import { postEmbedReadyToLattice, readEmbedMode } from "../embedMode";
 import { useHandleNewThread } from "../hooks/useHandleNewThread";
 import { createOrRecoverProjectFromPath } from "../lib/projectCreation";
 import { readNativeApi } from "../nativeApi";
@@ -30,7 +31,7 @@ import { SplitChatSurface } from "../components/chat/SplitChatSurface";
 import { resolveSingleProjectId } from "./-chatThreadRoute.logic";
 
 function ChatThreadRouteView() {
-  const embedMode = readEmbedMode();
+  const embedMode = useMemo(() => readEmbedMode(), []);
   const { handleNewThread } = useHandleNewThread();
   const embedBindingStartedRef = useRef(false);
   const [embedBindingError, setEmbedBindingError] = useState<string | null>(null);
@@ -60,6 +61,7 @@ function ChatThreadRouteView() {
   const activeProject = useStore((store) =>
     activeProjectId ? store.projects.find((project) => project.id === activeProjectId) ?? null : null,
   );
+  const activeProjectCwd = activeProject?.cwd ?? null;
   const navigate = useNavigate();
   const [missingThreadRecoveryState, setMissingThreadRecoveryState] =
     useState<EmptyRouteRestoreRecoveryState>("idle");
@@ -72,7 +74,11 @@ function ChatThreadRouteView() {
   const recoveryStartedRef = useRef(false);
 
   useEffect(() => {
-    if (!embedMode || activeProject?.cwd === embedMode.workspaceRoot || embedBindingStartedRef.current) {
+    if (
+      !embedMode ||
+      (activeProjectCwd && workspaceRootsEqual(activeProjectCwd, embedMode.workspaceRoot)) ||
+      embedBindingStartedRef.current
+    ) {
       return;
     }
     embedBindingStartedRef.current = true;
@@ -85,11 +91,23 @@ function ChatThreadRouteView() {
       try {
         const initialSnapshot = await api.orchestration.getShellSnapshot();
         useStore.getState().syncServerShellSnapshot(initialSnapshot);
-        const result = await createOrRecoverProjectFromPath({
-          api,
-          workspaceRoot: embedMode.workspaceRoot,
-          loadSnapshot: () => api.orchestration.getShellSnapshot(),
-        });
+        const existingProject = initialSnapshot.projects.find(
+          (project) =>
+            project.kind === "project" &&
+            workspaceRootsEqual(project.workspaceRoot, embedMode.workspaceRoot),
+        );
+        const result = existingProject
+          ? {
+              projectId: existingProject.id,
+              project: existingProject,
+              snapshot: initialSnapshot,
+              created: false,
+            }
+          : await createOrRecoverProjectFromPath({
+              api,
+              workspaceRoot: embedMode.workspaceRoot,
+              loadSnapshot: () => api.orchestration.getShellSnapshot(),
+            });
         if (result.snapshot) useStore.getState().syncServerShellSnapshot(result.snapshot);
         await handleNewThread(
           result.projectId,
@@ -108,7 +126,18 @@ function ChatThreadRouteView() {
         );
       }
     })();
-  }, [activeProject?.cwd, embedMode, handleNewThread]);
+  }, [activeProjectCwd, embedMode, handleNewThread]);
+
+  useEffect(() => {
+    if (
+      embedMode &&
+      routeThreadExists &&
+      activeProjectCwd &&
+      workspaceRootsEqual(activeProjectCwd, embedMode.workspaceRoot)
+    ) {
+      postEmbedReadyToLattice(embedMode);
+    }
+  }, [activeProjectCwd, embedMode, routeThreadExists]);
 
   useEffect(() => {
     return () => {
