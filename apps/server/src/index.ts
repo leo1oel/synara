@@ -10,6 +10,7 @@ import { version } from "../package.json" with { type: "json" };
 import { ServerLive } from "./effectServer";
 import { NetService } from "@synara/shared/Net";
 import { FetchHttpClient } from "effect/unstable/http";
+import { startDesktopParentMonitor } from "./desktopParentMonitor";
 
 const RuntimeLayer = Layer.empty.pipe(
   Layer.provideMerge(CliConfig.layer),
@@ -19,6 +20,8 @@ const RuntimeLayer = Layer.empty.pipe(
   Layer.provideMerge(NodeServices.layer),
   Layer.provideMerge(FetchHttpClient.layer),
 );
+
+startDesktopParentMonitor();
 
 Command.run(synaraCli, { version })
   .pipe(Effect.provide(RuntimeLayer))
