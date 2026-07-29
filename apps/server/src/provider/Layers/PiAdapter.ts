@@ -41,6 +41,7 @@ import {
 import { Effect, FileSystem, Layer, Option, Queue, Stream } from "effect";
 
 import { takeSynaraHarnessPolicyForProviderSession } from "../../agentGateway/harnessPolicy.ts";
+import { ACTIVE_AGENT_HOST_PROFILE } from "../../agentGateway/hostProfile.ts";
 import {
   callAgentGatewayMcpTool,
   listAgentGatewayMcpTools,
@@ -412,7 +413,7 @@ function piGatewayToolResult(result: unknown): AgentToolResult<unknown> {
           )
           .join("\n")
       : "";
-    throw new Error(message || "Synara gateway tool failed.");
+    throw new Error(message || `${ACTIVE_AGENT_HOST_PROFILE.displayName} gateway tool failed.`);
   }
   const content =
     isRecord(result) && Array.isArray(result.content)
@@ -455,7 +456,7 @@ export async function buildPiAgentGatewayCustomTools(input: {
     ...(input.fetch === undefined ? {} : { fetch: input.fetch }),
   });
   if (tools.length === 0) {
-    throw new Error("Synara MCP returned an empty tool catalog.");
+    throw new Error(`${ACTIVE_AGENT_HOST_PROFILE.displayName} MCP returned an empty tool catalog.`);
   }
   return tools.map((tool) =>
     input.defineTool({

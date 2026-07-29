@@ -91,6 +91,7 @@ import {
 
 import { buildClaudeMcpServers } from "../../agentGateway/mcpInjection.ts";
 import { renderSynaraHarnessPolicy } from "../../agentGateway/harnessPolicy.ts";
+import { ACTIVE_AGENT_HOST_PROFILE } from "../../agentGateway/hostProfile.ts";
 import { AgentGatewayCredentials } from "../../agentGateway/Services/AgentGatewayCredentials.ts";
 import { PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY } from "../Services/ProviderAdapter.ts";
 import {
@@ -1023,7 +1024,7 @@ const CLAUDE_CONTEXT_USAGE_TIMEOUT_MS = 1_000;
 const CLAUDE_INTERRUPT_TIMEOUT = Duration.seconds(10);
 export const buildEmbeddedClaudeSystemPromptAppend = (gatewayControlAvailable: boolean) =>
   [
-    "You are running inside Synara, a coding app that embeds the Claude Agent SDK.",
+    `You are running inside ${ACTIVE_AGENT_HOST_PROFILE.displayName}, an app that embeds the Claude Agent SDK.`,
     "Do not present the host app as Claude Code unless the user is explicitly asking about Claude Code.",
     "Treat the current working directory as the active workspace for the task.",
     "When the user asks about the current project, codebase, or repository, proactively inspect files in the current working directory before asking the user where to look.",

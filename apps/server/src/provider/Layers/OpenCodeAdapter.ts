@@ -37,6 +37,7 @@ import {
   ProviderAdapterValidationError,
 } from "../Errors.ts";
 import { takeSynaraHarnessPolicyForProviderSession } from "../../agentGateway/harnessPolicy.ts";
+import { ACTIVE_AGENT_HOST_PROFILE } from "../../agentGateway/hostProfile.ts";
 import { buildOpenCodeMcpServer, SYNARA_MCP_SERVER_NAME } from "../../agentGateway/mcpInjection.ts";
 import { AgentGatewayCredentials } from "../../agentGateway/Services/AgentGatewayCredentials.ts";
 import {
@@ -217,8 +218,8 @@ const installOpenCodeGatewayMcp = Effect.fn("installOpenCodeGatewayMcp")(functio
     operation: "mcp.add",
     detail:
       status?.status === "failed"
-        ? `${input.displayName} Synara MCP connection failed: ${status.error}`
-        : `${input.displayName} Synara MCP connection did not become ready.`,
+        ? `${input.displayName} ${ACTIVE_AGENT_HOST_PROFILE.displayName} MCP connection failed: ${status.error}`
+        : `${input.displayName} ${ACTIVE_AGENT_HOST_PROFILE.displayName} MCP connection did not become ready.`,
   });
 });
 
@@ -3535,7 +3536,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                               : {}),
                             ...(initialAgent ? { agent: initialAgent } : {}),
                             permission: buildOpenCodePermissionRules(input.runtimeMode),
-                            title: `Synara ${input.threadId}`,
+                            title: `${ACTIVE_AGENT_HOST_PROFILE.displayName} ${input.threadId}`,
                           };
                           return client.session.create(
                             sessionCreateInput as unknown as Parameters<

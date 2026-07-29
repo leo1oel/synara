@@ -51,6 +51,7 @@ import {
   SYNARA_AGENT_GATEWAY_TOKEN_ENV,
 } from "./agentGateway/mcpInjection.ts";
 import { SYNARA_GATEWAY_HARNESS_POLICY } from "./agentGateway/harnessPolicy.ts";
+import { ACTIVE_AGENT_HOST_PROFILE } from "./agentGateway/hostProfile.ts";
 import {
   AGENT_GATEWAY_TURN_AUTHORITY_RETIRED,
   type AgentGatewaySessionLease,
@@ -548,7 +549,9 @@ plan content should be human and agent digestible. The final plan must be plan-o
 Do not ask "should I proceed?" in the final output. The user can easily switch out of Plan mode and request implementation if you have included a \`<proposed_plan>\` block in your response. Alternatively, they can decide to stay in Plan mode and continue refining the plan.
 
 Only produce at most one \`<proposed_plan>\` block per turn, and only when you are presenting a complete spec.
-</collaboration_mode>${CODEX_BROWSER_TOOL_ROUTING_INSTRUCTIONS}\n\n${SYNARA_GATEWAY_HARNESS_POLICY}`;
+</collaboration_mode>${
+  ACTIVE_AGENT_HOST_PROFILE.browserToolsEnabled ? CODEX_BROWSER_TOOL_ROUTING_INSTRUCTIONS : ""
+}\n\n${SYNARA_GATEWAY_HARNESS_POLICY}`;
 
 export const CODEX_DEFAULT_MODE_DEVELOPER_INSTRUCTIONS = `<collaboration_mode># Collaboration Mode: Default
 
@@ -561,7 +564,9 @@ Your active mode changes only when new developer instructions with a different \
 The \`request_user_input\` tool is unavailable in Default mode. If you call it while in Default mode, it will return an error.
 
 In Default mode, strongly prefer making reasonable assumptions and executing the user's request rather than stopping to ask questions. If you absolutely must ask a question because the answer cannot be discovered from local context and a reasonable assumption would be risky, ask the user directly with a concise plain-text question. Never write a multiple choice question as a textual assistant message.
-</collaboration_mode>${CODEX_BROWSER_TOOL_ROUTING_INSTRUCTIONS}\n\n${SYNARA_GATEWAY_HARNESS_POLICY}`;
+</collaboration_mode>${
+  ACTIVE_AGENT_HOST_PROFILE.browserToolsEnabled ? CODEX_BROWSER_TOOL_ROUTING_INSTRUCTIONS : ""
+}\n\n${SYNARA_GATEWAY_HARNESS_POLICY}`;
 
 // Maps Synara's simple runtime toggle to Codex thread-level permission overrides.
 function mapCodexRuntimeMode(runtimeMode: RuntimeMode): {
@@ -660,11 +665,26 @@ function spawnCodexAppServer(input: {
     cwd: input.cwd,
     env: input.env,
   });
-  return spawn(prepared.command, prepared.args, {
+  const latticeBibGuard =
+    ACTIVE_AGENT_HOST_PROFILE.id === "lattice" && process.platform === "darwin";
+  const command = latticeBibGuard ? "/usr/bin/sandbox-exec" : prepared.command;
+  const args = latticeBibGuard
+    ? [
+        "-p",
+        [
+          "(version 1)",
+          "(allow default)",
+          '(deny file-write* (regex #".*[.][bB][iI][bB]$"))',
+        ].join("\n"),
+        prepared.command,
+        ...prepared.args,
+      ]
+    : prepared.args;
+  return spawn(command, args, {
     cwd: input.cwd,
     env: input.env,
     stdio: ["pipe", "pipe", "pipe"],
-    shell: prepared.shell,
+    shell: latticeBibGuard ? false : prepared.shell,
     windowsHide: prepared.windowsHide,
     windowsVerbatimArguments: prepared.windowsVerbatimArguments,
   });
@@ -689,8 +709,8 @@ export function normalizeCodexModelSlug(
 export function buildCodexInitializeParams() {
   return {
     clientInfo: {
-      name: "synara_desktop",
-      title: "Synara Desktop",
+      name: `${ACTIVE_AGENT_HOST_PROFILE.id}_desktop`,
+      title: `${ACTIVE_AGENT_HOST_PROFILE.displayName} Desktop`,
       version: "0.1.0",
     },
     capabilities: {

@@ -1,3 +1,5 @@
+import { ACTIVE_AGENT_HOST_PROFILE } from "../agentGateway/hostProfile.ts";
+
 /**
  * Shared plan-mode helpers for provider adapters.
  *
@@ -7,7 +9,7 @@
  */
 
 export const PROVIDER_PLAN_MODE_PROMPT_PREFIX = [
-  "Synara plan mode is active.",
+  `${ACTIVE_AGENT_HOST_PROFILE.displayName} plan mode is active.`,
   "Do not implement or mutate files in this turn. You may inspect or ask targeted questions as needed.",
   "When you are ready to present the final plan, wrap only the final plan markdown in these exact tags:",
   "<proposed_plan>",

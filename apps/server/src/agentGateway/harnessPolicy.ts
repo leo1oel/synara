@@ -1,6 +1,7 @@
 import type { ProviderKind } from "@synara/contracts";
 
 import { AUTOMATION_AUTHORING_GUIDANCE } from "./automationAuthoringGuidance.ts";
+import { ACTIVE_AGENT_HOST_PROFILE } from "./hostProfile.ts";
 
 /** Canonical, versioned host policy delivered to every supported provider. */
 export const SYNARA_HARNESS_POLICY_VERSION = "2026-07-25.2";
@@ -16,6 +17,25 @@ export interface SynaraHarnessCapabilities {
  * Synara resources.
  */
 export function renderSynaraHarnessPolicy(capabilities: SynaraHarnessCapabilities): string {
+  if (ACTIVE_AGENT_HOST_PROFILE.id === "lattice") {
+    return [
+      "[Lattice host policy v1]",
+      "You are working inside Lattice, a local-first research-writing environment. Lattice is the host and tool authority for this session.",
+      "Work only within the active Lattice project and respect the current permission mode, project boundary, and stop requests.",
+      ...(capabilities.gatewayControlAvailable
+        ? [
+            "Use the provided Lattice tools to inspect the current task, read task history, diagnose task execution, discover literature, retrieve papers, and manage citations.",
+          ]
+        : [
+            "Lattice task and literature tools are unavailable in this provider session. Do not claim that a Lattice tool action succeeded.",
+          ]),
+      "Use search_literature only for discovery. Search results and metadata are not paper evidence. Fetch or read the paper before making source-grounded claims.",
+      "Use fetch_paper to retrieve and cache a paper's complete text and metadata without adding it to the bibliography.",
+      "Use cite to add or reuse a bibliography entry and obtain the exact citation key.",
+      "Never modify a .bib file directly, including through file-editing tools, patches, shell commands, scripts, or external bibliography utilities. Use cite, upgrade_bibliography, or remove_reference for every bibliography mutation.",
+      "Do not claim that a Lattice tool action succeeded unless the tool returned a successful result.",
+    ].join("\n");
+  }
   const controlPolicy = capabilities.gatewayControlAvailable
     ? [
         "Use the synara_* tools for Synara threads, projects, automations, and coordination.",
@@ -94,10 +114,11 @@ export function takeSynaraHarnessPolicyForSession(
 ): string | null {
   if (state.harnessPolicyDelivered === true) return null;
   state.harnessPolicyDelivered = true;
+  const contextTag = ACTIVE_AGENT_HOST_PROFILE.contextTag;
   return [
-    "<synara_host_context>",
+    `<${contextTag}>`,
     renderSynaraHarnessPolicy(capabilities),
-    "</synara_host_context>",
+    `</${contextTag}>`,
   ].join("\n");
 }
 

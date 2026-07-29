@@ -16,11 +16,12 @@ import {
 
 import { resolveBaseCodexHomePath, resolveSynaraCodexHomeOverlayPath } from "./codexHomePaths.ts";
 import { buildProviderChildEnvironment } from "./providerChildEnvironment.ts";
+import { SYNARA_MCP_SERVER_NAME } from "./agentGateway/mcpInjection.ts";
 
 const CODEX_PROCESS_SHELL_ENV_NAMES = ["PATH", "SSH_AUTH_SOCK"] as const;
 const CODEX_OVERLAY_SHARED_STATE_FILES = new Set(["auth.json"]);
 const SYNARA_CONFIG_SUPPRESSIONS_FILE = "synara-config-suppressions-v1.json";
-const SYNARA_MANAGED_MCP_TABLE_HEADER = "[mcp_servers.synara]";
+const SYNARA_MANAGED_MCP_TABLE_HEADER = `[mcp_servers.${SYNARA_MCP_SERVER_NAME}]`;
 export const SYNARA_COMPETING_BROWSER_PLUGIN_SECTION_HEADERS = [
   '[plugins."browser@openai-bundled"]',
   '[plugins."chrome@openai-bundled"]',

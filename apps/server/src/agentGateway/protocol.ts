@@ -1,3 +1,5 @@
+import { ACTIVE_AGENT_HOST_PROFILE } from "./hostProfile.ts";
+
 /**
  * Minimal MCP (Model Context Protocol) JSON-RPC handling for the Synara agent
  * gateway.
@@ -153,8 +155,8 @@ export function buildMcpInitializeResult(input: {
       tools: { listChanged: false },
     },
     serverInfo: {
-      name: "synara",
-      title: "Synara App Control",
+      name: ACTIVE_AGENT_HOST_PROFILE.mcpServerName,
+      title: ACTIVE_AGENT_HOST_PROFILE.mcpServerTitle,
       version: input.serverVersion,
     },
     instructions: input.instructions,

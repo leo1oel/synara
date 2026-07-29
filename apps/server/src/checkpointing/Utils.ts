@@ -8,8 +8,9 @@ import {
   TurnId,
 } from "@synara/contracts";
 import { resolveThreadWorkspaceCwd as resolveSharedThreadWorkspaceCwd } from "@synara/shared/threadEnvironment";
+import { ACTIVE_AGENT_HOST_PROFILE } from "../agentGateway/hostProfile.ts";
 
-export const CHECKPOINT_REFS_PREFIX = "refs/synara/checkpoints";
+export const CHECKPOINT_REFS_PREFIX = `refs/${ACTIVE_AGENT_HOST_PROFILE.id}/checkpoints`;
 
 const MANAGED_CHECKPOINT_REF_PATTERN =
   /^refs\/([A-Za-z0-9._-]+)\/checkpoints\/([A-Za-z0-9_-]+)\/(turn|message-start|turn-start|turn-live|revert-rescue)\/([A-Za-z0-9_-]+)$/;

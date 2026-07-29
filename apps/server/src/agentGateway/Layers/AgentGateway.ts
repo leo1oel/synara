@@ -75,13 +75,20 @@ import { makeThreadReadTools } from "../threadReadTools.ts";
 import { makeThreadDiagnosticTools } from "../threadDiagnosticTools.ts";
 import { pruneProjectedArchivedManagedWorktrees } from "../../managedWorktrees.ts";
 import { resolveThreadWorkspaceCwd } from "../../checkpointing/Utils.ts";
+import {
+  ACTIVE_AGENT_HOST_PROFILE,
+  adaptToolsForActiveHost,
+} from "../hostProfile.ts";
+import { makeLatticeLiteratureTools } from "../latticeLiteratureTools.ts";
 
 // Providers already receive the versioned host policy exactly once in their
 // private prompt. MCP clients prepend initialize.instructions to every exposed
 // tool definition, so repeating the full policy here adds tens of thousands of
 // context characters per round without adding authority or safety.
 const AGENT_GATEWAY_INSTRUCTIONS =
-  "Synara tools are thread-scoped. Use browser_* only for Synara's visible WebView; follow the provider-delivered <synara_host_context> for full policy.";
+  ACTIVE_AGENT_HOST_PROFILE.id === "lattice"
+    ? "Lattice tools are scoped to the active task and project. Follow the provider-delivered <lattice_host_context> for the complete citation and bibliography policy."
+    : "Synara tools are thread-scoped. Use browser_* only for Synara's visible WebView; follow the provider-delivered <synara_host_context> for full policy.";
 
 export const makeAgentGateway = Effect.gen(function* () {
   const credentials = yield* AgentGatewayCredentials;
@@ -608,8 +615,24 @@ export const makeAgentGateway = Effect.gen(function* () {
         );
       }).pipe(Effect.orElseSucceed(() => null)),
   });
+  const latticeLiteratureTools = makeLatticeLiteratureTools({
+    resolveWorkspaceRoot: (context) =>
+      Effect.gen(function* () {
+        const thread = yield* requireThreadShell(context.callerThreadId);
+        const project = yield* snapshotQuery
+          .getProjectShellById(thread.projectId)
+          .pipe(Effect.map(Option.getOrNull));
+        if (!project) return null;
+        return (
+          resolveThreadWorkspaceCwd({
+            thread,
+            projects: [project],
+          }) ?? null
+        );
+      }).pipe(Effect.orElseSucceed(() => null)),
+  });
 
-  const tools: ReadonlyArray<ToolEntry> = [
+  const tools: ReadonlyArray<ToolEntry> = adaptToolsForActiveHost([
     ...readTools,
     ...diagnosticTools,
     createThreads,
@@ -620,7 +643,8 @@ export const makeAgentGateway = Effect.gen(function* () {
     setThreadArchived,
     ...automationTools,
     ...browserTools,
-  ];
+    ...(ACTIVE_AGENT_HOST_PROFILE.id === "lattice" ? latticeLiteratureTools : []),
+  ]);
   return {
     handleMcpPost: makeAgentGatewayMcpTransport({
       credentials,
