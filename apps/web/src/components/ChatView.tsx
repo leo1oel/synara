@@ -384,7 +384,11 @@ import {
   appendBrowserAnnotationsToPrompt,
   formatBrowserAnnotationLabel,
 } from "../lib/browserAnnotations";
-import { appendLatticeHostContextToPrompt } from "../lib/latticeHostContext";
+import {
+  appendLatticeHostContextToPrompt,
+  getLiveLatticeHostContext,
+  setLiveLatticeHostContext,
+} from "../lib/latticeHostContext";
 import {
   appendFileCommentsToPrompt,
   formatFileCommentLabel,
@@ -404,13 +408,13 @@ import {
   LATTICE_AGENT_PERMISSION_MODE_SET,
   postAgentPermissionModeToLattice,
   postHostContextRequestToLattice,
+  postHostContextSelectionClearToLattice,
   postLayoutMetricsToLattice,
   postProjectHistoryToLattice,
   readEmbedMode,
   readLatticeAgentPermissionModeMessage,
   readLatticeCheckpointRestoreMessage,
   readLatticeHostContextMessage,
-  type LatticeHostContextSnapshot,
 } from "../embedMode";
 import { useComposerVoiceController } from "./chat/useComposerVoiceController";
 import {
@@ -501,6 +505,8 @@ import { useChatTerminalController } from "./chat/useChatTerminalController";
 import { useChatAutomationSetup } from "./chat/useChatAutomationSetup";
 import { ComposerActiveTaskListCard } from "./chat/ComposerActiveTaskListCard";
 import { ComposerSubagentStrip } from "./chat/ComposerSubagentStrip";
+import { ComposerLatticeContextBar } from "./chat/ComposerLatticeContextBar";
+import { clearLatticeContextSelection } from "./chat/ComposerLatticeContextBar.logic";
 import {
   collectForegroundRunningSubagentStripItems,
   collectRunningSubagentStripItems,
@@ -1222,12 +1228,11 @@ export default function ChatView({
   );
   const isEditorRail = presentationMode === "editor";
   const isEmbed = presentationMode === "embed";
-  const latticeHostContextRef = useRef<LatticeHostContextSnapshot | null>(null);
   const appendLiveLatticeHostContext = useCallback(
     (text: string) =>
       appendLatticeHostContextToPrompt(
         text,
-        isEmbed ? latticeHostContextRef.current : null,
+        isEmbed ? getLiveLatticeHostContext() : null,
       ),
     [isEmbed],
   );
@@ -4791,11 +4796,23 @@ export default function ChatView({
     if (!embedConfig?.hostOrigin) return;
     const handleHostContext = (event: MessageEvent) => {
       const context = readLatticeHostContextMessage(event, embedConfig);
-      if (context) latticeHostContextRef.current = context;
+      if (context) setLiveLatticeHostContext(context);
     };
     postHostContextRequestToLattice(embedConfig);
     window.addEventListener("message", handleHostContext);
-    return () => window.removeEventListener("message", handleHostContext);
+    return () => {
+      window.removeEventListener("message", handleHostContext);
+      setLiveLatticeHostContext(null);
+    };
+  }, [isEmbed]);
+
+  const clearLiveLatticeHostSelection = useCallback(() => {
+    if (!isEmbed) return;
+    const context = getLiveLatticeHostContext();
+    const embedConfig = readEmbedMode();
+    if (!context || !embedConfig?.hostOrigin) return;
+    setLiveLatticeHostContext(clearLatticeContextSelection(context));
+    postHostContextSelectionClearToLattice(embedConfig);
   }, [isEmbed]);
 
   useEffect(() => {
@@ -10929,6 +10946,18 @@ export default function ChatView({
                   showComposerSubagentStrip
                 }
               />
+              {isEmbed ? (
+                <ComposerLatticeContextBar
+                  onClearSelection={clearLiveLatticeHostSelection}
+                  attachedToPrevious={
+                    showComposerLiveChangesHeader ||
+                    showComposerActiveTaskListCard ||
+                    showComposerWorkflowRunCard ||
+                    showComposerSubagentStrip ||
+                    queuedComposerTurns.length > 0
+                  }
+                />
+              ) : null}
               {/* Pending approvals and AskUserQuestion prompts both render as a detached
                   card floating just above the composer (padding gives the measured gap),
                   instead of a banner fused into the composer surface. An approval takes

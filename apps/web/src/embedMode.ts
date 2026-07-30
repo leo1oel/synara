@@ -14,6 +14,8 @@ export const LATTICE_PROJECT_HISTORY = "lattice:project-history";
 export const LATTICE_RESTORE_AGENT_CHECKPOINT = "lattice:restore-agent-checkpoint";
 export const LATTICE_HOST_CONTEXT = "lattice:host-context";
 export const LATTICE_HOST_CONTEXT_REQUEST = "lattice:request-host-context";
+export const LATTICE_HOST_CONTEXT_SELECTION_CLEAR =
+  "lattice:clear-host-context-selection";
 export const SYNARA_AGENT_PERMISSION_MODE_STATUS = "synara:agent-permission-mode";
 export const SYNARA_LAYOUT_METRICS = "synara:layout-metrics";
 export const SYNARA_SETTINGS_CONTENT_HEIGHT = "synara:settings-content-height";
@@ -285,6 +287,14 @@ export function postHostContextRequestToLattice(config: EmbedModeConfig): void {
   window.parent.postMessage({ type: LATTICE_HOST_CONTEXT_REQUEST }, config.hostOrigin);
 }
 
+export function postHostContextSelectionClearToLattice(config: EmbedModeConfig): void {
+  if (!config.hostOrigin) return;
+  window.parent.postMessage(
+    { type: LATTICE_HOST_CONTEXT_SELECTION_CLEAR },
+    config.hostOrigin,
+  );
+}
+
 export function isRuntimeMode(value: unknown): value is RuntimeMode {
   return value === "approval-required" || value === "auto" || value === "full-access";
 }
@@ -470,8 +480,8 @@ export function applyEmbedTheme(config: EmbedModeConfig): void {
   root.classList.toggle("dark", config.theme === "dark");
   const colors = config.theme === "dark"
     ? {
-        background: "#141416",
-        surface: "#141416",
+        background: "#1b1b1d",
+        surface: "#1b1b1d",
         elevated: "#202023",
         settingsField: "#171718",
         settingsPanel: "#202023",
@@ -485,8 +495,8 @@ export function applyEmbedTheme(config: EmbedModeConfig): void {
         accentSoft: "rgba(255, 255, 255, 0.1)",
       }
     : {
-        background: "#efeff0",
-        surface: "#efeff0",
+        background: "#f9f9fa",
+        surface: "#f9f9fa",
         elevated: "#ffffff",
         settingsField: "#f7f7f6",
         settingsPanel: "#ffffff",

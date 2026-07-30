@@ -3,6 +3,26 @@ import type { LatticeHostContextSnapshot } from "../embedMode";
 export const TRAILING_LATTICE_HOST_CONTEXT_BLOCK_PATTERN =
   /\n*(<lattice_active_context version="1">\n[\s\S]*?\n<\/lattice_active_context>)\s*$/u;
 
+let liveLatticeHostContext: LatticeHostContextSnapshot | null = null;
+const liveLatticeHostContextListeners = new Set<() => void>();
+
+export function getLiveLatticeHostContext(): LatticeHostContextSnapshot | null {
+  return liveLatticeHostContext;
+}
+
+export function setLiveLatticeHostContext(
+  context: LatticeHostContextSnapshot | null,
+): void {
+  if (Object.is(liveLatticeHostContext, context)) return;
+  liveLatticeHostContext = context;
+  for (const listener of liveLatticeHostContextListeners) listener();
+}
+
+export function subscribeLiveLatticeHostContext(listener: () => void): () => void {
+  liveLatticeHostContextListeners.add(listener);
+  return () => liveLatticeHostContextListeners.delete(listener);
+}
+
 export interface ExtractedLatticeHostContext {
   promptText: string;
   context: LatticeHostContextSnapshot | null;

@@ -1,8 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   appendLatticeHostContextToPrompt,
   extractTrailingLatticeHostContext,
+  getLiveLatticeHostContext,
+  setLiveLatticeHostContext,
+  subscribeLiveLatticeHostContext,
 } from "./latticeHostContext";
 
 const context = {
@@ -20,6 +23,18 @@ const context = {
 };
 
 describe("Lattice host context prompt block", () => {
+  it("publishes live snapshots without coupling them to the chat view render", () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeLiveLatticeHostContext(listener);
+
+    setLiveLatticeHostContext(context);
+
+    expect(getLiveLatticeHostContext()).toBe(context);
+    expect(listener).toHaveBeenCalledOnce();
+    unsubscribe();
+    setLiveLatticeHostContext(null);
+  });
+
   it("round-trips a hidden trailing context block", () => {
     const prompt = appendLatticeHostContextToPrompt("Explain this", context);
     expect(prompt).not.toMatch(/synara/i);

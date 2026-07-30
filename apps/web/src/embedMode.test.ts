@@ -6,6 +6,7 @@ import {
   initializeEmbedMode,
   postEmbedReadyToLattice,
   postHostContextRequestToLattice,
+  postHostContextSelectionClearToLattice,
   postProjectHistoryToLattice,
   readEmbedMode,
   readEmbeddedHostWsUrl,
@@ -13,12 +14,13 @@ import {
   readLatticeHostContextMessage,
   LATTICE_HOST_CONTEXT,
   LATTICE_HOST_CONTEXT_REQUEST,
+  LATTICE_HOST_CONTEXT_SELECTION_CLEAR,
   LATTICE_PROJECT_HISTORY,
   LATTICE_RESTORE_AGENT_CHECKPOINT,
   SYNARA_EMBED_READY,
 } from "./embedMode";
 
-function installBrowserStubs() {
+function installBrowserStubs(theme: "light" | "dark" = "dark") {
   const values = new Map<string, string>();
   const storage = {
     getItem: (key: string) => values.get(key) ?? null,
@@ -27,6 +29,7 @@ function installBrowserStubs() {
   };
   const replaceState = vi.fn();
   const postMessage = vi.fn();
+  const setProperty = vi.fn();
   Object.defineProperty(globalThis, "sessionStorage", {
     configurable: true,
     value: storage,
@@ -37,7 +40,7 @@ function installBrowserStubs() {
       location: {
         origin: "http://127.0.0.1:4567",
         pathname: "/",
-        search: "?embed=1&workspaceRoot=%2FUsers%2Fme%2Fpaper&theme=dark&hostOrigin=http%3A%2F%2Flocalhost%3A1420",
+        search: `?embed=1&workspaceRoot=%2FUsers%2Fme%2Fpaper&theme=${theme}&hostOrigin=http%3A%2F%2Flocalhost%3A1420`,
         hash: "#lattice-auth=secret-token",
       },
       history: { state: null, replaceState },
@@ -51,11 +54,11 @@ function installBrowserStubs() {
       documentElement: {
         dataset: {},
         classList: { toggle: vi.fn() },
-        style: { setProperty: vi.fn() },
+        style: { setProperty },
       },
     },
   });
-  return { postMessage, replaceState };
+  return { postMessage, replaceState, setProperty };
 }
 
 afterEach(() => {
@@ -90,6 +93,26 @@ describe("Lattice embed mode", () => {
     postEmbedReadyToLattice(config!);
 
     expect(postMessage).toHaveBeenCalledWith({ type: SYNARA_EMBED_READY }, "http://localhost:1420");
+  });
+
+  it("uses Lattice's shared light side surface in embedded mode", () => {
+    const { setProperty } = installBrowserStubs("light");
+
+    initializeEmbedMode();
+
+    expect(setProperty).toHaveBeenCalledWith("--app-shell-background", "#f9f9fa");
+    expect(setProperty).toHaveBeenCalledWith("--color-background-panel", "#f9f9fa");
+    expect(setProperty).toHaveBeenCalledWith("--sidebar", "#f9f9fa");
+  });
+
+  it("uses Lattice's shared dark side surface in embedded mode", () => {
+    const { setProperty } = installBrowserStubs("dark");
+
+    initializeEmbedMode();
+
+    expect(setProperty).toHaveBeenCalledWith("--app-shell-background", "#1b1b1d");
+    expect(setProperty).toHaveBeenCalledWith("--color-background-panel", "#1b1b1d");
+    expect(setProperty).toHaveBeenCalledWith("--sidebar", "#1b1b1d");
   });
 
   it("matches the embedded workspace without crashing on partially hydrated projects", () => {
@@ -219,6 +242,12 @@ describe("Lattice embed mode", () => {
     postHostContextRequestToLattice(config);
     expect(postMessage).toHaveBeenCalledWith(
       { type: LATTICE_HOST_CONTEXT_REQUEST },
+      "http://localhost:1420",
+    );
+
+    postHostContextSelectionClearToLattice(config);
+    expect(postMessage).toHaveBeenCalledWith(
+      { type: LATTICE_HOST_CONTEXT_SELECTION_CLEAR },
       "http://localhost:1420",
     );
   });
