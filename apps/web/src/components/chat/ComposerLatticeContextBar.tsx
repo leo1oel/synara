@@ -57,6 +57,7 @@ export function ComposerLatticeContextBar({
   const summary = latticeContextSummary(context);
   const details = latticeContextDetails(context);
   const selection = latticeContextSelection(context);
+  if (!selection) return null;
   const disclosureLabel = expanded
     ? "Hide included context details"
     : "Show included context details";

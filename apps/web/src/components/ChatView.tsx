@@ -387,6 +387,7 @@ import {
 import {
   appendLatticeHostContextToPrompt,
   getLiveLatticeHostContext,
+  promptContainsLiveLatticeHostSelection,
   setLiveLatticeHostContext,
 } from "../lib/latticeHostContext";
 import {
@@ -4815,6 +4816,19 @@ export default function ChatView({
     postHostContextSelectionClearToLattice(embedConfig);
   }, [isEmbed]);
 
+  const consumeDispatchedLatticeHostSelection = useCallback((prompt: string) => {
+    if (
+      !isEmbed ||
+      !promptContainsLiveLatticeHostSelection(
+        prompt,
+        getLiveLatticeHostContext(),
+      )
+    ) {
+      return;
+    }
+    clearLiveLatticeHostSelection();
+  }, [clearLiveLatticeHostSelection, isEmbed]);
+
   useEffect(() => {
     if (!isEmbed) return;
     const embedConfig = readEmbedMode();
@@ -8099,6 +8113,7 @@ export default function ChatView({
         }),
       );
       turnStartSucceeded = true;
+      consumeDispatchedLatticeHostSelection(outgoingMessageText);
       // Non-Codex steers interrupt the live turn before re-dispatching; hold
       // queued auto-dispatch through that gap so it can't race the steer. The
       // live session provider decides the interrupt path server-side, so the
@@ -8593,6 +8608,7 @@ export default function ChatView({
         ...(sourceProposedPlan ? { sourceProposedPlan } : {}),
         createdAt: messageCreatedAt,
       });
+      consumeDispatchedLatticeHostSelection(outgoingMessageText);
       // Non-Codex steers interrupt the live turn before re-dispatching; hold
       // queued auto-dispatch through that gap so it can't race the steer. The
       // live session provider decides the interrupt path server-side, so the
@@ -8698,6 +8714,7 @@ export default function ChatView({
           interactionMode,
           createdAt: messageCreatedAt,
         });
+        consumeDispatchedLatticeHostSelection(outgoingMessageText);
         return true;
       })()
         .catch((err: unknown) => {
@@ -8714,6 +8731,7 @@ export default function ChatView({
     [
       activeThread,
       appendLiveLatticeHostContext,
+      consumeDispatchedLatticeHostSelection,
       isConnecting,
       isRevertingCheckpoint,
       isSendBusy,
@@ -9005,7 +9023,10 @@ export default function ChatView({
           createdAt,
         });
       })
-      .then(() => api.orchestration.getShellSnapshot())
+      .then(() => {
+        consumeDispatchedLatticeHostSelection(outgoingImplementationPrompt);
+        return api.orchestration.getShellSnapshot();
+      })
       .then((snapshot) => {
         syncServerShellSnapshot(snapshot);
         // Signal that the plan sidebar should open on the new thread.
@@ -9046,6 +9067,7 @@ export default function ChatView({
     activeThreadAssociatedWorktree,
     appendLiveLatticeHostContext,
     beginLocalDispatch,
+    consumeDispatchedLatticeHostSelection,
     isConnecting,
     isSendBusy,
     isServerThread,

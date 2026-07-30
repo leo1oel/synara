@@ -28,6 +28,36 @@ export interface ExtractedLatticeHostContext {
   context: LatticeHostContextSnapshot | null;
 }
 
+interface LatticeHostContextSelection {
+  source: "editor" | "pdf" | "paper";
+  text: string;
+}
+
+function latticeHostContextSelection(
+  context: LatticeHostContextSnapshot | null,
+): LatticeHostContextSelection | null {
+  if (!context) return null;
+  const activeSelection =
+    context.activeSurface === "editor"
+      ? context.editor?.selection
+      : context.activeSurface === "pdf"
+        ? context.pdf?.selection
+        : context.paper?.selection;
+  if (activeSelection) {
+    return { source: context.activeSurface, text: activeSelection };
+  }
+  if (context.editor?.selection) {
+    return { source: "editor", text: context.editor.selection };
+  }
+  if (context.pdf?.selection) {
+    return { source: "pdf", text: context.pdf.selection };
+  }
+  if (context.paper?.selection) {
+    return { source: "paper", text: context.paper.selection };
+  }
+  return null;
+}
+
 export function extractTrailingLatticeHostContext(
   prompt: string,
 ): ExtractedLatticeHostContext {
@@ -46,6 +76,22 @@ export function extractTrailingLatticeHostContext(
   } catch {
     return { promptText, context: null };
   }
+}
+
+export function promptContainsLiveLatticeHostSelection(
+  prompt: string,
+  liveContext: LatticeHostContextSnapshot | null,
+): boolean {
+  const sentSelection = latticeHostContextSelection(
+    extractTrailingLatticeHostContext(prompt).context,
+  );
+  const liveSelection = latticeHostContextSelection(liveContext);
+  return Boolean(
+    sentSelection &&
+    liveSelection &&
+    sentSelection.source === liveSelection.source &&
+    sentSelection.text === liveSelection.text,
+  );
 }
 
 export function appendLatticeHostContextToPrompt(

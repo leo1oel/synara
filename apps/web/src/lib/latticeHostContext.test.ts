@@ -4,6 +4,7 @@ import {
   appendLatticeHostContextToPrompt,
   extractTrailingLatticeHostContext,
   getLiveLatticeHostContext,
+  promptContainsLiveLatticeHostSelection,
   setLiveLatticeHostContext,
   subscribeLiveLatticeHostContext,
 } from "./latticeHostContext";
@@ -54,5 +55,19 @@ describe("Lattice host context prompt block", () => {
     });
     expect(second.match(/<lattice_active_context/g)).toHaveLength(1);
     expect(extractTrailingLatticeHostContext(second).context?.activeSurface).toBe("pdf");
+  });
+
+  it("consumes only the selection that was actually dispatched", () => {
+    const prompt = appendLatticeHostContextToPrompt("Explain this", context);
+
+    expect(promptContainsLiveLatticeHostSelection(prompt, context)).toBe(true);
+    expect(promptContainsLiveLatticeHostSelection(prompt, {
+      ...context,
+      paper: {
+        ...context.paper,
+        selection: "A newer selection.",
+      },
+    })).toBe(false);
+    expect(promptContainsLiveLatticeHostSelection("Explain this", context)).toBe(false);
   });
 });

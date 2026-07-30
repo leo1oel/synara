@@ -37,4 +37,21 @@ describe("ComposerLatticeContextBar", () => {
     expect(markup).toContain('data-testid="composer-lattice-context"');
     setLiveLatticeHostContext(null);
   });
+
+  it("stays hidden when context has no selected text", () => {
+    setLiveLatticeHostContext({
+      type: LATTICE_HOST_CONTEXT,
+      version: 1,
+      workspaceRoot: "/Users/me/paper",
+      activeSurface: "editor",
+      editor: { path: "main.tex", line: 12, column: 4 },
+      pdf: { page: 2, pageCount: 8 },
+    });
+    const markup = renderToStaticMarkup(
+      <ComposerLatticeContextBar />,
+    );
+
+    expect(markup).toBe("");
+    setLiveLatticeHostContext(null);
+  });
 });
