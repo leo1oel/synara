@@ -10,6 +10,7 @@ import {
 } from "./browserAnnotations";
 import { extractTrailingFileComments, type ParsedFileCommentEntry } from "./fileComments";
 import { extractTrailingPastedTexts, type ParsedPastedTextEntry } from "./composerPastedText";
+import { extractTrailingLatticeHostContext } from "./latticeHostContext";
 
 export interface TerminalContextSelection {
   terminalId: string;
@@ -272,7 +273,7 @@ export function appendOriginalComposerPromptBlocks(input: {
   originalPrompt: string;
   messageId?: MessageId;
 }): string {
-  let remainingPrompt = input.originalPrompt;
+  let remainingPrompt = extractTrailingLatticeHostContext(input.originalPrompt).promptText;
   const originalBlocks: string[] = [];
   if (input.messageId) {
     const extractedBrowserAnnotations = extractTrailingBrowserAnnotations(
@@ -345,10 +346,11 @@ export function deriveDisplayedUserMessageState(
   // Trailing blocks are serialized in order: assistant selections, terminal
   // contexts, file comments, pasted text, then browser annotations (outermost).
   // Strip them in reverse so each extractor sees its block at the end.
+  const extractedLatticeContext = extractTrailingLatticeHostContext(prompt);
   const extractedBrowserAnnotations =
     options.messageId === undefined
-      ? { promptText: prompt, annotations: [] }
-      : extractTrailingBrowserAnnotations(prompt, options.messageId);
+      ? { promptText: extractedLatticeContext.promptText, annotations: [] }
+      : extractTrailingBrowserAnnotations(extractedLatticeContext.promptText, options.messageId);
   const extractedPastedTexts = extractTrailingPastedTexts(extractedBrowserAnnotations.promptText);
   const extractedFileComments = extractTrailingFileComments(extractedPastedTexts.promptText);
   const extractedContexts = extractTrailingTerminalContexts(extractedFileComments.promptText);

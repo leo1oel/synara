@@ -22,9 +22,14 @@ export function renderSynaraHarnessPolicy(capabilities: SynaraHarnessCapabilitie
       "[Lattice host policy v1]",
       "You are working inside Lattice, a local-first research-writing environment. Lattice is the host and tool authority for this session.",
       "Work only within the active Lattice project and respect the current permission mode, project boundary, and stop requests.",
+      "A trailing <lattice_active_context> block on a user message reports the live editor, PDF page, or cached paper view plus any explicit selection. Treat its paths as relative to the active project and read the file when more context is needed.",
       ...(capabilities.gatewayControlAvailable
         ? [
-            "Use the provided Lattice tools to inspect the current task, read task history, diagnose task execution, discover literature, retrieve papers, and manage citations.",
+            "Use the provided Lattice tools to inspect the current task, read task history, diagnose execution, coordinate parallel tasks, discover literature, retrieve papers, and manage citations.",
+            "Use agent_capabilities before selecting a provider, model, or provider option for a delegated task.",
+            "For two or more independent tasks, submit one exact create_tasks batch. The array length must equal the requested task count; do not replace a failed durable operation with extra tasks.",
+            "When delegated results are needed, call wait_for_tasks for every created task id, then synthesize all outcomes. Use send_message_to_task only for a scoped follow-up and interrupt_task only when work should stop.",
+            "Provider-native subagents may be used for internal parallel work. Lattice tasks are durable project conversations; use create_task or create_tasks when the user needs separately inspectable task history.",
           ]
         : [
             "Lattice task and literature tools are unavailable in this provider session. Do not claim that a Lattice tool action succeeded.",

@@ -2,57 +2,13 @@
 // Purpose: Render Synara source control as a dedicated Lattice embed surface.
 // Layer: Route screen
 
-import { type ProjectId } from "@synara/contracts";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
 
 import { GitPanel } from "../components/chat/GitPanel";
-import { readEmbedMode } from "../embedMode";
-import { createOrRecoverProjectFromPath } from "../lib/projectCreation";
-import { readNativeApi } from "../nativeApi";
-import { useStore } from "../store";
+import { useEmbeddedWorkspaceProject } from "../hooks/useEmbeddedWorkspaceProject";
 
 function SourceControlRouteView() {
-  const embedMode = readEmbedMode();
-  const matchingProject = useStore((store) =>
-    embedMode
-      ? store.projects.find((project) => project.cwd === embedMode.workspaceRoot) ?? null
-      : null,
-  );
-  const [projectId, setProjectId] = useState<ProjectId | null>(matchingProject?.id ?? null);
-  const [bindingError, setBindingError] = useState<string | null>(null);
-  const bindingStartedRef = useRef(false);
-
-  useEffect(() => {
-    if (!embedMode || matchingProject || bindingStartedRef.current) return;
-    bindingStartedRef.current = true;
-    const api = readNativeApi();
-    if (!api) {
-      setBindingError("Synara server connection is unavailable.");
-      return;
-    }
-    void (async () => {
-      try {
-        const initialSnapshot = await api.orchestration.getShellSnapshot();
-        useStore.getState().syncServerShellSnapshot(initialSnapshot);
-        const result = await createOrRecoverProjectFromPath({
-          api,
-          workspaceRoot: embedMode.workspaceRoot,
-          loadSnapshot: () => api.orchestration.getShellSnapshot(),
-        });
-        if (result.snapshot) useStore.getState().syncServerShellSnapshot(result.snapshot);
-        setProjectId(result.projectId);
-      } catch (error) {
-        setBindingError(
-          error instanceof Error ? error.message : "The Lattice project could not be bound.",
-        );
-      }
-    })();
-  }, [embedMode, matchingProject]);
-
-  useEffect(() => {
-    if (matchingProject) setProjectId(matchingProject.id);
-  }, [matchingProject]);
+  const { embedMode, projectId, bindingError } = useEmbeddedWorkspaceProject();
 
   if (!embedMode) {
     return (
@@ -74,7 +30,6 @@ function SourceControlRouteView() {
         projectId={projectId}
         cwdOverride={embedMode.workspaceRoot}
         showActions
-        onClose={() => window.parent.postMessage({ type: "lattice:close-source-control" }, "*")}
       />
     </div>
   );

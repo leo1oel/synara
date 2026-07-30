@@ -5,10 +5,14 @@ import {
   embedWorkspaceMatches,
   initializeEmbedMode,
   postEmbedReadyToLattice,
+  postHostContextRequestToLattice,
   postProjectHistoryToLattice,
   readEmbedMode,
   readEmbeddedHostWsUrl,
   readLatticeCheckpointRestoreMessage,
+  readLatticeHostContextMessage,
+  LATTICE_HOST_CONTEXT,
+  LATTICE_HOST_CONTEXT_REQUEST,
   LATTICE_PROJECT_HISTORY,
   LATTICE_RESTORE_AGENT_CHECKPOINT,
   SYNARA_EMBED_READY,
@@ -181,5 +185,41 @@ describe("Lattice embed mode", () => {
       threadId: "thread-1",
       turnCount: 1,
     });
+  });
+
+  it("accepts live host context only from the configured Lattice workspace", () => {
+    const { postMessage } = installBrowserStubs();
+    initializeEmbedMode();
+    const config = readEmbedMode()!;
+    const context = {
+      type: LATTICE_HOST_CONTEXT,
+      version: 1,
+      workspaceRoot: "/Users/me/paper/",
+      activeSurface: "editor",
+      editor: {
+        path: "main.tex",
+        line: 8,
+        column: 2,
+        selection: "introduction",
+      },
+      pdf: { page: 2, pageCount: 6 },
+    };
+
+    expect(readLatticeHostContextMessage({
+      source: window.parent,
+      origin: "http://localhost:1420",
+      data: context,
+    } as MessageEvent, config)).toEqual(context);
+    expect(readLatticeHostContextMessage({
+      source: window.parent,
+      origin: "http://localhost:1420",
+      data: { ...context, workspaceRoot: "/Users/me/other" },
+    } as MessageEvent, config)).toBeNull();
+
+    postHostContextRequestToLattice(config);
+    expect(postMessage).toHaveBeenCalledWith(
+      { type: LATTICE_HOST_CONTEXT_REQUEST },
+      "http://localhost:1420",
+    );
   });
 });

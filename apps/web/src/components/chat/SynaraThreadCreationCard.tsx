@@ -5,8 +5,10 @@
 import { PROVIDER_DISPLAY_NAMES } from "@synara/contracts";
 import { formatModelDisplayName } from "@synara/shared/model";
 import { memo } from "react";
+import { GoTasklist } from "react-icons/go";
 
 import type { WorkLogSynaraThreadCreation } from "../../session-logic";
+import { isSynaraEmbedMode } from "../../embedMode";
 import { ProviderIcon } from "../ProviderIcon";
 import { SynaraLogo } from "../SynaraLogo";
 import { Button } from "../ui/button";
@@ -24,11 +26,15 @@ export const SynaraThreadCreationCard = memo(function SynaraThreadCreationCard({
   readonly creation: WorkLogSynaraThreadCreation;
   readonly onOpenThread?: (threadId: string) => void;
 }) {
+  const latticeMode = isSynaraEmbedMode();
   const singleThread = creation.threads.length === 1 ? creation.threads[0] : undefined;
-  const title = singleThread ? "Thread created" : `${creation.createdCount} threads created`;
+  const noun = latticeMode ? "task" : "thread";
+  const title = singleThread
+    ? `${noun[0]!.toUpperCase()}${noun.slice(1)} created`
+    : `${creation.createdCount} ${noun}s created`;
   const summary = singleThread
     ? singleThread.title
-    : `${creation.createdCount}/${creation.requestedCount} requested threads created`;
+    : `${creation.createdCount}/${creation.requestedCount} requested ${noun}s created`;
 
   return (
     <div
@@ -37,7 +43,11 @@ export const SynaraThreadCreationCard = memo(function SynaraThreadCreationCard({
     >
       <div className="flex min-w-0 items-center gap-3 px-3 py-2.5">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[var(--color-background-elevated-secondary)] text-foreground">
-          <SynaraLogo className="h-[22px] w-auto" aria-label="Synara" />
+          {latticeMode ? (
+            <GoTasklist className="size-5" aria-label="Lattice tasks" />
+          ) : (
+            <SynaraLogo className="h-[22px] w-auto" aria-label="Synara" />
+          )}
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate font-system-ui text-[length:var(--app-font-size-ui-lg,13px)] font-medium text-foreground/95">
@@ -61,7 +71,7 @@ export const SynaraThreadCreationCard = memo(function SynaraThreadCreationCard({
             className="shrink-0"
             onClick={() => onOpenThread(singleThread.threadId)}
           >
-            Open thread
+            Open {noun}
           </Button>
         ) : null}
       </div>

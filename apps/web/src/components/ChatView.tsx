@@ -384,6 +384,7 @@ import {
   appendBrowserAnnotationsToPrompt,
   formatBrowserAnnotationLabel,
 } from "../lib/browserAnnotations";
+import { appendLatticeHostContextToPrompt } from "../lib/latticeHostContext";
 import {
   appendFileCommentsToPrompt,
   formatFileCommentLabel,
@@ -402,11 +403,14 @@ import {
   LATTICE_AGENT_PERMISSION_MODE_REQUEST,
   LATTICE_AGENT_PERMISSION_MODE_SET,
   postAgentPermissionModeToLattice,
+  postHostContextRequestToLattice,
   postLayoutMetricsToLattice,
   postProjectHistoryToLattice,
   readEmbedMode,
   readLatticeAgentPermissionModeMessage,
   readLatticeCheckpointRestoreMessage,
+  readLatticeHostContextMessage,
+  type LatticeHostContextSnapshot,
 } from "../embedMode";
 import { useComposerVoiceController } from "./chat/useComposerVoiceController";
 import {
@@ -1218,6 +1222,15 @@ export default function ChatView({
   );
   const isEditorRail = presentationMode === "editor";
   const isEmbed = presentationMode === "embed";
+  const latticeHostContextRef = useRef<LatticeHostContextSnapshot | null>(null);
+  const appendLiveLatticeHostContext = useCallback(
+    (text: string) =>
+      appendLatticeHostContextToPrompt(
+        text,
+        isEmbed ? latticeHostContextRef.current : null,
+      ),
+    [isEmbed],
+  );
   const isInactiveSplitPane = surfaceMode === "split" && !isFocusedPane;
   const composerDraft = useComposerThreadDraft(threadId);
   const prompt = composerDraft.prompt;
@@ -4776,6 +4789,19 @@ export default function ChatView({
     if (!isEmbed) return;
     const embedConfig = readEmbedMode();
     if (!embedConfig?.hostOrigin) return;
+    const handleHostContext = (event: MessageEvent) => {
+      const context = readLatticeHostContextMessage(event, embedConfig);
+      if (context) latticeHostContextRef.current = context;
+    };
+    postHostContextRequestToLattice(embedConfig);
+    window.addEventListener("message", handleHostContext);
+    return () => window.removeEventListener("message", handleHostContext);
+  }, [isEmbed]);
+
+  useEffect(() => {
+    if (!isEmbed) return;
+    const embedConfig = readEmbedMode();
+    if (!embedConfig?.hostOrigin) return;
     const autoModeAvailable = providerModelSupportsAutoRuntimeMode(
       selectedProvider,
       selectedRuntimeModel,
@@ -7755,12 +7781,14 @@ export default function ChatView({
     const messageCreatedAt = new Date().toISOString();
     const outgoingTextSeed =
       messageTextForSend || (composerImagesSnapshot.length > 0 ? IMAGE_ONLY_BOOTSTRAP_PROMPT : "");
-    const outgoingMessageText = formatOutgoingComposerPrompt({
-      provider: selectedProviderForSend,
-      model: selectedModelForSend,
-      effort: selectedPromptEffortForSend,
-      text: outgoingTextSeed,
-    });
+    const outgoingMessageText = appendLiveLatticeHostContext(
+      formatOutgoingComposerPrompt({
+        provider: selectedProviderForSend,
+        model: selectedModelForSend,
+        effort: selectedPromptEffortForSend,
+        text: outgoingTextSeed,
+      }),
+    );
     const mentionedSkillsForSend = filterPromptSkillReferences(
       outgoingMessageText,
       selectedComposerSkillsForSend,
@@ -8469,12 +8497,14 @@ export default function ChatView({
     const threadIdForSend = activeThread.id;
     const messageIdForSend = newMessageId();
     const messageCreatedAt = new Date().toISOString();
-    const outgoingMessageText = formatOutgoingComposerPrompt({
-      provider: queuedTurn?.selectedProvider ?? selectedProvider,
-      model: queuedTurn?.selectedModel ?? selectedModel,
-      effort: queuedTurn?.selectedPromptEffort ?? selectedPromptEffort,
-      text: trimmed,
-    });
+    const outgoingMessageText = appendLiveLatticeHostContext(
+      formatOutgoingComposerPrompt({
+        provider: queuedTurn?.selectedProvider ?? selectedProvider,
+        model: queuedTurn?.selectedModel ?? selectedModel,
+        effort: queuedTurn?.selectedPromptEffort ?? selectedPromptEffort,
+        text: trimmed,
+      }),
+    );
 
     sendInFlightRef.current = true;
     beginLocalDispatch();
@@ -8622,12 +8652,14 @@ export default function ChatView({
         originalPrompt: originalMessage.text,
         messageId,
       });
-      const outgoingMessageText = formatOutgoingComposerPrompt({
-        provider: selectedProvider,
-        model: selectedModel,
-        effort: selectedPromptEffort,
-        text: editedTextWithOriginalContext,
-      });
+      const outgoingMessageText = appendLiveLatticeHostContext(
+        formatOutgoingComposerPrompt({
+          provider: selectedProvider,
+          model: selectedModel,
+          effort: selectedPromptEffort,
+          text: editedTextWithOriginalContext,
+        }),
+      );
       return await (async () => {
         await persistThreadSettingsForNextTurn({
           threadId: activeThread.id,
@@ -8664,6 +8696,7 @@ export default function ChatView({
     },
     [
       activeThread,
+      appendLiveLatticeHostContext,
       isConnecting,
       isRevertingCheckpoint,
       isSendBusy,
@@ -8887,12 +8920,14 @@ export default function ChatView({
     const nextThreadId = newThreadId();
     const planMarkdown = activeProposedPlan.planMarkdown;
     const implementationPrompt = buildPlanImplementationPrompt(planMarkdown);
-    const outgoingImplementationPrompt = formatOutgoingComposerPrompt({
-      provider: selectedProvider,
-      model: selectedModel,
-      effort: selectedPromptEffort,
-      text: implementationPrompt,
-    });
+    const outgoingImplementationPrompt = appendLiveLatticeHostContext(
+      formatOutgoingComposerPrompt({
+        provider: selectedProvider,
+        model: selectedModel,
+        effort: selectedPromptEffort,
+        text: implementationPrompt,
+      }),
+    );
     const nextThreadTitle = truncateTitle(buildPlanImplementationThreadTitle(planMarkdown));
     const nextThreadModelSelection: ModelSelection = selectedModelSelection;
     const sourceProposedPlan = buildSourceProposedPlanReference({
@@ -8992,6 +9027,7 @@ export default function ChatView({
     activeProposedPlan,
     activeThread,
     activeThreadAssociatedWorktree,
+    appendLiveLatticeHostContext,
     beginLocalDispatch,
     isConnecting,
     isSendBusy,
@@ -11407,7 +11443,7 @@ export default function ChatView({
             : {})}
           isSidechat={Boolean(activeThread.sidechatSourceThreadId)}
           hideSidebarControls={isEditorRail || isEmbed}
-          hideHandoffControls={terminalWorkspaceTerminalTabActive || isEditorRail || isEmbed}
+          hideHandoffControls={terminalWorkspaceTerminalTabActive || isEditorRail}
           hideWorkspaceControls={isEmbed}
           {...(isEmbed && activeProject ? { historyProjectId: activeProject.id } : {})}
           {...(isEmbed ? { onNewChat: onNewEmbedChat } : {})}

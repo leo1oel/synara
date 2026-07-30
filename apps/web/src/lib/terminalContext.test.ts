@@ -34,6 +34,7 @@ import {
   appendBrowserAnnotationsToPrompt,
   type BrowserAnnotationDraft,
 } from "./browserAnnotations";
+import { appendLatticeHostContextToPrompt } from "./latticeHostContext";
 
 const BROWSER_ANNOTATION_MESSAGE_ID = MessageId.makeUnsafe("message-browser-annotation");
 
@@ -304,6 +305,26 @@ describe("terminalContext", () => {
       pastedTexts: [],
       browserAnnotations: [],
     });
+  });
+
+  it("keeps live Lattice host context out of displayed and copied text", () => {
+    const prompt = appendLatticeHostContextToPrompt("Explain this selection", {
+      type: "lattice:host-context",
+      version: 1,
+      workspaceRoot: "/tmp/paper",
+      activeSurface: "editor",
+      editor: {
+        path: "main.tex",
+        line: 12,
+        column: 4,
+        selection: "important sentence",
+      },
+    });
+    const displayed = deriveDisplayedUserMessageState(prompt, {
+      messageId: BROWSER_ANNOTATION_MESSAGE_ID,
+    });
+    expect(displayed.visibleText).toBe("Explain this selection");
+    expect(displayed.copyText).toBe("Explain this selection");
   });
 
   it("strips assistant selection transport markup from displayed and copied text", () => {

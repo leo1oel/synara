@@ -44,12 +44,21 @@ export const ACTIVE_AGENT_HOST_PROFILE = resolveAgentHostProfile();
 
 const LATTICE_TOOL_ALIASES = new Map<string, string>([
   ["synara_context", "context"],
-  ["synara_list_threads", "list_threads"],
-  ["synara_read_thread", "read_thread"],
-  ["synara_read_thread_activity", "read_thread_activity"],
-  ["synara_read_thread_events", "read_thread_events"],
-  ["synara_read_thread_runtime_events", "read_thread_runtime_events"],
-  ["synara_diagnose_thread", "diagnose_thread"],
+  ["synara_capabilities", "agent_capabilities"],
+  ["synara_list_projects", "list_projects"],
+  ["synara_list_threads", "list_tasks"],
+  ["synara_read_thread", "read_task"],
+  ["synara_read_thread_activity", "read_task_activity"],
+  ["synara_read_thread_events", "read_task_events"],
+  ["synara_read_thread_runtime_events", "read_task_runtime_events"],
+  ["synara_diagnose_thread", "diagnose_task"],
+  ["synara_wait_for_threads", "wait_for_tasks"],
+  ["synara_create_threads", "create_tasks"],
+  ["synara_create_thread", "create_task"],
+  ["synara_send_message", "send_message_to_task"],
+  ["synara_interrupt_thread", "interrupt_task"],
+  ["synara_set_thread_title", "set_task_title"],
+  ["synara_set_thread_archived", "set_task_archived"],
 ]);
 
 const LATTICE_NATIVE_TOOL_NAMES = new Set([
@@ -68,13 +77,22 @@ export function replaceModelVisibleHostBranding(value: string): string {
   });
 }
 
+function replaceModelVisibleToolAliases(value: string): string {
+  if (ACTIVE_AGENT_HOST_PROFILE.id !== "lattice") return value;
+  let next = value;
+  for (const [upstreamName, latticeName] of LATTICE_TOOL_ALIASES) {
+    next = next.replaceAll(upstreamName, latticeName);
+  }
+  return replaceModelVisibleHostBranding(next);
+}
+
 function replaceStructuredBranding(value: unknown): unknown {
-  if (typeof value === "string") return replaceModelVisibleHostBranding(value);
+  if (typeof value === "string") return replaceModelVisibleToolAliases(value);
   if (Array.isArray(value)) return value.map(replaceStructuredBranding);
   if (value === null || typeof value !== "object") return value;
   return Object.fromEntries(
     Object.entries(value).map(([key, nested]) => [
-      replaceModelVisibleHostBranding(key),
+      replaceModelVisibleToolAliases(key),
       replaceStructuredBranding(nested),
     ]),
   );
@@ -86,7 +104,7 @@ function adaptToolResult(result: McpToolCallResult): McpToolCallResult {
     ...result,
     content: result.content.map((part) =>
       part.type === "text"
-        ? { ...part, text: replaceModelVisibleHostBranding(part.text) }
+        ? { ...part, text: replaceModelVisibleToolAliases(part.text) }
         : part,
     ),
     ...(result.structuredContent === undefined
@@ -101,8 +119,8 @@ function adaptToolResult(result: McpToolCallResult): McpToolCallResult {
 
 /**
  * Keep upstream tool implementations intact and adapt only their model-facing
- * catalog. Lattice intentionally exposes the read/diagnostic subset in phase
- * one; orchestration, automation, and browser control remain unavailable.
+ * catalog. Lattice exposes bounded task coordination while automation and
+ * browser control remain unavailable.
  */
 export function adaptToolsForActiveHost(
   tools: ReadonlyArray<ToolEntry>,
@@ -117,7 +135,10 @@ export function adaptToolsForActiveHost(
         definition: {
           ...tool.definition,
           name: alias ?? tool.definition.name,
-          description: replaceModelVisibleHostBranding(tool.definition.description),
+          description: replaceModelVisibleToolAliases(tool.definition.description),
+          inputSchema: replaceStructuredBranding(
+            tool.definition.inputSchema,
+          ) as typeof tool.definition.inputSchema,
           ...(tool.definition.annotations === undefined
             ? {}
             : {
@@ -126,7 +147,7 @@ export function adaptToolsForActiveHost(
                   ...(tool.definition.annotations.title === undefined
                     ? {}
                     : {
-                        title: replaceModelVisibleHostBranding(
+                        title: replaceModelVisibleToolAliases(
                           tool.definition.annotations.title,
                         ),
                       }),

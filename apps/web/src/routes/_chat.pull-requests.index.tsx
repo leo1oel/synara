@@ -58,6 +58,7 @@ import {
   useDesktopTopBarTrafficLightGutterClassName,
   useDesktopTopBarWindowControlsGutterClassName,
 } from "~/hooks/useDesktopTopBarGutter";
+import { useEmbeddedWorkspaceProject } from "~/hooks/useEmbeddedWorkspaceProject";
 import { RefreshCwIcon } from "~/lib/icons";
 import {
   prefetchPullRequestListState,
@@ -147,6 +148,17 @@ const STATE_TABS: ReadonlyArray<{ value: PullRequestState; label: string }> = [
 
 function PullRequestsRouteView() {
   const search = Route.useSearch();
+  const {
+    embedMode,
+    projectId: embeddedProjectId,
+    bindingError,
+  } = useEmbeddedWorkspaceProject();
+  const scopedProjectId = embedMode
+    ? embeddedProjectId ?? undefined
+    : search.projectId;
+  const workspaceBindingPending = Boolean(
+    embedMode && !embeddedProjectId && !bindingError,
+  );
   const navigate = useNavigate({ from: Route.fullPath });
   const trafficLightGutter = useDesktopTopBarTrafficLightGutterClassName();
   const windowControlsGutter = useDesktopTopBarWindowControlsGutterClassName();
@@ -156,10 +168,13 @@ function PullRequestsRouteView() {
   // Reviewing/Authored tabs are derived below, so involvement switches never hit the network.
   // Manual memoization kept: this file does not compile under React Compiler (see compile-report).
   const listInput = useMemo(
-    () => ({ state: search.state, projectId: search.projectId ?? null }),
-    [search.projectId, search.state],
+    () => ({ state: search.state, projectId: scopedProjectId ?? null }),
+    [scopedProjectId, search.state],
   );
-  const listQuery = useQuery(pullRequestsListQueryOptions(listInput));
+  const listQuery = useQuery({
+    ...pullRequestsListQueryOptions(listInput),
+    enabled: !workspaceBindingPending,
+  });
   const refreshMutation = useMutation(pullRequestsForceRefreshMutationOptions(queryClient));
   const pinMutation = useMutation(pullRequestSetPinnedMutationOptions(queryClient));
   const mutateRefresh = refreshMutation.mutate;
@@ -192,8 +207,8 @@ function PullRequestsRouteView() {
         .toSorted((left, right) => left[1].localeCompare(right[1])),
     [projects],
   );
-  const scopedProjectName = search.projectId
-    ? repositoryProjects.find(([projectId]) => projectId === search.projectId)?.[1]
+  const scopedProjectName = scopedProjectId
+    ? repositoryProjects.find(([projectId]) => projectId === scopedProjectId)?.[1]
     : undefined;
   // Precise fallback for the filtered tabs: when a repository hit the per-repo entry cap, the
   // client-side involvement filter over the truncated superset can miss older matches, so the
@@ -211,9 +226,9 @@ function PullRequestsRouteView() {
     ...pullRequestsExactInvolvementQueryOptions({
       involvement: search.involvement,
       state: search.state,
-      projectId: search.projectId ?? null,
+      projectId: scopedProjectId ?? null,
     }),
-    enabled: needsExactInvolvement,
+    enabled: needsExactInvolvement && !workspaceBindingPending,
   });
   const exactInvolvementPending = needsExactInvolvement && exactInvolvementQuery.isPending;
   const listErrorState = pullRequestQueryErrorState(listQuery);
@@ -230,10 +245,10 @@ function PullRequestsRouteView() {
       if (state === search.state) return;
       void prefetchPullRequestListState(queryClient, {
         state,
-        projectId: search.projectId ?? null,
+        projectId: scopedProjectId ?? null,
       });
     },
-    [queryClient, search.projectId, search.state],
+    [queryClient, scopedProjectId, search.state],
   );
   const activeListData =
     needsExactInvolvement && exactInvolvementQuery.data
@@ -268,9 +283,9 @@ function PullRequestsRouteView() {
   // A crafted URL must not show Project A's list while opening Project B's PR: when the list
   // is project-scoped, the selection must belong to that same project.
   const selectionMatchesScope =
-    search.projectId === undefined ||
+    scopedProjectId === undefined ||
     search.selectedProjectId === undefined ||
-    search.selectedProjectId === search.projectId;
+    search.selectedProjectId === scopedProjectId;
   const selectedInput =
     selectionMatchesScope && search.selectedProjectId && search.selectedRepo && search.number
       ? {
@@ -345,7 +360,7 @@ function PullRequestsRouteView() {
   );
   const handleTogglePinned = useCallback(
     (entry: PullRequestListEntry) => {
-      for (const input of pullRequestPinToggleInputs(entry, search.projectId === undefined)) {
+      for (const input of pullRequestPinToggleInputs(entry, scopedProjectId === undefined)) {
         mutatePin(input, {
           onError: (error) =>
             toastManager.add({
@@ -356,7 +371,7 @@ function PullRequestsRouteView() {
         });
       }
     },
-    [mutatePin, search.projectId],
+    [mutatePin, scopedProjectId],
   );
   const refreshBlocked = refreshMutation.isPending || activeActionCount > 0;
   const handleManualRefresh = useCallback(() => {
@@ -386,12 +401,12 @@ function PullRequestsRouteView() {
               CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
               CHAT_SURFACE_HEADER_PADDING_X_CLASS,
               "drag-region",
-              trafficLightGutter,
-              windowControlsGutter,
+              !embedMode && trafficLightGutter,
+              !embedMode && windowControlsGutter,
             )}
           >
             <div className={cn("flex items-center gap-2", CHAT_SURFACE_HEADER_HEIGHT_CLASS)}>
-              <SidebarHeaderNavigationControls />
+              {!embedMode ? <SidebarHeaderNavigationControls /> : null}
               {/* The title rides the surface header like the automations detail route, so the
                   scroll area opens straight onto the filters and the list. */}
               <h1 className="truncate font-heading text-sm font-medium">Pull requests</h1>
@@ -427,6 +442,11 @@ function PullRequestsRouteView() {
           </header>
           <main className="min-h-0 flex-1 overflow-y-auto">
             <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-5 pb-12 pt-4 sm:px-7">
+              {bindingError ? (
+                <PullRequestWarningNote shape="callout" role="status">
+                  Project binding failed: {bindingError}
+                </PullRequestWarningNote>
+              ) : null}
               {/* Scope first, then search within it: the pills read as the view you are in and
                   the field filters it, which is also the reference layout. */}
               <div className="flex flex-col gap-3">
@@ -452,15 +472,17 @@ function PullRequestsRouteView() {
                       onChange={(event) => updateSearch({ q: event.target.value || undefined })}
                     />
                   </div>
-                  <PullRequestProjectFilterPopover
-                    projects={repositoryProjects}
-                    value={search.projectId}
-                    onChange={(projectId) => updateSearch({ projectId, ...CLEARED_SELECTION })}
-                  />
+                  {!embedMode ? (
+                    <PullRequestProjectFilterPopover
+                      projects={repositoryProjects}
+                      value={search.projectId}
+                      onChange={(projectId) => updateSearch({ projectId, ...CLEARED_SELECTION })}
+                    />
+                  ) : null}
                 </div>
               </div>
 
-              {listQuery.isPending || exactInvolvementPending ? (
+              {workspaceBindingPending || listQuery.isPending || exactInvolvementPending ? (
                 // Mirrors the loaded list's row height and spacing so the switch doesn't jump.
                 <div className="space-y-0.5">
                   {Array.from({ length: 7 }, (_, index) => (
@@ -499,7 +521,7 @@ function PullRequestsRouteView() {
                   selectedProjectId={search.selectedProjectId}
                   selectedRepo={search.selectedRepo}
                   selectedNumber={search.number}
-                  showProjectTitle={search.projectId === undefined}
+                  showProjectTitle={scopedProjectId === undefined}
                   onSelect={handleSelectPullRequest}
                   onTogglePinned={handleTogglePinned}
                 />

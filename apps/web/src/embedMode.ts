@@ -12,6 +12,8 @@ export const LATTICE_AGENT_PERMISSION_MODE_SET = "lattice:set-agent-permission-m
 export const LATTICE_SETTINGS_SECTION_SET = "lattice:set-settings-section";
 export const LATTICE_PROJECT_HISTORY = "lattice:project-history";
 export const LATTICE_RESTORE_AGENT_CHECKPOINT = "lattice:restore-agent-checkpoint";
+export const LATTICE_HOST_CONTEXT = "lattice:host-context";
+export const LATTICE_HOST_CONTEXT_REQUEST = "lattice:request-host-context";
 export const SYNARA_AGENT_PERMISSION_MODE_STATUS = "synara:agent-permission-mode";
 export const SYNARA_LAYOUT_METRICS = "synara:layout-metrics";
 export const SYNARA_SETTINGS_CONTENT_HEIGHT = "synara:settings-content-height";
@@ -23,6 +25,35 @@ export interface EmbedModeConfig {
   workspaceRoot: string;
   theme: "light" | "dark";
   hostOrigin: string | null;
+}
+
+export type LatticeHostSurface = "editor" | "pdf" | "paper";
+
+export interface LatticeHostContextSnapshot {
+  type: typeof LATTICE_HOST_CONTEXT;
+  version: 1;
+  workspaceRoot: string;
+  activeSurface: LatticeHostSurface;
+  editor?: {
+    path: string;
+    line: number;
+    column: number;
+    secondaryPath?: string;
+    selection?: string;
+  };
+  pdf?: {
+    page: number;
+    pageCount: number | null;
+    selection?: string;
+  };
+  paper?: {
+    title: string;
+    arxivId: string;
+    citationKey?: string;
+    path: string;
+    view: "blog" | "fulltext";
+    selection?: string;
+  };
 }
 
 export function embedWorkspaceMatches(
@@ -151,6 +182,107 @@ function normalizedOrigin(value: string | null): string | null {
   } catch {
     return null;
   }
+}
+
+function boundedString(value: unknown, maximum: number): value is string {
+  return typeof value === "string" && value.length <= maximum;
+}
+
+function positiveInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1;
+}
+
+function nonNegativeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
+export function readLatticeHostContextMessage(
+  event: MessageEvent,
+  config: EmbedModeConfig,
+): LatticeHostContextSnapshot | null {
+  if (
+    !config.hostOrigin ||
+    event.source !== window.parent ||
+    event.origin !== config.hostOrigin ||
+    !event.data ||
+    typeof event.data !== "object"
+  ) {
+    return null;
+  }
+  const value = event.data as Record<string, unknown>;
+  if (
+    value.type !== LATTICE_HOST_CONTEXT ||
+    value.version !== 1 ||
+    !boundedString(value.workspaceRoot, 4_096) ||
+    !workspaceRootsEqual(value.workspaceRoot, config.workspaceRoot) ||
+    (value.activeSurface !== "editor" &&
+      value.activeSurface !== "pdf" &&
+      value.activeSurface !== "paper")
+  ) {
+    return null;
+  }
+
+  const editor = value.editor;
+  if (editor !== undefined) {
+    if (!editor || typeof editor !== "object") return null;
+    const candidate = editor as Record<string, unknown>;
+    if (
+      !boundedString(candidate.path, 4_096) ||
+      !positiveInteger(candidate.line) ||
+      !nonNegativeInteger(candidate.column) ||
+      (candidate.secondaryPath !== undefined &&
+        !boundedString(candidate.secondaryPath, 4_096)) ||
+      (candidate.selection !== undefined &&
+        !boundedString(candidate.selection, 12_001))
+    ) {
+      return null;
+    }
+  }
+
+  const pdf = value.pdf;
+  if (pdf !== undefined) {
+    if (!pdf || typeof pdf !== "object") return null;
+    const candidate = pdf as Record<string, unknown>;
+    if (
+      !positiveInteger(candidate.page) ||
+      (candidate.pageCount !== null && !positiveInteger(candidate.pageCount)) ||
+      (candidate.selection !== undefined &&
+        !boundedString(candidate.selection, 12_001))
+    ) {
+      return null;
+    }
+  }
+
+  const paper = value.paper;
+  if (paper !== undefined) {
+    if (!paper || typeof paper !== "object") return null;
+    const candidate = paper as Record<string, unknown>;
+    if (
+      !boundedString(candidate.title, 1_000) ||
+      !boundedString(candidate.arxivId, 128) ||
+      !boundedString(candidate.path, 4_096) ||
+      (candidate.citationKey !== undefined &&
+        !boundedString(candidate.citationKey, 512)) ||
+      (candidate.view !== "blog" && candidate.view !== "fulltext") ||
+      (candidate.selection !== undefined &&
+        !boundedString(candidate.selection, 12_001))
+    ) {
+      return null;
+    }
+  }
+
+  if (
+    (value.activeSurface === "paper" && paper === undefined) ||
+    (value.activeSurface === "pdf" && pdf === undefined)
+  ) {
+    return null;
+  }
+  return value as unknown as LatticeHostContextSnapshot;
+}
+
+export function postHostContextRequestToLattice(config: EmbedModeConfig): void {
+  if (!config.hostOrigin) return;
+  window.parent.postMessage({ type: LATTICE_HOST_CONTEXT_REQUEST }, config.hostOrigin);
 }
 
 export function isRuntimeMode(value: unknown): value is RuntimeMode {
