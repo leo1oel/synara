@@ -26,6 +26,7 @@ import {
   type LucideIcon,
   MessageCircleIcon,
   Minimize2,
+  PaperIcon,
   PluginIcon,
   SkillCubeIcon,
   TemporaryThreadIcon,
@@ -34,14 +35,8 @@ import {
 } from "~/lib/icons";
 import { formatSkillScope } from "~/lib/providerDiscovery";
 import { cn } from "~/lib/utils";
-import {
-  Command,
-  CommandGroup,
-  CommandGroupLabel,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "../ui/command";
+import { Command, CommandGroup, CommandGroupLabel, CommandItem, CommandList, CommandSeparator } from "../ui/command";
+import { ScrollArea } from "../ui/scroll-area";
 import { FileEntryIcon } from "./FileEntryIcon";
 import { ProviderIcon } from "../ProviderIcon";
 import {
@@ -100,6 +95,10 @@ function commandMenuTrailingMeta(item: ComposerCommandItem): string | null {
     return "Plugin";
   }
 
+  if (item.type === "paper") {
+    return "Paper";
+  }
+
   if (item.type === "thread") {
     return null;
   }
@@ -140,6 +139,7 @@ function commandMenuSecondaryText(item: ComposerCommandItem): string | null {
 
   if (
     item.type === "plugin" ||
+    item.type === "paper" ||
     item.type === "skill" ||
     item.type === "local-root" ||
     item.type === "thread"
@@ -151,6 +151,16 @@ function commandMenuSecondaryText(item: ComposerCommandItem): string | null {
 }
 
 export type ComposerCommandItem =
+  | {
+      id: string;
+      type: "paper";
+      arxivId: string;
+      citationKey?: string;
+      view: "blog" | "fulltext";
+      mention: ProviderMentionReference;
+      label: string;
+      description: string;
+    }
   | {
       id: string;
       type: "path";
@@ -243,8 +253,7 @@ type ComposerCommandGroupModel = {
   items: ComposerCommandItem[];
 };
 
-const COMPOSER_COMMAND_GROUP_LABEL_CLASSNAME =
-  "px-2 pt-1.5 pb-1 text-[11px] font-normal text-muted-foreground/60";
+const COMPOSER_COMMAND_GROUP_LABEL_CLASSNAME = "px-2 pt-1.5 pb-1 text-[11px] font-normal text-muted-foreground/60";
 
 export function groupCommandItems(
   items: ComposerCommandItem[],
@@ -252,12 +261,14 @@ export function groupCommandItems(
   groupSlashCommandSections: boolean,
 ): ComposerCommandGroupModel[] {
   if (triggerKind === "mention") {
+    const paperItems = items.filter((item) => item.type === "paper");
     const pluginItems = items.filter((item) => item.type === "plugin");
     const threadItems = items.filter((item) => item.type === "thread");
     const localItems = items.filter((item) => item.type === "local-root" || item.type === "path");
     const agentItems = items.filter((item) => item.type === "agent");
     const otherItems = items.filter(
       (item) =>
+        item.type !== "paper" &&
         item.type !== "plugin" &&
         item.type !== "thread" &&
         item.type !== "local-root" &&
@@ -266,6 +277,9 @@ export function groupCommandItems(
     );
 
     const groups: ComposerCommandGroupModel[] = [];
+    if (paperItems.length > 0) {
+      groups.push({ id: "papers", label: "Papers", items: paperItems });
+    }
     if (pluginItems.length > 0) {
       groups.push({ id: "plugins", label: "Plugins", items: pluginItems });
     }
@@ -292,10 +306,7 @@ export function groupCommandItems(
   const providerItems = items.filter((item) => item.type === "provider-native-command");
   const skillItems = items.filter((item) => item.type === "skill");
   const otherItems = items.filter(
-    (item) =>
-      item.type !== "slash-command" &&
-      item.type !== "provider-native-command" &&
-      item.type !== "skill",
+    (item) => item.type !== "slash-command" && item.type !== "provider-native-command" && item.type !== "skill",
   );
 
   const groups: ComposerCommandGroupModel[] = [];
@@ -326,11 +337,7 @@ export function ComposerCommandMenu(props: {
   onSelect: (item: ComposerCommandItem) => void;
 }) {
   const itemRefs = useRef<Record<string, HTMLElement | null>>({});
-  const groups = groupCommandItems(
-    props.items,
-    props.triggerKind,
-    props.groupSlashCommandSections ?? true,
-  );
+  const groups = groupCommandItems(props.items, props.triggerKind, props.groupSlashCommandSections ?? true);
   const shouldRenderList = props.items.length > 0 || props.triggerKind === "mention";
 
   useEffect(() => {
@@ -348,9 +355,7 @@ export function ComposerCommandMenu(props: {
       autoHighlight={false}
       mode="none"
       onItemHighlighted={(highlightedValue) => {
-        props.onHighlightedItemChange(
-          typeof highlightedValue === "string" ? highlightedValue : null,
-        );
+        props.onHighlightedItemChange(typeof highlightedValue === "string" ? highlightedValue : null);
       }}
     >
       <div className={COMPOSER_COMMAND_MENU_SURFACE_CLASS_NAME}>
@@ -361,23 +366,61 @@ export function ComposerCommandMenu(props: {
                 {groupIndex > 0 ? <CommandSeparator className="my-0.5" /> : null}
                 <CommandGroup>
                   {group.label ? (
-                    <CommandGroupLabel className={COMPOSER_COMMAND_GROUP_LABEL_CLASSNAME}>
-                      {group.label}
-                    </CommandGroupLabel>
+                    group.id === "papers" ? (
+                      <div className="flex items-center justify-between gap-3 pe-5">
+                        <CommandGroupLabel className={COMPOSER_COMMAND_GROUP_LABEL_CLASSNAME}>
+                          {group.label} · {group.items.length}
+                        </CommandGroupLabel>
+                        {group.items.length > 4 ? (
+                          <span className="text-[10.5px] text-muted-foreground/45">Scroll to browse</span>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <CommandGroupLabel className={COMPOSER_COMMAND_GROUP_LABEL_CLASSNAME}>
+                        {group.label}
+                      </CommandGroupLabel>
+                    )
                   ) : null}
-                  {group.items.map((item) => (
-                    <ComposerCommandMenuItem
-                      key={item.id}
-                      item={item}
-                      resolvedTheme={props.resolvedTheme}
-                      isActive={props.activeItemId === item.id}
-                      itemRef={(node) => {
-                        itemRefs.current[item.id] = node;
-                      }}
-                      onHighlight={props.onHighlightedItemChange}
-                      onSelect={props.onSelect}
-                    />
-                  ))}
+                  {group.id === "papers" && group.items.length > 4 ? (
+                    <div className="me-3 h-28 min-h-0" data-paper-mention-scroll-region>
+                      {/* CommandList owns the menu-edge scrollbar. This viewport
+                          owns the Papers scrollbar and stays inset by 12px. */}
+                      <ScrollArea
+                        aria-label={`Papers, ${group.items.length} items`}
+                        scrollFade
+                        scrollbarGutter
+                        viewportClassName="scroll-py-1"
+                      >
+                        {group.items.map((item) => (
+                          <ComposerCommandMenuItem
+                            key={item.id}
+                            item={item}
+                            resolvedTheme={props.resolvedTheme}
+                            isActive={props.activeItemId === item.id}
+                            itemRef={(node) => {
+                              itemRefs.current[item.id] = node;
+                            }}
+                            onHighlight={props.onHighlightedItemChange}
+                            onSelect={props.onSelect}
+                          />
+                        ))}
+                      </ScrollArea>
+                    </div>
+                  ) : (
+                    group.items.map((item) => (
+                      <ComposerCommandMenuItem
+                        key={item.id}
+                        item={item}
+                        resolvedTheme={props.resolvedTheme}
+                        isActive={props.activeItemId === item.id}
+                        itemRef={(node) => {
+                          itemRefs.current[item.id] = node;
+                        }}
+                        onHighlight={props.onHighlightedItemChange}
+                        onSelect={props.onSelect}
+                      />
+                    ))
+                  )}
                 </CommandGroup>
               </div>
             ))}
@@ -394,9 +437,7 @@ export function ComposerCommandMenu(props: {
                   >
                     Files
                   </p>
-                  <p className="px-2 pt-0.5 text-[11px] text-muted-foreground/55">
-                    Type to search for files
-                  </p>
+                  <p className="px-2 pt-0.5 text-[11px] text-muted-foreground/55">Type to search for files</p>
                 </div>
               </>
             ) : null}
@@ -406,9 +447,7 @@ export function ComposerCommandMenu(props: {
           <p
             className={cn(
               "text-muted-foreground/50 text-[11px]",
-              props.isLoading
-                ? "flex h-[calc(1.625rem+0.5rem)] items-center px-2 text-left"
-                : "px-2 py-1.5",
+              props.isLoading ? "flex h-[calc(1.625rem+0.5rem)] items-center px-2 text-left" : "px-2 py-1.5",
             )}
           >
             {props.isLoading
@@ -477,25 +516,15 @@ function commandMenuItemGlyph(item: ComposerCommandItem, theme: "light" | "dark"
           pathValue={item.path}
           kind={item.pathKind}
           theme={theme}
-          className={
-            item.pathKind === "directory" ? cls : COMPOSER_COMMAND_ITEM_FILE_ICON_CLASSNAME
-          }
+          className={item.pathKind === "directory" ? cls : COMPOSER_COMMAND_ITEM_FILE_ICON_CLASSNAME}
         />
       );
     case "local-root":
       return <DeviceLaptopIcon className={cls} />;
     case "fork-target":
-      return item.target === "local" ? (
-        <DeviceLaptopIcon className={cls} />
-      ) : (
-        <WorktreeIcon className={cls} />
-      );
+      return item.target === "local" ? <DeviceLaptopIcon className={cls} /> : <WorktreeIcon className={cls} />;
     case "review-target":
-      return item.target === "changes" ? (
-        <ChangesIcon className={cls} />
-      ) : (
-        <GitBranchIcon className={cls} />
-      );
+      return item.target === "changes" ? <ChangesIcon className={cls} /> : <GitBranchIcon className={cls} />;
     case "slash-command":
       return commandMenuSlashGlyph(item.command, TerminalIcon);
     case "provider-native-command":
@@ -507,6 +536,8 @@ function commandMenuItemGlyph(item: ComposerCommandItem, theme: "light" | "dark"
       return <BrainIcon className={cls} />;
     case "agent":
       return <BotIcon className={cls} />;
+    case "paper":
+      return <PaperIcon className={cls} />;
     case "plugin":
       return <PluginIcon className={cls} />;
     case "thread":
@@ -524,12 +555,7 @@ function ComposerCommandItemIcon(props: {
   isActive: boolean;
 }) {
   return (
-    <span
-      className={cn(
-        COMPOSER_COMMAND_ITEM_ICON_SLOT_CLASSNAME,
-        props.isActive && "text-foreground/70",
-      )}
-    >
+    <span className={cn(COMPOSER_COMMAND_ITEM_ICON_SLOT_CLASSNAME, props.isActive && "text-foreground/70")}>
       {commandMenuItemGlyph(props.item, props.resolvedTheme)}
     </span>
   );
@@ -562,10 +588,7 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem({
     <CommandItem
       ref={itemRef}
       value={item.id}
-      className={cn(
-        COMPOSER_COMMAND_MENU_ITEM_CLASS_NAME,
-        isActive && COMPOSER_COMMAND_MENU_ITEM_ACTIVE_CLASS_NAME,
-      )}
+      className={cn(COMPOSER_COMMAND_MENU_ITEM_CLASS_NAME, isActive && COMPOSER_COMMAND_MENU_ITEM_ACTIVE_CLASS_NAME)}
       onMouseMove={() => {
         if (!isActive) onHighlight(item.id);
       }}
@@ -589,9 +612,7 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem({
           ) : null}
         </div>
         {trailingMeta ? (
-          <span className="shrink-0 pl-2 text-right text-[10.5px] text-muted-foreground/42">
-            {trailingMeta}
-          </span>
+          <span className="shrink-0 pl-2 text-right text-[10.5px] text-muted-foreground/42">{trailingMeta}</span>
         ) : null}
       </div>
     </CommandItem>

@@ -7,7 +7,7 @@ import { PROVIDER_DISPLAY_NAMES, type ProviderKind } from "@synara/contracts";
 import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
 import { sameAppSnapShortcut } from "@synara/shared/appSnapShortcut";
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
-import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {
   type AppSettings,
@@ -27,19 +27,10 @@ import {
 } from "../appSettings";
 import { APP_VERSION } from "../branding";
 import { AdvancedSettingsPanel } from "~/components/settings/AdvancedSettingsPanel";
-import {
-  ArchivedSettingsPanel,
-  WorktreesSettingsPanel,
-} from "~/components/settings/ConversationStorageSettingsPanels";
-import {
-  AppSnapSettingsPanel,
-  NotificationsSettingsPanel,
-} from "~/components/settings/DesktopSettingsPanels";
+import { ArchivedSettingsPanel, WorktreesSettingsPanel } from "~/components/settings/ConversationStorageSettingsPanels";
+import { AppSnapSettingsPanel, NotificationsSettingsPanel } from "~/components/settings/DesktopSettingsPanels";
 import { ModelsSettingsPanel } from "~/components/settings/ModelsSettingsPanel";
-import {
-  isProviderInstallSettingsDirty,
-  ProvidersSettingsPanel,
-} from "~/components/settings/ProvidersSettingsPanel";
+import { isProviderInstallSettingsDirty, ProvidersSettingsPanel } from "~/components/settings/ProvidersSettingsPanel";
 import { ProviderOptionLabel } from "../components/ProviderIcon";
 import ReleaseHistoryDialog from "../components/ReleaseHistoryDialog";
 import { KeyboardShortcutsSettingsPanel } from "../components/settings/KeyboardShortcutsSettingsPanel";
@@ -89,18 +80,16 @@ import { cn, isMacPlatform } from "../lib/utils";
 import { ensureNativeApi, readNativeApi } from "../nativeApi";
 import {
   isSynaraEmbedMode,
+  postEmbedReadyToLattice,
   postSettingsContentHeightToLattice,
   postSettingsWheelToLattice,
   readEmbedMode,
   readLatticeSettingsSectionMessage,
 } from "../embedMode";
 import { sameProviderOrder } from "../providerOrdering";
-import {
-  normalizeSettingsSection,
-  SETTINGS_NAV_ITEMS,
-  SETTINGS_TARGETS,
-} from "../settingsNavigation";
+import { normalizeSettingsSection, SETTINGS_NAV_ITEMS, SETTINGS_TARGETS } from "../settingsNavigation";
 import { SETTINGS_PAGE_BACKGROUND_CLASS_NAME } from "../settingsPanelStyles";
+import { createEmbeddedSettingsHeightReporter, measureEmbeddedSettingsHeight } from "../embeddedSettingsHeight";
 
 // ── Settings taxonomy ──────────────────────────────────────────────────────
 
@@ -192,31 +181,25 @@ function SettingsRouteView() {
   const navigate = useNavigate();
   const routeSearch = useSearch({ strict: false }) as Record<string, unknown>;
   const activeSection = normalizeSettingsSection(routeSearch.section);
+  const [embedUiReady, setEmbedUiReady] = useState(!isEmbed);
+  const embeddedSettingsHeightReporterRef = useRef<{
+    flush: () => number | null;
+    schedule: () => void;
+  } | null>(null);
   const settingsTarget = typeof routeSearch.target === "string" ? routeSearch.target : null;
   const activeSectionItem = SETTINGS_NAV_ITEMS.find((item) => item.id === activeSection)!;
 
-  const {
-    isDefaultActiveTheme,
-    resetAllThemes,
-    resolvedTheme,
-    theme,
-    setTheme,
-    systemUiFont,
-    setSystemUiFont,
-  } = useTheme();
+  const { isDefaultActiveTheme, resetAllThemes, resolvedTheme, theme, setTheme, systemUiFont, setSystemUiFont } =
+    useTheme();
   const { settings, defaults, updateSettings, resetSettings } = useAppSettings();
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const [releaseHistoryOpen, setReleaseHistoryOpen] = useState(false);
   const [resetEpoch, setResetEpoch] = useState(0);
-  const shouldShowFontSmoothing = isMacPlatform(
-    typeof navigator === "undefined" ? "" : navigator.platform,
-  );
+  const shouldShowFontSmoothing = isMacPlatform(typeof navigator === "undefined" ? "" : navigator.platform);
   const visibleTerminalFontFamilySuggestions = useMemo(() => {
     const query = settings.terminalFontFamily.trim().toLowerCase();
     if (!query) return TERMINAL_FONT_FAMILY_SUGGESTIONS;
-    return TERMINAL_FONT_FAMILY_SUGGESTIONS.filter((suggestion) =>
-      suggestion.toLowerCase().includes(query),
-    );
+    return TERMINAL_FONT_FAMILY_SUGGESTIONS.filter((suggestion) => suggestion.toLowerCase().includes(query));
   }, [settings.terminalFontFamily]);
 
   const isGitTextGenerationModelDirty = isGitTextGenerationSettingsDirty(settings, defaults);
@@ -241,49 +224,101 @@ function SettingsRouteView() {
     return () => window.removeEventListener("message", receiveHostMessage);
   }, [isEmbed, navigate]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (!isEmbed) return;
+    const embedConfig = readEmbedMode();
+    if (!embedConfig?.hostOrigin) return;
+    let cancelled = false;
+    const settleEmbeddedUi = async () => {
+      const fonts = (document as Document & { fonts?: FontFaceSet }).fonts;
+      if (fonts && typeof fonts.load === "function") {
+        try {
+          await Promise.all([fonts.load('400 12px "Inter Variable"'), fonts.load('600 18px "Inter Variable"')]);
+        } catch {
+          // A missing FontFaceSet or failed font request must not strand Settings.
+        }
+      }
+      if (cancelled) return;
+      document.documentElement.dataset.synaraSettingsReady = "true";
+      setEmbedUiReady(true);
+      postEmbedReadyToLattice(embedConfig);
+    };
+    document.documentElement.dataset.synaraSettingsReady = "false";
+    void settleEmbeddedUi();
+    return () => {
+      cancelled = true;
+      delete document.documentElement.dataset.synaraSettingsReady;
+    };
+  }, [isEmbed]);
+
+  useLayoutEffect(() => {
+    if (!isEmbed || !embedUiReady) return;
     const embedConfig = readEmbedMode();
     const content = document.querySelector<HTMLElement>(".synara-settings-content");
     if (!embedConfig?.hostOrigin || !content) return;
-    let frame = 0;
-    const reportHeight = () => {
-      window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(() => {
-        postSettingsContentHeightToLattice(
-          embedConfig,
-          Math.max(470, content.getBoundingClientRect().height),
-        );
-      });
-    };
-    reportHeight();
-    const observer = new ResizeObserver(reportHeight);
-    observer.observe(content);
+    const reporter = createEmbeddedSettingsHeightReporter({
+      measure: () => measureEmbeddedSettingsHeight(content),
+      publish: (height) => postSettingsContentHeightToLattice(embedConfig, height, activeSection),
+    });
+    embeddedSettingsHeightReporterRef.current = reporter;
+    reporter.flush();
+
+    const resizeObserver = new ResizeObserver(reporter.schedule);
+    resizeObserver.observe(content);
+    const mutationObserver = new MutationObserver(reporter.schedule);
+    mutationObserver.observe(content, {
+      attributes: true,
+      attributeFilter: ["aria-expanded", "class", "data-state", "hidden", "style"],
+      characterData: true,
+      childList: true,
+      subtree: true,
+    });
+    const fontSet = (document as Document & { fonts?: FontFaceSet }).fonts;
+    const reportAfterFonts = () => reporter.schedule();
+    void fontSet?.ready.then(reportAfterFonts);
+    fontSet?.addEventListener?.("loadingdone", reportAfterFonts);
+    content.addEventListener("load", reporter.schedule, true);
+    content.addEventListener("transitionend", reporter.schedule, true);
+    window.addEventListener("resize", reporter.schedule);
     return () => {
-      observer.disconnect();
-      window.cancelAnimationFrame(frame);
+      if (embeddedSettingsHeightReporterRef.current === reporter) {
+        embeddedSettingsHeightReporterRef.current = null;
+      }
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
+      fontSet?.removeEventListener?.("loadingdone", reportAfterFonts);
+      content.removeEventListener("load", reporter.schedule, true);
+      content.removeEventListener("transitionend", reporter.schedule, true);
+      window.removeEventListener("resize", reporter.schedule);
+      reporter.dispose();
     };
-  }, [activeSection, isEmbed]);
+  }, [activeSection, embedUiReady, isEmbed]);
 
   useEffect(() => {
     if (!isEmbed) return;
     const embedConfig = readEmbedMode();
     if (!embedConfig?.hostOrigin) return;
     const forwardWheel = (event: WheelEvent) => {
-      postSettingsWheelToLattice(embedConfig, event);
+      // Include the current height in the wheel message itself. Sending height
+      // and wheel as separate postMessage tasks let the host clamp the first
+      // gesture against the previous section's stale scroll range.
+      const height = embeddedSettingsHeightReporterRef.current?.flush();
+      postSettingsWheelToLattice(
+        embedConfig,
+        event,
+        height === null || height === undefined ? undefined : { height, section: activeSection },
+      );
       event.preventDefault();
     };
     window.addEventListener("wheel", forwardWheel, { passive: false });
     return () => window.removeEventListener("wheel", forwardWheel);
-  }, [isEmbed]);
+  }, [activeSection, isEmbed]);
 
   // Deep links and sidebar search targets all resolve to stable DOM ids in the active panel.
   useEffect(() => {
     if (!settingsTarget) return;
     const frame = window.requestAnimationFrame(() => {
-      document
-        .getElementById(settingsTarget)
-        ?.scrollIntoView({ block: "start", behavior: "smooth" });
+      document.getElementById(settingsTarget)?.scrollIntoView({ block: "start", behavior: "smooth" });
     });
     return () => window.cancelAnimationFrame(frame);
   }, [activeSection, settingsTarget]);
@@ -293,52 +328,32 @@ function SettingsRouteView() {
     ...(!isDefaultActiveTheme ? [`${resolvedTheme === "dark" ? "Dark" : "Light"} theme pack`] : []),
     ...(settings.defaultProvider !== defaults.defaultProvider ? ["Default provider"] : []),
     ...(settings.defaultThreadEnvMode !== defaults.defaultThreadEnvMode ? ["New thread mode"] : []),
-    ...(settings.sidebarProjectSortOrder !== defaults.sidebarProjectSortOrder
-      ? ["Project sort order"]
-      : []),
-    ...(settings.sidebarThreadSortOrder !== defaults.sidebarThreadSortOrder
-      ? ["Thread sort order"]
-      : []),
+    ...(settings.sidebarProjectSortOrder !== defaults.sidebarProjectSortOrder ? ["Project sort order"] : []),
+    ...(settings.sidebarThreadSortOrder !== defaults.sidebarThreadSortOrder ? ["Thread sort order"] : []),
     ...(settings.showChatsSection !== defaults.showChatsSection ? ["Chats section"] : []),
     ...(settings.showStudioSection !== defaults.showStudioSection ? ["Studio section"] : []),
     ...(settings.uiDensity !== defaults.uiDensity ? ["UI density"] : []),
     ...(settings.chatFontSizePx !== defaults.chatFontSizePx ? ["Base font size"] : []),
     ...(settings.terminalFontSizePx !== defaults.terminalFontSizePx ? ["Terminal font size"] : []),
     ...(settings.terminalFontFamily !== defaults.terminalFontFamily ? ["Terminal font"] : []),
-    ...(shouldShowFontSmoothing &&
-    settings.enableNativeFontSmoothing !== defaults.enableNativeFontSmoothing
+    ...(shouldShowFontSmoothing && settings.enableNativeFontSmoothing !== defaults.enableNativeFontSmoothing
       ? ["Font smoothing"]
       : []),
     ...(settings.timestampFormat !== defaults.timestampFormat ? ["Time format"] : []),
-    ...(settings.enableTaskCompletionToasts !== defaults.enableTaskCompletionToasts
-      ? ["Activity toasts"]
-      : []),
-    ...(settings.enableSystemTaskCompletionNotifications !==
-    defaults.enableSystemTaskCompletionNotifications
+    ...(settings.enableTaskCompletionToasts !== defaults.enableTaskCompletionToasts ? ["Activity toasts"] : []),
+    ...(settings.enableSystemTaskCompletionNotifications !== defaults.enableSystemTaskCompletionNotifications
       ? ["Desktop notifications"]
       : []),
-    ...(settings.enableAssistantStreaming !== defaults.enableAssistantStreaming
-      ? ["Assistant output"]
-      : []),
+    ...(settings.enableAssistantStreaming !== defaults.enableAssistantStreaming ? ["Assistant output"] : []),
     ...(settings.followUpBehavior !== defaults.followUpBehavior ? ["Follow-up behavior"] : []),
     ...(settings.enableAppSnap !== defaults.enableAppSnap ? ["AppSnap"] : []),
-    ...(!sameAppSnapShortcut(settings.appSnapShortcut, defaults.appSnapShortcut)
-      ? ["AppSnap shortcut"]
-      : []),
+    ...(!sameAppSnapShortcut(settings.appSnapShortcut, defaults.appSnapShortcut) ? ["AppSnap shortcut"] : []),
     ...(settings.appSnapPlaySound !== defaults.appSnapPlaySound ? ["AppSnap capture sound"] : []),
-    ...(settings.enableProviderUpdateChecks !== defaults.enableProviderUpdateChecks
-      ? ["Provider update checks"]
-      : []),
+    ...(settings.enableProviderUpdateChecks !== defaults.enableProviderUpdateChecks ? ["Provider update checks"] : []),
     ...(settings.diffWordWrap !== defaults.diffWordWrap ? ["Diff line wrapping"] : []),
-    ...(settings.confirmThreadDelete !== defaults.confirmThreadDelete
-      ? ["Delete confirmation"]
-      : []),
-    ...(settings.confirmThreadArchive !== defaults.confirmThreadArchive
-      ? ["Archive confirmation"]
-      : []),
-    ...(settings.confirmTerminalTabClose !== defaults.confirmTerminalTabClose
-      ? ["Terminal close confirmation"]
-      : []),
+    ...(settings.confirmThreadDelete !== defaults.confirmThreadDelete ? ["Delete confirmation"] : []),
+    ...(settings.confirmThreadArchive !== defaults.confirmThreadArchive ? ["Archive confirmation"] : []),
+    ...(settings.confirmTerminalTabClose !== defaults.confirmTerminalTabClose ? ["Terminal close confirmation"] : []),
     ...(isGitTextGenerationModelDirty ? ["Git writing model"] : []),
     ...(settings.customCodexModels.length > 0 ||
     settings.customClaudeModels.length > 0 ||
@@ -361,9 +376,7 @@ function SettingsRouteView() {
 
     const api = readNativeApi();
     const confirmed = await (api ?? ensureNativeApi()).dialogs.confirm(
-      ["Restore default settings?", `This will reset: ${changedSettingLabels.join(", ")}.`].join(
-        "\n",
-      ),
+      ["Restore default settings?", `This will reset: ${changedSettingLabels.join(", ")}.`].join("\n"),
     );
     if (!confirmed) return;
 
@@ -394,18 +407,14 @@ function SettingsRouteView() {
           isChanged ? (
             <SettingResetButton
               label={resetLabel}
-              onClick={() =>
-                updateSettings({ [settingKey]: defaults[settingKey] } as Partial<AppSettings>)
-              }
+              onClick={() => updateSettings({ [settingKey]: defaults[settingKey] } as Partial<AppSettings>)}
             />
           ) : null
         }
         control={
           <Switch
             checked={settings[settingKey]}
-            onCheckedChange={(checked) =>
-              updateSettings({ [settingKey]: Boolean(checked) } as Partial<AppSettings>)
-            }
+            onCheckedChange={(checked) => updateSettings({ [settingKey]: Boolean(checked) } as Partial<AppSettings>)}
             aria-label={ariaLabel}
           />
         }
@@ -444,10 +453,7 @@ function SettingsRouteView() {
             >
               {PROVIDER_SELECT_OPTIONS.map((provider) => (
                 <SelectItem hideIndicator key={provider} value={provider}>
-                  <ProviderOptionLabel
-                    provider={provider}
-                    label={PROVIDER_DISPLAY_NAMES[provider]}
-                  />
+                  <ProviderOptionLabel provider={provider} label={PROVIDER_DISPLAY_NAMES[provider]} />
                 </SelectItem>
               ))}
             </SettingsSelectControl>
@@ -575,8 +581,7 @@ function SettingsRouteView() {
         {renderBooleanSettingRow({
           settingKey: "showChatsSection",
           title: "Chats",
-          description:
-            "Show the standalone Chats list in the sidebar footer (chats not tied to a project).",
+          description: "Show the standalone Chats list in the sidebar footer (chats not tied to a project).",
           resetLabel: "chats section",
           ariaLabel: "Show the Chats section in the sidebar",
         })}
@@ -659,8 +664,7 @@ function SettingsRouteView() {
           {renderBooleanSettingRow({
             settingKey: "showEnvironmentMarkers",
             title: "Text markers",
-            description:
-              "Show highlighted and underlined transcript text in the Environment panel.",
+            description: "Show highlighted and underlined transcript text in the Environment panel.",
             resetLabel: "text markers section",
             ariaLabel: "Show the Text markers section in the Environment panel",
           })}
@@ -693,9 +697,7 @@ function SettingsRouteView() {
             title="Theme"
             description="Choose how Synara looks across the app."
             resetAction={
-              theme !== "system" ? (
-                <SettingResetButton label="theme" onClick={() => setTheme("system")} />
-              ) : null
+              theme !== "system" ? <SettingResetButton label="theme" onClick={() => setTheme("system")} /> : null
             }
             control={
               <SettingsSegmentedControl
@@ -712,16 +714,8 @@ function SettingsRouteView() {
         </SettingsCard>
 
         <div className="space-y-3">
-          {(resolvedTheme === "dark"
-            ? (["dark", "light"] as const)
-            : (["light", "dark"] as const)
-          ).map((variant) => (
-            <ThemePackEditor
-              key={variant}
-              variant={variant}
-              isActive={resolvedTheme === variant}
-              mode={theme}
-            />
+          {(resolvedTheme === "dark" ? (["dark", "light"] as const) : (["light", "dark"] as const)).map((variant) => (
+            <ThemePackEditor key={variant} variant={variant} isActive={resolvedTheme === variant} mode={theme} />
           ))}
         </div>
       </SettingsSectionShell>
@@ -731,9 +725,7 @@ function SettingsRouteView() {
           title="Use system UI font"
           description="Ignore the theme's custom UI font and render the interface with the native system font (SF Pro on macOS)."
           resetAction={
-            !systemUiFont ? (
-              <SettingResetButton label="system UI font" onClick={() => setSystemUiFont(true)} />
-            ) : null
+            !systemUiFont ? <SettingResetButton label="system UI font" onClick={() => setSystemUiFont(true)} /> : null
           }
           control={
             <Switch
@@ -891,7 +883,7 @@ function SettingsRouteView() {
                   showClear={settings.terminalFontFamily.length > 0}
                   spellCheck={false}
                   autoComplete="off"
-                  placeholder="Default (JetBrains Mono)"
+                  placeholder="Default (TX-02 / JetBrains Mono)"
                   className="w-full sm:w-56"
                   aria-label="Terminal font family"
                 />
@@ -1108,7 +1100,7 @@ function SettingsRouteView() {
             </div>
           </div>
         ) : null}
-        <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
+        <div className="synara-settings-shell flex h-full min-h-0 min-w-0 flex-1 flex-col">
           <div className="synara-settings-scroll flex-1 overflow-y-auto">
             <div
               className={cn(
@@ -1120,9 +1112,7 @@ function SettingsRouteView() {
               {activeSection !== "profile" ? (
                 <div className="synara-settings-heading mb-8 flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <h1 className="text-xl font-medium tracking-tight text-foreground">
-                      {activeSectionItem.label}
-                    </h1>
+                    <h1 className="text-xl font-medium tracking-tight text-foreground">{activeSectionItem.label}</h1>
                     <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
                       {activeSectionItem.description}
                     </p>
@@ -1160,20 +1150,22 @@ function SettingsRouteView() {
                 />
                 <WorktreesSettingsPanel active={activeSection === "worktrees"} />
                 <ArchivedSettingsPanel active={activeSection === "archived"} />
-                <ModelsSettingsPanel
-                  active={activeSection === "models"}
-                  settings={settings}
-                  defaults={defaults}
-                  updateSettings={updateSettings}
-                  resetEpoch={resetEpoch}
-                />
-                <ProvidersSettingsPanel
-                  active={activeSection === "providers"}
-                  settings={settings}
-                  defaults={defaults}
-                  updateSettings={updateSettings}
-                  resetEpoch={resetEpoch}
-                />
+                <div className={activeSection === "providers" ? "space-y-6" : "contents"}>
+                  <ModelsSettingsPanel
+                    active={activeSection === "providers"}
+                    settings={settings}
+                    defaults={defaults}
+                    updateSettings={updateSettings}
+                    resetEpoch={resetEpoch}
+                  />
+                  <ProvidersSettingsPanel
+                    active={activeSection === "providers"}
+                    settings={settings}
+                    defaults={defaults}
+                    updateSettings={updateSettings}
+                    resetEpoch={resetEpoch}
+                  />
+                </div>
                 <ExternalMcpSettingsPanel active={activeSection === "integrations"} />
                 <AdvancedSettingsPanel
                   active={activeSection === "advanced"}

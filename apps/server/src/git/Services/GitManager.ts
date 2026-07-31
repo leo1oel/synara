@@ -8,6 +8,10 @@
  */
 import {
   GitActionProgressEvent,
+  GitConnectGitHubRemoteInput,
+  GitConnectGitHubRemoteResult,
+  GitCreateGitHubRepositoryInput,
+  GitCreateGitHubRepositoryResult,
   GitHandoffThreadInput,
   GitHandoffThreadResult,
   GitPreparePullRequestThreadInput,
@@ -44,11 +48,23 @@ export interface GitRunStackedActionOptions {
  */
 export interface GitManagerShape {
   /**
+   * Attach an existing GitHub repository as the local repository's origin.
+   */
+  readonly connectGitHubRemote: (
+    input: GitConnectGitHubRemoteInput,
+  ) => Effect.Effect<GitConnectGitHubRemoteResult, GitManagerServiceError>;
+
+  /**
+   * Create a GitHub repository for the current local repository without pushing files.
+   */
+  readonly createGitHubRepository: (
+    input: GitCreateGitHubRepositoryInput,
+  ) => Effect.Effect<GitCreateGitHubRepositoryResult, GitManagerServiceError>;
+
+  /**
    * Read current repository Git status plus open PR metadata when available.
    */
-  readonly status: (
-    input: GitStatusInput,
-  ) => Effect.Effect<GitStatusResult, GitManagerServiceError>;
+  readonly status: (input: GitStatusInput) => Effect.Effect<GitStatusResult, GitManagerServiceError>;
 
   /**
    * Read a unified patch for the current repository working tree.
@@ -112,6 +128,4 @@ export interface GitManagerShape {
 /**
  * GitManager - Service tag for stacked Git workflow orchestration.
  */
-export class GitManager extends ServiceMap.Service<GitManager, GitManagerShape>()(
-  "synara/git/Services/GitManager",
-) {}
+export class GitManager extends ServiceMap.Service<GitManager, GitManagerShape>()("synara/git/Services/GitManager") {}

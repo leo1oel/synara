@@ -17,6 +17,12 @@ describe("normalizeFontFamilyCssValue", () => {
 });
 
 describe("normalizeMonospaceFontFamilyCssValue", () => {
+  it("prefers local TX-02 before the bundled JetBrains Mono fallback", () => {
+    expect(DEFAULT_MONOSPACE_FONT_FAMILY_STACK.indexOf('"TX-02 Variable"')).toBeLessThan(
+      DEFAULT_MONOSPACE_FONT_FAMILY_STACK.indexOf('"JetBrains Mono Variable"'),
+    );
+  });
+
   it("appends the default mono stack when a code font has no fallback", () => {
     expect(normalizeMonospaceFontFamilyCssValue("Jetbrains Mono")).toBe(
       `"Jetbrains Mono", ${DEFAULT_MONOSPACE_FONT_FAMILY_STACK}`,
@@ -24,9 +30,7 @@ describe("normalizeMonospaceFontFamilyCssValue", () => {
   });
 
   it("keeps existing generic mono fallbacks intact", () => {
-    expect(normalizeMonospaceFontFamilyCssValue('"Geist Mono", ui-monospace')).toBe(
-      '"Geist Mono", ui-monospace',
-    );
+    expect(normalizeMonospaceFontFamilyCssValue('"Geist Mono", ui-monospace')).toBe('"Geist Mono", ui-monospace');
   });
 
   it("preserves CSS-wide keywords as single values", () => {

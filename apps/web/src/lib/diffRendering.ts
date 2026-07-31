@@ -42,7 +42,8 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
      empty scrollbar track when every line already fits the viewport. */
   --diffs-overflow-override: auto;
   /* Honor the user-chosen chat code font size from settings instead of the library default (13px). */
-  --diffs-font-size: var(--app-font-size-chat-code, 11px);
+  --diffs-font-size: var(--app-font-size-diff-code, var(--app-font-size-chat-code, 11px));
+  --diffs-line-height: var(--app-line-height-diff-code, 20px);
   /* Match the app chrome — set on :host so hunk rows/gutters/separators inherit. */
   --diffs-bg: var(--background) !important;
   --diffs-light-bg: var(--background) !important;
@@ -86,7 +87,8 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
   --diffs-bg-deletion-emphasis: color-mix(in srgb, var(--background) 80%, var(--destructive)) !important;
 
   font-family: var(--font-chat-code-family) !important;
-  font-size: var(--app-font-size-chat-code, 11px) !important;
+  font-size: var(--app-font-size-diff-code, var(--app-font-size-chat-code, 11px)) !important;
+  line-height: var(--app-line-height-diff-code, 20px) !important;
   background-color: var(--background) !important;
 }
 
@@ -95,7 +97,8 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
 [data-file],
 [data-error-wrapper],
 [data-virtualizer-buffer] {
-  --diffs-font-size: var(--app-font-size-chat-code, 11px) !important;
+  --diffs-font-size: var(--app-font-size-diff-code, var(--app-font-size-chat-code, 11px)) !important;
+  --diffs-line-height: var(--app-line-height-diff-code, 20px) !important;
   --diffs-bg: var(--background) !important;
   --diffs-light-bg: var(--background) !important;
   --diffs-dark-bg: var(--background) !important;
@@ -123,12 +126,13 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
   /* Re-assert the code font inside diff hunks because these nodes live in shadow-rooted markup. */
   --diffs-font-family: var(--font-chat-code-family) !important;
   font-family: var(--font-chat-code-family) !important;
-  font-size: var(--app-font-size-chat-code, 11px) !important;
+  font-size: var(--app-font-size-diff-code, var(--app-font-size-chat-code, 11px)) !important;
+  line-height: var(--app-line-height-diff-code, 20px) !important;
 }
 
 [data-file-info] {
   font-family: var(--font-ui-family) !important;
-  font-size: var(--app-font-size-ui, 12px) !important;
+  font-size: var(--app-font-size-diff-header, var(--app-font-size-ui, 12px)) !important;
   background-color: var(--background) !important;
   border-block-color: var(--border) !important;
   color: var(--foreground) !important;
@@ -139,7 +143,7 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
 [data-diffs-header] {
   --diffs-header-font-family: var(--font-ui-family) !important;
   font-family: var(--font-ui-family) !important;
-  font-size: var(--app-font-size-ui, 12px) !important;
+  font-size: var(--app-font-size-diff-header, var(--app-font-size-ui, 12px)) !important;
   position: sticky !important;
   top: 0;
   z-index: 4;
@@ -175,6 +179,9 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
 [data-column-number],
 [data-unmodified-lines] {
   font-family: var(--font-ui-family) !important;
+  font-size: var(--app-font-size-diff-meta, var(--app-font-size-ui-xs, 11px)) !important;
+  line-height: var(--app-line-height-diff-code, 20px) !important;
+  font-weight: var(--app-font-weight-diff-meta, 400) !important;
   font-variant-numeric: tabular-nums !important;
 }
 
@@ -218,6 +225,16 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
     background-color: color-mix(in srgb, var(--foreground) 12%, transparent);
   }
 
+  *::-webkit-scrollbar-thumb:vertical:hover {
+    border-right-width: 4px;
+    border-left-width: 0;
+  }
+
+  *::-webkit-scrollbar-thumb:horizontal:hover {
+    border-top-width: 0;
+    border-bottom-width: 4px;
+  }
+
   *::-webkit-scrollbar-thumb:active {
     background-color: color-mix(in srgb, var(--foreground) 16%, transparent);
   }
@@ -232,11 +249,7 @@ const FNV_PRIME_32 = 0x01000193;
 const SECONDARY_HASH_SEED = 0x9e3779b9;
 const SECONDARY_HASH_MULTIPLIER = 0x85ebca6b;
 
-export function fnv1a32(
-  input: string,
-  seed = FNV_OFFSET_BASIS_32,
-  multiplier = FNV_PRIME_32,
-): number {
+export function fnv1a32(input: string, seed = FNV_OFFSET_BASIS_32, multiplier = FNV_PRIME_32): number {
   let hash = seed >>> 0;
   for (let index = 0; index < input.length; index += 1) {
     hash ^= input.charCodeAt(index);
@@ -248,11 +261,7 @@ export function fnv1a32(
 export function buildPatchCacheKey(patch: string, scope = "diff-panel"): string {
   const normalizedPatch = patch.trim();
   const primary = fnv1a32(normalizedPatch, FNV_OFFSET_BASIS_32, FNV_PRIME_32).toString(36);
-  const secondary = fnv1a32(
-    normalizedPatch,
-    SECONDARY_HASH_SEED,
-    SECONDARY_HASH_MULTIPLIER,
-  ).toString(36);
+  const secondary = fnv1a32(normalizedPatch, SECONDARY_HASH_SEED, SECONDARY_HASH_MULTIPLIER).toString(36);
   return `${scope}:${normalizedPatch.length}:${primary}:${secondary}`;
 }
 
@@ -275,19 +284,13 @@ export type RenderablePatch =
       reason: string;
     };
 
-export function getRenderablePatch(
-  patch: string | undefined,
-  cacheScope = "diff-panel",
-): RenderablePatch | null {
+export function getRenderablePatch(patch: string | undefined, cacheScope = "diff-panel"): RenderablePatch | null {
   if (!patch) return null;
   const normalizedPatch = patch.trim();
   if (normalizedPatch.length === 0) return null;
 
   try {
-    const parsedPatches = parsePatchFiles(
-      normalizedPatch,
-      buildPatchCacheKey(normalizedPatch, cacheScope),
-    );
+    const parsedPatches = parsePatchFiles(normalizedPatch, buildPatchCacheKey(normalizedPatch, cacheScope));
     const files = parsedPatches.flatMap((parsedPatch) => parsedPatch.files);
     if (files.length > 0) {
       return { kind: "files", files };

@@ -49,18 +49,12 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(function Sha
   const tiles: Tile[] = [
     {
       key: "lifetime",
-      value: (
-        <span className={VALUE_CLASS}>
-          {formatCompact(tokenStats?.lifetimeTotalTokens ?? null)}
-        </span>
-      ),
+      value: <span className={VALUE_CLASS}>{formatCompact(tokenStats?.lifetimeTotalTokens ?? null)}</span>,
       label: "lifetime tokens",
     },
     {
       key: "peak",
-      value: (
-        <span className={VALUE_CLASS}>{formatCompact(tokenStats?.peakDayTokens ?? null)}</span>
-      ),
+      value: <span className={VALUE_CLASS}>{formatCompact(tokenStats?.peakDayTokens ?? null)}</span>,
       label: "peak day",
     },
     {
@@ -79,10 +73,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(function Sha
       // slate color keeps currentColor glyphs visible on the white card in every theme.
       value: topProvider.provider ? (
         <span className="flex items-center gap-2">
-          <ProviderIcon
-            provider={topProvider.provider}
-            className="size-6 shrink-0 text-slate-700"
-          />
+          <ProviderIcon provider={topProvider.provider} className="size-6 shrink-0 text-slate-700" />
           {topProvider.percent !== null ? (
             <span className={VALUE_CLASS}>{`${Math.round(topProvider.percent)}%`}</span>
           ) : null}
@@ -101,7 +92,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(function Sha
     <div
       ref={ref}
       style={{ width: `${SHARE_CARD_WIDTH}px`, height: `${SHARE_CARD_HEIGHT}px` }}
-      className="flex flex-col justify-center gap-7 overflow-hidden bg-white px-12 font-sans text-slate-900"
+      className="flex flex-col justify-center gap-7 overflow-hidden bg-[#F9F9FA] px-12 font-sans text-slate-900"
     >
       {/* Header: user-edited identity truncates before it can collide with the fixed brand. */}
       <div className="flex min-w-0 items-center justify-between gap-6">
@@ -114,9 +105,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(function Sha
             textClassName="text-lg font-medium"
           />
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="truncate text-2xl font-normal leading-tight tracking-tight">
-              {displayName}
-            </span>
+            <span className="truncate text-2xl font-normal leading-tight tracking-tight">{displayName}</span>
             <span className="truncate text-base font-normal text-slate-400">{handle}</span>
           </div>
         </div>

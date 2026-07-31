@@ -11,7 +11,7 @@
 import { type FileDiffMetadata } from "@pierre/diffs/react";
 import { type ProjectId, type ThreadId } from "@synara/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 
 import { useTheme } from "~/hooks/useTheme";
 import {
@@ -23,6 +23,7 @@ import {
   summarizeFileDiffStats,
 } from "~/lib/diffRendering";
 import {
+  gitBranchesQueryOptions,
   gitQueryKeys,
   gitStageFilesMutationOptions,
   gitUnstageFilesMutationOptions,
@@ -35,12 +36,14 @@ import { createProjectSelector, createThreadSelector } from "~/storeSelectors";
 import { Alert } from "../ui/alert";
 import { Button } from "../ui/button";
 import { IconButton } from "../ui/icon-button";
-import { DOCK_HEADER_ICON_BUTTON_CLASS } from "./chatHeaderControls";
+import { ScrollArea } from "../ui/scroll-area";
+import { CHAT_SURFACE_HEADER_ACTION_ICON_CLASS_NAME, DOCK_HEADER_ICON_BUTTON_CLASS } from "./chatHeaderControls";
 import { DiffStat } from "./DiffStatLabel";
 import { DockPaneHeader } from "./DockPaneHeader";
 import { FileDiffHeader } from "./FileDiffHeader";
 import { SingleFileDiffBody } from "./FileDiffView";
 import { FileEntryIcon } from "./FileEntryIcon";
+import { GitHubRemoteSetupCard, GitInitializationState } from "./GitRepositorySetup";
 import { PanelStateMessage } from "./PanelStateMessage";
 import GitActionsControl from "../GitActionsControl";
 
@@ -54,10 +57,7 @@ interface SelectedFile {
   path: string;
 }
 
-function parsePatchToSortedFiles(
-  patch: string | undefined,
-  cacheScope: string,
-): FileDiffMetadata[] {
+function parsePatchToSortedFiles(patch: string | undefined, cacheScope: string): FileDiffMetadata[] {
   const renderable = getRenderablePatch(patch, cacheScope);
   return renderable?.kind === "files" ? sortFileDiffsByPath(renderable.files) : [];
 }
@@ -83,22 +83,14 @@ function GitFileRow(props: {
       )}
       onClick={() => props.onSelect(props.fileDiff)}
     >
-      <button
-        type="button"
-        className="flex min-w-0 flex-1 items-center gap-1.5"
-        title={filePath}
-      >
+      <button type="button" className="flex min-w-0 flex-1 items-center gap-1.5" title={filePath}>
         <FileEntryIcon pathValue={filePath} kind="file" theme={props.theme} className="size-4" />
         <span className="min-w-0 truncate text-[12px] text-foreground">
           {dir ? <span className="text-muted-foreground/70">{dir}</span> : null}
           <span>{name}</span>
         </span>
       </button>
-      <DiffStat
-        additions={stat.additions}
-        deletions={stat.deletions}
-        className="shrink-0 text-[11px]"
-      />
+      <DiffStat additions={stat.additions} deletions={stat.deletions} className="shrink-0 text-[11px]" />
       <IconButton
         size="icon-xs"
         variant="ghost"
@@ -111,11 +103,7 @@ function GitFileRow(props: {
           props.onAction([filePath]);
         }}
       >
-        {props.actionIcon === "stage" ? (
-          <PlusIcon className="size-3.5" />
-        ) : (
-          <RotateCcwIcon className="size-3.5" />
-        )}
+        {props.actionIcon === "stage" ? <PlusIcon className="size-3.5" /> : <RotateCcwIcon className="size-3.5" />}
       </IconButton>
     </div>
   );
@@ -192,7 +180,7 @@ function SelectedFileDiff(props: { fileDiff: FileDiffMetadata; theme: "light" | 
         <div className="border-b border-border bg-background">
           <FileDiffHeader fileDiff={props.fileDiff} theme={props.theme} />
         </div>
-        <div className="min-h-0 min-w-0 overflow-x-hidden overflow-y-auto">
+        <div className="min-h-0 min-w-0 overflow-hidden">
           <SingleFileDiffBody fileDiff={props.fileDiff} theme={props.theme} />
         </div>
       </div>
@@ -206,31 +194,27 @@ export function GitPanel(props: {
   cwdOverride?: string | null;
   onClose?: () => void;
   showActions?: boolean;
+  title?: ReactNode;
 }) {
   const queryClient = useQueryClient();
   const { resolvedTheme } = useTheme();
   const theme = resolvedTheme as "light" | "dark";
-  const thread = useStore(
-    useMemo(() => createThreadSelector(props.hostThreadId), [props.hostThreadId]),
-  );
-  const project = useStore(
-    useMemo(() => createProjectSelector(props.projectId), [props.projectId]),
-  );
+  const thread = useStore(useMemo(() => createThreadSelector(props.hostThreadId), [props.hostThreadId]));
+  const project = useStore(useMemo(() => createProjectSelector(props.projectId), [props.projectId]));
   const cwd = props.cwdOverride ?? thread?.worktreePath ?? project?.cwd ?? null;
 
   const [selected, setSelected] = useState<SelectedFile | null>(null);
+  const branchQuery = useQuery(gitBranchesQueryOptions(cwd));
+  const repositoryReady = branchQuery.isSuccess && branchQuery.data.isRepo;
 
   // No fixed polling: turn-driven file changes already push-invalidate the
   // working-tree-diff cache (see __root.tsx), and focus + the Refresh button +
   // post-mutation invalidation cover the rest. This keeps the pane cheap.
-  const stagedQuery = useQuery(gitWorkingTreeDiffQueryOptions({ cwd, scope: "staged" }));
-  const unstagedQuery = useQuery(gitWorkingTreeDiffQueryOptions({ cwd, scope: "unstaged" }));
+  const stagedQuery = useQuery(gitWorkingTreeDiffQueryOptions({ cwd, scope: "staged", enabled: repositoryReady }));
+  const unstagedQuery = useQuery(gitWorkingTreeDiffQueryOptions({ cwd, scope: "unstaged", enabled: repositoryReady }));
 
   const stagedFiles = parsePatchToSortedFiles(stagedQuery.data?.patch, `git-pane:staged:${theme}`);
-  const unstagedFiles = parsePatchToSortedFiles(
-    unstagedQuery.data?.patch,
-    `git-pane:unstaged:${theme}`,
-  );
+  const unstagedFiles = parsePatchToSortedFiles(unstagedQuery.data?.patch, `git-pane:unstaged:${theme}`);
 
   const stageMutation = useMutation(gitStageFilesMutationOptions({ cwd, queryClient }));
   const unstageMutation = useMutation(gitUnstageFilesMutationOptions({ cwd, queryClient }));
@@ -254,6 +238,8 @@ export function GitPanel(props: {
 
   const refresh = () => {
     if (!cwd) return;
+    void queryClient.invalidateQueries({ queryKey: gitQueryKeys.branches(cwd) });
+    if (!repositoryReady) return;
     void queryClient.invalidateQueries({ queryKey: gitQueryKeys.workingTreeDiff(cwd, "staged") });
     void queryClient.invalidateQueries({
       queryKey: gitQueryKeys.workingTreeDiff(cwd, "unstaged"),
@@ -285,6 +271,7 @@ export function GitPanel(props: {
   const selectedPath = selected?.path ?? null;
 
   const isLoading = stagedQuery.isLoading || unstagedQuery.isLoading;
+  const branchError = branchQuery.error instanceof Error ? branchQuery.error.message : null;
   const error =
     stagedQuery.error instanceof Error
       ? stagedQuery.error.message
@@ -298,14 +285,9 @@ export function GitPanel(props: {
   }
 
   return (
-    <div
-      className={cn(
-        "flex h-full min-h-0 w-full flex-col",
-        props.showActions && "lattice-source-control",
-      )}
-    >
+    <div className={cn("flex h-full min-h-0 w-full flex-col", props.showActions && "lattice-source-control")}>
       <DockPaneHeader
-        title="Source control"
+        title={props.title ?? "Source control"}
         onClose={props.onClose}
         closeLabel="Close source control"
         actions={
@@ -317,80 +299,92 @@ export function GitPanel(props: {
             className={DOCK_HEADER_ICON_BUTTON_CLASS}
             onClick={refresh}
           >
-            <RefreshCwIcon className="size-3.5" />
+            <RefreshCwIcon className={CHAT_SURFACE_HEADER_ACTION_ICON_CLASS_NAME} />
           </IconButton>
         }
       />
 
-      {props.showActions ? (
-        <div className="border-b border-border/70 px-2 py-1.5">
-          <GitActionsControl
-            gitCwd={cwd}
-            activeThreadId={props.hostThreadId ?? null}
-            variant="panel"
-          />
-        </div>
-      ) : null}
-
-      <div className="flex max-h-[48%] min-h-0 shrink-0 flex-col gap-2 overflow-auto px-1.5 py-2">
-        {error ? (
+      {branchError ? (
+        <div className="p-2">
           <Alert variant="error" size="sm" className="text-destructive">
-            {error}
+            {branchError}
           </Alert>
-        ) : null}
-        {!error && isLoading && !hasChanges ? (
-          <p className="px-1.5 py-1 text-[11px] text-muted-foreground/70">Loading changes...</p>
-        ) : null}
-        {!error && !isLoading && !hasChanges ? (
-          <p className="px-1.5 py-2 text-center text-[12px] text-muted-foreground/70">
-            No changes in the working tree.
-          </p>
-        ) : null}
-        {hasChanges ? (
-          <>
-            <GitFileSection
-              title="Staged"
-              emptyLabel="No staged changes."
-              files={stagedFiles}
-              theme={theme}
-              section="staged"
-              selectedPath={selectedResolved?.section === "staged" ? selectedPath : null}
-              actionLabel="Unstage file"
-              actionAllLabel="Unstage all"
-              actionIcon="unstage"
-              actionDisabled={mutating}
-              onSelect={selectStaged}
-              onAction={unstage}
-            />
-            <GitFileSection
-              title="Changes"
-              emptyLabel="No unstaged changes."
-              files={unstagedFiles}
-              theme={theme}
-              section="unstaged"
-              selectedPath={selectedResolved?.section === "unstaged" ? selectedPath : null}
-              actionLabel="Stage file"
-              actionAllLabel="Stage all"
-              actionIcon="stage"
-              actionDisabled={mutating}
-              onSelect={selectUnstaged}
-              onAction={stage}
-            />
-          </>
-        ) : null}
-      </div>
+        </div>
+      ) : !branchQuery.isSuccess ? (
+        <PanelStateMessage>Checking repository…</PanelStateMessage>
+      ) : !branchQuery.data.isRepo ? (
+        <GitInitializationState cwd={cwd} />
+      ) : (
+        <>
+          {props.showActions ? (
+            <div className="border-b border-border/70 px-2 py-1.5">
+              <GitActionsControl gitCwd={cwd} activeThreadId={props.hostThreadId ?? null} variant="panel" />
+            </div>
+          ) : null}
 
-      <div className="diff-panel-viewport min-h-0 min-w-0 flex-1 overflow-hidden border-t border-border/70">
-        {selectedFileDiff && selectedFileRenderKey ? (
-          <SelectedFileDiff
-            key={selectedFileRenderKey}
-            fileDiff={selectedFileDiff}
-            theme={theme}
-          />
-        ) : (
-          <PanelStateMessage density="compact">Select a file to view its diff.</PanelStateMessage>
-        )}
-      </div>
+          {!branchQuery.data.hasOriginRemote ? <GitHubRemoteSetupCard cwd={cwd} /> : null}
+
+          <div className="flex max-h-[48%] min-h-0 shrink-0 overflow-hidden">
+            <ScrollArea className="min-h-0 flex-1" scrollFade>
+              <div className="flex flex-col gap-2 px-1.5 py-2">
+                {error ? (
+                  <Alert variant="error" size="sm" className="text-destructive">
+                    {error}
+                  </Alert>
+                ) : null}
+                {!error && isLoading && !hasChanges ? (
+                  <p className="px-1.5 py-1 text-[11px] text-muted-foreground/70">Loading changes...</p>
+                ) : null}
+                {!error && !isLoading && !hasChanges ? (
+                  <p className="px-1.5 py-2 text-center text-[12px] text-muted-foreground/70">
+                    No changes in the working tree.
+                  </p>
+                ) : null}
+                {hasChanges ? (
+                  <>
+                    <GitFileSection
+                      title="Staged"
+                      emptyLabel="No staged changes."
+                      files={stagedFiles}
+                      theme={theme}
+                      section="staged"
+                      selectedPath={selectedResolved?.section === "staged" ? selectedPath : null}
+                      actionLabel="Unstage file"
+                      actionAllLabel="Unstage all"
+                      actionIcon="unstage"
+                      actionDisabled={mutating}
+                      onSelect={selectStaged}
+                      onAction={unstage}
+                    />
+                    <GitFileSection
+                      title="Changes"
+                      emptyLabel="No unstaged changes."
+                      files={unstagedFiles}
+                      theme={theme}
+                      section="unstaged"
+                      selectedPath={selectedResolved?.section === "unstaged" ? selectedPath : null}
+                      actionLabel="Stage file"
+                      actionAllLabel="Stage all"
+                      actionIcon="stage"
+                      actionDisabled={mutating}
+                      onSelect={selectUnstaged}
+                      onAction={stage}
+                    />
+                  </>
+                ) : null}
+              </div>
+            </ScrollArea>
+          </div>
+
+          <div className="diff-panel-viewport min-h-0 min-w-0 flex-1 overflow-hidden border-t border-border/70">
+            {selectedFileDiff && selectedFileRenderKey ? (
+              <SelectedFileDiff key={selectedFileRenderKey} fileDiff={selectedFileDiff} theme={theme} />
+            ) : (
+              <PanelStateMessage density="compact">Select a file to view its diff.</PanelStateMessage>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

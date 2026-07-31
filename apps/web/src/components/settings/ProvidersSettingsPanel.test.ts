@@ -5,6 +5,7 @@ import { type AppSettings, AppSettingsSchema } from "~/appSettings";
 import {
   createProviderInstallResetPatch,
   isProviderInstallSettingsDirty,
+  providerUpdateStatusLabel,
 } from "./ProvidersSettingsPanel";
 
 const defaults = AppSettingsSchema.makeUnsafe({});
@@ -25,7 +26,6 @@ describe("isProviderInstallSettingsDirty", () => {
       { openCodeBinaryPath: "/opt/opencode" },
       { openCodeServerUrl: "http://127.0.0.1:5001" },
       { openCodeExperimentalWebSockets: true },
-      { piBinaryPath: "/opt/pi" },
       { piAgentDir: "/tmp/pi-agent" },
     ] satisfies ReadonlyArray<Partial<AppSettings>>;
 
@@ -36,18 +36,11 @@ describe("isProviderInstallSettingsDirty", () => {
   });
 
   it("uses configured flags instead of unreadable password values", () => {
-    expect(
-      isProviderInstallSettingsDirty({ ...defaults, kiloServerPassword: "secret" }, defaults),
-    ).toBe(false);
-    expect(
-      isProviderInstallSettingsDirty({ ...defaults, kiloServerPasswordConfigured: true }, defaults),
-    ).toBe(true);
-    expect(
-      isProviderInstallSettingsDirty(
-        { ...defaults, openCodeServerPasswordConfigured: true },
-        defaults,
-      ),
-    ).toBe(true);
+    expect(isProviderInstallSettingsDirty({ ...defaults, kiloServerPassword: "secret" }, defaults)).toBe(false);
+    expect(isProviderInstallSettingsDirty({ ...defaults, kiloServerPasswordConfigured: true }, defaults)).toBe(true);
+    expect(isProviderInstallSettingsDirty({ ...defaults, openCodeServerPasswordConfigured: true }, defaults)).toBe(
+      true,
+    );
   });
 });
 
@@ -77,10 +70,24 @@ describe("createProviderInstallResetPatch", () => {
         "openCodeServerPassword",
         "openCodeServerUrl",
         "piAgentDir",
-        "piBinaryPath",
       ].sort(),
     );
     expect(patch.kiloServerPassword).toBe("");
     expect(patch.openCodeServerPassword).toBe("");
+  });
+});
+
+describe("providerUpdateStatusLabel", () => {
+  it("identifies Pi as included when no external CLI version exists", () => {
+    expect(
+      providerUpdateStatusLabel({
+        provider: "pi",
+        status: "ready",
+        available: true,
+        authStatus: "unknown",
+        checkedAt: "2026-07-30T12:00:00.000Z",
+        message: "Pi SDK is included with Synara.",
+      }),
+    ).toBe("Included with Lattice");
   });
 });

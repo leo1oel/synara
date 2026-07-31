@@ -106,16 +106,57 @@ describe("decider project scripts", () => {
 
     expect(Array.isArray(result)).toBe(true);
     const events = Array.isArray(result) ? result : [result];
-    expect(events.map((event) => event.type)).toEqual([
-      "project.deleted",
-      "project.deleted",
-      "project.created",
-    ]);
+    expect(events.map((event) => event.type)).toEqual(["project.deleted", "project.deleted", "project.created"]);
     expect(events.map((event) => (event.payload as { projectId: ProjectId }).projectId)).toEqual([
       asProjectId("project-stale-a"),
       asProjectId("project-stale-b"),
       asProjectId("project-recreated"),
     ]);
+  });
+
+  it("preserves an empty project shell when an embedded client requests reuse", async () => {
+    const now = new Date().toISOString();
+    const initial = createEmptyReadModel(now);
+    const readModel = await Effect.runPromise(
+      projectEvent(initial, {
+        sequence: 1,
+        eventId: asEventId("evt-embedded-project"),
+        aggregateKind: "project",
+        aggregateId: asProjectId("project-embedded"),
+        type: "project.created",
+        occurredAt: now,
+        commandId: CommandId.makeUnsafe("cmd-embedded-project"),
+        causationEventId: null,
+        correlationId: CommandId.makeUnsafe("cmd-embedded-project"),
+        metadata: {},
+        payload: {
+          projectId: asProjectId("project-embedded"),
+          title: "Embedded",
+          workspaceRoot: "/tmp/embedded-root",
+          defaultModelSelection: null,
+          scripts: [],
+          createdAt: now,
+          updatedAt: now,
+        },
+      }),
+    );
+
+    await expect(
+      Effect.runPromise(
+        decideOrchestrationCommand({
+          command: {
+            type: "project.create",
+            commandId: CommandId.makeUnsafe("cmd-embedded-project-race"),
+            projectId: asProjectId("project-embedded-race"),
+            title: "Embedded race",
+            workspaceRoot: "/tmp/embedded-root",
+            reuseExistingWorkspaceRoot: true,
+            createdAt: now,
+          },
+          readModel,
+        }),
+      ),
+    ).rejects.toThrow("Project 'project-embedded' already uses workspace root");
   });
 
   it("blocks on the project with saved threads before retiring empty duplicate shells", async () => {

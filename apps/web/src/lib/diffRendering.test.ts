@@ -19,6 +19,16 @@ import {
 } from "./diffRendering";
 
 describe("buildDiffPanelUnsafeCSS", () => {
+  it("exposes semantic font sizes and line height to every Pierre diff surface", () => {
+    const css = buildDiffPanelUnsafeCSS("light");
+
+    expect(css).toContain("--diffs-font-size: var(--app-font-size-diff-code, var(--app-font-size-chat-code, 11px))");
+    expect(css).toContain("--diffs-line-height: var(--app-line-height-diff-code, 20px)");
+    expect(css).toContain("--app-font-size-diff-header");
+    expect(css).toContain("--app-font-size-diff-meta");
+    expect(css).toContain("--app-font-weight-diff-meta");
+  });
+
   it("injects Lattice-style scrollbars into Pierre's shadow DOM", () => {
     const css = buildDiffPanelUnsafeCSS("light");
 
@@ -52,9 +62,7 @@ describe("buildPatchCacheKey", () => {
   it("changes when cache scope changes", () => {
     const patch = "diff --git a/a.ts b/a.ts\n+console.log('hello')";
 
-    expect(buildPatchCacheKey(patch, "diff-panel:light")).not.toBe(
-      buildPatchCacheKey(patch, "diff-panel:dark"),
-    );
+    expect(buildPatchCacheKey(patch, "diff-panel:light")).not.toBe(buildPatchCacheKey(patch, "diff-panel:dark"));
   });
 });
 
@@ -66,12 +74,7 @@ describe("resolveDiffCopyText", () => {
   });
 
   it("preserves mode-only metadata without reconstructing the patch", () => {
-    const patch = [
-      "diff --git a/script.sh b/script.sh",
-      "old mode 100644",
-      "new mode 100755",
-      "",
-    ].join("\n");
+    const patch = ["diff --git a/script.sh b/script.sh", "old mode 100644", "new mode 100755", ""].join("\n");
 
     expect(resolveDiffCopyText(patch)).toBe(patch);
   });
@@ -209,11 +212,7 @@ describe("sortFileDiffsByPath", () => {
     const sorted = sortFileDiffsByPath(renderable.files);
 
     // Numeric-aware ordering keeps item2 before item10, and the input is untouched.
-    expect(sorted.map((file) => resolveFileDiffPath(file))).toEqual([
-      "src/item2.ts",
-      "src/item10.ts",
-      "src/zebra.ts",
-    ]);
+    expect(sorted.map((file) => resolveFileDiffPath(file))).toEqual(["src/item2.ts", "src/item10.ts", "src/zebra.ts"]);
     expect(renderable.files).toEqual(original);
   });
 });
@@ -300,13 +299,7 @@ describe("resolveFileDiffStatByChangedPath", () => {
     const stat = { additions: 2, deletions: 1 };
     const statsByPath = new Map([["apps/web/src/App.tsx", stat]]);
 
-    expect(
-      resolveFileDiffStatByChangedPath(
-        statsByPath,
-        "/Users/example/project/apps/web/src/App.tsx",
-        2,
-      ),
-    ).toBe(stat);
+    expect(resolveFileDiffStatByChangedPath(statsByPath, "/Users/example/project/apps/web/src/App.tsx", 2)).toBe(stat);
   });
 
   it("does not reuse a sole parsed stat across unrelated files in a multi-file row", () => {
@@ -319,9 +312,7 @@ describe("resolveFileDiffStatByChangedPath", () => {
     const stat = { additions: 1, deletions: 4 };
     const statsByPath = new Map([["src/generated-name.ts", stat]]);
 
-    expect(resolveFileDiffStatByChangedPath(statsByPath, "provider-reported-name.ts", 1)).toBe(
-      stat,
-    );
+    expect(resolveFileDiffStatByChangedPath(statsByPath, "provider-reported-name.ts", 1)).toBe(stat);
   });
 
   it("avoids ambiguous basename matches", () => {

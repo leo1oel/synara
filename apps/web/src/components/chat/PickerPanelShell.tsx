@@ -5,24 +5,14 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 import { cn } from "~/lib/utils";
-import { Input } from "../ui/input";
+import { SearchInput } from "../ui/search-input";
 import {
   COMPOSER_PICKER_MODEL_LIST_SCROLL_CLASS_NAME,
   COMPOSER_PICKER_RADIUS_CLASS_NAME,
   COMPOSER_PICKER_SEARCH_HEADER_CLASS_NAME,
-  COMPOSER_PICKER_SEARCH_INPUT_CLASS_NAME,
 } from "./composerPickerStyles";
 
-const MENU_NAVIGATION_KEYS = new Set([
-  "ArrowDown",
-  "ArrowUp",
-  "Home",
-  "End",
-  "PageDown",
-  "PageUp",
-  "Enter",
-  "Escape",
-]);
+const MENU_NAVIGATION_KEYS = new Set(["ArrowDown", "ArrowUp", "Home", "End", "PageDown", "PageUp", "Enter", "Escape"]);
 
 export function PickerPanelShell(props: {
   searchPlaceholder?: string;
@@ -86,15 +76,10 @@ export function PickerPanelShell(props: {
               : "sticky top-0 z-20 shrink-0 border-b border-border bg-[var(--composer-surface)] p-1",
           )}
         >
-          <Input
-            className={cn(
-              "rounded-md border-border/60 shadow-none before:hidden has-focus-visible:border-neutral-500/15 has-focus-visible:ring-0 [&_input]:font-sans",
-              bleedParentPadding ? COMPOSER_PICKER_SEARCH_INPUT_CLASS_NAME : "bg-background",
-            )}
+          <SearchInput
+            className="before:hidden [&_input]:font-sans"
             nativeInput
             ref={searchInputRef}
-            size="sm"
-            type="search"
             placeholder={searchPlaceholder}
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}

@@ -12,15 +12,12 @@ import {
   shouldHoldMissingThreadRouteFallback,
   shouldStartMissingThreadRouteRecovery,
 } from "../chatRouteRestore";
-import {
-  refreshEmptyRouteRestoreSnapshot,
-  waitForEmptyRouteRestoreFallbackDelay,
-} from "../chatRouteRecovery";
+import { refreshEmptyRouteRestoreSnapshot, waitForEmptyRouteRestoreFallbackDelay } from "../chatRouteRecovery";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { parseDiffRouteSearch, stripDiffSearchParams } from "../diffRouteSearch";
-import { postEmbedReadyToLattice, readEmbedMode } from "../embedMode";
+import { postEmbedReadyToLattice } from "../embedMode";
+import { useEmbeddedWorkspaceProject } from "../hooks/useEmbeddedWorkspaceProject";
 import { useHandleNewThread } from "../hooks/useHandleNewThread";
-import { createOrRecoverProjectFromPath } from "../lib/projectCreation";
 import { readNativeApi } from "../nativeApi";
 import { isSplitRoute } from "../splitViewRoute";
 import { selectSplitView, useSplitViewStore } from "../splitViewStore";
@@ -28,13 +25,12 @@ import { useStore } from "../store";
 import { createThreadExistsSelector, createThreadProjectIdSelector } from "../storeSelectors";
 import { SingleChatSurface } from "../components/chat/SingleChatSurface";
 import { SplitChatSurface } from "../components/chat/SplitChatSurface";
-import { resolveSingleProjectId } from "./-chatThreadRoute.logic";
+import { resolveEmbeddedDraftProjectRebind, resolveSingleProjectId } from "./-chatThreadRoute.logic";
 
 function ChatThreadRouteView() {
-  const embedMode = useMemo(() => readEmbedMode(), []);
+  const { embedMode, projectId: embeddedProjectId, bindingError: embedBindingError } = useEmbeddedWorkspaceProject();
   const { handleNewThread } = useHandleNewThread();
-  const embedBindingStartedRef = useRef(false);
-  const [embedBindingError, setEmbedBindingError] = useState<string | null>(null);
+  const embedNavigationProjectIdRef = useRef<ProjectId | null>(null);
   const threadsHydrated = useStore((store) => store.threadsHydrated);
   const hasKnownServerThreads = useStore((store) => (store.threadIds?.length ?? 0) > 0);
   const threadId = Route.useParams({
@@ -45,26 +41,22 @@ function ChatThreadRouteView() {
   const threadExistsSelector = createThreadExistsSelector(threadId);
   const threadProjectId: ProjectId | null = useStore(threadProjectIdSelector);
   const threadExists = useStore(threadExistsSelector);
-  const draftThreadState = useComposerDraftStore(
-    (store) => store.draftThreadsByThreadId[threadId] ?? null,
-  );
+  const draftThreadState = useComposerDraftStore((store) => store.draftThreadsByThreadId[threadId] ?? null);
+  const moveDraftThreadToProject = useComposerDraftStore((store) => store.moveDraftThreadToProject);
   const draftThreadExists = draftThreadState !== null;
   const routeThreadExists = threadExists || draftThreadExists;
-  const splitView = useSplitViewStore(
-    useMemo(() => selectSplitView(search.splitViewId ?? null), [search.splitViewId]),
-  );
+  const splitView = useSplitViewStore(useMemo(() => selectSplitView(search.splitViewId ?? null), [search.splitViewId]));
   const splitViewsHydrated = useSplitViewStore((store) => store.hasHydrated);
   const activeProjectId = resolveSingleProjectId({
     threadProjectId,
     draftProjectId: draftThreadState?.projectId ?? null,
   });
   const activeProject = useStore((store) =>
-    activeProjectId ? store.projects.find((project) => project.id === activeProjectId) ?? null : null,
+    activeProjectId ? (store.projects.find((project) => project.id === activeProjectId) ?? null) : null,
   );
   const activeProjectCwd = activeProject?.cwd ?? null;
   const navigate = useNavigate();
-  const [missingThreadRecoveryState, setMissingThreadRecoveryState] =
-    useState<EmptyRouteRestoreRecoveryState>("idle");
+  const [missingThreadRecoveryState, setMissingThreadRecoveryState] = useState<EmptyRouteRestoreRecoveryState>("idle");
   const mountedRef = useRef(true);
   const missingThreadRecoveryRunRef = useRef(0);
   // Synchronous re-entry guard: the "pending" transition below is deferred (async
@@ -74,59 +66,49 @@ function ChatThreadRouteView() {
   const recoveryStartedRef = useRef(false);
 
   useEffect(() => {
+    if (!embedMode || !embeddedProjectId) {
+      return;
+    }
+
+    if (draftThreadState) {
+      const rebindProjectId = resolveEmbeddedDraftProjectRebind({
+        draftProjectId: draftThreadState.projectId,
+        embeddedProjectId,
+      });
+      if (rebindProjectId) {
+        moveDraftThreadToProject(threadId, rebindProjectId);
+      }
+      return;
+    }
+
     if (
-      !embedMode ||
       (activeProjectCwd && workspaceRootsEqual(activeProjectCwd, embedMode.workspaceRoot)) ||
-      embedBindingStartedRef.current
+      embedNavigationProjectIdRef.current === embeddedProjectId
     ) {
       return;
     }
-    embedBindingStartedRef.current = true;
-    const api = readNativeApi();
-    if (!api) {
-      setEmbedBindingError("Synara server connection is unavailable; the Lattice project was not bound.");
-      return;
-    }
-    void (async () => {
-      try {
-        const initialSnapshot = await api.orchestration.getShellSnapshot();
-        useStore.getState().syncServerShellSnapshot(initialSnapshot);
-        const existingProject = initialSnapshot.projects.find(
-          (project) =>
-            project.kind === "project" &&
-            workspaceRootsEqual(project.workspaceRoot, embedMode.workspaceRoot),
-        );
-        const result = existingProject
-          ? {
-              projectId: existingProject.id,
-              project: existingProject,
-              snapshot: initialSnapshot,
-              created: false,
-            }
-          : await createOrRecoverProjectFromPath({
-              api,
-              workspaceRoot: embedMode.workspaceRoot,
-              loadSnapshot: () => api.orchestration.getShellSnapshot(),
-            });
-        if (result.snapshot) useStore.getState().syncServerShellSnapshot(result.snapshot);
-        await handleNewThread(
-          result.projectId,
-          { fresh: true },
-          {
-            search: () => ({
-              embed: "1",
-              workspaceRoot: embedMode.workspaceRoot,
-              theme: embedMode.theme,
-            }),
-          },
-        );
-      } catch (error) {
-        setEmbedBindingError(
-          error instanceof Error ? error.message : "The Lattice project could not be bound to Synara.",
-        );
-      }
-    })();
-  }, [activeProjectCwd, embedMode, handleNewThread]);
+
+    embedNavigationProjectIdRef.current = embeddedProjectId;
+    void handleNewThread(
+      embeddedProjectId,
+      { fresh: true },
+      {
+        search: () => ({
+          embed: "1",
+          workspaceRoot: embedMode.workspaceRoot,
+          theme: embedMode.theme,
+        }),
+      },
+    );
+  }, [
+    activeProjectCwd,
+    draftThreadState,
+    embedMode,
+    embeddedProjectId,
+    handleNewThread,
+    moveDraftThreadToProject,
+    threadId,
+  ]);
 
   useEffect(() => {
     if (
@@ -245,6 +227,9 @@ function ChatThreadRouteView() {
   if (
     !threadsHydrated ||
     !splitViewsHydrated ||
+    (embedMode !== null &&
+      embedBindingError === null &&
+      (embeddedProjectId === null || activeProjectId !== embeddedProjectId)) ||
     shouldHoldMissingThreadRouteFallback({
       hasKnownServerThreads,
       recoveryState: missingThreadRecoveryState,

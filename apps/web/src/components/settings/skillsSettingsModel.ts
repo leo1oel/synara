@@ -37,6 +37,7 @@ export interface SettingsSkillSection {
 const SHARED_SKILLS_SECTION = "shared";
 const PERSONAL_ORIGIN = "personal";
 export const ORIGIN_SECTION_ORDER = [
+  "bundled",
   "synara",
   "codex",
   "claude",
@@ -52,8 +53,10 @@ export const ORIGIN_SECTION_ORDER = [
 ] as const;
 export function skillOriginInfo(scope: string | undefined): SkillOriginInfo {
   switch (scope) {
+    case "bundled":
+      return { label: "Included with Lattice", provider: null };
     case "synara":
-      return { label: "Synara", provider: null };
+      return { label: "Installed by you", provider: null };
     case "codex":
       return { label: PROVIDER_DISPLAY_NAMES.codex, provider: "codex" };
     case "claude":
@@ -114,8 +117,11 @@ function sourceSortKey(source: SettingsSkillSource): string {
 }
 
 function sectionTitle(section: string): string {
-  if (section === SHARED_SKILLS_SECTION) {
-    return "Shared skills";
+  if (section === "bundled") {
+    return "Included with Lattice";
+  }
+  if (section === SHARED_SKILLS_SECTION || section === "synara") {
+    return section === "synara" ? "Installed by you" : "Available skills";
   }
   return `From ${skillOriginInfo(section).label}`;
 }
@@ -129,9 +135,7 @@ function sectionRank(section: string): number {
 
 // Creates one canonical row per normalized skill name. Duplicate provider copies
 // stay visible as sources instead of letting the first origin hide the rest.
-export function buildSettingsSkillGroups(
-  skills: ReadonlyArray<ProviderSkillDescriptor>,
-): SettingsSkillGroup[] {
+export function buildSettingsSkillGroups(skills: ReadonlyArray<ProviderSkillDescriptor>): SettingsSkillGroup[] {
   const groups = new Map<string, SettingsSkillSource[]>();
   for (const skill of skills) {
     const key = settingsSkillNameKey(skill.name);
@@ -158,10 +162,8 @@ export function buildSettingsSkillGroups(
           .flatMap((source) => providersForSkillOrigin(source.origin))
           .filter((provider, index, all) => all.indexOf(provider) === index),
       );
-      const section =
-        sources.length > 1 ? SHARED_SKILLS_SECTION : (sources[0]?.origin ?? PERSONAL_ORIGIN);
-      const description =
-        primarySkill.interface?.shortDescription ?? primarySkill.description ?? "No description.";
+      const section = sources.length > 1 ? SHARED_SKILLS_SECTION : (sources[0]?.origin ?? PERSONAL_ORIGIN);
+      const description = primarySkill.interface?.shortDescription ?? primarySkill.description ?? "No description.";
       return {
         key,
         displayName: skillDisplayName(primarySkill),
@@ -176,9 +178,7 @@ export function buildSettingsSkillGroups(
     .sort((left, right) => left.displayName.localeCompare(right.displayName));
 }
 
-export function buildSettingsSkillSections(
-  skills: ReadonlyArray<ProviderSkillDescriptor>,
-): SettingsSkillSection[] {
+export function buildSettingsSkillSections(skills: ReadonlyArray<ProviderSkillDescriptor>): SettingsSkillSection[] {
   const sections = new Map<string, SettingsSkillGroup[]>();
   for (const group of buildSettingsSkillGroups(skills)) {
     sections.set(group.section, [...(sections.get(group.section) ?? []), group]);

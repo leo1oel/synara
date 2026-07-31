@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   collectParentDirectoryPaths,
   normalizeSingleSearchFromPane,
+  resolveEmbeddedDraftProjectRebind,
   resolveFilePreviewWorkspaceRoot,
   resolveRoutePanelBootstrap,
   resolveSingleProjectId,
@@ -91,6 +92,27 @@ describe("single chat route helpers", () => {
       }),
     ).toBe(DRAFT_PROJECT_ID);
     expect(resolveSingleProjectId({ threadProjectId: null, draftProjectId: null })).toBeNull();
+  });
+
+  it("rebinds a stale embedded draft to the canonical workspace project", () => {
+    expect(
+      resolveEmbeddedDraftProjectRebind({
+        draftProjectId: DRAFT_PROJECT_ID,
+        embeddedProjectId: PROJECT_ID,
+      }),
+    ).toBe(PROJECT_ID);
+    expect(
+      resolveEmbeddedDraftProjectRebind({
+        draftProjectId: PROJECT_ID,
+        embeddedProjectId: PROJECT_ID,
+      }),
+    ).toBeNull();
+    expect(
+      resolveEmbeddedDraftProjectRebind({
+        draftProjectId: DRAFT_PROJECT_ID,
+        embeddedProjectId: null,
+      }),
+    ).toBeNull();
   });
 
   it("normalizes split pane browser and diff state for single-chat navigation", () => {

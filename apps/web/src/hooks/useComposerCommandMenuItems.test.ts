@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ComposerThreadMentionSource, Project } from "../types";
-import { buildThreadMentionComposerItems } from "./useComposerCommandMenuItems";
+import { buildPaperMentionComposerItems, buildThreadMentionComposerItems } from "./useComposerCommandMenuItems";
 
 function project(id: string, kind: Project["kind"], name: string): Project {
   return {
@@ -188,5 +188,64 @@ describe("buildThreadMentionComposerItems", () => {
 
     const names = items.map((item) => (item.type === "thread" ? item.mention.name : ""));
     expect(names).toEqual(["Release (aaaaaa)", "release (bbbbbb)"]);
+  });
+});
+
+describe("buildPaperMentionComposerItems", () => {
+  const papers = Array.from({ length: 12 }, (_, index) => ({
+    title: index === 7 ? "Attention Is All You Need" : `Research Paper ${index}`,
+    arxivId: index === 7 ? "1706.03762" : `2401.${String(index).padStart(5, "0")}`,
+    citationKey: index === 7 ? "vaswani2017attention" : `author2026paper${index}`,
+    path:
+      index === 7
+        ? ".research/papers/1706.03762/paper.md"
+        : `.research/papers/2401.${String(index).padStart(5, "0")}/paper.md`,
+    view: "fulltext" as const,
+  }));
+
+  it("returns the full library so the fixed-height Papers viewport can scroll it", () => {
+    const items = buildPaperMentionComposerItems({ papers, query: "" });
+
+    expect(items).toHaveLength(12);
+    expect(items.every((item) => item.type === "paper")).toBe(true);
+  });
+
+  it("searches the full library by title, citation key, or paper id", () => {
+    expect(buildPaperMentionComposerItems({ papers, query: "attention" }).map((item) => item.label)).toEqual([
+      "Attention Is All You Need",
+    ]);
+    expect(buildPaperMentionComposerItems({ papers, query: "vaswani2017" }).map((item) => item.label)).toEqual([
+      "Attention Is All You Need",
+    ]);
+    expect(buildPaperMentionComposerItems({ papers, query: "1706.03762" }).map((item) => item.label)).toEqual([
+      "Attention Is All You Need",
+    ]);
+  });
+
+  it("keeps every title-search result and gives duplicate titles distinct mention names", () => {
+    const duplicatePapers = [
+      ...papers,
+      {
+        title: "Attention Is All You Need",
+        arxivId: "9999.00001",
+        citationKey: "anotherAttention",
+        path: ".research/papers/9999.00001/blog.md",
+        view: "blog" as const,
+      },
+    ];
+    const attentionItems = buildPaperMentionComposerItems({
+      papers: duplicatePapers,
+      query: "attention",
+    });
+    const broadItems = buildPaperMentionComposerItems({
+      papers: duplicatePapers,
+      query: "paper",
+    });
+
+    expect(attentionItems.map((item) => (item.type === "paper" ? item.mention.name : ""))).toEqual([
+      "Attention Is All You Need (vaswani2017attention)",
+      "Attention Is All You Need (anotherAttention)",
+    ]);
+    expect(broadItems).toHaveLength(11);
   });
 });

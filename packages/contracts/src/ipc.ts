@@ -42,9 +42,13 @@ import type {
 import type {
   GitCheckoutInput,
   GitActionProgressEvent,
+  GitConnectGitHubRemoteInput,
+  GitConnectGitHubRemoteResult,
   GitCreateBranchInput,
   GitCreateDetachedWorktreeInput,
   GitCreateDetachedWorktreeResult,
+  GitCreateGitHubRepositoryInput,
+  GitCreateGitHubRepositoryResult,
   GitHubRepositoryInput,
   GitHubRepositoryResult,
   GitHandoffThreadInput,
@@ -196,6 +200,18 @@ import type {
   ProviderListSkillsResult,
   ProviderSkillsCatalogInput,
   ProviderSkillsCatalogResult,
+  ProviderImportSkillInput,
+  ProviderImportSkillResult,
+  ProviderReadManagedSkillInput,
+  ProviderManagedSkillDetail,
+  ProviderSaveManagedSkillInput,
+  ProviderSaveManagedSkillResult,
+  ProviderDuplicateManagedSkillInput,
+  ProviderDuplicateManagedSkillResult,
+  ProviderRemoveManagedSkillInput,
+  ProviderRemoveManagedSkillResult,
+  ProviderRestoreManagedSkillInput,
+  ProviderRestoreManagedSkillResult,
   ProviderReadPluginInput,
   ProviderReadPluginResult,
 } from "./providerDiscovery";
@@ -340,19 +356,8 @@ export interface BrowserCaptureScreenshotResult {
 }
 
 export type DesktopAppSnapPlatform = "macos" | "windows" | "linux" | "other";
-export type DesktopAppSnapPermission =
-  | "granted"
-  | "denied"
-  | "not-determined"
-  | "restricted"
-  | "unknown";
-export type DesktopAppSnapStatus =
-  | "unsupported"
-  | "disabled"
-  | "permission-required"
-  | "starting"
-  | "ready"
-  | "error";
+export type DesktopAppSnapPermission = "granted" | "denied" | "not-determined" | "restricted" | "unknown";
+export type DesktopAppSnapStatus = "unsupported" | "disabled" | "permission-required" | "starting" | "ready" | "error";
 
 export type DesktopAppSnapShortcutModifier = "command" | "control" | "option" | "shift";
 
@@ -509,9 +514,7 @@ export interface DesktopBridge {
   appSnap: {
     getState: () => Promise<DesktopAppSnapState>;
     setEnabled: (enabled: boolean) => Promise<DesktopAppSnapState>;
-    checkShortcut: (
-      shortcut: DesktopAppSnapShortcut,
-    ) => Promise<DesktopAppSnapShortcutAvailability>;
+    checkShortcut: (shortcut: DesktopAppSnapShortcut) => Promise<DesktopAppSnapShortcutAvailability>;
     setShortcut: (shortcut: DesktopAppSnapShortcut) => Promise<DesktopAppSnapShortcutUpdateResult>;
     requestPermissions: () => Promise<DesktopAppSnapState>;
     listPendingCaptures: () => Promise<DesktopAppSnapCapture[]>;
@@ -525,15 +528,11 @@ export interface DesktopBridge {
     acknowledgeSnapshot: () => Promise<void>;
   };
   server?: {
-    transcribeVoice: (
-      input: ServerVoiceTranscriptionInput,
-    ) => Promise<ServerVoiceTranscriptionResult>;
+    transcribeVoice: (input: ServerVoiceTranscriptionInput) => Promise<ServerVoiceTranscriptionResult>;
   };
   browser: BrowserControlMethods & {
     annotations: BrowserAnnotationMethods;
-    onBrowserUseOpenPanelRequest: (
-      listener: (request: BrowserUseOpenPanelRequest) => void,
-    ) => () => void;
+    onBrowserUseOpenPanelRequest: (listener: (request: BrowserUseOpenPanelRequest) => void) => () => void;
     onBrowserCopyLink: (listener: (event: BrowserCopyLinkEvent) => void) => () => void;
   };
 }
@@ -562,9 +561,7 @@ export interface NativeApi {
     discoverScripts: (input: ProjectDiscoverScriptsInput) => Promise<ProjectDiscoverScriptsResult>;
     listDirectories: (input: ProjectListDirectoriesInput) => Promise<ProjectListDirectoriesResult>;
     searchEntries: (input: ProjectSearchEntriesInput) => Promise<ProjectSearchEntriesResult>;
-    searchLocalEntries: (
-      input: ProjectSearchLocalEntriesInput,
-    ) => Promise<ProjectSearchLocalEntriesResult>;
+    searchLocalEntries: (input: ProjectSearchLocalEntriesInput) => Promise<ProjectSearchLocalEntriesResult>;
     readFile: (input: ProjectReadFileInput) => Promise<ProjectReadFileResult>;
     createLocalFilePreviewGrant: (
       input: ProjectCreateLocalFilePreviewGrantInput,
@@ -579,9 +576,7 @@ export interface NativeApi {
     browse: (input: FilesystemBrowseInput) => Promise<FilesystemBrowseResult>;
   };
   studio: {
-    listThreadOutputs: (
-      input: StudioListThreadOutputsInput,
-    ) => Promise<StudioListThreadOutputsResult>;
+    listThreadOutputs: (input: StudioListThreadOutputsInput) => Promise<StudioListThreadOutputsResult>;
   };
   shell: {
     openInEditor: (cwd: string, editor: EditorId) => Promise<void>;
@@ -593,9 +588,7 @@ export interface NativeApi {
     githubRepository: (input: GitHubRepositoryInput) => Promise<GitHubRepositoryResult>;
     listBranches: (input: GitListBranchesInput) => Promise<GitListBranchesResult>;
     createWorktree: (input: GitCreateWorktreeInput) => Promise<GitCreateWorktreeResult>;
-    createDetachedWorktree: (
-      input: GitCreateDetachedWorktreeInput,
-    ) => Promise<GitCreateDetachedWorktreeResult>;
+    createDetachedWorktree: (input: GitCreateDetachedWorktreeInput) => Promise<GitCreateDetachedWorktreeResult>;
     removeWorktree: (input: GitRemoveWorktreeInput) => Promise<void>;
     createBranch: (input: GitCreateBranchInput) => Promise<void>;
     checkout: (input: GitCheckoutInput) => Promise<void>;
@@ -604,34 +597,26 @@ export interface NativeApi {
     stashInfo: (input: GitStashInfoInput) => Promise<GitStashInfoResult>;
     removeIndexLock: (input: GitRemoveIndexLockInput) => Promise<void>;
     init: (input: GitInitInput) => Promise<void>;
+    connectGitHubRemote: (input: GitConnectGitHubRemoteInput) => Promise<GitConnectGitHubRemoteResult>;
+    createGitHubRepository: (input: GitCreateGitHubRepositoryInput) => Promise<GitCreateGitHubRepositoryResult>;
     stageFiles: (input: GitStageFilesInput) => Promise<GitStageFilesResult>;
     unstageFiles: (input: GitUnstageFilesInput) => Promise<GitUnstageFilesResult>;
     handoffThread: (input: GitHandoffThreadInput) => Promise<GitHandoffThreadResult>;
     resolvePullRequest: (input: GitPullRequestRefInput) => Promise<GitResolvePullRequestResult>;
-    pullRequestSnapshot: (
-      input: GitPullRequestSnapshotInput,
-    ) => Promise<GitPullRequestSnapshotResult>;
-    preparePullRequestThread: (
-      input: GitPreparePullRequestThreadInput,
-    ) => Promise<GitPreparePullRequestThreadResult>;
+    pullRequestSnapshot: (input: GitPullRequestSnapshotInput) => Promise<GitPullRequestSnapshotResult>;
+    preparePullRequestThread: (input: GitPreparePullRequestThreadInput) => Promise<GitPreparePullRequestThreadResult>;
     // Stacked action API
     pull: (input: GitPullInput) => Promise<GitPullResult>;
     status: (input: GitStatusInput) => Promise<GitStatusResult>;
-    readWorkingTreeDiff: (
-      input: GitReadWorkingTreeDiffInput,
-    ) => Promise<GitReadWorkingTreeDiffResult>;
-    workingTreeDiffStats: (
-      input: GitReadWorkingTreeDiffInput,
-    ) => Promise<GitWorkingTreeDiffStatsResult>;
+    readWorkingTreeDiff: (input: GitReadWorkingTreeDiffInput) => Promise<GitReadWorkingTreeDiffResult>;
+    workingTreeDiffStats: (input: GitReadWorkingTreeDiffInput) => Promise<GitWorkingTreeDiffStatsResult>;
     summarizeDiff: (input: GitSummarizeDiffInput) => Promise<GitSummarizeDiffResult>;
     runStackedAction: (input: GitRunStackedActionInput) => Promise<GitRunStackedActionResult>;
     onActionProgress: (callback: (event: GitActionProgressEvent) => void) => () => void;
   };
   pullRequests: {
     list: (input: PullRequestsListInput) => Promise<PullRequestsListResult>;
-    reviewRequestCount: (
-      input: PullRequestReviewRequestCountInput,
-    ) => Promise<PullRequestReviewRequestCountResult>;
+    reviewRequestCount: (input: PullRequestReviewRequestCountInput) => Promise<PullRequestReviewRequestCountResult>;
     detail: (input: PullRequestDetailInput) => Promise<PullRequestDetail>;
     diff: (input: PullRequestDetailInput) => Promise<PullRequestDiffResult>;
     action: (input: PullRequestActionInput) => Promise<PullRequestActionResult>;
@@ -653,9 +638,7 @@ export interface NativeApi {
     bootstrapAuth: (input: AuthBootstrapInput) => Promise<AuthBootstrapResult>;
     bootstrapBearerAuth: (input: AuthBootstrapInput) => Promise<AuthBearerBootstrapResult>;
     issueAuthWebSocketToken: () => Promise<AuthWebSocketTokenResult>;
-    createAuthPairingToken: (
-      input?: AuthCreatePairingCredentialInput,
-    ) => Promise<AuthPairingCredentialResult>;
+    createAuthPairingToken: (input?: AuthCreatePairingCredentialInput) => Promise<AuthPairingCredentialResult>;
     listAuthPairingLinks: () => Promise<ReadonlyArray<AuthPairingLink>>;
     revokeAuthPairingLink: (input: AuthRevokePairingLinkInput) => Promise<{ revoked: boolean }>;
     listAuthClients: () => Promise<ReadonlyArray<AuthClientSession>>;
@@ -666,12 +649,8 @@ export interface NativeApi {
     createExternalMcpIntegration: (
       input: ExternalMcpCreateIntegrationInput,
     ) => Promise<ExternalMcpCreateIntegrationResult>;
-    revokeExternalMcpIntegration: (
-      input: ExternalMcpRevokeIntegrationInput,
-    ) => Promise<{ revoked: boolean }>;
-    refreshExternalMcpPairing: (
-      input: ExternalMcpRefreshPairingInput,
-    ) => Promise<ExternalMcpCreateIntegrationResult>;
+    revokeExternalMcpIntegration: (input: ExternalMcpRevokeIntegrationInput) => Promise<{ revoked: boolean }>;
+    refreshExternalMcpPairing: (input: ExternalMcpRefreshPairingInput) => Promise<ExternalMcpCreateIntegrationResult>;
     refreshProviders: () => Promise<ServerRefreshProvidersResult>;
     updateProvider: (input: ServerProviderUpdateInput) => Promise<ServerProviderUpdateResult>;
     listWorktrees: () => Promise<ServerListWorktreesResult>;
@@ -680,35 +659,31 @@ export interface NativeApi {
     getProviderUsageSnapshot: (
       input: ServerGetProviderUsageSnapshotInput,
     ) => Promise<ServerGetProviderUsageSnapshotResult>;
-    listProviderUsage: (
-      input: ServerListProviderUsageInput,
-    ) => Promise<ServerListProviderUsageResult>;
+    listProviderUsage: (input: ServerListProviderUsageInput) => Promise<ServerListProviderUsageResult>;
     getDiagnostics: () => Promise<ServerDiagnosticsResult>;
-    generateThreadRecap: (
-      input: ServerGenerateThreadRecapInput,
-    ) => Promise<ServerGenerateThreadRecapResult>;
+    generateThreadRecap: (input: ServerGenerateThreadRecapInput) => Promise<ServerGenerateThreadRecapResult>;
     generateAutomationIntent: (
       input: ServerGenerateAutomationIntentInput,
     ) => Promise<ServerGenerateAutomationIntentResult>;
-    transcribeVoice: (
-      input: ServerVoiceTranscriptionInput,
-    ) => Promise<ServerVoiceTranscriptionResult>;
+    transcribeVoice: (input: ServerVoiceTranscriptionInput) => Promise<ServerVoiceTranscriptionResult>;
     upsertKeybinding: (input: ServerUpsertKeybindingInput) => Promise<ServerUpsertKeybindingResult>;
   };
   stats: {
     getProfileStats: (input: StatsGetProfileStatsInput) => Promise<StatsGetProfileStatsResult>;
-    getProfileTokenStats: (
-      input: StatsGetProfileTokenStatsInput,
-    ) => Promise<StatsGetProfileTokenStatsResult>;
+    getProfileTokenStats: (input: StatsGetProfileTokenStatsInput) => Promise<StatsGetProfileTokenStatsResult>;
   };
   provider: {
-    getComposerCapabilities: (
-      input: ProviderGetComposerCapabilitiesInput,
-    ) => Promise<ProviderComposerCapabilities>;
+    getComposerCapabilities: (input: ProviderGetComposerCapabilitiesInput) => Promise<ProviderComposerCapabilities>;
     compactThread: (input: ProviderCompactThreadInput) => Promise<void>;
     listCommands: (input: ProviderListCommandsInput) => Promise<ProviderListCommandsResult>;
     listSkills: (input: ProviderListSkillsInput) => Promise<ProviderListSkillsResult>;
     listSkillsCatalog: (input: ProviderSkillsCatalogInput) => Promise<ProviderSkillsCatalogResult>;
+    importSkill: (input: ProviderImportSkillInput) => Promise<ProviderImportSkillResult>;
+    readManagedSkill: (input: ProviderReadManagedSkillInput) => Promise<ProviderManagedSkillDetail>;
+    saveManagedSkill: (input: ProviderSaveManagedSkillInput) => Promise<ProviderSaveManagedSkillResult>;
+    duplicateManagedSkill: (input: ProviderDuplicateManagedSkillInput) => Promise<ProviderDuplicateManagedSkillResult>;
+    removeManagedSkill: (input: ProviderRemoveManagedSkillInput) => Promise<ProviderRemoveManagedSkillResult>;
+    restoreManagedSkill: (input: ProviderRestoreManagedSkillInput) => Promise<ProviderRestoreManagedSkillResult>;
     listPlugins: (input: ProviderListPluginsInput) => Promise<ProviderListPluginsResult>;
     readPlugin: (input: ProviderReadPluginInput) => Promise<ProviderReadPluginResult>;
     listModels: (input: ProviderListModelsInput) => Promise<ProviderListModelsResult>;
@@ -721,14 +696,10 @@ export interface NativeApi {
       input: OrchestrationGetThreadDetailSnapshotInput,
     ) => Promise<OrchestrationGetThreadDetailSnapshotResult>;
     dispatchCommand: (command: ClientOrchestrationCommand) => Promise<{ sequence: number }>;
-    importThread: (
-      input: OrchestrationImportThreadInput,
-    ) => Promise<OrchestrationImportThreadResult>;
+    importThread: (input: OrchestrationImportThreadInput) => Promise<OrchestrationImportThreadResult>;
     repairState: () => Promise<OrchestrationReadModel>;
     getTurnDiff: (input: OrchestrationGetTurnDiffInput) => Promise<OrchestrationGetTurnDiffResult>;
-    getFullThreadDiff: (
-      input: OrchestrationGetFullThreadDiffInput,
-    ) => Promise<OrchestrationGetFullThreadDiffResult>;
+    getFullThreadDiff: (input: OrchestrationGetFullThreadDiffInput) => Promise<OrchestrationGetFullThreadDiffResult>;
     replayEvents: (fromSequenceExclusive: number) => Promise<OrchestrationEvent[]>;
     listProviderDeliveryBlockers: (
       input?: OrchestrationListProviderDeliveryBlockersInput,
@@ -754,9 +725,7 @@ export interface NativeApi {
     cancelRun: (input: AutomationCancelRunInput) => Promise<AutomationCancelRunResult>;
     markRunRead: (input: AutomationMarkRunReadInput) => Promise<AutomationRunActionResult>;
     archiveRun: (input: AutomationArchiveRunInput) => Promise<AutomationRunActionResult>;
-    resolveProposal: (
-      input: AutomationResolveProposalInput,
-    ) => Promise<AutomationResolveProposalResult>;
+    resolveProposal: (input: AutomationResolveProposalInput) => Promise<AutomationResolveProposalResult>;
     onEvent: (callback: (event: AutomationStreamEvent) => void) => () => void;
   };
   browser: BrowserControlMethods & {

@@ -45,10 +45,7 @@ import { resolveThreadWorkspaceCwd } from "./checkpointing/Utils";
 import { ServerConfig, type ServerConfigShape } from "./config";
 import { realpathNearestExisting } from "./realpathNearestExisting";
 import { listStudioThreadOutputs } from "./studioOutputs";
-import {
-  ensureStudioWorkspaceInstructionsFiles,
-  STUDIO_WORKSPACE_SUBDIRECTORIES,
-} from "./studioWorkspaceScaffold";
+import { ensureStudioWorkspaceInstructionsFiles, STUDIO_WORKSPACE_SUBDIRECTORIES } from "./studioWorkspaceScaffold";
 import { DevServerManager, findProjectDevServerForLocalServer } from "./devServerManager";
 import { GitCore } from "./git/Services/GitCore";
 import { GitManager } from "./git/Services/GitManager";
@@ -79,7 +76,16 @@ import { ProviderCommandReactor } from "./orchestration/Services/ProviderCommand
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
 import { shouldPublishThreadShellForEvent } from "./orchestration/threadShellEvents";
 import { ProviderDiscoveryService } from "./provider/Services/ProviderDiscoveryService";
-import { discoverSkillsCatalog, synaraSkillsDir } from "./provider/skillsCatalog";
+import {
+  duplicateManagedSkill,
+  discoverSkillsCatalog,
+  importSynaraSkill,
+  readManagedSkill,
+  removeManagedSkill,
+  restoreManagedSkill,
+  saveManagedSkill,
+  synaraSkillsDir,
+} from "./provider/skillsCatalog";
 import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegistry";
 import { ProviderHealth } from "./provider/Services/ProviderHealth";
 import { ProviderService } from "./provider/Services/ProviderService";
@@ -113,10 +119,7 @@ import {
   type WsConnectionSession,
 } from "./wsConnectionSessions";
 import { negotiateWsCompatibility, validateWsFeatureCompatibility } from "./wsCompatibility";
-import {
-  requiresWebSocketAuthentication,
-  shouldRejectUntrustedRequestOrigin,
-} from "./trustedOrigins";
+import { requiresWebSocketAuthentication, shouldRejectUntrustedRequestOrigin } from "./trustedOrigins";
 import { bufferLiveUiStream, type LiveUiStreamDropReport } from "./wsStreamBackpressure";
 import { makeCursorSafeSnapshotLiveStream } from "./wsSnapshotLiveStream";
 import { PullRequestService } from "./pullRequests/Services/PullRequestService";
@@ -195,10 +198,7 @@ function parseProcessTable(output: string): ProcessTableRow[] {
   return rows;
 }
 
-function collectDescendantProcesses(
-  rows: readonly ProcessTableRow[],
-  rootPid: number,
-): ProcessTableRow[] {
+function collectDescendantProcesses(rows: readonly ProcessTableRow[], rootPid: number): ProcessTableRow[] {
   const childrenByParent = new Map<number, ProcessTableRow[]>();
   for (const row of rows) {
     const children = childrenByParent.get(row.ppid) ?? [];
@@ -221,14 +221,9 @@ function readDescendantProcesses(rootPid: number): Promise<ProcessTableRow[]> {
     return Promise.resolve([]);
   }
   return new Promise((resolve) => {
-    execFile(
-      "ps",
-      ["-axo", "pid=,ppid=,rss=,vsz=,comm=,args="],
-      { maxBuffer: 2 * 1024 * 1024 },
-      (_error, stdout) => {
-        resolve(collectDescendantProcesses(parseProcessTable(stdout), rootPid));
-      },
-    );
+    execFile("ps", ["-axo", "pid=,ppid=,rss=,vsz=,comm=,args="], { maxBuffer: 2 * 1024 * 1024 }, (_error, stdout) => {
+      resolve(collectDescendantProcesses(parseProcessTable(stdout), rootPid));
+    });
   });
 }
 
@@ -236,8 +231,7 @@ function toWsRpcError(cause: unknown, fallbackMessage: string) {
   return Schema.is(WsRpcError)(cause)
     ? cause
     : new WsRpcError({
-        message:
-          cause instanceof Error && cause.message.length > 0 ? cause.message : fallbackMessage,
+        message: cause instanceof Error && cause.message.length > 0 ? cause.message : fallbackMessage,
         cause,
       });
 }
@@ -407,8 +401,7 @@ const makeWsRpcHandlersLayer = () =>
           );
 
       const isGlobalGitHubCliError = (error: unknown): error is GitHubCliError =>
-        error instanceof GitHubCliError &&
-        (error.reason === "not-installed" || error.reason === "not-authenticated");
+        error instanceof GitHubCliError && (error.reason === "not-installed" || error.reason === "not-authenticated");
 
       const toPullRequestsRpcError = (cause: unknown, fallbackMessage: string) => {
         if (isGlobalGitHubCliError(cause)) {
@@ -420,10 +413,8 @@ const makeWsRpcHandlersLayer = () =>
         return toWsRpcError(cause, fallbackMessage);
       };
 
-      const pullRequestsEffect = <A, E, R>(
-        effect: Effect.Effect<A, E, R>,
-        fallbackMessage: string,
-      ) => effect.pipe(Effect.mapError((cause) => toPullRequestsRpcError(cause, fallbackMessage)));
+      const pullRequestsEffect = <A, E, R>(effect: Effect.Effect<A, E, R>, fallbackMessage: string) =>
+        effect.pipe(Effect.mapError((cause) => toPullRequestsRpcError(cause, fallbackMessage)));
       const canonicalizeProjectWorkspaceRoot = Effect.fnUntraced(function* (
         workspaceRoot: string,
         options: { readonly createIfMissing?: boolean } = {},
@@ -538,9 +529,7 @@ const makeWsRpcHandlersLayer = () =>
       const dispatchOrchestrationCommand = (command: OrchestrationCommand) =>
         Effect.gen(function* () {
           const attachmentPrincipal = yield* CurrentManagedAttachmentPrincipal;
-          return yield* runtimeStartup.enqueueCommand(
-            orchestrationEngine.dispatch(command, { attachmentPrincipal }),
-          );
+          return yield* runtimeStartup.enqueueCommand(orchestrationEngine.dispatch(command, { attachmentPrincipal }));
         });
 
       // Terminal-first threads are created with the generic "New terminal" placeholder.
@@ -577,10 +566,7 @@ const makeWsRpcHandlersLayer = () =>
         });
       });
 
-      const stopLocalServerAndTrackedProjectRun = Effect.fnUntraced(function* (input: {
-        pid: number;
-        port: number;
-      }) {
+      const stopLocalServerAndTrackedProjectRun = Effect.fnUntraced(function* (input: { pid: number; port: number }) {
         const localServer =
           (yield* Effect.promise(() => listLocalServers())).servers.find(
             (server) => server.pid === input.pid && server.ports.includes(input.port),
@@ -593,9 +579,7 @@ const makeWsRpcHandlersLayer = () =>
             devServers: devServers.servers,
           });
           if (trackedServer) {
-            yield* devServerManager
-              .stop({ projectId: trackedServer.projectId })
-              .pipe(Effect.catch(() => Effect.void));
+            yield* devServerManager.stop({ projectId: trackedServer.projectId }).pipe(Effect.catch(() => Effect.void));
           }
         }
         return result;
@@ -620,9 +604,7 @@ const makeWsRpcHandlersLayer = () =>
 
       const refreshGitStatusAfter = <A, E, R>(cwd: string, effect: Effect.Effect<A, E, R>) =>
         effect.pipe(
-          Effect.tap(() =>
-            gitStatusBroadcaster.refreshStatus(cwd).pipe(Effect.catchCause(() => Effect.void)),
-          ),
+          Effect.tap(() => gitStatusBroadcaster.refreshStatus(cwd).pipe(Effect.catchCause(() => Effect.void))),
         );
 
       const pruneManagedWorktrees = pruneProjectedArchivedManagedWorktrees({
@@ -650,9 +632,7 @@ const makeWsRpcHandlersLayer = () =>
         ),
       );
       const getOrchestrationHighWaterSequence = orchestrationEngine.getEventHighWaterSequence.pipe(
-        Effect.mapError((cause) =>
-          toWsRpcError(cause, "Failed to capture orchestration high-water sequence"),
-        ),
+        Effect.mapError((cause) => toWsRpcError(cause, "Failed to capture orchestration high-water sequence")),
       );
 
       const toShellStreamEvent = (
@@ -718,18 +698,16 @@ const makeWsRpcHandlersLayer = () =>
             );
           default:
             if (event.aggregateKind !== "thread") return Effect.succeed(Option.none());
-            return projectionReadModelQuery
-              .getThreadShellById(ThreadId.makeUnsafe(String(event.aggregateId)))
-              .pipe(
-                Effect.map((thread) =>
-                  Option.map(thread, (nextThread) => ({
-                    kind: "thread-upserted" as const,
-                    sequence: event.sequence,
-                    thread: nextThread,
-                  })),
-                ),
-                Effect.catch(() => Effect.succeed(Option.none())),
-              );
+            return projectionReadModelQuery.getThreadShellById(ThreadId.makeUnsafe(String(event.aggregateId))).pipe(
+              Effect.map((thread) =>
+                Option.map(thread, (nextThread) => ({
+                  kind: "thread-upserted" as const,
+                  sequence: event.sequence,
+                  thread: nextThread,
+                })),
+              ),
+              Effect.catch(() => Effect.succeed(Option.none())),
+            );
         }
       };
 
@@ -738,9 +716,7 @@ const makeWsRpcHandlersLayer = () =>
 
       const requireOwner = Effect.gen(function* () {
         if (!canManageExternalMcp(yield* CurrentWsSessionRole)) {
-          return yield* Effect.fail(
-            new WsRpcError({ message: "Owner authorization is required for this operation." }),
-          );
+          return yield* Effect.fail(new WsRpcError({ message: "Owner authorization is required for this operation." }));
         }
         if (!isLoopbackHost(config.host) || config.publicUrl !== undefined) {
           return yield* Effect.fail(
@@ -755,8 +731,7 @@ const makeWsRpcHandlersLayer = () =>
         [ORCHESTRATION_WS_METHODS.dispatchCommand]: (command) =>
           rpcEffect(
             Effect.gen(function* () {
-              const { command: normalizedCommand, prepareWorkspaceRoot } =
-                yield* normalizeDispatchCommand({ command });
+              const { command: normalizedCommand, prepareWorkspaceRoot } = yield* normalizeDispatchCommand({ command });
               const result = yield* dispatchOrchestrationCommand(normalizedCommand);
               // Only scaffold managed workspace-root subdirectories (Inbox/Outbox/work/outputs)
               // AFTER the decider has accepted the command. A rejected dispatch (e.g. a
@@ -771,23 +746,14 @@ const makeWsRpcHandlersLayer = () =>
             }),
             "Failed to dispatch orchestration command",
           ),
-        [ORCHESTRATION_WS_METHODS.importThread]: (input) =>
-          rpcEffect(importThread(input), "Failed to import thread"),
+        [ORCHESTRATION_WS_METHODS.importThread]: (input) => rpcEffect(importThread(input), "Failed to import thread"),
         [ORCHESTRATION_WS_METHODS.getSnapshot]: () =>
-          rpcEffect(
-            projectionReadModelQuery.getSnapshot(),
-            "Failed to load orchestration snapshot",
-          ),
+          rpcEffect(projectionReadModelQuery.getSnapshot(), "Failed to load orchestration snapshot"),
         [ORCHESTRATION_WS_METHODS.getShellSnapshot]: () =>
-          rpcEffect(
-            projectionReadModelQuery.getShellSnapshot(),
-            "Failed to load orchestration shell snapshot",
-          ),
+          rpcEffect(projectionReadModelQuery.getShellSnapshot(), "Failed to load orchestration shell snapshot"),
         [ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot]: (input) =>
           rpcEffect(
-            projectionReadModelQuery
-              .getThreadDetailSnapshotById(input.threadId)
-              .pipe(Effect.map(Option.getOrNull)),
+            projectionReadModelQuery.getThreadDetailSnapshotById(input.threadId).pipe(Effect.map(Option.getOrNull)),
             "Failed to load orchestration thread detail snapshot",
           ),
         [ORCHESTRATION_WS_METHODS.repairState]: () =>
@@ -795,10 +761,7 @@ const makeWsRpcHandlersLayer = () =>
         [ORCHESTRATION_WS_METHODS.getTurnDiff]: (input) =>
           rpcEffect(checkpointDiffQuery.getTurnDiff(input), "Failed to load turn diff"),
         [ORCHESTRATION_WS_METHODS.getFullThreadDiff]: (input) =>
-          rpcEffect(
-            checkpointDiffQuery.getFullThreadDiff(input),
-            "Failed to load full thread diff",
-          ),
+          rpcEffect(checkpointDiffQuery.getFullThreadDiff(input), "Failed to load full thread diff"),
         [ORCHESTRATION_WS_METHODS.replayEvents]: (input) =>
           rpcEffect(
             Stream.runCollect(
@@ -833,8 +796,7 @@ const makeWsRpcHandlersLayer = () =>
               });
               if (result === null) {
                 return yield* new WsRpcError({
-                  message:
-                    "Provider delivery no longer matches the requested thread and blocking state.",
+                  message: "Provider delivery no longer matches the requested thread and blocking state.",
                   code: "PROVIDER_DELIVERY_RECONCILIATION_CONFLICT",
                   retryable: false,
                 });
@@ -858,20 +820,14 @@ const makeWsRpcHandlersLayer = () =>
               ),
               snapshot: projectionReadModelQuery
                 .getShellSnapshot()
-                .pipe(
-                  Effect.mapError((cause) => toWsRpcError(cause, "Failed to load shell snapshot")),
-                ),
+                .pipe(Effect.mapError((cause) => toWsRpcError(cause, "Failed to load shell snapshot"))),
               snapshotSequence: (snapshot) => snapshot.snapshotSequence,
               getHighWaterSequence: getOrchestrationHighWaterSequence,
               replay: (fromSequenceExclusive, throughSequenceInclusive) =>
-                orchestrationEngine
-                  .readEventsThrough(fromSequenceExclusive, throughSequenceInclusive)
-                  .pipe(
-                    Stream.filter(isShellRelevantEvent),
-                    Stream.mapError((cause) =>
-                      toWsRpcError(cause, "Failed to replay shell events"),
-                    ),
-                  ),
+                orchestrationEngine.readEventsThrough(fromSequenceExclusive, throughSequenceInclusive).pipe(
+                  Stream.filter(isShellRelevantEvent),
+                  Stream.mapError((cause) => toWsRpcError(cause, "Failed to replay shell events")),
+                ),
             }).pipe(
               Stream.mapEffect((item) =>
                 item.kind === "snapshot"
@@ -883,9 +839,7 @@ const makeWsRpcHandlersLayer = () =>
                     )
                   : toShellStreamEvent(item.event),
               ),
-              Stream.flatMap((item) =>
-                Option.isSome(item) ? Stream.succeed(item.value) : Stream.empty,
-              ),
+              Stream.flatMap((item) => (Option.isSome(item) ? Stream.succeed(item.value) : Stream.empty)),
             ),
           ),
         [ORCHESTRATION_WS_METHODS.unsubscribeShell]: () => Effect.void,
@@ -897,14 +851,11 @@ const makeWsRpcHandlersLayer = () =>
               threadId: input.threadId,
             },
             makeCursorSafeSnapshotLiveStream({
-              onResnapshotRequired: (report) =>
-                recordThreadResnapshotRequired(input.threadId, report),
+              onResnapshotRequired: (report) => recordThreadResnapshotRequired(input.threadId, report),
               subscribeLive: orchestrationEngine.subscribeDomainEvents.pipe(
                 Effect.map((stream) =>
                   bufferLiveUiStream(
-                    stream.pipe(
-                      Stream.filter((event) => isThreadDetailEventFor(input.threadId, event)),
-                    ),
+                    stream.pipe(Stream.filter((event) => isThreadDetailEventFor(input.threadId, event))),
                     {
                       label: "orchestration.thread-detail",
                       onDroppedEvents: (report) => recordThreadStreamDrop(input.threadId, report),
@@ -934,14 +885,10 @@ const makeWsRpcHandlersLayer = () =>
               snapshotSequence: (snapshot) => snapshot.snapshotSequence,
               getHighWaterSequence: getOrchestrationHighWaterSequence,
               replay: (fromSequenceExclusive, throughSequenceInclusive) =>
-                orchestrationEngine
-                  .readEventsThrough(fromSequenceExclusive, throughSequenceInclusive)
-                  .pipe(
-                    Stream.filter((event) => isThreadDetailEventFor(input.threadId, event)),
-                    Stream.mapError((cause) =>
-                      toWsRpcError(cause, "Failed to replay thread events"),
-                    ),
-                  ),
+                orchestrationEngine.readEventsThrough(fromSequenceExclusive, throughSequenceInclusive).pipe(
+                  Stream.filter((event) => isThreadDetailEventFor(input.threadId, event)),
+                  Stream.mapError((cause) => toWsRpcError(cause, "Failed to replay thread events")),
+                ),
             }).pipe(
               Stream.flatMap((item) => {
                 if (item.kind === "event") {
@@ -978,10 +925,7 @@ const makeWsRpcHandlersLayer = () =>
           ),
 
         [WS_METHODS.projectsListDirectories]: (input) =>
-          rpcEffect(
-            workspaceEntries.listDirectories(input),
-            "Failed to list workspace directories",
-          ),
+          rpcEffect(workspaceEntries.listDirectories(input), "Failed to list workspace directories"),
         [WS_METHODS.projectsSearchEntries]: (input) =>
           rpcEffect(workspaceEntries.search(input), "Failed to search workspace entries"),
         [WS_METHODS.projectsDiscoverScripts]: (input) =>
@@ -1001,8 +945,7 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(devServerManager.run(input), "Failed to start dev server"),
         [WS_METHODS.projectsStopDevServer]: (input) =>
           rpcEffect(devServerManager.stop(input), "Failed to stop dev server"),
-        [WS_METHODS.projectsListDevServers]: () =>
-          rpcEffect(devServerManager.list, "Failed to list dev servers"),
+        [WS_METHODS.projectsListDevServers]: () => rpcEffect(devServerManager.list, "Failed to list dev servers"),
         [WS_METHODS.subscribeProjectDevServerEvents]: (_, { clientId }) =>
           streamAdmission.guard(
             clientId,
@@ -1032,15 +975,12 @@ const makeWsRpcHandlersLayer = () =>
               // forever. mkdir -p is idempotent and cheap, and this endpoint only fires while
               // a Studio chat's environment panel is actually open. Failures degrade to the
               // empty-list behavior.
-              yield* prepareStudioWorkspaceRoot(config.studioWorkspaceRoot).pipe(
-                Effect.catch(() => Effect.void),
-              );
+              yield* prepareStudioWorkspaceRoot(config.studioWorkspaceRoot).pipe(Effect.catch(() => Effect.void));
               // Checkpoints cover Git workspaces; file-change activities preserve the same
               // attribution in the default non-Git Studio root. Unknown/non-Studio ids stay empty.
-              const context = yield* projectionReadModelQuery.getThreadCheckpointContext(
-                input.threadId,
-                { includeFileChangeActivityPayloads: true },
-              );
+              const context = yield* projectionReadModelQuery.getThreadCheckpointContext(input.threadId, {
+                includeFileChangeActivityPayloads: true,
+              });
               if (Option.isNone(context) || context.value.projectKind !== "studio") {
                 return { entries: [] };
               }
@@ -1074,8 +1014,7 @@ const makeWsRpcHandlersLayer = () =>
           ),
         [WS_METHODS.filesystemBrowse]: (input) =>
           rpcEffect(workspaceEntries.browse(input), "Failed to browse filesystem"),
-        [WS_METHODS.shellOpenInEditor]: (input) =>
-          rpcEffect(open.openInEditor(input), "Failed to open editor"),
+        [WS_METHODS.shellOpenInEditor]: (input) => rpcEffect(open.openInEditor(input), "Failed to open editor"),
 
         [WS_METHODS.gitGithubRepository]: (input) =>
           rpcEffect(resolveGitHubRepository(git, input.cwd), "Failed to resolve GitHub repository"),
@@ -1084,18 +1023,12 @@ const makeWsRpcHandlersLayer = () =>
         [WS_METHODS.gitReadWorkingTreeDiff]: (input) =>
           rpcEffect(gitManager.readWorkingTreeDiff(input), "Failed to read working tree diff"),
         [WS_METHODS.gitWorkingTreeDiffStats]: (input) =>
-          rpcEffect(
-            gitManager.readWorkingTreeDiffStats(input),
-            "Failed to read working tree diff stats",
-          ),
+          rpcEffect(gitManager.readWorkingTreeDiffStats(input), "Failed to read working tree diff stats"),
         [WS_METHODS.gitSummarizeDiff]: (input) =>
           rpcEffect(gitManager.summarizeDiff(input), "Failed to summarize diff"),
         [WS_METHODS.gitPull]: (input) =>
           rpcEffect(
-            refreshGitStatusAfter(
-              input.cwd,
-              git.withMutation(input.cwd, git.pullCurrentBranch(input.cwd)),
-            ),
+            refreshGitStatusAfter(input.cwd, git.withMutation(input.cwd, git.pullCurrentBranch(input.cwd))),
             "Failed to pull branch",
           ),
         [WS_METHODS.gitRunStackedAction]: (input) =>
@@ -1121,10 +1054,7 @@ const makeWsRpcHandlersLayer = () =>
         [WS_METHODS.gitResolvePullRequest]: (input) =>
           rpcEffect(gitManager.resolvePullRequest(input), "Failed to resolve pull request"),
         [WS_METHODS.gitPullRequestSnapshot]: (input) =>
-          rpcEffect(
-            gitManager.pullRequestSnapshot(input),
-            "Failed to load pull request checks and comments",
-          ),
+          rpcEffect(gitManager.pullRequestSnapshot(input), "Failed to load pull request checks and comments"),
         [WS_METHODS.gitPreparePullRequestThread]: (input) =>
           rpcEffect(
             refreshGitStatusAfter(input.cwd, gitManager.preparePullRequestThread(input)),
@@ -1133,10 +1063,7 @@ const makeWsRpcHandlersLayer = () =>
         [WS_METHODS.pullRequestsList]: (input) =>
           pullRequestsEffect(pullRequests.list(input), "Failed to list pull requests"),
         [WS_METHODS.pullRequestsReviewRequestCount]: (input) =>
-          pullRequestsEffect(
-            pullRequests.reviewRequestCount(input),
-            "Failed to count pull request review requests",
-          ),
+          pullRequestsEffect(pullRequests.reviewRequestCount(input), "Failed to count pull request review requests"),
         [WS_METHODS.pullRequestsDetail]: (input) =>
           pullRequestsEffect(pullRequests.detail(input), "Failed to load pull request"),
         [WS_METHODS.pullRequestsDiff]: (input) =>
@@ -1147,30 +1074,20 @@ const makeWsRpcHandlersLayer = () =>
           pullRequestsEffect(pullRequests.comment(input), "Could not post the comment"),
         [WS_METHODS.pullRequestsSetPinned]: (input) =>
           rpcEffect(pullRequests.setPinned(input), "Failed to update pull request pin"),
-        [WS_METHODS.gitListBranches]: (input) =>
-          rpcEffect(git.listBranches(input), "Failed to list branches"),
+        [WS_METHODS.gitListBranches]: (input) => rpcEffect(git.listBranches(input), "Failed to list branches"),
         [WS_METHODS.gitCreateWorktree]: (input) =>
           rpcEffect(
-            refreshGitStatusAfter(
-              input.cwd,
-              git.withMutation(input.cwd, git.createWorktree(input)),
-            ),
+            refreshGitStatusAfter(input.cwd, git.withMutation(input.cwd, git.createWorktree(input))),
             "Failed to create worktree",
           ),
         [WS_METHODS.gitCreateDetachedWorktree]: (input) =>
           rpcEffect(
-            refreshGitStatusAfter(
-              input.cwd,
-              git.withMutation(input.cwd, git.createDetachedWorktree(input)),
-            ),
+            refreshGitStatusAfter(input.cwd, git.withMutation(input.cwd, git.createDetachedWorktree(input))),
             "Failed to create detached worktree",
           ),
         [WS_METHODS.gitRemoveWorktree]: (input) =>
           rpcEffect(
-            refreshGitStatusAfter(
-              input.cwd,
-              git.withMutation(input.cwd, git.removeWorktree(input)),
-            ),
+            refreshGitStatusAfter(input.cwd, git.withMutation(input.cwd, git.removeWorktree(input))),
             "Failed to remove worktree",
           ),
         [WS_METHODS.gitCreateBranch]: (input) =>
@@ -1180,18 +1097,12 @@ const makeWsRpcHandlersLayer = () =>
           ),
         [WS_METHODS.gitCheckout]: (input) =>
           rpcEffect(
-            refreshGitStatusAfter(
-              input.cwd,
-              git.withMutation(input.cwd, Effect.scoped(git.checkoutBranch(input))),
-            ),
+            refreshGitStatusAfter(input.cwd, git.withMutation(input.cwd, Effect.scoped(git.checkoutBranch(input)))),
             "Failed to checkout branch",
           ),
         [WS_METHODS.gitStashAndCheckout]: (input) =>
           rpcEffect(
-            refreshGitStatusAfter(
-              input.cwd,
-              git.withMutation(input.cwd, Effect.scoped(git.stashAndCheckout(input))),
-            ),
+            refreshGitStatusAfter(input.cwd, git.withMutation(input.cwd, Effect.scoped(git.stashAndCheckout(input)))),
             "Failed to stash and checkout",
           ),
         [WS_METHODS.gitStashDrop]: (input) =>
@@ -1199,24 +1110,29 @@ const makeWsRpcHandlersLayer = () =>
             refreshGitStatusAfter(input.cwd, git.withMutation(input.cwd, git.stashDrop(input))),
             "Failed to drop stash",
           ),
-        [WS_METHODS.gitStashInfo]: (input) =>
-          rpcEffect(git.stashInfo(input), "Failed to read stash"),
+        [WS_METHODS.gitStashInfo]: (input) => rpcEffect(git.stashInfo(input), "Failed to read stash"),
         [WS_METHODS.gitRemoveIndexLock]: (input) =>
-          rpcEffect(
-            git.withMutation(input.cwd, git.removeIndexLock(input)),
-            "Failed to remove Git index lock",
-          ),
+          rpcEffect(git.withMutation(input.cwd, git.removeIndexLock(input)), "Failed to remove Git index lock"),
         [WS_METHODS.gitInit]: (input) =>
           rpcEffect(
             refreshGitStatusAfter(input.cwd, git.withMutation(input.cwd, git.initRepo(input))),
             "Failed to initialize repository",
           ),
+        [WS_METHODS.gitConnectGitHubRemote]: (input) =>
+          rpcEffect(
+            refreshGitStatusAfter(input.cwd, gitManager.connectGitHubRemote(input)),
+            "Failed to connect GitHub repository",
+          ),
+        [WS_METHODS.gitCreateGitHubRepository]: (input) =>
+          rpcEffect(
+            refreshGitStatusAfter(input.cwd, gitManager.createGitHubRepository(input)),
+            "Failed to create GitHub repository",
+          ),
         [WS_METHODS.gitStageFiles]: (input) =>
           rpcEffect(
-            refreshGitStatusAfter(
-              input.cwd,
-              git.withMutation(input.cwd, git.stageFiles(input.cwd, input.paths)),
-            ).pipe(Effect.as({ ok: true })),
+            refreshGitStatusAfter(input.cwd, git.withMutation(input.cwd, git.stageFiles(input.cwd, input.paths))).pipe(
+              Effect.as({ ok: true }),
+            ),
             "Failed to stage files",
           ),
         [WS_METHODS.gitUnstageFiles]: (input) =>
@@ -1256,9 +1172,7 @@ const makeWsRpcHandlersLayer = () =>
                         ),
                       ),
                     ).pipe(Effect.tap((gitResult) => recordGitHandoffResult(commandId, gitResult)));
-              yield* dispatchOrchestrationCommand(
-                gitHandoffMetadataCommand({ commandId, threadId }, result),
-              );
+              yield* dispatchOrchestrationCommand(gitHandoffMetadataCommand({ commandId, threadId }, result));
               yield* completeGitHandoff(commandId);
               return result;
             }),
@@ -1287,10 +1201,8 @@ const makeWsRpcHandlersLayer = () =>
           ),
         [WS_METHODS.terminalAckOutput]: (input) =>
           rpcEffect(terminalManager.ackOutput(input), "Failed to acknowledge terminal output"),
-        [WS_METHODS.terminalResize]: (input) =>
-          rpcEffect(terminalManager.resize(input), "Failed to resize terminal"),
-        [WS_METHODS.terminalClear]: (input) =>
-          rpcEffect(terminalManager.clear(input), "Failed to clear terminal"),
+        [WS_METHODS.terminalResize]: (input) => rpcEffect(terminalManager.resize(input), "Failed to resize terminal"),
+        [WS_METHODS.terminalClear]: (input) => rpcEffect(terminalManager.clear(input), "Failed to clear terminal"),
         [WS_METHODS.terminalRestart]: (input) =>
           rpcEffect(
             resetTerminalTitleBuffer(input.threadId, input.terminalId ?? DEFAULT_TERMINAL_ID).pipe(
@@ -1321,8 +1233,7 @@ const makeWsRpcHandlersLayer = () =>
             ),
           ),
 
-        [WS_METHODS.serverGetConfig]: () =>
-          rpcEffect(loadServerConfig, "Failed to load server config"),
+        [WS_METHODS.serverGetConfig]: () => rpcEffect(loadServerConfig, "Failed to load server config"),
         [WS_METHODS.serverGetEnvironment]: () =>
           rpcEffect(serverEnvironment.getDescriptor, "Failed to load server environment"),
         [WS_METHODS.serverGetSettings]: () =>
@@ -1373,10 +1284,7 @@ const makeWsRpcHandlersLayer = () =>
         [WS_METHODS.statsGetProfileStats]: (input) =>
           rpcEffect(profileStatsQuery.getProfileStats(input), "Failed to load profile stats"),
         [WS_METHODS.statsGetProfileTokenStats]: (input) =>
-          rpcEffect(
-            profileStatsQuery.getProfileTokenStats(input),
-            "Failed to load profile token stats",
-          ),
+          rpcEffect(profileStatsQuery.getProfileTokenStats(input), "Failed to load profile token stats"),
         [WS_METHODS.serverGetProviderUsageSnapshot]: (input) =>
           rpcEffect(getProviderUsageSnapshot(input), "Failed to load provider usage"),
         [WS_METHODS.serverListProviderUsage]: (input) =>
@@ -1422,11 +1330,7 @@ const makeWsRpcHandlersLayer = () =>
                 Effect.flatMap((adapter) =>
                   adapter.transcribeVoice
                     ? adapter.transcribeVoice(input)
-                    : Effect.fail(
-                        new Error(
-                          `Voice transcription is unavailable for provider '${input.provider}'.`,
-                        ),
-                      ),
+                    : Effect.fail(new Error(`Voice transcription is unavailable for provider '${input.provider}'.`)),
                 ),
               ),
             "Voice transcription failed",
@@ -1435,8 +1339,7 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(
             Effect.gen(function* () {
               const settings = yield* serverSettings.getSettings;
-              const modelSelection =
-                input.textGenerationModelSelection ?? settings.textGenerationModelSelection;
+              const modelSelection = input.textGenerationModelSelection ?? settings.textGenerationModelSelection;
               return yield* textGeneration.generateThreadRecap({
                 cwd: input.cwd,
                 newMaterial: input.newMaterial,
@@ -1454,8 +1357,7 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(
             Effect.gen(function* () {
               const settings = yield* serverSettings.getSettings;
-              const modelSelection =
-                input.textGenerationModelSelection ?? settings.textGenerationModelSelection;
+              const modelSelection = input.textGenerationModelSelection ?? settings.textGenerationModelSelection;
               return yield* textGeneration.generateAutomationIntent({
                 cwd: input.cwd,
                 message: input.message,
@@ -1473,9 +1375,7 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(
             keybindings
               .upsertKeybindingRule(input)
-              .pipe(
-                Effect.map((keybindingsConfig) => ({ keybindings: keybindingsConfig, issues: [] })),
-              ),
+              .pipe(Effect.map((keybindingsConfig) => ({ keybindings: keybindingsConfig, issues: [] }))),
             "Failed to update keybinding",
           ),
         [WS_METHODS.subscribeServerLifecycle]: (_, { clientId }) =>
@@ -1486,9 +1386,7 @@ const makeWsRpcHandlersLayer = () =>
               Stream.fromEffect(
                 lifecycleEvents.snapshot.pipe(
                   Effect.map((snapshot) =>
-                    Array.from(snapshot.events).toSorted(
-                      (left, right) => left.sequence - right.sequence,
-                    ),
+                    Array.from(snapshot.events).toSorted((left, right) => left.sequence - right.sequence),
                   ),
                 ),
               ).pipe(Stream.flatMap(Stream.fromIterable)),
@@ -1560,9 +1458,7 @@ const makeWsRpcHandlersLayer = () =>
             clientId,
             { key: "server.provider-statuses" },
             Stream.concat(
-              Stream.fromEffect(
-                providerHealth.getStatuses.pipe(Effect.map((providers) => ({ providers }))),
-              ),
+              Stream.fromEffect(providerHealth.getStatuses.pipe(Effect.map((providers) => ({ providers })))),
               bufferLiveUiStream(providerHealth.streamChanges, {
                 label: "server.provider-statuses",
                 onDroppedEvents: failLiveUiStreamForSnapshotResync,
@@ -1574,23 +1470,16 @@ const makeWsRpcHandlersLayer = () =>
             clientId,
             { key: "server.settings" },
             Stream.concat(
-              Stream.fromEffect(
-                serverSettings.getSettingsView.pipe(Effect.map((settings) => ({ settings }))),
-              ),
+              Stream.fromEffect(serverSettings.getSettingsView.pipe(Effect.map((settings) => ({ settings })))),
               bufferLiveUiStream(serverSettings.streamViews, {
                 label: "server.settings",
                 onDroppedEvents: failLiveUiStreamForSnapshotResync,
               }).pipe(Stream.map((settings) => ({ settings }))),
-            ).pipe(
-              Stream.mapError((cause) => toWsRpcError(cause, "Server settings stream failed")),
-            ),
+            ).pipe(Stream.mapError((cause) => toWsRpcError(cause, "Server settings stream failed"))),
           ),
 
         [WS_METHODS.providerGetComposerCapabilities]: (input) =>
-          rpcEffect(
-            providerDiscoveryService.getComposerCapabilities(input),
-            "Failed to get composer capabilities",
-          ),
+          rpcEffect(providerDiscoveryService.getComposerCapabilities(input), "Failed to get composer capabilities"),
         [WS_METHODS.providerCompactThread]: (input) =>
           rpcEffect(providerService.compactThread(input), "Failed to compact thread"),
         [WS_METHODS.providerListCommands]: (input) =>
@@ -1614,6 +1503,36 @@ const makeWsRpcHandlersLayer = () =>
             ),
             "Failed to list the skills catalog",
           ),
+        [WS_METHODS.providerImportSkill]: (input) =>
+          rpcEffect(
+            Effect.tryPromise(() => importSynaraSkill(config.baseDir, input)),
+            "Failed to import the skill",
+          ),
+        [WS_METHODS.providerReadManagedSkill]: (input) =>
+          rpcEffect(
+            Effect.tryPromise(() => readManagedSkill(config.baseDir, input)),
+            "Failed to read the skill",
+          ),
+        [WS_METHODS.providerSaveManagedSkill]: (input) =>
+          rpcEffect(
+            Effect.tryPromise(() => saveManagedSkill(config.baseDir, input)),
+            "Failed to save the skill",
+          ),
+        [WS_METHODS.providerDuplicateManagedSkill]: (input) =>
+          rpcEffect(
+            Effect.tryPromise(() => duplicateManagedSkill(config.baseDir, input)),
+            "Failed to create an editable skill copy",
+          ),
+        [WS_METHODS.providerRemoveManagedSkill]: (input) =>
+          rpcEffect(
+            Effect.tryPromise(() => removeManagedSkill(config.baseDir, input)),
+            "Failed to remove the skill",
+          ),
+        [WS_METHODS.providerRestoreManagedSkill]: (input) =>
+          rpcEffect(
+            Effect.tryPromise(() => restoreManagedSkill(config.baseDir, input)),
+            "Failed to restore the skill",
+          ),
         [WS_METHODS.providerListPlugins]: (input) =>
           rpcEffect(providerDiscoveryService.listPlugins(input), "Failed to list plugins"),
         [WS_METHODS.providerReadPlugin]: (input) =>
@@ -1622,8 +1541,7 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(providerDiscoveryService.listModels(input), "Failed to list models"),
         [WS_METHODS.providerListAgents]: (input) =>
           rpcEffect(providerDiscoveryService.listAgents(input), "Failed to list agents"),
-        [WS_METHODS.automationList]: (input) =>
-          rpcEffect(automationService.list(input), "Failed to list automations"),
+        [WS_METHODS.automationList]: (input) => rpcEffect(automationService.list(input), "Failed to list automations"),
         [WS_METHODS.automationGetMemory]: ({ automationId }) =>
           rpcEffect(automationService.getMemory(automationId), "Failed to load automation memory"),
         [WS_METHODS.automationCreate]: (input) =>
@@ -1641,10 +1559,7 @@ const makeWsRpcHandlersLayer = () =>
         [WS_METHODS.automationArchiveRun]: (input) =>
           rpcEffect(automationService.archiveRun(input), "Failed to update automation run"),
         [WS_METHODS.automationResolveProposal]: (input) =>
-          rpcEffect(
-            automationService.resolveProposal(input),
-            "Failed to resolve automation proposal",
-          ),
+          rpcEffect(automationService.resolveProposal(input), "Failed to resolve automation proposal"),
         [WS_METHODS.subscribeAutomationEvents]: (_, { clientId }) =>
           streamAdmission.guard(
             clientId,
@@ -1661,16 +1576,13 @@ const makeWsRpcHandlersLayer = () =>
                 ),
               ),
               automationService.streamEvents,
-            ).pipe(
-              Stream.mapError((cause) => toWsRpcError(cause, "Automation event stream failed")),
-            ),
+            ).pipe(Stream.mapError((cause) => toWsRpcError(cause, "Automation event stream failed"))),
           ),
       });
     }),
   );
 
-export const makeWsRpcLayer = () =>
-  Layer.merge(makeWsRpcHandlersLayer(), wsRequestAdmissionMiddlewareLayer);
+export const makeWsRpcLayer = () => Layer.merge(makeWsRpcHandlersLayer(), wsRequestAdmissionMiddlewareLayer);
 
 const makeRpcWebSocketHttpEffect = RpcServer.toHttpEffectWebsocket(AdmittedWsFeatureRpcGroup, {
   spanPrefix: "ws.rpc",
@@ -1724,9 +1636,7 @@ export function authenticateRpcWebSocketUpgrade(input: {
 }): Effect.Effect<AuthenticatedSession | null, AuthError> {
   if (
     !requiresWebSocketAuthentication(input.config) ||
-    (isLoopbackHost(input.config.host) &&
-      !input.config.publicUrl &&
-      input.legacyToken === input.config.authToken)
+    (isLoopbackHost(input.config.host) && !input.config.publicUrl && input.legacyToken === input.config.authToken)
   ) {
     return Effect.succeed(null);
   }
@@ -1735,11 +1645,7 @@ export function authenticateRpcWebSocketUpgrade(input: {
 
 export function makeWebsocketRpcRouteLayer<R>(
   rpcWebSocketHttpEffectSource: Effect.Effect<
-    Effect.Effect<
-      HttpServerResponse.HttpServerResponse,
-      never,
-      HttpServerRequest.HttpServerRequest | Scope.Scope
-    >,
+    Effect.Effect<HttpServerResponse.HttpServerResponse, never, HttpServerRequest.HttpServerRequest | Scope.Scope>,
     never,
     R
   >,
@@ -1755,10 +1661,7 @@ export function makeWebsocketRpcRouteLayer<R>(
       // session is registered for the connection's lifetime and its key is
       // injected as a synthetic upgrade header; the admission middleware
       // resolves it back into handler-scoped services on every request.
-      const runWithConnectionSession = (
-        request: HttpServerRequest.HttpServerRequest,
-        session: WsConnectionSession,
-      ) =>
+      const runWithConnectionSession = (request: HttpServerRequest.HttpServerRequest, session: WsConnectionSession) =>
         Effect.gen(function* () {
           const sessionKey = yield* connectionSessions.register(session);
           return yield* rpcWebSocketHttpEffect.pipe(
@@ -1824,8 +1727,7 @@ export function makeWebsocketRpcRouteLayer<R>(
                   },
                 }),
               ),
-            SessionCredentialError: (error) =>
-              Effect.succeed(HttpServerResponse.text(error.message, { status: 401 })),
+            SessionCredentialError: (error) => Effect.succeed(HttpServerResponse.text(error.message, { status: 401 })),
           }),
         ),
       );
@@ -1835,11 +1737,7 @@ export function makeWebsocketRpcRouteLayer<R>(
 
 function makeWebsocketBootstrapRouteLayer<R>(
   bootstrapWebSocketHttpEffectSource: Effect.Effect<
-    Effect.Effect<
-      HttpServerResponse.HttpServerResponse,
-      never,
-      HttpServerRequest.HttpServerRequest | Scope.Scope
-    >,
+    Effect.Effect<HttpServerResponse.HttpServerResponse, never, HttpServerRequest.HttpServerRequest | Scope.Scope>,
     never,
     R
   >,
@@ -1869,7 +1767,5 @@ export const websocketRpcRouteLayer = Layer.merge(
   makeWebsocketBootstrapRouteLayer(makeBootstrapWebSocketHttpEffect),
   // The registry must be provided here so the upgrade route and the RPC
   // middleware (built from the same source effect) share one instance.
-  makeWebsocketRpcRouteLayer(makeRpcWebSocketHttpEffect).pipe(
-    Layer.provide(WsConnectionSessionsLive),
-  ),
+  makeWebsocketRpcRouteLayer(makeRpcWebSocketHttpEffect).pipe(Layer.provide(WsConnectionSessionsLive)),
 );

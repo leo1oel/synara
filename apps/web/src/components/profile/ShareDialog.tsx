@@ -151,7 +151,7 @@ export function ShareDialog({
         <div className="mt-5 flex flex-col items-center gap-7 px-2 pb-3">
           <div
             ref={previewRef}
-            className="w-full max-w-[480px] overflow-hidden rounded-2xl border bg-white shadow-sm"
+            className="w-full max-w-[480px] overflow-hidden rounded-2xl border bg-[#F9F9FA] shadow-sm"
             style={{ aspectRatio: `${SHARE_CARD_WIDTH} / ${SHARE_CARD_HEIGHT}` }}
           >
             <div
@@ -183,12 +183,7 @@ export function ShareDialog({
             >
               <CopyIcon className="size-5" />
             </ShareButton>
-            <ShareButton
-              label="X"
-              busy={busy === "x"}
-              disabled={actionsDisabled}
-              onClick={() => void handleShare("x")}
-            >
+            <ShareButton label="X" busy={busy === "x"} disabled={actionsDisabled} onClick={() => void handleShare("x")}>
               <SiX className="size-5" />
             </ShareButton>
             <ShareButton
@@ -218,9 +213,7 @@ export function ShareDialog({
             </ShareButton>
           </div>
 
-          <p className="min-h-4 text-center text-xs leading-snug text-muted-foreground">
-            {status ?? ""}
-          </p>
+          <p className="min-h-4 text-center text-xs leading-snug text-muted-foreground">{status ?? ""}</p>
         </div>
       </DialogPopup>
     </Dialog>

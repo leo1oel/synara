@@ -9,6 +9,11 @@ import * as React from "react";
 
 import { cn } from "~/lib/utils";
 import {
+  FIELD_CONTROL_COMPACT_HEIGHT_CLASS_NAME,
+  FIELD_CONTROL_HEIGHT_CLASS_NAME,
+  FIELD_CONTROL_LARGE_HEIGHT_CLASS_NAME,
+} from "./field-styles";
+import {
   APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME,
   COMPOSER_PICKER_MENU_POPUP_BODY_CLASS_NAME,
   COMPOSER_PICKER_MENU_POPUP_VIEWPORT_CLASS_NAME,
@@ -46,9 +51,9 @@ const selectTriggerVariants = cva(
           "border-transparent text-[var(--color-text-foreground-secondary)] focus-visible:ring-1 focus-visible:ring-[color:var(--color-border-focus)]/60 data-pressed:bg-[var(--color-background-elevated-secondary)] [:hover,[data-pressed]]:bg-[var(--color-background-elevated-secondary)] [:hover,[data-pressed]]:text-[var(--color-text-foreground)]",
       },
       size: {
-        default: "min-h-9 px-[calc(--spacing(3)-1px)] sm:min-h-8",
-        lg: "min-h-10 px-[calc(--spacing(3)-1px)] sm:min-h-9",
-        sm: "min-h-8 gap-1.5 px-[calc(--spacing(2.5)-1px)] sm:min-h-7",
+        default: cn(FIELD_CONTROL_HEIGHT_CLASS_NAME, "px-[calc(--spacing(3)-1px)]"),
+        lg: cn(FIELD_CONTROL_LARGE_HEIGHT_CLASS_NAME, "px-[calc(--spacing(3)-1px)]"),
+        sm: cn(FIELD_CONTROL_COMPACT_HEIGHT_CLASS_NAME, "gap-1.5 px-[calc(--spacing(2.5)-1px)]"),
         xs: "h-7 gap-1 rounded-sm px-[calc(--spacing(2)-1px)] text-[length:var(--app-font-size-ui-sm,11px)] sm:h-6 sm:text-[length:var(--app-font-size-ui-xs,10px)] [&_svg:not([class*='size-'])]:size-4 sm:[&_svg:not([class*='size-'])]:size-3.5",
       },
     },
@@ -63,16 +68,12 @@ interface SelectButtonProps extends useRender.ComponentProps<"button"> {
 }
 
 function SelectButton({ className, size, variant, render, children, ...props }: SelectButtonProps) {
-  const typeValue: React.ButtonHTMLAttributes<HTMLButtonElement>["type"] = render
-    ? undefined
-    : "button";
+  const typeValue: React.ButtonHTMLAttributes<HTMLButtonElement>["type"] = render ? undefined : "button";
 
   const defaultProps = {
     children: (
       <>
-        <span className="flex-1 truncate in-data-placeholder:text-muted-foreground/72">
-          {children}
-        </span>
+        <span className="flex-1 truncate in-data-placeholder:text-muted-foreground/72">{children}</span>
         {variant === "ghost" ? (
           <ChevronDownIcon className="size-3 opacity-50" />
         ) : (
@@ -156,11 +157,7 @@ function SelectPopup({
   const viewportClassName = cn(
     COMPOSER_PICKER_MENU_POPUP_VIEWPORT_CLASS_NAME,
     surface === "settings"
-      ? cn(
-          APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME,
-          "rounded-lg",
-          COMPOSER_SURFACE_SHADOW_CLASS_NAME,
-        )
+      ? cn(APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME, "rounded-lg", COMPOSER_SURFACE_SHADOW_CLASS_NAME)
       : COMPOSER_PICKER_MENU_SURFACE_CLASS_NAME,
     shellClassName,
   );
@@ -171,9 +168,7 @@ function SelectPopup({
     className,
   );
   const scrollArrowSurfaceClassName =
-    surface === "settings"
-      ? "before:from-[var(--app-settings-surface)]"
-      : "before:from-[var(--composer-surface)]";
+    surface === "settings" ? "before:from-[var(--app-settings-surface)]" : "before:from-[var(--composer-surface)]";
 
   return (
     <SelectPopupSurfaceContext.Provider value={surface}>
@@ -205,10 +200,7 @@ function SelectPopup({
             {/* Keep a hard popup viewport cap so long theme lists can always scroll
                 fully to both edges even when the positioner reports a tight height. */}
             <div className={viewportClassName}>
-              <SelectPrimitive.List
-                className={cn(listClassName, "relative z-1")}
-                data-slot="menu-popup-body"
-              >
+              <SelectPrimitive.List className={cn(listClassName, "relative z-1")} data-slot="menu-popup-body">
                 {children}
               </SelectPrimitive.List>
             </div>
@@ -239,9 +231,7 @@ function SelectItem({
   const hideIndicator = hideIndicatorProp ?? false;
   const popupSurface = React.useContext(SelectPopupSurfaceContext);
   const optionBaseClassName =
-    popupSurface === "settings"
-      ? settingsSelectOptionClassName
-      : COMPOSER_PICKER_SELECT_OPTION_CLASS_NAME;
+    popupSurface === "settings" ? settingsSelectOptionClassName : COMPOSER_PICKER_SELECT_OPTION_CLASS_NAME;
 
   return (
     <SelectPrimitive.Item
@@ -257,10 +247,7 @@ function SelectItem({
         {children}
       </SelectPrimitive.ItemText>
       {hideIndicator ? null : (
-        <SelectPrimitive.ItemIndicator
-          className="col-start-2 justify-self-end"
-          data-slot="select-item-indicator"
-        >
+        <SelectPrimitive.ItemIndicator className="col-start-2 justify-self-end" data-slot="select-item-indicator">
           <svg
             className="size-3"
             fill="none"

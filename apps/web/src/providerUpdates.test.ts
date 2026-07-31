@@ -19,10 +19,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function providerStatus(
-  provider: ProviderKind,
-  overrides: Partial<ServerProviderStatus> = {},
-): ServerProviderStatus {
+function providerStatus(provider: ProviderKind, overrides: Partial<ServerProviderStatus> = {}): ServerProviderStatus {
   return {
     provider,
     status: "ready",
@@ -119,7 +116,7 @@ describe("getVisibleProviderUpdateStatuses", () => {
   });
 
   it("can narrow notifications to one-click updates while settings keep manual updates visible", () => {
-    const manualOnly = providerStatus("pi", {
+    const manualOnly = providerStatus("droid", {
       versionAdvisory: {
         status: "behind_latest",
         currentVersion: "1.0.0",
@@ -136,7 +133,7 @@ describe("getVisibleProviderUpdateStatuses", () => {
         providers: [providerStatus("codex"), manualOnly],
         serverSettings: serverSettings(),
       }).map((provider) => provider.provider),
-    ).toEqual(["codex", "pi"]);
+    ).toEqual(["codex", "droid"]);
     expect(
       getVisibleProviderUpdateStatuses({
         providers: [providerStatus("codex"), manualOnly],
@@ -211,12 +208,8 @@ describe("isProviderUpdateActive", () => {
       status: "succeeded",
     } satisfies NonNullable<ServerProviderStatus["updateState"]>;
 
-    expect(isProviderUpdateActive(providerStatus("codex", { updateState: queuedState }))).toBe(
-      true,
-    );
-    expect(isProviderUpdateActive(providerStatus("codex", { updateState: succeededState }))).toBe(
-      false,
-    );
+    expect(isProviderUpdateActive(providerStatus("codex", { updateState: queuedState }))).toBe(true);
+    expect(isProviderUpdateActive(providerStatus("codex", { updateState: succeededState }))).toBe(false);
   });
 });
 
@@ -267,5 +260,65 @@ describe("shouldOfferProviderUpdateAction", () => {
         }),
       ),
     ).toBe(true);
+  });
+
+  it("does not offer updates for a missing CLI even when stale capabilities say it can update", () => {
+    expect(
+      shouldOfferProviderUpdateAction(
+        providerStatus("antigravity", {
+          available: false,
+          version: undefined,
+          versionAdvisory: {
+            status: "unknown",
+            currentVersion: null,
+            latestVersion: null,
+            updateCommand: "agy update",
+            canUpdate: true,
+            checkedAt: "2026-07-15T14:00:00.000Z",
+            message: null,
+          },
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it("does not offer Pi CLI updates when only the bundled SDK is available", () => {
+    expect(
+      shouldOfferProviderUpdateAction(
+        providerStatus("pi", {
+          available: true,
+          version: undefined,
+          versionAdvisory: {
+            status: "unknown",
+            currentVersion: null,
+            latestVersion: null,
+            updateCommand: "pi update",
+            canUpdate: true,
+            checkedAt: "2026-07-15T14:00:00.000Z",
+            message: null,
+          },
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it("never exposes a Pi update even when stale status contains an external CLI version", () => {
+    expect(
+      shouldOfferProviderUpdateAction(
+        providerStatus("pi", {
+          available: true,
+          version: "0.74.0",
+          versionAdvisory: {
+            status: "behind_latest",
+            currentVersion: "0.74.0",
+            latestVersion: "0.75.0",
+            updateCommand: "pi update",
+            canUpdate: true,
+            checkedAt: "2026-07-15T14:00:00.000Z",
+            message: "Update available.",
+          },
+        }),
+      ),
+    ).toBe(false);
   });
 });

@@ -1,37 +1,25 @@
-import type {
-  ProjectId,
-  PullRequestInvolvement,
-  PullRequestListEntry,
-  PullRequestState,
-} from "@synara/contracts";
-import {
-  coalescePullRequestListEntries,
-  isValidGitHubRepositoryNameWithOwner,
-} from "@synara/shared/githubRepository";
+import type { ProjectId, PullRequestInvolvement, PullRequestListEntry, PullRequestState } from "@synara/contracts";
+import { coalescePullRequestListEntries, isValidGitHubRepositoryNameWithOwner } from "@synara/shared/githubRepository";
 import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 
 import {
+  CHAT_SURFACE_HEADER_ACTION_ICON_CLASS_NAME,
   CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
   CHAT_SURFACE_HEADER_HEIGHT_CLASS,
   CHAT_SURFACE_HEADER_PADDING_X_CLASS,
+  CHAT_SURFACE_HEADER_TITLE_CLASS_NAME,
+  DOCK_HEADER_ICON_BUTTON_CLASS,
 } from "~/components/chat/chatHeaderControls";
 import {
   CHAT_MAIN_CONTENT_SURFACE_CLASS_NAME,
   CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME,
 } from "~/components/chat/composerPickerStyles";
-import {
-  RIGHT_DOCK_DEFAULT_WIDTH,
-  RIGHT_DOCK_MIN_WIDTH,
-  RightDock,
-} from "~/components/chat/RightDock";
+import { RIGHT_DOCK_DEFAULT_WIDTH, RIGHT_DOCK_MIN_WIDTH, RightDock } from "~/components/chat/RightDock";
 import { PanelStateMessage } from "~/components/chat/PanelStateMessage";
 import { pullRequestPaneTabLabel } from "~/components/pullRequest/pullRequestDetail.logic";
-import {
-  focusPullRequestRow,
-  isFocusInsideRightDock,
-} from "~/components/pullRequest/pullRequestFocus";
+import { focusPullRequestRow, isFocusInsideRightDock } from "~/components/pullRequest/pullRequestFocus";
 import { PullRequestList } from "~/components/pullRequest/PullRequestList";
 import {
   filterPullRequestEntriesByInvolvement,
@@ -49,8 +37,8 @@ import { usePullRequestPaneStateIcon } from "~/components/pullRequest/usePullReq
 import { PullRequestWarningNote } from "~/components/pullRequest/PullRequestWarningNote";
 import { RouteInsetSurface } from "~/components/RouteInsetSurface";
 import { SidebarHeaderNavigationControls } from "~/components/SidebarHeaderNavigationControls";
-import { Button } from "~/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "~/components/ui/empty";
+import { IconButton } from "~/components/ui/icon-button";
 import { SearchInput } from "~/components/ui/search-input";
 import { Skeleton } from "~/components/ui/skeleton";
 import { toastManager } from "~/components/ui/toast";
@@ -71,11 +59,7 @@ import {
   shouldLoadExactPullRequestInvolvement,
 } from "~/lib/pullRequestReactQuery";
 import { cn } from "~/lib/utils";
-import {
-  createDefaultRightDockState,
-  openPaneInState,
-  type RightDockThreadState,
-} from "~/rightDockStore.logic";
+import { createDefaultRightDockState, openPaneInState, type RightDockThreadState } from "~/rightDockStore.logic";
 import { useStore } from "~/store";
 import { PR_FINE_TEXT_CLASS_NAME } from "~/components/pullRequest/pullRequestText";
 
@@ -114,22 +98,16 @@ const PullRequestDockPane = lazy(() => import("~/components/pullRequest/PullRequ
 
 export const Route = createFileRoute("/_chat/pull-requests/")({
   validateSearch: (raw): PullRequestsSearch => ({
-    involvement:
-      raw.involvement === "reviewing" || raw.involvement === "authored" ? raw.involvement : "all",
+    involvement: raw.involvement === "reviewing" || raw.involvement === "authored" ? raw.involvement : "all",
     state: raw.state === "closed" || raw.state === "merged" ? raw.state : "open",
-    ...(typeof raw.projectId === "string" && raw.projectId
-      ? { projectId: raw.projectId as ProjectId }
-      : {}),
+    ...(typeof raw.projectId === "string" && raw.projectId ? { projectId: raw.projectId as ProjectId } : {}),
     ...(typeof raw.selectedProjectId === "string" && raw.selectedProjectId
       ? { selectedProjectId: raw.selectedProjectId as ProjectId }
       : {}),
-    ...(typeof raw.selectedRepo === "string" &&
-    isValidGitHubRepositoryNameWithOwner(raw.selectedRepo)
+    ...(typeof raw.selectedRepo === "string" && isValidGitHubRepositoryNameWithOwner(raw.selectedRepo)
       ? { selectedRepo: raw.selectedRepo.trim() }
       : {}),
-    ...(typeof raw.number === "number" && Number.isInteger(raw.number) && raw.number > 0
-      ? { number: raw.number }
-      : {}),
+    ...(typeof raw.number === "number" && Number.isInteger(raw.number) && raw.number > 0 ? { number: raw.number } : {}),
     ...(typeof raw.q === "string" && raw.q ? { q: raw.q.slice(0, 200) } : {}),
   }),
   component: PullRequestsRouteView,
@@ -148,17 +126,9 @@ const STATE_TABS: ReadonlyArray<{ value: PullRequestState; label: string }> = [
 
 function PullRequestsRouteView() {
   const search = Route.useSearch();
-  const {
-    embedMode,
-    projectId: embeddedProjectId,
-    bindingError,
-  } = useEmbeddedWorkspaceProject();
-  const scopedProjectId = embedMode
-    ? embeddedProjectId ?? undefined
-    : search.projectId;
-  const workspaceBindingPending = Boolean(
-    embedMode && !embeddedProjectId && !bindingError,
-  );
+  const { embedMode, projectId: embeddedProjectId, bindingError } = useEmbeddedWorkspaceProject();
+  const scopedProjectId = embedMode ? (embeddedProjectId ?? undefined) : search.projectId;
+  const workspaceBindingPending = Boolean(embedMode && !embeddedProjectId && !bindingError);
   const navigate = useNavigate({ from: Route.fullPath });
   const trafficLightGutter = useDesktopTopBarTrafficLightGutterClassName();
   const windowControlsGutter = useDesktopTopBarWindowControlsGutterClassName();
@@ -214,9 +184,7 @@ function PullRequestsRouteView() {
   // client-side involvement filter over the truncated superset can miss older matches, so the
   // active tab additionally fetches the server-filtered list. In the common (untruncated) case
   // this query never runs; the exceptional loading/error states are surfaced explicitly below.
-  const supersetTruncated = (listQuery.data?.repositoryBatches ?? []).some(
-    (batch) => batch.truncated,
-  );
+  const supersetTruncated = (listQuery.data?.repositoryBatches ?? []).some((batch) => batch.truncated);
   const needsExactInvolvement = shouldLoadExactPullRequestInvolvement({
     involvement: search.involvement,
     state: search.state,
@@ -232,14 +200,10 @@ function PullRequestsRouteView() {
   });
   const exactInvolvementPending = needsExactInvolvement && exactInvolvementQuery.isPending;
   const listErrorState = pullRequestQueryErrorState(listQuery);
-  const exactInvolvementErrorState = pullRequestQueryErrorState(
-    exactInvolvementQuery,
-    needsExactInvolvement,
-  );
+  const exactInvolvementErrorState = pullRequestQueryErrorState(exactInvolvementQuery, needsExactInvolvement);
   const initialListError = listErrorState.initialError;
   const initialExactInvolvementError = exactInvolvementErrorState.initialError;
-  const backgroundListError =
-    listErrorState.backgroundError ?? exactInvolvementErrorState.backgroundError;
+  const backgroundListError = listErrorState.backgroundError ?? exactInvolvementErrorState.backgroundError;
   const handleStateIntent = useCallback(
     (state: PullRequestState) => {
       if (state === search.state) return;
@@ -251,9 +215,7 @@ function PullRequestsRouteView() {
     [queryClient, scopedProjectId, search.state],
   );
   const activeListData =
-    needsExactInvolvement && exactInvolvementQuery.data
-      ? exactInvolvementQuery.data
-      : listQuery.data;
+    needsExactInvolvement && exactInvolvementQuery.data ? exactInvolvementQuery.data : listQuery.data;
 
   // Multi-project result sets can be large. Keep typing responsive while React catches the
   // filtered rows up in a lower-priority render; virtualization can wait for measured need.
@@ -274,10 +236,7 @@ function PullRequestsRouteView() {
     [activeListData, listQuery.data?.viewer, query, search.involvement, search.selectedProjectId],
   );
   const grouped = useMemo(
-    () =>
-      search.involvement === "all"
-        ? groupPullRequestEntriesByInvolvement(entries, listQuery.data?.viewer)
-        : null,
+    () => (search.involvement === "all" ? groupPullRequestEntriesByInvolvement(entries, listQuery.data?.viewer) : null),
     [entries, listQuery.data?.viewer, search.involvement],
   );
   // A crafted URL must not show Project A's list while opening Project B's PR: when the list
@@ -339,9 +298,7 @@ function PullRequestsRouteView() {
   }, [renderedInput, detailOpen]);
   const paneLabelOverrides = useMemo(
     () =>
-      renderedInput
-        ? { [PULL_REQUESTS_ROUTE_PANE_ID]: pullRequestPaneTabLabel(renderedInput.number) }
-        : undefined,
+      renderedInput ? { [PULL_REQUESTS_ROUTE_PANE_ID]: pullRequestPaneTabLabel(renderedInput.number) } : undefined,
     [renderedInput],
   );
   const paneStateIcon = usePullRequestPaneStateIcon(renderedInput);
@@ -381,19 +338,15 @@ function PullRequestsRouteView() {
         toastManager.add({
           type: "error",
           title: "Could not refresh pull requests",
-          description:
-            error instanceof Error
-              ? error.message
-              : "The pull request list could not be refreshed.",
+          description: error instanceof Error ? error.message : "The pull request list could not be refreshed.",
         }),
     });
   }, [activeActionCount, listInput, mutateRefresh]);
 
-  const truncatedRepositoryCount =
-    activeListData?.repositoryBatches.filter((batch) => batch.truncated).length ?? 0;
+  const truncatedRepositoryCount = activeListData?.repositoryBatches.filter((batch) => batch.truncated).length ?? 0;
 
   return (
-    <div className={cn(CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME, CHAT_MAIN_CONTENT_SURFACE_CLASS_NAME)}>
+    <div className={cn(CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME, CHAT_MAIN_CONTENT_SURFACE_CLASS_NAME, "font-system-ui")}>
       <RouteInsetSurface surfaceClassName="bg-transparent">
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--color-background-surface)]">
           <header
@@ -409,25 +362,27 @@ function PullRequestsRouteView() {
               {!embedMode ? <SidebarHeaderNavigationControls /> : null}
               {/* The title rides the surface header like the automations detail route, so the
                   scroll area opens straight onto the filters and the list. */}
-              <h1 className="truncate font-heading text-sm font-medium">Pull requests</h1>
+              <h1 className={CHAT_SURFACE_HEADER_TITLE_CLASS_NAME}>Pull requests</h1>
               {scopedProjectName ? (
                 <>
                   <span aria-hidden className="text-muted-foreground/50">
                     ·
                   </span>
-                  <span className="truncate text-xs text-muted-foreground">
+                  <span
+                    className={cn("truncate text-muted-foreground", "text-[length:var(--app-font-size-ui-sm,11px)]")}
+                  >
                     {scopedProjectName}
                   </span>
                 </>
               ) : null}
               <div className="min-w-0 flex-1" />
-              <Button
-                size="icon-sm"
+              <IconButton
+                size="icon-xs"
                 variant="ghost"
-                aria-label="Refresh pull requests"
-                title={
-                  activeActionCount > 0 ? "Wait for the pull request action to finish" : "Refresh"
-                }
+                label="Refresh pull requests"
+                tooltip={activeActionCount > 0 ? "Wait for the pull request action to finish" : "Refresh"}
+                title={activeActionCount > 0 ? "Wait for the pull request action to finish" : "Refresh"}
+                className={DOCK_HEADER_ICON_BUTTON_CLASS}
                 disabled={refreshBlocked}
                 onClick={handleManualRefresh}
               >
@@ -435,13 +390,16 @@ function PullRequestsRouteView() {
                     (window focus, remount) are constant and unprompted, so animating them
                     turned the header into a fidget rather than a signal. */}
                 <RefreshCwIcon
-                  className={cn("size-4", refreshMutation.isPending && "animate-spin")}
+                  className={cn(
+                    CHAT_SURFACE_HEADER_ACTION_ICON_CLASS_NAME,
+                    refreshMutation.isPending && "animate-spin",
+                  )}
                 />
-              </Button>
+              </IconButton>
             </div>
           </header>
           <main className="min-h-0 flex-1 overflow-y-auto">
-            <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-5 pb-12 pt-4 sm:px-7">
+            <div className="flex w-full max-w-[46rem] flex-col gap-4 px-4 pb-12 pt-3 sm:px-5">
               {bindingError ? (
                 <PullRequestWarningNote shape="callout" role="status">
                   Project binding failed: {bindingError}
@@ -449,8 +407,8 @@ function PullRequestsRouteView() {
               ) : null}
               {/* Scope first, then search within it: the pills read as the view you are in and
                   the field filters it, which is also the reference layout. */}
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-col gap-2.5 border-b border-border/70 pb-3">
+                <div className="flex flex-wrap items-center gap-2.5">
                   <PullRequestFilterPillGroup
                     value={search.involvement}
                     options={INVOLVEMENT_TABS}
@@ -463,8 +421,8 @@ function PullRequestsRouteView() {
                     onChange={(state) => updateSearch({ state, ...CLEARED_SELECTION })}
                   />
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 items-center gap-2">
+                  <div className="w-full min-w-0 max-w-[22rem]">
                     {/* The long field list belonged in a spec, not a placeholder. */}
                     <SearchInput
                       placeholder="Search pull requests"
@@ -490,24 +448,21 @@ function PullRequestsRouteView() {
                   ))}
                 </div>
               ) : initialListError ? (
-                <PullRequestsUnavailableState
-                  error={initialListError}
-                  onRetry={() => void listQuery.refetch()}
-                />
+                <PullRequestsUnavailableState error={initialListError} onRetry={() => void listQuery.refetch()} />
               ) : initialExactInvolvementError ? (
                 <PullRequestsUnavailableState
                   error={initialExactInvolvementError}
                   onRetry={() => void exactInvolvementQuery.refetch()}
                 />
               ) : entries.length === 0 ? (
-                <Empty className="py-16">
+                <Empty className="py-16 font-system-ui">
                   <EmptyHeader>
-                    <EmptyTitle>
+                    <EmptyTitle className="font-system-ui text-[length:var(--app-font-size-ui-lg,13px)] leading-5 font-medium tracking-normal">
                       {search.involvement === "reviewing" && search.state !== "open"
                         ? "Review requests only apply to open pull requests"
                         : "No pull requests found"}
                     </EmptyTitle>
-                    <EmptyDescription>
+                    <EmptyDescription className="font-system-ui text-[length:var(--app-font-size-ui,12px)] leading-5 font-normal">
                       {search.involvement === "reviewing" && search.state !== "open"
                         ? "Select Open to see pull requests currently awaiting your review."
                         : "Try another involvement, state, project, or search filter."}
@@ -526,21 +481,17 @@ function PullRequestsRouteView() {
                   onTogglePinned={handleTogglePinned}
                 />
               )}
-              {!exactInvolvementPending &&
-              !initialExactInvolvementError &&
-              truncatedRepositoryCount > 0 ? (
+              {!exactInvolvementPending && !initialExactInvolvementError && truncatedRepositoryCount > 0 ? (
                 <p className={cn(PR_FINE_TEXT_CLASS_NAME, "px-1 text-muted-foreground")}>
                   Showing the first 50 matching pull requests for {truncatedRepositoryCount}{" "}
                   {truncatedRepositoryCount === 1 ? "repository" : "repositories"}.
                 </p>
               ) : null}
-              {!exactInvolvementPending &&
-              !initialExactInvolvementError &&
-              activeListData?.errors.length ? (
+              {!exactInvolvementPending && !initialExactInvolvementError && activeListData?.errors.length ? (
                 <PullRequestWarningNote shape="callout">
                   {activeListData.errors.length} project{" "}
-                  {activeListData.errors.length === 1 ? "repository was" : "repositories were"}{" "}
-                  unavailable. Healthy repositories are still shown.
+                  {activeListData.errors.length === 1 ? "repository was" : "repositories were"} unavailable. Healthy
+                  repositories are still shown.
                 </PullRequestWarningNote>
               ) : null}
               {backgroundListError ? (

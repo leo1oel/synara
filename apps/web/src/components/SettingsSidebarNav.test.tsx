@@ -7,12 +7,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import { SettingsSidebarNav } from "./SettingsSidebarNav";
-import { settingRowAnchorId } from "../settingsNavigation";
-import {
-  SETTINGS_SEARCH_ENTRIES,
-  rankSettingsSearchEntries,
-  settingsSearchEntryTarget,
-} from "../settingsSearchIndex";
+import { normalizeSettingsSection, settingRowAnchorId } from "../settingsNavigation";
+import { SETTINGS_SEARCH_ENTRIES, rankSettingsSearchEntries, settingsSearchEntryTarget } from "../settingsSearchIndex";
 
 describe("rankSettingsSearchEntries", () => {
   it("returns nothing for an empty query", () => {
@@ -93,10 +89,20 @@ describe("SettingsSidebarNav", () => {
     expect(markup).toContain("Chat behavior");
     expect(markup).toContain("MCP connections");
     expect(markup).toContain("Agent providers");
+    expect(markup).not.toContain("Models &amp; writing");
     expect(markup).toContain("Managed worktrees");
     expect(markup).toContain("System tools");
     expect(markup).toContain("Archived threads");
     expect(markup).not.toContain(">App<");
     expect(markup).not.toContain(">Synara<");
+  });
+
+  it("routes the former Models & writing section into Agent providers", () => {
+    expect(normalizeSettingsSection("models")).toBe("providers");
+    expect(
+      SETTINGS_SEARCH_ENTRIES.filter((entry) => entry.id.startsWith("models:")).every(
+        (entry) => entry.section === "providers",
+      ),
+    ).toBe(true);
   });
 });

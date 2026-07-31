@@ -3,12 +3,7 @@
 // Layer: Web helper tests
 // Depends on: projectCreation helper plus mocked NativeApi orchestration calls.
 
-import {
-  type NativeApi,
-  type OrchestrationShellSnapshot,
-  type ProjectId,
-  SpaceId,
-} from "@synara/contracts";
+import { type NativeApi, type OrchestrationShellSnapshot, type ProjectId, SpaceId } from "@synara/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { useSpacesUiStore } from "../spacesUiStore";
@@ -33,9 +28,7 @@ function makeProject(id: string, workspaceRoot = WORKSPACE_ROOT) {
   };
 }
 
-function makeSnapshot(
-  projects: OrchestrationShellSnapshot["projects"],
-): OrchestrationShellSnapshot {
+function makeSnapshot(projects: OrchestrationShellSnapshot["projects"]): OrchestrationShellSnapshot {
   return {
     snapshotSequence: 2,
     spaces: [],
@@ -64,9 +57,7 @@ describe("createOrRecoverProjectFromPath", () => {
       createdProjectId = command.projectId ?? null;
       return { sequence: 2 };
     });
-    const loadSnapshot = vi.fn(async () =>
-      makeSnapshot(createdProjectId ? [makeProject(createdProjectId)] : []),
-    );
+    const loadSnapshot = vi.fn(async () => makeSnapshot(createdProjectId ? [makeProject(createdProjectId)] : []));
 
     const result = await createOrRecoverProjectFromPath({
       api: makeApi(dispatchCommand),
@@ -103,9 +94,15 @@ describe("createOrRecoverProjectFromPath", () => {
     const result = await createOrRecoverProjectFromPath({
       api: makeApi(dispatchCommand),
       workspaceRoot: WORKSPACE_ROOT,
+      reuseExistingWorkspaceRoot: true,
       loadSnapshot,
     });
 
+    expect(dispatchCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reuseExistingWorkspaceRoot: true,
+      }),
+    );
     expect(result).toMatchObject({
       projectId: existingProject.id,
       project: existingProject,
@@ -125,8 +122,7 @@ describe("createOrRecoverProjectFromPath", () => {
     await createOrRecoverProjectFromPath({
       api: makeApi(dispatchCommand),
       workspaceRoot: WORKSPACE_ROOT,
-      loadSnapshot: async () =>
-        makeSnapshot(createdProjectId ? [makeProject(createdProjectId)] : []),
+      loadSnapshot: async () => makeSnapshot(createdProjectId ? [makeProject(createdProjectId)] : []),
     });
 
     expect(dispatchCommand).toHaveBeenCalledWith(

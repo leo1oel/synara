@@ -29,9 +29,7 @@ const OPENCODE_DEFINITION = {
   nativeUpdate: {
     executable: "opencode",
     args: (installSource) =>
-      installSource === "unknown" || installSource === "native"
-        ? ["upgrade"]
-        : ["upgrade", "--method", installSource],
+      installSource === "unknown" || installSource === "native" ? ["upgrade"] : ["upgrade", "--method", installSource],
     lockKey: "opencode-native",
     strategy: "always",
     excludedInstallSources: ["homebrew"],
@@ -73,9 +71,7 @@ describe("providerMaintenance", () => {
       "/opt/homebrew",
     );
     assert.strictEqual(
-      deriveNpmGlobalPrefix(
-        "C:\\Users\\Test User\\AppData\\Roaming\\npm\\node_modules\\@openai\\codex\\bin\\codex.js",
-      ),
+      deriveNpmGlobalPrefix("C:\\Users\\Test User\\AppData\\Roaming\\npm\\node_modules\\@openai\\codex\\bin\\codex.js"),
       "C:\\Users\\Test User\\AppData\\Roaming\\npm",
     );
     // Project-local node_modules paths are not global installs; no prefix.
@@ -85,8 +81,7 @@ describe("providerMaintenance", () => {
   it("quotes update command arguments containing spaces", () => {
     const capabilities = resolvePackageManagedProviderMaintenance(CODEX_DEFINITION, {
       binaryPath: "codex",
-      realCommandPath:
-        "C:\\Users\\Test User\\AppData\\Roaming\\npm\\node_modules\\@openai\\codex\\bin\\codex.js",
+      realCommandPath: "C:\\Users\\Test User\\AppData\\Roaming\\npm\\node_modules\\@openai\\codex\\bin\\codex.js",
     });
 
     assert.strictEqual(
@@ -159,6 +154,7 @@ describe("providerMaintenance", () => {
     function runWithVirtualFileSystem(
       presentPaths: ReadonlySet<string>,
       options: Parameters<typeof resolveProviderMaintenanceCapabilitiesEffect>[1],
+      definition: PackageManagedProviderMaintenanceDefinition = CODEX_DEFINITION,
     ) {
       const probed: string[] = [];
       const layer = FileSystem.layerNoop({
@@ -170,7 +166,7 @@ describe("providerMaintenance", () => {
         realPath: (probedPath: string) => Effect.succeed(probedPath),
       });
       return Effect.runPromise(
-        resolveProviderMaintenanceCapabilitiesEffect(CODEX_DEFINITION, options).pipe(
+        resolveProviderMaintenanceCapabilitiesEffect(definition, options).pipe(
           Effect.provide(layer),
           Effect.map((capabilities) => ({ capabilities, probed })),
         ),
@@ -178,14 +174,11 @@ describe("providerMaintenance", () => {
     }
 
     it("walks PATH in order and reports the first directory that holds the binary", async () => {
-      const { capabilities, probed } = await runWithVirtualFileSystem(
-        new Set([join("/second", "codex")]),
-        {
-          binaryPath: "codex",
-          platform: "darwin",
-          env: { PATH: "/first:/second:/third" },
-        },
-      );
+      const { capabilities, probed } = await runWithVirtualFileSystem(new Set([join("/second", "codex")]), {
+        binaryPath: "codex",
+        platform: "darwin",
+        env: { PATH: "/first:/second:/third" },
+      });
 
       assert.deepStrictEqual(probed, [join("/first", "codex"), join("/second", "codex")]);
       // Resolution stops at the hit, so /third is never touched, and the detected directory is
@@ -203,13 +196,7 @@ describe("providerMaintenance", () => {
       // An installation can be an extensionless file that nothing could spawn directly; this
       // resolver is reporting on what is installed, not picking something to run.
       // Candidates are joined with the host separator, so compare file names rather than paths.
-      assert.deepStrictEqual(probed.map(fileNameOf), [
-        "codex",
-        "codex.EXE",
-        "codex.exe",
-        "codex.CMD",
-        "codex.cmd",
-      ]);
+      assert.deepStrictEqual(probed.map(fileNameOf), ["codex", "codex.EXE", "codex.exe", "codex.CMD", "codex.cmd"]);
     });
 
     it("prefers .BAT over .CMD, matching Windows' own PATHEXT precedence", async () => {

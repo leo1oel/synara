@@ -9,15 +9,19 @@ import { SearchIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { Input, type InputProps } from "./input";
 
-export const SearchInput = forwardRef<HTMLInputElement, InputProps>(function SearchInput(
-  { className, type: typeProp, size: sizeProp, variant: variantProp, ...props },
+export type SearchInputProps = InputProps & {
+  containerClassName?: string;
+};
+
+export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(function SearchInput(
+  { className, containerClassName, type: typeProp, size: sizeProp, variant: variantProp, ...props },
   ref,
 ) {
-  const type = typeProp ?? "text";
-  const size = sizeProp ?? "sm";
+  const type = typeProp ?? "search";
+  const size = sizeProp ?? "default";
   const variant = variantProp ?? "soft";
   return (
-    <div className="relative w-full">
+    <div className={cn("relative w-full", containerClassName)} data-slot="search-field">
       <Input
         ref={ref}
         type={type}

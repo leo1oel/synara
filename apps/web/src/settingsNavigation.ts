@@ -13,7 +13,6 @@ export const SETTINGS_SECTION_IDS = [
   "shortcuts",
   "worktrees",
   "archived",
-  "models",
   "providers",
   "skills",
   "usage",
@@ -132,17 +131,9 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     id: "providers",
     group: "coding",
     label: "Agent providers",
-    description: "Choose visible coding agents and manage their installed CLI tools.",
+    description: "Choose coding agents, their installed tools, and model defaults for Git writing.",
     icon: "puzzle",
-    eyebrow: "Coding agents",
-  },
-  {
-    id: "models",
-    group: "coding",
-    label: "Models & writing",
-    description: "Choose the model used for Git writing and add custom model slugs.",
-    icon: "brain",
-    eyebrow: "Model configuration",
+    eyebrow: "Agents & models",
   },
   {
     id: "skills",
@@ -193,6 +184,11 @@ export function settingRowAnchorId(title: string): string {
 }
 
 export function normalizeSettingsSection(value: unknown): SettingsSectionId {
+  // Models & writing was folded into Agent providers. Keep old bookmarks and
+  // host messages working instead of dropping them on General.
+  if (value === "models") {
+    return "providers";
+  }
   if (typeof value !== "string") {
     return "general";
   }

@@ -54,10 +54,7 @@ export async function withProviderUpdateTimeout<T>(input: {
 type ProviderUpdateFilterInput = {
   readonly providers: ReadonlyArray<ServerProviderStatus>;
   readonly hiddenProviders?: ReadonlyArray<ProviderKind>;
-  readonly serverSettings?:
-    | Pick<ServerSettings, "providers" | "enableProviderUpdateChecks">
-    | null
-    | undefined;
+  readonly serverSettings?: Pick<ServerSettings, "providers" | "enableProviderUpdateChecks"> | null | undefined;
   readonly oneClickOnly?: boolean;
 };
 
@@ -65,10 +62,7 @@ type ProviderUpdateVisibilityInput = {
   readonly provider: ServerProviderStatus;
   readonly hiddenProviders?: ReadonlyArray<ProviderKind>;
   readonly hiddenProviderSet?: ReadonlySet<ProviderKind>;
-  readonly serverSettings?:
-    | Pick<ServerSettings, "providers" | "enableProviderUpdateChecks">
-    | null
-    | undefined;
+  readonly serverSettings?: Pick<ServerSettings, "providers" | "enableProviderUpdateChecks"> | null | undefined;
   readonly oneClickOnly?: boolean;
 };
 
@@ -77,8 +71,12 @@ export function isProviderUpdateActive(provider: ServerProviderStatus): boolean 
 }
 
 export function shouldOfferProviderUpdateAction(provider: ServerProviderStatus): boolean {
+  if (provider.provider === "pi") return false;
   const advisory = provider.versionAdvisory;
   return (
+    provider.available === true &&
+    typeof provider.version === "string" &&
+    provider.version.trim().length > 0 &&
     advisory?.canUpdate === true &&
     advisory.updateCommand !== null &&
     (advisory.status === "behind_latest" || advisory.status === "unknown")
@@ -100,6 +98,7 @@ export function shouldShowProviderUpdateStatus(input: ProviderUpdateVisibilityIn
   const advisory = input.provider.versionAdvisory;
   const hiddenProviderSet = input.hiddenProviderSet ?? new Set(input.hiddenProviders ?? []);
   if (
+    input.provider.provider === "pi" ||
     !advisory ||
     input.serverSettings?.enableProviderUpdateChecks === false ||
     advisory.status !== "behind_latest" ||
@@ -110,14 +109,10 @@ export function shouldShowProviderUpdateStatus(input: ProviderUpdateVisibilityIn
     return false;
   }
 
-  return input.oneClickOnly === true
-    ? advisory.canUpdate === true && advisory.updateCommand !== null
-    : true;
+  return input.oneClickOnly === true ? advisory.canUpdate === true && advisory.updateCommand !== null : true;
 }
 
-export function getVisibleProviderUpdateStatuses(
-  input: ProviderUpdateFilterInput,
-): ServerProviderStatus[] {
+export function getVisibleProviderUpdateStatuses(input: ProviderUpdateFilterInput): ServerProviderStatus[] {
   const hiddenProviderSet = new Set(input.hiddenProviders ?? []);
   const oneClickOnly = input.oneClickOnly ?? false;
 
@@ -131,13 +126,9 @@ export function getVisibleProviderUpdateStatuses(
   );
 }
 
-export function providerUpdateNotificationKey(
-  providers: ReadonlyArray<ServerProviderStatus>,
-): string | null {
+export function providerUpdateNotificationKey(providers: ReadonlyArray<ServerProviderStatus>): string | null {
   const parts = providers
-    .map((provider) =>
-      [provider.provider, provider.versionAdvisory?.latestVersion ?? "unknown"].join(":"),
-    )
+    .map((provider) => [provider.provider, provider.versionAdvisory?.latestVersion ?? "unknown"].join(":"))
     .toSorted();
 
   return parts.length > 0 ? parts.join("|") : null;

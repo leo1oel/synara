@@ -6,6 +6,7 @@
 import type { SearchAddon, ISearchOptions } from "@xterm/addon-search";
 import { useEffect, useRef, useState } from "react";
 import { IconButton } from "~/components/ui/icon-button";
+import { SearchInput } from "~/components/ui/search-input";
 import { ChevronDownIcon, ChevronUpIcon, XIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 
@@ -133,15 +134,16 @@ export function TerminalSearch({ searchAddon, isOpen, onClose }: TerminalSearchP
   if (!isOpen) return null;
 
   return (
-    <div className="absolute right-1 top-1 z-10 flex max-w-[calc(100%-0.5rem)] items-center rounded bg-popover/95 pl-2 pr-0.5 shadow-lg ring-1 ring-border/40 backdrop-blur">
-      <input
+    <div className="absolute right-1 top-1 z-10 flex max-w-[calc(100%-0.5rem)] items-center gap-1 rounded-lg bg-popover/95 p-1 shadow-lg backdrop-blur">
+      <SearchInput
         ref={inputRef}
-        type="text"
+        size="sm"
         value={query}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
         placeholder="Find"
-        className="h-6 w-28 min-w-0 flex-shrink bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+        aria-label="Find in terminal"
+        containerClassName="w-32 shrink"
       />
       {hasResults === false && query && (
         <span className="whitespace-nowrap px-1 text-xs text-muted-foreground">No results</span>

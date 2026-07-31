@@ -5,22 +5,39 @@ import {
   embedWorkspaceMatches,
   initializeEmbedMode,
   postEmbedReadyToLattice,
+  postShowInFolderToLattice,
+  postConfirmationRequestToLattice,
+  postSettingsContentHeightToLattice,
+  postSettingsWheelToLattice,
   postHostContextRequestToLattice,
   postHostContextSelectionClearToLattice,
+  postPaperLibraryRequestToLattice,
   postProjectHistoryToLattice,
   readEmbedMode,
   readEmbeddedHostWsUrl,
+  readLatticeAgentPanelOpenedMessage,
   readLatticeCheckpointRestoreMessage,
   readLatticeHostContextMessage,
+  readLatticePaperLibraryMessage,
+  readLatticeConfirmationMessage,
+  LATTICE_CONFIRMATION_ACK,
+  LATTICE_CONFIRMATION_RESPONSE,
+  LATTICE_AGENT_PANEL_OPENED,
   LATTICE_HOST_CONTEXT,
   LATTICE_HOST_CONTEXT_REQUEST,
   LATTICE_HOST_CONTEXT_SELECTION_CLEAR,
+  LATTICE_PAPER_LIBRARY,
+  LATTICE_PAPER_LIBRARY_REQUEST,
   LATTICE_PROJECT_HISTORY,
   LATTICE_RESTORE_AGENT_CHECKPOINT,
   SYNARA_EMBED_READY,
+  SYNARA_CONFIRMATION_REQUEST,
+  SYNARA_SETTINGS_CONTENT_HEIGHT,
+  SYNARA_SETTINGS_WHEEL,
+  SYNARA_SHOW_IN_FOLDER,
 } from "./embedMode";
 
-function installBrowserStubs(theme: "light" | "dark" = "dark") {
+function installBrowserStubs(theme: "light" | "dark" = "dark", surface: "chrome" | "drawer" = "chrome") {
   const values = new Map<string, string>();
   const storage = {
     getItem: (key: string) => values.get(key) ?? null,
@@ -40,7 +57,7 @@ function installBrowserStubs(theme: "light" | "dark" = "dark") {
       location: {
         origin: "http://127.0.0.1:4567",
         pathname: "/",
-        search: `?embed=1&workspaceRoot=%2FUsers%2Fme%2Fpaper&theme=${theme}&hostOrigin=http%3A%2F%2Flocalhost%3A1420`,
+        search: `?embed=1&workspaceRoot=%2FUsers%2Fme%2Fpaper&theme=${theme}&surface=${surface}&hostOrigin=http%3A%2F%2Flocalhost%3A1420`,
         hash: "#lattice-auth=secret-token",
       },
       history: { state: null, replaceState },
@@ -74,13 +91,14 @@ describe("Lattice embed mode", () => {
     expect(readEmbedMode()).toEqual({
       workspaceRoot: "/Users/me/paper",
       theme: "dark",
+      surface: "chrome",
       hostOrigin: "http://localhost:1420",
     });
     expect(readEmbeddedHostWsUrl()).toBe("ws://127.0.0.1:4567/?token=secret-token");
     expect(replaceState).toHaveBeenCalledWith(
       null,
       "",
-      "/?embed=1&workspaceRoot=%2FUsers%2Fme%2Fpaper&theme=dark&hostOrigin=http%3A%2F%2Flocalhost%3A1420",
+      "/?embed=1&workspaceRoot=%2FUsers%2Fme%2Fpaper&theme=dark&surface=chrome&hostOrigin=http%3A%2F%2Flocalhost%3A1420",
     );
   });
 
@@ -95,8 +113,153 @@ describe("Lattice embed mode", () => {
     expect(postMessage).toHaveBeenCalledWith({ type: SYNARA_EMBED_READY }, "http://localhost:1420");
   });
 
-  it("uses Lattice's shared light side surface in embedded mode", () => {
+  it("asks the trusted Lattice host to open a local skill folder", () => {
+    const { postMessage } = installBrowserStubs();
+    initializeEmbedMode();
+    const config = readEmbedMode();
+    expect(config).not.toBeNull();
+
+    expect(postShowInFolderToLattice(config!, "/Users/me/.synara/skills")).toBe(true);
+    expect(postMessage).toHaveBeenCalledWith(
+      {
+        type: SYNARA_SHOW_IN_FOLDER,
+        path: "/Users/me/.synara/skills",
+      },
+      "http://localhost:1420",
+    );
+  });
+
+  it("sends bounded confirmation requests only to Lattice", () => {
+    const { postMessage } = installBrowserStubs();
+    initializeEmbedMode();
+    const config = readEmbedMode();
+    expect(config).not.toBeNull();
+
+    postConfirmationRequestToLattice(config!, {
+      id: "delete-thread-1",
+      message: "Delete thread “Draft”?",
+    });
+
+    expect(postMessage).toHaveBeenCalledWith(
+      {
+        type: SYNARA_CONFIRMATION_REQUEST,
+        id: "delete-thread-1",
+        message: "Delete thread “Draft”?",
+      },
+      "http://localhost:1420",
+    );
+  });
+
+  it("accepts confirmation acknowledgements and results only from Lattice", () => {
+    installBrowserStubs();
+    initializeEmbedMode();
+    const config = readEmbedMode();
+    expect(config).not.toBeNull();
+    const trustedSource = window.parent;
+
+    expect(
+      readLatticeConfirmationMessage(
+        {
+          source: trustedSource,
+          origin: "http://localhost:1420",
+          data: { type: LATTICE_CONFIRMATION_ACK, id: "delete-thread-1" },
+        } as MessageEvent,
+        config!,
+        "delete-thread-1",
+      ),
+    ).toEqual({ type: LATTICE_CONFIRMATION_ACK, id: "delete-thread-1" });
+    expect(
+      readLatticeConfirmationMessage(
+        {
+          source: trustedSource,
+          origin: "http://localhost:1420",
+          data: {
+            type: LATTICE_CONFIRMATION_RESPONSE,
+            id: "delete-thread-1",
+            confirmed: false,
+          },
+        } as MessageEvent,
+        config!,
+        "delete-thread-1",
+      ),
+    ).toEqual({
+      type: LATTICE_CONFIRMATION_RESPONSE,
+      id: "delete-thread-1",
+      confirmed: false,
+    });
+    expect(
+      readLatticeConfirmationMessage(
+        {
+          source: trustedSource,
+          origin: "http://malicious.invalid",
+          data: {
+            type: LATTICE_CONFIRMATION_RESPONSE,
+            id: "delete-thread-1",
+            confirmed: true,
+          },
+        } as MessageEvent,
+        config!,
+        "delete-thread-1",
+      ),
+    ).toBeNull();
+  });
+
+  it("identifies the section that owns each embedded settings height", () => {
+    const { postMessage } = installBrowserStubs();
+    initializeEmbedMode();
+    const config = readEmbedMode();
+    expect(config).not.toBeNull();
+
+    postSettingsContentHeightToLattice(config!, 812.2, "providers");
+
+    expect(postMessage).toHaveBeenCalledWith(
+      {
+        type: SYNARA_SETTINGS_CONTENT_HEIGHT,
+        height: 813,
+        section: "providers",
+      },
+      "http://localhost:1420",
+    );
+  });
+
+  it("sends current settings height atomically with the forwarded wheel", () => {
+    const { postMessage } = installBrowserStubs();
+    initializeEmbedMode();
+    const config = readEmbedMode();
+    expect(config).not.toBeNull();
+
+    postSettingsWheelToLattice(
+      config!,
+      { deltaX: 0, deltaY: 420, deltaMode: 0 },
+      { height: 4_812.2, section: "providers" },
+    );
+
+    expect(postMessage).toHaveBeenCalledWith(
+      {
+        type: SYNARA_SETTINGS_WHEEL,
+        deltaX: 0,
+        deltaY: 420,
+        deltaMode: 0,
+        contentHeight: 4_813,
+        section: "providers",
+      },
+      "http://localhost:1420",
+    );
+  });
+
+  it("uses Lattice's light chrome surface for the embedded Agent", () => {
     const { setProperty } = installBrowserStubs("light");
+
+    initializeEmbedMode();
+
+    expect(setProperty).toHaveBeenCalledWith("--app-shell-background", "#efeff0");
+    expect(setProperty).toHaveBeenCalledWith("--color-background-panel", "#efeff0");
+    expect(setProperty).toHaveBeenCalledWith("--sidebar", "#efeff0");
+    expect(setProperty).toHaveBeenCalledWith("--popover", "#F9F9FA");
+  });
+
+  it("uses Lattice's light drawer surface for embedded feature panels", () => {
+    const { setProperty } = installBrowserStubs("light", "drawer");
 
     initializeEmbedMode();
 
@@ -105,8 +268,30 @@ describe("Lattice embed mode", () => {
     expect(setProperty).toHaveBeenCalledWith("--sidebar", "#f9f9fa");
   });
 
-  it("uses Lattice's shared dark side surface in embedded mode", () => {
+  it("uses Lattice's shared settings geometry for embedded sections", () => {
+    const { setProperty } = installBrowserStubs("light", "drawer");
+
+    initializeEmbedMode();
+
+    expect(setProperty).toHaveBeenCalledWith("--lattice-settings-content-max-width", "500px");
+    expect(setProperty).toHaveBeenCalledWith("--lattice-settings-content-padding-inline", "34px");
+    expect(setProperty).toHaveBeenCalledWith("--lattice-settings-frame-border-width", "1px");
+    expect(setProperty).toHaveBeenCalledWith("--lattice-settings-frame-radius", "8px");
+    expect(setProperty).toHaveBeenCalledWith("--lattice-settings-panel", "#F9F9FA");
+  });
+
+  it("uses Lattice's dark chrome surface for the embedded Agent", () => {
     const { setProperty } = installBrowserStubs("dark");
+
+    initializeEmbedMode();
+
+    expect(setProperty).toHaveBeenCalledWith("--app-shell-background", "#141416");
+    expect(setProperty).toHaveBeenCalledWith("--color-background-panel", "#141416");
+    expect(setProperty).toHaveBeenCalledWith("--sidebar", "#141416");
+  });
+
+  it("uses Lattice's dark drawer surface for embedded feature panels", () => {
+    const { setProperty } = installBrowserStubs("dark", "drawer");
 
     initializeEmbedMode();
 
@@ -133,43 +318,55 @@ describe("Lattice embed mode", () => {
       threadTitle: "Revise introduction",
       inferredCheckpointTurnCountByTurnId: {},
     };
-    expect(buildLatticeProjectHistoryCheckpoints({
-      ...baseInput,
-      messages: undefined,
-      summaries: undefined,
-    })).toEqual([]);
+    expect(
+      buildLatticeProjectHistoryCheckpoints({
+        ...baseInput,
+        messages: undefined,
+        summaries: undefined,
+      }),
+    ).toEqual([]);
 
-    expect(buildLatticeProjectHistoryCheckpoints({
-      ...baseInput,
-      messages: [{
-        role: "user",
+    expect(
+      buildLatticeProjectHistoryCheckpoints({
+        ...baseInput,
+        messages: [
+          {
+            role: "user",
+            turnId: "turn-1",
+            text: "Improve   the introduction",
+          },
+        ],
+        summaries: [
+          {
+            turnId: "turn-1",
+            completedAt: "2026-07-29T12:00:00Z",
+            status: "ready",
+            checkpointRef: "refs/lattice/checkpoints/one",
+            checkpointTurnCount: 1,
+            files: [{ path: "main.tex", additions: 4, deletions: 2 }],
+          },
+        ],
+      }),
+    ).toEqual([
+      {
+        id: "agent:thread-1:turn-1",
+        label: "Agent: Improve the introduction",
+        timestamp: "2026-07-29T12:00:00Z",
+        threadId: "thread-1",
+        threadTitle: "Revise introduction",
         turnId: "turn-1",
-        text: "Improve   the introduction",
-      }],
-      summaries: [{
-        turnId: "turn-1",
-        completedAt: "2026-07-29T12:00:00Z",
-        status: "ready",
+        turnCount: 1,
         checkpointRef: "refs/lattice/checkpoints/one",
-        checkpointTurnCount: 1,
-        files: [{ path: "main.tex", additions: 4, deletions: 2 }],
-      }],
-    })).toEqual([{
-      id: "agent:thread-1:turn-1",
-      label: "Agent: Improve the introduction",
-      timestamp: "2026-07-29T12:00:00Z",
-      threadId: "thread-1",
-      threadTitle: "Revise introduction",
-      turnId: "turn-1",
-      turnCount: 1,
-      checkpointRef: "refs/lattice/checkpoints/one",
-      files: [{
-        path: "main.tex",
-        kind: "modified",
-        additions: 4,
-        deletions: 2,
-      }],
-    }]);
+        files: [
+          {
+            path: "main.tex",
+            kind: "modified",
+            additions: 4,
+            deletions: 2,
+          },
+        ],
+      },
+    ]);
   });
 
   it("shares checkpoint summaries with Lattice and validates restore requests", () => {
@@ -177,17 +374,19 @@ describe("Lattice embed mode", () => {
     initializeEmbedMode();
     const config = readEmbedMode();
     expect(config).not.toBeNull();
-    const entries = [{
-      id: "agent:thread-1:turn-1",
-      label: "Agent revised the introduction",
-      timestamp: "2026-07-29T12:00:00Z",
-      threadId: "thread-1",
-      threadTitle: "Revise introduction",
-      turnId: "turn-1",
-      turnCount: 1,
-      checkpointRef: "refs/lattice/checkpoints/one",
-      files: [{ path: "main.tex", kind: "modified", additions: 4, deletions: 2 }],
-    }];
+    const entries = [
+      {
+        id: "agent:thread-1:turn-1",
+        label: "Agent revised the introduction",
+        timestamp: "2026-07-29T12:00:00Z",
+        threadId: "thread-1",
+        threadTitle: "Revise introduction",
+        turnId: "turn-1",
+        turnCount: 1,
+        checkpointRef: "refs/lattice/checkpoints/one",
+        files: [{ path: "main.tex", kind: "modified", additions: 4, deletions: 2 }],
+      },
+    ];
 
     postProjectHistoryToLattice(config!, "thread-1", entries);
 
@@ -195,15 +394,20 @@ describe("Lattice embed mode", () => {
       { type: LATTICE_PROJECT_HISTORY, activeThreadId: "thread-1", entries },
       "http://localhost:1420",
     );
-    expect(readLatticeCheckpointRestoreMessage({
-      source: window.parent,
-      origin: "http://localhost:1420",
-      data: {
-        type: LATTICE_RESTORE_AGENT_CHECKPOINT,
-        threadId: "thread-1",
-        turnCount: 1,
-      },
-    } as MessageEvent, config!)).toEqual({
+    expect(
+      readLatticeCheckpointRestoreMessage(
+        {
+          source: window.parent,
+          origin: "http://localhost:1420",
+          data: {
+            type: LATTICE_RESTORE_AGENT_CHECKPOINT,
+            threadId: "thread-1",
+            turnCount: 1,
+          },
+        } as MessageEvent,
+        config!,
+      ),
+    ).toEqual({
       type: LATTICE_RESTORE_AGENT_CHECKPOINT,
       threadId: "thread-1",
       turnCount: 1,
@@ -228,27 +432,115 @@ describe("Lattice embed mode", () => {
       pdf: { page: 2, pageCount: 6 },
     };
 
-    expect(readLatticeHostContextMessage({
-      source: window.parent,
-      origin: "http://localhost:1420",
-      data: context,
-    } as MessageEvent, config)).toEqual(context);
-    expect(readLatticeHostContextMessage({
-      source: window.parent,
-      origin: "http://localhost:1420",
-      data: { ...context, workspaceRoot: "/Users/me/other" },
-    } as MessageEvent, config)).toBeNull();
+    expect(
+      readLatticeHostContextMessage(
+        {
+          source: window.parent,
+          origin: "http://localhost:1420",
+          data: context,
+        } as MessageEvent,
+        config,
+      ),
+    ).toEqual(context);
+    expect(
+      readLatticeHostContextMessage(
+        {
+          source: window.parent,
+          origin: "http://localhost:1420",
+          data: { ...context, workspaceRoot: "/Users/me/other" },
+        } as MessageEvent,
+        config,
+      ),
+    ).toBeNull();
 
     postHostContextRequestToLattice(config);
-    expect(postMessage).toHaveBeenCalledWith(
-      { type: LATTICE_HOST_CONTEXT_REQUEST },
-      "http://localhost:1420",
-    );
+    expect(postMessage).toHaveBeenCalledWith({ type: LATTICE_HOST_CONTEXT_REQUEST }, "http://localhost:1420");
 
     postHostContextSelectionClearToLattice(config);
-    expect(postMessage).toHaveBeenCalledWith(
-      { type: LATTICE_HOST_CONTEXT_SELECTION_CLEAR },
-      "http://localhost:1420",
-    );
+    expect(postMessage).toHaveBeenCalledWith({ type: LATTICE_HOST_CONTEXT_SELECTION_CLEAR }, "http://localhost:1420");
+  });
+
+  it("accepts a bounded paper library from the configured Lattice workspace", () => {
+    const { postMessage } = installBrowserStubs();
+    initializeEmbedMode();
+    const config = readEmbedMode()!;
+    const library = {
+      type: LATTICE_PAPER_LIBRARY,
+      version: 1,
+      workspaceRoot: "/Users/me/paper/",
+      papers: [
+        {
+          title: "Attention Is All You Need",
+          arxivId: "1706.03762",
+          citationKey: "vaswani2017attention",
+          path: ".research/papers/1706.03762/paper.md",
+          view: "fulltext",
+        },
+      ],
+    };
+
+    expect(
+      readLatticePaperLibraryMessage(
+        {
+          source: window.parent,
+          origin: "http://localhost:1420",
+          data: library,
+        } as MessageEvent,
+        config,
+      ),
+    ).toEqual(library);
+    expect(
+      readLatticePaperLibraryMessage(
+        {
+          source: window.parent,
+          origin: "http://localhost:1420",
+          data: {
+            ...library,
+            papers: [{ ...library.papers[0], path: "../../secrets.txt" }],
+          },
+        } as MessageEvent,
+        config,
+      ),
+    ).toBeNull();
+    expect(
+      readLatticePaperLibraryMessage(
+        {
+          source: window.parent,
+          origin: "http://malicious.example",
+          data: library,
+        } as MessageEvent,
+        config,
+      ),
+    ).toBeNull();
+
+    postPaperLibraryRequestToLattice(config);
+    expect(postMessage).toHaveBeenCalledWith({ type: LATTICE_PAPER_LIBRARY_REQUEST }, "http://localhost:1420");
+  });
+
+  it("accepts panel-open events only from the configured Lattice host", () => {
+    installBrowserStubs();
+    initializeEmbedMode();
+    const config = readEmbedMode()!;
+
+    expect(
+      readLatticeAgentPanelOpenedMessage(
+        {
+          source: window.parent,
+          origin: "http://localhost:1420",
+          data: { type: LATTICE_AGENT_PANEL_OPENED },
+        } as MessageEvent,
+        config,
+      ),
+    ).toBe(true);
+    expect(
+      readLatticeAgentPanelOpenedMessage(
+        {
+          source: window.parent,
+          origin: "http://malicious.example",
+          data: { type: LATTICE_AGENT_PANEL_OPENED },
+        } as MessageEvent,
+        config,
+      ),
+    ).toBe(false);
   });
 });

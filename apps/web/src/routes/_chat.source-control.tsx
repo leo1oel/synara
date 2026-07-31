@@ -30,6 +30,7 @@ function SourceControlRouteView() {
         projectId={projectId}
         cwdOverride={embedMode.workspaceRoot}
         showActions
+        title="Changes"
       />
     </div>
   );

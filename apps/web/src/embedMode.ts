@@ -3,31 +3,53 @@ import { workspaceRootsEqual } from "@synara/shared/threadWorkspace";
 
 const EMBED_MODE_STORAGE_KEY = "synara.poc.embed-mode";
 const EMBED_AUTH_TOKEN_STORAGE_KEY = "synara.poc.embed-auth-token";
-export const EMBED_UI_FONT_STACK =
-  '"Inter Variable", Inter, "Avenir Next", "Segoe UI", sans-serif';
+export const EMBED_UI_FONT_STACK = '"Inter Variable", Inter, "Avenir Next", "Segoe UI", sans-serif';
 
-export const LATTICE_AGENT_PERMISSION_MODE_REQUEST =
-  "lattice:request-agent-permission-mode";
+export const LATTICE_AGENT_PERMISSION_MODE_REQUEST = "lattice:request-agent-permission-mode";
 export const LATTICE_AGENT_PERMISSION_MODE_SET = "lattice:set-agent-permission-mode";
+export const LATTICE_AGENT_PANEL_OPENED = "lattice:agent-panel-opened";
 export const LATTICE_SETTINGS_SECTION_SET = "lattice:set-settings-section";
 export const LATTICE_PROJECT_HISTORY = "lattice:project-history";
 export const LATTICE_RESTORE_AGENT_CHECKPOINT = "lattice:restore-agent-checkpoint";
 export const LATTICE_HOST_CONTEXT = "lattice:host-context";
 export const LATTICE_HOST_CONTEXT_REQUEST = "lattice:request-host-context";
-export const LATTICE_HOST_CONTEXT_SELECTION_CLEAR =
-  "lattice:clear-host-context-selection";
+export const LATTICE_HOST_CONTEXT_SELECTION_CLEAR = "lattice:clear-host-context-selection";
+export const LATTICE_PAPER_LIBRARY = "lattice:paper-library";
+export const LATTICE_PAPER_LIBRARY_REQUEST = "lattice:request-paper-library";
 export const SYNARA_AGENT_PERMISSION_MODE_STATUS = "synara:agent-permission-mode";
 export const SYNARA_LAYOUT_METRICS = "synara:layout-metrics";
 export const SYNARA_SETTINGS_CONTENT_HEIGHT = "synara:settings-content-height";
 export const SYNARA_SETTINGS_WHEEL = "synara:settings-wheel";
 export const SYNARA_OPEN_EXTERNAL = "synara:open-external";
+export const SYNARA_SHOW_IN_FOLDER = "synara:show-in-folder";
 export const SYNARA_EMBED_READY = "synara:embed-ready";
+export const SYNARA_CONFIRMATION_REQUEST = "synara:confirmation-request";
+export const LATTICE_CONFIRMATION_ACK = "lattice:confirmation-ack";
+export const LATTICE_CONFIRMATION_RESPONSE = "lattice:confirmation-response";
 
 export interface EmbedModeConfig {
   workspaceRoot: string;
   theme: "light" | "dark";
+  surface: "chrome" | "drawer";
   hostOrigin: string | null;
 }
+
+export interface SynaraConfirmationRequest {
+  type: typeof SYNARA_CONFIRMATION_REQUEST;
+  id: string;
+  message: string;
+}
+
+export type LatticeConfirmationMessage =
+  | {
+      type: typeof LATTICE_CONFIRMATION_ACK;
+      id: string;
+    }
+  | {
+      type: typeof LATTICE_CONFIRMATION_RESPONSE;
+      id: string;
+      confirmed: boolean;
+    };
 
 export type LatticeHostSurface = "editor" | "pdf" | "paper";
 
@@ -58,10 +80,22 @@ export interface LatticeHostContextSnapshot {
   };
 }
 
-export function embedWorkspaceMatches(
-  config: EmbedModeConfig,
-  projectCwd: unknown,
-): boolean {
+export interface LatticePaperLibraryEntry {
+  title: string;
+  arxivId: string;
+  citationKey?: string;
+  path: string;
+  view: "blog" | "fulltext";
+}
+
+export interface LatticePaperLibrarySnapshot {
+  type: typeof LATTICE_PAPER_LIBRARY;
+  version: 1;
+  workspaceRoot: string;
+  papers: LatticePaperLibraryEntry[];
+}
+
+export function embedWorkspaceMatches(config: EmbedModeConfig, projectCwd: unknown): boolean {
   return (
     typeof projectCwd === "string" &&
     projectCwd.trim().length > 0 &&
@@ -76,6 +110,17 @@ export type LatticeAgentPermissionModeMessage =
 export interface LatticeSettingsSectionMessage {
   type: typeof LATTICE_SETTINGS_SECTION_SET;
   section: string;
+}
+
+export function readLatticeAgentPanelOpenedMessage(event: MessageEvent, config: EmbedModeConfig): boolean {
+  return Boolean(
+    config.hostOrigin &&
+    event.source === window.parent &&
+    event.origin === config.hostOrigin &&
+    event.data &&
+    typeof event.data === "object" &&
+    event.data.type === LATTICE_AGENT_PANEL_OPENED,
+  );
 }
 
 export interface LatticeProjectHistoryCheckpoint {
@@ -104,15 +149,17 @@ interface LatticeProjectHistoryMessageSource {
 interface LatticeProjectHistorySummarySource {
   turnId: string;
   completedAt: string;
-  status?: string;
-  checkpointRef?: string;
-  checkpointTurnCount?: number;
-  files?: ReadonlyArray<{
-    path: string;
-    kind?: string;
-    additions?: number;
-    deletions?: number;
-  }>;
+  status?: string | undefined;
+  checkpointRef?: string | undefined;
+  checkpointTurnCount?: number | undefined;
+  files?:
+    | ReadonlyArray<{
+        path: string;
+        kind?: string | undefined;
+        additions?: number | undefined;
+        deletions?: number | undefined;
+      }>
+    | undefined;
 }
 
 export function buildLatticeProjectHistoryCheckpoints(input: {
@@ -123,23 +170,18 @@ export function buildLatticeProjectHistoryCheckpoints(input: {
   inferredCheckpointTurnCountByTurnId: Readonly<Record<string, number | undefined>>;
 }): LatticeProjectHistoryCheckpoint[] {
   const messages = Array.isArray(input.messages) ? input.messages : [];
-  const summaries = Array.isArray(input.summaries) ? input.summaries : [];
+  const summaries = input.summaries ?? [];
   const promptsByTurnId = new Map(
     messages
       .filter(
-        (message) =>
-          message.role === "user" &&
-          typeof message.turnId === "string" &&
-          typeof message.text === "string",
+        (message) => message.role === "user" && typeof message.turnId === "string" && typeof message.text === "string",
       )
       .map((message) => [message.turnId!, message.text] as const),
   );
 
   return summaries.flatMap((summary) => {
-    const files = Array.isArray(summary.files) ? summary.files : [];
-    const turnCount =
-      summary.checkpointTurnCount ??
-      input.inferredCheckpointTurnCountByTurnId[summary.turnId];
+    const files = summary.files ?? [];
+    const turnCount = summary.checkpointTurnCount ?? input.inferredCheckpointTurnCountByTurnId[summary.turnId];
     if (
       summary.status !== "ready" ||
       files.length === 0 ||
@@ -152,22 +194,24 @@ export function buildLatticeProjectHistoryCheckpoints(input: {
     }
     const prompt = promptsByTurnId.get(summary.turnId)?.replace(/\s+/g, " ").trim();
     const compactPrompt = prompt && prompt.length > 82 ? `${prompt.slice(0, 81)}…` : prompt;
-    return [{
-      id: `agent:${input.threadId}:${summary.turnId}`,
-      label: compactPrompt ? `Agent: ${compactPrompt}` : "Agent updated project files",
-      timestamp: summary.completedAt,
-      threadId: input.threadId,
-      threadTitle: input.threadTitle,
-      turnId: summary.turnId,
-      turnCount,
-      checkpointRef: summary.checkpointRef,
-      files: files.map((file) => ({
-        path: file.path,
-        kind: file.kind ?? "modified",
-        additions: file.additions ?? 0,
-        deletions: file.deletions ?? 0,
-      })),
-    }];
+    return [
+      {
+        id: `agent:${input.threadId}:${summary.turnId}`,
+        label: compactPrompt ? `Agent: ${compactPrompt}` : "Agent updated project files",
+        timestamp: summary.completedAt,
+        threadId: input.threadId,
+        threadTitle: input.threadTitle,
+        turnId: summary.turnId,
+        turnCount,
+        checkpointRef: summary.checkpointRef,
+        files: files.map((file) => ({
+          path: file.path,
+          kind: file.kind ?? "modified",
+          additions: file.additions ?? 0,
+          deletions: file.deletions ?? 0,
+        })),
+      },
+    ];
   });
 }
 
@@ -198,6 +242,17 @@ function nonNegativeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0;
 }
 
+function nonEmptyBoundedString(value: unknown, maximum: number): value is string {
+  return boundedString(value, maximum) && value.trim().length > 0;
+}
+
+function isSafePaperId(value: string): boolean {
+  return (
+    !value.includes("\\") &&
+    value.split("/").every((segment) => segment.length > 0 && segment !== "." && segment !== "..")
+  );
+}
+
 export function readLatticeHostContextMessage(
   event: MessageEvent,
   config: EmbedModeConfig,
@@ -217,9 +272,7 @@ export function readLatticeHostContextMessage(
     value.version !== 1 ||
     !boundedString(value.workspaceRoot, 4_096) ||
     !workspaceRootsEqual(value.workspaceRoot, config.workspaceRoot) ||
-    (value.activeSurface !== "editor" &&
-      value.activeSurface !== "pdf" &&
-      value.activeSurface !== "paper")
+    (value.activeSurface !== "editor" && value.activeSurface !== "pdf" && value.activeSurface !== "paper")
   ) {
     return null;
   }
@@ -232,10 +285,8 @@ export function readLatticeHostContextMessage(
       !boundedString(candidate.path, 4_096) ||
       !positiveInteger(candidate.line) ||
       !nonNegativeInteger(candidate.column) ||
-      (candidate.secondaryPath !== undefined &&
-        !boundedString(candidate.secondaryPath, 4_096)) ||
-      (candidate.selection !== undefined &&
-        !boundedString(candidate.selection, 12_001))
+      (candidate.secondaryPath !== undefined && !boundedString(candidate.secondaryPath, 4_096)) ||
+      (candidate.selection !== undefined && !boundedString(candidate.selection, 12_001))
     ) {
       return null;
     }
@@ -248,8 +299,7 @@ export function readLatticeHostContextMessage(
     if (
       !positiveInteger(candidate.page) ||
       (candidate.pageCount !== null && !positiveInteger(candidate.pageCount)) ||
-      (candidate.selection !== undefined &&
-        !boundedString(candidate.selection, 12_001))
+      (candidate.selection !== undefined && !boundedString(candidate.selection, 12_001))
     ) {
       return null;
     }
@@ -263,11 +313,9 @@ export function readLatticeHostContextMessage(
       !boundedString(candidate.title, 1_000) ||
       !boundedString(candidate.arxivId, 128) ||
       !boundedString(candidate.path, 4_096) ||
-      (candidate.citationKey !== undefined &&
-        !boundedString(candidate.citationKey, 512)) ||
+      (candidate.citationKey !== undefined && !boundedString(candidate.citationKey, 512)) ||
       (candidate.view !== "blog" && candidate.view !== "fulltext") ||
-      (candidate.selection !== undefined &&
-        !boundedString(candidate.selection, 12_001))
+      (candidate.selection !== undefined && !boundedString(candidate.selection, 12_001))
     ) {
       return null;
     }
@@ -282,17 +330,66 @@ export function readLatticeHostContextMessage(
   return value as unknown as LatticeHostContextSnapshot;
 }
 
+export function readLatticePaperLibraryMessage(
+  event: MessageEvent,
+  config: EmbedModeConfig,
+): LatticePaperLibrarySnapshot | null {
+  if (
+    !config.hostOrigin ||
+    event.source !== window.parent ||
+    event.origin !== config.hostOrigin ||
+    !event.data ||
+    typeof event.data !== "object"
+  ) {
+    return null;
+  }
+  const value = event.data as Record<string, unknown>;
+  if (
+    value.type !== LATTICE_PAPER_LIBRARY ||
+    value.version !== 1 ||
+    !boundedString(value.workspaceRoot, 4_096) ||
+    !workspaceRootsEqual(value.workspaceRoot, config.workspaceRoot) ||
+    !Array.isArray(value.papers) ||
+    value.papers.length > 2_000
+  ) {
+    return null;
+  }
+
+  for (const paper of value.papers) {
+    if (!paper || typeof paper !== "object") return null;
+    const candidate = paper as Record<string, unknown>;
+    if (
+      !nonEmptyBoundedString(candidate.title, 1_000) ||
+      !nonEmptyBoundedString(candidate.arxivId, 128) ||
+      !isSafePaperId(candidate.arxivId) ||
+      !boundedString(candidate.path, 4_096) ||
+      (candidate.citationKey !== undefined && !nonEmptyBoundedString(candidate.citationKey, 512)) ||
+      (candidate.view !== "blog" && candidate.view !== "fulltext")
+    ) {
+      return null;
+    }
+    const expectedPath = `.research/papers/${candidate.arxivId}/${
+      candidate.view === "fulltext" ? "paper.md" : "blog.md"
+    }`;
+    if (candidate.path !== expectedPath) return null;
+  }
+
+  return value as unknown as LatticePaperLibrarySnapshot;
+}
+
 export function postHostContextRequestToLattice(config: EmbedModeConfig): void {
   if (!config.hostOrigin) return;
   window.parent.postMessage({ type: LATTICE_HOST_CONTEXT_REQUEST }, config.hostOrigin);
 }
 
+export function postPaperLibraryRequestToLattice(config: EmbedModeConfig): void {
+  if (!config.hostOrigin) return;
+  window.parent.postMessage({ type: LATTICE_PAPER_LIBRARY_REQUEST }, config.hostOrigin);
+}
+
 export function postHostContextSelectionClearToLattice(config: EmbedModeConfig): void {
   if (!config.hostOrigin) return;
-  window.parent.postMessage(
-    { type: LATTICE_HOST_CONTEXT_SELECTION_CLEAR },
-    config.hostOrigin,
-  );
+  window.parent.postMessage({ type: LATTICE_HOST_CONTEXT_SELECTION_CLEAR }, config.hostOrigin);
 }
 
 export function isRuntimeMode(value: unknown): value is RuntimeMode {
@@ -315,10 +412,7 @@ export function readLatticeAgentPermissionModeMessage(
   if (event.data.type === LATTICE_AGENT_PERMISSION_MODE_REQUEST) {
     return { type: LATTICE_AGENT_PERMISSION_MODE_REQUEST };
   }
-  if (
-    event.data.type === LATTICE_AGENT_PERMISSION_MODE_SET &&
-    isRuntimeMode(event.data.mode)
-  ) {
+  if (event.data.type === LATTICE_AGENT_PERMISSION_MODE_SET && isRuntimeMode(event.data.mode)) {
     return { type: LATTICE_AGENT_PERMISSION_MODE_SET, mode: event.data.mode };
   }
   return null;
@@ -378,10 +472,7 @@ export function readLatticeCheckpointRestoreMessage(
   };
 }
 
-export function postLayoutMetricsToLattice(
-  config: EmbedModeConfig,
-  minimumSidebarWidth: number,
-): void {
+export function postLayoutMetricsToLattice(config: EmbedModeConfig, minimumSidebarWidth: number): void {
   if (!config.hostOrigin || !Number.isFinite(minimumSidebarWidth)) return;
   window.parent.postMessage(
     {
@@ -408,15 +499,13 @@ export function readLatticeSettingsSectionMessage(
   return { type: LATTICE_SETTINGS_SECTION_SET, section: event.data.section };
 }
 
-export function postSettingsContentHeightToLattice(
-  config: EmbedModeConfig,
-  height: number,
-): void {
-  if (!config.hostOrigin || !Number.isFinite(height)) return;
+export function postSettingsContentHeightToLattice(config: EmbedModeConfig, height: number, section: string): void {
+  if (!config.hostOrigin || !Number.isFinite(height) || !section) return;
   window.parent.postMessage(
     {
       type: SYNARA_SETTINGS_CONTENT_HEIGHT,
       height: Math.ceil(height),
+      section,
     },
     config.hostOrigin,
   );
@@ -425,14 +514,21 @@ export function postSettingsContentHeightToLattice(
 export function postSettingsWheelToLattice(
   config: EmbedModeConfig,
   event: Pick<WheelEvent, "deltaX" | "deltaY" | "deltaMode">,
+  content?: {
+    height: number;
+    section: string;
+  },
 ): void {
   if (!config.hostOrigin) return;
+  const contentHeight = content && Number.isFinite(content.height) ? Math.ceil(content.height) : undefined;
+  const section = content?.section.trim() || undefined;
   window.parent.postMessage(
     {
       type: SYNARA_SETTINGS_WHEEL,
       deltaX: event.deltaX,
       deltaY: event.deltaY,
       deltaMode: event.deltaMode,
+      ...(contentHeight !== undefined && section ? { contentHeight, section } : {}),
     },
     config.hostOrigin,
   );
@@ -444,9 +540,60 @@ export function postExternalLinkToLattice(config: EmbedModeConfig, url: string):
   return true;
 }
 
+export function postShowInFolderToLattice(config: EmbedModeConfig, path: string): boolean {
+  if (!config.hostOrigin || !path.trim()) return false;
+  window.parent.postMessage({ type: SYNARA_SHOW_IN_FOLDER, path }, config.hostOrigin);
+  return true;
+}
+
 export function postEmbedReadyToLattice(config: EmbedModeConfig): void {
   if (!config.hostOrigin) return;
   window.parent.postMessage({ type: SYNARA_EMBED_READY }, config.hostOrigin);
+}
+
+export function postConfirmationRequestToLattice(
+  config: EmbedModeConfig,
+  request: Omit<SynaraConfirmationRequest, "type">,
+): void {
+  if (!config.hostOrigin || !boundedString(request.id, 128) || !boundedString(request.message, 4_096)) {
+    return;
+  }
+  window.parent.postMessage(
+    {
+      type: SYNARA_CONFIRMATION_REQUEST,
+      id: request.id,
+      message: request.message,
+    } satisfies SynaraConfirmationRequest,
+    config.hostOrigin,
+  );
+}
+
+export function readLatticeConfirmationMessage(
+  event: MessageEvent,
+  config: EmbedModeConfig,
+  requestId: string,
+): LatticeConfirmationMessage | null {
+  if (
+    !config.hostOrigin ||
+    event.source !== window.parent ||
+    event.origin !== config.hostOrigin ||
+    !event.data ||
+    typeof event.data !== "object" ||
+    event.data.id !== requestId
+  ) {
+    return null;
+  }
+  if (event.data.type === LATTICE_CONFIRMATION_ACK) {
+    return { type: LATTICE_CONFIRMATION_ACK, id: requestId };
+  }
+  if (event.data.type === LATTICE_CONFIRMATION_RESPONSE && typeof event.data.confirmed === "boolean") {
+    return {
+      type: LATTICE_CONFIRMATION_RESPONSE,
+      id: requestId,
+      confirmed: event.data.confirmed,
+    };
+  }
+  return null;
 }
 
 function readFragmentAuthToken(): string | null {
@@ -478,37 +625,39 @@ export function applyEmbedTheme(config: EmbedModeConfig): void {
   const root = document.documentElement;
   root.dataset.synaraEmbed = "true";
   root.classList.toggle("dark", config.theme === "dark");
-  const colors = config.theme === "dark"
-    ? {
-        background: "#1b1b1d",
-        surface: "#1b1b1d",
-        elevated: "#202023",
-        settingsField: "#171718",
-        settingsPanel: "#202023",
-        settingsSoftPanel: "#1b1b1d",
-        foreground: "#e9e9e7",
-        muted: "#a4a4aa",
-        faint: "#88888f",
-        border: "rgba(255, 255, 255, 0.075)",
-        strongBorder: "rgba(255, 255, 255, 0.12)",
-        accent: "#e7e7e4",
-        accentSoft: "rgba(255, 255, 255, 0.1)",
-      }
-    : {
-        background: "#f9f9fa",
-        surface: "#f9f9fa",
-        elevated: "#ffffff",
-        settingsField: "#f7f7f6",
-        settingsPanel: "#ffffff",
-        settingsSoftPanel: "#fbfbfa",
-        foreground: "#242426",
-        muted: "#606066",
-        faint: "#6c6c72",
-        border: "rgba(28, 28, 31, 0.09)",
-        strongBorder: "rgba(28, 28, 31, 0.14)",
-        accent: "#303033",
-        accentSoft: "rgba(48, 48, 51, 0.08)",
-      };
+  const usesDrawerSurface = config.surface === "drawer";
+  const colors =
+    config.theme === "dark"
+      ? {
+          background: usesDrawerSurface ? "#1b1b1d" : "#141416",
+          surface: usesDrawerSurface ? "#1b1b1d" : "#141416",
+          elevated: "#202023",
+          settingsField: "#1b1b1d",
+          settingsPanel: "#202023",
+          settingsSoftPanel: "#1b1b1d",
+          foreground: "#e9e9e7",
+          muted: "#a4a4aa",
+          faint: "#88888f",
+          border: "rgba(255, 255, 255, 0.075)",
+          strongBorder: "rgba(255, 255, 255, 0.12)",
+          accent: "#e7e7e4",
+          accentSoft: "rgba(255, 255, 255, 0.1)",
+        }
+      : {
+          background: usesDrawerSurface ? "#f9f9fa" : "#efeff0",
+          surface: usesDrawerSurface ? "#f9f9fa" : "#efeff0",
+          elevated: "#F9F9FA",
+          settingsField: "#f9f9fa",
+          settingsPanel: "#F9F9FA",
+          settingsSoftPanel: "#fbfbfa",
+          foreground: "#242426",
+          muted: "#606066",
+          faint: "#6c6c72",
+          border: "rgba(28, 28, 31, 0.09)",
+          strongBorder: "rgba(28, 28, 31, 0.14)",
+          accent: "#303033",
+          accentSoft: "rgba(48, 48, 51, 0.08)",
+        };
   const variables: Record<string, string> = {
     "--app-shell-background": colors.background,
     "--color-background-panel": colors.surface,
@@ -536,6 +685,12 @@ export function applyEmbedTheme(config: EmbedModeConfig): void {
     "--lattice-settings-line-strong": colors.strongBorder,
     "--lattice-settings-accent": colors.accent,
     "--lattice-settings-accent-soft": colors.accentSoft,
+    "--lattice-settings-content-max-width": "500px",
+    "--lattice-settings-content-padding-top": "30px",
+    "--lattice-settings-content-padding-inline": "34px",
+    "--lattice-settings-content-padding-bottom": "40px",
+    "--lattice-settings-frame-border-width": "1px",
+    "--lattice-settings-frame-radius": "8px",
     "--theme-font-ui-family": EMBED_UI_FONT_STACK,
     ...(config.theme === "light" ? { "--composer-surface": "#f9f9fa" } : {}),
   };
@@ -548,10 +703,10 @@ export function initializeEmbedMode(): void {
   const embed = search.get("embed");
   const themeValue = search.get("theme");
   const theme = themeValue === "dark" || themeValue === '"dark"' ? "dark" : "light";
+  const surface = search.get("surface") === "drawer" ? "drawer" : "chrome";
   if ((embed === "1" || embed === '"1"' || embed === "true") && workspaceRoot) {
-    const hostOrigin =
-      normalizedOrigin(search.get("hostOrigin")) || normalizedOrigin(document.referrer);
-    const config: EmbedModeConfig = { workspaceRoot, theme, hostOrigin };
+    const hostOrigin = normalizedOrigin(search.get("hostOrigin")) || normalizedOrigin(document.referrer);
+    const config: EmbedModeConfig = { workspaceRoot, theme, surface, hostOrigin };
     const authToken = readFragmentAuthToken();
     if (authToken) {
       sessionStorage.setItem(EMBED_AUTH_TOKEN_STORAGE_KEY, authToken);
@@ -570,11 +725,10 @@ export function readEmbedMode(): EmbedModeConfig | null {
     if (!parsed || typeof parsed !== "object" || !("workspaceRoot" in parsed)) return null;
     const workspaceRoot = String(parsed.workspaceRoot).trim();
     const theme = "theme" in parsed && parsed.theme === "dark" ? "dark" : "light";
+    const surface = "surface" in parsed && parsed.surface === "drawer" ? "drawer" : "chrome";
     const hostOrigin =
-      "hostOrigin" in parsed && typeof parsed.hostOrigin === "string"
-        ? normalizedOrigin(parsed.hostOrigin)
-        : null;
-    return workspaceRoot ? { workspaceRoot, theme, hostOrigin } : null;
+      "hostOrigin" in parsed && typeof parsed.hostOrigin === "string" ? normalizedOrigin(parsed.hostOrigin) : null;
+    return workspaceRoot ? { workspaceRoot, theme, surface, hostOrigin } : null;
   } catch {
     return null;
   }

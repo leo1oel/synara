@@ -37,11 +37,7 @@ import {
   normalizeSubagentStatusKind,
   resolveSubagentPresentationForThread,
 } from "../lib/subagentPresentation";
-import {
-  hasLiveTurnTailWork,
-  isProviderFileEditWorkLogEntry,
-  type WorkLogEntry,
-} from "../session-logic";
+import { hasLiveTurnTailWork, isProviderFileEditWorkLogEntry, type WorkLogEntry } from "../session-logic";
 import { localSubagentThreadId } from "./ChatView.selectors";
 import type { ProviderModelOption } from "../providerModelOptions";
 
@@ -70,14 +66,9 @@ export function hasFileUndoSettled(input: {
 
   const targetTurnCounts = new Set(input.pending.turnCounts);
   const targetSummaries = input.thread.turnDiffSummaries.filter(
-    (summary) =>
-      summary.checkpointTurnCount !== undefined &&
-      targetTurnCounts.has(summary.checkpointTurnCount),
+    (summary) => summary.checkpointTurnCount !== undefined && targetTurnCounts.has(summary.checkpointTurnCount),
   );
-  if (
-    targetSummaries.length > 0 &&
-    targetSummaries.every((summary) => summary.files.length === 0)
-  ) {
+  if (targetSummaries.length > 0 && targetSummaries.every((summary) => summary.files.length === 0)) {
     return true;
   }
 
@@ -129,10 +120,7 @@ export async function commitAfterRuntimeModePersistence(input: {
   persistRuntimeMode: (mode: RuntimeMode) => Promise<boolean>;
   commit: () => void;
 }): Promise<boolean> {
-  if (
-    input.nextRuntimeMode !== input.currentRuntimeMode &&
-    !(await input.persistRuntimeMode(input.nextRuntimeMode))
-  ) {
+  if (input.nextRuntimeMode !== input.currentRuntimeMode && !(await input.persistRuntimeMode(input.nextRuntimeMode))) {
     return false;
   }
   input.commit();
@@ -152,9 +140,7 @@ export interface RuntimeModePersistenceQueue {
  * queued choice starts, after earlier choices have settled, so Auto → Full
  * access → Auto cannot drop the final Auto choice against a stale render.
  */
-export function createRuntimeModePersistenceQueue(
-  initialMode: RuntimeMode,
-): RuntimeModePersistenceQueue {
+export function createRuntimeModePersistenceQueue(initialMode: RuntimeMode): RuntimeModePersistenceQueue {
   let acknowledgedMode = initialMode;
   let pendingCount = 0;
   let tail: Promise<void> = Promise.resolve();
@@ -214,11 +200,9 @@ export async function persistModelSelectionBeforeRuntimeMode(input: {
 }): Promise<void> {
   const nextModelSelection = input.nextModelSelection;
   const modelChanged =
-    nextModelSelection !== undefined &&
-    !modelSelectionsEqual(input.currentModelSelection, nextModelSelection);
+    nextModelSelection !== undefined && !modelSelectionsEqual(input.currentModelSelection, nextModelSelection);
   const runtimeChanged = input.currentRuntimeMode !== input.nextRuntimeMode;
-  const downgradesFromAuto =
-    input.currentRuntimeMode === "auto" && input.nextRuntimeMode !== "auto";
+  const downgradesFromAuto = input.currentRuntimeMode === "auto" && input.nextRuntimeMode !== "auto";
 
   if (runtimeChanged && downgradesFromAuto) {
     await input.persistRuntimeMode(input.nextRuntimeMode);
@@ -245,9 +229,7 @@ export function shouldEnableComposerPastedTextCollapse(input: {
   hasPendingUserInput: boolean;
   showPlanFollowUpPrompt: boolean;
 }): boolean {
-  return (
-    !input.isComposerApprovalState && !input.hasPendingUserInput && !input.showPlanFollowUpPrompt
-  );
+  return !input.isComposerApprovalState && !input.hasPendingUserInput && !input.showPlanFollowUpPrompt;
 }
 
 export function buildComposerMenuSelectionKey(input: {
@@ -368,10 +350,7 @@ export function isComposerCursorOnLastLine(prompt: string, expandedCursor: numbe
   return boundedCursor >= lastLineStart;
 }
 
-function expandedCursorForPromptHistoryItem(
-  prompt: string,
-  direction: PromptHistoryDirection,
-): number {
+function expandedCursorForPromptHistoryItem(prompt: string, direction: PromptHistoryDirection): number {
   if (direction === "older") {
     const firstLineEnd = prompt.indexOf("\n");
     return firstLineEnd < 0 ? prompt.length : firstLineEnd;
@@ -387,9 +366,7 @@ export function resolvePromptHistoryNavigation(input: {
   selectionCollapsed: boolean;
   state: PromptHistoryNavigationState | null;
 }): PromptHistoryNavigationResult {
-  const notHandled = (
-    state: PromptHistoryNavigationState | null,
-  ): PromptHistoryNavigationResult => ({
+  const notHandled = (state: PromptHistoryNavigationState | null): PromptHistoryNavigationResult => ({
     handled: false,
     prompt: input.currentPrompt,
     expandedCursor: input.currentExpandedCursor,
@@ -404,8 +381,7 @@ export function resolvePromptHistoryNavigation(input: {
   // never abandon the saved draft — restart from the newest entry when going
   // older, or restore the draft when going newer.
   const activeEntry = input.state ? input.history[input.state.index] : undefined;
-  const stateIsStale =
-    input.state !== null && (activeEntry === undefined || input.currentPrompt !== activeEntry);
+  const stateIsStale = input.state !== null && (activeEntry === undefined || input.currentPrompt !== activeEntry);
 
   if (input.direction === "older") {
     if (!isComposerCursorOnFirstLine(input.currentPrompt, input.currentExpandedCursor)) {
@@ -497,9 +473,7 @@ export function resolveCycledModelSlug(input: {
   favoriteSlugs?: ReadonlyArray<string>;
   direction: "next" | "previous";
 }): string | null {
-  const optionSlugs = new Set(
-    input.options.map((option) => option.slug.trim()).filter((slug) => slug.length > 0),
-  );
+  const optionSlugs = new Set(input.options.map((option) => option.slug.trim()).filter((slug) => slug.length > 0));
   const seen = new Set<string>();
   const ordered: string[] = [];
   const push = (slug: string) => {
@@ -535,10 +509,7 @@ export function resolveEnvironmentPanelOpen(input: {
   return input.userPreferenceOpen ?? input.defaultOpen;
 }
 
-export function resolveEnvironmentPanelPreferenceUpdate(input: {
-  open: boolean;
-  persist: boolean;
-}): {
+export function resolveEnvironmentPanelPreferenceUpdate(input: { open: boolean; persist: boolean }): {
   userPreferenceOpen: boolean;
   settingsDefaultOpen: boolean | null;
 } {
@@ -584,9 +555,7 @@ export function resolveGitRepoUiState(input: {
 export function resolveActiveTurnLiveDiffState(input: {
   latestTurnId: TurnDiffSummary["turnId"] | null | undefined;
   turnDiffSummaries: ReadonlyArray<TurnDiffSummary>;
-  workLogEntries?: ReadonlyArray<
-    Pick<WorkLogEntry, "changedFiles" | "itemType" | "requestKind" | "turnId">
-  >;
+  workLogEntries?: ReadonlyArray<Pick<WorkLogEntry, "changedFiles" | "itemType" | "requestKind" | "turnId">>;
 }): {
   turnId: TurnDiffSummary["turnId"] | null;
   fileCount: number | null;
@@ -720,13 +689,8 @@ export function resolveActiveThreadTitle(input: {
 
 // Sidechats carry imported fork history for provider context, but their transcript should start
 // visually clean so only new sidechat turns appear in the pane.
-export function filterSidechatTranscriptMessages(
-  messages: readonly ChatMessage[],
-  isSidechat: boolean,
-): ChatMessage[] {
-  return isSidechat
-    ? messages.filter((message) => message.source !== "fork-import")
-    : [...messages];
+export function filterSidechatTranscriptMessages(messages: readonly ChatMessage[], isSidechat: boolean): ChatMessage[] {
+  return isSidechat ? messages.filter((message) => message.source !== "fork-import") : [...messages];
 }
 
 export function revokeBlobPreviewUrl(previewUrl: string | undefined): void {
@@ -761,10 +725,7 @@ export function collectUserMessageBlobPreviewUrls(message: ChatMessage): string[
   return previewUrls;
 }
 
-export function appendVoiceTranscriptToPrompt(
-  currentPrompt: string,
-  transcript: string,
-): string | null {
+export function appendVoiceTranscriptToPrompt(currentPrompt: string, transcript: string): string | null {
   const trimmedTranscript = transcript.trim();
   if (trimmedTranscript.length === 0) {
     return null;
@@ -782,10 +743,7 @@ export function sanitizeVoiceErrorMessage(message: string): string {
 
   const firstLine = normalized.split("\n")[0]?.trim() ?? normalized;
   const withoutInlineStack = firstLine.replace(/\s+at file:\/\/.*$/s, "").trim();
-  const withoutRemoteMethodPrefix = withoutInlineStack.replace(
-    /^Error invoking remote method ['"][^'"]+['"]:\s*/i,
-    "",
-  );
+  const withoutRemoteMethodPrefix = withoutInlineStack.replace(/^Error invoking remote method ['"][^'"]+['"]:\s*/i, "");
   const withoutRepeatedErrorPrefix = withoutRemoteMethodPrefix.replace(/^(Error:\s*)+/i, "").trim();
 
   return withoutRepeatedErrorPrefix.length > 0
@@ -807,7 +765,7 @@ export function describeVoiceRecordingStartError(error: unknown): string {
   const errorName = typeof error.name === "string" ? error.name : "";
 
   if (errorName === "NotAllowedError" || errorName === "PermissionDeniedError") {
-    return "Microphone access was denied. Enable it in macOS Privacy & Security > Microphone for Synara, then try again.";
+    return "Microphone access was denied. Enable it in macOS Privacy & Security > Microphone for Lattice, then try again.";
   }
   if (errorName === "NotFoundError" || errorName === "DevicesNotFoundError") {
     return "No microphone was found. Connect one and try again.";
@@ -878,8 +836,7 @@ export function shouldShowComposerModelBootstrapSkeleton(input: {
   const normalizedSelectedModel =
     normalizeModelSlug(input.selectedModel, input.selectedProvider) ?? input.selectedModel;
   const normalizedPersistedModel =
-    normalizeModelSlug(persistedSelection.model, persistedSelection.provider) ??
-    persistedSelection.model;
+    normalizeModelSlug(persistedSelection.model, persistedSelection.provider) ?? persistedSelection.model;
 
   return normalizedSelectedModel !== normalizedPersistedModel;
 }
@@ -889,9 +846,7 @@ export function resolveCommittedProviderModel(input: {
   availableOptions: ReadonlyArray<ProviderModelOption>;
   fallback: () => string;
 }): string {
-  const directRuntimeOption = input.availableOptions.find(
-    (option) => option.slug === input.selectedModel,
-  );
+  const directRuntimeOption = input.availableOptions.find((option) => option.slug === input.selectedModel);
   return directRuntimeOption?.slug ?? input.fallback();
 }
 
@@ -970,9 +925,7 @@ export function failWorktreeSetupSnapshot(snapshot: WorktreeSetupSnapshot): Work
     return snapshot;
   }
   return {
-    steps: snapshot.steps.map((step) =>
-      step.status === "active" ? { ...step, status: "error" } : step,
-    ),
+    steps: snapshot.steps.map((step) => (step.status === "active" ? { ...step, status: "error" } : step)),
   };
 }
 
@@ -983,11 +936,7 @@ export function worktreeSetupHasError(snapshot: WorktreeSetupSnapshot | null): b
 export interface LocalDispatchSnapshot {
   startedAt: string;
   worktreeSetup: WorktreeSetupSnapshot | null;
-  latestTurnTurnId: Thread["latestTurn"] extends infer T
-    ? T extends { turnId: infer U }
-      ? U | null
-      : null
-    : null;
+  latestTurnTurnId: Thread["latestTurn"] extends infer T ? (T extends { turnId: infer U } ? U | null : null) : null;
   latestTurnRequestedAt: string | null;
   latestTurnStartedAt: string | null;
   latestTurnCompletedAt: string | null;
@@ -1081,10 +1030,7 @@ export function hasServerAcknowledgedLocalDispatch(input: {
   }
 
   if (input.localDispatch.sessionOrchestrationStatus !== nextSessionOrchestrationStatus) {
-    if (
-      input.localDispatch.sessionOrchestrationStatus === null &&
-      nextSessionOrchestrationStatus === "ready"
-    ) {
+    if (input.localDispatch.sessionOrchestrationStatus === null && nextSessionOrchestrationStatus === "ready") {
       return false;
     }
     return true;
@@ -1177,11 +1123,7 @@ export function shouldStartActiveTurnLayoutGrace(options: {
   currentTurnLayoutLive: boolean;
   latestTurnStartedAt: string | null;
 }): boolean {
-  return (
-    options.previousTurnLayoutLive &&
-    !options.currentTurnLayoutLive &&
-    options.latestTurnStartedAt !== null
-  );
+  return options.previousTurnLayoutLive && !options.currentTurnLayoutLive && options.latestTurnStartedAt !== null;
 }
 
 export function buildSuggestedWorktreeName(input: {
@@ -1209,8 +1151,7 @@ export function deriveComposerSendState(options: {
 } {
   const trimmedPrompt = stripInlineTerminalContextPlaceholders(options.prompt).trim();
   const sendableTerminalContexts = filterTerminalContextsWithText(options.terminalContexts);
-  const expiredTerminalContextCount =
-    options.terminalContexts.length - sendableTerminalContexts.length;
+  const expiredTerminalContextCount = options.terminalContexts.length - sendableTerminalContexts.length;
   const sendablePastedTexts = filterPastedTextsWithText(options.pastedTexts);
   return {
     trimmedPrompt,
@@ -1284,12 +1225,7 @@ export function shouldAutoDeleteTerminalThreadOnLastClose(options: {
     | undefined;
 }): boolean {
   const { thread } = options;
-  if (
-    !options.isLastTerminal ||
-    !options.isServerThread ||
-    options.terminalEntryPoint !== "terminal" ||
-    !thread
-  ) {
+  if (!options.isLastTerminal || !options.isServerThread || options.terminalEntryPoint !== "terminal" || !thread) {
     return false;
   }
   return (
@@ -1440,9 +1376,7 @@ function resolveTimelineSubagentThread(input: {
 
     if (input.subagent.agentId) {
       const matchedByAgent = input.threads.find(
-        (thread) =>
-          thread.parentThreadId === input.parentThreadId &&
-          thread.subagentAgentId === input.subagent.agentId,
+        (thread) => thread.parentThreadId === input.parentThreadId && thread.subagentAgentId === input.subagent.agentId,
       );
       if (matchedByAgent) {
         return matchedByAgent;
@@ -1486,9 +1420,7 @@ export function enrichSubagentWorkEntries(
         ? undefined
         : terminalSubagentStatusLabel(subagent.rawStatus, entry.subagentAction?.status);
       const matchedPresentation =
-        matchedThread !== undefined
-          ? resolveSubagentPresentationForThread({ thread: matchedThread, threads })
-          : null;
+        matchedThread !== undefined ? resolveSubagentPresentationForThread({ thread: matchedThread, threads }) : null;
       const nextSubagent = Object.assign({}, subagent);
       if (matchedThread) {
         nextSubagent.resolvedThreadId = matchedThread.id;

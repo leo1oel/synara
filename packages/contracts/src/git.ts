@@ -1,11 +1,5 @@
 import { Option, Schema } from "effect";
-import {
-  CommandId,
-  NonNegativeInt,
-  PositiveInt,
-  ThreadId,
-  TrimmedNonEmptyString,
-} from "./baseSchemas";
+import { CommandId, NonNegativeInt, PositiveInt, ThreadId, TrimmedNonEmptyString } from "./baseSchemas";
 import { DEFAULT_GIT_TEXT_GENERATION_MODEL } from "./model";
 import { ModelSelection, ProviderStartOptions } from "./orchestration";
 
@@ -13,13 +7,7 @@ const TrimmedNonEmptyStringSchema = TrimmedNonEmptyString;
 
 // Domain Types
 
-export const GitStackedAction = Schema.Literals([
-  "commit",
-  "push",
-  "create_pr",
-  "commit_push",
-  "commit_push_pr",
-]);
+export const GitStackedAction = Schema.Literals(["commit", "push", "create_pr", "commit_push", "commit_push_pr"]);
 export type GitStackedAction = typeof GitStackedAction.Type;
 export const GitActionProgressPhase = Schema.Literals(["branch", "commit", "push", "pr"]);
 export type GitActionProgressPhase = typeof GitActionProgressPhase.Type;
@@ -35,16 +23,8 @@ export const GitActionProgressKind = Schema.Literals([
 export type GitActionProgressKind = typeof GitActionProgressKind.Type;
 export const GitActionProgressStream = Schema.Literals(["stdout", "stderr"]);
 export type GitActionProgressStream = typeof GitActionProgressStream.Type;
-const GitCommitStepStatus = Schema.Literals([
-  "created",
-  "skipped_no_changes",
-  "skipped_not_requested",
-]);
-const GitPushStepStatus = Schema.Literals([
-  "pushed",
-  "skipped_not_requested",
-  "skipped_up_to_date",
-]);
+const GitCommitStepStatus = Schema.Literals(["created", "skipped_no_changes", "skipped_not_requested"]);
+const GitPushStepStatus = Schema.Literals(["pushed", "skipped_not_requested", "skipped_up_to_date"]);
 const GitBranchStepStatus = Schema.Literals(["created", "skipped_not_requested"]);
 const GitPrStepStatus = Schema.Literals(["created", "opened_existing", "skipped_not_requested"]);
 const GitStatusPrState = Schema.Literals(["open", "closed", "merged"]);
@@ -168,9 +148,7 @@ export const GitRunStackedActionInput = Schema.Struct({
   action: GitStackedAction,
   commitMessage: Schema.optional(TrimmedNonEmptyStringSchema.check(Schema.isMaxLength(10_000))),
   featureBranch: Schema.optional(Schema.Boolean),
-  filePaths: Schema.optional(
-    Schema.Array(TrimmedNonEmptyStringSchema).check(Schema.isMinLength(1)),
-  ),
+  filePaths: Schema.optional(Schema.Array(TrimmedNonEmptyStringSchema).check(Schema.isMinLength(1))),
   codexHomePath: Schema.optional(TrimmedNonEmptyStringSchema),
   providerOptions: Schema.optional(ProviderStartOptions),
   textGenerationModel: Schema.optional(TrimmedNonEmptyStringSchema).pipe(
@@ -282,6 +260,20 @@ export const GitInitInput = Schema.Struct({
   cwd: TrimmedNonEmptyStringSchema,
 });
 export type GitInitInput = typeof GitInitInput.Type;
+
+export const GitConnectGitHubRemoteInput = Schema.Struct({
+  cwd: TrimmedNonEmptyStringSchema,
+  url: TrimmedNonEmptyStringSchema,
+});
+export type GitConnectGitHubRemoteInput = typeof GitConnectGitHubRemoteInput.Type;
+
+export const GitCreateGitHubRepositoryInput = Schema.Struct({
+  cwd: TrimmedNonEmptyStringSchema,
+  name: TrimmedNonEmptyStringSchema,
+  description: Schema.optional(Schema.String),
+  visibility: Schema.Literals(["private", "public"]),
+});
+export type GitCreateGitHubRepositoryInput = typeof GitCreateGitHubRepositoryInput.Type;
 
 export const GitStageFilesInput = Schema.Struct({
   cwd: TrimmedNonEmptyStringSchema,
@@ -407,6 +399,16 @@ export type GitStageFilesResult = typeof GitStageFilesResult.Type;
 
 export const GitUnstageFilesResult = GitStageFilesResult;
 export type GitUnstageFilesResult = GitStageFilesResult;
+
+export const GitConnectGitHubRemoteResult = Schema.Struct({
+  remoteName: TrimmedNonEmptyStringSchema,
+  repository: TrimmedNonEmptyStringSchema,
+  url: TrimmedNonEmptyStringSchema,
+});
+export type GitConnectGitHubRemoteResult = typeof GitConnectGitHubRemoteResult.Type;
+
+export const GitCreateGitHubRepositoryResult = GitConnectGitHubRemoteResult;
+export type GitCreateGitHubRepositoryResult = GitConnectGitHubRemoteResult;
 
 export const GitListBranchesResult = Schema.Struct({
   branches: Schema.Array(GitBranch),

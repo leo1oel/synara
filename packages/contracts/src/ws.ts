@@ -37,8 +37,10 @@ import {
 import {
   GitActionProgressEvent,
   GitCheckoutInput,
+  GitConnectGitHubRemoteInput,
   GitCreateBranchInput,
   GitCreateDetachedWorktreeInput,
+  GitCreateGitHubRepositoryInput,
   GitHubRepositoryInput,
   GitHandoffThreadInput,
   GitPreparePullRequestThreadInput,
@@ -110,6 +112,12 @@ import {
   ProviderReadPluginInput,
   ProviderListSkillsInput,
   ProviderSkillsCatalogInput,
+  ProviderImportSkillInput,
+  ProviderReadManagedSkillInput,
+  ProviderSaveManagedSkillInput,
+  ProviderDuplicateManagedSkillInput,
+  ProviderRemoveManagedSkillInput,
+  ProviderRestoreManagedSkillInput,
 } from "./providerDiscovery";
 import { ProviderCompactThreadInput } from "./provider";
 import {
@@ -170,6 +178,8 @@ export const WS_METHODS = {
   gitStashInfo: "git.stashInfo",
   gitRemoveIndexLock: "git.removeIndexLock",
   gitInit: "git.init",
+  gitConnectGitHubRemote: "git.connectGitHubRemote",
+  gitCreateGitHubRepository: "git.createGitHubRepository",
   gitStageFiles: "git.stageFiles",
   gitUnstageFiles: "git.unstageFiles",
   gitHandoffThread: "git.handoffThread",
@@ -233,6 +243,12 @@ export const WS_METHODS = {
   providerListCommands: "provider.listCommands",
   providerListSkills: "provider.listSkills",
   providerListSkillsCatalog: "provider.listSkillsCatalog",
+  providerImportSkill: "provider.importSkill",
+  providerReadManagedSkill: "provider.readManagedSkill",
+  providerSaveManagedSkill: "provider.saveManagedSkill",
+  providerDuplicateManagedSkill: "provider.duplicateManagedSkill",
+  providerRemoveManagedSkill: "provider.removeManagedSkill",
+  providerRestoreManagedSkill: "provider.restoreManagedSkill",
   providerListPlugins: "provider.listPlugins",
   providerReadPlugin: "provider.readPlugin",
   providerListModels: "provider.listModels",
@@ -280,17 +296,11 @@ const tagRequestBody = <const Tag extends string, const Fields extends Schema.St
 
 const WebSocketRequestBody = Schema.Union([
   // Orchestration methods
-  tagRequestBody(
-    ORCHESTRATION_WS_METHODS.dispatchCommand,
-    Schema.Struct({ command: ClientOrchestrationCommand }),
-  ),
+  tagRequestBody(ORCHESTRATION_WS_METHODS.dispatchCommand, Schema.Struct({ command: ClientOrchestrationCommand })),
   tagRequestBody(ORCHESTRATION_WS_METHODS.importThread, OrchestrationImportThreadInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.getSnapshot, OrchestrationGetSnapshotInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.getShellSnapshot, OrchestrationGetShellSnapshotInput),
-  tagRequestBody(
-    ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot,
-    OrchestrationGetThreadDetailSnapshotInput,
-  ),
+  tagRequestBody(ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot, OrchestrationGetThreadDetailSnapshotInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.repairState, OrchestrationRepairStateInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.getTurnDiff, OrchestrationGetTurnDiffInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.getFullThreadDiff, OrchestrationGetFullThreadDiffInput),
@@ -306,10 +316,7 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.projectsSearchEntries, ProjectSearchEntriesInput),
   tagRequestBody(WS_METHODS.projectsSearchLocalEntries, ProjectSearchLocalEntriesInput),
   tagRequestBody(WS_METHODS.projectsReadFile, ProjectReadFileInput),
-  tagRequestBody(
-    WS_METHODS.projectsCreateLocalFilePreviewGrant,
-    ProjectCreateLocalFilePreviewGrantInput,
-  ),
+  tagRequestBody(WS_METHODS.projectsCreateLocalFilePreviewGrant, ProjectCreateLocalFilePreviewGrantInput),
   tagRequestBody(WS_METHODS.projectsWriteFile, ProjectWriteFileInput),
   tagRequestBody(WS_METHODS.projectsRunDevServer, ProjectRunDevServerInput),
   tagRequestBody(WS_METHODS.projectsStopDevServer, ProjectStopDevServerInput),
@@ -344,6 +351,8 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.gitStashInfo, GitStashInfoInput),
   tagRequestBody(WS_METHODS.gitRemoveIndexLock, GitRemoveIndexLockInput),
   tagRequestBody(WS_METHODS.gitInit, GitInitInput),
+  tagRequestBody(WS_METHODS.gitConnectGitHubRemote, GitConnectGitHubRemoteInput),
+  tagRequestBody(WS_METHODS.gitCreateGitHubRepository, GitCreateGitHubRepositoryInput),
   tagRequestBody(WS_METHODS.gitStageFiles, GitStageFilesInput),
   tagRequestBody(WS_METHODS.gitUnstageFiles, GitUnstageFilesInput),
   tagRequestBody(WS_METHODS.gitHandoffThread, GitHandoffThreadInput),
@@ -399,6 +408,12 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.providerListCommands, ProviderListCommandsInput),
   tagRequestBody(WS_METHODS.providerListSkills, ProviderListSkillsInput),
   tagRequestBody(WS_METHODS.providerListSkillsCatalog, ProviderSkillsCatalogInput),
+  tagRequestBody(WS_METHODS.providerImportSkill, ProviderImportSkillInput),
+  tagRequestBody(WS_METHODS.providerReadManagedSkill, ProviderReadManagedSkillInput),
+  tagRequestBody(WS_METHODS.providerSaveManagedSkill, ProviderSaveManagedSkillInput),
+  tagRequestBody(WS_METHODS.providerDuplicateManagedSkill, ProviderDuplicateManagedSkillInput),
+  tagRequestBody(WS_METHODS.providerRemoveManagedSkill, ProviderRemoveManagedSkillInput),
+  tagRequestBody(WS_METHODS.providerRestoreManagedSkill, ProviderRestoreManagedSkillInput),
   tagRequestBody(WS_METHODS.providerListPlugins, ProviderListPluginsInput),
   tagRequestBody(WS_METHODS.providerReadPlugin, ProviderReadPluginInput),
   tagRequestBody(WS_METHODS.providerListModels, ProviderListModelsInput),
@@ -483,10 +498,7 @@ export const WsPushServerMaintenanceUpdated = makeWsPushSchema(
   WS_CHANNELS.serverMaintenanceUpdated,
   ServerLifecycleStreamEvent,
 );
-export const WsPushServerConfigUpdated = makeWsPushSchema(
-  WS_CHANNELS.serverConfigUpdated,
-  ServerConfigUpdatedPayload,
-);
+export const WsPushServerConfigUpdated = makeWsPushSchema(WS_CHANNELS.serverConfigUpdated, ServerConfigUpdatedPayload);
 export const WsPushServerProviderStatusesUpdated = makeWsPushSchema(
   WS_CHANNELS.serverProviderStatusesUpdated,
   ServerProviderStatusesUpdatedPayload,
@@ -495,19 +507,10 @@ export const WsPushServerSettingsUpdated = makeWsPushSchema(
   WS_CHANNELS.serverSettingsUpdated,
   ServerSettingsUpdatedPayload,
 );
-export const WsPushAutomationEvent = makeWsPushSchema(
-  WS_CHANNELS.automationEvent,
-  AutomationStreamEvent,
-);
-export const WsPushGitActionProgress = makeWsPushSchema(
-  WS_CHANNELS.gitActionProgress,
-  GitActionProgressEvent,
-);
+export const WsPushAutomationEvent = makeWsPushSchema(WS_CHANNELS.automationEvent, AutomationStreamEvent);
+export const WsPushGitActionProgress = makeWsPushSchema(WS_CHANNELS.gitActionProgress, GitActionProgressEvent);
 export const WsPushTerminalEvent = makeWsPushSchema(WS_CHANNELS.terminalEvent, TerminalEvent);
-export const WsPushProjectDevServerEvent = makeWsPushSchema(
-  WS_CHANNELS.projectDevServerEvent,
-  ProjectDevServerEvent,
-);
+export const WsPushProjectDevServerEvent = makeWsPushSchema(WS_CHANNELS.projectDevServerEvent, ProjectDevServerEvent);
 export const WsPushOrchestrationDomainEvent = makeWsPushSchema(
   ORCHESTRATION_WS_CHANNELS.domainEvent,
   OrchestrationEvent,

@@ -8,11 +8,7 @@
 import { spawnSync } from "node:child_process";
 
 import { Effect } from "effect";
-import type {
-  GitPullRequestCheck,
-  GitPullRequestComment,
-  PullRequestMergeCapabilities,
-} from "@synara/contracts";
+import type { GitPullRequestCheck, GitPullRequestComment, PullRequestMergeCapabilities } from "@synara/contracts";
 
 import { GitHubCliError } from "../Errors.ts";
 import {
@@ -32,6 +28,7 @@ export interface FakeGhScenario {
   prListSequence?: string[];
   prListByHeadSelector?: Record<string, string>;
   createdPrUrl?: string;
+  createdRepositoryUrl?: string;
   defaultBranch?: string;
   pullRequest?: {
     number: number;
@@ -103,13 +100,8 @@ export function createGitHubCliWithFakeGh(scenario: FakeGhScenario = {}): {
     if (args[0] === "pr" && args[1] === "list") {
       const headSelectorIndex = args.findIndex((value) => value === "--head");
       const headSelector =
-        headSelectorIndex >= 0 && headSelectorIndex < args.length - 1
-          ? args[headSelectorIndex + 1]
-          : undefined;
-      const mappedStdout =
-        typeof headSelector === "string"
-          ? scenario.prListByHeadSelector?.[headSelector]
-          : undefined;
+        headSelectorIndex >= 0 && headSelectorIndex < args.length - 1 ? args[headSelectorIndex + 1] : undefined;
+      const mappedStdout = typeof headSelector === "string" ? scenario.prListByHeadSelector?.[headSelector] : undefined;
       const stdout = (mappedStdout ?? prListQueue.shift() ?? "[]") + "\n";
       return Effect.succeed({
         stdout,
@@ -125,8 +117,28 @@ export function createGitHubCliWithFakeGh(scenario: FakeGhScenario = {}): {
         return Effect.fail(scenario.createPullRequestError);
       }
       return Effect.succeed({
-        stdout:
-          (scenario.createdPrUrl ?? "https://github.com/example-org/sample-repo/pull/101") + "\n",
+        stdout: (scenario.createdPrUrl ?? "https://github.com/example-org/sample-repo/pull/101") + "\n",
+        stderr: "",
+        code: 0,
+        signal: null,
+        timedOut: false,
+      });
+    }
+
+    if (args[0] === "repo" && args[1] === "create") {
+      const requestedName = args[2] ?? "sample-repo";
+      const repositoryUrl =
+        scenario.createdRepositoryUrl ??
+        `https://github.com/${requestedName.includes("/") ? requestedName : `example-org/${requestedName}`}`;
+      const sourceIndex = args.indexOf("--source");
+      const remoteIndex = args.indexOf("--remote");
+      const source = sourceIndex >= 0 ? args[sourceIndex + 1] : input.cwd;
+      const remoteName = remoteIndex >= 0 ? args[remoteIndex + 1] : "origin";
+      if (source && remoteName) {
+        runGitSyncForFakeGh(source, ["remote", "add", remoteName, `${repositoryUrl}.git`]);
+      }
+      return Effect.succeed({
+        stdout: `${repositoryUrl}\n`,
         stderr: "",
         code: 0,
         signal: null,
@@ -174,14 +186,10 @@ export function createGitHubCliWithFakeGh(scenario: FakeGhScenario = {}): {
         try: () => {
           const headBranch = scenario.pullRequest?.headRefName;
           if (headBranch) {
-            const existingBranch = spawnSync(
-              "git",
-              ["show-ref", "--verify", "--quiet", `refs/heads/${headBranch}`],
-              {
-                cwd: input.cwd,
-                encoding: "utf8",
-              },
-            );
+            const existingBranch = spawnSync("git", ["show-ref", "--verify", "--quiet", `refs/heads/${headBranch}`], {
+              cwd: input.cwd,
+              encoding: "utf8",
+            });
             if (existingBranch.status === 0) {
               runGitSyncForFakeGh(input.cwd, ["checkout", headBranch]);
             } else {
@@ -276,9 +284,7 @@ export function createGitHubCliWithFakeGh(scenario: FakeGhScenario = {}): {
       execute,
       getViewerLogin: (input) => {
         ghCalls.push(`api user --jq .login [cwd=${input.cwd}]`);
-        return scenario.failWith
-          ? Effect.fail(scenario.failWith)
-          : Effect.succeed(scenario.viewerLogin ?? "viewer");
+        return scenario.failWith ? Effect.fail(scenario.failWith) : Effect.succeed(scenario.viewerLogin ?? "viewer");
       },
       listRepositoryPullRequests: (input) => {
         const involvementArgs =
@@ -353,10 +359,8 @@ export function createGitHubCliWithFakeGh(scenario: FakeGhScenario = {}): {
         ghCalls.push(`pr comment ${input.number} --repo ${input.repository}`);
         return scenario.failWith ? Effect.fail(scenario.failWith) : Effect.void;
       },
-      listOpenPullRequests: (input) =>
-        listPullRequestsWithState(input, { state: "open", defaultLimit: 1 }),
-      listPullRequests: (input) =>
-        listPullRequestsWithState(input, { state: "all", defaultLimit: 20 }),
+      listOpenPullRequests: (input) => listPullRequestsWithState(input, { state: "open", defaultLimit: 1 }),
+      listPullRequests: (input) => listPullRequestsWithState(input, { state: "all", defaultLimit: 20 }),
       createPullRequest: (input) =>
         execute({
           cwd: input.cwd,
@@ -401,13 +405,7 @@ export function createGitHubCliWithFakeGh(scenario: FakeGhScenario = {}): {
       getPullRequestWithChecks: (input) =>
         execute({
           cwd: input.cwd,
-          args: [
-            "pr",
-            "view",
-            input.reference,
-            "--json",
-            `${PULL_REQUEST_SUMMARY_JSON_FIELDS},statusCheckRollup`,
-          ],
+          args: ["pr", "view", input.reference, "--json", `${PULL_REQUEST_SUMMARY_JSON_FIELDS},statusCheckRollup`],
         }).pipe(
           Effect.map((result) => ({
             summary: JSON.parse(result.stdout) as GitHubPullRequestSummary,
@@ -415,9 +413,7 @@ export function createGitHubCliWithFakeGh(scenario: FakeGhScenario = {}): {
           })),
         ),
       getPullRequestReviewComments: (input) => {
-        ghCalls.push(
-          `api graphql reviewThreads ${input.host}/${input.owner}/${input.repo}#${input.number}`,
-        );
+        ghCalls.push(`api graphql reviewThreads ${input.host}/${input.owner}/${input.repo}#${input.number}`);
         return scenario.reviewCommentsError
           ? Effect.fail(scenario.reviewCommentsError)
           : Effect.succeed({

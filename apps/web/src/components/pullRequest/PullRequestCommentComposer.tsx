@@ -13,6 +13,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 
 import { toastManager } from "~/components/ui/toast";
+import { FIELD_CONTROL_CLASS_NAME } from "~/components/ui/field-styles";
 import { ArrowUpIcon, GitHubIcon } from "~/lib/icons";
 import { pullRequestCommentMutationOptions } from "~/lib/pullRequestReactQuery";
 import { PR_BODY_TEXT_CLASS_NAME } from "./pullRequestText";
@@ -57,7 +58,7 @@ export function PullRequestCommentComposer({ detail }: { detail: PullRequestDeta
   };
 
   return (
-    <div className="flex items-center gap-2 rounded-3xl border border-border/60 bg-background py-1 pl-3 pr-1.5 shadow-sm">
+    <div className={cn(FIELD_CONTROL_CLASS_NAME, "flex items-center gap-2 rounded-lg py-1 pl-3 pr-1.5")}>
       <span
         className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--color-background-elevated-secondary)] text-muted-foreground"
         title="Commenting as your GitHub account"

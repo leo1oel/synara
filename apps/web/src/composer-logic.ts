@@ -1,9 +1,6 @@
 import { splitPromptIntoComposerSegments } from "./composer-editor-mentions";
 import { isBuiltInComposerSlashCommand, type ComposerSlashCommand } from "./composerSlashCommands";
-import {
-  composerMentionQuotedPathHasClosingQuote,
-  decodeComposerMentionQuotedPath,
-} from "./lib/composerMentions";
+import { composerMentionQuotedPathClosingQuoteIndex, decodeComposerMentionQuotedPath } from "./lib/composerMentions";
 import { INLINE_TERMINAL_CONTEXT_PLACEHOLDER } from "./lib/terminalContext";
 
 export type ComposerTriggerKind = "mention" | "slash-command" | "slash-model" | "skill";
@@ -41,11 +38,7 @@ function clampCursor(text: string, cursor: number): number {
 
 function isWhitespace(char: string): boolean {
   return (
-    char === " " ||
-    char === "\n" ||
-    char === "\t" ||
-    char === "\r" ||
-    char === INLINE_TERMINAL_CONTEXT_PLACEHOLDER
+    char === " " || char === "\n" || char === "\t" || char === "\r" || char === INLINE_TERMINAL_CONTEXT_PLACEHOLDER
   );
 }
 
@@ -164,10 +157,7 @@ function clampCollapsedComposerCursorForSegments(
   segments: ReadonlyArray<ComposerSegmentLike>,
   cursorInput: number,
 ): number {
-  const collapsedLength = segments.reduce(
-    (total, segment) => total + collapsedSegmentLength(segment),
-    0,
-  );
+  const collapsedLength = segments.reduce((total, segment) => total + collapsedSegmentLength(segment), 0);
   if (!Number.isFinite(cursorInput)) {
     return collapsedLength;
   }
@@ -175,10 +165,7 @@ function clampCollapsedComposerCursorForSegments(
 }
 
 export function clampCollapsedComposerCursor(text: string, cursorInput: number): number {
-  return clampCollapsedComposerCursorForSegments(
-    splitPromptIntoComposerSegments(text),
-    cursorInput,
-  );
+  return clampCollapsedComposerCursorForSegments(splitPromptIntoComposerSegments(text), cursorInput);
 }
 
 export function collapseExpandedComposerCursor(text: string, cursorInput: number): number {
@@ -366,10 +353,25 @@ export function detectComposerTrigger(text: string, cursorInput: number): Compos
   const quotedMentionStart = linePrefix.lastIndexOf('@"');
   if (quotedMentionStart !== -1) {
     const afterOpen = linePrefix.slice(quotedMentionStart + 2);
-    if (!composerMentionQuotedPathHasClosingQuote(afterOpen)) {
+    const closingQuoteIndex = composerMentionQuotedPathClosingQuoteIndex(afterOpen);
+    if (closingQuoteIndex === -1) {
       return {
         kind: "mention",
         query: decodeComposerMentionQuotedPath(afterOpen),
+        rangeStart: lineStart + quotedMentionStart,
+        rangeEnd: cursor,
+      };
+    }
+    // A selected quoted mention is followed by a delimiter, so its picker is
+    // closed. Removing that delimiter with Backspace leaves the caret directly
+    // after the closing quote while Lexical still owns the mention chip. Reopen
+    // the picker for that exact token, matching the edit/delete flow of simple
+    // `@plugin` and `@file` mentions. Any following text keeps it completed.
+    const closingQuoteEnd = quotedMentionStart + 2 + closingQuoteIndex + 1;
+    if (closingQuoteEnd === linePrefix.length) {
+      return {
+        kind: "mention",
+        query: decodeComposerMentionQuotedPath(afterOpen.slice(0, closingQuoteIndex)),
         rangeStart: lineStart + quotedMentionStart,
         rangeEnd: cursor,
       };
@@ -400,9 +402,23 @@ export function detectComposerTrigger(text: string, cursorInput: number): Compos
   };
 }
 
-export function parseStandaloneComposerSlashCommand(
-  text: string,
-): Exclude<ComposerSlashCommand, "model"> | null {
+export function resolveComposerTriggerAfterEditorChange(options: {
+  previousText: string;
+  nextText: string;
+  expandedCursor: number;
+  cursorAdjacentToInlineToken: boolean;
+}): ComposerTrigger | null {
+  // Moving the caret beside an atomic chip must not reopen its picker. A real
+  // text edit is different: removing the delimiter after a completed mention
+  // with Backspace intentionally exposes that mention as the active query, so
+  // the picker can reopen before a second Backspace removes the chip.
+  if (options.cursorAdjacentToInlineToken && options.previousText === options.nextText) {
+    return null;
+  }
+  return detectComposerTrigger(options.nextText, options.expandedCursor);
+}
+
+export function parseStandaloneComposerSlashCommand(text: string): Exclude<ComposerSlashCommand, "model"> | null {
   const match = /^\/([a-z-]+)\s*$/i.exec(text.trim());
   if (!match) {
     return null;

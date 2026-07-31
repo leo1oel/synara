@@ -8,26 +8,13 @@ import { useId, useRef, type ChangeEvent } from "react";
 import { GoTasklist } from "react-icons/go";
 
 import { PaperclipIcon, PlusIcon } from "~/lib/icons";
-import { ComposerPickerMenuPopup, ComposerPickerMenuSubPopup } from "./ComposerPickerMenuPopup";
+import { ComposerPickerMenuPopup } from "./ComposerPickerMenuPopup";
 import { Button } from "../ui/button";
-import {
-  Menu,
-  MenuCheckboxItem,
-  MenuItem,
-  MenuRadioGroup,
-  MenuRadioItem,
-  MenuSeparator,
-  MenuSub,
-  MenuSubTrigger,
-  MenuTrigger,
-} from "../ui/menu";
+import { Menu, MenuCheckboxItem, MenuItem, MenuSeparator, MenuTrigger } from "../ui/menu";
 
 export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
   interactionMode: ProviderInteractionMode;
-  supportsFastMode: boolean;
-  fastModeEnabled: boolean;
   onAddPhotos: (files: File[]) => void;
-  onToggleFastMode: () => void;
   onSetPlanMode: (enabled: boolean) => void;
 }) {
   const inputId = useId();
@@ -57,12 +44,7 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
       <Menu>
         <MenuTrigger
           render={
-            <Button
-              size="icon-sm"
-              variant="chrome"
-              className="shrink-0 rounded-md"
-              aria-label="Composer extras"
-            />
+            <Button size="icon-sm" variant="chrome" className="shrink-0 rounded-md" aria-label="Composer extras" />
           }
         >
           <PlusIcon aria-hidden="true" className="size-4" />
@@ -90,28 +72,6 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
               Plan mode
             </span>
           </MenuCheckboxItem>
-
-          {props.supportsFastMode ? (
-            <>
-              <MenuSeparator />
-              <MenuSub>
-                <MenuSubTrigger>Fast</MenuSubTrigger>
-                <ComposerPickerMenuSubPopup>
-                  <MenuRadioGroup
-                    value={props.fastModeEnabled ? "fast" : "normal"}
-                    onValueChange={(value) => {
-                      const shouldEnableFast = value === "fast";
-                      if (shouldEnableFast === props.fastModeEnabled) return;
-                      props.onToggleFastMode();
-                    }}
-                  >
-                    <MenuRadioItem value="normal">Default</MenuRadioItem>
-                    <MenuRadioItem value="fast">Fast</MenuRadioItem>
-                  </MenuRadioGroup>
-                </ComposerPickerMenuSubPopup>
-              </MenuSub>
-            </>
-          ) : null}
         </ComposerPickerMenuPopup>
       </Menu>
     </>

@@ -3,9 +3,15 @@ import { describe, expect, it } from "vitest";
 import {
   COMPOSER_FOOTER_COMPACT_BREAKPOINT_PX,
   COMPOSER_FOOTER_MAX_TIER,
+  COMPOSER_FOOTER_SURFACE_EDGE_GUARD_PX,
   COMPOSER_FOOTER_TIER_PROMOTION_SLACK_PX,
   COMPOSER_FOOTER_WIDE_ACTIONS_COMPACT_BREAKPOINT_PX,
+  EMBED_COMPOSER_SEND_EDGE_INSET_PX,
+  composerFooterActionsClip,
+  composerFooterActionsCrossSurfaceEdge,
+  composerFooterIsOverflowing,
   composerFooterPlanForTier,
+  embedComposerMinimumSidebarWidth,
   resolveNextComposerFooterTier,
   shouldUseCompactComposerFooter,
 } from "./composerFooterLayout";
@@ -74,6 +80,128 @@ describe("composerFooterPlanForTier", () => {
 
   it("never shows the context meter when the thread has none", () => {
     expect(composerFooterPlanForTier(0, false).showContextMeter).toBe(false);
+  });
+});
+
+describe("composerFooterActionsCrossSurfaceEdge", () => {
+  it("does not treat the footer's normal end padding as overflow", () => {
+    expect(
+      composerFooterActionsCrossSurfaceEdge({
+        actionsRight: 492.5,
+        surfaceRight: 500,
+      }),
+    ).toBe(false);
+  });
+
+  it("guards controls that touch or cross the composer edge", () => {
+    expect(
+      composerFooterActionsCrossSurfaceEdge({
+        actionsRight: 500 - COMPOSER_FOOTER_SURFACE_EDGE_GUARD_PX / 2,
+        surfaceRight: 500,
+      }),
+    ).toBe(true);
+    expect(
+      composerFooterActionsCrossSurfaceEdge({
+        actionsRight: 501,
+        surfaceRight: 500,
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("composerFooterActionsClip", () => {
+  it("ignores descendant scroll width in the embedded max-content track", () => {
+    expect(
+      composerFooterActionsClip({
+        isEmbed: true,
+        intrinsicWidth: 240,
+        clientWidth: 120,
+      }),
+    ).toBe(false);
+  });
+
+  it("still detects clipped flexible action rows outside embed mode", () => {
+    expect(
+      composerFooterActionsClip({
+        isEmbed: false,
+        intrinsicWidth: 240,
+        clientWidth: 120,
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("composerFooterIsOverflowing", () => {
+  it("uses the embedded grid row as the single source of truth", () => {
+    expect(
+      composerFooterIsOverflowing({
+        isEmbed: true,
+        rowOverflows: false,
+        leadingClips: true,
+        actionsClip: true,
+        actionsCrossSurfaceEdge: true,
+      }),
+    ).toBe(false);
+    expect(
+      composerFooterIsOverflowing({
+        isEmbed: true,
+        rowOverflows: true,
+        leadingClips: false,
+        actionsClip: false,
+        actionsCrossSurfaceEdge: false,
+      }),
+    ).toBe(true);
+  });
+
+  it("retains every overflow guard in the standalone layout", () => {
+    for (const overflowKey of ["rowOverflows", "leadingClips", "actionsClip", "actionsCrossSurfaceEdge"] as const) {
+      expect(
+        composerFooterIsOverflowing({
+          isEmbed: false,
+          rowOverflows: overflowKey === "rowOverflows",
+          leadingClips: overflowKey === "leadingClips",
+          actionsClip: overflowKey === "actionsClip",
+          actionsCrossSurfaceEdge: overflowKey === "actionsCrossSurfaceEdge",
+        }),
+      ).toBe(true);
+    }
+  });
+});
+
+describe("embedComposerMinimumSidebarWidth", () => {
+  it("includes every intrinsic control and preserves the send-edge inset", () => {
+    expect(
+      embedComposerMinimumSidebarWidth({
+        viewportWidth: 360,
+        footerWidth: 336,
+        footerPaddingLeft: 6,
+        footerPaddingRight: 4,
+        footerGap: 2,
+        leadingIntrinsicWidth: 24,
+        actionsIntrinsicWidth: 246,
+      }),
+    ).toBe(310);
+  });
+
+  it("grows and shrinks with the active model, effort, and speed controls", () => {
+    const base = {
+      viewportWidth: 360,
+      footerWidth: 336,
+      footerPaddingLeft: 6,
+      footerPaddingRight: EMBED_COMPOSER_SEND_EDGE_INSET_PX,
+      footerGap: 2,
+      leadingIntrinsicWidth: 24,
+    };
+    const regular = embedComposerMinimumSidebarWidth({
+      ...base,
+      actionsIntrinsicWidth: 180,
+    });
+    const fastHighEffort = embedComposerMinimumSidebarWidth({
+      ...base,
+      actionsIntrinsicWidth: 232,
+    });
+
+    expect(fastHighEffort - regular).toBe(52);
   });
 });
 

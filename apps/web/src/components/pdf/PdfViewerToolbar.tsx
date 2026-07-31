@@ -7,13 +7,7 @@
 
 import { useState } from "react";
 
-import {
-  ChevronDownIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  MinusIcon,
-  PlusIcon,
-} from "~/lib/icons";
+import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, MinusIcon, PlusIcon } from "~/lib/icons";
 import { formatZoomPercent, PDF_ZOOM_PRESETS, type PdfZoomMode } from "~/lib/pdf/pdfZoom";
 import { cn } from "~/lib/utils";
 import { ComposerPickerMenuPopup } from "../chat/ComposerPickerMenuPopup";
@@ -24,6 +18,7 @@ import {
 } from "../chat/chatHeaderControls";
 import { OpenInPicker } from "../chat/OpenInPicker";
 import { Badge } from "../ui/badge";
+import { FIELD_CONTROL_CLASS_NAME } from "../ui/field-styles";
 import { Menu, MenuRadioGroup, MenuRadioItem, MenuSeparator, MenuTrigger } from "../ui/menu";
 
 interface PdfViewerToolbarProps {
@@ -103,11 +98,7 @@ export const PdfViewerToolbar = function PdfViewerToolbar(props: PdfViewerToolba
             <MinusIcon aria-hidden="true" className="size-4" />
           </ChatHeaderIconButton>
           <Menu>
-            <MenuTrigger
-              render={
-                <ChatHeaderButton tone="plain" className="min-w-16 justify-center gap-1 px-2" />
-              }
-            >
+            <MenuTrigger render={<ChatHeaderButton tone="plain" className="min-w-16 justify-center gap-1 px-2" />}>
               <span className="tabular-nums">{formatZoomPercent(props.scale)}</span>
               <ChevronDownIcon aria-hidden="true" className="size-3.5 opacity-70" />
             </MenuTrigger>
@@ -146,11 +137,7 @@ export const PdfViewerToolbar = function PdfViewerToolbar(props: PdfViewerToolba
           </ChatHeaderIconButton>
         </div>
 
-        <OpenInPicker
-          openInTarget={props.openInTarget}
-          labelMode="always"
-          defaultEditor="system-default"
-        />
+        <OpenInPicker openInTarget={props.openInTarget} labelMode="always" defaultEditor="system-default" />
       </div>
     </div>
   );
@@ -188,7 +175,10 @@ function PdfPageIndicator({
         value={draft}
         inputMode="numeric"
         aria-label="Current page"
-        className="h-6 w-8 rounded-sm border border-border/60 bg-transparent text-center text-[11px] text-foreground tabular-nums outline-none focus-visible:border-[color:var(--color-border-focus)]"
+        className={cn(
+          FIELD_CONTROL_CLASS_NAME,
+          "h-6 w-8 rounded-lg text-center text-[11px] text-foreground tabular-nums outline-none",
+        )}
         onChange={(event) => setDraft(event.target.value.replace(/[^0-9]/g, ""))}
         onBlur={commit}
         onKeyDown={(event) => {

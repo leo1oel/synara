@@ -4,20 +4,26 @@
 // Layer: Server provider tests
 
 import { mkdtempSync, rmSync } from "node:fs";
-import { mkdir, symlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { access } from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 
 import type { ProviderSkillDescriptor } from "@synara/contracts";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   clearSkillsCatalogCacheForTests,
   discoverSkillsCatalog,
+  duplicateManagedSkill,
   filterDisabledSkills,
+  importSynaraSkill,
   mergeSkillsIntoCatalog,
   parseSkillFrontmatter,
+  readManagedSkill,
+  removeManagedSkill,
+  restoreManagedSkill,
+  saveManagedSkill,
 } from "./skillsCatalog.ts";
 
 let root: string;
@@ -46,6 +52,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   rmSync(root, { recursive: true, force: true });
 });
 
@@ -66,6 +73,239 @@ disable-model-invocation: true
       "disable-model-invocation": true,
     });
   });
+
+  it("unescapes editor-generated quoted metadata", () => {
+    expect(
+      parseSkillFrontmatter(`---
+name: "quote-check"
+description: "Use when the user says \\"check this\\"."
+---
+`),
+    ).toMatchObject({
+      name: "quote-check",
+      description: 'Use when the user says "check this".',
+    });
+  });
+});
+
+describe("importSynaraSkill", () => {
+  const encoded = (value: string) => Buffer.from(value).toString("base64");
+
+  it("installs a complete skill folder and invalidates cached discovery", async () => {
+    await discoverSkillsCatalog({ homeDir, synaraBaseDir });
+
+    const result = await importSynaraSkill(synaraBaseDir, {
+      folderName: "paper-review",
+      files: [
+        {
+          relativePath: "SKILL.md",
+          contentBase64: encoded(`---
+name: paper-review
+description: Review a research paper
+---
+
+# Paper review
+`),
+        },
+        {
+          relativePath: "references/checklist.md",
+          contentBase64: encoded("# Checklist"),
+        },
+      ],
+    });
+
+    expect(result.status).toBe("imported");
+    expect(result.skill?.name).toBe("paper-review");
+    await expect(
+      readFile(path.join(synaraBaseDir, "skills", "paper-review", "references", "checklist.md"), "utf8"),
+    ).resolves.toBe("# Checklist");
+
+    const refreshed = await discoverSkillsCatalog({ homeDir, synaraBaseDir });
+    expect(refreshed.find((skill) => skill.name === "paper-review")?.scope).toBe("synara");
+  });
+
+  it("requires confirmation before replacing an existing shared skill", async () => {
+    await writeSkill(path.join(synaraBaseDir, "skills", "paper-review"), "paper-review", "Original");
+    const files = [
+      {
+        relativePath: "SKILL.md",
+        contentBase64: encoded(`---
+name: paper-review
+description: Updated
+---
+`),
+      },
+    ];
+
+    const conflict = await importSynaraSkill(synaraBaseDir, {
+      folderName: "paper-review",
+      files,
+    });
+    expect(conflict.status).toBe("conflict");
+    await expect(readFile(path.join(synaraBaseDir, "skills", "paper-review", "SKILL.md"), "utf8")).resolves.toContain(
+      "Original",
+    );
+
+    const replaced = await importSynaraSkill(synaraBaseDir, {
+      folderName: "paper-review",
+      files,
+      overwrite: true,
+    });
+    expect(replaced.status).toBe("replaced");
+    await expect(readFile(path.join(synaraBaseDir, "skills", "paper-review", "SKILL.md"), "utf8")).resolves.toContain(
+      "Updated",
+    );
+  });
+
+  it("rejects paths that escape the selected skill folder", async () => {
+    await expect(
+      importSynaraSkill(synaraBaseDir, {
+        folderName: "unsafe",
+        files: [
+          { relativePath: "SKILL.md", contentBase64: encoded("# Unsafe") },
+          { relativePath: "../outside.txt", contentBase64: encoded("outside") },
+        ],
+      }),
+    ).rejects.toThrow("invalid path");
+    await expect(access(path.join(synaraBaseDir, "outside.txt"))).rejects.toThrow();
+  });
+
+  it("protects skills that are included with Lattice from replacement", async () => {
+    const bundledRoot = path.join(root, "bundled-skills");
+    await writeSkill(path.join(bundledRoot, "humanize-writing"), "humanize-writing", "Included with Lattice");
+    vi.stubEnv("SYNARA_BUNDLED_SKILLS_DIR", bundledRoot);
+
+    await expect(
+      importSynaraSkill(synaraBaseDir, {
+        folderName: "humanize-writing-copy",
+        files: [
+          {
+            relativePath: "SKILL.md",
+            contentBase64: encoded(`---
+name: humanize-writing
+description: User copy
+---
+`),
+          },
+        ],
+      }),
+    ).rejects.toThrow("included with Lattice");
+    await expect(access(path.join(synaraBaseDir, "skills", "humanize-writing-copy"))).rejects.toThrow();
+  });
+});
+
+describe("managed skills", () => {
+  it("creates and edits a skill without requiring an external Markdown editor", async () => {
+    const created = await saveManagedSkill(synaraBaseDir, {
+      mode: "create",
+      id: "literature-review",
+      displayName: "Literature Review",
+      description: "Review papers and check claims against primary sources.",
+      instructions: "# Workflow\n\nRead the paper before summarizing it.",
+    });
+
+    expect(created.status).toBe("created");
+    expect(created.detail.skill.interface?.displayName).toBe("Literature Review");
+    expect(created.detail.markdown).toContain('name: "literature-review"');
+    expect(created.detail.markdown).toContain("# Workflow");
+
+    const skillDir = path.join(synaraBaseDir, "skills", "literature-review");
+    await mkdir(path.join(skillDir, "references"), { recursive: true });
+    await writeFile(path.join(skillDir, "references", "checks.md"), "# Checks");
+    await writeFile(
+      path.join(skillDir, "SKILL.md"),
+      created.detail.markdown.replace("---\n\n# Workflow", "disable-model-invocation: false\n---\n\n# Workflow"),
+    );
+
+    const updated = await saveManagedSkill(synaraBaseDir, {
+      mode: "update",
+      id: "literature-review",
+      displayName: "Evidence Review",
+      description: "Review evidence and identify unsupported claims.",
+      instructions: "# Updated workflow\n\nCheck every citation.",
+    });
+
+    expect(updated.status).toBe("updated");
+    expect(updated.detail.skill.name).toBe("literature-review");
+    expect(updated.detail.skill.interface?.displayName).toBe("Evidence Review");
+    expect(updated.detail.files).toContain("references/checks.md");
+    expect(updated.detail.markdown).toContain("disable-model-invocation: false");
+    expect(updated.detail.markdown).toContain("# Updated workflow");
+  });
+
+  it("duplicates a bundled skill and all of its resources into the user folder", async () => {
+    const bundledRoot = path.join(root, "bundled-skills");
+    const bundledSkillDir = path.join(bundledRoot, "research-taste");
+    await writeSkill(bundledSkillDir, "research-taste", "Choose worthwhile research.");
+    await mkdir(path.join(bundledSkillDir, "references"), { recursive: true });
+    await writeFile(path.join(bundledSkillDir, "references", "taste.md"), "# Taste");
+    vi.stubEnv("SYNARA_BUNDLED_SKILLS_DIR", bundledRoot);
+
+    const copied = await duplicateManagedSkill(synaraBaseDir, {
+      kind: "bundled",
+      id: "research-taste",
+    });
+
+    expect(copied.detail.skill.management).toMatchObject({
+      kind: "installed",
+      id: "research-taste-custom",
+      canDelete: true,
+    });
+    expect(copied.detail.skill.name).toBe("research-taste-custom");
+    expect(copied.detail.files).toContain("references/taste.md");
+    await expect(
+      readFile(path.join(synaraBaseDir, "skills", "research-taste-custom", "references", "taste.md"), "utf8"),
+    ).resolves.toBe("# Taste");
+    await expect(readFile(path.join(bundledSkillDir, "SKILL.md"), "utf8")).resolves.toContain("name: research-taste");
+  });
+
+  it("reads installed skill details, removes them recoverably, and restores them", async () => {
+    const skillDir = path.join(synaraBaseDir, "skills", "paper-review");
+    await writeSkill(skillDir, "paper-review", "Review a paper");
+    await mkdir(path.join(skillDir, "references"), { recursive: true });
+    await writeFile(path.join(skillDir, "references", "checklist.md"), "# Checklist");
+    await symlink(path.join(root, "outside.md"), path.join(skillDir, "references", "outside.md"));
+
+    const detail = await readManagedSkill(synaraBaseDir, {
+      kind: "installed",
+      id: "paper-review",
+    });
+    expect(detail.skill.management).toEqual({
+      kind: "installed",
+      id: "paper-review",
+      canDelete: true,
+    });
+    expect(detail.files).toEqual(["SKILL.md", "references/checklist.md"]);
+    expect(detail.markdown).toContain("# paper-review");
+
+    const removed = await removeManagedSkill(synaraBaseDir, { id: "paper-review" });
+    await expect(access(skillDir)).rejects.toThrow();
+    await expect(access(path.join(synaraBaseDir, "skill-trash", removed.trashId, "SKILL.md"))).resolves.toBeUndefined();
+
+    const restored = await restoreManagedSkill(synaraBaseDir, {
+      id: removed.id,
+      trashId: removed.trashId,
+    });
+    expect(restored.skill.management?.kind).toBe("installed");
+    await expect(access(path.join(skillDir, "SKILL.md"))).resolves.toBeUndefined();
+  });
+
+  it("discovers bundled skills ahead of user and provider copies", async () => {
+    const bundledRoot = path.join(root, "bundled-skills");
+    await writeSkill(path.join(bundledRoot, "research-taste"), "research-taste", "Bundled copy");
+    await writeSkill(path.join(synaraBaseDir, "skills", "research-taste"), "research-taste", "User copy");
+    await writeSkill(path.join(homeDir, ".codex", "skills", "research-taste"), "research-taste", "Provider copy");
+    vi.stubEnv("SYNARA_BUNDLED_SKILLS_DIR", bundledRoot);
+
+    const skills = await discoverSkillsCatalog({ homeDir, synaraBaseDir });
+    const researchTaste = skills.find((skill) => skill.name === "research-taste");
+    expect(researchTaste?.scope).toBe("bundled");
+    expect(researchTaste?.management).toEqual({
+      kind: "bundled",
+      id: "research-taste",
+      canDelete: false,
+    });
+  });
 });
 
 describe("discoverSkillsCatalog", () => {
@@ -77,23 +317,11 @@ describe("discoverSkillsCatalog", () => {
   it("aggregates skills from synara and provider home folders with origin scopes", async () => {
     await writeSkill(path.join(synaraBaseDir, "skills", "portable"), "portable", "Synara skill");
     await writeSkill(path.join(homeDir, ".codex", "skills", "codex-only"), "codex-only", "Codex");
-    await writeSkill(
-      path.join(homeDir, ".claude", "skills", "claude-only"),
-      "claude-only",
-      "Claude",
-    );
-    await writeSkill(
-      path.join(homeDir, ".cursor", "skills", "cursor-only"),
-      "cursor-only",
-      "Cursor",
-    );
+    await writeSkill(path.join(homeDir, ".claude", "skills", "claude-only"), "claude-only", "Claude");
+    await writeSkill(path.join(homeDir, ".cursor", "skills", "cursor-only"), "cursor-only", "Cursor");
     await writeSkill(path.join(homeDir, ".grok", "skills", "grok-only"), "grok-only", "Grok");
     await writeSkill(path.join(homeDir, ".kilo", "skills", "kilo-only"), "kilo-only", "Kilo");
-    await writeSkill(
-      path.join(homeDir, ".config", "opencode", "skills", "opencode-only"),
-      "opencode-only",
-      "OpenCode",
-    );
+    await writeSkill(path.join(homeDir, ".config", "opencode", "skills", "opencode-only"), "opencode-only", "OpenCode");
     await writeSkill(path.join(homeDir, ".pi", "agent", "skills", "pi-only"), "pi-only", "Pi");
 
     const skills = await discoverSkillsCatalog({ homeDir, synaraBaseDir });
@@ -237,11 +465,7 @@ description: Direct Pi markdown skill
   it("includes project-level .synara skills when a cwd is provided", async () => {
     const cwd = path.join(root, "repo", "packages", "web");
     await mkdir(cwd, { recursive: true });
-    await writeSkill(
-      path.join(root, "repo", ".synara", "skills", "repo-skill"),
-      "repo-skill",
-      "Project skill",
-    );
+    await writeSkill(path.join(root, "repo", ".synara", "skills", "repo-skill"), "repo-skill", "Project skill");
 
     const skills = await discoverSkillsCatalog({ cwd, homeDir, synaraBaseDir });
     expect(skills.find((skill) => skill.name === "repo-skill")?.scope).toBe("project");
@@ -288,9 +512,7 @@ describe("mergeSkillsIntoCatalog", () => {
       catalog: [descriptor("Shared", "synara"), descriptor("extra", "synara")],
     });
     expect(merged).toHaveLength(2);
-    expect(merged.find((skill) => skill.name.toLowerCase() === "shared")?.scope).toBe(
-      "codex-native",
-    );
+    expect(merged.find((skill) => skill.name.toLowerCase() === "shared")?.scope).toBe("codex-native");
     expect(merged.some((skill) => skill.name === "extra")).toBe(true);
   });
 });
@@ -301,9 +523,7 @@ describe("filterDisabledSkills", () => {
       { name: "Reviewer", path: "/tmp/a/SKILL.md", enabled: true },
       { name: "writer", path: "/tmp/b/SKILL.md", enabled: true },
     ];
-    expect(filterDisabledSkills(skills, ["reviewer"]).map((skill) => skill.name)).toEqual([
-      "writer",
-    ]);
+    expect(filterDisabledSkills(skills, ["reviewer"]).map((skill) => skill.name)).toEqual(["writer"]);
     expect(filterDisabledSkills(skills, [])).toHaveLength(2);
   });
 });

@@ -5,6 +5,7 @@ import type {
   ProviderListCommandsResult,
   ProviderListModelsResult,
   ProviderListPluginsResult,
+  ProviderSkillDescriptor,
   ProviderListSkillsResult,
   ProviderSkillsCatalogResult,
 } from "@synara/contracts";
@@ -14,11 +15,49 @@ import { ensureNativeApi } from "~/nativeApi";
 
 const LATTICE_SKILL_NAMES = new Set(["humanize-writing", "research-taste"]);
 
-function skillsForCurrentClient<T extends { skills: ReadonlyArray<{ name: string }> }>(result: T): T {
+function latticeSkillNames(skills: ReadonlyArray<ProviderSkillDescriptor>): Set<string> {
+  const names = new Set(LATTICE_SKILL_NAMES);
+  for (const skill of skills) {
+    if (skill.scope === "synara" || skill.scope === "bundled" || skill.management !== undefined) {
+      names.add(skill.name.toLocaleLowerCase());
+    }
+  }
+  return names;
+}
+
+function skillsForCurrentClient<T extends { skills: ReadonlyArray<{ name: string }> }>(
+  result: T,
+  allowedNames: ReadonlySet<string>,
+): T {
   if (!isSynaraEmbedMode()) return result;
   return {
     ...result,
-    skills: result.skills.filter((skill) => LATTICE_SKILL_NAMES.has(skill.name.toLocaleLowerCase())),
+    skills: result.skills.filter((skill) => allowedNames.has(skill.name.toLocaleLowerCase())),
+  };
+}
+
+function providerSkillsForLattice(
+  result: ProviderListSkillsResult,
+  catalog: ProviderSkillsCatalogResult,
+): ProviderListSkillsResult {
+  const allowedNames = latticeSkillNames(catalog.skills);
+  const managedSkills = catalog.skills.filter(
+    (
+      skill,
+    ): skill is ProviderSkillDescriptor & {
+      management: NonNullable<ProviderSkillDescriptor["management"]>;
+    } => skill.management !== undefined,
+  );
+  const byName = new Map<string, ProviderSkillDescriptor>();
+  for (const skill of [...managedSkills, ...result.skills]) {
+    const key = skill.name.toLocaleLowerCase();
+    if (allowedNames.has(key) && !byName.has(key)) {
+      byName.set(key, skill);
+    }
+  }
+  return {
+    ...result,
+    skills: [...byName.values()],
   };
 }
 
@@ -57,14 +96,9 @@ const EMPTY_PLUGINS_RESULT: ProviderListPluginsResult = {
 
 export const providerDiscoveryQueryKeys = {
   all: ["provider-discovery"] as const,
-  composerCapabilities: (provider: ProviderKind) =>
-    ["provider-discovery", "composer-capabilities", provider] as const,
-  commands: (
-    provider: ProviderKind,
-    cwd: string | null,
-    agentDir: string | null,
-    connectionKey: string | null,
-  ) => ["provider-discovery", "commands", provider, cwd, agentDir, connectionKey] as const,
+  composerCapabilities: (provider: ProviderKind) => ["provider-discovery", "composer-capabilities", provider] as const,
+  commands: (provider: ProviderKind, cwd: string | null, agentDir: string | null, connectionKey: string | null) =>
+    ["provider-discovery", "commands", provider, cwd, agentDir, connectionKey] as const,
   // The skill list is query-independent (filtering is client-side), so the key
   // deliberately excludes the typed filter to avoid a refetch per keystroke.
   skills: (provider: ProviderKind, cwd: string | null, agentDir: string | null) =>
@@ -78,8 +112,7 @@ export const providerDiscoveryQueryKeys = {
     pluginName: string,
     cwd: string | null,
     threadId: string | null,
-  ) =>
-    ["provider-discovery", "plugin", provider, marketplacePath, pluginName, cwd, threadId] as const,
+  ) => ["provider-discovery", "plugin", provider, marketplacePath, pluginName, cwd, threadId] as const,
   models: (
     provider: ProviderKind,
     binaryPath: string | null,
@@ -87,8 +120,7 @@ export const providerDiscoveryQueryKeys = {
     agentDir: string | null,
     cwd: string | null,
   ) => ["provider-discovery", "models", provider, binaryPath, apiEndpoint, agentDir, cwd] as const,
-  agentsForProvider: (provider: ProviderKind) =>
-    ["provider-discovery", "agents", provider] as const,
+  agentsForProvider: (provider: ProviderKind) => ["provider-discovery", "agents", provider] as const,
   agents: (provider: ProviderKind, binaryPath: string | null, cwd: string | null) =>
     [...providerDiscoveryQueryKeys.agentsForProvider(provider), binaryPath, cwd] as const,
 };
@@ -124,7 +156,11 @@ export function providerSkillsQueryOptions(input: {
         ...(input.threadId ? { threadId: input.threadId } : {}),
         ...(input.agentDir ? { agentDir: input.agentDir } : {}),
       });
-      return skillsForCurrentClient(result);
+      if (!isSynaraEmbedMode()) {
+        return result;
+      }
+      const catalog = await api.provider.listSkillsCatalog({ cwd: input.cwd });
+      return providerSkillsForLattice(result, catalog);
     },
     enabled: (input.enabled ?? true) && input.cwd !== null,
     staleTime: 30_000,
@@ -142,7 +178,7 @@ export function skillsCatalogQueryOptions(input?: { cwd?: string | null; enabled
     queryFn: async (): Promise<ProviderSkillsCatalogResult> => {
       const api = ensureNativeApi();
       const result = await api.provider.listSkillsCatalog(cwd ? { cwd } : {});
-      return skillsForCurrentClient(result);
+      return skillsForCurrentClient(result, latticeSkillNames(result.skills));
     },
     enabled: input?.enabled ?? true,
     staleTime: 30_000,
@@ -167,12 +203,7 @@ export function providerCommandsQueryOptions(input: {
     experimentalWebSockets: input.experimentalWebSockets ?? null,
   });
   return queryOptions({
-    queryKey: providerDiscoveryQueryKeys.commands(
-      input.provider,
-      input.cwd,
-      input.agentDir ?? null,
-      connectionKey,
-    ),
+    queryKey: providerDiscoveryQueryKeys.commands(input.provider, input.cwd, input.agentDir ?? null, connectionKey),
     queryFn: async () => {
       const api = ensureNativeApi();
       if (!input.cwd) {
@@ -184,9 +215,7 @@ export function providerCommandsQueryOptions(input: {
         ...(input.threadId ? { threadId: input.threadId } : {}),
         ...(input.binaryPath ? { binaryPath: input.binaryPath } : {}),
         ...(input.serverUrl ? { serverUrl: input.serverUrl } : {}),
-        ...(input.experimentalWebSockets !== undefined
-          ? { experimentalWebSockets: input.experimentalWebSockets }
-          : {}),
+        ...(input.experimentalWebSockets !== undefined ? { experimentalWebSockets: input.experimentalWebSockets } : {}),
         ...(input.agentDir ? { agentDir: input.agentDir } : {}),
       });
     },
@@ -253,11 +282,7 @@ export function providerAgentsQueryOptions(input: {
   enabled?: boolean;
 }) {
   return queryOptions({
-    queryKey: providerDiscoveryQueryKeys.agents(
-      input.provider,
-      input.binaryPath ?? null,
-      input.cwd ?? null,
-    ),
+    queryKey: providerDiscoveryQueryKeys.agents(input.provider, input.binaryPath ?? null, input.cwd ?? null),
     queryFn: async () => {
       const api = ensureNativeApi();
       return api.provider.listAgents({
@@ -294,32 +319,22 @@ export function providerPluginsQueryOptions(input: {
   });
 }
 
-export function supportsSkillDiscovery(
-  capabilities: ProviderComposerCapabilities | undefined,
-): boolean {
+export function supportsSkillDiscovery(capabilities: ProviderComposerCapabilities | undefined): boolean {
   return capabilities?.supportsSkillDiscovery === true;
 }
 
-export function supportsNativeSlashCommandDiscovery(
-  capabilities: ProviderComposerCapabilities | undefined,
-): boolean {
+export function supportsNativeSlashCommandDiscovery(capabilities: ProviderComposerCapabilities | undefined): boolean {
   return capabilities?.supportsNativeSlashCommandDiscovery === true;
 }
 
-export function supportsPluginDiscovery(
-  capabilities: ProviderComposerCapabilities | undefined,
-): boolean {
+export function supportsPluginDiscovery(capabilities: ProviderComposerCapabilities | undefined): boolean {
   return capabilities?.supportsPluginDiscovery === true;
 }
 
-export function supportsThreadCompaction(
-  capabilities: ProviderComposerCapabilities | undefined,
-): boolean {
+export function supportsThreadCompaction(capabilities: ProviderComposerCapabilities | undefined): boolean {
   return capabilities?.supportsThreadCompaction === true;
 }
 
-export function supportsThreadImport(
-  capabilities: ProviderComposerCapabilities | undefined,
-): boolean {
+export function supportsThreadImport(capabilities: ProviderComposerCapabilities | undefined): boolean {
   return capabilities?.supportsThreadImport === true;
 }

@@ -1,10 +1,7 @@
 export const COMPOSER_FOOTER_COMPACT_BREAKPOINT_PX = 620;
 export const COMPOSER_FOOTER_WIDE_ACTIONS_COMPACT_BREAKPOINT_PX = 720;
 
-export function shouldUseCompactComposerFooter(
-  width: number | null,
-  options?: { hasWideActions?: boolean },
-): boolean {
+export function shouldUseCompactComposerFooter(width: number | null, options?: { hasWideActions?: boolean }): boolean {
   const breakpoint = options?.hasWideActions
     ? COMPOSER_FOOTER_WIDE_ACTIONS_COMPACT_BREAKPOINT_PX
     : COMPOSER_FOOTER_COMPACT_BREAKPOINT_PX;
@@ -37,11 +34,63 @@ export const COMPOSER_FOOTER_MAX_TIER = 4;
 // Extra width (px) required beyond the recorded overflow point before stepping
 // back to a richer tier, so a 1px resize cannot oscillate between tiers.
 export const COMPOSER_FOOTER_TIER_PROMOTION_SLACK_PX = 32;
+export const EMBED_COMPOSER_SEND_EDGE_INSET_PX = 8;
+// The footer already owns an 8px end padding. Overflow detection only needs to
+// protect the control cluster from touching/crossing the composer's border; using
+// the full padding as a second required inset makes normal subpixel rounding look
+// like overflow at every width and permanently demotes the labels.
+export const COMPOSER_FOOTER_SURFACE_EDGE_GUARD_PX = 1;
 
-export function composerFooterPlanForTier(
-  tier: number,
-  hasContextMeter: boolean,
-): ComposerFooterControlsPlan {
+export function composerFooterActionsCrossSurfaceEdge(input: { actionsRight: number; surfaceRight: number }): boolean {
+  return input.actionsRight > input.surfaceRight - COMPOSER_FOOTER_SURFACE_EDGE_GUARD_PX;
+}
+
+export function composerFooterActionsClip(input: {
+  isEmbed: boolean;
+  intrinsicWidth: number;
+  clientWidth: number;
+}): boolean {
+  // The embedded footer deliberately lets the model trigger shrink so the send
+  // control stays anchored inside the composer. Its intrinsic width is reported
+  // to Lattice as the sidebar minimum instead of hiding labels in this surface.
+  return !input.isEmbed && input.intrinsicWidth > input.clientWidth + 1;
+}
+
+export function composerFooterIsOverflowing(input: {
+  isEmbed: boolean;
+  rowOverflows: boolean;
+  leadingClips: boolean;
+  actionsClip: boolean;
+  actionsCrossSurfaceEdge: boolean;
+}): boolean {
+  // The embedded footer keeps its send control inside a shrinkable second grid
+  // track. Its richer intrinsic width is negotiated with the Lattice splitter;
+  // the additional flexbox heuristics would otherwise pin labels at icon-only.
+  if (input.isEmbed) return input.rowOverflows;
+  return input.rowOverflows || input.leadingClips || input.actionsClip || input.actionsCrossSurfaceEdge;
+}
+
+export function embedComposerMinimumSidebarWidth(input: {
+  viewportWidth: number;
+  footerWidth: number;
+  footerPaddingLeft: number;
+  footerPaddingRight: number;
+  footerGap: number;
+  leadingIntrinsicWidth: number;
+  actionsIntrinsicWidth: number;
+}): number {
+  const outsideFooterWidth = Math.max(0, input.viewportWidth - input.footerWidth);
+  return Math.ceil(
+    outsideFooterWidth +
+      Math.max(0, input.footerPaddingLeft) +
+      Math.max(EMBED_COMPOSER_SEND_EDGE_INSET_PX, input.footerPaddingRight) +
+      Math.max(0, input.leadingIntrinsicWidth) +
+      Math.max(0, input.actionsIntrinsicWidth) +
+      Math.max(0, input.footerGap),
+  );
+}
+
+export function composerFooterPlanForTier(tier: number, hasContextMeter: boolean): ComposerFooterControlsPlan {
   return {
     showContextMeter: hasContextMeter && tier < 1,
     showTraitsLabel: tier < 2,

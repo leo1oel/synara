@@ -90,9 +90,7 @@ function centralIconWrapper(name: string, variant?: CentralIconVariant): LucideI
   };
 }
 
-export const AppsIcon: LucideIcon = (props) => (
-  <RiApps2Line className={props.className} style={props.style} />
-);
+export const AppsIcon: LucideIcon = (props) => <RiApps2Line className={props.className} style={props.style} />;
 // Composer stacked-panel glyphs (subagent strip / workflow run card).
 export const BackgroundTrayIcon: LucideIcon = centralIconWrapper("arrow-down-wall");
 export const PanelExpandIcon: LucideIcon = centralIconWrapper("expand-45");
@@ -118,6 +116,8 @@ export const ArrowUpRightIcon = adaptIcon(IconArrowUpRight);
 export const AGENT_ROBOT_ICON_NAME = "robot";
 export const BotIcon: LucideIcon = centralIconWrapper(AGENT_ROBOT_ICON_NAME);
 export const BookIcon: LucideIcon = centralIconWrapper("book-simple");
+export const PAPER_ICON_NAME = "file-text";
+export const PaperIcon: LucideIcon = centralIconWrapper(PAPER_ICON_NAME);
 export const BugIcon = adaptIcon(IconBug);
 export const CameraIcon = adaptIcon(IconCamera);
 export const CheckIcon = adaptIcon(IconCheck);
@@ -170,9 +170,7 @@ export const GitForkIcon = centralIconWrapper("fork");
 export const GitMergeIcon: LucideIcon = centralIconWrapper("merged");
 export const GitMergedSimpleIcon: LucideIcon = centralIconWrapper("merged-simple");
 export const PushIcon: LucideIcon = centralIconWrapper("cloud-simple-upload");
-export const GitHubIcon: LucideIcon = (props) => (
-  <SiGithub className={props.className} style={props.style} />
-);
+export const GitHubIcon: LucideIcon = (props) => <SiGithub className={props.className} style={props.style} />;
 export const GitPullRequestIcon = centralIconWrapper("pull-request");
 // Pull-request state glyphs from the same three-node Central family as "pull-request",
 // so draft/closed/merged read as variations of one icon rather than four styles.
@@ -186,9 +184,7 @@ export const FilterIcon: LucideIcon = centralIconWrapper("filter-2");
 export const UsersIcon: LucideIcon = centralIconWrapper("user-group");
 export const GlobeIcon = adaptIcon(IconWorld);
 export const WebSearchIcon: LucideIcon = centralIconWrapper("globe");
-export const McpIcon: LucideIcon = (props) => (
-  <VscMcp className={props.className} style={props.style} />
-);
+export const McpIcon: LucideIcon = (props) => <VscMcp className={props.className} style={props.style} />;
 export const PluginIcon: LucideIcon = centralIconWrapper("puzzle");
 // Single hammer/build glyph (tool-call rows, codex provider, "build" scripts).
 // Sourced from the Central set so it matches the other work-row icons (pencil,

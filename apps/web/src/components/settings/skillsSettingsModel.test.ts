@@ -68,7 +68,25 @@ describe("buildSettingsSkillGroups", () => {
 });
 
 describe("buildSettingsSkillSections", () => {
-  it("places shared skill groups before provider-only sections", () => {
+  it("labels Lattice-managed user skills as installed by the user", () => {
+    const sections = buildSettingsSkillSections([
+      skill({
+        name: "paper-review",
+        path: "/Users/test/.synara/skills/paper-review/SKILL.md",
+        scope: "synara",
+        management: {
+          kind: "installed",
+          id: "paper-review",
+          canDelete: true,
+        },
+      }),
+    ]);
+
+    expect(sections.map((section) => section.title)).toEqual(["Installed by you"]);
+    expect(sections[0]?.groups[0]?.sources[0]?.originInfo.label).toBe("Installed by you");
+  });
+
+  it("places duplicate skill groups before provider-only sections", () => {
     const sections = buildSettingsSkillSections([
       skill({
         name: "logic-consolidator",
@@ -87,7 +105,7 @@ describe("buildSettingsSkillSections", () => {
       }),
     ]);
 
-    expect(sections.map((section) => section.title)).toEqual(["Shared skills", "From Cursor"]);
+    expect(sections.map((section) => section.title)).toEqual(["Available skills", "From Cursor"]);
     expect(sections[0]?.groups.map((group) => group.key)).toEqual(["logic-consolidator"]);
   });
 });

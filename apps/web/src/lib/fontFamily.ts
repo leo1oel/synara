@@ -6,7 +6,7 @@
 const CSS_WIDE_KEYWORDS = new Set(["inherit", "initial", "revert", "revert-layer", "unset"]);
 
 export const DEFAULT_MONOSPACE_FONT_FAMILY_STACK =
-  '"JetBrains Mono Variable", "JetBrains Mono", "SF Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace';
+  '"TX-02 Variable", "TX-02", "Berkeley Mono Variable", "Berkeley Mono", "JetBrains Mono Variable", "JetBrains Mono", "SF Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace';
 
 const GENERIC_FONT_FAMILIES = new Set([
   "cursive",
@@ -117,9 +117,7 @@ export function normalizeFontFamilyCssValue(value: string | null | undefined): s
 }
 
 // Keeps theme-provided code fonts from falling through to the browser's serif default.
-export function normalizeMonospaceFontFamilyCssValue(
-  value: string | null | undefined,
-): string | null {
+export function normalizeMonospaceFontFamilyCssValue(value: string | null | undefined): string | null {
   const normalizedValue = normalizeFontFamilyCssValue(value);
   if (normalizedValue === null || CSS_WIDE_KEYWORDS.has(normalizedValue.toLowerCase())) {
     return normalizedValue;

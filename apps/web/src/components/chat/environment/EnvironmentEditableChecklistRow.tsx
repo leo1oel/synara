@@ -2,16 +2,10 @@
 // Purpose: Shared editable checklist-row interaction for pinned messages and transcript markers.
 // Layer: Environment panel UI primitive
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type MouseEvent,
-  type ReactNode,
-} from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 
 import { Checkbox } from "~/components/ui/checkbox";
+import { FIELD_CONTROL_CLASS_NAME } from "~/components/ui/field-styles";
 import { IconButton } from "~/components/ui/icon-button";
 import { XIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
@@ -138,13 +132,7 @@ export function EnvironmentEditableChecklistRow({
   };
 
   return (
-    <li
-      className={cn(
-        "flex items-center gap-1.5 rounded-lg px-2 py-1",
-        ELEVATED_HOVER_SURFACE_CLASS_NAME,
-        className,
-      )}
-    >
+    <li className={cn("flex items-center gap-1.5 rounded-lg px-2 py-1", ELEVATED_HOVER_SURFACE_CLASS_NAME, className)}>
       <Checkbox
         className="size-3.5 sm:size-3.5"
         checked={checked}
@@ -160,7 +148,10 @@ export function EnvironmentEditableChecklistRow({
           onBlur={handleInputBlur}
           onKeyDown={handleInputKeyDown}
           placeholder={editPlaceholder}
-          className="min-w-0 flex-1 rounded border border-input bg-background px-1 py-0.5 text-[length:var(--app-font-size-ui,12px)] text-foreground outline-none focus-visible:border-ring"
+          className={cn(
+            FIELD_CONTROL_CLASS_NAME,
+            "min-w-0 flex-1 rounded-lg px-1.5 py-0.5 text-[length:var(--app-font-size-ui,12px)] text-foreground outline-none",
+          )}
         />
       ) : (
         <button
@@ -175,9 +166,7 @@ export function EnvironmentEditableChecklistRow({
             checked
               ? "text-muted-foreground/55 line-through"
               : "text-[var(--color-text-foreground)] hover:text-foreground",
-            available
-              ? "cursor-pointer hover:underline"
-              : "cursor-default text-muted-foreground/55",
+            available ? "cursor-pointer hover:underline" : "cursor-default text-muted-foreground/55",
           )}
         >
           {displayLabel}
@@ -187,10 +176,7 @@ export function EnvironmentEditableChecklistRow({
         label={removeLabel}
         tooltip={removeTooltip}
         size="icon-xs"
-        className={cn(
-          "shrink-0 opacity-0 transition-opacity focus-visible:opacity-100",
-          removeButtonClassName,
-        )}
+        className={cn("shrink-0 opacity-0 transition-opacity focus-visible:opacity-100", removeButtonClassName)}
         onClick={onRemove}
       >
         <XIcon className="size-3" />

@@ -13,16 +13,12 @@ import { IconButton } from "~/components/ui/icon-button";
 import { Popover, PopoverPopup, PopoverTrigger } from "~/components/ui/popover";
 import { CheckIcon, FilterIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
-import {
-  PR_BODY_TEXT_CLASS_NAME,
-  PR_FINE_TEXT_CLASS_NAME,
-  PR_META_TEXT_CLASS_NAME,
-} from "./pullRequestText";
+import { PR_FINE_TEXT_CLASS_NAME, PR_META_TEXT_CLASS_NAME } from "./pullRequestText";
 import { ELEVATED_HOVER_SURFACE_CLASS_NAME } from "~/surfaceStyles";
 
 /** One selectable project in the filter popover — full-width row with a trailing check. */
 const PROJECT_FILTER_OPTION_CLASS_NAME = cn(
-  PR_BODY_TEXT_CLASS_NAME,
+  PR_META_TEXT_CLASS_NAME,
   "flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left",
   ELEVATED_HOVER_SURFACE_CLASS_NAME,
 );
@@ -39,9 +35,12 @@ export function PullRequestFilterPillGroup<T extends string>({
   onIntent?: (value: T) => void;
 }) {
   return (
-    // Sized off the shared UI font var so the pills track the user's font-size setting like
-    // every Button-based control.
-    <div className={cn(PR_META_TEXT_CLASS_NAME, "flex items-center gap-1")}>
+    <div
+      className={cn(
+        PR_META_TEXT_CLASS_NAME,
+        "flex h-8 items-center gap-0.5 rounded-lg bg-foreground/4 p-0.5 font-system-ui",
+      )}
+    >
       {options.map((option) => (
         <button
           key={option.value}
@@ -53,9 +52,9 @@ export function PullRequestFilterPillGroup<T extends string>({
           // Active uses the shared control-active token (real contrast in both modes) — the
           // elevated-secondary tint is a 2–4% hover wash and disappears on dark surfaces.
           className={cn(
-            "rounded-md px-2.5 py-1 transition-colors",
+            "flex h-7 items-center rounded-md px-2.5 font-normal transition-colors",
             option.value === value
-              ? CHAT_SURFACE_CONTROL_ACTIVE_CLASS_NAME
+              ? cn(CHAT_SURFACE_CONTROL_ACTIVE_CLASS_NAME, "shadow-[0_1px_2px_rgb(0_0_0/0.06)]")
               : "text-muted-foreground hover:text-foreground",
           )}
         >
@@ -77,9 +76,7 @@ export function PullRequestProjectFilterPopover({
 }) {
   const [open, setOpen] = useState(false);
   const active = value !== undefined;
-  const selectedProjectName = value
-    ? projects.find(([projectId]) => projectId === value)?.[1]
-    : undefined;
+  const selectedProjectName = value ? projects.find(([projectId]) => projectId === value)?.[1] : undefined;
   const triggerLabel = `Filter pull requests by project: ${selectedProjectName ?? "All projects"}`;
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -93,18 +90,13 @@ export function PullRequestProjectFilterPopover({
           >
             <FilterIcon className="size-4" />
             {active ? (
-              <span
-                aria-hidden="true"
-                className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-primary"
-              />
+              <span aria-hidden="true" className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-primary" />
             ) : null}
           </IconButton>
         }
       />
       <PopoverPopup align="end" className="w-64 p-1">
-        <div className={cn(PR_FINE_TEXT_CLASS_NAME, "px-2 py-1 font-medium text-muted-foreground")}>
-          Project
-        </div>
+        <div className={cn(PR_FINE_TEXT_CLASS_NAME, "px-2 py-1 font-medium text-muted-foreground")}>Project</div>
         <div className="max-h-72 overflow-y-auto">
           <button
             type="button"
@@ -113,10 +105,7 @@ export function PullRequestProjectFilterPopover({
               onChange(undefined);
               setOpen(false);
             }}
-            className={cn(
-              PROJECT_FILTER_OPTION_CLASS_NAME,
-              value === undefined && "text-foreground",
-            )}
+            className={cn(PROJECT_FILTER_OPTION_CLASS_NAME, value === undefined && "text-foreground")}
           >
             <span className="min-w-0 truncate">All projects</span>
             {value === undefined ? <CheckIcon aria-hidden className="size-3.5 shrink-0" /> : null}

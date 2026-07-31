@@ -28,16 +28,12 @@ export const gitQueryKeys = {
   status: (cwd: string | null) => ["git", "status", cwd] as const,
   branches: (cwd: string | null) => ["git", "branches", cwd] as const,
   pullRequest: (cwd: string | null) => ["git", "pull-request", cwd] as const,
-  workingTreeDiff: (
-    cwd: string | null,
-    scope: GitReadWorkingTreeDiffInput["scope"] = "workingTree",
-  ) => ["git", "working-tree-diff", cwd, scope] as const,
+  workingTreeDiff: (cwd: string | null, scope: GitReadWorkingTreeDiffInput["scope"] = "workingTree") =>
+    ["git", "working-tree-diff", cwd, scope] as const,
   // Deliberately nested under the patch key so every existing
   // `["git", "working-tree-diff", ...]` invalidation refreshes the counts too.
-  workingTreeDiffStats: (
-    cwd: string | null,
-    scope: GitReadWorkingTreeDiffInput["scope"] = "workingTree",
-  ) => ["git", "working-tree-diff", cwd, scope, "stats"] as const,
+  workingTreeDiffStats: (cwd: string | null, scope: GitReadWorkingTreeDiffInput["scope"] = "workingTree") =>
+    ["git", "working-tree-diff", cwd, scope, "stats"] as const,
   diffSummary: (
     cacheScope: string | null,
     model: string | null,
@@ -46,25 +42,17 @@ export const gitQueryKeys = {
     providerOptionsKey: string | null,
     patchKey: string | null,
   ) =>
-    [
-      "git",
-      "diff-summary",
-      cacheScope,
-      model,
-      modelSelectionKey,
-      codexHomePath,
-      providerOptionsKey,
-      patchKey,
-    ] as const,
+    ["git", "diff-summary", cacheScope, model, modelSelectionKey, codexHomePath, providerOptionsKey, patchKey] as const,
 };
 
 export const gitMutationKeys = {
   init: (cwd: string | null) => ["git", "mutation", "init", cwd] as const,
+  connectGitHubRemote: (cwd: string | null) => ["git", "mutation", "connect-github-remote", cwd] as const,
+  createGitHubRepository: (cwd: string | null) => ["git", "mutation", "create-github-repository", cwd] as const,
   checkout: (cwd: string | null) => ["git", "mutation", "checkout", cwd] as const,
   runStackedAction: (cwd: string | null) => ["git", "mutation", "run-stacked-action", cwd] as const,
   pull: (cwd: string | null) => ["git", "mutation", "pull", cwd] as const,
-  preparePullRequestThread: (cwd: string | null) =>
-    ["git", "mutation", "prepare-pull-request-thread", cwd] as const,
+  preparePullRequestThread: (cwd: string | null) => ["git", "mutation", "prepare-pull-request-thread", cwd] as const,
   handoffThread: (cwd: string | null) => ["git", "mutation", "handoff-thread", cwd] as const,
   stageFiles: (cwd: string | null) => ["git", "mutation", "stage-files", cwd] as const,
   unstageFiles: (cwd: string | null) => ["git", "mutation", "unstage-files", cwd] as const,
@@ -141,10 +129,7 @@ export function gitBranchesQueryOptions(cwd: string | null) {
   });
 }
 
-export function gitResolvePullRequestQueryOptions(input: {
-  cwd: string | null;
-  reference: string | null;
-}) {
+export function gitResolvePullRequestQueryOptions(input: { cwd: string | null; reference: string | null }) {
   return queryOptions({
     queryKey: [...gitQueryKeys.pullRequest(input.cwd), input.reference] as const,
     queryFn: async () => {
@@ -186,11 +171,8 @@ export function gitPullRequestSnapshotQueryOptions(input: {
     // Once the snapshot itself reports the PR merged/closed, stop polling it — the cached
     // git status can lag behind and would otherwise keep the interval alive.
     refetchInterval: (query) =>
-      query.state.data && query.state.data.pullRequest.state !== "open"
-        ? false
-        : GIT_PR_SNAPSHOT_REFETCH_INTERVAL_MS,
-    refetchOnWindowFocus: (query) =>
-      !query.state.data || query.state.data.pullRequest.state === "open",
+      query.state.data && query.state.data.pullRequest.state !== "open" ? false : GIT_PR_SNAPSHOT_REFETCH_INTERVAL_MS,
+    refetchOnWindowFocus: (query) => !query.state.data || query.state.data.pullRequest.state === "open",
     refetchOnReconnect: true,
   });
 }
@@ -289,9 +271,7 @@ function makeGitMutationOptions<TArgs, TResult>(config: {
       if (!config.cwd) throw new Error(config.unavailableMessage);
       return config.run(api, config.cwd, args);
     },
-    ...(invalidateOn === "success"
-      ? { onSuccess: runInvalidation }
-      : { onSettled: runInvalidation }),
+    ...(invalidateOn === "success" ? { onSuccess: runInvalidation } : { onSettled: runInvalidation }),
   });
 }
 
@@ -306,10 +286,42 @@ export function gitInitMutationOptions(input: { cwd: string | null; queryClient:
   });
 }
 
-export function gitStageFilesMutationOptions(input: {
-  cwd: string | null;
-  queryClient: QueryClient;
-}) {
+export function gitConnectGitHubRemoteMutationOptions(input: { cwd: string | null; queryClient: QueryClient }) {
+  return makeGitMutationOptions<{ url: string }, Awaited<ReturnType<NativeApi["git"]["connectGitHubRemote"]>>>({
+    cwd: input.cwd,
+    queryClient: input.queryClient,
+    mutationKey: gitMutationKeys.connectGitHubRemote(input.cwd),
+    unavailableMessage: "Connecting a GitHub repository is unavailable.",
+    invalidateOn: "success",
+    run: (api, cwd, args) => api.git.connectGitHubRemote({ cwd, url: args.url }),
+  });
+}
+
+export function gitCreateGitHubRepositoryMutationOptions(input: { cwd: string | null; queryClient: QueryClient }) {
+  return makeGitMutationOptions<
+    {
+      name: string;
+      description?: string;
+      visibility: "private" | "public";
+    },
+    Awaited<ReturnType<NativeApi["git"]["createGitHubRepository"]>>
+  >({
+    cwd: input.cwd,
+    queryClient: input.queryClient,
+    mutationKey: gitMutationKeys.createGitHubRepository(input.cwd),
+    unavailableMessage: "Creating a GitHub repository is unavailable.",
+    invalidateOn: "success",
+    run: (api, cwd, args) =>
+      api.git.createGitHubRepository({
+        cwd,
+        name: args.name,
+        visibility: args.visibility,
+        ...(args.description ? { description: args.description } : {}),
+      }),
+  });
+}
+
+export function gitStageFilesMutationOptions(input: { cwd: string | null; queryClient: QueryClient }) {
   return makeGitMutationOptions<readonly string[], { ok: boolean }>({
     cwd: input.cwd,
     queryClient: input.queryClient,
@@ -323,10 +335,7 @@ export function gitStageFilesMutationOptions(input: {
   });
 }
 
-export function gitUnstageFilesMutationOptions(input: {
-  cwd: string | null;
-  queryClient: QueryClient;
-}) {
+export function gitUnstageFilesMutationOptions(input: { cwd: string | null; queryClient: QueryClient }) {
   return makeGitMutationOptions<readonly string[], { ok: boolean }>({
     cwd: input.cwd,
     queryClient: input.queryClient,
@@ -455,10 +464,7 @@ export function gitRemoveWorktreeMutationOptions(input: { queryClient: QueryClie
   });
 }
 
-export function gitPreparePullRequestThreadMutationOptions(input: {
-  cwd: string | null;
-  queryClient: QueryClient;
-}) {
+export function gitPreparePullRequestThreadMutationOptions(input: { cwd: string | null; queryClient: QueryClient }) {
   return makeGitMutationOptions<
     { reference: string; mode: "local" | "worktree" },
     Awaited<ReturnType<NativeApi["git"]["preparePullRequestThread"]>>
@@ -467,15 +473,11 @@ export function gitPreparePullRequestThreadMutationOptions(input: {
     queryClient: input.queryClient,
     mutationKey: gitMutationKeys.preparePullRequestThread(input.cwd),
     unavailableMessage: "Pull request thread preparation is unavailable.",
-    run: (api, cwd, { reference, mode }) =>
-      api.git.preparePullRequestThread({ cwd, reference, mode }),
+    run: (api, cwd, { reference, mode }) => api.git.preparePullRequestThread({ cwd, reference, mode }),
   });
 }
 
-export function gitHandoffThreadMutationOptions(input: {
-  cwd: string | null;
-  queryClient: QueryClient;
-}) {
+export function gitHandoffThreadMutationOptions(input: { cwd: string | null; queryClient: QueryClient }) {
   return makeGitMutationOptions<
     Omit<GitHandoffThreadInput, "cwd">,
     Awaited<ReturnType<NativeApi["git"]["handoffThread"]>>

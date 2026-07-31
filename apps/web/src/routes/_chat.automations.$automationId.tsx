@@ -6,10 +6,7 @@ import {
   type ModelSelection,
   type ProviderOptionDescriptor,
 } from "@synara/contracts";
-import {
-  automationContinuationThreadId,
-  automationRequiresTargetThread,
-} from "@synara/shared/automationMode";
+import { automationContinuationThreadId, automationRequiresTargetThread } from "@synara/shared/automationMode";
 import {
   getModelCapabilities,
   getProviderOptionCurrentValue,
@@ -29,6 +26,7 @@ import {
 import { CHAT_BACKGROUND_CLASS_NAME } from "~/components/chat/composerPickerStyles";
 import { SidebarHeaderNavigationControls } from "~/components/SidebarHeaderNavigationControls";
 import { Button } from "~/components/ui/button";
+import { FIELD_CONTROL_CLASS_NAME } from "~/components/ui/field-styles";
 import { RouteInsetSurface } from "~/components/RouteInsetSurface";
 import {
   automationApprovalGaps,
@@ -38,10 +36,7 @@ import {
   type AutomationDraftWarning,
   type AutomationDraftWarningId,
 } from "~/lib/automationDraft";
-import {
-  completionPolicyFromStopWhen,
-  stopWhenFromCompletionPolicy,
-} from "@synara/shared/automationCompletionPolicy";
+import { completionPolicyFromStopWhen, stopWhenFromCompletionPolicy } from "@synara/shared/automationCompletionPolicy";
 import { automationLifecycleState, canPauseAutomation } from "~/lib/automationStatus";
 import {
   useDesktopTopBarTrafficLightGutterClassName,
@@ -180,8 +175,7 @@ function intervalOptions(current: number): readonly SelectOption[] {
   if (INTERVAL_PRESETS.some((option) => option.value === String(current))) {
     return INTERVAL_PRESETS;
   }
-  const label =
-    current >= 60 && current % 60 === 0 ? `Every ${current / 60} min` : `Every ${current} sec`;
+  const label = current >= 60 && current % 60 === 0 ? `Every ${current / 60} min` : `Every ${current} sec`;
   return [{ value: String(current), label }, ...INTERVAL_PRESETS];
 }
 
@@ -190,16 +184,15 @@ function AutomationDetailView() {
   const navigate = useNavigate();
   const { settings } = useAppSettings();
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
-  const desktopTopBarWindowControlsGutterClassName =
-    useDesktopTopBarWindowControlsGutterClassName();
+  const desktopTopBarWindowControlsGutterClassName = useDesktopTopBarWindowControlsGutterClassName();
   const projects = useStore((state) => state.projects);
   const threads = useStore(selectAllThreads);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<AutomationFormState | null>(null);
   const [dialogWarnings, setDialogWarnings] = useState<readonly AutomationDraftWarning[]>([]);
-  const [acknowledgedWarningIds, setAcknowledgedWarningIds] = useState<
-    ReadonlySet<AutomationDraftWarningId>
-  >(() => new Set());
+  const [acknowledgedWarningIds, setAcknowledgedWarningIds] = useState<ReadonlySet<AutomationDraftWarningId>>(
+    () => new Set(),
+  );
 
   const {
     data,
@@ -219,25 +212,17 @@ function AutomationDetailView() {
   const memoryQuery = useQuery({
     queryKey: ["automation-memory", automationId],
     queryFn: () =>
-      definition
-        ? ensureNativeApi().automation.getMemory({ automationId: definition.id })
-        : Promise.resolve(null),
+      definition ? ensureNativeApi().automation.getMemory({ automationId: definition.id }) : Promise.resolve(null),
     enabled: definition !== null,
   });
-  const streamedMemory =
-    (data.memories ?? []).find((candidate) => candidate.automationId === automationId) ?? null;
+  const streamedMemory = (data.memories ?? []).find((candidate) => candidate.automationId === automationId) ?? null;
   const memory = streamedMemory ?? memoryQuery.data ?? null;
   const providerOptionsForDispatch = getProviderStartOptions(settings);
 
   if (!definition) {
     return (
       <RouteInsetSurface>
-        <div
-          className={cn(
-            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
-            CHAT_BACKGROUND_CLASS_NAME,
-          )}
-        >
+        <div className={cn("flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden", CHAT_BACKGROUND_CLASS_NAME)}>
           <header
             className={cn(
               CHAT_SURFACE_HEADER_PADDING_X_CLASS,
@@ -247,21 +232,14 @@ function AutomationDetailView() {
               desktopTopBarWindowControlsGutterClassName,
             )}
           >
-            <div
-              className={cn("flex items-center gap-2 sm:gap-3", CHAT_SURFACE_HEADER_HEIGHT_CLASS)}
-            >
+            <div className={cn("flex items-center gap-2 sm:gap-3", CHAT_SURFACE_HEADER_HEIGHT_CLASS)}>
               <SidebarHeaderNavigationControls />
               <h1 className="truncate font-heading text-sm font-medium">Automations</h1>
             </div>
           </header>
           <main className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
             Automation not found.
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => void navigate({ to: "/automations" })}
-            >
+            <Button type="button" size="sm" variant="outline" onClick={() => void navigate({ to: "/automations" })}>
               Back to automations
             </Button>
           </main>
@@ -287,8 +265,7 @@ function AutomationDetailView() {
   const stopWhen = stopWhenFromCompletionPolicy(definition.completionPolicy ?? { type: "none" });
   const pendingProposal = definition.proposalState === "pending";
 
-  const patch = (input: Omit<AutomationUpdateInput, "id">) =>
-    updateMutation.mutate({ id: definition.id, ...input });
+  const patch = (input: Omit<AutomationUpdateInput, "id">) => updateMutation.mutate({ id: definition.id, ...input });
 
   // One-time risk approval surfaced at the top of the panel when an already-created
   // automation still needs it (e.g. created via the API). Persists on the automation.
@@ -308,9 +285,7 @@ function AutomationDetailView() {
     updateMutation.mutateAsync({
       id: definition.id,
       acknowledgedRisks: approvalGaps.acknowledgedRisks,
-      ...(approvalGaps.maxIterations !== undefined
-        ? { maxIterations: approvalGaps.maxIterations }
-        : {}),
+      ...(approvalGaps.maxIterations !== undefined ? { maxIterations: approvalGaps.maxIterations } : {}),
     });
   const handleApproveAndRunNow = async () => {
     try {
@@ -353,18 +328,13 @@ function AutomationDetailView() {
   };
 
   const toggleWarning = (id: AutomationDraftWarningId, checked: boolean) => {
-    setAcknowledgedWarningIds((current) =>
-      updateAutomationDraftWarningAcknowledgement(current, id, checked),
-    );
+    setAcknowledgedWarningIds((current) => updateAutomationDraftWarningAcknowledgement(current, id, checked));
   };
 
   const submitForm = () => {
     if (!form || !isFormSubmittable(form)) return;
     if (hasBlockingAutomationDraftWarnings(dialogWarnings, acknowledgedWarningIds)) return;
-    const acknowledgedRisks = acknowledgedRiskIdsForFormWarnings(
-      dialogWarnings,
-      acknowledgedWarningIds,
-    );
+    const acknowledgedRisks = acknowledgedRiskIdsForFormWarnings(dialogWarnings, acknowledgedWarningIds);
     updateMutation.mutate(
       updateInputFromForm(
         definition,
@@ -392,12 +362,7 @@ function AutomationDetailView() {
 
   return (
     <RouteInsetSurface>
-      <div
-        className={cn(
-          "flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden",
-          CHAT_BACKGROUND_CLASS_NAME,
-        )}
-      >
+      <div className={cn("flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden", CHAT_BACKGROUND_CLASS_NAME)}>
         {/* Left column: breadcrumb header + the prompt. */}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <header
@@ -408,9 +373,7 @@ function AutomationDetailView() {
               desktopTopBarTrafficLightGutterClassName,
             )}
           >
-            <div
-              className={cn("flex items-center gap-2 sm:gap-3", CHAT_SURFACE_HEADER_HEIGHT_CLASS)}
-            >
+            <div className={cn("flex items-center gap-2 sm:gap-3", CHAT_SURFACE_HEADER_HEIGHT_CLASS)}>
               <SidebarHeaderNavigationControls />
               <div className="flex min-w-0 flex-1 items-center gap-1.5 text-sm [-webkit-app-region:no-drag]">
                 <button
@@ -420,10 +383,7 @@ function AutomationDetailView() {
                 >
                   Automations
                 </button>
-                <CentralIcon
-                  name="chevron-right-small"
-                  className="size-3.5 shrink-0 text-muted-foreground"
-                />
+                <CentralIcon name="chevron-right-small" className="size-3.5 shrink-0 text-muted-foreground" />
                 <span className="truncate font-heading font-medium">{definition.name}</span>
               </div>
             </div>
@@ -431,9 +391,7 @@ function AutomationDetailView() {
 
           <main className="min-h-0 flex-1 overflow-y-auto px-6 py-8 sm:px-8">
             <div className="max-w-3xl space-y-4">
-              <h1 className="font-heading text-2xl font-normal text-foreground">
-                {definition.name}
-              </h1>
+              <h1 className="font-heading text-2xl font-normal text-foreground">{definition.name}</h1>
               <p className="whitespace-pre-wrap text-[0.9375rem] leading-relaxed text-muted-foreground">
                 {definition.prompt}
               </p>
@@ -472,12 +430,7 @@ function AutomationDetailView() {
               desktopTopBarWindowControlsGutterClassName,
             )}
           >
-            <div
-              className={cn(
-                "flex items-center justify-end gap-2 sm:gap-3",
-                CHAT_SURFACE_HEADER_HEIGHT_CLASS,
-              )}
-            >
+            <div className={cn("flex items-center justify-end gap-2 sm:gap-3", CHAT_SURFACE_HEADER_HEIGHT_CLASS)}>
               <div className="flex shrink-0 items-center gap-1 [-webkit-app-region:no-drag]">
                 {!pendingProposal && canPauseAutomation(definition) ? (
                   <Button
@@ -549,9 +502,7 @@ function AutomationDetailView() {
                 </DetailRow>
                 <DetailRow label="Next run">
                   {definition.enabled && definition.nextRunAt ? (
-                    <StatusValue tone="muted">
-                      {formatRunTimestamp(definition.nextRunAt)}
-                    </StatusValue>
+                    <StatusValue tone="muted">{formatRunTimestamp(definition.nextRunAt)}</StatusValue>
                   ) : (
                     "—"
                   )}
@@ -571,9 +522,7 @@ function AutomationDetailView() {
                 {!ownsItsEnvironment ? (
                   <DetailRow label="Runs in">Thread</DetailRow>
                 ) : !canChooseEnvironment ? (
-                  <DetailRow label="Runs in">
-                    {worktreeModeLabel(definition.worktreeMode)}
-                  </DetailRow>
+                  <DetailRow label="Runs in">{worktreeModeLabel(definition.worktreeMode)}</DetailRow>
                 ) : (
                   <EditRow
                     label={
@@ -610,9 +559,7 @@ function AutomationDetailView() {
                     <InlineSelect
                       value={definition.projectId}
                       options={projects.map((entry) => ({ value: entry.id, label: entry.name }))}
-                      onChange={(value) =>
-                        patch({ projectId: value as AutomationDefinition["projectId"] })
-                      }
+                      onChange={(value) => patch({ projectId: value as AutomationDefinition["projectId"] })}
                     />
                   </EditRow>
                 )}
@@ -642,10 +589,7 @@ function AutomationDetailView() {
                     options={SCHEDULE_KIND_OPTIONS}
                     onChange={(value) =>
                       patch({
-                        schedule: scheduleFromKind(
-                          value as (typeof SCHEDULE_KIND_OPTIONS)[number]["value"],
-                          schedule,
-                        ),
+                        schedule: scheduleFromKind(value as (typeof SCHEDULE_KIND_OPTIONS)[number]["value"], schedule),
                       })
                     }
                   />
@@ -703,9 +647,7 @@ function AutomationDetailView() {
                   <EditRow label="Time">
                     <InlineTime
                       value={schedule.timeOfDay}
-                      onChange={(value) =>
-                        value ? patch({ schedule: { ...schedule, timeOfDay: value } }) : undefined
-                      }
+                      onChange={(value) => (value ? patch({ schedule: { ...schedule, timeOfDay: value } }) : undefined)}
                     />
                   </EditRow>
                 ) : null}
@@ -758,10 +700,7 @@ function AutomationDetailView() {
                     onChange={applyModelSelection}
                   />
                 </EditRow>
-                <ModelOptionRows
-                  modelSelection={definition.modelSelection}
-                  onChange={applyModelSelection}
-                />
+                <ModelOptionRows modelSelection={definition.modelSelection} onChange={applyModelSelection} />
                 <DetailRow label="Mode">{MODE_LABELS[definition.mode]}</DetailRow>
                 <EditRow label="Notify">
                   <InlineSelect
@@ -772,8 +711,7 @@ function AutomationDetailView() {
                     ]}
                     onChange={(value) =>
                       patch({
-                        notificationPolicy:
-                          value === "failed-runs-only" ? "failed-runs-only" : "all",
+                        notificationPolicy: value === "failed-runs-only" ? "failed-runs-only" : "all",
                       })
                     }
                   />
@@ -793,9 +731,7 @@ function AutomationDetailView() {
                   <InlineSelect
                     value={definition.maxIterations == null ? "" : String(definition.maxIterations)}
                     options={maxIterationOptions(definition.maxIterations)}
-                    onChange={(value) =>
-                      patch({ maxIterations: value === "" ? null : Number.parseInt(value, 10) })
-                    }
+                    onChange={(value) => patch({ maxIterations: value === "" ? null : Number.parseInt(value, 10) })}
                   />
                 </EditRow>
                 {continuationThreadId !== null ? (
@@ -835,9 +771,7 @@ function AutomationDetailView() {
                       <RunRow
                         key={run.id}
                         run={run}
-                        onOpen={(threadId) =>
-                          void navigate({ to: "/$threadId", params: { threadId } })
-                        }
+                        onOpen={(threadId) => void navigate({ to: "/$threadId", params: { threadId } })}
                         onCancel={() => cancelRunMutation.mutate(run)}
                         onMarkRead={(unread) => markRunReadMutation.mutate({ run, unread })}
                         onArchive={(archived) => archiveRunMutation.mutate({ run, archived })}
@@ -871,13 +805,7 @@ function AutomationDetailView() {
   );
 }
 
-function DetailGroup({
-  title,
-  children,
-}: {
-  readonly title: string;
-  readonly children: React.ReactNode;
-}) {
+function DetailGroup({ title, children }: { readonly title: string; readonly children: React.ReactNode }) {
   return (
     <section className="space-y-0.5">
       <h2 className="px-1.5 pb-1 text-xs font-medium text-muted-foreground/70">{title}</h2>
@@ -886,13 +814,7 @@ function DetailGroup({
   );
 }
 
-function DetailRow({
-  label,
-  children,
-}: {
-  readonly label: React.ReactNode;
-  readonly children: React.ReactNode;
-}) {
+function DetailRow({ label, children }: { readonly label: React.ReactNode; readonly children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3 rounded-md px-1.5 py-1.5 text-xs">
       <span className="flex shrink-0 items-center gap-1 text-muted-foreground">{label}</span>
@@ -914,23 +836,14 @@ function StatusValue({
   const tone = toneProp ?? "default";
   return (
     <span
-      className={cn(
-        "inline-flex items-center gap-1.5",
-        tone === "muted" ? "text-muted-foreground" : "text-foreground",
-      )}
+      className={cn("inline-flex items-center gap-1.5", tone === "muted" ? "text-muted-foreground" : "text-foreground")}
     >
       {children}
     </span>
   );
 }
 
-function EditRow({
-  label,
-  children,
-}: {
-  readonly label: React.ReactNode;
-  readonly children: React.ReactNode;
-}) {
+function EditRow({ label, children }: { readonly label: React.ReactNode; readonly children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-2 rounded-md py-px pl-1.5 pr-0.5 text-xs transition-colors hover:bg-foreground/[0.04]">
       <span className="flex shrink-0 items-center gap-1 text-muted-foreground">{label}</span>
@@ -939,8 +852,10 @@ function EditRow({
   );
 }
 
-const INLINE_CONTROL_CLASS =
-  "cursor-pointer rounded-md bg-transparent px-2 py-1.5 text-right text-xs text-foreground outline-none transition-colors focus-visible:ring-1 focus-visible:ring-ring";
+const INLINE_CONTROL_CLASS = cn(
+  FIELD_CONTROL_CLASS_NAME,
+  "cursor-pointer rounded-lg px-2 py-1.5 text-right text-xs text-foreground outline-none",
+);
 
 function InlineSelect({
   value,
@@ -972,19 +887,9 @@ function InlineSelect({
   );
 }
 
-function InlineToggle({
-  value,
-  onChange,
-}: {
-  readonly value: boolean;
-  readonly onChange: (value: boolean) => void;
-}) {
+function InlineToggle({ value, onChange }: { readonly value: boolean; readonly onChange: (value: boolean) => void }) {
   return (
-    <button
-      type="button"
-      onClick={() => onChange(!value)}
-      className={cn(INLINE_CONTROL_CLASS, "min-w-[3rem]")}
-    >
+    <button type="button" onClick={() => onChange(!value)} className={cn(INLINE_CONTROL_CLASS, "min-w-[3rem]")}>
       {value ? "On" : "Off"}
     </button>
   );
@@ -1063,13 +968,7 @@ function ModelOptionRows({
   );
 }
 
-function InlineTime({
-  value,
-  onChange,
-}: {
-  readonly value: string;
-  readonly onChange: (value: string) => void;
-}) {
+function InlineTime({ value, onChange }: { readonly value: string; readonly onChange: (value: string) => void }) {
   return (
     <input
       type="time"

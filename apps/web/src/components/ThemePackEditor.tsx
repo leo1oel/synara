@@ -17,6 +17,7 @@ import {
   DialogTrigger,
 } from "./ui/dialog";
 import { Input } from "./ui/input";
+import { FIELD_CONTROL_CLASS_NAME } from "./ui/field-styles";
 import { Popover, PopoverPopup, PopoverTrigger } from "./ui/popover";
 import { Select, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Switch } from "./ui/switch";
@@ -55,11 +56,7 @@ const EDITOR_TEXT_ACTION_CLASS_NAME = cn(
   ELEVATED_HOVER_SURFACE_RAISED_TEXT_CLASS_NAME,
 );
 
-export function ThemePackEditor({
-  variant,
-  isActive: isActiveProp,
-  mode: modeProp,
-}: ThemePackEditorProps) {
+export function ThemePackEditor({ variant, isActive: isActiveProp, mode: modeProp }: ThemePackEditorProps) {
   const isActive = isActiveProp ?? false;
   const mode = modeProp ?? "system";
   const {
@@ -86,8 +83,7 @@ export function ThemePackEditor({
       variants: option.variants,
     }));
   }, [variant]);
-  const codeThemeLabel =
-    CODE_THEME_OPTIONS.find((option) => option.id === pack.codeThemeId)?.label ?? pack.codeThemeId;
+  const codeThemeLabel = CODE_THEME_OPTIONS.find((option) => option.id === pack.codeThemeId)?.label ?? pack.codeThemeId;
   const isPristine = isDefaultThemePack(variant);
   const titleLabel = variant === "dark" ? "Dark theme" : "Light theme";
   const contextLabel = isActive
@@ -140,11 +136,7 @@ export function ThemePackEditor({
         </div>
         <div className="flex items-center gap-1">
           <ImportThemeDialog variant={variant} onImport={handleImport} />
-          <button
-            type="button"
-            onClick={() => void handleCopy()}
-            className={EDITOR_TEXT_ACTION_CLASS_NAME}
-          >
+          <button type="button" onClick={() => void handleCopy()} className={EDITOR_TEXT_ACTION_CLASS_NAME}>
             Copy
           </button>
           <Select
@@ -249,9 +241,7 @@ export function ThemePackEditor({
               placeholder='"JetBrains Mono"'
               ariaLabel={`${titleLabel} code font`}
               mono
-              onChange={(next) =>
-                updateThemeFonts(variant, { code: next.length > 0 ? next : null })
-              }
+              onChange={(next) => updateThemeFonts(variant, { code: next.length > 0 ? next : null })}
             />
           </div>
         </ThemeRow>
@@ -280,12 +270,7 @@ export function ThemePackEditor({
 
 function ThemeRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div
-      className={cn(
-        SETTINGS_CARD_ROW_CLASS_NAME,
-        "flex min-h-12 items-center justify-between gap-3",
-      )}
-    >
+    <div className={cn(SETTINGS_CARD_ROW_CLASS_NAME, "flex min-h-12 items-center justify-between gap-3")}>
       <span className="text-sm text-foreground/90">{label}</span>
       <div className="flex shrink-0 items-center gap-2">{children}</div>
     </div>
@@ -314,8 +299,7 @@ function ColorPill({
   const draftHex = draftHexRaw === color ? null : draftHexRaw;
   const [isOpen, setIsOpen] = useState(false);
   const normalizedDraftHex = draftHex?.trim().toLowerCase() ?? null;
-  const previewColor =
-    normalizedDraftHex && HEX_COLOR_RE.test(normalizedDraftHex) ? normalizedDraftHex : color;
+  const previewColor = normalizedDraftHex && HEX_COLOR_RE.test(normalizedDraftHex) ? normalizedDraftHex : color;
   const inputValue = draftHex ?? color;
   const textColor = useReadableTextColor(previewColor);
   const ringColor = useReadableTextColor(previewColor, 0.32);
@@ -412,19 +396,10 @@ function ColorPill({
             />
           }
         >
-          <span
-            aria-hidden
-            className="block size-5 shrink-0 rounded-full border"
-            style={{ borderColor: ringColor }}
-          />
+          <span aria-hidden className="block size-5 shrink-0 rounded-full border" style={{ borderColor: ringColor }} />
           <span className="font-system-ui flex-1 text-[12px] uppercase">{previewColor}</span>
         </PopoverTrigger>
-        <PopoverPopup
-          align="end"
-          side="bottom"
-          sideOffset={8}
-          className="p-0 [&_[data-slot=popover-viewport]]:p-0"
-        >
+        <PopoverPopup align="end" side="bottom" sideOffset={8} className="p-0 [&_[data-slot=popover-viewport]]:p-0">
           <div className="theme-color-picker flex w-56 flex-col gap-3 p-3">
             <HexColorPicker color={previewColor} onChange={handleValidDraft} />
             <input
@@ -444,8 +419,9 @@ function ColorPill({
               spellCheck={false}
               maxLength={7}
               className={cn(
+                FIELD_CONTROL_CLASS_NAME,
                 SETTINGS_CONTROL_RADIUS_CLASS_NAME,
-                "h-8 border border-[color:var(--color-border-light)] bg-[var(--color-background-elevated-secondary)] px-2 text-center font-chat-code text-xs uppercase outline-none focus:border-[color:var(--color-border-focus)]",
+                "h-8 px-2 text-center font-chat-code text-xs uppercase outline-none",
               )}
               aria-label={`${ariaLabel} hex value`}
             />
@@ -546,22 +522,14 @@ function ContrastSlider({
           background: `linear-gradient(to right, var(--primary) 0%, var(--primary) ${fillPct}%, var(--input) ${fillPct}%, var(--input) 100%)`,
         }}
       />
-      <span className="w-7 text-right font-chat-code text-xs text-muted-foreground tabular-nums">
-        {value}
-      </span>
+      <span className="w-7 text-right font-chat-code text-xs text-muted-foreground tabular-nums">{value}</span>
     </div>
   );
 }
 
 // ── Import dialog ─────────────────────────────────────────────────────────
 
-function ImportThemeDialog({
-  variant,
-  onImport,
-}: {
-  variant: ThemeVariant;
-  onImport: (value: string) => void;
-}) {
+function ImportThemeDialog({ variant, onImport }: { variant: ThemeVariant; onImport: (value: string) => void }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -595,10 +563,8 @@ function ImportThemeDialog({
         <DialogHeader>
           <DialogTitle>Import {variant} theme</DialogTitle>
           <p className="text-xs text-muted-foreground">
-            Paste a{" "}
-            <code className="rounded bg-muted px-1 py-0.5 font-chat-code">codex-theme-v1:</code>{" "}
-            share string. The embedded variant must match {variant}, and the selected code theme
-            must exist for that variant.
+            Paste a <code className="rounded bg-muted px-1 py-0.5 font-chat-code">codex-theme-v1:</code> share string.
+            The embedded variant must match {variant}, and the selected code theme must exist for that variant.
           </p>
         </DialogHeader>
         <DialogPanel>
@@ -624,12 +590,7 @@ function ImportThemeDialog({
               </Button>
             }
           />
-          <Button
-            type="button"
-            size="sm"
-            disabled={value.trim().length === 0}
-            onClick={handleSubmit}
-          >
+          <Button type="button" size="sm" disabled={value.trim().length === 0} onClick={handleSubmit}>
             Import
           </Button>
         </DialogFooter>

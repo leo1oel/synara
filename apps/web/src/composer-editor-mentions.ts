@@ -1,20 +1,14 @@
 import { isBuiltInComposerSlashCommand, type ComposerSlashCommand } from "./composerSlashCommands";
-import {
-  INLINE_TERMINAL_CONTEXT_PLACEHOLDER,
-  type TerminalContextDraft,
-} from "./lib/terminalContext";
+import { INLINE_TERMINAL_CONTEXT_PLACEHOLDER, type TerminalContextDraft } from "./lib/terminalContext";
 import {
   createComposerMentionTokenRegex,
   extractComposerMentionPath,
   findThreadProviderMentionReferenceForToken,
+  isPaperProviderMentionReference,
   isPluginProviderMentionReference,
   providerMentionMatchesToken,
 } from "./lib/composerMentions";
-import {
-  LINK_TOKEN_SOURCE,
-  normalizeComposerLinkUrl,
-  trimTrailingLinkPunctuation,
-} from "./lib/linkChips";
+import { LINK_TOKEN_SOURCE, normalizeComposerLinkUrl, trimTrailingLinkPunctuation } from "./lib/linkChips";
 import { resolveAgentAlias } from "@synara/contracts";
 import type { ProviderMentionReference } from "@synara/contracts";
 import { threadIdFromThreadMentionPath } from "@synara/shared/threadMentions";
@@ -27,7 +21,7 @@ export type ComposerPromptSegment =
   | {
       type: "mention";
       path: string;
-      kind?: "path" | "plugin" | "thread";
+      kind?: "path" | "paper" | "plugin" | "thread";
       threadId?: string;
       /**
        * Raw token length in the source text (`@name` vs `@"name with spaces"`).
@@ -99,9 +93,7 @@ export function matchComposerLinkToken(
   if (!text.includes("http") && !text.includes(".")) {
     return null;
   }
-  const regex = options.includeTrailingTokenAtEnd
-    ? DISPLAY_LINK_TOKEN_FIRST_REGEX
-    : LINK_TOKEN_FIRST_REGEX;
+  const regex = options.includeTrailingTokenAtEnd ? DISPLAY_LINK_TOKEN_FIRST_REGEX : LINK_TOKEN_FIRST_REGEX;
   const match = regex.exec(text);
   if (!match) {
     return null;
@@ -184,16 +176,13 @@ function collectInlineTokenMatches(
   const mentionRegex = createComposerMentionTokenRegex({
     includeTrailingTokenAtEnd: options.includeTrailingTokenAtEnd,
   });
-  const skillRegex = options.includeTrailingTokenAtEnd
-    ? DISPLAY_SKILL_TOKEN_REGEX
-    : SKILL_TOKEN_REGEX;
+  const skillRegex = options.includeTrailingTokenAtEnd ? DISPLAY_SKILL_TOKEN_REGEX : SKILL_TOKEN_REGEX;
   const linkRegex = options.includeTrailingTokenAtEnd ? DISPLAY_LINK_TOKEN_REGEX : LINK_TOKEN_REGEX;
 
   // Ranges covered by higher-priority tokens, so mentions/skills do not match
   // inside a URL (e.g. an `@` host) and links do not match inside an agent token.
   const reservedRanges: Array<{ start: number; end: number }> = [];
-  const isReserved = (pos: number): boolean =>
-    reservedRanges.some((range) => pos >= range.start && pos < range.end);
+  const isReserved = (pos: number): boolean => reservedRanges.some((range) => pos >= range.start && pos < range.end);
 
   // Links win first: a URL is an opaque span that other token kinds must skip.
   for (const match of text.matchAll(linkRegex)) {
@@ -322,15 +311,14 @@ function splitTextIntoPromptSegments(
         color: match.color,
       });
     } else if (match.kind === "mention") {
-      const threadMention = findThreadProviderMentionReferenceForToken(
-        match.value,
-        options.mentionReferences,
-      );
+      const threadMention = findThreadProviderMentionReferenceForToken(match.value, options.mentionReferences);
       const isPluginMention =
         options.mentionReferences?.some(
-          (mention) =>
-            isPluginProviderMentionReference(mention) &&
-            providerMentionMatchesToken(mention, match.value),
+          (mention) => isPluginProviderMentionReference(mention) && providerMentionMatchesToken(mention, match.value),
+        ) ?? false;
+      const isPaperMention =
+        options.mentionReferences?.some(
+          (mention) => isPaperProviderMentionReference(mention) && providerMentionMatchesToken(mention, match.value),
         ) ?? false;
       const tokenLength = match.end - match.start;
       const threadId = threadMention ? threadIdFromThreadMentionPath(threadMention.path) : null;
@@ -345,7 +333,9 @@ function splitTextIntoPromptSegments(
             }
           : isPluginMention
             ? { type: "mention", path: match.value, kind: "plugin", tokenLength }
-            : { type: "mention", path: match.value, tokenLength },
+            : isPaperMention
+              ? { type: "mention", path: match.value, kind: "paper", tokenLength }
+              : { type: "mention", path: match.value, tokenLength },
       );
     } else if (match.kind === "slash-command") {
       segments.push({ type: "slash-command", command: match.command });

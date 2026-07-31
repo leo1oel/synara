@@ -72,6 +72,20 @@ export function resolveSingleProjectId(input: {
   return input.threadProjectId ?? input.draftProjectId ?? null;
 }
 
+export function resolveEmbeddedDraftProjectRebind(input: {
+  draftProjectId: ProjectId | null;
+  embeddedProjectId: ProjectId | null;
+}): ProjectId | null {
+  if (
+    input.draftProjectId === null ||
+    input.embeddedProjectId === null ||
+    input.draftProjectId === input.embeddedProjectId
+  ) {
+    return null;
+  }
+  return input.embeddedProjectId;
+}
+
 export function normalizeSingleSearchFromPane(
   panelState: Pick<ChatPanelStateSnapshot, "panel" | "diffTurnId" | "diffFilePath">,
 ): DiffRouteSearch {
@@ -109,10 +123,7 @@ export function collectParentDirectoryPaths(filePath: string): string[] {
   return parents;
 }
 
-function createRoutePanelSearchKey(input: {
-  scopeId: string;
-  search: DiffRouteSearch;
-}): string | null {
+function createRoutePanelSearchKey(input: { scopeId: string; search: DiffRouteSearch }): string | null {
   const { scopeId, search } = input;
   if (
     search.panel === undefined &&

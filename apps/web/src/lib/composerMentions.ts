@@ -34,19 +34,24 @@ export function extractComposerMentionPath(match: RegExpExecArray | RegExpMatchA
   return match[2] === undefined ? (match[3] ?? "") : decodeComposerMentionQuotedPath(match[2]);
 }
 
-export function composerMentionQuotedPathHasClosingQuote(path: string): boolean {
+export function composerMentionQuotedPathClosingQuoteIndex(path: string): number {
   let precedingBackslashes = 0;
-  for (const character of path) {
+  for (let index = 0; index < path.length; index += 1) {
+    const character = path[index] ?? "";
     if (character === "\\") {
       precedingBackslashes += 1;
       continue;
     }
     if (character === '"' && precedingBackslashes % 2 === 0) {
-      return true;
+      return index;
     }
     precedingBackslashes = 0;
   }
-  return false;
+  return -1;
+}
+
+export function composerMentionQuotedPathHasClosingQuote(path: string): boolean {
+  return composerMentionQuotedPathClosingQuoteIndex(path) !== -1;
 }
 
 function encodeComposerMentionQuotedPath(path: string): string {
@@ -73,14 +78,9 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-export function promptIncludesSkillMention(
-  prompt: string,
-  skillName: string,
-  provider: string,
-): boolean {
+export function promptIncludesSkillMention(prompt: string, skillName: string, provider: string): boolean {
   const escapedSkillName = escapeRegExp(skillName);
-  const prefixes =
-    provider === "pi" ? [skillMentionPrefix(provider)] : [skillMentionPrefix(provider), "$"];
+  const prefixes = provider === "pi" ? [skillMentionPrefix(provider)] : [skillMentionPrefix(provider), "$"];
   return prefixes.some((prefix) => {
     const pattern = new RegExp(`(^|\\s)${escapeRegExp(prefix)}${escapedSkillName}(?=\\s|$)`, "i");
     return pattern.test(prompt);
@@ -101,9 +101,7 @@ export function providerSkillReferencesEqual(
 ): boolean {
   return (
     left.length === right.length &&
-    left.every(
-      (skill, index) => skill.name === right[index]?.name && skill.path === right[index]?.path,
-    )
+    left.every((skill, index) => skill.name === right[index]?.name && skill.path === right[index]?.path)
   );
 }
 
@@ -137,17 +135,12 @@ function collectProviderMentionTokenKeys(mention: ProviderMentionReference): Set
   return keys;
 }
 
-export function providerMentionMatchesToken(
-  mention: ProviderMentionReference,
-  token: string,
-): boolean {
+export function providerMentionMatchesToken(mention: ProviderMentionReference, token: string): boolean {
   const normalizedToken = normalizeMentionNameKey(token);
-  return (
-    normalizedToken.length > 0 && collectProviderMentionTokenKeys(mention).has(normalizedToken)
-  );
+  return normalizedToken.length > 0 && collectProviderMentionTokenKeys(mention).has(normalizedToken);
 }
 
-export type MentionChipKind = "path" | "plugin" | "thread";
+export type MentionChipKind = "path" | "paper" | "plugin" | "thread";
 
 export function isPluginProviderMentionReference(mention: ProviderMentionReference): boolean {
   return mention.path.startsWith("plugin://");
@@ -157,9 +150,14 @@ export function isThreadProviderMentionReference(mention: ProviderMentionReferen
   return isThreadMentionPath(mention.path);
 }
 
-export function threadIdFromProviderMentionReference(
-  mention: ProviderMentionReference,
-): string | null {
+export function isPaperProviderMentionReference(mention: ProviderMentionReference): boolean {
+  return (
+    mention.path.startsWith(".research/papers/") &&
+    (mention.path.endsWith("/paper.md") || mention.path.endsWith("/blog.md"))
+  );
+}
+
+export function threadIdFromProviderMentionReference(mention: ProviderMentionReference): string | null {
   return threadIdFromThreadMentionPath(mention.path);
 }
 
@@ -168,8 +166,7 @@ export function findThreadProviderMentionReferenceForToken(
   mentions: ReadonlyArray<ProviderMentionReference> | undefined,
 ): ProviderMentionReference | undefined {
   return mentions?.find(
-    (mention) =>
-      isThreadProviderMentionReference(mention) && providerMentionMatchesToken(mention, token),
+    (mention) => isThreadProviderMentionReference(mention) && providerMentionMatchesToken(mention, token),
   );
 }
 
@@ -186,16 +183,28 @@ export function resolveMentionChipKind(
   if (options?.kind === "plugin" || path.startsWith("plugin://")) {
     return "plugin";
   }
+  if (
+    options?.kind === "paper" ||
+    (path.startsWith(".research/papers/") && (path.endsWith("/paper.md") || path.endsWith("/blog.md")))
+  ) {
+    return "paper";
+  }
   if (findThreadProviderMentionReferenceForToken(path, options?.mentionReferences)) {
     return "thread";
   }
   if (
     options?.mentionReferences?.some(
-      (mention) =>
-        isPluginProviderMentionReference(mention) && providerMentionMatchesToken(mention, path),
+      (mention) => isPluginProviderMentionReference(mention) && providerMentionMatchesToken(mention, path),
     )
   ) {
     return "plugin";
+  }
+  if (
+    options?.mentionReferences?.some(
+      (mention) => isPaperProviderMentionReference(mention) && providerMentionMatchesToken(mention, path),
+    )
+  ) {
+    return "paper";
   }
   return "path";
 }
@@ -246,9 +255,6 @@ export function providerMentionReferencesEqual(
 ): boolean {
   return (
     left.length === right.length &&
-    left.every(
-      (mention, index) =>
-        mention.path === right[index]?.path && mention.name === right[index]?.name,
-    )
+    left.every((mention, index) => mention.path === right[index]?.path && mention.name === right[index]?.name)
   );
 }

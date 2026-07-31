@@ -25,6 +25,16 @@ export const ProviderSkillInterface = Schema.Struct({
 });
 export type ProviderSkillInterface = typeof ProviderSkillInterface.Type;
 
+export const ProviderManagedSkillKind = Schema.Literals(["bundled", "installed"]);
+export type ProviderManagedSkillKind = typeof ProviderManagedSkillKind.Type;
+
+export const ProviderSkillManagement = Schema.Struct({
+  kind: ProviderManagedSkillKind,
+  id: TrimmedNonEmptyString,
+  canDelete: Schema.Boolean,
+});
+export type ProviderSkillManagement = typeof ProviderSkillManagement.Type;
+
 export const ProviderSkillDescriptor = Schema.Struct({
   name: TrimmedNonEmptyString,
   description: Schema.optional(TrimmedNonEmptyString),
@@ -33,6 +43,7 @@ export const ProviderSkillDescriptor = Schema.Struct({
   scope: Schema.optional(TrimmedNonEmptyString),
   interface: Schema.optional(ProviderSkillInterface),
   dependencies: Schema.optional(Schema.Unknown),
+  management: Schema.optional(ProviderSkillManagement),
 });
 export type ProviderSkillDescriptor = typeof ProviderSkillDescriptor.Type;
 
@@ -95,6 +106,88 @@ export const ProviderSkillsCatalogResult = Schema.Struct({
 });
 export type ProviderSkillsCatalogResult = typeof ProviderSkillsCatalogResult.Type;
 
+export const ProviderSkillImportFile = Schema.Struct({
+  relativePath: TrimmedNonEmptyString,
+  contentBase64: Schema.String,
+});
+export type ProviderSkillImportFile = typeof ProviderSkillImportFile.Type;
+
+export const ProviderImportSkillInput = Schema.Struct({
+  folderName: TrimmedNonEmptyString,
+  files: Schema.Array(ProviderSkillImportFile),
+  overwrite: Schema.optional(Schema.Boolean),
+});
+export type ProviderImportSkillInput = typeof ProviderImportSkillInput.Type;
+
+export const ProviderImportSkillResult = Schema.Struct({
+  status: Schema.Literals(["imported", "replaced", "conflict"]),
+  folderName: TrimmedNonEmptyString,
+  skill: Schema.optional(ProviderSkillDescriptor),
+});
+export type ProviderImportSkillResult = typeof ProviderImportSkillResult.Type;
+
+export const ProviderReadManagedSkillInput = Schema.Struct({
+  kind: ProviderManagedSkillKind,
+  id: TrimmedNonEmptyString,
+});
+export type ProviderReadManagedSkillInput = typeof ProviderReadManagedSkillInput.Type;
+
+export const ProviderManagedSkillDetail = Schema.Struct({
+  skill: ProviderSkillDescriptor,
+  markdown: Schema.String,
+  files: Schema.Array(TrimmedNonEmptyString),
+});
+export type ProviderManagedSkillDetail = typeof ProviderManagedSkillDetail.Type;
+
+export const ProviderSaveManagedSkillInput = Schema.Struct({
+  mode: Schema.Literals(["create", "update"]),
+  id: TrimmedNonEmptyString,
+  displayName: TrimmedNonEmptyString,
+  description: TrimmedNonEmptyString,
+  instructions: TrimmedNonEmptyString,
+});
+export type ProviderSaveManagedSkillInput = typeof ProviderSaveManagedSkillInput.Type;
+
+export const ProviderSaveManagedSkillResult = Schema.Struct({
+  status: Schema.Literals(["created", "updated"]),
+  detail: ProviderManagedSkillDetail,
+});
+export type ProviderSaveManagedSkillResult = typeof ProviderSaveManagedSkillResult.Type;
+
+export const ProviderDuplicateManagedSkillInput = Schema.Struct({
+  kind: ProviderManagedSkillKind,
+  id: TrimmedNonEmptyString,
+});
+export type ProviderDuplicateManagedSkillInput = typeof ProviderDuplicateManagedSkillInput.Type;
+
+export const ProviderDuplicateManagedSkillResult = Schema.Struct({
+  detail: ProviderManagedSkillDetail,
+});
+export type ProviderDuplicateManagedSkillResult = typeof ProviderDuplicateManagedSkillResult.Type;
+
+export const ProviderRemoveManagedSkillInput = Schema.Struct({
+  id: TrimmedNonEmptyString,
+});
+export type ProviderRemoveManagedSkillInput = typeof ProviderRemoveManagedSkillInput.Type;
+
+export const ProviderRemoveManagedSkillResult = Schema.Struct({
+  id: TrimmedNonEmptyString,
+  name: TrimmedNonEmptyString,
+  trashId: TrimmedNonEmptyString,
+});
+export type ProviderRemoveManagedSkillResult = typeof ProviderRemoveManagedSkillResult.Type;
+
+export const ProviderRestoreManagedSkillInput = Schema.Struct({
+  id: TrimmedNonEmptyString,
+  trashId: TrimmedNonEmptyString,
+});
+export type ProviderRestoreManagedSkillInput = typeof ProviderRestoreManagedSkillInput.Type;
+
+export const ProviderRestoreManagedSkillResult = Schema.Struct({
+  skill: ProviderSkillDescriptor,
+});
+export type ProviderRestoreManagedSkillResult = typeof ProviderRestoreManagedSkillResult.Type;
+
 export const ProviderNativeCommandDescriptor = Schema.Struct({
   name: TrimmedNonEmptyString,
   description: Schema.optional(TrimmedNonEmptyString),
@@ -126,11 +219,7 @@ export const ProviderPluginMarketplaceInterface = Schema.Struct({
 });
 export type ProviderPluginMarketplaceInterface = typeof ProviderPluginMarketplaceInterface.Type;
 
-export const ProviderPluginInstallPolicy = Schema.Literals([
-  "NOT_AVAILABLE",
-  "AVAILABLE",
-  "INSTALLED_BY_DEFAULT",
-]);
+export const ProviderPluginInstallPolicy = Schema.Literals(["NOT_AVAILABLE", "AVAILABLE", "INSTALLED_BY_DEFAULT"]);
 export type ProviderPluginInstallPolicy = typeof ProviderPluginInstallPolicy.Type;
 
 export const ProviderPluginAuthPolicy = Schema.Literals(["ON_INSTALL", "ON_USE"]);

@@ -53,11 +53,7 @@ import { useAppSettings } from "../../appSettings";
 import { useStore } from "../../store";
 import { createSidebarDisplayThreadsSelector } from "../../storeSelectors";
 import { sortThreadsForSidebar } from "../Sidebar.logic";
-import {
-  readEditorRailChatTabs,
-  storeEditorRailChatTabs,
-  type EditorRailChatTabSnapshot,
-} from "../../editorViewState";
+import { readEditorRailChatTabs, storeEditorRailChatTabs, type EditorRailChatTabSnapshot } from "../../editorViewState";
 import { cn } from "~/lib/utils";
 import { useOpenFavoriteEditorShortcut } from "~/hooks/useOpenFavoriteEditorShortcut";
 import type { RepoDiffTotals } from "~/hooks/useRepoDiffTotals";
@@ -190,12 +186,10 @@ function EditorChatHistoryMenu(props: {
           props.triggerTitle ? (
             <button
               type="button"
-              className="flex min-w-0 items-center gap-1.5 rounded-md px-1 py-0.5 text-left text-[length:var(--app-font-size-ui,12px)] font-normal text-foreground transition-colors hover:bg-secondary"
+              className="flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-left text-[length:var(--app-font-size-ui,12px)] leading-[var(--app-line-height-ui,1.5)] font-normal text-foreground transition-colors hover:bg-secondary"
               aria-label={`${props.triggerTitle}, open chat history`}
             >
-              <span className="max-w-[min(10rem,calc(100vw-5.5rem))] truncate">
-                {props.triggerTitle}
-              </span>
+              <span className="max-w-[min(10rem,calc(100vw-5.5rem))] truncate">{props.triggerTitle}</span>
               <HistoryIcon className="size-3 shrink-0 text-muted-foreground" />
             </button>
           ) : (
@@ -357,23 +351,14 @@ function EditorRailTabs(props: {
           return [...current, activeChatTab];
         }
         const existing = current[existingIndex];
-        if (
-          existing?.title === activeChatTab.title &&
-          existing.provider === activeChatTab.provider
-        ) {
+        if (existing?.title === activeChatTab.title && existing.provider === activeChatTab.provider) {
           return current;
         }
         return current.map((thread) => (thread.id === activeChatTab.id ? activeChatTab : thread));
       });
     }, 0);
     return () => window.clearTimeout(timeoutId);
-  }, [
-    props.activeProvider,
-    props.activeSurface,
-    props.activeThreadId,
-    props.activeThreadTitle,
-    props.projectId,
-  ]);
+  }, [props.activeProvider, props.activeSurface, props.activeThreadId, props.activeThreadTitle, props.projectId]);
   const sortedProjectThreads = sortThreadsForSidebar(
     displayThreads.filter((thread) => thread.projectId === props.projectId),
     settings.sidebarThreadSortOrder,
@@ -390,9 +375,7 @@ function EditorRailTabs(props: {
   );
   const activeChatAlreadyOpen = openChatTabs.some((thread) => thread.id === props.activeThreadId);
   const orderedOpenTabs =
-    props.activeSurface === "chat" && !activeChatAlreadyOpen
-      ? [...openChatTabs, currentChatTab]
-      : openChatTabs;
+    props.activeSurface === "chat" && !activeChatAlreadyOpen ? [...openChatTabs, currentChatTab] : openChatTabs;
   const chatTabs = orderedOpenTabs.map((thread) => sidebarThreadById.get(thread.id) ?? thread);
   const terminalTabVisible = terminalTabOpen || props.terminalAvailable;
   const tabCount = chatTabs.length + (terminalTabVisible ? 1 : 0);
@@ -456,12 +439,7 @@ function EditorRailTabs(props: {
               </IconButton>
             }
           />
-          <ComposerPickerMenuPopup
-            align="start"
-            side="bottom"
-            sideOffset={6}
-            className="w-44 min-w-44"
-          >
+          <ComposerPickerMenuPopup align="start" side="bottom" sideOffset={6} className="w-44 min-w-44">
             <MenuItem onClick={props.onNewChat}>
               <MessageCircleIcon className="size-3.5 shrink-0 text-muted-foreground" />
               <span>New chat</span>
@@ -490,13 +468,7 @@ function EditorRailTabs(props: {
               title={thread.title}
               label={`Chat ${index + 1}`}
               labelClassName="max-w-24"
-              icon={
-                <ProviderIcon
-                  provider={thread.provider}
-                  tone="header"
-                  className="size-3 shrink-0"
-                />
-              }
+              icon={<ProviderIcon provider={thread.provider} tone="header" className="size-3 shrink-0" />}
               closeLabel={`Close ${thread.title}`}
               onSelect={() => openChatTab(thread.id)}
               onClose={() => closeChatTab(thread.id)}
@@ -602,11 +574,7 @@ export function ChatHeader({
   const { isMobile, state } = useSidebar();
   const headerRef = useRef<HTMLDivElement>(null);
   const [compact, setCompact] = useState(false);
-  const {
-    additions: diffAdditions,
-    deletions: diffDeletions,
-    hasChanges: showDiffTotals,
-  } = diffTotals;
+  const { additions: diffAdditions, deletions: diffDeletions, hasChanges: showDiffTotals } = diffTotals;
 
   // Own the open-favorite editor shortcut here so it survives regardless of which editor UI
   // is mounted (the legacy Open-in button, the Environment panel's Editor section, or
@@ -702,22 +670,13 @@ export function ChatHeader({
         )}
       >
         {hideSidebarControls ? null : <SidebarHeaderNavigationControls />}
-        <div
-          className={cn("flex min-w-0 flex-1 items-center gap-2", editorChatControls && "h-full")}
-        >
-          <div
-            className={cn(
-              "flex min-w-0 flex-1 flex-col",
-              editorChatControls && "h-full justify-center",
-            )}
-          >
+        <div className={cn("flex min-w-0 flex-1 items-center gap-2", editorChatControls && "h-full")}>
+          <div className={cn("flex min-w-0 flex-1 flex-col", editorChatControls && "h-full justify-center")}>
             {threadBreadcrumbs.length > 0 ? (
               <div className="flex min-w-0 items-center gap-1 overflow-hidden text-[11px] text-muted-foreground/55">
                 {threadBreadcrumbs.map((breadcrumb, index) => (
                   <React.Fragment key={breadcrumb.threadId}>
-                    {index > 0 ? (
-                      <span className="shrink-0 text-muted-foreground/35">/</span>
-                    ) : null}
+                    {index > 0 ? <span className="shrink-0 text-muted-foreground/35">/</span> : null}
                     <button
                       type="button"
                       className="min-w-0 truncate transition-colors hover:text-foreground/80"
@@ -734,18 +693,13 @@ export function ChatHeader({
               <div
                 className={cn(
                   "flex min-w-0 items-center gap-2",
-                  showSidechatTitleChip &&
-                    "rounded-lg bg-secondary py-1 pl-2 pr-1 text-secondary-foreground",
+                  showSidechatTitleChip && "rounded-lg bg-secondary py-1 pl-2 pr-1 text-secondary-foreground",
                 )}
               >
                 {threadIconKind === "none" ? null : (
                   <span
                     className="inline-flex size-3.5 shrink-0 items-center justify-center"
-                    title={
-                      threadIconKind === "terminal"
-                        ? "Terminal"
-                        : PROVIDER_DISPLAY_NAMES[activeProvider]
-                    }
+                    title={threadIconKind === "terminal" ? "Terminal" : PROVIDER_DISPLAY_NAMES[activeProvider]}
                   >
                     {threadIconKind === "terminal" ? (
                       <TerminalIcon className="size-3.5 text-[var(--color-text-accent)]" />
@@ -832,9 +786,7 @@ export function ChatHeader({
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2 [-webkit-app-region:no-drag]">
-        {!hideHandoffControls && !environment ? (
-          <ProviderUsageMenuControl provider={activeProvider} />
-        ) : null}
+        {!hideHandoffControls && !environment ? <ProviderUsageMenuControl provider={activeProvider} /> : null}
         {!hideHandoffControls ? (
           <Menu modal={false}>
             <Tooltip>
@@ -844,7 +796,7 @@ export function ChatHeader({
                     render={
                       <ChatHeaderButton
                         type="button"
-                        tone="outline"
+                        tone="plain"
                         className={compact ? "gap-1" : "gap-1.5"}
                         aria-label={handoffActionLabel}
                         disabled={handoffDisabled || handoffActionTargetProviders.length === 0}
@@ -931,11 +883,7 @@ export function ChatHeader({
             {/* Open in editor: dedicated split-button with an editor switcher; the project
                 action control now lives beside Hand off as its own project command surface. */}
             {activeProjectName ? (
-              <OpenInPicker
-                keybindings={keybindings}
-                availableEditors={availableEditors}
-                openInTarget={openInTarget}
-              />
+              <OpenInPicker keybindings={keybindings} availableEditors={availableEditors} openInTarget={openInTarget} />
             ) : null}
 
             {activeProjectName && showGitActions ? (

@@ -8,16 +8,11 @@ import type { ResolvedKeybindingsConfig } from "@synara/contracts";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { Input } from "~/components/ui/input";
+import { SearchInput } from "~/components/ui/search-input";
 import { ShortcutKbd } from "~/components/ui/shortcut-kbd";
-import { CentralIcon } from "~/lib/central-icons";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
-import {
-  buildShortcutSheetSections,
-  filterShortcutSheetSections,
-  type ShortcutSheetContext,
-} from "~/shortcutsSheet";
+import { buildShortcutSheetSections, filterShortcutSheetSections, type ShortcutSheetContext } from "~/shortcutsSheet";
 import {
   SETTINGS_CARD_ROW_CLASS_NAME,
   SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME,
@@ -56,11 +51,8 @@ export function KeyboardShortcutsSettingsPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="relative w-full">
-        <Input
-          type="search"
-          size="sm"
-          variant="soft"
+      <div className="w-full">
+        <SearchInput
           nativeInput
           placeholder="Search shortcuts..."
           value={query}
@@ -73,11 +65,6 @@ export function KeyboardShortcutsSettingsPanel() {
               setQuery("");
             }
           }}
-          className="[&>[data-slot=input]]:pr-9"
-        />
-        <CentralIcon
-          name="cmd-box"
-          className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/70"
         />
       </div>
 
@@ -99,12 +86,8 @@ export function KeyboardShortcutsSettingsPanel() {
                 )}
               >
                 <div className="min-w-0 space-y-0.5">
-                  <div className={cn(SETTINGS_CARD_ROW_TITLE_CLASS_NAME, "truncate")}>
-                    {entry.label}
-                  </div>
-                  <div className={cn(SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME, "truncate")}>
-                    {entry.description}
-                  </div>
+                  <div className={cn(SETTINGS_CARD_ROW_TITLE_CLASS_NAME, "truncate")}>{entry.label}</div>
+                  <div className={cn(SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME, "truncate")}>{entry.description}</div>
                 </div>
                 <ShortcutKbd shortcutLabel={entry.shortcutLabel} groupClassName="shrink-0" />
               </div>

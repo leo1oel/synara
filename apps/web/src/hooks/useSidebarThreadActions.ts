@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { AppSettings } from "../appSettings";
 import { useComposerDraftStore } from "../composerDraftStore";
-import { showConfirmDialogFallback } from "../confirmDialogFallback";
+import { showConfirmDialog } from "../confirmDialogFallback";
 import {
   getFallbackThreadIdAfterDelete,
   derivePinnedThreadIdsForSidebar,
@@ -71,10 +71,7 @@ interface DeleteProjectThreadsOptions {
 
 export function useSidebarThreadActions(input: {
   readonly activeSplitView: SplitView | null | undefined;
-  readonly appSettings: Pick<
-    AppSettings,
-    "confirmThreadArchive" | "confirmThreadDelete" | "sidebarThreadSortOrder"
-  >;
+  readonly appSettings: Pick<AppSettings, "confirmThreadArchive" | "confirmThreadDelete" | "sidebarThreadSortOrder">;
   readonly clearTerminalState: (threadId: ThreadId) => void;
   readonly handleNewChat: (options?: { fresh?: boolean }) => Promise<unknown>;
   readonly projectById: ReadonlyMap<ProjectId, Project>;
@@ -102,9 +99,7 @@ export function useSidebarThreadActions(input: {
   const queryClient = useQueryClient();
   const removeWorktreeMutation = useMutation(gitRemoveWorktreeMutationOptions({ queryClient }));
   const clearComposerDraftForThread = useComposerDraftStore((store) => store.clearDraftThread);
-  const clearProjectDraftThreadById = useComposerDraftStore(
-    (store) => store.clearProjectDraftThreadById,
-  );
+  const clearProjectDraftThreadById = useComposerDraftStore((store) => store.clearProjectDraftThreadById);
   const persistedPinnedThreadIds = usePinnedThreadsStore((store) => store.pinnedThreadIds);
   const pinThreadLocally = usePinnedThreadsStore((store) => store.pinThread);
   const unpinThread = usePinnedThreadsStore((store) => store.unpinThread);
@@ -170,8 +165,7 @@ export function useSidebarThreadActions(input: {
     async (threadId: ThreadId, isPinned: boolean) => {
       const api = readNativeApi();
       if (!api) return;
-      const requestVersion =
-        (latestPinnedMutationVersionByThreadIdRef.current.get(threadId) ?? 0) + 1;
+      const requestVersion = (latestPinnedMutationVersionByThreadIdRef.current.get(threadId) ?? 0) + 1;
       latestPinnedMutationVersionByThreadIdRef.current.set(threadId, requestVersion);
 
       setOptimisticThreadPinned(threadId, isPinned);
@@ -203,13 +197,7 @@ export function useSidebarThreadActions(input: {
         throw error;
       }
     },
-    [
-      clearOptimisticThreadPinned,
-      dispatchThreadPinnedState,
-      pinThreadLocally,
-      setOptimisticThreadPinned,
-      unpinThread,
-    ],
+    [clearOptimisticThreadPinned, dispatchThreadPinnedState, pinThreadLocally, setOptimisticThreadPinned, unpinThread],
   );
   const toggleThreadPinned = useCallback(
     (threadId: ThreadId) => {
@@ -286,12 +274,8 @@ export function useSidebarThreadActions(input: {
       await deleteActiveThreadFromClient({
         threadId,
         ...(opts.deletedThreadIds !== undefined ? { deletedThreadIds: opts.deletedThreadIds } : {}),
-        ...(opts.reconcileDeletedThread !== undefined
-          ? { reconcileDeletedThread: opts.reconcileDeletedThread }
-          : {}),
-        ...(opts.worktreeCleanupMode !== undefined
-          ? { worktreeCleanupMode: opts.worktreeCleanupMode }
-          : {}),
+        ...(opts.reconcileDeletedThread !== undefined ? { reconcileDeletedThread: opts.reconcileDeletedThread } : {}),
+        ...(opts.worktreeCleanupMode !== undefined ? { worktreeCleanupMode: opts.worktreeCleanupMode } : {}),
         prepareForDelete: () => ({
           shouldNavigateToFallback: routeThreadId === threadId,
           fallbackThreadId: getFallbackThreadIdAfterDelete({
@@ -300,9 +284,7 @@ export function useSidebarThreadActions(input: {
             deletedThreadIds: opts.deletedThreadIds ?? new Set<ThreadId>(),
             sortOrder: appSettings.sidebarThreadSortOrder,
           }),
-          deletedPaneInActiveSplit: activeSplitView
-            ? resolveSplitViewPaneIdForThread(activeSplitView, threadId)
-            : null,
+          deletedPaneInActiveSplit: activeSplitView ? resolveSplitViewPaneIdForThread(activeSplitView, threadId) : null,
         }),
         onDeleted: ({ thread, prepared }) => {
           unpinThread(threadId);
@@ -313,8 +295,7 @@ export function useSidebarThreadActions(input: {
           clearTemporaryThread(threadId);
 
           if (routeSplitViewId && prepared?.deletedPaneInActiveSplit) {
-            const nextActiveSplitView =
-              useSplitViewStore.getState().splitViewsById[routeSplitViewId] ?? null;
+            const nextActiveSplitView = useSplitViewStore.getState().splitViewsById[routeSplitViewId] ?? null;
             const nextFocusedThreadId = nextActiveSplitView
               ? resolveSplitViewFocusedThreadId(nextActiveSplitView)
               : null;
@@ -379,7 +360,7 @@ export function useSidebarThreadActions(input: {
         ].join("\n");
         const confirmed = api
           ? await api.dialogs.confirm(confirmationMessage)
-          : await showConfirmDialogFallback(confirmationMessage);
+          : await showConfirmDialog(confirmationMessage);
         if (!confirmed) return;
       }
       await deleteThread(threadId);
@@ -426,10 +407,7 @@ export function useSidebarThreadActions(input: {
   );
 
   const restoreArchivedThreadFromToast = useCallback(
-    async (restoreInput: {
-      threadId: ThreadId;
-      returnToThreadOnUndo: boolean;
-    }): Promise<boolean> => {
+    async (restoreInput: { threadId: ThreadId; returnToThreadOnUndo: boolean }): Promise<boolean> => {
       const pendingThreadIds = archiveUndoPendingThreadIdsRef.current;
       if (pendingThreadIds.has(restoreInput.threadId)) return false;
       pendingThreadIds.add(restoreInput.threadId);
@@ -522,7 +500,7 @@ export function useSidebarThreadActions(input: {
         ].join("\n");
         const confirmed = api
           ? await api.dialogs.confirm(confirmationMessage)
-          : await showConfirmDialogFallback(confirmationMessage);
+          : await showConfirmDialog(confirmationMessage);
         if (!confirmed) return;
       }
       await archiveThreadWithUndo(threadId);
@@ -552,7 +530,7 @@ export function useSidebarThreadActions(input: {
       ];
       const confirmed = api
         ? await api.dialogs.confirm(archiveLines.join("\n"))
-        : await showConfirmDialogFallback(archiveLines.join("\n"));
+        : await showConfirmDialog(archiveLines.join("\n"));
       if (!confirmed) return;
 
       let archivedCount = 0;

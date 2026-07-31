@@ -5,7 +5,7 @@ import { CheckIcon, ChevronsUpDownIcon, XIcon } from "~/lib/icons";
 import * as React from "react";
 
 import { cn } from "~/lib/utils";
-import { Input } from "~/components/ui/input";
+import { Input, type InputProps } from "~/components/ui/input";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME } from "../chat/composerPickerStyles";
 
@@ -61,6 +61,7 @@ function ComboboxInput({
   showClear: showClearProp,
   startAddon,
   size,
+  variant,
   ...props
 }: Omit<ComboboxPrimitive.Input.Props, "size"> & {
   inputClassName?: string;
@@ -68,6 +69,7 @@ function ComboboxInput({
   showClear?: boolean;
   startAddon?: React.ReactNode;
   size?: "sm" | "default" | "lg" | number;
+  variant?: InputProps["variant"];
   ref?: React.Ref<HTMLInputElement>;
 }) {
   const showTrigger = showTriggerProp ?? true;
@@ -100,6 +102,7 @@ function ComboboxInput({
             className={cn("has-disabled:opacity-100", inputClassName)}
             nativeInput
             size={sizeValue}
+            {...(variant ? { variant } : {})}
           />
         }
         {...props}
@@ -209,12 +212,8 @@ function ComboboxItem({
       data-slot="combobox-item"
       {...props}
     >
-      <div className={hideIndicator ? "col-start-1 col-span-full" : "col-start-1 min-w-0"}>
-        {children}
-      </div>
-      <ComboboxPrimitive.ItemIndicator
-        className={cn("col-start-2 justify-self-end", hideIndicator && "hidden")}
-      >
+      <div className={hideIndicator ? "col-start-1 col-span-full" : "col-start-1 min-w-0"}>{children}</div>
+      <ComboboxPrimitive.ItemIndicator className={cn("col-start-2 justify-self-end", hideIndicator && "hidden")}>
         <CheckIcon className="size-3" />
       </ComboboxPrimitive.ItemIndicator>
     </ComboboxPrimitive.Item>
@@ -254,10 +253,7 @@ function ComboboxGroupLabel({ className, ...props }: ComboboxPrimitive.GroupLabe
 function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
   return (
     <ComboboxPrimitive.Empty
-      className={cn(
-        "not-empty:p-2 text-center text-base text-muted-foreground sm:text-sm",
-        className,
-      )}
+      className={cn("not-empty:p-2 text-center text-base text-muted-foreground sm:text-sm", className)}
       data-slot="combobox-empty"
       {...props}
     />
@@ -291,10 +287,7 @@ function ComboboxClear({ className, ...props }: ComboboxPrimitive.Clear.Props) {
 function ComboboxStatus({ className, ...props }: ComboboxPrimitive.Status.Props) {
   return (
     <ComboboxPrimitive.Status
-      className={cn(
-        "px-3 py-2 font-medium text-muted-foreground text-xs empty:m-0 empty:p-0",
-        className,
-      )}
+      className={cn("px-3 py-2 font-medium text-muted-foreground text-xs empty:m-0 empty:p-0", className)}
       data-slot="combobox-status"
       {...props}
     />

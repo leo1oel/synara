@@ -48,9 +48,10 @@ describe("Lattice host context prompt block", () => {
   it("replaces stale context instead of accumulating copies", () => {
     const first = appendLatticeHostContextToPrompt("Explain this", context);
     const second = appendLatticeHostContextToPrompt(first, {
-      ...context,
+      type: context.type,
+      version: context.version,
+      workspaceRoot: context.workspaceRoot,
       activeSurface: "pdf",
-      paper: undefined,
       pdf: { page: 4, pageCount: 10 },
     });
     expect(second.match(/<lattice_active_context/g)).toHaveLength(1);
@@ -61,13 +62,15 @@ describe("Lattice host context prompt block", () => {
     const prompt = appendLatticeHostContextToPrompt("Explain this", context);
 
     expect(promptContainsLiveLatticeHostSelection(prompt, context)).toBe(true);
-    expect(promptContainsLiveLatticeHostSelection(prompt, {
-      ...context,
-      paper: {
-        ...context.paper,
-        selection: "A newer selection.",
-      },
-    })).toBe(false);
+    expect(
+      promptContainsLiveLatticeHostSelection(prompt, {
+        ...context,
+        paper: {
+          ...context.paper,
+          selection: "A newer selection.",
+        },
+      }),
+    ).toBe(false);
     expect(promptContainsLiveLatticeHostSelection("Explain this", context)).toBe(false);
   });
 });

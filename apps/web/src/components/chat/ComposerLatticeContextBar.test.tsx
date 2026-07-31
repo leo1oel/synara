@@ -23,11 +23,7 @@ describe("ComposerLatticeContextBar", () => {
       },
       pdf: { page: 4, pageCount: 12 },
     });
-    const markup = renderToStaticMarkup(
-      <ComposerLatticeContextBar
-        onClearSelection={() => {}}
-      />,
-    );
+    const markup = renderToStaticMarkup(<ComposerLatticeContextBar onClearSelection={() => {}} />);
 
     expect(markup).toContain("Context");
     expect(markup).toContain("introduction.tex · Line 42");
@@ -35,6 +31,8 @@ describe("ComposerLatticeContextBar", () => {
     expect(markup).toContain("Selected claim");
     expect(markup).toContain("Exclude selected text from context");
     expect(markup).toContain('data-testid="composer-lattice-context"');
+    expect(markup.match(/data-slot="scroll-area"/g)).toHaveLength(1);
+    expect(markup.match(/data-slot="scroll-area-viewport"/g)).toHaveLength(1);
     setLiveLatticeHostContext(null);
   });
 
@@ -47,9 +45,7 @@ describe("ComposerLatticeContextBar", () => {
       editor: { path: "main.tex", line: 12, column: 4 },
       pdf: { page: 2, pageCount: 8 },
     });
-    const markup = renderToStaticMarkup(
-      <ComposerLatticeContextBar />,
-    );
+    const markup = renderToStaticMarkup(<ComposerLatticeContextBar />);
 
     expect(markup).toBe("");
     setLiveLatticeHostContext(null);

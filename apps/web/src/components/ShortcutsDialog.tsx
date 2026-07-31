@@ -5,15 +5,8 @@
 
 import type { ResolvedKeybindingsConfig } from "@synara/contracts";
 import { useEffect, useRef, useState } from "react";
-import {
-  Dialog,
-  DialogDescription,
-  DialogHeader,
-  DialogPanel,
-  DialogPopup,
-  DialogTitle,
-} from "~/components/ui/dialog";
-import { Input } from "~/components/ui/input";
+import { Dialog, DialogDescription, DialogHeader, DialogPanel, DialogPopup, DialogTitle } from "~/components/ui/dialog";
+import { SearchInput } from "~/components/ui/search-input";
 import { cn } from "~/lib/utils";
 import { ShortcutKbd } from "./ui/shortcut-kbd";
 import {
@@ -82,14 +75,10 @@ function ShortcutsDialogContent(props: {
     <>
       <DialogHeader className="pb-2">
         <DialogTitle className="text-base">Keyboard shortcuts</DialogTitle>
-        <DialogDescription className="text-xs">
-          Reflects the bindings active in your current context.
-        </DialogDescription>
+        <DialogDescription className="text-xs">Reflects the bindings active in your current context.</DialogDescription>
         <div className="pt-2">
-          <Input
+          <SearchInput
             ref={inputRef}
-            type="search"
-            size="sm"
             placeholder="Search shortcuts..."
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -100,7 +89,6 @@ function ShortcutsDialogContent(props: {
                 setQuery("");
               }
             }}
-            className="rounded-md"
             nativeInput
             aria-label="Search shortcuts"
           />
@@ -124,24 +112,13 @@ function ShortcutsDialogContent(props: {
   );
 }
 
-function ShortcutSection({
-  section,
-  isFirst,
-}: {
-  section: ShortcutSheetSection;
-  isFirst: boolean;
-}) {
+function ShortcutSection({ section, isFirst }: { section: ShortcutSheetSection; isFirst: boolean }) {
   if (section.entries.length === 0) return null;
   const muted = section.tone === "muted";
   return (
     <section className={cn(!isFirst && "border-t border-border/50")}>
       <header className="flex items-baseline justify-between gap-3 px-6 pt-4 pb-2">
-        <h3
-          className={cn(
-            "text-[11px] font-semibold",
-            muted ? "text-muted-foreground/70" : "text-muted-foreground",
-          )}
-        >
+        <h3 className={cn("text-[11px] font-semibold", muted ? "text-muted-foreground/70" : "text-muted-foreground")}>
           {section.title}
         </h3>
         <p className="truncate text-[11px] text-muted-foreground/70">{section.description}</p>

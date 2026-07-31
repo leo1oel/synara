@@ -3,7 +3,63 @@
 // Layer: UI fallback helper
 // Depends on: global document/body and shared Tailwind theme tokens already loaded by the app.
 
+import {
+  LATTICE_CONFIRMATION_ACK,
+  LATTICE_CONFIRMATION_RESPONSE,
+  postConfirmationRequestToLattice,
+  readEmbedMode,
+  readLatticeConfirmationMessage,
+} from "./embedMode";
 import { ELEVATED_HOVER_SURFACE_CLASS_NAME } from "./surfaceStyles";
+
+const EMBEDDED_CONFIRMATION_ACK_TIMEOUT_MS = 1_000;
+let embeddedConfirmationSequence = 0;
+
+function nextEmbeddedConfirmationId(): string {
+  embeddedConfirmationSequence += 1;
+  return `confirmation-${Date.now()}-${embeddedConfirmationSequence}`;
+}
+
+function requestConfirmationFromLattice(message: string): Promise<boolean | null> {
+  const config = readEmbedMode();
+  if (!config?.hostOrigin) return Promise.resolve(null);
+
+  return new Promise<boolean | null>((resolve) => {
+    const id = nextEmbeddedConfirmationId();
+    let settled = false;
+    let acknowledged = false;
+    const settle = (result: boolean | null) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(acknowledgementTimer);
+      window.removeEventListener("message", receiveHostResponse);
+      resolve(result);
+    };
+    const receiveHostResponse = (event: MessageEvent) => {
+      const response = readLatticeConfirmationMessage(event, config, id);
+      if (!response) return;
+      if (response.type === LATTICE_CONFIRMATION_ACK) {
+        acknowledged = true;
+        window.clearTimeout(acknowledgementTimer);
+        return;
+      }
+      if (response.type === LATTICE_CONFIRMATION_RESPONSE) {
+        settle(response.confirmed);
+      }
+    };
+    const acknowledgementTimer = window.setTimeout(() => {
+      if (!acknowledged) settle(null);
+    }, EMBEDDED_CONFIRMATION_ACK_TIMEOUT_MS);
+
+    window.addEventListener("message", receiveHostResponse);
+    postConfirmationRequestToLattice(config, { id, message });
+  });
+}
+
+export async function showConfirmDialog(message: string): Promise<boolean> {
+  const hostResult = await requestConfirmationFromLattice(message);
+  return hostResult ?? showConfirmDialogFallback(message);
+}
 
 export function showConfirmDialogFallback(message: string): Promise<boolean> {
   return new Promise<boolean>((resolve) => {

@@ -3,12 +3,7 @@
 // Layer: Web orchestration helper
 // Exports: createOrRecoverProjectFromPath
 
-import {
-  type NativeApi,
-  type OrchestrationShellSnapshot,
-  type ProjectId,
-  type SpaceId,
-} from "@synara/contracts";
+import { type NativeApi, type OrchestrationShellSnapshot, type ProjectId, type SpaceId } from "@synara/contracts";
 import { getDefaultModel } from "@synara/shared/model";
 
 import { readActiveSpaceId } from "../spacesUiStore";
@@ -37,6 +32,7 @@ export async function createOrRecoverProjectFromPath(input: {
   api: NativeApi;
   workspaceRoot: string;
   createIfMissing?: boolean;
+  reuseExistingWorkspaceRoot?: boolean;
   /** Overrides the active-space default; `null` files the project in Void. */
   spaceId?: SpaceId | null;
   loadSnapshot: () => Promise<OrchestrationShellSnapshot | null>;
@@ -68,6 +64,7 @@ export async function createOrRecoverProjectFromPath(input: {
       title,
       workspaceRoot,
       createWorkspaceRootIfMissing: input.createIfMissing === true,
+      reuseExistingWorkspaceRoot: input.reuseExistingWorkspaceRoot === true,
       defaultModelSelection: {
         provider: "codex",
         model: getDefaultModel("codex"),
@@ -92,8 +89,7 @@ export async function createOrRecoverProjectFromPath(input: {
       created: true,
     };
   } catch (error) {
-    const description =
-      error instanceof Error ? error.message : "An error occurred while adding the project.";
+    const description = error instanceof Error ? error.message : "An error occurred while adding the project.";
     if (!isDuplicateProjectCreateError(description)) {
       throw error instanceof Error ? error : new Error(description);
     }

@@ -27,7 +27,7 @@ export async function renderNodeToPngBlob(
     return await toBlob(node, {
       pixelRatio: 2,
       cacheBust: true,
-      backgroundColor: "#ffffff",
+      backgroundColor: "#F9F9FA",
       ...(size ? { width: size.width, height: size.height } : {}),
     });
   } catch {

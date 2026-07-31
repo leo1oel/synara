@@ -14,6 +14,7 @@ import { XIcon } from "~/lib/icons";
 import { IconButton } from "../ui/icon-button";
 import {
   CHAT_SURFACE_HEADER_ROW_CLASS_NAME,
+  CHAT_SURFACE_HEADER_TITLE_CLASS_NAME,
   DOCK_HEADER_ICON_BUTTON_CLASS,
 } from "./chatHeaderControls";
 
@@ -25,9 +26,7 @@ export function DockPaneHeader(props: {
 }) {
   return (
     <header className={cn(CHAT_SURFACE_HEADER_ROW_CLASS_NAME, "gap-1 px-4")}>
-      <span className="text-[13px] font-medium tracking-[-0.01em] text-foreground">
-        {props.title}
-      </span>
+      <span className={CHAT_SURFACE_HEADER_TITLE_CLASS_NAME}>{props.title}</span>
       <div className="ml-auto flex items-center gap-0.5">
         {props.actions}
         {props.onClose ? (

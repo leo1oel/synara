@@ -6,12 +6,16 @@ import type * as React from "react";
 import { cn } from "~/lib/utils";
 import { Input, type InputProps } from "~/components/ui/input";
 import { Textarea, type TextareaProps } from "~/components/ui/textarea";
+import { FIELD_CONTROL_CLASS_NAME, FIELD_CONTROL_HEIGHT_CLASS_NAME } from "./field-styles";
 
 function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "relative inline-flex w-full min-w-0 items-center rounded-lg border border-input bg-background text-[length:var(--app-font-size-ui,12px)] text-foreground has-[input:focus-visible,textarea:focus-visible]:has-[input[aria-invalid],textarea[aria-invalid]]:border-destructive/64 has-[textarea]:h-auto has-data-[align=block-end]:h-auto has-data-[align=block-start]:h-auto has-data-[align=block-end]:flex-col has-data-[align=block-start]:flex-col has-[input:focus-visible,textarea:focus-visible]:border-foreground/30 has-[input[aria-invalid],textarea[aria-invalid]]:border-destructive/36 has-autofill:bg-foreground/4 has-[input:disabled,textarea:disabled]:opacity-64 sm:text-[length:var(--app-font-size-ui,12px)] dark:bg-input/32 dark:has-autofill:bg-foreground/8 has-data-[align=inline-start]:**:[[data-size=sm]_input]:ps-1.5 has-data-[align=inline-end]:**:[[data-size=sm]_input]:pe-1.5 *:[[data-slot=input-control],[data-slot=textarea-control]]:contents has-[[data-align=block-start],[data-align=block-end]]:**:[input]:h-auto has-data-[align=inline-start]:**:[input]:ps-2 has-data-[align=inline-end]:**:[input]:pe-2 has-data-[align=block-end]:**:[input]:pt-1.5 has-data-[align=block-start]:**:[input]:pb-1.5 **:[textarea]:min-h-20.5 **:[textarea]:resize-none **:[textarea]:py-[calc(--spacing(3)-1px)] **:[textarea]:max-sm:min-h-23.5 **:[textarea_button]:rounded-[calc(var(--radius-md)-1px)]",
+        "relative inline-flex w-full min-w-0 items-center rounded-lg text-[length:var(--app-font-size-ui,12px)] text-foreground has-[input:focus-visible,textarea:focus-visible]:has-[input[aria-invalid],textarea[aria-invalid]]:border-destructive/64 has-[textarea]:h-auto has-data-[align=block-end]:h-auto has-data-[align=block-start]:h-auto has-data-[align=block-end]:flex-col has-data-[align=block-start]:flex-col has-[input[aria-invalid],textarea[aria-invalid]]:border-destructive/36 has-autofill:bg-foreground/4 has-[input:disabled,textarea:disabled]:opacity-64 sm:text-[length:var(--app-font-size-ui,12px)] dark:has-autofill:bg-foreground/8 has-data-[align=inline-start]:**:[[data-size=sm]_input]:ps-1.5 has-data-[align=inline-end]:**:[[data-size=sm]_input]:pe-1.5 *:[[data-slot=input-control],[data-slot=textarea-control]]:contents has-[[data-align=block-start],[data-align=block-end]]:**:[input]:h-auto has-data-[align=inline-start]:**:[input]:ps-2 has-data-[align=inline-end]:**:[input]:pe-2 has-data-[align=block-end]:**:[input]:pt-1.5 has-data-[align=block-start]:**:[input]:pb-1.5 **:[textarea]:min-h-20.5 **:[textarea]:resize-none **:[textarea]:py-[calc(--spacing(3)-1px)] **:[textarea]:max-sm:min-h-23.5 **:[textarea_button]:rounded-[calc(var(--radius-md)-1px)]",
+        FIELD_CONTROL_CLASS_NAME,
+        FIELD_CONTROL_HEIGHT_CLASS_NAME,
+        "has-[textarea]:min-h-0",
         className,
       )}
       data-slot="input-group"
@@ -61,9 +65,7 @@ function InputGroupAddon({
         if (isInteractive) return;
         e.preventDefault();
         const parent = e.currentTarget.parentElement;
-        const input = parent?.querySelector<HTMLInputElement | HTMLTextAreaElement>(
-          "input, textarea",
-        );
+        const input = parent?.querySelector<HTMLInputElement | HTMLTextAreaElement>("input, textarea");
         if (input && !parent?.querySelector("input:focus, textarea:focus")) {
           input.focus();
         }

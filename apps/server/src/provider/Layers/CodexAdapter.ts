@@ -30,17 +30,7 @@ import {
   ThreadId,
   TurnId,
 } from "@synara/contracts";
-import {
-  Cause,
-  Effect,
-  FileSystem,
-  Layer,
-  Option,
-  Queue,
-  Schema,
-  ServiceMap,
-  Stream,
-} from "effect";
+import { Cause, Effect, FileSystem, Layer, Option, Queue, Schema, ServiceMap, Stream } from "effect";
 
 import {
   ProviderAdapterProcessError,
@@ -58,10 +48,7 @@ import {
   type CodexAppServerSendTurnInput,
   type CodexAppServerStartSessionInput,
 } from "../../codexAppServerManager.ts";
-import {
-  evaluateAcpTurnIdleTick,
-  resolveAcpTurnIdleTimeoutMs,
-} from "../acp/AcpTurnIdleWatchdog.ts";
+import { evaluateAcpTurnIdleTick, resolveAcpTurnIdleTimeoutMs } from "../acp/AcpTurnIdleWatchdog.ts";
 import { AgentGatewayCredentials } from "../../agentGateway/Services/AgentGatewayCredentials.ts";
 import { acquireAgentGatewaySessionLease } from "../../agentGateway/sessionLease.ts";
 import { loadProviderPromptImageBlocks } from "../promptAttachments.ts";
@@ -77,7 +64,7 @@ import { ServerConfig } from "../../config.ts";
 import { makeRuntimeTaskListItem } from "../runtimeTaskList.ts";
 import { extractProposedPlanMarkdown } from "../planMode.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
-import { synaraSkillsDir } from "../skillsCatalog.ts";
+import { bundledSkillsDir, synaraSkillsDir } from "../skillsCatalog.ts";
 import { makeBoundedCallbackIngress } from "../boundedCallbackIngress.ts";
 import { assignDerivedProviderRuntimeEventIds } from "../providerRuntimeEventIdentity.ts";
 import {
@@ -140,10 +127,7 @@ function codexRuntimeIngressItemBytes(item: CodexRuntimeIngressItem): number {
   } catch {
     nativeBytes = PROVIDER_RUNTIME_INGRESS_EVENT_MAX_BYTES;
   }
-  return (
-    nativeBytes +
-    item.runtimeEvents.reduce((total, event) => total + providerRuntimeEventBytes(event), 0)
-  );
+  return nativeBytes + item.runtimeEvents.reduce((total, event) => total + providerRuntimeEventBytes(event), 0);
 }
 
 export interface CodexAdapterLiveOptions {
@@ -186,8 +170,7 @@ function composeCodexInputWithFileAttachments(input: {
 
 function codexModelSelectionOverrides(
   modelSelection: ModelSelection | undefined,
-): Pick<CodexAppServerSendTurnInput, "model" | "effort"> &
-  Pick<CodexAppServerStartSessionInput, "serviceTier"> {
+): Pick<CodexAppServerSendTurnInput, "model" | "effort"> & Pick<CodexAppServerStartSessionInput, "serviceTier"> {
   if (modelSelection?.provider !== PROVIDER) {
     return {};
   }
@@ -263,9 +246,7 @@ function providerErrorMapsToWarning(event: ProviderEvent): boolean {
   return (
     event.kind === "error" &&
     (event.method === "process/stderr" ||
-      (event.method === "error" &&
-        typeof event.message === "string" &&
-        isNonFatalCodexErrorMessage(event.message)))
+      (event.method === "error" && typeof event.message === "string" && isNonFatalCodexErrorMessage(event.message)))
   );
 }
 
@@ -274,27 +255,22 @@ function normalizeCodexTokenUsage(value: unknown): ThreadTokenUsageSnapshot | un
   const totalUsage = asObject(usage?.total_token_usage ?? usage?.total);
   const lastUsage = asObject(usage?.last_token_usage ?? usage?.last);
 
-  const totalProcessedTokens =
-    asNumber(totalUsage?.total_tokens) ?? asNumber(totalUsage?.totalTokens);
-  const usedTokens =
-    asNumber(lastUsage?.total_tokens) ?? asNumber(lastUsage?.totalTokens) ?? totalProcessedTokens;
+  const totalProcessedTokens = asNumber(totalUsage?.total_tokens) ?? asNumber(totalUsage?.totalTokens);
+  const usedTokens = asNumber(lastUsage?.total_tokens) ?? asNumber(lastUsage?.totalTokens) ?? totalProcessedTokens;
   if (usedTokens === undefined || usedTokens <= 0) {
     return undefined;
   }
 
   const maxTokens = asNumber(usage?.model_context_window) ?? asNumber(usage?.modelContextWindow);
   const inputTokens = asNumber(lastUsage?.input_tokens) ?? asNumber(lastUsage?.inputTokens);
-  const cachedInputTokens =
-    asNumber(lastUsage?.cached_input_tokens) ?? asNumber(lastUsage?.cachedInputTokens);
+  const cachedInputTokens = asNumber(lastUsage?.cached_input_tokens) ?? asNumber(lastUsage?.cachedInputTokens);
   const outputTokens = asNumber(lastUsage?.output_tokens) ?? asNumber(lastUsage?.outputTokens);
   const reasoningOutputTokens =
     asNumber(lastUsage?.reasoning_output_tokens) ?? asNumber(lastUsage?.reasoningOutputTokens);
 
   return {
     usedTokens,
-    ...(totalProcessedTokens !== undefined && totalProcessedTokens > usedTokens
-      ? { totalProcessedTokens }
-      : {}),
+    ...(totalProcessedTokens !== undefined && totalProcessedTokens > usedTokens ? { totalProcessedTokens } : {}),
     ...(maxTokens !== undefined ? { maxTokens } : {}),
     ...(inputTokens !== undefined ? { inputTokens } : {}),
     ...(cachedInputTokens !== undefined ? { cachedInputTokens } : {}),
@@ -304,9 +280,7 @@ function normalizeCodexTokenUsage(value: unknown): ThreadTokenUsageSnapshot | un
     ...(inputTokens !== undefined ? { lastInputTokens: inputTokens } : {}),
     ...(cachedInputTokens !== undefined ? { lastCachedInputTokens: cachedInputTokens } : {}),
     ...(outputTokens !== undefined ? { lastOutputTokens: outputTokens } : {}),
-    ...(reasoningOutputTokens !== undefined
-      ? { lastReasoningOutputTokens: reasoningOutputTokens }
-      : {}),
+    ...(reasoningOutputTokens !== undefined ? { lastReasoningOutputTokens: reasoningOutputTokens } : {}),
     compactsAutomatically: true,
   };
 }
@@ -350,8 +324,7 @@ function toCanonicalItemType(raw: unknown): CanonicalItemType {
   if (type.includes("reasoning") || type.includes("thought")) return "reasoning";
   if (type.includes("plan") || type.includes("todo")) return "plan";
   if (type.includes("command")) return "command_execution";
-  if (type.includes("file change") || type.includes("patch") || type.includes("edit"))
-    return "file_change";
+  if (type.includes("file change") || type.includes("patch") || type.includes("edit")) return "file_change";
   if (type.includes("mcp")) return "mcp_tool_call";
   if (type.includes("dynamic tool")) return "dynamic_tool_call";
   if (type.includes("collab")) return "collab_agent_tool_call";
@@ -413,10 +386,7 @@ function reasoningSummaryDetail(item: Record<string, unknown>): string | undefin
   return asString(item.summary)?.trim() || joinedTextParts(item.summary);
 }
 
-function itemDetail(
-  item: Record<string, unknown>,
-  payload: Record<string, unknown>,
-): string | undefined {
+function itemDetail(item: Record<string, unknown>, payload: Record<string, unknown>): string | undefined {
   const nestedResult = asObject(item.result);
   const candidates = [
     asString(item.command),
@@ -498,9 +468,7 @@ function toRequestTypeFromKind(kind: unknown): CanonicalRequestType {
   }
 }
 
-function toRequestTypeFromResolvedPayload(
-  payload: Record<string, unknown> | undefined,
-): CanonicalRequestType {
+function toRequestTypeFromResolvedPayload(payload: Record<string, unknown> | undefined): CanonicalRequestType {
   const request = asObject(payload?.request);
   const method = asString(request?.method) ?? asString(payload?.method);
   if (method) {
@@ -513,9 +481,7 @@ function toRequestTypeFromResolvedPayload(
   return "unknown";
 }
 
-function toCanonicalUserInputAnswers(
-  answers: ProviderUserInputAnswers | undefined,
-): ProviderUserInputAnswers {
+function toCanonicalUserInputAnswers(answers: ProviderUserInputAnswers | undefined): ProviderUserInputAnswers {
   if (!answers) {
     return {};
   }
@@ -535,9 +501,7 @@ function toCanonicalUserInputAnswers(
 
     const nestedAnswers = asArray(asObject(value)?.answers);
     if (nestedAnswers) {
-      const normalized = nestedAnswers.filter(
-        (entry): entry is string => typeof entry === "string",
-      );
+      const normalized = nestedAnswers.filter((entry): entry is string => typeof entry === "string");
       result[questionId] = normalized.length === 1 ? normalized[0]! : normalized;
       continue;
     }
@@ -545,9 +509,7 @@ function toCanonicalUserInputAnswers(
   return result;
 }
 
-function toThreadState(
-  value: unknown,
-): "active" | "idle" | "archived" | "closed" | "compacted" | "error" {
+function toThreadState(value: unknown): "active" | "idle" | "archived" | "closed" | "compacted" | "error" {
   switch (value) {
     case "idle":
       return "idle";
@@ -602,9 +564,7 @@ function asRuntimeTaskId(taskId: string): RuntimeTaskId {
   return RuntimeTaskId.makeUnsafe(taskId);
 }
 
-function codexEventMessage(
-  payload: Record<string, unknown> | undefined,
-): Record<string, unknown> | undefined {
+function codexEventMessage(payload: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
   return asObject(payload?.msg);
 }
 
@@ -711,10 +671,7 @@ function mapGeneratedImageEndEvent(
   event: ProviderEvent,
   canonicalThreadId: ThreadId,
 ): ProviderRuntimeEvent | undefined {
-  if (
-    event.method !== "codex/event/image_generation_end" &&
-    event.method !== "image_generation_end"
-  ) {
+  if (event.method !== "codex/event/image_generation_end" && event.method !== "image_generation_end") {
     return undefined;
   }
   const payload = asObject(event.payload);
@@ -729,10 +686,7 @@ function mapGeneratedImageEndEvent(
 
   const turnId =
     event.turnId ??
-    toTurnId(
-      firstStringValue(candidate, ["turn_id", "turnId"]) ??
-        firstStringValue(payload, ["turn_id", "turnId"]),
-    );
+    toTurnId(firstStringValue(candidate, ["turn_id", "turnId"]) ?? firstStringValue(payload, ["turn_id", "turnId"]));
   const itemId =
     event.itemId ??
     toProviderItemId(
@@ -773,9 +727,7 @@ function eventRawSource(event: ProviderEvent): NonNullable<ProviderRuntimeEvent[
   return event.kind === "request" ? "codex.app-server.request" : "codex.app-server.notification";
 }
 
-function providerRefsFromEvent(
-  event: ProviderEvent,
-): ProviderRuntimeEvent["providerRefs"] | undefined {
+function providerRefsFromEvent(event: ProviderEvent): ProviderRuntimeEvent["providerRefs"] | undefined {
   const refs: Record<string, string> = {};
   if (event.providerThreadId) refs.providerThreadId = event.providerThreadId;
   if (event.providerParentThreadId) refs.providerParentThreadId = event.providerParentThreadId;
@@ -797,9 +749,7 @@ function runtimeEventBase(
     provider: event.provider,
     threadId: canonicalThreadId,
     createdAt: event.createdAt,
-    ...(event.lifecycleGeneration !== undefined
-      ? { lifecycleGeneration: event.lifecycleGeneration }
-      : {}),
+    ...(event.lifecycleGeneration !== undefined ? { lifecycleGeneration: event.lifecycleGeneration } : {}),
     ...(event.turnId ? { turnId: event.turnId } : {}),
     ...(event.parentTurnId ? { parentTurnId: event.parentTurnId } : {}),
     ...(event.itemId ? { itemId: asRuntimeItemId(event.itemId) } : {}),
@@ -836,11 +786,7 @@ function mapItemLifecycle(
           threadId: codexGeneratedImageThreadId(event, payload) ?? canonicalThreadId,
         })
       : undefined;
-  if (
-    lifecycle === "item.completed" &&
-    itemType === "image_generation" &&
-    !generatedImageReference
-  ) {
+  if (lifecycle === "item.completed" && itemType === "image_generation" && !generatedImageReference) {
     return undefined;
   }
 
@@ -849,28 +795,19 @@ function mapItemLifecycle(
 
   // Only the provider-authored summary is user-visible reasoning. Raw content
   // may contain model trace data and must not leak into transcript activities.
-  const detail =
-    itemType === "reasoning" ? reasoningSummaryDetail(source) : itemDetail(source, payload ?? {});
+  const detail = itemType === "reasoning" ? reasoningSummaryDetail(source) : itemDetail(source, payload ?? {});
   const status = itemStatus(lifecycle, source.status);
 
   return {
     ...(generatedImageReference
-      ? withSanitizedGeneratedImageRaw(
-          runtimeEventBase(event, canonicalThreadId),
-          event,
-          canonicalThreadId,
-        )
+      ? withSanitizedGeneratedImageRaw(runtimeEventBase(event, canonicalThreadId), event, canonicalThreadId)
       : runtimeEventBase(event, canonicalThreadId)),
     type: lifecycle,
     payload: {
       itemType: canonicalItemType,
       ...(status ? { status } : {}),
       ...(itemTitle(canonicalItemType) ? { title: itemTitle(canonicalItemType) } : {}),
-      ...(generatedImageReference
-        ? { detail: generatedImageReference.path }
-        : detail
-          ? { detail }
-          : {}),
+      ...(generatedImageReference ? { detail: generatedImageReference.path } : detail ? { detail } : {}),
       ...(generatedImageReference
         ? { data: codexGeneratedImageArtifact(generatedImageReference) }
         : event.payload !== undefined
@@ -880,10 +817,7 @@ function mapItemLifecycle(
   };
 }
 
-function mapToRuntimeEvents(
-  event: ProviderEvent,
-  canonicalThreadId: ThreadId,
-): ReadonlyArray<ProviderRuntimeEvent> {
+function mapToRuntimeEvents(event: ProviderEvent, canonicalThreadId: ThreadId): ReadonlyArray<ProviderRuntimeEvent> {
   const payload = asObject(event.payload);
   const turn = asObject(payload?.turn);
   const generatedImageEndEvent = mapGeneratedImageEndEvent(event, canonicalThreadId);
@@ -928,8 +862,7 @@ function mapToRuntimeEvents(
       ];
     }
 
-    const detail =
-      asString(payload?.command) ?? asString(payload?.reason) ?? asString(payload?.prompt);
+    const detail = asString(payload?.command) ?? asString(payload?.reason) ?? asString(payload?.prompt);
     return [
       {
         ...runtimeEventBase(event, canonicalThreadId),
@@ -969,9 +902,7 @@ function mapToRuntimeEvents(
       return [];
     }
     const rationale =
-      asString(review?.rationale) ??
-      asString(review?.reason) ??
-      `Automatic approval review ${status} this action.`;
+      asString(review?.rationale) ?? asString(review?.reason) ?? `Automatic approval review ${status} this action.`;
     return [
       {
         ...runtimeEventBase(event, canonicalThreadId),
@@ -1154,9 +1085,7 @@ function mapToRuntimeEvents(
           ...(asString(turn?.stopReason) ? { stopReason: asString(turn?.stopReason) } : {}),
           ...(turn?.usage !== undefined ? { usage: turn.usage } : {}),
           ...(asObject(turn?.modelUsage) ? { modelUsage: asObject(turn?.modelUsage) } : {}),
-          ...(asNumber(turn?.totalCostUsd) !== undefined
-            ? { totalCostUsd: asNumber(turn?.totalCostUsd) }
-            : {}),
+          ...(asNumber(turn?.totalCostUsd) !== undefined ? { totalCostUsd: asNumber(turn?.totalCostUsd) } : {}),
           ...(errorMessage ? { errorMessage } : {}),
         },
       },
@@ -1182,18 +1111,13 @@ function mapToRuntimeEvents(
         ...runtimeEventBase(event, canonicalThreadId),
         type: "turn.tasks.updated",
         payload: {
-          ...(asString(payload?.explanation)
-            ? { explanation: asString(payload?.explanation) }
-            : {}),
+          ...(asString(payload?.explanation) ? { explanation: asString(payload?.explanation) } : {}),
           tasks: steps.flatMap((entry) => {
             const taskEntry = asObject(entry);
             if (!taskEntry) {
               return [];
             }
-            const item = makeRuntimeTaskListItem(
-              asString(taskEntry.step) ?? "task",
-              taskEntry.status,
-            );
+            const item = makeRuntimeTaskListItem(asString(taskEntry.step) ?? "task", taskEntry.status);
             return item ? [item] : [];
           }),
         },
@@ -1207,11 +1131,7 @@ function mapToRuntimeEvents(
         ...runtimeEventBase(event, canonicalThreadId),
         type: "turn.diff.updated",
         payload: {
-          unifiedDiff:
-            asString(payload?.unifiedDiff) ??
-            asString(payload?.diff) ??
-            asString(payload?.patch) ??
-            "",
+          unifiedDiff: asString(payload?.unifiedDiff) ?? asString(payload?.diff) ?? asString(payload?.patch) ?? "",
         },
       },
     ];
@@ -1299,12 +1219,8 @@ function mapToRuntimeEvents(
         payload: {
           streamKind: contentStreamKindFromMethod(event.method),
           delta,
-          ...(typeof payload?.contentIndex === "number"
-            ? { contentIndex: payload.contentIndex }
-            : {}),
-          ...(typeof payload?.summaryIndex === "number"
-            ? { summaryIndex: payload.summaryIndex }
-            : {}),
+          ...(typeof payload?.contentIndex === "number" ? { contentIndex: payload.contentIndex } : {}),
+          ...(typeof payload?.summaryIndex === "number" ? { summaryIndex: payload.summaryIndex } : {}),
         },
       },
     ];
@@ -1372,9 +1288,7 @@ function mapToRuntimeEvents(
         type: "task.started",
         payload: {
           taskId: asRuntimeTaskId(taskId),
-          ...(asString(msg?.collaboration_mode_kind)
-            ? { taskType: asString(msg?.collaboration_mode_kind) }
-            : {}),
+          ...(asString(msg?.collaboration_mode_kind) ? { taskType: asString(msg?.collaboration_mode_kind) } : {}),
         },
       },
     ];
@@ -1405,9 +1319,7 @@ function mapToRuntimeEvents(
         payload: {
           taskId: asRuntimeTaskId(taskId),
           status: "completed",
-          ...(asString(msg?.last_agent_message)
-            ? { summary: asString(msg?.last_agent_message) }
-            : {}),
+          ...(asString(msg?.last_agent_message) ? { summary: asString(msg?.last_agent_message) } : {}),
         },
       },
     ];
@@ -1453,14 +1365,9 @@ function mapToRuntimeEvents(
         ...codexEventBase(event, canonicalThreadId),
         type: "content.delta",
         payload: {
-          streamKind:
-            asNumber(msg?.summary_index) !== undefined
-              ? "reasoning_summary_text"
-              : "reasoning_text",
+          streamKind: asNumber(msg?.summary_index) !== undefined ? "reasoning_summary_text" : "reasoning_text",
           delta,
-          ...(asNumber(msg?.summary_index) !== undefined
-            ? { summaryIndex: asNumber(msg?.summary_index) }
-            : {}),
+          ...(asNumber(msg?.summary_index) !== undefined ? { summaryIndex: asNumber(msg?.summary_index) } : {}),
         },
       },
     ];
@@ -1609,8 +1516,7 @@ function mapToRuntimeEvents(
   }
 
   if (event.method === "error") {
-    const message =
-      asString(asObject(payload?.error)?.message) ?? event.message ?? "Provider runtime error";
+    const message = asString(asObject(payload?.error)?.message) ?? event.message ?? "Provider runtime error";
     const willRetry = payload?.willRetry === true;
     const treatAsWarning = willRetry || isNonFatalCodexErrorMessage(message);
     return [
@@ -1677,11 +1583,10 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
   Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
     const serverConfig = yield* Effect.service(ServerConfig);
+    const packagedSkillsDir = bundledSkillsDir();
     // Optional so adapter tests can run without the gateway layer; when
     // present, every session gets the synara_* MCP tools.
-    const agentGatewayCredentials = Option.getOrUndefined(
-      yield* Effect.serviceOption(AgentGatewayCredentials),
-    );
+    const agentGatewayCredentials = Option.getOrUndefined(yield* Effect.serviceOption(AgentGatewayCredentials));
     const nativeEventLogger =
       options?.nativeEventLogger ??
       (options?.nativeEventLogPath !== undefined
@@ -1700,6 +1605,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
           options?.makeManager?.(services) ??
           new CodexAppServerManager(services, {
             synaraSkillsDir: synaraSkillsDir(serverConfig.baseDir),
+            ...(packagedSkillsDir ? { bundledSkillsDir: packagedSkillsDir } : {}),
             ...(agentGatewayCredentials
               ? {
                   agentGatewayMcp: {
@@ -1824,9 +1730,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
           ...(input.skills !== undefined ? { skills: input.skills } : {}),
           ...(input.mentions !== undefined ? { mentions: input.mentions } : {}),
           ...codexModelSelectionOverrides(input.modelSelection),
-          ...(input.interactionMode !== undefined
-            ? { interactionMode: input.interactionMode }
-            : {}),
+          ...(input.interactionMode !== undefined ? { interactionMode: input.interactionMode } : {}),
           ...(nativeCodexAttachments.length > 0 ? { attachments: nativeCodexAttachments } : {}),
         } satisfies CodexAppServerSendTurnInput;
       });
@@ -1845,9 +1749,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
       const managerInput: CodexAppServerStartSessionInput = {
         threadId: input.threadId,
         provider: "codex",
-        ...(input.lifecycleGeneration !== undefined
-          ? { lifecycleGeneration: input.lifecycleGeneration }
-          : {}),
+        ...(input.lifecycleGeneration !== undefined ? { lifecycleGeneration: input.lifecycleGeneration } : {}),
         ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
         ...(input.resumeCursor !== undefined ? { resumeCursor: input.resumeCursor } : {}),
         ...(input.providerOptions !== undefined ? { providerOptions: input.providerOptions } : {}),
@@ -1913,11 +1815,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
         })),
       );
 
-    const interruptTurn: CodexAdapterShape["interruptTurn"] = (
-      threadId,
-      turnId,
-      providerThreadId,
-    ) =>
+    const interruptTurn: CodexAdapterShape["interruptTurn"] = (threadId, turnId, providerThreadId) =>
       Effect.tryPromise({
         try: () => manager.interruptTurn(threadId, turnId, providerThreadId),
         catch: (cause) => toRequestError(threadId, "turn/interrupt", cause),
@@ -1987,21 +1885,13 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
         catch: (cause) => toRequestError(input.sourceThreadId, "thread/fork", cause),
       });
 
-    const respondToRequest: CodexAdapterShape["respondToRequest"] = (
-      threadId,
-      requestId,
-      decision,
-    ) =>
+    const respondToRequest: CodexAdapterShape["respondToRequest"] = (threadId, requestId, decision) =>
       Effect.tryPromise({
         try: () => manager.respondToRequest(threadId, requestId, decision),
         catch: (cause) => toRequestError(threadId, "item/requestApproval/decision", cause),
       });
 
-    const respondToUserInput: CodexAdapterShape["respondToUserInput"] = (
-      threadId,
-      requestId,
-      answers,
-    ) =>
+    const respondToUserInput: CodexAdapterShape["respondToUserInput"] = (threadId, requestId, answers) =>
       Effect.tryPromise({
         try: () => manager.respondToUserInput(threadId, requestId, answers),
         catch: (cause) => toRequestError(threadId, "item/tool/requestUserInput", cause),
@@ -2019,11 +1909,9 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
           }),
       });
 
-    const listSessions: CodexAdapterShape["listSessions"] = () =>
-      Effect.sync(() => manager.listSessions());
+    const listSessions: CodexAdapterShape["listSessions"] = () => Effect.sync(() => manager.listSessions());
 
-    const hasSession: CodexAdapterShape["hasSession"] = (threadId) =>
-      Effect.sync(() => manager.hasSession(threadId));
+    const hasSession: CodexAdapterShape["hasSession"] = (threadId) => Effect.sync(() => manager.hasSession(threadId));
 
     const stopAll: CodexAdapterShape["stopAll"] = () =>
       Effect.tryPromise({
@@ -2063,9 +1951,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
           manager.listPlugins({
             ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
             ...(input.threadId !== undefined ? { threadId: input.threadId } : {}),
-            ...(input.forceRemoteSync !== undefined
-              ? { forceRemoteSync: input.forceRemoteSync }
-              : {}),
+            ...(input.forceRemoteSync !== undefined ? { forceRemoteSync: input.forceRemoteSync } : {}),
             ...(input.forceReload !== undefined ? { forceReload: input.forceReload } : {}),
           }),
         catch: (cause) =>
@@ -2164,9 +2050,9 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
           },
         );
         const listener = (event: ProviderEvent) => {
-          const runtimeEvents = assignDerivedProviderRuntimeEventIds(
-            mapToRuntimeEvents(event, event.threadId),
-          ).map(compactProviderRuntimeEventForIngress);
+          const runtimeEvents = assignDerivedProviderRuntimeEventIds(mapToRuntimeEvents(event, event.threadId)).map(
+            compactProviderRuntimeEventForIngress,
+          );
           trackTurnWatchdogActivity(event.threadId, runtimeEvents);
           const result = ingress.offer({
             nativeEvent: compactCodexNativeEventForIngress(event),

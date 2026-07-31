@@ -4,7 +4,13 @@ import { Input as InputPrimitive } from "@base-ui/react/input";
 import { forwardRef, type ComponentPropsWithoutRef } from "react";
 
 import { cn } from "~/lib/utils";
-import { SOFT_SURFACE_FILL_CLASS_NAME } from "~/surfaceStyles";
+import {
+  FIELD_CONTROL_CLASS_NAME,
+  FIELD_CONTROL_COMPACT_HEIGHT_CLASS_NAME,
+  FIELD_CONTROL_HEIGHT_CLASS_NAME,
+  FIELD_CONTROL_LARGE_HEIGHT_CLASS_NAME,
+  FIELD_SINGLE_LINE_CONTENT_CLASS_NAME,
+} from "./field-styles";
 
 type InputProps = Omit<ComponentPropsWithoutRef<typeof InputPrimitive>, "size"> & {
   size?: "sm" | "default" | "lg" | number;
@@ -32,8 +38,15 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   const variant = variantProp ?? "default";
   const unstyled = unstyledProp ?? false;
   const nativeInput = nativeInputProp ?? false;
+  const heightClassName =
+    size === "sm"
+      ? FIELD_CONTROL_COMPACT_HEIGHT_CLASS_NAME
+      : size === "lg"
+        ? FIELD_CONTROL_LARGE_HEIGHT_CLASS_NAME
+        : FIELD_CONTROL_HEIGHT_CLASS_NAME;
   const inputClassName = cn(
-    "font-system-ui h-full w-full min-w-0 rounded-[inherit] border-0 bg-transparent px-3 py-1.5 text-[length:var(--app-font-size-ui,12px)] leading-normal outline-none placeholder:text-muted-foreground/72 [transition:background-color_5000000s_ease-in-out_0s] sm:text-[length:var(--app-font-size-ui,12px)]",
+    "font-system-ui h-full w-full rounded-[inherit] border-0 bg-transparent px-3 py-1.5 text-[length:var(--app-font-size-ui,12px)] leading-normal outline-none placeholder:text-muted-foreground/72 [transition:background-color_5000000s_ease-in-out_0s] sm:text-[length:var(--app-font-size-ui,12px)]",
+    FIELD_SINGLE_LINE_CONTENT_CLASS_NAME,
     size === "sm" &&
       "px-2.5 py-1 text-[length:var(--app-font-size-ui-sm,11px)] sm:text-[length:var(--app-font-size-ui-sm,11px)]",
     size === "lg" && "px-3.5 py-2",
@@ -47,10 +60,11 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   // wrapper renders without a `class` attribute at all (unstyled callers).
   const controlClassName = cn(
     !unstyled &&
-      "relative inline-flex w-full min-h-9 items-center rounded-lg border border-border bg-background text-[length:var(--app-font-size-ui,12px)] text-foreground has-aria-invalid:border-destructive/30 has-focus-visible:has-aria-invalid:border-destructive/50 has-focus-visible:border-foreground/30 has-autofill:bg-foreground/4 has-disabled:opacity-64 sm:min-h-8 sm:text-[length:var(--app-font-size-ui,12px)] dark:bg-input/32 dark:has-autofill:bg-foreground/8",
-    size === "sm" && "min-h-8 sm:min-h-7",
-    size === "lg" && "min-h-10 sm:min-h-9",
-    variant === "soft" && SOFT_SURFACE_FILL_CLASS_NAME,
+      cn(
+        "relative inline-flex w-full items-center rounded-lg text-[length:var(--app-font-size-ui,12px)] text-foreground has-aria-invalid:border-destructive/30 has-focus-visible:has-aria-invalid:border-destructive/50 has-autofill:bg-foreground/4 has-disabled:opacity-64 sm:text-[length:var(--app-font-size-ui,12px)] dark:has-autofill:bg-foreground/8",
+        FIELD_CONTROL_CLASS_NAME,
+        heightClassName,
+      ),
     className,
   );
 
@@ -59,6 +73,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       className={controlClassName === "" ? undefined : controlClassName}
       data-size={size}
       data-slot="input-control"
+      data-variant={variant}
     >
       {nativeInput ? (
         <input

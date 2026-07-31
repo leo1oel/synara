@@ -10,6 +10,8 @@ import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { FILE_COMMENT_TEXT_MAX_CHARS, normalizeFileCommentText } from "~/lib/fileComments";
 import { SynaraLogo } from "../SynaraLogo";
 import { Button } from "../ui/button";
+import { FIELD_CONTROL_CLASS_NAME, FIELD_MULTILINE_CONTENT_CLASS_NAME } from "../ui/field-styles";
+import { cn } from "~/lib/utils";
 
 interface FileLineCommentBoxProps {
   // Pre-formatted target label, e.g. "line 12" or "lines 3-5".
@@ -85,20 +87,17 @@ export function FileLineCommentBox(props: FileLineCommentBoxProps) {
         placeholder="Request change"
         rows={2}
         maxLength={FILE_COMMENT_TEXT_MAX_CHARS}
-        className="editor-file-viewer__comment-input"
+        className={cn(
+          FIELD_CONTROL_CLASS_NAME,
+          FIELD_MULTILINE_CONTENT_CLASS_NAME,
+          "editor-file-viewer__comment-input rounded-lg",
+        )}
       />
       <div className="flex items-center justify-end gap-1">
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
           Cancel
         </Button>
-        <Button
-          type="button"
-          variant="default"
-          size="sm"
-          className="px-3.5"
-          disabled={!canSubmit}
-          onClick={submit}
-        >
+        <Button type="button" variant="default" size="sm" className="px-3.5" disabled={!canSubmit} onClick={submit}>
           Comment
         </Button>
       </div>

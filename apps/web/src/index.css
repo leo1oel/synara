@@ -68,6 +68,23 @@
   * {
     @apply border-border outline-ring/30;
   }
+  input,
+  textarea,
+  [contenteditable="true"] {
+    box-sizing: border-box;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  input {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  textarea,
+  [contenteditable="true"] {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
   body {
     @apply text-foreground relative;
     background: var(--app-shell-background, transparent);
@@ -189,8 +206,7 @@
   /* Only when the chat layout's own sidebar is expanded is the seam (and its wedge) in the
      middle of the window, safely away from the window's corners — so only then paint the
      strip. Direct-child :has() so the nested right-dock sidebar-wrapper can't drive this. */
-  [data-slot="sidebar-wrapper"]:has(> [data-slot="sidebar"][data-state="expanded"])
-    .chat-content-card-backing::after {
+  [data-slot="sidebar-wrapper"]:has(> [data-slot="sidebar"][data-state="expanded"]) .chat-content-card-backing::after {
     opacity: 1;
   }
 
@@ -233,8 +249,7 @@
 
   [data-sidebar-side="left"] .chat-content-card {
     --seam-shadow-x: -6.5px;
-    border-radius: var(--app-content-card-radius, 0.75rem) 0 0
-      var(--app-content-card-radius, 0.75rem);
+    border-radius: var(--app-content-card-radius, 0.75rem) 0 0 var(--app-content-card-radius, 0.75rem);
   }
 
   .chat-content-card::before {
@@ -267,8 +282,7 @@
      Use the DIRECT-CHILD combinator: only the chat layout's own sidebar is a direct child of
      this wrapper; the right dock nests its own sidebar-wrapper, so a plain descendant :has()
      would also fire on the dock's (always-collapsed) sidebar. */
-  [data-slot="sidebar-wrapper"]:has(> [data-slot="sidebar"][data-state="collapsed"])
-    .chat-content-card {
+  [data-slot="sidebar-wrapper"]:has(> [data-slot="sidebar"][data-state="collapsed"]) .chat-content-card {
     border-radius: 0;
     /* Fade the depth shadow via its color token rather than `box-shadow: none` —
        Chromium snaps box-shadow to/from `none`, but keeping the geometry and only
@@ -276,8 +290,7 @@
     --seam-shadow-color: transparent;
   }
 
-  [data-slot="sidebar-wrapper"]:has(> [data-slot="sidebar"][data-state="collapsed"])
-    .chat-content-card::before {
+  [data-slot="sidebar-wrapper"]:has(> [data-slot="sidebar"][data-state="collapsed"]) .chat-content-card::before {
     opacity: 0;
   }
 
@@ -491,6 +504,10 @@
   --font-ui-family: "Inter Variable", Inter, "Avenir Next", "Segoe UI", sans-serif;
   --font-mono-family: var(
     --theme-font-code-family,
+    "TX-02 Variable",
+    "TX-02",
+    "Berkeley Mono Variable",
+    "Berkeley Mono",
     "JetBrains Mono Variable",
     "JetBrains Mono",
     "SF Mono",
@@ -501,16 +518,18 @@
     monospace
   );
   --font-chat-code-family: var(--theme-font-code-family, var(--font-mono-family));
-  --terminal-font-family: "JetBrainsMono NFM", "JetBrainsMono NF", "JetBrains Mono", monospace;
+  --terminal-font-family:
+    "TX-02 Variable", "TX-02", "Berkeley Mono Variable", "Berkeley Mono", "JetBrains Mono Variable", "JetBrains Mono",
+    "JetBrainsMono NFM", "JetBrainsMono NF", Menlo, monospace;
   --app-shell-background: transparent;
   --app-sidebar-backdrop-filter: blur(8px) saturate(135%);
   --app-sidebar-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.025);
   --app-sidebar-surface: color-mix(in srgb, var(--card) 64%, transparent);
   --background: #fcfcfc;
   --foreground: var(--color-neutral-800);
-  --card: var(--color-white);
+  --card: #f9f9fa;
   --card-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
+  --popover: #f9f9fa;
   --popover-foreground: var(--color-neutral-800);
   --primary: var(--color-neutral-900);
   --primary-foreground: var(--color-white);
@@ -598,11 +617,7 @@
     --success-foreground: var(--color-emerald-400);
     --status-success: color-mix(in srgb, var(--success) 72%, var(--color-white));
     --status-failure: color-mix(in srgb, var(--destructive) 72%, var(--color-white));
-    --status-open: color-mix(
-      in srgb,
-      var(--color-decoration-added, var(--success)) 72%,
-      var(--color-white)
-    );
+    --status-open: color-mix(in srgb, var(--color-decoration-added, var(--success)) 72%, var(--color-white));
     --status-merged: color-mix(in srgb, var(--color-indigo-500) 72%, var(--color-white));
     --status-neutral: color-mix(in srgb, var(--color-zinc-500) 72%, var(--color-white));
     --sidebar: var(--card);
@@ -636,6 +651,35 @@ body {
 
 /* Lattice PoC: the host owns the outer panel geometry, so the embedded chat surface
    must fill it without Synara's standalone-window seam radius or shadow. */
+html[data-synara-embed="true"] {
+  /* Match Lattice's editor role: prefer a locally installed TX-02 / Berkeley
+     Mono face, then use Synara's bundled JetBrains Mono Variable fallback. */
+  --font-mono-family:
+    "TX-02 Variable", "TX-02", "Berkeley Mono Variable", "Berkeley Mono", "JetBrains Mono Variable", "JetBrains Mono",
+    Menlo, "SF Mono", "SFMono-Regular", ui-monospace, monospace;
+  --font-chat-code-family: var(--font-mono-family);
+  --terminal-font-family: var(--font-mono-family);
+  --app-font-size-diff-code: 11px;
+  --app-font-size-diff-header: 11px;
+  --app-font-size-diff-meta: 10px;
+  --app-font-weight-diff-meta: 500;
+  --app-line-height-diff-code: 18px;
+  /* Mirror Lattice's semantic settings roles inside the iframe. */
+  --lattice-type-heading-size: 18px;
+  --lattice-type-heading-line-height: 22px;
+  --lattice-type-heading-weight: 600;
+  --lattice-type-label-size: 12px;
+  --lattice-type-label-line-height: 16px;
+  --lattice-type-label-weight: 500;
+  --lattice-type-caption-size: 11px;
+  --lattice-type-caption-line-height: 16px;
+  --lattice-type-caption-weight: 400;
+  /* Embedded chrome follows Lattice's compact navigation role. Transcript
+     body copy keeps its independent 13/20px reading role. */
+  --app-font-size-ui: var(--lattice-type-caption-size);
+  --app-line-height-ui: var(--lattice-type-caption-line-height);
+}
+
 html[data-synara-embed="true"] .chat-content-card {
   border-radius: 0 !important;
   box-shadow: none !important;
@@ -655,6 +699,16 @@ html[data-synara-embed="true"] .lattice-source-control {
 
 html[data-synara-embed="true"] .lattice-source-control .text-\[12px\] {
   font-size: 11px;
+}
+
+html[data-synara-embed="true"] [data-diff-file-header] .text-\[11\.5px\],
+html[data-synara-embed="true"] [data-diff-file-header] .text-\[11px\] {
+  font-size: var(--app-font-size-diff-header);
+}
+
+html[data-synara-embed="true"] [data-diff-file-header] .text-\[10px\] {
+  font-size: var(--app-font-size-diff-meta);
+  font-weight: var(--app-font-weight-diff-meta);
 }
 
 html[data-synara-embed="true"] .lattice-source-control button,
@@ -677,24 +731,55 @@ html[data-synara-embed="true"] .app-settings-surface {
   line-height: 1.45;
 }
 
-html[data-synara-embed="true"] .app-settings-surface h1 {
-  font-size: 18px;
-  line-height: 1.25;
-  font-weight: 700;
+html[data-synara-embed="true"] .app-settings-surface .synara-settings-heading h1 {
+  font-size: var(--lattice-type-heading-size);
+  line-height: var(--lattice-type-heading-line-height);
+  font-weight: var(--lattice-type-heading-weight);
   letter-spacing: normal;
 }
 
 html[data-synara-embed="true"] .synara-settings-content {
-  max-width: 460px;
+  max-width: var(--lattice-settings-content-max-width);
   margin-inline: 0;
-  padding: 30px 34px 40px;
+  padding: var(--lattice-settings-content-padding-top) var(--lattice-settings-content-padding-inline)
+    var(--lattice-settings-content-padding-bottom);
 }
 
+/* Embedded Settings reports its intrinsic content height to Lattice, which owns
+   the only scrollbar. Keep every route shell content-sized so changing the host
+   iframe height cannot feed back into the next measured height. */
 html[data-synara-embed="true"]:has(.app-settings-surface),
 html[data-synara-embed="true"]:has(.app-settings-surface) body,
-html[data-synara-embed="true"]:has(.app-settings-surface) #root,
-html[data-synara-embed="true"] .synara-settings-scroll {
+html[data-synara-embed="true"]:has(.app-settings-surface) #root {
+  height: auto !important;
+  min-height: 0 !important;
   overflow: hidden !important;
+}
+
+/* The route card and SidebarInset sit in horizontal flex layouts. Preserve
+   their flex-1 width so the settings surface spans the whole iframe;
+   only override the standalone page height/overflow behavior. */
+html[data-synara-embed="true"] .chat-content-card.app-settings-surface,
+html[data-synara-embed="true"] .app-settings-surface [data-slot="sidebar-inset"] {
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+}
+
+/* These descendants sit in vertical flex layouts, so disabling their vertical
+   growth keeps the reported settings height intrinsic without collapsing the
+   route card's horizontal width. */
+html[data-synara-embed="true"] .app-settings-surface [data-slot="sidebar-inset-surface"],
+html[data-synara-embed="true"] .synara-settings-shell,
+html[data-synara-embed="true"] .synara-settings-scroll {
+  height: auto !important;
+  min-height: 0 !important;
+  flex: none !important;
+  overflow: visible !important;
+}
+
+html[data-synara-embed="true"][data-synara-settings-ready="false"] .app-settings-surface {
+  visibility: hidden;
 }
 
 html[data-synara-embed="true"] .synara-settings-heading {
@@ -704,17 +789,18 @@ html[data-synara-embed="true"] .synara-settings-heading {
 html[data-synara-embed="true"] .synara-settings-heading p {
   margin-top: 6px;
   color: var(--lattice-settings-muted);
-  font-size: 11px;
-  line-height: 1.55;
+  font-size: var(--lattice-type-caption-size);
+  line-height: var(--lattice-type-caption-line-height);
+  font-weight: var(--lattice-type-caption-weight);
 }
 
 html[data-synara-embed="true"] .app-settings-surface h2 {
   margin: 0;
   padding: 0;
   color: var(--lattice-settings-muted);
-  font-size: 11px;
-  line-height: 1.4;
-  font-weight: 600;
+  font-size: var(--lattice-type-label-size);
+  line-height: var(--lattice-type-label-line-height);
+  font-weight: var(--lattice-type-label-weight);
   letter-spacing: normal;
   text-transform: none;
 }
@@ -750,48 +836,35 @@ html[data-synara-embed="true"] .app-settings-surface [data-slot="switch"][data-c
   translate: 10px 0;
 }
 
-html[data-synara-embed="true"] :where(
-  button,
-  a,
-  input,
-  textarea,
-  select,
-  [role="button"],
-  [tabindex]
-):focus,
-html[data-synara-embed="true"] :where(
-  button,
-  a,
-  input,
-  textarea,
-  select,
-  [role="button"],
-  [tabindex]
-):focus-visible {
+html[data-synara-embed="true"] :where(button, a, input, textarea, select, [role="button"], [tabindex]):focus,
+html[data-synara-embed="true"] :where(button, a, input, textarea, select, [role="button"], [tabindex]):focus-visible {
   outline: none;
 }
 
 html[data-synara-embed="true"] .app-settings-surface h3,
 html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] h3 {
   font-family: var(--font-ui-family);
-  font-size: 11px;
-  line-height: 1.4;
-  font-weight: 600;
+  font-size: var(--lattice-type-label-size);
+  line-height: var(--lattice-type-label-line-height);
+  font-weight: var(--lattice-type-label-weight);
   letter-spacing: normal;
 }
 
 html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] {
-  font-size: 11px;
-  line-height: 1.45;
+  font-size: var(--lattice-type-caption-size);
+  line-height: var(--lattice-type-caption-line-height);
 }
 
 html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-card"] {
-  border-color: var(--lattice-settings-line);
+  border-width: var(--lattice-settings-frame-border-width);
+  border-color: var(--lattice-settings-line-strong);
+  border-radius: var(--lattice-settings-frame-radius) !important;
   background: var(--lattice-settings-soft-panel);
 }
 
 html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-card"] > * + * {
   border-color: var(--lattice-settings-line);
+  border-top-width: var(--lattice-settings-frame-border-width);
 }
 
 html[data-synara-embed="true"] .app-settings-surface .text-foreground {
@@ -803,9 +876,9 @@ html[data-synara-embed="true"] .app-settings-surface .text-muted-foreground {
 }
 
 html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] p {
-  font-size: 11px;
-  line-height: 1.55;
-  font-weight: 400;
+  font-size: var(--lattice-type-caption-size);
+  line-height: var(--lattice-type-caption-line-height);
+  font-weight: var(--lattice-type-caption-weight);
 }
 
 html[data-synara-embed="true"] .app-settings-surface .text-xl {
@@ -824,7 +897,10 @@ html[data-synara-embed="true"] .app-settings-surface .text-xs {
   font-size: 10px;
 }
 
-html[data-synara-embed="true"] .app-settings-surface .font-medium,
+html[data-synara-embed="true"] .app-settings-surface .font-medium {
+  font-weight: 500;
+}
+
 html[data-synara-embed="true"] .app-settings-surface .font-semibold {
   font-weight: 600;
 }
@@ -846,18 +922,22 @@ html[data-synara-embed="true"] .app-settings-surface select {
   font-weight: 400;
 }
 
+/* Settings uses the same one-owner field contract as the rest of Lattice:
+   the component shell draws the border/background and the native input stays
+   transparent. Styling both layers produced a second pair of vertical border
+   lines on hover and also forced every field to the old 38px form height. */
 html[data-synara-embed="true"] .app-settings-surface [data-slot="select-trigger"],
-html[data-synara-embed="true"] .app-settings-surface input:not([type="checkbox"]):not([type="radio"]),
-html[data-synara-embed="true"] .app-settings-surface textarea {
-  border-color: var(--lattice-settings-line-strong) !important;
-  border-radius: 8px !important;
+html[data-synara-embed="true"] .app-settings-surface [data-slot="input-control"],
+html[data-synara-embed="true"] .app-settings-surface [data-slot="textarea-control"] {
+  border-width: var(--lattice-settings-frame-border-width) !important;
+  border-color: color-mix(in srgb, var(--lattice-settings-text) 12%, var(--lattice-settings-field)) !important;
+  border-radius: var(--lattice-settings-frame-radius) !important;
   background: var(--lattice-settings-field);
+  box-shadow: none !important;
 }
 
 html[data-synara-embed="true"] .app-settings-surface [data-slot="select-trigger"] {
   width: 100%;
-  height: 38px;
-  min-height: 38px;
   padding: 0 10px;
   background: var(--lattice-settings-field) !important;
   color: var(--lattice-settings-text);
@@ -866,17 +946,17 @@ html[data-synara-embed="true"] .app-settings-surface [data-slot="select-trigger"
   font-weight: 400;
 }
 
-html[data-synara-embed="true"] .app-settings-surface [data-slot="select-trigger"]:hover {
-  border-color: color-mix(
-    in srgb,
-    var(--lattice-settings-accent) 32%,
-    var(--lattice-settings-line-strong)
-  ) !important;
+html[data-synara-embed="true"] .app-settings-surface [data-slot="select-trigger"]:hover,
+html[data-synara-embed="true"] .app-settings-surface [data-slot="input-control"]:hover,
+html[data-synara-embed="true"] .app-settings-surface [data-slot="textarea-control"]:hover,
+html[data-synara-embed="true"] .app-settings-surface [data-slot="input-control"]:has([data-slot="input"]:focus),
+html[data-synara-embed="true"] .app-settings-surface [data-slot="textarea-control"]:has([data-slot="textarea"]:focus) {
+  border-color: color-mix(in srgb, var(--lattice-settings-text) 24%, var(--lattice-settings-field)) !important;
 }
 
 html[data-synara-embed="true"] .app-settings-surface [data-slot="select-trigger"][data-popup-open],
 html[data-synara-embed="true"] .app-settings-surface [data-slot="select-trigger"]:focus-visible {
-  border-color: var(--lattice-settings-accent) !important;
+  border-color: color-mix(in srgb, var(--lattice-settings-text) 24%, var(--lattice-settings-field)) !important;
   box-shadow: none;
 }
 
@@ -886,8 +966,12 @@ html[data-synara-embed="true"] .app-settings-surface [data-slot="select-icon"] s
   opacity: 0.55;
 }
 
-html[data-synara-embed="true"] .app-settings-surface input:not([type="checkbox"]):not([type="radio"]):not([type="range"]) {
-  min-height: 38px;
+html[data-synara-embed="true"] .app-settings-surface [data-slot="input-control"] > [data-slot="input"],
+html[data-synara-embed="true"] .app-settings-surface [data-slot="textarea-control"] > [data-slot="textarea"] {
+  min-height: 0;
+  border: 0 !important;
+  background: transparent;
+  box-shadow: none !important;
 }
 
 /* Select popups are portalled outside .app-settings-surface, so their embed
@@ -937,11 +1021,112 @@ html[data-synara-embed="true"] [data-slot="select-item-indicator"] {
 }
 
 html[data-synara-embed="true"] .app-settings-surface .rounded-xl {
-  border-radius: 8px !important;
+  border-radius: var(--lattice-settings-frame-radius) !important;
 }
 
 html[data-synara-embed="true"] .app-settings-surface .rounded-lg {
   border-radius: 7px !important;
+}
+
+/* Base UI scroll surfaces use the same interaction geometry as Lattice:
+   a 10px hit track, a quiet 4px thumb that grows to 6px on hover, and the
+   same idle/hover/active contrast steps as the host PDF and paper panes. */
+.synara-scrollbar {
+  position: absolute;
+  z-index: 20;
+  display: flex;
+  touch-action: none;
+  user-select: none;
+  opacity: 0;
+  transition: opacity 120ms ease-out 160ms;
+}
+
+.synara-scrollbar[data-hovering],
+.synara-scrollbar[data-scrolling] {
+  opacity: 1;
+  transition-duration: 160ms;
+  transition-delay: 0ms;
+}
+
+.synara-scrollbar[data-orientation="vertical"]:not([data-overflow-y-start]):not([data-overflow-y-end]),
+.synara-scrollbar[data-orientation="horizontal"]:not([data-overflow-x-start]):not([data-overflow-x-end]) {
+  display: none;
+}
+
+[data-slot="scroll-area"]:has(> [data-slot="scroll-area-viewport"][data-has-vertical-overflow="false"])
+  > .synara-scrollbar[data-orientation="vertical"],
+[data-slot="scroll-area"]:has(> [data-slot="scroll-area-viewport"][data-has-horizontal-overflow="false"])
+  > .synara-scrollbar[data-orientation="horizontal"] {
+  display: none;
+}
+
+.synara-scrollbar[data-orientation="vertical"] {
+  top: 0;
+  right: 0;
+  width: 10px;
+  height: 100%;
+}
+
+.synara-scrollbar[data-orientation="horizontal"] {
+  bottom: 0;
+  left: 0;
+  flex-direction: column;
+  width: 100%;
+  height: 10px;
+}
+
+.synara-scrollbar-thumb {
+  position: relative;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  transition:
+    background-color 160ms ease-in-out,
+    width 160ms ease-in-out,
+    height 160ms ease-in-out;
+}
+
+.synara-scrollbar:hover .synara-scrollbar-thumb {
+  background: color-mix(in srgb, var(--foreground) 12%, transparent);
+}
+
+.synara-scrollbar-thumb:active {
+  background: color-mix(in srgb, var(--foreground) 16%, transparent);
+}
+
+.synara-scrollbar[data-orientation="vertical"] .synara-scrollbar-thumb {
+  width: 4px;
+  height: var(--scroll-area-thumb-height);
+  margin: 4px auto;
+  transform: translateX(-2px);
+}
+
+.synara-scrollbar[data-orientation="vertical"]:hover .synara-scrollbar-thumb {
+  width: 6px;
+}
+
+.synara-scrollbar[data-orientation="horizontal"] .synara-scrollbar-thumb {
+  width: var(--scroll-area-thumb-width);
+  height: 4px;
+  margin: auto 4px;
+  transform: translateY(-2px);
+}
+
+.synara-scrollbar[data-orientation="horizontal"]:hover .synara-scrollbar-thumb {
+  height: 6px;
+}
+
+/* Base UI scrolls through this viewport while the adjacent Scrollbar renders
+   the product thumb. The embedded native-scrollbar rules below are deliberately
+   broad, so make the one-owner contract explicit here to prevent two tracks. */
+[data-slot="scroll-area-viewport"] {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+[data-slot="scroll-area-viewport"]::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* Match Lattice's inset, low-contrast scrollbar rather than Synara's centered thumb. */
@@ -982,8 +1167,55 @@ html[data-synara-embed="true"] .app-settings-surface .rounded-lg {
     background-color: color-mix(in srgb, var(--foreground) 12%, transparent);
   }
 
+  html[data-synara-embed="true"] *::-webkit-scrollbar-thumb:vertical:hover {
+    border-right-width: 4px;
+    border-left-width: 0;
+  }
+
+  html[data-synara-embed="true"] *::-webkit-scrollbar-thumb:horizontal:hover {
+    border-top-width: 0;
+    border-bottom-width: 4px;
+  }
+
   html[data-synara-embed="true"] *::-webkit-scrollbar-thumb:active {
     background-color: color-mix(in srgb, var(--foreground) 16%, transparent);
+  }
+
+  /* Virtualized owners such as LegendList must keep their native viewport.
+     Give them ScrollArea's reveal-on-scroll behavior without introducing a
+     wrapper that would break follow-to-bottom and indexed navigation. */
+  html[data-synara-embed="true"] .lattice-native-scrollbar {
+    scrollbar-color: transparent transparent;
+  }
+
+  html[data-synara-embed="true"] .lattice-native-scrollbar:hover,
+  html[data-synara-embed="true"] .lattice-native-scrollbar[data-scrolling] {
+    scrollbar-color: color-mix(in srgb, var(--foreground) 8%, transparent) transparent;
+  }
+
+  html[data-synara-embed="true"] .lattice-native-scrollbar::-webkit-scrollbar-thumb {
+    background-color: transparent;
+  }
+
+  html[data-synara-embed="true"] .lattice-native-scrollbar:hover::-webkit-scrollbar-thumb,
+  html[data-synara-embed="true"] .lattice-native-scrollbar[data-scrolling]::-webkit-scrollbar-thumb {
+    background-color: color-mix(in srgb, var(--foreground) 8%, transparent);
+  }
+
+  html[data-synara-embed="true"] .lattice-native-scrollbar:hover::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in srgb, var(--foreground) 12%, transparent);
+  }
+
+  html[data-synara-embed="true"] .lattice-native-scrollbar:hover::-webkit-scrollbar-thumb:active {
+    background-color: color-mix(in srgb, var(--foreground) 16%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .synara-scrollbar,
+  .synara-scrollbar-thumb {
+    transition-duration: 0ms;
+    transition-delay: 0ms;
   }
 }
 
@@ -1016,9 +1248,7 @@ body,
 }
 
 /* Preserve inset variant rounding (inherits from the main element) */
-[data-slot="sidebar"][data-variant="inset"]
-  ~ [data-slot="sidebar-inset"]
-  > [data-slot="sidebar-inset-surface"] {
+[data-slot="sidebar"][data-variant="inset"] ~ [data-slot="sidebar-inset"] > [data-slot="sidebar-inset-surface"] {
   border-radius: inherit;
 }
 
@@ -1687,9 +1917,7 @@ label:has(> select#reasoning-effort) select {
 .editor-file-viewer__comment-input {
   width: 100%;
   min-height: 2.5rem;
-  padding: 0;
-  border: 0;
-  background: transparent;
+  padding: 0.5rem 0.625rem;
   /* Override the global `textarea { font-family: mono }` reset — this field is
      UI chrome, not code, so it must use the normal UI font. */
   font-family: var(--font-ui-family);
@@ -1796,26 +2024,10 @@ label:has(> select#reasoning-effort) select {
   justify-content: center;
   padding: 1rem;
   background:
-    linear-gradient(
-      45deg,
-      color-mix(in srgb, var(--foreground) 4%, transparent) 25%,
-      transparent 25%
-    ),
-    linear-gradient(
-      -45deg,
-      color-mix(in srgb, var(--foreground) 4%, transparent) 25%,
-      transparent 25%
-    ),
-    linear-gradient(
-      45deg,
-      transparent 75%,
-      color-mix(in srgb, var(--foreground) 4%, transparent) 75%
-    ),
-    linear-gradient(
-      -45deg,
-      transparent 75%,
-      color-mix(in srgb, var(--foreground) 4%, transparent) 75%
-    ),
+    linear-gradient(45deg, color-mix(in srgb, var(--foreground) 4%, transparent) 25%, transparent 25%),
+    linear-gradient(-45deg, color-mix(in srgb, var(--foreground) 4%, transparent) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, color-mix(in srgb, var(--foreground) 4%, transparent) 75%),
+    linear-gradient(-45deg, transparent 75%, color-mix(in srgb, var(--foreground) 4%, transparent) 75%),
     color-mix(in srgb, var(--background) 96%, var(--foreground));
   background-position:
     0 0,
@@ -1968,7 +2180,7 @@ label:has(> select#reasoning-effort) select {
   /* Auto inline margins center the sheet but collapse to 0 once it is wider than
      the viewport, so zoomed-in pages stay fully scroll-reachable on the left. */
   margin-inline: auto;
-  background: #fff;
+  background: #f9f9fa;
   border: 1px solid color-mix(in srgb, var(--border), var(--foreground) 10%);
   overflow: hidden;
 }
@@ -2195,18 +2407,12 @@ label:has(> select#reasoning-effort) select {
       --scroll-fade-t: 0px;
     }
     to {
-      --scroll-fade-t: var(
-        --_scroll-fade-size-t,
-        var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
-      );
+      --scroll-fade-t: var(--_scroll-fade-size-t, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
     }
   }
   @keyframes scroll-fade-reveal-b {
     from {
-      --scroll-fade-b: var(
-        --_scroll-fade-size-b,
-        var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
-      );
+      --scroll-fade-b: var(--_scroll-fade-size-b, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
     }
     to {
       --scroll-fade-b: 0px;
@@ -2217,18 +2423,12 @@ label:has(> select#reasoning-effort) select {
       --scroll-fade-s: 0px;
     }
     to {
-      --scroll-fade-s: var(
-        --_scroll-fade-size-s,
-        var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
-      );
+      --scroll-fade-s: var(--_scroll-fade-size-s, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
     }
   }
   @keyframes scroll-fade-reveal-e {
     from {
-      --scroll-fade-e: var(
-        --_scroll-fade-size-e,
-        var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
-      );
+      --scroll-fade-e: var(--_scroll-fade-size-e, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
     }
     to {
       --scroll-fade-e: 0px;
@@ -2237,14 +2437,8 @@ label:has(> select#reasoning-effort) select {
 }
 
 @utility scroll-fade {
-  --_scroll-fade-size-t: var(
-    --scroll-fade-t-size,
-    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
-  );
-  --_scroll-fade-size-b: var(
-    --scroll-fade-b-size,
-    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
-  );
+  --_scroll-fade-size-t: var(--scroll-fade-t-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
+  --_scroll-fade-size-b: var(--scroll-fade-b-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
   --scroll-fade-block: linear-gradient(
     to bottom,
     transparent 0,
@@ -2277,14 +2471,8 @@ label:has(> select#reasoning-effort) select {
 }
 
 @utility scroll-fade-y {
-  --_scroll-fade-size-t: var(
-    --scroll-fade-t-size,
-    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
-  );
-  --_scroll-fade-size-b: var(
-    --scroll-fade-b-size,
-    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
-  );
+  --_scroll-fade-size-t: var(--scroll-fade-t-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
+  --_scroll-fade-size-b: var(--scroll-fade-b-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
   --scroll-fade-block: linear-gradient(
     to bottom,
     transparent 0,
@@ -2317,14 +2505,8 @@ label:has(> select#reasoning-effort) select {
 }
 
 @utility scroll-fade-x {
-  --_scroll-fade-size-s: var(
-    --scroll-fade-s-size,
-    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
-  );
-  --_scroll-fade-size-e: var(
-    --scroll-fade-e-size,
-    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
-  );
+  --_scroll-fade-size-s: var(--scroll-fade-s-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
+  --_scroll-fade-size-e: var(--scroll-fade-e-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
   --scroll-fade-inline: linear-gradient(
     to right,
     transparent 0,
@@ -2366,16 +2548,8 @@ label:has(> select#reasoning-effort) select {
 }
 
 @utility scroll-fade-t {
-  --_scroll-fade-size-t: var(
-    --scroll-fade-t-size,
-    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
-  );
-  --scroll-fade-mask: linear-gradient(
-    to bottom,
-    transparent 0,
-    #000 var(--scroll-fade-t, 0px),
-    #000 100%
-  );
+  --_scroll-fade-size-t: var(--scroll-fade-t-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
+  --scroll-fade-mask: linear-gradient(to bottom, transparent 0, #000 var(--scroll-fade-t, 0px), #000 100%);
   -webkit-mask-image: var(--scroll-fade-mask);
   mask-image: var(--scroll-fade-mask);
   -webkit-mask-composite: source-in;
@@ -2396,16 +2570,8 @@ label:has(> select#reasoning-effort) select {
 }
 
 @utility scroll-fade-b {
-  --_scroll-fade-size-b: var(
-    --scroll-fade-b-size,
-    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
-  );
-  --scroll-fade-mask: linear-gradient(
-    to bottom,
-    #000 0,
-    #000 calc(100% - var(--scroll-fade-b, 0px)),
-    transparent 100%
-  );
+  --_scroll-fade-size-b: var(--scroll-fade-b-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
+  --scroll-fade-mask: linear-gradient(to bottom, #000 0, #000 calc(100% - var(--scroll-fade-b, 0px)), transparent 100%);
   -webkit-mask-image: var(--scroll-fade-mask);
   mask-image: var(--scroll-fade-mask);
   -webkit-mask-composite: source-in;
@@ -2426,16 +2592,8 @@ label:has(> select#reasoning-effort) select {
 }
 
 @utility scroll-fade-l {
-  --_scroll-fade-size-s: var(
-    --scroll-fade-s-size,
-    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
-  );
-  --scroll-fade-mask: linear-gradient(
-    to right,
-    transparent 0,
-    #000 var(--scroll-fade-s, 0px),
-    #000 100%
-  );
+  --_scroll-fade-size-s: var(--scroll-fade-s-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
+  --scroll-fade-mask: linear-gradient(to right, transparent 0, #000 var(--scroll-fade-s, 0px), #000 100%);
   -webkit-mask-image: var(--scroll-fade-mask);
   mask-image: var(--scroll-fade-mask);
   -webkit-mask-composite: source-in;
@@ -2456,16 +2614,8 @@ label:has(> select#reasoning-effort) select {
 }
 
 @utility scroll-fade-r {
-  --_scroll-fade-size-e: var(
-    --scroll-fade-e-size,
-    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
-  );
-  --scroll-fade-mask: linear-gradient(
-    to right,
-    #000 0,
-    #000 calc(100% - var(--scroll-fade-e, 0px)),
-    transparent 100%
-  );
+  --_scroll-fade-size-e: var(--scroll-fade-e-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
+  --scroll-fade-mask: linear-gradient(to right, #000 0, #000 calc(100% - var(--scroll-fade-e, 0px)), transparent 100%);
   -webkit-mask-image: var(--scroll-fade-mask);
   mask-image: var(--scroll-fade-mask);
   -webkit-mask-composite: source-in;
@@ -2486,23 +2636,10 @@ label:has(> select#reasoning-effort) select {
 }
 
 @utility scroll-fade-s {
-  --_scroll-fade-size-s: var(
-    --scroll-fade-s-size,
-    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
-  );
-  --scroll-fade-mask: linear-gradient(
-    to right,
-    transparent 0,
-    #000 var(--scroll-fade-s, 0px),
-    #000 100%
-  );
+  --_scroll-fade-size-s: var(--scroll-fade-s-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
+  --scroll-fade-mask: linear-gradient(to right, transparent 0, #000 var(--scroll-fade-s, 0px), #000 100%);
   &:where([dir="rtl"], [dir="rtl"] *) {
-    --scroll-fade-mask: linear-gradient(
-      to left,
-      transparent 0,
-      #000 var(--scroll-fade-s, 0px),
-      #000 100%
-    );
+    --scroll-fade-mask: linear-gradient(to left, transparent 0, #000 var(--scroll-fade-s, 0px), #000 100%);
   }
   -webkit-mask-image: var(--scroll-fade-mask);
   mask-image: var(--scroll-fade-mask);
@@ -2524,23 +2661,10 @@ label:has(> select#reasoning-effort) select {
 }
 
 @utility scroll-fade-e {
-  --_scroll-fade-size-e: var(
-    --scroll-fade-e-size,
-    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
-  );
-  --scroll-fade-mask: linear-gradient(
-    to right,
-    #000 0,
-    #000 calc(100% - var(--scroll-fade-e, 0px)),
-    transparent 100%
-  );
+  --_scroll-fade-size-e: var(--scroll-fade-e-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
+  --scroll-fade-mask: linear-gradient(to right, #000 0, #000 calc(100% - var(--scroll-fade-e, 0px)), transparent 100%);
   &:where([dir="rtl"], [dir="rtl"] *) {
-    --scroll-fade-mask: linear-gradient(
-      to left,
-      #000 0,
-      #000 calc(100% - var(--scroll-fade-e, 0px)),
-      transparent 100%
-    );
+    --scroll-fade-mask: linear-gradient(to left, #000 0, #000 calc(100% - var(--scroll-fade-e, 0px)), transparent 100%);
   }
   -webkit-mask-image: var(--scroll-fade-mask);
   mask-image: var(--scroll-fade-mask);
@@ -2685,10 +2809,7 @@ label:has(> select#reasoning-effort) select {
   animation: tw-shimmer var(--shimmer-duration, 2s) linear infinite;
 
   @variant dark {
-    --_highlight: var(
-      --shimmer-color,
-      oklch(from currentColor max(0.8, calc(l + 0.4)) c h / calc(alpha + 0.4))
-    );
+    --_highlight: var(--shimmer-color, oklch(from currentColor max(0.8, calc(l + 0.4)) c h / calc(alpha + 0.4)));
   }
 
   &:where([dir="rtl"], [dir="rtl"] *) {
@@ -2711,11 +2832,7 @@ label:has(> select#reasoning-effort) select {
 
 @utility shimmer-color-* {
   --shimmer-color: --value(--color, [color]);
-  --shimmer-color: color-mix(
-    in oklch,
-    --value(--color, [color]) calc(--modifier(integer) * 1%),
-    transparent
-  );
+  --shimmer-color: color-mix(in oklch, --value(--color, [color]) calc(--modifier(integer) * 1%), transparent);
 }
 
 @utility shimmer-duration-* {
@@ -2798,8 +2915,7 @@ label:has(> select#reasoning-effort) select {
 }
 
 .chat-generated-image[data-status="ready"]:hover .chat-generated-image__overlay-pill--download,
-.chat-generated-image[data-status="ready"]:focus-within
-  .chat-generated-image__overlay-pill--download {
+.chat-generated-image[data-status="ready"]:focus-within .chat-generated-image__overlay-pill--download {
   opacity: 1;
   transform: translateY(0);
 }
@@ -3005,10 +3121,7 @@ diffs-container {
 .sidebar-segmented-thumb {
   background:
     linear-gradient(var(--composer-surface), var(--composer-surface)),
-    linear-gradient(
-      var(--color-background-elevated-secondary),
-      var(--color-background-elevated-secondary)
-    ),
+    linear-gradient(var(--color-background-elevated-secondary), var(--color-background-elevated-secondary)),
     var(--background);
   border: 1px solid color-mix(in oklab, var(--color-text-foreground) 5%, transparent);
   box-shadow:
@@ -3033,10 +3146,7 @@ diffs-container {
    selects, popovers, comboboxes) and composer pickers. Background + blur are
    theme-aware via the tokens set in theme.logic (control-opaque @70% + blur). */
 .composer-picker-menu-surface {
-  background: var(
-    --app-composer-picker-surface,
-    color-mix(in oklab, var(--popover) 70%, transparent)
-  );
+  background: var(--app-composer-picker-surface, color-mix(in oklab, var(--popover) 70%, transparent));
   backdrop-filter: var(--app-composer-picker-backdrop-filter, blur(32px));
   -webkit-backdrop-filter: var(--app-composer-picker-backdrop-filter, blur(32px));
 }
@@ -3114,24 +3224,16 @@ diffs-container {
 
 .composer-picker-menu--small [data-slot="menu-item"] > svg:not([class*="size-"]),
 .composer-picker-menu--small [data-slot="menu-radio-item"] > svg:not([class*="size-"]),
-.composer-picker-menu--small
-  [data-slot="menu-sub-trigger"]
-  > svg:not([class*="size-"]):first-of-type,
+.composer-picker-menu--small [data-slot="menu-sub-trigger"] > svg:not([class*="size-"]):first-of-type,
 .composer-picker-menu-wide--small [data-slot="menu-item"] > svg:not([class*="size-"]),
 .composer-picker-menu-wide--small [data-slot="menu-radio-item"] > svg:not([class*="size-"]),
-.composer-picker-menu-wide--small
-  [data-slot="menu-sub-trigger"]
-  > svg:not([class*="size-"]):first-of-type,
+.composer-picker-menu-wide--small [data-slot="menu-sub-trigger"] > svg:not([class*="size-"]):first-of-type,
 .composer-picker-menu--normal [data-slot="menu-item"] > svg:not([class*="size-"]),
 .composer-picker-menu--normal [data-slot="menu-radio-item"] > svg:not([class*="size-"]),
-.composer-picker-menu--normal
-  [data-slot="menu-sub-trigger"]
-  > svg:not([class*="size-"]):first-of-type,
+.composer-picker-menu--normal [data-slot="menu-sub-trigger"] > svg:not([class*="size-"]):first-of-type,
 .composer-picker-menu-wide--normal [data-slot="menu-item"] > svg:not([class*="size-"]),
 .composer-picker-menu-wide--normal [data-slot="menu-radio-item"] > svg:not([class*="size-"]),
-.composer-picker-menu-wide--normal
-  [data-slot="menu-sub-trigger"]
-  > svg:not([class*="size-"]):first-of-type {
+.composer-picker-menu-wide--normal [data-slot="menu-sub-trigger"] > svg:not([class*="size-"]):first-of-type {
   width: var(--picker-option-icon-size);
   height: var(--picker-option-icon-size);
 }

@@ -46,32 +46,19 @@ import {
   MINIMUM_CODEX_AUTO_REVIEW_CLI_VERSION,
   parseCodexCliVersion,
 } from "./provider/codexCliVersion";
-import {
-  buildCodexMcpConfigToml,
-  SYNARA_AGENT_GATEWAY_TOKEN_ENV,
-} from "./agentGateway/mcpInjection.ts";
+import { buildCodexMcpConfigToml, SYNARA_AGENT_GATEWAY_TOKEN_ENV } from "./agentGateway/mcpInjection.ts";
 import { SYNARA_GATEWAY_HARNESS_POLICY } from "./agentGateway/harnessPolicy.ts";
 import { ACTIVE_AGENT_HOST_PROFILE } from "./agentGateway/hostProfile.ts";
-import {
-  AGENT_GATEWAY_TURN_AUTHORITY_RETIRED,
-  type AgentGatewaySessionLease,
-} from "./agentGateway/sessionLease.ts";
+import { AGENT_GATEWAY_TURN_AUTHORITY_RETIRED, type AgentGatewaySessionLease } from "./agentGateway/sessionLease.ts";
 import { isNonFatalCodexErrorMessage } from "./codexErrorClassification.ts";
 import { buildCodexProcessEnv } from "./codexProcessEnv.ts";
 import { assertCodexWorkingDirectoryExists } from "./codexWorkingDirectory.ts";
 import { executableIdentity, resolveExecutable } from "./executableLookup.ts";
-import {
-  teardownChildProcessTree,
-  teardownProviderProcessTree,
-} from "./provider/supervisedProcessTeardown.ts";
+import { teardownChildProcessTree, teardownProviderProcessTree } from "./provider/supervisedProcessTeardown.ts";
 import { ensureIsolatedScratchWorkspace } from "./scratchWorkspaces.ts";
 import { createLogger } from "./logger";
 import { transcribeVoiceWithChatGptSession } from "./voiceTranscription.ts";
-import {
-  CodexAppServerTransportError,
-  CodexJsonlFramer,
-  CodexJsonlWriter,
-} from "./codexAppServerTransport.ts";
+import { CodexAppServerTransportError, CodexJsonlFramer, CodexJsonlWriter } from "./codexAppServerTransport.ts";
 import { buildCodexTurnInput, type CodexTurnInputItem } from "./codexTurnInput.ts";
 import {
   parseCodexModelListResponse,
@@ -224,16 +211,7 @@ function shouldRetrySkillsListWithCwdFallback(error: unknown): boolean {
   );
 }
 
-type CodexPlanType =
-  | "free"
-  | "go"
-  | "plus"
-  | "pro"
-  | "team"
-  | "business"
-  | "enterprise"
-  | "edu"
-  | "unknown";
+type CodexPlanType = "free" | "go" | "plus" | "pro" | "team" | "business" | "enterprise" | "edu" | "unknown";
 
 interface CodexAccountSnapshot {
   readonly type: "apiKey" | "chatgpt" | "unknown";
@@ -295,8 +273,7 @@ const CODEX_VERSION_CHECK_CACHE_TTL_MS = 10 * 60 * 1000;
 
 const ANSI_ESCAPE_CHAR = String.fromCharCode(27);
 const ANSI_ESCAPE_REGEX = new RegExp(`${ANSI_ESCAPE_CHAR}\\[[0-9;]*m`, "g");
-const CODEX_STDERR_LOG_REGEX =
-  /^\d{4}-\d{2}-\d{2}T\S+\s+(TRACE|DEBUG|INFO|WARN|ERROR)\s+\S+:\s+(.*)$/;
+const CODEX_STDERR_LOG_REGEX = /^\d{4}-\d{2}-\d{2}T\S+\s+(TRACE|DEBUG|INFO|WARN|ERROR)\s+\S+:\s+(.*)$/;
 const BENIGN_ERROR_LOG_SNIPPETS = [
   "state db missing rollout path for thread",
   "state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back",
@@ -356,8 +333,7 @@ function isCodexProtocolEnvelope(value: Record<string, unknown>): boolean {
   const hasId = Object.prototype.hasOwnProperty.call(value, "id");
   return (
     hasId &&
-    (Object.prototype.hasOwnProperty.call(value, "result") ||
-      Object.prototype.hasOwnProperty.call(value, "error"))
+    (Object.prototype.hasOwnProperty.call(value, "result") || Object.prototype.hasOwnProperty.call(value, "error"))
   );
 }
 
@@ -372,9 +348,7 @@ function logIgnoredCodexStdout(rawLine: string, reason: string): void {
 function normalizeCodexUserVisibleErrorMessage(rawMessage: string): string {
   const message = normalizeCodexProcessLine(rawMessage);
 
-  const duplicateFunctionArgMatch = message.match(
-    /failed to parse function arguments: duplicate field `([^`]+)`/i,
-  );
+  const duplicateFunctionArgMatch = message.match(/failed to parse function arguments: duplicate field `([^`]+)`/i);
   if (duplicateFunctionArgMatch) {
     const fieldName = duplicateFunctionArgMatch[1];
     return `Tool call failed because the same argument was sent twice${fieldName ? ` (${fieldName})` : ""}.`;
@@ -639,10 +613,7 @@ function resolveCodexTurnOverrides(context: CodexSessionContext): {
   readonly approvalsReviewer: CodexApprovalsReviewer;
   readonly sandboxPolicy: CodexTurnSandboxPolicy;
 } {
-  return (
-    context.sessionApprovalOverride ??
-    mapCodexRuntimeModeToTurnOverrides(context.session.runtimeMode)
-  );
+  return context.sessionApprovalOverride ?? mapCodexRuntimeModeToTurnOverrides(context.session.runtimeMode);
 }
 
 export function resolveCodexModelForAccount(
@@ -665,17 +636,12 @@ function spawnCodexAppServer(input: {
     cwd: input.cwd,
     env: input.env,
   });
-  const latticeBibGuard =
-    ACTIVE_AGENT_HOST_PROFILE.id === "lattice" && process.platform === "darwin";
+  const latticeBibGuard = ACTIVE_AGENT_HOST_PROFILE.id === "lattice" && process.platform === "darwin";
   const command = latticeBibGuard ? "/usr/bin/sandbox-exec" : prepared.command;
   const args = latticeBibGuard
     ? [
         "-p",
-        [
-          "(version 1)",
-          "(allow default)",
-          '(deny file-write* (regex #".*[.][bB][iI][bB]$"))',
-        ].join("\n"),
+        ["(version 1)", "(allow default)", '(deny file-write* (regex #".*[.][bB][iI][bB]$"))'].join("\n"),
         prepared.command,
         ...prepared.args,
       ]
@@ -690,10 +656,7 @@ function spawnCodexAppServer(input: {
   });
 }
 
-export function normalizeCodexModelSlug(
-  model: string | undefined | null,
-  preferredId?: string,
-): string | undefined {
+export function normalizeCodexModelSlug(model: string | undefined | null, preferredId?: string): string | undefined {
   const normalized = normalizeModelSlug(model);
   if (!normalized) {
     return undefined;
@@ -771,14 +734,9 @@ function toCodexUserInputAnswer(value: unknown): CodexUserInputAnswer {
   throw new Error("User input answers must be strings or arrays of strings.");
 }
 
-function toCodexUserInputAnswers(
-  answers: ProviderUserInputAnswers,
-): Record<string, CodexUserInputAnswer> {
+function toCodexUserInputAnswers(answers: ProviderUserInputAnswers): Record<string, CodexUserInputAnswer> {
   return Object.fromEntries(
-    Object.entries(answers).map(([questionId, value]) => [
-      questionId,
-      toCodexUserInputAnswer(value),
-    ]),
+    Object.entries(answers).map(([questionId, value]) => [questionId, toCodexUserInputAnswer(value)]),
   );
 }
 
@@ -912,7 +870,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   private readonly modelCache = new Map<string, ProviderListModelsResult>();
 
   private runPromise: (effect: Effect.Effect<unknown, never>) => Promise<unknown>;
-  private readonly synaraSkillsDir: string | undefined;
+  private readonly skillRootDirs: readonly string[];
   private readonly agentGatewayMcp:
     | {
         readonly endpointUrl: () => string;
@@ -925,6 +883,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     services?: ServiceMap.ServiceMap<never>,
     options?: {
       readonly synaraSkillsDir?: string;
+      readonly bundledSkillsDir?: string;
       readonly agentGatewayMcp?: {
         readonly endpointUrl: () => string;
         readonly acquireSessionLease: (threadId: ThreadId) => AgentGatewaySessionLease;
@@ -935,7 +894,9 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   ) {
     super();
     this.runPromise = services ? Effect.runPromiseWith(services) : Effect.runPromise;
-    this.synaraSkillsDir = options?.synaraSkillsDir;
+    this.skillRootDirs = [options?.bundledSkillsDir, options?.synaraSkillsDir].filter((root): root is string =>
+      Boolean(root),
+    );
     this.agentGatewayMcp = options?.agentGatewayMcp;
     this.teardownProcessTree = options?.teardownProcessTree ?? teardownProviderProcessTree;
     this.taskCompleteFallbackGraceMs = Math.max(0, options?.taskCompleteFallbackGraceMs ?? 750);
@@ -944,10 +905,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   // The Synara MCP server rides on the shared overlay config (no secrets),
   // while the per-thread bearer token travels through the app-server process
   // env referenced by `bearer_token_env_var`.
-  private async buildSessionProcessEnv(
-    homePath: string | undefined,
-    gatewayBearerToken: string | undefined,
-  ) {
+  private async buildSessionProcessEnv(homePath: string | undefined, gatewayBearerToken: string | undefined) {
     const env = await buildCodexProcessEnv({
       ...(homePath ? { homePath } : {}),
       ...(this.agentGatewayMcp
@@ -960,17 +918,15 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     return env;
   }
 
-  // Registers `~/.synara/skills` as a codex skill root so portable skills are
-  // first-class: skills/list returns them and turn/start `skill` items inject
-  // their instructions. Verified live: skill items with paths outside known
-  // roots are silently ignored by codex app-server, so this call is required.
+  // Registers Lattice's bundled skills and `~/.synara/skills` as codex skill
+  // roots so both included and user-installed skills are first-class.
   private async registerSynaraSkillsRoot(context: CodexSessionContext): Promise<void> {
-    if (!this.synaraSkillsDir) {
+    if (this.skillRootDirs.length === 0) {
       return;
     }
     try {
       await this.sendRequest(context, "skills/extraRoots/set", {
-        extraRoots: [this.synaraSkillsDir],
+        extraRoots: this.skillRootDirs,
       });
     } catch (error) {
       // Older codex builds (< extra-roots support) keep working; Synara-only
@@ -1010,27 +966,20 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       await this.assertSupportedCodexCliVersion({
         binaryPath: codexBinaryPath,
         cwd: resolvedCwd,
-        ...(input.runtimeMode === "auto"
-          ? { minimumVersion: MINIMUM_CODEX_AUTO_REVIEW_CLI_VERSION }
-          : {}),
+        ...(input.runtimeMode === "auto" ? { minimumVersion: MINIMUM_CODEX_AUTO_REVIEW_CLI_VERSION } : {}),
         ...(codexHomePath ? { homePath: codexHomePath } : {}),
       });
       gatewaySessionLease = this.agentGatewayMcp?.acquireSessionLease(threadId);
       const child = spawnCodexAppServer({
         binaryPath: codexBinaryPath,
         cwd: resolvedCwd,
-        env: await this.buildSessionProcessEnv(
-          codexHomePath,
-          gatewaySessionLease?.connection.bearerToken,
-        ),
+        env: await this.buildSessionProcessEnv(codexHomePath, gatewaySessionLease?.connection.bearerToken),
       });
 
       context = {
         ...(gatewaySessionLease ? { gatewaySessionLease } : {}),
         session,
-        ...(input.lifecycleGeneration !== undefined
-          ? { lifecycleGeneration: input.lifecycleGeneration }
-          : {}),
+        ...(input.lifecycleGeneration !== undefined ? { lifecycleGeneration: input.lifecycleGeneration } : {}),
         account: {
           type: "unknown",
           planType: null,
@@ -1077,10 +1026,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         log.warn("account/read failed", { error });
       }
 
-      const normalizedModel = resolveCodexModelForAccount(
-        normalizeCodexModelSlug(input.model),
-        context.account,
-      );
+      const normalizedModel = resolveCodexModelForAccount(normalizeCodexModelSlug(input.model), context.account);
       const sessionOverrides = {
         model: normalizedModel ?? null,
         ...(input.serviceTier !== undefined ? { serviceTier: input.serviceTier } : {}),
@@ -1096,9 +1042,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       this.emitLifecycleEvent(
         context,
         "session/threadOpenRequested",
-        resumeThreadId
-          ? `Attempting to resume thread ${resumeThreadId}.`
-          : "Starting a new Codex thread.",
+        resumeThreadId ? `Attempting to resume thread ${resumeThreadId}.` : "Starting a new Codex thread.",
       );
       await Effect.logInfo("codex app-server opening thread", {
         threadId,
@@ -1167,11 +1111,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         status: "ready",
         resumeCursor: { threadId: providerThreadId },
       });
-      this.emitLifecycleEvent(
-        context,
-        "session/threadOpenResolved",
-        `Codex ${threadOpenMethod} resolved.`,
-      );
+      this.emitLifecycleEvent(context, "session/threadOpenResolved", `Codex ${threadOpenMethod} resolved.`);
       await Effect.logInfo("codex app-server thread open resolved", {
         threadId,
         threadOpenMethod,
@@ -1198,9 +1138,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
           provider: "codex",
           threadId,
           createdAt: new Date().toISOString(),
-          ...(input.lifecycleGeneration !== undefined
-            ? { lifecycleGeneration: input.lifecycleGeneration }
-            : {}),
+          ...(input.lifecycleGeneration !== undefined ? { lifecycleGeneration: input.lifecycleGeneration } : {}),
           method: "session/startFailed",
           message,
         });
@@ -1296,17 +1234,13 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     this.updateSession(context, {
       status: "running",
       activeTurnId: turnId,
-      ...(context.session.resumeCursor !== undefined
-        ? { resumeCursor: context.session.resumeCursor }
-        : {}),
+      ...(context.session.resumeCursor !== undefined ? { resumeCursor: context.session.resumeCursor } : {}),
     });
 
     return {
       threadId: context.session.threadId,
       turnId,
-      ...(context.session.resumeCursor !== undefined
-        ? { resumeCursor: context.session.resumeCursor }
-        : {}),
+      ...(context.session.resumeCursor !== undefined ? { resumeCursor: context.session.resumeCursor } : {}),
     };
   }
 
@@ -1347,17 +1281,13 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     this.updateSession(context, {
       status: "running",
       activeTurnId: turnId,
-      ...(context.session.resumeCursor !== undefined
-        ? { resumeCursor: context.session.resumeCursor }
-        : {}),
+      ...(context.session.resumeCursor !== undefined ? { resumeCursor: context.session.resumeCursor } : {}),
     });
 
     return {
       threadId: context.session.threadId,
       turnId,
-      ...(context.session.resumeCursor !== undefined
-        ? { resumeCursor: context.session.resumeCursor }
-        : {}),
+      ...(context.session.resumeCursor !== undefined ? { resumeCursor: context.session.resumeCursor } : {}),
     };
   }
 
@@ -1400,17 +1330,13 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     this.updateSession(context, {
       status: "running",
       activeTurnId: turnId,
-      ...(context.session.resumeCursor !== undefined
-        ? { resumeCursor: context.session.resumeCursor }
-        : {}),
+      ...(context.session.resumeCursor !== undefined ? { resumeCursor: context.session.resumeCursor } : {}),
     });
 
     return {
       threadId: context.session.threadId,
       turnId,
-      ...(context.session.resumeCursor !== undefined
-        ? { resumeCursor: context.session.resumeCursor }
-        : {}),
+      ...(context.session.resumeCursor !== undefined ? { resumeCursor: context.session.resumeCursor } : {}),
     };
   }
 
@@ -1466,9 +1392,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   private cancelGatewayTurn(context: CodexSessionContext, turnId: TurnId): Promise<void> {
     const lease = context.gatewaySessionLease;
     if (!lease) return Promise.resolve();
-    return this.runGatewayTurnCleanup(context, turnId, "cancellation", () =>
-      lease.cancelTurn(turnId),
-    );
+    return this.runGatewayTurnCleanup(context, turnId, "cancellation", () => lease.cancelTurn(turnId));
   }
 
   private retireGatewayTurn(context: CodexSessionContext, turnId: TurnId): Promise<void> {
@@ -1477,16 +1401,10 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     // Flip the local admission fence before starting asynchronous request
     // drainage. No following turn may reuse this runtime's bearer.
     context.gatewayCredentialRetired = true;
-    return this.runGatewayTurnCleanup(context, turnId, "retirement", () =>
-      lease.retireTurn(turnId),
-    );
+    return this.runGatewayTurnCleanup(context, turnId, "retirement", () => lease.retireTurn(turnId));
   }
 
-  async interruptTurn(
-    threadId: ThreadId,
-    turnId?: TurnId,
-    providerThreadIdOverride?: string,
-  ): Promise<void> {
+  async interruptTurn(threadId: ThreadId, turnId?: TurnId, providerThreadIdOverride?: string): Promise<void> {
     const context = this.requireSession(threadId);
     const effectiveTurnId = turnId ?? context.session.activeTurnId;
 
@@ -1525,11 +1443,8 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     // the parent runtime. This deliberately disables gateway tools for the rest
     // of that parent turn: without a child-specific transport, re-enabling them
     // would also re-authorize indistinguishable late child requests.
-    const gatewayTurnId =
-      providerThreadIdOverride === undefined ? effectiveTurnId : context.session.activeTurnId;
-    const gatewayCancellation = gatewayTurnId
-      ? this.cancelGatewayTurn(context, gatewayTurnId)
-      : Promise.resolve();
+    const gatewayTurnId = providerThreadIdOverride === undefined ? effectiveTurnId : context.session.activeTurnId;
+    const gatewayCancellation = gatewayTurnId ? this.cancelGatewayTurn(context, gatewayTurnId) : Promise.resolve();
     let gatewayRevocationError: unknown;
     try {
       // A session bearer has no trustworthy per-turn provenance. Revoke it
@@ -1588,9 +1503,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         threadId,
         currentTurnId: effectiveTurnId,
         latestReviewTurnId: latestReviewTurnId ?? null,
-        latestReviewTurnExited: latestReviewTurnId
-          ? this.isExitedReviewTurn(snapshot, latestReviewTurnId)
-          : false,
+        latestReviewTurnExited: latestReviewTurnId ? this.isExitedReviewTurn(snapshot, latestReviewTurnId) : false,
         snapshotTurnIds: snapshot.turns.map((turn) => String(turn.id)),
       });
 
@@ -1689,9 +1602,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       provider: "codex",
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
-      ...(context.lifecycleGeneration !== undefined
-        ? { lifecycleGeneration: context.lifecycleGeneration }
-        : {}),
+      ...(context.lifecycleGeneration !== undefined ? { lifecycleGeneration: context.lifecycleGeneration } : {}),
       method: "turn/aborted",
       turnId,
       message: detail,
@@ -1723,10 +1634,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     return this.parseThreadSnapshot("thread/read", response);
   }
 
-  async readExternalThread(input: {
-    externalThreadId: string;
-    cwd?: string;
-  }): Promise<CodexThreadSnapshot> {
+  async readExternalThread(input: { externalThreadId: string; cwd?: string }): Promise<CodexThreadSnapshot> {
     const context = await this.resolveContextForDiscovery(undefined, input.cwd);
     const response = await this.sendRequest(context, "thread/read", {
       threadId: input.externalThreadId,
@@ -1758,9 +1666,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         status: "connecting",
         runtimeMode: input.runtimeMode,
         model:
-          input.modelSelection?.provider === "codex"
-            ? normalizeCodexModelSlug(input.modelSelection.model)
-            : undefined,
+          input.modelSelection?.provider === "codex" ? normalizeCodexModelSlug(input.modelSelection.model) : undefined,
         cwd: resolvedCwd,
         threadId,
         createdAt: now,
@@ -1778,19 +1684,14 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       await this.assertSupportedCodexCliVersion({
         binaryPath: codexBinaryPath,
         cwd: resolvedCwd,
-        ...(input.runtimeMode === "auto"
-          ? { minimumVersion: MINIMUM_CODEX_AUTO_REVIEW_CLI_VERSION }
-          : {}),
+        ...(input.runtimeMode === "auto" ? { minimumVersion: MINIMUM_CODEX_AUTO_REVIEW_CLI_VERSION } : {}),
         ...(codexHomePath ? { homePath: codexHomePath } : {}),
       });
       gatewaySessionLease = this.agentGatewayMcp?.acquireSessionLease(threadId);
       const child = spawnCodexAppServer({
         binaryPath: codexBinaryPath,
         cwd: resolvedCwd,
-        env: await this.buildSessionProcessEnv(
-          codexHomePath,
-          gatewaySessionLease?.connection.bearerToken,
-        ),
+        env: await this.buildSessionProcessEnv(codexHomePath, gatewaySessionLease?.connection.bearerToken),
       });
 
       context = {
@@ -1830,10 +1731,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
 
       const normalizedModel =
         input.modelSelection?.provider === "codex"
-          ? resolveCodexModelForAccount(
-              normalizeCodexModelSlug(input.modelSelection.model),
-              context.account,
-            )
+          ? resolveCodexModelForAccount(normalizeCodexModelSlug(input.modelSelection.model), context.account)
           : undefined;
       const useFastServiceTier =
         input.modelSelection?.provider === "codex" &&
@@ -1859,11 +1757,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         resumeCursor: { threadId: forkedProviderThreadId },
       });
       this.emitLifecycleEvent(context, "session/threadOpenResolved", "Codex thread/fork resolved.");
-      this.emitLifecycleEvent(
-        context,
-        "session/ready",
-        `Connected to thread ${forkedProviderThreadId}`,
-      );
+      this.emitLifecycleEvent(context, "session/ready", `Connected to thread ${forkedProviderThreadId}`);
 
       return {
         threadId,
@@ -1943,9 +1837,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       provider: "codex",
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
-      ...(context.lifecycleGeneration !== undefined
-        ? { lifecycleGeneration: context.lifecycleGeneration }
-        : {}),
+      ...(context.lifecycleGeneration !== undefined ? { lifecycleGeneration: context.lifecycleGeneration } : {}),
       ...(context.session.activeTurnId ? { turnId: context.session.activeTurnId } : {}),
       method: "thread/compacting",
       message: "Compacting context",
@@ -1993,8 +1885,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     const result =
       pendingRequest.method === "item/permissions/requestApproval"
         ? {
-            permissions:
-              decision === "accept" || decision === "acceptForSession" ? grantedPermissions : {},
+            permissions: decision === "accept" || decision === "acceptForSession" ? grantedPermissions : {},
             scope: decision === "acceptForSession" ? ("session" as const) : ("turn" as const),
           }
         : { decision };
@@ -2009,9 +1900,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       provider: "codex",
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
-      ...(context.lifecycleGeneration !== undefined
-        ? { lifecycleGeneration: context.lifecycleGeneration }
-        : {}),
+      ...(context.lifecycleGeneration !== undefined ? { lifecycleGeneration: context.lifecycleGeneration } : {}),
       method: "item/requestApproval/decision",
       turnId: pendingRequest.turnId,
       parentTurnId: pendingRequest.parentTurnId,
@@ -2028,9 +1917,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     });
   }
 
-  private async resolveRemainingSessionApprovalRequests(
-    context: CodexSessionContext,
-  ): Promise<void> {
+  private async resolveRemainingSessionApprovalRequests(context: CodexSessionContext): Promise<void> {
     const remainingRequests = Array.from(context.pendingApprovals.values()).filter(
       (request) => !isPermissionApprovalRequest(request),
     );
@@ -2101,9 +1988,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       provider: "codex",
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
-      ...(context.lifecycleGeneration !== undefined
-        ? { lifecycleGeneration: context.lifecycleGeneration }
-        : {}),
+      ...(context.lifecycleGeneration !== undefined ? { lifecycleGeneration: context.lifecycleGeneration } : {}),
       method: "item/tool/requestUserInput/answered",
       turnId: pendingRequest.turnId,
       parentTurnId: pendingRequest.parentTurnId,
@@ -2131,10 +2016,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
    * even when its write fails, because the request is being abandoned and a
    * surviving entry would only leak into the next turn.
    */
-  private async settlePendingHumanRequests(
-    context: CodexSessionContext,
-    reason: string,
-  ): Promise<void> {
+  private async settlePendingHumanRequests(context: CodexSessionContext, reason: string): Promise<void> {
     const pendingApprovals = Array.from(context.pendingApprovals.values());
     const pendingUserInputs = Array.from(context.pendingUserInputs.values());
     if (pendingApprovals.length === 0 && pendingUserInputs.length === 0) {
@@ -2283,14 +2165,9 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       ...Array.from(this.sessions.keys(), (threadId) => this.stopSession(threadId)),
       ...Array.from(this.discoverySessions.keys(), (key) => this.stopDiscoverySession(key)),
     ]);
-    const failures = results.flatMap((result) =>
-      result.status === "rejected" ? [result.reason] : [],
-    );
+    const failures = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
     if (failures.length > 0) {
-      throw new AggregateError(
-        failures,
-        "One or more Codex app-server process trees did not exit.",
-      );
+      throw new AggregateError(failures, "One or more Codex app-server process trees did not exit.");
     }
   }
 
@@ -2422,9 +2299,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     return result;
   }
 
-  async transcribeVoice(
-    input: ServerVoiceTranscriptionInput,
-  ): Promise<ServerVoiceTranscriptionResult> {
+  async transcribeVoice(input: ServerVoiceTranscriptionInput): Promise<ServerVoiceTranscriptionResult> {
     return transcribeVoiceWithChatGptSession({
       request: input,
       resolveAuth: (refreshToken) =>
@@ -2480,10 +2355,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     );
   }
 
-  private async resolveContextForDiscovery(
-    threadId?: string,
-    cwd?: string,
-  ): Promise<CodexSessionContext> {
+  private async resolveContextForDiscovery(threadId?: string, cwd?: string): Promise<CodexSessionContext> {
     const normalizedThreadId = threadId?.trim();
     const normalizedCwd = cwd?.trim() || undefined;
     if (normalizedThreadId) {
@@ -2506,9 +2378,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       }
       return this.getOrCreateDiscoverySession(normalizedCwd);
     }
-    const firstActive = Array.from(this.sessions.values()).find((context) =>
-      this.isContextRoutable(context),
-    );
+    const firstActive = Array.from(this.sessions.values()).find((context) => this.isContextRoutable(context));
     if (firstActive) {
       return firstActive;
     }
@@ -2637,11 +2507,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         this.discoverySessionIdleTimers.delete(discoveryKey);
         return;
       }
-      if (
-        context.pending.size > 0 ||
-        context.pendingApprovals.size > 0 ||
-        context.pendingUserInputs.size > 0
-      ) {
+      if (context.pending.size > 0 || context.pendingApprovals.size > 0 || context.pendingUserInputs.size > 0) {
         this.scheduleDiscoverySessionIdleStop(discoveryKey);
         return;
       }
@@ -2670,10 +2536,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     }
 
     context.stopping = true;
-    this.rejectPendingRequests(
-      context,
-      new Error("Discovery session stopped before request completed."),
-    );
+    this.rejectPendingRequests(context, new Error("Discovery session stopped before request completed."));
     context.detachStdout?.();
     context.stdinWriter?.close(new Error("Codex discovery session stopped"));
     // Keep a non-routable replacement barrier until exit is proven.
@@ -2787,8 +2650,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
 
   private handleTransportFailure(context: CodexSessionContext, cause: unknown): void {
     if (context.stopping) return;
-    const error =
-      cause instanceof Error ? cause : new Error("Codex app-server transport failed", { cause });
+    const error = cause instanceof Error ? cause : new Error("Codex app-server transport failed", { cause });
     const message =
       error instanceof CodexAppServerTransportError
         ? error.message
@@ -2833,9 +2695,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     }
 
     if (this.isServerRequest(parsed)) {
-      void this.handleServerRequest(context, parsed).catch((cause) =>
-        this.handleTransportFailure(context, cause),
-      );
+      void this.handleServerRequest(context, parsed).catch((cause) => this.handleTransportFailure(context, cause));
       return;
     }
 
@@ -2849,17 +2709,10 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       return;
     }
 
-    this.emitErrorEvent(
-      context,
-      "protocol/unrecognizedMessage",
-      "Received protocol message in an unknown shape.",
-    );
+    this.emitErrorEvent(context, "protocol/unrecognizedMessage", "Received protocol message in an unknown shape.");
   }
 
-  private handleServerNotification(
-    context: CodexSessionContext,
-    notification: JsonRpcNotification,
-  ): void {
+  private handleServerNotification(context: CodexSessionContext, notification: JsonRpcNotification): void {
     const rawRoute = this.readRouteFields(notification.params);
     this.rememberCollabReceiverTurns(context, notification.params, rawRoute.turnId);
     const resolvedCollaborationRoute = this.resolveCollaborationRoute(context, notification.params);
@@ -2869,16 +2722,11 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       providerParentThreadId,
       isChildConversation,
     } = resolvedCollaborationRoute;
-    if (
-      isChildConversation &&
-      this.shouldSuppressChildConversationNotification(notification.method)
-    ) {
+    if (isChildConversation && this.shouldSuppressChildConversationNotification(notification.method)) {
       return;
     }
     const textDelta =
-      notification.method === "item/agentMessage/delta"
-        ? this.readString(notification.params, "delta")
-        : undefined;
+      notification.method === "item/agentMessage/delta" ? this.readString(notification.params, "delta") : undefined;
     const terminalErrorMessageRaw =
       notification.method === "error"
         ? this.readString(this.readObject(notification.params)?.error, "message")
@@ -2888,21 +2736,15 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         ? normalizeCodexUserVisibleErrorMessage(terminalErrorMessageRaw)
         : undefined;
     const terminalErrorWillRetry =
-      notification.method === "error"
-        ? this.readBoolean(notification.params, "willRetry") === true
-        : false;
+      notification.method === "error" ? this.readBoolean(notification.params, "willRetry") === true : false;
     const isTerminalError =
       notification.method === "error" &&
       !terminalErrorWillRetry &&
       !(terminalErrorMessage !== undefined && isNonFatalCodexErrorMessage(terminalErrorMessage));
     const isTerminalParentTurn =
       !isChildConversation &&
-      (notification.method === "turn/completed" ||
-        notification.method === "turn/aborted" ||
-        isTerminalError);
-    const terminalGatewayTurnId = isTerminalParentTurn
-      ? (rawRoute.turnId ?? context.session.activeTurnId)
-      : undefined;
+      (notification.method === "turn/completed" || notification.method === "turn/aborted" || isTerminalError);
+    const terminalGatewayTurnId = isTerminalParentTurn ? (rawRoute.turnId ?? context.session.activeTurnId) : undefined;
     const gatewayTurnAuthorityRetired =
       terminalGatewayTurnId !== undefined && context.gatewaySessionLease !== undefined;
     if (gatewayTurnAuthorityRetired) {
@@ -2924,9 +2766,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       provider: "codex",
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
-      ...(context.lifecycleGeneration !== undefined
-        ? { lifecycleGeneration: context.lifecycleGeneration }
-        : {}),
+      ...(context.lifecycleGeneration !== undefined ? { lifecycleGeneration: context.lifecycleGeneration } : {}),
       method: notification.method,
       ...(rawRoute.turnId ? { turnId: rawRoute.turnId } : {}),
       ...(childParentTurnId ? { parentTurnId: childParentTurnId } : {}),
@@ -2952,11 +2792,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     if (notification.method === "thread/compacted") {
       // Compaction is the only work that can hold the session "running" without
       // a turn; settle it here so the status cannot stay stuck once it lands.
-      if (
-        !isChildConversation &&
-        context.session.activeTurnId === undefined &&
-        context.session.status === "running"
-      ) {
+      if (!isChildConversation && context.session.activeTurnId === undefined && context.session.status === "running") {
         this.updateSession(context, { status: "ready" });
       }
       return;
@@ -3001,9 +2837,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       const status = this.readString(turn, "status");
       const errorMessageRaw = this.readString(this.readObject(turn, "error"), "message");
       const errorMessage =
-        errorMessageRaw !== undefined
-          ? normalizeCodexUserVisibleErrorMessage(errorMessageRaw)
-          : undefined;
+        errorMessageRaw !== undefined ? normalizeCodexUserVisibleErrorMessage(errorMessageRaw) : undefined;
       this.updateSession(context, {
         status: status === "failed" ? "error" : "ready",
         activeTurnId: undefined,
@@ -3044,11 +2878,9 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       }
       const item = this.readObject(notification.params, "item");
       const reviewTurnId = toTurnId(this.readString(item, "id")) ?? rawRoute.turnId;
-      const reviewTurnTracked =
-        reviewTurnId !== undefined ? context.reviewTurnIds.has(reviewTurnId) : false;
+      const reviewTurnTracked = reviewTurnId !== undefined ? context.reviewTurnIds.has(reviewTurnId) : false;
       const activeTurnTracked =
-        context.session.activeTurnId !== undefined &&
-        context.reviewTurnIds.has(context.session.activeTurnId);
+        context.session.activeTurnId !== undefined && context.reviewTurnIds.has(context.session.activeTurnId);
       log.info("[codex-review] exitedReviewMode notification", {
         threadId: context.session.threadId,
         reviewTurnId: reviewTurnId ?? null,
@@ -3102,8 +2934,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       }
       const message = terminalErrorMessage;
       const willRetry = terminalErrorWillRetry;
-      const isNonFatalWarning =
-        message !== undefined && !willRetry && isNonFatalCodexErrorMessage(message);
+      const isNonFatalWarning = message !== undefined && !willRetry && isNonFatalCodexErrorMessage(message);
 
       if (willRetry) {
         // Only a live turn may restore "running"; otherwise a retryable error
@@ -3129,17 +2960,10 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     }
   }
 
-  private async handleServerRequest(
-    context: CodexSessionContext,
-    request: JsonRpcRequest,
-  ): Promise<void> {
+  private async handleServerRequest(context: CodexSessionContext, request: JsonRpcRequest): Promise<void> {
     const rawRoute = this.readRouteFields(request.params);
     const resolvedCollaborationRoute = this.resolveCollaborationRoute(context, request.params);
-    const {
-      parentTurnId: childParentTurnId,
-      providerThreadId,
-      providerParentThreadId,
-    } = resolvedCollaborationRoute;
+    const { parentTurnId: childParentTurnId, providerThreadId, providerParentThreadId } = resolvedCollaborationRoute;
     const requestKind = this.requestKindForMethod(request.method);
     let requestId: ApprovalRequestId | undefined;
     if (requestKind) {
@@ -3171,9 +2995,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     const isUserInputRequest = request.method === "item/tool/requestUserInput";
     // Parsed up front: a request whose questions cannot be rendered must never
     // become a pending entry, because nothing would ever answer its JSON-RPC id.
-    const userInputQuestions = isUserInputRequest
-      ? parseCodexUserInputQuestions(asObject(request.params))
-      : undefined;
+    const userInputQuestions = isUserInputRequest ? parseCodexUserInputQuestions(asObject(request.params)) : undefined;
     if (isUserInputRequest && userInputQuestions) {
       requestId = ApprovalRequestId.makeUnsafe(randomUUID());
       context.pendingUserInputs.set(requestId, {
@@ -3194,9 +3016,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       provider: "codex",
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
-      ...(context.lifecycleGeneration !== undefined
-        ? { lifecycleGeneration: context.lifecycleGeneration }
-        : {}),
+      ...(context.lifecycleGeneration !== undefined ? { lifecycleGeneration: context.lifecycleGeneration } : {}),
       method: request.method,
       ...(rawRoute.turnId ? { turnId: rawRoute.turnId } : {}),
       ...(childParentTurnId ? { parentTurnId: childParentTurnId } : {}),
@@ -3305,9 +3125,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       provider: "codex",
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
-      ...(context.lifecycleGeneration !== undefined
-        ? { lifecycleGeneration: context.lifecycleGeneration }
-        : {}),
+      ...(context.lifecycleGeneration !== undefined ? { lifecycleGeneration: context.lifecycleGeneration } : {}),
       method,
       message,
     });
@@ -3323,9 +3141,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       provider: "codex",
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
-      ...(context.lifecycleGeneration !== undefined
-        ? { lifecycleGeneration: context.lifecycleGeneration }
-        : {}),
+      ...(context.lifecycleGeneration !== undefined ? { lifecycleGeneration: context.lifecycleGeneration } : {}),
       method,
       message,
     });
@@ -3387,9 +3203,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         provider: "codex",
         threadId: context.session.threadId,
         createdAt: new Date().toISOString(),
-        ...(context.lifecycleGeneration !== undefined
-          ? { lifecycleGeneration: context.lifecycleGeneration }
-          : {}),
+        ...(context.lifecycleGeneration !== undefined ? { lifecycleGeneration: context.lifecycleGeneration } : {}),
         method: "turn/completed",
         turnId,
         message: "Recovered a missing turn/completed notification after task_complete.",
@@ -3415,8 +3229,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     },
   ): void {
     const terminalTurnId =
-      context.session.activeTurnId !== undefined &&
-      context.reviewTurnIds.has(context.session.activeTurnId)
+      context.session.activeTurnId !== undefined && context.reviewTurnIds.has(context.session.activeTurnId)
         ? context.session.activeTurnId
         : input.completedTurnId !== undefined && context.reviewTurnIds.has(input.completedTurnId)
           ? input.completedTurnId
@@ -3440,9 +3253,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       provider: "codex",
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
-      ...(context.lifecycleGeneration !== undefined
-        ? { lifecycleGeneration: context.lifecycleGeneration }
-        : {}),
+      ...(context.lifecycleGeneration !== undefined ? { lifecycleGeneration: context.lifecycleGeneration } : {}),
       method: "turn/completed",
       turnId: terminalTurnId,
       message: input.reason,
@@ -3451,9 +3262,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
           id: terminalTurnId,
           status: "completed",
         },
-        ...(context.gatewayCredentialRetired === true
-          ? { [AGENT_GATEWAY_TURN_AUTHORITY_RETIRED]: true }
-          : {}),
+        ...(context.gatewayCredentialRetired === true ? { [AGENT_GATEWAY_TURN_AUTHORITY_RETIRED]: true } : {}),
       },
     });
   }
@@ -3499,8 +3308,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     const responseRecord = this.readObject(response);
     const threadRecord = this.readObject(responseRecord, "thread");
     const threadIdRaw = this.readThreadIdFromResponse(method, responseRecord);
-    const turnsRaw =
-      this.readArray(threadRecord, "turns") ?? this.readArray(responseRecord, "turns") ?? [];
+    const turnsRaw = this.readArray(threadRecord, "turns") ?? this.readArray(responseRecord, "turns") ?? [];
     const turns = turnsRaw.map((turnValue, index) => {
       const turn = this.readObject(turnValue);
       const turnIdRaw = this.readString(turn, "id") ?? `${threadIdRaw}:turn:${index + 1}`;
@@ -3536,8 +3344,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   private readThreadIdFromResponse(method: string, response: unknown): string {
     const responseRecord = this.readObject(response);
     const thread = this.readObject(responseRecord, "thread");
-    const threadIdRaw =
-      this.readString(thread, "id") ?? this.readString(responseRecord, "threadId");
+    const threadIdRaw = this.readString(thread, "id") ?? this.readString(responseRecord, "threadId");
     if (!threadIdRaw) {
       throw new Error(`${method} response did not include a thread id.`);
     }
@@ -3551,8 +3358,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
 
     const candidate = value as Record<string, unknown>;
     return (
-      typeof candidate.method === "string" &&
-      (typeof candidate.id === "string" || typeof candidate.id === "number")
+      typeof candidate.method === "string" && (typeof candidate.id === "string" || typeof candidate.id === "number")
     );
   }
 
@@ -3616,10 +3422,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     );
   }
 
-  private resolveCollaborationRoute(
-    context: CodexSessionContext,
-    params: unknown,
-  ): ResolvedCollaborationRoute {
+  private resolveCollaborationRoute(context: CodexSessionContext, params: unknown): ResolvedCollaborationRoute {
     const parentTurnId = this.readChildParentTurnId(context, params);
     const providerThreadId = normalizeProviderThreadId(this.readProviderConversationId(params));
     const mappedProviderParentThreadId = this.readChildParentProviderThreadId(context, params);
@@ -3642,17 +3445,14 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       activeProviderThreadId !== undefined &&
       providerThreadId !== activeProviderThreadId;
     const providerParentThreadId =
-      mappedProviderParentThreadId ??
-      (isUnmappedChildConversation ? activeProviderThreadId : undefined);
+      mappedProviderParentThreadId ?? (isUnmappedChildConversation ? activeProviderThreadId : undefined);
 
     return {
       ...(parentTurnId ? { parentTurnId } : {}),
       ...(providerThreadId ? { providerThreadId } : {}),
       ...(providerParentThreadId ? { providerParentThreadId } : {}),
       isChildConversation:
-        parentTurnId !== undefined ||
-        providerParentThreadId !== undefined ||
-        isUnmappedChildConversation,
+        parentTurnId !== undefined || providerParentThreadId !== undefined || isUnmappedChildConversation,
     };
   }
 
@@ -3664,10 +3464,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     return context.collabReceiverTurns.get(providerConversationId);
   }
 
-  private readChildParentProviderThreadId(
-    context: CodexSessionContext,
-    params: unknown,
-  ): string | undefined {
+  private readChildParentProviderThreadId(context: CodexSessionContext, params: unknown): string | undefined {
     const providerConversationId = this.readProviderConversationId(params);
     if (!providerConversationId) {
       return undefined;
@@ -3689,9 +3486,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     if (itemType !== "collabAgentToolCall" && itemType !== "collabToolCall") {
       return;
     }
-    const parentProviderThreadId = normalizeProviderThreadId(
-      this.readProviderConversationId(params),
-    );
+    const parentProviderThreadId = normalizeProviderThreadId(this.readProviderConversationId(params));
 
     const receiverThreadIds = decodeSubagentReceiverThreadIds(item);
     for (const receiverThreadId of receiverThreadIds) {
@@ -3789,10 +3584,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   }
 
   private isTurnAlreadyIdleError(error: unknown): boolean {
-    return (
-      error instanceof Error &&
-      /turn\/interrupt[^\n]*no active turn(?: to interrupt)?/i.test(error.message)
-    );
+    return error instanceof Error && /turn\/interrupt[^\n]*no active turn(?: to interrupt)?/i.test(error.message);
   }
 
   private normalizeItemType(raw: unknown): string {
@@ -3805,15 +3597,10 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       .toLowerCase();
   }
 
-  private turnHasReviewItem(
-    turn: CodexThreadTurnSnapshot,
-    itemType: "entered" | "exited",
-  ): boolean {
+  private turnHasReviewItem(turn: CodexThreadTurnSnapshot, itemType: "entered" | "exited"): boolean {
     return turn.items.some((item) => {
       const record = this.readObject(item);
-      const normalized = this.normalizeItemType(
-        this.readString(record, "type") ?? this.readString(record, "kind"),
-      );
+      const normalized = this.normalizeItemType(this.readString(record, "type") ?? this.readString(record, "kind"));
       return itemType === "entered"
         ? normalized.includes("entered review mode")
         : normalized.includes("exited review mode");
@@ -3821,9 +3608,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   }
 
   private findLatestReviewTurnId(snapshot: CodexThreadSnapshot): TurnId | undefined {
-    const latestReviewTurn = [...snapshot.turns]
-      .reverse()
-      .find((turn) => this.turnHasReviewItem(turn, "entered"));
+    const latestReviewTurn = [...snapshot.turns].reverse().find((turn) => this.turnHasReviewItem(turn, "entered"));
     return latestReviewTurn?.id;
   }
 
@@ -3833,10 +3618,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   }
 }
 
-function brandIfNonEmpty<T extends string>(
-  value: string | undefined,
-  maker: (value: string) => T,
-): T | undefined {
+function brandIfNonEmpty<T extends string>(value: string | undefined, maker: (value: string) => T): T | undefined {
   const normalized = value?.trim();
   return normalized?.length ? maker(normalized) : undefined;
 }
@@ -3941,9 +3723,7 @@ function runCodexVersionCommand(input: {
       // regardless: a binary that ignores SIGTERM would otherwise linger forever.
       child.kill("SIGKILL");
       finish({
-        error: new Error(
-          `Codex CLI version check timed out after ${CODEX_VERSION_CHECK_TIMEOUT_MS}ms.`,
-        ),
+        error: new Error(`Codex CLI version check timed out after ${CODEX_VERSION_CHECK_TIMEOUT_MS}ms.`),
         status: null,
         stdout,
         stderr,
@@ -4001,9 +3781,7 @@ async function runCodexCliVersionGate(input: {
       assertCodexWorkingDirectoryExists(input.cwd);
       throw new Error(`Codex CLI (${input.binaryPath}) is not installed or not executable.`);
     }
-    throw new Error(
-      `Failed to execute Codex CLI version check: ${result.error.message || String(result.error)}`,
-    );
+    throw new Error(`Failed to execute Codex CLI version check: ${result.error.message || String(result.error)}`);
   }
 
   const { stdout, stderr } = result;
