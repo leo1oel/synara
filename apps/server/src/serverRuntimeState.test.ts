@@ -5,7 +5,6 @@ import { describe, expect, it } from "vitest";
 
 import { ServerConfig } from "./config";
 import {
-  clearPersistedServerRuntimeState,
   makePersistedServerRuntimeState,
   persistServerRuntimeState,
   readPersistedServerRuntimeState,
@@ -20,7 +19,7 @@ const run = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   Effect.runPromise(effect.pipe(Effect.provide(testLayer)) as Effect.Effect<A, E, never>);
 
 describe("serverRuntimeState", () => {
-  it("persists, reads, and clears runtime state", async () => {
+  it("persists and reads private runtime state", async () => {
     const result = await run(
       Effect.gen(function* () {
         const config = yield* ServerConfig;
@@ -28,9 +27,7 @@ describe("serverRuntimeState", () => {
         yield* persistServerRuntimeState({ path: config.serverRuntimeStatePath, state });
         const mode = fs.statSync(config.serverRuntimeStatePath).mode & 0o777;
         const persisted = yield* readPersistedServerRuntimeState(config.serverRuntimeStatePath);
-        yield* clearPersistedServerRuntimeState(config.serverRuntimeStatePath);
-        const cleared = yield* readPersistedServerRuntimeState(config.serverRuntimeStatePath);
-        return { persisted, cleared, mode };
+        return { persisted, mode };
       }),
     );
 
@@ -38,7 +35,6 @@ describe("serverRuntimeState", () => {
     if (Option.isSome(result.persisted)) {
       expect(result.persisted.value.origin).toBe("http://127.0.0.1:4123");
     }
-    expect(Option.isNone(result.cleared)).toBe(true);
     if (process.platform !== "win32") expect(result.mode).toBe(0o600);
   });
 });

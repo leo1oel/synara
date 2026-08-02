@@ -82,6 +82,7 @@ interface ChatHeaderProps {
   hideSidebarControls?: boolean;
   hideHandoffControls?: boolean;
   hideWorkspaceControls?: boolean;
+  forceHandoffLabel?: boolean;
   historyProjectId?: ProjectId;
   onNewChat?: () => void;
   onDeleteChat?: (threadId: ThreadId, threadTitle: string) => void;
@@ -520,6 +521,7 @@ export function ChatHeader({
   hideSidebarControls: hideSidebarControlsProp,
   hideHandoffControls: hideHandoffControlsProp,
   hideWorkspaceControls: hideWorkspaceControlsProp,
+  forceHandoffLabel: forceHandoffLabelProp,
   historyProjectId,
   onNewChat,
   onDeleteChat,
@@ -562,6 +564,7 @@ export function ChatHeader({
   const hideSidebarControls = hideSidebarControlsProp ?? false;
   const hideHandoffControls = hideHandoffControlsProp ?? false;
   const hideWorkspaceControls = hideWorkspaceControlsProp ?? false;
+  const forceHandoffLabel = forceHandoffLabelProp ?? false;
   const showGitActions = showGitActionsProp ?? true;
   const showDiffToggle = showDiffToggleProp ?? true;
   const diffDisabledReason = diffDisabledReasonProp ?? null;
@@ -797,14 +800,18 @@ export function ChatHeader({
                       <ChatHeaderButton
                         type="button"
                         tone="plain"
-                        className={compact ? "gap-1" : "gap-1.5"}
+                        className={cn(
+                          compact && !forceHandoffLabel ? "gap-1" : "gap-1.5",
+                          forceHandoffLabel &&
+                            "text-[length:var(--lattice-type-label-size,12px)] sm:text-[length:var(--lattice-type-label-size,12px)]",
+                        )}
                         aria-label={handoffActionLabel}
                         disabled={handoffDisabled || handoffActionTargetProviders.length === 0}
                       />
                     }
                   >
-                    <HandoffIcon className="size-[1em] shrink-0 opacity-80" />
-                    {!compact ? <span className="truncate font-normal">Hand off</span> : null}
+                    <HandoffIcon className={cn("shrink-0 opacity-80", forceHandoffLabel ? "size-3" : "size-[1em]")} />
+                    {!compact || forceHandoffLabel ? <span className="truncate font-normal">Hand off</span> : null}
                   </MenuTrigger>
                 }
               />

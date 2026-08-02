@@ -128,8 +128,8 @@ function GitFileSection(props: {
   return (
     <section className="min-w-0">
       <header className="flex items-center gap-2 px-1.5 py-1">
-        <span className="text-[11px] font-semibold text-muted-foreground">{props.title}</span>
-        <span className="rounded-full bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
+        <span className="text-[11px] font-semibold text-[var(--color-text-foreground-secondary)]">{props.title}</span>
+        <span className="rounded-full bg-muted px-1.5 text-[10px] font-medium text-[var(--color-text-foreground-secondary)]">
           {props.files.length}
         </span>
         <DiffStat additions={stat.additions} deletions={stat.deletions} className="text-[10px]" />
@@ -147,7 +147,7 @@ function GitFileSection(props: {
         ) : null}
       </header>
       {props.files.length === 0 ? (
-        <p className="px-1.5 py-1 text-[11px] text-muted-foreground/70">{props.emptyLabel}</p>
+        <p className="px-1.5 py-1 text-[11px] text-[var(--color-text-foreground-tertiary)]">{props.emptyLabel}</p>
       ) : (
         <div className="flex flex-col gap-0.5">
           {props.files.map((file) => {
@@ -285,7 +285,12 @@ export function GitPanel(props: {
   }
 
   return (
-    <div className={cn("flex h-full min-h-0 w-full flex-col", props.showActions && "lattice-source-control")}>
+    <div
+      className={cn(
+        "flex h-full min-h-0 w-full flex-col text-[var(--color-text-foreground)]",
+        props.showActions && "lattice-source-control",
+      )}
+    >
       <DockPaneHeader
         title={props.title ?? "Source control"}
         onClose={props.onClose}

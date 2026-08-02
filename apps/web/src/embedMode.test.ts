@@ -273,8 +273,8 @@ describe("Lattice embed mode", () => {
 
     initializeEmbedMode();
 
-    expect(setProperty).toHaveBeenCalledWith("--lattice-settings-content-max-width", "500px");
-    expect(setProperty).toHaveBeenCalledWith("--lattice-settings-content-padding-inline", "34px");
+    expect(setProperty).toHaveBeenCalledWith("--lattice-settings-content-max-width", "720px");
+    expect(setProperty).toHaveBeenCalledWith("--lattice-settings-content-padding-inline", "40px");
     expect(setProperty).toHaveBeenCalledWith("--lattice-settings-frame-border-width", "1px");
     expect(setProperty).toHaveBeenCalledWith("--lattice-settings-frame-radius", "8px");
     expect(setProperty).toHaveBeenCalledWith("--lattice-settings-panel", "#F9F9FA");
@@ -287,7 +287,11 @@ describe("Lattice embed mode", () => {
 
     expect(setProperty).toHaveBeenCalledWith("--app-shell-background", "#141416");
     expect(setProperty).toHaveBeenCalledWith("--color-background-panel", "#141416");
+    expect(setProperty).toHaveBeenCalledWith("--color-text-foreground", "#e9e9e7");
+    expect(setProperty).toHaveBeenCalledWith("--color-text-foreground-secondary", "#a4a4aa");
     expect(setProperty).toHaveBeenCalledWith("--sidebar", "#141416");
+    expect(setProperty).toHaveBeenCalledWith("--composer-surface", "#202023");
+    expect(setProperty).toHaveBeenCalledWith("--lattice-agent-composer-surface", "#202023");
   });
 
   it("uses Lattice's dark drawer surface for embedded feature panels", () => {

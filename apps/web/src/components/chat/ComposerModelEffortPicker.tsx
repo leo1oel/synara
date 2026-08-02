@@ -30,11 +30,7 @@ import {
 } from "./composerPickerStyles";
 import { ComposerPickerMenuPopup, ComposerPickerMenuSubPopup } from "./ComposerPickerMenuPopup";
 import { getComposerTraitSelection, hasVisibleComposerTraitControls } from "./composerTraits";
-import {
-  getProviderIconClassName,
-  ProviderModelMenuItems,
-  resolveProviderModelLabel,
-} from "./ProviderModelPicker";
+import { getProviderIconClassName, ProviderModelMenuItems, resolveProviderModelLabel } from "./ProviderModelPicker";
 import { TraitsMenuContent } from "./TraitsPicker";
 
 type ComposerModelEffortPickerProps = {
@@ -118,9 +114,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
   const supportsFastModeControl = fastModeDescriptor !== null || caps.supportsFastMode;
   const hasTraitsTopSection = hasVisibleComposerTraitControls(traitSelection);
 
-  const effortLabel = effort
-    ? (effortLevels.find((level) => level.value === effort)?.label ?? effort)
-    : null;
+  const effortLabel = effort ? (effortLevels.find((level) => level.value === effort)?.label ?? effort) : null;
   const triggerStatusLabel = ultrathinkPromptControlled
     ? "Ultrathink"
     : effortLabel
@@ -154,7 +148,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
       disabled={props.disabled ?? false}
       className={cn(
         "min-w-0 justify-start gap-1.5 whitespace-nowrap px-2 sm:px-2.5 [&_svg]:mx-0",
-        props.dense ? "shrink" : "shrink-0",
+        props.dense ? "!h-8 shrink" : "shrink-0",
         COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME,
       )}
       aria-label="Change model and reasoning"
@@ -163,12 +157,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
   );
 
   const triggerContent = (
-    <span
-      className={cn(
-        "flex min-w-0 items-center overflow-hidden",
-        props.dense ? "gap-[3px]" : "gap-1.5",
-      )}
-    >
+    <span className={cn("flex min-w-0 items-center overflow-hidden", props.dense ? "gap-[3px]" : "gap-1.5")}>
       <ProviderIcon
         aria-hidden="true"
         className={cn(
@@ -183,10 +172,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
         <span className="min-w-0 truncate text-[var(--color-text-foreground)]">{modelLabel}</span>
       )}
       {showsFastBadge ? (
-        <FastModeIcon
-          aria-hidden="true"
-          className={cn("size-3.5 shrink-0", COMPOSER_MUTED_ACCENT_TEXT_CLASS_NAME)}
-        />
+        <FastModeIcon aria-hidden="true" className={cn("size-3.5 shrink-0", COMPOSER_MUTED_ACCENT_TEXT_CLASS_NAME)} />
       ) : null}
       {triggerStatusLabel ? (
         props.hideStatusLabel ? (
@@ -198,9 +184,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
             <span className="sr-only">{triggerStatusLabel}</span>
           </>
         ) : (
-          <span className={cn("shrink-0", COMPOSER_MUTED_ACCENT_TEXT_CLASS_NAME)}>
-            {triggerStatusLabel}
-          </span>
+          <span className={cn("shrink-0", COMPOSER_MUTED_ACCENT_TEXT_CLASS_NAME)}>{triggerStatusLabel}</span>
         )
       ) : null}
       <ChevronDownIcon aria-hidden="true" className="ms-0.5 size-3 shrink-0 opacity-60" />
@@ -220,9 +204,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
     >
       {props.shortcutLabel ? (
         <Tooltip>
-          <TooltipTrigger render={<MenuTrigger render={triggerButton} />}>
-            {triggerContent}
-          </TooltipTrigger>
+          <TooltipTrigger render={<MenuTrigger render={triggerButton} />}>{triggerContent}</TooltipTrigger>
           {!isMenuOpen ? (
             <TooltipPopup side="top" sideOffset={6} variant="picker">
               <span className="inline-flex items-center gap-2 px-1 py-0.5">
@@ -264,19 +246,14 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
             />
             <span className="truncate">{modelLabel}</span>
           </MenuSubTrigger>
-          <ComposerPickerMenuSubPopup
-            fixedWidth
-            className={COMPOSER_PICKER_MODEL_SUBMENU_HEIGHT_CLASS_NAME}
-          >
+          <ComposerPickerMenuSubPopup fixedWidth className={COMPOSER_PICKER_MODEL_SUBMENU_HEIGHT_CLASS_NAME}>
             <ProviderModelMenuItems
               provider={props.provider}
               model={props.model}
               lockedProvider={props.lockedProvider}
               {...(props.providers ? { providers: props.providers } : {})}
               modelOptionsByProvider={props.modelOptionsByProvider}
-              {...(props.loadingModelProviders
-                ? { loadingModelProviders: props.loadingModelProviders }
-                : {})}
+              {...(props.loadingModelProviders ? { loadingModelProviders: props.loadingModelProviders } : {})}
               {...(props.hiddenProviders ? { hiddenProviders: props.hiddenProviders } : {})}
               {...(props.providerOrder ? { providerOrder: props.providerOrder } : {})}
               {...(props.disabled !== undefined ? { disabled: props.disabled } : {})}

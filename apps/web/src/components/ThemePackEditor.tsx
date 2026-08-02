@@ -158,7 +158,6 @@ export function ThemePackEditor({ variant, isActive: isActiveProp, mode: modePro
             <SettingsSelectPopup align="end" alignItemWithTrigger={false} className="p-1.5">
               {codeThemes.map((option) => (
                 <SelectItem
-                  hideIndicator
                   key={option.id}
                   value={option.id}
                   className={cn(SETTINGS_CONTROL_RADIUS_CLASS_NAME, "px-2 py-2")}

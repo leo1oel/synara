@@ -12,7 +12,7 @@ import { render } from "vitest-browser-react";
 
 import { ComposerExtrasMenu } from "./ComposerExtrasMenu";
 
-async function mountMenu(props?: { interactionMode?: "default" | "plan" }) {
+async function mountMenu(props?: { interactionMode?: "default" | "plan"; triggerClassName?: string }) {
   const onAddPhotos = vi.fn();
   const onSetPlanMode = vi.fn();
   const host = document.createElement("div");
@@ -22,6 +22,7 @@ async function mountMenu(props?: { interactionMode?: "default" | "plan" }) {
       interactionMode={props?.interactionMode ?? "default"}
       onAddPhotos={onAddPhotos}
       onSetPlanMode={onSetPlanMode}
+      triggerClassName={props?.triggerClassName}
     />,
     { container: host },
   );
@@ -85,5 +86,13 @@ describe("ComposerExtrasMenu", () => {
 
     expect(menu.onSetPlanMode).toHaveBeenCalledWith(true);
     expect(document.body.textContent ?? "").not.toContain("Fast");
+  });
+
+  it("can keep the embed trigger at a fixed size across viewport breakpoints", async () => {
+    await using _ = await mountMenu({ triggerClassName: "!size-8" });
+
+    const trigger = page.getByLabelText("Composer extras").element();
+    expect(getComputedStyle(trigger).width).toBe("32px");
+    expect(getComputedStyle(trigger).height).toBe("32px");
   });
 });

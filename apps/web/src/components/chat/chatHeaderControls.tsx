@@ -42,7 +42,8 @@ export const CHAT_SURFACE_HEADER_HEIGHT_CLASS: `h-[${typeof CHAT_SURFACE_HEADER_
  * headers all sit their content at this x). Kept as one token so the leading controls
  * line up across surfaces and the inset is tuned in a single place.
  */
-export const CHAT_SURFACE_HEADER_PADDING_X_CLASS = "px-3 sm:px-5";
+export const CHAT_SURFACE_HEADER_PADDING_X_CLASS =
+  "px-[var(--app-chat-surface-gutter-x)] sm:px-[var(--app-chat-surface-gutter-x-lg)]";
 
 /**
  * Bottom hairline shared by every chat-surface chrome bar (chat header, workspace

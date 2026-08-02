@@ -54,8 +54,11 @@ export function PullRequestFilterPillGroup<T extends string>({
           className={cn(
             "flex h-7 items-center rounded-md px-2.5 font-normal transition-colors",
             option.value === value
-              ? cn(CHAT_SURFACE_CONTROL_ACTIVE_CLASS_NAME, "shadow-[0_1px_2px_rgb(0_0_0/0.06)]")
-              : "text-muted-foreground hover:text-foreground",
+              ? cn(
+                  CHAT_SURFACE_CONTROL_ACTIVE_CLASS_NAME,
+                  "text-[var(--color-text-foreground)] shadow-[0_1px_2px_rgb(0_0_0/0.06)]",
+                )
+              : "text-[var(--color-text-foreground-secondary)] hover:text-[var(--color-text-foreground)]",
           )}
         >
           {option.label}

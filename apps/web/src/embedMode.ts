@@ -663,7 +663,20 @@ export function applyEmbedTheme(config: EmbedModeConfig): void {
     "--color-background-panel": colors.surface,
     "--color-background-surface": colors.surface,
     "--color-background-surface-under": colors.background,
+    "--color-background-control": colors.elevated,
+    "--color-background-control-opaque": colors.elevated,
+    "--color-background-elevated-primary-opaque": colors.elevated,
+    "--color-background-elevated-secondary": colors.elevated,
     "--color-token-main-surface-primary": colors.surface,
+    // Synara's newer controls read the Codex primitive text tokens directly,
+    // while older Tailwind utilities route through --foreground. Set both
+    // branches at the iframe boundary so an embedded dark surface cannot fall
+    // back to the persisted light theme's black ink.
+    "--color-text-foreground": colors.foreground,
+    "--color-text-foreground-secondary": colors.muted,
+    "--color-text-foreground-tertiary": colors.faint,
+    "--color-icon-primary": colors.foreground,
+    "--color-icon-secondary": colors.muted,
     "--background": colors.background,
     "--foreground": colors.foreground,
     "--card": colors.surface,
@@ -685,14 +698,24 @@ export function applyEmbedTheme(config: EmbedModeConfig): void {
     "--lattice-settings-line-strong": colors.strongBorder,
     "--lattice-settings-accent": colors.accent,
     "--lattice-settings-accent-soft": colors.accentSoft,
-    "--lattice-settings-content-max-width": "500px",
-    "--lattice-settings-content-padding-top": "30px",
-    "--lattice-settings-content-padding-inline": "34px",
-    "--lattice-settings-content-padding-bottom": "40px",
+    "--lattice-settings-content-max-width": "720px",
+    "--lattice-settings-content-padding-top": "32px",
+    "--lattice-settings-content-padding-inline": "40px",
+    "--lattice-settings-content-padding-bottom": "48px",
+    "--lattice-settings-control-width": "170px",
+    "--lattice-settings-control-height": "30px",
+    "--lattice-settings-control-radius": "9px",
+    "--lattice-settings-control-font-size": "12px",
+    "--lattice-settings-control-line-height": "16px",
+    "--lattice-settings-control-font-weight": "400",
     "--lattice-settings-frame-border-width": "1px",
     "--lattice-settings-frame-radius": "8px",
     "--theme-font-ui-family": EMBED_UI_FONT_STACK,
-    ...(config.theme === "light" ? { "--composer-surface": "#f9f9fa" } : {}),
+    // The composer lives inside this iframe. Set its surface at the embed
+    // boundary so a dark Lattice host cannot leave it on the web app's light
+    // default while the rest of the chrome has already switched themes.
+    "--composer-surface": config.theme === "dark" ? colors.elevated : "#f9f9fa",
+    "--lattice-agent-composer-surface": config.theme === "dark" ? colors.elevated : "#f9f9fa",
   };
   for (const [name, value] of Object.entries(variables)) root.style.setProperty(name, value);
 }

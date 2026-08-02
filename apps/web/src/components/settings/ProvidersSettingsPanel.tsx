@@ -862,6 +862,7 @@ export function ProvidersSettingsPanel({
                   return (
                     <SettingsListRow
                       key={providerStatus.provider}
+                      className="px-3"
                       title={PROVIDER_DISPLAY_NAMES[providerStatus.provider]}
                       description={updateLabel || undefined}
                       actions={

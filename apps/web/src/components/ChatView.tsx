@@ -9995,6 +9995,7 @@ export default function ChatView({
         interactionMode={interactionMode}
         onAddPhotos={addComposerImages}
         onSetPlanMode={setPlanMode}
+        triggerClassName={isEmbed ? "!size-8" : undefined}
       />
       {!isEmbed && !isVoiceRecording && !isVoiceTranscribing ? (
         <RuntimeUsageControls {...runtimeUsageControlsProps} className="shrink-0" hideLabel={options.iconOnly} />
@@ -10463,7 +10464,7 @@ export default function ChatView({
                       "@container",
                       COMPOSER_FOOTER_ROW_CLASS_NAME,
                       isEmbed
-                        ? "!grid grid-cols-[auto_minmax(0,1fr)] gap-0 overflow-hidden"
+                        ? "!grid min-h-[38px] grid-cols-[auto_minmax(0,1fr)] gap-0 overflow-hidden"
                         : isComposerFooterCompact
                           ? "gap-1.5"
                           : "flex-wrap gap-1.5 sm:flex-nowrap sm:gap-0",
@@ -10752,6 +10753,7 @@ export default function ChatView({
           CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
           !isEditorRail && CHAT_SURFACE_HEADER_PADDING_X_CLASS,
           "flex items-center",
+          isEmbed && "lattice-agent-header",
           isEditorRail ? "h-10" : CHAT_SURFACE_HEADER_HEIGHT_CLASS,
           isElectron && "drag-region",
           // The editor-rail chat header sits in the editor's second row (inside the
@@ -10774,6 +10776,7 @@ export default function ChatView({
           hideSidebarControls={isEditorRail || isEmbed}
           hideHandoffControls={terminalWorkspaceTerminalTabActive || isEditorRail}
           hideWorkspaceControls={isEmbed}
+          forceHandoffLabel={isEmbed}
           {...(isEmbed && activeProject ? { historyProjectId: activeProject.id } : {})}
           {...(isEmbed ? { onNewChat: onNewEmbedChat } : {})}
           {...(isEmbed ? { onDeleteChat: onDeleteEmbedChat } : {})}
@@ -11049,7 +11052,7 @@ export default function ChatView({
                     CHAT_COLUMN_GUTTER_CLASS_NAME,
                     // A trailing BranchToolbar only renders for legacy git threads; otherwise the
                     // composer is the last element, so give it a comfortable bottom margin.
-                    isGitRepo && !environmentEnabled ? "pb-0.5" : "pb-3 sm:pb-4",
+                    isGitRepo && !environmentEnabled ? "pb-0.5" : isEmbed ? "pb-3" : "pb-3 sm:pb-4",
                   )}
                   // Match the transcript's right inset so the composer stays aligned with chat
                   // content (and clear of the docked Environment overlay).

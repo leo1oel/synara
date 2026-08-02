@@ -6,6 +6,7 @@ import {
   disclosureShellClassName,
   DISCLOSURE_CHEVRON_MOTION_CLASS,
   DISCLOSURE_COLLAPSIBLE_PANEL_CLASS,
+  DISCLOSURE_POPUP_MOTION_CLASS,
   DISCLOSURE_SHELL_MOTION_CLASS,
   DISCLOSURE_SHELL_CLOSED_CLASS,
   DISCLOSURE_SHELL_OPEN_CLASS,
@@ -32,10 +33,18 @@ describe("disclosureMotion", () => {
       DISCLOSURE_SHELL_MOTION_CLASS,
       DISCLOSURE_CHEVRON_MOTION_CLASS,
       DISCLOSURE_COLLAPSIBLE_PANEL_CLASS,
+      DISCLOSURE_POPUP_MOTION_CLASS,
     ]) {
       expect(className).toContain("duration-220");
       expect(className).toContain("ease-out");
       expect(className).toContain("motion-reduce:transition-none");
     }
+  });
+
+  it("keeps popup travel subtle and symmetric", () => {
+    expect(DISCLOSURE_POPUP_MOTION_CLASS).toContain("data-starting-style:-translate-y-1");
+    expect(DISCLOSURE_POPUP_MOTION_CLASS).toContain("data-ending-style:-translate-y-1");
+    expect(DISCLOSURE_POPUP_MOTION_CLASS).toContain("data-starting-style:scale-[0.97]");
+    expect(DISCLOSURE_POPUP_MOTION_CLASS).toContain("data-ending-style:scale-[0.97]");
   });
 });

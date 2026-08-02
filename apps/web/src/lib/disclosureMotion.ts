@@ -35,6 +35,10 @@ export const DISCLOSURE_CHEVRON_MOTION_CLASS =
 export const DISCLOSURE_COLLAPSIBLE_PANEL_CLASS =
   "h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-220 ease-out motion-reduce:transition-none data-ending-style:h-0 data-starting-style:h-0 data-open:data-ending-style:[height:var(--collapsible-panel-height)]";
 
+/** Menu/select popup entrance and exit, shared with the Lattice host. */
+export const DISCLOSURE_POPUP_MOTION_CLASS =
+  "transition-[opacity,transform] duration-220 ease-out motion-reduce:transition-none data-starting-style:-translate-y-1 data-starting-style:scale-[0.97] data-starting-style:opacity-0 data-ending-style:-translate-y-1 data-ending-style:scale-[0.97] data-ending-style:opacity-0";
+
 /**
  * Inline-axis (width) reveal for side panels that open/close along the
  * horizontal axis. Same timing curve as the vertical disclosures so every
@@ -43,11 +47,7 @@ export const DISCLOSURE_COLLAPSIBLE_PANEL_CLASS =
 export const DISCLOSURE_WIDTH_MOTION_CLASS =
   "overflow-hidden transition-[width] duration-220 ease-out motion-reduce:transition-none";
 
-export function disclosureWidthClassName(
-  open: boolean,
-  openWidthClassName: string,
-  className?: string,
-) {
+export function disclosureWidthClassName(open: boolean, openWidthClassName: string, className?: string) {
   return cn(DISCLOSURE_WIDTH_MOTION_CLASS, open ? openWidthClassName : "w-0", className);
 }
 

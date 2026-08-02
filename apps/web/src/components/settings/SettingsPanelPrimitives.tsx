@@ -38,11 +38,7 @@ export function SettingsCard({
   return (
     <div
       data-slot="settings-card"
-      className={cn(
-        SETTINGS_CARD_CLASS_NAME,
-        divided && SETTINGS_STACKED_ROWS_DIVIDER_CLASS_NAME,
-        className,
-      )}
+      className={cn(SETTINGS_CARD_CLASS_NAME, divided && SETTINGS_STACKED_ROWS_DIVIDER_CLASS_NAME, className)}
     >
       {children}
     </div>
@@ -112,9 +108,7 @@ export function SettingsEmptyState({
         SETTINGS_EMPTY_STATE_CLASS_NAME,
         "px-4 text-sm",
         layout === "block" ? "py-10 text-center" : "py-6",
-        tone === "destructive"
-          ? "border-destructive/30 bg-destructive/5 text-destructive"
-          : "text-muted-foreground",
+        tone === "destructive" ? "border-destructive/30 bg-destructive/5 text-destructive" : "text-muted-foreground",
         className,
       )}
     >
@@ -157,22 +151,20 @@ export function SettingsListRow({
   title,
   description,
   actions,
+  className,
   align: alignProp,
   onContextMenu,
 }: {
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
+  className?: string;
   align?: "center" | "start";
   onContextMenu?: ComponentProps<"div">["onContextMenu"];
 }) {
   const align = alignProp ?? "center";
   return (
-    <div
-      className={SETTINGS_CARD_ROW_CLASS_NAME}
-      data-slot="settings-row"
-      onContextMenu={onContextMenu}
-    >
+    <div className={cn(SETTINGS_CARD_ROW_CLASS_NAME, className)} data-slot="settings-row" onContextMenu={onContextMenu}>
       <div
         className={cn(
           "flex flex-col gap-2.5 sm:flex-row sm:justify-between",
@@ -181,12 +173,10 @@ export function SettingsListRow({
       >
         <div className="min-w-0 flex-1 space-y-0.5">
           <div className={cn(SETTINGS_CARD_ROW_TITLE_CLASS_NAME, "truncate")}>{title}</div>
-          {description != null ? (
-            <div className={SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME}>{description}</div>
-          ) : null}
+          {description != null ? <div className={SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME}>{description}</div> : null}
         </div>
         {actions != null ? (
-          <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto sm:justify-end">
+          <div data-slot="settings-actions" className="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto">
             {actions}
           </div>
         ) : null}
@@ -231,15 +221,13 @@ export function SettingsRow({
         <div className="min-w-0 flex-1 space-y-0.5">
           <div className="flex min-h-5 items-center gap-1.5">
             <h3 className={SETTINGS_CARD_ROW_TITLE_CLASS_NAME}>{title}</h3>
-            <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center">
-              {resetAction}
-            </span>
+            <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center">{resetAction}</span>
           </div>
           <p className={SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME}>{description}</p>
           {status ? <div className="pt-1 text-[11px] text-muted-foreground">{status}</div> : null}
         </div>
         {control ? (
-          <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto sm:justify-end">
+          <div data-slot="settings-control" className="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto">
             {control}
           </div>
         ) : null}

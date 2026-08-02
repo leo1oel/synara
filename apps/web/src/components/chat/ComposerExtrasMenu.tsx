@@ -8,6 +8,7 @@ import { useId, useRef, type ChangeEvent } from "react";
 import { GoTasklist } from "react-icons/go";
 
 import { PaperclipIcon, PlusIcon } from "~/lib/icons";
+import { cn } from "~/lib/utils";
 import { ComposerPickerMenuPopup } from "./ComposerPickerMenuPopup";
 import { Button } from "../ui/button";
 import { Menu, MenuCheckboxItem, MenuItem, MenuSeparator, MenuTrigger } from "../ui/menu";
@@ -16,6 +17,7 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
   interactionMode: ProviderInteractionMode;
   onAddPhotos: (files: File[]) => void;
   onSetPlanMode: (enabled: boolean) => void;
+  triggerClassName?: string | undefined;
 }) {
   const inputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -44,7 +46,12 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
       <Menu>
         <MenuTrigger
           render={
-            <Button size="icon-sm" variant="chrome" className="shrink-0 rounded-md" aria-label="Composer extras" />
+            <Button
+              size="icon-sm"
+              variant="chrome"
+              className={cn("shrink-0 rounded-md", props.triggerClassName)}
+              aria-label="Composer extras"
+            />
           }
         >
           <PlusIcon aria-hidden="true" className="size-4" />

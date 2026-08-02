@@ -346,7 +346,13 @@ function PullRequestsRouteView() {
   const truncatedRepositoryCount = activeListData?.repositoryBatches.filter((batch) => batch.truncated).length ?? 0;
 
   return (
-    <div className={cn(CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME, CHAT_MAIN_CONTENT_SURFACE_CLASS_NAME, "font-system-ui")}>
+    <div
+      className={cn(
+        CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME,
+        CHAT_MAIN_CONTENT_SURFACE_CLASS_NAME,
+        "font-system-ui text-[var(--color-text-foreground)]",
+      )}
+    >
       <RouteInsetSurface surfaceClassName="bg-transparent">
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--color-background-surface)]">
           <header

@@ -24,8 +24,7 @@ const runtimeOriginForConfig = (
   config: Pick<ServerConfigShape, "host">,
   port: number,
 ): PersistedServerRuntimeState["origin"] => {
-  const hostname =
-    config.host && !isWildcardHost(config.host) ? formatHostForUrl(config.host) : "127.0.0.1";
+  const hostname = config.host && !isWildcardHost(config.host) ? formatHostForUrl(config.host) : "127.0.0.1";
   return `http://${hostname}:${port}`;
 };
 
@@ -49,12 +48,6 @@ export const persistServerRuntimeState = (input: {
   writeFileStringAtomically({
     filePath: input.path,
     contents: `${JSON.stringify(input.state)}\n`,
-  });
-
-export const clearPersistedServerRuntimeState = (path: string) =>
-  Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
-    yield* fs.remove(path, { force: true }).pipe(Effect.ignore({ log: true }));
   });
 
 export const readPersistedServerRuntimeState = (path: string) =>

@@ -522,6 +522,10 @@
     "TX-02 Variable", "TX-02", "Berkeley Mono Variable", "Berkeley Mono", "JetBrains Mono Variable", "JetBrains Mono",
     "JetBrainsMono NFM", "JetBrainsMono NF", Menlo, monospace;
   --app-shell-background: transparent;
+  /* Header and chat column share one horizontal rhythm. Standalone Synara keeps
+     following the selected density; Lattice overrides both breakpoints below. */
+  --app-chat-surface-gutter-x: var(--app-density-chat-gutter-x, 0.75rem);
+  --app-chat-surface-gutter-x-lg: var(--app-density-chat-gutter-x-lg, 1.25rem);
   --app-sidebar-backdrop-filter: blur(8px) saturate(135%);
   --app-sidebar-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.025);
   --app-sidebar-surface: color-mix(in srgb, var(--card) 64%, transparent);
@@ -652,6 +656,11 @@ body {
 /* Lattice PoC: the host owns the outer panel geometry, so the embedded chat surface
    must fill it without Synara's standalone-window seam radius or shadow. */
 html[data-synara-embed="true"] {
+  /* Project, Papers, Agent header, and Agent composer all start on the same
+     12px navigation grid. Symmetric padding keeps the composer centered between
+     the sidebar's left edge and the host-owned divider on its right. */
+  --app-chat-surface-gutter-x: 12px;
+  --app-chat-surface-gutter-x-lg: 12px;
   /* Match Lattice's editor role: prefer a locally installed TX-02 / Berkeley
      Mono face, then use Synara's bundled JetBrains Mono Variable fallback. */
   --font-mono-family:
@@ -668,6 +677,9 @@ html[data-synara-embed="true"] {
   --lattice-type-heading-size: 18px;
   --lattice-type-heading-line-height: 22px;
   --lattice-type-heading-weight: 600;
+  --lattice-type-group-size: 13px;
+  --lattice-type-group-line-height: 18px;
+  --lattice-type-group-weight: 600;
   --lattice-type-label-size: 12px;
   --lattice-type-label-line-height: 16px;
   --lattice-type-label-weight: 500;
@@ -683,6 +695,20 @@ html[data-synara-embed="true"] {
 html[data-synara-embed="true"] .chat-content-card {
   border-radius: 0 !important;
   box-shadow: none !important;
+}
+
+/* The embedded Agent is a resizable sidebar, not a reading-width page. Keep the
+   composer on the shared 12px edges even if the user makes the sidebar wider
+   than Synara's standalone 46rem chat-column cap. */
+html[data-synara-embed="true"] .composer-column-frame {
+  max-width: none;
+}
+
+/* The host permission picker ends 8px before the shared sidebar divider.
+   Keep New thread on the 12px content grid, while anchoring the Hand off block
+   to that same trailing control edge. */
+html[data-synara-embed="true"] .lattice-agent-header {
+  padding-inline-end: 8px;
 }
 
 html[data-synara-embed="true"] .lattice-source-control {
@@ -796,11 +822,12 @@ html[data-synara-embed="true"] .synara-settings-heading p {
 
 html[data-synara-embed="true"] .app-settings-surface h2 {
   margin: 0;
-  padding: 0;
-  color: var(--lattice-settings-muted);
-  font-size: var(--lattice-type-label-size);
-  line-height: var(--lattice-type-label-line-height);
-  font-weight: var(--lattice-type-label-weight);
+  padding: 0 0 8px;
+  border-bottom: 1px solid var(--lattice-settings-line);
+  color: var(--lattice-settings-text);
+  font-size: var(--lattice-type-group-size);
+  line-height: var(--lattice-type-group-line-height);
+  font-weight: var(--lattice-type-group-weight);
   letter-spacing: normal;
   text-transform: none;
 }
@@ -856,15 +883,13 @@ html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] 
 }
 
 html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-card"] {
-  border-width: var(--lattice-settings-frame-border-width);
-  border-color: var(--lattice-settings-line-strong);
-  border-radius: var(--lattice-settings-frame-radius) !important;
-  background: var(--lattice-settings-soft-panel);
+  border: 0;
+  border-radius: 0 !important;
+  background: transparent;
 }
 
 html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-card"] > * + * {
-  border-color: var(--lattice-settings-line);
-  border-top-width: var(--lattice-settings-frame-border-width);
+  border-top-width: 0;
 }
 
 html[data-synara-embed="true"] .app-settings-surface .text-foreground {
@@ -879,6 +904,31 @@ html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] 
   font-size: var(--lattice-type-caption-size);
   line-height: var(--lattice-type-caption-line-height);
   font-weight: var(--lattice-type-caption-weight);
+}
+
+html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] > div:first-child {
+  min-width: 0;
+}
+
+html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-control"] {
+  width: var(--lattice-settings-control-width);
+  flex: none;
+  justify-content: flex-end;
+}
+
+html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] [data-slot="select-trigger"],
+html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] [data-slot="input-control"],
+html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] [data-slot="button"] {
+  height: var(--lattice-settings-control-height);
+  min-height: var(--lattice-settings-control-height);
+  border-radius: var(--lattice-settings-control-radius) !important;
+}
+
+html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-control"] > [data-slot="button"]:only-child {
+  width: 100%;
+  background: var(--lattice-settings-field);
+  border-color: var(--lattice-settings-line-strong);
+  color: var(--lattice-settings-text);
 }
 
 html[data-synara-embed="true"] .app-settings-surface .text-xl {
@@ -905,21 +955,26 @@ html[data-synara-embed="true"] .app-settings-surface .font-semibold {
   font-weight: 600;
 }
 
-html[data-synara-embed="true"] .app-settings-surface button,
-html[data-synara-embed="true"] .app-settings-surface input,
-html[data-synara-embed="true"] .app-settings-surface textarea,
-html[data-synara-embed="true"] .app-settings-surface select {
+html[data-synara-embed="true"] .app-settings-surface [data-slot="button"],
+html[data-synara-embed="true"] .app-settings-surface [data-slot="select-trigger"],
+html[data-synara-embed="true"] .app-settings-surface [data-slot="input-control"],
+html[data-synara-embed="true"] .app-settings-surface [data-slot="textarea-control"] {
   font-family: var(--font-ui-family);
+  font-size: var(--lattice-settings-control-font-size);
+  font-style: normal;
+  font-weight: var(--lattice-settings-control-font-weight);
+  line-height: var(--lattice-settings-control-line-height);
+  letter-spacing: normal;
 }
 
-html[data-synara-embed="true"] .app-settings-surface button {
-  font-weight: 600;
+html[data-synara-embed="true"] .app-settings-surface [data-slot="select-trigger"],
+html[data-synara-embed="true"] .app-settings-surface [data-slot="input-control"],
+html[data-synara-embed="true"] .app-settings-surface [data-slot="textarea-control"] {
+  text-align: start;
 }
 
-html[data-synara-embed="true"] .app-settings-surface input,
-html[data-synara-embed="true"] .app-settings-surface textarea,
-html[data-synara-embed="true"] .app-settings-surface select {
-  font-weight: 400;
+html[data-synara-embed="true"] .app-settings-surface [data-slot="button"] {
+  text-align: center;
 }
 
 /* Settings uses the same one-owner field contract as the rest of Lattice:
@@ -937,13 +992,14 @@ html[data-synara-embed="true"] .app-settings-surface [data-slot="textarea-contro
 }
 
 html[data-synara-embed="true"] .app-settings-surface [data-slot="select-trigger"] {
+  height: var(--lattice-settings-control-height);
+  min-height: var(--lattice-settings-control-height);
   width: 100%;
   padding: 0 10px;
+  border-radius: 9px !important;
   background: var(--lattice-settings-field) !important;
   color: var(--lattice-settings-text);
   box-shadow: none;
-  font-size: 12px;
-  font-weight: 400;
 }
 
 html[data-synara-embed="true"] .app-settings-surface [data-slot="select-trigger"]:hover,
@@ -972,6 +1028,13 @@ html[data-synara-embed="true"] .app-settings-surface [data-slot="textarea-contro
   border: 0 !important;
   background: transparent;
   box-shadow: none !important;
+  font-family: inherit;
+  font-size: inherit;
+  font-style: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  text-align: start;
 }
 
 /* Select popups are portalled outside .app-settings-surface, so their embed
@@ -982,28 +1045,33 @@ html[data-synara-embed="true"] [data-slot="select-positioner"] {
 
 html[data-synara-embed="true"] [data-slot="select-popup"] > div {
   border: 1px solid var(--lattice-settings-line-strong);
-  border-radius: 8px !important;
+  border-radius: 11px !important;
   background: var(--lattice-settings-panel) !important;
-  box-shadow: 0 8px 24px rgba(22, 22, 24, 0.12);
+  box-shadow:
+    0 1px 2px rgba(28, 25, 23, 0.06),
+    0 16px 36px -18px rgba(28, 25, 23, 0.5);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
 
 html[data-synara-embed="true"] [data-slot="menu-popup-body"] {
-  padding: 4px;
+  padding: 5px;
 }
 
 html[data-synara-embed="true"] [data-slot="select-item"] {
-  min-height: 28px;
+  min-height: 30px;
   grid-template-columns: 16px minmax(0, 1fr);
   column-gap: 4px;
-  border-radius: 6px !important;
+  border-radius: 7px !important;
   padding: 5px 8px 5px 4px;
   color: var(--lattice-settings-text);
   font-family: var(--font-ui-family);
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 1.3;
+  font-size: var(--lattice-settings-control-font-size);
+  font-style: normal;
+  font-weight: var(--lattice-settings-control-font-weight);
+  line-height: var(--lattice-settings-control-line-height);
+  letter-spacing: normal;
+  text-align: start;
 }
 
 html[data-synara-embed="true"] [data-slot="select-item"][data-highlighted] {
@@ -3089,6 +3157,14 @@ diffs-container {
   background: var(--composer-surface);
   backdrop-filter: var(--app-composer-backdrop-filter, none);
   -webkit-backdrop-filter: var(--app-composer-backdrop-filter, none);
+}
+
+/* Lattice owns the embedded surface theme. Use a dedicated bridge token here
+   so Synara's persisted standalone theme cannot repaint the composer after the
+   host has already selected dark mode. */
+html[data-synara-embed="true"] .chat-composer-surface {
+  background: var(--lattice-agent-composer-surface, var(--composer-surface));
+  color: var(--color-text-foreground);
 }
 
 /* Recessed track: a hairline border + faint inner shadow read the base as a sunken

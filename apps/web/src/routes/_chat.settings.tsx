@@ -452,7 +452,7 @@ function SettingsRouteView() {
               }
             >
               {PROVIDER_SELECT_OPTIONS.map((provider) => (
-                <SelectItem hideIndicator key={provider} value={provider}>
+                <SelectItem key={provider} value={provider}>
                   <ProviderOptionLabel provider={provider} label={PROVIDER_DISPLAY_NAMES[provider]} />
                 </SelectItem>
               ))}
@@ -487,12 +487,8 @@ function SettingsRouteView() {
               ariaLabel="Default thread mode"
               valueContent={settings.defaultThreadEnvMode === "worktree" ? "New worktree" : "Local"}
             >
-              <SelectItem hideIndicator value="local">
-                Local
-              </SelectItem>
-              <SelectItem hideIndicator value="worktree">
-                New worktree
-              </SelectItem>
+              <SelectItem value="local">Local</SelectItem>
+              <SelectItem value="worktree">New worktree</SelectItem>
             </SettingsSelectControl>
           }
         />
@@ -526,15 +522,9 @@ function SettingsRouteView() {
               ariaLabel="Project sort order"
               valueContent={SIDEBAR_PROJECT_SORT_ORDER_LABELS[settings.sidebarProjectSortOrder]}
             >
-              <SelectItem hideIndicator value="updated_at">
-                {SIDEBAR_PROJECT_SORT_ORDER_LABELS.updated_at}
-              </SelectItem>
-              <SelectItem hideIndicator value="created_at">
-                {SIDEBAR_PROJECT_SORT_ORDER_LABELS.created_at}
-              </SelectItem>
-              <SelectItem hideIndicator value="manual">
-                {SIDEBAR_PROJECT_SORT_ORDER_LABELS.manual}
-              </SelectItem>
+              <SelectItem value="updated_at">{SIDEBAR_PROJECT_SORT_ORDER_LABELS.updated_at}</SelectItem>
+              <SelectItem value="created_at">{SIDEBAR_PROJECT_SORT_ORDER_LABELS.created_at}</SelectItem>
+              <SelectItem value="manual">{SIDEBAR_PROJECT_SORT_ORDER_LABELS.manual}</SelectItem>
             </SettingsSelectControl>
           }
         />
@@ -566,12 +556,8 @@ function SettingsRouteView() {
               ariaLabel="Thread sort order"
               valueContent={SIDEBAR_THREAD_SORT_ORDER_LABELS[settings.sidebarThreadSortOrder]}
             >
-              <SelectItem hideIndicator value="updated_at">
-                {SIDEBAR_THREAD_SORT_ORDER_LABELS.updated_at}
-              </SelectItem>
-              <SelectItem hideIndicator value="created_at">
-                {SIDEBAR_THREAD_SORT_ORDER_LABELS.created_at}
-              </SelectItem>
+              <SelectItem value="updated_at">{SIDEBAR_THREAD_SORT_ORDER_LABELS.updated_at}</SelectItem>
+              <SelectItem value="created_at">{SIDEBAR_THREAD_SORT_ORDER_LABELS.created_at}</SelectItem>
             </SettingsSelectControl>
           }
         />
@@ -954,15 +940,9 @@ function SettingsRouteView() {
               triggerClassName="w-full sm:w-40"
               valueContent={TIMESTAMP_FORMAT_LABELS[settings.timestampFormat]}
             >
-              <SelectItem hideIndicator value="locale">
-                {TIMESTAMP_FORMAT_LABELS.locale}
-              </SelectItem>
-              <SelectItem hideIndicator value="12-hour">
-                {TIMESTAMP_FORMAT_LABELS["12-hour"]}
-              </SelectItem>
-              <SelectItem hideIndicator value="24-hour">
-                {TIMESTAMP_FORMAT_LABELS["24-hour"]}
-              </SelectItem>
+              <SelectItem value="locale">{TIMESTAMP_FORMAT_LABELS.locale}</SelectItem>
+              <SelectItem value="12-hour">{TIMESTAMP_FORMAT_LABELS["12-hour"]}</SelectItem>
+              <SelectItem value="24-hour">{TIMESTAMP_FORMAT_LABELS["24-hour"]}</SelectItem>
             </SettingsSelectControl>
           }
         />

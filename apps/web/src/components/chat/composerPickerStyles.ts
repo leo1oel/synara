@@ -98,12 +98,12 @@ export const CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME = "flex h-dvh min-h-0 min-w-0 f
 
 /** Horizontal padding shared by the transcript and composer columns. */
 export const CHAT_COLUMN_GUTTER_CLASS_NAME =
-  "px-[var(--app-density-chat-gutter-x,0.75rem)] sm:px-[var(--app-density-chat-gutter-x-lg,1.25rem)]";
+  "px-[var(--app-chat-surface-gutter-x)] sm:px-[var(--app-chat-surface-gutter-x-lg)]";
 /** Centers the chat column and applies the shared max width. */
 export const CHAT_COLUMN_FRAME_CLASS_NAME = `mx-auto w-full min-w-0 ${COMPOSER_MAX_WIDTH_CLASS_NAME}`;
 
 /** Max width for the composer shell only; outer wrappers stay full width for shadow bleed. */
-export const COMPOSER_COLUMN_FRAME_CLASS_NAME = CHAT_COLUMN_FRAME_CLASS_NAME;
+export const COMPOSER_COLUMN_FRAME_CLASS_NAME = `composer-column-frame ${CHAT_COLUMN_FRAME_CLASS_NAME}`;
 
 /**
  * Frame for rows stacked above the composer (queued steer/queue rows, live file

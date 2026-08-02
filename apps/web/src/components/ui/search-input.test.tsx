@@ -49,8 +49,8 @@ describe("SearchInput", () => {
     const searchMarkup = renderToStaticMarkup(<SearchInput aria-label="Search" />);
 
     for (const markup of [inputMarkup, searchMarkup]) {
-      expect(markup).toContain("h-8");
-      expect(markup).toContain("min-h-8");
+      expect(markup).toContain("h-[30px]");
+      expect(markup).toContain("min-h-[30px]");
     }
   });
 
@@ -60,10 +60,10 @@ describe("SearchInput", () => {
     expect(markup).toMatch(/data-slot="input-control"[^>]*>.*class="[^"]*border-0[^"]*"[^>]*data-slot="input"/);
   });
 
-  it("keeps form-sized inputs on the shared 38px height", () => {
+  it("keeps form-sized inputs on the shared 30px height", () => {
     const inputMarkup = renderToStaticMarkup(<Input aria-label="Name" size="lg" />);
 
-    expect(inputMarkup).toContain("h-[38px]");
-    expect(inputMarkup).toContain("min-h-[38px]");
+    expect(inputMarkup).toContain("h-[30px]");
+    expect(inputMarkup).toContain("min-h-[30px]");
   });
 });

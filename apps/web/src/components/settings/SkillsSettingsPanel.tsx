@@ -109,8 +109,6 @@ export function SkillsSettingsPanel() {
 
   const totalSkills = managedGroups.length;
   const enabledSkills = managedGroups.filter((group) => !disabledSkillNames.has(group.key)).length;
-  const synaraSkillsDir = catalogQuery.data?.synaraSkillsDir;
-
   const refreshSkillQueries = async () => {
     await queryClient.invalidateQueries({ queryKey: providerDiscoveryQueryKeys.all });
   };
@@ -168,19 +166,6 @@ export function SkillsSettingsPanel() {
     if (files.length > 0) {
       void importSelectedSkill(files);
     }
-  };
-
-  const openSkillsFolder = () => {
-    if (!synaraSkillsDir) return;
-    void ensureNativeApi()
-      .shell.showInFolder(synaraSkillsDir)
-      .catch((error) => {
-        toastManager.add({
-          type: "error",
-          title: "Could not open skills folder",
-          description: error instanceof Error ? error.message : "The folder could not be opened.",
-        });
-      });
   };
 
   const restoreRemovedSkill = async (id: string, trashId: string) => {
@@ -435,10 +420,6 @@ export function SkillsSettingsPanel() {
                   <FolderOpenIcon className="size-3.5" />
                 )}
                 {isImportingSkill ? "Importing…" : "Import…"}
-              </Button>
-              <Button size="sm" variant="outline" disabled={!synaraSkillsDir} onClick={openSkillsFolder}>
-                <FolderOpenIcon className="size-3.5" />
-                User folder
               </Button>
             </div>
           }

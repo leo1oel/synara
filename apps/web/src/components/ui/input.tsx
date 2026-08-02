@@ -49,7 +49,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     FIELD_SINGLE_LINE_CONTENT_CLASS_NAME,
     size === "sm" &&
       "px-2.5 py-1 text-[length:var(--app-font-size-ui-sm,11px)] sm:text-[length:var(--app-font-size-ui-sm,11px)]",
-    size === "lg" && "px-3.5 py-2",
+    size === "lg" && "px-3.5 py-1.5",
     props.type === "search" &&
       "[&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none [&::-webkit-search-results-button]:appearance-none [&::-webkit-search-results-decoration]:appearance-none",
     props.type === "file" &&

@@ -16,6 +16,7 @@ describe("ComposerModelEffortPicker", () => {
       <ComposerModelEffortPicker
         provider="grok"
         model={GROK_4_5}
+        dense
         lockedProvider={null}
         modelOptionsByProvider={{
           claudeAgent: [],
@@ -40,6 +41,7 @@ describe("ComposerModelEffortPicker", () => {
     try {
       const trigger = page.getByRole("button", { name: "Change model and reasoning" });
       await expect.element(trigger).toHaveAttribute("title", "Low");
+      expect(getComputedStyle(trigger.element()).height).toBe("32px");
       expect(trigger.element().querySelector('[data-slot="central-icon"]')).not.toBeNull();
 
       await trigger.click();

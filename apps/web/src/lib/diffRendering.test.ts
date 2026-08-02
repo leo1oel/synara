@@ -29,6 +29,14 @@ describe("buildDiffPanelUnsafeCSS", () => {
     expect(css).toContain("--app-font-weight-diff-meta");
   });
 
+  it("pins Pierre's text branch to the selected theme", () => {
+    const css = buildDiffPanelUnsafeCSS("dark");
+
+    expect(css).toContain("color-scheme: dark");
+    expect(css).toContain("--diffs-fg: var(--foreground) !important");
+    expect(css).toContain("--diffs-dark: var(--foreground) !important");
+  });
+
   it("injects Lattice-style scrollbars into Pierre's shadow DOM", () => {
     const css = buildDiffPanelUnsafeCSS("light");
 

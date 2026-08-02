@@ -4,9 +4,10 @@ import { mergeProps } from "@base-ui/react/merge-props";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
-import { ChevronDownIcon, ChevronsUpDownIcon, ChevronUpIcon } from "~/lib/icons";
+import { CheckIcon, ChevronDownIcon, ChevronsUpDownIcon, ChevronUpIcon } from "~/lib/icons";
 import * as React from "react";
 
+import { DISCLOSURE_POPUP_MOTION_CLASS } from "~/lib/disclosureMotion";
 import { cn } from "~/lib/utils";
 import {
   FIELD_CONTROL_COMPACT_HEIGHT_CLASS_NAME,
@@ -31,7 +32,7 @@ const Select = SelectPrimitive.Root;
 type SelectPopupSurface = "composer" | "settings";
 
 const settingsSelectOptionClassName =
-  "[&>svg]:-mx-0.5 flex cursor-default select-none items-center rounded-lg text-[length:var(--app-font-size-ui,12px)] text-[var(--color-text-foreground)] outline-none data-disabled:pointer-events-none data-highlighted:bg-[var(--color-background-button-secondary-hover)] data-highlighted:text-[var(--color-text-foreground)] data-disabled:opacity-64 [&>svg:not([class*='opacity-'])]:opacity-80 [&>svg]:pointer-events-none [&>svg]:shrink-0 grid in-data-[side=none]:min-w-[calc(var(--anchor-width)+1.25rem)]";
+  "[&>svg]:-mx-0.5 flex cursor-default select-none items-center rounded-lg text-[length:var(--app-font-size-ui,12px)] leading-[var(--app-line-height-ui,16px)] font-normal text-[var(--color-text-foreground)] outline-none transition-[color,background-color] duration-120 ease-out motion-reduce:transition-none data-disabled:pointer-events-none data-highlighted:bg-[var(--color-background-button-secondary-hover)] data-highlighted:text-[var(--color-text-foreground)] data-disabled:opacity-64 [&>svg:not([class*='opacity-'])]:opacity-80 [&>svg]:pointer-events-none [&>svg]:shrink-0 grid in-data-[side=none]:min-w-[calc(var(--anchor-width)+1.25rem)]";
 
 const SelectPopupSurfaceContext = React.createContext<SelectPopupSurface>("composer");
 
@@ -184,7 +185,10 @@ function SelectPopup({
           sideOffset={sideOffset}
         >
           <SelectPrimitive.Popup
-            className="origin-(--transform-origin) text-[var(--color-text-foreground)]"
+            className={cn(
+              DISCLOSURE_POPUP_MOTION_CLASS,
+              "origin-(--transform-origin) text-[var(--color-text-foreground)]",
+            )}
             data-slot="select-popup"
             {...props}
           >
@@ -228,40 +232,35 @@ function SelectItem({
 }: SelectPrimitive.Item.Props & {
   hideIndicator?: boolean;
 }) {
-  const hideIndicator = hideIndicatorProp ?? false;
   const popupSurface = React.useContext(SelectPopupSurfaceContext);
+  // Settings selects always expose the same selected-state affordance. The
+  // prop remains for compact non-settings pickers whose layout intentionally
+  // omits it.
+  const hideIndicator = popupSurface === "settings" ? false : (hideIndicatorProp ?? false);
   const optionBaseClassName =
     popupSurface === "settings" ? settingsSelectOptionClassName : COMPOSER_PICKER_SELECT_OPTION_CLASS_NAME;
+  const itemLayoutClassName =
+    popupSurface === "settings"
+      ? "grid-cols-[16px_minmax(0,1fr)] gap-1 ps-1 pe-2"
+      : hideIndicator
+        ? "grid-cols-[1fr] ps-3 pe-3"
+        : "grid-cols-[1fr_auto] gap-3 px-2.5";
+  const itemTextClassName = popupSurface === "settings" ? "col-start-2" : "col-start-1";
+  const itemIndicatorClassName =
+    popupSurface === "settings" ? "col-start-1 justify-self-center" : "col-start-2 justify-self-end";
 
   return (
     <SelectPrimitive.Item
-      className={cn(
-        optionBaseClassName,
-        hideIndicator ? "grid-cols-[1fr] ps-3 pe-3" : "grid-cols-[1fr_auto] gap-3 px-2.5",
-        className,
-      )}
+      className={cn(optionBaseClassName, itemLayoutClassName, className)}
       data-slot="select-item"
       {...props}
     >
-      <SelectPrimitive.ItemText className="col-start-1 min-w-0" data-slot="select-item-text">
+      <SelectPrimitive.ItemText className={cn(itemTextClassName, "min-w-0")} data-slot="select-item-text">
         {children}
       </SelectPrimitive.ItemText>
       {hideIndicator ? null : (
-        <SelectPrimitive.ItemIndicator className="col-start-2 justify-self-end" data-slot="select-item-indicator">
-          <svg
-            className="size-3"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path d="M5.252 12.7 10.2 18.63 18.748 5.37" />
-          </svg>
+        <SelectPrimitive.ItemIndicator className={itemIndicatorClassName} data-slot="select-item-indicator">
+          <CheckIcon aria-hidden className="size-3.5 [stroke-width:1.5]" />
         </SelectPrimitive.ItemIndicator>
       )}
     </SelectPrimitive.Item>

@@ -35,6 +35,13 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
   }
   const css = `
 :host {
+  /* Pierre's default is "light dark", which follows the OS instead of the
+     theme selected by the embedding Lattice window. Keep its fallback text
+     and light-dark branch on the iframe's explicit theme. */
+  color-scheme: ${theme};
+  --diffs-fg: var(--foreground) !important;
+  --diffs-light: var(--foreground) !important;
+  --diffs-dark: var(--foreground) !important;
   /* Route diff hunks through the chat code font; keep file headers on the UI stack. */
   --diffs-font-family: var(--font-chat-code-family);
   --diffs-header-font-family: var(--font-ui-family);

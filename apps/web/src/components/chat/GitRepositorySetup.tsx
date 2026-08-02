@@ -99,10 +99,10 @@ export function GitHubRemoteSetupCard(props: { cwd: string }) {
             <GitHubIcon className="size-3.5" />
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="font-system-ui text-[length:var(--app-font-size-ui,12px)] font-medium text-foreground">
+            <h2 className="font-system-ui text-[length:var(--app-font-size-ui,12px)] font-medium text-[var(--color-text-foreground)]">
               Connect to GitHub
             </h2>
-            <p className="mt-0.5 text-[length:var(--app-font-size-ui-xs,10px)] leading-relaxed text-muted-foreground">
+            <p className="mt-0.5 text-[length:var(--app-font-size-ui-xs,10px)] leading-relaxed text-[var(--color-text-foreground-secondary)]">
               Publish a new private repository or attach one you already have.
             </p>
           </div>
@@ -112,7 +112,12 @@ export function GitHubRemoteSetupCard(props: { cwd: string }) {
             <GitHubIcon />
             Publish
           </Button>
-          <Button size="xs" variant="outline" onClick={() => setDialogMode("connect")}>
+          <Button
+            size="xs"
+            variant="outline"
+            className="text-[var(--color-text-foreground)]"
+            onClick={() => setDialogMode("connect")}
+          >
             <LinkIcon />
             Connect existing
           </Button>
