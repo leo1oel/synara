@@ -182,6 +182,7 @@ import type {
   OrchestrationShellStreamItem,
   OrchestrationSubscribeThreadInput,
   OrchestrationThreadStreamItem,
+  OrchestrationUnsubscribeThreadInput,
 } from "./orchestration";
 import type { EditorId } from "./editor";
 import type { ThreadId } from "./baseSchemas";
@@ -710,7 +711,7 @@ export interface NativeApi {
     subscribeShell: () => Promise<void>;
     unsubscribeShell: () => Promise<void>;
     subscribeThread: (input: OrchestrationSubscribeThreadInput) => Promise<void>;
-    unsubscribeThread: (input: OrchestrationSubscribeThreadInput) => Promise<void>;
+    unsubscribeThread: (input: OrchestrationUnsubscribeThreadInput) => Promise<void>;
     onDomainEvent: (callback: (event: OrchestrationEvent) => void) => () => void;
     onShellEvent: (callback: (event: OrchestrationShellStreamItem) => void) => () => void;
     onThreadEvent: (callback: (event: OrchestrationThreadStreamItem) => void) => () => void;

@@ -39,6 +39,7 @@ import {
   RuntimeMode,
 } from "@synara/contracts";
 import { automationRequiresTargetThread } from "@synara/shared/automationMode";
+import { providerSupportsNativeTurnSteering } from "@synara/shared/providerMetadata";
 import { getModelCapabilities, normalizeModelSlug } from "@synara/shared/model";
 import { resolveTailUserMessageEditTarget } from "@synara/shared/conversationEdit";
 import { threadExportBlockedReason } from "@synara/shared/threadExport";
@@ -125,8 +126,6 @@ import {
 } from "../lib/browserPromptContext";
 import {
   buildComposerFileAttachmentsFromFiles,
-  IMAGE_SIZE_LIMIT_LABEL,
-  buildComposerImageAttachmentsFromFiles,
   stageUploadComposerAttachments,
   cloneComposerImageAttachment,
   effectiveComposerAttachmentCount,
@@ -153,6 +152,7 @@ import {
 import { dispatchThreadRename } from "../lib/threadRename";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
 import { useComposerDropzone } from "../hooks/useComposerDropzone";
+import { useComposerImageIntake } from "../hooks/useComposerImageIntake";
 import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
 import {
   buildThreadBreadcrumbs,
@@ -205,6 +205,7 @@ import {
   createComposerThreadMentionSourcesSelector,
   createThreadSelector,
 } from "../storeSelectors";
+import { buildThreadSubscribeInput } from "../threadDetailResumeCursors";
 import { retainThreadDetailSubscription } from "../threadDetailSubscriptionRetention";
 import {
   canOfferForkSlashCommand,
@@ -282,6 +283,7 @@ import {
   ChevronDownIcon,
   ComposerSendArrowIcon,
   LayoutSidebarIcon,
+  LoaderCircleIcon,
   RefreshCwIcon,
   TemporaryThreadIcon,
 } from "~/lib/icons";
@@ -502,6 +504,10 @@ import {
 } from "./chat/WorkflowRunCard.logic";
 import { ComposerColumnFrame } from "./chat/ComposerColumnFrame";
 import { useTranscriptAssistantSelectionAction } from "./chat/useTranscriptAssistantSelectionAction";
+import {
+  scrollTranscriptToSettledEnd,
+  stopTranscriptScrollAtCurrentOffset,
+} from "./chat/transcriptScroll";
 import { resolveTranscriptMarkerRange } from "./chat/chatSelectionActions";
 import {
   dispatchThreadMarkerAdd,
@@ -543,6 +549,7 @@ import {
   filterSidechatTranscriptMessages,
   hasServerAcknowledgedLocalDispatch,
   resolveNextLocalDispatchSnapshot,
+  resolveThreadArtifactWorkspaceRoot,
   WORKTREE_SETUP_ERROR_HOLD_MS,
   worktreeSetupHasError,
   LAST_INVOKED_SCRIPT_BY_PROJECT_KEY,
@@ -1067,6 +1074,7 @@ interface ChatViewProps {
   isFocusedPane?: boolean;
   panelState?: SplitViewPanePanelState;
   onToggleDiffPanel?: () => void;
+  onToggleRightDock?: () => void;
   onToggleBrowserPanel?: () => void;
   onOpenBrowserUrl?: (url: string) => void;
   onOpenTurnDiffPanel?: (turnId: TurnId, filePath?: string) => void;
@@ -1126,6 +1134,7 @@ export default function ChatView({
   isFocusedPane: isFocusedPaneProp,
   panelState,
   onToggleDiffPanel,
+  onToggleRightDock,
   onToggleBrowserPanel,
   onOpenBrowserUrl,
   onOpenTurnDiffPanel,
@@ -1227,8 +1236,9 @@ export default function ChatView({
   const setComposerDraftInteractionMode = useComposerDraftStore((store) => store.setInteractionMode);
   const enqueueQueuedComposerTurn = useComposerDraftStore((store) => store.enqueueQueuedTurn);
   const insertQueuedComposerTurn = useComposerDraftStore((store) => store.insertQueuedTurn);
-  const removeQueuedComposerTurnFromDraft = useComposerDraftStore((store) => store.removeQueuedTurn);
-  const addComposerDraftImage = useComposerDraftStore((store) => store.addImage);
+  const removeQueuedComposerTurnFromDraft = useComposerDraftStore(
+    (store) => store.removeQueuedTurn,
+  );
   const addComposerDraftImages = useComposerDraftStore((store) => store.addImages);
   const removeComposerDraftImage = useComposerDraftStore((store) => store.removeImage);
   const addComposerDraftFiles = useComposerDraftStore((store) => store.addFiles);
@@ -1466,8 +1476,9 @@ export default function ChatView({
     restoredSourceProposedPlan ?? null,
   );
   const autoDispatchingQueuedTurnRef = useRef(false);
-  // Holds queued-composer auto-dispatch through a non-Codex steer's
-  // interrupt→re-dispatch gap; see resolveQueuedSteerGateTransition.
+  // Holds queued-composer auto-dispatch through a non-natively-steerable
+  // provider steer's interrupt→re-dispatch gap; see
+  // resolveQueuedSteerGateTransition.
   const [queuedSteerGate, setQueuedSteerGate] = useState<QueuedSteerGate | null>(null);
   // Bumped to re-evaluate auto-dispatch when only non-reactive guards (refs)
   // blocked it; nothing else re-triggers the effect once they reset.
@@ -1531,24 +1542,17 @@ export default function ChatView({
     promptHistoryAppliedPromptRef.current = null;
     setComposerDraftPromptHistorySavedDraft(threadId, null);
   }, [setComposerDraftPromptHistorySavedDraft, threadId]);
-  const addComposerImage = useCallback(
-    (image: ComposerImageAttachment) => {
-      discardPromptHistoryNavigationForComposerMutation();
-      addComposerDraftImage(threadId, image);
-    },
-    [addComposerDraftImage, discardPromptHistoryNavigationForComposerMutation, threadId],
-  );
   const addComposerImagesToDraft = useCallback(
     (images: ComposerImageAttachment[]) => {
       discardPromptHistoryNavigationForComposerMutation();
-      addComposerDraftImages(threadId, images);
+      return addComposerDraftImages(threadId, images);
     },
     [addComposerDraftImages, discardPromptHistoryNavigationForComposerMutation, threadId],
   );
   const addComposerFilesToDraft = useCallback(
     (files: ComposerFileAttachment[]) => {
       discardPromptHistoryNavigationForComposerMutation();
-      addComposerDraftFiles(threadId, files);
+      return addComposerDraftFiles(threadId, files);
     },
     [addComposerDraftFiles, discardPromptHistoryNavigationForComposerMutation, threadId],
   );
@@ -2632,6 +2636,7 @@ export default function ChatView({
         phase,
         latestTurn: activeLatestTurn,
         session: activeThread?.session ?? null,
+        messages: activeThread?.messages ?? EMPTY_MESSAGES,
         hasPendingApproval: activePendingApproval !== null,
         hasPendingUserInput: activePendingUserInput !== null,
         threadError: activeThread?.error,
@@ -2641,6 +2646,7 @@ export default function ChatView({
       activePendingApproval,
       activePendingUserInput,
       activeThread?.error,
+      activeThread?.messages,
       activeThread?.session,
       localDispatch,
       phase,
@@ -2958,6 +2964,19 @@ export default function ChatView({
     () => new Set(optimisticUserMessages.map((message) => message.id)),
     [optimisticUserMessages],
   );
+  // The user message a local send anchored at the top of the transcript viewport.
+  // Set at the send sites and kept after the turn settles — collapsing the tail
+  // spacer when a turn ends would visibly yank the settled transcript. The next
+  // send replaces it, and thread switches reset it via the per-thread timeline
+  // remount plus the threadId guard at the render site.
+  const [tailAnchor, setTailAnchor] = useState<{
+    threadId: ThreadId;
+    messageId: MessageId;
+  } | null>(null);
+  // True from send until the tail-anchor hook finishes sliding the sent message
+  // to the viewport top. The auto-follow effect stays quiet while set so the
+  // anchored slide has exactly one scroll owner (see useTailAnchorScroll).
+  const tailAnchorScrollInFlightRef = useRef(false);
   // --- Pinned messages & notes (per-thread, server-synced through sidepanel commands) ---
   const pinnedMessages = activeThread?.pinnedMessages ?? EMPTY_PINNED_MESSAGES;
   const threadMarkers = activeThread?.threadMarkers ?? EMPTY_THREAD_MARKERS;
@@ -3100,7 +3119,9 @@ export default function ChatView({
   const handleRetryThreadDetailSync = useCallback(() => {
     useStore.getState().clearThreadDetailSyncFailure(threadId);
     const api = readNativeApi();
-    void api?.orchestration.subscribeThread({ threadId }).catch(() => undefined);
+    void api?.orchestration
+      .subscribeThread(buildThreadSubscribeInput(threadId))
+      .catch(() => undefined);
   }, [threadId]);
   // Stable identity: this element is forwarded to the memoized MessagesTimeline, so
   // building it inline in JSX would defeat its `memo()` on every keystroke.
@@ -3185,7 +3206,11 @@ export default function ChatView({
         workingDirectory: resolvedThreadWorkingDirectory,
       })
     : null;
-  const threadArtifactWorkspaceRoot = isStudioContainer ? threadWorkspaceCwd : (activeProject?.cwd ?? null);
+  const threadArtifactWorkspaceRoot = resolveThreadArtifactWorkspaceRoot({
+    isStudioContainer,
+    projectCwd: activeProject?.cwd ?? null,
+    threadWorkspaceCwd,
+  });
   const gitCwd = threadWorkspaceCwd;
   const gitBranchSourceCwd = isStudioContainer
     ? threadWorkspaceCwd
@@ -3767,6 +3792,30 @@ export default function ChatView({
     },
     [setStoreThreadError],
   );
+  const composerImageAttachmentCount = useCallback(
+    () =>
+      effectiveComposerAttachmentCount(useComposerDraftStore.getState().draftsByThreadId[threadId]),
+    [threadId],
+  );
+  const commitPreparedComposerImages = useCallback(
+    (images: ComposerImageAttachment[]) => addComposerImagesToDraft(images),
+    [addComposerImagesToDraft],
+  );
+  const setComposerImagePreparationError = useCallback(
+    (error: string | null) => setThreadError(threadId, error),
+    [setThreadError, threadId],
+  );
+  const {
+    addImages: enqueueComposerImages,
+    isPreparingImages: isPreparingComposerImages,
+    pendingImageCount: pendingComposerImageCount,
+    waitForPending: waitForPendingComposerImages,
+  } = useComposerImageIntake({
+    threadId,
+    existingAttachmentCount: composerImageAttachmentCount,
+    commitImages: commitPreparedComposerImages,
+    onError: setComposerImagePreparationError,
+  });
 
   const focusComposer = useCallback(() => {
     // Secondary chrome is deferred during thread switches; replay focus once it
@@ -4645,6 +4694,10 @@ export default function ChatView({
   // Guards isAtEndRef from flipping during reflow-induced scroll events that
   // fire immediately after an explicit scrollToEnd.
   const programmaticScrollUntilRef = useRef(0);
+  // The arrow's smooth jump is followed by one exact settle after LegendList
+  // has measured the tail. A user gesture invalidates that pending settle.
+  const settledScrollRequestRef = useRef(0);
+  const settledScrollInFlightRef = useRef(false);
   // Smooth only the first auto-follow after a send; live stream re-sticks stay cheap.
   const animateNextAutoFollowScrollRef = useRef(false);
   const scrollToEnd = useCallback((animated = false) => {
@@ -4659,8 +4712,17 @@ export default function ChatView({
     setShowScrollToBottom(false);
   }, []);
   const clearTranscriptAutoFollow = useCallback(() => {
+    const settledScrollTarget = settledScrollInFlightRef.current ? legendListRef.current : null;
     autoFollowThreadIdRef.current = null;
     animateNextAutoFollowScrollRef.current = false;
+    settledScrollRequestRef.current += 1;
+    settledScrollInFlightRef.current = false;
+    programmaticScrollUntilRef.current = 0;
+    // A user scroll gesture takes over from any in-flight tail-anchor slide.
+    tailAnchorScrollInFlightRef.current = false;
+    if (settledScrollTarget) {
+      void stopTranscriptScrollAtCurrentOffset(settledScrollTarget);
+    }
   }, []);
   const transcriptMessageCount = useMemo(
     () => timelineEntries.filter((entry) => entry.kind === "message").length,
@@ -4690,7 +4752,12 @@ export default function ChatView({
   });
   const onIsAtEndChange = useCallback((isAtEnd: boolean) => {
     if (isAtEndRef.current === isAtEnd) return;
-    if (!isAtEnd && performance.now() < programmaticScrollUntilRef.current) return;
+    if (
+      !isAtEnd &&
+      (settledScrollInFlightRef.current || performance.now() < programmaticScrollUntilRef.current)
+    ) {
+      return;
+    }
     isAtEndRef.current = isAtEnd;
     if (isAtEnd) {
       showScrollDebouncer.current.cancel();
@@ -4765,6 +4832,12 @@ export default function ChatView({
     // Re-apply the bottom stick only for real transcript messages; tool/work
     // rows can arrive quickly and should not churn scroll/layout work.
     const frameId = window.requestAnimationFrame(() => {
+      // The tail-anchor slide owns the scroll after a send; a re-snap here
+      // would hard-jump past the smooth slide mid-flight. Once the anchor
+      // settles the spacer keeps the end position exact, so nothing is missed.
+      if (tailAnchorScrollInFlightRef.current) {
+        return;
+      }
       const shouldAnimate = animateNextAutoFollowScrollRef.current;
       animateNextAutoFollowScrollRef.current = false;
       scrollToEnd(shouldAnimate);
@@ -5047,6 +5120,9 @@ export default function ChatView({
 
   useEffect(() => {
     isAtEndRef.current = true;
+    settledScrollRequestRef.current += 1;
+    settledScrollInFlightRef.current = false;
+    programmaticScrollUntilRef.current = 0;
     showScrollDebouncer.current.cancel();
     // Capture the carried sidebar-open intent synchronously (ref reads/writes stay
     // in render->commit order); defer only the setState so this thread-change reset
@@ -6016,21 +6092,9 @@ export default function ChatView({
         return;
       }
 
-      const { images: nextImages, error } = buildComposerImageAttachmentsFromFiles({
-        files,
-        existingAttachmentCount: effectiveComposerAttachmentCount(
-          useComposerDraftStore.getState().draftsByThreadId[activeThreadId],
-        ),
-      });
-
-      if (nextImages.length === 1 && nextImages[0]) {
-        addComposerImage(nextImages[0]);
-      } else if (nextImages.length > 1) {
-        addComposerImagesToDraft(nextImages);
-      }
-      setThreadError(activeThreadId, error);
+      enqueueComposerImages(files);
     },
-    [activeThreadId, addComposerImage, addComposerImagesToDraft, pendingUserInputs.length, setThreadError],
+    [activeThreadId, enqueueComposerImages, pendingUserInputs.length],
   );
 
   const removeComposerImage = (imageId: string) => {
@@ -6056,10 +6120,13 @@ export default function ChatView({
         ),
       });
 
-      if (nextFiles.length > 0) {
-        addComposerFilesToDraft(nextFiles);
-      }
-      setThreadError(activeThreadId, error);
+      const insertedCount = nextFiles.length > 0 ? addComposerFilesToDraft(nextFiles) : 0;
+      setThreadError(
+        activeThreadId,
+        insertedCount < nextFiles.length
+          ? `You can attach up to ${PROVIDER_SEND_TURN_MAX_ATTACHMENTS} references per message.`
+          : error,
+      );
     },
     [activeThreadId, addComposerFilesToDraft, pendingUserInputs.length, setThreadError],
   );
@@ -6672,6 +6739,11 @@ export default function ChatView({
     ) {
       return false;
     }
+    if (!queuedTurn) {
+      sendPreflightInFlightRef.current = true;
+      await waitForPendingComposerImages();
+      sendPreflightInFlightRef.current = false;
+    }
     if (activePendingProgress) {
       const activeQuestion = activePendingProgress.activeQuestion;
       const liveComposerSnapshot = composerEditorRef.current?.readSnapshot() ?? null;
@@ -6705,7 +6777,10 @@ export default function ChatView({
     const queuedChatTurn = queuedTurn ?? null;
     const liveComposerSnapshot = queuedChatTurn === null ? (composerEditorRef.current?.readSnapshot() ?? null) : null;
     let promptForSend = queuedChatTurn?.prompt ?? liveComposerSnapshot?.value ?? promptRef.current;
-    let composerImagesForSend = queuedChatTurn?.images ?? composerImages;
+    let composerImagesForSend =
+      queuedChatTurn?.images ??
+      useComposerDraftStore.getState().draftsByThreadId[activeThread.id]?.images ??
+      composerImages;
     // AppSnap captures persist as IndexedDB blobs and hydrate into `images`
     // asynchronously (see AppSnapCoordinator). Right after a reload the user can
     // hit send before that hydration finishes; without this, the not-yet-hydrated
@@ -7039,8 +7114,8 @@ export default function ChatView({
           ? "Open the in-app browser first, then try again."
           : browserPromptAttachment.reason === "no-active-tab"
             ? "The in-app browser has no active tab to capture yet."
-            : browserPromptAttachment.reason === "attachment-too-large"
-              ? `The browser screenshot exceeded the ${IMAGE_SIZE_LIMIT_LABEL} attachment limit.`
+            : browserPromptAttachment.reason === "attachment-processing-failed"
+              ? "The browser screenshot could not be optimized for attachment."
               : "The current browser context could not be attached.";
       toastManager.add({
         type: "warning",
@@ -7264,13 +7339,15 @@ export default function ChatView({
 
     const setupScriptForWorktree = baseBranchForWorktree ? setupProjectScript(targetProjectScriptsForSend) : null;
     const worktreeSetupScriptName = setupScriptForWorktree?.name ?? null;
+    const messageIdForSend = newMessageId();
 
     sendInFlightRef.current = true;
-    beginLocalDispatch(
-      baseBranchForWorktree
+    beginLocalDispatch({
+      expectedUserMessageId: messageIdForSend,
+      ...(baseBranchForWorktree
         ? { worktreeSetupStepId: "create-worktree", setupScriptName: worktreeSetupScriptName }
-        : undefined,
-    );
+        : {}),
+    });
 
     const composerImagesSnapshot = [...composerImagesForSend];
     const composerFilesSnapshot = [...composerFilesForSend];
@@ -7284,7 +7361,6 @@ export default function ChatView({
     const composerPastedTextsSnapshot = [...sendableComposerPastedTexts];
     const composerSkillsSnapshot = [...selectedComposerSkillsForSend];
     const composerMentionsSnapshot = [...selectedComposerMentionsForSend];
-    const messageIdForSend = newMessageId();
     // Trailing blocks are appended innermost-to-outermost: assistant selections,
     // terminal contexts, file comments, pasted text, then browser annotations
     // (outermost). The display
@@ -7374,9 +7450,13 @@ export default function ChatView({
         source: "native",
       },
     ]);
-    // Mark the transcript as anchored before the optimistic row lands so the
-    // re-snap effect on row count change pulls us to the new tail.
+    // Mark the transcript as anchored before the optimistic row lands. The tail
+    // anchor sizes the spacer that lets this message sit at the viewport top,
+    // and its hook owns the slide; auto-follow stays armed for bookkeeping but
+    // pauses until the in-flight flag clears.
     armTranscriptAutoFollow(threadIdForSend, true);
+    tailAnchorScrollInFlightRef.current = true;
+    setTailAnchor({ threadId: threadIdForSend, messageId: messageIdForSend });
 
     setThreadError(threadIdForSend, null);
     if (expiredTerminalContextCount > 0) {
@@ -7596,12 +7676,17 @@ export default function ChatView({
       );
       turnStartSucceeded = true;
       consumeDispatchedLatticeHostSelection(outgoingMessageText);
-      // Non-Codex steers interrupt the live turn before re-dispatching; hold
-      // queued auto-dispatch through that gap so it can't race the steer. The
-      // live session provider decides the interrupt path server-side, so the
-      // gate keys off it rather than the requested model selection.
-      const liveProviderForSteerGate = activeThread?.session?.provider ?? selectedModelSelectionForSend.provider;
-      if (dispatchMode === "steer" && liveProviderForSteerGate !== "codex") {
+      // Steers on providers without native mid-turn steering interrupt the live
+      // turn before re-dispatching; hold queued auto-dispatch through that gap
+      // so it can't race the steer. The live session provider decides the
+      // interrupt path server-side, so the gate keys off it rather than the
+      // requested model selection.
+      const liveProviderForSteerGate =
+        activeThread?.session?.provider ?? selectedModelSelectionForSend.provider;
+      if (
+        dispatchMode === "steer" &&
+        !providerSupportsNativeTurnSteering(liveProviderForSteerGate)
+      ) {
         setQueuedSteerGate({
           sawInterruptGap: false,
           gapStartedAt: null,
@@ -7993,7 +8078,7 @@ export default function ChatView({
     );
 
     sendInFlightRef.current = true;
-    beginLocalDispatch();
+    beginLocalDispatch({ expectedUserMessageId: messageIdForSend });
     setThreadError(threadIdForSend, null);
     setOptimisticUserMessages((existing) => [
       ...existing,
@@ -8008,6 +8093,8 @@ export default function ChatView({
       },
     ]);
     armTranscriptAutoFollow(threadIdForSend, true);
+    tailAnchorScrollInFlightRef.current = true;
+    setTailAnchor({ threadId: threadIdForSend, messageId: messageIdForSend });
 
     // Nested function so the `try` body holds no value blocks — see the comment on
     // `deleteEmptyTerminalThread` above for why React Compiler requires this shape.
@@ -8061,13 +8148,18 @@ export default function ChatView({
         ...(sourceProposedPlan ? { sourceProposedPlan } : {}),
         createdAt: messageCreatedAt,
       });
+      // Steers on providers without native mid-turn steering interrupt the live
+      // turn before re-dispatching; hold queued auto-dispatch through that gap
+      // so it can't race the steer. The live session provider decides the
+      // interrupt path server-side, so the gate keys off it rather than the
+      // requested model selection.
       consumeDispatchedLatticeHostSelection(outgoingMessageText);
-      // Non-Codex steers interrupt the live turn before re-dispatching; hold
-      // queued auto-dispatch through that gap so it can't race the steer. The
-      // live session provider decides the interrupt path server-side, so the
-      // gate keys off it rather than the requested model selection.
-      const livePlanProviderForSteerGate = activeThread?.session?.provider ?? modelSelectionForPlanDispatch.provider;
-      if (dispatchMode === "steer" && livePlanProviderForSteerGate !== "codex") {
+      const livePlanProviderForSteerGate =
+        activeThread?.session?.provider ?? modelSelectionForPlanDispatch.provider;
+      if (
+        dispatchMode === "steer" &&
+        !providerSupportsNativeTurnSteering(livePlanProviderForSteerGate)
+      ) {
         setQueuedSteerGate({
           sawInterruptGap: false,
           gapStartedAt: null,
@@ -8791,15 +8883,26 @@ export default function ChatView({
   );
 
   const moveEmptyDraftToLocalProject = useCallback(
-    (projectId: ProjectId) => {
+    (
+      projectId: ProjectId,
+      options?: {
+        restoreComposerFocus?: boolean;
+      },
+    ) => {
       // Project moves reset branch; the previous project's current branch may not exist here.
       moveDraftThreadToProject(threadId, projectId, LOCAL_PROJECT_DRAFT_CONTEXT);
-      scheduleComposerFocus();
+      if (options?.restoreComposerFocus ?? true) {
+        scheduleComposerFocus();
+      }
     },
     [moveDraftThreadToProject, scheduleComposerFocus, threadId],
   );
 
   const handleResetWorkspaceToHome = useCallback(() => {
+    // The inline reset action prevents pointer-down from stealing editor focus. Avoid refocusing
+    // an already-focused editor: focusAtEnd would move its cursor and schedule a redundant frame.
+    // Picker-menu resets still restore focus because the editor is no longer active in that path.
+    const restoreComposerFocus = !composerEditorRef.current?.isFocused();
     if (isLocalDraftThread) {
       if (isStudioContainer) {
         setDraftThreadContext(threadId, {
@@ -8809,7 +8912,9 @@ export default function ChatView({
           workingDirectory: null,
           lastKnownPr: null,
         });
-        scheduleComposerFocus();
+        if (restoreComposerFocus) {
+          scheduleComposerFocus();
+        }
         return;
       }
       if (!isHomeChatContainer) {
@@ -8833,7 +8938,7 @@ export default function ChatView({
             }
             syncServerShellSnapshot(snapshot);
           }
-          moveEmptyDraftToLocalProject(homeProjectId);
+          moveEmptyDraftToLocalProject(homeProjectId, { restoreComposerFocus });
         })();
       }
       setDraftThreadContext(threadId, {
@@ -8843,7 +8948,9 @@ export default function ChatView({
         branch: null,
         lastKnownPr: null,
       });
-      scheduleComposerFocus();
+      if (restoreComposerFocus) {
+        scheduleComposerFocus();
+      }
       return;
     }
 
@@ -8865,7 +8972,9 @@ export default function ChatView({
         });
       }
     }
-    scheduleComposerFocus();
+    if (restoreComposerFocus) {
+      scheduleComposerFocus();
+    }
   }, [
     activeThread,
     chatWorkspaceRoot,
@@ -9698,8 +9807,41 @@ export default function ChatView({
     isAtEndRef.current = true;
     showScrollDebouncer.current.cancel();
     setShowScrollToBottom(false);
-    scrollToEnd(true);
-  }, [scrollToEnd]);
+    const target = legendListRef.current;
+    if (!target) {
+      return;
+    }
+
+    const requestId = settledScrollRequestRef.current + 1;
+    settledScrollRequestRef.current = requestId;
+    settledScrollInFlightRef.current = true;
+    programmaticScrollUntilRef.current = performance.now() + 200;
+    void scrollTranscriptToSettledEnd({
+      target,
+      isCurrent: () =>
+        settledScrollRequestRef.current === requestId && legendListRef.current === target,
+      beforeFinalScroll: () => {
+        programmaticScrollUntilRef.current = performance.now() + 200;
+      },
+    })
+      .then((settled) => {
+        if (settledScrollRequestRef.current !== requestId) {
+          return;
+        }
+        settledScrollInFlightRef.current = false;
+        if (!settled) {
+          return;
+        }
+        isAtEndRef.current = true;
+        showScrollDebouncer.current.cancel();
+        setShowScrollToBottom(false);
+      })
+      .catch(() => {
+        if (settledScrollRequestRef.current === requestId) {
+          settledScrollInFlightRef.current = false;
+        }
+      });
+  }, []);
   const onOpenTurnDiff = useCallback(
     (turnId: TurnId, filePath?: string) => {
       if (diffEnvironmentPending) {
@@ -10399,6 +10541,17 @@ export default function ChatView({
                   ) : null}
                   {!isComposerApprovalState &&
                     pendingUserInputs.length === 0 &&
+                    isPreparingComposerImages && (
+                      <div
+                        className="flex items-center gap-1.5 px-1 text-xs text-muted-foreground"
+                        role="status"
+                      >
+                        <LoaderCircleIcon className="size-3.5 animate-spin" />
+                        Optimizing {pendingComposerImageCount === 1 ? "image" : "images"}…
+                      </div>
+                    )}
+                  {!isComposerApprovalState &&
+                    pendingUserInputs.length === 0 &&
                     (composerAssistantSelections.length > 0 ||
                       composerBrowserAnnotations.length > 0 ||
                       composerFileComments.length > 0 ||
@@ -10668,6 +10821,7 @@ export default function ChatView({
                                 isSendBusy ||
                                 isConnecting ||
                                 isVoiceTranscribing ||
+                                isPreparingComposerImages ||
                                 !composerSendState.hasSendableContent
                               }
                               aria-label={
@@ -10675,14 +10829,16 @@ export default function ChatView({
                                   ? "Connecting"
                                   : isVoiceTranscribing
                                     ? "Transcribing voice note"
-                                    : isPreparingWorktree
-                                      ? "Preparing worktree"
-                                      : isSendBusy
-                                        ? "Sending"
-                                        : "Send message"
+                                    : isPreparingComposerImages
+                                      ? "Optimizing image"
+                                      : isPreparingWorktree
+                                        ? "Preparing worktree"
+                                        : isSendBusy
+                                          ? "Sending"
+                                          : "Send message"
                               }
                             >
-                              {isConnecting || isSendBusy ? (
+                              {isConnecting || isSendBusy || isPreparingComposerImages ? (
                                 <svg
                                   width="12"
                                   height="12"
@@ -10799,6 +10955,8 @@ export default function ChatView({
           showDiffToggle={!isEditorRail && !isEmbed}
           diffOpen={resolvedDiffOpen}
           diffDisabledReason={diffDisabledReason}
+          rightDockOpen={rightDockOpen}
+          {...(onToggleRightDock ? { onToggleRightDock } : {})}
           environment={isEditorRail ? null : environmentHeaderState}
           surfaceMode={surfaceMode}
           chatLayoutAction={
@@ -10992,7 +11150,7 @@ export default function ChatView({
                     activeTurnId={activeTurnIdForTranscript}
                     agentActivityDetail={openAgentActivityDetail}
                     hasMessages={timelineEntries.length > 0}
-                    isWorking={isWorking}
+                    isWorking={hasLiveTurn}
                     worktreeSetup={activeWorktreeSetup}
                     activeTurnInProgress={activeTurnInProgress}
                     activeTurnStartedAt={activeWorkStartedAt}
@@ -11003,6 +11161,12 @@ export default function ChatView({
                     onTogglePinMessage={handleTogglePinMessageGuarded}
                     threadMarkers={threadMarkers}
                     enteringUserMessageIds={enteringUserMessageIds}
+                    tailAnchorMessageId={
+                      tailAnchor !== null && tailAnchor.threadId === activeThread.id
+                        ? tailAnchor.messageId
+                        : null
+                    }
+                    tailAnchorScrollInFlightRef={tailAnchorScrollInFlightRef}
                     crossTaskOrigin={crossTaskOrigin}
                     timelineEntries={timelineEntries}
                     turnDiffSummaryByAssistantMessageId={turnDiffSummaryByAssistantMessageId}

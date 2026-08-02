@@ -254,6 +254,9 @@ export type OrchestrationMessageSource = typeof OrchestrationMessageSource.Type;
 export const PROVIDER_SEND_TURN_MAX_INPUT_CHARS = 120_000;
 export const PROVIDER_SEND_TURN_MAX_ATTACHMENTS = 8;
 export const PROVIDER_SEND_TURN_MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+// Raw local images may exceed the provider-safe payload limit when they can be
+// normalized on-device before upload (for example Retina PNG screenshots).
+export const PROVIDER_SEND_TURN_MAX_IMAGE_IMPORT_BYTES = 32 * 1024 * 1024;
 export const PROVIDER_SEND_TURN_MAX_FILE_BYTES = 25 * 1024 * 1024;
 export const MAX_PINNED_PROJECTS = 3;
 const CHAT_ATTACHMENT_ID_MAX_CHARS = 128;
@@ -679,7 +682,12 @@ export const OrchestrationThread = Schema.Struct({
   hasActionableProposedPlan: Schema.optional(Schema.Boolean),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
-  archivedAt: Schema.optional(Schema.NullOr(IsoDateTime)).pipe(Schema.withDecodingDefault(() => null)),
+  archivedAt: Schema.optional(Schema.NullOr(IsoDateTime)).pipe(
+    Schema.withDecodingDefault(() => null),
+  ),
+  settledAt: Schema.optional(Schema.NullOr(IsoDateTime)).pipe(
+    Schema.withDecodingDefault(() => null),
+  ),
   deletedAt: Schema.NullOr(IsoDateTime),
   handoff: Schema.NullOr(ThreadHandoff).pipe(Schema.withDecodingDefault(() => null)),
   pinnedMessages: Schema.optional(ThreadPinnedMessages),
@@ -739,7 +747,12 @@ export const OrchestrationThreadShell = Schema.Struct({
   hasActionableProposedPlan: Schema.optional(Schema.Boolean),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
-  archivedAt: Schema.optional(Schema.NullOr(IsoDateTime)).pipe(Schema.withDecodingDefault(() => null)),
+  archivedAt: Schema.optional(Schema.NullOr(IsoDateTime)).pipe(
+    Schema.withDecodingDefault(() => null),
+  ),
+  settledAt: Schema.optional(Schema.NullOr(IsoDateTime)).pipe(
+    Schema.withDecodingDefault(() => null),
+  ),
   handoff: Schema.NullOr(ThreadHandoff).pipe(Schema.withDecodingDefault(() => null)),
   session: Schema.NullOr(OrchestrationSession),
 });
@@ -1020,6 +1033,8 @@ const ThreadMetaUpdateCommand = Schema.Struct({
   associatedWorktreeRef: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
   createBranchFlowCompleted: Schema.optional(Schema.Boolean),
   isPinned: Schema.optional(Schema.Boolean),
+  // Desired settled state; the decider stamps the authoritative settledAt timestamp.
+  isSettled: Schema.optional(Schema.Boolean),
   parentThreadId: Schema.optional(Schema.NullOr(ThreadId)),
   subagentAgentId: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
   subagentNickname: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
@@ -1353,6 +1368,8 @@ const ThreadSessionSetCommand = Schema.Struct({
   commandId: CommandId,
   threadId: ThreadId,
   session: OrchestrationSession,
+  expectedSessionStatus: Schema.optional(OrchestrationSessionStatus),
+  expectedSessionUpdatedAt: Schema.optional(IsoDateTime),
   createdAt: IsoDateTime,
 });
 
@@ -1627,6 +1644,7 @@ export const ThreadMetaUpdatedPayload = Schema.Struct({
   associatedWorktreeRef: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
   createBranchFlowCompleted: Schema.optional(Schema.Boolean),
   isPinned: Schema.optional(Schema.Boolean),
+  settledAt: Schema.optional(Schema.NullOr(IsoDateTime)),
   parentThreadId: Schema.optional(Schema.NullOr(ThreadId)),
   subagentAgentId: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
   subagentNickname: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
@@ -2237,11 +2255,19 @@ export type OrchestrationUnsubscribeShellInput = typeof OrchestrationUnsubscribe
 
 export const OrchestrationSubscribeThreadInput = Schema.Struct({
   threadId: ThreadId,
+  // Cursor of the last event the client already applied. When present and the
+  // gap fits the server's replay limit, the stream replays only the gap and
+  // skips the full-history snapshot. Optional so older clients keep the
+  // snapshot-first behavior unchanged.
+  afterSequence: Schema.optional(NonNegativeInt),
 });
 export type OrchestrationSubscribeThreadInput = typeof OrchestrationSubscribeThreadInput.Type;
 
-export const OrchestrationGetThreadDetailSnapshotInput = OrchestrationSubscribeThreadInput;
-export type OrchestrationGetThreadDetailSnapshotInput = typeof OrchestrationGetThreadDetailSnapshotInput.Type;
+export const OrchestrationGetThreadDetailSnapshotInput = Schema.Struct({
+  threadId: ThreadId,
+});
+export type OrchestrationGetThreadDetailSnapshotInput =
+  typeof OrchestrationGetThreadDetailSnapshotInput.Type;
 
 export const OrchestrationGetThreadDetailSnapshotResult = Schema.NullOr(OrchestrationThreadDetailSnapshot);
 export type OrchestrationGetThreadDetailSnapshotResult = typeof OrchestrationGetThreadDetailSnapshotResult.Type;

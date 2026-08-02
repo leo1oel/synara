@@ -70,6 +70,13 @@ export function isProviderUpdateActive(provider: ServerProviderStatus): boolean 
   return provider.updateState?.status === "queued" || provider.updateState?.status === "running";
 }
 
+// A provider whose latest version Synara cannot look up (self-updating CLIs such as
+// `cursor-agent`) is permanently "unknown". Treating that as an update prompt made its
+// row nag forever, so those providers get the update offered as a manual action instead.
+export function isProviderLatestVersionKnowable(provider: ServerProviderStatus): boolean {
+  return provider.versionAdvisory?.latestVersionKnowable !== false;
+}
+
 export function shouldOfferProviderUpdateAction(provider: ServerProviderStatus): boolean {
   if (provider.provider === "pi") return false;
   const advisory = provider.versionAdvisory;
@@ -81,6 +88,11 @@ export function shouldOfferProviderUpdateAction(provider: ServerProviderStatus):
     advisory.updateCommand !== null &&
     (advisory.status === "behind_latest" || advisory.status === "unknown")
   );
+}
+
+// Header affordance: reserved for providers Synara can actually assert are outdated.
+export function shouldPromptProviderUpdate(provider: ServerProviderStatus): boolean {
+  return shouldOfferProviderUpdateAction(provider) && isProviderLatestVersionKnowable(provider);
 }
 
 function isProviderEnabled(
