@@ -10617,7 +10617,7 @@ export default function ChatView({
                       "@container",
                       COMPOSER_FOOTER_ROW_CLASS_NAME,
                       isEmbed
-                        ? "!grid min-h-[38px] grid-cols-[auto_minmax(0,1fr)] gap-0 overflow-hidden"
+                        ? "!grid min-h-[38px] grid-cols-[auto_minmax(0,1fr)] gap-1 overflow-hidden"
                         : isComposerFooterCompact
                           ? "gap-1.5"
                           : "flex-wrap gap-1.5 sm:flex-nowrap sm:gap-0",
@@ -10642,9 +10642,9 @@ export default function ChatView({
                         <>
                           {interactionMode === "plan" ? (
                             <Button
-                              variant="ghost"
-                              className="shrink-0 whitespace-nowrap px-2 text-[length:var(--app-font-size-ui-sm,11px)] sm:text-[length:var(--app-font-size-ui-sm,11px)] font-normal text-[var(--color-text-foreground-secondary)] hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)] sm:px-3"
-                              size="sm"
+                              variant="secondary"
+                              className="shrink-0 gap-1 whitespace-nowrap rounded-md px-2 font-normal leading-none text-[length:var(--app-font-size-ui-sm,11px)] text-[var(--color-text-foreground-secondary)] sm:h-6 sm:px-2 sm:text-[length:var(--app-font-size-ui-sm,11px)]"
+                              size="xs"
                               type="button"
                               onClick={toggleInteractionMode}
                               title="Plan mode — click to return to normal build mode"
