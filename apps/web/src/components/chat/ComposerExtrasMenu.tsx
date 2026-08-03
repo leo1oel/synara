@@ -69,15 +69,15 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
           <MenuSeparator />
           <MenuCheckboxItem
             checked={props.interactionMode === "plan"}
-            className="composer-plan-mode-toggle"
+            className="composer-plan-mode-toggle items-center leading-4"
             variant="switch"
             onCheckedChange={(checked) => {
               props.onSetPlanMode(checked === true);
             }}
           >
-            <span className="inline-flex items-center gap-2">
-              <GoTasklist className="size-4 shrink-0" />
-              Plan mode
+            <span className="inline-flex h-4 items-center gap-2 leading-4">
+              <GoTasklist className="block size-4 shrink-0 self-center" />
+              <span className="leading-4">Plan mode</span>
             </span>
           </MenuCheckboxItem>
         </ComposerPickerMenuPopup>

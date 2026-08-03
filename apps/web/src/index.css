@@ -770,6 +770,11 @@ html[data-synara-embed="true"] .composer-plan-mode-toggle [data-slot="menu-check
   --thumb-size: 10px;
 }
 
+html[data-synara-embed="true"] .composer-plan-mode-toggle > span,
+html[data-synara-embed="true"] .composer-plan-mode-toggle [data-slot="menu-checkbox-switch"] {
+  align-self: center;
+}
+
 html[data-synara-embed="true"] .app-settings-surface [data-slot="switch"][data-checked],
 html[data-synara-embed="true"] .composer-plan-mode-toggle[data-checked] [data-slot="menu-checkbox-switch"] {
   background: var(--lattice-settings-accent);
