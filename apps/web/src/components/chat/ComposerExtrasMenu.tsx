@@ -75,7 +75,7 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
               props.onSetPlanMode(checked === true);
             }}
           >
-            <span className="inline-flex h-4 items-center gap-2 leading-4">
+            <span className="inline-flex h-4 translate-y-px items-center gap-2 leading-4">
               <GoTasklist className="block size-4 shrink-0 self-center" />
               <span className="leading-4">Plan mode</span>
             </span>
