@@ -63,7 +63,6 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
-import { GoTasklist } from "react-icons/go";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Debouncer, useDebouncedValue } from "@tanstack/react-pacer";
 import { useNavigate } from "@tanstack/react-router";
@@ -10617,7 +10616,7 @@ export default function ChatView({
                       "@container",
                       COMPOSER_FOOTER_ROW_CLASS_NAME,
                       isEmbed
-                        ? "!grid min-h-[38px] grid-cols-[auto_minmax(0,1fr)] gap-1 overflow-hidden"
+                        ? "!grid min-h-[38px] grid-cols-[auto_minmax(0,1fr)] gap-0 overflow-hidden"
                         : isComposerFooterCompact
                           ? "gap-1.5"
                           : "flex-wrap gap-1.5 sm:flex-nowrap sm:gap-0",
@@ -10640,20 +10639,6 @@ export default function ChatView({
 
                       {!isVoiceRecording && !isVoiceTranscribing ? (
                         <>
-                          {interactionMode === "plan" ? (
-                            <Button
-                              variant="secondary"
-                              className="shrink-0 gap-1 whitespace-nowrap rounded-md px-2 font-normal leading-none text-[length:var(--app-font-size-ui-sm,11px)] text-[var(--color-text-foreground-secondary)] sm:h-6 sm:px-2 sm:text-[length:var(--app-font-size-ui-sm,11px)]"
-                              size="xs"
-                              type="button"
-                              onClick={toggleInteractionMode}
-                              title="Plan mode — click to return to normal build mode"
-                            >
-                              <GoTasklist className="size-3.5" />
-                              <span className="sr-only sm:not-sr-only">Plan</span>
-                            </Button>
-                          ) : null}
-
                           {activeTaskList || sidebarProposedPlan || planSidebarOpen ? (
                             <Button
                               variant="ghost"

@@ -69,6 +69,7 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
           <MenuSeparator />
           <MenuCheckboxItem
             checked={props.interactionMode === "plan"}
+            className="composer-plan-mode-toggle"
             variant="switch"
             onCheckedChange={(checked) => {
               props.onSetPlanMode(checked === true);

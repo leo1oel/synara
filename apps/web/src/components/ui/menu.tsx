@@ -194,6 +194,7 @@ function MenuCheckboxItem({
               SWITCH_TRACK_CLASS_NAME,
               "inset-shadow-[0_1px_--theme(--color-black/4%)] [--thumb-size:--spacing(4)] focus-visible:ring-1 sm:[--thumb-size:--spacing(3)]",
             )}
+            data-slot="menu-checkbox-switch"
             keepMounted
           >
             <span
@@ -201,6 +202,7 @@ function MenuCheckboxItem({
                 SWITCH_THUMB_CLASS_NAME,
                 "in-[[data-slot=menu-checkbox-item][data-checked]]:origin-[var(--thumb-size)_50%] in-[[data-slot=menu-checkbox-item][data-checked]]:translate-x-[calc(var(--thumb-size)-4px)] in-[[data-slot=menu-checkbox-item]:active]:not-data-disabled:scale-x-110 in-[[data-slot=menu-checkbox-item]:active]:rounded-[var(--thumb-size)/calc(var(--thumb-size)*1.10)]",
               )}
+              data-slot="menu-checkbox-switch-thumb"
             />
           </MenuPrimitive.CheckboxItemIndicator>
         </>
