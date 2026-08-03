@@ -62,8 +62,10 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
               fileInputRef.current?.click();
             }}
           >
-            <PaperclipIcon className="size-4 shrink-0" />
-            Add image
+            <span className="inline-flex items-center gap-2">
+              <PaperclipIcon className="block size-4 shrink-0" />
+              <span>Add image</span>
+            </span>
           </MenuItem>
 
           <MenuSeparator />
