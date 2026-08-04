@@ -112,6 +112,7 @@ import {
 } from "./wsStreamAdmission";
 import { ThreadDiagnosticsQuery } from "./diagnostics/Services/ThreadDiagnosticsQuery";
 import { makeWsRequestAdmission } from "./wsRequestAdmission";
+import { voiceUploadAdmissionGate } from "./voiceUploadAdmission";
 import {
   CurrentWsSessionRole,
   provideWsConnectionSession,
@@ -870,16 +871,11 @@ const makeWsRpcHandlersLayer = () =>
               // head stays above the cursor, so the gap check alone would
               // accept the resume and stream nothing. Falling through to the
               // snapshot path surfaces THREAD_SNAPSHOT_NOT_FOUND instead.
-              resumeSubjectExists: projectionReadModelQuery
-                .getThreadDetailSnapshotById(input.threadId)
-                .pipe(
-                  Effect.map(Option.isSome),
-                  Effect.mapError((cause) =>
-                    toWsRpcError(cause, "Failed to verify thread before cursor resume"),
-                  ),
-                ),
-              onResnapshotRequired: (report) =>
-                recordThreadResnapshotRequired(input.threadId, report),
+              resumeSubjectExists: projectionReadModelQuery.getThreadDetailSnapshotById(input.threadId).pipe(
+                Effect.map(Option.isSome),
+                Effect.mapError((cause) => toWsRpcError(cause, "Failed to verify thread before cursor resume")),
+              ),
+              onResnapshotRequired: (report) => recordThreadResnapshotRequired(input.threadId, report),
               subscribeLive: orchestrationEngine.subscribeDomainEvents.pipe(
                 Effect.map((stream) =>
                   bufferLiveUiStream(
@@ -1350,17 +1346,32 @@ const makeWsRpcHandlersLayer = () =>
             }),
             "Failed to load server diagnostics",
           ),
-        [WS_METHODS.serverTranscribeVoice]: (input) =>
+        [WS_METHODS.serverPrewarmVoice]: (input) =>
           rpcEffect(
             providerAdapterRegistry
               .getByProvider(input.provider)
               .pipe(
                 Effect.flatMap((adapter) =>
-                  adapter.transcribeVoice
-                    ? adapter.transcribeVoice(input)
+                  adapter.prewarmVoice
+                    ? adapter.prewarmVoice(input)
                     : Effect.fail(new Error(`Voice transcription is unavailable for provider '${input.provider}'.`)),
                 ),
               ),
+            "Voice transcription prewarm failed",
+          ),
+        [WS_METHODS.serverTranscribeVoice]: (input) =>
+          rpcEffect(
+            voiceUploadAdmissionGate.run(
+              providerAdapterRegistry
+                .getByProvider(input.provider)
+                .pipe(
+                  Effect.flatMap((adapter) =>
+                    adapter.transcribeVoice
+                      ? adapter.transcribeVoice(input)
+                      : Effect.fail(new Error(`Voice transcription is unavailable for provider '${input.provider}'.`)),
+                  ),
+                ),
+            ),
             "Voice transcription failed",
           ),
         [WS_METHODS.serverGenerateThreadRecap]: (input) =>
@@ -1800,9 +1811,7 @@ function makeWsNegotiateHttpRouteLayer() {
           }
           return yield* negotiateWsCompatibility(input).pipe(
             Effect.map((result) => HttpServerResponse.jsonUnsafe(result, { status: 200, headers })),
-            Effect.catch((error) =>
-              Effect.succeed(HttpServerResponse.jsonUnsafe(error, { status: 426, headers })),
-            ),
+            Effect.catch((error) => Effect.succeed(HttpServerResponse.jsonUnsafe(error, { status: 426, headers }))),
           );
         }),
       );
@@ -1842,10 +1851,7 @@ function makeWebsocketBootstrapRouteLayer<R>(
 // bootstrap socket kept for older clients during rollout. Exported separately
 // so route-level tests can mount them beside a custom feature RPC group.
 export const makeWebsocketNegotiationRouteLayer = () =>
-  Layer.merge(
-    makeWsNegotiateHttpRouteLayer(),
-    makeWebsocketBootstrapRouteLayer(makeBootstrapWebSocketHttpEffect),
-  );
+  Layer.merge(makeWsNegotiateHttpRouteLayer(), makeWebsocketBootstrapRouteLayer(makeBootstrapWebSocketHttpEffect));
 
 export const websocketRpcRouteLayer = Layer.merge(
   makeWebsocketNegotiationRouteLayer(),

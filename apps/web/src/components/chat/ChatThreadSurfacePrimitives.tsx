@@ -9,6 +9,7 @@ import type { SplitViewPanePanelState } from "../../splitViewStore";
 import { CHAT_BACKGROUND_CLASS_NAME } from "./composerPickerStyles";
 import { Spinner } from "../ui/spinner";
 import { cn } from "~/lib/utils";
+import { scheduleDeferredChatMount } from "./deferredChatMount";
 
 const DiffPanel = lazy(() => import("../DiffPanel"));
 export const LazyBrowserPanel = lazy(() => import("../BrowserPanel"));
@@ -116,23 +117,10 @@ export function DeferredChatView(props: {
     }
     // readyMountKey is keyed by mountKey, so a changed mountKey already makes
     // canMountChatView false (loader) without an eager reset here; the double
-    // rAF then stamps the new key once the paint has settled. Embedded
-    // WKWebViews can suspend rAF for a newly attached frame, so keep a short
-    // timer fallback instead of leaving the chat on its mount loader forever.
-    let firstFrame = 0;
-    let secondFrame = 0;
-    const fallbackTimer = window.setTimeout(() => setReadyMountKey(mountKey), 250);
-    firstFrame = window.requestAnimationFrame(() => {
-      secondFrame = window.requestAnimationFrame(() => {
-        window.clearTimeout(fallbackTimer);
-        setReadyMountKey(mountKey);
-      });
-    });
-    return () => {
-      window.clearTimeout(fallbackTimer);
-      window.cancelAnimationFrame(firstFrame);
-      window.cancelAnimationFrame(secondFrame);
-    };
+    // rAF then stamps the new key once the paint has settled. Chromium and
+    // embedded WKWebViews can suppress animation frames while starting,
+    // attaching, or background-throttled, so keep a bounded fallback.
+    return scheduleDeferredChatMount(window, () => setReadyMountKey(mountKey));
   }, [mountKey, props.deferMount]);
 
   useEffect(() => {

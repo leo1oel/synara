@@ -150,7 +150,7 @@ import {
 } from "../lib/automationDraft";
 import { dispatchThreadRename } from "../lib/threadRename";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
-import { useComposerDropzone } from "../hooks/useComposerDropzone";
+import { splitComposerDropzoneFiles, useComposerDropzone } from "../hooks/useComposerDropzone";
 import { useComposerImageIntake } from "../hooks/useComposerImageIntake";
 import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
 import {
@@ -503,10 +503,7 @@ import {
 } from "./chat/WorkflowRunCard.logic";
 import { ComposerColumnFrame } from "./chat/ComposerColumnFrame";
 import { useTranscriptAssistantSelectionAction } from "./chat/useTranscriptAssistantSelectionAction";
-import {
-  scrollTranscriptToSettledEnd,
-  stopTranscriptScrollAtCurrentOffset,
-} from "./chat/transcriptScroll";
+import { scrollTranscriptToSettledEnd, stopTranscriptScrollAtCurrentOffset } from "./chat/transcriptScroll";
 import { resolveTranscriptMarkerRange } from "./chat/chatSelectionActions";
 import {
   dispatchThreadMarkerAdd,
@@ -1235,9 +1232,7 @@ export default function ChatView({
   const setComposerDraftInteractionMode = useComposerDraftStore((store) => store.setInteractionMode);
   const enqueueQueuedComposerTurn = useComposerDraftStore((store) => store.enqueueQueuedTurn);
   const insertQueuedComposerTurn = useComposerDraftStore((store) => store.insertQueuedTurn);
-  const removeQueuedComposerTurnFromDraft = useComposerDraftStore(
-    (store) => store.removeQueuedTurn,
-  );
+  const removeQueuedComposerTurnFromDraft = useComposerDraftStore((store) => store.removeQueuedTurn);
   const addComposerDraftImages = useComposerDraftStore((store) => store.addImages);
   const removeComposerDraftImage = useComposerDraftStore((store) => store.removeImage);
   const addComposerDraftFiles = useComposerDraftStore((store) => store.addFiles);
@@ -2411,12 +2406,30 @@ export default function ChatView({
     return () => window.clearTimeout(settle);
   }, [agentActivityTimelineState.detailById, openAgentActivityId]);
   const pendingApprovals = useMemo(
-    () => derivePendingApprovals(threadActivities, activeThread?.pendingInteractions),
-    [activeThread?.pendingInteractions, threadActivities],
+    () =>
+      derivePendingApprovals(threadActivities, activeThread?.pendingInteractions, {
+        authoritativeHasPending: activeThread?.hasPendingApprovals,
+        latestTurnId: activeThread?.latestTurn?.turnId,
+      }),
+    [
+      activeThread?.hasPendingApprovals,
+      activeThread?.latestTurn?.turnId,
+      activeThread?.pendingInteractions,
+      threadActivities,
+    ],
   );
   const pendingUserInputs = useMemo(
-    () => derivePendingUserInputs(threadActivities, activeThread?.pendingInteractions),
-    [activeThread?.pendingInteractions, threadActivities],
+    () =>
+      derivePendingUserInputs(threadActivities, activeThread?.pendingInteractions, {
+        authoritativeHasPending: activeThread?.hasPendingUserInput,
+        latestTurnId: activeThread?.latestTurn?.turnId,
+      }),
+    [
+      activeThread?.hasPendingUserInput,
+      activeThread?.latestTurn?.turnId,
+      activeThread?.pendingInteractions,
+      threadActivities,
+    ],
   );
   const activePendingUserInput = pendingUserInputs[0] ?? null;
   const activePendingUserInputKey = activePendingUserInput
@@ -3118,9 +3131,7 @@ export default function ChatView({
   const handleRetryThreadDetailSync = useCallback(() => {
     useStore.getState().clearThreadDetailSyncFailure(threadId);
     const api = readNativeApi();
-    void api?.orchestration
-      .subscribeThread(buildThreadSubscribeInput(threadId))
-      .catch(() => undefined);
+    void api?.orchestration.subscribeThread(buildThreadSubscribeInput(threadId)).catch(() => undefined);
   }, [threadId]);
   // Stable identity: this element is forwarded to the memoized MessagesTimeline, so
   // building it inline in JSX would defeat its `memo()` on every keystroke.
@@ -3792,8 +3803,7 @@ export default function ChatView({
     [setStoreThreadError],
   );
   const composerImageAttachmentCount = useCallback(
-    () =>
-      effectiveComposerAttachmentCount(useComposerDraftStore.getState().draftsByThreadId[threadId]),
+    () => effectiveComposerAttachmentCount(useComposerDraftStore.getState().draftsByThreadId[threadId]),
     [threadId],
   );
   const commitPreparedComposerImages = useCallback(
@@ -4742,6 +4752,7 @@ export default function ChatView({
         latestTranscriptMessage.role,
         latestTranscriptMessage.streaming ? "streaming" : "settled",
         latestTranscriptMessage.text.length > 0 ? "content" : "empty",
+        latestTranscriptMessage.text.length,
         latestTranscriptMessage.completedAt ?? "",
       ].join(":")
     : "empty";
@@ -4751,10 +4762,7 @@ export default function ChatView({
   });
   const onIsAtEndChange = useCallback((isAtEnd: boolean) => {
     if (isAtEndRef.current === isAtEnd) return;
-    if (
-      !isAtEnd &&
-      (settledScrollInFlightRef.current || performance.now() < programmaticScrollUntilRef.current)
-    ) {
+    if (!isAtEnd && (settledScrollInFlightRef.current || performance.now() < programmaticScrollUntilRef.current)) {
       return;
     }
     isAtEndRef.current = isAtEnd;
@@ -6128,6 +6136,19 @@ export default function ChatView({
       );
     },
     [activeThreadId, addComposerFilesToDraft, pendingUserInputs.length, setThreadError],
+  );
+
+  const addComposerAttachments = useCallback(
+    (files: readonly File[]) => {
+      const { imageFiles, genericFiles } = splitComposerDropzoneFiles(files);
+      if (imageFiles.length > 0) {
+        addComposerImages(imageFiles);
+      }
+      if (genericFiles.length > 0) {
+        addComposerFiles(genericFiles);
+      }
+    },
+    [addComposerFiles, addComposerImages],
   );
 
   const removeComposerFile = (fileId: string) => {
@@ -7680,12 +7701,8 @@ export default function ChatView({
       // so it can't race the steer. The live session provider decides the
       // interrupt path server-side, so the gate keys off it rather than the
       // requested model selection.
-      const liveProviderForSteerGate =
-        activeThread?.session?.provider ?? selectedModelSelectionForSend.provider;
-      if (
-        dispatchMode === "steer" &&
-        !providerSupportsNativeTurnSteering(liveProviderForSteerGate)
-      ) {
+      const liveProviderForSteerGate = activeThread?.session?.provider ?? selectedModelSelectionForSend.provider;
+      if (dispatchMode === "steer" && !providerSupportsNativeTurnSteering(liveProviderForSteerGate)) {
         setQueuedSteerGate({
           sawInterruptGap: false,
           gapStartedAt: null,
@@ -8153,12 +8170,8 @@ export default function ChatView({
       // interrupt path server-side, so the gate keys off it rather than the
       // requested model selection.
       consumeDispatchedLatticeHostSelection(outgoingMessageText);
-      const livePlanProviderForSteerGate =
-        activeThread?.session?.provider ?? modelSelectionForPlanDispatch.provider;
-      if (
-        dispatchMode === "steer" &&
-        !providerSupportsNativeTurnSteering(livePlanProviderForSteerGate)
-      ) {
+      const livePlanProviderForSteerGate = activeThread?.session?.provider ?? modelSelectionForPlanDispatch.provider;
+      if (dispatchMode === "steer" && !providerSupportsNativeTurnSteering(livePlanProviderForSteerGate)) {
         setQueuedSteerGate({
           sawInterruptGap: false,
           gapStartedAt: null,
@@ -9817,8 +9830,7 @@ export default function ChatView({
     programmaticScrollUntilRef.current = performance.now() + 200;
     void scrollTranscriptToSettledEnd({
       target,
-      isCurrent: () =>
-        settledScrollRequestRef.current === requestId && legendListRef.current === target,
+      isCurrent: () => settledScrollRequestRef.current === requestId && legendListRef.current === target,
       beforeFinalScroll: () => {
         programmaticScrollUntilRef.current = performance.now() + 200;
       },
@@ -10134,7 +10146,7 @@ export default function ChatView({
     <>
       <ComposerExtrasMenu
         interactionMode={interactionMode}
-        onAddPhotos={addComposerImages}
+        onAddAttachments={addComposerAttachments}
         onSetPlanMode={setPlanMode}
         triggerClassName={isEmbed ? "!size-8" : undefined}
       />
@@ -10538,17 +10550,12 @@ export default function ChatView({
                       )}
                     </div>
                   ) : null}
-                  {!isComposerApprovalState &&
-                    pendingUserInputs.length === 0 &&
-                    isPreparingComposerImages && (
-                      <div
-                        className="flex items-center gap-1.5 px-1 text-xs text-muted-foreground"
-                        role="status"
-                      >
-                        <LoaderCircleIcon className="size-3.5 animate-spin" />
-                        Optimizing {pendingComposerImageCount === 1 ? "image" : "images"}…
-                      </div>
-                    )}
+                  {!isComposerApprovalState && pendingUserInputs.length === 0 && isPreparingComposerImages && (
+                    <div className="flex items-center gap-1.5 px-1 text-xs text-muted-foreground" role="status">
+                      <LoaderCircleIcon className="size-3.5 animate-spin" />
+                      Optimizing {pendingComposerImageCount === 1 ? "image" : "images"}…
+                    </div>
+                  )}
                   {!isComposerApprovalState &&
                     pendingUserInputs.length === 0 &&
                     (composerAssistantSelections.length > 0 ||
@@ -10698,14 +10705,8 @@ export default function ChatView({
                           isTranscribing={isVoiceTranscribing}
                           durationLabel={voiceRecordingDurationLabel}
                           waveformLevels={voiceWaveformLevels}
-                          onCancel={() => {
-                            if (isVoiceRecording) {
-                              void submitComposerVoiceRecording();
-                              return;
-                            }
-                            cancelComposerVoiceRecording();
-                          }}
-                          onSubmit={() => {
+                          onDiscard={cancelComposerVoiceRecording}
+                          onStop={() => {
                             void submitComposerVoiceRecording();
                           }}
                         />
@@ -11147,9 +11148,7 @@ export default function ChatView({
                     threadMarkers={threadMarkers}
                     enteringUserMessageIds={enteringUserMessageIds}
                     tailAnchorMessageId={
-                      tailAnchor !== null && tailAnchor.threadId === activeThread.id
-                        ? tailAnchor.messageId
-                        : null
+                      tailAnchor !== null && tailAnchor.threadId === activeThread.id ? tailAnchor.messageId : null
                     }
                     tailAnchorScrollInFlightRef={tailAnchorScrollInFlightRef}
                     crossTaskOrigin={crossTaskOrigin}

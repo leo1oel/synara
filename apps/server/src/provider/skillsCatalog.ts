@@ -25,6 +25,7 @@ import type {
   ProviderSaveManagedSkillResult,
   ProviderSkillDescriptor,
 } from "@synara/contracts";
+import { discoverClaudePluginSkillRoots } from "./claudePluginSkills.ts";
 
 type FrontmatterValue = string | boolean;
 
@@ -33,6 +34,10 @@ export interface SkillRoot {
   readonly scope: string;
   readonly includeMarkdownFiles?: boolean;
   readonly managedKind?: ProviderManagedSkillKind;
+  /** Prefix used by plugin-provided skills whose native invocation is namespaced. */
+  readonly namespace?: string;
+  /** Provider-owned plugin caches should not traverse linked content outside the install. */
+  readonly followSymlinks?: boolean;
 }
 
 // ── Frontmatter parsing ──────────────────────────────────────────────
@@ -142,11 +147,15 @@ async function readdirOrEmpty(path: string): Promise<import("node:fs").Dirent[]>
   }
 }
 
-async function isWalkableSkillDirectory(parentPath: string, dirent: import("node:fs").Dirent): Promise<boolean> {
+async function isWalkableSkillDirectory(
+  parentPath: string,
+  dirent: import("node:fs").Dirent,
+  followSymlinks: boolean,
+): Promise<boolean> {
   if (dirent.isDirectory()) {
     return true;
   }
-  if (!dirent.isSymbolicLink()) {
+  if (!followSymlinks || !dirent.isSymbolicLink()) {
     return false;
   }
   try {
@@ -179,12 +188,15 @@ async function isReadableMarkdownFile(parentPath: string, dirent: import("node:f
 
 export async function collectSkillMarkdownPaths(
   rootPath: string,
-  options?: { readonly includeMarkdownFiles?: boolean },
+  options?: {
+    readonly includeMarkdownFiles?: boolean;
+    readonly followSymlinks?: boolean;
+  },
 ): Promise<string[]> {
   async function visit(dir: string, depth: number): Promise<string[]> {
     const skillPath = nodePath.join(dir, "SKILL.md");
     try {
-      const stat = await fs.stat(skillPath);
+      const stat = options?.followSymlinks === false ? await fs.lstat(skillPath) : await fs.stat(skillPath);
       if (stat.isFile()) {
         return [skillPath];
       }
@@ -215,7 +227,7 @@ export async function collectSkillMarkdownPaths(
       await Promise.all(
         dirents.map(async (dirent) => ({
           name: dirent.name,
-          isDirectory: await isWalkableSkillDirectory(dir, dirent),
+          isDirectory: await isWalkableSkillDirectory(dir, dirent, options?.followSymlinks !== false),
         })),
       )
     )
@@ -232,6 +244,7 @@ export async function collectSkillMarkdownPaths(
 export async function readSkillDescriptor(input: {
   readonly skillPath: string;
   readonly scope: string;
+  readonly namespace?: string;
 }): Promise<ProviderSkillDescriptor | null> {
   let raw: string;
   try {
@@ -246,7 +259,9 @@ export async function readSkillDescriptor(input: {
     skillFilename.toLowerCase() === "skill.md"
       ? nodePath.basename(nodePath.dirname(input.skillPath))
       : nodePath.basename(input.skillPath, nodePath.extname(input.skillPath));
-  const name = readStringField(frontmatter, ["name"]) ?? fallbackName;
+  const unqualifiedName = readStringField(frontmatter, ["name"]) ?? fallbackName;
+  const name =
+    input.namespace && !unqualifiedName.includes(":") ? `${input.namespace}:${unqualifiedName}` : unqualifiedName;
   const description = readStringField(frontmatter, ["description"]);
   const displayName = readStringField(frontmatter, ["display-name", "displayName", "title"]);
   const shortDescription = readStringField(frontmatter, ["short-description", "shortDescription", "summary"]);
@@ -278,10 +293,21 @@ async function collectSkillDescriptorsFromRoots(roots: ReadonlyArray<SkillRoot>)
     roots.map(async (root) => {
       const skillPaths = await collectSkillMarkdownPaths(
         root.path,
-        root.includeMarkdownFiles ? { includeMarkdownFiles: true } : undefined,
+        root.includeMarkdownFiles || root.followSymlinks === false
+          ? {
+              ...(root.includeMarkdownFiles ? { includeMarkdownFiles: true } : {}),
+              ...(root.followSymlinks === false ? { followSymlinks: false } : {}),
+            }
+          : undefined,
       );
       const descriptors = await Promise.all(
-        skillPaths.map((skillPath) => readSkillDescriptor({ skillPath, scope: root.scope })),
+        skillPaths.map((skillPath) =>
+          readSkillDescriptor({
+            skillPath,
+            scope: root.scope,
+            ...(root.namespace ? { namespace: root.namespace } : {}),
+          }),
+        ),
       );
       return descriptors
         .filter((skill) => skill !== null)
@@ -1185,9 +1211,16 @@ export async function discoverSkillsCatalog(input: SkillsCatalogDiscoveryInput):
   const generation = skillsCatalogGeneration;
   const scan = (async () => {
     await ensureSynaraSkillsDir(input.synaraBaseDir);
+    const roots = [
+      ...skillsCatalogRoots(input),
+      ...(await discoverClaudePluginSkillRoots({
+        homeDir: input.homeDir,
+        ...(input.cwd ? { cwd: input.cwd } : {}),
+      })),
+    ];
     const skills = input.includeDuplicateOrigins
-      ? await collectSkillDescriptorsFromRoots(skillsCatalogRoots(input))
-      : await collectSkillsFromRoots(skillsCatalogRoots(input));
+      ? await collectSkillDescriptorsFromRoots(roots)
+      : await collectSkillsFromRoots(roots);
 
     if (generation === skillsCatalogGeneration) {
       skillsCatalogCache.delete(cacheKey);

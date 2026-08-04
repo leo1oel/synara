@@ -529,12 +529,14 @@ export function SidebarActivityView({
   const { priority: priorityThreads, seen: seenThreads } = splitPriorityActivityThreads(
     model.active,
   );
-  const { recent: recentThreads, rest: remainingActiveThreads } =
-    splitRecentActivityThreads(seenThreads);
+  const { recent: recentThreads, rest: remainingActiveThreads } = splitRecentActivityThreads(
+    seenThreads,
+    { nowMs },
+  );
   const dateBuckets = splitActivityThreadsByDateBucket(remainingActiveThreads, nowMs);
   const projectGroups =
     groupMode === "project"
-      ? groupActivityThreadsByProject(model.active, isRealProject)
+      ? groupActivityThreadsByProject(model.active, isRealProject, { nowMs })
       : EMPTY_PROJECT_GROUPS;
 
   const earlierPaging = resolveSidebarThreadListPaging({

@@ -45,10 +45,7 @@ import { AgentGatewayOperationRepository } from "../Services/AgentGatewayOperati
 import { ProviderDiscoveryService } from "../../provider/Services/ProviderDiscoveryService.ts";
 import { ProviderHealth } from "../../provider/Services/ProviderHealth.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
-import {
-  AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION,
-  type AgentGatewayProviderAvailability,
-} from "../targetResolver.ts";
+import { AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION, type AgentGatewayProviderAvailability } from "../targetResolver.ts";
 import { mcpToolResultError, mcpToolResultJson } from "../protocol.ts";
 import { gatewayIsoNow as isoNow } from "../creationUtils.ts";
 import {
@@ -75,10 +72,7 @@ import { makeThreadReadTools } from "../threadReadTools.ts";
 import { makeThreadDiagnosticTools } from "../threadDiagnosticTools.ts";
 import { pruneProjectedArchivedManagedWorktrees } from "../../managedWorktrees.ts";
 import { resolveThreadWorkspaceCwd } from "../../checkpointing/Utils.ts";
-import {
-  ACTIVE_AGENT_HOST_PROFILE,
-  adaptToolsForActiveHost,
-} from "../hostProfile.ts";
+import { ACTIVE_AGENT_HOST_PROFILE, adaptToolsForActiveHost } from "../hostProfile.ts";
 import { makeLatticeLiteratureTools } from "../latticeLiteratureTools.ts";
 
 // Providers already receive the versioned host policy exactly once in their
@@ -88,7 +82,7 @@ import { makeLatticeLiteratureTools } from "../latticeLiteratureTools.ts";
 const AGENT_GATEWAY_INSTRUCTIONS =
   ACTIVE_AGENT_HOST_PROFILE.id === "lattice"
     ? "Lattice tools are scoped to the active task and project. Follow the provider-delivered <lattice_host_context> for the complete citation and bibliography policy."
-    : "Synara tools are thread-scoped. Use browser_* only for Synara's visible WebView; follow the provider-delivered <synara_host_context> for full policy.";
+    : "Synara tools are thread-scoped. Use browser_* only for Synara's shared in-app browser runtime; follow the provider-delivered <synara_host_context> for full policy.";
 
 export const makeAgentGateway = Effect.gen(function* () {
   const credentials = yield* AgentGatewayCredentials;
@@ -106,15 +100,11 @@ export const makeAgentGateway = Effect.gen(function* () {
   const providerRuntimeEvents = yield* ProviderRuntimeEventRepository;
   const diagnostics = yield* ThreadDiagnosticsQuery;
   const serverConfig = yield* ServerConfig;
-  const browserAutomationHost = Option.getOrElse(
-    yield* Effect.serviceOption(BrowserAutomationHost),
-    () => makeBrowserAutomationHost({}),
+  const browserAutomationHost = Option.getOrElse(yield* Effect.serviceOption(BrowserAutomationHost), () =>
+    makeBrowserAutomationHost({}),
   );
   const loadProviderAvailabilities = Effect.gen(function* () {
-    const [settings, statuses] = yield* Effect.all([
-      serverSettings.getSettings,
-      providerHealth.getStatuses,
-    ]);
+    const [settings, statuses] = yield* Effect.all([serverSettings.getSettings, providerHealth.getStatuses]);
     const statusByProvider = new Map<ProviderKind, ServerProviderStatus>(
       statuses.map((status) => [status.provider, status]),
     );
@@ -343,15 +333,7 @@ export const makeAgentGateway = Effect.gen(function* () {
           prompt: readStringArg(args, "prompt", { required: true })!,
           target,
         };
-        for (const key of [
-          "title",
-          "projectId",
-          "environment",
-          "baseRef",
-          "baseBranch",
-          "branchName",
-          "runtimeMode",
-        ]) {
+        for (const key of ["title", "projectId", "environment", "baseRef", "baseBranch", "branchName", "runtimeMode"]) {
           const value = args[key];
           if (value !== undefined) spec[key] = value;
         }
@@ -529,8 +511,7 @@ export const makeAgentGateway = Effect.gen(function* () {
     requiresActiveTurn: true,
     definition: {
       name: "synara_set_thread_archived",
-      description:
-        "Archive or unarchive a Synara thread. Defaults to your own thread when threadId is omitted.",
+      description: "Archive or unarchive a Synara thread. Defaults to your own thread when threadId is omitted.",
       inputSchema: {
         type: "object",
         properties: {
@@ -603,9 +584,7 @@ export const makeAgentGateway = Effect.gen(function* () {
     resolveWorkspaceRoot: (context) =>
       Effect.gen(function* () {
         const thread = yield* requireThreadShell(context.callerThreadId);
-        const project = yield* snapshotQuery
-          .getProjectShellById(thread.projectId)
-          .pipe(Effect.map(Option.getOrNull));
+        const project = yield* snapshotQuery.getProjectShellById(thread.projectId).pipe(Effect.map(Option.getOrNull));
         if (!project) return null;
         return (
           resolveThreadWorkspaceCwd({
@@ -619,9 +598,7 @@ export const makeAgentGateway = Effect.gen(function* () {
     resolveWorkspaceRoot: (context) =>
       Effect.gen(function* () {
         const thread = yield* requireThreadShell(context.callerThreadId);
-        const project = yield* snapshotQuery
-          .getProjectShellById(thread.projectId)
-          .pipe(Effect.map(Option.getOrNull));
+        const project = yield* snapshotQuery.getProjectShellById(thread.projectId).pipe(Effect.map(Option.getOrNull));
         if (!project) return null;
         return (
           resolveThreadWorkspaceCwd({
