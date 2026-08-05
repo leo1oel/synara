@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ServerProviderStatus } from "@synara/contracts";
 import {
+  findFirstUsableDefaultProvider,
   isProviderUsable,
   normalizeProviderStatusForLocalConfig,
   providerUnavailableReason,
@@ -23,6 +24,48 @@ const READY_STATUS: ServerProviderStatus = {
   status: "ready",
   authStatus: "authenticated",
 };
+
+describe("findFirstUsableDefaultProvider", () => {
+  it("uses the first installed and authenticated provider in the preferred order", () => {
+    expect(
+      findFirstUsableDefaultProvider(
+        [
+          { ...BASE_STATUS, provider: "codex" },
+          { ...READY_STATUS, provider: "claudeAgent" },
+        ],
+        ["codex", "claudeAgent"],
+      ),
+    ).toBe("claudeAgent");
+  });
+
+  it("returns null when every checked provider requires setup", () => {
+    expect(
+      findFirstUsableDefaultProvider(
+        [
+          { ...BASE_STATUS, provider: "codex" },
+          {
+            ...BASE_STATUS,
+            provider: "claudeAgent",
+            authStatus: "unauthenticated",
+          },
+        ],
+        ["codex", "claudeAgent"],
+      ),
+    ).toBeNull();
+  });
+
+  it("does not treat Pi as a selectable fallback without a default model", () => {
+    expect(
+      findFirstUsableDefaultProvider(
+        [
+          { ...BASE_STATUS, provider: "codex" },
+          { ...READY_STATUS, provider: "pi", authStatus: "unknown" },
+        ],
+        ["codex", "pi"],
+      ),
+    ).toBeNull();
+  });
+});
 
 describe("normalizeProviderStatusForLocalConfig", () => {
   it("keeps Antigravity interactive when a custom binary path is configured locally", () => {

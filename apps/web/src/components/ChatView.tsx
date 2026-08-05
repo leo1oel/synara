@@ -40,7 +40,7 @@ import {
 } from "@synara/contracts";
 import { automationRequiresTargetThread } from "@synara/shared/automationMode";
 import { providerSupportsNativeTurnSteering } from "@synara/shared/providerMetadata";
-import { getModelCapabilities, normalizeModelSlug } from "@synara/shared/model";
+import { getDefaultModel, getModelCapabilities, normalizeModelSlug } from "@synara/shared/model";
 import {
   resolveLatestTailUserMessageEditTarget,
   resolveTailUserMessageEditTarget,
@@ -102,6 +102,7 @@ import {
 } from "~/lib/composerMentions";
 import { getLocalFolderBrowseRootPath, isLocalFolderMentionQuery } from "~/lib/localFolderMentions";
 import {
+  findFirstUsableDefaultProvider,
   findProviderStatus,
   isProviderUsable,
   normalizeCustomBinaryPath,
@@ -395,6 +396,7 @@ import {
   postAgentPermissionModeToLattice,
   postHostContextRequestToLattice,
   postHostContextSelectionClearToLattice,
+  postOpenSettingsToLattice,
   postPaperLibraryRequestToLattice,
   postLayoutMetricsToLattice,
   postProjectHistoryToLattice,
@@ -1487,6 +1489,10 @@ export default function ChatView({
   const attachmentPreviewHandoffTimeoutByMessageIdRef = useRef<Record<string, number>>({});
   const sendInFlightRef = useRef(false);
   const sendPreflightInFlightRef = useRef(false);
+  const providerFallbackSendAttemptRef = useRef<{
+    threadId: ThreadId;
+    token: symbol;
+  } | null>(null);
   const dragDepthRef = useRef(0);
   const terminalOpenByThreadRef = useRef<Record<string, boolean>>({});
   const activatedThreadIdRef = useRef<ThreadId | null>(null);
@@ -2032,13 +2038,26 @@ export default function ChatView({
     activeThread?.modelSelection.provider ?? activeProject?.defaultModelSelection?.provider ?? null;
   const hasThreadStarted = Boolean(
     activeThread &&
-    (activeThread.latestTurn !== null || activeThread.messages.length > 0 || activeThread.session !== null),
+    (activeThread.latestTurn !== null ||
+      activeThread.messages.length > 0 ||
+      activeThread.session !== null ||
+      optimisticUserMessages.length > 0),
   );
   const lockedProvider: ProviderKind | null = hasThreadStarted
     ? (sessionProvider ?? threadProvider ?? selectedProviderByThreadId ?? null)
     : null;
   const selectedProvider: ProviderKind =
     lockedProvider ?? selectedProviderByThreadId ?? threadProvider ?? settings.defaultProvider;
+  const latestProviderFallbackContextRef = useRef({
+    threadId: activeThread?.id ?? null,
+    selectedProvider,
+    hasThreadStarted,
+  });
+  latestProviderFallbackContextRef.current = {
+    threadId: activeThread?.id ?? null,
+    selectedProvider,
+    hasThreadStarted,
+  };
   const previousSelectedProviderRef = useRef<{
     threadId: ThreadId;
     provider: ProviderKind;
@@ -3604,6 +3623,91 @@ export default function ChatView({
     () => findProviderStatus(providerStatuses, selectedProvider),
     [selectedProvider, providerStatuses],
   );
+  const refreshProviderStatuses = useRefreshProviderStatusesNow();
+  const refreshProviderStatusesRef = useRef(refreshProviderStatuses);
+  refreshProviderStatusesRef.current = refreshProviderStatuses;
+  const providerFallbackProbesRef = useRef(new Map<ThreadId, {
+    providerAtStart: ProviderKind;
+    state: "failed" | "refreshing" | "settled";
+  }>());
+  const [providerFallbackProbeRevision, setProviderFallbackProbeRevision] = useState(0);
+  useEffect(() => {
+    if (!activeThread || hasThreadStarted) return;
+    if (providerFallbackProbesRef.current.has(activeThread.id)) return;
+    const probe = {
+      providerAtStart: selectedProvider,
+      state: "refreshing" as const,
+    };
+    providerFallbackProbesRef.current.set(activeThread.id, probe);
+    setProviderFallbackProbeRevision((revision) => revision + 1);
+    void refreshProviderStatusesRef.current({ silent: true }).then((statuses) => {
+      providerFallbackProbesRef.current.set(activeThread.id, {
+        providerAtStart: probe.providerAtStart,
+        state: statuses ? "settled" : "failed",
+      });
+      setProviderFallbackProbeRevision((revision) => revision + 1);
+    });
+  }, [activeThread, hasThreadStarted, selectedProvider]);
+  const providerFallbackProbe = activeThread
+    ? providerFallbackProbesRef.current.get(activeThread.id)
+    : null;
+  const providerFallbackProbeState =
+    providerFallbackProbe?.providerAtStart === selectedProvider
+      ? providerFallbackProbe.state
+      : null;
+  const providerFallbackProbeSettled = providerFallbackProbeState === "settled";
+  const providerFallbackProbePending =
+    Boolean(activeThread) &&
+    !hasThreadStarted &&
+    (!providerFallbackProbe || providerFallbackProbeState === "refreshing");
+  const fallbackProvider = useMemo(
+    () =>
+      findFirstUsableDefaultProvider(
+        providerStatuses,
+        [settings.defaultProvider, ...settings.providerOrder],
+      ),
+    [providerStatuses, settings.defaultProvider, settings.providerOrder],
+  );
+  const shouldSelectFallbackProvider =
+    providerFallbackProbeSettled &&
+    !isProviderUsable(activeProviderStatus) &&
+    fallbackProvider !== null &&
+    fallbackProvider !== selectedProvider;
+  const needsProviderSetup =
+    providerFallbackProbeSettled &&
+    !isProviderUsable(activeProviderStatus) &&
+    fallbackProvider === null;
+  useEffect(() => {
+    if (!activeThread || !shouldSelectFallbackProvider || !fallbackProvider) return;
+    const latestContext = latestProviderFallbackContextRef.current;
+    const latestProbe = providerFallbackProbesRef.current.get(activeThread.id);
+    if (
+      latestContext.threadId !== activeThread.id ||
+      latestContext.selectedProvider !== selectedProvider ||
+      latestContext.hasThreadStarted ||
+      providerFallbackSendAttemptRef.current?.threadId === activeThread.id ||
+      latestProbe?.providerAtStart !== selectedProvider ||
+      latestProbe.state !== "settled"
+    ) {
+      return;
+    }
+    const model =
+      composerDraft.modelSelectionByProvider[fallbackProvider]?.model ??
+      getDefaultModel(fallbackProvider);
+    if (!model) return;
+    setComposerDraftModelSelection(activeThread.id, {
+      provider: fallbackProvider,
+      model,
+    });
+  }, [
+    activeThread,
+    composerDraft.modelSelectionByProvider,
+    fallbackProvider,
+    providerFallbackProbeRevision,
+    selectedProvider,
+    setComposerDraftModelSelection,
+    shouldSelectFallbackProvider,
+  ]);
   const activeProviderHealthBannerDismissalKey = useMemo(
     () => getProviderHealthBannerDismissalKey(activeProviderStatus),
     [activeProviderStatus],
@@ -3614,7 +3718,6 @@ export default function ChatView({
       ? null
       : activeProviderStatus;
   const voiceProviderStatus = useMemo(() => findProviderStatus(providerStatuses, "codex"), [providerStatuses]);
-  const refreshProviderStatuses = useRefreshProviderStatusesNow();
   const activeProjectCwd = activeProject?.cwd ?? null;
   const activeThreadWorktreePath = isStudioContainer ? null : (activeThread?.worktreePath ?? null);
   const hasNativeUserMessages = useMemo(
@@ -6803,6 +6906,12 @@ export default function ChatView({
     ) {
       return false;
     }
+    const providerFallbackSendAttempt = {
+      threadId: activeThread.id,
+      token: Symbol("provider-fallback-send-attempt"),
+    };
+    providerFallbackSendAttemptRef.current = providerFallbackSendAttempt;
+    try {
     if (!queuedTurn) {
       sendPreflightInFlightRef.current = true;
       await waitForPendingComposerImages();
@@ -7873,6 +7982,12 @@ export default function ChatView({
       }
     }
     return turnStartSucceeded;
+    } finally {
+      if (providerFallbackSendAttemptRef.current?.token === providerFallbackSendAttempt.token) {
+        providerFallbackSendAttemptRef.current = null;
+        setProviderFallbackProbeRevision((revision) => revision + 1);
+      }
+    }
   };
 
   const onRespondToApproval = useCallback(
@@ -11067,8 +11182,26 @@ export default function ChatView({
 
       {/* Error banner */}
       <ProviderHealthBanner
-        status={shouldShowProviderHealthBanner ? visibleActiveProviderStatus : null}
-        onDismiss={dismissActiveProviderHealthBanner}
+        status={
+          shouldShowProviderHealthBanner &&
+          !providerFallbackProbePending &&
+          !shouldSelectFallbackProvider
+            ? visibleActiveProviderStatus
+            : null
+        }
+        needsProviderSetup={shouldShowProviderHealthBanner && needsProviderSetup}
+        onConfigure={
+          needsProviderSetup
+            ? () => {
+                const embedConfig = readEmbedMode();
+                if (embedConfig && postOpenSettingsToLattice(embedConfig, "providers")) {
+                  return;
+                }
+                void navigate({ to: "/settings", search: { section: "providers" } });
+              }
+            : undefined
+        }
+        onDismiss={needsProviderSetup ? undefined : dismissActiveProviderHealthBanner}
       />
       <ThreadErrorBanner
         error={activeThread.error}
