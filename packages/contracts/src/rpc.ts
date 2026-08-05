@@ -31,6 +31,10 @@ import {
   ExternalMcpRevokeIntegrationInput,
 } from "./externalMcp";
 import { FilesystemBrowseInput, FilesystemBrowseResult } from "./filesystem";
+import {
+  GitHubProjectProvisionInput,
+  GitHubProjectProvisionProgressEvent,
+} from "./githubProjectProvisioning";
 import { StudioListThreadOutputsInput, StudioListThreadOutputsResult } from "./studio";
 import {
   GitCheckoutInput,
@@ -146,6 +150,8 @@ import {
   ProjectListDirectoriesResult,
   ProjectReadFileInput,
   ProjectReadFileResult,
+  ProjectResolveOutOfRootFileReferenceInput,
+  ProjectResolveOutOfRootFileReferenceResult,
   ProjectRunDevServerInput,
   ProjectRunDevServerResult,
   ProjectSearchEntriesInput,
@@ -362,11 +368,23 @@ export const WsProjectsReadFileRpc = Rpc.make(WS_METHODS.projectsReadFile, {
   error: WsRpcError,
 });
 
-export const WsProjectsCreateLocalFilePreviewGrantRpc = Rpc.make(WS_METHODS.projectsCreateLocalFilePreviewGrant, {
-  payload: ProjectCreateLocalFilePreviewGrantInput,
-  success: ProjectCreateLocalFilePreviewGrantResult,
-  error: WsRpcError,
-});
+export const WsProjectsResolveOutOfRootFileReferenceRpc = Rpc.make(
+  WS_METHODS.projectsResolveOutOfRootFileReference,
+  {
+    payload: ProjectResolveOutOfRootFileReferenceInput,
+    success: ProjectResolveOutOfRootFileReferenceResult,
+    error: WsRpcError,
+  },
+);
+
+export const WsProjectsCreateLocalFilePreviewGrantRpc = Rpc.make(
+  WS_METHODS.projectsCreateLocalFilePreviewGrant,
+  {
+    payload: ProjectCreateLocalFilePreviewGrantInput,
+    success: ProjectCreateLocalFilePreviewGrantResult,
+    error: WsRpcError,
+  },
+);
 
 export const WsProjectsWriteFileRpc = Rpc.make(WS_METHODS.projectsWriteFile, {
   payload: ProjectWriteFileInput,
@@ -395,6 +413,13 @@ export const WsProjectsListDevServersRpc = Rpc.make(WS_METHODS.projectsListDevSe
 export const WsSubscribeProjectDevServerEventsRpc = Rpc.make(WS_METHODS.subscribeProjectDevServerEvents, {
   payload: Schema.Struct({}),
   success: ProjectDevServerEvent,
+  error: WsRpcError,
+  stream: true,
+});
+
+export const WsProjectsProvisionFromGitHubRpc = Rpc.make(WS_METHODS.projectsProvisionFromGitHub, {
+  payload: GitHubProjectProvisionInput,
+  success: GitHubProjectProvisionProgressEvent,
   error: WsRpcError,
   stream: true,
 });
@@ -1016,12 +1041,14 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsProjectsSearchEntriesRpc,
   WsProjectsSearchLocalEntriesRpc,
   WsProjectsReadFileRpc,
+  WsProjectsResolveOutOfRootFileReferenceRpc,
   WsProjectsCreateLocalFilePreviewGrantRpc,
   WsProjectsWriteFileRpc,
   WsProjectsRunDevServerRpc,
   WsProjectsStopDevServerRpc,
   WsProjectsListDevServersRpc,
   WsSubscribeProjectDevServerEventsRpc,
+  WsProjectsProvisionFromGitHubRpc,
   WsStudioListThreadOutputsRpc,
   WsFilesystemBrowseRpc,
   WsShellOpenInEditorRpc,

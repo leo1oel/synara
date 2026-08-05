@@ -29,6 +29,7 @@ import { useDiffRouteSearch } from "../../hooks/useDiffRouteSearch";
 import { selectSplitView, useSplitViewStore } from "../../splitViewStore";
 import { resolveVisibleToastThreadIds, shouldRenderToastForVisibleThreads } from "./toastRouteVisibility";
 import { readEmbedMode } from "../../embedMode";
+import { selectRightDockState, useRightDockStore } from "../../rightDockStore";
 import {
   embeddedNotificationDismiss,
   embeddedNotificationUpsert,
@@ -191,8 +192,16 @@ function useVisibleThreadIdsFromRoute(): ReadonlySet<ThreadId> {
   const splitView = useSplitViewStore(
     useMemo(() => selectSplitView(routeSearch.splitViewId ?? null), [routeSearch.splitViewId]),
   );
+  const rightDockState = useRightDockStore(
+    useMemo(() => selectRightDockState(activeThreadId), [activeThreadId]),
+  );
 
-  return resolveVisibleToastThreadIds({ activeThreadId, splitView });
+  return resolveVisibleToastThreadIds({
+    activeThreadId,
+    splitView,
+    rightDockRendered: routeSearch.view !== "editor",
+    rightDockState,
+  });
 }
 
 function ThreadToastVisibleAutoDismiss({

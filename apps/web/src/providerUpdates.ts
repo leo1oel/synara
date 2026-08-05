@@ -138,7 +138,18 @@ export function getVisibleProviderUpdateStatuses(input: ProviderUpdateFilterInpu
   );
 }
 
-export function providerUpdateNotificationKey(providers: ReadonlyArray<ServerProviderStatus>): string | null {
+export function getNotifiableProviderUpdateStatuses(
+  input: ProviderUpdateFilterInput & { readonly liveVersionCheckCompleted: boolean },
+): ServerProviderStatus[] {
+  if (!input.liveVersionCheckCompleted) {
+    return [];
+  }
+  return getVisibleProviderUpdateStatuses({ ...input, oneClickOnly: true });
+}
+
+export function providerUpdateNotificationKey(
+  providers: ReadonlyArray<ServerProviderStatus>,
+): string | null {
   const parts = providers
     .map((provider) => [provider.provider, provider.versionAdvisory?.latestVersion ?? "unknown"].join(":"))
     .toSorted();
