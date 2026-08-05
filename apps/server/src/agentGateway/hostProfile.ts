@@ -67,6 +67,10 @@ const LATTICE_NATIVE_TOOL_NAMES = new Set([
   "cite",
   "upgrade_bibliography",
   "remove_reference",
+  "list_canvas_shapes",
+  "create_canvas_shapes",
+  "update_canvas_shapes",
+  "delete_canvas_shapes",
 ]);
 
 export function replaceModelVisibleHostBranding(value: string): string {

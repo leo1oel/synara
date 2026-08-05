@@ -74,6 +74,7 @@ import { pruneProjectedArchivedManagedWorktrees } from "../../managedWorktrees.t
 import { resolveThreadWorkspaceCwd } from "../../checkpointing/Utils.ts";
 import { ACTIVE_AGENT_HOST_PROFILE, adaptToolsForActiveHost } from "../hostProfile.ts";
 import { makeLatticeLiteratureTools } from "../latticeLiteratureTools.ts";
+import { makeLatticeCanvasTools } from "../latticeCanvasTools.ts";
 
 // Providers already receive the versioned host policy exactly once in their
 // private prompt. MCP clients prepend initialize.instructions to every exposed
@@ -608,6 +609,20 @@ export const makeAgentGateway = Effect.gen(function* () {
         );
       }).pipe(Effect.orElseSucceed(() => null)),
   });
+  const latticeCanvasTools =
+    ACTIVE_AGENT_HOST_PROFILE.id === "lattice"
+      ? yield* makeLatticeCanvasTools({
+          resolveWorkspaceRoot: (context) =>
+            Effect.gen(function* () {
+              const thread = yield* requireThreadShell(context.callerThreadId);
+              const project = yield* snapshotQuery
+                .getProjectShellById(thread.projectId)
+                .pipe(Effect.map(Option.getOrNull));
+              if (!project) return null;
+              return resolveThreadWorkspaceCwd({ thread, projects: [project] }) ?? null;
+            }).pipe(Effect.orElseSucceed(() => null)),
+        })
+      : [];
 
   const tools: ReadonlyArray<ToolEntry> = adaptToolsForActiveHost([
     ...readTools,
@@ -621,6 +636,7 @@ export const makeAgentGateway = Effect.gen(function* () {
     ...automationTools,
     ...browserTools,
     ...(ACTIVE_AGENT_HOST_PROFILE.id === "lattice" ? latticeLiteratureTools : []),
+    ...latticeCanvasTools,
   ]);
   return {
     handleMcpPost: makeAgentGatewayMcpTransport({

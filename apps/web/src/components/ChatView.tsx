@@ -11190,18 +11190,17 @@ export default function ChatView({
             : null
         }
         needsProviderSetup={shouldShowProviderHealthBanner && needsProviderSetup}
-        onConfigure={
-          needsProviderSetup
-            ? () => {
+        {...(needsProviderSetup
+          ? {
+              onConfigure: () => {
                 const embedConfig = readEmbedMode();
                 if (embedConfig && postOpenSettingsToLattice(embedConfig, "providers")) {
                   return;
                 }
                 void navigate({ to: "/settings", search: { section: "providers" } });
-              }
-            : undefined
-        }
-        onDismiss={needsProviderSetup ? undefined : dismissActiveProviderHealthBanner}
+              },
+            }
+          : { onDismiss: dismissActiveProviderHealthBanner })}
       />
       <ThreadErrorBanner
         error={activeThread.error}

@@ -2,6 +2,7 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Layer } from "effect";
 
 import { AgentGatewayLive } from "./agentGateway/Layers/AgentGateway";
+import { LatticeCanvasBrokerLive } from "./agentGateway/Layers/LatticeCanvasBroker";
 import { AgentGatewayOperationRepositoryLive } from "./agentGateway/Layers/AgentGatewayOperationRepository";
 import { AgentGatewayCredentialsWithSecretsLive } from "./agentGateway/Layers/AgentGatewayCredentials";
 import { BrowserAutomationHostLive } from "./browserAutomation/Layers/BrowserAutomationHost";
@@ -164,6 +165,7 @@ export function makeServerRuntimeServicesLayer(
     Layer.provideMerge(providerHealthLayer),
   );
   const agentGatewayLayer = AgentGatewayLive.pipe(
+    Layer.provideMerge(LatticeCanvasBrokerLive),
     Layer.provideMerge(agentGatewayCredentialsLayer),
     Layer.provideMerge(automationServiceLayer),
     Layer.provideMerge(runtimeServicesLayer),
@@ -185,6 +187,7 @@ export function makeServerRuntimeServicesLayer(
 
   return Layer.mergeAll(
     agentGatewayCredentialsLayer,
+    LatticeCanvasBrokerLive,
     agentGatewayLayer,
     BrowserAutomationHostLive,
     automationServiceLayer,

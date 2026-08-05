@@ -10,9 +10,11 @@ import { appHistory } from "./appNavigation";
 import { getRouter } from "./router";
 import { APP_DISPLAY_NAME } from "./branding";
 import { initializeEmbedMode } from "./embedMode";
+import { startLatticeCanvasRelay } from "./latticeCanvasRelay";
 import { isElectron } from "./env";
 
 initializeEmbedMode();
+startLatticeCanvasRelay();
 const router = getRouter(appHistory);
 
 document.title = APP_DISPLAY_NAME;
