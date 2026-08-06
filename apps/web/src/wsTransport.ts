@@ -25,6 +25,8 @@ import {
   type AutomationStreamEvent,
   type GitActionProgressEvent,
   type GitRunStackedActionResult,
+  type GitHubProjectProvisionProgressEvent,
+  type GitHubProjectProvisionResult,
   type OrchestrationEvent,
   type OrchestrationShellStreamItem,
   type OrchestrationThreadStreamItem,
@@ -543,6 +545,9 @@ export class WsTransport {
   private readonly listeners = new Map<string, Set<(message: WsPush) => void>>();
   private readonly stateListeners = new Set<(state: WsTransportState) => void>();
   private readonly compatibilityListeners = new Set<(issue: WsCompatibilityError | null) => void>();
+  private readonly compatibilityResultListeners = new Set<
+    (compatibility: WsBootstrapNegotiateResult | null) => void
+  >();
   private readonly threadStreamFailureListeners = new Set<
     (failure: WsThreadStreamFailure) => void
   >();
@@ -615,6 +620,9 @@ export class WsTransport {
 
       if (method === WS_METHODS.gitRunStackedAction) {
         return (await this.runGitActionStream(client, params, abortScope.signal)) as T;
+      }
+      if (method === WS_METHODS.projectsProvisionFromGitHub) {
+        return (await this.runProjectProvisionStream(client, params, abortScope.signal)) as T;
       }
 
       if (method === ORCHESTRATION_WS_METHODS.subscribeShell) {
@@ -736,6 +744,17 @@ export class WsTransport {
     return this.compatibility;
   }
 
+  onCompatibilityChange(
+    listener: (compatibility: WsBootstrapNegotiateResult | null) => void,
+    options?: { readonly replayCurrent?: boolean },
+  ): () => void {
+    this.compatibilityResultListeners.add(listener);
+    if (options?.replayCurrent) listener(this.compatibility);
+    return () => {
+      this.compatibilityResultListeners.delete(listener);
+    };
+  }
+
   onCompatibilityIssue(
     listener: (issue: WsCompatibilityError | null) => void,
     options?: { readonly replayCurrent?: boolean },
@@ -849,7 +868,7 @@ export class WsTransport {
       resetThreadDetailResumeCursors();
     }
     this.lastServerInstanceId = compatibility.serverInstanceId;
-    this.compatibility = compatibility;
+    this.setCompatibility(compatibility);
     this.setCompatibilityIssue(null);
   }
 
@@ -873,7 +892,7 @@ export class WsTransport {
     try {
       await runtime.runPromise(probe({}).pipe(Effect.timeout(FEATURE_CONNECTION_PROBE_TIMEOUT_MS)));
     } catch (error) {
-      this.compatibility = null;
+      this.setCompatibility(null);
       throw error;
     }
   }
@@ -907,7 +926,7 @@ export class WsTransport {
       return client;
     })().catch((error) => {
       if (!this.disposed && this.sessionVersion === sessionVersion) {
-        this.compatibility = null;
+        this.setCompatibility(null);
         const compatibilityError = getTerminalCompatibilityError(error);
         if (compatibilityError) {
           this.setCompatibilityIssue(compatibilityError);
@@ -1083,6 +1102,18 @@ export class WsTransport {
         listener(issue);
       } catch {
         // Compatibility UI listeners must not break transport teardown.
+      }
+    }
+  }
+
+  private setCompatibility(compatibility: WsBootstrapNegotiateResult | null): void {
+    if (this.compatibility === compatibility) return;
+    this.compatibility = compatibility;
+    for (const listener of this.compatibilityResultListeners) {
+      try {
+        listener(compatibility);
+      } catch {
+        // Capability listeners must not break transport connection lifecycle.
       }
     }
   }
@@ -1524,6 +1555,28 @@ export class WsTransport {
       signal ? { signal } : undefined,
     );
     if (!result) throw new Error("Git action stream completed without a final result.");
+    return result;
+  }
+
+  private async runProjectProvisionStream(
+    client: RpcClientInstance,
+    params: unknown,
+    signal?: AbortSignal,
+  ): Promise<GitHubProjectProvisionResult> {
+    let result: GitHubProjectProvisionResult | null = null;
+    await this.getClientRuntime(client).runPromise(
+      Stream.runForEach(client[WS_METHODS.projectsProvisionFromGitHub](params as never), (event) =>
+        Effect.sync(() => {
+          const progressEvent = event as GitHubProjectProvisionProgressEvent;
+          this.emit(WS_CHANNELS.projectProvisionProgress, progressEvent);
+          if (progressEvent.kind === "completed") {
+            result = progressEvent.result;
+          }
+        }),
+      ),
+      signal ? { signal } : undefined,
+    );
+    if (!result) throw new Error("Project provisioning completed without a final result.");
     return result;
   }
 }

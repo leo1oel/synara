@@ -24,6 +24,12 @@ export interface ProviderLatestVersionSource {
   readonly homebrewKind?: "formula" | "cask";
 }
 
+export interface ProviderHomebrewPackageDefinition {
+  readonly name: string;
+  readonly kind: "formula" | "cask";
+  readonly isCommandPath?: (commandPath: string) => boolean;
+}
+
 export interface ProviderMaintenanceCapabilities {
   readonly provider: ProviderKind;
   readonly packageName: string | null;
@@ -52,16 +58,19 @@ export interface PackageManagedProviderMaintenanceDefinition {
   readonly provider: ProviderKind;
   readonly binaryName: string;
   readonly npmPackageName: string | null;
-  readonly homebrew: {
-    readonly name: string;
-    readonly kind: "formula" | "cask";
-  } | null;
+  readonly homebrew:
+    | (ProviderHomebrewPackageDefinition & {
+        readonly variants?: ReadonlyArray<ProviderHomebrewPackageDefinition>;
+      })
+    | null;
   readonly latestVersionSource?: ProviderLatestVersionSource | null;
   readonly nativeUpdate: {
     readonly executable: string;
     readonly args: (installSource: ProviderInstallSource) => ReadonlyArray<string>;
     readonly lockKey: string;
     readonly strategy: "always" | "matching-path";
+    /** Explicit source for native installs. Null delegates update truth to the provider CLI. */
+    readonly latestVersionSource?: ProviderLatestVersionSource | null;
     readonly excludedInstallSources?: ReadonlyArray<ProviderInstallSource>;
     readonly isCommandPath?: (commandPath: string) => boolean;
   } | null;
@@ -236,7 +245,11 @@ export function makeProviderMaintenanceCapabilities(input: {
     provider: input.provider,
     packageName: input.packageName,
     latestVersionSource:
-      input.latestVersionSource ?? (input.packageName ? { kind: "npm", name: input.packageName } : null),
+      input.latestVersionSource !== undefined
+        ? input.latestVersionSource
+        : input.packageName
+          ? { kind: "npm", name: input.packageName }
+          : null,
     update,
   };
 }
@@ -323,9 +336,10 @@ function makePnpmGlobalProviderMaintenanceCapabilities(
 
 function makeHomebrewProviderMaintenanceCapabilities(
   definition: PackageManagedProviderMaintenanceDefinition,
+  homebrewPackage: ProviderHomebrewPackageDefinition | null,
   pathPrepend?: string | null,
 ): ProviderMaintenanceCapabilities {
-  if (!definition.homebrew) {
+  if (!homebrewPackage) {
     return makeManualOnlyProviderMaintenanceCapabilities({
       provider: definition.provider,
       packageName: definition.npmPackageName,
@@ -335,12 +349,16 @@ function makeHomebrewProviderMaintenanceCapabilities(
   return makeProviderMaintenanceCapabilities({
     provider: definition.provider,
     packageName: null,
-    latestVersionSource: resolveLatestVersionSourceForInstallSource(definition, "homebrew"),
+    latestVersionSource: resolveLatestVersionSourceForInstallSource(
+      definition,
+      "homebrew",
+      homebrewPackage,
+    ),
     updateExecutable: "brew",
     updateArgs:
-      definition.homebrew.kind === "cask"
-        ? ["upgrade", "--cask", definition.homebrew.name]
-        : ["upgrade", definition.homebrew.name],
+      homebrewPackage.kind === "cask"
+        ? ["upgrade", "--cask", homebrewPackage.name]
+        : ["upgrade", homebrewPackage.name],
     updateLockKey: "homebrew",
     ...(pathPrepend === undefined ? {} : { updatePathPrepend: pathPrepend }),
   });
@@ -349,15 +367,23 @@ function makeHomebrewProviderMaintenanceCapabilities(
 function resolveLatestVersionSourceForInstallSource(
   definition: PackageManagedProviderMaintenanceDefinition,
   installSource: ProviderInstallSource,
+  homebrewPackage?: ProviderHomebrewPackageDefinition | null,
 ): ProviderLatestVersionSource | null {
   if (definition.latestVersionSource) {
     return definition.latestVersionSource;
   }
-  if (installSource === "homebrew" && definition.homebrew) {
+  if (
+    installSource === "native" &&
+    definition.nativeUpdate &&
+    definition.nativeUpdate.latestVersionSource !== undefined
+  ) {
+    return definition.nativeUpdate.latestVersionSource;
+  }
+  if (installSource === "homebrew" && homebrewPackage) {
     return {
       kind: "homebrew",
-      name: definition.homebrew.name,
-      homebrewKind: definition.homebrew.kind,
+      name: homebrewPackage.name,
+      homebrewKind: homebrewPackage.kind,
     };
   }
   return definition.npmPackageName ? { kind: "npm", name: definition.npmPackageName } : null;
@@ -411,12 +437,14 @@ function detectInstallSource(
 function makeProviderMaintenanceForInstallSource(input: {
   readonly definition: PackageManagedProviderMaintenanceDefinition;
   readonly installSource: ProviderInstallSource;
+  readonly homebrewPackage?: ProviderHomebrewPackageDefinition | null;
   readonly executable?: string | null;
   readonly pathPrepend?: string | null;
   /** Path that matched install-source detection, used to pin the install tree. */
   readonly commandPath?: string | null;
 }): ProviderMaintenanceCapabilities {
-  const { definition, installSource, executable, pathPrepend, commandPath } = input;
+  const { definition, installSource, homebrewPackage, executable, pathPrepend, commandPath } =
+    input;
   if (
     definition.nativeUpdate?.strategy === "always" &&
     !definition.nativeUpdate.excludedInstallSources?.includes(installSource)
@@ -448,12 +476,27 @@ function makeProviderMaintenanceForInstallSource(input: {
     return makeNpmGlobalProviderMaintenanceCapabilities(definition, pathPrepend, commandPath);
   }
   if (installSource === "homebrew") {
-    return makeHomebrewProviderMaintenanceCapabilities(definition, pathPrepend);
+    return makeHomebrewProviderMaintenanceCapabilities(
+      definition,
+      homebrewPackage ?? definition.homebrew,
+      pathPrepend,
+    );
   }
   return makeManualOnlyProviderMaintenanceCapabilities({
     provider: definition.provider,
     packageName: definition.npmPackageName,
   });
+}
+
+function resolveHomebrewPackageForCommandPath(
+  definition: PackageManagedProviderMaintenanceDefinition,
+  commandPath: string,
+): ProviderHomebrewPackageDefinition | null {
+  const homebrew = definition.homebrew;
+  if (!homebrew) {
+    return null;
+  }
+  return homebrew.variants?.find((variant) => variant.isCommandPath?.(commandPath)) ?? homebrew;
 }
 
 function isBunGlobalCommandPath(commandPath: string): boolean {
@@ -515,6 +558,9 @@ export function resolvePackageManagedProviderMaintenance(
       return makeProviderMaintenanceForInstallSource({
         definition,
         installSource,
+        ...(installSource === "homebrew"
+          ? { homebrewPackage: resolveHomebrewPackageForCommandPath(definition, commandPath) }
+          : {}),
         executable: binaryPath,
         commandPath,
         ...(options?.commandDirectory === undefined ? {} : { pathPrepend: options.commandDirectory }),
@@ -537,53 +583,60 @@ export function resolvePackageManagedProviderMaintenance(
   });
 }
 
-export const resolveProviderMaintenanceCapabilitiesEffect = Effect.fn("resolveProviderMaintenanceCapabilitiesEffect")(
-  function* (
-    definition: PackageManagedProviderMaintenanceDefinition,
-    options?: ProviderMaintenanceCapabilityResolutionOptions,
-  ) {
-    const binaryPath = nonEmptyString(options?.binaryPath) ?? definition.binaryName;
-    if (hasPathSeparator(binaryPath)) {
-      return resolvePackageManagedProviderMaintenance(definition, options);
-    }
-
-    const fileSystem = yield* FileSystem.FileSystem;
-    // Existence, not executability: this is locating an installation to report on, so an
-    // extensionless Windows file still counts even though nothing could spawn it directly.
-    //
-    // `options.env` is used whole, with no per-key fallback to `process.env`. An earlier version
-    // read `options.env.PATH ?? process.env.PATH`, which could report a provider as installed
-    // because *this* process can see it while the child environment we were asked about cannot.
-    // The production caller passes `buildProviderChildEnvironment(...)`, which always carries PATH.
-    for (const candidate of executableCandidates(binaryPath, {
-      ...(options?.platform === undefined ? {} : { platform: options.platform }),
-      ...(options?.env === undefined ? {} : { env: options.env }),
-      allowExtensionlessOnWindows: true,
-    })) {
-      const exists = yield* fileSystem.exists(candidate.path).pipe(Effect.orElseSucceed(() => false));
-      if (!exists) {
-        continue;
-      }
-      const realCommandPath = yield* fileSystem
-        .realPath(candidate.path)
-        .pipe(Effect.catch(() => Effect.succeed(candidate.path)));
-      return resolvePackageManagedProviderMaintenance(definition, {
-        ...options,
-        binaryPath,
-        realCommandPath,
-        commandDirectory: candidate.directory,
-      });
-    }
-
-    // A provider may ship an SDK inside Synara while its standalone CLI is absent
-    // (Pi is the main example). Do not advertise a native "update" command that
-    // cannot be spawned, and do not treat one-click update as one-click install.
-    return makeManualOnlyProviderMaintenanceCapabilities({
-      provider: definition.provider,
-      packageName: definition.npmPackageName,
+export const resolveProviderMaintenanceCapabilitiesEffect = Effect.fn(
+  "resolveProviderMaintenanceCapabilitiesEffect",
+)(function* (
+  definition: PackageManagedProviderMaintenanceDefinition,
+  options?: ProviderMaintenanceCapabilityResolutionOptions,
+) {
+  const binaryPath = nonEmptyString(options?.binaryPath) ?? definition.binaryName;
+  const fileSystem = yield* FileSystem.FileSystem;
+  if (hasPathSeparator(binaryPath)) {
+    const realCommandPath =
+      nonEmptyString(options?.realCommandPath) ??
+      (yield* fileSystem.realPath(binaryPath).pipe(Effect.catch(() => Effect.succeed(binaryPath))));
+    return resolvePackageManagedProviderMaintenance(definition, {
+      ...options,
+      binaryPath,
+      realCommandPath,
     });
-  },
-);
+  }
+
+  // Existence, not executability: this is locating an installation to report on, so an
+  // extensionless Windows file still counts even though nothing could spawn it directly.
+  //
+  // `options.env` is used whole, with no per-key fallback to `process.env`. An earlier version
+  // read `options.env.PATH ?? process.env.PATH`, which could report a provider as installed
+  // because *this* process can see it while the child environment we were asked about cannot.
+  // The production caller passes `buildProviderChildEnvironment(...)`, which always carries PATH.
+  for (const candidate of executableCandidates(binaryPath, {
+    ...(options?.platform === undefined ? {} : { platform: options.platform }),
+    ...(options?.env === undefined ? {} : { env: options.env }),
+    allowExtensionlessOnWindows: true,
+  })) {
+    const exists = yield* fileSystem.exists(candidate.path).pipe(Effect.orElseSucceed(() => false));
+    if (!exists) {
+      continue;
+    }
+    const realCommandPath = yield* fileSystem
+      .realPath(candidate.path)
+      .pipe(Effect.catch(() => Effect.succeed(candidate.path)));
+    return resolvePackageManagedProviderMaintenance(definition, {
+      ...options,
+      binaryPath,
+      realCommandPath,
+      commandDirectory: candidate.directory,
+    });
+  }
+
+  // A provider may ship an SDK inside Synara while its standalone CLI is absent
+  // (Pi is the main example). Do not advertise a native "update" command that
+  // cannot be spawned, and do not treat one-click update as one-click install.
+  return makeManualOnlyProviderMaintenanceCapabilities({
+    provider: definition.provider,
+    packageName: definition.npmPackageName,
+  });
+});
 
 function deriveVersionAdvisory(input: {
   readonly currentVersion: string | null;
