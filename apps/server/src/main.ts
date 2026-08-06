@@ -194,9 +194,7 @@ const ServerConfigLive = (input: CliInput) =>
             return Effect.succeed(env.port);
           }
           if (mode === "desktop") {
-            return dynamicPort
-              ? reserveLoopbackPort("127.0.0.1")
-              : Effect.succeed(DEFAULT_PORT);
+            return dynamicPort ? reserveLoopbackPort("127.0.0.1") : Effect.succeed(DEFAULT_PORT);
           }
           return findAvailablePort(DEFAULT_PORT);
         },
@@ -448,8 +446,7 @@ const modeFlag = Flag.choice("mode", ["web", "desktop"]).pipe(
   Flag.optional,
 );
 const dynamicPortFlag = optionalBooleanFlag("dynamic-port", {
-  description:
-    "Select an available localhost port at startup (equivalent to SYNARA_DYNAMIC_PORT).",
+  description: "Select an available localhost port at startup (equivalent to SYNARA_DYNAMIC_PORT).",
 });
 const portFlag = Flag.integer("port").pipe(
   Flag.withSchema(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 65535 }))),

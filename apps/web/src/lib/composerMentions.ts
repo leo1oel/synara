@@ -78,9 +78,14 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-export function promptIncludesSkillMention(prompt: string, skillName: string, provider: string): boolean {
+export function promptIncludesSkillMention(
+  prompt: string,
+  skillName: string,
+  provider: string,
+): boolean {
   const escapedSkillName = escapeRegExp(skillName);
-  const prefixes = provider === "pi" ? [skillMentionPrefix(provider)] : [skillMentionPrefix(provider), "$"];
+  const prefixes =
+    provider === "pi" ? [skillMentionPrefix(provider)] : [skillMentionPrefix(provider), "$"];
   return prefixes.some((prefix) => {
     const pattern = new RegExp(`(^|\\s)${escapeRegExp(prefix)}${escapedSkillName}(?=\\s|$)`, "i");
     return pattern.test(prompt);
@@ -101,7 +106,9 @@ export function providerSkillReferencesEqual(
 ): boolean {
   return (
     left.length === right.length &&
-    left.every((skill, index) => skill.name === right[index]?.name && skill.path === right[index]?.path)
+    left.every(
+      (skill, index) => skill.name === right[index]?.name && skill.path === right[index]?.path,
+    )
   );
 }
 
@@ -135,9 +142,14 @@ function collectProviderMentionTokenKeys(mention: ProviderMentionReference): Set
   return keys;
 }
 
-export function providerMentionMatchesToken(mention: ProviderMentionReference, token: string): boolean {
+export function providerMentionMatchesToken(
+  mention: ProviderMentionReference,
+  token: string,
+): boolean {
   const normalizedToken = normalizeMentionNameKey(token);
-  return normalizedToken.length > 0 && collectProviderMentionTokenKeys(mention).has(normalizedToken);
+  return (
+    normalizedToken.length > 0 && collectProviderMentionTokenKeys(mention).has(normalizedToken)
+  );
 }
 
 export type MentionChipKind = "path" | "paper" | "plugin" | "thread";
@@ -157,7 +169,9 @@ export function isPaperProviderMentionReference(mention: ProviderMentionReferenc
   );
 }
 
-export function threadIdFromProviderMentionReference(mention: ProviderMentionReference): string | null {
+export function threadIdFromProviderMentionReference(
+  mention: ProviderMentionReference,
+): string | null {
   return threadIdFromThreadMentionPath(mention.path);
 }
 
@@ -166,7 +180,8 @@ export function findThreadProviderMentionReferenceForToken(
   mentions: ReadonlyArray<ProviderMentionReference> | undefined,
 ): ProviderMentionReference | undefined {
   return mentions?.find(
-    (mention) => isThreadProviderMentionReference(mention) && providerMentionMatchesToken(mention, token),
+    (mention) =>
+      isThreadProviderMentionReference(mention) && providerMentionMatchesToken(mention, token),
   );
 }
 
@@ -185,7 +200,8 @@ export function resolveMentionChipKind(
   }
   if (
     options?.kind === "paper" ||
-    (path.startsWith(".research/papers/") && (path.endsWith("/paper.md") || path.endsWith("/blog.md")))
+    (path.startsWith(".research/papers/") &&
+      (path.endsWith("/paper.md") || path.endsWith("/blog.md")))
   ) {
     return "paper";
   }
@@ -194,14 +210,16 @@ export function resolveMentionChipKind(
   }
   if (
     options?.mentionReferences?.some(
-      (mention) => isPluginProviderMentionReference(mention) && providerMentionMatchesToken(mention, path),
+      (mention) =>
+        isPluginProviderMentionReference(mention) && providerMentionMatchesToken(mention, path),
     )
   ) {
     return "plugin";
   }
   if (
     options?.mentionReferences?.some(
-      (mention) => isPaperProviderMentionReference(mention) && providerMentionMatchesToken(mention, path),
+      (mention) =>
+        isPaperProviderMentionReference(mention) && providerMentionMatchesToken(mention, path),
     )
   ) {
     return "paper";
@@ -255,6 +273,9 @@ export function providerMentionReferencesEqual(
 ): boolean {
   return (
     left.length === right.length &&
-    left.every((mention, index) => mention.path === right[index]?.path && mention.name === right[index]?.name)
+    left.every(
+      (mention, index) =>
+        mention.path === right[index]?.path && mention.name === right[index]?.name,
+    )
   );
 }

@@ -25,7 +25,8 @@ export function ManagedSkillEditorView({
   onSaved: (result: ProviderSaveManagedSkillResult) => void;
 }) {
   const initialDisplayName = detail?.skill.interface?.displayName ?? detail?.skill.name ?? "";
-  const initialDescription = detail?.skill.description ?? detail?.skill.interface?.shortDescription ?? "";
+  const initialDescription =
+    detail?.skill.description ?? detail?.skill.interface?.shortDescription ?? "";
   const initialInstructions = detail ? skillInstructionsFromMarkdown(detail.markdown) : "";
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [description, setDescription] = useState(initialDescription);
@@ -69,7 +70,10 @@ export function ManagedSkillEditorView({
       <SettingsSectionShell title={mode === "create" ? "Create a skill" : "Edit skill"}>
         <SettingsCard divided={false} className="space-y-5 p-4">
           <div className="space-y-1.5">
-            <label className="font-system-ui text-xs font-medium text-foreground" htmlFor="managed-skill-name">
+            <label
+              className="font-system-ui text-xs font-medium text-foreground"
+              htmlFor="managed-skill-name"
+            >
               Skill name
             </label>
             <Input
@@ -82,7 +86,10 @@ export function ManagedSkillEditorView({
               onChange={(event) => setDisplayName(event.target.value)}
               aria-describedby="managed-skill-name-help"
             />
-            <p id="managed-skill-name-help" className="text-[11px] leading-relaxed text-muted-foreground">
+            <p
+              id="managed-skill-name-help"
+              className="text-[11px] leading-relaxed text-muted-foreground"
+            >
               {mode === "create"
                 ? `Lattice will save this as “${generatedId}”.`
                 : `Internal name: ${detail?.skill.name ?? id}`}
@@ -90,7 +97,10 @@ export function ManagedSkillEditorView({
           </div>
 
           <div className="space-y-1.5">
-            <label className="font-system-ui text-xs font-medium text-foreground" htmlFor="managed-skill-description">
+            <label
+              className="font-system-ui text-xs font-medium text-foreground"
+              htmlFor="managed-skill-description"
+            >
               What should this skill do?
             </label>
             <Textarea
@@ -107,7 +117,10 @@ export function ManagedSkillEditorView({
           </div>
 
           <div className="space-y-1.5">
-            <label className="font-system-ui text-xs font-medium text-foreground" htmlFor="managed-skill-instructions">
+            <label
+              className="font-system-ui text-xs font-medium text-foreground"
+              htmlFor="managed-skill-instructions"
+            >
               Instructions
             </label>
             <Textarea
@@ -118,7 +131,8 @@ export function ManagedSkillEditorView({
               onChange={(event) => setInstructions(event.target.value)}
             />
             <p className="text-[11px] leading-relaxed text-muted-foreground">
-              Plain text works. Markdown formatting is optional, and everything wraps inside the editor.
+              Plain text works. Markdown formatting is optional, and everything wraps inside the
+              editor.
             </p>
           </div>
 
@@ -135,7 +149,9 @@ export function ManagedSkillEditorView({
             <Button
               type="submit"
               size="sm"
-              disabled={isSaving || !displayName.trim() || !description.trim() || !instructions.trim()}
+              disabled={
+                isSaving || !displayName.trim() || !description.trim() || !instructions.trim()
+              }
             >
               {isSaving ? <Loader2Icon className="size-3.5 animate-spin" /> : null}
               {isSaving ? "Saving…" : mode === "create" ? "Create skill" : "Save changes"}

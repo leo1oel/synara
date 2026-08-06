@@ -1,7 +1,10 @@
 export const COMPOSER_FOOTER_COMPACT_BREAKPOINT_PX = 620;
 export const COMPOSER_FOOTER_WIDE_ACTIONS_COMPACT_BREAKPOINT_PX = 720;
 
-export function shouldUseCompactComposerFooter(width: number | null, options?: { hasWideActions?: boolean }): boolean {
+export function shouldUseCompactComposerFooter(
+  width: number | null,
+  options?: { hasWideActions?: boolean },
+): boolean {
   const breakpoint = options?.hasWideActions
     ? COMPOSER_FOOTER_WIDE_ACTIONS_COMPACT_BREAKPOINT_PX
     : COMPOSER_FOOTER_COMPACT_BREAKPOINT_PX;
@@ -41,7 +44,10 @@ export const EMBED_COMPOSER_SEND_EDGE_INSET_PX = 8;
 // like overflow at every width and permanently demotes the labels.
 export const COMPOSER_FOOTER_SURFACE_EDGE_GUARD_PX = 1;
 
-export function composerFooterActionsCrossSurfaceEdge(input: { actionsRight: number; surfaceRight: number }): boolean {
+export function composerFooterActionsCrossSurfaceEdge(input: {
+  actionsRight: number;
+  surfaceRight: number;
+}): boolean {
   return input.actionsRight > input.surfaceRight - COMPOSER_FOOTER_SURFACE_EDGE_GUARD_PX;
 }
 
@@ -67,7 +73,9 @@ export function composerFooterIsOverflowing(input: {
   // track. Its richer intrinsic width is negotiated with the Lattice splitter;
   // the additional flexbox heuristics would otherwise pin labels at icon-only.
   if (input.isEmbed) return input.rowOverflows;
-  return input.rowOverflows || input.leadingClips || input.actionsClip || input.actionsCrossSurfaceEdge;
+  return (
+    input.rowOverflows || input.leadingClips || input.actionsClip || input.actionsCrossSurfaceEdge
+  );
 }
 
 export function embedComposerMinimumSidebarWidth(input: {
@@ -90,7 +98,10 @@ export function embedComposerMinimumSidebarWidth(input: {
   );
 }
 
-export function composerFooterPlanForTier(tier: number, hasContextMeter: boolean): ComposerFooterControlsPlan {
+export function composerFooterPlanForTier(
+  tier: number,
+  hasContextMeter: boolean,
+): ComposerFooterControlsPlan {
   return {
     showContextMeter: hasContextMeter && tier < 1,
     showTraitsLabel: tier < 2,

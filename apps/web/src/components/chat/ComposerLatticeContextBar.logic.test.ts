@@ -65,9 +65,7 @@ describe("ComposerLatticeContextBar presentation", () => {
         selection: "Multi-head attention",
       },
     };
-    expect(latticeContextSummary(paperContext)).toBe(
-      "Paper · Attention Is All You Need",
-    );
+    expect(latticeContextSummary(paperContext)).toBe("Paper · Attention Is All You Need");
     expect(latticeContextSelection(paperContext)?.label).toBe("Paper selection");
     expect(latticeContextDetails(paperContext)).toContainEqual({
       label: "Citation key",

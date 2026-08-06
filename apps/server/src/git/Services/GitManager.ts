@@ -64,7 +64,9 @@ export interface GitManagerShape {
   /**
    * Read current repository Git status plus open PR metadata when available.
    */
-  readonly status: (input: GitStatusInput) => Effect.Effect<GitStatusResult, GitManagerServiceError>;
+  readonly status: (
+    input: GitStatusInput,
+  ) => Effect.Effect<GitStatusResult, GitManagerServiceError>;
 
   /**
    * Read a unified patch for the current repository working tree.
@@ -128,4 +130,6 @@ export interface GitManagerShape {
 /**
  * GitManager - Service tag for stacked Git workflow orchestration.
  */
-export class GitManager extends ServiceMap.Service<GitManager, GitManagerShape>()("synara/git/Services/GitManager") {}
+export class GitManager extends ServiceMap.Service<GitManager, GitManagerShape>()(
+  "synara/git/Services/GitManager",
+) {}

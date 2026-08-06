@@ -1,6 +1,9 @@
 import { splitPromptIntoComposerSegments } from "./composer-editor-mentions";
 import { isBuiltInComposerSlashCommand, type ComposerSlashCommand } from "./composerSlashCommands";
-import { composerMentionQuotedPathClosingQuoteIndex, decodeComposerMentionQuotedPath } from "./lib/composerMentions";
+import {
+  composerMentionQuotedPathClosingQuoteIndex,
+  decodeComposerMentionQuotedPath,
+} from "./lib/composerMentions";
 import { INLINE_TERMINAL_CONTEXT_PLACEHOLDER } from "./lib/terminalContext";
 
 export type ComposerTriggerKind = "mention" | "slash-command" | "slash-model" | "skill";
@@ -38,7 +41,11 @@ function clampCursor(text: string, cursor: number): number {
 
 function isWhitespace(char: string): boolean {
   return (
-    char === " " || char === "\n" || char === "\t" || char === "\r" || char === INLINE_TERMINAL_CONTEXT_PLACEHOLDER
+    char === " " ||
+    char === "\n" ||
+    char === "\t" ||
+    char === "\r" ||
+    char === INLINE_TERMINAL_CONTEXT_PLACEHOLDER
   );
 }
 
@@ -157,7 +164,10 @@ function clampCollapsedComposerCursorForSegments(
   segments: ReadonlyArray<ComposerSegmentLike>,
   cursorInput: number,
 ): number {
-  const collapsedLength = segments.reduce((total, segment) => total + collapsedSegmentLength(segment), 0);
+  const collapsedLength = segments.reduce(
+    (total, segment) => total + collapsedSegmentLength(segment),
+    0,
+  );
   if (!Number.isFinite(cursorInput)) {
     return collapsedLength;
   }
@@ -165,7 +175,10 @@ function clampCollapsedComposerCursorForSegments(
 }
 
 export function clampCollapsedComposerCursor(text: string, cursorInput: number): number {
-  return clampCollapsedComposerCursorForSegments(splitPromptIntoComposerSegments(text), cursorInput);
+  return clampCollapsedComposerCursorForSegments(
+    splitPromptIntoComposerSegments(text),
+    cursorInput,
+  );
 }
 
 export function collapseExpandedComposerCursor(text: string, cursorInput: number): number {
@@ -418,7 +431,9 @@ export function resolveComposerTriggerAfterEditorChange(options: {
   return detectComposerTrigger(options.nextText, options.expandedCursor);
 }
 
-export function parseStandaloneComposerSlashCommand(text: string): Exclude<ComposerSlashCommand, "model"> | null {
+export function parseStandaloneComposerSlashCommand(
+  text: string,
+): Exclude<ComposerSlashCommand, "model"> | null {
   const match = /^\/([a-z-]+)\s*$/i.exec(text.trim());
   if (!match) {
     return null;

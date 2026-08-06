@@ -17,7 +17,10 @@ import { resolveListeningPort } from "./startupAccess";
 import { patchBunWebSocketCloseEventCompatibility } from "./bunWebSocketCompatibility";
 import { makeEffectHttpRouteLayer } from "./http";
 import { Keybindings } from "./keybindings";
-import { ManagedAttachmentCleanup, type ManagedAttachmentCleanupShape } from "./managedAttachmentCleanup";
+import {
+  ManagedAttachmentCleanup,
+  type ManagedAttachmentCleanupShape,
+} from "./managedAttachmentCleanup";
 import {
   OrchestrationEngineService,
   type OrchestrationEngineShape,
@@ -72,12 +75,17 @@ export interface ServerShape {
   readonly stopSignal: Effect.Effect<void, never>;
 }
 
-export class Server extends ServiceMap.Service<Server, ServerShape>()("synara/effectServer/Server") {}
+export class Server extends ServiceMap.Service<Server, ServerShape>()(
+  "synara/effectServer/Server",
+) {}
 
-export class ServerLifecycleError extends Schema.TaggedErrorClass<ServerLifecycleError>()("ServerLifecycleError", {
-  operation: Schema.String,
-  cause: Schema.optional(Schema.Defect),
-}) {}
+export class ServerLifecycleError extends Schema.TaggedErrorClass<ServerLifecycleError>()(
+  "ServerLifecycleError",
+  {
+    operation: Schema.String,
+    cause: Schema.optional(Schema.Defect),
+  },
+) {}
 
 export function closeServerRuntimePipeline(input: {
   readonly orchestrationEngine: Pick<OrchestrationEngineShape, "quiesce" | "drain" | "stop">;
@@ -97,7 +105,9 @@ export function closeServerRuntimePipeline(input: {
   );
 }
 
-export const createEffectServer = Effect.fn(function* (shutdownController: ServerShutdownController) {
+export const createEffectServer = Effect.fn(function* (
+  shutdownController: ServerShutdownController,
+) {
   const config = yield* ServerConfig;
   const remotePolicyError = remoteAccessPolicyError(config);
   if (remotePolicyError) {
@@ -157,9 +167,14 @@ export const createEffectServer = Effect.fn(function* (shutdownController: Serve
   const httpApp = yield* HttpRouter.toHttpEffect(routesLayer);
   yield* httpServer
     .serve(httpApp)
-    .pipe(Effect.mapError((cause) => new ServerLifecycleError({ operation: "httpServerServe", cause })));
+    .pipe(
+      Effect.mapError((cause) => new ServerLifecycleError({ operation: "httpServerServe", cause })),
+    );
 
-  const listeningPort = resolveListeningPort((nodeServer as http.Server | null)?.address() ?? null, config.port);
+  const listeningPort = resolveListeningPort(
+    (nodeServer as http.Server | null)?.address() ?? null,
+    config.port,
+  );
   agentGatewayCredentials.setListeningPort(listeningPort);
   yield* persistServerRuntimeState({
     path: config.serverRuntimeStatePath,
@@ -167,7 +182,11 @@ export const createEffectServer = Effect.fn(function* (shutdownController: Serve
       config,
       port: listeningPort,
     }),
-  }).pipe(Effect.mapError((cause) => new ServerLifecycleError({ operation: "persistServerRuntimeState", cause })));
+  }).pipe(
+    Effect.mapError(
+      (cause) => new ServerLifecycleError({ operation: "persistServerRuntimeState", cause }),
+    ),
+  );
   // Leave the private runtime record in place when this process exits. Readers
   // already reject records whose PID is no longer alive, and the next server
   // atomically replaces it. Removing it from an old process finalizer can race
@@ -201,7 +220,9 @@ export const createEffectServer = Effect.fn(function* (shutdownController: Serve
   // projection.
   yield* orchestrationReactor.reconcileSettledOpenTurns;
   yield* recoverGitHandoffOperations((command) => orchestrationEngine.dispatch(command)).pipe(
-    Effect.mapError((cause) => new ServerLifecycleError({ operation: "recoverGitHandoffOperations", cause })),
+    Effect.mapError(
+      (cause) => new ServerLifecycleError({ operation: "recoverGitHandoffOperations", cause }),
+    ),
   );
   yield* runtimeStartup.markCommandReady;
 

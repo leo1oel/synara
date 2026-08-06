@@ -58,7 +58,12 @@ export function PullRequestCommentComposer({ detail }: { detail: PullRequestDeta
   };
 
   return (
-    <div className={cn(FIELD_CONTROL_CLASS_NAME, "flex items-center gap-2 rounded-lg py-1 pl-3 pr-1.5")}>
+    <div
+      className={cn(
+        FIELD_CONTROL_CLASS_NAME,
+        "flex items-center gap-2 rounded-lg py-1 pl-3 pr-1.5",
+      )}
+    >
       <span
         className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--color-background-elevated-secondary)] text-muted-foreground"
         title="Commenting as your GitHub account"

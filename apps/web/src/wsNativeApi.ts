@@ -125,14 +125,17 @@ function subscribeWithReplay<T>(input: {
 
 const welcomeListeners = createListenerRegistry<WsWelcomePayload>();
 const serverConfigUpdatedListeners = createListenerRegistry<ServerConfigUpdatedPayload>();
-const serverProviderStatusesUpdatedListeners = createListenerRegistry<ServerProviderStatusesUpdatedPayload>();
+const serverProviderStatusesUpdatedListeners =
+  createListenerRegistry<ServerProviderStatusesUpdatedPayload>();
 const serverMaintenanceUpdatedListeners = createListenerRegistry<ServerLifecycleStreamEvent>();
 const serverSettingsUpdatedListeners = createListenerRegistry<ServerSettingsUpdatedPayload>();
 const gitActionProgressListeners = createListenerRegistry<GitActionProgressEvent>();
 const projectProvisionProgressListeners =
   createListenerRegistry<GitHubProjectProvisionProgressEvent>();
 
-function omitNullUserInputAnswers(command: Parameters<NativeApi["orchestration"]["dispatchCommand"]>[0]) {
+function omitNullUserInputAnswers(
+  command: Parameters<NativeApi["orchestration"]["dispatchCommand"]>[0],
+) {
   if (command.type !== "thread.user-input.respond") {
     return command;
   }
@@ -140,7 +143,9 @@ function omitNullUserInputAnswers(command: Parameters<NativeApi["orchestration"]
   return {
     ...command,
     answers: Object.fromEntries(
-      Object.entries(command.answers).filter(([, answer]) => answer !== null && answer !== undefined),
+      Object.entries(command.answers).filter(
+        ([, answer]) => answer !== null && answer !== undefined,
+      ),
     ),
   };
 }
@@ -215,7 +220,10 @@ async function requestAuthJson<T>(
   const payload = (await response.json().catch(() => null)) as unknown;
   if (!response.ok) {
     const message =
-      payload && typeof payload === "object" && "error" in payload && typeof payload.error === "string"
+      payload &&
+      typeof payload === "object" &&
+      "error" in payload &&
+      typeof payload.error === "string"
         ? payload.error
         : `Auth request failed with status ${response.status}`;
     throw new Error(message);
@@ -223,7 +231,9 @@ async function requestAuthJson<T>(
   return payload as T;
 }
 
-async function requestVoiceTranscriptionUpload(input: Parameters<NativeApi["server"]["transcribeVoice"]>[0]) {
+async function requestVoiceTranscriptionUpload(
+  input: Parameters<NativeApi["server"]["transcribeVoice"]>[0],
+) {
   const params = new URLSearchParams({
     provider: input.provider,
     cwd: input.cwd,
@@ -237,11 +247,14 @@ async function requestVoiceTranscriptionUpload(input: Parameters<NativeApi["serv
   for (let index = 0; index < decoded.length; index += 1) {
     bytes[index] = decoded.charCodeAt(index);
   }
-  const response = await fetch(resolveWsHttpUrl(`${VOICE_TRANSCRIPTION_UPLOAD_ROUTE_PATH}?${params.toString()}`), {
-    method: "POST",
-    credentials: "include",
-    body: bytes,
-  });
+  const response = await fetch(
+    resolveWsHttpUrl(`${VOICE_TRANSCRIPTION_UPLOAD_ROUTE_PATH}?${params.toString()}`),
+    {
+      method: "POST",
+      credentials: "include",
+      body: bytes,
+    },
+  );
   const payload = (await response.json().catch(() => null)) as
     | ServerVoiceTranscriptionResult
     | { readonly error?: unknown }
@@ -343,8 +356,11 @@ export function onServerWelcome(listener: (payload: WsWelcomePayload) => void): 
  * Subscribe to server config update events. Replays the latest update for
  * late subscribers to avoid missing config validation feedback.
  */
-export function onServerConfigUpdated(listener: (payload: ServerConfigUpdatedPayload) => void): () => void {
-  const latestConfig = instance?.transport.getLatestPush(WS_CHANNELS.serverConfigUpdated)?.data ?? null;
+export function onServerConfigUpdated(
+  listener: (payload: ServerConfigUpdatedPayload) => void,
+): () => void {
+  const latestConfig =
+    instance?.transport.getLatestPush(WS_CHANNELS.serverConfigUpdated)?.data ?? null;
   return subscribeWithReplay({
     registry: serverConfigUpdatedListeners,
     listener,
@@ -367,8 +383,11 @@ export function onServerProviderStatusesUpdated(
   });
 }
 
-export function onServerMaintenanceUpdated(listener: (payload: ServerLifecycleStreamEvent) => void): () => void {
-  const latestMaintenance = instance?.transport.getLatestPush(WS_CHANNELS.serverMaintenanceUpdated)?.data ?? null;
+export function onServerMaintenanceUpdated(
+  listener: (payload: ServerLifecycleStreamEvent) => void,
+): () => void {
+  const latestMaintenance =
+    instance?.transport.getLatestPush(WS_CHANNELS.serverMaintenanceUpdated)?.data ?? null;
   return subscribeWithReplay({
     registry: serverMaintenanceUpdatedListeners,
     listener,
@@ -376,8 +395,11 @@ export function onServerMaintenanceUpdated(listener: (payload: ServerLifecycleSt
   });
 }
 
-export function onServerSettingsUpdated(listener: (payload: ServerSettingsUpdatedPayload) => void): () => void {
-  const latestSettings = instance?.transport.getLatestPush(WS_CHANNELS.serverSettingsUpdated)?.data ?? null;
+export function onServerSettingsUpdated(
+  listener: (payload: ServerSettingsUpdatedPayload) => void,
+): () => void {
+  const latestSettings =
+    instance?.transport.getLatestPush(WS_CHANNELS.serverSettingsUpdated)?.data ?? null;
   return subscribeWithReplay({
     registry: serverSettingsUpdatedListeners,
     listener,
@@ -390,7 +412,9 @@ export function onServerSettingsUpdated(listener: (payload: ServerSettingsUpdate
  * exhausted). Lets thread-detail consumers surface a failed hydration state
  * instead of rendering an empty conversation.
  */
-export function onThreadStreamFailure(listener: (failure: WsThreadStreamFailure) => void): () => void {
+export function onThreadStreamFailure(
+  listener: (failure: WsThreadStreamFailure) => void,
+): () => void {
   const unsubscribe = threadStreamFailureListeners.subscribe(listener);
   return () => void unsubscribe();
 }
@@ -489,7 +513,8 @@ export function createWsNativeApi(): NativeApi {
       discoverScripts: (input) => transport.request(WS_METHODS.projectsDiscoverScripts, input),
       listDirectories: (input) => transport.request(WS_METHODS.projectsListDirectories, input),
       searchEntries: (input) => transport.request(WS_METHODS.projectsSearchEntries, input),
-      searchLocalEntries: (input) => transport.request(WS_METHODS.projectsSearchLocalEntries, input),
+      searchLocalEntries: (input) =>
+        transport.request(WS_METHODS.projectsSearchLocalEntries, input),
       readFile: (input) => transport.request(WS_METHODS.projectsReadFile, input),
       resolveOutOfRootFileReference: (input) =>
         transport.request(WS_METHODS.projectsResolveOutOfRootFileReference, input),
@@ -514,7 +539,8 @@ export function createWsNativeApi(): NativeApi {
       listThreadOutputs: (input) => transport.request(WS_METHODS.studioListThreadOutputs, input),
     },
     shell: {
-      openInEditor: (cwd, editor) => transport.request(WS_METHODS.shellOpenInEditor, { cwd, editor }),
+      openInEditor: (cwd, editor) =>
+        transport.request(WS_METHODS.shellOpenInEditor, { cwd, editor }),
       openExternal: async (url) => {
         const externalUrl = requireHttpExternalUrl(url);
         if (window.desktopBridge) {
@@ -557,7 +583,8 @@ export function createWsNativeApi(): NativeApi {
         }),
       listBranches: (input) => transport.request(WS_METHODS.gitListBranches, input),
       createWorktree: (input) => transport.request(WS_METHODS.gitCreateWorktree, input),
-      createDetachedWorktree: (input) => transport.request(WS_METHODS.gitCreateDetachedWorktree, input),
+      createDetachedWorktree: (input) =>
+        transport.request(WS_METHODS.gitCreateDetachedWorktree, input),
       removeWorktree: (input) => transport.request(WS_METHODS.gitRemoveWorktree, input),
       createBranch: (input) => transport.request(WS_METHODS.gitCreateBranch, input),
       checkout: (input) => transport.request(WS_METHODS.gitCheckout, input),
@@ -576,15 +603,18 @@ export function createWsNativeApi(): NativeApi {
       handoffThread: (input) => transport.request(WS_METHODS.gitHandoffThread, input),
       resolvePullRequest: (input) => transport.request(WS_METHODS.gitResolvePullRequest, input),
       pullRequestSnapshot: (input) => transport.request(WS_METHODS.gitPullRequestSnapshot, input),
-      preparePullRequestThread: (input) => transport.request(WS_METHODS.gitPreparePullRequestThread, input),
+      preparePullRequestThread: (input) =>
+        transport.request(WS_METHODS.gitPreparePullRequestThread, input),
       onActionProgress: gitActionProgressListeners.subscribe,
     },
     pullRequests: {
       list: (input) => transport.request(WS_METHODS.pullRequestsList, input),
-      reviewRequestCount: (input) => transport.request(WS_METHODS.pullRequestsReviewRequestCount, input),
+      reviewRequestCount: (input) =>
+        transport.request(WS_METHODS.pullRequestsReviewRequestCount, input),
       detail: (input) => transport.request(WS_METHODS.pullRequestsDetail, input),
       diff: (input) => transport.request(WS_METHODS.pullRequestsDiff, input),
-      action: (input) => transport.request(WS_METHODS.pullRequestsAction, input, { timeoutMs: null }),
+      action: (input) =>
+        transport.request(WS_METHODS.pullRequestsAction, input, { timeoutMs: null }),
       comment: (input) => transport.request(WS_METHODS.pullRequestsComment, input),
       setPinned: (input) => transport.request(WS_METHODS.pullRequestsSetPinned, input),
     },
@@ -622,7 +652,8 @@ export function createWsNativeApi(): NativeApi {
           method: "POST",
           ...(input ? { body: input } : {}),
         }),
-      listAuthPairingLinks: () => requestAuthJson<ReadonlyArray<AuthPairingLink>>("/api/auth/pairing-links"),
+      listAuthPairingLinks: () =>
+        requestAuthJson<ReadonlyArray<AuthPairingLink>>("/api/auth/pairing-links"),
       revokeAuthPairingLink: (input: AuthRevokePairingLinkInput) =>
         requestAuthJson<{ revoked: boolean }>("/api/auth/pairing-links/revoke", {
           method: "POST",
@@ -645,7 +676,8 @@ export function createWsNativeApi(): NativeApi {
         await transport.dispose();
         return result;
       },
-      listExternalMcpIntegrations: () => transport.request(WS_METHODS.serverListExternalMcpIntegrations),
+      listExternalMcpIntegrations: () =>
+        transport.request(WS_METHODS.serverListExternalMcpIntegrations),
       createExternalMcpIntegration: (input: ExternalMcpCreateIntegrationInput) =>
         transport.request(WS_METHODS.serverCreateExternalMcpIntegration, input),
       revokeExternalMcpIntegration: (input: ExternalMcpRevokeIntegrationInput) =>
@@ -655,11 +687,13 @@ export function createWsNativeApi(): NativeApi {
       refreshProviders: () => transport.request(WS_METHODS.serverRefreshProviders),
       // Provider updates run up to 2 minutes server-side; callers wrap this in
       // withProviderUpdateTimeout, which owns the client-side watchdog.
-      updateProvider: (input) => transport.request(WS_METHODS.serverUpdateProvider, input, { timeoutMs: null }),
+      updateProvider: (input) =>
+        transport.request(WS_METHODS.serverUpdateProvider, input, { timeoutMs: null }),
       listWorktrees: () => transport.request(WS_METHODS.serverListWorktrees),
       listLocalServers: () => transport.request(WS_METHODS.serverListLocalServers),
       stopLocalServer: (input) => transport.request(WS_METHODS.serverStopLocalServer, input),
-      getProviderUsageSnapshot: (input) => transport.request(WS_METHODS.serverGetProviderUsageSnapshot, input),
+      getProviderUsageSnapshot: (input) =>
+        transport.request(WS_METHODS.serverGetProviderUsageSnapshot, input),
       listProviderUsage: (input) => transport.request(WS_METHODS.serverListProviderUsage, input),
       getDiagnostics: () => transport.request(WS_METHODS.serverGetDiagnostics),
       generateThreadRecap: (input) =>
@@ -685,22 +719,28 @@ export function createWsNativeApi(): NativeApi {
     },
     stats: {
       getProfileStats: (input) => transport.request(WS_METHODS.statsGetProfileStats, input),
-      getProfileTokenStats: (input) => transport.request(WS_METHODS.statsGetProfileTokenStats, input),
+      getProfileTokenStats: (input) =>
+        transport.request(WS_METHODS.statsGetProfileTokenStats, input),
     },
     provider: {
-      getComposerCapabilities: (input) => transport.request(WS_METHODS.providerGetComposerCapabilities, input),
+      getComposerCapabilities: (input) =>
+        transport.request(WS_METHODS.providerGetComposerCapabilities, input),
       // Compaction is capped server-side per provider (ACP providers allow up
       // to the 10-minute turn-idle ceiling), so the server owns this bound.
-      compactThread: (input) => transport.request(WS_METHODS.providerCompactThread, input, { timeoutMs: null }),
+      compactThread: (input) =>
+        transport.request(WS_METHODS.providerCompactThread, input, { timeoutMs: null }),
       listCommands: (input) => transport.request(WS_METHODS.providerListCommands, input),
       listSkills: (input) => transport.request(WS_METHODS.providerListSkills, input),
       listSkillsCatalog: (input) => transport.request(WS_METHODS.providerListSkillsCatalog, input),
       importSkill: (input) => transport.request(WS_METHODS.providerImportSkill, input),
       readManagedSkill: (input) => transport.request(WS_METHODS.providerReadManagedSkill, input),
       saveManagedSkill: (input) => transport.request(WS_METHODS.providerSaveManagedSkill, input),
-      duplicateManagedSkill: (input) => transport.request(WS_METHODS.providerDuplicateManagedSkill, input),
-      removeManagedSkill: (input) => transport.request(WS_METHODS.providerRemoveManagedSkill, input),
-      restoreManagedSkill: (input) => transport.request(WS_METHODS.providerRestoreManagedSkill, input),
+      duplicateManagedSkill: (input) =>
+        transport.request(WS_METHODS.providerDuplicateManagedSkill, input),
+      removeManagedSkill: (input) =>
+        transport.request(WS_METHODS.providerRemoveManagedSkill, input),
+      restoreManagedSkill: (input) =>
+        transport.request(WS_METHODS.providerRestoreManagedSkill, input),
       listPlugins: (input) => transport.request(WS_METHODS.providerListPlugins, input),
       readPlugin: (input) => transport.request(WS_METHODS.providerReadPlugin, input),
       listModels: (input) => transport.request(WS_METHODS.providerListModels, input),
@@ -709,7 +749,8 @@ export function createWsNativeApi(): NativeApi {
     orchestration: {
       getSnapshot: () => transport.request(ORCHESTRATION_WS_METHODS.getSnapshot),
       getShellSnapshot: () => transport.request(ORCHESTRATION_WS_METHODS.getShellSnapshot),
-      getThreadDetailSnapshot: (input) => transport.request(ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot, input),
+      getThreadDetailSnapshot: (input) =>
+        transport.request(ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot, input),
       dispatchCommand: (command) => {
         return transport.request(ORCHESTRATION_WS_METHODS.dispatchCommand, {
           command: omitNullUserInputAnswers(command),
@@ -718,7 +759,8 @@ export function createWsNativeApi(): NativeApi {
       importThread: (input) => transport.request(ORCHESTRATION_WS_METHODS.importThread, input),
       repairState: () => transport.request(ORCHESTRATION_WS_METHODS.repairState),
       getTurnDiff: (input) => transport.request(ORCHESTRATION_WS_METHODS.getTurnDiff, input),
-      getFullThreadDiff: (input) => transport.request(ORCHESTRATION_WS_METHODS.getFullThreadDiff, input),
+      getFullThreadDiff: (input) =>
+        transport.request(ORCHESTRATION_WS_METHODS.getFullThreadDiff, input),
       replayEvents: (fromSequenceExclusive) =>
         transport.request(ORCHESTRATION_WS_METHODS.replayEvents, {
           fromSequenceExclusive,
@@ -728,15 +770,19 @@ export function createWsNativeApi(): NativeApi {
       reconcileProviderDelivery: (input) =>
         transport.request(ORCHESTRATION_WS_METHODS.reconcileProviderDelivery, input),
       subscribeShell: () => transport.request<void>(ORCHESTRATION_WS_METHODS.subscribeShell, {}),
-      unsubscribeShell: () => transport.request<void>(ORCHESTRATION_WS_METHODS.unsubscribeShell, {}),
-      subscribeThread: (input) => transport.request<void>(ORCHESTRATION_WS_METHODS.subscribeThread, input),
-      unsubscribeThread: (input) => transport.request<void>(ORCHESTRATION_WS_METHODS.unsubscribeThread, input),
+      unsubscribeShell: () =>
+        transport.request<void>(ORCHESTRATION_WS_METHODS.unsubscribeShell, {}),
+      subscribeThread: (input) =>
+        transport.request<void>(ORCHESTRATION_WS_METHODS.subscribeThread, input),
+      unsubscribeThread: (input) =>
+        transport.request<void>(ORCHESTRATION_WS_METHODS.unsubscribeThread, input),
       onDomainEvent: (callback) => {
         const shouldStartTransport = orchestrationDomainEventListeners.size === 0;
         const unsubscribe = orchestrationDomainEventListeners.subscribe(callback);
         if (shouldStartTransport) {
-          unsubscribeDomainEventTransport = transport.subscribe(ORCHESTRATION_WS_CHANNELS.domainEvent, (message) =>
-            orchestrationDomainEventListeners.emit(message.data),
+          unsubscribeDomainEventTransport = transport.subscribe(
+            ORCHESTRATION_WS_CHANNELS.domainEvent,
+            (message) => orchestrationDomainEventListeners.emit(message.data),
           );
         }
         return () => {

@@ -5,7 +5,11 @@
 // Exports: entry type, the index, section label lookup, and the ranking helper
 
 import { rankProviderDiscoveryItems } from "~/lib/providerDiscovery";
-import { settingRowAnchorId, SETTINGS_NAV_ITEMS, type SettingsSectionId } from "./settingsNavigation";
+import {
+  settingRowAnchorId,
+  SETTINGS_NAV_ITEMS,
+  type SettingsSectionId,
+} from "./settingsNavigation";
 
 /**
  * One searchable settings result. `title` usually matches a string SettingsRow heading so
@@ -39,7 +43,8 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     id: "general:new-threads",
     section: "general",
     title: "New threads",
-    keywords: "Pick the default workspace mode for newly created draft threads. local worktree environment",
+    keywords:
+      "Pick the default workspace mode for newly created draft threads. local worktree environment",
   },
   {
     id: "general:project-order",
@@ -51,13 +56,15 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     id: "general:thread-order",
     section: "general",
     title: "Thread order",
-    keywords: "Controls how threads are arranged inside each project in the main sidebar. sort updated created",
+    keywords:
+      "Controls how threads are arranged inside each project in the main sidebar. sort updated created",
   },
   {
     id: "general:chats-section",
     section: "general",
     title: "Chats",
-    keywords: "Show the standalone Chats list in the sidebar footer chats not tied to a project. sidebar section",
+    keywords:
+      "Show the standalone Chats list in the sidebar footer chats not tied to a project. sidebar section",
   },
   {
     id: "general:studio-section",
@@ -88,13 +95,15 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     id: "general:environment-pull-request",
     section: "general",
     title: "Pull request",
-    keywords: "Show the open pull request CI checks and review comments in the chat Environment panel. pr fix github",
+    keywords:
+      "Show the open pull request CI checks and review comments in the chat Environment panel. pr fix github",
   },
   {
     id: "general:environment-editor",
     section: "general",
     title: "Editor",
-    keywords: "Show the Editor section in-app editor view and Open in editor picker in the chat Environment panel.",
+    keywords:
+      "Show the Editor section in-app editor view and Open in editor picker in the chat Environment panel.",
   },
   {
     id: "general:environment-recap",
@@ -151,7 +160,8 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     id: "appearance:base-font-size",
     section: "appearance",
     title: "Base font size",
-    keywords: "Adjust the app text base in pixels. Chat and UI typography scale proportionally. font",
+    keywords:
+      "Adjust the app text base in pixels. Chat and UI typography scale proportionally. font",
   },
   {
     id: "appearance:terminal-font-size",
@@ -163,7 +173,8 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     id: "appearance:terminal-font",
     section: "appearance",
     title: "Terminal font",
-    keywords: "Type any monospace font installed on this device e.g. Fira Code. system monospace family",
+    keywords:
+      "Type any monospace font installed on this device e.g. Fira Code. system monospace family",
   },
   {
     id: "appearance:font-smoothing",
@@ -176,7 +187,8 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     id: "appearance:time-format",
     section: "appearance",
     title: "Time format",
-    keywords: "System default follows your browser or OS clock preference. timestamp 12-hour 24-hour locale",
+    keywords:
+      "System default follows your browser or OS clock preference. timestamp 12-hour 24-hour locale",
   },
 
   // ── Notifications ─────────────────────────────────────────────────────────────
@@ -184,7 +196,8 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     id: "notifications:activity-toasts",
     section: "notifications",
     title: "Activity toasts",
-    keywords: "Show an in-app toast when a chat or managed terminal agent finishes or needs input. alerts",
+    keywords:
+      "Show an in-app toast when a chat or managed terminal agent finishes or needs input. alerts",
   },
   {
     id: "notifications:desktop-notifications",
@@ -324,7 +337,8 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     id: "providers:visible-providers",
     section: "providers",
     title: "Visible providers",
-    keywords: "Drag providers into your preferred picker order and hide the ones you don't use. visibility order",
+    keywords:
+      "Drag providers into your preferred picker order and hide the ones you don't use. visibility order",
   },
   {
     id: "providers:provider-updates",
@@ -362,13 +376,15 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     id: "advanced:keybindings",
     section: "advanced",
     title: "Keybindings",
-    keywords: "Open the persisted keybindings.json file to edit advanced bindings directly. shortcuts",
+    keywords:
+      "Open the persisted keybindings.json file to edit advanced bindings directly. shortcuts",
   },
   {
     id: "advanced:recovery-tools",
     section: "advanced",
     title: "Recovery tools",
-    keywords: "Rebuild local project indexes without clearing existing chats when the local state gets out of sync.",
+    keywords:
+      "Rebuild local project indexes without clearing existing chats when the local state gets out of sync.",
   },
   {
     id: "integrations:external-mcp",
@@ -387,7 +403,8 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     id: "advanced:release-history",
     section: "advanced",
     title: "Release history",
-    keywords: "A running log of every update, newest first. changelog what's new about release notes",
+    keywords:
+      "A running log of every update, newest first. changelog what's new about release notes",
   },
 ] as const;
 
@@ -404,7 +421,10 @@ export function settingsSectionLabel(section: SettingsSectionId): string {
  * the description/synonym keywords and the owning section label match more loosely so a
  * query like "appearance" or "wrap" still surfaces the right rows.
  */
-export function rankSettingsSearchEntries(query: string, limit: number): readonly SettingsSearchEntry[] {
+export function rankSettingsSearchEntries(
+  query: string,
+  limit: number,
+): readonly SettingsSearchEntry[] {
   const trimmed = query.trim();
   if (trimmed.length === 0) {
     return [];

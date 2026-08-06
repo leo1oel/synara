@@ -30,7 +30,9 @@ describe("GitRepositorySetup", () => {
   it("uses the app typography and a compact primary action for Git initialization", async () => {
     await renderWithQueryClient(<GitInitializationState cwd="/tmp/research-writer" />);
 
-    await expect.element(page.getByRole("heading", { name: "Start version control" })).toBeVisible();
+    await expect
+      .element(page.getByRole("heading", { name: "Start version control" }))
+      .toBeVisible();
     await expect.element(page.getByRole("button", { name: "Initialize Git" })).toBeVisible();
 
     const heading = document.querySelector("h2");
@@ -63,7 +65,9 @@ describe("GitRepositorySetup", () => {
     await expect.element(connectButton).toBeVisible();
     await connectButton.click();
 
-    await expect.element(page.getByRole("heading", { name: "Connect GitHub repository" })).toBeVisible();
+    await expect
+      .element(page.getByRole("heading", { name: "Connect GitHub repository" }))
+      .toBeVisible();
     await expect
       .element(page.getByLabelText("Repository URL"))
       .toHaveAttribute("placeholder", "https://github.com/owner/repository.git");

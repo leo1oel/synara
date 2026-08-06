@@ -32,7 +32,9 @@ function startsWithSegments(value: ReadonlyArray<string>, prefix: ReadonlyArray<
   return prefix.every((segment, index) => value[index] === segment);
 }
 
-export function prepareSkillSelection(selectedFiles: ReadonlyArray<BrowserSkillFile>): PreparedSkillSelection {
+export function prepareSkillSelection(
+  selectedFiles: ReadonlyArray<BrowserSkillFile>,
+): PreparedSkillSelection {
   if (selectedFiles.length === 0) {
     throw new Error("Choose a skill folder containing a SKILL.md file.");
   }
@@ -94,7 +96,9 @@ function bytesToBase64(buffer: ArrayBuffer): string {
   return btoa(binary);
 }
 
-export async function encodeSkillSelection(selection: PreparedSkillSelection): Promise<ProviderSkillImportFile[]> {
+export async function encodeSkillSelection(
+  selection: PreparedSkillSelection,
+): Promise<ProviderSkillImportFile[]> {
   return Promise.all(
     selection.files.map(async ({ relativePath, file }) => ({
       relativePath,

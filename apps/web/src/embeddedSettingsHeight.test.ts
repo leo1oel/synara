@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createEmbeddedSettingsHeightReporter, measureEmbeddedSettingsHeight } from "./embeddedSettingsHeight";
+import {
+  createEmbeddedSettingsHeightReporter,
+  measureEmbeddedSettingsHeight,
+} from "./embeddedSettingsHeight";
 
 describe("embedded settings height", () => {
   it("measures overflowing content instead of only its border box", () => {

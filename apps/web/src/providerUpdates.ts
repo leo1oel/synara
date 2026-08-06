@@ -54,7 +54,10 @@ export async function withProviderUpdateTimeout<T>(input: {
 type ProviderUpdateFilterInput = {
   readonly providers: ReadonlyArray<ServerProviderStatus>;
   readonly hiddenProviders?: ReadonlyArray<ProviderKind>;
-  readonly serverSettings?: Pick<ServerSettings, "providers" | "enableProviderUpdateChecks"> | null | undefined;
+  readonly serverSettings?:
+    | Pick<ServerSettings, "providers" | "enableProviderUpdateChecks">
+    | null
+    | undefined;
   readonly oneClickOnly?: boolean;
 };
 
@@ -62,7 +65,10 @@ type ProviderUpdateVisibilityInput = {
   readonly provider: ServerProviderStatus;
   readonly hiddenProviders?: ReadonlyArray<ProviderKind>;
   readonly hiddenProviderSet?: ReadonlySet<ProviderKind>;
-  readonly serverSettings?: Pick<ServerSettings, "providers" | "enableProviderUpdateChecks"> | null | undefined;
+  readonly serverSettings?:
+    | Pick<ServerSettings, "providers" | "enableProviderUpdateChecks">
+    | null
+    | undefined;
   readonly oneClickOnly?: boolean;
 };
 
@@ -121,10 +127,14 @@ export function shouldShowProviderUpdateStatus(input: ProviderUpdateVisibilityIn
     return false;
   }
 
-  return input.oneClickOnly === true ? advisory.canUpdate === true && advisory.updateCommand !== null : true;
+  return input.oneClickOnly === true
+    ? advisory.canUpdate === true && advisory.updateCommand !== null
+    : true;
 }
 
-export function getVisibleProviderUpdateStatuses(input: ProviderUpdateFilterInput): ServerProviderStatus[] {
+export function getVisibleProviderUpdateStatuses(
+  input: ProviderUpdateFilterInput,
+): ServerProviderStatus[] {
   const hiddenProviderSet = new Set(input.hiddenProviders ?? []);
   const oneClickOnly = input.oneClickOnly ?? false;
 
@@ -151,7 +161,9 @@ export function providerUpdateNotificationKey(
   providers: ReadonlyArray<ServerProviderStatus>,
 ): string | null {
   const parts = providers
-    .map((provider) => [provider.provider, provider.versionAdvisory?.latestVersion ?? "unknown"].join(":"))
+    .map((provider) =>
+      [provider.provider, provider.versionAdvisory?.latestVersion ?? "unknown"].join(":"),
+    )
     .toSorted();
 
   return parts.length > 0 ? parts.join("|") : null;

@@ -35,7 +35,8 @@ import { Button } from "../ui/button";
  * for class names it can scan literally, so the class stays a literal here — but its
  * TYPE is derived from the shared number, so the build fails if the two ever drift.
  */
-export const CHAT_SURFACE_HEADER_HEIGHT_CLASS: `h-[${typeof CHAT_SURFACE_HEADER_HEIGHT_PX}px]` = "h-[46px]";
+export const CHAT_SURFACE_HEADER_HEIGHT_CLASS: `h-[${typeof CHAT_SURFACE_HEADER_HEIGHT_PX}px]` =
+  "h-[46px]";
 
 /**
  * Standard horizontal inset for a chat-surface top bar (chat / workspace / settings
@@ -86,13 +87,15 @@ export const CHAT_SURFACE_HEADER_ACTION_ICON_CLASS_NAME = "size-3.5";
  * the toolbar. Header buttons want crisp, solid icons, so we override both the
  * icon opacity and the inherited `currentColor` here.
  */
-export const CHAT_HEADER_ICON_STRENGTH_CLASS_NAME = "text-[var(--color-text-foreground)] [&_svg]:!opacity-100";
+export const CHAT_HEADER_ICON_STRENGTH_CLASS_NAME =
+  "text-[var(--color-text-foreground)] [&_svg]:!opacity-100";
 
 /** Fixed control height + radius for every header toolbar control. */
 export const CHAT_HEADER_CONTROL_CLASS_NAME = "!h-7 shrink-0 rounded-lg";
 
 /** Idle text tone for flat header/dock controls (toggles, tabs, chrome icon buttons). */
-export const CHAT_SURFACE_CONTROL_IDLE_TEXT_CLASS_NAME = "text-[var(--color-text-foreground-secondary)]";
+export const CHAT_SURFACE_CONTROL_IDLE_TEXT_CLASS_NAME =
+  "text-[var(--color-text-foreground-secondary)]";
 
 /** Active/pressed flat background shared by header toggles and dock tabs. */
 export const CHAT_SURFACE_CONTROL_ACTIVE_CLASS_NAME =
@@ -131,10 +134,19 @@ export const CHAT_SURFACE_CHIP_GLYPH_CLASS_NAME = "size-3.5 shrink-0";
  * which both chips drive to `--color-text-foreground-secondary` at rest, so the
  * tint is inherited from the chip instead of redeclared per call site.
  */
-export const CHAT_SURFACE_CHIP_ICON_CLASS_NAME = cn(CHAT_SURFACE_CHIP_GLYPH_CLASS_NAME, "opacity-70");
+export const CHAT_SURFACE_CHIP_ICON_CLASS_NAME = cn(
+  CHAT_SURFACE_CHIP_GLYPH_CLASS_NAME,
+  "opacity-70",
+);
 
 /** Renders any chip glyph with the shared {@link CHAT_SURFACE_CHIP_ICON_CLASS_NAME} treatment. */
-export function SurfaceChipIcon({ icon: Icon, className }: { icon: LucideIcon; className?: string }) {
+export function SurfaceChipIcon({
+  icon: Icon,
+  className,
+}: {
+  icon: LucideIcon;
+  className?: string;
+}) {
   return <Icon aria-hidden className={cn(CHAT_SURFACE_CHIP_ICON_CLASS_NAME, className)} />;
 }
 
@@ -147,7 +159,10 @@ export const CHAT_HEADER_TOGGLE_CLASS_NAME = cn(
 /** Flat dock tab chip — shares the header diff toggle chrome, but adds one extra
  *  step of right padding (`px-1.5` → `pr-2.5`) so the label/trailing edge has a
  *  touch more breathing room than the symmetric chip base. */
-export const DOCK_TAB_CHIP_CLASS_NAME = cn(CHAT_SURFACE_CHIP_CLASS_NAME, "inline-flex min-w-0 items-center pr-2.5");
+export const DOCK_TAB_CHIP_CLASS_NAME = cn(
+  CHAT_SURFACE_CHIP_CLASS_NAME,
+  "inline-flex min-w-0 items-center pr-2.5",
+);
 
 /** Icon slot for dock tabs — bare larger icon at rest; on hover a circular disc + X appears.
  *  Color is muted while the tab (not the close button) is hovered and brightens to full
@@ -226,7 +241,11 @@ export function SurfaceTabChip({
             onClose();
           }}
         >
-          <span className={cn("flex items-center justify-center", DOCK_TAB_ICON_HOVER_HIDE_CLASS_NAME)}>{icon}</span>
+          <span
+            className={cn("flex items-center justify-center", DOCK_TAB_ICON_HOVER_HIDE_CLASS_NAME)}
+          >
+            {icon}
+          </span>
           <CentralIcon name="cross-small" className={DOCK_TAB_CLOSE_GLYPH_CLASS_NAME} />
         </button>
       ) : (
@@ -251,7 +270,10 @@ export function SurfaceTabChip({
         // Non-selectable chips (a lone tab that cannot switch to anything) render the
         // label as static text so keyboard/AT users don't land on a button that does
         // nothing.
-        <span className={cn("flex min-w-0 items-center gap-1.5 text-left", labelClassName)} title={title}>
+        <span
+          className={cn("flex min-w-0 items-center gap-1.5 text-left", labelClassName)}
+          title={title}
+        >
           {leading}
           <span className="truncate">{label}</span>
           {trailing}
@@ -326,23 +348,29 @@ type ChatHeaderButtonBaseProps = Omit<ComponentProps<typeof Button>, "variant" |
  * Text (or text + icon) header control. Safe to use directly or as a
  * Menu/Tooltip `render` target since it forwards the ref and spreads props.
  */
-export const ChatHeaderButton = forwardRef<HTMLButtonElement, ChatHeaderButtonBaseProps>(function ChatHeaderButton(
-  { tone: toneProp, className, ...props },
-  ref,
-) {
-  const tone = toneProp ?? "outline";
-  return (
-    <Button
-      {...props}
-      ref={ref}
-      size="xs"
-      variant={chatHeaderControlVariant(tone)}
-      className={cn(CHAT_HEADER_CONTROL_CLASS_NAME, CHAT_HEADER_ICON_STRENGTH_CLASS_NAME, className)}
-    />
-  );
-});
+export const ChatHeaderButton = forwardRef<HTMLButtonElement, ChatHeaderButtonBaseProps>(
+  function ChatHeaderButton({ tone: toneProp, className, ...props }, ref) {
+    const tone = toneProp ?? "outline";
+    return (
+      <Button
+        {...props}
+        ref={ref}
+        size="xs"
+        variant={chatHeaderControlVariant(tone)}
+        className={cn(
+          CHAT_HEADER_CONTROL_CLASS_NAME,
+          CHAT_HEADER_ICON_STRENGTH_CLASS_NAME,
+          className,
+        )}
+      />
+    );
+  },
+);
 
-type ChatHeaderIconButtonBaseProps = Omit<ComponentProps<typeof Button>, "variant" | "size" | "aria-label"> & {
+type ChatHeaderIconButtonBaseProps = Omit<
+  ComponentProps<typeof Button>,
+  "variant" | "size" | "aria-label"
+> & {
   label: string;
   tone?: ChatHeaderControlTone;
   children?: ReactNode;
@@ -362,7 +390,11 @@ export const ChatHeaderIconButton = forwardRef<HTMLButtonElement, ChatHeaderIcon
         aria-label={label}
         size="icon-xs"
         variant={chatHeaderControlVariant(tone)}
-        className={cn(CHAT_HEADER_ICON_CONTROL_CLASS_NAME, CHAT_HEADER_ICON_STRENGTH_CLASS_NAME, className)}
+        className={cn(
+          CHAT_HEADER_ICON_CONTROL_CLASS_NAME,
+          CHAT_HEADER_ICON_STRENGTH_CLASS_NAME,
+          className,
+        )}
       >
         {children}
       </Button>

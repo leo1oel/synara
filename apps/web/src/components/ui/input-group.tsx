@@ -65,7 +65,9 @@ function InputGroupAddon({
         if (isInteractive) return;
         e.preventDefault();
         const parent = e.currentTarget.parentElement;
-        const input = parent?.querySelector<HTMLInputElement | HTMLTextAreaElement>("input, textarea");
+        const input = parent?.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+          "input, textarea",
+        );
         if (input && !parent?.querySelector("input:focus, textarea:focus")) {
           input.focus();
         }

@@ -10,9 +10,7 @@ export function getLiveLatticeHostContext(): LatticeHostContextSnapshot | null {
   return liveLatticeHostContext;
 }
 
-export function setLiveLatticeHostContext(
-  context: LatticeHostContextSnapshot | null,
-): void {
+export function setLiveLatticeHostContext(context: LatticeHostContextSnapshot | null): void {
   if (Object.is(liveLatticeHostContext, context)) return;
   liveLatticeHostContext = context;
   for (const listener of liveLatticeHostContextListeners) listener();
@@ -58,9 +56,7 @@ function latticeHostContextSelection(
   return null;
 }
 
-export function extractTrailingLatticeHostContext(
-  prompt: string,
-): ExtractedLatticeHostContext {
+export function extractTrailingLatticeHostContext(prompt: string): ExtractedLatticeHostContext {
   const match = TRAILING_LATTICE_HOST_CONTEXT_BLOCK_PATTERN.exec(prompt);
   if (!match) return { promptText: prompt, context: null };
   const promptText = prompt.slice(0, match.index).replace(/\n+$/u, "");

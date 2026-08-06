@@ -86,9 +86,12 @@ function notificationTimeout(toast: EmbeddableToast): number {
 export function embeddedNotificationUpsert(toast: EmbeddableToast): EmbeddedNotificationMessage {
   const title = boundedText(embeddedToastText(toast.title), 160) || "Synara notification";
   const detail = boundedText(embeddedToastText(toast.description), 4_000);
-  const copyText = typeof toast.data?.copyText === "string" ? boundedText(toast.data.copyText, 4_000) : "";
+  const copyText =
+    typeof toast.data?.copyText === "string" ? boundedText(toast.data.copyText, 4_000) : "";
   const archiveUndo = Boolean(toast.data?.archiveUndo);
-  const primaryActionLabel = archiveUndo ? "Undo" : boundedText(embeddedToastText(toast.actionProps?.children), 48);
+  const primaryActionLabel = archiveUndo
+    ? "Undo"
+    : boundedText(embeddedToastText(toast.actionProps?.children), 48);
   const secondaryActionLabel = archiveUndo
     ? "View archived"
     : boundedText(embeddedToastText(toast.data?.secondaryActionProps?.children), 48);
@@ -115,7 +118,9 @@ export function embeddedNotificationDismiss(id: string): EmbeddedNotificationMes
   };
 }
 
-export function isEmbeddedNotificationActionMessage(value: unknown): value is EmbeddedNotificationActionMessage {
+export function isEmbeddedNotificationActionMessage(
+  value: unknown,
+): value is EmbeddedNotificationActionMessage {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<EmbeddedNotificationActionMessage>;
   return (
@@ -123,6 +128,8 @@ export function isEmbeddedNotificationActionMessage(value: unknown): value is Em
     typeof candidate.id === "string" &&
     candidate.id.length > 0 &&
     candidate.id.length <= 128 &&
-    (candidate.action === "dismiss" || candidate.action === "primary" || candidate.action === "secondary")
+    (candidate.action === "dismiss" ||
+      candidate.action === "primary" ||
+      candidate.action === "secondary")
   );
 }

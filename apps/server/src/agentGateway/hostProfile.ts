@@ -110,7 +110,10 @@ function adaptToolResult(result: McpToolCallResult): McpToolCallResult {
     ...(result.structuredContent === undefined
       ? {}
       : {
-          structuredContent: replaceStructuredBranding(result.structuredContent) as Record<string, unknown>,
+          structuredContent: replaceStructuredBranding(result.structuredContent) as Record<
+            string,
+            unknown
+          >,
         }),
   };
 }
@@ -132,7 +135,9 @@ export function adaptToolsForActiveHost(tools: ReadonlyArray<ToolEntry>): Readon
           ...tool.definition,
           name: alias ?? tool.definition.name,
           description: replaceModelVisibleToolAliases(tool.definition.description),
-          inputSchema: replaceStructuredBranding(tool.definition.inputSchema) as typeof tool.definition.inputSchema,
+          inputSchema: replaceStructuredBranding(
+            tool.definition.inputSchema,
+          ) as typeof tool.definition.inputSchema,
           ...(tool.definition.annotations === undefined
             ? {}
             : {

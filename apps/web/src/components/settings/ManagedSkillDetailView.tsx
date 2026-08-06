@@ -6,7 +6,11 @@ import type { ProviderManagedSkillDetail, ProviderSkillDescriptor } from "@synar
 import { useQuery } from "@tanstack/react-query";
 
 import ChatMarkdown from "~/components/ChatMarkdown";
-import { SettingsCard, SettingsEmptyState, SettingsSectionShell } from "~/components/settings/SettingsPanelPrimitives";
+import {
+  SettingsCard,
+  SettingsEmptyState,
+  SettingsSectionShell,
+} from "~/components/settings/SettingsPanelPrimitives";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { ChevronLeftIcon, Loader2Icon, PencilIcon, SkillCubeIcon, Trash2 } from "~/lib/icons";
@@ -52,7 +56,9 @@ export function ManagedSkillDetailView({
   const included = management?.kind === "bundled";
   const displayName = skill.interface?.displayName ?? skill.name;
   const description =
-    skill.interface?.shortDescription ?? skill.description ?? "No description is provided for this skill.";
+    skill.interface?.shortDescription ??
+    skill.description ??
+    "No description is provided for this skill.";
 
   return (
     <div className="space-y-5">
@@ -73,7 +79,9 @@ export function ManagedSkillDetailView({
                 <Badge variant={included ? "info" : "outline"}>
                   {included ? "Included with Lattice" : "Installed by you"}
                 </Badge>
-                <Badge variant={enabled ? "success" : "secondary"}>{enabled ? "Enabled" : "Disabled"}</Badge>
+                <Badge variant={enabled ? "success" : "secondary"}>
+                  {enabled ? "Enabled" : "Disabled"}
+                </Badge>
                 {detailQuery.data ? (
                   <span className="text-[11px] text-muted-foreground">
                     {detailQuery.data.files.length} file
@@ -81,7 +89,9 @@ export function ManagedSkillDetailView({
                   </span>
                 ) : null}
               </div>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</p>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                {description}
+              </p>
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2 self-start">
@@ -92,7 +102,12 @@ export function ManagedSkillDetailView({
               </Button>
             ) : null}
             {onCustomize ? (
-              <Button size="sm" variant="outline" disabled={isCustomizing} onClick={() => onCustomize(skill)}>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={isCustomizing}
+                onClick={() => onCustomize(skill)}
+              >
                 {isCustomizing ? (
                   <Loader2Icon className="size-3.5 animate-spin" aria-hidden="true" />
                 ) : (
@@ -111,8 +126,8 @@ export function ManagedSkillDetailView({
         </div>
         {included ? (
           <p className="mt-4 border-t border-border/65 pt-3 text-[11px] leading-relaxed text-muted-foreground">
-            This protected skill ships inside Lattice, so it is not stored in your user skills folder. Customize a copy
-            to edit it without changing the original.
+            This protected skill ships inside Lattice, so it is not stored in your user skills
+            folder. Customize a copy to edit it without changing the original.
           </p>
         ) : null}
       </SettingsCard>
@@ -122,7 +137,9 @@ export function ManagedSkillDetailView({
           <SettingsEmptyState layout="status">Loading skill…</SettingsEmptyState>
         ) : detailQuery.isError ? (
           <SettingsEmptyState tone="destructive" layout="status">
-            {detailQuery.error instanceof Error ? detailQuery.error.message : "The skill could not be loaded."}
+            {detailQuery.error instanceof Error
+              ? detailQuery.error.message
+              : "The skill could not be loaded."}
           </SettingsEmptyState>
         ) : detailQuery.data ? (
           <SettingsCard divided={false} className="px-4 py-3">

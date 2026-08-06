@@ -23,6 +23,8 @@ describe("composer quotes", () => {
   });
 
   it("formats a quote and its attribution as composer placeholder copy", () => {
-    expect(formatComposerQuote(COMPOSER_QUOTES[0]!)).toBe("“One must imagine Sisyphus happy.” — Albert Camus");
+    expect(formatComposerQuote(COMPOSER_QUOTES[0]!)).toBe(
+      "“One must imagine Sisyphus happy.” — Albert Camus",
+    );
   });
 });

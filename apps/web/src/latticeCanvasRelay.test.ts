@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { awaitCanvasHostResult, LATTICE_CANVAS_TOOL_RESULT, SYNARA_CANVAS_TOOL_REQUEST } from "./latticeCanvasRelay";
+import {
+  awaitCanvasHostResult,
+  LATTICE_CANVAS_TOOL_RESULT,
+  SYNARA_CANVAS_TOOL_REQUEST,
+} from "./latticeCanvasRelay";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -12,8 +16,10 @@ describe("Lattice canvas relay protocol", () => {
       configurable: true,
       value: {
         parent,
-        addEventListener: (_: string, listener: (event: MessageEvent) => void) => listeners.add(listener),
-        removeEventListener: (_: string, listener: (event: MessageEvent) => void) => listeners.delete(listener),
+        addEventListener: (_: string, listener: (event: MessageEvent) => void) =>
+          listeners.add(listener),
+        removeEventListener: (_: string, listener: (event: MessageEvent) => void) =>
+          listeners.delete(listener),
         setTimeout,
         clearTimeout,
       },
@@ -44,7 +50,13 @@ describe("Lattice canvas relay protocol", () => {
       listener({
         source: parent,
         origin: "https://lattice.test",
-        data: { type: LATTICE_CANVAS_TOOL_RESULT, version: 1, id: "abc", ok: true, result: { created: 1 } },
+        data: {
+          type: LATTICE_CANVAS_TOOL_RESULT,
+          version: 1,
+          id: "abc",
+          ok: true,
+          result: { created: 1 },
+        },
       } as unknown as MessageEvent);
     await expect(promise).resolves.toMatchObject({ id: "abc", ok: true, result: { created: 1 } });
     expect(listeners.size).toBe(0);

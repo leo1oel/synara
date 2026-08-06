@@ -97,7 +97,14 @@ export function FileLineCommentBox(props: FileLineCommentBoxProps) {
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="button" variant="default" size="sm" className="px-3.5" disabled={!canSubmit} onClick={submit}>
+        <Button
+          type="button"
+          variant="default"
+          size="sm"
+          className="px-3.5"
+          disabled={!canSubmit}
+          onClick={submit}
+        >
           Comment
         </Button>
       </div>

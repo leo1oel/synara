@@ -31,7 +31,10 @@ export function pickComposerQuoteIndex(
     previousIndex >= 0 &&
     previousIndex < COMPOSER_QUOTES.length;
   const candidateCount = hasPrevious ? COMPOSER_QUOTES.length - 1 : COMPOSER_QUOTES.length;
-  const candidate = Math.min(candidateCount - 1, Math.max(0, Math.floor(random() * candidateCount)));
+  const candidate = Math.min(
+    candidateCount - 1,
+    Math.max(0, Math.floor(random() * candidateCount)),
+  );
 
   return hasPrevious && candidate >= previousIndex ? candidate + 1 : candidate;
 }

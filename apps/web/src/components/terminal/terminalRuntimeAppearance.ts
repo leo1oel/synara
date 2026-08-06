@@ -80,9 +80,13 @@ export function getTerminalFontSizePx(): number {
     return FALLBACK_TERMINAL_FONT_SIZE_PX;
   }
 
-  const rawValue = getComputedStyle(document.documentElement).getPropertyValue("--app-font-size-terminal").trim();
+  const rawValue = getComputedStyle(document.documentElement)
+    .getPropertyValue("--app-font-size-terminal")
+    .trim();
   const parsedValue = Number.parseFloat(rawValue);
-  return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : FALLBACK_TERMINAL_FONT_SIZE_PX;
+  return Number.isFinite(parsedValue) && parsedValue > 0
+    ? parsedValue
+    : FALLBACK_TERMINAL_FONT_SIZE_PX;
 }
 
 export function getTerminalFontWeight(): number {
@@ -268,7 +272,10 @@ export function terminalThemeFromApp(): ITheme {
       "var(--color-token-terminal-ansi-white, var(--color-text-foreground))",
       fallbackTheme.white,
     ),
-    yellow: resolveTerminalCssColor("var(--color-token-terminal-ansi-yellow, var(--warning))", fallbackTheme.yellow),
+    yellow: resolveTerminalCssColor(
+      "var(--color-token-terminal-ansi-yellow, var(--warning))",
+      fallbackTheme.yellow,
+    ),
   };
 }
 

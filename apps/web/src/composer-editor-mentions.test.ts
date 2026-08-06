@@ -155,11 +155,15 @@ describe("splitPromptIntoComposerSegments", () => {
   });
 
   it("does not convert an incomplete trailing dollar skill token", () => {
-    expect(splitPromptIntoComposerSegments("Use $check-code")).toEqual([{ type: "text", text: "Use $check-code" }]);
+    expect(splitPromptIntoComposerSegments("Use $check-code")).toEqual([
+      { type: "text", text: "Use $check-code" },
+    ]);
   });
 
   it("does not convert an incomplete trailing slash skill token", () => {
-    expect(splitPromptIntoComposerSegments("Use /check-code")).toEqual([{ type: "text", text: "Use /check-code" }]);
+    expect(splitPromptIntoComposerSegments("Use /check-code")).toEqual([
+      { type: "text", text: "Use /check-code" },
+    ]);
   });
 
   it("converts completed dollar skill tokens once a trailing delimiter exists", () => {
@@ -180,7 +184,9 @@ describe("splitPromptIntoComposerSegments", () => {
 
   it("keeps built-in slash commands as plain text", () => {
     expect(splitPromptIntoComposerSegments("/plan ")).toEqual([{ type: "text", text: "/plan " }]);
-    expect(splitPromptIntoComposerSegments("/model spark")).toEqual([{ type: "text", text: "/model spark" }]);
+    expect(splitPromptIntoComposerSegments("/model spark")).toEqual([
+      { type: "text", text: "/model spark" },
+    ]);
   });
 
   it("converts completed /automation into an app slash-command segment", () => {
@@ -191,7 +197,9 @@ describe("splitPromptIntoComposerSegments", () => {
   });
 
   it("keeps a typed agent alias as plain text until parentheses are added", () => {
-    expect(splitPromptIntoComposerSegments("Ask @spark")).toEqual([{ type: "text", text: "Ask @spark" }]);
+    expect(splitPromptIntoComposerSegments("Ask @spark")).toEqual([
+      { type: "text", text: "Ask @spark" },
+    ]);
   });
 
   it("converts an agent alias into a chip once the task parentheses begin", () => {
@@ -211,7 +219,9 @@ describe("splitPromptIntoComposerSegments", () => {
   });
 
   it("supports quoted mention tokens so folder paths can include spaces", () => {
-    expect(splitPromptIntoComposerSegments('Inspect @"/Users/test/Application Support" please')).toEqual([
+    expect(
+      splitPromptIntoComposerSegments('Inspect @"/Users/test/Application Support" please'),
+    ).toEqual([
       { type: "text", text: "Inspect " },
       {
         type: "mention",
@@ -223,7 +233,11 @@ describe("splitPromptIntoComposerSegments", () => {
   });
 
   it("keeps inline terminal context placeholders at their prompt positions", () => {
-    expect(splitPromptIntoComposerSegments(`Inspect ${INLINE_TERMINAL_CONTEXT_PLACEHOLDER}@AGENTS.md please`)).toEqual([
+    expect(
+      splitPromptIntoComposerSegments(
+        `Inspect ${INLINE_TERMINAL_CONTEXT_PLACEHOLDER}@AGENTS.md please`,
+      ),
+    ).toEqual([
       { type: "text", text: "Inspect " },
       { type: "terminal-context", context: null },
       { type: "mention", path: "AGENTS.md", tokenLength: "@AGENTS.md".length },
@@ -232,7 +246,9 @@ describe("splitPromptIntoComposerSegments", () => {
   });
 
   it("converts a URL into a link segment once a delimiter follows it", () => {
-    expect(splitPromptIntoComposerSegments("see https://github.com/openai/codex/pull/1 thanks")).toEqual([
+    expect(
+      splitPromptIntoComposerSegments("see https://github.com/openai/codex/pull/1 thanks"),
+    ).toEqual([
       { type: "text", text: "see " },
       { type: "link", url: "https://github.com/openai/codex/pull/1" },
       { type: "text", text: " thanks" },
@@ -270,7 +286,9 @@ describe("splitPromptIntoComposerSegments", () => {
 
 describe("splitPromptIntoDisplaySegments", () => {
   it("converts a trailing skill token for read-only rendering", () => {
-    expect(splitPromptIntoDisplaySegments("$check-code")).toEqual([{ type: "skill", name: "check-code", prefix: "$" }]);
+    expect(splitPromptIntoDisplaySegments("$check-code")).toEqual([
+      { type: "skill", name: "check-code", prefix: "$" },
+    ]);
   });
 
   it("converts a trailing skill token at the end of surrounding text", () => {
@@ -292,9 +310,9 @@ describe("splitPromptIntoDisplaySegments", () => {
   });
 
   it("converts a trailing URL into a link segment for read-only rendering", () => {
-    expect(splitPromptIntoDisplaySegments("https://github.com/Emanuele-web04/synara/pull/155")).toEqual([
-      { type: "link", url: "https://github.com/Emanuele-web04/synara/pull/155" },
-    ]);
+    expect(
+      splitPromptIntoDisplaySegments("https://github.com/Emanuele-web04/synara/pull/155"),
+    ).toEqual([{ type: "link", url: "https://github.com/Emanuele-web04/synara/pull/155" }]);
   });
 
   it("converts a trailing bare domain into a normalized link segment for read-only rendering", () => {
@@ -305,7 +323,9 @@ describe("splitPromptIntoDisplaySegments", () => {
 
   it("renders a URL on its own line followed by trailing prose", () => {
     expect(
-      splitPromptIntoDisplaySegments("https://github.com/Emanuele-web04/synara/pull/155\nfix the conflicts"),
+      splitPromptIntoDisplaySegments(
+        "https://github.com/Emanuele-web04/synara/pull/155\nfix the conflicts",
+      ),
     ).toEqual([
       { type: "link", url: "https://github.com/Emanuele-web04/synara/pull/155" },
       { type: "text", text: "\nfix the conflicts" },
@@ -326,7 +346,9 @@ describe("splitPromptIntoDisplaySegments", () => {
       { type: "mention", path: "linear", tokenLength: "@linear".length },
     ]);
     expect(
-      splitPromptIntoDisplaySegments("Use @linear", [{ name: "linear", path: "plugin://linear@openai-curated" }]),
+      splitPromptIntoDisplaySegments("Use @linear", [
+        { name: "linear", path: "plugin://linear@openai-curated" },
+      ]),
     ).toEqual([
       { type: "text", text: "Use " },
       { type: "mention", path: "linear", kind: "plugin", tokenLength: "@linear".length },

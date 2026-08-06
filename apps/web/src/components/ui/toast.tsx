@@ -99,7 +99,13 @@ function toastIconClassName(type: ToastObject<ThreadToastData>["type"]): string 
   return cn(NOTIFICATION_ICON_CLASS_NAME, type === "loading" && "animate-spin opacity-90");
 }
 
-type ToastPosition = "top-left" | "top-center" | "top-right" | "bottom-left" | "bottom-center" | "bottom-right";
+type ToastPosition =
+  | "top-left"
+  | "top-center"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-center"
+  | "bottom-right";
 
 interface ToastProviderProps extends Toast.Provider.Props {
   position?: ToastPosition;
@@ -165,7 +171,8 @@ function EmbeddedToastBridge({ hostOrigin }: { hostOrigin: string }) {
         }
         return;
       }
-      const action = event.data.action === "primary" ? toast.actionProps : toast.data?.secondaryActionProps;
+      const action =
+        event.data.action === "primary" ? toast.actionProps : toast.data?.secondaryActionProps;
       action?.onClick?.(new MouseEvent("click") as never);
     };
     window.addEventListener("message", receiveHostAction);
@@ -189,7 +196,8 @@ function shouldRenderForActiveThread(
 function useVisibleThreadIdsFromRoute(): ReadonlySet<ThreadId> {
   const activeThreadId = useParams({
     strict: false,
-    select: (params) => (typeof params.threadId === "string" ? ThreadId.makeUnsafe(params.threadId) : null),
+    select: (params) =>
+      typeof params.threadId === "string" ? ThreadId.makeUnsafe(params.threadId) : null,
   });
   const routeSearch = useDiffRouteSearch();
   const splitView = useSplitViewStore(
@@ -430,11 +438,16 @@ function ArchiveUndoToastSurface({
       <Toast.Content
         className={cn(
           "pointer-events-auto relative flex items-center gap-2 overflow-hidden px-3.5 py-2 text-[length:var(--app-font-size-ui-sm,11px)] leading-normal transition-opacity duration-250 data-expanded:opacity-100",
-          hideCollapsedContent && "not-data-expanded:pointer-events-none not-data-expanded:opacity-0",
+          hideCollapsedContent &&
+            "not-data-expanded:pointer-events-none not-data-expanded:opacity-0",
         )}
         data-slot="toast-archive-undo"
       >
-        <Toast.Title className="min-w-0 flex-1 font-normal whitespace-nowrap" data-slot="toast-title" render={<div />}>
+        <Toast.Title
+          className="min-w-0 flex-1 font-normal whitespace-nowrap"
+          data-slot="toast-title"
+          render={<div />}
+        >
           <button
             type="button"
             className={ARCHIVE_UNDO_TOAST_LINK_CLASS_NAME}
@@ -492,7 +505,9 @@ function ToastSurface({
         <div
           className={cn(
             "shrink-0 [&_svg]:pointer-events-none [&_svg]:shrink-0",
-            compact ? cn("[&>svg]:size-3.5", compactContextual && "pt-0.5") : "[&>svg]:h-lh [&>svg]:w-4",
+            compact
+              ? cn("[&>svg]:size-3.5", compactContextual && "pt-0.5")
+              : "[&>svg]:h-lh [&>svg]:w-4",
           )}
           data-slot="toast-icon"
         >
@@ -501,7 +516,10 @@ function ToastSurface({
       ) : null}
 
       <div
-        className={cn("min-w-0 flex-1", compact && !compactContextual ? "flex items-center" : "flex flex-col gap-0.5")}
+        className={cn(
+          "min-w-0 flex-1",
+          compact && !compactContextual ? "flex items-center" : "flex flex-col gap-0.5",
+        )}
       >
         <Toast.Title
           className={cn(
@@ -555,7 +573,11 @@ function ToastProvider({ children, position: positionProp, ...props }: ToastProv
   return (
     <Toast.Provider toastManager={toastManager} {...props}>
       {children}
-      {hostOrigin ? <EmbeddedToastBridge hostOrigin={hostOrigin} /> : <Toasts position={position} />}
+      {hostOrigin ? (
+        <EmbeddedToastBridge hostOrigin={hostOrigin} />
+      ) : (
+        <Toasts position={position} />
+      )}
     </Toast.Provider>
   );
 }
@@ -608,7 +630,10 @@ function Toasts({ position: positionProp }: { position: ToastPosition }) {
         }
       >
         {visibleToastLayout.items.map(({ toast, visibleIndex, offsetY }) => {
-          const hideCollapsedContent = shouldHideCollapsedToastContent(visibleIndex, visibleToastLayout.items.length);
+          const hideCollapsedContent = shouldHideCollapsedToastContent(
+            visibleIndex,
+            visibleToastLayout.items.length,
+          );
           const compact = shouldUseCompactToast(toast);
           const archiveUndoToast = isArchiveUndoToast(toast);
 
@@ -617,7 +642,10 @@ function Toasts({ position: positionProp }: { position: ToastPosition }) {
               className={cn(
                 "absolute z-[calc(9999-var(--toast-index))] h-(--toast-calc-height) select-none [transition:transform_.5s_cubic-bezier(.22,1,.36,1),opacity_.5s,height_.15s]",
                 archiveUndoToast
-                  ? cn(ARCHIVE_UNDO_TOAST_SURFACE_CLASS_NAME, position.includes("center") ? "mx-auto" : "")
+                  ? cn(
+                      ARCHIVE_UNDO_TOAST_SURFACE_CLASS_NAME,
+                      position.includes("center") ? "mx-auto" : "",
+                    )
                   : toastRootClassName(position, compact),
                 // Base positioning using data-position
                 "data-[position*=right]:right-0 data-[position*=right]:left-auto",
@@ -786,4 +814,10 @@ function AnchoredToasts() {
   );
 }
 
-export { ToastProvider, type ToastPosition, toastManager, AnchoredToastProvider, anchoredToastManager };
+export {
+  ToastProvider,
+  type ToastPosition,
+  toastManager,
+  AnchoredToastProvider,
+  anchoredToastManager,
+};

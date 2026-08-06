@@ -27,10 +27,19 @@ import {
 } from "../appSettings";
 import { APP_VERSION } from "../branding";
 import { AdvancedSettingsPanel } from "~/components/settings/AdvancedSettingsPanel";
-import { ArchivedSettingsPanel, WorktreesSettingsPanel } from "~/components/settings/ConversationStorageSettingsPanels";
-import { AppSnapSettingsPanel, NotificationsSettingsPanel } from "~/components/settings/DesktopSettingsPanels";
+import {
+  ArchivedSettingsPanel,
+  WorktreesSettingsPanel,
+} from "~/components/settings/ConversationStorageSettingsPanels";
+import {
+  AppSnapSettingsPanel,
+  NotificationsSettingsPanel,
+} from "~/components/settings/DesktopSettingsPanels";
 import { ModelsSettingsPanel } from "~/components/settings/ModelsSettingsPanel";
-import { isProviderInstallSettingsDirty, ProvidersSettingsPanel } from "~/components/settings/ProvidersSettingsPanel";
+import {
+  isProviderInstallSettingsDirty,
+  ProvidersSettingsPanel,
+} from "~/components/settings/ProvidersSettingsPanel";
 import { ProviderOptionLabel } from "../components/ProviderIcon";
 import ReleaseHistoryDialog from "../components/ReleaseHistoryDialog";
 import { KeyboardShortcutsSettingsPanel } from "../components/settings/KeyboardShortcutsSettingsPanel";
@@ -87,9 +96,16 @@ import {
   readLatticeSettingsSectionMessage,
 } from "../embedMode";
 import { sameProviderOrder } from "../providerOrdering";
-import { normalizeSettingsSection, SETTINGS_NAV_ITEMS, SETTINGS_TARGETS } from "../settingsNavigation";
+import {
+  normalizeSettingsSection,
+  SETTINGS_NAV_ITEMS,
+  SETTINGS_TARGETS,
+} from "../settingsNavigation";
 import { SETTINGS_PAGE_BACKGROUND_CLASS_NAME } from "../settingsPanelStyles";
-import { createEmbeddedSettingsHeightReporter, measureEmbeddedSettingsHeight } from "../embeddedSettingsHeight";
+import {
+  createEmbeddedSettingsHeightReporter,
+  measureEmbeddedSettingsHeight,
+} from "../embeddedSettingsHeight";
 
 // ── Settings taxonomy ──────────────────────────────────────────────────────
 
@@ -189,17 +205,28 @@ function SettingsRouteView() {
   const settingsTarget = typeof routeSearch.target === "string" ? routeSearch.target : null;
   const activeSectionItem = SETTINGS_NAV_ITEMS.find((item) => item.id === activeSection)!;
 
-  const { isDefaultActiveTheme, resetAllThemes, resolvedTheme, theme, setTheme, systemUiFont, setSystemUiFont } =
-    useTheme();
+  const {
+    isDefaultActiveTheme,
+    resetAllThemes,
+    resolvedTheme,
+    theme,
+    setTheme,
+    systemUiFont,
+    setSystemUiFont,
+  } = useTheme();
   const { settings, defaults, updateSettings, resetSettings } = useAppSettings();
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const [releaseHistoryOpen, setReleaseHistoryOpen] = useState(false);
   const [resetEpoch, setResetEpoch] = useState(0);
-  const shouldShowFontSmoothing = isMacPlatform(typeof navigator === "undefined" ? "" : navigator.platform);
+  const shouldShowFontSmoothing = isMacPlatform(
+    typeof navigator === "undefined" ? "" : navigator.platform,
+  );
   const visibleTerminalFontFamilySuggestions = useMemo(() => {
     const query = settings.terminalFontFamily.trim().toLowerCase();
     if (!query) return TERMINAL_FONT_FAMILY_SUGGESTIONS;
-    return TERMINAL_FONT_FAMILY_SUGGESTIONS.filter((suggestion) => suggestion.toLowerCase().includes(query));
+    return TERMINAL_FONT_FAMILY_SUGGESTIONS.filter((suggestion) =>
+      suggestion.toLowerCase().includes(query),
+    );
   }, [settings.terminalFontFamily]);
 
   const isGitTextGenerationModelDirty = isGitTextGenerationSettingsDirty(settings, defaults);
@@ -233,7 +260,10 @@ function SettingsRouteView() {
       const fonts = (document as Document & { fonts?: FontFaceSet }).fonts;
       if (fonts && typeof fonts.load === "function") {
         try {
-          await Promise.all([fonts.load('400 12px "Inter Variable"'), fonts.load('600 18px "Inter Variable"')]);
+          await Promise.all([
+            fonts.load('400 12px "Inter Variable"'),
+            fonts.load('600 18px "Inter Variable"'),
+          ]);
         } catch {
           // A missing FontFaceSet or failed font request must not strand Settings.
         }
@@ -318,7 +348,9 @@ function SettingsRouteView() {
   useEffect(() => {
     if (!settingsTarget) return;
     const frame = window.requestAnimationFrame(() => {
-      document.getElementById(settingsTarget)?.scrollIntoView({ block: "start", behavior: "smooth" });
+      document
+        .getElementById(settingsTarget)
+        ?.scrollIntoView({ block: "start", behavior: "smooth" });
     });
     return () => window.cancelAnimationFrame(frame);
   }, [activeSection, settingsTarget]);
@@ -328,32 +360,52 @@ function SettingsRouteView() {
     ...(!isDefaultActiveTheme ? [`${resolvedTheme === "dark" ? "Dark" : "Light"} theme pack`] : []),
     ...(settings.defaultProvider !== defaults.defaultProvider ? ["Default provider"] : []),
     ...(settings.defaultThreadEnvMode !== defaults.defaultThreadEnvMode ? ["New thread mode"] : []),
-    ...(settings.sidebarProjectSortOrder !== defaults.sidebarProjectSortOrder ? ["Project sort order"] : []),
-    ...(settings.sidebarThreadSortOrder !== defaults.sidebarThreadSortOrder ? ["Thread sort order"] : []),
+    ...(settings.sidebarProjectSortOrder !== defaults.sidebarProjectSortOrder
+      ? ["Project sort order"]
+      : []),
+    ...(settings.sidebarThreadSortOrder !== defaults.sidebarThreadSortOrder
+      ? ["Thread sort order"]
+      : []),
     ...(settings.showChatsSection !== defaults.showChatsSection ? ["Chats section"] : []),
     ...(settings.showStudioSection !== defaults.showStudioSection ? ["Studio section"] : []),
     ...(settings.uiDensity !== defaults.uiDensity ? ["UI density"] : []),
     ...(settings.chatFontSizePx !== defaults.chatFontSizePx ? ["Base font size"] : []),
     ...(settings.terminalFontSizePx !== defaults.terminalFontSizePx ? ["Terminal font size"] : []),
     ...(settings.terminalFontFamily !== defaults.terminalFontFamily ? ["Terminal font"] : []),
-    ...(shouldShowFontSmoothing && settings.enableNativeFontSmoothing !== defaults.enableNativeFontSmoothing
+    ...(shouldShowFontSmoothing &&
+    settings.enableNativeFontSmoothing !== defaults.enableNativeFontSmoothing
       ? ["Font smoothing"]
       : []),
     ...(settings.timestampFormat !== defaults.timestampFormat ? ["Time format"] : []),
-    ...(settings.enableTaskCompletionToasts !== defaults.enableTaskCompletionToasts ? ["Activity toasts"] : []),
-    ...(settings.enableSystemTaskCompletionNotifications !== defaults.enableSystemTaskCompletionNotifications
+    ...(settings.enableTaskCompletionToasts !== defaults.enableTaskCompletionToasts
+      ? ["Activity toasts"]
+      : []),
+    ...(settings.enableSystemTaskCompletionNotifications !==
+    defaults.enableSystemTaskCompletionNotifications
       ? ["Desktop notifications"]
       : []),
-    ...(settings.enableAssistantStreaming !== defaults.enableAssistantStreaming ? ["Assistant output"] : []),
+    ...(settings.enableAssistantStreaming !== defaults.enableAssistantStreaming
+      ? ["Assistant output"]
+      : []),
     ...(settings.followUpBehavior !== defaults.followUpBehavior ? ["Follow-up behavior"] : []),
     ...(settings.enableAppSnap !== defaults.enableAppSnap ? ["AppSnap"] : []),
-    ...(!sameAppSnapShortcut(settings.appSnapShortcut, defaults.appSnapShortcut) ? ["AppSnap shortcut"] : []),
+    ...(!sameAppSnapShortcut(settings.appSnapShortcut, defaults.appSnapShortcut)
+      ? ["AppSnap shortcut"]
+      : []),
     ...(settings.appSnapPlaySound !== defaults.appSnapPlaySound ? ["AppSnap capture sound"] : []),
-    ...(settings.enableProviderUpdateChecks !== defaults.enableProviderUpdateChecks ? ["Provider update checks"] : []),
+    ...(settings.enableProviderUpdateChecks !== defaults.enableProviderUpdateChecks
+      ? ["Provider update checks"]
+      : []),
     ...(settings.diffWordWrap !== defaults.diffWordWrap ? ["Diff line wrapping"] : []),
-    ...(settings.confirmThreadDelete !== defaults.confirmThreadDelete ? ["Delete confirmation"] : []),
-    ...(settings.confirmThreadArchive !== defaults.confirmThreadArchive ? ["Archive confirmation"] : []),
-    ...(settings.confirmTerminalTabClose !== defaults.confirmTerminalTabClose ? ["Terminal close confirmation"] : []),
+    ...(settings.confirmThreadDelete !== defaults.confirmThreadDelete
+      ? ["Delete confirmation"]
+      : []),
+    ...(settings.confirmThreadArchive !== defaults.confirmThreadArchive
+      ? ["Archive confirmation"]
+      : []),
+    ...(settings.confirmTerminalTabClose !== defaults.confirmTerminalTabClose
+      ? ["Terminal close confirmation"]
+      : []),
     ...(isGitTextGenerationModelDirty ? ["Git writing model"] : []),
     ...(settings.customCodexModels.length > 0 ||
     settings.customClaudeModels.length > 0 ||
@@ -376,7 +428,9 @@ function SettingsRouteView() {
 
     const api = readNativeApi();
     const confirmed = await (api ?? ensureNativeApi()).dialogs.confirm(
-      ["Restore default settings?", `This will reset: ${changedSettingLabels.join(", ")}.`].join("\n"),
+      ["Restore default settings?", `This will reset: ${changedSettingLabels.join(", ")}.`].join(
+        "\n",
+      ),
     );
     if (!confirmed) return;
 
@@ -407,14 +461,18 @@ function SettingsRouteView() {
           isChanged ? (
             <SettingResetButton
               label={resetLabel}
-              onClick={() => updateSettings({ [settingKey]: defaults[settingKey] } as Partial<AppSettings>)}
+              onClick={() =>
+                updateSettings({ [settingKey]: defaults[settingKey] } as Partial<AppSettings>)
+              }
             />
           ) : null
         }
         control={
           <Switch
             checked={settings[settingKey]}
-            onCheckedChange={(checked) => updateSettings({ [settingKey]: Boolean(checked) } as Partial<AppSettings>)}
+            onCheckedChange={(checked) =>
+              updateSettings({ [settingKey]: Boolean(checked) } as Partial<AppSettings>)
+            }
             aria-label={ariaLabel}
           />
         }
@@ -453,7 +511,10 @@ function SettingsRouteView() {
             >
               {PROVIDER_SELECT_OPTIONS.map((provider) => (
                 <SelectItem key={provider} value={provider}>
-                  <ProviderOptionLabel provider={provider} label={PROVIDER_DISPLAY_NAMES[provider]} />
+                  <ProviderOptionLabel
+                    provider={provider}
+                    label={PROVIDER_DISPLAY_NAMES[provider]}
+                  />
                 </SelectItem>
               ))}
             </SettingsSelectControl>
@@ -522,8 +583,12 @@ function SettingsRouteView() {
               ariaLabel="Project sort order"
               valueContent={SIDEBAR_PROJECT_SORT_ORDER_LABELS[settings.sidebarProjectSortOrder]}
             >
-              <SelectItem value="updated_at">{SIDEBAR_PROJECT_SORT_ORDER_LABELS.updated_at}</SelectItem>
-              <SelectItem value="created_at">{SIDEBAR_PROJECT_SORT_ORDER_LABELS.created_at}</SelectItem>
+              <SelectItem value="updated_at">
+                {SIDEBAR_PROJECT_SORT_ORDER_LABELS.updated_at}
+              </SelectItem>
+              <SelectItem value="created_at">
+                {SIDEBAR_PROJECT_SORT_ORDER_LABELS.created_at}
+              </SelectItem>
               <SelectItem value="manual">{SIDEBAR_PROJECT_SORT_ORDER_LABELS.manual}</SelectItem>
             </SettingsSelectControl>
           }
@@ -556,8 +621,12 @@ function SettingsRouteView() {
               ariaLabel="Thread sort order"
               valueContent={SIDEBAR_THREAD_SORT_ORDER_LABELS[settings.sidebarThreadSortOrder]}
             >
-              <SelectItem value="updated_at">{SIDEBAR_THREAD_SORT_ORDER_LABELS.updated_at}</SelectItem>
-              <SelectItem value="created_at">{SIDEBAR_THREAD_SORT_ORDER_LABELS.created_at}</SelectItem>
+              <SelectItem value="updated_at">
+                {SIDEBAR_THREAD_SORT_ORDER_LABELS.updated_at}
+              </SelectItem>
+              <SelectItem value="created_at">
+                {SIDEBAR_THREAD_SORT_ORDER_LABELS.created_at}
+              </SelectItem>
             </SettingsSelectControl>
           }
         />
@@ -567,7 +636,8 @@ function SettingsRouteView() {
         {renderBooleanSettingRow({
           settingKey: "showChatsSection",
           title: "Chats",
-          description: "Show the standalone Chats list in the sidebar footer (chats not tied to a project).",
+          description:
+            "Show the standalone Chats list in the sidebar footer (chats not tied to a project).",
           resetLabel: "chats section",
           ariaLabel: "Show the Chats section in the sidebar",
         })}
@@ -650,7 +720,8 @@ function SettingsRouteView() {
           {renderBooleanSettingRow({
             settingKey: "showEnvironmentMarkers",
             title: "Text markers",
-            description: "Show highlighted and underlined transcript text in the Environment panel.",
+            description:
+              "Show highlighted and underlined transcript text in the Environment panel.",
             resetLabel: "text markers section",
             ariaLabel: "Show the Text markers section in the Environment panel",
           })}
@@ -683,7 +754,9 @@ function SettingsRouteView() {
             title="Theme"
             description="Choose how Synara looks across the app."
             resetAction={
-              theme !== "system" ? <SettingResetButton label="theme" onClick={() => setTheme("system")} /> : null
+              theme !== "system" ? (
+                <SettingResetButton label="theme" onClick={() => setTheme("system")} />
+              ) : null
             }
             control={
               <SettingsSegmentedControl
@@ -700,8 +773,16 @@ function SettingsRouteView() {
         </SettingsCard>
 
         <div className="space-y-3">
-          {(resolvedTheme === "dark" ? (["dark", "light"] as const) : (["light", "dark"] as const)).map((variant) => (
-            <ThemePackEditor key={variant} variant={variant} isActive={resolvedTheme === variant} mode={theme} />
+          {(resolvedTheme === "dark"
+            ? (["dark", "light"] as const)
+            : (["light", "dark"] as const)
+          ).map((variant) => (
+            <ThemePackEditor
+              key={variant}
+              variant={variant}
+              isActive={resolvedTheme === variant}
+              mode={theme}
+            />
           ))}
         </div>
       </SettingsSectionShell>
@@ -711,7 +792,9 @@ function SettingsRouteView() {
           title="Use system UI font"
           description="Ignore the theme's custom UI font and render the interface with the native system font (SF Pro on macOS)."
           resetAction={
-            !systemUiFont ? <SettingResetButton label="system UI font" onClick={() => setSystemUiFont(true)} /> : null
+            !systemUiFont ? (
+              <SettingResetButton label="system UI font" onClick={() => setSystemUiFont(true)} />
+            ) : null
           }
           control={
             <Switch
@@ -1092,7 +1175,9 @@ function SettingsRouteView() {
               {activeSection !== "profile" ? (
                 <div className="synara-settings-heading mb-8 flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <h1 className="text-xl font-medium tracking-tight text-foreground">{activeSectionItem.label}</h1>
+                    <h1 className="text-xl font-medium tracking-tight text-foreground">
+                      {activeSectionItem.label}
+                    </h1>
                     <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
                       {activeSectionItem.description}
                     </p>

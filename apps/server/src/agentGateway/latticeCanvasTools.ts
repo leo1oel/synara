@@ -2,7 +2,11 @@ import { Effect } from "effect";
 
 import { LatticeCanvasBroker, LatticeCanvasBrokerError } from "./Services/LatticeCanvasBroker.ts";
 import { mcpToolResultError, mcpToolResultJson } from "./protocol.ts";
-import { READ_ONLY_TOOL_ANNOTATIONS, WRITE_TOOL_ANNOTATIONS, type ToolEntry } from "./toolRuntime.ts";
+import {
+  READ_ONLY_TOOL_ANNOTATIONS,
+  WRITE_TOOL_ANNOTATIONS,
+  type ToolEntry,
+} from "./toolRuntime.ts";
 
 const commonShapeProperties = {
   id: { type: "string", description: "Stable shape id in the form shape:name." },
@@ -45,7 +49,8 @@ const createShapesSchema = {
           "frame",
           "highlight",
         ],
-        description: "The model-friendly shape type. Geometric aliases are converted to tldraw geo shapes.",
+        description:
+          "The model-friendly shape type. Geometric aliases are converted to tldraw geo shapes.",
       },
     },
     required: ["type"],
@@ -65,7 +70,9 @@ const updateShapesSchema = {
 } as const;
 
 export const makeLatticeCanvasTools = (options: {
-  readonly resolveWorkspaceRoot: (context: import("./toolRuntime.ts").ToolContext) => Effect.Effect<string | null>;
+  readonly resolveWorkspaceRoot: (
+    context: import("./toolRuntime.ts").ToolContext,
+  ) => Effect.Effect<string | null>;
 }) =>
   Effect.gen(function* () {
     const broker = yield* LatticeCanvasBroker;
@@ -98,7 +105,11 @@ export const makeLatticeCanvasTools = (options: {
           ),
           Effect.map(mcpToolResultJson),
           Effect.catch((error) =>
-            Effect.succeed(mcpToolResultError(JSON.stringify({ error: { code: error.code, message: error.message } }))),
+            Effect.succeed(
+              mcpToolResultError(
+                JSON.stringify({ error: { code: error.code, message: error.message } }),
+              ),
+            ),
           ),
         ),
     });

@@ -25,7 +25,11 @@ import {
   MenuTrigger,
 } from "../ui/menu";
 import { useComposerDraftStore } from "../../composerDraftStore";
-import { buildNextProviderOptions, buildProviderOptionPatch, type ProviderOptions } from "../../providerModelOptions";
+import {
+  buildNextProviderOptions,
+  buildProviderOptionPatch,
+  type ProviderOptions,
+} from "../../providerModelOptions";
 import { COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME } from "./composerPickerStyles";
 import { ComposerPickerMenuPopup } from "./ComposerPickerMenuPopup";
 import {
@@ -64,7 +68,10 @@ function getSelectedAgentValue(
   return selectedAgent && selectedAgent.length > 0 ? selectedAgent : defaultAgent;
 }
 
-function findAgentLabel(agents: ReadonlyArray<ProviderAgentDescriptor>, value: string | null): string | null {
+function findAgentLabel(
+  agents: ReadonlyArray<ProviderAgentDescriptor>,
+  value: string | null,
+): string | null {
   if (!value) return null;
   const agent = agents.find((candidate) => candidate.name === value);
   return agent?.displayName ?? value;
@@ -157,7 +164,10 @@ function FastModeToggle({ enabled, onToggle }: { enabled: boolean; onToggle: () 
       >
         <Icon
           aria-hidden="true"
-          className={cn("size-3.5", enabled ? "text-[hsl(var(--chart-4))]" : "text-muted-foreground/70")}
+          className={cn(
+            "size-3.5",
+            enabled ? "text-[hsl(var(--chart-4))]" : "text-muted-foreground/70",
+          )}
         />
       </TooltipTrigger>
       <TooltipPopup side="top" variant="picker">
@@ -225,7 +235,11 @@ function TraitRadioSection({
           return option.description ? (
             <Tooltip key={option.value}>
               <TooltipTrigger render={item} />
-              <TooltipPopup side="right" variant="picker" className="max-w-80 whitespace-normal leading-tight">
+              <TooltipPopup
+                side="right"
+                variant="picker"
+                className="max-w-80 whitespace-normal leading-tight"
+              >
                 {option.description}
               </TooltipPopup>
             </Tooltip>
@@ -290,7 +304,8 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
   // Fast mode rides the Effort header as a compact icon toggle whenever an
   // effort section exists; fast-only models (no effort levels) keep the
   // standalone radio section instead.
-  const showsFastModeEffortToggle = includeFastMode && supportsFastModeControl && effortLevels.length > 0;
+  const showsFastModeEffortToggle =
+    includeFastMode && supportsFastModeControl && effortLevels.length > 0;
   const agentOptions = getAgentOptions(provider, runtimeAgents);
   const defaultAgent = defaultAgentForProvider(provider);
   const selectedAgent = getSelectedAgentValue(provider, modelOptions);
@@ -310,10 +325,15 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
   // The fast-mode header toggle passes `keepMenuOpen` so its state flip stays visible.
   const commitTrait = useCallback(
     (patch: Record<string, unknown>, options?: { keepMenuOpen?: boolean }) => {
-      setProviderModelOptions(threadId, provider, buildNextProviderOptions(provider, modelOptions, patch), {
-        ...(model !== undefined ? { model } : {}),
-        persistSticky: true,
-      });
+      setProviderModelOptions(
+        threadId,
+        provider,
+        buildNextProviderOptions(provider, modelOptions, patch),
+        {
+          ...(model !== undefined ? { model } : {}),
+          persistSticky: true,
+        },
+      );
       if (!options?.keepMenuOpen) {
         onSelectionComplete?.();
       }
@@ -332,7 +352,9 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
     if (!nextOption) return;
     if (promptInjectedValues.includes(nextOption.value)) {
       const nextPrompt =
-        prompt.trim().length === 0 ? ULTRATHINK_PROMPT_PREFIX : applyClaudePromptEffortPrefix(prompt, "ultrathink");
+        prompt.trim().length === 0
+          ? ULTRATHINK_PROMPT_PREFIX
+          : applyClaudePromptEffortPrefix(prompt, "ultrathink");
       onPromptChange(nextPrompt);
       onSelectionComplete?.();
       return;
@@ -392,7 +414,9 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
               showsFastModeEffortToggle ? (
                 <FastModeToggle
                   enabled={fastModeEnabled}
-                  onToggle={() => commitTrait({ fastMode: !fastModeEnabled }, { keepMenuOpen: true })}
+                  onToggle={() =>
+                    commitTrait({ fastMode: !fastModeEnabled }, { keepMenuOpen: true })
+                  }
                 />
               ) : undefined
             }
@@ -514,13 +538,8 @@ export const TraitsPicker = memo(function TraitsPicker({
     setMenuOpen(false);
     scheduleSelectionCommitted();
   }, [scheduleSelectionCommitted, setMenuOpen]);
-  const { caps, effortLevels, thinkingEnabled, contextWindowOptions, fastModeDescriptor } = getComposerTraitSelection(
-    provider,
-    model,
-    prompt,
-    modelOptions,
-    runtimeModel,
-  );
+  const { caps, effortLevels, thinkingEnabled, contextWindowOptions, fastModeDescriptor } =
+    getComposerTraitSelection(provider, model, prompt, modelOptions, runtimeModel);
   const hasVisibleControls = hasVisibleComposerTraitControls(
     { caps, effortLevels, thinkingEnabled, contextWindowOptions, fastModeDescriptor },
     { includeFastMode },
@@ -608,7 +627,9 @@ export const TraitsPicker = memo(function TraitsPicker({
         ) : null}
         {contextWindowLabel ? (
           <>
-            {visiblePrimaryTriggerLabel || showsFastBadge ? <span className="text-muted-foreground/45">·</span> : null}
+            {visiblePrimaryTriggerLabel || showsFastBadge ? (
+              <span className="text-muted-foreground/45">·</span>
+            ) : null}
             <span>{contextWindowLabel}</span>
           </>
         ) : null}
@@ -626,7 +647,9 @@ export const TraitsPicker = memo(function TraitsPicker({
     >
       {shortcutLabel ? (
         <Tooltip>
-          <TooltipTrigger render={<MenuTrigger render={triggerButton} />}>{triggerContent}</TooltipTrigger>
+          <TooltipTrigger render={<MenuTrigger render={triggerButton} />}>
+            {triggerContent}
+          </TooltipTrigger>
           {!isMenuOpen ? (
             <TooltipPopup side="top" sideOffset={6} variant="picker">
               <span className="inline-flex items-center gap-2 px-1 py-0.5">

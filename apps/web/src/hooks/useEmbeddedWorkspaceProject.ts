@@ -14,7 +14,9 @@ export function useEmbeddedWorkspaceProject(): {
   const embedMode = useMemo(() => readEmbedMode(), []);
   const workspaceRoot = embedMode?.workspaceRoot ?? null;
   const matchingProject = useStore((store) =>
-    embedMode ? (store.projects.find((project) => embedWorkspaceMatches(embedMode, project.cwd)) ?? null) : null,
+    embedMode
+      ? (store.projects.find((project) => embedWorkspaceMatches(embedMode, project.cwd)) ?? null)
+      : null,
   );
   const [projectId, setProjectId] = useState<ProjectId | null>(matchingProject?.id ?? null);
   const [bindingError, setBindingError] = useState<string | null>(null);
@@ -35,7 +37,8 @@ export function useEmbeddedWorkspaceProject(): {
         useStore.getState().syncServerShellSnapshot(initialSnapshot);
         const existingProject =
           initialSnapshot.projects.find(
-            (project) => project.kind === "project" && embedWorkspaceMatches(embedMode, project.workspaceRoot),
+            (project) =>
+              project.kind === "project" && embedWorkspaceMatches(embedMode, project.workspaceRoot),
           ) ?? null;
         const result = existingProject
           ? {
@@ -56,7 +59,9 @@ export function useEmbeddedWorkspaceProject(): {
         setProjectId(result.projectId);
         setBindingError(null);
       } catch (error) {
-        setBindingError(error instanceof Error ? error.message : "The Lattice project could not be bound.");
+        setBindingError(
+          error instanceof Error ? error.message : "The Lattice project could not be bound.",
+        );
       }
     })();
   }, [embedMode, matchingProject, workspaceRoot]);

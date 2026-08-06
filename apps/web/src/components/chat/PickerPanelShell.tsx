@@ -12,7 +12,16 @@ import {
   COMPOSER_PICKER_SEARCH_HEADER_CLASS_NAME,
 } from "./composerPickerStyles";
 
-const MENU_NAVIGATION_KEYS = new Set(["ArrowDown", "ArrowUp", "Home", "End", "PageDown", "PageUp", "Enter", "Escape"]);
+const MENU_NAVIGATION_KEYS = new Set([
+  "ArrowDown",
+  "ArrowUp",
+  "Home",
+  "End",
+  "PageDown",
+  "PageUp",
+  "Enter",
+  "Escape",
+]);
 
 export function PickerPanelShell(props: {
   searchPlaceholder?: string;

@@ -6,7 +6,10 @@
 import { useState, useSyncExternalStore } from "react";
 
 import { EyeIcon, PanelCollapseIcon, PanelExpandIcon, XIcon } from "~/lib/icons";
-import { getLiveLatticeHostContext, subscribeLiveLatticeHostContext } from "~/lib/latticeHostContext";
+import {
+  getLiveLatticeHostContext,
+  subscribeLiveLatticeHostContext,
+} from "~/lib/latticeHostContext";
 import { cn } from "~/lib/utils";
 import { Button } from "../ui/button";
 import { DisclosureRegion } from "../ui/DisclosureRegion";
@@ -17,7 +20,10 @@ import {
   latticeContextSummary,
 } from "./ComposerLatticeContextBar.logic";
 import { ComposerStackedPanelHeaderRow } from "./ComposerStackedPanelContent";
-import { COMPOSER_STACKED_PANEL_DIVIDER_CLASS_NAME, ComposerStackedPanel } from "./ComposerStackedPanel";
+import {
+  COMPOSER_STACKED_PANEL_DIVIDER_CLASS_NAME,
+  ComposerStackedPanel,
+} from "./ComposerStackedPanel";
 import {
   COMPOSER_STACKED_PANEL_BODY_PADDING_CLASS_NAME,
   COMPOSER_STACKED_PANEL_ICON_BUTTON_CLASS_NAME,
@@ -45,10 +51,15 @@ export function ComposerLatticeContextBar({
   const details = latticeContextDetails(context);
   const selection = latticeContextSelection(context);
   if (!selection) return null;
-  const disclosureLabel = expanded ? "Hide included context details" : "Show included context details";
+  const disclosureLabel = expanded
+    ? "Hide included context details"
+    : "Show included context details";
 
   return (
-    <ComposerStackedPanel attachedToPrevious={attachedToPrevious} data-testid="composer-lattice-context">
+    <ComposerStackedPanel
+      attachedToPrevious={attachedToPrevious}
+      data-testid="composer-lattice-context"
+    >
       <ComposerStackedPanelHeaderRow>
         <button
           type="button"
@@ -60,7 +71,9 @@ export function ComposerLatticeContextBar({
         >
           <EyeIcon className={COMPOSER_STACKED_PANEL_ICON_CLASS_NAME} />
           <span className="shrink-0 text-[12px] font-medium text-foreground/90">Context</span>
-          <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground/75">{summary}</span>
+          <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground/75">
+            {summary}
+          </span>
           {selection ? (
             <span className="shrink-0 rounded-full bg-[var(--color-background-button-secondary)] px-1.5 py-0.5 text-[10px] text-[var(--color-text-foreground-secondary)]">
               {selection.length.toLocaleString()} chars
@@ -100,7 +113,9 @@ export function ComposerLatticeContextBar({
           scrollFade
         >
           <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="text-[11px] text-muted-foreground/75">Included automatically with your next message</p>
+            <p className="text-[11px] text-muted-foreground/75">
+              Included automatically with your next message
+            </p>
             <span className="shrink-0 rounded-full bg-[var(--color-background-button-secondary)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-text-foreground-secondary)]">
               Included
             </span>
@@ -117,8 +132,12 @@ export function ComposerLatticeContextBar({
             <section className="mt-2 border-t border-border/45 pt-2">
               <div className="mb-1.5 flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="truncate text-[11px] font-medium text-foreground/85">{selection.label}</p>
-                  <p className="text-[10px] text-muted-foreground/55">{selection.length.toLocaleString()} characters</p>
+                  <p className="truncate text-[11px] font-medium text-foreground/85">
+                    {selection.label}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/55">
+                    {selection.length.toLocaleString()} characters
+                  </p>
                 </div>
                 {onClearSelection ? (
                   <Button

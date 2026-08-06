@@ -339,7 +339,9 @@ describe("expandCollapsedComposerCursor", () => {
     const collapsedCursorAfterMention = "what's in my ".length + 2;
     const expandedCursorAfterMention = "what's in my @AGENTS.md ".length;
 
-    expect(expandCollapsedComposerCursor(text, collapsedCursorAfterMention)).toBe(expandedCursorAfterMention);
+    expect(expandCollapsedComposerCursor(text, collapsedCursorAfterMention)).toBe(
+      expandedCursorAfterMention,
+    );
   });
 
   it("allows path trigger detection to close after selecting a mention", () => {
@@ -383,7 +385,9 @@ describe("collapseExpandedComposerCursor", () => {
     const collapsedCursorAfterMention = "what's in my ".length + 2;
     const expandedCursorAfterMention = "what's in my @AGENTS.md ".length;
 
-    expect(collapseExpandedComposerCursor(text, expandedCursorAfterMention)).toBe(collapsedCursorAfterMention);
+    expect(collapseExpandedComposerCursor(text, expandedCursorAfterMention)).toBe(
+      collapsedCursorAfterMention,
+    );
   });
 
   it("keeps replacement cursors aligned when another mention already exists earlier", () => {
@@ -400,7 +404,9 @@ describe("collapseExpandedComposerCursor", () => {
 
     expect(collapseExpandedComposerCursor(text, `@"Casual greeting"`.length)).toBe(1);
     expect(collapseExpandedComposerCursor(text, `@"Casual greeting" `.length)).toBe(2);
-    expect(expandCollapsedComposerCursor(text, collapseExpandedComposerCursor(text, text.length))).toBe(text.length);
+    expect(
+      expandCollapsedComposerCursor(text, collapseExpandedComposerCursor(text, text.length)),
+    ).toBe(text.length);
   });
 
   it("maps expanded /automation command text cursor back to the chip cursor", () => {
@@ -415,8 +421,12 @@ describe("clampCollapsedComposerCursor", () => {
   it("clamps to collapsed prompt length when mentions are present", () => {
     const text = "open @AGENTS.md then ";
 
-    expect(clampCollapsedComposerCursor(text, text.length)).toBe("open ".length + 1 + " then ".length);
-    expect(clampCollapsedComposerCursor(text, Number.POSITIVE_INFINITY)).toBe("open ".length + 1 + " then ".length);
+    expect(clampCollapsedComposerCursor(text, text.length)).toBe(
+      "open ".length + 1 + " then ".length,
+    );
+    expect(clampCollapsedComposerCursor(text, Number.POSITIVE_INFINITY)).toBe(
+      "open ".length + 1 + " then ".length,
+    );
   });
 });
 
@@ -453,8 +463,12 @@ describe("isCollapsedCursorAdjacentToInlineToken", () => {
   });
 
   it("keeps raw skill triggers non-adjacent while typing", () => {
-    expect(isCollapsedCursorAdjacentToInlineToken("hello $che", "hello $che".length, "left")).toBe(false);
-    expect(isCollapsedCursorAdjacentToInlineToken("hello /che", "hello /che".length, "right")).toBe(false);
+    expect(isCollapsedCursorAdjacentToInlineToken("hello $che", "hello $che".length, "left")).toBe(
+      false,
+    );
+    expect(isCollapsedCursorAdjacentToInlineToken("hello /che", "hello /che".length, "right")).toBe(
+      false,
+    );
   });
 
   it("detects left adjacency only when cursor is directly after a mention", () => {

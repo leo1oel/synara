@@ -22,7 +22,10 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function providerStatus(provider: ProviderKind, overrides: Partial<ServerProviderStatus> = {}): ServerProviderStatus {
+function providerStatus(
+  provider: ProviderKind,
+  overrides: Partial<ServerProviderStatus> = {},
+): ServerProviderStatus {
   return {
     provider,
     status: "ready",
@@ -251,8 +254,12 @@ describe("isProviderUpdateActive", () => {
       status: "succeeded",
     } satisfies NonNullable<ServerProviderStatus["updateState"]>;
 
-    expect(isProviderUpdateActive(providerStatus("codex", { updateState: queuedState }))).toBe(true);
-    expect(isProviderUpdateActive(providerStatus("codex", { updateState: succeededState }))).toBe(false);
+    expect(isProviderUpdateActive(providerStatus("codex", { updateState: queuedState }))).toBe(
+      true,
+    );
+    expect(isProviderUpdateActive(providerStatus("codex", { updateState: succeededState }))).toBe(
+      false,
+    );
   });
 });
 

@@ -1,4 +1,7 @@
-type MemoryStorage = Pick<Storage, "clear" | "getItem" | "key" | "length" | "removeItem" | "setItem">;
+type MemoryStorage = Pick<
+  Storage,
+  "clear" | "getItem" | "key" | "length" | "removeItem" | "setItem"
+>;
 
 function createMemoryStorage(): MemoryStorage {
   const values = new Map<string, string>();

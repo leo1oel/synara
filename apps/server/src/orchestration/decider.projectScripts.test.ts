@@ -106,7 +106,11 @@ describe("decider project scripts", () => {
 
     expect(Array.isArray(result)).toBe(true);
     const events = Array.isArray(result) ? result : [result];
-    expect(events.map((event) => event.type)).toEqual(["project.deleted", "project.deleted", "project.created"]);
+    expect(events.map((event) => event.type)).toEqual([
+      "project.deleted",
+      "project.deleted",
+      "project.created",
+    ]);
     expect(events.map((event) => (event.payload as { projectId: ProjectId }).projectId)).toEqual([
       asProjectId("project-stale-a"),
       asProjectId("project-stale-b"),

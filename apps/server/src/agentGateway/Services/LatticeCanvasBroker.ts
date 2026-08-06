@@ -32,9 +32,14 @@ export interface LatticeCanvasBrokerShape {
     args: Record<string, unknown>,
   ) => Effect.Effect<unknown, LatticeCanvasBrokerError>;
   readonly poll: (workspaceRoot: string) => Effect.Effect<LatticeCanvasRequest | null>;
-  readonly complete: (workspaceRoot: string, id: string, result: LatticeCanvasResult) => Effect.Effect<boolean>;
+  readonly complete: (
+    workspaceRoot: string,
+    id: string,
+    result: LatticeCanvasResult,
+  ) => Effect.Effect<boolean>;
 }
 
-export class LatticeCanvasBroker extends ServiceMap.Service<LatticeCanvasBroker, LatticeCanvasBrokerShape>()(
-  "synara/agentGateway/Services/LatticeCanvasBroker",
-) {}
+export class LatticeCanvasBroker extends ServiceMap.Service<
+  LatticeCanvasBroker,
+  LatticeCanvasBrokerShape
+>()("synara/agentGateway/Services/LatticeCanvasBroker") {}

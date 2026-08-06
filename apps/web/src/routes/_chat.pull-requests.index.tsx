@@ -1,5 +1,13 @@
-import type { ProjectId, PullRequestInvolvement, PullRequestListEntry, PullRequestState } from "@synara/contracts";
-import { coalescePullRequestListEntries, isValidGitHubRepositoryNameWithOwner } from "@synara/shared/githubRepository";
+import type {
+  ProjectId,
+  PullRequestInvolvement,
+  PullRequestListEntry,
+  PullRequestState,
+} from "@synara/contracts";
+import {
+  coalescePullRequestListEntries,
+  isValidGitHubRepositoryNameWithOwner,
+} from "@synara/shared/githubRepository";
 import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
@@ -16,10 +24,17 @@ import {
   CHAT_MAIN_CONTENT_SURFACE_CLASS_NAME,
   CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME,
 } from "~/components/chat/composerPickerStyles";
-import { RIGHT_DOCK_DEFAULT_WIDTH, RIGHT_DOCK_MIN_WIDTH, RightDock } from "~/components/chat/RightDock";
+import {
+  RIGHT_DOCK_DEFAULT_WIDTH,
+  RIGHT_DOCK_MIN_WIDTH,
+  RightDock,
+} from "~/components/chat/RightDock";
 import { PanelStateMessage } from "~/components/chat/PanelStateMessage";
 import { pullRequestPaneTabLabel } from "~/components/pullRequest/pullRequestDetail.logic";
-import { focusPullRequestRow, isFocusInsideRightDock } from "~/components/pullRequest/pullRequestFocus";
+import {
+  focusPullRequestRow,
+  isFocusInsideRightDock,
+} from "~/components/pullRequest/pullRequestFocus";
 import { PullRequestList } from "~/components/pullRequest/PullRequestList";
 import {
   filterPullRequestEntriesByInvolvement,
@@ -59,7 +74,11 @@ import {
   shouldLoadExactPullRequestInvolvement,
 } from "~/lib/pullRequestReactQuery";
 import { cn } from "~/lib/utils";
-import { createDefaultRightDockState, openPaneInState, type RightDockThreadState } from "~/rightDockStore.logic";
+import {
+  createDefaultRightDockState,
+  openPaneInState,
+  type RightDockThreadState,
+} from "~/rightDockStore.logic";
 import { useStore } from "~/store";
 import { PR_FINE_TEXT_CLASS_NAME } from "~/components/pullRequest/pullRequestText";
 
@@ -98,16 +117,22 @@ const PullRequestDockPane = lazy(() => import("~/components/pullRequest/PullRequ
 
 export const Route = createFileRoute("/_chat/pull-requests/")({
   validateSearch: (raw): PullRequestsSearch => ({
-    involvement: raw.involvement === "reviewing" || raw.involvement === "authored" ? raw.involvement : "all",
+    involvement:
+      raw.involvement === "reviewing" || raw.involvement === "authored" ? raw.involvement : "all",
     state: raw.state === "closed" || raw.state === "merged" ? raw.state : "open",
-    ...(typeof raw.projectId === "string" && raw.projectId ? { projectId: raw.projectId as ProjectId } : {}),
+    ...(typeof raw.projectId === "string" && raw.projectId
+      ? { projectId: raw.projectId as ProjectId }
+      : {}),
     ...(typeof raw.selectedProjectId === "string" && raw.selectedProjectId
       ? { selectedProjectId: raw.selectedProjectId as ProjectId }
       : {}),
-    ...(typeof raw.selectedRepo === "string" && isValidGitHubRepositoryNameWithOwner(raw.selectedRepo)
+    ...(typeof raw.selectedRepo === "string" &&
+    isValidGitHubRepositoryNameWithOwner(raw.selectedRepo)
       ? { selectedRepo: raw.selectedRepo.trim() }
       : {}),
-    ...(typeof raw.number === "number" && Number.isInteger(raw.number) && raw.number > 0 ? { number: raw.number } : {}),
+    ...(typeof raw.number === "number" && Number.isInteger(raw.number) && raw.number > 0
+      ? { number: raw.number }
+      : {}),
     ...(typeof raw.q === "string" && raw.q ? { q: raw.q.slice(0, 200) } : {}),
   }),
   component: PullRequestsRouteView,
@@ -184,7 +209,9 @@ function PullRequestsRouteView() {
   // client-side involvement filter over the truncated superset can miss older matches, so the
   // active tab additionally fetches the server-filtered list. In the common (untruncated) case
   // this query never runs; the exceptional loading/error states are surfaced explicitly below.
-  const supersetTruncated = (listQuery.data?.repositoryBatches ?? []).some((batch) => batch.truncated);
+  const supersetTruncated = (listQuery.data?.repositoryBatches ?? []).some(
+    (batch) => batch.truncated,
+  );
   const needsExactInvolvement = shouldLoadExactPullRequestInvolvement({
     involvement: search.involvement,
     state: search.state,
@@ -200,10 +227,14 @@ function PullRequestsRouteView() {
   });
   const exactInvolvementPending = needsExactInvolvement && exactInvolvementQuery.isPending;
   const listErrorState = pullRequestQueryErrorState(listQuery);
-  const exactInvolvementErrorState = pullRequestQueryErrorState(exactInvolvementQuery, needsExactInvolvement);
+  const exactInvolvementErrorState = pullRequestQueryErrorState(
+    exactInvolvementQuery,
+    needsExactInvolvement,
+  );
   const initialListError = listErrorState.initialError;
   const initialExactInvolvementError = exactInvolvementErrorState.initialError;
-  const backgroundListError = listErrorState.backgroundError ?? exactInvolvementErrorState.backgroundError;
+  const backgroundListError =
+    listErrorState.backgroundError ?? exactInvolvementErrorState.backgroundError;
   const handleStateIntent = useCallback(
     (state: PullRequestState) => {
       if (state === search.state) return;
@@ -215,7 +246,9 @@ function PullRequestsRouteView() {
     [queryClient, scopedProjectId, search.state],
   );
   const activeListData =
-    needsExactInvolvement && exactInvolvementQuery.data ? exactInvolvementQuery.data : listQuery.data;
+    needsExactInvolvement && exactInvolvementQuery.data
+      ? exactInvolvementQuery.data
+      : listQuery.data;
 
   // Multi-project result sets can be large. Keep typing responsive while React catches the
   // filtered rows up in a lower-priority render; virtualization can wait for measured need.
@@ -236,7 +269,10 @@ function PullRequestsRouteView() {
     [activeListData, listQuery.data?.viewer, query, search.involvement, search.selectedProjectId],
   );
   const grouped = useMemo(
-    () => (search.involvement === "all" ? groupPullRequestEntriesByInvolvement(entries, listQuery.data?.viewer) : null),
+    () =>
+      search.involvement === "all"
+        ? groupPullRequestEntriesByInvolvement(entries, listQuery.data?.viewer)
+        : null,
     [entries, listQuery.data?.viewer, search.involvement],
   );
   // A crafted URL must not show Project A's list while opening Project B's PR: when the list
@@ -298,7 +334,9 @@ function PullRequestsRouteView() {
   }, [renderedInput, detailOpen]);
   const paneLabelOverrides = useMemo(
     () =>
-      renderedInput ? { [PULL_REQUESTS_ROUTE_PANE_ID]: pullRequestPaneTabLabel(renderedInput.number) } : undefined,
+      renderedInput
+        ? { [PULL_REQUESTS_ROUTE_PANE_ID]: pullRequestPaneTabLabel(renderedInput.number) }
+        : undefined,
     [renderedInput],
   );
   const paneStateIcon = usePullRequestPaneStateIcon(renderedInput);
@@ -338,12 +376,16 @@ function PullRequestsRouteView() {
         toastManager.add({
           type: "error",
           title: "Could not refresh pull requests",
-          description: error instanceof Error ? error.message : "The pull request list could not be refreshed.",
+          description:
+            error instanceof Error
+              ? error.message
+              : "The pull request list could not be refreshed.",
         }),
     });
   }, [activeActionCount, listInput, mutateRefresh]);
 
-  const truncatedRepositoryCount = activeListData?.repositoryBatches.filter((batch) => batch.truncated).length ?? 0;
+  const truncatedRepositoryCount =
+    activeListData?.repositoryBatches.filter((batch) => batch.truncated).length ?? 0;
 
   return (
     <div
@@ -375,7 +417,10 @@ function PullRequestsRouteView() {
                     ·
                   </span>
                   <span
-                    className={cn("truncate text-muted-foreground", "text-[length:var(--app-font-size-ui-sm,11px)]")}
+                    className={cn(
+                      "truncate text-muted-foreground",
+                      "text-[length:var(--app-font-size-ui-sm,11px)]",
+                    )}
                   >
                     {scopedProjectName}
                   </span>
@@ -386,8 +431,12 @@ function PullRequestsRouteView() {
                 size="icon-xs"
                 variant="ghost"
                 label="Refresh pull requests"
-                tooltip={activeActionCount > 0 ? "Wait for the pull request action to finish" : "Refresh"}
-                title={activeActionCount > 0 ? "Wait for the pull request action to finish" : "Refresh"}
+                tooltip={
+                  activeActionCount > 0 ? "Wait for the pull request action to finish" : "Refresh"
+                }
+                title={
+                  activeActionCount > 0 ? "Wait for the pull request action to finish" : "Refresh"
+                }
                 className={DOCK_HEADER_ICON_BUTTON_CLASS}
                 disabled={refreshBlocked}
                 onClick={handleManualRefresh}
@@ -459,7 +508,10 @@ function PullRequestsRouteView() {
                   ))}
                 </div>
               ) : initialListError ? (
-                <PullRequestsUnavailableState error={initialListError} onRetry={() => void listQuery.refetch()} />
+                <PullRequestsUnavailableState
+                  error={initialListError}
+                  onRetry={() => void listQuery.refetch()}
+                />
               ) : initialExactInvolvementError ? (
                 <PullRequestsUnavailableState
                   error={initialExactInvolvementError}
@@ -492,17 +544,21 @@ function PullRequestsRouteView() {
                   onTogglePinned={handleTogglePinned}
                 />
               )}
-              {!exactInvolvementPending && !initialExactInvolvementError && truncatedRepositoryCount > 0 ? (
+              {!exactInvolvementPending &&
+              !initialExactInvolvementError &&
+              truncatedRepositoryCount > 0 ? (
                 <p className={cn(PR_FINE_TEXT_CLASS_NAME, "px-1 text-muted-foreground")}>
                   Showing the first 50 matching pull requests for {truncatedRepositoryCount}{" "}
                   {truncatedRepositoryCount === 1 ? "repository" : "repositories"}.
                 </p>
               ) : null}
-              {!exactInvolvementPending && !initialExactInvolvementError && activeListData?.errors.length ? (
+              {!exactInvolvementPending &&
+              !initialExactInvolvementError &&
+              activeListData?.errors.length ? (
                 <PullRequestWarningNote shape="callout">
                   {activeListData.errors.length} project{" "}
-                  {activeListData.errors.length === 1 ? "repository was" : "repositories were"} unavailable. Healthy
-                  repositories are still shown.
+                  {activeListData.errors.length === 1 ? "repository was" : "repositories were"}{" "}
+                  unavailable. Healthy repositories are still shown.
                 </PullRequestWarningNote>
               ) : null}
               {backgroundListError ? (

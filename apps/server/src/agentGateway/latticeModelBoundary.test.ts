@@ -8,15 +8,7 @@ afterEach(() => {
 describe("Lattice model boundary", () => {
   it("removes upstream branding from provider prompts and MCP identity", async () => {
     vi.stubEnv("AGENT_HOST_PROFILE", "lattice");
-    const [
-      harness,
-      protocol,
-      injection,
-      codex,
-      claude,
-      planMode,
-      checkpoints,
-    ] = await Promise.all([
+    const [harness, protocol, injection, codex, claude, planMode, checkpoints] = await Promise.all([
       import("./harnessPolicy.ts"),
       import("./protocol.ts"),
       import("./mcpInjection.ts"),

@@ -1,4 +1,8 @@
-import type { ProviderKind, ServerProviderStatus, ServerProviderVersionAdvisory } from "@synara/contracts";
+import type {
+  ProviderKind,
+  ServerProviderStatus,
+  ServerProviderVersionAdvisory,
+} from "@synara/contracts";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -76,7 +80,10 @@ export interface PackageManagedProviderMaintenanceDefinition {
   } | null;
 }
 
-const latestVersionCache = new Map<string, { readonly expiresAt: number; readonly version: string | null }>();
+const latestVersionCache = new Map<
+  string,
+  { readonly expiresAt: number; readonly version: string | null }
+>();
 const SEMVER_NUMBER_SEGMENT = /^\d+$/;
 
 function nonEmptyString(value: unknown): string | null {
@@ -239,7 +246,9 @@ export function makeProviderMaintenanceCapabilities(input: {
           executable: input.updateExecutable,
           args: input.updateArgs,
           lockKey: input.updateLockKey,
-          ...(nonEmptyString(input.updatePathPrepend) ? { pathPrepend: nonEmptyString(input.updatePathPrepend)! } : {}),
+          ...(nonEmptyString(input.updatePathPrepend)
+            ? { pathPrepend: nonEmptyString(input.updatePathPrepend)! }
+            : {}),
         };
   return {
     provider: input.provider,
@@ -450,7 +459,12 @@ function makeProviderMaintenanceForInstallSource(input: {
     !definition.nativeUpdate.excludedInstallSources?.includes(installSource)
   ) {
     return (
-      makeNativeProviderMaintenanceCapabilities(definition, installSource, executable, pathPrepend) ??
+      makeNativeProviderMaintenanceCapabilities(
+        definition,
+        installSource,
+        executable,
+        pathPrepend,
+      ) ??
       makeManualOnlyProviderMaintenanceCapabilities({
         provider: definition.provider,
         packageName: definition.npmPackageName,
@@ -459,7 +473,12 @@ function makeProviderMaintenanceForInstallSource(input: {
   }
   if (installSource === "native") {
     return (
-      makeNativeProviderMaintenanceCapabilities(definition, installSource, executable, pathPrepend) ??
+      makeNativeProviderMaintenanceCapabilities(
+        definition,
+        installSource,
+        executable,
+        pathPrepend,
+      ) ??
       makeManualOnlyProviderMaintenanceCapabilities({
         provider: definition.provider,
         packageName: definition.npmPackageName,
@@ -563,7 +582,9 @@ export function resolvePackageManagedProviderMaintenance(
           : {}),
         executable: binaryPath,
         commandPath,
-        ...(options?.commandDirectory === undefined ? {} : { pathPrepend: options.commandDirectory }),
+        ...(options?.commandDirectory === undefined
+          ? {}
+          : { pathPrepend: options.commandDirectory }),
       });
     }
   }
@@ -687,10 +708,13 @@ export function createProviderVersionAdvisory(input: {
 
 const fetchNpmLatestVersion = Effect.fn("fetchNpmLatestVersion")(function* (packageName: string) {
   return yield* Effect.tryPromise(async () => {
-    const response = await fetch(`https://registry.npmjs.org/${encodeURIComponent(packageName)}/latest`, {
-      headers: { accept: "application/json" },
-      signal: AbortSignal.timeout(LATEST_VERSION_TIMEOUT_MS),
-    });
+    const response = await fetch(
+      `https://registry.npmjs.org/${encodeURIComponent(packageName)}/latest`,
+      {
+        headers: { accept: "application/json" },
+        signal: AbortSignal.timeout(LATEST_VERSION_TIMEOUT_MS),
+      },
+    );
     if (!response.ok) {
       return null;
     }
@@ -720,7 +744,9 @@ const fetchHomebrewLatestVersion = Effect.fn("fetchHomebrewLatestVersion")(funct
       version?: unknown;
       versions?: { stable?: unknown };
     };
-    return nonEmptyString(source.homebrewKind === "cask" ? payload.version : payload.versions?.stable);
+    return nonEmptyString(
+      source.homebrewKind === "cask" ? payload.version : payload.versions?.stable,
+    );
   }).pipe(Effect.catch(() => Effect.succeed(null)));
 });
 
@@ -733,7 +759,9 @@ export const resolveLatestProviderVersion = Effect.fn("resolveLatestProviderVers
   }
 
   const cacheKey =
-    source.kind === "homebrew" ? `homebrew:${source.homebrewKind ?? "unknown"}:${source.name}` : `npm:${source.name}`;
+    source.kind === "homebrew"
+      ? `homebrew:${source.homebrewKind ?? "unknown"}:${source.name}`
+      : `npm:${source.name}`;
   const cached = latestVersionCache.get(cacheKey);
   const now = DateTime.toEpochMillis(yield* DateTime.now);
   if (cached && cached.expiresAt > now) {
@@ -741,7 +769,9 @@ export const resolveLatestProviderVersion = Effect.fn("resolveLatestProviderVers
   }
 
   const version =
-    source.kind === "homebrew" ? yield* fetchHomebrewLatestVersion(source) : yield* fetchNpmLatestVersion(source.name);
+    source.kind === "homebrew"
+      ? yield* fetchHomebrewLatestVersion(source)
+      : yield* fetchNpmLatestVersion(source.name);
   latestVersionCache.set(cacheKey, {
     expiresAt: now + LATEST_VERSION_CACHE_TTL_MS,
     version,
@@ -749,7 +779,9 @@ export const resolveLatestProviderVersion = Effect.fn("resolveLatestProviderVers
   return version;
 });
 
-export const enrichProviderStatusWithVersionAdvisory = Effect.fn("enrichProviderStatusWithVersionAdvisory")(function* (
+export const enrichProviderStatusWithVersionAdvisory = Effect.fn(
+  "enrichProviderStatusWithVersionAdvisory",
+)(function* (
   status: ServerProviderStatus,
   maintenanceCapabilities: ProviderMaintenanceCapabilities,
 ) {

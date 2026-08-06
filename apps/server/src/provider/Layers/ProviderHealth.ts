@@ -51,7 +51,10 @@ import {
   parseCodexCliVersion,
 } from "../codexCliVersion";
 import { ServerConfig } from "../../config";
-import { buildProviderChildEnvironment, type ProviderChildKind } from "../../providerChildEnvironment.ts";
+import {
+  buildProviderChildEnvironment,
+  type ProviderChildKind,
+} from "../../providerChildEnvironment.ts";
 import { ServerSettingsService } from "../../serverSettings";
 import { isWindowsShellCommandMissingResult } from "../../shell-command-detection";
 import {
@@ -169,7 +172,10 @@ function isClaudeLatestHomebrewCommandPath(commandPath: string): boolean {
 
 function isOpenCodeNativeCommandPath(commandPath: string): boolean {
   const normalized = normalizeCommandPath(commandPath);
-  return normalized.endsWith("/.opencode/bin/opencode") || normalized.endsWith("/.opencode/bin/opencode.exe");
+  return (
+    normalized.endsWith("/.opencode/bin/opencode") ||
+    normalized.endsWith("/.opencode/bin/opencode.exe")
+  );
 }
 
 function isKiloNativeCommandPath(commandPath: string): boolean {
@@ -281,7 +287,9 @@ export const PACKAGE_MANAGED_PROVIDER_UPDATES: Partial<
 // Generic CLI-output parsing lives in ../providerCliOutput; Claude auth-status
 // interpretation lives in ../claudeAuthStatus.
 
-function resolveVoiceTranscriptionAvailability(authMethod: string | undefined): boolean | undefined {
+function resolveVoiceTranscriptionAvailability(
+  authMethod: string | undefined,
+): boolean | undefined {
   if (!authMethod) {
     return undefined;
   }
@@ -311,7 +319,9 @@ const asNonEmptyString = (v: unknown): Option.Option<string> =>
   typeof v === "string" && v.length > 0 ? Option.some(v) : Option.none();
 
 const asRecord = (v: unknown): Option.Option<Record<string, unknown>> =>
-  typeof v === "object" && v !== null && !Array.isArray(v) ? Option.some(v as Record<string, unknown>) : Option.none();
+  typeof v === "object" && v !== null && !Array.isArray(v)
+    ? Option.some(v as Record<string, unknown>)
+    : Option.none();
 
 function findSubscriptionType(value: unknown): Option.Option<string> {
   if (Array.isArray(value)) {
@@ -319,10 +329,14 @@ function findSubscriptionType(value: unknown): Option.Option<string> {
   }
   return asRecord(value).pipe(
     Option.flatMap((record) => {
-      const direct = Option.firstSomeOf(SUBSCRIPTION_TYPE_KEYS.map((key) => asNonEmptyString(record[key])));
+      const direct = Option.firstSomeOf(
+        SUBSCRIPTION_TYPE_KEYS.map((key) => asNonEmptyString(record[key])),
+      );
       if (Option.isSome(direct)) return direct;
       return Option.firstSomeOf(
-        SUBSCRIPTION_CONTAINER_KEYS.map((key) => asRecord(record[key]).pipe(Option.flatMap(findSubscriptionType))),
+        SUBSCRIPTION_CONTAINER_KEYS.map((key) =>
+          asRecord(record[key]).pipe(Option.flatMap(findSubscriptionType)),
+        ),
       );
     }),
   );
@@ -334,10 +348,14 @@ function findAuthMethodDeep(value: unknown): Option.Option<string> {
   }
   return asRecord(value).pipe(
     Option.flatMap((record) => {
-      const direct = Option.firstSomeOf(AUTH_METHOD_KEYS.map((key) => asNonEmptyString(record[key])));
+      const direct = Option.firstSomeOf(
+        AUTH_METHOD_KEYS.map((key) => asNonEmptyString(record[key])),
+      );
       if (Option.isSome(direct)) return direct;
       return Option.firstSomeOf(
-        AUTH_METHOD_CONTAINER_KEYS.map((key) => asRecord(record[key]).pipe(Option.flatMap(findAuthMethodDeep))),
+        AUTH_METHOD_CONTAINER_KEYS.map((key) =>
+          asRecord(record[key]).pipe(Option.flatMap(findAuthMethodDeep)),
+        ),
       );
     }),
   );
@@ -542,7 +560,9 @@ export function parseAuthStatusFromOutput(result: CommandResult): {
   })();
 
   if (parsedAuth.auth === true) {
-    const voiceTranscriptionAvailable = resolveVoiceTranscriptionAvailability(parsedAuth.authMethod);
+    const voiceTranscriptionAvailable = resolveVoiceTranscriptionAvailability(
+      parsedAuth.authMethod,
+    );
     return {
       status: "ready",
       authStatus: "authenticated",
@@ -560,7 +580,8 @@ export function parseAuthStatusFromOutput(result: CommandResult): {
     return {
       status: "warning",
       authStatus: "unknown",
-      message: "Could not verify Codex authentication status from JSON output (missing auth marker).",
+      message:
+        "Could not verify Codex authentication status from JSON output (missing auth marker).",
     };
   }
   if (result.code === 0) {
@@ -604,7 +625,9 @@ export const readCodexConfigModelProvider = Effect.gen(function* () {
   const codexHome = process.env.CODEX_HOME || path.join(OS.homedir(), ".codex");
   const configPath = path.join(codexHome, "config.toml");
 
-  const content = yield* fileSystem.readFileString(configPath).pipe(Effect.orElseSucceed(() => undefined));
+  const content = yield* fileSystem
+    .readFileString(configPath)
+    .pipe(Effect.orElseSucceed(() => undefined));
   if (content === undefined) {
     return undefined;
   }
@@ -632,7 +655,11 @@ const collectStreamAsString = <E>(stream: Stream.Stream<Uint8Array, E>): Effect.
     (acc, chunk) => acc + new TextDecoder().decode(chunk),
   );
 
-const runProviderCommand = (executable: string, args: ReadonlyArray<string>, env: NodeJS.ProcessEnv) =>
+const runProviderCommand = (
+  executable: string,
+  args: ReadonlyArray<string>,
+  env: NodeJS.ProcessEnv,
+) =>
   Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
     const prepared = prepareWindowsSafeProcess(executable, args, { env });
@@ -712,7 +739,10 @@ const runKiloCommand = (args: ReadonlyArray<string>, executable = "kilo") =>
     ),
   );
 
-const runCursorCommand = (args: ReadonlyArray<string>, executable = DEFAULT_CURSOR_AGENT_BINARY) => {
+const runCursorCommand = (
+  args: ReadonlyArray<string>,
+  executable = DEFAULT_CURSOR_AGENT_BINARY,
+) => {
   const command = buildCursorAgentCommand(executable, args);
   return runProviderCommand(command.command, command.args, buildCursorAgentHeadlessEnv()).pipe(
     Effect.flatMap((result) =>
@@ -739,7 +769,8 @@ function parseCursorAuthStatusFromOutput(result: CommandResult): {
     return {
       status: "warning",
       authStatus: "unknown",
-      message: "Cursor Agent authentication status command is unavailable in this Cursor Agent version.",
+      message:
+        "Cursor Agent authentication status command is unavailable in this Cursor Agent version.",
     };
   }
 
@@ -819,7 +850,9 @@ const readCodexConfigModelProviderForEnv = (env: NodeJS.ProcessEnv) =>
     const codexHome = env.CODEX_HOME?.trim() || path.join(OS.homedir(), ".codex");
     const configPath = path.join(codexHome, "config.toml");
 
-    const content = yield* fileSystem.readFileString(configPath).pipe(Effect.orElseSucceed(() => undefined));
+    const content = yield* fileSystem
+      .readFileString(configPath)
+      .pipe(Effect.orElseSucceed(() => undefined));
     if (content === undefined) {
       return undefined;
     }
@@ -906,7 +939,8 @@ export const makeCheckCodexProviderStatus = (
       };
     }
     const supportsAutoRuntimeMode =
-      parsedVersion !== null && compareCodexCliVersions(parsedVersion, MINIMUM_CODEX_AUTO_REVIEW_CLI_VERSION) >= 0;
+      parsedVersion !== null &&
+      compareCodexCliVersions(parsedVersion, MINIMUM_CODEX_AUTO_REVIEW_CLI_VERSION) >= 0;
 
     // Probe 2: `codex login status` — is the user authenticated?
     //
@@ -971,7 +1005,11 @@ export const makeCheckCodexProviderStatus = (
         ? codexAccountAuthLabel({ type: codexAccountType, planType: codexPlanType })
         : undefined;
     const codexAuthType =
-      parsed.authStatus === "authenticated" ? (codexAccountType === "apiKey" ? "apiKey" : codexPlanType) : undefined;
+      parsed.authStatus === "authenticated"
+        ? codexAccountType === "apiKey"
+          ? "apiKey"
+          : codexPlanType
+        : undefined;
 
     return {
       provider: CODEX_PROVIDER,
@@ -1011,7 +1049,9 @@ export const makeCheckClaudeProviderStatus = (
   const executable = nonEmptyTrimmed(binaryPath) ?? "claude";
   return Effect.gen(function* () {
     const checkedAt = new Date().toISOString();
-    const claudeEnv = buildClaudeProcessEnv(homeDir ? { env: process.env, homeDir } : { env: process.env });
+    const claudeEnv = buildClaudeProcessEnv(
+      homeDir ? { env: process.env, homeDir } : { env: process.env },
+    );
 
     // Probe 1: `claude --version` — is the CLI reachable?
     const versionProbe = yield* probeProviderCliVersion(
@@ -1041,7 +1081,8 @@ export const makeCheckClaudeProviderStatus = (
         available: false,
         authStatus: "unknown" as const,
         checkedAt,
-        message: "Claude Agent CLI is installed but failed to run. Timed out while running command.",
+        message:
+          "Claude Agent CLI is installed but failed to run. Timed out while running command.",
       };
     }
 
@@ -1117,8 +1158,12 @@ export const makeCheckClaudeProviderStatus = (
     // record to rescue it (macOS keeps OAuth in the Keychain, not on disk) is
     // the signature of a lost refresh-token rotation race with a concurrent
     // `claude auth status` invocation. Re-probe once after the rotation settles.
-    if (!credentialSummary.usable && isStructuredClaudeAuthFalseNegativeCandidate(authOutput, parsed)) {
-      const retryDelayMs = options?.falseNegativeRetryDelayMs ?? CLAUDE_AUTH_FALSE_NEGATIVE_RETRY_DELAY_MS;
+    if (
+      !credentialSummary.usable &&
+      isStructuredClaudeAuthFalseNegativeCandidate(authOutput, parsed)
+    ) {
+      const retryDelayMs =
+        options?.falseNegativeRetryDelayMs ?? CLAUDE_AUTH_FALSE_NEGATIVE_RETRY_DELAY_MS;
       if (retryDelayMs > 0) {
         yield* Effect.sleep(retryDelayMs);
       }
@@ -1128,7 +1173,10 @@ export const makeCheckClaudeProviderStatus = (
         parsed = parseClaudeAuthStatusFromOutput(authOutput);
       }
     }
-    const structuredFalseNegative = isStructuredClaudeAuthFalseNegativeCandidate(authOutput, parsed);
+    const structuredFalseNegative = isStructuredClaudeAuthFalseNegativeCandidate(
+      authOutput,
+      parsed,
+    );
     const credentialProbeSubscriptionType =
       credentialSummary.usable && structuredFalseNegative && resolveSubscriptionType
         ? yield* resolveSubscriptionType
@@ -1137,7 +1185,9 @@ export const makeCheckClaudeProviderStatus = (
     // SDK init still reads account metadata. Token strings alone are not enough:
     // require the SDK probe before treating the credential file as authenticated.
     const effectiveParsed: ReturnType<typeof parseClaudeAuthStatusFromOutput> =
-      credentialProbeSubscriptionType !== undefined ? { status: "ready", authStatus: "authenticated" } : parsed;
+      credentialProbeSubscriptionType !== undefined
+        ? { status: "ready", authStatus: "authenticated" }
+        : parsed;
     const useCredentialMetadata = credentialProbeSubscriptionType !== undefined;
 
     // Determine subscription type from multiple sources (cheapest first):
@@ -1150,8 +1200,13 @@ export const makeCheckClaudeProviderStatus = (
       credentialProbeSubscriptionType ??
       (useCredentialMetadata ? credentialSummary.subscriptionType : undefined);
     const authMethod =
-      extractClaudeAuthMethodFromOutput(authOutput) ?? (useCredentialMetadata ? "claude.ai" : undefined);
-    if (!subscriptionType && resolveSubscriptionType && effectiveParsed.authStatus === "authenticated") {
+      extractClaudeAuthMethodFromOutput(authOutput) ??
+      (useCredentialMetadata ? "claude.ai" : undefined);
+    if (
+      !subscriptionType &&
+      resolveSubscriptionType &&
+      effectiveParsed.authStatus === "authenticated"
+    ) {
       subscriptionType = yield* resolveSubscriptionType;
     }
     const authMetadata = claudeAuthMetadata({ subscriptionType, authMethod });
@@ -1186,7 +1241,10 @@ export const makeCheckGrokProviderStatus = (
     const checkedAt = new Date().toISOString();
     const executable = nonEmptyTrimmed(binaryPath) ?? "grok";
 
-    const versionProbe = yield* probeProviderCliVersion(runGrokCommand(["--version"], executable), DEFAULT_TIMEOUT_MS);
+    const versionProbe = yield* probeProviderCliVersion(
+      runGrokCommand(["--version"], executable),
+      DEFAULT_TIMEOUT_MS,
+    );
 
     if (versionProbe.outcome === "missing" || versionProbe.outcome === "failure") {
       const error = versionProbe.cause;
@@ -1262,7 +1320,10 @@ export const makeCheckDroidProviderStatus = (
     const checkedAt = new Date().toISOString();
     const executable = resolveDroidCliBinaryPath(nonEmptyTrimmed(binaryPath) ?? undefined);
 
-    const versionProbe = yield* probeProviderCliVersion(runDroidCommand(["--version"], executable), DEFAULT_TIMEOUT_MS);
+    const versionProbe = yield* probeProviderCliVersion(
+      runDroidCommand(["--version"], executable),
+      DEFAULT_TIMEOUT_MS,
+    );
 
     if (versionProbe.outcome === "missing" || versionProbe.outcome === "failure") {
       const error = versionProbe.cause;
@@ -1390,7 +1451,8 @@ export const makeCheckOpenCodeProviderStatus = (
       authStatus: "unknown" as const,
       version: parsedVersion,
       checkedAt,
-      message: "OpenCode CLI is installed. Configure provider credentials inside OpenCode as needed.",
+      message:
+        "OpenCode CLI is installed. Configure provider credentials inside OpenCode as needed.",
     } satisfies ServerProviderStatus;
   });
 
@@ -1405,7 +1467,10 @@ export const makeCheckKiloProviderStatus = (
     const checkedAt = new Date().toISOString();
     const executable = nonEmptyTrimmed(binaryPath) ?? "kilo";
 
-    const versionProbe = yield* probeProviderCliVersion(runKiloCommand(["--version"], executable), DEFAULT_TIMEOUT_MS);
+    const versionProbe = yield* probeProviderCliVersion(
+      runKiloCommand(["--version"], executable),
+      DEFAULT_TIMEOUT_MS,
+    );
 
     if (versionProbe.outcome === "missing" || versionProbe.outcome === "failure") {
       const error = versionProbe.cause;
@@ -1529,7 +1594,10 @@ export const checkAntigravityProviderStatus = (
     }
     const version = versionProbe.result;
     const parsedVersion = parseGenericCliVersion(`${version.stdout}\n${version.stderr}`);
-    if (parsedVersion !== null && compareSemverVersions(parsedVersion, MINIMUM_ANTIGRAVITY_CLI_VERSION) < 0) {
+    if (
+      parsedVersion !== null &&
+      compareSemverVersions(parsedVersion, MINIMUM_ANTIGRAVITY_CLI_VERSION) < 0
+    ) {
       return {
         provider: ANTIGRAVITY_PROVIDER,
         status: "error",
@@ -1607,7 +1675,8 @@ export const makeCheckCursorProviderStatus = (
         available: false,
         authStatus: "unknown" as const,
         checkedAt,
-        message: "Cursor Agent CLI is installed but failed to run. Timed out while running command.",
+        message:
+          "Cursor Agent CLI is installed but failed to run. Timed out while running command.",
       } satisfies ServerProviderStatus;
     }
 
@@ -1657,7 +1726,8 @@ export const makeCheckCursorProviderStatus = (
         authStatus: "unknown" as const,
         version: parsedVersion,
         checkedAt,
-        message: "Could not verify Cursor Agent authentication status. Timed out while running command.",
+        message:
+          "Could not verify Cursor Agent authentication status. Timed out while running command.",
       } satisfies ServerProviderStatus;
     }
 
@@ -1730,7 +1800,8 @@ export const makeCheckCursorProviderStatus = (
         authStatus: "authenticated" as const,
         version: parsedVersion,
         checkedAt,
-        message: "Cursor Agent is authenticated, but it reports no models available for this account.",
+        message:
+          "Cursor Agent is authenticated, but it reports no models available for this account.",
       } satisfies ServerProviderStatus;
     }
     if (modelsResult.code !== 0) {
@@ -1755,7 +1826,8 @@ export const makeCheckCursorProviderStatus = (
         authStatus: "authenticated" as const,
         version: parsedVersion,
         checkedAt,
-        message: "Cursor Agent is authenticated, but model discovery returned no recognizable model rows.",
+        message:
+          "Cursor Agent is authenticated, but model discovery returned no recognizable model rows.",
       } satisfies ServerProviderStatus;
     }
 
@@ -1832,11 +1904,17 @@ export function stabilizeProviderStatusesAgainstTransientTimeouts(
     return nextStatuses;
   }
 
-  const previousByProvider = new Map(previousStatuses.map((status) => [status.provider, status] as const));
+  const previousByProvider = new Map(
+    previousStatuses.map((status) => [status.provider, status] as const),
+  );
 
   return nextStatuses.map((status) => {
     const previous = previousByProvider.get(status.provider);
-    if (!previous || !wasPreviouslyUsableProviderStatus(previous) || !isTransientProviderCommandTimeout(status)) {
+    if (
+      !previous ||
+      !wasPreviouslyUsableProviderStatus(previous) ||
+      !isTransientProviderCommandTimeout(status)
+    ) {
       return status;
     }
 
@@ -1854,8 +1932,13 @@ export function stabilizeProviderStatusesAgainstTransientTimeouts(
   });
 }
 
-export function isProviderEnabledForSettings(provider: ProviderKind, settings: ServerSettings): boolean {
-  return settings.providers[provider]?.enabled !== false && settings.providers[provider] !== undefined;
+export function isProviderEnabledForSettings(
+  provider: ProviderKind,
+  settings: ServerSettings,
+): boolean {
+  return (
+    settings.providers[provider]?.enabled !== false && settings.providers[provider] !== undefined
+  );
 }
 
 export function makeDisabledProviderStatus(
@@ -1880,7 +1963,9 @@ function mergeProviderStatusUpdates(
   previousStatuses: ReadonlyArray<ServerProviderStatus>,
   updatedStatuses: ReadonlyArray<ServerProviderStatus>,
 ): ProviderStatuses {
-  const statusByProvider = new Map(previousStatuses.map((status) => [status.provider, status] as const));
+  const statusByProvider = new Map(
+    previousStatuses.map((status) => [status.provider, status] as const),
+  );
   for (const status of updatedStatuses) {
     statusByProvider.set(status.provider, status);
   }
@@ -1937,7 +2022,9 @@ export function projectProviderStatusesForSettings(
     }
 
     if (status && !isDisabledProviderStatusOverlay(status)) {
-      projected.push(settings.enableProviderUpdateChecks ? status : suppressProviderVersionAdvisory(status));
+      projected.push(
+        settings.enableProviderUpdateChecks ? status : suppressProviderVersionAdvisory(status),
+      );
     }
   }
 
@@ -1995,7 +2082,9 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
       );
 
       const statusesRef = yield* Ref.make<ProviderStatuses>(cachedStatuses);
-      const updateStatesRef = yield* Ref.make<ReadonlyMap<ProviderKind, ServerProviderUpdateState>>(new Map());
+      const updateStatesRef = yield* Ref.make<ReadonlyMap<ProviderKind, ServerProviderUpdateState>>(
+        new Map(),
+      );
       const refreshFiberRef = yield* Ref.make<Fiber.Fiber<ProviderStatuses, never> | null>(null);
       const commandCoordinator = yield* makeProviderMaintenanceCommandCoordinator({
         makeAlreadyRunningError: (provider) =>
@@ -2041,46 +2130,48 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
         }
       };
 
-      const getProviderMaintenanceCapabilities = Effect.fn("getProviderMaintenanceCapabilities")(function* (
-        provider: ProviderKind,
-      ) {
-        const settings = yield* serverSettings.getSettings;
-        if (!isProviderEnabledForSettings(provider, settings)) {
-          return makeProviderMaintenanceCapabilities({
-            provider,
-            packageName: null,
-            latestVersionSource: null,
-            updateExecutable: null,
-            updateArgs: [],
-            updateLockKey: null,
-          });
-        }
-        if (provider === "cursor") {
-          const command = buildCursorAgentCommand(getProviderBinaryPath(provider, settings), ["update"]);
-          return makeProviderMaintenanceCapabilities({
-            provider,
-            packageName: null,
-            updateExecutable: command.command,
-            updateArgs: command.args,
-            updateLockKey: "cursor-agent",
-          });
-        }
-        const definition = PACKAGE_MANAGED_PROVIDER_UPDATES[provider];
-        if (!definition) {
-          return makeProviderMaintenanceCapabilities({
-            provider,
-            packageName: null,
-            updateExecutable: null,
-            updateArgs: [],
-            updateLockKey: null,
-          });
-        }
-        return yield* resolveProviderMaintenanceCapabilitiesEffect(definition, {
-          binaryPath: getProviderBinaryPath(provider, settings),
-          env: providerCommandEnv(provider),
-          platform: process.platform,
-        }).pipe(Effect.provideService(FileSystem.FileSystem, fileSystem));
-      });
+      const getProviderMaintenanceCapabilities = Effect.fn("getProviderMaintenanceCapabilities")(
+        function* (provider: ProviderKind) {
+          const settings = yield* serverSettings.getSettings;
+          if (!isProviderEnabledForSettings(provider, settings)) {
+            return makeProviderMaintenanceCapabilities({
+              provider,
+              packageName: null,
+              latestVersionSource: null,
+              updateExecutable: null,
+              updateArgs: [],
+              updateLockKey: null,
+            });
+          }
+          if (provider === "cursor") {
+            const command = buildCursorAgentCommand(getProviderBinaryPath(provider, settings), [
+              "update",
+            ]);
+            return makeProviderMaintenanceCapabilities({
+              provider,
+              packageName: null,
+              updateExecutable: command.command,
+              updateArgs: command.args,
+              updateLockKey: "cursor-agent",
+            });
+          }
+          const definition = PACKAGE_MANAGED_PROVIDER_UPDATES[provider];
+          if (!definition) {
+            return makeProviderMaintenanceCapabilities({
+              provider,
+              packageName: null,
+              updateExecutable: null,
+              updateArgs: [],
+              updateLockKey: null,
+            });
+          }
+          return yield* resolveProviderMaintenanceCapabilitiesEffect(definition, {
+            binaryPath: getProviderBinaryPath(provider, settings),
+            env: providerCommandEnv(provider),
+            platform: process.platform,
+          }).pipe(Effect.provideService(FileSystem.FileSystem, fileSystem));
+        },
+      );
 
       const applyVolatileProviderState = Effect.fn("applyVolatileProviderState")(function* (
         status: ServerProviderStatus,
@@ -2097,9 +2188,9 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
         };
       });
 
-      const projectStatusesForCurrentSettings = Effect.fn("projectProviderStatusesForCurrentSettings")(function* (
-        statuses: ReadonlyArray<ServerProviderStatus>,
-      ) {
+      const projectStatusesForCurrentSettings = Effect.fn(
+        "projectProviderStatusesForCurrentSettings",
+      )(function* (statuses: ReadonlyArray<ServerProviderStatus>) {
         return yield* serverSettings.getSettings.pipe(
           Effect.map((settings) => projectProviderStatusesForSettings(statuses, settings)),
           Effect.catch(() => Effect.succeed(statuses)),
@@ -2143,16 +2234,22 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
           Effect.catch(() => Effect.succeed(null)),
         );
         if (settings?.enableProviderUpdateChecks === false) {
-          return yield* Effect.forEach(statuses.map(suppressProviderVersionAdvisory), applyVolatileProviderState, {
-            concurrency: "unbounded",
-          });
+          return yield* Effect.forEach(
+            statuses.map(suppressProviderVersionAdvisory),
+            applyVolatileProviderState,
+            {
+              concurrency: "unbounded",
+            },
+          );
         }
 
         const enriched = yield* Effect.forEach(
           statuses,
           (status) =>
             getProviderMaintenanceCapabilities(status.provider).pipe(
-              Effect.flatMap((capabilities) => enrichProviderStatusWithVersionAdvisory(status, capabilities)),
+              Effect.flatMap((capabilities) =>
+                enrichProviderStatusWithVersionAdvisory(status, capabilities),
+              ),
               Effect.catch(() =>
                 Effect.succeed({
                   ...status,
@@ -2193,7 +2290,10 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
                 checkProviderWhenEnabled(
                   settings,
                   CODEX_PROVIDER,
-                  makeCheckCodexProviderStatus(settings.providers.codex.binaryPath, settings.providers.codex.homePath),
+                  makeCheckCodexProviderStatus(
+                    settings.providers.codex.binaryPath,
+                    settings.providers.codex.homePath,
+                  ),
                 ),
                 checkProviderWhenEnabled(
                   settings,
@@ -2234,7 +2334,11 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
                   OPENCODE_PROVIDER,
                   makeCheckOpenCodeProviderStatus(settings.providers.opencode.binaryPath),
                 ),
-                checkProviderWhenEnabled(settings, PI_PROVIDER, checkPiProviderStatus(settings.providers.pi.agentDir)),
+                checkProviderWhenEnabled(
+                  settings,
+                  PI_PROVIDER,
+                  checkPiProviderStatus(settings.providers.pi.agentDir),
+                ),
               ],
               {
                 concurrency: "unbounded",
@@ -2247,7 +2351,9 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
           Effect.provideService(FileSystem.FileSystem, fileSystem),
           Effect.provideService(Path.Path, path),
           Effect.map((statuses) =>
-            orderProviderStatuses(statuses.flatMap((status) => (Option.isSome(status) ? [status.value] : []))),
+            orderProviderStatuses(
+              statuses.flatMap((status) => (Option.isSome(status) ? [status.value] : [])),
+            ),
           ),
           Effect.flatMap(enrichStatuses),
         );
@@ -2287,7 +2393,10 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
           previousRawStatuses,
           loadedStatuses,
         );
-        const nextRawStatuses = mergeProviderStatusUpdates(previousRawStatuses, stabilizedLoadedStatuses);
+        const nextRawStatuses = mergeProviderStatusUpdates(
+          previousRawStatuses,
+          stabilizedLoadedStatuses,
+        );
         const nextStatuses = yield* projectStatusesForCurrentSettings(nextRawStatuses);
         yield* Ref.set(statusesRef, nextRawStatuses);
         if (providerStatusesEqual(previousStatuses, nextStatuses)) {
@@ -2300,31 +2409,35 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
 
       // Keep a single refresh in flight so repeated config reads do not spawn
       // overlapping CLI probes while the cache already gives us a usable answer.
-      const ensureRefreshFiber: Effect.Effect<Fiber.Fiber<ProviderStatuses, never>> = Effect.gen(function* () {
-        const inFlight = yield* Ref.get(refreshFiberRef);
-        if (inFlight) {
-          return inFlight;
-        }
-        const refreshFiber = yield* Effect.gen(function* () {
-          const refreshExit = yield* Effect.exit(refreshNow);
-          if (Exit.isSuccess(refreshExit)) {
-            return refreshExit.value;
+      const ensureRefreshFiber: Effect.Effect<Fiber.Fiber<ProviderStatuses, never>> = Effect.gen(
+        function* () {
+          const inFlight = yield* Ref.get(refreshFiberRef);
+          if (inFlight) {
+            return inFlight;
           }
-          // Keep the current in-memory snapshot as the source of truth if a
-          // foreground refresh fails after startup.
-          const rawStatuses = yield* Ref.get(statusesRef);
-          return yield* projectStatusesForCurrentSettings(rawStatuses);
-        }).pipe(Effect.ensuring(Ref.set(refreshFiberRef, null)), Effect.forkIn(refreshScope));
-        yield* Ref.set(refreshFiberRef, refreshFiber);
-        return refreshFiber;
-      });
+          const refreshFiber = yield* Effect.gen(function* () {
+            const refreshExit = yield* Effect.exit(refreshNow);
+            if (Exit.isSuccess(refreshExit)) {
+              return refreshExit.value;
+            }
+            // Keep the current in-memory snapshot as the source of truth if a
+            // foreground refresh fails after startup.
+            const rawStatuses = yield* Ref.get(statusesRef);
+            return yield* projectStatusesForCurrentSettings(rawStatuses);
+          }).pipe(Effect.ensuring(Ref.set(refreshFiberRef, null)), Effect.forkIn(refreshScope));
+          yield* Ref.set(refreshFiberRef, refreshFiber);
+          return refreshFiber;
+        },
+      );
 
       yield* serverSettings.streamChanges.pipe(
         Stream.runForEach(() => publishProjectedStatuses().pipe(Effect.asVoid)),
         Effect.forkIn(refreshScope),
       );
 
-      const refresh: Effect.Effect<ProviderStatuses> = ensureRefreshFiber.pipe(Effect.flatMap(Fiber.join));
+      const refresh: Effect.Effect<ProviderStatuses> = ensureRefreshFiber.pipe(
+        Effect.flatMap(Fiber.join),
+      );
 
       const nowIso = Effect.map(DateTime.now, DateTime.formatIso);
 
@@ -2402,122 +2515,128 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
         };
       });
 
-      const updateProvider: ProviderHealthShape["updateProvider"] = Effect.fn("ProviderHealth.updateProvider")(
-        function* (input) {
-          const provider = input.provider;
-          const toUpdateError = (reason: unknown) =>
-            new ServerProviderUpdateError({
-              provider,
-              reason: reason instanceof Error ? reason.message : String(reason),
-            });
-          const settings = yield* serverSettings.getSettings.pipe(Effect.mapError(toUpdateError));
-          if (!isProviderEnabledForSettings(provider, settings)) {
-            return yield* new ServerProviderUpdateError({
-              provider,
-              reason: "Provider is disabled in Synara settings.",
-            });
-          }
-          const capabilities = yield* getProviderMaintenanceCapabilities(provider).pipe(Effect.mapError(toUpdateError));
-          const update = capabilities.update;
-          if (!update) {
-            return yield* new ServerProviderUpdateError({
-              provider,
-              reason: "This provider does not support one-click updates.",
-            });
-          }
+      const updateProvider: ProviderHealthShape["updateProvider"] = Effect.fn(
+        "ProviderHealth.updateProvider",
+      )(function* (input) {
+        const provider = input.provider;
+        const toUpdateError = (reason: unknown) =>
+          new ServerProviderUpdateError({
+            provider,
+            reason: reason instanceof Error ? reason.message : String(reason),
+          });
+        const settings = yield* serverSettings.getSettings.pipe(Effect.mapError(toUpdateError));
+        if (!isProviderEnabledForSettings(provider, settings)) {
+          return yield* new ServerProviderUpdateError({
+            provider,
+            reason: "Provider is disabled in Synara settings.",
+          });
+        }
+        const capabilities = yield* getProviderMaintenanceCapabilities(provider).pipe(
+          Effect.mapError(toUpdateError),
+        );
+        const update = capabilities.update;
+        if (!update) {
+          return yield* new ServerProviderUpdateError({
+            provider,
+            reason: "This provider does not support one-click updates.",
+          });
+        }
 
-          const run = Effect.gen(function* () {
-            const startedAt = yield* nowIso;
-            yield* setProviderUpdateState(
+        const run = Effect.gen(function* () {
+          const startedAt = yield* nowIso;
+          yield* setProviderUpdateState(
+            provider,
+            makeUpdateState({
+              status: "running",
+              startedAt,
+              finishedAt: null,
+              message: "Updating provider.",
+            }),
+          );
+
+          const commandResult = yield* runUpdateCommand({
+            provider,
+            command: update.executable,
+            args: update.args,
+            ...(update.pathPrepend ? { pathPrepend: update.pathPrepend } : {}),
+          }).pipe(
+            Effect.scoped,
+            Effect.timeoutOption(Duration.millis(providerUpdateTimeoutMs)),
+            Effect.result,
+          );
+          const finishedAt = yield* nowIso;
+          if (Result.isFailure(commandResult)) {
+            const providers = yield* setProviderUpdateState(
               provider,
               makeUpdateState({
-                status: "running",
-                startedAt,
-                finishedAt: null,
-                message: "Updating provider.",
-              }),
-            );
-
-            const commandResult = yield* runUpdateCommand({
-              provider,
-              command: update.executable,
-              args: update.args,
-              ...(update.pathPrepend ? { pathPrepend: update.pathPrepend } : {}),
-            }).pipe(Effect.scoped, Effect.timeoutOption(Duration.millis(providerUpdateTimeoutMs)), Effect.result);
-            const finishedAt = yield* nowIso;
-            if (Result.isFailure(commandResult)) {
-              const providers = yield* setProviderUpdateState(
-                provider,
-                makeUpdateState({
-                  status: "failed",
-                  startedAt,
-                  finishedAt,
-                  message: describeUpdateCommandError(commandResult.failure),
-                }),
-              );
-              return { providers };
-            }
-            const result = commandResult.success;
-            const output = Option.isSome(result)
-              ? [result.value.stderr, result.value.stdout].filter(Boolean).join("\n\n").trim() || null
-              : null;
-            const failed = Option.isNone(result) || result.value.exitCode !== 0;
-            if (failed) {
-              const message = Option.isNone(result)
-                ? `Update timed out after ${formatProviderUpdateTimeout(providerUpdateTimeoutMs)}. The provider process was stopped.`
-                : `Update command exited with code ${result.value.exitCode}.`;
-              const providers = yield* setProviderUpdateState(
-                provider,
-                makeUpdateState({
-                  status: "failed",
-                  startedAt,
-                  finishedAt,
-                  message,
-                  output: output ? output.slice(0, UPDATE_OUTPUT_MAX_BYTES) : null,
-                }),
-              );
-              return { providers };
-            }
-
-            const providers = yield* refreshNow.pipe(Effect.mapError(toUpdateError));
-            const refreshed = providers.find((status) => status.provider === provider);
-            const refreshedAdvisory = refreshed?.versionAdvisory;
-            const stillOutdated = refreshedAdvisory?.status === "behind_latest";
-            const stillOutdatedVersions =
-              refreshedAdvisory?.currentVersion && refreshedAdvisory.latestVersion
-                ? ` (installed ${refreshedAdvisory.currentVersion}, latest ${refreshedAdvisory.latestVersion})`
-                : "";
-            const finalProviders = yield* setProviderUpdateState(
-              provider,
-              makeUpdateState({
-                status: stillOutdated ? "unchanged" : "succeeded",
+                status: "failed",
                 startedAt,
                 finishedAt,
-                message: stillOutdated
-                  ? `Update command completed, but Synara still detects an outdated provider version${stillOutdatedVersions}.`
-                  : "Provider updated.",
+                message: describeUpdateCommandError(commandResult.failure),
+              }),
+            );
+            return { providers };
+          }
+          const result = commandResult.success;
+          const output = Option.isSome(result)
+            ? [result.value.stderr, result.value.stdout].filter(Boolean).join("\n\n").trim() || null
+            : null;
+          const failed = Option.isNone(result) || result.value.exitCode !== 0;
+          if (failed) {
+            const message = Option.isNone(result)
+              ? `Update timed out after ${formatProviderUpdateTimeout(providerUpdateTimeoutMs)}. The provider process was stopped.`
+              : `Update command exited with code ${result.value.exitCode}.`;
+            const providers = yield* setProviderUpdateState(
+              provider,
+              makeUpdateState({
+                status: "failed",
+                startedAt,
+                finishedAt,
+                message,
                 output: output ? output.slice(0, UPDATE_OUTPUT_MAX_BYTES) : null,
               }),
             );
-            return { providers: finalProviders };
-          });
+            return { providers };
+          }
 
-          return yield* commandCoordinator.withCommandLock({
-            targetKey: provider,
-            lockKey: update.lockKey,
-            onQueued: setProviderUpdateState(
-              provider,
-              makeUpdateState({
-                status: "queued",
-                startedAt: null,
-                finishedAt: null,
-                message: "Waiting for another provider update to finish.",
-              }),
-            ).pipe(Effect.asVoid),
-            run,
-          });
-        },
-      );
+          const providers = yield* refreshNow.pipe(Effect.mapError(toUpdateError));
+          const refreshed = providers.find((status) => status.provider === provider);
+          const refreshedAdvisory = refreshed?.versionAdvisory;
+          const stillOutdated = refreshedAdvisory?.status === "behind_latest";
+          const stillOutdatedVersions =
+            refreshedAdvisory?.currentVersion && refreshedAdvisory.latestVersion
+              ? ` (installed ${refreshedAdvisory.currentVersion}, latest ${refreshedAdvisory.latestVersion})`
+              : "";
+          const finalProviders = yield* setProviderUpdateState(
+            provider,
+            makeUpdateState({
+              status: stillOutdated ? "unchanged" : "succeeded",
+              startedAt,
+              finishedAt,
+              message: stillOutdated
+                ? `Update command completed, but Synara still detects an outdated provider version${stillOutdatedVersions}.`
+                : "Provider updated.",
+              output: output ? output.slice(0, UPDATE_OUTPUT_MAX_BYTES) : null,
+            }),
+          );
+          return { providers: finalProviders };
+        });
+
+        return yield* commandCoordinator.withCommandLock({
+          targetKey: provider,
+          lockKey: update.lockKey,
+          onQueued: setProviderUpdateState(
+            provider,
+            makeUpdateState({
+              status: "queued",
+              startedAt: null,
+              finishedAt: null,
+              message: "Waiting for another provider update to finish.",
+            }),
+          ).pipe(Effect.asVoid),
+          run,
+        });
+      });
 
       return {
         // Mirror upstream's behavior here: reads consume the latest stable

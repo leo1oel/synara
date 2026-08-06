@@ -169,7 +169,10 @@ async function isWalkableSkillDirectory(
 // Subdirectories are visited concurrently but results are flattened in sorted name
 // order so name-dedup always picks the same winner across runs. Provider skill
 // folders may be symlinked, so directory checks intentionally follow symlinks.
-async function isReadableMarkdownFile(parentPath: string, dirent: import("node:fs").Dirent): Promise<boolean> {
+async function isReadableMarkdownFile(
+  parentPath: string,
+  dirent: import("node:fs").Dirent,
+): Promise<boolean> {
   if (!dirent.name.toLowerCase().endsWith(".md") || dirent.name.toLowerCase() === "skill.md") {
     return false;
   }
@@ -196,7 +199,8 @@ export async function collectSkillMarkdownPaths(
   async function visit(dir: string, depth: number): Promise<string[]> {
     const skillPath = nodePath.join(dir, "SKILL.md");
     try {
-      const stat = options?.followSymlinks === false ? await fs.lstat(skillPath) : await fs.stat(skillPath);
+      const stat =
+        options?.followSymlinks === false ? await fs.lstat(skillPath) : await fs.stat(skillPath);
       if (stat.isFile()) {
         return [skillPath];
       }
@@ -227,14 +231,20 @@ export async function collectSkillMarkdownPaths(
       await Promise.all(
         dirents.map(async (dirent) => ({
           name: dirent.name,
-          isDirectory: await isWalkableSkillDirectory(dir, dirent, options?.followSymlinks !== false),
+          isDirectory: await isWalkableSkillDirectory(
+            dir,
+            dirent,
+            options?.followSymlinks !== false,
+          ),
         })),
       )
     )
       .filter((entry) => entry.isDirectory)
       .map((entry) => entry.name)
       .sort();
-    const nested = await Promise.all(subdirNames.map((name) => visit(nodePath.join(dir, name), depth + 1)));
+    const nested = await Promise.all(
+      subdirNames.map((name) => visit(nodePath.join(dir, name), depth + 1)),
+    );
     return [...directMarkdownFiles, ...nested.flat()];
   }
 
@@ -261,11 +271,18 @@ export async function readSkillDescriptor(input: {
       : nodePath.basename(input.skillPath, nodePath.extname(input.skillPath));
   const unqualifiedName = readStringField(frontmatter, ["name"]) ?? fallbackName;
   const name =
-    input.namespace && !unqualifiedName.includes(":") ? `${input.namespace}:${unqualifiedName}` : unqualifiedName;
+    input.namespace && !unqualifiedName.includes(":")
+      ? `${input.namespace}:${unqualifiedName}`
+      : unqualifiedName;
   const description = readStringField(frontmatter, ["description"]);
   const displayName = readStringField(frontmatter, ["display-name", "displayName", "title"]);
-  const shortDescription = readStringField(frontmatter, ["short-description", "shortDescription", "summary"]);
-  const disabled = readBooleanField(frontmatter, ["disable-model-invocation", "disableModelInvocation"]) === true;
+  const shortDescription = readStringField(frontmatter, [
+    "short-description",
+    "shortDescription",
+    "summary",
+  ]);
+  const disabled =
+    readBooleanField(frontmatter, ["disable-model-invocation", "disableModelInvocation"]) === true;
 
   return {
     name,
@@ -288,7 +305,9 @@ export function skillNameKey(name: string): string {
   return name.trim().toLowerCase();
 }
 
-async function collectSkillDescriptorsFromRoots(roots: ReadonlyArray<SkillRoot>): Promise<ProviderSkillDescriptor[]> {
+async function collectSkillDescriptorsFromRoots(
+  roots: ReadonlyArray<SkillRoot>,
+): Promise<ProviderSkillDescriptor[]> {
   const skillsPerRoot = await Promise.all(
     roots.map(async (root) => {
       const skillPaths = await collectSkillMarkdownPaths(
@@ -336,7 +355,9 @@ async function collectSkillDescriptorsFromRoots(roots: ReadonlyArray<SkillRoot>)
 
 // Scans all roots concurrently, then dedupes by name in root order so earlier
 // roots keep precedence. Within a root, SKILL.md path order is preserved.
-export async function collectSkillsFromRoots(roots: ReadonlyArray<SkillRoot>): Promise<ProviderSkillDescriptor[]> {
+export async function collectSkillsFromRoots(
+  roots: ReadonlyArray<SkillRoot>,
+): Promise<ProviderSkillDescriptor[]> {
   const allSkills = await collectSkillDescriptorsFromRoots(roots);
   const byName = new Map<string, ProviderSkillDescriptor>();
   for (const skill of allSkills) {
@@ -463,7 +484,11 @@ function validateSkillFolderName(value: string): string {
 
 function validateAgentSkillName(value: string): string {
   const name = value.trim();
-  if (name.length === 0 || name.length > MAX_AGENT_SKILL_NAME_LENGTH || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name)) {
+  if (
+    name.length === 0 ||
+    name.length > MAX_AGENT_SKILL_NAME_LENGTH ||
+    !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name)
+  ) {
     throw new Error("Skill names must use lowercase letters, numbers, and single hyphens only.");
   }
   return name;
@@ -482,7 +507,9 @@ function normalizedSingleLine(value: string, label: string, maxLength: number): 
 
 function skillShortDescription(description: string): string {
   const firstSentence = description.match(/^.*?[.!?](?:\s|$)/)?.[0]?.trim() ?? description;
-  return firstSentence.length <= 160 ? firstSentence : `${firstSentence.slice(0, 157).trimEnd()}...`;
+  return firstSentence.length <= 160
+    ? firstSentence
+    : `${firstSentence.slice(0, 157).trimEnd()}...`;
 }
 
 function yamlString(value: string): string {
@@ -526,8 +553,16 @@ function buildEditedSkillMarkdown(input: {
   readonly description: string;
   readonly instructions: string;
 }): string {
-  const displayName = normalizedSingleLine(input.displayName, "Skill name", MAX_SKILL_DISPLAY_NAME_LENGTH);
-  const description = normalizedSingleLine(input.description, "Description", MAX_SKILL_DESCRIPTION_LENGTH);
+  const displayName = normalizedSingleLine(
+    input.displayName,
+    "Skill name",
+    MAX_SKILL_DISPLAY_NAME_LENGTH,
+  );
+  const description = normalizedSingleLine(
+    input.description,
+    "Description",
+    MAX_SKILL_DESCRIPTION_LENGTH,
+  );
   const instructions = input.instructions.trim();
   if (!instructions) {
     throw new Error("Instructions are required.");
@@ -535,7 +570,9 @@ function buildEditedSkillMarkdown(input: {
   if (Buffer.byteLength(instructions, "utf8") > MAX_MANAGED_SKILL_MARKDOWN_BYTES) {
     throw new Error("The skill instructions are too large.");
   }
-  const preserved = input.originalMarkdown ? preservedSkillFrontmatterLines(input.originalMarkdown) : [];
+  const preserved = input.originalMarkdown
+    ? preservedSkillFrontmatterLines(input.originalMarkdown)
+    : [];
   const frontmatter = [
     `name: ${yamlString(input.name)}`,
     `display-name: ${yamlString(displayName)}`,
@@ -579,7 +616,10 @@ function validateImportedRelativePath(value: string): string {
     normalized.length === 0 ||
     normalized.length > 1_024 ||
     normalized.startsWith("/") ||
-    segments.some((segment) => segment.length === 0 || segment === "." || segment === ".." || segment.includes("\0"))
+    segments.some(
+      (segment) =>
+        segment.length === 0 || segment === "." || segment === ".." || segment.includes("\0"),
+    )
   ) {
     throw new Error(`The skill contains an invalid path: ${value}`);
   }
@@ -690,7 +730,9 @@ export async function importSynaraSkill(
       throw new Error("The selected SKILL.md could not be read.");
     }
     if ((await bundledSkillNameKeys()).has(skillNameKey(stagedDescriptor.name))) {
-      throw new Error(`${stagedDescriptor.name} is included with Lattice and does not need to be installed.`);
+      throw new Error(
+        `${stagedDescriptor.name} is included with Lattice and does not need to be installed.`,
+      );
     }
 
     if (destinationExists) {
@@ -746,7 +788,9 @@ async function listManagedSkillFiles(skillDirectory: string): Promise<string[]> 
       if (entry.isFile()) {
         files.push(relativePath);
         if (files.length > MAX_MANAGED_SKILL_FILES) {
-          throw new Error(`This skill contains more than ${MAX_MANAGED_SKILL_FILES} files and cannot be previewed.`);
+          throw new Error(
+            `This skill contains more than ${MAX_MANAGED_SKILL_FILES} files and cannot be previewed.`,
+          );
         }
       }
     }
@@ -776,7 +820,10 @@ export async function readManagedSkill(
   if (stat.size > MAX_MANAGED_SKILL_MARKDOWN_BYTES) {
     throw new Error("This SKILL.md is too large to preview.");
   }
-  const [markdown, files] = await Promise.all([fs.readFile(skillPath, "utf8"), listManagedSkillFiles(skillDirectory)]);
+  const [markdown, files] = await Promise.all([
+    fs.readFile(skillPath, "utf8"),
+    listManagedSkillFiles(skillDirectory),
+  ]);
   return {
     skill: managedSkillDescriptor(descriptor, input.kind, id),
     markdown,
@@ -850,7 +897,10 @@ export async function saveManagedSkill(
     description: input.description,
     instructions: input.instructions,
   });
-  await replaceSkillMarkdown(nodePath.join(synaraSkillsDir(synaraBaseDir), id, "SKILL.md"), markdown);
+  await replaceSkillMarkdown(
+    nodePath.join(synaraSkillsDir(synaraBaseDir), id, "SKILL.md"),
+    markdown,
+  );
   invalidateSkillsCatalogCache();
   return {
     status: "updated",
@@ -905,7 +955,8 @@ export async function duplicateManagedSkill(
   const sourceDirectory = nodePath.join(sourceRoot, sourceId);
   const detail = await readManagedSkill(synaraBaseDir, input);
   const id = await availableCustomSkillId(synaraBaseDir, sourceId);
-  const displayName = detail.skill.interface?.displayName ?? displayNameFromSkillName(detail.skill.name);
+  const displayName =
+    detail.skill.interface?.displayName ?? displayNameFromSkillName(detail.skill.name);
   const customDisplayName = `${displayName
     .slice(0, MAX_SKILL_DISPLAY_NAME_LENGTH - " Custom".length)
     .trimEnd()} Custom`;
@@ -1090,7 +1141,10 @@ const PROVIDER_SKILL_ORIGIN_PREFERENCES = {
   pi: ["pi", "agents"],
 } as const satisfies Partial<Record<ProviderKind, readonly SkillsHomeOrigin[]>>;
 
-function homeRootsForOrigin(origin: SkillsHomeOrigin, input: SkillsCatalogDiscoveryInput): string[] {
+function homeRootsForOrigin(
+  origin: SkillsHomeOrigin,
+  input: SkillsCatalogDiscoveryInput,
+): string[] {
   return SKILL_ORIGIN_ROOTS[origin].homeRoots(input);
 }
 
@@ -1100,7 +1154,9 @@ function projectRootNamesForOrigin(origin: SkillsHomeOrigin): readonly string[] 
 
 // Native copies first so an agent keeps using its own skill, then Synara as the
 // portable fallback, then the remaining provider homes for cross-provider reuse.
-function preferredOriginsForProvider(provider: ProviderKind | null | undefined): ReadonlyArray<SkillsHomeOrigin> {
+function preferredOriginsForProvider(
+  provider: ProviderKind | null | undefined,
+): ReadonlyArray<SkillsHomeOrigin> {
   return provider ? (PROVIDER_SKILL_ORIGIN_PREFERENCES[provider] ?? []) : [];
 }
 
@@ -1118,7 +1174,9 @@ function orderedOriginsForProvider(
     ordered.push("synara");
   }
   if (!includeRemainingOrigins) {
-    return ordered.filter((origin) => includeSynaraRoot || (origin !== "bundled" && origin !== "synara"));
+    return ordered.filter(
+      (origin) => includeSynaraRoot || (origin !== "bundled" && origin !== "synara"),
+    );
   }
   for (const origin of HOME_ORIGIN_ORDER) {
     if (!includeSynaraRoot && (origin === "bundled" || origin === "synara")) {
@@ -1179,14 +1237,19 @@ function rootsForOrderedOrigins(
 }
 
 export function skillsCatalogRoots(input: SkillsCatalogRootInput): SkillRoot[] {
-  return rootsForOrderedOrigins(input, orderedOriginsForProvider(input.provider, input.includeSynaraRoot !== false));
+  return rootsForOrderedOrigins(
+    input,
+    orderedOriginsForProvider(input.provider, input.includeSynaraRoot !== false),
+  );
 }
 
 export function providerNativeSkillRoots(input: SkillsCatalogRootInput): SkillRoot[] {
   return rootsForOrderedOrigins(input, orderedOriginsForProvider(input.provider, false, false));
 }
 
-export async function discoverSkillsCatalog(input: SkillsCatalogDiscoveryInput): Promise<ProviderSkillDescriptor[]> {
+export async function discoverSkillsCatalog(
+  input: SkillsCatalogDiscoveryInput,
+): Promise<ProviderSkillDescriptor[]> {
   const cacheKey = [
     input.cwd?.trim() ?? "",
     input.provider ?? "",

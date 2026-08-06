@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import type { ComposerThreadMentionSource, Project } from "../types";
-import { buildPaperMentionComposerItems, buildThreadMentionComposerItems } from "./useComposerCommandMenuItems";
+import {
+  buildPaperMentionComposerItems,
+  buildThreadMentionComposerItems,
+} from "./useComposerCommandMenuItems";
 
 function project(id: string, kind: Project["kind"], name: string): Project {
   return {
@@ -211,15 +214,15 @@ describe("buildPaperMentionComposerItems", () => {
   });
 
   it("searches the full library by title, citation key, or paper id", () => {
-    expect(buildPaperMentionComposerItems({ papers, query: "attention" }).map((item) => item.label)).toEqual([
-      "Attention Is All You Need",
-    ]);
-    expect(buildPaperMentionComposerItems({ papers, query: "vaswani2017" }).map((item) => item.label)).toEqual([
-      "Attention Is All You Need",
-    ]);
-    expect(buildPaperMentionComposerItems({ papers, query: "1706.03762" }).map((item) => item.label)).toEqual([
-      "Attention Is All You Need",
-    ]);
+    expect(
+      buildPaperMentionComposerItems({ papers, query: "attention" }).map((item) => item.label),
+    ).toEqual(["Attention Is All You Need"]);
+    expect(
+      buildPaperMentionComposerItems({ papers, query: "vaswani2017" }).map((item) => item.label),
+    ).toEqual(["Attention Is All You Need"]);
+    expect(
+      buildPaperMentionComposerItems({ papers, query: "1706.03762" }).map((item) => item.label),
+    ).toEqual(["Attention Is All You Need"]);
   });
 
   it("keeps every title-search result and gives duplicate titles distinct mention names", () => {

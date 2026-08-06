@@ -135,7 +135,9 @@ function sectionRank(section: string): number {
 
 // Creates one canonical row per normalized skill name. Duplicate provider copies
 // stay visible as sources instead of letting the first origin hide the rest.
-export function buildSettingsSkillGroups(skills: ReadonlyArray<ProviderSkillDescriptor>): SettingsSkillGroup[] {
+export function buildSettingsSkillGroups(
+  skills: ReadonlyArray<ProviderSkillDescriptor>,
+): SettingsSkillGroup[] {
   const groups = new Map<string, SettingsSkillSource[]>();
   for (const skill of skills) {
     const key = settingsSkillNameKey(skill.name);
@@ -162,8 +164,10 @@ export function buildSettingsSkillGroups(skills: ReadonlyArray<ProviderSkillDesc
           .flatMap((source) => providersForSkillOrigin(source.origin))
           .filter((provider, index, all) => all.indexOf(provider) === index),
       );
-      const section = sources.length > 1 ? SHARED_SKILLS_SECTION : (sources[0]?.origin ?? PERSONAL_ORIGIN);
-      const description = primarySkill.interface?.shortDescription ?? primarySkill.description ?? "No description.";
+      const section =
+        sources.length > 1 ? SHARED_SKILLS_SECTION : (sources[0]?.origin ?? PERSONAL_ORIGIN);
+      const description =
+        primarySkill.interface?.shortDescription ?? primarySkill.description ?? "No description.";
       return {
         key,
         displayName: skillDisplayName(primarySkill),
@@ -178,7 +182,9 @@ export function buildSettingsSkillGroups(skills: ReadonlyArray<ProviderSkillDesc
     .sort((left, right) => left.displayName.localeCompare(right.displayName));
 }
 
-export function buildSettingsSkillSections(skills: ReadonlyArray<ProviderSkillDescriptor>): SettingsSkillSection[] {
+export function buildSettingsSkillSections(
+  skills: ReadonlyArray<ProviderSkillDescriptor>,
+): SettingsSkillSection[] {
   const sections = new Map<string, SettingsSkillGroup[]>();
   for (const group of buildSettingsSkillGroups(skills)) {
     sections.set(group.section, [...(sections.get(group.section) ?? []), group]);

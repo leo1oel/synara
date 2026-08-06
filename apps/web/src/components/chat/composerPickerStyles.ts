@@ -25,14 +25,16 @@ export const COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME =
 export const COMPOSER_TOOLBAR_PICKER_TRIGGER_CLASS_NAME = `inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 ${ELEVATED_HOVER_SURFACE_CLASS_NAME} ${COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME}`;
 
 /** Caps model-provider submenu height; pairs with the list scroll class below. */
-export const COMPOSER_PICKER_MODEL_SUBMENU_HEIGHT_CLASS_NAME = "[--available-height:min(20rem,55vh)]";
+export const COMPOSER_PICKER_MODEL_SUBMENU_HEIGHT_CLASS_NAME =
+  "[--available-height:min(20rem,55vh)]";
 
 /** Sticky search header inside frosted composer picker submenus. */
 export const COMPOSER_PICKER_SEARCH_HEADER_CLASS_NAME =
   "sticky z-20 shrink-0 border-b border-[color:color-mix(in_srgb,var(--foreground)_6%,transparent)] bg-transparent px-1.5 pb-1.5 pt-1";
 
 /** Scrollable model list body inside searchable provider submenus. */
-export const COMPOSER_PICKER_MODEL_LIST_MAX_HEIGHT_CLASS_NAME = "max-h-[min(var(--available-height,20rem),20rem)]";
+export const COMPOSER_PICKER_MODEL_LIST_MAX_HEIGHT_CLASS_NAME =
+  "max-h-[min(var(--available-height,20rem),20rem)]";
 
 /** Scroll chrome for long model-provider lists. */
 export const COMPOSER_PICKER_MODEL_LIST_SCROLL_CLASS_NAME = "composer-picker-scroll";
@@ -87,10 +89,12 @@ export const CHAT_MAIN_CONTENT_SURFACE_CLASS_NAME = `${CHAT_BACKGROUND_CLASS_NAM
 
 /** Clipped full-height inset shell for routes that already own an outer card wrapper.
  *  Default RouteInsetSurface card routes use an unclipped inset so seam shadows can bleed. */
-export const CHAT_ROUTE_INSET_SHELL_CLASS_NAME = "h-dvh min-h-0 overflow-hidden overscroll-y-none text-foreground";
+export const CHAT_ROUTE_INSET_SHELL_CLASS_NAME =
+  "h-dvh min-h-0 overflow-hidden overscroll-y-none text-foreground";
 
 /** Outer viewport shell for the split/single thread content wrapper that carries the card. */
-export const CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME = "flex h-dvh min-h-0 min-w-0 flex-1 overflow-hidden";
+export const CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME =
+  "flex h-dvh min-h-0 min-w-0 flex-1 overflow-hidden";
 
 /** Horizontal padding shared by the transcript and composer columns. */
 export const CHAT_COLUMN_GUTTER_CLASS_NAME =
@@ -221,7 +225,8 @@ export const COMPOSER_COMMAND_MENU_ITEM_ACTIVE_CLASS_NAME =
 
 export const COMPOSER_INPUT_SURFACE_BANNER_CLASS_NAME = `chat-composer-surface-banner border-b ${COMPOSER_SURFACE_BORDER_CLASS_NAME} bg-[var(--color-background-elevated-secondary)]`;
 
-export const RUNTIME_FULL_ACCESS_ACCENT_CLASS_NAME = "text-[var(--runtime-full-access-accent)] hover:opacity-85";
+export const RUNTIME_FULL_ACCESS_ACCENT_CLASS_NAME =
+  "text-[var(--runtime-full-access-accent)] hover:opacity-85";
 
 export const RUNTIME_AUTO_ACCENT_CLASS_NAME = "text-[var(--color-text-accent)] hover:opacity-85";
 export const RUNTIME_AUTO_ICON_ACCENT_CLASS_NAME = "text-[var(--color-text-accent)]";
@@ -235,7 +240,8 @@ export const COMPOSER_EDITOR_TEXT_CLASS_NAME = "text-[length:var(--app-font-size
 export const COMPOSER_EDITOR_TYPOGRAPHY_CLASS_NAME = `font-system-ui ${COMPOSER_EDITOR_TEXT_CLASS_NAME} ${COMPOSER_EDITOR_LINE_HEIGHT_CLASS_NAME}`;
 /** Muted empty-state copy for the composer prompt editor. */
 export const COMPOSER_PLACEHOLDER_TEXT_CLASS_NAME = "text-muted-foreground/40";
-export const COMPOSER_EDITOR_MIN_HEIGHT_CLASS_NAME = "min-h-[var(--app-density-composer-editor-min-height,2lh)]";
+export const COMPOSER_EDITOR_MIN_HEIGHT_CLASS_NAME =
+  "min-h-[var(--app-density-composer-editor-min-height,2lh)]";
 /** Lexical wraps lines in `<p>` nodes; reset default margins so text sits flush above the footer. */
 export const COMPOSER_EDITOR_CONTENT_RESET_CLASS_NAME = "[&_p]:m-0";
 /** Shared padding around the composer prompt editor. */

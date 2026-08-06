@@ -758,7 +758,9 @@ describe("voice helpers", () => {
       },
     ] as const;
 
-    expect(filterSidechatTranscriptMessages(messages, true).map((message) => message.id)).toEqual(["message-native"]);
+    expect(filterSidechatTranscriptMessages(messages, true).map((message) => message.id)).toEqual([
+      "message-native",
+    ]);
     expect(filterSidechatTranscriptMessages(messages, false).map((message) => message.id)).toEqual([
       "message-imported",
       "message-native",
@@ -766,7 +768,9 @@ describe("voice helpers", () => {
   });
 
   it("appends a transcript to the existing prompt without disturbing spacing", () => {
-    expect(appendVoiceTranscriptToPrompt("Hello there   ", "  next line  ")).toBe("Hello there\nnext line");
+    expect(appendVoiceTranscriptToPrompt("Hello there   ", "  next line  ")).toBe(
+      "Hello there\nnext line",
+    );
   });
 
   it("returns null when the transcript is empty", () => {
@@ -775,7 +779,9 @@ describe("voice helpers", () => {
 
   it("sanitizes inline stack traces from voice errors", () => {
     expect(
-      sanitizeVoiceErrorMessage("Your ChatGPT login has expired. Sign in again. at file:///Users/test/app.mjs:12:3"),
+      sanitizeVoiceErrorMessage(
+        "Your ChatGPT login has expired. Sign in again. at file:///Users/test/app.mjs:12:3",
+      ),
     ).toBe("Your ChatGPT login has expired. Sign in again.");
   });
 
@@ -1690,11 +1696,9 @@ describe("worktree setup snapshots", () => {
   });
 
   it("starts with every step pending except the first when setup begins", () => {
-    expect(createWorktreeSetupSnapshot("create-worktree").steps.map((step) => step.status)).toEqual([
-      "active",
-      "pending",
-      "pending",
-    ]);
+    expect(createWorktreeSetupSnapshot("create-worktree").steps.map((step) => step.status)).toEqual(
+      ["active", "pending", "pending"],
+    );
   });
 
   it("ends with every step done except the last when the session starts", () => {
@@ -1706,7 +1710,9 @@ describe("worktree setup snapshots", () => {
   });
 
   it("inserts the setup action step when a worktree setup script is present", () => {
-    expect(createWorktreeSetupSnapshot("run-setup-action", { setupScriptName: "Setup" }).steps).toEqual([
+    expect(
+      createWorktreeSetupSnapshot("run-setup-action", { setupScriptName: "Setup" }).steps,
+    ).toEqual([
       { id: "create-worktree", label: "Creating branch and worktree", status: "done" },
       { id: "prepare-thread", label: "Linking thread workspace", status: "done" },
       { id: "run-setup-action", label: "Running setup action: Setup", status: "active" },
@@ -1716,7 +1722,9 @@ describe("worktree setup snapshots", () => {
 
   it("keeps the setup action step done when the session starts afterward", () => {
     expect(
-      createWorktreeSetupSnapshot("start-session", { setupScriptName: "Setup" }).steps.map((step) => step.status),
+      createWorktreeSetupSnapshot("start-session", { setupScriptName: "Setup" }).steps.map(
+        (step) => step.status,
+      ),
     ).toEqual(["done", "done", "done", "active"]);
   });
 
@@ -1798,7 +1806,11 @@ describe("worktree setup snapshots", () => {
     });
 
     expect(next).not.toBe(current);
-    expect(next.worktreeSetup?.steps.map((step) => step.status)).toEqual(["active", "pending", "pending"]);
+    expect(next.worktreeSetup?.steps.map((step) => step.status)).toEqual([
+      "active",
+      "pending",
+      "pending",
+    ]);
   });
 });
 
@@ -2014,7 +2026,9 @@ describe("shouldAutoDeleteTerminalThreadOnLastClose", () => {
 
 describe("resolveRuntimeModeAfterApprovalDecision", () => {
   it("switches approval-required threads to full-access on acceptForSession", () => {
-    expect(resolveRuntimeModeAfterApprovalDecision("approval-required", "acceptForSession")).toBe("full-access");
+    expect(resolveRuntimeModeAfterApprovalDecision("approval-required", "acceptForSession")).toBe(
+      "full-access",
+    );
   });
 
   it("does not change a thread already in full-access", () => {
@@ -2031,7 +2045,9 @@ describe("resolveRuntimeModeAfterApprovalDecision", () => {
   });
 
   it("does not widen a permission-profile grant to full access", () => {
-    expect(resolveRuntimeModeAfterApprovalDecision("auto", "acceptForSession", "permissions")).toBeNull();
+    expect(
+      resolveRuntimeModeAfterApprovalDecision("auto", "acceptForSession", "permissions"),
+    ).toBeNull();
   });
 });
 

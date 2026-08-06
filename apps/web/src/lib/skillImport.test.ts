@@ -35,13 +35,21 @@ describe("prepareSkillSelection", () => {
     ]);
 
     expect(selection.folderName).toBe("paper-review");
-    expect(selection.files.map((file) => file.relativePath)).toEqual(["references/checklist.md", "SKILL.md"]);
+    expect(selection.files.map((file) => file.relativePath)).toEqual([
+      "references/checklist.md",
+      "SKILL.md",
+    ]);
   });
 
   it("rejects folders without a skill manifest or with multiple skills", () => {
-    expect(() => prepareSkillSelection([browserFile("notes/README.md")])).toThrow("containing a SKILL.md");
+    expect(() => prepareSkillSelection([browserFile("notes/README.md")])).toThrow(
+      "containing a SKILL.md",
+    );
     expect(() =>
-      prepareSkillSelection([browserFile("skills/one/SKILL.md"), browserFile("skills/two/SKILL.md")]),
+      prepareSkillSelection([
+        browserFile("skills/one/SKILL.md"),
+        browserFile("skills/two/SKILL.md"),
+      ]),
     ).toThrow("one skill folder");
   });
 });

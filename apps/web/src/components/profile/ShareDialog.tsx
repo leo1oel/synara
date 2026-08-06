@@ -183,7 +183,12 @@ export function ShareDialog({
             >
               <CopyIcon className="size-5" />
             </ShareButton>
-            <ShareButton label="X" busy={busy === "x"} disabled={actionsDisabled} onClick={() => void handleShare("x")}>
+            <ShareButton
+              label="X"
+              busy={busy === "x"}
+              disabled={actionsDisabled}
+              onClick={() => void handleShare("x")}
+            >
               <SiX className="size-5" />
             </ShareButton>
             <ShareButton
@@ -213,7 +218,9 @@ export function ShareDialog({
             </ShareButton>
           </div>
 
-          <p className="min-h-4 text-center text-xs leading-snug text-muted-foreground">{status ?? ""}</p>
+          <p className="min-h-4 text-center text-xs leading-snug text-muted-foreground">
+            {status ?? ""}
+          </p>
         </div>
       </DialogPopup>
     </Dialog>

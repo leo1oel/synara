@@ -61,9 +61,7 @@ export function latticeContextSelection(
     : null;
 }
 
-export function latticeContextDetails(
-  context: LatticeHostContextSnapshot,
-): LatticeContextDetail[] {
+export function latticeContextDetails(context: LatticeHostContextSnapshot): LatticeContextDetail[] {
   const details: LatticeContextDetail[] = [
     {
       label: "Active view",
@@ -117,9 +115,7 @@ export function clearLatticeContextSelection(
   };
   return {
     ...context,
-    ...(context.editor
-      ? { editor: withoutSelection(context.editor) }
-      : {}),
+    ...(context.editor ? { editor: withoutSelection(context.editor) } : {}),
     ...(context.pdf ? { pdf: withoutSelection(context.pdf) } : {}),
     ...(context.paper ? { paper: withoutSelection(context.paper) } : {}),
   };

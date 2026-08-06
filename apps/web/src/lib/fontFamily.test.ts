@@ -30,7 +30,9 @@ describe("normalizeMonospaceFontFamilyCssValue", () => {
   });
 
   it("keeps existing generic mono fallbacks intact", () => {
-    expect(normalizeMonospaceFontFamilyCssValue('"Geist Mono", ui-monospace')).toBe('"Geist Mono", ui-monospace');
+    expect(normalizeMonospaceFontFamilyCssValue('"Geist Mono", ui-monospace')).toBe(
+      '"Geist Mono", ui-monospace',
+    );
   });
 
   it("preserves CSS-wide keywords as single values", () => {

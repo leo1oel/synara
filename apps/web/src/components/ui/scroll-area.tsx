@@ -50,7 +50,11 @@ function ScrollArea({
   );
 }
 
-function ScrollBar({ className, orientation: orientationProp, ...props }: ScrollAreaPrimitive.Scrollbar.Props) {
+function ScrollBar({
+  className,
+  orientation: orientationProp,
+  ...props
+}: ScrollAreaPrimitive.Scrollbar.Props) {
   const orientation = orientationProp ?? "vertical";
   return (
     <ScrollAreaPrimitive.Scrollbar

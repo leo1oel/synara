@@ -306,11 +306,17 @@ const tagRequestBody = <const Tag extends string, const Fields extends Schema.St
 
 const WebSocketRequestBody = Schema.Union([
   // Orchestration methods
-  tagRequestBody(ORCHESTRATION_WS_METHODS.dispatchCommand, Schema.Struct({ command: ClientOrchestrationCommand })),
+  tagRequestBody(
+    ORCHESTRATION_WS_METHODS.dispatchCommand,
+    Schema.Struct({ command: ClientOrchestrationCommand }),
+  ),
   tagRequestBody(ORCHESTRATION_WS_METHODS.importThread, OrchestrationImportThreadInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.getSnapshot, OrchestrationGetSnapshotInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.getShellSnapshot, OrchestrationGetShellSnapshotInput),
-  tagRequestBody(ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot, OrchestrationGetThreadDetailSnapshotInput),
+  tagRequestBody(
+    ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot,
+    OrchestrationGetThreadDetailSnapshotInput,
+  ),
   tagRequestBody(ORCHESTRATION_WS_METHODS.repairState, OrchestrationRepairStateInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.getTurnDiff, OrchestrationGetTurnDiffInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.getFullThreadDiff, OrchestrationGetFullThreadDiffInput),
@@ -518,7 +524,10 @@ export const WsPushServerMaintenanceUpdated = makeWsPushSchema(
   WS_CHANNELS.serverMaintenanceUpdated,
   ServerLifecycleStreamEvent,
 );
-export const WsPushServerConfigUpdated = makeWsPushSchema(WS_CHANNELS.serverConfigUpdated, ServerConfigUpdatedPayload);
+export const WsPushServerConfigUpdated = makeWsPushSchema(
+  WS_CHANNELS.serverConfigUpdated,
+  ServerConfigUpdatedPayload,
+);
 export const WsPushServerProviderStatusesUpdated = makeWsPushSchema(
   WS_CHANNELS.serverProviderStatusesUpdated,
   ServerProviderStatusesUpdatedPayload,
@@ -540,7 +549,10 @@ export const WsPushProjectProvisionProgress = makeWsPushSchema(
   GitHubProjectProvisionProgressEvent,
 );
 export const WsPushTerminalEvent = makeWsPushSchema(WS_CHANNELS.terminalEvent, TerminalEvent);
-export const WsPushProjectDevServerEvent = makeWsPushSchema(WS_CHANNELS.projectDevServerEvent, ProjectDevServerEvent);
+export const WsPushProjectDevServerEvent = makeWsPushSchema(
+  WS_CHANNELS.projectDevServerEvent,
+  ProjectDevServerEvent,
+);
 export const WsPushOrchestrationDomainEvent = makeWsPushSchema(
   ORCHESTRATION_WS_CHANNELS.domainEvent,
   OrchestrationEvent,

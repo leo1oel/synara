@@ -12,7 +12,10 @@ import {
   shouldHoldMissingThreadRouteFallback,
   shouldStartMissingThreadRouteRecovery,
 } from "../chatRouteRestore";
-import { refreshEmptyRouteRestoreSnapshot, waitForEmptyRouteRestoreFallbackDelay } from "../chatRouteRecovery";
+import {
+  refreshEmptyRouteRestoreSnapshot,
+  waitForEmptyRouteRestoreFallbackDelay,
+} from "../chatRouteRecovery";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { parseDiffRouteSearch, stripDiffSearchParams } from "../diffRouteSearch";
 import { postEmbedReadyToLattice } from "../embedMode";
@@ -25,10 +28,17 @@ import { useStore } from "../store";
 import { createThreadExistsSelector, createThreadProjectIdSelector } from "../storeSelectors";
 import { SingleChatSurface } from "../components/chat/SingleChatSurface";
 import { SplitChatSurface } from "../components/chat/SplitChatSurface";
-import { resolveEmbeddedDraftProjectRebind, resolveSingleProjectId } from "./-chatThreadRoute.logic";
+import {
+  resolveEmbeddedDraftProjectRebind,
+  resolveSingleProjectId,
+} from "./-chatThreadRoute.logic";
 
 function ChatThreadRouteView() {
-  const { embedMode, projectId: embeddedProjectId, bindingError: embedBindingError } = useEmbeddedWorkspaceProject();
+  const {
+    embedMode,
+    projectId: embeddedProjectId,
+    bindingError: embedBindingError,
+  } = useEmbeddedWorkspaceProject();
   const { handleNewThread } = useHandleNewThread();
   const embedNavigationProjectIdRef = useRef<ProjectId | null>(null);
   const threadsHydrated = useStore((store) => store.threadsHydrated);
@@ -41,22 +51,29 @@ function ChatThreadRouteView() {
   const threadExistsSelector = createThreadExistsSelector(threadId);
   const threadProjectId: ProjectId | null = useStore(threadProjectIdSelector);
   const threadExists = useStore(threadExistsSelector);
-  const draftThreadState = useComposerDraftStore((store) => store.draftThreadsByThreadId[threadId] ?? null);
+  const draftThreadState = useComposerDraftStore(
+    (store) => store.draftThreadsByThreadId[threadId] ?? null,
+  );
   const moveDraftThreadToProject = useComposerDraftStore((store) => store.moveDraftThreadToProject);
   const draftThreadExists = draftThreadState !== null;
   const routeThreadExists = threadExists || draftThreadExists;
-  const splitView = useSplitViewStore(useMemo(() => selectSplitView(search.splitViewId ?? null), [search.splitViewId]));
+  const splitView = useSplitViewStore(
+    useMemo(() => selectSplitView(search.splitViewId ?? null), [search.splitViewId]),
+  );
   const splitViewsHydrated = useSplitViewStore((store) => store.hasHydrated);
   const activeProjectId = resolveSingleProjectId({
     threadProjectId,
     draftProjectId: draftThreadState?.projectId ?? null,
   });
   const activeProject = useStore((store) =>
-    activeProjectId ? (store.projects.find((project) => project.id === activeProjectId) ?? null) : null,
+    activeProjectId
+      ? (store.projects.find((project) => project.id === activeProjectId) ?? null)
+      : null,
   );
   const activeProjectCwd = activeProject?.cwd ?? null;
   const navigate = useNavigate();
-  const [missingThreadRecoveryState, setMissingThreadRecoveryState] = useState<EmptyRouteRestoreRecoveryState>("idle");
+  const [missingThreadRecoveryState, setMissingThreadRecoveryState] =
+    useState<EmptyRouteRestoreRecoveryState>("idle");
   const mountedRef = useRef(true);
   const missingThreadRecoveryRunRef = useRef(0);
   // Synchronous re-entry guard: the "pending" transition below is deferred (async

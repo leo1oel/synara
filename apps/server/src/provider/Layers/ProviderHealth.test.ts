@@ -92,7 +92,9 @@ function mockSpawnerLayer(
           windowsVerbatimArguments?: boolean;
         };
       };
-      return Effect.succeed(mockHandle(handler(cmd.args, cmd.command, cmd.options?.env, cmd.options)));
+      return Effect.succeed(
+        mockHandle(handler(cmd.args, cmd.command, cmd.options?.env, cmd.options)),
+      );
     }),
   );
 }
@@ -174,7 +176,9 @@ const allProvidersDisabledServerSettings = {
 
 const disabledProviderHealthLayer = ProviderHealthLive.pipe(
   Layer.provideMerge(ServerSettingsService.layerTest(allProvidersDisabledSettings)),
-  Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "provider-health-disabled-" })),
+  Layer.provideMerge(
+    ServerConfig.layerTest(process.cwd(), { prefix: "provider-health-disabled-" }),
+  ),
 );
 
 const cachedReadyCodexStatus = {
@@ -308,14 +312,22 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
 
       const capabilities = resolvePackageManagedProviderMaintenance(definition, {
         binaryPath: "kilo",
-        realCommandPath: "/Users/test/.nvm/versions/node/v24.13.0/lib/node_modules/@kilocode/cli/bin/kilo",
+        realCommandPath:
+          "/Users/test/.nvm/versions/node/v24.13.0/lib/node_modules/@kilocode/cli/bin/kilo",
         commandDirectory: "/Users/test/.nvm/versions/node/v24.13.0/bin",
       });
 
       assert.deepStrictEqual(capabilities.update, {
-        command: "npm install -g --prefix /Users/test/.nvm/versions/node/v24.13.0 @kilocode/cli@latest",
+        command:
+          "npm install -g --prefix /Users/test/.nvm/versions/node/v24.13.0 @kilocode/cli@latest",
         executable: "npm",
-        args: ["install", "-g", "--prefix", "/Users/test/.nvm/versions/node/v24.13.0", "@kilocode/cli@latest"],
+        args: [
+          "install",
+          "-g",
+          "--prefix",
+          "/Users/test/.nvm/versions/node/v24.13.0",
+          "@kilocode/cli@latest",
+        ],
         lockKey: "npm-global",
         pathPrepend: "/Users/test/.nvm/versions/node/v24.13.0/bin",
       });
@@ -351,7 +363,8 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
             kilo: {
               ...DEFAULT_SERVER_SETTINGS.providers.kilo,
               enabled: true,
-              binaryPath: "/Users/test/.nvm/versions/node/v24.13.0/lib/node_modules/@kilocode/cli/bin/kilo",
+              binaryPath:
+                "/Users/test/.nvm/versions/node/v24.13.0/lib/node_modules/@kilocode/cli/bin/kilo",
             },
           },
         } satisfies typeof DEFAULT_SERVER_SETTINGS;
@@ -363,7 +376,8 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
               onKill: () => (killed = true),
               shouldHang: (args, command) =>
                 command === "npm" &&
-                args.join(" ") === "install -g --prefix /Users/test/.nvm/versions/node/v24.13.0 @kilocode/cli@latest",
+                args.join(" ") ===
+                  "install -g --prefix /Users/test/.nvm/versions/node/v24.13.0 @kilocode/cli@latest",
             }),
           ),
         );
@@ -600,7 +614,8 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
       authStatus: "unknown",
       version: "1.15.13",
       checkedAt: "2026-06-04T17:00:00.000Z",
-      message: "OpenCode CLI is installed. Configure provider credentials inside OpenCode as needed.",
+      message:
+        "OpenCode CLI is installed. Configure provider credentials inside OpenCode as needed.",
     } satisfies ServerProviderStatus;
 
     it("keeps an already usable provider available after a transient command timeout", () => {
@@ -613,7 +628,8 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
             available: false,
             authStatus: "unknown",
             checkedAt: "2026-06-04T17:01:00.000Z",
-            message: "OpenCode CLI is installed but failed to run. Timed out while running command.",
+            message:
+              "OpenCode CLI is installed but failed to run. Timed out while running command.",
           },
         ],
       );
@@ -679,7 +695,10 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
       } satisfies ServerProviderStatus;
 
       assert.deepStrictEqual(
-        stabilizeProviderStatusesAgainstTransientTimeouts([previousReadyOpenCode], [unavailableStatus]),
+        stabilizeProviderStatusesAgainstTransientTimeouts(
+          [previousReadyOpenCode],
+          [unavailableStatus],
+        ),
         [unavailableStatus],
       );
     });
@@ -704,7 +723,8 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
             authStatus: "unknown",
             version: "2.1.162",
             checkedAt: "2026-06-04T17:01:00.000Z",
-            message: "Could not verify Claude authentication status. Timed out while running command.",
+            message:
+              "Could not verify Claude authentication status. Timed out while running command.",
           },
         ],
       );
@@ -738,7 +758,10 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
       } satisfies ServerProviderStatus;
 
       assert.deepStrictEqual(
-        stabilizeProviderStatusesAgainstTransientTimeouts([previousUnauthenticatedClaude], [authTimeoutWarning]),
+        stabilizeProviderStatusesAgainstTransientTimeouts(
+          [previousUnauthenticatedClaude],
+          [authTimeoutWarning],
+        ),
         [authTimeoutWarning],
       );
     });
@@ -752,7 +775,8 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
       authStatus: "unknown",
       version: "2026.06.04-8f81907",
       checkedAt: "2026-06-04T17:00:00.000Z",
-      message: "Cursor Agent CLI is installed. Sign in with Cursor if a session prompts for authentication.",
+      message:
+        "Cursor Agent CLI is installed. Sign in with Cursor if a session prompts for authentication.",
       versionAdvisory: {
         status: "current",
         currentVersion: "2026.06.04-8f81907",
@@ -815,7 +839,10 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         false,
       );
       assert.strictEqual(
-        providerStatusesEqual([readyCodex], [{ ...readyCodex, autoRuntimeModeBinaryPath: "/custom/bin/codex" }]),
+        providerStatusesEqual(
+          [readyCodex],
+          [{ ...readyCodex, autoRuntimeModeBinaryPath: "/custom/bin/codex" }],
+        ),
         false,
       );
     });
@@ -902,11 +929,17 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const { tmpDir, runtimeDir } = yield* withTempCodexHome();
-        yield* fileSystem.writeFileString(path.join(tmpDir, "config.toml"), 'model_provider = "portkey"\n');
+        yield* fileSystem.writeFileString(
+          path.join(tmpDir, "config.toml"),
+          'model_provider = "portkey"\n',
+        );
         const configuredHome = yield* fileSystem.makeTempDirectoryScoped({
           prefix: "synara-configured-codex-",
         });
-        yield* fileSystem.writeFileString(path.join(configuredHome, "config.toml"), 'model_provider = "openai"\n');
+        yield* fileSystem.writeFileString(
+          path.join(configuredHome, "config.toml"),
+          'model_provider = "openai"\n',
+        );
         expectedCodexHome = path.join(runtimeDir, SYNARA_CODEX_HOME_OVERLAY_DIR);
 
         const status = yield* makeCheckCodexProviderStatus("codex", configuredHome);
@@ -993,7 +1026,10 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         assert.strictEqual(status.status, "error");
         assert.strictEqual(status.available, true);
         assert.strictEqual(status.authStatus, "unauthenticated");
-        assert.strictEqual(status.message, "Codex CLI is not authenticated. Run `codex login` and try again.");
+        assert.strictEqual(
+          status.message,
+          "Codex CLI is not authenticated. Run `codex login` and try again.",
+        );
       }).pipe(
         Effect.provide(
           mockSpawnerLayer((args) => {
@@ -1016,7 +1052,10 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         assert.strictEqual(status.status, "error");
         assert.strictEqual(status.available, true);
         assert.strictEqual(status.authStatus, "unauthenticated");
-        assert.strictEqual(status.message, "Codex CLI is not authenticated. Run `codex login` and try again.");
+        assert.strictEqual(
+          status.message,
+          "Codex CLI is not authenticated. Run `codex login` and try again.",
+        );
       }).pipe(
         Effect.provide(
           mockSpawnerLayer((args) => {
@@ -1076,7 +1115,10 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         assert.strictEqual(status.status, "ready");
         assert.strictEqual(status.available, true);
         assert.strictEqual(status.authStatus, "unknown");
-        assert.strictEqual(status.message, "Using a custom Codex model provider; OpenAI login check skipped.");
+        assert.strictEqual(
+          status.message,
+          "Using a custom Codex model provider; OpenAI login check skipped.",
+        );
       }).pipe(
         Effect.provide(
           // The spawner only handles --version; if the test attempts
@@ -1361,83 +1403,85 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
       ),
     );
 
-    it.effect("strips stale direct Claude credentials from health probes when local OAuth is usable", () =>
-      Effect.gen(function* () {
-        const fileSystem = yield* FileSystem.FileSystem;
-        const path = yield* Path.Path;
-        const homeDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "provider-health-claude-home-",
-        });
-        const claudeDir = path.join(homeDir, ".claude");
-        yield* fileSystem.makeDirectory(claudeDir, { recursive: true });
-        yield* fileSystem.writeFileString(
-          path.join(claudeDir, ".credentials.json"),
-          JSON.stringify({
-            claudeAiOauth: {
-              accessToken: "local-access-token",
-              expiresAt: Date.now() + 60_000,
-            },
-          }),
-        );
+    it.effect(
+      "strips stale direct Claude credentials from health probes when local OAuth is usable",
+      () =>
+        Effect.gen(function* () {
+          const fileSystem = yield* FileSystem.FileSystem;
+          const path = yield* Path.Path;
+          const homeDir = yield* fileSystem.makeTempDirectoryScoped({
+            prefix: "provider-health-claude-home-",
+          });
+          const claudeDir = path.join(homeDir, ".claude");
+          yield* fileSystem.makeDirectory(claudeDir, { recursive: true });
+          yield* fileSystem.writeFileString(
+            path.join(claudeDir, ".credentials.json"),
+            JSON.stringify({
+              claudeAiOauth: {
+                accessToken: "local-access-token",
+                expiresAt: Date.now() + 60_000,
+              },
+            }),
+          );
 
-        const envKeys = [
-          "ANTHROPIC_API_KEY",
-          "ANTHROPIC_AUTH_TOKEN",
-          "CLAUDE_CODE_OAUTH_TOKEN",
-          "ANTHROPIC_BASE_URL",
-          "CLAUDE_CODE_USE_BEDROCK",
-          "CLAUDE_CODE_USE_VERTEX",
-          "CLAUDE_CODE_USE_ANTHROPIC_AWS",
-        ] as const;
-        yield* Effect.acquireRelease(
-          Effect.sync(() => {
-            const previous = new Map<string, string | undefined>();
-            for (const key of envKeys) {
-              previous.set(key, process.env[key]);
-              delete process.env[key];
-            }
-            process.env.ANTHROPIC_API_KEY = "stale-api-key";
-            process.env.ANTHROPIC_AUTH_TOKEN = "stale-auth-token";
-            process.env.CLAUDE_CODE_OAUTH_TOKEN = "stale-oauth-token";
-            return previous;
-          }),
-          (previous) =>
+          const envKeys = [
+            "ANTHROPIC_API_KEY",
+            "ANTHROPIC_AUTH_TOKEN",
+            "CLAUDE_CODE_OAUTH_TOKEN",
+            "ANTHROPIC_BASE_URL",
+            "CLAUDE_CODE_USE_BEDROCK",
+            "CLAUDE_CODE_USE_VERTEX",
+            "CLAUDE_CODE_USE_ANTHROPIC_AWS",
+          ] as const;
+          yield* Effect.acquireRelease(
             Effect.sync(() => {
-              for (const [key, value] of previous) {
-                if (value === undefined) {
-                  delete process.env[key];
-                } else {
-                  process.env[key] = value;
-                }
+              const previous = new Map<string, string | undefined>();
+              for (const key of envKeys) {
+                previous.set(key, process.env[key]);
+                delete process.env[key];
               }
+              process.env.ANTHROPIC_API_KEY = "stale-api-key";
+              process.env.ANTHROPIC_AUTH_TOKEN = "stale-auth-token";
+              process.env.CLAUDE_CODE_OAUTH_TOKEN = "stale-oauth-token";
+              return previous;
             }),
-        );
+            (previous) =>
+              Effect.sync(() => {
+                for (const [key, value] of previous) {
+                  if (value === undefined) {
+                    delete process.env[key];
+                  } else {
+                    process.env[key] = value;
+                  }
+                }
+              }),
+          );
 
-        const status = yield* makeCheckClaudeProviderStatus(undefined, "claude", homeDir).pipe(
-          Effect.provide(
-            mockSpawnerLayer((args, command, env) => {
-              assert.strictEqual(command, "claude");
-              assert.strictEqual(env?.ANTHROPIC_API_KEY, undefined);
-              assert.strictEqual(env?.ANTHROPIC_AUTH_TOKEN, undefined);
-              assert.strictEqual(env?.CLAUDE_CODE_OAUTH_TOKEN, undefined);
+          const status = yield* makeCheckClaudeProviderStatus(undefined, "claude", homeDir).pipe(
+            Effect.provide(
+              mockSpawnerLayer((args, command, env) => {
+                assert.strictEqual(command, "claude");
+                assert.strictEqual(env?.ANTHROPIC_API_KEY, undefined);
+                assert.strictEqual(env?.ANTHROPIC_AUTH_TOKEN, undefined);
+                assert.strictEqual(env?.CLAUDE_CODE_OAUTH_TOKEN, undefined);
 
-              const joined = args.join(" ");
-              if (joined === "--version") return { stdout: "1.0.0\n", stderr: "", code: 0 };
-              if (joined === "auth status")
-                return {
-                  stdout: '{"loggedIn":true,"authMethod":"claude.ai"}\n',
-                  stderr: "",
-                  code: 0,
-                };
-              throw new Error(`Unexpected args: ${joined}`);
-            }),
-          ),
-        );
+                const joined = args.join(" ");
+                if (joined === "--version") return { stdout: "1.0.0\n", stderr: "", code: 0 };
+                if (joined === "auth status")
+                  return {
+                    stdout: '{"loggedIn":true,"authMethod":"claude.ai"}\n',
+                    stderr: "",
+                    code: 0,
+                  };
+                throw new Error(`Unexpected args: ${joined}`);
+              }),
+            ),
+          );
 
-        assert.strictEqual(status.provider, "claudeAgent");
-        assert.strictEqual(status.status, "ready");
-        assert.strictEqual(status.authStatus, "authenticated");
-      }),
+          assert.strictEqual(status.provider, "claudeAgent");
+          assert.strictEqual(status.status, "ready");
+          assert.strictEqual(status.authStatus, "authenticated");
+        }),
     );
 
     it.effect("trusts usable Claude OAuth credentials after the SDK probe validates them", () =>
@@ -1544,136 +1588,143 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
       }),
     );
 
-    it.effect("keeps Claude unauthenticated when auth status includes a textual login failure", () =>
-      Effect.gen(function* () {
-        const fileSystem = yield* FileSystem.FileSystem;
-        const path = yield* Path.Path;
-        const homeDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "provider-health-claude-auth-text-failure-",
-        });
-        const claudeDir = path.join(homeDir, ".claude");
-        yield* fileSystem.makeDirectory(claudeDir, { recursive: true });
-        yield* fileSystem.writeFileString(
-          path.join(claudeDir, ".credentials.json"),
-          JSON.stringify({
-            claudeAiOauth: {
-              accessToken: "expired-access-token",
-              refreshToken: "refresh-token",
-              expiresAt: Date.now() - 60_000,
-              subscriptionType: "max",
-            },
-          }),
-        );
-
-        const status = yield* makeCheckClaudeProviderStatus(undefined, "claude", homeDir).pipe(
-          Effect.provide(
-            mockSpawnerLayer((args) => {
-              const joined = args.join(" ");
-              if (joined === "--version") {
-                return { stdout: "2.1.197\n", stderr: "", code: 0 };
-              }
-              if (joined === "auth status")
-                return {
-                  stdout: '{"loggedIn":false,"authMethod":"none","apiProvider":"firstParty"}\n',
-                  stderr: "Not logged in. Please run /login.\n",
-                  code: 0,
-                };
-              throw new Error(`Unexpected args: ${joined}`);
+    it.effect(
+      "keeps Claude unauthenticated when auth status includes a textual login failure",
+      () =>
+        Effect.gen(function* () {
+          const fileSystem = yield* FileSystem.FileSystem;
+          const path = yield* Path.Path;
+          const homeDir = yield* fileSystem.makeTempDirectoryScoped({
+            prefix: "provider-health-claude-auth-text-failure-",
+          });
+          const claudeDir = path.join(homeDir, ".claude");
+          yield* fileSystem.makeDirectory(claudeDir, { recursive: true });
+          yield* fileSystem.writeFileString(
+            path.join(claudeDir, ".credentials.json"),
+            JSON.stringify({
+              claudeAiOauth: {
+                accessToken: "expired-access-token",
+                refreshToken: "refresh-token",
+                expiresAt: Date.now() - 60_000,
+                subscriptionType: "max",
+              },
             }),
-          ),
-        );
+          );
 
-        assert.strictEqual(status.provider, "claudeAgent");
-        assert.strictEqual(status.status, "error");
-        assert.strictEqual(status.authStatus, "unauthenticated");
-        assert.strictEqual(status.authType, undefined);
-        assert.strictEqual(status.authLabel, undefined);
-        assert.match(status.message ?? "", /not authenticated/i);
-      }),
+          const status = yield* makeCheckClaudeProviderStatus(undefined, "claude", homeDir).pipe(
+            Effect.provide(
+              mockSpawnerLayer((args) => {
+                const joined = args.join(" ");
+                if (joined === "--version") {
+                  return { stdout: "2.1.197\n", stderr: "", code: 0 };
+                }
+                if (joined === "auth status")
+                  return {
+                    stdout: '{"loggedIn":false,"authMethod":"none","apiProvider":"firstParty"}\n',
+                    stderr: "Not logged in. Please run /login.\n",
+                    code: 0,
+                  };
+                throw new Error(`Unexpected args: ${joined}`);
+              }),
+            ),
+          );
+
+          assert.strictEqual(status.provider, "claudeAgent");
+          assert.strictEqual(status.status, "error");
+          assert.strictEqual(status.authStatus, "unauthenticated");
+          assert.strictEqual(status.authType, undefined);
+          assert.strictEqual(status.authLabel, undefined);
+          assert.match(status.message ?? "", /not authenticated/i);
+        }),
     );
 
-    it.effect("re-probes auth status once when a structured false negative has no credential file to rescue it", () =>
-      Effect.gen(function* () {
-        const fileSystem = yield* FileSystem.FileSystem;
-        const homeDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "provider-health-claude-auth-retry-",
-        });
+    it.effect(
+      "re-probes auth status once when a structured false negative has no credential file to rescue it",
+      () =>
+        Effect.gen(function* () {
+          const fileSystem = yield* FileSystem.FileSystem;
+          const homeDir = yield* fileSystem.makeTempDirectoryScoped({
+            prefix: "provider-health-claude-auth-retry-",
+          });
 
-        let authStatusCalls = 0;
-        const status = yield* makeCheckClaudeProviderStatus(undefined, "claude", homeDir, {
-          falseNegativeRetryDelayMs: 0,
-        }).pipe(
-          Effect.provide(
-            mockSpawnerLayer((args) => {
-              const joined = args.join(" ");
-              if (joined === "--version") {
-                return { stdout: "2.1.197\n", stderr: "", code: 0 };
-              }
-              if (joined === "auth status") {
-                authStatusCalls += 1;
-                // First probe loses a refresh-token rotation race; the retry
-                // observes the settled, rotated token.
-                return authStatusCalls === 1
-                  ? {
-                      stdout: '{"loggedIn":false,"authMethod":"none"}\n',
-                      stderr: "",
-                      code: 0,
-                    }
-                  : {
-                      stdout: '{"loggedIn":true,"authMethod":"claude.ai","subscriptionType":"max"}\n',
-                      stderr: "",
-                      code: 0,
-                    };
-              }
-              throw new Error(`Unexpected args: ${joined}`);
-            }),
-          ),
-        );
+          let authStatusCalls = 0;
+          const status = yield* makeCheckClaudeProviderStatus(undefined, "claude", homeDir, {
+            falseNegativeRetryDelayMs: 0,
+          }).pipe(
+            Effect.provide(
+              mockSpawnerLayer((args) => {
+                const joined = args.join(" ");
+                if (joined === "--version") {
+                  return { stdout: "2.1.197\n", stderr: "", code: 0 };
+                }
+                if (joined === "auth status") {
+                  authStatusCalls += 1;
+                  // First probe loses a refresh-token rotation race; the retry
+                  // observes the settled, rotated token.
+                  return authStatusCalls === 1
+                    ? {
+                        stdout: '{"loggedIn":false,"authMethod":"none"}\n',
+                        stderr: "",
+                        code: 0,
+                      }
+                    : {
+                        stdout:
+                          '{"loggedIn":true,"authMethod":"claude.ai","subscriptionType":"max"}\n',
+                        stderr: "",
+                        code: 0,
+                      };
+                }
+                throw new Error(`Unexpected args: ${joined}`);
+              }),
+            ),
+          );
 
-        assert.strictEqual(authStatusCalls, 2);
-        assert.strictEqual(status.provider, "claudeAgent");
-        assert.strictEqual(status.status, "ready");
-        assert.strictEqual(status.authStatus, "authenticated");
-        assert.strictEqual(status.authType, "max");
-      }),
+          assert.strictEqual(authStatusCalls, 2);
+          assert.strictEqual(status.provider, "claudeAgent");
+          assert.strictEqual(status.status, "ready");
+          assert.strictEqual(status.authStatus, "authenticated");
+          assert.strictEqual(status.authType, "max");
+        }),
     );
 
-    it.effect("stays unauthenticated when the structured false negative persists across the retry", () =>
-      Effect.gen(function* () {
-        const fileSystem = yield* FileSystem.FileSystem;
-        const homeDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "provider-health-claude-auth-retry-persist-",
-        });
+    it.effect(
+      "stays unauthenticated when the structured false negative persists across the retry",
+      () =>
+        Effect.gen(function* () {
+          const fileSystem = yield* FileSystem.FileSystem;
+          const homeDir = yield* fileSystem.makeTempDirectoryScoped({
+            prefix: "provider-health-claude-auth-retry-persist-",
+          });
 
-        let authStatusCalls = 0;
-        const status = yield* makeCheckClaudeProviderStatus(undefined, "claude", homeDir, {
-          falseNegativeRetryDelayMs: 0,
-        }).pipe(
-          Effect.provide(
-            mockSpawnerLayer((args) => {
-              const joined = args.join(" ");
-              if (joined === "--version") {
-                return { stdout: "2.1.197\n", stderr: "", code: 0 };
-              }
-              if (joined === "auth status") {
-                authStatusCalls += 1;
-                return {
-                  stdout: '{"loggedIn":false,"authMethod":"none"}\n',
-                  stderr: "",
-                  code: 0,
-                };
-              }
-              throw new Error(`Unexpected args: ${joined}`);
-            }),
-          ),
-        );
+          let authStatusCalls = 0;
+          const status = yield* makeCheckClaudeProviderStatus(undefined, "claude", homeDir, {
+            falseNegativeRetryDelayMs: 0,
+          }).pipe(
+            Effect.provide(
+              mockSpawnerLayer((args) => {
+                const joined = args.join(" ");
+                if (joined === "--version") {
+                  return { stdout: "2.1.197\n", stderr: "", code: 0 };
+                }
+                if (joined === "auth status") {
+                  authStatusCalls += 1;
+                  return {
+                    stdout: '{"loggedIn":false,"authMethod":"none"}\n',
+                    stderr: "",
+                    code: 0,
+                  };
+                }
+                throw new Error(`Unexpected args: ${joined}`);
+              }),
+            ),
+          );
 
-        assert.strictEqual(authStatusCalls, 2);
-        assert.strictEqual(status.provider, "claudeAgent");
-        assert.strictEqual(status.status, "error");
-        assert.strictEqual(status.authStatus, "unauthenticated");
-        assert.match(status.message ?? "", /not authenticated/i);
-      }),
+          assert.strictEqual(authStatusCalls, 2);
+          assert.strictEqual(status.provider, "claudeAgent");
+          assert.strictEqual(status.status, "error");
+          assert.strictEqual(status.authStatus, "unauthenticated");
+          assert.match(status.message ?? "", /not authenticated/i);
+        }),
     );
 
     it.effect("returns unavailable when claude is missing", () =>
@@ -1683,7 +1734,10 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         assert.strictEqual(status.status, "error");
         assert.strictEqual(status.available, false);
         assert.strictEqual(status.authStatus, "unknown");
-        assert.strictEqual(status.message, "Claude Agent CLI (`claude`) is not installed or not on PATH.");
+        assert.strictEqual(
+          status.message,
+          "Claude Agent CLI (`claude`) is not installed or not on PATH.",
+        );
       }).pipe(Effect.provide(failingSpawnerLayer("spawn claude ENOENT"))),
     );
 
@@ -1697,7 +1751,8 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         Effect.provide(
           mockSpawnerLayer((args) => {
             const joined = args.join(" ");
-            if (joined === "--version") return { stdout: "", stderr: "Something went wrong", code: 1 };
+            if (joined === "--version")
+              return { stdout: "", stderr: "Something went wrong", code: 1 };
             throw new Error(`Unexpected args: ${joined}`);
           }),
         ),
@@ -1711,7 +1766,10 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         assert.strictEqual(status.status, "error");
         assert.strictEqual(status.available, true);
         assert.strictEqual(status.authStatus, "unauthenticated");
-        assert.strictEqual(status.message, "Claude is not authenticated. Run `claude auth login` and try again.");
+        assert.strictEqual(
+          status.message,
+          "Claude is not authenticated. Run `claude auth login` and try again.",
+        );
       }).pipe(
         Effect.provide(
           mockSpawnerLayer((args) => {
@@ -1764,7 +1822,8 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           mockSpawnerLayer((args) => {
             const joined = args.join(" ");
             if (joined === "--version") return { stdout: "1.0.0\n", stderr: "", code: 0 };
-            if (joined === "auth status") return { stdout: "", stderr: "error: unknown command 'auth'", code: 2 };
+            if (joined === "auth status")
+              return { stdout: "", stderr: "error: unknown command 'auth'", code: 2 };
             throw new Error(`Unexpected args: ${joined}`);
           }),
         ),
@@ -1814,7 +1873,10 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         assert.strictEqual(status.status, "error");
         assert.strictEqual(status.available, false);
         assert.strictEqual(status.authStatus, "unknown");
-        assert.strictEqual(status.message, "OpenCode CLI (`opencode`) is not installed or not on PATH.");
+        assert.strictEqual(
+          status.message,
+          "OpenCode CLI (`opencode`) is not installed or not on PATH.",
+        );
       }).pipe(Effect.provide(failingSpawnerLayer("spawn opencode ENOENT"))),
     );
   });
@@ -1857,7 +1919,10 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
       Effect.gen(function* () {
         const status = yield* checkPiProviderStatus("/tmp/pi-agent");
         assert.strictEqual(status.status, "ready");
-        assert.strictEqual(status.message, "Pi SDK is included with Synara. Using Pi agent dir /tmp/pi-agent.");
+        assert.strictEqual(
+          status.message,
+          "Pi SDK is included with Synara. Using Pi agent dir /tmp/pi-agent.",
+        );
       }),
     );
 
@@ -1873,7 +1938,10 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         assert.strictEqual(status.status, "error");
         assert.strictEqual(status.available, false);
         assert.strictEqual(status.version, "1.0.11");
-        assert.strictEqual(status.message, "Antigravity CLI 1.0.11 is too old for Synara. Upgrade to 1.0.12 or newer.");
+        assert.strictEqual(
+          status.message,
+          "Antigravity CLI 1.0.11 is too old for Synara. Upgrade to 1.0.12 or newer.",
+        );
       }).pipe(
         Effect.provide(
           mockSpawnerLayer((args) => {
@@ -2114,42 +2182,44 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
       ),
     );
 
-    it.effect("falls back through configured Cursor editors when no agent command is resolved", () =>
-      Effect.gen(function* () {
-        const originalPath = process.env.PATH;
-        yield* Effect.acquireRelease(
-          Effect.sync(() => {
-            process.env.PATH = "";
-          }),
-          () =>
+    it.effect(
+      "falls back through configured Cursor editors when no agent command is resolved",
+      () =>
+        Effect.gen(function* () {
+          const originalPath = process.env.PATH;
+          yield* Effect.acquireRelease(
             Effect.sync(() => {
-              if (originalPath !== undefined) {
-                process.env.PATH = originalPath;
-              } else {
-                delete process.env.PATH;
-              }
+              process.env.PATH = "";
             }),
-        );
-        const status = yield* makeCheckCursorProviderStatus("/custom/bin/cursor");
-        assert.strictEqual(status.status, "ready");
-      }).pipe(
-        Effect.provide(
-          mockSpawnerLayer((args, command) => {
-            assert.strictEqual(command, "/custom/bin/cursor");
-            const joined = args.join(" ");
-            if (joined === "agent --version") {
-              return { stdout: "cursor 2026.04.27\n", stderr: "", code: 0 };
-            }
-            if (joined === "agent status") {
-              return { stdout: "Logged in as user@example.com\n", stderr: "", code: 0 };
-            }
-            if (joined === "agent models") {
-              return { stdout: "gpt-5 - GPT-5\n", stderr: "", code: 0 };
-            }
-            throw new Error(`Unexpected args: ${joined}`);
-          }),
+            () =>
+              Effect.sync(() => {
+                if (originalPath !== undefined) {
+                  process.env.PATH = originalPath;
+                } else {
+                  delete process.env.PATH;
+                }
+              }),
+          );
+          const status = yield* makeCheckCursorProviderStatus("/custom/bin/cursor");
+          assert.strictEqual(status.status, "ready");
+        }).pipe(
+          Effect.provide(
+            mockSpawnerLayer((args, command) => {
+              assert.strictEqual(command, "/custom/bin/cursor");
+              const joined = args.join(" ");
+              if (joined === "agent --version") {
+                return { stdout: "cursor 2026.04.27\n", stderr: "", code: 0 };
+              }
+              if (joined === "agent status") {
+                return { stdout: "Logged in as user@example.com\n", stderr: "", code: 0 };
+              }
+              if (joined === "agent models") {
+                return { stdout: "gpt-5 - GPT-5\n", stderr: "", code: 0 };
+              }
+              throw new Error(`Unexpected args: ${joined}`);
+            }),
+          ),
         ),
-      ),
     );
 
     it.effect("returns unavailable when Cursor Agent is missing", () =>
@@ -2159,7 +2229,10 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         assert.strictEqual(status.status, "error");
         assert.strictEqual(status.available, false);
         assert.strictEqual(status.authStatus, "unknown");
-        assert.strictEqual(status.message, "Cursor Agent CLI (`cursor-agent`) is not installed or not on PATH.");
+        assert.strictEqual(
+          status.message,
+          "Cursor Agent CLI (`cursor-agent`) is not installed or not on PATH.",
+        );
       }).pipe(Effect.provide(failingSpawnerLayer("spawn cursor-agent ENOENT"))),
     );
 
@@ -2170,7 +2243,10 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         assert.strictEqual(status.status, "error");
         assert.strictEqual(status.available, false);
         assert.strictEqual(status.authStatus, "unknown");
-        assert.strictEqual(status.message, "Cursor Agent CLI is installed but failed to run. version failed");
+        assert.strictEqual(
+          status.message,
+          "Cursor Agent CLI is installed but failed to run. version failed",
+        );
       }).pipe(
         Effect.provide(
           mockSpawnerLayer((args, command) => {
@@ -2292,10 +2368,14 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
               assert.strictEqual(cmd.command, "cursor-agent");
               const joined = cmd.args.join(" ");
               if (joined === "--version") {
-                return Effect.succeed(mockHandle({ stdout: "agent 2026.04.27\n", stderr: "", code: 0 }));
+                return Effect.succeed(
+                  mockHandle({ stdout: "agent 2026.04.27\n", stderr: "", code: 0 }),
+                );
               }
               if (joined === "status") {
-                return Effect.succeed(mockHandle({ stdout: "Logged in as user@example.com\n", stderr: "", code: 0 }));
+                return Effect.succeed(
+                  mockHandle({ stdout: "Logged in as user@example.com\n", stderr: "", code: 0 }),
+                );
               }
               if (joined === "models") {
                 return Effect.fail(

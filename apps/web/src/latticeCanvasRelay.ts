@@ -51,7 +51,12 @@ export function awaitCanvasHostResult(
         typeof data.ok !== "boolean"
       )
         return;
-      if (!data.ok && (!data.error || typeof data.error.code !== "string" || typeof data.error.message !== "string"))
+      if (
+        !data.ok &&
+        (!data.error ||
+          typeof data.error.code !== "string" ||
+          typeof data.error.message !== "string")
+      )
         return;
       finish(data as CanvasResult);
     };
@@ -62,7 +67,10 @@ export function awaitCanvasHostResult(
           version: 1,
           id: request.id,
           ok: false,
-          error: { code: "canvas_host_timeout", message: "The canvas host did not respond within 30 seconds." },
+          error: {
+            code: "canvas_host_timeout",
+            message: "The canvas host did not respond within 30 seconds.",
+          },
         }),
       timeoutMs,
     );
@@ -114,16 +122,20 @@ async function submitResult(
 export function startLatticeCanvasRelay(): () => void {
   const config = readEmbedMode();
   const token = readAuthToken();
-  if (!config?.hostOrigin || config.surface !== "chrome" || !token || window.parent === window) return () => undefined;
+  if (!config?.hostOrigin || config.surface !== "chrome" || !token || window.parent === window)
+    return () => undefined;
   const controller = new AbortController();
   const run = async () => {
     while (!controller.signal.aborted) {
       try {
-        const response = await fetch(`${POLL_PATH}?${new URLSearchParams({ workspaceRoot: config.workspaceRoot })}`, {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: "no-store",
-          signal: controller.signal,
-        });
+        const response = await fetch(
+          `${POLL_PATH}?${new URLSearchParams({ workspaceRoot: config.workspaceRoot })}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            cache: "no-store",
+            signal: controller.signal,
+          },
+        );
         if (response.status === 204) continue;
         if (!response.ok) throw new Error(`Canvas poll failed (${response.status}).`);
         const request = (await response.json()) as CanvasRequest;
@@ -134,12 +146,16 @@ export function startLatticeCanvasRelay(): () => void {
                 version: 1 as const,
                 id: request.id,
                 ok: false,
-                error: { code: "canvas_tool_expired", message: "The canvas request expired before execution." },
+                error: {
+                  code: "canvas_tool_expired",
+                  message: "The canvas request expired before execution.",
+                },
               }
             : await awaitCanvasHostResult(request, config.hostOrigin!);
         await submitResult(request.id, result, token, config.workspaceRoot, controller.signal);
       } catch {
-        if (!controller.signal.aborted) await new Promise((resolve) => window.setTimeout(resolve, 500));
+        if (!controller.signal.aborted)
+          await new Promise((resolve) => window.setTimeout(resolve, 500));
       }
     }
   };

@@ -17,7 +17,12 @@ import {
   type ServerSettingsView,
   type ServerSettingsPatch,
 } from "@synara/contracts";
-import { getDefaultModel, getModelOptions, normalizeModelSlug, resolveSelectableModel } from "@synara/shared/model";
+import {
+  getDefaultModel,
+  getModelOptions,
+  normalizeModelSlug,
+  resolveSelectableModel,
+} from "@synara/shared/model";
 import {
   APP_SNAP_SHORTCUT_KEYS,
   APP_SNAP_SHORTCUT_MODIFIERS,
@@ -27,11 +32,19 @@ import { useLocalStorage } from "./hooks/useLocalStorage";
 import { EnvMode } from "./components/BranchToolbar.logic";
 import { normalizeCursorModelVariantBaseId } from "./cursorModelVariants";
 import { formatProviderModelOptionName, type ProviderModelOption } from "./providerModelOptions";
-import { DEFAULT_PROVIDER_ORDER, normalizeHiddenProviders, normalizeProviderOrder } from "./providerOrdering";
+import {
+  DEFAULT_PROVIDER_ORDER,
+  normalizeHiddenProviders,
+  normalizeProviderOrder,
+} from "./providerOrdering";
 import { ensureNativeApi } from "./nativeApi";
 import { providerDiscoveryQueryKeys } from "./lib/providerDiscoveryReactQuery";
 import { serverQueryKeys, serverSettingsQueryOptions } from "./lib/serverReactQuery";
-import { DEFAULT_UI_DENSITY, UI_DENSITY_MODES, normalizeUiDensity as normalizeUiDensityValue } from "./lib/appDensity";
+import {
+  DEFAULT_UI_DENSITY,
+  UI_DENSITY_MODES,
+  normalizeUiDensity as normalizeUiDensityValue,
+} from "./lib/appDensity";
 
 const APP_SETTINGS_STORAGE_KEY = "synara:app-settings:v1";
 const SERVER_SETTINGS_MIGRATION_STORAGE_KEY = "synara:server-settings-migrated:v1";
@@ -131,7 +144,10 @@ const BUILT_IN_MODEL_SLUGS_BY_PROVIDER: Record<ProviderKind, ReadonlySet<string>
 };
 
 const withDefaults =
-  <S extends Schema.Top & Schema.WithoutConstructorDefault, D extends S["~type.make.in"] & S["Encoded"]>(
+  <
+    S extends Schema.Top & Schema.WithoutConstructorDefault,
+    D extends S["~type.make.in"] & S["Encoded"],
+  >(
     fallback: () => D,
   ) =>
   (schema: S) =>
@@ -187,7 +203,9 @@ export const AppSettingsSchema = Schema.Struct({
   piBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   piAgentDir: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   openCodeServerUrl: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
-  openCodeServerPassword: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
+  openCodeServerPassword: Schema.String.check(Schema.isMaxLength(4096)).pipe(
+    withDefaults(() => ""),
+  ),
   openCodeServerPasswordConfigured: Schema.Boolean.pipe(withDefaults(() => false)),
   openCodeExperimentalWebSockets: Schema.Boolean.pipe(withDefaults(() => false)),
   defaultThreadEnvMode: EnvMode.pipe(withDefaults(() => "local" as const satisfies EnvMode)),
@@ -231,8 +249,12 @@ export const AppSettingsSchema = Schema.Struct({
   appSnapPlaySound: Schema.Boolean.pipe(withDefaults(() => true)),
   // Deprecated rename bridge. Normalization migrates this value and then omits the key.
   enableAppshots: Schema.optionalKey(Schema.Boolean),
-  sidebarProjectSortOrder: SidebarProjectSortOrder.pipe(withDefaults(() => DEFAULT_SIDEBAR_PROJECT_SORT_ORDER)),
-  sidebarThreadSortOrder: SidebarThreadSortOrder.pipe(withDefaults(() => DEFAULT_SIDEBAR_THREAD_SORT_ORDER)),
+  sidebarProjectSortOrder: SidebarProjectSortOrder.pipe(
+    withDefaults(() => DEFAULT_SIDEBAR_PROJECT_SORT_ORDER),
+  ),
+  sidebarThreadSortOrder: SidebarThreadSortOrder.pipe(
+    withDefaults(() => DEFAULT_SIDEBAR_THREAD_SORT_ORDER),
+  ),
   timestampFormat: TimestampFormat.pipe(withDefaults(() => DEFAULT_TIMESTAMP_FORMAT)),
   customCodexModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customClaudeModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
@@ -253,7 +275,9 @@ export const AppSettingsSchema = Schema.Struct({
   // never get stuck on a thread whose provider they later chose to hide.
   hiddenProviders: Schema.Array(PersistedProviderKind).pipe(withDefaults(() => [])),
   // Local-only UI preference: top-level provider order in Settings and the composer picker.
-  providerOrder: Schema.Array(PersistedProviderKind).pipe(withDefaults(() => [...DEFAULT_PROVIDER_ORDER])),
+  providerOrder: Schema.Array(PersistedProviderKind).pipe(
+    withDefaults(() => [...DEFAULT_PROVIDER_ORDER]),
+  ),
   // Deprecated local-only preference kept for backward-compatible decoding.
   // Model-level hiding caused too many edge cases, so the app now normalizes it away.
   hiddenModels: Schema.Array(
@@ -274,7 +298,10 @@ export type AppSettingsBinding = {
   readonly updateSettings: (patch: Partial<AppSettings>) => void;
 };
 
-export function isGitTextGenerationSettingsDirty(settings: AppSettings, defaults: AppSettings): boolean {
+export function isGitTextGenerationSettingsDirty(
+  settings: AppSettings,
+  defaults: AppSettings,
+): boolean {
   return (
     (settings.textGenerationProvider ?? "codex") !== (defaults.textGenerationProvider ?? "codex") ||
     (settings.textGenerationModel ?? DEFAULT_GIT_TEXT_GENERATION_MODEL) !==
@@ -428,7 +455,10 @@ export function normalizeTerminalFontSizePx(value: number | null | undefined): n
     return DEFAULT_TERMINAL_FONT_SIZE_PX;
   }
 
-  return Math.min(MAX_TERMINAL_FONT_SIZE_PX, Math.max(MIN_TERMINAL_FONT_SIZE_PX, Math.round(value)));
+  return Math.min(
+    MAX_TERMINAL_FONT_SIZE_PX,
+    Math.max(MIN_TERMINAL_FONT_SIZE_PX, Math.round(value)),
+  );
 }
 
 export function normalizeTerminalFontFamily(value: string | null | undefined): string {
@@ -452,7 +482,9 @@ export function resolveTerminalFontFamilyStack(value: string | null | undefined)
     return null;
   }
 
-  const hasGenericFallback = /\b(?:monospace|serif|sans-serif|system-ui|ui-monospace)\b/.test(normalized);
+  const hasGenericFallback = /\b(?:monospace|serif|sans-serif|system-ui|ui-monospace)\b/.test(
+    normalized,
+  );
 
   if (normalized.includes(",")) {
     return hasGenericFallback ? normalized : `${normalized}, monospace`;
@@ -463,7 +495,10 @@ export function resolveTerminalFontFamilyStack(value: string | null | undefined)
   return hasGenericFallback ? family : `${family}, monospace`;
 }
 
-function normalizeProviderBinaryPathOverride(provider: ProviderKind, value: string | null | undefined): string {
+function normalizeProviderBinaryPathOverride(
+  provider: ProviderKind,
+  value: string | null | undefined,
+): string {
   const trimmed = value?.trim() ?? "";
   if (!trimmed || trimmed === DEFAULT_SERVER_SETTINGS.providers[provider].binaryPath) {
     return "";
@@ -495,7 +530,10 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     grokBinaryPath: normalizeProviderBinaryPathOverride("grok", settings.grokBinaryPath),
     droidBinaryPath: normalizeProviderBinaryPathOverride("droid", settings.droidBinaryPath),
     kiloBinaryPath: normalizeProviderBinaryPathOverride("kilo", settings.kiloBinaryPath),
-    openCodeBinaryPath: normalizeProviderBinaryPathOverride("opencode", settings.openCodeBinaryPath),
+    openCodeBinaryPath: normalizeProviderBinaryPathOverride(
+      "opencode",
+      settings.openCodeBinaryPath,
+    ),
     piBinaryPath: normalizeProviderBinaryPathOverride("pi", settings.piBinaryPath),
     uiDensity: normalizeUiDensityValue(settings.uiDensity),
     chatFontSizePx: normalizeChatFontSizePx(settings.chatFontSizePx),
@@ -600,37 +638,57 @@ function appSettingsPatchToServerSettingsPatch(patch: Partial<AppSettings>): Ser
     const model = patch.textGenerationModel ?? DEFAULT_GIT_TEXT_GENERATION_MODEL;
     serverPatch.textGenerationModelSelection = {
       provider: resolveTextGenerationProvider({
-        ...(patch.textGenerationProvider !== undefined ? { provider: patch.textGenerationProvider } : {}),
+        ...(patch.textGenerationProvider !== undefined
+          ? { provider: patch.textGenerationProvider }
+          : {}),
         model,
       }),
       model,
     };
   }
 
-  if (hasOwn(patch, "codexBinaryPath") || hasOwn(patch, "codexHomePath") || hasOwn(patch, "customCodexModels")) {
+  if (
+    hasOwn(patch, "codexBinaryPath") ||
+    hasOwn(patch, "codexHomePath") ||
+    hasOwn(patch, "customCodexModels")
+  ) {
     providers.codex = {
       ...(hasOwn(patch, "codexBinaryPath") ? { binaryPath: patch.codexBinaryPath ?? "" } : {}),
       ...(hasOwn(patch, "codexHomePath") ? { homePath: patch.codexHomePath ?? "" } : {}),
-      ...(hasOwn(patch, "customCodexModels") ? { customModels: patch.customCodexModels ?? [] } : {}),
+      ...(hasOwn(patch, "customCodexModels")
+        ? { customModels: patch.customCodexModels ?? [] }
+        : {}),
     };
   }
   if (hasOwn(patch, "claudeBinaryPath") || hasOwn(patch, "customClaudeModels")) {
     providers.claudeAgent = {
       ...(hasOwn(patch, "claudeBinaryPath") ? { binaryPath: patch.claudeBinaryPath ?? "" } : {}),
-      ...(hasOwn(patch, "customClaudeModels") ? { customModels: patch.customClaudeModels ?? [] } : {}),
+      ...(hasOwn(patch, "customClaudeModels")
+        ? { customModels: patch.customClaudeModels ?? [] }
+        : {}),
     };
   }
-  if (hasOwn(patch, "cursorApiEndpoint") || hasOwn(patch, "cursorBinaryPath") || hasOwn(patch, "customCursorModels")) {
+  if (
+    hasOwn(patch, "cursorApiEndpoint") ||
+    hasOwn(patch, "cursorBinaryPath") ||
+    hasOwn(patch, "customCursorModels")
+  ) {
     providers.cursor = {
       ...(hasOwn(patch, "cursorApiEndpoint") ? { apiEndpoint: patch.cursorApiEndpoint ?? "" } : {}),
       ...(hasOwn(patch, "cursorBinaryPath") ? { binaryPath: patch.cursorBinaryPath ?? "" } : {}),
-      ...(hasOwn(patch, "customCursorModels") ? { customModels: patch.customCursorModels ?? [] } : {}),
+      ...(hasOwn(patch, "customCursorModels")
+        ? { customModels: patch.customCursorModels ?? [] }
+        : {}),
     };
   }
   if (hasOwn(patch, "antigravityBinaryPath") || hasOwn(patch, "customAntigravityModels")) {
     providers.antigravity = {
-      ...(hasOwn(patch, "antigravityBinaryPath") ? { binaryPath: patch.antigravityBinaryPath ?? "" } : {}),
-      ...(hasOwn(patch, "customAntigravityModels") ? { customModels: patch.customAntigravityModels ?? [] } : {}),
+      ...(hasOwn(patch, "antigravityBinaryPath")
+        ? { binaryPath: patch.antigravityBinaryPath ?? "" }
+        : {}),
+      ...(hasOwn(patch, "customAntigravityModels")
+        ? { customModels: patch.customAntigravityModels ?? [] }
+        : {}),
     };
   }
   if (hasOwn(patch, "grokBinaryPath") || hasOwn(patch, "customGrokModels")) {
@@ -642,7 +700,9 @@ function appSettingsPatchToServerSettingsPatch(patch: Partial<AppSettings>): Ser
   if (hasOwn(patch, "droidBinaryPath") || hasOwn(patch, "customDroidModels")) {
     providers.droid = {
       ...(hasOwn(patch, "droidBinaryPath") ? { binaryPath: patch.droidBinaryPath ?? "" } : {}),
-      ...(hasOwn(patch, "customDroidModels") ? { customModels: patch.customDroidModels ?? [] } : {}),
+      ...(hasOwn(patch, "customDroidModels")
+        ? { customModels: patch.customDroidModels ?? [] }
+        : {}),
     };
   }
   if (
@@ -654,7 +714,9 @@ function appSettingsPatchToServerSettingsPatch(patch: Partial<AppSettings>): Ser
     providers.kilo = {
       ...(hasOwn(patch, "kiloBinaryPath") ? { binaryPath: patch.kiloBinaryPath ?? "" } : {}),
       ...(hasOwn(patch, "kiloServerUrl") ? { serverUrl: patch.kiloServerUrl ?? "" } : {}),
-      ...(hasOwn(patch, "kiloServerPassword") ? { serverPassword: patch.kiloServerPassword ?? "" } : {}),
+      ...(hasOwn(patch, "kiloServerPassword")
+        ? { serverPassword: patch.kiloServerPassword ?? "" }
+        : {}),
       ...(hasOwn(patch, "customKiloModels") ? { customModels: patch.customKiloModels ?? [] } : {}),
     };
   }
@@ -666,16 +728,26 @@ function appSettingsPatchToServerSettingsPatch(patch: Partial<AppSettings>): Ser
     hasOwn(patch, "customOpenCodeModels")
   ) {
     providers.opencode = {
-      ...(hasOwn(patch, "openCodeBinaryPath") ? { binaryPath: patch.openCodeBinaryPath ?? "" } : {}),
+      ...(hasOwn(patch, "openCodeBinaryPath")
+        ? { binaryPath: patch.openCodeBinaryPath ?? "" }
+        : {}),
       ...(hasOwn(patch, "openCodeExperimentalWebSockets")
         ? { experimentalWebSockets: Boolean(patch.openCodeExperimentalWebSockets) }
         : {}),
       ...(hasOwn(patch, "openCodeServerUrl") ? { serverUrl: patch.openCodeServerUrl ?? "" } : {}),
-      ...(hasOwn(patch, "openCodeServerPassword") ? { serverPassword: patch.openCodeServerPassword ?? "" } : {}),
-      ...(hasOwn(patch, "customOpenCodeModels") ? { customModels: patch.customOpenCodeModels ?? [] } : {}),
+      ...(hasOwn(patch, "openCodeServerPassword")
+        ? { serverPassword: patch.openCodeServerPassword ?? "" }
+        : {}),
+      ...(hasOwn(patch, "customOpenCodeModels")
+        ? { customModels: patch.customOpenCodeModels ?? [] }
+        : {}),
     };
   }
-  if (hasOwn(patch, "piAgentDir") || hasOwn(patch, "piBinaryPath") || hasOwn(patch, "customPiModels")) {
+  if (
+    hasOwn(patch, "piAgentDir") ||
+    hasOwn(patch, "piBinaryPath") ||
+    hasOwn(patch, "customPiModels")
+  ) {
     providers.pi = {
       ...(hasOwn(patch, "piAgentDir") ? { agentDir: patch.piAgentDir ?? "" } : {}),
       ...(hasOwn(patch, "piBinaryPath") ? { binaryPath: patch.piBinaryPath ?? "" } : {}),
@@ -833,7 +905,11 @@ export function getAppModelOptions(
   const selectedModelMatchesExistingName =
     typeof trimmedSelectedModel === "string" &&
     options.some((option) => option.name.toLowerCase() === trimmedSelectedModel);
-  if (normalizedSelectedModel && !seen.has(normalizedSelectedModel) && !selectedModelMatchesExistingName) {
+  if (
+    normalizedSelectedModel &&
+    !seen.has(normalizedSelectedModel) &&
+    !selectedModelMatchesExistingName
+  ) {
     options.push({
       provider,
       slug: normalizedSelectedModel,
@@ -861,10 +937,17 @@ export function mapCatalogModelOptionsToAppModelOptions(
 export function getGitTextGenerationModelOptions(
   settings: Pick<
     AppSettings,
-    "customCodexModels" | "customKiloModels" | "customOpenCodeModels" | "textGenerationModel" | "textGenerationProvider"
+    | "customCodexModels"
+    | "customKiloModels"
+    | "customOpenCodeModels"
+    | "textGenerationModel"
+    | "textGenerationProvider"
   >,
   discoveredOptionsByProvider?: Partial<
-    Record<GitTextGenerationDiscoveredProvider, ReadonlyArray<ProviderModelOption & { isCustom?: boolean }>>
+    Record<
+      GitTextGenerationDiscoveredProvider,
+      ReadonlyArray<ProviderModelOption & { isCustom?: boolean }>
+    >
   >,
 ): AppModelOption[] {
   const options = [
@@ -913,7 +996,9 @@ export function resolveAppModelSelection(
 ): string {
   const customModelsForProvider = customModels[provider];
   const options = getAppModelOptions(provider, customModelsForProvider, selectedModel);
-  return resolveSelectableModel(provider, selectedModel, options) ?? getDefaultModel(provider) ?? "";
+  return (
+    resolveSelectableModel(provider, selectedModel, options) ?? getDefaultModel(provider) ?? ""
+  );
 }
 
 export function getCustomModelOptionsByProvider(
@@ -953,14 +1038,23 @@ export function getProviderStartOptions(
     | "piBinaryPath"
   >,
 ): ProviderStartOptions | undefined {
-  const claudeBinaryPath = normalizeProviderBinaryPathOverride("claudeAgent", settings.claudeBinaryPath);
+  const claudeBinaryPath = normalizeProviderBinaryPathOverride(
+    "claudeAgent",
+    settings.claudeBinaryPath,
+  );
   const codexBinaryPath = normalizeProviderBinaryPathOverride("codex", settings.codexBinaryPath);
   const cursorBinaryPath = normalizeProviderBinaryPathOverride("cursor", settings.cursorBinaryPath);
-  const antigravityBinaryPath = normalizeProviderBinaryPathOverride("antigravity", settings.antigravityBinaryPath);
+  const antigravityBinaryPath = normalizeProviderBinaryPathOverride(
+    "antigravity",
+    settings.antigravityBinaryPath,
+  );
   const grokBinaryPath = normalizeProviderBinaryPathOverride("grok", settings.grokBinaryPath);
   const droidBinaryPath = normalizeProviderBinaryPathOverride("droid", settings.droidBinaryPath);
   const kiloBinaryPath = normalizeProviderBinaryPathOverride("kilo", settings.kiloBinaryPath);
-  const openCodeBinaryPath = normalizeProviderBinaryPathOverride("opencode", settings.openCodeBinaryPath);
+  const openCodeBinaryPath = normalizeProviderBinaryPathOverride(
+    "opencode",
+    settings.openCodeBinaryPath,
+  );
   const piBinaryPath = normalizeProviderBinaryPathOverride("pi", settings.piBinaryPath);
   const hasOpenCodeStartOptions = Boolean(
     openCodeBinaryPath || settings.openCodeExperimentalWebSockets || settings.openCodeServerUrl,

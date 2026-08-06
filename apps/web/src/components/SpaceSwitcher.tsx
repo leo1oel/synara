@@ -2,7 +2,12 @@
 // Purpose: Arc-style horizontal Space tabs with reordering and tab management.
 
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
-import { SortableContext, arrayMove, horizontalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import {
+  SortableContext,
+  arrayMove,
+  horizontalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import { SPACE_NAME_MAX_LENGTH, type ProjectId, type SpaceId } from "@synara/contracts";
@@ -217,12 +222,16 @@ function SpaceTab(props: {
       <TooltipPopup side="bottom">
         {props.name}
         {detail ? <span className="text-muted-foreground/70"> · {detail}</span> : null}
-        {props.shortcutLabel ? <span className="text-muted-foreground/70"> · {props.shortcutLabel}</span> : null}
+        {props.shortcutLabel ? (
+          <span className="text-muted-foreground/70"> · {props.shortcutLabel}</span>
+        ) : null}
         {/* Renaming and reordering are pointer gestures with no visible affordance of their
             own, so the tooltip is the only place they can be discovered. It is a deliberate
             hover, and the line is muted and secondary, so it stays out of the way once known. */}
         {props.gestureHint ? (
-          <span className="mt-0.5 block text-[0.9em] text-muted-foreground/60">{props.gestureHint}</span>
+          <span className="mt-0.5 block text-[0.9em] text-muted-foreground/60">
+            {props.gestureHint}
+          </span>
         ) : null}
       </TooltipPopup>
     </Tooltip>
@@ -343,7 +352,8 @@ function SpaceNameLabel(props: {
 
   const trimmed = draft.trim();
   const isValid =
-    trimmed.length > 0 && !props.takenNames.some((name) => name.trim().toLowerCase() === trimmed.toLowerCase());
+    trimmed.length > 0 &&
+    !props.takenNames.some((name) => name.trim().toLowerCase() === trimmed.toLowerCase());
   const commit = () => {
     if (isValid && trimmed !== props.displayName) props.onRename(trimmed);
     setDraft(null);
@@ -438,7 +448,9 @@ function SpaceSwitcherStrip(props: SpaceSwitcherProps) {
    * Void is also the state the store reconciles itself to a moment later.
    */
   const activeSpaceId = resolveActiveSpaceId(props.activeSpaceId, props.spaces);
-  const activeSpace = activeSpaceId ? (props.spaces.find((space) => space.id === activeSpaceId) ?? null) : null;
+  const activeSpace = activeSpaceId
+    ? (props.spaces.find((space) => space.id === activeSpaceId) ?? null)
+    : null;
   const activeSpaceName = spaceDisplayName(activeSpaceId, props.spaces, props.voidSpace);
   /** Every name the header rename must not land on: the other spaces, plus Void or itself. */
   const takenNames = [
@@ -446,7 +458,8 @@ function SpaceSwitcherStrip(props: SpaceSwitcherProps) {
     ...(activeSpace ? [props.voidSpace.name] : []),
   ];
   const voidIsCustomized =
-    props.voidSpace.name !== DEFAULT_VOID_SPACE.name || props.voidSpace.icon !== DEFAULT_VOID_SPACE.icon;
+    props.voidSpace.name !== DEFAULT_VOID_SPACE.name ||
+    props.voidSpace.icon !== DEFAULT_VOID_SPACE.icon;
 
   /**
    * A tab click that only ends a drag is dropped rather than navigating (see `dragEndedRef`).
@@ -472,7 +485,9 @@ function SpaceSwitcherStrip(props: SpaceSwitcherProps) {
    */
   const handleTabStripKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
     if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-    const tabs = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>("[data-space-tab]"));
+    const tabs = Array.from(
+      event.currentTarget.querySelectorAll<HTMLButtonElement>("[data-space-tab]"),
+    );
     if (tabs.length === 0) return;
     const currentIndex = tabs.indexOf(document.activeElement as HTMLButtonElement);
     const nextIndex =
@@ -497,7 +512,12 @@ function SpaceSwitcherStrip(props: SpaceSwitcherProps) {
 
   return (
     <div className="mb-2">
-      <div className={cn("flex h-7 min-w-0 items-center px-2 py-0.5", SIDEBAR_SECTION_LABEL_CLASS_NAME)}>
+      <div
+        className={cn(
+          "flex h-7 min-w-0 items-center px-2 py-0.5",
+          SIDEBAR_SECTION_LABEL_CLASS_NAME,
+        )}
+      >
         <SpaceNameLabel
           // Keyed by the active space so switching spaces mid-edit discards the draft
           // instead of leaving an input bound to a different space's rename handler.
@@ -573,7 +593,10 @@ function SpaceSwitcherStrip(props: SpaceSwitcherProps) {
                 TAB_STRIP_FADE_CLASS_NAME,
               )}
             >
-              <SortableContext items={props.spaces.map((space) => space.id)} strategy={horizontalListSortingStrategy}>
+              <SortableContext
+                items={props.spaces.map((space) => space.id)}
+                strategy={horizontalListSortingStrategy}
+              >
                 {props.spaces.map((space, index) => (
                   <SortableSpaceTab
                     key={space.id}

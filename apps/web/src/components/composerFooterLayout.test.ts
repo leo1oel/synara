@@ -154,7 +154,12 @@ describe("composerFooterIsOverflowing", () => {
   });
 
   it("retains every overflow guard in the standalone layout", () => {
-    for (const overflowKey of ["rowOverflows", "leadingClips", "actionsClip", "actionsCrossSurfaceEdge"] as const) {
+    for (const overflowKey of [
+      "rowOverflows",
+      "leadingClips",
+      "actionsClip",
+      "actionsCrossSurfaceEdge",
+    ] as const) {
       expect(
         composerFooterIsOverflowing({
           isEmbed: false,

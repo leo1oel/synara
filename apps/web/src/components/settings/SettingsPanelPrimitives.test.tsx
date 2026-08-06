@@ -6,9 +6,15 @@ import { SettingsListRow, SettingsRow } from "./SettingsPanelPrimitives";
 describe("SettingsPanelPrimitives trailing regions", () => {
   it("marks form controls and list actions as distinct layout regions", () => {
     const controlMarkup = renderToStaticMarkup(
-      <SettingsRow title="Provider" description="Choose a provider." control={<button>Choose</button>} />,
+      <SettingsRow
+        title="Provider"
+        description="Choose a provider."
+        control={<button>Choose</button>}
+      />,
     );
-    const actionsMarkup = renderToStaticMarkup(<SettingsListRow title="Droid" actions={<button>Update</button>} />);
+    const actionsMarkup = renderToStaticMarkup(
+      <SettingsListRow title="Droid" actions={<button>Update</button>} />,
+    );
 
     expect(controlMarkup).toContain('data-slot="settings-control"');
     expect(actionsMarkup).toContain('data-slot="settings-actions"');

@@ -24,7 +24,8 @@ const runtimeOriginForConfig = (
   config: Pick<ServerConfigShape, "host">,
   port: number,
 ): PersistedServerRuntimeState["origin"] => {
-  const hostname = config.host && !isWildcardHost(config.host) ? formatHostForUrl(config.host) : "127.0.0.1";
+  const hostname =
+    config.host && !isWildcardHost(config.host) ? formatHostForUrl(config.host) : "127.0.0.1";
   return `http://${hostname}:${port}`;
 };
 

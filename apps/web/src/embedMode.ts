@@ -112,7 +112,10 @@ export interface LatticeSettingsSectionMessage {
   section: string;
 }
 
-export function readLatticeAgentPanelOpenedMessage(event: MessageEvent, config: EmbedModeConfig): boolean {
+export function readLatticeAgentPanelOpenedMessage(
+  event: MessageEvent,
+  config: EmbedModeConfig,
+): boolean {
   return Boolean(
     config.hostOrigin &&
     event.source === window.parent &&
@@ -174,14 +177,18 @@ export function buildLatticeProjectHistoryCheckpoints(input: {
   const promptsByTurnId = new Map(
     messages
       .filter(
-        (message) => message.role === "user" && typeof message.turnId === "string" && typeof message.text === "string",
+        (message) =>
+          message.role === "user" &&
+          typeof message.turnId === "string" &&
+          typeof message.text === "string",
       )
       .map((message) => [message.turnId!, message.text] as const),
   );
 
   return summaries.flatMap((summary) => {
     const files = summary.files ?? [];
-    const turnCount = summary.checkpointTurnCount ?? input.inferredCheckpointTurnCountByTurnId[summary.turnId];
+    const turnCount =
+      summary.checkpointTurnCount ?? input.inferredCheckpointTurnCountByTurnId[summary.turnId];
     if (
       summary.status !== "ready" ||
       files.length === 0 ||
@@ -272,7 +279,9 @@ export function readLatticeHostContextMessage(
     value.version !== 1 ||
     !boundedString(value.workspaceRoot, 4_096) ||
     !workspaceRootsEqual(value.workspaceRoot, config.workspaceRoot) ||
-    (value.activeSurface !== "editor" && value.activeSurface !== "pdf" && value.activeSurface !== "paper")
+    (value.activeSurface !== "editor" &&
+      value.activeSurface !== "pdf" &&
+      value.activeSurface !== "paper")
   ) {
     return null;
   }
@@ -472,7 +481,10 @@ export function readLatticeCheckpointRestoreMessage(
   };
 }
 
-export function postLayoutMetricsToLattice(config: EmbedModeConfig, minimumSidebarWidth: number): void {
+export function postLayoutMetricsToLattice(
+  config: EmbedModeConfig,
+  minimumSidebarWidth: number,
+): void {
   if (!config.hostOrigin || !Number.isFinite(minimumSidebarWidth)) return;
   window.parent.postMessage(
     {
@@ -499,7 +511,11 @@ export function readLatticeSettingsSectionMessage(
   return { type: LATTICE_SETTINGS_SECTION_SET, section: event.data.section };
 }
 
-export function postSettingsContentHeightToLattice(config: EmbedModeConfig, height: number, section: string): void {
+export function postSettingsContentHeightToLattice(
+  config: EmbedModeConfig,
+  height: number,
+  section: string,
+): void {
   if (!config.hostOrigin || !Number.isFinite(height) || !section) return;
   window.parent.postMessage(
     {
@@ -520,7 +536,8 @@ export function postSettingsWheelToLattice(
   },
 ): void {
   if (!config.hostOrigin) return;
-  const contentHeight = content && Number.isFinite(content.height) ? Math.ceil(content.height) : undefined;
+  const contentHeight =
+    content && Number.isFinite(content.height) ? Math.ceil(content.height) : undefined;
   const section = content?.section.trim() || undefined;
   window.parent.postMessage(
     {
@@ -555,7 +572,11 @@ export function postConfirmationRequestToLattice(
   config: EmbedModeConfig,
   request: Omit<SynaraConfirmationRequest, "type">,
 ): void {
-  if (!config.hostOrigin || !boundedString(request.id, 128) || !boundedString(request.message, 4_096)) {
+  if (
+    !config.hostOrigin ||
+    !boundedString(request.id, 128) ||
+    !boundedString(request.message, 4_096)
+  ) {
     return;
   }
   window.parent.postMessage(
@@ -586,7 +607,10 @@ export function readLatticeConfirmationMessage(
   if (event.data.type === LATTICE_CONFIRMATION_ACK) {
     return { type: LATTICE_CONFIRMATION_ACK, id: requestId };
   }
-  if (event.data.type === LATTICE_CONFIRMATION_RESPONSE && typeof event.data.confirmed === "boolean") {
+  if (
+    event.data.type === LATTICE_CONFIRMATION_RESPONSE &&
+    typeof event.data.confirmed === "boolean"
+  ) {
     return {
       type: LATTICE_CONFIRMATION_RESPONSE,
       id: requestId,
@@ -728,7 +752,8 @@ export function initializeEmbedMode(): void {
   const theme = themeValue === "dark" || themeValue === '"dark"' ? "dark" : "light";
   const surface = search.get("surface") === "drawer" ? "drawer" : "chrome";
   if ((embed === "1" || embed === '"1"' || embed === "true") && workspaceRoot) {
-    const hostOrigin = normalizedOrigin(search.get("hostOrigin")) || normalizedOrigin(document.referrer);
+    const hostOrigin =
+      normalizedOrigin(search.get("hostOrigin")) || normalizedOrigin(document.referrer);
     const config: EmbedModeConfig = { workspaceRoot, theme, surface, hostOrigin };
     const authToken = readFragmentAuthToken();
     if (authToken) {
@@ -750,7 +775,9 @@ export function readEmbedMode(): EmbedModeConfig | null {
     const theme = "theme" in parsed && parsed.theme === "dark" ? "dark" : "light";
     const surface = "surface" in parsed && parsed.surface === "drawer" ? "drawer" : "chrome";
     const hostOrigin =
-      "hostOrigin" in parsed && typeof parsed.hostOrigin === "string" ? normalizedOrigin(parsed.hostOrigin) : null;
+      "hostOrigin" in parsed && typeof parsed.hostOrigin === "string"
+        ? normalizedOrigin(parsed.hostOrigin)
+        : null;
     return workspaceRoot ? { workspaceRoot, theme, surface, hostOrigin } : null;
   } catch {
     return null;

@@ -26,13 +26,15 @@ export const SETTINGS_PAGE_BACKGROUND_CLASS_NAME = "app-settings-surface";
 export const SETTINGS_SECTION_LABEL_CLASS_NAME = "settings-group-heading";
 
 /** Vertical rhythm between stacked settings groups in the content panel. */
-export const SETTINGS_PANEL_SECTION_CLASS_NAME = "settings-group flex flex-col gap-1.5 not-first:mt-7";
+export const SETTINGS_PANEL_SECTION_CLASS_NAME =
+  "settings-group flex flex-col gap-1.5 not-first:mt-7";
 
 /** Unframed settings group. Rows sit directly on the page surface. */
 export const SETTINGS_CARD_CLASS_NAME = "settings-group-rows";
 
 /** Row padding inside a settings group. */
-export const SETTINGS_CARD_ROW_CLASS_NAME = "settings-row px-0 py-[var(--app-density-settings-row-padding-y,0.625rem)]";
+export const SETTINGS_CARD_ROW_CLASS_NAME =
+  "settings-row px-0 py-[var(--app-density-settings-row-padding-y,0.625rem)]";
 
 /** Row title — same UI font/size as the description; weight and color differ. */
 export const SETTINGS_CARD_ROW_TITLE_CLASS_NAME =

@@ -16,7 +16,10 @@ import {
   normalizeProviderDiscoveryText,
   rankProviderDiscoveryItems,
 } from "~/lib/providerDiscovery";
-import { LOCAL_FOLDER_MENTION_NAME, matchesLocalFolderMentionShortcut } from "~/lib/localFolderMentions";
+import {
+  LOCAL_FOLDER_MENTION_NAME,
+  matchesLocalFolderMentionShortcut,
+} from "~/lib/localFolderMentions";
 import { basenameOfPath } from "../file-icons";
 import type { ComposerTrigger } from "../composer-logic";
 import {
@@ -178,7 +181,9 @@ export function buildThreadMentionComposerItems(input: {
   const projectById = new Map(input.projects.map((project) => [project.id, project]));
   const candidates = withDisambiguatedMentionNames(
     input.threads
-      .filter((thread) => thread.id !== input.currentThreadId && (thread.archivedAt ?? null) === null)
+      .filter(
+        (thread) => thread.id !== input.currentThreadId && (thread.archivedAt ?? null) === null,
+      )
       .map((thread) => ({
         thread,
         title: threadSuggestionTitle(thread.title),
@@ -205,7 +210,9 @@ export function buildThreadMentionComposerItems(input: {
   }));
 }
 
-function paperMentionNames(papers: readonly ComposerPaperMentionSource[]): Map<ComposerPaperMentionSource, string> {
+function paperMentionNames(
+  papers: readonly ComposerPaperMentionSource[],
+): Map<ComposerPaperMentionSource, string> {
   const titleCounts = new Map<string, number>();
   for (const paper of papers) {
     const key = mentionNameKey(paper.title);
@@ -217,7 +224,9 @@ function paperMentionNames(papers: readonly ComposerPaperMentionSource[]): Map<C
   for (const paper of papers) {
     const title = paper.title.trim();
     const duplicateTitle = (titleCounts.get(mentionNameKey(title)) ?? 0) > 1;
-    const preferredName = duplicateTitle ? `${title} (${paper.citationKey?.trim() || paper.arxivId})` : title;
+    const preferredName = duplicateTitle
+      ? `${title} (${paper.citationKey?.trim() || paper.arxivId})`
+      : title;
     let mentionName = preferredName;
     let attempt = 0;
     while (usedNames.has(mentionNameKey(mentionName))) {
@@ -273,23 +282,27 @@ export function buildSearchableModelOptions(input: {
   const hiddenProviderSet = new Set(input.hiddenProviders);
   const protectedProviderSet = new Set(input.protectedProviders);
   return input.providerOptions
-    .toSorted((left, right) => compareProvidersByOrder(input.providerOrder, left.value, right.value))
+    .toSorted((left, right) =>
+      compareProvidersByOrder(input.providerOrder, left.value, right.value),
+    )
     .filter((option) =>
       input.lockedProvider
         ? option.value === input.lockedProvider
         : protectedProviderSet.has(option.value) || !hiddenProviderSet.has(option.value),
     )
     .flatMap((option) =>
-      input.modelOptionsByProvider[option.value].map(({ slug, name, upstreamProviderId, upstreamProviderName }) => ({
-        provider: option.value,
-        providerLabel: option.label,
-        slug,
-        name,
-        searchSlug: slug.toLowerCase(),
-        searchName: name.toLowerCase(),
-        searchProvider: option.label.toLowerCase(),
-        searchUpstreamProvider: (upstreamProviderName ?? upstreamProviderId ?? "").toLowerCase(),
-      })),
+      input.modelOptionsByProvider[option.value].map(
+        ({ slug, name, upstreamProviderId, upstreamProviderName }) => ({
+          provider: option.value,
+          providerLabel: option.label,
+          slug,
+          name,
+          searchSlug: slug.toLowerCase(),
+          searchName: name.toLowerCase(),
+          searchProvider: option.label.toLowerCase(),
+          searchUpstreamProvider: (upstreamProviderName ?? upstreamProviderId ?? "").toLowerCase(),
+        }),
+      ),
     );
 }
 
@@ -417,7 +430,14 @@ export function useComposerCommandMenuItems(input: {
     });
     // Papers are a primary Lattice workflow. Keep the initial slice short so a
     // large library never crowds Plugins, Chats, Local, or Subagents out of view.
-    return [...paperItems, ...pluginItems, ...threadItems, ...localRootItems, ...pathItems, ...agentItems];
+    return [
+      ...paperItems,
+      ...pluginItems,
+      ...threadItems,
+      ...localRootItems,
+      ...pathItems,
+      ...agentItems,
+    ];
   }
 
   if (composerTrigger.kind === "slash-command") {
@@ -436,14 +456,16 @@ export function useComposerCommandMenuItems(input: {
       ? availableCommands.filter((command) => surfaceAppSlashCommands.has(command))
       : availableCommands;
     const visibleAppCommandSet = new Set(visibleAppCommands);
-    const builtInItems = filterComposerSlashCommands(composerTrigger.query, visibleAppCommands).map((definition) => ({
-      id: `slash:${definition.command}`,
-      type: "slash-command" as const,
-      command: definition.command,
-      label: definition.label,
-      description: definition.description,
-      source: definition.source,
-    }));
+    const builtInItems = filterComposerSlashCommands(composerTrigger.query, visibleAppCommands).map(
+      (definition) => ({
+        id: `slash:${definition.command}`,
+        type: "slash-command" as const,
+        command: definition.command,
+        label: definition.label,
+        description: definition.description,
+        source: definition.source,
+      }),
+    );
     const providerCommandItems = providerNativeCommands
       .filter(
         (command) =>
@@ -453,9 +475,11 @@ export function useComposerCommandMenuItems(input: {
       )
       .map((command) => ({
         command,
-        aliasFields: getProviderNativeSlashCommandSearchTerms(provider, command.name).map((term) => ({
-          value: term,
-        })),
+        aliasFields: getProviderNativeSlashCommandSearchTerms(provider, command.name).map(
+          (term) => ({
+            value: term,
+          }),
+        ),
       }));
     const rankedProviderCommandItems = rankProviderDiscoveryItems(
       providerCommandItems,
@@ -487,13 +511,15 @@ export function useComposerCommandMenuItems(input: {
 
   if (composerTrigger.kind === "skill") {
     const query = normalizeProviderDiscoveryText(composerTrigger.query);
-    return rankProviderDiscoveryItems(providerSkills, query, buildSkillSearchFields).map((skill) => ({
-      id: `skill:${skill.path}`,
-      type: "skill" as const,
-      skill,
-      label: skill.interface?.displayName ?? skill.name,
-      description: skill.interface?.shortDescription ?? skill.description ?? skill.path,
-    }));
+    return rankProviderDiscoveryItems(providerSkills, query, buildSkillSearchFields).map(
+      (skill) => ({
+        id: `skill:${skill.path}`,
+        type: "skill" as const,
+        skill,
+        label: skill.interface?.displayName ?? skill.name,
+        description: skill.interface?.shortDescription ?? skill.description ?? skill.path,
+      }),
+    );
   }
 
   return rankProviderDiscoveryItems(searchableModelOptions, composerTrigger.query, (option) => [

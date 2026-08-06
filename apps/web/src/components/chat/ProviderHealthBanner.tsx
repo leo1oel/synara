@@ -56,19 +56,11 @@ export const ProviderHealthBanner = function ProviderHealthBanner({
       >
         <Icon className={NOTIFICATION_ICON_CLASS_NAME} />
         <AlertTitle className="font-normal text-[var(--notification-fg)]">{title}</AlertTitle>
-        <AlertDescription
-          className="line-clamp-3 text-[var(--notification-fg)]/72"
-          title={message}
-        >
+        <AlertDescription className="line-clamp-3 text-[var(--notification-fg)]/72" title={message}>
           {message}
         </AlertDescription>
         {onConfigure || onDismiss ? (
-          <AlertAction
-            className={cn(
-              "items-center",
-              !onConfigure && "absolute top-2 right-2",
-            )}
-          >
+          <AlertAction className={cn("items-center", !onConfigure && "absolute top-2 right-2")}>
             {onConfigure ? (
               <Button size="xs" variant="outline" onClick={onConfigure}>
                 Provider settings

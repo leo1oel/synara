@@ -146,7 +146,9 @@ function checkpointRevertSucceededEvent(input: {
   };
 }
 
-function omitNullUserInputAnswers(command: Extract<OrchestrationCommand, { type: "thread.user-input.respond" }>) {
+function omitNullUserInputAnswers(
+  command: Extract<OrchestrationCommand, { type: "thread.user-input.respond" }>,
+) {
   return Object.fromEntries(
     Object.entries(command.answers).filter(([, answer]) => answer !== null && answer !== undefined),
   );
@@ -166,7 +168,10 @@ function countPinnedProjects(
 }
 
 function validateProjectPinLimit(input: {
-  readonly command: Extract<OrchestrationCommand, { type: "project.create" | "project.meta.update" }>;
+  readonly command: Extract<
+    OrchestrationCommand,
+    { type: "project.create" | "project.meta.update" }
+  >;
   readonly readModel: OrchestrationReadModel;
   readonly projectId: OrchestrationEvent["aggregateId"];
   readonly nextKind: ProjectKind;
@@ -228,11 +233,15 @@ function deriveCommandAssociatedWorktreeMetadata(input: {
   return deriveAssociatedWorktreeMetadata({
     branch: input.branch,
     worktreePath: input.worktreePath,
-    ...(input.associatedWorktreePath !== undefined ? { associatedWorktreePath: input.associatedWorktreePath } : {}),
+    ...(input.associatedWorktreePath !== undefined
+      ? { associatedWorktreePath: input.associatedWorktreePath }
+      : {}),
     ...(input.associatedWorktreeBranch !== undefined
       ? { associatedWorktreeBranch: input.associatedWorktreeBranch }
       : {}),
-    ...(input.associatedWorktreeRef !== undefined ? { associatedWorktreeRef: input.associatedWorktreeRef } : {}),
+    ...(input.associatedWorktreeRef !== undefined
+      ? { associatedWorktreeRef: input.associatedWorktreeRef }
+      : {}),
   });
 }
 
@@ -246,16 +255,23 @@ function deriveCommandAssociatedWorktreeMetadataPatch(input: {
   return deriveAssociatedWorktreeMetadataPatch({
     ...(input.branch !== undefined ? { branch: input.branch } : {}),
     ...(input.worktreePath !== undefined ? { worktreePath: input.worktreePath } : {}),
-    ...(input.associatedWorktreePath !== undefined ? { associatedWorktreePath: input.associatedWorktreePath } : {}),
+    ...(input.associatedWorktreePath !== undefined
+      ? { associatedWorktreePath: input.associatedWorktreePath }
+      : {}),
     ...(input.associatedWorktreeBranch !== undefined
       ? { associatedWorktreeBranch: input.associatedWorktreeBranch }
       : {}),
-    ...(input.associatedWorktreeRef !== undefined ? { associatedWorktreeRef: input.associatedWorktreeRef } : {}),
+    ...(input.associatedWorktreeRef !== undefined
+      ? { associatedWorktreeRef: input.associatedWorktreeRef }
+      : {}),
   });
 }
 
 type CreatedThreadWorkspaceCommand = Pick<
-  Extract<OrchestrationCommand, { type: "thread.create" | "thread.handoff.create" | "thread.fork.create" }>,
+  Extract<
+    OrchestrationCommand,
+    { type: "thread.create" | "thread.handoff.create" | "thread.fork.create" }
+  >,
   | "envMode"
   | "branch"
   | "worktreePath"
@@ -276,7 +292,8 @@ function resolveCreatedThreadWorkspaceMetadata(
       worktreePath: null,
       // Backward compatibility: older Studio clients sent "Use a folder" through
       // worktreePath. Preserve that folder while stripping its worktree semantics.
-      workingDirectory: command.workingDirectory !== undefined ? command.workingDirectory : command.worktreePath,
+      workingDirectory:
+        command.workingDirectory !== undefined ? command.workingDirectory : command.worktreePath,
       associatedWorktreePath: null,
       associatedWorktreeBranch: null,
       associatedWorktreeRef: null,
@@ -297,7 +314,9 @@ function resolveCreatedThreadWorkspaceMetadata(
       ...(command.associatedWorktreeBranch !== undefined
         ? { associatedWorktreeBranch: command.associatedWorktreeBranch }
         : {}),
-      ...(command.associatedWorktreeRef !== undefined ? { associatedWorktreeRef: command.associatedWorktreeRef } : {}),
+      ...(command.associatedWorktreeRef !== undefined
+        ? { associatedWorktreeRef: command.associatedWorktreeRef }
+        : {}),
     }),
   };
 }
@@ -329,7 +348,9 @@ function resolveThreadWorkspaceMetadataPatch(
     ...(command.envMode !== undefined ? { envMode: command.envMode } : {}),
     ...(command.branch !== undefined ? { branch: command.branch } : {}),
     ...(command.worktreePath !== undefined ? { worktreePath: command.worktreePath } : {}),
-    ...(command.workingDirectory !== undefined ? { workingDirectory: command.workingDirectory } : {}),
+    ...(command.workingDirectory !== undefined
+      ? { workingDirectory: command.workingDirectory }
+      : {}),
     ...deriveCommandAssociatedWorktreeMetadataPatch({
       ...(command.branch !== undefined ? { branch: command.branch } : {}),
       ...(command.worktreePath !== undefined ? { worktreePath: command.worktreePath } : {}),
@@ -339,7 +360,9 @@ function resolveThreadWorkspaceMetadataPatch(
       ...(command.associatedWorktreeBranch !== undefined
         ? { associatedWorktreeBranch: command.associatedWorktreeBranch }
         : {}),
-      ...(command.associatedWorktreeRef !== undefined ? { associatedWorktreeRef: command.associatedWorktreeRef } : {}),
+      ...(command.associatedWorktreeRef !== undefined
+        ? { associatedWorktreeRef: command.associatedWorktreeRef }
+        : {}),
     }),
     ...(command.createBranchFlowCompleted !== undefined
       ? { createBranchFlowCompleted: command.createBranchFlowCompleted }
@@ -395,7 +418,10 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           detail: `A maximum of ${SPACES_MAX_COUNT} custom spaces is supported.`,
         });
       }
-      const sortOrder = activeSpaces.reduce((maximum, space) => Math.max(maximum, space.sortOrder + 1), 0);
+      const sortOrder = activeSpaces.reduce(
+        (maximum, space) => Math.max(maximum, space.sortOrder + 1),
+        0,
+      );
       return {
         ...withEventBase({
           aggregateKind: "space",
@@ -419,8 +445,14 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       const existingSpace = yield* requireSpace({ readModel, command, spaceId: command.spaceId });
       // Fields equal to the current value are not changes: a Save with nothing edited (or a
       // rename that resends the icon) must not append an event or bump updatedAt.
-      const nextName = command.name !== undefined && command.name !== existingSpace.name ? command.name : undefined;
-      const nextIcon = command.icon !== undefined && command.icon !== existingSpace.icon ? command.icon : undefined;
+      const nextName =
+        command.name !== undefined && command.name !== existingSpace.name
+          ? command.name
+          : undefined;
+      const nextIcon =
+        command.icon !== undefined && command.icon !== existingSpace.icon
+          ? command.icon
+          : undefined;
       if (nextName === undefined && nextIcon === undefined) {
         return yield* new OrchestrationCommandInvariantError({
           commandType: command.type,
@@ -564,16 +596,23 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         // The app-managed Studio container owns its root exclusively and is never retired here:
         // silently deleting it would orphan Studio threads, so adding its folder as a project
         // is rejected outright.
-        const existingStudioProject = listActiveProjectsByWorkspaceRoot(readModel, command.workspaceRoot, {
-          kinds: STUDIO_PROJECT_KIND_SET,
-        })[0];
+        const existingStudioProject = listActiveProjectsByWorkspaceRoot(
+          readModel,
+          command.workspaceRoot,
+          {
+            kinds: STUDIO_PROJECT_KIND_SET,
+          },
+        )[0];
         if (existingStudioProject) {
           return yield* new OrchestrationCommandInvariantError({
             commandType: command.type,
             detail: `Project '${existingStudioProject.id}' already uses workspace root '${existingStudioProject.workspaceRoot}'.`,
           });
         }
-        const existingProjects = listActiveProjectsByWorkspaceRoot(readModel, command.workspaceRoot);
+        const existingProjects = listActiveProjectsByWorkspaceRoot(
+          readModel,
+          command.workspaceRoot,
+        );
         if (command.reuseExistingWorkspaceRoot && existingProjects[0]) {
           const existingProject = existingProjects[0];
           return yield* new OrchestrationCommandInvariantError({
@@ -616,9 +655,13 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         // Cross-kind on purpose: a regular project already using this root would otherwise
         // coexist with the Studio container, breaking workspace-root-to-project uniqueness
         // that shell snapshot mapping and duplicate recovery rely on.
-        const existingOwningProject = listActiveProjectsByWorkspaceRoot(readModel, command.workspaceRoot, {
-          kinds: WORKSPACE_OWNING_PROJECT_KIND_SET,
-        })[0];
+        const existingOwningProject = listActiveProjectsByWorkspaceRoot(
+          readModel,
+          command.workspaceRoot,
+          {
+            kinds: WORKSPACE_OWNING_PROJECT_KIND_SET,
+          },
+        )[0];
         if (existingOwningProject) {
           return yield* new OrchestrationCommandInvariantError({
             commandType: command.type,
@@ -636,7 +679,8 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
 
       // Filing a new project into the requested space is best-effort: creation must never
       // fail because the space raced a delete, so an unusable target degrades to Void.
-      const requestedSpace = command.spaceId != null ? findSpaceById(readModel, command.spaceId) : undefined;
+      const requestedSpace =
+        command.spaceId != null ? findSpaceById(readModel, command.spaceId) : undefined;
       const creationSpaceId =
         command.spaceId != null &&
         nextProjectKind === "project" &&
@@ -687,9 +731,12 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           : nextProjectKind !== "project" && existingProject.spaceId !== null
             ? null
             : undefined;
-      const effectiveSpaceId = requestedSpaceId !== undefined ? requestedSpaceId : existingProject.spaceId;
+      const effectiveSpaceId =
+        requestedSpaceId !== undefined ? requestedSpaceId : existingProject.spaceId;
       const changedSpaceId =
-        requestedSpaceId !== undefined && requestedSpaceId !== existingProject.spaceId ? requestedSpaceId : undefined;
+        requestedSpaceId !== undefined && requestedSpaceId !== existingProject.spaceId
+          ? requestedSpaceId
+          : undefined;
       const hasOtherMetadataInput =
         command.kind !== undefined ||
         command.title !== undefined ||
@@ -702,7 +749,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         projectWorkspaceRoot: existingProject.workspaceRoot,
         workspacePaths,
       });
-      if (command.title !== undefined && command.title !== existingProject.title && isLegacyHomeChatContainer) {
+      if (
+        command.title !== undefined &&
+        command.title !== existingProject.title &&
+        isLegacyHomeChatContainer
+      ) {
         return yield* new OrchestrationCommandInvariantError({
           commandType: command.type,
           detail: "The legacy Chats container cannot be renamed.",
@@ -746,7 +797,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         }
         yield* requireSpace({ readModel, command, spaceId: command.spaceId });
       }
-      if (requestedSpaceId !== undefined && changedSpaceId === undefined && !hasOtherMetadataInput) {
+      if (
+        requestedSpaceId !== undefined &&
+        changedSpaceId === undefined &&
+        !hasOtherMetadataInput
+      ) {
         return yield* new OrchestrationCommandInvariantError({
           commandType: command.type,
           detail: "Project is already assigned to this space.",
@@ -862,7 +917,8 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           runtimeMode: command.runtimeMode,
           interactionMode: command.interactionMode,
           ...resolveCreatedThreadWorkspaceMetadata(project.kind, command),
-          createBranchFlowCompleted: project.kind === "studio" ? false : command.createBranchFlowCompleted,
+          createBranchFlowCompleted:
+            project.kind === "studio" ? false : command.createBranchFlowCompleted,
           isPinned: command.isPinned,
           parentThreadId: command.parentThreadId,
           ...(command.creationSource !== undefined
@@ -938,7 +994,8 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           runtimeMode: command.runtimeMode,
           interactionMode: command.interactionMode,
           ...resolveCreatedThreadWorkspaceMetadata(project.kind, command),
-          createBranchFlowCompleted: project.kind === "studio" ? false : command.createBranchFlowCompleted,
+          createBranchFlowCompleted:
+            project.kind === "studio" ? false : command.createBranchFlowCompleted,
           isPinned: false,
           parentThreadId: null,
           subagentAgentId: null,
@@ -961,8 +1018,8 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       // clock floors on the new thread's own createdAt/updatedAt (see
       // `threadRetention.getThreadLastActivityMs`) so a handoff of an old
       // conversation is never born past the retention cutoff.
-      const importedMessageEvents: ReadonlyArray<Omit<OrchestrationEvent, "sequence">> = command.importedMessages.map(
-        (message) => ({
+      const importedMessageEvents: ReadonlyArray<Omit<OrchestrationEvent, "sequence">> =
+        command.importedMessages.map((message) => ({
           ...withEventBase({
             aggregateKind: "thread",
             aggregateId: command.threadId,
@@ -982,8 +1039,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
             createdAt: message.createdAt,
             updatedAt: message.updatedAt,
           },
-        }),
-      );
+        }));
 
       return [createdEvent, ...importedMessageEvents];
     }
@@ -1034,7 +1090,8 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           runtimeMode: command.runtimeMode,
           interactionMode: command.interactionMode,
           ...resolveCreatedThreadWorkspaceMetadata(project.kind, command),
-          createBranchFlowCompleted: project.kind === "studio" ? false : command.createBranchFlowCompleted,
+          createBranchFlowCompleted:
+            project.kind === "studio" ? false : command.createBranchFlowCompleted,
           isPinned: false,
           parentThreadId: null,
           subagentAgentId: null,
@@ -1053,8 +1110,8 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       // clock floors on the new thread's own createdAt/updatedAt (see
       // `threadRetention.getThreadLastActivityMs`) so a fork of an old conversation
       // is never born past the retention cutoff.
-      const importedMessageEvents: ReadonlyArray<Omit<OrchestrationEvent, "sequence">> = command.importedMessages.map(
-        (message) => ({
+      const importedMessageEvents: ReadonlyArray<Omit<OrchestrationEvent, "sequence">> =
+        command.importedMessages.map((message) => ({
           ...withEventBase({
             aggregateKind: "thread",
             aggregateId: command.threadId,
@@ -1074,8 +1131,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
             createdAt: message.createdAt,
             updatedAt: message.updatedAt,
           },
-        }),
-      );
+        }));
 
       return [createdEvent, ...importedMessageEvents];
     }
@@ -1193,7 +1249,9 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         payload: {
           threadId: command.threadId,
           ...(command.title !== undefined ? { title: command.title } : {}),
-          ...(command.modelSelection !== undefined ? { modelSelection: command.modelSelection } : {}),
+          ...(command.modelSelection !== undefined
+            ? { modelSelection: command.modelSelection }
+            : {}),
           ...resolveThreadWorkspaceMetadataPatch(project?.kind, command, thread),
           ...(command.isPinned !== undefined ? { isPinned: command.isPinned } : {}),
           ...(command.isSettled !== undefined
@@ -1211,7 +1269,9 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           ...(command.subagentRole !== undefined ? { subagentRole: command.subagentRole } : {}),
           ...(command.handoff !== undefined ? { handoff: command.handoff } : {}),
           ...(command.lastKnownPr !== undefined ? { lastKnownPr: command.lastKnownPr } : {}),
-          ...(command.pinnedMessages !== undefined ? { pinnedMessages: command.pinnedMessages } : {}),
+          ...(command.pinnedMessages !== undefined
+            ? { pinnedMessages: command.pinnedMessages }
+            : {}),
           ...(command.notes !== undefined ? { notes: command.notes } : {}),
           updatedAt: occurredAt,
         },
@@ -1358,7 +1418,10 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           replacedMarkerCount += 1;
         }
       }
-      if (!existingMarker && (thread.threadMarkers?.length ?? 0) - replacedMarkerCount >= THREAD_MARKERS_MAX_COUNT) {
+      if (
+        !existingMarker &&
+        (thread.threadMarkers?.length ?? 0) - replacedMarkerCount >= THREAD_MARKERS_MAX_COUNT
+      ) {
         return yield* new OrchestrationCommandInvariantError({
           commandType: command.type,
           detail: `Thread '${command.threadId}' already has the maximum of ${THREAD_MARKERS_MAX_COUNT} markers.`,
@@ -1587,7 +1650,9 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         threadId: command.threadId,
         messageId: command.message.messageId,
         ...(command.modelSelection !== undefined ? { modelSelection: command.modelSelection } : {}),
-        ...(command.providerOptions !== undefined ? { providerOptions: command.providerOptions } : {}),
+        ...(command.providerOptions !== undefined
+          ? { providerOptions: command.providerOptions }
+          : {}),
         ...(command.reviewTarget !== undefined ? { reviewTarget: command.reviewTarget } : {}),
         assistantDeliveryMode: command.assistantDeliveryMode ?? DEFAULT_ASSISTANT_DELIVERY_MODE,
         dispatchMode,
@@ -1597,8 +1662,10 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         ...(sourceProposedPlan !== undefined ? { sourceProposedPlan } : {}),
         createdAt: command.createdAt,
       } as const;
-      const activeProvider = targetThread.session?.providerName ?? targetThread.modelSelection.provider;
-      const isThreadRunning = targetThread.session?.status === "running" && targetThread.session.activeTurnId !== null;
+      const activeProvider =
+        targetThread.session?.providerName ?? targetThread.modelSelection.provider;
+      const isThreadRunning =
+        targetThread.session?.status === "running" && targetThread.session.activeTurnId !== null;
       // Subagent threads never queue: their messages steer the running child task
       // through the parent session, so deferring until the turn settles would
       // deliver the message only after the subagent already finished.
@@ -1655,7 +1722,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           detail: checkpointRevertInProgressDetail(command.threadId),
         });
       }
-      yield* validateAutoRuntimeMode(command, command.modelSelection ?? thread.modelSelection, command.runtimeMode);
+      yield* validateAutoRuntimeMode(
+        command,
+        command.modelSelection ?? thread.modelSelection,
+        command.runtimeMode,
+      );
       return {
         ...withEventBase({
           aggregateKind: "thread",
@@ -1667,15 +1738,21 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         payload: {
           threadId: command.threadId,
           messageId: command.messageId,
-          ...(command.modelSelection !== undefined ? { modelSelection: command.modelSelection } : {}),
-          ...(command.providerOptions !== undefined ? { providerOptions: command.providerOptions } : {}),
+          ...(command.modelSelection !== undefined
+            ? { modelSelection: command.modelSelection }
+            : {}),
+          ...(command.providerOptions !== undefined
+            ? { providerOptions: command.providerOptions }
+            : {}),
           ...(command.reviewTarget !== undefined ? { reviewTarget: command.reviewTarget } : {}),
           assistantDeliveryMode: command.assistantDeliveryMode ?? DEFAULT_ASSISTANT_DELIVERY_MODE,
           dispatchMode: command.dispatchMode ?? "queue",
           dispatchOrigin: command.dispatchOrigin ?? "user",
           runtimeMode: command.runtimeMode,
           interactionMode: command.interactionMode,
-          ...(command.sourceProposedPlan !== undefined ? { sourceProposedPlan: command.sourceProposedPlan } : {}),
+          ...(command.sourceProposedPlan !== undefined
+            ? { sourceProposedPlan: command.sourceProposedPlan }
+            : {}),
           createdAt: command.createdAt,
         },
       };
@@ -1767,7 +1844,9 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         payload: {
           threadId: command.threadId,
           requestId: command.requestId,
-          ...(command.lifecycleGeneration !== undefined ? { lifecycleGeneration: command.lifecycleGeneration } : {}),
+          ...(command.lifecycleGeneration !== undefined
+            ? { lifecycleGeneration: command.lifecycleGeneration }
+            : {}),
           decision: command.decision,
           createdAt: command.createdAt,
         },
@@ -1795,7 +1874,9 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         payload: {
           threadId: command.threadId,
           requestId: command.requestId,
-          ...(command.lifecycleGeneration !== undefined ? { lifecycleGeneration: command.lifecycleGeneration } : {}),
+          ...(command.lifecycleGeneration !== undefined
+            ? { lifecycleGeneration: command.lifecycleGeneration }
+            : {}),
           answers,
           createdAt: command.createdAt,
         },
@@ -1916,11 +1997,16 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           detail: checkpointRevertInProgressDetail(command.threadId),
         });
       }
-      yield* validateAutoRuntimeMode(command, command.modelSelection ?? thread.modelSelection, command.runtimeMode);
+      yield* validateAutoRuntimeMode(
+        command,
+        command.modelSelection ?? thread.modelSelection,
+        command.runtimeMode,
+      );
       const editTarget = resolveTailUserMessageEditTarget({
         messages: thread.messages,
         messageId: command.messageId,
-        activeTurnId: thread.session?.status === "running" ? (thread.session.activeTurnId ?? null) : null,
+        activeTurnId:
+          thread.session?.status === "running" ? (thread.session.activeTurnId ?? null) : null,
       });
       if (!editTarget.editable) {
         return yield* new OrchestrationCommandInvariantError({
@@ -1942,8 +2028,12 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           text: command.text,
           rollbackTurnCount: editTarget.rollbackTurnCount,
           removedTurnIds: editTarget.removedTurnIds.map((turnId) => TurnId.makeUnsafe(turnId)),
-          ...(command.modelSelection !== undefined ? { modelSelection: command.modelSelection } : {}),
-          ...(command.providerOptions !== undefined ? { providerOptions: command.providerOptions } : {}),
+          ...(command.modelSelection !== undefined
+            ? { modelSelection: command.modelSelection }
+            : {}),
+          ...(command.providerOptions !== undefined
+            ? { providerOptions: command.providerOptions }
+            : {}),
           ...(command.assistantDeliveryMode !== undefined
             ? { assistantDeliveryMode: command.assistantDeliveryMode }
             : {}),
@@ -1976,7 +2066,10 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           },
         },
       };
-      return [startingSessionEvent, { ...requestedEvent, causationEventId: startingSessionEvent.eventId }];
+      return [
+        startingSessionEvent,
+        { ...requestedEvent, causationEventId: startingSessionEvent.eventId },
+      ];
     }
 
     case "thread.session.stop": {
@@ -2234,8 +2327,12 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           threadId: command.threadId,
           messageId: command.messageId,
           numTurns: command.numTurns,
-          ...(command.removedTurnIds !== undefined ? { removedTurnIds: command.removedTurnIds } : {}),
-          ...(command.skipAttachmentPrune !== undefined ? { skipAttachmentPrune: command.skipAttachmentPrune } : {}),
+          ...(command.removedTurnIds !== undefined
+            ? { removedTurnIds: command.removedTurnIds }
+            : {}),
+          ...(command.skipAttachmentPrune !== undefined
+            ? { skipAttachmentPrune: command.skipAttachmentPrune }
+            : {}),
         },
       };
     }

@@ -37,7 +37,10 @@ import { Alert } from "../ui/alert";
 import { Button } from "../ui/button";
 import { IconButton } from "../ui/icon-button";
 import { ScrollArea } from "../ui/scroll-area";
-import { CHAT_SURFACE_HEADER_ACTION_ICON_CLASS_NAME, DOCK_HEADER_ICON_BUTTON_CLASS } from "./chatHeaderControls";
+import {
+  CHAT_SURFACE_HEADER_ACTION_ICON_CLASS_NAME,
+  DOCK_HEADER_ICON_BUTTON_CLASS,
+} from "./chatHeaderControls";
 import { DiffStat } from "./DiffStatLabel";
 import { DockPaneHeader } from "./DockPaneHeader";
 import { FileDiffHeader } from "./FileDiffHeader";
@@ -57,7 +60,10 @@ interface SelectedFile {
   path: string;
 }
 
-function parsePatchToSortedFiles(patch: string | undefined, cacheScope: string): FileDiffMetadata[] {
+function parsePatchToSortedFiles(
+  patch: string | undefined,
+  cacheScope: string,
+): FileDiffMetadata[] {
   const renderable = getRenderablePatch(patch, cacheScope);
   return renderable?.kind === "files" ? sortFileDiffsByPath(renderable.files) : [];
 }
@@ -90,7 +96,11 @@ function GitFileRow(props: {
           <span>{name}</span>
         </span>
       </button>
-      <DiffStat additions={stat.additions} deletions={stat.deletions} className="shrink-0 text-[11px]" />
+      <DiffStat
+        additions={stat.additions}
+        deletions={stat.deletions}
+        className="shrink-0 text-[11px]"
+      />
       <IconButton
         size="icon-xs"
         variant="ghost"
@@ -103,7 +113,11 @@ function GitFileRow(props: {
           props.onAction([filePath]);
         }}
       >
-        {props.actionIcon === "stage" ? <PlusIcon className="size-3.5" /> : <RotateCcwIcon className="size-3.5" />}
+        {props.actionIcon === "stage" ? (
+          <PlusIcon className="size-3.5" />
+        ) : (
+          <RotateCcwIcon className="size-3.5" />
+        )}
       </IconButton>
     </div>
   );
@@ -128,7 +142,9 @@ function GitFileSection(props: {
   return (
     <section className="min-w-0">
       <header className="flex items-center gap-2 px-1.5 py-1">
-        <span className="text-[11px] font-semibold text-[var(--color-text-foreground-secondary)]">{props.title}</span>
+        <span className="text-[11px] font-semibold text-[var(--color-text-foreground-secondary)]">
+          {props.title}
+        </span>
         <span className="rounded-full bg-muted px-1.5 text-[10px] font-medium text-[var(--color-text-foreground-secondary)]">
           {props.files.length}
         </span>
@@ -147,7 +163,9 @@ function GitFileSection(props: {
         ) : null}
       </header>
       {props.files.length === 0 ? (
-        <p className="px-1.5 py-1 text-[11px] text-[var(--color-text-foreground-tertiary)]">{props.emptyLabel}</p>
+        <p className="px-1.5 py-1 text-[11px] text-[var(--color-text-foreground-tertiary)]">
+          {props.emptyLabel}
+        </p>
       ) : (
         <div className="flex flex-col gap-0.5">
           {props.files.map((file) => {
@@ -199,8 +217,12 @@ export function GitPanel(props: {
   const queryClient = useQueryClient();
   const { resolvedTheme } = useTheme();
   const theme = resolvedTheme as "light" | "dark";
-  const thread = useStore(useMemo(() => createThreadSelector(props.hostThreadId), [props.hostThreadId]));
-  const project = useStore(useMemo(() => createProjectSelector(props.projectId), [props.projectId]));
+  const thread = useStore(
+    useMemo(() => createThreadSelector(props.hostThreadId), [props.hostThreadId]),
+  );
+  const project = useStore(
+    useMemo(() => createProjectSelector(props.projectId), [props.projectId]),
+  );
   const cwd = props.cwdOverride ?? thread?.worktreePath ?? project?.cwd ?? null;
 
   const [selected, setSelected] = useState<SelectedFile | null>(null);
@@ -210,11 +232,18 @@ export function GitPanel(props: {
   // No fixed polling: turn-driven file changes already push-invalidate the
   // working-tree-diff cache (see __root.tsx), and focus + the Refresh button +
   // post-mutation invalidation cover the rest. This keeps the pane cheap.
-  const stagedQuery = useQuery(gitWorkingTreeDiffQueryOptions({ cwd, scope: "staged", enabled: repositoryReady }));
-  const unstagedQuery = useQuery(gitWorkingTreeDiffQueryOptions({ cwd, scope: "unstaged", enabled: repositoryReady }));
+  const stagedQuery = useQuery(
+    gitWorkingTreeDiffQueryOptions({ cwd, scope: "staged", enabled: repositoryReady }),
+  );
+  const unstagedQuery = useQuery(
+    gitWorkingTreeDiffQueryOptions({ cwd, scope: "unstaged", enabled: repositoryReady }),
+  );
 
   const stagedFiles = parsePatchToSortedFiles(stagedQuery.data?.patch, `git-pane:staged:${theme}`);
-  const unstagedFiles = parsePatchToSortedFiles(unstagedQuery.data?.patch, `git-pane:unstaged:${theme}`);
+  const unstagedFiles = parsePatchToSortedFiles(
+    unstagedQuery.data?.patch,
+    `git-pane:unstaged:${theme}`,
+  );
 
   const stageMutation = useMutation(gitStageFilesMutationOptions({ cwd, queryClient }));
   const unstageMutation = useMutation(gitUnstageFilesMutationOptions({ cwd, queryClient }));
@@ -323,7 +352,11 @@ export function GitPanel(props: {
         <>
           {props.showActions ? (
             <div className="border-b border-border/70 px-2 py-1.5">
-              <GitActionsControl gitCwd={cwd} activeThreadId={props.hostThreadId ?? null} variant="panel" />
+              <GitActionsControl
+                gitCwd={cwd}
+                activeThreadId={props.hostThreadId ?? null}
+                variant="panel"
+              />
             </div>
           ) : null}
 
@@ -331,14 +364,18 @@ export function GitPanel(props: {
 
           <div className="flex max-h-[48%] min-h-0 shrink-0 overflow-hidden">
             <ScrollArea className="min-h-0 flex-1" scrollFade>
-              <div className={cn("flex flex-col gap-2 py-2", props.showActions ? "px-2" : "px-1.5")}>
+              <div
+                className={cn("flex flex-col gap-2 py-2", props.showActions ? "px-2" : "px-1.5")}
+              >
                 {error ? (
                   <Alert variant="error" size="sm" className="text-destructive">
                     {error}
                   </Alert>
                 ) : null}
                 {!error && isLoading && !hasChanges ? (
-                  <p className="px-1.5 py-1 text-[11px] text-muted-foreground/70">Loading changes...</p>
+                  <p className="px-1.5 py-1 text-[11px] text-muted-foreground/70">
+                    Loading changes...
+                  </p>
                 ) : null}
                 {!error && !isLoading && !hasChanges ? (
                   <p className="px-1.5 py-2 text-center text-[12px] text-muted-foreground/70">
@@ -383,9 +420,15 @@ export function GitPanel(props: {
 
           <div className="diff-panel-viewport min-h-0 min-w-0 flex-1 overflow-hidden border-t border-border/70">
             {selectedFileDiff && selectedFileRenderKey ? (
-              <SelectedFileDiff key={selectedFileRenderKey} fileDiff={selectedFileDiff} theme={theme} />
+              <SelectedFileDiff
+                key={selectedFileRenderKey}
+                fileDiff={selectedFileDiff}
+                theme={theme}
+              />
             ) : (
-              <PanelStateMessage density="compact">Select a file to view its diff.</PanelStateMessage>
+              <PanelStateMessage density="compact">
+                Select a file to view its diff.
+              </PanelStateMessage>
             )}
           </div>
         </>

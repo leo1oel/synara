@@ -4,7 +4,12 @@ import { lazy, type ReactNode, Suspense, useEffect, useState } from "react";
 
 import ChatView from "../ChatView";
 import { DiffWorkerPoolProvider } from "../DiffWorkerPoolProvider";
-import { DiffPanelHeaderSkeleton, DiffPanelLoadingState, DiffPanelShell, type DiffPanelMode } from "../DiffPanelShell";
+import {
+  DiffPanelHeaderSkeleton,
+  DiffPanelLoadingState,
+  DiffPanelShell,
+  type DiffPanelMode,
+} from "../DiffPanelShell";
 import type { SplitViewPanePanelState } from "../../splitViewStore";
 import { CHAT_BACKGROUND_CLASS_NAME } from "./composerPickerStyles";
 import { Spinner } from "../ui/spinner";
@@ -18,7 +23,10 @@ export const noopChatSurfaceAction = () => {};
 
 function DiffLoadingFallback(props: { mode: DiffPanelMode; hideHeader?: boolean }) {
   return (
-    <DiffPanelShell mode={props.mode} header={props.hideHeader ? null : <DiffPanelHeaderSkeleton />}>
+    <DiffPanelShell
+      mode={props.mode}
+      header={props.hideHeader ? null : <DiffPanelHeaderSkeleton />}
+    >
       <DiffPanelLoadingState label="Loading diff viewer..." />
     </DiffPanelShell>
   );
@@ -28,7 +36,9 @@ export function LazyDiffPanel(props: {
   mode: DiffPanelMode;
   threadId?: ThreadId | null;
   panelState?: Pick<SplitViewPanePanelState, "panel" | "diffTurnId" | "diffFilePath">;
-  onUpdatePanelState?: (patch: Partial<Pick<SplitViewPanePanelState, "panel" | "diffTurnId" | "diffFilePath">>) => void;
+  onUpdatePanelState?: (
+    patch: Partial<Pick<SplitViewPanePanelState, "panel" | "diffTurnId" | "diffFilePath">>,
+  ) => void;
   onClosePanel?: () => void;
   liveRefreshEnabled?: boolean;
   queriesEnabled?: boolean;
@@ -52,11 +62,17 @@ export function LazyDiffPanel(props: {
           {...(props.panelState ? { panelState: props.panelState } : {})}
           {...(props.onUpdatePanelState ? { onUpdatePanelState: props.onUpdatePanelState } : {})}
           {...(props.onClosePanel ? { onClosePanel: props.onClosePanel } : {})}
-          {...(props.liveRefreshEnabled !== undefined ? { liveRefreshEnabled: props.liveRefreshEnabled } : {})}
+          {...(props.liveRefreshEnabled !== undefined
+            ? { liveRefreshEnabled: props.liveRefreshEnabled }
+            : {})}
           {...(props.queriesEnabled !== undefined ? { queriesEnabled: props.queriesEnabled } : {})}
           {...(props.hideHeader !== undefined ? { hideHeader: props.hideHeader } : {})}
-          {...(props.onRenderableFilesChange ? { onRenderableFilesChange: props.onRenderableFilesChange } : {})}
-          {...(props.onEditorDiffOptionsChange ? { onEditorDiffOptionsChange: props.onEditorDiffOptionsChange } : {})}
+          {...(props.onRenderableFilesChange
+            ? { onRenderableFilesChange: props.onRenderableFilesChange }
+            : {})}
+          {...(props.onEditorDiffOptionsChange
+            ? { onEditorDiffOptionsChange: props.onEditorDiffOptionsChange }
+            : {})}
         />
       </Suspense>
     </DiffWorkerPoolProvider>
@@ -108,7 +124,9 @@ export function DeferredChatView(props: {
 }) {
   const onMounted = props.onMounted ?? noopChatSurfaceAction;
   const mountKey = `${props.paneScopeId}:${props.threadId}`;
-  const [readyMountKey, setReadyMountKey] = useState<string | null>(() => (props.deferMount ? null : mountKey));
+  const [readyMountKey, setReadyMountKey] = useState<string | null>(() =>
+    props.deferMount ? null : mountKey,
+  );
   const canMountChatView = !props.deferMount || readyMountKey === mountKey;
 
   useEffect(() => {

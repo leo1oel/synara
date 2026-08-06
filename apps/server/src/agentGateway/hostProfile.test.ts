@@ -18,8 +18,7 @@ describe("agent host profile", () => {
 
   it("presents Lattice research and task tools without upstream branding", async () => {
     vi.stubEnv("AGENT_HOST_PROFILE", "lattice");
-    const { adaptToolsForActiveHost, resolveAgentHostProfile } =
-      await import("./hostProfile.ts");
+    const { adaptToolsForActiveHost, resolveAgentHostProfile } = await import("./hostProfile.ts");
     const tools = adaptToolsForActiveHost([
       {
         requiredCapability: "thread:read",
@@ -56,10 +55,12 @@ describe("agent host profile", () => {
         },
         handler: () =>
           Effect.succeed({
-            content: [{
-              type: "text" as const,
-              text: '{"nextTool":"synara_wait_for_threads"}',
-            }],
+            content: [
+              {
+                type: "text" as const,
+                text: '{"nextTool":"synara_wait_for_threads"}',
+              },
+            ],
           }),
       },
       {
@@ -78,11 +79,7 @@ describe("agent host profile", () => {
       displayName: "Lattice",
       mcpServerName: "lattice",
     });
-    expect(tools.map((tool) => tool.definition.name)).toEqual([
-      "context",
-      "create_task",
-      "cite",
-    ]);
+    expect(tools.map((tool) => tool.definition.name)).toEqual(["context", "create_task", "cite"]);
     expect(JSON.stringify(tools.map((tool) => tool.definition))).not.toMatch(/synara/i);
 
     const contextResult = await Effect.runPromise(

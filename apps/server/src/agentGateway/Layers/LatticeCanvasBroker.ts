@@ -53,7 +53,10 @@ export function makeLatticeCanvasBroker(options?: {
           removeQueued();
           resume(
             Effect.fail(
-              new LatticeCanvasBrokerError("canvas_tool_timeout", "The canvas tool timed out after 30 seconds."),
+              new LatticeCanvasBrokerError(
+                "canvas_tool_timeout",
+                "The canvas tool timed out after 30 seconds.",
+              ),
             ),
           );
         }, toolTimeoutMs);

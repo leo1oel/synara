@@ -17,7 +17,11 @@ const SWITCH_THUMB_CLASS_NAME =
 
 function Switch({ className, ...props }: SwitchPrimitive.Root.Props) {
   return (
-    <SwitchPrimitive.Root className={cn(SWITCH_TRACK_CLASS_NAME, className)} data-slot="switch" {...props}>
+    <SwitchPrimitive.Root
+      className={cn(SWITCH_TRACK_CLASS_NAME, className)}
+      data-slot="switch"
+      {...props}
+    >
       <SwitchPrimitive.Thumb
         className={cn(
           SWITCH_THUMB_CLASS_NAME,

@@ -47,7 +47,11 @@ export const DISCLOSURE_POPUP_MOTION_CLASS =
 export const DISCLOSURE_WIDTH_MOTION_CLASS =
   "overflow-hidden transition-[width] duration-220 ease-out motion-reduce:transition-none";
 
-export function disclosureWidthClassName(open: boolean, openWidthClassName: string, className?: string) {
+export function disclosureWidthClassName(
+  open: boolean,
+  openWidthClassName: string,
+  className?: string,
+) {
   return cn(DISCLOSURE_WIDTH_MOTION_CLASS, open ? openWidthClassName : "w-0", className);
 }
 

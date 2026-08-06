@@ -81,10 +81,7 @@ export function FileDiffCard(props: {
 // only introduces stale offsets and WebKit grid gaps. Preload Pierre's exact
 // highlighter resources before mounting a plain FileDiff; its first hydrate can
 // then render synchronously without a worker or Virtualizer ancestor.
-export function SingleFileDiffBody(props: {
-  fileDiff: FileDiffMetadata;
-  theme: "light" | "dark";
-}) {
+export function SingleFileDiffBody(props: { fileDiff: FileDiffMetadata; theme: "light" | "dark" }) {
   const themeName = resolveDiffThemeName(props.theme);
   const language = props.fileDiff.lang ?? getFiletypeFromFileName(props.fileDiff.name);
   const preloadKey = `${themeName}:${language}`;

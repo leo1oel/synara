@@ -10,9 +10,21 @@ import {
 } from "@synara/contracts";
 import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
 import { pluralize } from "@synara/shared/text";
-import { closestCenter, DndContext, PointerSensor, type DragEndEvent, useSensor, useSensors } from "@dnd-kit/core";
+import {
+  closestCenter,
+  DndContext,
+  PointerSensor,
+  type DragEndEvent,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type MouseEvent, type ReactNode, useCallback, useMemo, useState } from "react";
@@ -22,7 +34,11 @@ import { postExternalLinkToLattice, readEmbedMode } from "~/embedMode";
 import { CentralIcon } from "~/lib/central-icons";
 import { DownloadIcon, ExternalLinkIcon, Loader2Icon } from "~/lib/icons";
 import { openExternalLink } from "~/lib/linkChips";
-import { serverConfigQueryOptions, serverQueryKeys, serverSettingsQueryOptions } from "~/lib/serverReactQuery";
+import {
+  serverConfigQueryOptions,
+  serverQueryKeys,
+  serverSettingsQueryOptions,
+} from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
 import { ensureNativeApi } from "~/nativeApi";
 import { sameProviderOrder } from "~/providerOrdering";
@@ -69,7 +85,9 @@ type ProviderInstallTextKey =
   | "piBinaryPath"
   | "piAgentDir";
 type ProviderInstallPasswordKey = "kiloServerPassword" | "openCodeServerPassword";
-type ProviderInstallPasswordConfiguredKey = "kiloServerPasswordConfigured" | "openCodeServerPasswordConfigured";
+type ProviderInstallPasswordConfiguredKey =
+  | "kiloServerPasswordConfigured"
+  | "openCodeServerPasswordConfigured";
 type ProviderInstallBooleanKey = "openCodeExperimentalWebSockets";
 
 type ProviderInstallTextField = {
@@ -93,19 +111,21 @@ type ProviderInstallBooleanField = {
   readonly label: string;
   readonly description: ReactNode;
 };
-type ProviderInstallField = ProviderInstallTextField | ProviderInstallPasswordField | ProviderInstallBooleanField;
+type ProviderInstallField =
+  | ProviderInstallTextField
+  | ProviderInstallPasswordField
+  | ProviderInstallBooleanField;
 type ProviderInstallSettings = {
   readonly provider: ProviderKind;
   readonly docs: ReadonlyArray<{ readonly label: string; readonly href: string }>;
   readonly fields: readonly ProviderInstallField[];
 };
 
-const PROVIDER_VISIBILITY_OPTIONS: ReadonlyArray<{ provider: ProviderKind; title: string }> = PROVIDER_DESCRIPTORS.map(
-  (descriptor) => ({
+const PROVIDER_VISIBILITY_OPTIONS: ReadonlyArray<{ provider: ProviderKind; title: string }> =
+  PROVIDER_DESCRIPTORS.map((descriptor) => ({
     provider: descriptor.kind,
     title: descriptor.displayName,
-  }),
-);
+  }));
 
 const PROVIDER_INSTALL_SETTINGS: readonly ProviderInstallSettings[] = [
   {
@@ -172,7 +192,8 @@ const PROVIDER_INSTALL_SETTINGS: readonly ProviderInstallSettings[] = [
         placeholder: "Cursor Agent or Cursor CLI path",
         description: (
           <>
-            Leave blank to use <code>cursor-agent</code> from your PATH. Cursor editor CLI paths are accepted too.
+            Leave blank to use <code>cursor-agent</code> from your PATH. Cursor editor CLI paths are
+            accepted too.
           </>
         ),
       },
@@ -323,7 +344,8 @@ const PROVIDER_INSTALL_SETTINGS: readonly ProviderInstallSettings[] = [
         kind: "boolean",
         settingsKey: "openCodeExperimentalWebSockets",
         label: "OpenAI response WebSockets",
-        description: "Use Opencode's experimental OpenAI response WebSocket transport for managed local servers.",
+        description:
+          "Use Opencode's experimental OpenAI response WebSocket transport for managed local servers.",
       },
     ],
   },
@@ -360,26 +382,34 @@ function isProviderInstallConfigDirty(
   return config.fields.some((field) => isProviderInstallFieldDirty(field, settings, defaults));
 }
 
-export function isProviderInstallSettingsDirty(settings: AppSettings, defaults: AppSettings): boolean {
-  return PROVIDER_INSTALL_SETTINGS.some((config) => isProviderInstallConfigDirty(config, settings, defaults));
+export function isProviderInstallSettingsDirty(
+  settings: AppSettings,
+  defaults: AppSettings,
+): boolean {
+  return PROVIDER_INSTALL_SETTINGS.some((config) =>
+    isProviderInstallConfigDirty(config, settings, defaults),
+  );
 }
 
-function createProviderInstallDisclosureState(settings: AppSettings): Record<ProviderKind, boolean> {
+function createProviderInstallDisclosureState(
+  settings: AppSettings,
+): Record<ProviderKind, boolean> {
   return Object.fromEntries(
     PROVIDER_INSTALL_SETTINGS.map((config) => [
       config.provider,
       config.fields.some((field) =>
-        field.kind === "password" ? settings[field.configuredKey] : Boolean(settings[field.settingsKey]),
+        field.kind === "password"
+          ? settings[field.configuredKey]
+          : Boolean(settings[field.settingsKey]),
       ),
     ]),
   ) as Record<ProviderKind, boolean>;
 }
 
 function createClosedProviderInstallDisclosureState(): Record<ProviderKind, boolean> {
-  return Object.fromEntries(PROVIDER_INSTALL_SETTINGS.map((config) => [config.provider, false])) as Record<
-    ProviderKind,
-    boolean
-  >;
+  return Object.fromEntries(
+    PROVIDER_INSTALL_SETTINGS.map((config) => [config.provider, false]),
+  ) as Record<ProviderKind, boolean>;
 }
 
 export function createProviderInstallResetPatch(defaults: AppSettings): Partial<AppSettings> {
@@ -404,7 +434,15 @@ function SortableProviderVisibilityRow(props: {
   isHidden: boolean;
   onHiddenChange: (hidden: boolean) => void;
 }) {
-  const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setActivatorNodeRef,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id: props.option.provider,
   });
 
@@ -530,7 +568,11 @@ function ProviderUpdateAction(props: {
         props.onUpdate(props.providerStatus.provider);
       }}
     >
-      {props.active ? <Loader2Icon className="size-3.5 animate-spin" /> : <DownloadIcon className="size-3.5" />}
+      {props.active ? (
+        <Loader2Icon className="size-3.5 animate-spin" />
+      ) : (
+        <DownloadIcon className="size-3.5" />
+      )}
       {props.active ? "Updating" : "Update"}
     </Button>
   );
@@ -550,18 +592,23 @@ function ProviderInstallFieldControl(props: {
       >
         <span className="min-w-0">
           <span className="block text-xs font-medium text-foreground">{props.field.label}</span>
-          <span className="mt-1 block text-xs text-muted-foreground">{props.field.description}</span>
+          <span className="mt-1 block text-xs text-muted-foreground">
+            {props.field.description}
+          </span>
         </span>
         <Switch
           id={id}
           checked={props.settings[props.field.settingsKey]}
-          onCheckedChange={(checked) => props.updateSettings({ [props.field.settingsKey]: Boolean(checked) })}
+          onCheckedChange={(checked) =>
+            props.updateSettings({ [props.field.settingsKey]: Boolean(checked) })
+          }
         />
       </label>
     );
   }
 
-  const configured = props.field.kind === "password" ? props.settings[props.field.configuredKey] : false;
+  const configured =
+    props.field.kind === "password" ? props.settings[props.field.configuredKey] : false;
   const isPassword = props.field.kind === "password";
   return (
     <label htmlFor={id} className="block">
@@ -572,9 +619,13 @@ function ProviderInstallFieldControl(props: {
         variant="soft"
         className="mt-1"
         value={isPassword ? "" : props.settings[props.field.settingsKey]}
-        onCommit={(nextValue) => props.updateSettings({ [props.field.settingsKey]: nextValue } as Partial<AppSettings>)}
+        onCommit={(nextValue) =>
+          props.updateSettings({ [props.field.settingsKey]: nextValue } as Partial<AppSettings>)
+        }
         placeholder={
-          isPassword && configured ? "Configured — enter a replacement or leave blank" : props.field.placeholder
+          isPassword && configured
+            ? "Configured — enter a replacement or leave blank"
+            : props.field.placeholder
         }
         type={isPassword ? "password" : undefined}
         autoComplete={isPassword ? "new-password" : undefined}
@@ -608,7 +659,8 @@ function ProviderToolRow(props: {
       })
     : false;
   const updateAdvisory = props.providerStatus?.versionAdvisory;
-  const providerUpdateSuppressed = updateAdvisory?.status === "behind_latest" && !showProviderUpdateStatus;
+  const providerUpdateSuppressed =
+    updateAdvisory?.status === "behind_latest" && !showProviderUpdateStatus;
   const currentProviderVersion = formatProviderVersion(props.providerStatus?.version);
   const providerUpdateLabel = props.providerStatus
     ? !props.settings.enableProviderUpdateChecks
@@ -638,20 +690,30 @@ function ProviderToolRow(props: {
     <Collapsible open={props.open} onOpenChange={props.onOpenChange}>
       <div className="border-t border-border/70 first:border-t-0">
         <div className="flex min-h-11 items-center gap-2 px-3 py-2">
-          <CollapsibleTrigger type="button" className="flex min-w-0 flex-1 items-center gap-2 text-left">
+          <CollapsibleTrigger
+            type="button"
+            className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          >
             <span className="min-w-0 flex-1 text-sm font-medium text-foreground">{title}</span>
-            {isDirty ? <span className="shrink-0 text-[11px] text-muted-foreground">Custom</span> : null}
+            {isDirty ? (
+              <span className="shrink-0 text-[11px] text-muted-foreground">Custom</span>
+            ) : null}
             {providerUpdateLabel ? (
               <span
                 className={cn(
                   "shrink-0 text-[11px]",
-                  updateAdvisory?.status === "behind_latest" ? "text-foreground" : "text-muted-foreground",
+                  updateAdvisory?.status === "behind_latest"
+                    ? "text-foreground"
+                    : "text-muted-foreground",
                 )}
               >
                 {providerUpdateLabel}
               </span>
             ) : null}
-            <DisclosureChevron open={props.open} className="size-4 shrink-0 text-muted-foreground" />
+            <DisclosureChevron
+              open={props.open}
+              className="size-4 shrink-0 text-muted-foreground"
+            />
           </CollapsibleTrigger>
           {showUpdateButton && props.providerStatus ? (
             <ProviderUpdateAction
@@ -724,11 +786,16 @@ export function ProvidersSettingsPanel({
   const queryClient = useQueryClient();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
-  const [openInstallProviders, setOpenInstallProviders] = useState<Record<ProviderKind, boolean>>(() =>
-    createProviderInstallDisclosureState(settings),
+  const [openInstallProviders, setOpenInstallProviders] = useState<Record<ProviderKind, boolean>>(
+    () => createProviderInstallDisclosureState(settings),
   );
-  const [updatingProviders, setUpdatingProviders] = useState<ReadonlySet<ProviderKind>>(() => new Set());
-  const hiddenProviderSet = useMemo(() => new Set<ProviderKind>(settings.hiddenProviders), [settings.hiddenProviders]);
+  const [updatingProviders, setUpdatingProviders] = useState<ReadonlySet<ProviderKind>>(
+    () => new Set(),
+  );
+  const hiddenProviderSet = useMemo(
+    () => new Set<ProviderKind>(settings.hiddenProviders),
+    [settings.hiddenProviders],
+  );
   const hiddenProviderCount = hiddenProviderSet.size;
   const providerVisibilityOptionsByProvider = useMemo(
     () => new Map(PROVIDER_VISIBILITY_OPTIONS.map((option) => [option.provider, option])),
@@ -742,10 +809,13 @@ export function ProvidersSettingsPanel({
       }),
     [providerVisibilityOptionsByProvider, settings.providerOrder],
   );
-  const providerVisibilitySensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  const providerVisibilitySensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+  );
   const isProviderOrderDirty = !sameProviderOrder(settings.providerOrder, defaults.providerOrder);
   const providerStatusByProvider = useMemo(
-    () => new Map((serverConfigQuery.data?.providers ?? []).map((status) => [status.provider, status])),
+    () =>
+      new Map((serverConfigQuery.data?.providers ?? []).map((status) => [status.provider, status])),
     [serverConfigQuery.data?.providers],
   );
   const providerUpdateServerSettings = useMemo(
@@ -823,7 +893,9 @@ export function ProvidersSettingsPanel({
           });
         })
         .finally(async () => {
-          await queryClient.invalidateQueries({ queryKey: serverQueryKeys.config() }).catch(() => undefined);
+          await queryClient
+            .invalidateQueries({ queryKey: serverQueryKeys.config() })
+            .catch(() => undefined);
           setUpdatingProviders((current) => {
             const next = new Set(current);
             next.delete(provider);
@@ -858,7 +930,9 @@ export function ProvidersSettingsPanel({
             control={
               <Switch
                 checked={settings.enableProviderUpdateChecks}
-                onCheckedChange={(checked) => updateSettings({ enableProviderUpdateChecks: Boolean(checked) })}
+                onCheckedChange={(checked) =>
+                  updateSettings({ enableProviderUpdateChecks: Boolean(checked) })
+                }
                 aria-label="Automatic CLI update checks"
               />
             }
@@ -876,10 +950,17 @@ export function ProvidersSettingsPanel({
             }
           >
             {settings.enableProviderUpdateChecks && outdatedProviderStatuses.length > 0 ? (
-              <div className={cn("mt-4", SETTINGS_INSET_LIST_CLASS_NAME, SETTINGS_STACKED_ROWS_DIVIDER_CLASS_NAME)}>
+              <div
+                className={cn(
+                  "mt-4",
+                  SETTINGS_INSET_LIST_CLASS_NAME,
+                  SETTINGS_STACKED_ROWS_DIVIDER_CLASS_NAME,
+                )}
+              >
                 {outdatedProviderStatuses.map((providerStatus) => {
                   const updateActive =
-                    isProviderUpdateActive(providerStatus) || updatingProviders.has(providerStatus.provider);
+                    isProviderUpdateActive(providerStatus) ||
+                    updatingProviders.has(providerStatus.provider);
                   const updateLabel = providerUpdateStatusLabel(providerStatus);
                   return (
                     <SettingsListRow
@@ -951,7 +1032,11 @@ export function ProvidersSettingsPanel({
                     isHidden={hiddenProviderSet.has(option.provider)}
                     onHiddenChange={(hidden) =>
                       updateSettings({
-                        hiddenProviders: setProviderHidden(settings.hiddenProviders, option.provider, hidden),
+                        hiddenProviders: setProviderHidden(
+                          settings.hiddenProviders,
+                          option.provider,
+                          hidden,
+                        ),
                       })
                     }
                   />

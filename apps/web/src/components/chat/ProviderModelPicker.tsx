@@ -10,7 +10,15 @@ import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { type ProviderPickerKind, PROVIDER_OPTIONS } from "../../session-logic";
 import { formatProviderModelOptionName } from "../../providerModelOptions";
 import { compareProvidersByOrder } from "../../providerOrdering";
-import { Menu, MenuItem, MenuRadioGroup, MenuSeparator, MenuSub, MenuSubTrigger, MenuTrigger } from "../ui/menu";
+import {
+  Menu,
+  MenuItem,
+  MenuRadioGroup,
+  MenuSeparator,
+  MenuSub,
+  MenuSubTrigger,
+  MenuTrigger,
+} from "../ui/menu";
 import { PROVIDER_ICON_COMPONENT_BY_PROVIDER } from "../ProviderIcon";
 import { cn } from "~/lib/utils";
 import { PickerPanelShell } from "./PickerPanelShell";
@@ -93,10 +101,15 @@ function filterProviderOptionsByVisibility<T extends { value: ProviderKind }>(
   if (hiddenProviders.size === 0) {
     return options;
   }
-  return options.filter((option) => protectedProviders.has(option.value) || !hiddenProviders.has(option.value));
+  return options.filter(
+    (option) => protectedProviders.has(option.value) || !hiddenProviders.has(option.value),
+  );
 }
 
-function providerIconClassName(provider: ProviderKind | ProviderPickerKind, fallbackClassName: string): string {
+function providerIconClassName(
+  provider: ProviderKind | ProviderPickerKind,
+  fallbackClassName: string,
+): string {
   return provider === "claudeAgent" || provider === "antigravity" || provider === "pi"
     ? "text-foreground"
     : fallbackClassName;
@@ -129,7 +142,9 @@ function resolveSelectedModelLabel(input: {
   }
   if (input.provider === "cursor") {
     const baseModel = stripParameterizedModelSuffix(input.model);
-    const baseMatch = input.options.find((option) => stripParameterizedModelSuffix(option.slug) === baseModel);
+    const baseMatch = input.options.find(
+      (option) => stripParameterizedModelSuffix(option.slug) === baseModel,
+    );
     if (baseMatch) {
       return baseMatch.name;
     }
@@ -141,7 +156,13 @@ function resolveSelectedModelLabel(input: {
 }
 
 function buildModelSearchText(option: ProviderModelOption): string {
-  return [option.name, option.slug, option.description, option.upstreamProviderName, option.upstreamProviderId]
+  return [
+    option.name,
+    option.slug,
+    option.description,
+    option.upstreamProviderName,
+    option.upstreamProviderId,
+  ]
     .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
     .join(" ")
     .toLowerCase();
@@ -166,7 +187,9 @@ type ProviderModelMenuItemsProps = {
 // Renders only the popup body of the provider/model picker. Designed to be
 // dropped into any shared picker popup or submenu so the same selection logic can
 // be reused by the standalone picker and the combined composer trait picker.
-export const ProviderModelMenuItems = function ProviderModelMenuItems(props: ProviderModelMenuItemsProps) {
+export const ProviderModelMenuItems = function ProviderModelMenuItems(
+  props: ProviderModelMenuItemsProps,
+) {
   const { onAfterSelection } = props;
   const [modelSearchQuery, setModelSearchQuery] = useState("");
   const [kiloFavoriteModelSlugs, setKiloFavoriteModelSlugs] = useLocalStorage(
@@ -225,7 +248,11 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(props: Pro
   const handleModelChange = (provider: ProviderKind, value: string) => {
     if (props.disabled) return;
     if (!value) return;
-    const resolvedModel = resolveSelectableModel(provider, value, props.modelOptionsByProvider[provider]);
+    const resolvedModel = resolveSelectableModel(
+      provider,
+      value,
+      props.modelOptionsByProvider[provider],
+    );
     if (!resolvedModel) return;
     props.onProviderModelChange(provider, resolvedModel);
     onAfterSelection?.();
@@ -258,15 +285,21 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(props: Pro
 
     const providerOptions = props.modelOptionsByProvider[provider];
     const shouldShowSearch =
-      (provider === "kilo" || provider === "opencode" || provider === "cursor" || provider === "pi") &&
+      (provider === "kilo" ||
+        provider === "opencode" ||
+        provider === "cursor" ||
+        provider === "pi") &&
       providerOptions.length >= SEARCHABLE_MODEL_PICKER_THRESHOLD;
     const normalizedModelSearchQuery = deferredModelSearchQuery.trim().toLowerCase();
     const filteredOptions =
       shouldShowSearch && normalizedModelSearchQuery.length > 0
-        ? providerOptions.filter((option) => buildModelSearchText(option).includes(normalizedModelSearchQuery))
+        ? providerOptions.filter((option) =>
+            buildModelSearchText(option).includes(normalizedModelSearchQuery),
+          )
         : providerOptions;
     const favoriteProvider = supportsModelFavorites(provider) ? provider : null;
-    const favoriteModelSlugSet = favoriteProvider !== null ? favoriteModelSlugSets[favoriteProvider] : undefined;
+    const favoriteModelSlugSet =
+      favoriteProvider !== null ? favoriteModelSlugSets[favoriteProvider] : undefined;
     const groupedOptions =
       favoriteModelSlugSet !== undefined
         ? groupProviderModelOptionsWithFavorites({
@@ -294,7 +327,9 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(props: Pro
         </MenuRadioGroup>
       ) : (
         <div className="px-2 py-2 text-muted-foreground text-sm">
-          {provider === "pi" && normalizedModelSearchQuery.length === 0 ? "No Pi models found" : "No matches"}
+          {provider === "pi" && normalizedModelSearchQuery.length === 0
+            ? "No Pi models found"
+            : "No matches"}
         </div>
       );
 
@@ -355,7 +390,9 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(props: Pro
                 )}
               />
               <span>{option.label}</span>
-              <span className="ms-auto text-[11px] text-muted-foreground/80">{availability.label}</span>
+              <span className="ms-auto text-[11px] text-muted-foreground/80">
+                {availability.label}
+              </span>
             </MenuItem>
           );
         }
@@ -364,11 +401,17 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(props: Pro
             <MenuSubTrigger>
               <OptionIcon
                 aria-hidden="true"
-                className={cn("size-3 shrink-0", providerIconClassName(option.value, "text-muted-foreground/85"))}
+                className={cn(
+                  "size-3 shrink-0",
+                  providerIconClassName(option.value, "text-muted-foreground/85"),
+                )}
               />
               {option.label}
             </MenuSubTrigger>
-            <ComposerPickerMenuSubPopup fixedWidth className={COMPOSER_PICKER_MODEL_SUBMENU_HEIGHT_CLASS_NAME}>
+            <ComposerPickerMenuSubPopup
+              fixedWidth
+              className={COMPOSER_PICKER_MODEL_SUBMENU_HEIGHT_CLASS_NAME}
+            >
               {renderModelRadioGroup(option.value)}
             </ComposerPickerMenuSubPopup>
           </MenuSub>
@@ -379,7 +422,10 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(props: Pro
         const OptionIcon = PROVIDER_ICON_COMPONENT_BY_PROVIDER[option.value];
         return (
           <MenuItem key={option.value} disabled>
-            <OptionIcon aria-hidden="true" className="size-3 shrink-0 text-muted-foreground/85 opacity-80" />
+            <OptionIcon
+              aria-hidden="true"
+              className="size-3 shrink-0 text-muted-foreground/85 opacity-80"
+            />
             <span>{option.label}</span>
             <span className="ms-auto text-[11px] text-muted-foreground/80">Coming soon</span>
           </MenuItem>
@@ -537,7 +583,9 @@ export const ProviderModelPicker = function ProviderModelPicker(props: ProviderM
           lockedProvider={props.lockedProvider}
           {...(props.providers ? { providers: props.providers } : {})}
           modelOptionsByProvider={props.modelOptionsByProvider}
-          {...(props.loadingModelProviders ? { loadingModelProviders: props.loadingModelProviders } : {})}
+          {...(props.loadingModelProviders
+            ? { loadingModelProviders: props.loadingModelProviders }
+            : {})}
           {...(props.hiddenProviders ? { hiddenProviders: props.hiddenProviders } : {})}
           {...(props.providerOrder ? { providerOrder: props.providerOrder } : {})}
           {...(props.disabled !== undefined ? { disabled: props.disabled } : {})}

@@ -117,7 +117,9 @@ export function normalizeFontFamilyCssValue(value: string | null | undefined): s
 }
 
 // Keeps theme-provided code fonts from falling through to the browser's serif default.
-export function normalizeMonospaceFontFamilyCssValue(value: string | null | undefined): string | null {
+export function normalizeMonospaceFontFamilyCssValue(
+  value: string | null | undefined,
+): string | null {
   const normalizedValue = normalizeFontFamilyCssValue(value);
   if (normalizedValue === null || CSS_WIDE_KEYWORDS.has(normalizedValue.toLowerCase())) {
     return normalizedValue;

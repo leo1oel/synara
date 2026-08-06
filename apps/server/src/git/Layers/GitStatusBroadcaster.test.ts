@@ -49,24 +49,29 @@ function makeTestLayer(state: {
   } as unknown as GitCoreShape;
   const gitManager: GitManagerShape = {
     connectGitHubRemote: () => Effect.die("connectGitHubRemote should not be called in this test"),
-    createGitHubRepository: () => Effect.die("createGitHubRepository should not be called in this test"),
+    createGitHubRepository: () =>
+      Effect.die("createGitHubRepository should not be called in this test"),
     status: () =>
       Effect.sync(() => {
         state.statusCalls += 1;
         return state.currentStatus;
       }),
     readWorkingTreeDiff: () => Effect.die("readWorkingTreeDiff should not be called in this test"),
-    readWorkingTreeDiffStats: () => Effect.die("readWorkingTreeDiffStats should not be called in this test"),
+    readWorkingTreeDiffStats: () =>
+      Effect.die("readWorkingTreeDiffStats should not be called in this test"),
     summarizeDiff: () => Effect.die("summarizeDiff should not be called in this test"),
     resolvePullRequest: () => Effect.die("resolvePullRequest should not be called in this test"),
     pullRequestSnapshot: () => Effect.die("pullRequestSnapshot should not be called in this test"),
-    preparePullRequestThread: () => Effect.die("preparePullRequestThread should not be called in this test"),
+    preparePullRequestThread: () =>
+      Effect.die("preparePullRequestThread should not be called in this test"),
     handoffThread: () => Effect.die("handoffThread should not be called in this test"),
     runStackedAction: () => Effect.die("runStackedAction should not be called in this test"),
   };
 
   return GitStatusBroadcasterLive.pipe(
-    Layer.provide(Layer.mergeAll(Layer.succeed(GitCore, gitCore), Layer.succeed(GitManager, gitManager))),
+    Layer.provide(
+      Layer.mergeAll(Layer.succeed(GitCore, gitCore), Layer.succeed(GitManager, gitManager)),
+    ),
   );
 }
 

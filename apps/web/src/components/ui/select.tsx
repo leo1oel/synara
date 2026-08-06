@@ -69,12 +69,16 @@ interface SelectButtonProps extends useRender.ComponentProps<"button"> {
 }
 
 function SelectButton({ className, size, variant, render, children, ...props }: SelectButtonProps) {
-  const typeValue: React.ButtonHTMLAttributes<HTMLButtonElement>["type"] = render ? undefined : "button";
+  const typeValue: React.ButtonHTMLAttributes<HTMLButtonElement>["type"] = render
+    ? undefined
+    : "button";
 
   const defaultProps = {
     children: (
       <>
-        <span className="flex-1 truncate in-data-placeholder:text-muted-foreground/72">{children}</span>
+        <span className="flex-1 truncate in-data-placeholder:text-muted-foreground/72">
+          {children}
+        </span>
         {variant === "ghost" ? (
           <ChevronDownIcon className="size-3 opacity-50" />
         ) : (
@@ -158,7 +162,11 @@ function SelectPopup({
   const viewportClassName = cn(
     COMPOSER_PICKER_MENU_POPUP_VIEWPORT_CLASS_NAME,
     surface === "settings"
-      ? cn(APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME, "rounded-lg", COMPOSER_SURFACE_SHADOW_CLASS_NAME)
+      ? cn(
+          APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME,
+          "rounded-lg",
+          COMPOSER_SURFACE_SHADOW_CLASS_NAME,
+        )
       : COMPOSER_PICKER_MENU_SURFACE_CLASS_NAME,
     shellClassName,
   );
@@ -169,7 +177,9 @@ function SelectPopup({
     className,
   );
   const scrollArrowSurfaceClassName =
-    surface === "settings" ? "before:from-[var(--app-settings-surface)]" : "before:from-[var(--composer-surface)]";
+    surface === "settings"
+      ? "before:from-[var(--app-settings-surface)]"
+      : "before:from-[var(--composer-surface)]";
 
   return (
     <SelectPopupSurfaceContext.Provider value={surface}>
@@ -204,7 +214,10 @@ function SelectPopup({
             {/* Keep a hard popup viewport cap so long theme lists can always scroll
                 fully to both edges even when the positioner reports a tight height. */}
             <div className={viewportClassName}>
-              <SelectPrimitive.List className={cn(listClassName, "relative z-1")} data-slot="menu-popup-body">
+              <SelectPrimitive.List
+                className={cn(listClassName, "relative z-1")}
+                data-slot="menu-popup-body"
+              >
                 {children}
               </SelectPrimitive.List>
             </div>
@@ -238,7 +251,9 @@ function SelectItem({
   // omits it.
   const hideIndicator = popupSurface === "settings" ? false : (hideIndicatorProp ?? false);
   const optionBaseClassName =
-    popupSurface === "settings" ? settingsSelectOptionClassName : COMPOSER_PICKER_SELECT_OPTION_CLASS_NAME;
+    popupSurface === "settings"
+      ? settingsSelectOptionClassName
+      : COMPOSER_PICKER_SELECT_OPTION_CLASS_NAME;
   const itemLayoutClassName =
     popupSurface === "settings"
       ? "grid-cols-[16px_minmax(0,1fr)] gap-1 ps-1 pe-2"
@@ -247,7 +262,9 @@ function SelectItem({
         : "grid-cols-[1fr_auto] gap-3 px-2.5";
   const itemTextClassName = popupSurface === "settings" ? "col-start-2" : "col-start-1";
   const itemIndicatorClassName =
-    popupSurface === "settings" ? "col-start-1 justify-self-center" : "col-start-2 justify-self-end";
+    popupSurface === "settings"
+      ? "col-start-1 justify-self-center"
+      : "col-start-2 justify-self-end";
 
   return (
     <SelectPrimitive.Item
@@ -255,11 +272,17 @@ function SelectItem({
       data-slot="select-item"
       {...props}
     >
-      <SelectPrimitive.ItemText className={cn(itemTextClassName, "min-w-0")} data-slot="select-item-text">
+      <SelectPrimitive.ItemText
+        className={cn(itemTextClassName, "min-w-0")}
+        data-slot="select-item-text"
+      >
         {children}
       </SelectPrimitive.ItemText>
       {hideIndicator ? null : (
-        <SelectPrimitive.ItemIndicator className={itemIndicatorClassName} data-slot="select-item-indicator">
+        <SelectPrimitive.ItemIndicator
+          className={itemIndicatorClassName}
+          data-slot="select-item-indicator"
+        >
           <CheckIcon aria-hidden className="size-3.5 [stroke-width:1.5]" />
         </SelectPrimitive.ItemIndicator>
       )}

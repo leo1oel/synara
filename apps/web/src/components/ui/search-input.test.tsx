@@ -7,7 +7,11 @@ import { Textarea } from "./textarea";
 describe("SearchInput", () => {
   it("renders the shared default search field contract", () => {
     const markup = renderToStaticMarkup(
-      <SearchInput aria-label="Search files" containerClassName="search-container" placeholder="Search files..." />,
+      <SearchInput
+        aria-label="Search files"
+        containerClassName="search-container"
+        placeholder="Search files..."
+      />,
     );
 
     expect(markup).toContain('data-slot="search-field"');
@@ -57,7 +61,9 @@ describe("SearchInput", () => {
   it("keeps the native input borderless inside the single field shell", () => {
     const markup = renderToStaticMarkup(<SearchInput aria-label="Search" nativeInput />);
 
-    expect(markup).toMatch(/data-slot="input-control"[^>]*>.*class="[^"]*border-0[^"]*"[^>]*data-slot="input"/);
+    expect(markup).toMatch(
+      /data-slot="input-control"[^>]*>.*class="[^"]*border-0[^"]*"[^>]*data-slot="input"/,
+    );
   });
 
   it("keeps form-sized inputs on the shared 30px height", () => {

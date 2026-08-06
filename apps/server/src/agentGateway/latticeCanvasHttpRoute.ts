@@ -53,7 +53,10 @@ export const latticeCanvasRouteLayer = Layer.mergeAll(
       const broker = yield* LatticeCanvasBroker;
       const request = yield* broker.poll(workspaceRoot);
       return request
-        ? HttpServerResponse.jsonUnsafe(request, { status: 200, headers: { "Cache-Control": "no-store" } })
+        ? HttpServerResponse.jsonUnsafe(request, {
+            status: 200,
+            headers: { "Cache-Control": "no-store" },
+          })
         : HttpServerResponse.empty({ status: 204, headers: { "Cache-Control": "no-store" } });
     }),
   ),
@@ -66,7 +69,8 @@ export const latticeCanvasRouteLayer = Layer.mergeAll(
       const workspaceRoot = workspaceRootFromRequest(request);
       if (!workspaceRoot) return HttpServerResponse.text("Missing workspaceRoot", { status: 400 });
       const body = yield* readMcpJsonBody(request, LATTICE_CANVAS_MAX_BODY_BYTES);
-      if (body.kind === "too-large") return HttpServerResponse.text("Payload Too Large", { status: 413 });
+      if (body.kind === "too-large")
+        return HttpServerResponse.text("Payload Too Large", { status: 413 });
       if (body.kind !== "ok" || !isResultBody(body.body)) {
         return HttpServerResponse.jsonUnsafe({ error: "Invalid canvas result." }, { status: 400 });
       }

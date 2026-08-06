@@ -121,9 +121,11 @@ function resolvePluginLogo(plugin: ProviderPluginDescriptor): string | undefined
 }
 
 function resolvePluginBrand(plugin: ProviderPluginDescriptor): PluginBrandArtwork | undefined {
-  const candidates = [plugin.interface?.composerIcon, plugin.interface?.displayName, plugin.name].map(
-    normalizeBrandKey,
-  );
+  const candidates = [
+    plugin.interface?.composerIcon,
+    plugin.interface?.displayName,
+    plugin.name,
+  ].map(normalizeBrandKey);
 
   for (const candidate of candidates) {
     if (!candidate) continue;
@@ -168,7 +170,13 @@ function PluginGlyph({ plugin }: { plugin: ProviderPluginDescriptor }) {
         className="inline-flex size-11 shrink-0 items-center justify-center rounded-[14px] border border-border/60 bg-background"
         style={accent ? { boxShadow: `0 0 0 0.5px ${accent}25` } : undefined}
       >
-        <img src={logo} alt="" className="size-6 object-contain" loading="lazy" onError={() => setLogoFailed(true)} />
+        <img
+          src={logo}
+          alt=""
+          className="size-6 object-contain"
+          loading="lazy"
+          onError={() => setLogoFailed(true)}
+        />
       </span>
     );
   }
@@ -186,7 +194,10 @@ function PluginGlyph({ plugin }: { plugin: ProviderPluginDescriptor }) {
   }
 
   return (
-    <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-[14px]" style={style}>
+    <span
+      className="inline-flex size-11 shrink-0 items-center justify-center rounded-[14px]"
+      style={style}
+    >
       <PluginIcon className="size-5 text-white/80" />
     </span>
   );
@@ -209,7 +220,15 @@ function SkillGlyph({ skill }: { skill: ProviderSkillDescriptor }) {
 
 // ── UI controls ────────────────────────────────────────────────────────────
 
-function TabButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function TabButton({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
@@ -294,7 +313,9 @@ function InstalledStatus({ installed }: { installed: boolean }) {
 
 function PluginGridItem({ entry }: { entry: PluginEntry }) {
   const description =
-    entry.plugin.interface?.shortDescription ?? entry.plugin.interface?.longDescription ?? entry.plugin.source.path;
+    entry.plugin.interface?.shortDescription ??
+    entry.plugin.interface?.longDescription ??
+    entry.plugin.source.path;
 
   return (
     <div className="flex items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-[var(--sidebar-accent)]">
@@ -311,7 +332,8 @@ function PluginGridItem({ entry }: { entry: PluginEntry }) {
 }
 
 function SkillGridItem({ skill }: { skill: ProviderSkillDescriptor }) {
-  const description = skill.interface?.shortDescription ?? skill.description ?? "No description available.";
+  const description =
+    skill.interface?.shortDescription ?? skill.description ?? "No description available.";
 
   return (
     <div className="flex items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-[var(--sidebar-accent)]">
@@ -335,13 +357,16 @@ function SectionHeader({ title }: { title: string }) {
 
 export function PluginLibrary() {
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
-  const desktopTopBarWindowControlsGutterClassName = useDesktopTopBarWindowControlsGutterClassName();
+  const desktopTopBarWindowControlsGutterClassName =
+    useDesktopTopBarWindowControlsGutterClassName();
   const firstProject = useStore(useMemo(() => createFirstProjectSelector(), []));
   const { activeProject: focusedProject, activeThread, focusedThreadId } = useFocusedChatContext();
   const activeProject = focusedProject ?? firstProject ?? null;
 
   const preferredProvider =
-    activeThread?.modelSelection.provider ?? activeProject?.defaultModelSelection?.provider ?? "codex";
+    activeThread?.modelSelection.provider ??
+    activeProject?.defaultModelSelection?.provider ??
+    "codex";
 
   const [selectedProvider, setSelectedProvider] = useState<ProviderKind>(preferredProvider);
   const [selectedTab, setSelectedTab] = useState<DiscoveryTab>("plugins");
@@ -355,7 +380,9 @@ export function PluginLibrary() {
   const codexCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("codex"));
   const claudeCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("claudeAgent"));
   const cursorCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("cursor"));
-  const antigravityCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("antigravity"));
+  const antigravityCapabilitiesQuery = useQuery(
+    providerComposerCapabilitiesQueryOptions("antigravity"),
+  );
   const grokCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("grok"));
   const droidCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("droid"));
   const kiloCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("kilo"));
@@ -416,7 +443,9 @@ export function PluginLibrary() {
   const effectiveProvider = supportsSelectedTab
     ? selectedProvider
     : (providerFallbackOrder.find((provider) =>
-        selectedTab === "plugins" ? providerCapabilities[provider].plugins : providerCapabilities[provider].skills,
+        selectedTab === "plugins"
+          ? providerCapabilities[provider].plugins
+          : providerCapabilities[provider].skills,
       ) ?? selectedProvider);
 
   const discoveryCwd = resolveProviderDiscoveryCwd({
@@ -459,7 +488,9 @@ export function PluginLibrary() {
     })),
   );
 
-  const installedPluginEntries = pluginEntries.filter((entry) => isInstalledProviderPlugin(entry.plugin));
+  const installedPluginEntries = pluginEntries.filter((entry) =>
+    isInstalledProviderPlugin(entry.plugin),
+  );
 
   const pluginSearchQuery = normalizeProviderDiscoveryText(deferredPluginSearch);
   const filteredPluginEntries = pluginSearchQuery
@@ -506,8 +537,16 @@ export function PluginLibrary() {
         >
           <SidebarHeaderNavigationControls />
           <div className="flex items-end gap-3">
-            <TabButton label="Plugins" active={selectedTab === "plugins"} onClick={() => setSelectedTab("plugins")} />
-            <TabButton label="Skills" active={selectedTab === "skills"} onClick={() => setSelectedTab("skills")} />
+            <TabButton
+              label="Plugins"
+              active={selectedTab === "plugins"}
+              onClick={() => setSelectedTab("plugins")}
+            />
+            <TabButton
+              label="Skills"
+              active={selectedTab === "skills"}
+              onClick={() => setSelectedTab("skills")}
+            />
           </div>
           <div className="flex-1" />
           <div className="inline-flex rounded-full border border-border/60 bg-background/60 p-0.5">
@@ -540,7 +579,9 @@ export function PluginLibrary() {
         <div className="min-h-0 flex-1 overflow-y-auto">
           {/* Hero */}
           <div className="px-6 py-10 text-center">
-            <h1 className="text-[28px] font-semibold text-foreground">Make {providerLabel} work your way</h1>
+            <h1 className="text-[28px] font-semibold text-foreground">
+              Make {providerLabel} work your way
+            </h1>
           </div>
 
           {/* Search */}
@@ -559,15 +600,19 @@ export function PluginLibrary() {
           {/* Warnings */}
           {((!discoveryCwd && selectedTab === "skills") ||
             (selectedTab === "plugins" && !!pluginsQuery.data?.remoteSyncError) ||
-            (selectedTab === "plugins" && (pluginsQuery.data?.marketplaceLoadErrors.length ?? 0) > 0)) && (
+            (selectedTab === "plugins" &&
+              (pluginsQuery.data?.marketplaceLoadErrors.length ?? 0) > 0)) && (
             <div className="mx-auto max-w-2xl space-y-1.5 px-6 pb-4">
               {!discoveryCwd && selectedTab === "skills" ? (
-                <InlineWarning>Skills need a workspace path. Open a project or thread first.</InlineWarning>
+                <InlineWarning>
+                  Skills need a workspace path. Open a project or thread first.
+                </InlineWarning>
               ) : null}
               {selectedTab === "plugins" && pluginsQuery.data?.remoteSyncError ? (
                 <InlineWarning>{pluginsQuery.data.remoteSyncError}</InlineWarning>
               ) : null}
-              {selectedTab === "plugins" && (pluginsQuery.data?.marketplaceLoadErrors.length ?? 0) > 0 ? (
+              {selectedTab === "plugins" &&
+              (pluginsQuery.data?.marketplaceLoadErrors.length ?? 0) > 0 ? (
                 <InlineWarning>
                   {pluginsQuery.data?.marketplaceLoadErrors
                     .map((err) => `${sectionTitle(err.marketplacePath)}: ${err.message}`)

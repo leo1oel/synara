@@ -2,7 +2,11 @@
 // Purpose: Own model-setting discovery, selection, and custom-model editing workflows.
 // Layer: Settings panel
 
-import { DEFAULT_GIT_TEXT_GENERATION_MODEL, PROVIDER_DISPLAY_NAMES, type ProviderKind } from "@synara/contracts";
+import {
+  DEFAULT_GIT_TEXT_GENERATION_MODEL,
+  PROVIDER_DISPLAY_NAMES,
+  type ProviderKind,
+} from "@synara/contracts";
 import { getModelOptions, normalizeModelSlug } from "@synara/shared/model";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
@@ -22,13 +26,20 @@ import { PlusIcon, XIcon } from "~/lib/icons";
 import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
-import { SETTINGS_CARD_ROW_DIVIDER_CLASS_NAME, SETTINGS_INSET_LIST_CLASS_NAME } from "~/settingsPanelStyles";
+import {
+  SETTINGS_CARD_ROW_DIVIDER_CLASS_NAME,
+  SETTINGS_INSET_LIST_CLASS_NAME,
+} from "~/settingsPanelStyles";
 
 import { Button } from "../ui/button";
 import { DisclosureRegion } from "../ui/DisclosureRegion";
 import { Input } from "../ui/input";
 import { Select, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { SettingResetButton, SettingsSelectControl, useSettingsRestoreSignal } from "./SettingControls";
+import {
+  SettingResetButton,
+  SettingsSelectControl,
+  useSettingsRestoreSignal,
+} from "./SettingControls";
 import { SettingsRow, SettingsSection, SettingsSelectPopup } from "./SettingsPanelPrimitives";
 
 type CustomModelValidationResult =
@@ -70,10 +81,11 @@ export function ModelsSettingsPanel({
   active,
 }: AppSettingsBinding & { readonly resetEpoch: number; readonly active: boolean }) {
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
-  const [selectedCustomModelProvider, setSelectedCustomModelProvider] = useState<ProviderKind>("codex");
-  const [customModelInputByProvider, setCustomModelInputByProvider] = useState<Partial<Record<ProviderKind, string>>>(
-    {},
-  );
+  const [selectedCustomModelProvider, setSelectedCustomModelProvider] =
+    useState<ProviderKind>("codex");
+  const [customModelInputByProvider, setCustomModelInputByProvider] = useState<
+    Partial<Record<ProviderKind, string>>
+  >({});
   const [customModelErrorByProvider, setCustomModelErrorByProvider] = useState<
     Partial<Record<ProviderKind, string | null>>
   >({});
@@ -86,8 +98,13 @@ export function ModelsSettingsPanel({
     setShowAllCustomModels(false);
   });
 
-  const { customCodexModels, customKiloModels, customOpenCodeModels, textGenerationModel, textGenerationProvider } =
-    settings;
+  const {
+    customCodexModels,
+    customKiloModels,
+    customOpenCodeModels,
+    textGenerationModel,
+    textGenerationProvider,
+  } = settings;
   const currentGitTextGenerationProvider = textGenerationProvider ?? "codex";
   const currentGitTextGenerationModel = textGenerationModel ?? DEFAULT_GIT_TEXT_GENERATION_MODEL;
   const gitWritingModelHintByProvider = useMemo<Partial<Record<ProviderKind, string | null>>>(
@@ -137,7 +154,9 @@ export function ModelsSettingsPanel({
   const isGitTextGenerationModelDirty = isGitTextGenerationSettingsDirty(settings, defaults);
   const selectedGitTextGenerationModelLabel =
     gitTextGenerationModelOptions.find(
-      (option) => option.provider === currentGitTextGenerationProvider && option.slug === currentGitTextGenerationModel,
+      (option) =>
+        option.provider === currentGitTextGenerationProvider &&
+        option.slug === currentGitTextGenerationModel,
     )?.name ?? currentGitTextGenerationModel;
   const selectedCustomModelProviderSettings = CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.find(
     (config) => config.provider === selectedCustomModelProvider,
@@ -200,7 +219,9 @@ export function ModelsSettingsPanel({
     const patch = Object.assign(
       {},
       ...CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.map((config) =>
-        patchCustomModels(config.provider, [...getDefaultCustomModelsForProvider(defaults, config.provider)]),
+        patchCustomModels(config.provider, [
+          ...getDefaultCustomModelsForProvider(defaults, config.provider),
+        ]),
       ),
     );
     updateSettings(patch);
@@ -208,7 +229,10 @@ export function ModelsSettingsPanel({
     setShowAllCustomModels(false);
   }, [defaults, updateSettings]);
 
-  const renderCustomModelRow = (row: (typeof savedCustomModelRows)[number], removeFirstBorder: boolean) => (
+  const renderCustomModelRow = (
+    row: (typeof savedCustomModelRows)[number],
+    removeFirstBorder: boolean,
+  ) => (
     <div
       key={row.key}
       className={cn(
@@ -269,7 +293,10 @@ export function ModelsSettingsPanel({
               valueContent={selectedGitTextGenerationModelLabel}
             >
               {gitTextGenerationModelOptions.map((option) => (
-                <SelectItem key={`${option.provider}:${option.slug}`} value={`${option.provider}:${option.slug}`}>
+                <SelectItem
+                  key={`${option.provider}:${option.slug}`}
+                  value={`${option.provider}:${option.slug}`}
+                >
                   {PROVIDER_DISPLAY_NAMES[option.provider]} / {option.name}
                 </SelectItem>
               ))}
@@ -298,7 +325,11 @@ export function ModelsSettingsPanel({
                   }
                 }}
               >
-                <SelectTrigger size="sm" className="w-full sm:w-40" aria-label="Custom model provider">
+                <SelectTrigger
+                  size="sm"
+                  className="w-full sm:w-40"
+                  aria-label="Custom model provider"
+                >
                   <SelectValue>{selectedCustomModelProviderSettings.title}</SelectValue>
                 </SelectTrigger>
                 <SettingsSelectPopup align="start">
@@ -355,7 +386,9 @@ export function ModelsSettingsPanel({
                 {overflowCustomModelRows.length > 0 ? (
                   <>
                     <DisclosureRegion open={showAllCustomModels}>
-                      <div>{overflowCustomModelRows.map((row) => renderCustomModelRow(row, false))}</div>
+                      <div>
+                        {overflowCustomModelRows.map((row) => renderCustomModelRow(row, false))}
+                      </div>
                     </DisclosureRegion>
                     <button
                       type="button"
@@ -363,7 +396,9 @@ export function ModelsSettingsPanel({
                       aria-expanded={showAllCustomModels}
                       onClick={() => setShowAllCustomModels((value) => !value)}
                     >
-                      {showAllCustomModels ? "Show less" : `Show more (${overflowCustomModelRows.length})`}
+                      {showAllCustomModels
+                        ? "Show less"
+                        : `Show more (${overflowCustomModelRows.length})`}
                     </button>
                   </>
                 ) : null}

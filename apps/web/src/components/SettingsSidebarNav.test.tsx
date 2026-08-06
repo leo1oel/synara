@@ -8,7 +8,11 @@ import { describe, expect, it, vi } from "vitest";
 
 import { SettingsSidebarNav } from "./SettingsSidebarNav";
 import { normalizeSettingsSection, settingRowAnchorId } from "../settingsNavigation";
-import { SETTINGS_SEARCH_ENTRIES, rankSettingsSearchEntries, settingsSearchEntryTarget } from "../settingsSearchIndex";
+import {
+  SETTINGS_SEARCH_ENTRIES,
+  rankSettingsSearchEntries,
+  settingsSearchEntryTarget,
+} from "../settingsSearchIndex";
 
 describe("rankSettingsSearchEntries", () => {
   it("returns nothing for an empty query", () => {

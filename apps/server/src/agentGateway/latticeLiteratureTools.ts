@@ -70,11 +70,7 @@ function executeLatticeLiteratureTool(input: {
 export function makeLatticeLiteratureTools(
   input: LatticeLiteratureToolsInput,
 ): ReadonlyArray<ToolEntry> {
-  const invoke = (
-    tool: string,
-    params: Record<string, unknown>,
-    context: ToolContext,
-  ) =>
+  const invoke = (tool: string, params: Record<string, unknown>, context: ToolContext) =>
     Effect.gen(function* () {
       const workspaceRoot = yield* input.resolveWorkspaceRoot(context);
       if (!workspaceRoot) {
@@ -204,7 +200,11 @@ export function makeLatticeLiteratureTools(
         },
         additionalProperties: false,
       },
-      annotations: { title: "Upgrade bibliography", ...WRITE_TOOL_ANNOTATIONS, openWorldHint: true },
+      annotations: {
+        title: "Upgrade bibliography",
+        ...WRITE_TOOL_ANNOTATIONS,
+        openWorldHint: true,
+      },
     },
     handler: (args, context) =>
       invoke(
@@ -236,11 +236,7 @@ export function makeLatticeLiteratureTools(
       annotations: { title: "Remove reference", ...WRITE_TOOL_ANNOTATIONS },
     },
     handler: (args, context) =>
-      invoke(
-        "remove_reference",
-        { key: readStringArg(args, "key", { required: true })! },
-        context,
-      ),
+      invoke("remove_reference", { key: readStringArg(args, "key", { required: true })! }, context),
   };
 
   return [searchLiterature, fetchPaper, cite, upgradeBibliography, removeReference];

@@ -12,7 +12,11 @@ import { SearchInput } from "~/components/ui/search-input";
 import { ShortcutKbd } from "~/components/ui/shortcut-kbd";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
-import { buildShortcutSheetSections, filterShortcutSheetSections, type ShortcutSheetContext } from "~/shortcutsSheet";
+import {
+  buildShortcutSheetSections,
+  filterShortcutSheetSections,
+  type ShortcutSheetContext,
+} from "~/shortcutsSheet";
 import {
   SETTINGS_CARD_ROW_CLASS_NAME,
   SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME,
@@ -86,8 +90,12 @@ export function KeyboardShortcutsSettingsPanel() {
                 )}
               >
                 <div className="min-w-0 space-y-0.5">
-                  <div className={cn(SETTINGS_CARD_ROW_TITLE_CLASS_NAME, "truncate")}>{entry.label}</div>
-                  <div className={cn(SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME, "truncate")}>{entry.description}</div>
+                  <div className={cn(SETTINGS_CARD_ROW_TITLE_CLASS_NAME, "truncate")}>
+                    {entry.label}
+                  </div>
+                  <div className={cn(SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME, "truncate")}>
+                    {entry.description}
+                  </div>
                 </div>
                 <ShortcutKbd shortcutLabel={entry.shortcutLabel} groupClassName="shrink-0" />
               </div>

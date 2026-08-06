@@ -25,16 +25,33 @@ import { Button } from "~/components/ui/button";
 import { SearchInput } from "~/components/ui/search-input";
 import { Switch } from "~/components/ui/switch";
 import { toastManager } from "~/components/ui/toast";
-import { ChevronRightIcon, FolderOpenIcon, Loader2Icon, PlusIcon, SkillCubeIcon, Trash2 } from "~/lib/icons";
+import {
+  ChevronRightIcon,
+  FolderOpenIcon,
+  Loader2Icon,
+  PlusIcon,
+  SkillCubeIcon,
+  Trash2,
+} from "~/lib/icons";
 import { ensureNativeApi } from "~/nativeApi";
-import { providerDiscoveryQueryKeys, skillsCatalogQueryOptions } from "~/lib/providerDiscoveryReactQuery";
+import {
+  providerDiscoveryQueryKeys,
+  skillsCatalogQueryOptions,
+} from "~/lib/providerDiscoveryReactQuery";
 import { serverQueryKeys, serverSettingsQueryOptions } from "~/lib/serverReactQuery";
 import { encodeSkillSelection, prepareSkillSelection } from "~/lib/skillImport";
 import { ManagedSkillDetailView } from "./ManagedSkillDetailView";
 import { ManagedSkillEditorView } from "./ManagedSkillEditorView";
-import { buildSettingsSkillGroups, settingsSkillNameKey, type SettingsSkillGroup } from "./skillsSettingsModel";
+import {
+  buildSettingsSkillGroups,
+  settingsSkillNameKey,
+  type SettingsSkillGroup,
+} from "./skillsSettingsModel";
 
-function filterSkillGroups(groups: ReadonlyArray<SettingsSkillGroup>, query: string): SettingsSkillGroup[] {
+function filterSkillGroups(
+  groups: ReadonlyArray<SettingsSkillGroup>,
+  query: string,
+): SettingsSkillGroup[] {
   const normalized = query.trim().toLocaleLowerCase();
   if (!normalized) {
     return [...groups];
@@ -72,8 +89,12 @@ export function SkillsSettingsPanel() {
       ),
     [catalogQuery.data?.skills],
   );
-  const bundledGroups = managedGroups.filter((group) => group.primarySkill.management?.kind === "bundled");
-  const installedGroups = managedGroups.filter((group) => group.primarySkill.management?.kind === "installed");
+  const bundledGroups = managedGroups.filter(
+    (group) => group.primarySkill.management?.kind === "bundled",
+  );
+  const installedGroups = managedGroups.filter(
+    (group) => group.primarySkill.management?.kind === "installed",
+  );
   const visibleBundledGroups = filterSkillGroups(bundledGroups, searchQuery);
   const visibleInstalledGroups = filterSkillGroups(installedGroups, searchQuery);
 
@@ -145,7 +166,10 @@ export function SkillsSettingsPanel() {
         if (replacement.status === "conflict") {
           throw new Error("The existing skill changed before it could be replaced. Try again.");
         }
-        await finishSkillImport(replacement.status, replacement.skill?.name ?? selection.folderName);
+        await finishSkillImport(
+          replacement.status,
+          replacement.skill?.name ?? selection.folderName,
+        );
         return;
       }
       await finishSkillImport(result.status, result.skill?.name ?? selection.folderName);
@@ -228,7 +252,11 @@ export function SkillsSettingsPanel() {
 
   const finishSkillSave = async (result: ProviderSaveManagedSkillResult) => {
     queryClient.setQueryData(
-      ["managed-skill-detail", result.detail.skill.management?.kind, result.detail.skill.management?.id],
+      [
+        "managed-skill-detail",
+        result.detail.skill.management?.kind,
+        result.detail.skill.management?.id,
+      ],
       result.detail,
     );
     await refreshSkillQueries();
@@ -251,7 +279,11 @@ export function SkillsSettingsPanel() {
         id: management.id,
       });
       queryClient.setQueryData(
-        ["managed-skill-detail", result.detail.skill.management?.kind, result.detail.skill.management?.id],
+        [
+          "managed-skill-detail",
+          result.detail.skill.management?.kind,
+          result.detail.skill.management?.id,
+        ],
         result.detail,
       );
       await refreshSkillQueries();
@@ -312,7 +344,11 @@ export function SkillsSettingsPanel() {
                   title="Remove skill"
                   onClick={() => void removeSkill(skill)}
                 >
-                  {isRemoving ? <Loader2Icon className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+                  {isRemoving ? (
+                    <Loader2Icon className="size-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="size-3.5" />
+                  )}
                 </Button>
               ) : null}
             </div>
@@ -366,7 +402,11 @@ export function SkillsSettingsPanel() {
               }
             : null
         }
-        onCustomize={selectedSkill.management?.kind === "bundled" ? (skill) => void customizeSkill(skill) : null}
+        onCustomize={
+          selectedSkill.management?.kind === "bundled"
+            ? (skill) => void customizeSkill(skill)
+            : null
+        }
         isCustomizing={customizingSkillId === selectedSkill.management?.id}
         onRemove={selectedSkill.management?.canDelete ? (skill) => void removeSkill(skill) : null}
       />
@@ -444,7 +484,8 @@ export function SkillsSettingsPanel() {
       {catalogQuery.isError ? (
         <SettingsSectionShell title="Skills">
           <SettingsEmptyState tone="destructive" layout="status">
-            Lattice could not scan the skill library. Check that the local service is running, then reopen Settings.
+            Lattice could not scan the skill library. Check that the local service is running, then
+            reopen Settings.
           </SettingsEmptyState>
         </SettingsSectionShell>
       ) : null}

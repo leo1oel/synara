@@ -120,11 +120,9 @@ export function takeSynaraHarnessPolicyForSession(
   if (state.harnessPolicyDelivered === true) return null;
   state.harnessPolicyDelivered = true;
   const contextTag = ACTIVE_AGENT_HOST_PROFILE.contextTag;
-  return [
-    `<${contextTag}>`,
-    renderSynaraHarnessPolicy(capabilities),
-    `</${contextTag}>`,
-  ].join("\n");
+  return [`<${contextTag}>`, renderSynaraHarnessPolicy(capabilities), `</${contextTag}>`].join(
+    "\n",
+  );
 }
 
 /**

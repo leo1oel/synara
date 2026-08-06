@@ -37,7 +37,10 @@ import {
   SYNARA_SHOW_IN_FOLDER,
 } from "./embedMode";
 
-function installBrowserStubs(theme: "light" | "dark" = "dark", surface: "chrome" | "drawer" = "chrome") {
+function installBrowserStubs(
+  theme: "light" | "dark" = "dark",
+  surface: "chrome" | "drawer" = "chrome",
+) {
   const values = new Map<string, string>();
   const storage = {
     getItem: (key: string) => values.get(key) ?? null,
@@ -458,10 +461,16 @@ describe("Lattice embed mode", () => {
     ).toBeNull();
 
     postHostContextRequestToLattice(config);
-    expect(postMessage).toHaveBeenCalledWith({ type: LATTICE_HOST_CONTEXT_REQUEST }, "http://localhost:1420");
+    expect(postMessage).toHaveBeenCalledWith(
+      { type: LATTICE_HOST_CONTEXT_REQUEST },
+      "http://localhost:1420",
+    );
 
     postHostContextSelectionClearToLattice(config);
-    expect(postMessage).toHaveBeenCalledWith({ type: LATTICE_HOST_CONTEXT_SELECTION_CLEAR }, "http://localhost:1420");
+    expect(postMessage).toHaveBeenCalledWith(
+      { type: LATTICE_HOST_CONTEXT_SELECTION_CLEAR },
+      "http://localhost:1420",
+    );
   });
 
   it("accepts a bounded paper library from the configured Lattice workspace", () => {
@@ -518,7 +527,10 @@ describe("Lattice embed mode", () => {
     ).toBeNull();
 
     postPaperLibraryRequestToLattice(config);
-    expect(postMessage).toHaveBeenCalledWith({ type: LATTICE_PAPER_LIBRARY_REQUEST }, "http://localhost:1420");
+    expect(postMessage).toHaveBeenCalledWith(
+      { type: LATTICE_PAPER_LIBRARY_REQUEST },
+      "http://localhost:1420",
+    );
   });
 
   it("accepts panel-open events only from the configured Lattice host", () => {

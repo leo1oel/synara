@@ -219,7 +219,11 @@ export const ProviderPluginMarketplaceInterface = Schema.Struct({
 });
 export type ProviderPluginMarketplaceInterface = typeof ProviderPluginMarketplaceInterface.Type;
 
-export const ProviderPluginInstallPolicy = Schema.Literals(["NOT_AVAILABLE", "AVAILABLE", "INSTALLED_BY_DEFAULT"]);
+export const ProviderPluginInstallPolicy = Schema.Literals([
+  "NOT_AVAILABLE",
+  "AVAILABLE",
+  "INSTALLED_BY_DEFAULT",
+]);
 export type ProviderPluginInstallPolicy = typeof ProviderPluginInstallPolicy.Type;
 
 export const ProviderPluginAuthPolicy = Schema.Literals(["ON_INSTALL", "ON_USE"]);

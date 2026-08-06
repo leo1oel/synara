@@ -70,7 +70,12 @@ export function GitInitializationState(props: { cwd: string }) {
         <p className="mt-1.5 text-[length:var(--app-font-size-ui-sm,11px)] leading-relaxed text-muted-foreground">
           Track changes locally, review diffs, and restore earlier work. Nothing is uploaded.
         </p>
-        <Button size="sm" className="mt-4" disabled={initMutation.isPending} onClick={() => void initialize()}>
+        <Button
+          size="sm"
+          className="mt-4"
+          disabled={initMutation.isPending}
+          onClick={() => void initialize()}
+        >
           {initMutation.isPending ? (
             <LoaderCircleIcon className="size-3.5 animate-spin" />
           ) : (
@@ -79,7 +84,10 @@ export function GitInitializationState(props: { cwd: string }) {
           {initMutation.isPending ? "Initializing…" : "Initialize Git"}
         </Button>
         {initMutation.error ? (
-          <p role="alert" className="mt-3 text-[length:var(--app-font-size-ui-xs,10px)] leading-snug text-destructive">
+          <p
+            role="alert"
+            className="mt-3 text-[length:var(--app-font-size-ui-xs,10px)] leading-snug text-destructive"
+          >
             {mutationErrorMessage(initMutation.error)}
           </p>
         ) : null}
@@ -149,9 +157,15 @@ function GitHubRepositorySetupDialog(props: {
       <DialogPopup className="max-w-md">
         <DialogHeader>
           <div className="mb-1 flex size-9 items-center justify-center rounded-xl border border-border/70 bg-foreground/[0.035] text-foreground/80">
-            {props.mode === "create" ? <GitHubIcon className="size-4" /> : <LinkIcon className="size-4" />}
+            {props.mode === "create" ? (
+              <GitHubIcon className="size-4" />
+            ) : (
+              <LinkIcon className="size-4" />
+            )}
           </div>
-          <DialogTitle>{props.mode === "create" ? "Publish to GitHub" : "Connect GitHub repository"}</DialogTitle>
+          <DialogTitle>
+            {props.mode === "create" ? "Publish to GitHub" : "Connect GitHub repository"}
+          </DialogTitle>
           <DialogDescription>
             {props.mode === "create"
               ? "Create a GitHub repository for this folder. Your files stay local until you commit and push them."
@@ -166,7 +180,10 @@ function GitHubRepositorySetupDialog(props: {
             props.onOpenChange(false);
             toastManager.add({
               type: "success",
-              title: props.mode === "create" ? "GitHub repository created" : "GitHub repository connected",
+              title:
+                props.mode === "create"
+                  ? "GitHub repository created"
+                  : "GitHub repository connected",
               description:
                 props.mode === "create"
                   ? `${result.repository} is ready. Files stay local until your first push.`
@@ -190,13 +207,19 @@ function GitHubRepositorySetupForm(props: {
   const repositoryNameId = useId();
   const descriptionId = useId();
   const remoteUrlId = useId();
-  const [repositoryName, setRepositoryName] = useState(() => suggestGitHubRepositoryName(props.cwd));
+  const [repositoryName, setRepositoryName] = useState(() =>
+    suggestGitHubRepositoryName(props.cwd),
+  );
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState<GitHubRepositoryVisibility>("private");
   const [remoteUrl, setRemoteUrl] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const createMutation = useMutation(gitCreateGitHubRepositoryMutationOptions({ cwd: props.cwd, queryClient }));
-  const connectMutation = useMutation(gitConnectGitHubRemoteMutationOptions({ cwd: props.cwd, queryClient }));
+  const createMutation = useMutation(
+    gitCreateGitHubRepositoryMutationOptions({ cwd: props.cwd, queryClient }),
+  );
+  const connectMutation = useMutation(
+    gitConnectGitHubRemoteMutationOptions({ cwd: props.cwd, queryClient }),
+  );
   const mutation = props.mode === "create" ? createMutation : connectMutation;
   const isPending = mutation.isPending;
   const createNameValid = isValidGitHubRepositoryCreateName(repositoryName);
@@ -245,7 +268,10 @@ function GitHubRepositorySetupForm(props: {
                 placeholder="research-writer"
               />
               {submitted && !createNameValid ? (
-                <p role="alert" className="text-[length:var(--app-font-size-ui-xs,10px)] text-destructive">
+                <p
+                  role="alert"
+                  className="text-[length:var(--app-font-size-ui-xs,10px)] text-destructive"
+                >
                   Use letters, numbers, periods, hyphens, or underscores.
                 </p>
               ) : (
@@ -268,7 +294,11 @@ function GitHubRepositorySetupForm(props: {
             </div>
             <fieldset className="space-y-1.5">
               <legend className={dialogFieldLabelClassName}>Visibility</legend>
-              <div role="radiogroup" aria-label="Repository visibility" className="grid grid-cols-2 gap-2">
+              <div
+                role="radiogroup"
+                aria-label="Repository visibility"
+                className="grid grid-cols-2 gap-2"
+              >
                 {(
                   [
                     ["private", "Private", "Only you and invited collaborators"],
@@ -290,7 +320,9 @@ function GitHubRepositorySetupForm(props: {
                       disabled={isPending}
                       onClick={() => setVisibility(value)}
                     >
-                      <span className="text-[length:var(--app-font-size-ui,12px)] font-medium">{label}</span>
+                      <span className="text-[length:var(--app-font-size-ui,12px)] font-medium">
+                        {label}
+                      </span>
                       <span className="whitespace-normal text-[length:var(--app-font-size-ui-xs,10px)] font-normal leading-snug text-muted-foreground">
                         {help}
                       </span>
@@ -315,7 +347,10 @@ function GitHubRepositorySetupForm(props: {
               placeholder="https://github.com/owner/repository.git"
             />
             {submitted && !remoteUrlValid ? (
-              <p role="alert" className="text-[length:var(--app-font-size-ui-xs,10px)] text-destructive">
+              <p
+                role="alert"
+                className="text-[length:var(--app-font-size-ui-xs,10px)] text-destructive"
+              >
                 Enter a GitHub HTTPS or SSH repository URL.
               </p>
             ) : (
@@ -336,7 +371,10 @@ function GitHubRepositorySetupForm(props: {
         </div>
 
         {mutation.error ? (
-          <p role="alert" className="text-[length:var(--app-font-size-ui-xs,10px)] leading-snug text-destructive">
+          <p
+            role="alert"
+            className="text-[length:var(--app-font-size-ui-xs,10px)] leading-snug text-destructive"
+          >
             {mutationErrorMessage(mutation.error)}
           </p>
         ) : null}

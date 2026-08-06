@@ -794,7 +794,9 @@ function ComposerInlineTokenSelectionNormalizePlugin() {
               if (caret.getKey() !== keepCaretKey) caret.remove();
             }
             if (!tokenKey) return;
-            const token = $getRoot().getAllTextNodes().find((node) => node.getKey() === tokenKey);
+            const token = $getRoot()
+              .getAllTextNodes()
+              .find((node) => node.getKey() === tokenKey);
             if (!token || !isComposerInlineTokenNode(token)) return;
             const existing = token.getNextSibling();
             const caret =

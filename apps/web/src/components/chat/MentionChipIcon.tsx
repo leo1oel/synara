@@ -30,7 +30,8 @@ function composerMentionChipCentralIconName(path: string, kind: MentionChipKind 
   }
   if (
     kind === "paper" ||
-    (path.startsWith(".research/papers/") && (path.endsWith("/paper.md") || path.endsWith("/blog.md")))
+    (path.startsWith(".research/papers/") &&
+      (path.endsWith("/paper.md") || path.endsWith("/blog.md")))
   ) {
     return PAPER_ICON_NAME;
   }
@@ -56,7 +57,10 @@ export const MentionChipIcon = function MentionChipIcon(props: {
     ...(props.kind ? { kind: props.kind } : {}),
     ...(props.mentionReferences ? { mentionReferences: props.mentionReferences } : {}),
   });
-  const threadMention = findThreadProviderMentionReferenceForToken(props.path, props.mentionReferences);
+  const threadMention = findThreadProviderMentionReferenceForToken(
+    props.path,
+    props.mentionReferences,
+  );
   const threadId = threadMention
     ? threadIdFromProviderMentionReference(threadMention)
     : threadIdFromThreadMentionPath(props.path);

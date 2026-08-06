@@ -129,7 +129,10 @@ description: Review a research paper
     expect(result.status).toBe("imported");
     expect(result.skill?.name).toBe("paper-review");
     await expect(
-      readFile(path.join(synaraBaseDir, "skills", "paper-review", "references", "checklist.md"), "utf8"),
+      readFile(
+        path.join(synaraBaseDir, "skills", "paper-review", "references", "checklist.md"),
+        "utf8",
+      ),
     ).resolves.toBe("# Checklist");
 
     const refreshed = await discoverSkillsCatalog({ homeDir, synaraBaseDir });
@@ -137,7 +140,11 @@ description: Review a research paper
   });
 
   it("requires confirmation before replacing an existing shared skill", async () => {
-    await writeSkill(path.join(synaraBaseDir, "skills", "paper-review"), "paper-review", "Original");
+    await writeSkill(
+      path.join(synaraBaseDir, "skills", "paper-review"),
+      "paper-review",
+      "Original",
+    );
     const files = [
       {
         relativePath: "SKILL.md",
@@ -154,9 +161,9 @@ description: Updated
       files,
     });
     expect(conflict.status).toBe("conflict");
-    await expect(readFile(path.join(synaraBaseDir, "skills", "paper-review", "SKILL.md"), "utf8")).resolves.toContain(
-      "Original",
-    );
+    await expect(
+      readFile(path.join(synaraBaseDir, "skills", "paper-review", "SKILL.md"), "utf8"),
+    ).resolves.toContain("Original");
 
     const replaced = await importSynaraSkill(synaraBaseDir, {
       folderName: "paper-review",
@@ -164,9 +171,9 @@ description: Updated
       overwrite: true,
     });
     expect(replaced.status).toBe("replaced");
-    await expect(readFile(path.join(synaraBaseDir, "skills", "paper-review", "SKILL.md"), "utf8")).resolves.toContain(
-      "Updated",
-    );
+    await expect(
+      readFile(path.join(synaraBaseDir, "skills", "paper-review", "SKILL.md"), "utf8"),
+    ).resolves.toContain("Updated");
   });
 
   it("rejects paths that escape the selected skill folder", async () => {
@@ -184,7 +191,11 @@ description: Updated
 
   it("protects skills that are included with Lattice from replacement", async () => {
     const bundledRoot = path.join(root, "bundled-skills");
-    await writeSkill(path.join(bundledRoot, "humanize-writing"), "humanize-writing", "Included with Lattice");
+    await writeSkill(
+      path.join(bundledRoot, "humanize-writing"),
+      "humanize-writing",
+      "Included with Lattice",
+    );
     vi.stubEnv("SYNARA_BUNDLED_SKILLS_DIR", bundledRoot);
 
     await expect(
@@ -202,7 +213,9 @@ description: User copy
         ],
       }),
     ).rejects.toThrow("included with Lattice");
-    await expect(access(path.join(synaraBaseDir, "skills", "humanize-writing-copy"))).rejects.toThrow();
+    await expect(
+      access(path.join(synaraBaseDir, "skills", "humanize-writing-copy")),
+    ).rejects.toThrow();
   });
 });
 
@@ -226,7 +239,10 @@ describe("managed skills", () => {
     await writeFile(path.join(skillDir, "references", "checks.md"), "# Checks");
     await writeFile(
       path.join(skillDir, "SKILL.md"),
-      created.detail.markdown.replace("---\n\n# Workflow", "disable-model-invocation: false\n---\n\n# Workflow"),
+      created.detail.markdown.replace(
+        "---\n\n# Workflow",
+        "disable-model-invocation: false\n---\n\n# Workflow",
+      ),
     );
 
     const updated = await saveManagedSkill(synaraBaseDir, {
@@ -266,9 +282,14 @@ describe("managed skills", () => {
     expect(copied.detail.skill.name).toBe("research-taste-custom");
     expect(copied.detail.files).toContain("references/taste.md");
     await expect(
-      readFile(path.join(synaraBaseDir, "skills", "research-taste-custom", "references", "taste.md"), "utf8"),
+      readFile(
+        path.join(synaraBaseDir, "skills", "research-taste-custom", "references", "taste.md"),
+        "utf8",
+      ),
     ).resolves.toBe("# Taste");
-    await expect(readFile(path.join(bundledSkillDir, "SKILL.md"), "utf8")).resolves.toContain("name: research-taste");
+    await expect(readFile(path.join(bundledSkillDir, "SKILL.md"), "utf8")).resolves.toContain(
+      "name: research-taste",
+    );
   });
 
   it("reads installed skill details, removes them recoverably, and restores them", async () => {
@@ -292,7 +313,9 @@ describe("managed skills", () => {
 
     const removed = await removeManagedSkill(synaraBaseDir, { id: "paper-review" });
     await expect(access(skillDir)).rejects.toThrow();
-    await expect(access(path.join(synaraBaseDir, "skill-trash", removed.trashId, "SKILL.md"))).resolves.toBeUndefined();
+    await expect(
+      access(path.join(synaraBaseDir, "skill-trash", removed.trashId, "SKILL.md")),
+    ).resolves.toBeUndefined();
 
     const restored = await restoreManagedSkill(synaraBaseDir, {
       id: removed.id,
@@ -305,8 +328,16 @@ describe("managed skills", () => {
   it("discovers bundled skills ahead of user and provider copies", async () => {
     const bundledRoot = path.join(root, "bundled-skills");
     await writeSkill(path.join(bundledRoot, "research-taste"), "research-taste", "Bundled copy");
-    await writeSkill(path.join(synaraBaseDir, "skills", "research-taste"), "research-taste", "User copy");
-    await writeSkill(path.join(homeDir, ".codex", "skills", "research-taste"), "research-taste", "Provider copy");
+    await writeSkill(
+      path.join(synaraBaseDir, "skills", "research-taste"),
+      "research-taste",
+      "User copy",
+    );
+    await writeSkill(
+      path.join(homeDir, ".codex", "skills", "research-taste"),
+      "research-taste",
+      "Provider copy",
+    );
     vi.stubEnv("SYNARA_BUNDLED_SKILLS_DIR", bundledRoot);
 
     const skills = await discoverSkillsCatalog({ homeDir, synaraBaseDir });
@@ -338,11 +369,23 @@ describe("discoverSkillsCatalog", () => {
   it("aggregates skills from synara and provider home folders with origin scopes", async () => {
     await writeSkill(path.join(synaraBaseDir, "skills", "portable"), "portable", "Synara skill");
     await writeSkill(path.join(homeDir, ".codex", "skills", "codex-only"), "codex-only", "Codex");
-    await writeSkill(path.join(homeDir, ".claude", "skills", "claude-only"), "claude-only", "Claude");
-    await writeSkill(path.join(homeDir, ".cursor", "skills", "cursor-only"), "cursor-only", "Cursor");
+    await writeSkill(
+      path.join(homeDir, ".claude", "skills", "claude-only"),
+      "claude-only",
+      "Claude",
+    );
+    await writeSkill(
+      path.join(homeDir, ".cursor", "skills", "cursor-only"),
+      "cursor-only",
+      "Cursor",
+    );
     await writeSkill(path.join(homeDir, ".grok", "skills", "grok-only"), "grok-only", "Grok");
     await writeSkill(path.join(homeDir, ".kilo", "skills", "kilo-only"), "kilo-only", "Kilo");
-    await writeSkill(path.join(homeDir, ".config", "opencode", "skills", "opencode-only"), "opencode-only", "OpenCode");
+    await writeSkill(
+      path.join(homeDir, ".config", "opencode", "skills", "opencode-only"),
+      "opencode-only",
+      "OpenCode",
+    );
     await writeSkill(path.join(homeDir, ".pi", "agent", "skills", "pi-only"), "pi-only", "Pi");
 
     const skills = await discoverSkillsCatalog({ homeDir, synaraBaseDir });
@@ -366,7 +409,11 @@ describe("discoverSkillsCatalog", () => {
       "feature-delivery",
       "Deliver a feature",
     );
-    await writeSkill(path.join(staleInstallPath, "skills", "stale-only"), "stale-only", "Old cache entry");
+    await writeSkill(
+      path.join(staleInstallPath, "skills", "stale-only"),
+      "stale-only",
+      "Old cache entry",
+    );
     await writeClaudePluginManifest({
       "workflow-kit@skill-forge": [
         {
@@ -392,7 +439,11 @@ describe("discoverSkillsCatalog", () => {
 
   it("dedupes duplicate Claude plugin registrations deterministically", async () => {
     const installPath = claudePluginInstallPath("skill-forge", "workflow-kit", "1.21.0");
-    await writeSkill(path.join(installPath, "skills", "feature-delivery"), "feature-delivery", "Deliver a feature");
+    await writeSkill(
+      path.join(installPath, "skills", "feature-delivery"),
+      "feature-delivery",
+      "Deliver a feature",
+    );
     const install = { scope: "user", installPath, version: "1.21.0" };
     await writeClaudePluginManifest({
       "workflow-kit@skill-forge": [install, install],
@@ -404,15 +455,25 @@ describe("discoverSkillsCatalog", () => {
       includeDuplicateOrigins: true,
     });
 
-    expect(skills.filter((skill) => skill.name === "workflow-kit:feature-delivery")).toHaveLength(1);
+    expect(skills.filter((skill) => skill.name === "workflow-kit:feature-delivery")).toHaveLength(
+      1,
+    );
   });
 
   it("uses deterministic plugin-id precedence when namespaces and skill names collide", async () => {
     const alphaInstallPath = claudePluginInstallPath("alpha", "workflow-kit", "1.0.0");
     const zetaInstallPath = claudePluginInstallPath("zeta", "workflow-kit", "1.0.0");
     await Promise.all([
-      writeSkill(path.join(alphaInstallPath, "skills", "feature-delivery"), "feature-delivery", "Alpha copy"),
-      writeSkill(path.join(zetaInstallPath, "skills", "feature-delivery"), "feature-delivery", "Zeta copy"),
+      writeSkill(
+        path.join(alphaInstallPath, "skills", "feature-delivery"),
+        "feature-delivery",
+        "Alpha copy",
+      ),
+      writeSkill(
+        path.join(zetaInstallPath, "skills", "feature-delivery"),
+        "feature-delivery",
+        "Zeta copy",
+      ),
     ]);
     await writeClaudePluginManifest({
       "workflow-kit@zeta": [{ scope: "user", installPath: zetaInstallPath }],
@@ -435,7 +496,11 @@ describe("discoverSkillsCatalog", () => {
     const otherInstallPath = claudePluginInstallPath("plugins", "other-tools", "1.0.0");
     await Promise.all([
       writeSkill(path.join(userInstallPath, "skills", "user-skill"), "user-skill", "User"),
-      writeSkill(path.join(projectInstallPath, "skills", "project-skill"), "project-skill", "Project"),
+      writeSkill(
+        path.join(projectInstallPath, "skills", "project-skill"),
+        "project-skill",
+        "Project",
+      ),
       writeSkill(path.join(otherInstallPath, "skills", "other-skill"), "other-skill", "Other"),
     ]);
     await writeClaudePluginManifest({
@@ -443,7 +508,9 @@ describe("discoverSkillsCatalog", () => {
       "project-tools@plugins": [
         { scope: "project", projectPath: path.join(root, "repo"), installPath: projectInstallPath },
       ],
-      "other-tools@plugins": [{ scope: "project", projectPath: otherProject, installPath: otherInstallPath }],
+      "other-tools@plugins": [
+        { scope: "project", projectPath: otherProject, installPath: otherInstallPath },
+      ],
     });
 
     const skills = await discoverSkillsCatalog({ cwd, homeDir, synaraBaseDir });
@@ -460,7 +527,11 @@ describe("discoverSkillsCatalog", () => {
     const projectInstallPath = claudePluginInstallPath("plugins", "workflow-kit", "2.0.0");
     await Promise.all([
       writeSkill(path.join(userInstallPath, "skills", "user-only"), "user-only", "User copy only"),
-      writeSkill(path.join(projectInstallPath, "skills", "project-only"), "project-only", "Project copy only"),
+      writeSkill(
+        path.join(projectInstallPath, "skills", "project-only"),
+        "project-only",
+        "Project copy only",
+      ),
     ]);
     await writeClaudePluginManifest({
       "workflow-kit@plugins": [
@@ -482,7 +553,11 @@ describe("discoverSkillsCatalog", () => {
     const validInstallPath = claudePluginInstallPath("plugins", "valid", "1.0.0");
     const outsideInstallPath = path.join(root, "outside-plugin");
     await writeSkill(path.join(validInstallPath, "skills", "valid-skill"), "valid-skill", "Valid");
-    await writeSkill(path.join(outsideInstallPath, "skills", "outside-skill"), "outside-skill", "Outside");
+    await writeSkill(
+      path.join(outsideInstallPath, "skills", "outside-skill"),
+      "outside-skill",
+      "Outside",
+    );
     await symlink(
       path.join(outsideInstallPath, "skills", "outside-skill"),
       path.join(validInstallPath, "skills", "linked-outside"),
@@ -631,7 +706,11 @@ description: Direct Pi markdown skill
   it("includes project-level .synara skills when a cwd is provided", async () => {
     const cwd = path.join(root, "repo", "packages", "web");
     await mkdir(cwd, { recursive: true });
-    await writeSkill(path.join(root, "repo", ".synara", "skills", "repo-skill"), "repo-skill", "Project skill");
+    await writeSkill(
+      path.join(root, "repo", ".synara", "skills", "repo-skill"),
+      "repo-skill",
+      "Project skill",
+    );
 
     const skills = await discoverSkillsCatalog({ cwd, homeDir, synaraBaseDir });
     expect(skills.find((skill) => skill.name === "repo-skill")?.scope).toBe("project");
@@ -678,7 +757,9 @@ describe("mergeSkillsIntoCatalog", () => {
       catalog: [descriptor("Shared", "synara"), descriptor("extra", "synara")],
     });
     expect(merged).toHaveLength(2);
-    expect(merged.find((skill) => skill.name.toLowerCase() === "shared")?.scope).toBe("codex-native");
+    expect(merged.find((skill) => skill.name.toLowerCase() === "shared")?.scope).toBe(
+      "codex-native",
+    );
     expect(merged.some((skill) => skill.name === "extra")).toBe(true);
   });
 });
@@ -689,7 +770,9 @@ describe("filterDisabledSkills", () => {
       { name: "Reviewer", path: "/tmp/a/SKILL.md", enabled: true },
       { name: "writer", path: "/tmp/b/SKILL.md", enabled: true },
     ];
-    expect(filterDisabledSkills(skills, ["reviewer"]).map((skill) => skill.name)).toEqual(["writer"]);
+    expect(filterDisabledSkills(skills, ["reviewer"]).map((skill) => skill.name)).toEqual([
+      "writer",
+    ]);
     expect(filterDisabledSkills(skills, [])).toHaveLength(2);
   });
 });

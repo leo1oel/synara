@@ -212,7 +212,8 @@
     --seam-shadow-color: transparent;
   }
 
-  [data-slot="sidebar-wrapper"]:has(> [data-slot="sidebar"][data-state="collapsed"]) .chat-content-card::before {
+  [data-slot="sidebar-wrapper"]:has(> [data-slot="sidebar"][data-state="collapsed"])
+    .chat-content-card::before {
     opacity: 0;
   }
 
@@ -441,8 +442,8 @@
   );
   --font-chat-code-family: var(--theme-font-code-family, var(--font-mono-family));
   --terminal-font-family:
-    "TX-02 Variable", "TX-02", "Berkeley Mono Variable", "Berkeley Mono", "JetBrains Mono Variable", "JetBrains Mono",
-    "JetBrainsMono NFM", "JetBrainsMono NF", Menlo, monospace;
+    "TX-02 Variable", "TX-02", "Berkeley Mono Variable", "Berkeley Mono", "JetBrains Mono Variable",
+    "JetBrains Mono", "JetBrainsMono NFM", "JetBrainsMono NF", Menlo, monospace;
   --app-shell-background: transparent;
   /* Header and chat column share one horizontal rhythm. Standalone Synara keeps
      following the selected density; Lattice overrides both breakpoints below. */
@@ -543,7 +544,11 @@
     --success-foreground: var(--color-emerald-400);
     --status-success: color-mix(in srgb, var(--success) 72%, var(--color-white));
     --status-failure: color-mix(in srgb, var(--destructive) 72%, var(--color-white));
-    --status-open: color-mix(in srgb, var(--color-decoration-added, var(--success)) 72%, var(--color-white));
+    --status-open: color-mix(
+      in srgb,
+      var(--color-decoration-added, var(--success)) 72%,
+      var(--color-white)
+    );
     --status-merged: color-mix(in srgb, var(--color-indigo-500) 72%, var(--color-white));
     --status-neutral: color-mix(in srgb, var(--color-zinc-500) 72%, var(--color-white));
     --sidebar: var(--card);
@@ -586,8 +591,8 @@ html[data-synara-embed="true"] {
   /* Match Lattice's editor role: prefer a locally installed TX-02 / Berkeley
      Mono face, then use Synara's bundled JetBrains Mono Variable fallback. */
   --font-mono-family:
-    "TX-02 Variable", "TX-02", "Berkeley Mono Variable", "Berkeley Mono", "JetBrains Mono Variable", "JetBrains Mono",
-    Menlo, "SF Mono", "SFMono-Regular", ui-monospace, monospace;
+    "TX-02 Variable", "TX-02", "Berkeley Mono Variable", "Berkeley Mono", "JetBrains Mono Variable",
+    "JetBrains Mono", Menlo, "SF Mono", "SFMono-Regular", ui-monospace, monospace;
   --font-chat-code-family: var(--font-mono-family);
   --terminal-font-family: var(--font-mono-family);
   --app-font-size-diff-code: 11px;
@@ -689,8 +694,8 @@ html[data-synara-embed="true"] .app-settings-surface .synara-settings-heading h1
 html[data-synara-embed="true"] .synara-settings-content {
   max-width: var(--lattice-settings-content-max-width);
   margin-inline: 0;
-  padding: var(--lattice-settings-content-padding-top) var(--lattice-settings-content-padding-inline)
-    var(--lattice-settings-content-padding-bottom);
+  padding: var(--lattice-settings-content-padding-top)
+    var(--lattice-settings-content-padding-inline) var(--lattice-settings-content-padding-bottom);
 }
 
 /* Embedded Settings reports its intrinsic content height to Lattice, which owns
@@ -776,7 +781,9 @@ html[data-synara-embed="true"] .composer-plan-mode-toggle [data-slot="menu-check
 }
 
 html[data-synara-embed="true"] .app-settings-surface [data-slot="switch"][data-checked],
-html[data-synara-embed="true"] .composer-plan-mode-toggle[data-checked] [data-slot="menu-checkbox-switch"] {
+html[data-synara-embed="true"]
+  .composer-plan-mode-toggle[data-checked]
+  [data-slot="menu-checkbox-switch"] {
   background: var(--lattice-settings-accent);
 }
 
@@ -788,13 +795,20 @@ html[data-synara-embed="true"] .composer-plan-mode-toggle [data-slot="menu-check
   box-shadow: 0 1px 2px rgba(20, 20, 22, 0.18);
 }
 
-html[data-synara-embed="true"] .app-settings-surface [data-slot="switch"][data-checked] [data-slot="switch-thumb"],
-html[data-synara-embed="true"] .composer-plan-mode-toggle[data-checked] [data-slot="menu-checkbox-switch-thumb"] {
+html[data-synara-embed="true"]
+  .app-settings-surface
+  [data-slot="switch"][data-checked]
+  [data-slot="switch-thumb"],
+html[data-synara-embed="true"]
+  .composer-plan-mode-toggle[data-checked]
+  [data-slot="menu-checkbox-switch-thumb"] {
   translate: 10px 0;
 }
 
-html[data-synara-embed="true"] :where(button, a, input, textarea, select, [role="button"], [tabindex]):focus,
-html[data-synara-embed="true"] :where(button, a, input, textarea, select, [role="button"], [tabindex]):focus-visible {
+html[data-synara-embed="true"]
+  :where(button, a, input, textarea, select, [role="button"], [tabindex]):focus,
+html[data-synara-embed="true"]
+  :where(button, a, input, textarea, select, [role="button"], [tabindex]):focus-visible {
   outline: none;
 }
 
@@ -846,15 +860,27 @@ html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-contro
   justify-content: flex-end;
 }
 
-html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] [data-slot="select-trigger"],
-html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] [data-slot="input-control"],
-html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] [data-slot="button"] {
+html[data-synara-embed="true"]
+  .app-settings-surface
+  [data-slot="settings-row"]
+  [data-slot="select-trigger"],
+html[data-synara-embed="true"]
+  .app-settings-surface
+  [data-slot="settings-row"]
+  [data-slot="input-control"],
+html[data-synara-embed="true"]
+  .app-settings-surface
+  [data-slot="settings-row"]
+  [data-slot="button"] {
   height: var(--lattice-settings-control-height);
   min-height: var(--lattice-settings-control-height);
   border-radius: var(--lattice-settings-control-radius) !important;
 }
 
-html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-control"] > [data-slot="button"]:only-child {
+html[data-synara-embed="true"]
+  .app-settings-surface
+  [data-slot="settings-control"]
+  > [data-slot="button"]:only-child {
   width: 100%;
   background: var(--lattice-settings-field);
   border-color: var(--lattice-settings-line-strong);
@@ -915,7 +941,11 @@ html[data-synara-embed="true"] .app-settings-surface [data-slot="select-trigger"
 html[data-synara-embed="true"] .app-settings-surface [data-slot="input-control"],
 html[data-synara-embed="true"] .app-settings-surface [data-slot="textarea-control"] {
   border-width: var(--lattice-settings-frame-border-width) !important;
-  border-color: color-mix(in srgb, var(--lattice-settings-text) 12%, var(--lattice-settings-field)) !important;
+  border-color: color-mix(
+    in srgb,
+    var(--lattice-settings-text) 12%,
+    var(--lattice-settings-field)
+  ) !important;
   border-radius: var(--lattice-settings-frame-radius) !important;
   background: var(--lattice-settings-field);
   box-shadow: none !important;
@@ -935,14 +965,26 @@ html[data-synara-embed="true"] .app-settings-surface [data-slot="select-trigger"
 html[data-synara-embed="true"] .app-settings-surface [data-slot="select-trigger"]:hover,
 html[data-synara-embed="true"] .app-settings-surface [data-slot="input-control"]:hover,
 html[data-synara-embed="true"] .app-settings-surface [data-slot="textarea-control"]:hover,
-html[data-synara-embed="true"] .app-settings-surface [data-slot="input-control"]:has([data-slot="input"]:focus),
-html[data-synara-embed="true"] .app-settings-surface [data-slot="textarea-control"]:has([data-slot="textarea"]:focus) {
-  border-color: color-mix(in srgb, var(--lattice-settings-text) 24%, var(--lattice-settings-field)) !important;
+html[data-synara-embed="true"]
+  .app-settings-surface
+  [data-slot="input-control"]:has([data-slot="input"]:focus),
+html[data-synara-embed="true"]
+  .app-settings-surface
+  [data-slot="textarea-control"]:has([data-slot="textarea"]:focus) {
+  border-color: color-mix(
+    in srgb,
+    var(--lattice-settings-text) 24%,
+    var(--lattice-settings-field)
+  ) !important;
 }
 
 html[data-synara-embed="true"] .app-settings-surface [data-slot="select-trigger"][data-popup-open],
 html[data-synara-embed="true"] .app-settings-surface [data-slot="select-trigger"]:focus-visible {
-  border-color: color-mix(in srgb, var(--lattice-settings-text) 24%, var(--lattice-settings-field)) !important;
+  border-color: color-mix(
+    in srgb,
+    var(--lattice-settings-text) 24%,
+    var(--lattice-settings-field)
+  ) !important;
   box-shadow: none;
 }
 
@@ -952,8 +994,14 @@ html[data-synara-embed="true"] .app-settings-surface [data-slot="select-icon"] s
   opacity: 0.55;
 }
 
-html[data-synara-embed="true"] .app-settings-surface [data-slot="input-control"] > [data-slot="input"],
-html[data-synara-embed="true"] .app-settings-surface [data-slot="textarea-control"] > [data-slot="textarea"] {
+html[data-synara-embed="true"]
+  .app-settings-surface
+  [data-slot="input-control"]
+  > [data-slot="input"],
+html[data-synara-embed="true"]
+  .app-settings-surface
+  [data-slot="textarea-control"]
+  > [data-slot="textarea"] {
   min-height: 0;
   border: 0 !important;
   background: transparent;
@@ -1046,14 +1094,22 @@ html[data-synara-embed="true"] .app-settings-surface .rounded-lg {
   transition-delay: 0ms;
 }
 
-.synara-scrollbar[data-orientation="vertical"]:not([data-overflow-y-start]):not([data-overflow-y-end]),
-.synara-scrollbar[data-orientation="horizontal"]:not([data-overflow-x-start]):not([data-overflow-x-end]) {
+.synara-scrollbar[data-orientation="vertical"]:not([data-overflow-y-start]):not(
+    [data-overflow-y-end]
+  ),
+.synara-scrollbar[data-orientation="horizontal"]:not([data-overflow-x-start]):not(
+    [data-overflow-x-end]
+  ) {
   display: none;
 }
 
-[data-slot="scroll-area"]:has(> [data-slot="scroll-area-viewport"][data-has-vertical-overflow="false"])
+[data-slot="scroll-area"]:has(
+    > [data-slot="scroll-area-viewport"][data-has-vertical-overflow="false"]
+  )
   > .synara-scrollbar[data-orientation="vertical"],
-[data-slot="scroll-area"]:has(> [data-slot="scroll-area-viewport"][data-has-horizontal-overflow="false"])
+[data-slot="scroll-area"]:has(
+    > [data-slot="scroll-area-viewport"][data-has-horizontal-overflow="false"]
+  )
   > .synara-scrollbar[data-orientation="horizontal"] {
   display: none;
 }
@@ -1196,7 +1252,8 @@ html[data-synara-embed="true"] .app-settings-surface .rounded-lg {
   }
 
   html[data-synara-embed="true"] .lattice-native-scrollbar:hover::-webkit-scrollbar-thumb,
-  html[data-synara-embed="true"] .lattice-native-scrollbar[data-scrolling]::-webkit-scrollbar-thumb {
+  html[data-synara-embed="true"]
+    .lattice-native-scrollbar[data-scrolling]::-webkit-scrollbar-thumb {
     background-color: color-mix(in srgb, var(--foreground) 8%, transparent);
   }
 
@@ -1246,7 +1303,9 @@ body,
 }
 
 /* Preserve inset variant rounding (inherits from the main element) */
-[data-slot="sidebar"][data-variant="inset"] ~ [data-slot="sidebar-inset"] > [data-slot="sidebar-inset-surface"] {
+[data-slot="sidebar"][data-variant="inset"]
+  ~ [data-slot="sidebar-inset"]
+  > [data-slot="sidebar-inset-surface"] {
   border-radius: inherit;
 }
 
@@ -2022,10 +2081,26 @@ label:has(> select#reasoning-effort) select {
   justify-content: center;
   padding: 1rem;
   background:
-    linear-gradient(45deg, color-mix(in srgb, var(--foreground) 4%, transparent) 25%, transparent 25%),
-    linear-gradient(-45deg, color-mix(in srgb, var(--foreground) 4%, transparent) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, color-mix(in srgb, var(--foreground) 4%, transparent) 75%),
-    linear-gradient(-45deg, transparent 75%, color-mix(in srgb, var(--foreground) 4%, transparent) 75%),
+    linear-gradient(
+      45deg,
+      color-mix(in srgb, var(--foreground) 4%, transparent) 25%,
+      transparent 25%
+    ),
+    linear-gradient(
+      -45deg,
+      color-mix(in srgb, var(--foreground) 4%, transparent) 25%,
+      transparent 25%
+    ),
+    linear-gradient(
+      45deg,
+      transparent 75%,
+      color-mix(in srgb, var(--foreground) 4%, transparent) 75%
+    ),
+    linear-gradient(
+      -45deg,
+      transparent 75%,
+      color-mix(in srgb, var(--foreground) 4%, transparent) 75%
+    ),
     color-mix(in srgb, var(--background) 96%, var(--foreground));
   background-position:
     0 0,
@@ -2405,12 +2480,18 @@ label:has(> select#reasoning-effort) select {
       --scroll-fade-t: 0px;
     }
     to {
-      --scroll-fade-t: var(--_scroll-fade-size-t, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
+      --scroll-fade-t: var(
+        --_scroll-fade-size-t,
+        var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
+      );
     }
   }
   @keyframes scroll-fade-reveal-b {
     from {
-      --scroll-fade-b: var(--_scroll-fade-size-b, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
+      --scroll-fade-b: var(
+        --_scroll-fade-size-b,
+        var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
+      );
     }
     to {
       --scroll-fade-b: 0px;
@@ -2421,12 +2502,18 @@ label:has(> select#reasoning-effort) select {
       --scroll-fade-s: 0px;
     }
     to {
-      --scroll-fade-s: var(--_scroll-fade-size-s, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
+      --scroll-fade-s: var(
+        --_scroll-fade-size-s,
+        var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
+      );
     }
   }
   @keyframes scroll-fade-reveal-e {
     from {
-      --scroll-fade-e: var(--_scroll-fade-size-e, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
+      --scroll-fade-e: var(
+        --_scroll-fade-size-e,
+        var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
+      );
     }
     to {
       --scroll-fade-e: 0px;
@@ -2435,8 +2522,14 @@ label:has(> select#reasoning-effort) select {
 }
 
 @utility scroll-fade {
-  --_scroll-fade-size-t: var(--scroll-fade-t-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
-  --_scroll-fade-size-b: var(--scroll-fade-b-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
+  --_scroll-fade-size-t: var(
+    --scroll-fade-t-size,
+    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
+  );
+  --_scroll-fade-size-b: var(
+    --scroll-fade-b-size,
+    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
+  );
   --scroll-fade-block: linear-gradient(
     to bottom,
     transparent 0,
@@ -2469,8 +2562,14 @@ label:has(> select#reasoning-effort) select {
 }
 
 @utility scroll-fade-y {
-  --_scroll-fade-size-t: var(--scroll-fade-t-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
-  --_scroll-fade-size-b: var(--scroll-fade-b-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
+  --_scroll-fade-size-t: var(
+    --scroll-fade-t-size,
+    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
+  );
+  --_scroll-fade-size-b: var(
+    --scroll-fade-b-size,
+    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
+  );
   --scroll-fade-block: linear-gradient(
     to bottom,
     transparent 0,
@@ -2503,8 +2602,14 @@ label:has(> select#reasoning-effort) select {
 }
 
 @utility scroll-fade-x {
-  --_scroll-fade-size-s: var(--scroll-fade-s-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
-  --_scroll-fade-size-e: var(--scroll-fade-e-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
+  --_scroll-fade-size-s: var(
+    --scroll-fade-s-size,
+    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
+  );
+  --_scroll-fade-size-e: var(
+    --scroll-fade-e-size,
+    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
+  );
   --scroll-fade-inline: linear-gradient(
     to right,
     transparent 0,
@@ -2546,8 +2651,16 @@ label:has(> select#reasoning-effort) select {
 }
 
 @utility scroll-fade-t {
-  --_scroll-fade-size-t: var(--scroll-fade-t-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
-  --scroll-fade-mask: linear-gradient(to bottom, transparent 0, #000 var(--scroll-fade-t, 0px), #000 100%);
+  --_scroll-fade-size-t: var(
+    --scroll-fade-t-size,
+    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
+  );
+  --scroll-fade-mask: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--scroll-fade-t, 0px),
+    #000 100%
+  );
   -webkit-mask-image: var(--scroll-fade-mask);
   mask-image: var(--scroll-fade-mask);
   -webkit-mask-composite: source-in;
@@ -2568,8 +2681,16 @@ label:has(> select#reasoning-effort) select {
 }
 
 @utility scroll-fade-b {
-  --_scroll-fade-size-b: var(--scroll-fade-b-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
-  --scroll-fade-mask: linear-gradient(to bottom, #000 0, #000 calc(100% - var(--scroll-fade-b, 0px)), transparent 100%);
+  --_scroll-fade-size-b: var(
+    --scroll-fade-b-size,
+    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
+  );
+  --scroll-fade-mask: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 calc(100% - var(--scroll-fade-b, 0px)),
+    transparent 100%
+  );
   -webkit-mask-image: var(--scroll-fade-mask);
   mask-image: var(--scroll-fade-mask);
   -webkit-mask-composite: source-in;
@@ -2590,8 +2711,16 @@ label:has(> select#reasoning-effort) select {
 }
 
 @utility scroll-fade-l {
-  --_scroll-fade-size-s: var(--scroll-fade-s-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
-  --scroll-fade-mask: linear-gradient(to right, transparent 0, #000 var(--scroll-fade-s, 0px), #000 100%);
+  --_scroll-fade-size-s: var(
+    --scroll-fade-s-size,
+    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
+  );
+  --scroll-fade-mask: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--scroll-fade-s, 0px),
+    #000 100%
+  );
   -webkit-mask-image: var(--scroll-fade-mask);
   mask-image: var(--scroll-fade-mask);
   -webkit-mask-composite: source-in;
@@ -2612,8 +2741,16 @@ label:has(> select#reasoning-effort) select {
 }
 
 @utility scroll-fade-r {
-  --_scroll-fade-size-e: var(--scroll-fade-e-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
-  --scroll-fade-mask: linear-gradient(to right, #000 0, #000 calc(100% - var(--scroll-fade-e, 0px)), transparent 100%);
+  --_scroll-fade-size-e: var(
+    --scroll-fade-e-size,
+    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
+  );
+  --scroll-fade-mask: linear-gradient(
+    to right,
+    #000 0,
+    #000 calc(100% - var(--scroll-fade-e, 0px)),
+    transparent 100%
+  );
   -webkit-mask-image: var(--scroll-fade-mask);
   mask-image: var(--scroll-fade-mask);
   -webkit-mask-composite: source-in;
@@ -2634,10 +2771,23 @@ label:has(> select#reasoning-effort) select {
 }
 
 @utility scroll-fade-s {
-  --_scroll-fade-size-s: var(--scroll-fade-s-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
-  --scroll-fade-mask: linear-gradient(to right, transparent 0, #000 var(--scroll-fade-s, 0px), #000 100%);
+  --_scroll-fade-size-s: var(
+    --scroll-fade-s-size,
+    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
+  );
+  --scroll-fade-mask: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--scroll-fade-s, 0px),
+    #000 100%
+  );
   &:where([dir="rtl"], [dir="rtl"] *) {
-    --scroll-fade-mask: linear-gradient(to left, transparent 0, #000 var(--scroll-fade-s, 0px), #000 100%);
+    --scroll-fade-mask: linear-gradient(
+      to left,
+      transparent 0,
+      #000 var(--scroll-fade-s, 0px),
+      #000 100%
+    );
   }
   -webkit-mask-image: var(--scroll-fade-mask);
   mask-image: var(--scroll-fade-mask);
@@ -2659,10 +2809,23 @@ label:has(> select#reasoning-effort) select {
 }
 
 @utility scroll-fade-e {
-  --_scroll-fade-size-e: var(--scroll-fade-e-size, var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10))));
-  --scroll-fade-mask: linear-gradient(to right, #000 0, #000 calc(100% - var(--scroll-fade-e, 0px)), transparent 100%);
+  --_scroll-fade-size-e: var(
+    --scroll-fade-e-size,
+    var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
+  );
+  --scroll-fade-mask: linear-gradient(
+    to right,
+    #000 0,
+    #000 calc(100% - var(--scroll-fade-e, 0px)),
+    transparent 100%
+  );
   &:where([dir="rtl"], [dir="rtl"] *) {
-    --scroll-fade-mask: linear-gradient(to left, #000 0, #000 calc(100% - var(--scroll-fade-e, 0px)), transparent 100%);
+    --scroll-fade-mask: linear-gradient(
+      to left,
+      #000 0,
+      #000 calc(100% - var(--scroll-fade-e, 0px)),
+      transparent 100%
+    );
   }
   -webkit-mask-image: var(--scroll-fade-mask);
   mask-image: var(--scroll-fade-mask);
@@ -2807,7 +2970,10 @@ label:has(> select#reasoning-effort) select {
   animation: tw-shimmer var(--shimmer-duration, 2s) linear infinite;
 
   @variant dark {
-    --_highlight: var(--shimmer-color, oklch(from currentColor max(0.8, calc(l + 0.4)) c h / calc(alpha + 0.4)));
+    --_highlight: var(
+      --shimmer-color,
+      oklch(from currentColor max(0.8, calc(l + 0.4)) c h / calc(alpha + 0.4))
+    );
   }
 
   &:where([dir="rtl"], [dir="rtl"] *) {
@@ -2830,7 +2996,11 @@ label:has(> select#reasoning-effort) select {
 
 @utility shimmer-color-* {
   --shimmer-color: --value(--color, [color]);
-  --shimmer-color: color-mix(in oklch, --value(--color, [color]) calc(--modifier(integer) * 1%), transparent);
+  --shimmer-color: color-mix(
+    in oklch,
+    --value(--color, [color]) calc(--modifier(integer) * 1%),
+    transparent
+  );
 }
 
 @utility shimmer-duration-* {
@@ -2913,7 +3083,8 @@ label:has(> select#reasoning-effort) select {
 }
 
 .chat-generated-image[data-status="ready"]:hover .chat-generated-image__overlay-pill--download,
-.chat-generated-image[data-status="ready"]:focus-within .chat-generated-image__overlay-pill--download {
+.chat-generated-image[data-status="ready"]:focus-within
+  .chat-generated-image__overlay-pill--download {
   opacity: 1;
   transform: translateY(0);
 }
@@ -3127,7 +3298,10 @@ html[data-synara-embed="true"] .chat-composer-surface {
 .sidebar-segmented-thumb {
   background:
     linear-gradient(var(--composer-surface), var(--composer-surface)),
-    linear-gradient(var(--color-background-elevated-secondary), var(--color-background-elevated-secondary)),
+    linear-gradient(
+      var(--color-background-elevated-secondary),
+      var(--color-background-elevated-secondary)
+    ),
     var(--background);
   border: 1px solid color-mix(in oklab, var(--color-text-foreground) 5%, transparent);
   box-shadow:
@@ -3152,7 +3326,10 @@ html[data-synara-embed="true"] .chat-composer-surface {
    selects, popovers, comboboxes) and composer pickers. Background + blur are
    theme-aware via the tokens set in theme.logic (control-opaque @70% + blur). */
 .composer-picker-menu-surface {
-  background: var(--app-composer-picker-surface, color-mix(in oklab, var(--popover) 70%, transparent));
+  background: var(
+    --app-composer-picker-surface,
+    color-mix(in oklab, var(--popover) 70%, transparent)
+  );
   backdrop-filter: var(--app-composer-picker-backdrop-filter, blur(32px));
   -webkit-backdrop-filter: var(--app-composer-picker-backdrop-filter, blur(32px));
 }
@@ -3230,16 +3407,24 @@ html[data-synara-embed="true"] .chat-composer-surface {
 
 .composer-picker-menu--small [data-slot="menu-item"] > svg:not([class*="size-"]),
 .composer-picker-menu--small [data-slot="menu-radio-item"] > svg:not([class*="size-"]),
-.composer-picker-menu--small [data-slot="menu-sub-trigger"] > svg:not([class*="size-"]):first-of-type,
+.composer-picker-menu--small
+  [data-slot="menu-sub-trigger"]
+  > svg:not([class*="size-"]):first-of-type,
 .composer-picker-menu-wide--small [data-slot="menu-item"] > svg:not([class*="size-"]),
 .composer-picker-menu-wide--small [data-slot="menu-radio-item"] > svg:not([class*="size-"]),
-.composer-picker-menu-wide--small [data-slot="menu-sub-trigger"] > svg:not([class*="size-"]):first-of-type,
+.composer-picker-menu-wide--small
+  [data-slot="menu-sub-trigger"]
+  > svg:not([class*="size-"]):first-of-type,
 .composer-picker-menu--normal [data-slot="menu-item"] > svg:not([class*="size-"]),
 .composer-picker-menu--normal [data-slot="menu-radio-item"] > svg:not([class*="size-"]),
-.composer-picker-menu--normal [data-slot="menu-sub-trigger"] > svg:not([class*="size-"]):first-of-type,
+.composer-picker-menu--normal
+  [data-slot="menu-sub-trigger"]
+  > svg:not([class*="size-"]):first-of-type,
 .composer-picker-menu-wide--normal [data-slot="menu-item"] > svg:not([class*="size-"]),
 .composer-picker-menu-wide--normal [data-slot="menu-radio-item"] > svg:not([class*="size-"]),
-.composer-picker-menu-wide--normal [data-slot="menu-sub-trigger"] > svg:not([class*="size-"]):first-of-type {
+.composer-picker-menu-wide--normal
+  [data-slot="menu-sub-trigger"]
+  > svg:not([class*="size-"]):first-of-type {
   width: var(--picker-option-icon-size);
   height: var(--picker-option-icon-size);
 }

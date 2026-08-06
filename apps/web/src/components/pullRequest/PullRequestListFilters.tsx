@@ -79,7 +79,9 @@ export function PullRequestProjectFilterPopover({
 }) {
   const [open, setOpen] = useState(false);
   const active = value !== undefined;
-  const selectedProjectName = value ? projects.find(([projectId]) => projectId === value)?.[1] : undefined;
+  const selectedProjectName = value
+    ? projects.find(([projectId]) => projectId === value)?.[1]
+    : undefined;
   const triggerLabel = `Filter pull requests by project: ${selectedProjectName ?? "All projects"}`;
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -93,13 +95,18 @@ export function PullRequestProjectFilterPopover({
           >
             <FilterIcon className="size-4" />
             {active ? (
-              <span aria-hidden="true" className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-primary" />
+              <span
+                aria-hidden="true"
+                className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-primary"
+              />
             ) : null}
           </IconButton>
         }
       />
       <PopoverPopup align="end" className="w-64 p-1">
-        <div className={cn(PR_FINE_TEXT_CLASS_NAME, "px-2 py-1 font-medium text-muted-foreground")}>Project</div>
+        <div className={cn(PR_FINE_TEXT_CLASS_NAME, "px-2 py-1 font-medium text-muted-foreground")}>
+          Project
+        </div>
         <div className="max-h-72 overflow-y-auto">
           <button
             type="button"
@@ -108,7 +115,10 @@ export function PullRequestProjectFilterPopover({
               onChange(undefined);
               setOpen(false);
             }}
-            className={cn(PROJECT_FILTER_OPTION_CLASS_NAME, value === undefined && "text-foreground")}
+            className={cn(
+              PROJECT_FILTER_OPTION_CLASS_NAME,
+              value === undefined && "text-foreground",
+            )}
           >
             <span className="min-w-0 truncate">All projects</span>
             {value === undefined ? <CheckIcon aria-hidden className="size-3.5 shrink-0" /> : null}

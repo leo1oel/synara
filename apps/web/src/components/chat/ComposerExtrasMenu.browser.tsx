@@ -12,7 +12,10 @@ import { render } from "vitest-browser-react";
 
 import { ComposerExtrasMenu } from "./ComposerExtrasMenu";
 
-async function mountMenu(props?: { interactionMode?: "default" | "plan"; triggerClassName?: string }) {
+async function mountMenu(props?: {
+  interactionMode?: "default" | "plan";
+  triggerClassName?: string;
+}) {
   const onAddAttachments = vi.fn();
   const onSetPlanMode = vi.fn();
   const host = document.createElement("div");

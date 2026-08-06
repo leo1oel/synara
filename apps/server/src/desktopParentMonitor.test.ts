@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { parseDesktopParentPid, processIsAlive, startDesktopParentMonitor } from "./desktopParentMonitor";
+import {
+  parseDesktopParentPid,
+  processIsAlive,
+  startDesktopParentMonitor,
+} from "./desktopParentMonitor";
 
 describe("desktop parent monitor", () => {
   afterEach(() => {

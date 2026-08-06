@@ -35,7 +35,14 @@ import {
 } from "~/lib/icons";
 import { formatSkillScope } from "~/lib/providerDiscovery";
 import { cn } from "~/lib/utils";
-import { Command, CommandGroup, CommandGroupLabel, CommandItem, CommandList, CommandSeparator } from "../ui/command";
+import {
+  Command,
+  CommandGroup,
+  CommandGroupLabel,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "../ui/command";
 import { ScrollArea } from "../ui/scroll-area";
 import { FileEntryIcon } from "./FileEntryIcon";
 import { ProviderIcon } from "../ProviderIcon";
@@ -253,7 +260,8 @@ type ComposerCommandGroupModel = {
   items: ComposerCommandItem[];
 };
 
-const COMPOSER_COMMAND_GROUP_LABEL_CLASSNAME = "px-2 pt-1.5 pb-1 text-[11px] font-normal text-muted-foreground/60";
+const COMPOSER_COMMAND_GROUP_LABEL_CLASSNAME =
+  "px-2 pt-1.5 pb-1 text-[11px] font-normal text-muted-foreground/60";
 
 export function groupCommandItems(
   items: ComposerCommandItem[],
@@ -306,7 +314,10 @@ export function groupCommandItems(
   const providerItems = items.filter((item) => item.type === "provider-native-command");
   const skillItems = items.filter((item) => item.type === "skill");
   const otherItems = items.filter(
-    (item) => item.type !== "slash-command" && item.type !== "provider-native-command" && item.type !== "skill",
+    (item) =>
+      item.type !== "slash-command" &&
+      item.type !== "provider-native-command" &&
+      item.type !== "skill",
   );
 
   const groups: ComposerCommandGroupModel[] = [];
@@ -337,7 +348,11 @@ export function ComposerCommandMenu(props: {
   onSelect: (item: ComposerCommandItem) => void;
 }) {
   const itemRefs = useRef<Record<string, HTMLElement | null>>({});
-  const groups = groupCommandItems(props.items, props.triggerKind, props.groupSlashCommandSections ?? true);
+  const groups = groupCommandItems(
+    props.items,
+    props.triggerKind,
+    props.groupSlashCommandSections ?? true,
+  );
   const shouldRenderList = props.items.length > 0 || props.triggerKind === "mention";
 
   useEffect(() => {
@@ -355,7 +370,9 @@ export function ComposerCommandMenu(props: {
       autoHighlight={false}
       mode="none"
       onItemHighlighted={(highlightedValue) => {
-        props.onHighlightedItemChange(typeof highlightedValue === "string" ? highlightedValue : null);
+        props.onHighlightedItemChange(
+          typeof highlightedValue === "string" ? highlightedValue : null,
+        );
       }}
     >
       <div className={COMPOSER_COMMAND_MENU_SURFACE_CLASS_NAME}>
@@ -372,7 +389,9 @@ export function ComposerCommandMenu(props: {
                           {group.label} · {group.items.length}
                         </CommandGroupLabel>
                         {group.items.length > 4 ? (
-                          <span className="text-[10.5px] text-muted-foreground/45">Scroll to browse</span>
+                          <span className="text-[10.5px] text-muted-foreground/45">
+                            Scroll to browse
+                          </span>
                         ) : null}
                       </div>
                     ) : (
@@ -437,7 +456,9 @@ export function ComposerCommandMenu(props: {
                   >
                     Files
                   </p>
-                  <p className="px-2 pt-0.5 text-[11px] text-muted-foreground/55">Type to search for files</p>
+                  <p className="px-2 pt-0.5 text-[11px] text-muted-foreground/55">
+                    Type to search for files
+                  </p>
                 </div>
               </>
             ) : null}
@@ -447,7 +468,9 @@ export function ComposerCommandMenu(props: {
           <p
             className={cn(
               "text-muted-foreground/50 text-[11px]",
-              props.isLoading ? "flex h-[calc(1.625rem+0.5rem)] items-center px-2 text-left" : "px-2 py-1.5",
+              props.isLoading
+                ? "flex h-[calc(1.625rem+0.5rem)] items-center px-2 text-left"
+                : "px-2 py-1.5",
             )}
           >
             {props.isLoading
@@ -516,15 +539,25 @@ function commandMenuItemGlyph(item: ComposerCommandItem, theme: "light" | "dark"
           pathValue={item.path}
           kind={item.pathKind}
           theme={theme}
-          className={item.pathKind === "directory" ? cls : COMPOSER_COMMAND_ITEM_FILE_ICON_CLASSNAME}
+          className={
+            item.pathKind === "directory" ? cls : COMPOSER_COMMAND_ITEM_FILE_ICON_CLASSNAME
+          }
         />
       );
     case "local-root":
       return <DeviceLaptopIcon className={cls} />;
     case "fork-target":
-      return item.target === "local" ? <DeviceLaptopIcon className={cls} /> : <WorktreeIcon className={cls} />;
+      return item.target === "local" ? (
+        <DeviceLaptopIcon className={cls} />
+      ) : (
+        <WorktreeIcon className={cls} />
+      );
     case "review-target":
-      return item.target === "changes" ? <ChangesIcon className={cls} /> : <GitBranchIcon className={cls} />;
+      return item.target === "changes" ? (
+        <ChangesIcon className={cls} />
+      ) : (
+        <GitBranchIcon className={cls} />
+      );
     case "slash-command":
       return commandMenuSlashGlyph(item.command, TerminalIcon);
     case "provider-native-command":
@@ -555,7 +588,12 @@ function ComposerCommandItemIcon(props: {
   isActive: boolean;
 }) {
   return (
-    <span className={cn(COMPOSER_COMMAND_ITEM_ICON_SLOT_CLASSNAME, props.isActive && "text-foreground/70")}>
+    <span
+      className={cn(
+        COMPOSER_COMMAND_ITEM_ICON_SLOT_CLASSNAME,
+        props.isActive && "text-foreground/70",
+      )}
+    >
       {commandMenuItemGlyph(props.item, props.resolvedTheme)}
     </span>
   );
@@ -588,7 +626,10 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem({
     <CommandItem
       ref={itemRef}
       value={item.id}
-      className={cn(COMPOSER_COMMAND_MENU_ITEM_CLASS_NAME, isActive && COMPOSER_COMMAND_MENU_ITEM_ACTIVE_CLASS_NAME)}
+      className={cn(
+        COMPOSER_COMMAND_MENU_ITEM_CLASS_NAME,
+        isActive && COMPOSER_COMMAND_MENU_ITEM_ACTIVE_CLASS_NAME,
+      )}
       onMouseMove={() => {
         if (!isActive) onHighlight(item.id);
       }}
@@ -612,7 +653,9 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem({
           ) : null}
         </div>
         {trailingMeta ? (
-          <span className="shrink-0 pl-2 text-right text-[10.5px] text-muted-foreground/42">{trailingMeta}</span>
+          <span className="shrink-0 pl-2 text-right text-[10.5px] text-muted-foreground/42">
+            {trailingMeta}
+          </span>
         ) : null}
       </div>
     </CommandItem>

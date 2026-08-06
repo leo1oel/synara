@@ -7,7 +7,13 @@
 
 import { useState } from "react";
 
-import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, MinusIcon, PlusIcon } from "~/lib/icons";
+import {
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  MinusIcon,
+  PlusIcon,
+} from "~/lib/icons";
 import { formatZoomPercent, PDF_ZOOM_PRESETS, type PdfZoomMode } from "~/lib/pdf/pdfZoom";
 import { cn } from "~/lib/utils";
 import { ComposerPickerMenuPopup } from "../chat/ComposerPickerMenuPopup";
@@ -98,7 +104,11 @@ export const PdfViewerToolbar = function PdfViewerToolbar(props: PdfViewerToolba
             <MinusIcon aria-hidden="true" className="size-4" />
           </ChatHeaderIconButton>
           <Menu>
-            <MenuTrigger render={<ChatHeaderButton tone="plain" className="min-w-16 justify-center gap-1 px-2" />}>
+            <MenuTrigger
+              render={
+                <ChatHeaderButton tone="plain" className="min-w-16 justify-center gap-1 px-2" />
+              }
+            >
               <span className="tabular-nums">{formatZoomPercent(props.scale)}</span>
               <ChevronDownIcon aria-hidden="true" className="size-3.5 opacity-70" />
             </MenuTrigger>
@@ -137,7 +147,11 @@ export const PdfViewerToolbar = function PdfViewerToolbar(props: PdfViewerToolba
           </ChatHeaderIconButton>
         </div>
 
-        <OpenInPicker openInTarget={props.openInTarget} labelMode="always" defaultEditor="system-default" />
+        <OpenInPicker
+          openInTarget={props.openInTarget}
+          labelMode="always"
+          defaultEditor="system-default"
+        />
       </div>
     </div>
   );

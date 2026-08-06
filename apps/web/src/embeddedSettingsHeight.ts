@@ -3,7 +3,9 @@ export const MIN_EMBEDDED_SETTINGS_HEIGHT = 470;
 type SettingsHeightSource = Pick<HTMLElement, "offsetHeight" | "scrollHeight">;
 
 export function measureEmbeddedSettingsHeight(content: SettingsHeightSource): number {
-  return Math.ceil(Math.max(MIN_EMBEDDED_SETTINGS_HEIGHT, content.offsetHeight, content.scrollHeight));
+  return Math.ceil(
+    Math.max(MIN_EMBEDDED_SETTINGS_HEIGHT, content.offsetHeight, content.scrollHeight),
+  );
 }
 
 export function createEmbeddedSettingsHeightReporter(options: {
@@ -12,7 +14,8 @@ export function createEmbeddedSettingsHeightReporter(options: {
   requestFrame?: (callback: FrameRequestCallback) => number;
   cancelFrame?: (handle: number) => void;
 }) {
-  const requestFrame = options.requestFrame ?? ((callback) => window.requestAnimationFrame(callback));
+  const requestFrame =
+    options.requestFrame ?? ((callback) => window.requestAnimationFrame(callback));
   const cancelFrame = options.cancelFrame ?? ((handle) => window.cancelAnimationFrame(handle));
   let frame: number | null = null;
   let lastReportedHeight = 0;

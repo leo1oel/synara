@@ -2,7 +2,14 @@
 // Purpose: Shared editable checklist-row interaction for pinned messages and transcript markers.
 // Layer: Environment panel UI primitive
 
-import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 
 import { Checkbox } from "~/components/ui/checkbox";
 import { FIELD_CONTROL_CLASS_NAME } from "~/components/ui/field-styles";
@@ -132,7 +139,13 @@ export function EnvironmentEditableChecklistRow({
   };
 
   return (
-    <li className={cn("flex items-center gap-1.5 rounded-lg px-2 py-1", ELEVATED_HOVER_SURFACE_CLASS_NAME, className)}>
+    <li
+      className={cn(
+        "flex items-center gap-1.5 rounded-lg px-2 py-1",
+        ELEVATED_HOVER_SURFACE_CLASS_NAME,
+        className,
+      )}
+    >
       <Checkbox
         className="size-3.5 sm:size-3.5"
         checked={checked}
@@ -166,7 +179,9 @@ export function EnvironmentEditableChecklistRow({
             checked
               ? "text-muted-foreground/55 line-through"
               : "text-[var(--color-text-foreground)] hover:text-foreground",
-            available ? "cursor-pointer hover:underline" : "cursor-default text-muted-foreground/55",
+            available
+              ? "cursor-pointer hover:underline"
+              : "cursor-default text-muted-foreground/55",
           )}
         >
           {displayLabel}
@@ -176,7 +191,10 @@ export function EnvironmentEditableChecklistRow({
         label={removeLabel}
         tooltip={removeTooltip}
         size="icon-xs"
-        className={cn("shrink-0 opacity-0 transition-opacity focus-visible:opacity-100", removeButtonClassName)}
+        className={cn(
+          "shrink-0 opacity-0 transition-opacity focus-visible:opacity-100",
+          removeButtonClassName,
+        )}
         onClick={onRemove}
       >
         <XIcon className="size-3" />

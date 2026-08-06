@@ -3,7 +3,12 @@
 // Layer: Web orchestration helper
 // Exports: createOrRecoverProjectFromPath
 
-import { type NativeApi, type OrchestrationShellSnapshot, type ProjectId, type SpaceId } from "@synara/contracts";
+import {
+  type NativeApi,
+  type OrchestrationShellSnapshot,
+  type ProjectId,
+  type SpaceId,
+} from "@synara/contracts";
 import { getDefaultModel } from "@synara/shared/model";
 
 import { readActiveSpaceId } from "../spacesUiStore";
@@ -89,7 +94,8 @@ export async function createOrRecoverProjectFromPath(input: {
       created: true,
     };
   } catch (error) {
-    const description = error instanceof Error ? error.message : "An error occurred while adding the project.";
+    const description =
+      error instanceof Error ? error.message : "An error occurred while adding the project.";
     if (!isDuplicateProjectCreateError(description)) {
       throw error instanceof Error ? error : new Error(description);
     }

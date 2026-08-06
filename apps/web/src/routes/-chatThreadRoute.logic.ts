@@ -123,7 +123,10 @@ export function collectParentDirectoryPaths(filePath: string): string[] {
   return parents;
 }
 
-function createRoutePanelSearchKey(input: { scopeId: string; search: DiffRouteSearch }): string | null {
+function createRoutePanelSearchKey(input: {
+  scopeId: string;
+  search: DiffRouteSearch;
+}): string | null {
   const { scopeId, search } = input;
   if (
     search.panel === undefined &&
