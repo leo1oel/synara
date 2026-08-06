@@ -108,7 +108,7 @@ import {
 } from "~/lib/composerMentions";
 import { getLocalFolderBrowseRootPath, isLocalFolderMentionQuery } from "~/lib/localFolderMentions";
 import {
-  findFirstUsableProvider,
+  findFirstUsableDefaultProvider,
   findProviderStatus,
   isProviderUsable,
   normalizeCustomBinaryPath,
@@ -418,6 +418,7 @@ import {
   postAgentPermissionModeToLattice,
   postHostContextRequestToLattice,
   postHostContextSelectionClearToLattice,
+  postOpenSettingsToLattice,
   postPaperLibraryRequestToLattice,
   postLayoutMetricsToLattice,
   postProjectHistoryToLattice,
@@ -1636,6 +1637,10 @@ export default function ChatView({
   const attachmentPreviewHandoffTimeoutByMessageIdRef = useRef<Record<string, number>>({});
   const sendInFlightRef = useRef(false);
   const sendPreflightInFlightRef = useRef(false);
+  const providerFallbackSendAttemptRef = useRef<{
+    threadId: ThreadId;
+    token: symbol;
+  } | null>(null);
   const dragDepthRef = useRef(0);
   const terminalOpenByThreadRef = useRef<Record<string, boolean>>({});
   const activatedThreadIdRef = useRef<ThreadId | null>(null);
@@ -2234,13 +2239,24 @@ export default function ChatView({
     activeThread &&
     (activeThread.latestTurn !== null ||
       activeThread.messages.length > 0 ||
-      activeThread.session !== null),
+      activeThread.session !== null ||
+      optimisticUserMessages.length > 0),
   );
   const lockedProvider: ProviderKind | null = hasThreadStarted
     ? (sessionProvider ?? threadProvider ?? selectedProviderByThreadId ?? null)
     : null;
   const selectedProvider: ProviderKind =
     lockedProvider ?? selectedProviderByThreadId ?? threadProvider ?? settings.defaultProvider;
+  const latestProviderFallbackContextRef = useRef({
+    threadId: activeThread?.id ?? null,
+    selectedProvider,
+    hasThreadStarted,
+  });
+  latestProviderFallbackContextRef.current = {
+    threadId: activeThread?.id ?? null,
+    selectedProvider,
+    hasThreadStarted,
+  };
   const previousSelectedProviderRef = useRef<{
     threadId: ThreadId;
     provider: ProviderKind;
@@ -3931,26 +3947,82 @@ export default function ChatView({
     () => findProviderStatus(providerStatuses, selectedProvider),
     [selectedProvider, providerStatuses],
   );
+  const refreshProviderStatuses = useRefreshProviderStatusesNow();
+  const refreshProviderStatusesRef = useRef(refreshProviderStatuses);
+  refreshProviderStatusesRef.current = refreshProviderStatuses;
+  const providerFallbackProbesRef = useRef(
+    new Map<
+      ThreadId,
+      {
+        providerAtStart: ProviderKind;
+        state: "failed" | "refreshing" | "settled";
+      }
+    >(),
+  );
+  const [providerFallbackProbeRevision, setProviderFallbackProbeRevision] = useState(0);
+  useEffect(() => {
+    if (!activeThread || hasThreadStarted) return;
+    if (providerFallbackProbesRef.current.has(activeThread.id)) return;
+    const probe = {
+      providerAtStart: selectedProvider,
+      state: "refreshing" as const,
+    };
+    providerFallbackProbesRef.current.set(activeThread.id, probe);
+    setProviderFallbackProbeRevision((revision) => revision + 1);
+    void refreshProviderStatusesRef.current({ silent: true }).then((statuses) => {
+      providerFallbackProbesRef.current.set(activeThread.id, {
+        providerAtStart: probe.providerAtStart,
+        state: statuses ? "settled" : "failed",
+      });
+      setProviderFallbackProbeRevision((revision) => revision + 1);
+    });
+  }, [activeThread, hasThreadStarted, selectedProvider]);
+  const providerFallbackProbe = activeThread
+    ? providerFallbackProbesRef.current.get(activeThread.id)
+    : null;
+  const providerFallbackProbeState =
+    providerFallbackProbe?.providerAtStart === selectedProvider
+      ? providerFallbackProbe.state
+      : null;
+  const providerFallbackProbeSettled = providerFallbackProbeState === "settled";
+  const providerFallbackProbePending =
+    Boolean(activeThread) &&
+    !hasThreadStarted &&
+    (!providerFallbackProbe || providerFallbackProbeState === "refreshing");
   const fallbackProvider = useMemo(
     () =>
-      findFirstUsableProvider(
-        providerStatuses,
-        [settings.defaultProvider, ...settings.providerOrder].filter(
-          (provider) => provider !== "pi",
-        ),
-      ),
+      findFirstUsableDefaultProvider(providerStatuses, [
+        settings.defaultProvider,
+        ...settings.providerOrder,
+      ]),
     [providerStatuses, settings.defaultProvider, settings.providerOrder],
   );
-  const hasUsableProvider = providerStatuses.some(isProviderUsable);
   const shouldSelectFallbackProvider =
-    !hasThreadStarted &&
+    providerFallbackProbeSettled &&
     !isProviderUsable(activeProviderStatus) &&
     fallbackProvider !== null &&
     fallbackProvider !== selectedProvider;
-  const needsProviderSetup = serverConfigQuery.data !== undefined && !hasUsableProvider;
+  const needsProviderSetup =
+    providerFallbackProbeSettled &&
+    !isProviderUsable(activeProviderStatus) &&
+    fallbackProvider === null;
   useEffect(() => {
     if (!activeThread || !shouldSelectFallbackProvider || !fallbackProvider) return;
-    const model = getDefaultModel(fallbackProvider);
+    const latestContext = latestProviderFallbackContextRef.current;
+    const latestProbe = providerFallbackProbesRef.current.get(activeThread.id);
+    if (
+      latestContext.threadId !== activeThread.id ||
+      latestContext.selectedProvider !== selectedProvider ||
+      latestContext.hasThreadStarted ||
+      providerFallbackSendAttemptRef.current?.threadId === activeThread.id ||
+      latestProbe?.providerAtStart !== selectedProvider ||
+      latestProbe.state !== "settled"
+    ) {
+      return;
+    }
+    const model =
+      composerDraft.modelSelectionByProvider[fallbackProvider]?.model ??
+      getDefaultModel(fallbackProvider);
     if (!model) return;
     setComposerDraftModelSelection(activeThread.id, {
       provider: fallbackProvider,
@@ -3958,7 +4030,10 @@ export default function ChatView({
     });
   }, [
     activeThread,
+    composerDraft.modelSelectionByProvider,
     fallbackProvider,
+    providerFallbackProbeRevision,
+    selectedProvider,
     setComposerDraftModelSelection,
     shouldSelectFallbackProvider,
   ]);
@@ -3975,7 +4050,6 @@ export default function ChatView({
     () => findProviderStatus(providerStatuses, "codex"),
     [providerStatuses],
   );
-  const refreshProviderStatuses = useRefreshProviderStatusesNow();
   const activeProjectCwd = activeProject?.cwd ?? null;
   const activeThreadWorktreePath = isStudioContainer ? null : (activeThread?.worktreePath ?? null);
   const hasNativeUserMessages = useMemo(
@@ -7333,213 +7407,799 @@ export default function ChatView({
     ) {
       return false;
     }
-    if (!queuedTurn) {
-      sendPreflightInFlightRef.current = true;
-      await waitForPendingComposerImages();
-      sendPreflightInFlightRef.current = false;
-    }
-    if (activePendingProgress) {
-      const activeQuestion = activePendingProgress.activeQuestion;
-      const liveComposerSnapshot = composerEditorRef.current?.readSnapshot() ?? null;
-      const livePendingAnswerText = liveComposerSnapshot?.value ?? promptRef.current;
-      const currentDraftAnswer =
-        activePendingUserInputKey && activeQuestion
-          ? pendingUserInputAnswersByRequestIdRef.current[activePendingUserInputKey]?.[
-              activeQuestion.id
-            ]
-          : undefined;
-      const answerOverrides =
-        activeQuestion && livePendingAnswerText.trim().length > 0
-          ? {
-              [activeQuestion.id]: setPendingUserInputCustomAnswer(
-                currentDraftAnswer,
-                livePendingAnswerText,
-              ),
-            }
-          : undefined;
-      if (activePendingUserInputKey && answerOverrides) {
-        const nextRequestAnswers = {
-          ...pendingUserInputAnswersByRequestIdRef.current[activePendingUserInputKey],
-          ...answerOverrides,
-        };
-        pendingUserInputAnswersByRequestIdRef.current = {
-          ...pendingUserInputAnswersByRequestIdRef.current,
-          [activePendingUserInputKey]: nextRequestAnswers,
-        };
-        setPendingUserInputAnswersByRequestId((existing) => ({
-          ...existing,
-          [activePendingUserInputKey]: nextRequestAnswers,
-        }));
+    const providerFallbackSendAttempt = {
+      threadId: activeThread.id,
+      token: Symbol("provider-fallback-send-attempt"),
+    };
+    providerFallbackSendAttemptRef.current = providerFallbackSendAttempt;
+    try {
+      if (!queuedTurn) {
+        sendPreflightInFlightRef.current = true;
+        await waitForPendingComposerImages();
+        sendPreflightInFlightRef.current = false;
       }
-      return lateSendHandlers.advanceActivePendingUserInput(answerOverrides);
-    }
-    const queuedChatTurn = queuedTurn ?? null;
-    const liveComposerSnapshot =
-      queuedChatTurn === null ? (composerEditorRef.current?.readSnapshot() ?? null) : null;
-    let promptForSend = queuedChatTurn?.prompt ?? liveComposerSnapshot?.value ?? promptRef.current;
-    let composerImagesForSend =
-      queuedChatTurn?.images ??
-      useComposerDraftStore.getState().draftsByThreadId[activeThread.id]?.images ??
-      composerImages;
-    // AppSnap captures persist as IndexedDB blobs and hydrate into `images`
-    // asynchronously (see AppSnapCoordinator). Right after a reload the user can
-    // hit send before that hydration finishes; without this, the not-yet-hydrated
-    // capture would be silently dropped from the message and then have its blob
-    // deleted when the composer clears after send. Live sends only: a queued turn
-    // already captured a fully-resolved image snapshot when it was queued.
-    if (queuedChatTurn === null) {
-      const pendingBlobAttachments = findPendingBlobComposerAttachments({
-        persistedAttachments:
-          useComposerDraftStore.getState().draftsByThreadId[activeThread.id]
-            ?.persistedAttachments ?? [],
-        images: composerImagesForSend,
-      });
-      if (pendingBlobAttachments.length > 0) {
-        const hydratedPendingImages =
-          await hydratePendingBlobComposerAttachments(pendingBlobAttachments);
-        if (hydratedPendingImages.length > 0) {
-          composerImagesForSend = [...composerImagesForSend, ...hydratedPendingImages];
+      if (activePendingProgress) {
+        const activeQuestion = activePendingProgress.activeQuestion;
+        const liveComposerSnapshot = composerEditorRef.current?.readSnapshot() ?? null;
+        const livePendingAnswerText = liveComposerSnapshot?.value ?? promptRef.current;
+        const currentDraftAnswer =
+          activePendingUserInputKey && activeQuestion
+            ? pendingUserInputAnswersByRequestIdRef.current[activePendingUserInputKey]?.[
+                activeQuestion.id
+              ]
+            : undefined;
+        const answerOverrides =
+          activeQuestion && livePendingAnswerText.trim().length > 0
+            ? {
+                [activeQuestion.id]: setPendingUserInputCustomAnswer(
+                  currentDraftAnswer,
+                  livePendingAnswerText,
+                ),
+              }
+            : undefined;
+        if (activePendingUserInputKey && answerOverrides) {
+          const nextRequestAnswers = {
+            ...pendingUserInputAnswersByRequestIdRef.current[activePendingUserInputKey],
+            ...answerOverrides,
+          };
+          pendingUserInputAnswersByRequestIdRef.current = {
+            ...pendingUserInputAnswersByRequestIdRef.current,
+            [activePendingUserInputKey]: nextRequestAnswers,
+          };
+          setPendingUserInputAnswersByRequestId((existing) => ({
+            ...existing,
+            [activePendingUserInputKey]: nextRequestAnswers,
+          }));
+        }
+        return lateSendHandlers.advanceActivePendingUserInput(answerOverrides);
+      }
+      const queuedChatTurn = queuedTurn ?? null;
+      const liveComposerSnapshot =
+        queuedChatTurn === null ? (composerEditorRef.current?.readSnapshot() ?? null) : null;
+      let promptForSend =
+        queuedChatTurn?.prompt ?? liveComposerSnapshot?.value ?? promptRef.current;
+      let composerImagesForSend =
+        queuedChatTurn?.images ??
+        useComposerDraftStore.getState().draftsByThreadId[activeThread.id]?.images ??
+        composerImages;
+      // AppSnap captures persist as IndexedDB blobs and hydrate into `images`
+      // asynchronously (see AppSnapCoordinator). Right after a reload the user can
+      // hit send before that hydration finishes; without this, the not-yet-hydrated
+      // capture would be silently dropped from the message and then have its blob
+      // deleted when the composer clears after send. Live sends only: a queued turn
+      // already captured a fully-resolved image snapshot when it was queued.
+      if (queuedChatTurn === null) {
+        const pendingBlobAttachments = findPendingBlobComposerAttachments({
+          persistedAttachments:
+            useComposerDraftStore.getState().draftsByThreadId[activeThread.id]
+              ?.persistedAttachments ?? [],
+          images: composerImagesForSend,
+        });
+        if (pendingBlobAttachments.length > 0) {
+          const hydratedPendingImages =
+            await hydratePendingBlobComposerAttachments(pendingBlobAttachments);
+          if (hydratedPendingImages.length > 0) {
+            composerImagesForSend = [...composerImagesForSend, ...hydratedPendingImages];
+          }
         }
       }
-    }
-    const composerFilesForSend = queuedChatTurn?.files ?? composerFiles;
-    const composerAssistantSelectionsForSend =
-      queuedChatTurn?.assistantSelections ?? composerAssistantSelections;
-    const composerBrowserAnnotationsForSend =
-      queuedChatTurn?.browserAnnotations ?? composerBrowserAnnotations;
-    const composerFileCommentsForSend = queuedChatTurn?.fileComments ?? composerFileComments;
-    const composerTerminalContextsForSend =
-      queuedChatTurn?.terminalContexts ?? composerTerminalContexts;
-    const composerPastedTextsForSend = queuedChatTurn?.pastedTexts ?? composerPastedTexts;
-    const selectedComposerSkillsForSend =
-      queuedChatTurn?.skills ?? selectedComposerSkillsRef.current;
-    const selectedComposerMentionsForSend =
-      queuedChatTurn?.mentions ?? selectedComposerMentionsRef.current;
-    const selectedProviderForSend = queuedChatTurn?.selectedProvider ?? selectedProvider;
-    const selectedModelForSend = queuedChatTurn?.selectedModel ?? selectedModel;
-    const selectedPromptEffortForSend =
-      queuedChatTurn?.selectedPromptEffort ?? selectedPromptEffort;
-    const selectedModelSelectionForSend = queuedChatTurn?.modelSelection ?? selectedModelSelection;
-    const providerOptionsForDispatchForSend =
-      queuedChatTurn?.providerOptionsForDispatch ?? providerOptionsForDispatch;
-    const runtimeModeForSend = queuedChatTurn?.runtimeMode ?? runtimeMode;
-    let interactionModeForSend = queuedChatTurn?.interactionMode ?? interactionMode;
-    const envModeForSend = queuedChatTurn?.envMode ?? envMode;
-    const {
-      trimmedPrompt: trimmed,
-      sendableTerminalContexts: sendableComposerTerminalContexts,
-      expiredTerminalContextCount,
-      sendablePastedTexts: sendableComposerPastedTexts,
-      hasSendableContent,
-    } = deriveComposerSendState({
-      prompt: promptForSend,
-      imageCount: composerImagesForSend.length,
-      fileCount: composerFilesForSend.length,
-      assistantSelectionCount: composerAssistantSelectionsForSend.length,
-      browserAnnotationCount: composerBrowserAnnotationsForSend.length,
-      fileCommentCount: composerFileCommentsForSend.length,
-      terminalContexts: composerTerminalContextsForSend,
-      pastedTexts: composerPastedTextsForSend,
-    });
-    let trimmedPromptForSend = trimmed;
-    const restoredQueuedPlanDraftSource =
-      queuedChatTurn === null &&
-      restoredQueuedSourceProposedPlanRef.current?.threadId === activeThread.id &&
-      composerPromptStillMatchesRestoredQueuedDraft(
-        restoredQueuedSourceProposedPlanRef.current.restoredPrompt,
-        promptForSend,
-      )
-        ? restoredQueuedSourceProposedPlanRef.current
-        : null;
-    const isLivePlanFollowUpSubmission =
-      queuedChatTurn === null &&
-      restoredQueuedPlanDraftSource === null &&
-      showPlanFollowUpPrompt &&
-      activeProposedPlan !== null;
-    const hasStructuredPlanFollowUpContent =
-      composerImagesForSend.length > 0 ||
-      composerFilesForSend.length > 0 ||
-      composerAssistantSelectionsForSend.length > 0 ||
-      composerBrowserAnnotationsForSend.length > 0 ||
-      composerFileCommentsForSend.length > 0 ||
-      sendableComposerTerminalContexts.length > 0 ||
-      sendableComposerPastedTexts.length > 0;
-    // Queued chat turns already captured their intended mode. Live plan follow-ups
-    // with attachments must use the normal send path so references are preserved.
-    if (isLivePlanFollowUpSubmission) {
-      const followUp = resolvePlanFollowUpSubmission({
-        draftText: trimmed,
-        planMarkdown: activeProposedPlan.planMarkdown,
+      const composerFilesForSend = queuedChatTurn?.files ?? composerFiles;
+      const composerAssistantSelectionsForSend =
+        queuedChatTurn?.assistantSelections ?? composerAssistantSelections;
+      const composerBrowserAnnotationsForSend =
+        queuedChatTurn?.browserAnnotations ?? composerBrowserAnnotations;
+      const composerFileCommentsForSend = queuedChatTurn?.fileComments ?? composerFileComments;
+      const composerTerminalContextsForSend =
+        queuedChatTurn?.terminalContexts ?? composerTerminalContexts;
+      const composerPastedTextsForSend = queuedChatTurn?.pastedTexts ?? composerPastedTexts;
+      const selectedComposerSkillsForSend =
+        queuedChatTurn?.skills ?? selectedComposerSkillsRef.current;
+      const selectedComposerMentionsForSend =
+        queuedChatTurn?.mentions ?? selectedComposerMentionsRef.current;
+      const selectedProviderForSend = queuedChatTurn?.selectedProvider ?? selectedProvider;
+      const selectedModelForSend = queuedChatTurn?.selectedModel ?? selectedModel;
+      const selectedPromptEffortForSend =
+        queuedChatTurn?.selectedPromptEffort ?? selectedPromptEffort;
+      const selectedModelSelectionForSend =
+        queuedChatTurn?.modelSelection ?? selectedModelSelection;
+      const providerOptionsForDispatchForSend =
+        queuedChatTurn?.providerOptionsForDispatch ?? providerOptionsForDispatch;
+      const runtimeModeForSend = queuedChatTurn?.runtimeMode ?? runtimeMode;
+      let interactionModeForSend = queuedChatTurn?.interactionMode ?? interactionMode;
+      const envModeForSend = queuedChatTurn?.envMode ?? envMode;
+      const {
+        trimmedPrompt: trimmed,
+        sendableTerminalContexts: sendableComposerTerminalContexts,
+        expiredTerminalContextCount,
+        sendablePastedTexts: sendableComposerPastedTexts,
+        hasSendableContent,
+      } = deriveComposerSendState({
+        prompt: promptForSend,
+        imageCount: composerImagesForSend.length,
+        fileCount: composerFilesForSend.length,
+        assistantSelectionCount: composerAssistantSelectionsForSend.length,
+        browserAnnotationCount: composerBrowserAnnotationsForSend.length,
+        fileCommentCount: composerFileCommentsForSend.length,
+        terminalContexts: composerTerminalContextsForSend,
+        pastedTexts: composerPastedTextsForSend,
       });
-      if (hasStructuredPlanFollowUpContent) {
-        promptForSend = followUp.text;
-        interactionModeForSend = followUp.interactionMode;
-        trimmedPromptForSend = followUp.text.trim();
-      } else {
-        if (hasQueueableLiveTurn && dispatchMode === "queue") {
+      let trimmedPromptForSend = trimmed;
+      const restoredQueuedPlanDraftSource =
+        queuedChatTurn === null &&
+        restoredQueuedSourceProposedPlanRef.current?.threadId === activeThread.id &&
+        composerPromptStillMatchesRestoredQueuedDraft(
+          restoredQueuedSourceProposedPlanRef.current.restoredPrompt,
+          promptForSend,
+        )
+          ? restoredQueuedSourceProposedPlanRef.current
+          : null;
+      const isLivePlanFollowUpSubmission =
+        queuedChatTurn === null &&
+        restoredQueuedPlanDraftSource === null &&
+        showPlanFollowUpPrompt &&
+        activeProposedPlan !== null;
+      const hasStructuredPlanFollowUpContent =
+        composerImagesForSend.length > 0 ||
+        composerFilesForSend.length > 0 ||
+        composerAssistantSelectionsForSend.length > 0 ||
+        composerBrowserAnnotationsForSend.length > 0 ||
+        composerFileCommentsForSend.length > 0 ||
+        sendableComposerTerminalContexts.length > 0 ||
+        sendableComposerPastedTexts.length > 0;
+      // Queued chat turns already captured their intended mode. Live plan follow-ups
+      // with attachments must use the normal send path so references are preserved.
+      if (isLivePlanFollowUpSubmission) {
+        const followUp = resolvePlanFollowUpSubmission({
+          draftText: trimmed,
+          planMarkdown: activeProposedPlan.planMarkdown,
+        });
+        if (hasStructuredPlanFollowUpContent) {
+          promptForSend = followUp.text;
+          interactionModeForSend = followUp.interactionMode;
+          trimmedPromptForSend = followUp.text.trim();
+        } else {
+          if (hasQueueableLiveTurn && dispatchMode === "queue") {
+            clearComposerInput(activeThread.id);
+            scheduleComposerFocus();
+            enqueueQueuedComposerTurn(activeThread.id, {
+              id: randomUUID(),
+              kind: "plan-follow-up",
+              createdAt: new Date().toISOString(),
+              previewText: followUp.text.trim(),
+              text: followUp.text,
+              interactionMode: followUp.interactionMode,
+              selectedProvider,
+              selectedModel,
+              selectedPromptEffort,
+              modelSelection: selectedModelSelection,
+              ...(providerOptionsForDispatch ? { providerOptionsForDispatch } : {}),
+              runtimeMode,
+            });
+            return true;
+          }
           clearComposerInput(activeThread.id);
           scheduleComposerFocus();
-          enqueueQueuedComposerTurn(activeThread.id, {
-            id: randomUUID(),
-            kind: "plan-follow-up",
-            createdAt: new Date().toISOString(),
-            previewText: followUp.text.trim(),
+          return lateSendHandlers.submitPlanFollowUp({
             text: followUp.text,
             interactionMode: followUp.interactionMode,
-            selectedProvider,
-            selectedModel,
-            selectedPromptEffort,
-            modelSelection: selectedModelSelection,
-            ...(providerOptionsForDispatch ? { providerOptionsForDispatch } : {}),
-            runtimeMode,
+            dispatchMode,
+          });
+        }
+      }
+      const hasNoStructuredComposerContext =
+        composerImagesForSend.length === 0 &&
+        composerFilesForSend.length === 0 &&
+        composerAssistantSelectionsForSend.length === 0 &&
+        composerBrowserAnnotationsForSend.length === 0 &&
+        composerFileCommentsForSend.length === 0 &&
+        sendableComposerTerminalContexts.length === 0 &&
+        sendableComposerPastedTexts.length === 0 &&
+        // Provider mentions are structured turn metadata, and automation definitions persist text only.
+        selectedComposerMentionsForSend.length === 0;
+      const hasPromptOnlySendableContent = hasNoStructuredComposerContext;
+      if (hasPromptOnlySendableContent) {
+        const handledSlashCommand =
+          await lateSendHandlers.handleStandaloneSlashCommand(trimmedPromptForSend);
+        if (handledSlashCommand) {
+          // A slash command (e.g. /clear) consumes the composer, so abandon any in-progress
+          // automation setup rather than leaving a stale banner/request behind.
+          pendingAutomationConversationRef.current = null;
+          setPendingAutomationConversation(null);
+          return true;
+        }
+      }
+      const sourceProposedPlanForSend =
+        queuedChatTurn?.sourceProposedPlan ??
+        restoredQueuedPlanDraftSource?.sourceProposedPlan ??
+        (isLivePlanFollowUpSubmission && activeProposedPlan && interactionModeForSend === "default"
+          ? buildSourceProposedPlanReference({
+              threadId: activeThread.id,
+              proposedPlan: activeProposedPlan,
+            })
+          : undefined);
+      if (!hasSendableContent) {
+        if (expiredTerminalContextCount > 0) {
+          const toastCopy = buildExpiredTerminalContextToastCopy(
+            expiredTerminalContextCount,
+            "empty",
+          );
+          toastManager.add({
+            type: "warning",
+            title: toastCopy.title,
+            description: toastCopy.description,
+          });
+        }
+        return false;
+      }
+      if (!activeProject) {
+        toastManager.add({
+          type: "error",
+          title: "Workspace is still connecting",
+          description: "Wait a moment for the Lattice project to reconnect, then try again.",
+        });
+        return false;
+      }
+      if (queuedChatTurn === null && !isLivePlanFollowUpSubmission) {
+        const conversation = pendingAutomationConversation;
+        // While gathering missing details, fold the reply into the cleaned request so it
+        // re-resolves as a whole rather than parsing the bare answer (and never re-parses
+        // "could you create an automation" scaffolding as the task).
+        const messageForAutomation = conversation
+          ? `${conversation.accumulatedMessage}\n${trimmedPromptForSend}`
+          : trimmedPromptForSend;
+        const automationRequest = await resolveComposerAutomationRequest({
+          message: messageForAutomation,
+          cwd: threadWorkspaceCwd ?? activeProject.cwd,
+          generateIntent: (request) => api.server.generateAutomationIntent(request),
+        });
+        // Drop a stale resolve: bail if the user switched threads, or cancelled/changed the
+        // setup, while generateAutomationIntent was awaiting.
+        if (
+          activeThreadIdRef.current !== threadId ||
+          pendingAutomationConversationRef.current !== conversation ||
+          (!hasLiveTurn && hasLiveTurnRef.current)
+        ) {
+          return true;
+        }
+        if (automationRequest.type !== "normal-chat") {
+          if (automationRequest.type === "needs-clarification") {
+            // Conversational setup only runs for prompt-only sends while no turn is live:
+            // clearing the composer would drop attachments/mentions Cancel can't restore,
+            // and ephemeral setup bubbles must not anchor a running turn's work rows.
+            if (!hasPromptOnlySendableContent || hasLiveTurn) {
+              toastManager.add({
+                type: "warning",
+                title: "Automation needs a bit more detail",
+                description:
+                  automationRequest.reason ??
+                  'Add what it should do and how often, e.g. "every weekday at 9am, summarize my PRs".',
+              });
+              return true;
+            }
+            // Render the exchange in-thread: echo the user's words as a bubble and ask for
+            // what's missing as an assistant bubble. Nothing reaches a provider; the cleaned
+            // automationMessage accumulates for the next re-resolve and for Cancel's restore.
+            const question = automationClarificationPrompt(automationRequest.missingFields);
+            const priorBubbles = conversation?.bubbles ?? [];
+            // Drop the submitted request from the composer (it is captured in
+            // accumulatedMessage, so re-folding it would duplicate the scaffold) while
+            // preserving anything typed *after* it during the async resolve.
+            const liveDraft = promptRef.current.trimStart();
+            const leftover = liveDraft.startsWith(trimmedPromptForSend)
+              ? liveDraft.slice(trimmedPromptForSend.length).trimStart()
+              : liveDraft;
+            promptRef.current = leftover;
+            setComposerDraftPrompt(activeThread.id, leftover);
+            setComposerTrigger(null);
+            // Bring the new question into view even if the user had scrolled up.
+            armTranscriptAutoFollow(activeThread.id, true);
+            setPendingAutomationConversation({
+              threadId: activeThread.id,
+              accumulatedMessage: automationRequest.automationMessage,
+              bubbles: [
+                ...priorBubbles,
+                makeAutomationSetupBubble("user", trimmedPromptForSend),
+                makeAutomationSetupBubble("assistant", question),
+              ],
+            });
+            return true;
+          }
+
+          pendingAutomationConversationRef.current = null;
+          setPendingAutomationConversation(null);
+          const automationIntent = automationRequest.resolution.intent;
+          const automationTargetThreadId =
+            automationIntent.executionScope === "thread" ? activeThread.id : null;
+          const automationDraft = buildComposerAutomationDraft({
+            resolution: automationRequest.resolution,
+            projectId: activeProject.id,
+            projectModelSelection: automationProjectModelSelection(
+              automationProjects,
+              activeProject.id,
+            ),
+            selectedModelSelection: selectedModelSelectionForSend,
+            targetThreadId: automationTargetThreadId,
+            hasEphemeralContext: !hasPromptOnlySendableContent,
+          });
+          // A multi-turn setup always confirms before creating, so the user reviews the
+          // parsed task/schedule (and any scaffolding the parser kept) rather than it
+          // silently auto-creating a recurring job.
+          if (automationDraft.needsDraftReview || conversation !== null) {
+            if (conversation !== null) {
+              // Keep the full multi-turn request in the composer so dismissing the review
+              // dialog doesn't lose it (the single-turn path likewise leaves its text).
+              // Restore only the text; any attachments/mentions on the final reply stay.
+              const liveDraft = promptRef.current.trimStart();
+              const leftover = liveDraft.startsWith(trimmedPromptForSend)
+                ? liveDraft.slice(trimmedPromptForSend.length).trimStart()
+                : liveDraft;
+              const restoredPrompt = leftover
+                ? `${messageForAutomation}\n${leftover}`
+                : messageForAutomation;
+              promptRef.current = restoredPrompt;
+              setComposerDraftPrompt(activeThread.id, restoredPrompt);
+            }
+            setAutomationEditingDefinition(null);
+            setAutomationDraftWarningContext(automationDraft.warningContext);
+            setAutomationDraftForm(automationDraft.form);
+            setAutomationDraftWarnings(automationDraft.warnings);
+            setAcknowledgedAutomationWarnings(automationDraft.acknowledgedWarningIds);
+            setAutomationDraftOpen(true);
+            return true;
+          }
+          const preparedAutomation = await prepareAutomationFormForCreate(automationDraft.form);
+          if (!preparedAutomation) {
+            return true;
+          }
+          await createAutomationFromForm({
+            form: preparedAutomation.form,
+            warnings: automationDraft.warnings,
+            acknowledgedWarningIds: automationDraft.acknowledgedWarningIds,
+            activityThreadId: preparedAutomation.activityThreadId,
+            ...(providerOptionsForDispatchForSend
+              ? { providerOptions: providerOptionsForDispatchForSend }
+              : {}),
           });
           return true;
         }
-        clearComposerInput(activeThread.id);
-        scheduleComposerFocus();
-        return lateSendHandlers.submitPlanFollowUp({
-          text: followUp.text,
-          interactionMode: followUp.interactionMode,
-          dispatchMode,
+        if (conversation) {
+          // The combined text no longer reads as an automation; abandon setup and let
+          // this message send as a normal chat turn instead of looping on the question.
+          pendingAutomationConversationRef.current = null;
+          setPendingAutomationConversation(null);
+        }
+      }
+      sendPreflightInFlightRef.current = true;
+      const sendProviderAvailability = await resolveProviderSendAvailabilityWithRefresh({
+        provider: selectedModelSelectionForSend.provider,
+        statuses: providerStatuses,
+        refreshStatuses: () => refreshProviderStatuses({ silent: true }),
+      }).finally(() => {
+        sendPreflightInFlightRef.current = false;
+      });
+      if (!sendProviderAvailability.usable) {
+        toastManager.add({
+          type: "error",
+          title: sendProviderAvailability.unavailableReason,
+        });
+        return false;
+      }
+
+      const browserPromptAttachment: BrowserPromptAttachmentResolution =
+        await maybeResolveBrowserPromptAttachment({
+          api,
+          threadId: activeThread.id,
+          prompt: promptForSend,
+        }).catch(
+          (): BrowserPromptAttachmentResolution => ({
+            requested: false,
+            image: null,
+          }),
+        );
+      if (browserPromptAttachment.image) {
+        const nextAttachmentCount =
+          composerImagesForSend.length +
+          composerFilesForSend.length +
+          composerAssistantSelectionsForSend.length +
+          (browserPromptAttachment.image ? 1 : 0);
+        if (nextAttachmentCount <= PROVIDER_SEND_TURN_MAX_ATTACHMENTS) {
+          composerImagesForSend = [...composerImagesForSend, browserPromptAttachment.image];
+        } else {
+          toastManager.add({
+            type: "warning",
+            title: `You can attach up to ${PROVIDER_SEND_TURN_MAX_ATTACHMENTS} references per message.`,
+            description:
+              "The current browser screenshot was skipped because this message is already at the attachment limit.",
+          });
+        }
+      } else if (browserPromptAttachment.requested) {
+        const description =
+          browserPromptAttachment.reason === "no-open-browser"
+            ? "Open the in-app browser first, then try again."
+            : browserPromptAttachment.reason === "no-active-tab"
+              ? "The in-app browser has no active tab to capture yet."
+              : browserPromptAttachment.reason === "attachment-processing-failed"
+                ? "The browser screenshot could not be optimized for attachment."
+                : "The current browser context could not be attached.";
+        toastManager.add({
+          type: "warning",
+          title: "Couldn’t attach the in-app browser context",
+          description,
         });
       }
-    }
-    const hasNoStructuredComposerContext =
-      composerImagesForSend.length === 0 &&
-      composerFilesForSend.length === 0 &&
-      composerAssistantSelectionsForSend.length === 0 &&
-      composerBrowserAnnotationsForSend.length === 0 &&
-      composerFileCommentsForSend.length === 0 &&
-      sendableComposerTerminalContexts.length === 0 &&
-      sendableComposerPastedTexts.length === 0 &&
-      // Provider mentions are structured turn metadata, and automation definitions persist text only.
-      selectedComposerMentionsForSend.length === 0;
-    const hasPromptOnlySendableContent = hasNoStructuredComposerContext;
-    if (hasPromptOnlySendableContent) {
-      const handledSlashCommand =
-        await lateSendHandlers.handleStandaloneSlashCommand(trimmedPromptForSend);
-      if (handledSlashCommand) {
-        // A slash command (e.g. /clear) consumes the composer, so abandon any in-progress
-        // automation setup rather than leaving a stale banner/request behind.
-        pendingAutomationConversationRef.current = null;
-        setPendingAutomationConversation(null);
+
+      if (hasQueueableLiveTurn && dispatchMode === "queue" && queuedChatTurn === null) {
+        clearComposerInput(activeThread.id);
+        scheduleComposerFocus();
+        const queuedImagesForPersistence = await Promise.all(
+          composerImagesForSend.map(async (image) => {
+            try {
+              return {
+                ...image,
+                previewUrl: await readFileAsDataUrl(image.file),
+              };
+            } catch {
+              return image;
+            }
+          }),
+        );
+        enqueueQueuedComposerTurn(activeThread.id, {
+          id: randomUUID(),
+          kind: "chat",
+          createdAt: new Date().toISOString(),
+          previewText: buildQueuedComposerPreviewText({
+            trimmedPrompt: trimmed,
+            images: queuedImagesForPersistence,
+            files: composerFilesForSend,
+            assistantSelections: composerAssistantSelectionsForSend,
+            browserAnnotations: composerBrowserAnnotationsForSend,
+            terminalContexts: sendableComposerTerminalContexts,
+            fileComments: composerFileCommentsForSend,
+            pastedTexts: sendableComposerPastedTexts,
+          }),
+          prompt: promptForSend,
+          images: queuedImagesForPersistence,
+          files: composerFilesForSend,
+          assistantSelections: composerAssistantSelectionsForSend,
+          browserAnnotations: composerBrowserAnnotationsForSend,
+          fileComments: composerFileCommentsForSend,
+          terminalContexts: sendableComposerTerminalContexts,
+          pastedTexts: sendableComposerPastedTexts,
+          skills: selectedComposerSkillsForSend,
+          mentions: selectedComposerMentionsForSend,
+          selectedProvider: selectedProviderForSend,
+          selectedModel: selectedModelForSend,
+          selectedPromptEffort: selectedPromptEffortForSend,
+          modelSelection: selectedModelSelectionForSend,
+          ...(providerOptionsForDispatchForSend
+            ? { providerOptionsForDispatch: providerOptionsForDispatchForSend }
+            : {}),
+          ...(sourceProposedPlanForSend ? { sourceProposedPlan: sourceProposedPlanForSend } : {}),
+          runtimeMode: runtimeModeForSend,
+          interactionMode: interactionModeForSend,
+          envMode: envModeForSend,
+        });
         return true;
       }
-    }
-    const sourceProposedPlanForSend =
-      queuedChatTurn?.sourceProposedPlan ??
-      restoredQueuedPlanDraftSource?.sourceProposedPlan ??
-      (isLivePlanFollowUpSubmission && activeProposedPlan && interactionModeForSend === "default"
-        ? buildSourceProposedPlanReference({
-            threadId: activeThread.id,
-            proposedPlan: activeProposedPlan,
-          })
-        : undefined);
-    if (!hasSendableContent) {
+      const threadIdForSend = activeThread.id;
+      const isFirstMessage = !isServerThread || !hasNativeUserMessages;
+      const firstSendCreatedAt = new Date();
+      let firstComposerImageNameForTitle: string | null = null;
+      if (composerImagesForSend.length > 0) {
+        firstComposerImageNameForTitle = composerImagesForSend[0]?.name ?? null;
+      }
+      let titleSeed = trimmedPromptForSend;
+      if (!titleSeed) {
+        if (firstComposerImageNameForTitle) {
+          titleSeed = `Image: ${firstComposerImageNameForTitle}`;
+        } else if (composerFilesForSend.length > 0) {
+          titleSeed = `File: ${composerFilesForSend[0]?.name ?? "attachment"}`;
+        } else if (composerAssistantSelectionsForSend.length > 0) {
+          titleSeed = formatAssistantSelectionTitleSeed(composerAssistantSelectionsForSend.length);
+        } else if (composerBrowserAnnotationsForSend.length > 0) {
+          titleSeed = formatBrowserAnnotationLabel(composerBrowserAnnotationsForSend[0]!);
+        } else if (sendableComposerTerminalContexts.length > 0) {
+          titleSeed = formatTerminalContextLabel(sendableComposerTerminalContexts[0]!);
+        } else if (composerFileCommentsForSend.length > 0) {
+          titleSeed = formatFileCommentTitleSeed(composerFileCommentsForSend.length);
+        } else if (sendableComposerPastedTexts.length > 0) {
+          titleSeed =
+            formatPastedTextTitleSeed(sendableComposerPastedTexts) ?? GENERIC_CHAT_THREAD_TITLE;
+        } else {
+          titleSeed = GENERIC_CHAT_THREAD_TITLE;
+        }
+      }
+      // Keep the optimistic label short while the server asks Codex for a better summary.
+      const title = buildPromptThreadTitleFallback(titleSeed);
+      const currentStoreState = useStore.getState();
+      // Keep an optimistically selected Space across the command/snapshot race. The server
+      // validates this best-effort target and degrades genuinely stale/deleted ids to Void.
+      const activeSpaceIdForSend = readActiveSpaceId();
+      const firstSendTarget = resolveFirstSendTarget({
+        activeProject,
+        chatWorkspaceRoot,
+        createdAt: firstSendCreatedAt,
+        isFirstMessage,
+        isHomeChatContainer,
+        isStudioContainer,
+        projects: currentStoreState.projects,
+        // Studio reference folders change the thread cwd without moving the chat out of
+        // the managed Studio project. Home-chat folder selection keeps its project routing.
+        selectedWorkspaceRoot: isHomeChatContainer ? (resolvedThreadWorktreePath ?? null) : null,
+        title,
+        titleSeed,
+      });
+      let {
+        targetProjectId: targetProjectIdForSend,
+        targetProjectKind: targetProjectKindForSend,
+        targetProjectCwd: targetProjectCwdForSend,
+        targetProjectScripts: targetProjectScriptsForSend,
+        targetProjectDefaultModelSelection: targetProjectDefaultModelSelectionForSend,
+      } = firstSendTarget.kind === "create-project"
+        ? {
+            targetProjectId: activeProject.id,
+            targetProjectKind: activeProject.kind,
+            targetProjectCwd: activeProject.cwd,
+            targetProjectScripts: activeProject.kind === "project" ? activeProject.scripts : [],
+            targetProjectDefaultModelSelection: activeProject.defaultModelSelection ?? null,
+          }
+        : firstSendTarget.target;
+      let nextRuntimeModeForSend = runtimeModeForSend;
+      let nextThreadEnvMode = envModeForSend;
+      let nextThreadBranch = isStudioContainer ? null : activeThread.branch;
+      let nextThreadWorktreePath = isStudioContainer ? null : activeThread.worktreePath;
+      let nextThreadWorkingDirectory = isStudioContainer
+        ? resolvedThreadWorkingDirectory
+        : (activeThread.workingDirectory ?? null);
+      let nextAssociatedWorktreePath = isStudioContainer
+        ? null
+        : (activeThread.associatedWorktreePath ?? null);
+      let nextAssociatedWorktreeBranch = isStudioContainer
+        ? null
+        : (activeThread.associatedWorktreeBranch ?? null);
+      let nextAssociatedWorktreeRef = isStudioContainer
+        ? null
+        : (activeThread.associatedWorktreeRef ?? null);
+
+      if (isFirstMessage && isContainerLandingProject && firstSendTarget.kind !== "current") {
+        if (firstSendTarget.kind === "create-project") {
+          const projectId = newProjectId();
+          const createdAt = firstSendCreatedAt.toISOString();
+          // Managed chat rows stay global; a folder mention creates an ordinary project and
+          // should inherit the Space where the first send originated. Resolved before the
+          // `try`: a value block inside a try body makes React Compiler bail out on the whole
+          // component.
+          const createProjectSpaceFields =
+            firstSendTarget.creation.kind === "project" ? { spaceId: activeSpaceIdForSend } : {};
+          try {
+            await api.orchestration.dispatchCommand({
+              type: "project.create",
+              commandId: newCommandId(),
+              projectId,
+              kind: firstSendTarget.creation.kind,
+              title: firstSendTarget.creation.title,
+              workspaceRoot: firstSendTarget.creation.workspaceRoot,
+              createWorkspaceRootIfMissing: firstSendTarget.creation.createWorkspaceRootIfMissing,
+              defaultModelSelection: firstSendTarget.creation.defaultModelSelection,
+              ...createProjectSpaceFields,
+              createdAt,
+            });
+            targetProjectIdForSend = projectId;
+            targetProjectKindForSend = firstSendTarget.creation.kind;
+            targetProjectCwdForSend = firstSendTarget.creation.workspaceRoot;
+            targetProjectScriptsForSend = [];
+            targetProjectDefaultModelSelectionForSend =
+              firstSendTarget.creation.defaultModelSelection;
+          } catch (error) {
+            const description =
+              error instanceof Error ? error.message : "Failed to create the selected project.";
+            if (!isDuplicateProjectCreateError(description)) {
+              throw error;
+            }
+
+            // If the server already knows this workspace root, reuse that project and continue.
+            const { snapshot, project: recoveredProject } =
+              await waitForRecoverableProjectForDuplicateCreate({
+                message: description,
+                workspaceRoot: firstSendTarget.creation.workspaceRoot,
+                loadSnapshot: () => api.orchestration.getShellSnapshot().catch(() => null),
+              });
+            if (!snapshot || !recoveredProject) {
+              throw error;
+            }
+
+            syncServerShellSnapshot(snapshot);
+            targetProjectIdForSend = recoveredProject.id;
+            targetProjectKindForSend = recoveredProject.kind ?? firstSendTarget.creation.kind;
+            targetProjectCwdForSend = recoveredProject.workspaceRoot;
+            targetProjectScriptsForSend =
+              (recoveredProject.kind ?? firstSendTarget.creation.kind) === "project"
+                ? [...recoveredProject.scripts]
+                : [];
+            targetProjectDefaultModelSelectionForSend =
+              recoveredProject.defaultModelSelection ??
+              firstSendTarget.creation.defaultModelSelection;
+          }
+        }
+
+        clearProjectDraftThreadId(targetProjectIdForSend);
+        setDraftThreadContext(threadIdForSend, {
+          projectId: targetProjectIdForSend,
+          envMode: "local",
+          worktreePath: null,
+          workingDirectory: null,
+          branch: null,
+        });
+        nextThreadEnvMode = "local";
+        nextThreadBranch = null;
+        nextThreadWorktreePath = null;
+        nextThreadWorkingDirectory = null;
+        nextAssociatedWorktreePath = null;
+        nextAssociatedWorktreeBranch = null;
+        nextAssociatedWorktreeRef = null;
+      }
+
+      // The branch query can finish just after the user chooses New worktree. Use the
+      // resolved active branch at send time instead of rejecting an otherwise valid fast send.
+      if (
+        isFirstMessage &&
+        nextThreadEnvMode === "worktree" &&
+        !nextThreadWorktreePath &&
+        !nextThreadBranch
+      ) {
+        nextThreadBranch = activeRootBranch ?? null;
+      }
+
+      const baseBranchForWorktree =
+        isFirstMessage && nextThreadEnvMode === "worktree" && !nextThreadWorktreePath
+          ? nextThreadBranch
+          : null;
+
+      // In worktree mode, require an explicit base branch so we don't silently
+      // fall back to local execution when branch selection is missing.
+      const shouldCreateWorktree =
+        isFirstMessage && nextThreadEnvMode === "worktree" && !nextThreadWorktreePath;
+      if (shouldCreateWorktree && !nextThreadBranch) {
+        setStoreThreadError(
+          threadIdForSend,
+          "Select a base branch before sending in New worktree mode.",
+        );
+        return false;
+      }
+
+      const setupScriptForWorktree = baseBranchForWorktree
+        ? setupProjectScript(targetProjectScriptsForSend)
+        : null;
+      const worktreeSetupScriptName = setupScriptForWorktree?.name ?? null;
+      const messageIdForSend = newMessageId();
+
+      sendInFlightRef.current = true;
+      beginLocalDispatch({
+        expectedUserMessageId: messageIdForSend,
+        ...(baseBranchForWorktree
+          ? { worktreeSetupStepId: "create-worktree", setupScriptName: worktreeSetupScriptName }
+          : {}),
+      });
+
+      const composerImagesSnapshot = [...composerImagesForSend];
+      const composerFilesSnapshot = [...composerFilesForSend];
+      const composerAssistantSelectionsSnapshot = [...composerAssistantSelectionsForSend];
+      const composerBrowserAnnotationsSnapshot = composerBrowserAnnotationsForSend.map(
+        (annotation) => ({
+          ...annotation,
+          source: { ...annotation.source },
+        }),
+      );
+      const composerFileCommentsSnapshot = [...composerFileCommentsForSend];
+      const composerTerminalContextsSnapshot = [...sendableComposerTerminalContexts];
+      const composerPastedTextsSnapshot = [...sendableComposerPastedTexts];
+      const composerSkillsSnapshot = [...selectedComposerSkillsForSend];
+      const composerMentionsSnapshot = [...selectedComposerMentionsForSend];
+      // Trailing blocks are appended innermost-to-outermost: assistant selections,
+      // terminal contexts, file comments, pasted text, then browser annotations
+      // (outermost). The display
+      // extractors unwrap them in the reverse order.
+      const messageTextForSend = appendBrowserAnnotationsToPrompt(
+        appendPastedTextsToPrompt(
+          appendFileCommentsToPrompt(
+            appendTerminalContextsToPrompt(
+              appendAssistantSelectionsToPrompt(promptForSend, composerAssistantSelectionsSnapshot),
+              composerTerminalContextsSnapshot,
+            ),
+            composerFileCommentsSnapshot,
+          ),
+          composerPastedTextsSnapshot,
+        ),
+        composerBrowserAnnotationsSnapshot,
+        messageIdForSend,
+      );
+      const messageCreatedAt = new Date().toISOString();
+      const outgoingTextSeed =
+        messageTextForSend ||
+        (composerImagesSnapshot.length > 0 ? IMAGE_ONLY_BOOTSTRAP_PROMPT : "");
+      const outgoingMessageText = appendLiveLatticeHostContext(
+        formatOutgoingComposerPrompt({
+          provider: selectedProviderForSend,
+          model: selectedModelForSend,
+          effort: selectedPromptEffortForSend,
+          text: outgoingTextSeed,
+        }),
+      );
+      const mentionedSkillsForSend = filterPromptSkillReferences(
+        outgoingMessageText,
+        selectedComposerSkillsForSend,
+        selectedProviderForSend,
+      );
+      const mentionedPluginMentionsForSend = filterPromptProviderMentionReferences(
+        outgoingMessageText,
+        selectedComposerMentionsForSend,
+      );
+      const turnAttachmentsPromise = stageUploadComposerAttachments({
+        threadId: threadIdForSend,
+        images: composerImagesSnapshot,
+        files: composerFilesSnapshot,
+        assistantSelections: composerAssistantSelectionsSnapshot,
+      });
+      const optimisticAttachments = [
+        ...composerAssistantSelectionsSnapshot,
+        ...composerImagesSnapshot.map((image) => ({
+          type: "image" as const,
+          id: image.id,
+          name: image.name,
+          mimeType: image.mimeType,
+          sizeBytes: image.sizeBytes,
+          previewUrl: image.previewUrl,
+        })),
+        ...composerFilesSnapshot.map((file) => ({
+          type: "file" as const,
+          id: file.id,
+          name: file.name,
+          mimeType: file.mimeType,
+          sizeBytes: file.sizeBytes,
+        })),
+      ];
+      // Sending the first message flips the centered empty landing into a normal
+      // transcript. Clear session-only landing overrides when default-open is enabled;
+      // otherwise keep the transition closed.
+      if (isCenteredEmptyLanding) {
+        setEnvironmentPanelPreferenceOpen(
+          resolveEnvironmentPanelPreferenceAfterFirstSend({
+            isCenteredEmptyLanding,
+            settingsDefaultOpen: settings.environmentPanelDefaultOpen,
+            currentPreferenceOpen: environmentPanelPreferenceOpen,
+          }),
+        );
+      }
+      setOptimisticUserMessages((existing) => [
+        ...existing,
+        {
+          id: messageIdForSend,
+          role: "user",
+          text: outgoingMessageText,
+          dispatchMode,
+          ...(optimisticAttachments.length > 0 ? { attachments: optimisticAttachments } : {}),
+          ...(mentionedSkillsForSend.length > 0 ? { skills: mentionedSkillsForSend } : {}),
+          ...(mentionedPluginMentionsForSend.length > 0
+            ? { mentions: mentionedPluginMentionsForSend }
+            : {}),
+          createdAt: messageCreatedAt,
+          streaming: false,
+          source: "native",
+        },
+      ]);
+      // Mark the transcript as anchored before the optimistic row lands. The tail
+      // anchor sizes the spacer that lets this message sit at the viewport top,
+      // and its hook owns the slide; auto-follow stays armed for bookkeeping but
+      // pauses until the in-flight flag clears.
+      armTranscriptAutoFollow(threadIdForSend, true);
+      tailAnchorScrollInFlightRef.current = true;
+      setTailAnchor({ threadId: threadIdForSend, messageId: messageIdForSend });
+
+      setThreadError(threadIdForSend, null);
       if (expiredTerminalContextCount > 0) {
         const toastCopy = buildExpiredTerminalContextToastCopy(
           expiredTerminalContextCount,
-          "empty",
+          "omitted",
         );
         toastManager.add({
           type: "warning",
@@ -7547,939 +8207,369 @@ export default function ChatView({
           description: toastCopy.description,
         });
       }
-      return false;
-    }
-    if (!activeProject) {
-      toastManager.add({
-        type: "error",
-        title: "Workspace is still connecting",
-        description: "Wait a moment for the Lattice project to reconnect, then try again.",
-      });
-      return false;
-    }
-    if (queuedChatTurn === null && !isLivePlanFollowUpSubmission) {
-      const conversation = pendingAutomationConversation;
-      // While gathering missing details, fold the reply into the cleaned request so it
-      // re-resolves as a whole rather than parsing the bare answer (and never re-parses
-      // "could you create an automation" scaffolding as the task).
-      const messageForAutomation = conversation
-        ? `${conversation.accumulatedMessage}\n${trimmedPromptForSend}`
-        : trimmedPromptForSend;
-      const automationRequest = await resolveComposerAutomationRequest({
-        message: messageForAutomation,
-        cwd: threadWorkspaceCwd ?? activeProject.cwd,
-        generateIntent: (request) => api.server.generateAutomationIntent(request),
-      });
-      // Drop a stale resolve: bail if the user switched threads, or cancelled/changed the
-      // setup, while generateAutomationIntent was awaiting.
-      if (
-        activeThreadIdRef.current !== threadId ||
-        pendingAutomationConversationRef.current !== conversation ||
-        (!hasLiveTurn && hasLiveTurnRef.current)
-      ) {
-        return true;
-      }
-      if (automationRequest.type !== "normal-chat") {
-        if (automationRequest.type === "needs-clarification") {
-          // Conversational setup only runs for prompt-only sends while no turn is live:
-          // clearing the composer would drop attachments/mentions Cancel can't restore,
-          // and ephemeral setup bubbles must not anchor a running turn's work rows.
-          if (!hasPromptOnlySendableContent || hasLiveTurn) {
-            toastManager.add({
-              type: "warning",
-              title: "Automation needs a bit more detail",
-              description:
-                automationRequest.reason ??
-                'Add what it should do and how often, e.g. "every weekday at 9am, summarize my PRs".',
-            });
-            return true;
-          }
-          // Render the exchange in-thread: echo the user's words as a bubble and ask for
-          // what's missing as an assistant bubble. Nothing reaches a provider; the cleaned
-          // automationMessage accumulates for the next re-resolve and for Cancel's restore.
-          const question = automationClarificationPrompt(automationRequest.missingFields);
-          const priorBubbles = conversation?.bubbles ?? [];
-          // Drop the submitted request from the composer (it is captured in
-          // accumulatedMessage, so re-folding it would duplicate the scaffold) while
-          // preserving anything typed *after* it during the async resolve.
-          const liveDraft = promptRef.current.trimStart();
-          const leftover = liveDraft.startsWith(trimmedPromptForSend)
-            ? liveDraft.slice(trimmedPromptForSend.length).trimStart()
-            : liveDraft;
-          promptRef.current = leftover;
-          setComposerDraftPrompt(activeThread.id, leftover);
-          setComposerTrigger(null);
-          // Bring the new question into view even if the user had scrolled up.
-          armTranscriptAutoFollow(activeThread.id, true);
-          setPendingAutomationConversation({
-            threadId: activeThread.id,
-            accumulatedMessage: automationRequest.automationMessage,
-            bubbles: [
-              ...priorBubbles,
-              makeAutomationSetupBubble("user", trimmedPromptForSend),
-              makeAutomationSetupBubble("assistant", question),
-            ],
-          });
-          return true;
-        }
-
-        pendingAutomationConversationRef.current = null;
-        setPendingAutomationConversation(null);
-        const automationIntent = automationRequest.resolution.intent;
-        const automationTargetThreadId =
-          automationIntent.executionScope === "thread" ? activeThread.id : null;
-        const automationDraft = buildComposerAutomationDraft({
-          resolution: automationRequest.resolution,
-          projectId: activeProject.id,
-          projectModelSelection: automationProjectModelSelection(
-            automationProjects,
-            activeProject.id,
-          ),
-          selectedModelSelection: selectedModelSelectionForSend,
-          targetThreadId: automationTargetThreadId,
-          hasEphemeralContext: !hasPromptOnlySendableContent,
-        });
-        // A multi-turn setup always confirms before creating, so the user reviews the
-        // parsed task/schedule (and any scaffolding the parser kept) rather than it
-        // silently auto-creating a recurring job.
-        if (automationDraft.needsDraftReview || conversation !== null) {
-          if (conversation !== null) {
-            // Keep the full multi-turn request in the composer so dismissing the review
-            // dialog doesn't lose it (the single-turn path likewise leaves its text).
-            // Restore only the text; any attachments/mentions on the final reply stay.
-            const liveDraft = promptRef.current.trimStart();
-            const leftover = liveDraft.startsWith(trimmedPromptForSend)
-              ? liveDraft.slice(trimmedPromptForSend.length).trimStart()
-              : liveDraft;
-            const restoredPrompt = leftover
-              ? `${messageForAutomation}\n${leftover}`
-              : messageForAutomation;
-            promptRef.current = restoredPrompt;
-            setComposerDraftPrompt(activeThread.id, restoredPrompt);
-          }
-          setAutomationEditingDefinition(null);
-          setAutomationDraftWarningContext(automationDraft.warningContext);
-          setAutomationDraftForm(automationDraft.form);
-          setAutomationDraftWarnings(automationDraft.warnings);
-          setAcknowledgedAutomationWarnings(automationDraft.acknowledgedWarningIds);
-          setAutomationDraftOpen(true);
-          return true;
-        }
-        const preparedAutomation = await prepareAutomationFormForCreate(automationDraft.form);
-        if (!preparedAutomation) {
-          return true;
-        }
-        await createAutomationFromForm({
-          form: preparedAutomation.form,
-          warnings: automationDraft.warnings,
-          acknowledgedWarningIds: automationDraft.acknowledgedWarningIds,
-          activityThreadId: preparedAutomation.activityThreadId,
-          ...(providerOptionsForDispatchForSend
-            ? { providerOptions: providerOptionsForDispatchForSend }
-            : {}),
-        });
-        return true;
-      }
-      if (conversation) {
-        // The combined text no longer reads as an automation; abandon setup and let
-        // this message send as a normal chat turn instead of looping on the question.
-        pendingAutomationConversationRef.current = null;
-        setPendingAutomationConversation(null);
-      }
-    }
-    sendPreflightInFlightRef.current = true;
-    const sendProviderAvailability = await resolveProviderSendAvailabilityWithRefresh({
-      provider: selectedModelSelectionForSend.provider,
-      statuses: providerStatuses,
-      refreshStatuses: () => refreshProviderStatuses({ silent: true }),
-    }).finally(() => {
-      sendPreflightInFlightRef.current = false;
-    });
-    if (!sendProviderAvailability.usable) {
-      toastManager.add({
-        type: "error",
-        title: sendProviderAvailability.unavailableReason,
-      });
-      return false;
-    }
-
-    const browserPromptAttachment: BrowserPromptAttachmentResolution =
-      await maybeResolveBrowserPromptAttachment({
-        api,
-        threadId: activeThread.id,
-        prompt: promptForSend,
-      }).catch(
-        (): BrowserPromptAttachmentResolution => ({
-          requested: false,
-          image: null,
-        }),
-      );
-    if (browserPromptAttachment.image) {
-      const nextAttachmentCount =
-        composerImagesForSend.length +
-        composerFilesForSend.length +
-        composerAssistantSelectionsForSend.length +
-        (browserPromptAttachment.image ? 1 : 0);
-      if (nextAttachmentCount <= PROVIDER_SEND_TURN_MAX_ATTACHMENTS) {
-        composerImagesForSend = [...composerImagesForSend, browserPromptAttachment.image];
-      } else {
-        toastManager.add({
-          type: "warning",
-          title: `You can attach up to ${PROVIDER_SEND_TURN_MAX_ATTACHMENTS} references per message.`,
-          description:
-            "The current browser screenshot was skipped because this message is already at the attachment limit.",
-        });
-      }
-    } else if (browserPromptAttachment.requested) {
-      const description =
-        browserPromptAttachment.reason === "no-open-browser"
-          ? "Open the in-app browser first, then try again."
-          : browserPromptAttachment.reason === "no-active-tab"
-            ? "The in-app browser has no active tab to capture yet."
-            : browserPromptAttachment.reason === "attachment-processing-failed"
-              ? "The browser screenshot could not be optimized for attachment."
-              : "The current browser context could not be attached.";
-      toastManager.add({
-        type: "warning",
-        title: "Couldn’t attach the in-app browser context",
-        description,
-      });
-    }
-
-    if (hasQueueableLiveTurn && dispatchMode === "queue" && queuedChatTurn === null) {
-      clearComposerInput(activeThread.id);
-      scheduleComposerFocus();
-      const queuedImagesForPersistence = await Promise.all(
-        composerImagesForSend.map(async (image) => {
-          try {
-            return {
-              ...image,
-              previewUrl: await readFileAsDataUrl(image.file),
-            };
-          } catch {
-            return image;
-          }
-        }),
-      );
-      enqueueQueuedComposerTurn(activeThread.id, {
-        id: randomUUID(),
-        kind: "chat",
-        createdAt: new Date().toISOString(),
-        previewText: buildQueuedComposerPreviewText({
-          trimmedPrompt: trimmed,
-          images: queuedImagesForPersistence,
-          files: composerFilesForSend,
-          assistantSelections: composerAssistantSelectionsForSend,
-          browserAnnotations: composerBrowserAnnotationsForSend,
-          terminalContexts: sendableComposerTerminalContexts,
-          fileComments: composerFileCommentsForSend,
-          pastedTexts: sendableComposerPastedTexts,
-        }),
-        prompt: promptForSend,
-        images: queuedImagesForPersistence,
-        files: composerFilesForSend,
-        assistantSelections: composerAssistantSelectionsForSend,
-        browserAnnotations: composerBrowserAnnotationsForSend,
-        fileComments: composerFileCommentsForSend,
-        terminalContexts: sendableComposerTerminalContexts,
-        pastedTexts: sendableComposerPastedTexts,
-        skills: selectedComposerSkillsForSend,
-        mentions: selectedComposerMentionsForSend,
-        selectedProvider: selectedProviderForSend,
-        selectedModel: selectedModelForSend,
-        selectedPromptEffort: selectedPromptEffortForSend,
-        modelSelection: selectedModelSelectionForSend,
-        ...(providerOptionsForDispatchForSend
-          ? { providerOptionsForDispatch: providerOptionsForDispatchForSend }
-          : {}),
-        ...(sourceProposedPlanForSend ? { sourceProposedPlan: sourceProposedPlanForSend } : {}),
-        runtimeMode: runtimeModeForSend,
-        interactionMode: interactionModeForSend,
-        envMode: envModeForSend,
-      });
-      return true;
-    }
-    const threadIdForSend = activeThread.id;
-    const isFirstMessage = !isServerThread || !hasNativeUserMessages;
-    const firstSendCreatedAt = new Date();
-    let firstComposerImageNameForTitle: string | null = null;
-    if (composerImagesForSend.length > 0) {
-      firstComposerImageNameForTitle = composerImagesForSend[0]?.name ?? null;
-    }
-    let titleSeed = trimmedPromptForSend;
-    if (!titleSeed) {
-      if (firstComposerImageNameForTitle) {
-        titleSeed = `Image: ${firstComposerImageNameForTitle}`;
-      } else if (composerFilesForSend.length > 0) {
-        titleSeed = `File: ${composerFilesForSend[0]?.name ?? "attachment"}`;
-      } else if (composerAssistantSelectionsForSend.length > 0) {
-        titleSeed = formatAssistantSelectionTitleSeed(composerAssistantSelectionsForSend.length);
-      } else if (composerBrowserAnnotationsForSend.length > 0) {
-        titleSeed = formatBrowserAnnotationLabel(composerBrowserAnnotationsForSend[0]!);
-      } else if (sendableComposerTerminalContexts.length > 0) {
-        titleSeed = formatTerminalContextLabel(sendableComposerTerminalContexts[0]!);
-      } else if (composerFileCommentsForSend.length > 0) {
-        titleSeed = formatFileCommentTitleSeed(composerFileCommentsForSend.length);
-      } else if (sendableComposerPastedTexts.length > 0) {
-        titleSeed =
-          formatPastedTextTitleSeed(sendableComposerPastedTexts) ?? GENERIC_CHAT_THREAD_TITLE;
-      } else {
-        titleSeed = GENERIC_CHAT_THREAD_TITLE;
-      }
-    }
-    // Keep the optimistic label short while the server asks Codex for a better summary.
-    const title = buildPromptThreadTitleFallback(titleSeed);
-    const currentStoreState = useStore.getState();
-    // Keep an optimistically selected Space across the command/snapshot race. The server
-    // validates this best-effort target and degrades genuinely stale/deleted ids to Void.
-    const activeSpaceIdForSend = readActiveSpaceId();
-    const firstSendTarget = resolveFirstSendTarget({
-      activeProject,
-      chatWorkspaceRoot,
-      createdAt: firstSendCreatedAt,
-      isFirstMessage,
-      isHomeChatContainer,
-      isStudioContainer,
-      projects: currentStoreState.projects,
-      // Studio reference folders change the thread cwd without moving the chat out of
-      // the managed Studio project. Home-chat folder selection keeps its project routing.
-      selectedWorkspaceRoot: isHomeChatContainer ? (resolvedThreadWorktreePath ?? null) : null,
-      title,
-      titleSeed,
-    });
-    let {
-      targetProjectId: targetProjectIdForSend,
-      targetProjectKind: targetProjectKindForSend,
-      targetProjectCwd: targetProjectCwdForSend,
-      targetProjectScripts: targetProjectScriptsForSend,
-      targetProjectDefaultModelSelection: targetProjectDefaultModelSelectionForSend,
-    } = firstSendTarget.kind === "create-project"
-      ? {
-          targetProjectId: activeProject.id,
-          targetProjectKind: activeProject.kind,
-          targetProjectCwd: activeProject.cwd,
-          targetProjectScripts: activeProject.kind === "project" ? activeProject.scripts : [],
-          targetProjectDefaultModelSelection: activeProject.defaultModelSelection ?? null,
-        }
-      : firstSendTarget.target;
-    let nextRuntimeModeForSend = runtimeModeForSend;
-    let nextThreadEnvMode = envModeForSend;
-    let nextThreadBranch = isStudioContainer ? null : activeThread.branch;
-    let nextThreadWorktreePath = isStudioContainer ? null : activeThread.worktreePath;
-    let nextThreadWorkingDirectory = isStudioContainer
-      ? resolvedThreadWorkingDirectory
-      : (activeThread.workingDirectory ?? null);
-    let nextAssociatedWorktreePath = isStudioContainer
-      ? null
-      : (activeThread.associatedWorktreePath ?? null);
-    let nextAssociatedWorktreeBranch = isStudioContainer
-      ? null
-      : (activeThread.associatedWorktreeBranch ?? null);
-    let nextAssociatedWorktreeRef = isStudioContainer
-      ? null
-      : (activeThread.associatedWorktreeRef ?? null);
-
-    if (isFirstMessage && isContainerLandingProject && firstSendTarget.kind !== "current") {
-      if (firstSendTarget.kind === "create-project") {
-        const projectId = newProjectId();
-        const createdAt = firstSendCreatedAt.toISOString();
-        // Managed chat rows stay global; a folder mention creates an ordinary project and
-        // should inherit the Space where the first send originated. Resolved before the
-        // `try`: a value block inside a try body makes React Compiler bail out on the whole
-        // component.
-        const createProjectSpaceFields =
-          firstSendTarget.creation.kind === "project" ? { spaceId: activeSpaceIdForSend } : {};
-        try {
-          await api.orchestration.dispatchCommand({
-            type: "project.create",
-            commandId: newCommandId(),
-            projectId,
-            kind: firstSendTarget.creation.kind,
-            title: firstSendTarget.creation.title,
-            workspaceRoot: firstSendTarget.creation.workspaceRoot,
-            createWorkspaceRootIfMissing: firstSendTarget.creation.createWorkspaceRootIfMissing,
-            defaultModelSelection: firstSendTarget.creation.defaultModelSelection,
-            ...createProjectSpaceFields,
-            createdAt,
-          });
-          targetProjectIdForSend = projectId;
-          targetProjectKindForSend = firstSendTarget.creation.kind;
-          targetProjectCwdForSend = firstSendTarget.creation.workspaceRoot;
-          targetProjectScriptsForSend = [];
-          targetProjectDefaultModelSelectionForSend =
-            firstSendTarget.creation.defaultModelSelection;
-        } catch (error) {
-          const description =
-            error instanceof Error ? error.message : "Failed to create the selected project.";
-          if (!isDuplicateProjectCreateError(description)) {
-            throw error;
-          }
-
-          // If the server already knows this workspace root, reuse that project and continue.
-          const { snapshot, project: recoveredProject } =
-            await waitForRecoverableProjectForDuplicateCreate({
-              message: description,
-              workspaceRoot: firstSendTarget.creation.workspaceRoot,
-              loadSnapshot: () => api.orchestration.getShellSnapshot().catch(() => null),
-            });
-          if (!snapshot || !recoveredProject) {
-            throw error;
-          }
-
-          syncServerShellSnapshot(snapshot);
-          targetProjectIdForSend = recoveredProject.id;
-          targetProjectKindForSend = recoveredProject.kind ?? firstSendTarget.creation.kind;
-          targetProjectCwdForSend = recoveredProject.workspaceRoot;
-          targetProjectScriptsForSend =
-            (recoveredProject.kind ?? firstSendTarget.creation.kind) === "project"
-              ? [...recoveredProject.scripts]
-              : [];
-          targetProjectDefaultModelSelectionForSend =
-            recoveredProject.defaultModelSelection ??
-            firstSendTarget.creation.defaultModelSelection;
-        }
-      }
-
-      clearProjectDraftThreadId(targetProjectIdForSend);
-      setDraftThreadContext(threadIdForSend, {
-        projectId: targetProjectIdForSend,
-        envMode: "local",
-        worktreePath: null,
-        workingDirectory: null,
-        branch: null,
-      });
-      nextThreadEnvMode = "local";
-      nextThreadBranch = null;
-      nextThreadWorktreePath = null;
-      nextThreadWorkingDirectory = null;
-      nextAssociatedWorktreePath = null;
-      nextAssociatedWorktreeBranch = null;
-      nextAssociatedWorktreeRef = null;
-    }
-
-    // The branch query can finish just after the user chooses New worktree. Use the
-    // resolved active branch at send time instead of rejecting an otherwise valid fast send.
-    if (
-      isFirstMessage &&
-      nextThreadEnvMode === "worktree" &&
-      !nextThreadWorktreePath &&
-      !nextThreadBranch
-    ) {
-      nextThreadBranch = activeRootBranch ?? null;
-    }
-
-    const baseBranchForWorktree =
-      isFirstMessage && nextThreadEnvMode === "worktree" && !nextThreadWorktreePath
-        ? nextThreadBranch
-        : null;
-
-    // In worktree mode, require an explicit base branch so we don't silently
-    // fall back to local execution when branch selection is missing.
-    const shouldCreateWorktree =
-      isFirstMessage && nextThreadEnvMode === "worktree" && !nextThreadWorktreePath;
-    if (shouldCreateWorktree && !nextThreadBranch) {
-      setStoreThreadError(
-        threadIdForSend,
-        "Select a base branch before sending in New worktree mode.",
-      );
-      return false;
-    }
-
-    const setupScriptForWorktree = baseBranchForWorktree
-      ? setupProjectScript(targetProjectScriptsForSend)
-      : null;
-    const worktreeSetupScriptName = setupScriptForWorktree?.name ?? null;
-    const messageIdForSend = newMessageId();
-
-    sendInFlightRef.current = true;
-    beginLocalDispatch({
-      expectedUserMessageId: messageIdForSend,
-      ...(baseBranchForWorktree
-        ? { worktreeSetupStepId: "create-worktree", setupScriptName: worktreeSetupScriptName }
-        : {}),
-    });
-
-    const composerImagesSnapshot = [...composerImagesForSend];
-    const composerFilesSnapshot = [...composerFilesForSend];
-    const composerAssistantSelectionsSnapshot = [...composerAssistantSelectionsForSend];
-    const composerBrowserAnnotationsSnapshot = composerBrowserAnnotationsForSend.map(
-      (annotation) => ({
-        ...annotation,
-        source: { ...annotation.source },
-      }),
-    );
-    const composerFileCommentsSnapshot = [...composerFileCommentsForSend];
-    const composerTerminalContextsSnapshot = [...sendableComposerTerminalContexts];
-    const composerPastedTextsSnapshot = [...sendableComposerPastedTexts];
-    const composerSkillsSnapshot = [...selectedComposerSkillsForSend];
-    const composerMentionsSnapshot = [...selectedComposerMentionsForSend];
-    // Trailing blocks are appended innermost-to-outermost: assistant selections,
-    // terminal contexts, file comments, pasted text, then browser annotations
-    // (outermost). The display
-    // extractors unwrap them in the reverse order.
-    const messageTextForSend = appendBrowserAnnotationsToPrompt(
-      appendPastedTextsToPrompt(
-        appendFileCommentsToPrompt(
-          appendTerminalContextsToPrompt(
-            appendAssistantSelectionsToPrompt(promptForSend, composerAssistantSelectionsSnapshot),
-            composerTerminalContextsSnapshot,
-          ),
-          composerFileCommentsSnapshot,
-        ),
-        composerPastedTextsSnapshot,
-      ),
-      composerBrowserAnnotationsSnapshot,
-      messageIdForSend,
-    );
-    const messageCreatedAt = new Date().toISOString();
-    const outgoingTextSeed =
-      messageTextForSend || (composerImagesSnapshot.length > 0 ? IMAGE_ONLY_BOOTSTRAP_PROMPT : "");
-    const outgoingMessageText = appendLiveLatticeHostContext(
-      formatOutgoingComposerPrompt({
-        provider: selectedProviderForSend,
-        model: selectedModelForSend,
-        effort: selectedPromptEffortForSend,
-        text: outgoingTextSeed,
-      }),
-    );
-    const mentionedSkillsForSend = filterPromptSkillReferences(
-      outgoingMessageText,
-      selectedComposerSkillsForSend,
-      selectedProviderForSend,
-    );
-    const mentionedPluginMentionsForSend = filterPromptProviderMentionReferences(
-      outgoingMessageText,
-      selectedComposerMentionsForSend,
-    );
-    const turnAttachmentsPromise = stageUploadComposerAttachments({
-      threadId: threadIdForSend,
-      images: composerImagesSnapshot,
-      files: composerFilesSnapshot,
-      assistantSelections: composerAssistantSelectionsSnapshot,
-    });
-    const optimisticAttachments = [
-      ...composerAssistantSelectionsSnapshot,
-      ...composerImagesSnapshot.map((image) => ({
-        type: "image" as const,
-        id: image.id,
-        name: image.name,
-        mimeType: image.mimeType,
-        sizeBytes: image.sizeBytes,
-        previewUrl: image.previewUrl,
-      })),
-      ...composerFilesSnapshot.map((file) => ({
-        type: "file" as const,
-        id: file.id,
-        name: file.name,
-        mimeType: file.mimeType,
-        sizeBytes: file.sizeBytes,
-      })),
-    ];
-    // Sending the first message flips the centered empty landing into a normal
-    // transcript. Clear session-only landing overrides when default-open is enabled;
-    // otherwise keep the transition closed.
-    if (isCenteredEmptyLanding) {
-      setEnvironmentPanelPreferenceOpen(
-        resolveEnvironmentPanelPreferenceAfterFirstSend({
-          isCenteredEmptyLanding,
-          settingsDefaultOpen: settings.environmentPanelDefaultOpen,
-          currentPreferenceOpen: environmentPanelPreferenceOpen,
-        }),
-      );
-    }
-    setOptimisticUserMessages((existing) => [
-      ...existing,
-      {
-        id: messageIdForSend,
-        role: "user",
-        text: outgoingMessageText,
-        dispatchMode,
-        ...(optimisticAttachments.length > 0 ? { attachments: optimisticAttachments } : {}),
-        ...(mentionedSkillsForSend.length > 0 ? { skills: mentionedSkillsForSend } : {}),
-        ...(mentionedPluginMentionsForSend.length > 0
-          ? { mentions: mentionedPluginMentionsForSend }
-          : {}),
-        createdAt: messageCreatedAt,
-        streaming: false,
-        source: "native",
-      },
-    ]);
-    // Mark the transcript as anchored before the optimistic row lands. The tail
-    // anchor sizes the spacer that lets this message sit at the viewport top,
-    // and its hook owns the slide; auto-follow stays armed for bookkeeping but
-    // pauses until the in-flight flag clears.
-    armTranscriptAutoFollow(threadIdForSend, true);
-    tailAnchorScrollInFlightRef.current = true;
-    setTailAnchor({ threadId: threadIdForSend, messageId: messageIdForSend });
-
-    setThreadError(threadIdForSend, null);
-    if (expiredTerminalContextCount > 0) {
-      const toastCopy = buildExpiredTerminalContextToastCopy(
-        expiredTerminalContextCount,
-        "omitted",
-      );
-      toastManager.add({
-        type: "warning",
-        title: toastCopy.title,
-        description: toastCopy.description,
-      });
-    }
-    // Queued turns are dispatched from their captured snapshot, so this send path
-    // must not clear a separate live draft the user may already be editing.
-    if (queuedChatTurn === null) {
-      promptHistoryNavigationRef.current = null;
-      applyingPromptHistoryNavigationRef.current = false;
-      expectedPromptHistoryPromptRef.current = null;
-      promptRef.current = "";
-      clearComposerDraftContent(threadIdForSend, { preservePreviewUrls: true });
-      if (isLivePlanFollowUpSubmission) {
-        setComposerDraftInteractionMode(threadIdForSend, interactionModeForSend);
-      }
-      setComposerHighlightedItemId(null);
-      setComposerCursor(0);
-      setComposerTrigger(null);
-      // A clicked submit button steals focus; return it after the controlled
-      // draft reset so rapid follow-up typing lands in the composer.
-      scheduleComposerFocus();
-    }
-
-    let createdServerThreadForLocalDraft = false;
-    let createdWorktreeForSendPath: string | null = null;
-    let turnStartSucceeded = false;
-    await (async () => {
-      // On first message: lock in branch + create worktree if needed.
-      if (baseBranchForWorktree) {
-        const result = await createWorktreeMutation.mutateAsync({
-          cwd: targetProjectCwdForSend,
-          ref: baseBranchForWorktree,
-          ...(baseBranchForWorktree === activeRootBranch
-            ? { copyChangesFrom: targetProjectCwdForSend }
-            : {}),
-        });
-        beginLocalDispatch({
-          worktreeSetupStepId: "prepare-thread",
-          setupScriptName: worktreeSetupScriptName,
-        });
-        nextThreadBranch = result.worktree.branch;
-        nextThreadWorktreePath = result.worktree.path;
-        createdWorktreeForSendPath = result.worktree.path;
-        const nextAssociatedWorktree = {
-          associatedWorktreePath: result.worktree.path,
-          associatedWorktreeBranch: null,
-          associatedWorktreeRef: result.worktree.ref,
-        };
-        nextAssociatedWorktreePath = nextAssociatedWorktree.associatedWorktreePath;
-        nextAssociatedWorktreeBranch = nextAssociatedWorktree.associatedWorktreeBranch;
-        nextAssociatedWorktreeRef = nextAssociatedWorktree.associatedWorktreeRef;
-        if (isServerThread) {
-          await api.orchestration.dispatchCommand({
-            type: "thread.meta.update",
-            commandId: newCommandId(),
-            threadId: threadIdForSend,
-            envMode: "worktree",
-            branch: result.worktree.branch,
-            worktreePath: result.worktree.path,
-            associatedWorktreePath: nextAssociatedWorktree.associatedWorktreePath,
-            associatedWorktreeBranch: nextAssociatedWorktree.associatedWorktreeBranch,
-            associatedWorktreeRef: nextAssociatedWorktree.associatedWorktreeRef,
-          });
-          // Keep local thread state in sync immediately so terminal drawer opens
-          // with the worktree cwd/env instead of briefly using the project root.
-          setStoreThreadWorkspace(threadIdForSend, {
-            branch: result.worktree.branch,
-            worktreePath: result.worktree.path,
-            ...nextAssociatedWorktree,
-          });
-        }
-      }
-
-      const threadCreateModelSelection: ModelSelection = buildModelSelection(
-        selectedModelSelectionForSend.provider,
-        selectedModelSelectionForSend.model ||
-          selectedModelForSend ||
-          targetProjectDefaultModelSelectionForSend?.model ||
-          DEFAULT_MODEL_BY_PROVIDER.codex,
-        selectedModelSelectionForSend.options,
-        selectedModelSelectionForSend.provider === "claudeAgent"
-          ? selectedModelSelectionForSend.supportsAutoMode
-          : undefined,
-      );
-
-      if (isLocalDraftThread) {
-        const inheritedProjectInstructions =
-          useProjectInstructionsStore.getState().instructionsByProjectId[targetProjectIdForSend] ??
-          "";
-        const inheritedThreadNotes = mergeProjectInstructionsIntoThreadNotes({
-          threadNotes,
-          projectInstructions: inheritedProjectInstructions,
-        });
-        await promoteThreadCreate(
-          {
-            type: "thread.create",
-            commandId: newCommandId(),
-            threadId: threadIdForSend,
-            projectId: targetProjectIdForSend,
-            title,
-            modelSelection: threadCreateModelSelection,
-            runtimeMode: nextRuntimeModeForSend,
-            interactionMode: interactionModeForSend,
-            envMode: nextThreadEnvMode,
-            branch: nextThreadBranch,
-            worktreePath: nextThreadWorktreePath,
-            workingDirectory: nextThreadWorkingDirectory,
-            associatedWorktreePath: nextAssociatedWorktreePath,
-            associatedWorktreeBranch: nextAssociatedWorktreeBranch,
-            associatedWorktreeRef: nextAssociatedWorktreeRef,
-            lastKnownPr: activeThread.lastKnownPr ?? null,
-            createdAt: activeThread.createdAt,
-          },
-          api,
-        );
-        // `thread.create` does not carry notes, so seed the freshly created
-        // server thread's notepad with the inherited project instructions via a
-        // dedicated meta update. Best-effort: a failure here must not abort the turn.
-        if (inheritedThreadNotes !== threadNotes && inheritedThreadNotes.trim().length > 0) {
-          try {
-            await dispatchThreadNotes(threadIdForSend, inheritedThreadNotes);
-          } catch {
-            // Seeding is non-critical; project instructions can still be copied
-            // into the notepad manually from the Environment panel.
-          }
-        }
-        if (targetProjectKindForSend === "chat") {
-          await api.orchestration.dispatchCommand({
-            type: "project.meta.update",
-            commandId: newCommandId(),
-            projectId: targetProjectIdForSend,
-            title,
-          });
-        }
-        createdServerThreadForLocalDraft = true;
-      }
-
-      const setupScript = setupScriptForWorktree;
-      if (setupScript) {
-        let shouldRunSetupScript = false;
-        if (isServerThread) {
-          shouldRunSetupScript = true;
-        } else {
-          if (createdServerThreadForLocalDraft) {
-            shouldRunSetupScript = true;
-          }
-        }
-        if (shouldRunSetupScript) {
-          beginLocalDispatch({
-            worktreeSetupStepId: "run-setup-action",
-            setupScriptName: setupScript.name,
-          });
-          const setupScriptOptions: Parameters<typeof runProjectScript>[1] = {
-            worktreePath: nextThreadWorktreePath,
-            rememberAsLastInvoked: false,
-            throwOnError: true,
-          };
-          if (nextThreadWorktreePath) {
-            setupScriptOptions.cwd = nextThreadWorktreePath;
-          }
-          const setupTerminal = await runProjectScript(setupScript, setupScriptOptions);
-          if (setupTerminal) {
-            await waitForSetupScriptTerminalActivity({
-              threadId: threadIdForSend,
-              terminalId: setupTerminal.terminalId,
-            });
-          }
-        }
-      }
-
-      if (isServerThread) {
-        await persistThreadSettingsForNextTurn({
-          threadId: threadIdForSend,
-          createdAt: messageCreatedAt,
-          modelSelection: selectedModelSelectionForSend,
-          runtimeMode: nextRuntimeModeForSend,
-          interactionMode: interactionModeForSend,
-        });
-      }
-
-      beginLocalDispatch(
-        baseBranchForWorktree
-          ? { worktreeSetupStepId: "start-session", setupScriptName: worktreeSetupScriptName }
-          : undefined,
-      );
-      const stagedTurnAttachments = await turnAttachmentsPromise;
-      rememberCustomBinaryPathForDispatch({
-        threadId: threadIdForSend,
-        provider: selectedModelSelectionForSend.provider,
-        providerOptions: providerOptionsForDispatchForSend,
-      });
-      await stagedTurnAttachments.runWithDispatch((turnAttachments) =>
-        api.orchestration.dispatchCommand({
-          type: "thread.turn.start",
-          commandId: newCommandId(),
-          threadId: threadIdForSend,
-          message: {
-            messageId: messageIdForSend,
-            role: "user",
-            text: outgoingMessageText,
-            attachments: turnAttachments,
-            ...(mentionedSkillsForSend.length > 0 ? { skills: mentionedSkillsForSend } : {}),
-            ...(mentionedPluginMentionsForSend.length > 0
-              ? { mentions: mentionedPluginMentionsForSend }
-              : {}),
-          },
-          modelSelection: selectedModelSelectionForSend,
-          ...(providerOptionsForDispatchForSend
-            ? { providerOptions: providerOptionsForDispatchForSend }
-            : {}),
-          assistantDeliveryMode,
-          dispatchMode,
-          runtimeMode: nextRuntimeModeForSend,
-          interactionMode: interactionModeForSend,
-          ...(sourceProposedPlanForSend ? { sourceProposedPlan: sourceProposedPlanForSend } : {}),
-          createdAt: messageCreatedAt,
-        }),
-      );
-      turnStartSucceeded = true;
-      consumeDispatchedLatticeHostSelection(outgoingMessageText);
-      // Steers on providers without native mid-turn steering interrupt the live
-      // turn before re-dispatching; hold queued auto-dispatch through that gap
-      // so it can't race the steer. The live session provider decides the
-      // interrupt path server-side, so the gate keys off it rather than the
-      // requested model selection.
-      const liveProviderForSteerGate =
-        activeThread?.session?.provider ?? selectedModelSelectionForSend.provider;
-      if (
-        dispatchMode === "steer" &&
-        !providerSupportsNativeTurnSteering(liveProviderForSteerGate)
-      ) {
-        setQueuedSteerGate({
-          sawInterruptGap: false,
-          gapStartedAt: null,
-          armedActiveTurnId: activeThread?.session?.activeTurnId ?? null,
-        });
-      }
-      if (sourceProposedPlanForSend) {
-        planSidebarDismissedForTurnRef.current = null;
-        setPlanSidebarOpen(true);
-      }
+      // Queued turns are dispatched from their captured snapshot, so this send path
+      // must not clear a separate live draft the user may already be editing.
       if (queuedChatTurn === null) {
-        setRestoredQueuedSourceProposedPlan(threadIdForSend, null);
+        promptHistoryNavigationRef.current = null;
+        applyingPromptHistoryNavigationRef.current = false;
+        expectedPromptHistoryPromptRef.current = null;
+        promptRef.current = "";
+        clearComposerDraftContent(threadIdForSend, { preservePreviewUrls: true });
+        if (isLivePlanFollowUpSubmission) {
+          setComposerDraftInteractionMode(threadIdForSend, interactionModeForSend);
+        }
+        setComposerHighlightedItemId(null);
+        setComposerCursor(0);
+        setComposerTrigger(null);
+        // A clicked submit button steals focus; return it after the controlled
+        // draft reset so rapid follow-up typing lands in the composer.
+        scheduleComposerFocus();
       }
-    })().catch(async (err: unknown) => {
-      // Uploads start in parallel with workspace/session preparation. If any
-      // earlier step fails, settle that promise and release every staged blob.
-      await turnAttachmentsPromise.then(
-        (staged) => staged.cleanup(),
-        () => undefined,
-      );
-      // Surface the failure on whichever setup step was active (no-op for
-      // sends without a worktree setup in flight).
-      failLocalDispatchWorktreeSetup();
-      if (createdServerThreadForLocalDraft && !turnStartSucceeded) {
-        // This rollback cleans up a retryable draft promotion; do not tombstone the draft id.
-        await api.orchestration
-          .dispatchCommand({
-            type: "thread.delete",
-            commandId: newCommandId(),
-            threadId: threadIdForSend,
-          })
-          .catch(() => undefined);
-      }
-      if (createdWorktreeForSendPath && !turnStartSucceeded) {
-        const removed = await api.git
-          .removeWorktree({
+
+      let createdServerThreadForLocalDraft = false;
+      let createdWorktreeForSendPath: string | null = null;
+      let turnStartSucceeded = false;
+      await (async () => {
+        // On first message: lock in branch + create worktree if needed.
+        if (baseBranchForWorktree) {
+          const result = await createWorktreeMutation.mutateAsync({
             cwd: targetProjectCwdForSend,
-            path: createdWorktreeForSendPath,
-            force: true,
-          })
-          .then(
-            () => true,
-            () => false,
-          );
-        if (removed && isServerThread) {
-          await api.orchestration
-            .dispatchCommand({
+            ref: baseBranchForWorktree,
+            ...(baseBranchForWorktree === activeRootBranch
+              ? { copyChangesFrom: targetProjectCwdForSend }
+              : {}),
+          });
+          beginLocalDispatch({
+            worktreeSetupStepId: "prepare-thread",
+            setupScriptName: worktreeSetupScriptName,
+          });
+          nextThreadBranch = result.worktree.branch;
+          nextThreadWorktreePath = result.worktree.path;
+          createdWorktreeForSendPath = result.worktree.path;
+          const nextAssociatedWorktree = {
+            associatedWorktreePath: result.worktree.path,
+            associatedWorktreeBranch: null,
+            associatedWorktreeRef: result.worktree.ref,
+          };
+          nextAssociatedWorktreePath = nextAssociatedWorktree.associatedWorktreePath;
+          nextAssociatedWorktreeBranch = nextAssociatedWorktree.associatedWorktreeBranch;
+          nextAssociatedWorktreeRef = nextAssociatedWorktree.associatedWorktreeRef;
+          if (isServerThread) {
+            await api.orchestration.dispatchCommand({
               type: "thread.meta.update",
               commandId: newCommandId(),
               threadId: threadIdForSend,
-              envMode: "local",
-              branch: null,
-              worktreePath: null,
-              associatedWorktreePath: null,
-              associatedWorktreeBranch: null,
-              associatedWorktreeRef: null,
-            })
-            .then(
-              () =>
-                setStoreThreadWorkspace(threadIdForSend, {
-                  branch: null,
-                  worktreePath: null,
-                  associatedWorktreePath: null,
-                  associatedWorktreeBranch: null,
-                  associatedWorktreeRef: null,
-                }),
-              () => undefined,
-            );
-        }
-      }
-      if (
-        queuedChatTurn === null &&
-        !turnStartSucceeded &&
-        promptRef.current.length === 0 &&
-        composerImagesRef.current.length === 0 &&
-        composerFilesRef.current.length === 0 &&
-        composerAssistantSelectionsRef.current.length === 0 &&
-        composerBrowserAnnotationsRef.current.length === 0 &&
-        composerFileCommentsRef.current.length === 0 &&
-        composerTerminalContextsRef.current.length === 0 &&
-        composerPastedTextsRef.current.length === 0
-      ) {
-        setOptimisticUserMessages((existing) => {
-          const removed = existing.filter((message) => message.id === messageIdForSend);
-          for (const message of removed) {
-            revokeUserMessagePreviewUrls(message);
+              envMode: "worktree",
+              branch: result.worktree.branch,
+              worktreePath: result.worktree.path,
+              associatedWorktreePath: nextAssociatedWorktree.associatedWorktreePath,
+              associatedWorktreeBranch: nextAssociatedWorktree.associatedWorktreeBranch,
+              associatedWorktreeRef: nextAssociatedWorktree.associatedWorktreeRef,
+            });
+            // Keep local thread state in sync immediately so terminal drawer opens
+            // with the worktree cwd/env instead of briefly using the project root.
+            setStoreThreadWorkspace(threadIdForSend, {
+              branch: result.worktree.branch,
+              worktreePath: result.worktree.path,
+              ...nextAssociatedWorktree,
+            });
           }
-          const next = existing.filter((message) => message.id !== messageIdForSend);
-          return next.length === existing.length ? existing : next;
-        });
-        promptRef.current = promptForSend;
-        setPrompt(promptForSend);
-        if (sourceProposedPlanForSend) {
-          setRestoredQueuedSourceProposedPlan(threadIdForSend, {
+        }
+
+        const threadCreateModelSelection: ModelSelection = buildModelSelection(
+          selectedModelSelectionForSend.provider,
+          selectedModelSelectionForSend.model ||
+            selectedModelForSend ||
+            targetProjectDefaultModelSelectionForSend?.model ||
+            DEFAULT_MODEL_BY_PROVIDER.codex,
+          selectedModelSelectionForSend.options,
+          selectedModelSelectionForSend.provider === "claudeAgent"
+            ? selectedModelSelectionForSend.supportsAutoMode
+            : undefined,
+        );
+
+        if (isLocalDraftThread) {
+          const inheritedProjectInstructions =
+            useProjectInstructionsStore.getState().instructionsByProjectId[
+              targetProjectIdForSend
+            ] ?? "";
+          const inheritedThreadNotes = mergeProjectInstructionsIntoThreadNotes({
+            threadNotes,
+            projectInstructions: inheritedProjectInstructions,
+          });
+          await promoteThreadCreate(
+            {
+              type: "thread.create",
+              commandId: newCommandId(),
+              threadId: threadIdForSend,
+              projectId: targetProjectIdForSend,
+              title,
+              modelSelection: threadCreateModelSelection,
+              runtimeMode: nextRuntimeModeForSend,
+              interactionMode: interactionModeForSend,
+              envMode: nextThreadEnvMode,
+              branch: nextThreadBranch,
+              worktreePath: nextThreadWorktreePath,
+              workingDirectory: nextThreadWorkingDirectory,
+              associatedWorktreePath: nextAssociatedWorktreePath,
+              associatedWorktreeBranch: nextAssociatedWorktreeBranch,
+              associatedWorktreeRef: nextAssociatedWorktreeRef,
+              lastKnownPr: activeThread.lastKnownPr ?? null,
+              createdAt: activeThread.createdAt,
+            },
+            api,
+          );
+          // `thread.create` does not carry notes, so seed the freshly created
+          // server thread's notepad with the inherited project instructions via a
+          // dedicated meta update. Best-effort: a failure here must not abort the turn.
+          if (inheritedThreadNotes !== threadNotes && inheritedThreadNotes.trim().length > 0) {
+            try {
+              await dispatchThreadNotes(threadIdForSend, inheritedThreadNotes);
+            } catch {
+              // Seeding is non-critical; project instructions can still be copied
+              // into the notepad manually from the Environment panel.
+            }
+          }
+          if (targetProjectKindForSend === "chat") {
+            await api.orchestration.dispatchCommand({
+              type: "project.meta.update",
+              commandId: newCommandId(),
+              projectId: targetProjectIdForSend,
+              title,
+            });
+          }
+          createdServerThreadForLocalDraft = true;
+        }
+
+        const setupScript = setupScriptForWorktree;
+        if (setupScript) {
+          let shouldRunSetupScript = false;
+          if (isServerThread) {
+            shouldRunSetupScript = true;
+          } else {
+            if (createdServerThreadForLocalDraft) {
+              shouldRunSetupScript = true;
+            }
+          }
+          if (shouldRunSetupScript) {
+            beginLocalDispatch({
+              worktreeSetupStepId: "run-setup-action",
+              setupScriptName: setupScript.name,
+            });
+            const setupScriptOptions: Parameters<typeof runProjectScript>[1] = {
+              worktreePath: nextThreadWorktreePath,
+              rememberAsLastInvoked: false,
+              throwOnError: true,
+            };
+            if (nextThreadWorktreePath) {
+              setupScriptOptions.cwd = nextThreadWorktreePath;
+            }
+            const setupTerminal = await runProjectScript(setupScript, setupScriptOptions);
+            if (setupTerminal) {
+              await waitForSetupScriptTerminalActivity({
+                threadId: threadIdForSend,
+                terminalId: setupTerminal.terminalId,
+              });
+            }
+          }
+        }
+
+        if (isServerThread) {
+          await persistThreadSettingsForNextTurn({
             threadId: threadIdForSend,
-            restoredPrompt: promptForSend,
-            sourceProposedPlan: sourceProposedPlanForSend,
+            createdAt: messageCreatedAt,
+            modelSelection: selectedModelSelectionForSend,
+            runtimeMode: nextRuntimeModeForSend,
+            interactionMode: interactionModeForSend,
           });
         }
-        setComposerCursor(collapseExpandedComposerCursor(promptForSend, promptForSend.length));
-        addComposerImagesToDraft(composerImagesSnapshot.map(cloneComposerImageAttachment));
-        addComposerFilesToDraft(composerFilesSnapshot);
-        for (const selection of composerAssistantSelectionsSnapshot) {
-          addComposerAssistantSelectionToDraft(selection);
+
+        beginLocalDispatch(
+          baseBranchForWorktree
+            ? { worktreeSetupStepId: "start-session", setupScriptName: worktreeSetupScriptName }
+            : undefined,
+        );
+        const stagedTurnAttachments = await turnAttachmentsPromise;
+        rememberCustomBinaryPathForDispatch({
+          threadId: threadIdForSend,
+          provider: selectedModelSelectionForSend.provider,
+          providerOptions: providerOptionsForDispatchForSend,
+        });
+        await stagedTurnAttachments.runWithDispatch((turnAttachments) =>
+          api.orchestration.dispatchCommand({
+            type: "thread.turn.start",
+            commandId: newCommandId(),
+            threadId: threadIdForSend,
+            message: {
+              messageId: messageIdForSend,
+              role: "user",
+              text: outgoingMessageText,
+              attachments: turnAttachments,
+              ...(mentionedSkillsForSend.length > 0 ? { skills: mentionedSkillsForSend } : {}),
+              ...(mentionedPluginMentionsForSend.length > 0
+                ? { mentions: mentionedPluginMentionsForSend }
+                : {}),
+            },
+            modelSelection: selectedModelSelectionForSend,
+            ...(providerOptionsForDispatchForSend
+              ? { providerOptions: providerOptionsForDispatchForSend }
+              : {}),
+            assistantDeliveryMode,
+            dispatchMode,
+            runtimeMode: nextRuntimeModeForSend,
+            interactionMode: interactionModeForSend,
+            ...(sourceProposedPlanForSend ? { sourceProposedPlan: sourceProposedPlanForSend } : {}),
+            createdAt: messageCreatedAt,
+          }),
+        );
+        turnStartSucceeded = true;
+        consumeDispatchedLatticeHostSelection(outgoingMessageText);
+        // Steers on providers without native mid-turn steering interrupt the live
+        // turn before re-dispatching; hold queued auto-dispatch through that gap
+        // so it can't race the steer. The live session provider decides the
+        // interrupt path server-side, so the gate keys off it rather than the
+        // requested model selection.
+        const liveProviderForSteerGate =
+          activeThread?.session?.provider ?? selectedModelSelectionForSend.provider;
+        if (
+          dispatchMode === "steer" &&
+          !providerSupportsNativeTurnSteering(liveProviderForSteerGate)
+        ) {
+          setQueuedSteerGate({
+            sawInterruptGap: false,
+            gapStartedAt: null,
+            armedActiveTurnId: activeThread?.session?.activeTurnId ?? null,
+          });
         }
-        addComposerDraftBrowserAnnotations(threadIdForSend, composerBrowserAnnotationsSnapshot);
-        for (const comment of composerFileCommentsSnapshot) {
-          addComposerFileCommentToDraft(comment);
+        if (sourceProposedPlanForSend) {
+          planSidebarDismissedForTurnRef.current = null;
+          setPlanSidebarOpen(true);
         }
-        addComposerTerminalContextsToDraft(composerTerminalContextsSnapshot);
-        addComposerPastedTextsToDraft(composerPastedTextsSnapshot);
-        updateSelectedComposerSkills(composerSkillsSnapshot);
-        updateSelectedComposerMentions(composerMentionsSnapshot);
-        setComposerTrigger(detectComposerTrigger(promptForSend, promptForSend.length));
+        if (queuedChatTurn === null) {
+          setRestoredQueuedSourceProposedPlan(threadIdForSend, null);
+        }
+      })().catch(async (err: unknown) => {
+        // Uploads start in parallel with workspace/session preparation. If any
+        // earlier step fails, settle that promise and release every staged blob.
+        await turnAttachmentsPromise.then(
+          (staged) => staged.cleanup(),
+          () => undefined,
+        );
+        // Surface the failure on whichever setup step was active (no-op for
+        // sends without a worktree setup in flight).
+        failLocalDispatchWorktreeSetup();
+        if (createdServerThreadForLocalDraft && !turnStartSucceeded) {
+          // This rollback cleans up a retryable draft promotion; do not tombstone the draft id.
+          await api.orchestration
+            .dispatchCommand({
+              type: "thread.delete",
+              commandId: newCommandId(),
+              threadId: threadIdForSend,
+            })
+            .catch(() => undefined);
+        }
+        if (createdWorktreeForSendPath && !turnStartSucceeded) {
+          const removed = await api.git
+            .removeWorktree({
+              cwd: targetProjectCwdForSend,
+              path: createdWorktreeForSendPath,
+              force: true,
+            })
+            .then(
+              () => true,
+              () => false,
+            );
+          if (removed && isServerThread) {
+            await api.orchestration
+              .dispatchCommand({
+                type: "thread.meta.update",
+                commandId: newCommandId(),
+                threadId: threadIdForSend,
+                envMode: "local",
+                branch: null,
+                worktreePath: null,
+                associatedWorktreePath: null,
+                associatedWorktreeBranch: null,
+                associatedWorktreeRef: null,
+              })
+              .then(
+                () =>
+                  setStoreThreadWorkspace(threadIdForSend, {
+                    branch: null,
+                    worktreePath: null,
+                    associatedWorktreePath: null,
+                    associatedWorktreeBranch: null,
+                    associatedWorktreeRef: null,
+                  }),
+                () => undefined,
+              );
+          }
+        }
+        if (
+          queuedChatTurn === null &&
+          !turnStartSucceeded &&
+          promptRef.current.length === 0 &&
+          composerImagesRef.current.length === 0 &&
+          composerFilesRef.current.length === 0 &&
+          composerAssistantSelectionsRef.current.length === 0 &&
+          composerBrowserAnnotationsRef.current.length === 0 &&
+          composerFileCommentsRef.current.length === 0 &&
+          composerTerminalContextsRef.current.length === 0 &&
+          composerPastedTextsRef.current.length === 0
+        ) {
+          setOptimisticUserMessages((existing) => {
+            const removed = existing.filter((message) => message.id === messageIdForSend);
+            for (const message of removed) {
+              revokeUserMessagePreviewUrls(message);
+            }
+            const next = existing.filter((message) => message.id !== messageIdForSend);
+            return next.length === existing.length ? existing : next;
+          });
+          promptRef.current = promptForSend;
+          setPrompt(promptForSend);
+          if (sourceProposedPlanForSend) {
+            setRestoredQueuedSourceProposedPlan(threadIdForSend, {
+              threadId: threadIdForSend,
+              restoredPrompt: promptForSend,
+              sourceProposedPlan: sourceProposedPlanForSend,
+            });
+          }
+          setComposerCursor(collapseExpandedComposerCursor(promptForSend, promptForSend.length));
+          addComposerImagesToDraft(composerImagesSnapshot.map(cloneComposerImageAttachment));
+          addComposerFilesToDraft(composerFilesSnapshot);
+          for (const selection of composerAssistantSelectionsSnapshot) {
+            addComposerAssistantSelectionToDraft(selection);
+          }
+          addComposerDraftBrowserAnnotations(threadIdForSend, composerBrowserAnnotationsSnapshot);
+          for (const comment of composerFileCommentsSnapshot) {
+            addComposerFileCommentToDraft(comment);
+          }
+          addComposerTerminalContextsToDraft(composerTerminalContextsSnapshot);
+          addComposerPastedTextsToDraft(composerPastedTextsSnapshot);
+          updateSelectedComposerSkills(composerSkillsSnapshot);
+          updateSelectedComposerMentions(composerMentionsSnapshot);
+          setComposerTrigger(detectComposerTrigger(promptForSend, promptForSend.length));
+        }
+        setThreadError(
+          threadIdForSend,
+          err instanceof Error ? err.message : "Failed to send message.",
+        );
+      });
+      sendInFlightRef.current = false;
+      if (!turnStartSucceeded) {
+        if (baseBranchForWorktree) {
+          scheduleFailedWorktreeSetupDispatchReset();
+        } else {
+          resetLocalDispatch();
+        }
       }
-      setThreadError(
-        threadIdForSend,
-        err instanceof Error ? err.message : "Failed to send message.",
-      );
-    });
-    sendInFlightRef.current = false;
-    if (!turnStartSucceeded) {
-      if (baseBranchForWorktree) {
-        scheduleFailedWorktreeSetupDispatchReset();
-      } else {
-        resetLocalDispatch();
+      return turnStartSucceeded;
+    } finally {
+      if (providerFallbackSendAttemptRef.current?.token === providerFallbackSendAttempt.token) {
+        providerFallbackSendAttemptRef.current = null;
+        setProviderFallbackProbeRevision((revision) => revision + 1);
       }
     }
-    return turnStartSucceeded;
   };
 
   const onRespondToApproval = useCallback(
@@ -11873,7 +11963,9 @@ export default function ChatView({
       {/* Error banner */}
       <ProviderHealthBanner
         status={
-          shouldShowProviderHealthBanner && !shouldSelectFallbackProvider
+          shouldShowProviderHealthBanner &&
+          !providerFallbackProbePending &&
+          !shouldSelectFallbackProvider
             ? visibleActiveProviderStatus
             : null
         }
@@ -11881,6 +11973,10 @@ export default function ChatView({
         {...(needsProviderSetup
           ? {
               onConfigure: () => {
+                const embedConfig = readEmbedMode();
+                if (embedConfig && postOpenSettingsToLattice(embedConfig, "providers")) {
+                  return;
+                }
                 void navigate({ to: "/settings", search: { section: "providers" } });
               },
             }

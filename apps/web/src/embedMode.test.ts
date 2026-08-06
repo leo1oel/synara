@@ -5,6 +5,7 @@ import {
   embedWorkspaceMatches,
   initializeEmbedMode,
   postEmbedReadyToLattice,
+  postOpenSettingsToLattice,
   postShowInFolderToLattice,
   postConfirmationRequestToLattice,
   postSettingsContentHeightToLattice,
@@ -32,6 +33,7 @@ import {
   LATTICE_RESTORE_AGENT_CHECKPOINT,
   SYNARA_EMBED_READY,
   SYNARA_CONFIRMATION_REQUEST,
+  SYNARA_OPEN_SETTINGS,
   SYNARA_SETTINGS_CONTENT_HEIGHT,
   SYNARA_SETTINGS_WHEEL,
   SYNARA_SHOW_IN_FOLDER,
@@ -127,6 +129,22 @@ describe("Lattice embed mode", () => {
       {
         type: SYNARA_SHOW_IN_FOLDER,
         path: "/Users/me/.synara/skills",
+      },
+      "http://localhost:1420",
+    );
+  });
+
+  it("asks the trusted Lattice host to open provider settings", () => {
+    const { postMessage } = installBrowserStubs();
+    initializeEmbedMode();
+    const config = readEmbedMode();
+    expect(config).not.toBeNull();
+
+    expect(postOpenSettingsToLattice(config!, "providers")).toBe(true);
+    expect(postMessage).toHaveBeenCalledWith(
+      {
+        type: SYNARA_OPEN_SETTINGS,
+        section: "providers",
       },
       "http://localhost:1420",
     );

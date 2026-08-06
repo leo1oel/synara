@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ServerProviderStatus } from "@synara/contracts";
 import {
-  findFirstUsableProvider,
+  findFirstUsableDefaultProvider,
   isProviderUsable,
   normalizeProviderStatusForLocalConfig,
   providerUnavailableReason,
@@ -25,10 +25,10 @@ const READY_STATUS: ServerProviderStatus = {
   authStatus: "authenticated",
 };
 
-describe("findFirstUsableProvider", () => {
+describe("findFirstUsableDefaultProvider", () => {
   it("uses the first installed and authenticated provider in the preferred order", () => {
     expect(
-      findFirstUsableProvider(
+      findFirstUsableDefaultProvider(
         [
           { ...BASE_STATUS, provider: "codex" },
           { ...READY_STATUS, provider: "claudeAgent" },
@@ -40,7 +40,7 @@ describe("findFirstUsableProvider", () => {
 
   it("returns null when every checked provider requires setup", () => {
     expect(
-      findFirstUsableProvider(
+      findFirstUsableDefaultProvider(
         [
           { ...BASE_STATUS, provider: "codex" },
           {
@@ -50,6 +50,18 @@ describe("findFirstUsableProvider", () => {
           },
         ],
         ["codex", "claudeAgent"],
+      ),
+    ).toBeNull();
+  });
+
+  it("does not treat Pi as a selectable fallback without a default model", () => {
+    expect(
+      findFirstUsableDefaultProvider(
+        [
+          { ...BASE_STATUS, provider: "codex" },
+          { ...READY_STATUS, provider: "pi", authStatus: "unknown" },
+        ],
+        ["codex", "pi"],
       ),
     ).toBeNull();
   });

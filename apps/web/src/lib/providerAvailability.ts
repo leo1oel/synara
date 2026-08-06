@@ -3,6 +3,7 @@ import {
   type ProviderKind,
   type ServerProviderStatus,
 } from "@synara/contracts";
+import { getDefaultModel } from "@synara/shared/model";
 
 export interface ProviderSendAvailability {
   readonly provider: ProviderKind;
@@ -106,7 +107,7 @@ export function findProviderStatus(
   return statuses.find((status) => status.provider === provider) ?? null;
 }
 
-export function findFirstUsableProvider(
+export function findFirstUsableDefaultProvider(
   statuses: readonly ServerProviderStatus[],
   providerOrder: readonly ProviderKind[],
 ): ProviderKind | null {
@@ -114,7 +115,10 @@ export function findFirstUsableProvider(
   for (const provider of providerOrder) {
     if (checked.has(provider)) continue;
     checked.add(provider);
-    if (isProviderUsable(findProviderStatus(statuses, provider))) {
+    if (
+      getDefaultModel(provider) !== null &&
+      isProviderUsable(findProviderStatus(statuses, provider))
+    ) {
       return provider;
     }
   }

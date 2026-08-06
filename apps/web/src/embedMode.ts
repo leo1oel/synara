@@ -20,6 +20,7 @@ export const SYNARA_AGENT_PERMISSION_MODE_STATUS = "synara:agent-permission-mode
 export const SYNARA_LAYOUT_METRICS = "synara:layout-metrics";
 export const SYNARA_SETTINGS_CONTENT_HEIGHT = "synara:settings-content-height";
 export const SYNARA_SETTINGS_WHEEL = "synara:settings-wheel";
+export const SYNARA_OPEN_SETTINGS = "synara:open-settings";
 export const SYNARA_OPEN_EXTERNAL = "synara:open-external";
 export const SYNARA_SHOW_IN_FOLDER = "synara:show-in-folder";
 export const SYNARA_EMBED_READY = "synara:embed-ready";
@@ -560,6 +561,12 @@ export function postExternalLinkToLattice(config: EmbedModeConfig, url: string):
 export function postShowInFolderToLattice(config: EmbedModeConfig, path: string): boolean {
   if (!config.hostOrigin || !path.trim()) return false;
   window.parent.postMessage({ type: SYNARA_SHOW_IN_FOLDER, path }, config.hostOrigin);
+  return true;
+}
+
+export function postOpenSettingsToLattice(config: EmbedModeConfig, section: "providers"): boolean {
+  if (!config.hostOrigin) return false;
+  window.parent.postMessage({ type: SYNARA_OPEN_SETTINGS, section }, config.hostOrigin);
   return true;
 }
 
