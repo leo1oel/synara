@@ -358,7 +358,7 @@ function PullRequestsRouteView() {
           <header
             className={cn(
               CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
-              CHAT_SURFACE_HEADER_PADDING_X_CLASS,
+              embedMode ? "px-[14px]" : CHAT_SURFACE_HEADER_PADDING_X_CLASS,
               "drag-region",
               !embedMode && trafficLightGutter,
               !embedMode && windowControlsGutter,
@@ -405,7 +405,12 @@ function PullRequestsRouteView() {
             </div>
           </header>
           <main className="min-h-0 flex-1 overflow-y-auto">
-            <div className="flex w-full max-w-[46rem] flex-col gap-4 px-4 pb-12 pt-3 sm:px-5">
+            <div
+              className={cn(
+                "flex w-full max-w-[46rem] flex-col gap-4 pb-12 pt-3",
+                embedMode ? "px-[14px]" : "px-4 sm:px-5",
+              )}
+            >
               {bindingError ? (
                 <PullRequestWarningNote shape="callout" role="status">
                   Project binding failed: {bindingError}

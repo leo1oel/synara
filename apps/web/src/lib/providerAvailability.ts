@@ -106,6 +106,21 @@ export function findProviderStatus(
   return statuses.find((status) => status.provider === provider) ?? null;
 }
 
+export function findFirstUsableProvider(
+  statuses: readonly ServerProviderStatus[],
+  providerOrder: readonly ProviderKind[],
+): ProviderKind | null {
+  const checked = new Set<ProviderKind>();
+  for (const provider of providerOrder) {
+    if (checked.has(provider)) continue;
+    checked.add(provider);
+    if (isProviderUsable(findProviderStatus(statuses, provider))) {
+      return provider;
+    }
+  }
+  return null;
+}
+
 // Shared send gate used by chat, Kanban, shortcuts, and handoff flows.
 export function resolveProviderSendAvailability(input: {
   readonly provider: ProviderKind;

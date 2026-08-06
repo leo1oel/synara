@@ -331,7 +331,7 @@ export function GitPanel(props: {
 
           <div className="flex max-h-[48%] min-h-0 shrink-0 overflow-hidden">
             <ScrollArea className="min-h-0 flex-1" scrollFade>
-              <div className="flex flex-col gap-2 px-1.5 py-2">
+              <div className={cn("flex flex-col gap-2 py-2", props.showActions ? "px-2" : "px-1.5")}>
                 {error ? (
                   <Alert variant="error" size="sm" className="text-destructive">
                     {error}

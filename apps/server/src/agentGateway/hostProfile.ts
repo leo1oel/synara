@@ -35,9 +35,7 @@ const LATTICE_HOST_PROFILE: AgentHostProfile = {
 export function resolveAgentHostProfile(
   value = process.env.AGENT_HOST_PROFILE ?? process.env.SYNARA_HOST_PROFILE,
 ): AgentHostProfile {
-  return value?.trim().toLowerCase() === "lattice"
-    ? LATTICE_HOST_PROFILE
-    : SYNARA_HOST_PROFILE;
+  return value?.trim().toLowerCase() === "lattice" ? LATTICE_HOST_PROFILE : SYNARA_HOST_PROFILE;
 }
 
 export const ACTIVE_AGENT_HOST_PROFILE = resolveAgentHostProfile();
@@ -67,6 +65,10 @@ const LATTICE_NATIVE_TOOL_NAMES = new Set([
   "cite",
   "upgrade_bibliography",
   "remove_reference",
+  "list_canvas_shapes",
+  "create_canvas_shapes",
+  "update_canvas_shapes",
+  "delete_canvas_shapes",
 ]);
 
 export function replaceModelVisibleHostBranding(value: string): string {
@@ -103,16 +105,12 @@ function adaptToolResult(result: McpToolCallResult): McpToolCallResult {
   return {
     ...result,
     content: result.content.map((part) =>
-      part.type === "text"
-        ? { ...part, text: replaceModelVisibleToolAliases(part.text) }
-        : part,
+      part.type === "text" ? { ...part, text: replaceModelVisibleToolAliases(part.text) } : part,
     ),
     ...(result.structuredContent === undefined
       ? {}
       : {
-          structuredContent: replaceStructuredBranding(
-            result.structuredContent,
-          ) as Record<string, unknown>,
+          structuredContent: replaceStructuredBranding(result.structuredContent) as Record<string, unknown>,
         }),
   };
 }
@@ -122,9 +120,7 @@ function adaptToolResult(result: McpToolCallResult): McpToolCallResult {
  * catalog. Lattice exposes bounded task coordination while automation and
  * browser control remain unavailable.
  */
-export function adaptToolsForActiveHost(
-  tools: ReadonlyArray<ToolEntry>,
-): ReadonlyArray<ToolEntry> {
+export function adaptToolsForActiveHost(tools: ReadonlyArray<ToolEntry>): ReadonlyArray<ToolEntry> {
   if (ACTIVE_AGENT_HOST_PROFILE.id !== "lattice") return tools;
   return tools.flatMap((tool) => {
     const alias = LATTICE_TOOL_ALIASES.get(tool.definition.name);
@@ -136,9 +132,7 @@ export function adaptToolsForActiveHost(
           ...tool.definition,
           name: alias ?? tool.definition.name,
           description: replaceModelVisibleToolAliases(tool.definition.description),
-          inputSchema: replaceStructuredBranding(
-            tool.definition.inputSchema,
-          ) as typeof tool.definition.inputSchema,
+          inputSchema: replaceStructuredBranding(tool.definition.inputSchema) as typeof tool.definition.inputSchema,
           ...(tool.definition.annotations === undefined
             ? {}
             : {
@@ -147,15 +141,12 @@ export function adaptToolsForActiveHost(
                   ...(tool.definition.annotations.title === undefined
                     ? {}
                     : {
-                        title: replaceModelVisibleToolAliases(
-                          tool.definition.annotations.title,
-                        ),
+                        title: replaceModelVisibleToolAliases(tool.definition.annotations.title),
                       }),
                 },
               }),
         },
-        handler: (args, context) =>
-          tool.handler(args, context).pipe(Effect.map(adaptToolResult)),
+        handler: (args, context) => tool.handler(args, context).pipe(Effect.map(adaptToolResult)),
       },
     ];
   });

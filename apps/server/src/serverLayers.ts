@@ -2,6 +2,7 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Layer } from "effect";
 
 import { AgentGatewayLive } from "./agentGateway/Layers/AgentGateway";
+import { LatticeCanvasBrokerLive } from "./agentGateway/Layers/LatticeCanvasBroker";
 import { AgentGatewayOperationRepositoryLive } from "./agentGateway/Layers/AgentGatewayOperationRepository";
 import { AgentGatewayCredentialsWithSecretsLive } from "./agentGateway/Layers/AgentGatewayCredentials";
 import { BrowserAutomationHostLive } from "./browserAutomation/Layers/BrowserAutomationHost";
@@ -60,8 +61,7 @@ export function makeServerRuntimeServicesLayer(
     readonly agentGatewayCredentialsLayer?: typeof AgentGatewayCredentialsWithSecretsLive;
   } = {},
 ) {
-  const agentGatewayCredentialsLayer =
-    options.agentGatewayCredentialsLayer ?? AgentGatewayCredentialsWithSecretsLive;
+  const agentGatewayCredentialsLayer = options.agentGatewayCredentialsLayer ?? AgentGatewayCredentialsWithSecretsLive;
   const providerHealthLayer = ProviderHealthLive.pipe(Layer.provideMerge(ServerSettingsLive));
   const checkpointStoreLayer = CheckpointStoreLive.pipe(Layer.provide(GitCoreLive));
 
@@ -77,15 +77,9 @@ export function makeServerRuntimeServicesLayer(
     RuntimeReceiptBusLive,
     TurnCheckpointCoordinatorLive,
   );
-  const managedAttachmentCleanupLayer = ManagedAttachmentCleanupLive.pipe(
-    Layer.provideMerge(runtimeServicesLayer),
-  );
-  const runtimeIngestionLayer = ProviderRuntimeIngestionLive.pipe(
-    Layer.provideMerge(runtimeServicesLayer),
-  );
-  const studioOutputReactorLayer = StudioOutputReactorLive.pipe(
-    Layer.provideMerge(runtimeServicesLayer),
-  );
+  const managedAttachmentCleanupLayer = ManagedAttachmentCleanupLive.pipe(Layer.provideMerge(runtimeServicesLayer));
+  const runtimeIngestionLayer = ProviderRuntimeIngestionLive.pipe(Layer.provideMerge(runtimeServicesLayer));
+  const studioOutputReactorLayer = StudioOutputReactorLive.pipe(Layer.provideMerge(runtimeServicesLayer));
   const providerCommandReactorLayer = ProviderCommandReactorLive.pipe(
     Layer.provideMerge(runtimeServicesLayer),
     Layer.provideMerge(OrchestrationEventDeliveryRepositoryLive),
@@ -94,12 +88,8 @@ export function makeServerRuntimeServicesLayer(
     Layer.provideMerge(TextGenerationLayerLive),
     Layer.provideMerge(ServerSettingsLive),
   );
-  const checkpointReactorLayer = CheckpointReactorLive.pipe(
-    Layer.provideMerge(runtimeServicesLayer),
-  );
-  const profileStatsArchiveLayer = ProfileStatsArchiveLive.pipe(
-    Layer.provideMerge(checkpointStoreLayer),
-  );
+  const checkpointReactorLayer = CheckpointReactorLive.pipe(Layer.provideMerge(runtimeServicesLayer));
+  const profileStatsArchiveLayer = ProfileStatsArchiveLive.pipe(Layer.provideMerge(checkpointStoreLayer));
   const orchestrationReactorLayer = OrchestrationReactorLive.pipe(
     Layer.provideMerge(runtimeIngestionLayer),
     Layer.provideMerge(providerCommandReactorLayer),
@@ -113,9 +103,7 @@ export function makeServerRuntimeServicesLayer(
   );
   // Shares the single memoized TerminalManager with the top-level TerminalLayerLive.
   const devServerManagerLayer = DevServerManagerLive.pipe(Layer.provide(TerminalLayerLive));
-  const sessionCredentialLayer = SessionCredentialServiceLive.pipe(
-    Layer.provide(ServerSecretStoreLive),
-  );
+  const sessionCredentialLayer = SessionCredentialServiceLive.pipe(Layer.provide(ServerSecretStoreLive));
   const authControlPlaneLayer = AuthControlPlaneLive.pipe(
     Layer.provide(BootstrapCredentialServiceLive),
     Layer.provide(sessionCredentialLayer),
@@ -146,9 +134,7 @@ export function makeServerRuntimeServicesLayer(
     Layer.provideMerge(automationServiceLayer),
     Layer.provideMerge(AutomationRepositoryLive),
   );
-  const automationRunReactorLayer = AutomationRunReactorLive.pipe(
-    Layer.provideMerge(automationServiceLayer),
-  );
+  const automationRunReactorLayer = AutomationRunReactorLive.pipe(Layer.provideMerge(automationServiceLayer));
   const externalMcpServiceLayer = ExternalMcpServiceLive.pipe(
     Layer.provideMerge(ExternalMcpRepositoryLive),
     Layer.provideMerge(runtimeServicesLayer),
@@ -164,6 +150,7 @@ export function makeServerRuntimeServicesLayer(
     Layer.provideMerge(providerHealthLayer),
   );
   const agentGatewayLayer = AgentGatewayLive.pipe(
+    Layer.provideMerge(LatticeCanvasBrokerLive),
     Layer.provideMerge(agentGatewayCredentialsLayer),
     Layer.provideMerge(automationServiceLayer),
     Layer.provideMerge(runtimeServicesLayer),
@@ -185,6 +172,7 @@ export function makeServerRuntimeServicesLayer(
 
   return Layer.mergeAll(
     agentGatewayCredentialsLayer,
+    LatticeCanvasBrokerLive,
     agentGatewayLayer,
     BrowserAutomationHostLive,
     automationServiceLayer,

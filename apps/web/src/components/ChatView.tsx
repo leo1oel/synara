@@ -40,7 +40,7 @@ import {
 } from "@synara/contracts";
 import { automationRequiresTargetThread } from "@synara/shared/automationMode";
 import { providerSupportsNativeTurnSteering } from "@synara/shared/providerMetadata";
-import { getModelCapabilities, normalizeModelSlug } from "@synara/shared/model";
+import { getDefaultModel, getModelCapabilities, normalizeModelSlug } from "@synara/shared/model";
 import { resolveTailUserMessageEditTarget } from "@synara/shared/conversationEdit";
 import { threadExportBlockedReason } from "@synara/shared/threadExport";
 import { pendingRequestInstanceKey } from "@synara/shared/threadSummary";
@@ -99,6 +99,7 @@ import {
 } from "~/lib/composerMentions";
 import { getLocalFolderBrowseRootPath, isLocalFolderMentionQuery } from "~/lib/localFolderMentions";
 import {
+  findFirstUsableProvider,
   findProviderStatus,
   isProviderUsable,
   normalizeCustomBinaryPath,
@@ -3581,6 +3582,38 @@ export default function ChatView({
     () => findProviderStatus(providerStatuses, selectedProvider),
     [selectedProvider, providerStatuses],
   );
+  const fallbackProvider = useMemo(
+    () =>
+      findFirstUsableProvider(
+        providerStatuses,
+        [settings.defaultProvider, ...settings.providerOrder].filter(
+          (provider) => provider !== "pi",
+        ),
+      ),
+    [providerStatuses, settings.defaultProvider, settings.providerOrder],
+  );
+  const hasUsableProvider = providerStatuses.some(isProviderUsable);
+  const shouldSelectFallbackProvider =
+    !hasThreadStarted &&
+    !isProviderUsable(activeProviderStatus) &&
+    fallbackProvider !== null &&
+    fallbackProvider !== selectedProvider;
+  const needsProviderSetup =
+    serverConfigQuery.data !== undefined && !hasUsableProvider;
+  useEffect(() => {
+    if (!activeThread || !shouldSelectFallbackProvider || !fallbackProvider) return;
+    const model = getDefaultModel(fallbackProvider);
+    if (!model) return;
+    setComposerDraftModelSelection(activeThread.id, {
+      provider: fallbackProvider,
+      model,
+    });
+  }, [
+    activeThread,
+    fallbackProvider,
+    setComposerDraftModelSelection,
+    shouldSelectFallbackProvider,
+  ]);
   const activeProviderHealthBannerDismissalKey = useMemo(
     () => getProviderHealthBannerDismissalKey(activeProviderStatus),
     [activeProviderStatus],
@@ -11023,8 +11056,20 @@ export default function ChatView({
 
       {/* Error banner */}
       <ProviderHealthBanner
-        status={shouldShowProviderHealthBanner ? visibleActiveProviderStatus : null}
-        onDismiss={dismissActiveProviderHealthBanner}
+        status={
+          shouldShowProviderHealthBanner && !shouldSelectFallbackProvider
+            ? visibleActiveProviderStatus
+            : null
+        }
+        needsProviderSetup={shouldShowProviderHealthBanner && needsProviderSetup}
+        onConfigure={
+          needsProviderSetup
+            ? () => {
+                void navigate({ to: "/settings", search: { section: "providers" } });
+              }
+            : undefined
+        }
+        onDismiss={needsProviderSetup ? undefined : dismissActiveProviderHealthBanner}
       />
       <ThreadErrorBanner
         error={activeThread.error}
