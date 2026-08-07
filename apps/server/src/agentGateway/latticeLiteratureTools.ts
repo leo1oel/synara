@@ -140,6 +140,53 @@ export function makeLatticeLiteratureTools(
     },
   };
 
+  const listPapers: ToolEntry = {
+    requiredCapability: "literature:read",
+    definition: {
+      name: "list_papers",
+      description:
+        "List the project's paper library: every work the user has imported and cited, with its title, citation key, and — when the text is cached locally — workspace-relative fullTextPath and overviewPath ready to read with file tools. This is the user's own literature; consult it before any external search when they refer to their papers, library, or readings. An entry without paths is cited but not downloaded; fetch_paper can retrieve it.",
+      inputSchema: {
+        type: "object",
+        properties: {},
+        additionalProperties: false,
+      },
+      annotations: { title: "List paper library", ...READ_ONLY_TOOL_ANNOTATIONS },
+    },
+    handler: (_args, context) => invoke("list_papers", {}, context),
+  };
+
+  const searchLibrary: ToolEntry = {
+    requiredCapability: "literature:read",
+    definition: {
+      name: "search_library",
+      description:
+        "Full-text search across the cached papers in the project's library. Returns matching lines with the paper's workspace-relative path; read the file at a hit's path for surrounding context. Searches only what the user has cited and cached — use search_literature to discover new external works instead.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Words to find in library papers." },
+        },
+        required: ["query"],
+        additionalProperties: false,
+      },
+      annotations: { title: "Search paper library", ...READ_ONLY_TOOL_ANNOTATIONS },
+    },
+    handler: (args, context) => {
+      try {
+        return invoke(
+          "search_library",
+          { query: readStringArg(args, "query", { required: true })! },
+          context,
+        );
+      } catch (error) {
+        return Effect.succeed(
+          mcpToolResultError(error instanceof Error ? error.message : String(error)),
+        );
+      }
+    },
+  };
+
   const fetchPaper: ToolEntry = {
     requiredCapability: "literature:write",
     requiresActiveTurn: true,
@@ -266,6 +313,8 @@ export function makeLatticeLiteratureTools(
 
   return [
     searchLiterature,
+    listPapers,
+    searchLibrary,
     fetchPaper,
     cite,
     fetchWebReference,

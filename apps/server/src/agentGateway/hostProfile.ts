@@ -61,6 +61,8 @@ const LATTICE_TOOL_ALIASES = new Map<string, string>([
 
 const LATTICE_NATIVE_TOOL_NAMES = new Set([
   "search_literature",
+  "list_papers",
+  "search_library",
   "fetch_paper",
   "cite",
   "fetch_web_reference",

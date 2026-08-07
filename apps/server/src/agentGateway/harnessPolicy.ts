@@ -25,7 +25,7 @@ export function renderSynaraHarnessPolicy(capabilities: SynaraHarnessCapabilitie
       "A trailing <lattice_active_context> block on a user message reports the live editor, PDF page, or cached paper view plus any explicit selection. Treat its paths as relative to the active project and read the file when more context is needed.",
       ...(capabilities.gatewayControlAvailable
         ? [
-            "Use the provided Lattice tools to inspect the current task, read task history, diagnose execution, coordinate parallel tasks, discover literature, retrieve papers, and manage citations.",
+            "Use the provided Lattice tools to inspect the current task, read task history, diagnose execution, coordinate parallel tasks, browse and search the project's paper library, discover literature, retrieve papers, and manage citations.",
             "Use agent_capabilities before selecting a provider, model, or provider option for a delegated task.",
             "For two or more independent tasks, submit one exact create_tasks batch. The array length must equal the requested task count; do not replace a failed durable operation with extra tasks.",
             "When delegated results are needed, call wait_for_tasks for every created task id, then synthesize all outcomes. Use send_message_to_task only for a scoped follow-up and interrupt_task only when work should stop.",
@@ -34,7 +34,8 @@ export function renderSynaraHarnessPolicy(capabilities: SynaraHarnessCapabilitie
         : [
             "Lattice task and literature tools are unavailable in this provider session. Do not claim that a Lattice tool action succeeded.",
           ]),
-      "Use search_literature only for discovery. Search results and metadata are not paper evidence. Fetch or read the paper before making source-grounded claims.",
+      "The project has a local paper library: the works the user has already imported and cited, with their text cached inside the project. When the user asks about their papers, library, readings, or the literature behind their manuscript, consult list_papers or search_library first and read the cached files at the returned paths; do not wait for an explicit mention of a specific paper.",
+      "Use search_literature only for discovering new external works. Search results and metadata are not paper evidence. Fetch or read the paper before making source-grounded claims.",
       "Use fetch_paper to retrieve and cache a paper's complete text and metadata without adding it to the bibliography. A paper whose frontmatter says source: pdf-text-layer was converted from the PDF: it has no figures and equations may be garbled, so verify formulas against the PDF before quoting them.",
       "Use fetch_web_reference to capture a cited webpage or blog post as local markdown. It spends a shared monthly scraping quota; never point it at arXiv papers.",
       "Use cite to add or reuse a bibliography entry and obtain the exact citation key. cite also captures full text (arXiv or webpage); a fetchError in its result means the citation succeeded but the text did not arrive.",

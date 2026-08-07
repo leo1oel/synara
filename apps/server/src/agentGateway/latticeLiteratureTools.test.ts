@@ -6,6 +6,7 @@ import { Effect } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { makeLatticeLiteratureTools } from "./latticeLiteratureTools.ts";
+import type { ToolContext } from "./toolRuntime.ts";
 
 const temporaryRoots: string[] = [];
 
@@ -71,6 +72,63 @@ describe("Lattice literature tools", () => {
       text: expect.stringContaining("\\cite{vaswani2017attention}"),
     });
     expect(JSON.stringify(result)).toContain(`${workspaceRoot}/papers/attention.md`);
+  });
+
+  it("lists and searches the paper library through the executable dispatch", async () => {
+    const workspaceRoot = await mkdtemp(path.join(tmpdir(), "lattice-literature-"));
+    temporaryRoots.push(workspaceRoot);
+    const executable = path.join(workspaceRoot, "lattice-stub.mjs");
+    await writeFile(
+      executable,
+      [
+        "#!/usr/bin/env node",
+        "const request = JSON.parse(process.argv[3]);",
+        "if (process.argv[2] !== 'literature') process.exit(2);",
+        "process.stdout.write(JSON.stringify(request.tool === 'list_papers'",
+        "  ? { papers: [{ title: 'Attention Is All You Need', citationKey: 'vaswani2017attention', arxivId: '1706.03762', fullTextPath: '.research/papers/1706.03762/paper.md' }] }",
+        "  : { results: [{ kind: 'paper', path: '.research/papers/1706.03762/paper.md', line: 3, snippet: 'scaled dot-product attention' }], request }));",
+      ].join("\n"),
+    );
+    await chmod(executable, 0o755);
+    vi.stubEnv("LATTICE_BIN", executable);
+
+    const context: ToolContext = {
+      principal: {
+        kind: "provider-session",
+        sessionKey: "session",
+        threadId: "thread",
+        provider: "codex",
+        turnId: "turn",
+      },
+      callerThreadId: "thread",
+      callerSessionKey: "session",
+      callerProvider: "codex",
+      callerCapabilities: new Set(["literature:read"]),
+      callerTurnId: "turn",
+      assertCallerTurnActive: () => Effect.void,
+      jsonRpcRequestId: "request",
+    };
+    const tools = makeLatticeLiteratureTools({
+      resolveWorkspaceRoot: () => Effect.succeed(workspaceRoot),
+    });
+
+    const listPapers = tools.find((tool) => tool.definition.name === "list_papers");
+    expect(listPapers).toBeDefined();
+    const listed = await Effect.runPromise(listPapers!.handler({}, context));
+    expect(listed.isError).not.toBe(true);
+    expect(JSON.stringify(listed)).toContain(".research/papers/1706.03762/paper.md");
+    expect(JSON.stringify(listed)).toContain("vaswani2017attention");
+
+    const searchLibrary = tools.find((tool) => tool.definition.name === "search_library");
+    expect(searchLibrary).toBeDefined();
+    const found = await Effect.runPromise(
+      searchLibrary!.handler({ query: "scaled dot-product" }, context),
+    );
+    expect(found.isError).not.toBe(true);
+    const payload = JSON.stringify(found);
+    // The stub echoes the dispatched request: tool tag and query arrived intact.
+    expect(payload).toContain("search_library");
+    expect(payload).toContain("scaled dot-product");
   });
 
   it("captures webpages through the same executable dispatch", async () => {
