@@ -204,7 +204,11 @@ export function makeLatticeLiteratureTools(
       annotations: { title: "Capture webpage", ...WRITE_TOOL_ANNOTATIONS, openWorldHint: true },
     },
     handler: (args, context) =>
-      invoke("fetch_web_reference", { url: readStringArg(args, "url", { required: true })! }, context),
+      invoke(
+        "fetch_web_reference",
+        { url: readStringArg(args, "url", { required: true })! },
+        context,
+      ),
   };
 
   const upgradeBibliography: ToolEntry = {
@@ -260,5 +264,12 @@ export function makeLatticeLiteratureTools(
       invoke("remove_reference", { key: readStringArg(args, "key", { required: true })! }, context),
   };
 
-  return [searchLiterature, fetchPaper, cite, fetchWebReference, upgradeBibliography, removeReference];
+  return [
+    searchLiterature,
+    fetchPaper,
+    cite,
+    fetchWebReference,
+    upgradeBibliography,
+    removeReference,
+  ];
 }

@@ -13,6 +13,7 @@ import { Route as ChatRouteImport } from './routes/_chat'
 import { Route as ChatIndexRouteImport } from './routes/_chat.index'
 import { Route as ChatSourceControlRouteImport } from './routes/_chat.source-control'
 import { Route as ChatSettingsRouteImport } from './routes/_chat.settings'
+import { Route as ChatReviewRouteImport } from './routes/_chat.review'
 import { Route as ChatPullRequestsRouteImport } from './routes/_chat.pull-requests'
 import { Route as ChatPluginsRouteImport } from './routes/_chat.plugins'
 import { Route as ChatAutomationsRouteImport } from './routes/_chat.automations'
@@ -41,6 +42,11 @@ const ChatSourceControlRoute = ChatSourceControlRouteImport.update({
 const ChatSettingsRoute = ChatSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => ChatRoute,
+} as any)
+const ChatReviewRoute = ChatReviewRouteImport.update({
+  id: '/review',
+  path: '/review',
   getParentRoute: () => ChatRoute,
 } as any)
 const ChatPullRequestsRoute = ChatPullRequestsRouteImport.update({
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/automations': typeof ChatAutomationsRouteWithChildren
   '/plugins': typeof ChatPluginsRoute
   '/pull-requests': typeof ChatPullRequestsRouteWithChildren
+  '/review': typeof ChatReviewRoute
   '/settings': typeof ChatSettingsRoute
   '/source-control': typeof ChatSourceControlRoute
   '/automations/$automationId': typeof ChatAutomationsAutomationIdRoute
@@ -113,6 +120,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/$threadId': typeof ChatThreadIdRoute
   '/plugins': typeof ChatPluginsRoute
+  '/review': typeof ChatReviewRoute
   '/settings': typeof ChatSettingsRoute
   '/source-control': typeof ChatSourceControlRoute
   '/': typeof ChatIndexRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/_chat/automations': typeof ChatAutomationsRouteWithChildren
   '/_chat/plugins': typeof ChatPluginsRoute
   '/_chat/pull-requests': typeof ChatPullRequestsRouteWithChildren
+  '/_chat/review': typeof ChatReviewRoute
   '/_chat/settings': typeof ChatSettingsRoute
   '/_chat/source-control': typeof ChatSourceControlRoute
   '/_chat/': typeof ChatIndexRoute
@@ -148,6 +157,7 @@ export interface FileRouteTypes {
     | '/automations'
     | '/plugins'
     | '/pull-requests'
+    | '/review'
     | '/settings'
     | '/source-control'
     | '/automations/$automationId'
@@ -160,6 +170,7 @@ export interface FileRouteTypes {
   to:
     | '/$threadId'
     | '/plugins'
+    | '/review'
     | '/settings'
     | '/source-control'
     | '/'
@@ -176,6 +187,7 @@ export interface FileRouteTypes {
     | '/_chat/automations'
     | '/_chat/plugins'
     | '/_chat/pull-requests'
+    | '/_chat/review'
     | '/_chat/settings'
     | '/_chat/source-control'
     | '/_chat/'
@@ -219,6 +231,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof ChatSettingsRouteImport
+      parentRoute: typeof ChatRoute
+    }
+    '/_chat/review': {
+      id: '/_chat/review'
+      path: '/review'
+      fullPath: '/review'
+      preLoaderRoute: typeof ChatReviewRouteImport
       parentRoute: typeof ChatRoute
     }
     '/_chat/pull-requests': {
@@ -324,6 +343,7 @@ interface ChatRouteChildren {
   ChatAutomationsRoute: typeof ChatAutomationsRouteWithChildren
   ChatPluginsRoute: typeof ChatPluginsRoute
   ChatPullRequestsRoute: typeof ChatPullRequestsRouteWithChildren
+  ChatReviewRoute: typeof ChatReviewRoute
   ChatSettingsRoute: typeof ChatSettingsRoute
   ChatSourceControlRoute: typeof ChatSourceControlRoute
   ChatIndexRoute: typeof ChatIndexRoute
@@ -337,6 +357,7 @@ const ChatRouteChildren: ChatRouteChildren = {
   ChatAutomationsRoute: ChatAutomationsRouteWithChildren,
   ChatPluginsRoute: ChatPluginsRoute,
   ChatPullRequestsRoute: ChatPullRequestsRouteWithChildren,
+  ChatReviewRoute: ChatReviewRoute,
   ChatSettingsRoute: ChatSettingsRoute,
   ChatSourceControlRoute: ChatSourceControlRoute,
   ChatIndexRoute: ChatIndexRoute,

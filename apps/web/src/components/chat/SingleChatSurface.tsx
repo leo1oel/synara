@@ -20,6 +20,7 @@ import { useComposerDraftStore } from "../../composerDraftStore";
 import type { DiffRouteSearch } from "../../diffRouteSearch";
 import { stripDiffSearchParams } from "../../diffRouteSearch";
 import { readEditorViewState, storeEditorViewState } from "../../editorViewState";
+import { postOpenReviewToLattice, readEmbedMode } from "../../embedMode";
 import { basenameOfPath } from "../../file-icons";
 import { useBrowserPanelDesktopBridge } from "../../hooks/useBrowserPanelDesktopBridge";
 import { useDockPaneRuntimeActivation } from "../../hooks/useDockPaneRuntimeActivation";
@@ -320,6 +321,19 @@ export function SingleChatSurface(props: {
     openPane(props.threadId, { kind: "browser" });
   };
   const handleOpenTurnDiff = (turnId: TurnId, filePath?: string) => {
+    // Embedded surfaces never render the RightDock, so opening a diff pane
+    // there would silently do nothing. Hand the review off to the Lattice host
+    // instead: file rows open that file in the host editor, the Review button
+    // opens the host's changes drawer.
+    if (props.embedMode) {
+      const embedConfig = readEmbedMode();
+      if (
+        embedConfig &&
+        postOpenReviewToLattice(embedConfig, { threadId: props.threadId, turnId, filePath })
+      ) {
+        return;
+      }
+    }
     requestImmediateDockHydration("diff");
     openPane(props.threadId, {
       kind: "diff",

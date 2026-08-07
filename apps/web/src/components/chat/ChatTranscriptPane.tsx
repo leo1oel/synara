@@ -180,8 +180,7 @@ export function ChatTranscriptPane({
   const surfaceRef = useRef<HTMLDivElement>(null);
   const getTimelineViewport = useCallback(
     () =>
-      surfaceRef.current?.querySelector<HTMLElement>('[data-chat-scroll-container="true"]') ??
-      null,
+      surfaceRef.current?.querySelector<HTMLElement>('[data-chat-scroll-container="true"]') ?? null,
     [],
   );
 

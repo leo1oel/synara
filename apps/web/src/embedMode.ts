@@ -26,6 +26,7 @@ export const SYNARA_OPEN_SETTINGS = "synara:open-settings";
 export const SYNARA_OPEN_EXTERNAL = "synara:open-external";
 export const SYNARA_SHOW_IN_FOLDER = "synara:show-in-folder";
 export const SYNARA_EMBED_READY = "synara:embed-ready";
+export const SYNARA_OPEN_REVIEW = "synara:open-review";
 export const SYNARA_CONFIRMATION_REQUEST = "synara:confirmation-request";
 export const LATTICE_CONFIRMATION_ACK = "lattice:confirmation-ack";
 export const LATTICE_CONFIRMATION_RESPONSE = "lattice:confirmation-response";
@@ -652,6 +653,26 @@ export function postExternalLinkToLattice(config: EmbedModeConfig, url: string):
 export function postShowInFolderToLattice(config: EmbedModeConfig, path: string): boolean {
   if (!config.hostOrigin || !path.trim()) return false;
   window.parent.postMessage({ type: SYNARA_SHOW_IN_FOLDER, path }, config.hostOrigin);
+  return true;
+}
+
+// Embedded chats have no RightDock, so turn-diff review is delegated to the
+// host: with a filePath Lattice opens that file in its editor, without one it
+// opens the /review drawer pinned to this thread and turn.
+export function postOpenReviewToLattice(
+  config: EmbedModeConfig,
+  review: { threadId: string; turnId: string; filePath?: string | undefined },
+): boolean {
+  if (!config.hostOrigin || !review.threadId.trim() || !review.turnId.trim()) return false;
+  window.parent.postMessage(
+    {
+      type: SYNARA_OPEN_REVIEW,
+      threadId: review.threadId,
+      turnId: review.turnId,
+      ...(review.filePath?.trim() ? { filePath: review.filePath } : {}),
+    },
+    config.hostOrigin,
+  );
   return true;
 }
 

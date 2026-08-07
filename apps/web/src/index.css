@@ -1275,7 +1275,6 @@ html[data-synara-embed="true"] .app-settings-surface .rounded-lg {
   html[data-synara-embed="true"] *::-webkit-scrollbar-thumb:active {
     background-color: color-mix(in srgb, var(--foreground) 16%, transparent);
   }
-
 }
 
 @media (prefers-reduced-motion: reduce) {
