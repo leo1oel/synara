@@ -270,9 +270,16 @@ export function ChatTranscriptPane({
         )}
 
         {!agentActivityDetail ? (
-          // Keyed like the timeline: a thread switch recreates the scroller
-          // element, and the overlay must re-attach to the new one.
-          <ExternalScrollbar key={activeThreadId} getViewport={getTimelineViewport} />
+          // Keyed per thread: a switch recreates the scroller element and the
+          // overlay must re-attach to the new one. The prefix keeps this key
+          // distinct from the sibling MessagesTimeline's bare activeThreadId —
+          // duplicate keys in one children list corrupt reconciliation and
+          // left the previous thread's empty-state DOM mounted beside the
+          // list, squeezing the transcript into the bottom half of the pane.
+          <ExternalScrollbar
+            key={`external-scrollbar:${activeThreadId}`}
+            getViewport={getTimelineViewport}
+          />
         ) : null}
 
         {!agentActivityDetail ? (
