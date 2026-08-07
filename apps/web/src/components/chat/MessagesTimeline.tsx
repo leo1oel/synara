@@ -2243,8 +2243,11 @@ export const MessagesTimeline = memo(function MessagesTimeline({
         // edge so streamed content dissolves toward the composer. It is scroll-aware
         // via `animation-timeline: scroll()`, so the fade clears at the live edge and a
         // pinned or non-scrollable transcript stays crisp (no permanent shadow).
+        // The native scrollbar is hidden; ChatTranscriptPane draws the shared
+        // overlay scrollbar beside this list (native `::-webkit-scrollbar`
+        // hover state sticks when the pointer exits the embed iframe).
         className={cn(
-          "lattice-native-scrollbar scroll-fade-b h-full overflow-x-hidden overscroll-y-contain py-3 [scrollbar-gutter:stable] sm:py-4",
+          "scroll-fade-b h-full overflow-x-hidden overscroll-y-contain py-3 [-ms-overflow-style:none] [scrollbar-width:none] sm:py-4 [&::-webkit-scrollbar]:hidden",
           ENVIRONMENT_CONTENT_INSET_MOTION_CLASS,
           CHAT_COLUMN_GUTTER_CLASS_NAME,
         )}

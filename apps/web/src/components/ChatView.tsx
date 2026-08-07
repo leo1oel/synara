@@ -426,6 +426,7 @@ import {
   readLatticeAgentPanelOpenedMessage,
   readLatticeAgentPermissionModeMessage,
   readLatticeCheckpointRestoreMessage,
+  readLatticeComposerFilesMessage,
   readLatticeHostContextMessage,
   readLatticePaperLibraryMessage,
   type LatticePaperLibrarySnapshot,
@@ -6789,6 +6790,23 @@ export default function ChatView({
     focusComposer,
     setIsDragOverComposer,
   });
+
+  // OS drops over the embedded panel never reach this DOM: the Tauri host
+  // intercepts native file drags, reads the bytes, and relays them through the
+  // embed bridge instead. Feed them into the same path as the extras "+" menu.
+  useEffect(() => {
+    if (!isEmbed) return;
+    const embedConfig = readEmbedMode();
+    if (!embedConfig?.hostOrigin) return;
+    const handleComposerFiles = (event: MessageEvent) => {
+      const files = readLatticeComposerFilesMessage(event, embedConfig);
+      if (!files) return;
+      addComposerAttachments(files);
+      focusComposer();
+    };
+    window.addEventListener("message", handleComposerFiles);
+    return () => window.removeEventListener("message", handleComposerFiles);
+  }, [addComposerAttachments, focusComposer, isEmbed]);
 
   const onRevertToTurnCount = useCallback(
     async (turnCount: number) => {

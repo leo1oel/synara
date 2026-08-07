@@ -196,9 +196,14 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
    the embed document's scrollbar selectors. Mirror Lattice's inset scrollbar
    here so both axes look and align like the host's editor and paper panes. */
 @media (pointer: fine) {
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--foreground) 8%, transparent) transparent;
+  /* Standard properties only where webkit pseudo-elements don't exist: WebKit
+     and Blink drop every \`::-webkit-scrollbar-*\` rule on a scroller that also
+     sets \`scrollbar-width\` or \`scrollbar-color\`. */
+  @supports not selector(::-webkit-scrollbar) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: color-mix(in srgb, var(--foreground) 8%, transparent) transparent;
+    }
   }
 
   *::-webkit-scrollbar {

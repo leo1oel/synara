@@ -6,7 +6,9 @@
 import { type MessageId, type ThreadId, type ThreadMarker, type TurnId } from "@synara/contracts";
 import { type LegendListRef } from "@legendapp/list/react";
 import {
+  useCallback,
   useEffect,
+  useRef,
   useState,
   type ComponentProps,
   type CSSProperties,
@@ -25,6 +27,7 @@ import { ELEVATED_HOVER_SURFACE_CLASS_NAME } from "~/surfaceStyles";
 import { DISCLOSURE_CONTENT_MOTION_CLASS } from "~/lib/disclosureMotion";
 import { type ExpandedImagePreview } from "./ExpandedImagePreview";
 import { ChatEmptyStateHero } from "./ChatEmptyStateHero";
+import { ExternalScrollbar } from "../ui/external-scrollbar";
 import { MessagesTimeline, type MessagesTimelineController } from "./MessagesTimeline";
 import { MessageTrail } from "./MessageTrail";
 import { createActiveTrailStore, deriveMessageTrailItems } from "./messageTrail.logic";
@@ -172,6 +175,16 @@ export function ChatTranscriptPane({
     timelineControllerRef?.current?.scrollToMessage(messageId);
   };
 
+  // The timeline hides its native scrollbar and this pane draws the product
+  // overlay next to it instead (LegendList must stay the scroll owner).
+  const surfaceRef = useRef<HTMLDivElement>(null);
+  const getTimelineViewport = useCallback(
+    () =>
+      surfaceRef.current?.querySelector<HTMLElement>('[data-chat-scroll-container="true"]') ??
+      null,
+    [],
+  );
+
   return (
     <div
       data-chat-transcript-pane="true"
@@ -181,7 +194,7 @@ export function ChatTranscriptPane({
         terminalWorkspaceTerminalTabActive ? "pointer-events-none invisible" : "",
       )}
     >
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div ref={surfaceRef} className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         {agentActivityDetail && onCloseAgentActivityDetail ? (
           <AgentActivityDetailView
             detail={agentActivityDetail}
@@ -255,6 +268,12 @@ export function ChatTranscriptPane({
             {...(onToggleWorkGroup ? { onToggleWorkGroup } : {})}
           />
         )}
+
+        {!agentActivityDetail ? (
+          // Keyed like the timeline: a thread switch recreates the scroller
+          // element, and the overlay must re-attach to the new one.
+          <ExternalScrollbar key={activeThreadId} getViewport={getTimelineViewport} />
+        ) : null}
 
         {!agentActivityDetail ? (
           <div

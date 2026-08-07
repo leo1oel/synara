@@ -1169,6 +1169,17 @@ html[data-synara-embed="true"] .app-settings-surface .rounded-lg {
   height: 6px;
 }
 
+/* Overlay drawn beside a native scroll owner that ScrollArea cannot wrap
+   (external-scrollbar.tsx). Shares .synara-scrollbar visuals; the component
+   sets track top/height and thumb height/offset inline. */
+.external-scrollbar {
+  pointer-events: auto;
+}
+
+.external-scrollbar .synara-scrollbar-thumb {
+  flex: none;
+}
+
 /* Base UI scrolls through this viewport while the adjacent Scrollbar renders
    the product thumb. The embedded native-scrollbar rules below are deliberately
    broad, so make the one-owner contract explicit here to prevent two tracks. */
@@ -1185,9 +1196,31 @@ html[data-synara-embed="true"] .app-settings-surface .rounded-lg {
 
 /* Match Lattice's inset, low-contrast scrollbar rather than Synara's centered thumb. */
 @media (pointer: fine) {
-  html[data-synara-embed="true"] * {
-    scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--foreground) 8%, transparent) transparent;
+  /* Standard scrollbar properties only for engines without `::-webkit-scrollbar`:
+     WebKit and Blink ignore every `::-webkit-scrollbar-*` rule on a scroller
+     that also sets `scrollbar-width` or `scrollbar-color`, so declaring both
+     unconditionally made the embed render the UA's thin bar instead of the
+     4px inset thumb below (same constraint Lattice documents in theme.css). */
+  @supports not selector(::-webkit-scrollbar) {
+    html[data-synara-embed="true"] * {
+      scrollbar-width: thin;
+      scrollbar-color: transparent transparent;
+    }
+
+    html[data-synara-embed="true"] *:hover {
+      scrollbar-color: color-mix(in srgb, var(--foreground) 8%, transparent) transparent;
+    }
+  }
+
+  /* Element-level `scrollbar-width: thin` elsewhere in this file would likewise
+     knock out the webkit rules on those scrollers; reset it inside the embed so
+     they pick up the Lattice-style thumb too. */
+  @supports selector(::-webkit-scrollbar) {
+    html[data-synara-embed="true"] .chat-markdown .katex-display,
+    html[data-synara-embed="true"] .composer-picker-scroll {
+      scrollbar-width: auto;
+      scrollbar-color: auto;
+    }
   }
 
   html[data-synara-embed="true"] *::-webkit-scrollbar {
@@ -1200,11 +1233,19 @@ html[data-synara-embed="true"] .app-settings-surface .rounded-lg {
     background: transparent;
   }
 
+  /* Rest state is fully transparent; the thumb reveals when the scroller is
+     hovered, mirroring Lattice's hover-revealed editor scrollbar. Keep the
+     `background`/`background-color` split so `background-clip` survives the
+     hover overrides. */
   html[data-synara-embed="true"] *::-webkit-scrollbar-thumb {
     border: 3px solid transparent;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--foreground) 8%, transparent);
+    background: transparent;
     background-clip: content-box;
+  }
+
+  html[data-synara-embed="true"] *:hover::-webkit-scrollbar-thumb {
+    background-color: color-mix(in srgb, var(--foreground) 8%, transparent);
   }
 
   html[data-synara-embed="true"] *::-webkit-scrollbar-thumb:vertical {
@@ -1235,35 +1276,6 @@ html[data-synara-embed="true"] .app-settings-surface .rounded-lg {
     background-color: color-mix(in srgb, var(--foreground) 16%, transparent);
   }
 
-  /* Virtualized owners such as LegendList must keep their native viewport.
-     Give them ScrollArea's reveal-on-scroll behavior without introducing a
-     wrapper that would break follow-to-bottom and indexed navigation. */
-  html[data-synara-embed="true"] .lattice-native-scrollbar {
-    scrollbar-color: transparent transparent;
-  }
-
-  html[data-synara-embed="true"] .lattice-native-scrollbar:hover,
-  html[data-synara-embed="true"] .lattice-native-scrollbar[data-scrolling] {
-    scrollbar-color: color-mix(in srgb, var(--foreground) 8%, transparent) transparent;
-  }
-
-  html[data-synara-embed="true"] .lattice-native-scrollbar::-webkit-scrollbar-thumb {
-    background-color: transparent;
-  }
-
-  html[data-synara-embed="true"] .lattice-native-scrollbar:hover::-webkit-scrollbar-thumb,
-  html[data-synara-embed="true"]
-    .lattice-native-scrollbar[data-scrolling]::-webkit-scrollbar-thumb {
-    background-color: color-mix(in srgb, var(--foreground) 8%, transparent);
-  }
-
-  html[data-synara-embed="true"] .lattice-native-scrollbar:hover::-webkit-scrollbar-thumb:hover {
-    background-color: color-mix(in srgb, var(--foreground) 12%, transparent);
-  }
-
-  html[data-synara-embed="true"] .lattice-native-scrollbar:hover::-webkit-scrollbar-thumb:active {
-    background-color: color-mix(in srgb, var(--foreground) 16%, transparent);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

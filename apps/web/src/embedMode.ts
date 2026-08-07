@@ -16,6 +16,8 @@ export const LATTICE_HOST_CONTEXT_REQUEST = "lattice:request-host-context";
 export const LATTICE_HOST_CONTEXT_SELECTION_CLEAR = "lattice:clear-host-context-selection";
 export const LATTICE_PAPER_LIBRARY = "lattice:paper-library";
 export const LATTICE_PAPER_LIBRARY_REQUEST = "lattice:request-paper-library";
+export const LATTICE_COMPOSER_FILES = "lattice:composer-files";
+export const LATTICE_HOST_POINTER = "lattice:host-pointer";
 export const SYNARA_AGENT_PERMISSION_MODE_STATUS = "synara:agent-permission-mode";
 export const SYNARA_LAYOUT_METRICS = "synara:layout-metrics";
 export const SYNARA_SETTINGS_CONTENT_HEIGHT = "synara:settings-content-height";
@@ -96,6 +98,18 @@ export interface LatticePaperLibrarySnapshot {
   papers: LatticePaperLibraryEntry[];
 }
 
+export interface LatticeComposerFileEntry {
+  name: string;
+  mimeType: string;
+  bytes: ArrayBuffer;
+}
+
+export interface LatticeComposerFilesMessage {
+  type: typeof LATTICE_COMPOSER_FILES;
+  version: 1;
+  files: LatticeComposerFileEntry[];
+}
+
 export function embedWorkspaceMatches(config: EmbedModeConfig, projectCwd: unknown): boolean {
   return (
     typeof projectCwd === "string" &&
@@ -124,6 +138,26 @@ export function readLatticeAgentPanelOpenedMessage(
     event.data &&
     typeof event.data === "object" &&
     event.data.type === LATTICE_AGENT_PANEL_OPENED,
+  );
+}
+
+/**
+ * True when the host reports its own document saw the pointer — i.e. the
+ * cursor is not over this frame. WebKit does not deliver `pointerleave`
+ * across the iframe boundary, so in-frame hover states (the overlay
+ * scrollbar) treat this as the missing leave signal.
+ */
+export function readLatticeHostPointerMessage(
+  event: MessageEvent,
+  config: EmbedModeConfig,
+): boolean {
+  return Boolean(
+    config.hostOrigin &&
+    event.source === window.parent &&
+    event.origin === config.hostOrigin &&
+    event.data &&
+    typeof event.data === "object" &&
+    event.data.type === LATTICE_HOST_POINTER,
   );
 }
 
@@ -385,6 +419,63 @@ export function readLatticePaperLibraryMessage(
   }
 
   return value as unknown as LatticePaperLibrarySnapshot;
+}
+
+const MAX_COMPOSER_FILE_COUNT = 20;
+const MAX_COMPOSER_FILE_BYTES = 64 * 1024 * 1024;
+
+// Split chat surfaces mount one ChatView per pane, and every pane's listener
+// receives the same MessageEvent. Claim each event on first successful read so
+// a dropped file lands in exactly one composer.
+const consumedComposerFileEvents = new WeakSet<MessageEvent>();
+
+export function readLatticeComposerFilesMessage(
+  event: MessageEvent,
+  config: EmbedModeConfig,
+): File[] | null {
+  if (
+    !config.hostOrigin ||
+    event.source !== window.parent ||
+    event.origin !== config.hostOrigin ||
+    !event.data ||
+    typeof event.data !== "object"
+  ) {
+    return null;
+  }
+  const value = event.data as Record<string, unknown>;
+  if (
+    value.type !== LATTICE_COMPOSER_FILES ||
+    value.version !== 1 ||
+    !Array.isArray(value.files) ||
+    value.files.length === 0 ||
+    value.files.length > MAX_COMPOSER_FILE_COUNT
+  ) {
+    return null;
+  }
+  const files: File[] = [];
+  for (const entry of value.files) {
+    if (!entry || typeof entry !== "object") return null;
+    const candidate = entry as Record<string, unknown>;
+    if (
+      !nonEmptyBoundedString(candidate.name, 1_024) ||
+      candidate.name.includes("/") ||
+      candidate.name.includes("\\") ||
+      !boundedString(candidate.mimeType, 256) ||
+      !(candidate.bytes instanceof ArrayBuffer) ||
+      candidate.bytes.byteLength === 0 ||
+      candidate.bytes.byteLength > MAX_COMPOSER_FILE_BYTES
+    ) {
+      return null;
+    }
+    files.push(
+      new File([candidate.bytes], candidate.name, {
+        type: candidate.mimeType,
+      }),
+    );
+  }
+  if (consumedComposerFileEvents.has(event)) return null;
+  consumedComposerFileEvents.add(event);
+  return files;
 }
 
 export function postHostContextRequestToLattice(config: EmbedModeConfig): void {

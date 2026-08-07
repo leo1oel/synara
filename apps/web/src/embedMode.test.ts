@@ -18,9 +18,13 @@ import {
   readEmbeddedHostWsUrl,
   readLatticeAgentPanelOpenedMessage,
   readLatticeCheckpointRestoreMessage,
+  readLatticeComposerFilesMessage,
   readLatticeHostContextMessage,
   readLatticePaperLibraryMessage,
   readLatticeConfirmationMessage,
+  readLatticeHostPointerMessage,
+  LATTICE_COMPOSER_FILES,
+  LATTICE_HOST_POINTER,
   LATTICE_CONFIRMATION_ACK,
   LATTICE_CONFIRMATION_RESPONSE,
   LATTICE_AGENT_PANEL_OPENED,
@@ -437,6 +441,83 @@ describe("Lattice embed mode", () => {
       threadId: "thread-1",
       turnCount: 1,
     });
+  });
+
+  it("turns relayed composer files into File objects exactly once", () => {
+    installBrowserStubs();
+    initializeEmbedMode();
+    const config = readEmbedMode()!;
+    const bytes = new TextEncoder().encode("png-bytes").buffer;
+    const validData = {
+      type: LATTICE_COMPOSER_FILES,
+      version: 1,
+      files: [{ name: "plot.png", mimeType: "image/png", bytes }],
+    };
+    const event = {
+      source: window.parent,
+      origin: "http://localhost:1420",
+      data: validData,
+    } as MessageEvent;
+
+    const files = readLatticeComposerFilesMessage(event, config);
+    expect(files).toHaveLength(1);
+    expect(files![0]!.name).toBe("plot.png");
+    expect(files![0]!.type).toBe("image/png");
+    expect(files![0]!.size).toBe(9);
+    // A second reader (another mounted ChatView in a split) must not
+    // duplicate the drop: the event is claimed by the first read.
+    expect(readLatticeComposerFilesMessage(event, config)).toBeNull();
+
+    expect(
+      readLatticeComposerFilesMessage(
+        {
+          source: window.parent,
+          origin: "https://untrusted.example",
+          data: validData,
+        } as MessageEvent,
+        config,
+      ),
+    ).toBeNull();
+    expect(
+      readLatticeComposerFilesMessage(
+        {
+          source: window.parent,
+          origin: "http://localhost:1420",
+          data: {
+            type: LATTICE_COMPOSER_FILES,
+            version: 1,
+            files: [{ name: "../evil.png", mimeType: "image/png", bytes }],
+          },
+        } as MessageEvent,
+        config,
+      ),
+    ).toBeNull();
+  });
+
+  it("treats host pointer reports as the missing iframe pointerleave", () => {
+    installBrowserStubs();
+    initializeEmbedMode();
+    const config = readEmbedMode()!;
+    expect(
+      readLatticeHostPointerMessage(
+        {
+          source: window.parent,
+          origin: "http://localhost:1420",
+          data: { type: LATTICE_HOST_POINTER },
+        } as MessageEvent,
+        config,
+      ),
+    ).toBe(true);
+    expect(
+      readLatticeHostPointerMessage(
+        {
+          source: window.parent,
+          origin: "https://untrusted.example",
+          data: { type: LATTICE_HOST_POINTER },
+        } as MessageEvent,
+        config,
+      ),
+    ).toBe(false);
   });
 
   it("accepts live host context only from the configured Lattice workspace", () => {
