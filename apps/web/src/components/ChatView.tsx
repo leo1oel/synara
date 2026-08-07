@@ -3292,12 +3292,22 @@ export default function ChatView({
   // The user message a local send anchored at the top of the transcript viewport.
   // Set at the send sites and kept after the turn settles — collapsing the tail
   // spacer when a turn ends would visibly yank the settled transcript. The next
-  // send replaces it, and thread switches reset it via the per-thread timeline
-  // remount plus the threadId guard at the render site.
+  // send replaces it, and switching threads clears it below.
   const [tailAnchor, setTailAnchor] = useState<{
     threadId: ThreadId;
     messageId: MessageId;
   } | null>(null);
+  // A stale anchor must not survive leaving its thread: the render-site guard
+  // only hides it while another thread is active, so returning later would
+  // remount the timeline with the inherited anchor and rebuild the anchored
+  // layout — reserved tail space, transcript pushed to mid-viewport — for a
+  // turn that is long settled.
+  const activeThreadIdForTailAnchor = activeThread?.id ?? null;
+  useEffect(() => {
+    setTailAnchor((current) =>
+      current !== null && current.threadId !== activeThreadIdForTailAnchor ? null : current,
+    );
+  }, [activeThreadIdForTailAnchor]);
   // True from send until the tail-anchor hook finishes sliding the sent message
   // to the viewport top. The auto-follow effect stays quiet while set so the
   // anchored slide has exactly one scroll owner (see useTailAnchorScroll).
