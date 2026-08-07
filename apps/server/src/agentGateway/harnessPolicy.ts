@@ -35,8 +35,9 @@ export function renderSynaraHarnessPolicy(capabilities: SynaraHarnessCapabilitie
             "Lattice task and literature tools are unavailable in this provider session. Do not claim that a Lattice tool action succeeded.",
           ]),
       "Use search_literature only for discovery. Search results and metadata are not paper evidence. Fetch or read the paper before making source-grounded claims.",
-      "Use fetch_paper to retrieve and cache a paper's complete text and metadata without adding it to the bibliography.",
-      "Use cite to add or reuse a bibliography entry and obtain the exact citation key.",
+      "Use fetch_paper to retrieve and cache a paper's complete text and metadata without adding it to the bibliography. A paper whose frontmatter says source: pdf-text-layer was converted from the PDF: it has no figures and equations may be garbled, so verify formulas against the PDF before quoting them.",
+      "Use fetch_web_reference to capture a cited webpage or blog post as local markdown. It spends a shared monthly scraping quota; never point it at arXiv papers.",
+      "Use cite to add or reuse a bibliography entry and obtain the exact citation key. cite also captures full text (arXiv or webpage); a fetchError in its result means the citation succeeded but the text did not arrive.",
       "Never modify a .bib file directly, including through file-editing tools, patches, shell commands, scripts, or external bibliography utilities. Use cite, upgrade_bibliography, or remove_reference for every bibliography mutation.",
       "Do not claim that a Lattice tool action succeeded unless the tool returned a successful result.",
     ].join("\n");

@@ -146,7 +146,7 @@ export function makeLatticeLiteratureTools(
     definition: {
       name: "fetch_paper",
       description:
-        "Download and cache the complete text, overview, and metadata for an arXiv paper. Reuses an existing complete copy and does not add a citation.",
+        "Download and cache the complete text, overview, and metadata for an arXiv paper. When arXiv has no HTML rendering (mostly older papers), converts the PDF text layer instead; such files say so in their frontmatter and lack figures, so verify equations against the PDF before quoting them. Reuses an existing complete copy and does not add a citation.",
       inputSchema: {
         type: "object",
         properties: {
@@ -171,7 +171,7 @@ export function makeLatticeLiteratureTools(
     definition: {
       name: "cite",
       description:
-        "Add a work to the bibliography and return the exact \\cite{...} key. Resolves current publication metadata, avoids duplicates, and reuses or fetches arXiv full text.",
+        "Add a work to the bibliography and return the exact \\cite{...} key. Resolves current publication metadata, avoids duplicates, and captures full text locally: arXiv papers by id, webpages by URL. A failed download never blocks the citation; the result reports it as fetchError.",
       inputSchema: {
         type: "object",
         properties: {
@@ -184,6 +184,27 @@ export function makeLatticeLiteratureTools(
     },
     handler: (args, context) =>
       invoke("cite", { query: readStringArg(args, "query", { required: true })! }, context),
+  };
+
+  const fetchWebReference: ToolEntry = {
+    requiredCapability: "literature:write",
+    requiresActiveTurn: true,
+    definition: {
+      name: "fetch_web_reference",
+      description:
+        "Capture a webpage or blog post as local markdown so it can be read like a paper. Reuses an existing capture of the same URL and does not add a citation (cite does both). Scraping spends a shared monthly quota; do not use it for arXiv papers, which fetch_paper handles locally.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          url: { type: "string", description: "The http(s) page to capture." },
+        },
+        required: ["url"],
+        additionalProperties: false,
+      },
+      annotations: { title: "Capture webpage", ...WRITE_TOOL_ANNOTATIONS, openWorldHint: true },
+    },
+    handler: (args, context) =>
+      invoke("fetch_web_reference", { url: readStringArg(args, "url", { required: true })! }, context),
   };
 
   const upgradeBibliography: ToolEntry = {
@@ -239,5 +260,5 @@ export function makeLatticeLiteratureTools(
       invoke("remove_reference", { key: readStringArg(args, "key", { required: true })! }, context),
   };
 
-  return [searchLiterature, fetchPaper, cite, upgradeBibliography, removeReference];
+  return [searchLiterature, fetchPaper, cite, fetchWebReference, upgradeBibliography, removeReference];
 }

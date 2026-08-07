@@ -72,4 +72,61 @@ describe("Lattice literature tools", () => {
     });
     expect(JSON.stringify(result)).toContain(`${workspaceRoot}/papers/attention.md`);
   });
+
+  it("captures webpages through the same executable dispatch", async () => {
+    const workspaceRoot = await mkdtemp(path.join(tmpdir(), "lattice-literature-"));
+    temporaryRoots.push(workspaceRoot);
+    const executable = path.join(workspaceRoot, "lattice-stub.mjs");
+    await writeFile(
+      executable,
+      [
+        "#!/usr/bin/env node",
+        "const request = JSON.parse(process.argv[3]);",
+        "if (process.argv[2] !== 'literature') process.exit(2);",
+        "process.stdout.write(JSON.stringify({",
+        "  arxivId: 'web-63d7dedf6dd9973c',",
+        "  paperPath: '.research/papers/web-63d7dedf6dd9973c/paper.md',",
+        "  reused: false,",
+        "  request,",
+        "}));",
+      ].join("\n"),
+    );
+    await chmod(executable, 0o755);
+    vi.stubEnv("LATTICE_BIN", executable);
+
+    const tools = makeLatticeLiteratureTools({
+      resolveWorkspaceRoot: () => Effect.succeed(workspaceRoot),
+    });
+    const capture = tools.find((tool) => tool.definition.name === "fetch_web_reference");
+    expect(capture).toBeDefined();
+    const result = await Effect.runPromise(
+      capture!.handler(
+        { url: "https://example.com/a-blog-post" },
+        {
+          principal: {
+            kind: "provider-session",
+            sessionKey: "session",
+            threadId: "thread",
+            provider: "codex",
+            turnId: "turn",
+          },
+          callerThreadId: "thread",
+          callerSessionKey: "session",
+          callerProvider: "codex",
+          callerCapabilities: new Set(["literature:write"]),
+          callerTurnId: "turn",
+          assertCallerTurnActive: () => Effect.void,
+          jsonRpcRequestId: "request",
+        },
+      ),
+    );
+
+    expect(result.isError).not.toBe(true);
+    const payload = JSON.stringify(result);
+    expect(payload).toContain("web-63d7dedf6dd9973c");
+    // The stub echoes the dispatched request: the CLI tool tag and the URL
+    // both arrived intact.
+    expect(payload).toContain("fetch_web_reference");
+    expect(payload).toContain("https://example.com/a-blog-post");
+  });
 });

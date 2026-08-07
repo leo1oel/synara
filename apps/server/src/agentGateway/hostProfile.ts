@@ -63,6 +63,7 @@ const LATTICE_NATIVE_TOOL_NAMES = new Set([
   "search_literature",
   "fetch_paper",
   "cite",
+  "fetch_web_reference",
   "upgrade_bibliography",
   "remove_reference",
   "list_canvas_shapes",
