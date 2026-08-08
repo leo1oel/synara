@@ -20,7 +20,7 @@ import { useComposerDraftStore } from "../../composerDraftStore";
 import type { DiffRouteSearch } from "../../diffRouteSearch";
 import { stripDiffSearchParams } from "../../diffRouteSearch";
 import { readEditorViewState, storeEditorViewState } from "../../editorViewState";
-import { postOpenReviewToLattice, readEmbedMode } from "../../embedMode";
+import { postOpenFileToLattice, postOpenReviewToLattice, readEmbedMode } from "../../embedMode";
 import { basenameOfPath } from "../../file-icons";
 import { useBrowserPanelDesktopBridge } from "../../hooks/useBrowserPanelDesktopBridge";
 import { useDockPaneRuntimeActivation } from "../../hooks/useDockPaneRuntimeActivation";
@@ -463,6 +463,15 @@ export function SingleChatSurface(props: {
       const targetPath = resolveDockFileOpenTarget(path, workspaceRoot);
       if (!targetPath) {
         return false;
+      }
+      // Embedded surfaces render no dock, so opening a pane there is a click
+      // that does nothing. The host has the editor; hand the file to it.
+      if (props.embedMode && workspaceRoot) {
+        const embedConfig = readEmbedMode();
+        const relativePath = resolveWorkspaceFileOpenTarget(path, workspaceRoot);
+        if (embedConfig && relativePath && postOpenFileToLattice(embedConfig, relativePath)) {
+          return true;
+        }
       }
       requestImmediateDockHydration("file");
       openPane(props.threadId, { kind: "file", filePath: targetPath });

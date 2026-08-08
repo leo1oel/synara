@@ -27,6 +27,7 @@ export const SYNARA_OPEN_EXTERNAL = "synara:open-external";
 export const SYNARA_SHOW_IN_FOLDER = "synara:show-in-folder";
 export const SYNARA_EMBED_READY = "synara:embed-ready";
 export const SYNARA_OPEN_REVIEW = "synara:open-review";
+export const SYNARA_OPEN_FILE = "synara:open-file";
 export const SYNARA_CONFIRMATION_REQUEST = "synara:confirmation-request";
 export const LATTICE_CONFIRMATION_ACK = "lattice:confirmation-ack";
 export const LATTICE_CONFIRMATION_RESPONSE = "lattice:confirmation-response";
@@ -653,6 +654,15 @@ export function postExternalLinkToLattice(config: EmbedModeConfig, url: string):
 export function postShowInFolderToLattice(config: EmbedModeConfig, path: string): boolean {
   if (!config.hostOrigin || !path.trim()) return false;
   window.parent.postMessage({ type: SYNARA_SHOW_IN_FOLDER, path }, config.hostOrigin);
+  return true;
+}
+
+// Same reason as the review hand-off: a file reference in an answer opens a
+// dock pane, and the embed has no dock, so clicking one did nothing at all.
+// The host owns an editor already — give it the file.
+export function postOpenFileToLattice(config: EmbedModeConfig, filePath: string): boolean {
+  if (!config.hostOrigin || !filePath.trim()) return false;
+  window.parent.postMessage({ type: SYNARA_OPEN_FILE, filePath }, config.hostOrigin);
   return true;
 }
 
