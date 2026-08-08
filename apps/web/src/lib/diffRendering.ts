@@ -304,6 +304,27 @@ export type RenderablePatch =
       reason: string;
     };
 
+// Rich rendering parses every file and hands it to the highlighter pool. That
+// is the right cost for a diff someone wrote and a bad trade for one a program
+// emitted: a turn that recompiled a paper carried its .log and .fls along, and
+// the panel sat on skeleton rows rather than showing the edit the turn made.
+// Both bounds sit far above anything hand-written, so this only ever trips on
+// generated content — a safety net, not a policy about diff size.
+export const MAX_RENDERABLE_PATCH_BYTES = 512 * 1024;
+export const MAX_RENDERABLE_LINE_LENGTH = 10_000;
+
+function exceedsRenderableBudget(patch: string): boolean {
+  if (patch.length > MAX_RENDERABLE_PATCH_BYTES) return true;
+  let lineStart = 0;
+  for (;;) {
+    const lineEnd = patch.indexOf("\n", lineStart);
+    const length = (lineEnd === -1 ? patch.length : lineEnd) - lineStart;
+    if (length > MAX_RENDERABLE_LINE_LENGTH) return true;
+    if (lineEnd === -1) return false;
+    lineStart = lineEnd + 1;
+  }
+}
+
 export function getRenderablePatch(
   patch: string | undefined,
   cacheScope = "diff-panel",
@@ -311,6 +332,14 @@ export function getRenderablePatch(
   if (!patch) return null;
   const normalizedPatch = patch.trim();
   if (normalizedPatch.length === 0) return null;
+
+  if (exceedsRenderableBudget(normalizedPatch)) {
+    return {
+      kind: "raw",
+      text: normalizedPatch,
+      reason: "This diff is too large to render file by file. Showing raw patch.",
+    };
+  }
 
   try {
     const parsedPatches = parsePatchFiles(

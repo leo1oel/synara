@@ -10,6 +10,8 @@ import {
   buildDiffPanelUnsafeCSS,
   fileDiffStatsByPath,
   getRenderablePatch,
+  MAX_RENDERABLE_LINE_LENGTH,
+  MAX_RENDERABLE_PATCH_BYTES,
   resolveDiffCopyText,
   resolveFileDiffStatByChangedPath,
   resolveFileDiffPath,
@@ -351,5 +353,38 @@ describe("resolveFileDiffStatByChangedPath", () => {
     ]);
 
     expect(resolveFileDiffStatByChangedPath(statsByPath, "index.ts", 2)).toBeUndefined();
+  });
+});
+
+describe("getRenderablePatch budget", () => {
+  const header = ["diff --git a/main.log b/main.log", "--- a/main.log", "+++ b/main.log"];
+
+  it("renders an ordinary patch file by file", () => {
+    const patch = [...header, "@@ -1 +1 @@", "-before", "+after", ""].join("\n");
+    expect(getRenderablePatch(patch, "budget:test")?.kind).toBe("files");
+  });
+
+  it("falls back to raw text for one pathologically long line", () => {
+    // What a LaTeX .log or a minified bundle looks like to the highlighter.
+    const patch = [
+      ...header,
+      "@@ -1 +1 @@",
+      `+${"x".repeat(MAX_RENDERABLE_LINE_LENGTH + 1)}`,
+      "",
+    ].join("\n");
+    const renderable = getRenderablePatch(patch, "budget:test");
+    expect(renderable?.kind).toBe("raw");
+    if (renderable?.kind !== "raw") return;
+    expect(renderable.reason).toContain("too large");
+    // The content is still reachable, just not syntax highlighted.
+    expect(renderable.text).toContain("xxx");
+  });
+
+  it("falls back to raw text past the total size budget", () => {
+    const line = `+${"content ".repeat(10)}`;
+    const body = Array.from({ length: 8000 }, () => line).join("\n");
+    const patch = [...header, "@@ -1 +1 @@", body, ""].join("\n");
+    expect(patch.length).toBeGreaterThan(MAX_RENDERABLE_PATCH_BYTES);
+    expect(getRenderablePatch(patch, "budget:test")?.kind).toBe("raw");
   });
 });
