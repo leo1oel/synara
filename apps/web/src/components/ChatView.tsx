@@ -10757,6 +10757,13 @@ export default function ChatView({
   const onOpenTurnDiff = useCallback(
     (turnId: TurnId, filePath?: string) => {
       if (diffEnvironmentPending) {
+        // Returning silently made Review look broken: the button reported
+        // nothing, and the wait it was reporting ends on its own, so trying
+        // again a moment later worked. The reason already exists — say it.
+        toastManager.add({
+          type: "info",
+          title: diffDisabledReason ?? "Diffs are not available for this chat yet.",
+        });
         return;
       }
       if (onOpenTurnDiffPanel) {
@@ -10780,7 +10787,7 @@ export default function ChatView({
         },
       });
     },
-    [diffEnvironmentPending, navigate, onOpenTurnDiffPanel, threadId],
+    [diffDisabledReason, diffEnvironmentPending, navigate, onOpenTurnDiffPanel, threadId],
   );
   const onReviewComposerLiveChanges = useCallback(() => {
     if (!activeTurnLiveDiffState.turnId) {
