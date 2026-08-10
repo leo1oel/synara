@@ -24,6 +24,7 @@ const MENU_NAVIGATION_KEYS = new Set([
 ]);
 
 export function PickerPanelShell(props: {
+  searchInput?: ReactNode;
   searchPlaceholder?: string;
   query?: string;
   onQueryChange?: (query: string) => void;
@@ -36,6 +37,7 @@ export function PickerPanelShell(props: {
   listMaxHeightClassName?: string;
 }) {
   const {
+    searchInput,
     searchPlaceholder: searchPlaceholderProp,
     query: queryProp,
     onQueryChange,
@@ -77,7 +79,7 @@ export function PickerPanelShell(props: {
         bleedParentPadding ? cn("-m-1 overflow-clip", COMPOSER_PICKER_RADIUS_CLASS_NAME) : null,
       )}
     >
-      {onQueryChange ? (
+      {searchInput || onQueryChange ? (
         <div
           className={cn(
             bleedParentPadding
@@ -85,23 +87,25 @@ export function PickerPanelShell(props: {
               : "sticky top-0 z-20 shrink-0 border-b border-border bg-[var(--composer-surface)] p-1",
           )}
         >
-          <SearchInput
-            className="before:hidden [&_input]:font-sans"
-            nativeInput
-            ref={searchInputRef}
-            placeholder={searchPlaceholder}
-            value={query}
-            onChange={(event) => onQueryChange(event.target.value)}
-            onKeyDownCapture={
-              stopSearchKeyPropagation
-                ? (event) => {
-                    if (!MENU_NAVIGATION_KEYS.has(event.key)) {
-                      event.stopPropagation();
+          {searchInput ?? (
+            <SearchInput
+              className="before:hidden [&_input]:font-sans"
+              nativeInput
+              ref={searchInputRef}
+              placeholder={searchPlaceholder}
+              value={query}
+              onChange={(event) => onQueryChange?.(event.target.value)}
+              onKeyDownCapture={
+                stopSearchKeyPropagation
+                  ? (event) => {
+                      if (!MENU_NAVIGATION_KEYS.has(event.key)) {
+                        event.stopPropagation();
+                      }
                     }
-                  }
-                : undefined
-            }
-          />
+                  : undefined
+              }
+            />
+          )}
         </div>
       ) : null}
       <div

@@ -61,6 +61,7 @@ import {
   GitStatusInput,
   GitSummarizeDiffInput,
   GitUnstageFilesInput,
+  GitWorktreeSetupProgressEvent,
 } from "./git";
 import {
   TerminalAckOutputInput,
@@ -282,6 +283,7 @@ export const WS_METHODS = {
 export const WS_CHANNELS = {
   automationEvent: "automation.event",
   gitActionProgress: "git.actionProgress",
+  gitWorktreeSetupProgress: "git.worktreeSetupProgress",
   projectProvisionProgress: "project.provisionProgress",
   terminalEvent: "terminal.event",
   projectDevServerEvent: "project.devServerEvent",
@@ -497,6 +499,7 @@ export interface WsPushPayloadByChannel {
   readonly [WS_CHANNELS.serverSettingsUpdated]: typeof ServerSettingsUpdatedPayload.Type;
   readonly [WS_CHANNELS.automationEvent]: typeof AutomationStreamEvent.Type;
   readonly [WS_CHANNELS.gitActionProgress]: typeof GitActionProgressEvent.Type;
+  readonly [WS_CHANNELS.gitWorktreeSetupProgress]: typeof GitWorktreeSetupProgressEvent.Type;
   readonly [WS_CHANNELS.projectProvisionProgress]: typeof GitHubProjectProvisionProgressEvent.Type;
   readonly [WS_CHANNELS.terminalEvent]: typeof TerminalEvent.Type;
   readonly [WS_CHANNELS.projectDevServerEvent]: typeof ProjectDevServerEvent.Type;
@@ -544,6 +547,10 @@ export const WsPushGitActionProgress = makeWsPushSchema(
   WS_CHANNELS.gitActionProgress,
   GitActionProgressEvent,
 );
+export const WsPushGitWorktreeSetupProgress = makeWsPushSchema(
+  WS_CHANNELS.gitWorktreeSetupProgress,
+  GitWorktreeSetupProgressEvent,
+);
 export const WsPushProjectProvisionProgress = makeWsPushSchema(
   WS_CHANNELS.projectProvisionProgress,
   GitHubProjectProvisionProgressEvent,
@@ -568,6 +575,7 @@ export const WsPushOrchestrationThreadEvent = makeWsPushSchema(
 
 export const WsPushChannelSchema = Schema.Literals([
   WS_CHANNELS.gitActionProgress,
+  WS_CHANNELS.gitWorktreeSetupProgress,
   WS_CHANNELS.projectProvisionProgress,
   WS_CHANNELS.serverWelcome,
   WS_CHANNELS.serverMaintenanceUpdated,
@@ -591,6 +599,7 @@ export const WsPush = Schema.Union([
   WsPushServerSettingsUpdated,
   WsPushAutomationEvent,
   WsPushGitActionProgress,
+  WsPushGitWorktreeSetupProgress,
   WsPushProjectProvisionProgress,
   WsPushTerminalEvent,
   WsPushProjectDevServerEvent,

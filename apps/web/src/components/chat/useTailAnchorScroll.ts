@@ -46,9 +46,9 @@ const ANCHOR_MOUNT_MAX_WAIT_MS = 1_000;
 const ANCHOR_OVERFLOW_HANDOFF_FRAMES = 3;
 // How far past the viewport bottom the transcript may sit while the anchor is
 // held before that counts as overflow. While the reserve is doing its job the
-// tail sits exactly at the viewport bottom, so this only has to cover
-// reserve-recompute rounding.
-const ANCHOR_OVERFLOW_SLACK_PX = 8;
+// tail sits exactly at the viewport bottom, so one transcript inset covers
+// reserve-recompute and layout rounding without delaying a real handoff.
+const ANCHOR_OVERFLOW_SLACK_PX = 16;
 // A freshly committed row can report a transient position for one frame before
 // the list assigns its real offset. The first move of the slide waits for the
 // row's content position to repeat, but no longer than this.
@@ -71,6 +71,8 @@ interface UseTailAnchorScrollOptions {
   contentChangeSignal?: unknown;
   /** Normal sends slide; steering an already-streaming turn anchors immediately. */
   animateAnchorSlide?: boolean | undefined;
+  /** Keep correcting the anchor while its turn is active, until the response outgrows the reserve. */
+  holdWhileTurnInProgress?: boolean | undefined;
 }
 
 function getScrollContainer(listRef: RefObject<LegendListRef | null>): HTMLElement | null {
@@ -125,15 +127,21 @@ export function useTailAnchorScroll({
   onAnchorSlideFinished,
   contentChangeSignal,
   animateAnchorSlide = true,
+  holdWhileTurnInProgress = false,
 }: UseTailAnchorScrollOptions): void {
   const anchorSlideCorrectionRef = useRef<(() => void) | null>(null);
   const animateAnchorSlideRef = useRef(animateAnchorSlide);
+  const holdWhileTurnInProgressRef = useRef(holdWhileTurnInProgress);
 
   // Capture the mode selected for each new anchor without restarting an active
   // steering settle when `followLiveOutput` later flips to false.
   useLayoutEffect(() => {
     animateAnchorSlideRef.current = animateAnchorSlide;
   }, [anchorMessageId, animateAnchorSlide]);
+
+  useLayoutEffect(() => {
+    holdWhileTurnInProgressRef.current = holdWhileTurnInProgress;
+  }, [holdWhileTurnInProgress]);
 
   useLayoutEffect(() => {
     if (anchorMessageId === null) {
@@ -361,7 +369,10 @@ export function useTailAnchorScroll({
       }
 
       const minHoldMs = easeToAnchor ? 0 : STEER_ANCHOR_MIN_SETTLE_MS;
-      const quiet = hasLanded && now - lastCorrectionAt >= ANCHOR_HOLD_QUIET_MS;
+      const quiet =
+        hasLanded &&
+        !holdWhileTurnInProgressRef.current &&
+        now - lastCorrectionAt >= ANCHOR_HOLD_QUIET_MS;
       if ((!quiet || elapsedMs < minHoldMs) && elapsedMs < ANCHOR_SLIDE_MAX_MS) {
         return false;
       }

@@ -49,6 +49,7 @@ interface ChatTranscriptPaneProps {
   isRevertingCheckpoint: boolean;
   isTemporaryThread?: boolean;
   isWorking: boolean;
+  workingLabel?: ComponentProps<typeof MessagesTimeline>["workingLabel"];
   followLiveOutput: boolean;
   listRef: RefObject<LegendListRef | null>;
   timelineControllerRef?: RefObject<MessagesTimelineController | null>;
@@ -95,6 +96,10 @@ interface ChatTranscriptPaneProps {
   turnDiffSummaryByAssistantMessageId: Map<MessageId, TurnDiffSummary>;
   workspaceRoot: string | undefined;
   worktreeSetup: WorktreeSetupSnapshot | null;
+  worktreeSetupPendingAction?: ComponentProps<
+    typeof MessagesTimeline
+  >["worktreeSetupPendingAction"];
+  onResolveWorktreeSetup?: ComponentProps<typeof MessagesTimeline>["onResolveWorktreeSetup"];
 }
 
 export function ChatTranscriptPane({
@@ -112,6 +117,7 @@ export function ChatTranscriptPane({
   isRevertingCheckpoint,
   isTemporaryThread,
   isWorking,
+  workingLabel,
   followLiveOutput,
   listRef,
   timelineControllerRef,
@@ -156,6 +162,8 @@ export function ChatTranscriptPane({
   turnDiffSummaryByAssistantMessageId,
   workspaceRoot,
   worktreeSetup,
+  worktreeSetupPendingAction,
+  onResolveWorktreeSetup,
 }: ChatTranscriptPaneProps) {
   const scrollButtonFrameStyle: CSSProperties | undefined = contentInsetRightPx
     ? { paddingRight: contentInsetRightPx }
@@ -209,7 +217,10 @@ export function ChatTranscriptPane({
             key={activeThreadId}
             hasMessages={hasMessages}
             isWorking={isWorking}
+            {...(workingLabel ? { workingLabel } : {})}
             worktreeSetup={worktreeSetup}
+            worktreeSetupPendingAction={worktreeSetupPendingAction ?? null}
+            {...(onResolveWorktreeSetup ? { onResolveWorktreeSetup } : {})}
             activeTurnId={activeTurnId ?? null}
             activeTurnInProgress={activeTurnInProgress}
             activeTurnStartedAt={activeTurnStartedAt}

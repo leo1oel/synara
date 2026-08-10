@@ -393,6 +393,7 @@ export function createGitHubCliWithFakeGh(scenario: FakeGhScenario = {}): {
             input.title,
             "--body-file",
             input.bodyFile,
+            ...(input.draft === true ? ["--draft"] : []),
           ],
         }).pipe(Effect.asVoid),
       getDefaultBranch: (input) =>

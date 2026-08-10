@@ -39,6 +39,8 @@ import {
   RuntimeMode,
 } from "@synara/contracts";
 import { automationRequiresTargetThread } from "@synara/shared/automationMode";
+import { buildTemporaryWorktreeBranchName } from "@synara/shared/git";
+import { respondingInteractionReclaimAt } from "@synara/shared/pendingInteractions";
 import { providerSupportsNativeTurnSteering } from "@synara/shared/providerMetadata";
 import { getDefaultModel, getModelCapabilities, normalizeModelSlug } from "@synara/shared/model";
 import {
@@ -72,6 +74,7 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
+import { GoTasklist } from "react-icons/go";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Debouncer, useDebouncedValue } from "@tanstack/react-pacer";
 import { useNavigate } from "@tanstack/react-router";
@@ -94,7 +97,11 @@ import {
   supportsThreadCompaction,
 } from "~/lib/providerDiscoveryReactQuery";
 import { projectSearchEntriesQueryOptions } from "~/lib/projectReactQuery";
-import { serverConfigQueryOptions, serverQueryKeys } from "~/lib/serverReactQuery";
+import {
+  serverConfigQueryOptions,
+  serverQueryKeys,
+  serverSettingsQueryOptions,
+} from "~/lib/serverReactQuery";
 import { useRefreshProviderStatusesNow } from "~/hooks/useProviderStatusRefresh";
 import { SINGLE_CHAT_PANE_SCOPE_ID } from "~/lib/chatPaneScope";
 import {
@@ -275,6 +282,7 @@ import {
   DEFAULT_THREAD_TERMINAL_ID,
   type ChatMessage,
   type Thread,
+  type WorktreeSetupResolutionAction,
 } from "../types";
 import { useTheme } from "../hooks/useTheme";
 import { useThreadWorkspaceHandoff } from "../hooks/useThreadWorkspaceHandoff";
@@ -578,7 +586,7 @@ import { resolveRuntimeModelDescriptor } from "./chat/runtimeModelCapabilities";
 import { ProjectPicker } from "./chat/ProjectPicker";
 import { FolderClosed } from "./FolderClosed";
 import { ProviderHealthBanner } from "./chat/ProviderHealthBanner";
-import { ThreadErrorBanner } from "./chat/ThreadErrorBanner";
+import { useThreadErrorToast } from "./chat/useThreadErrorToast";
 import {
   RateLimitBanner,
   deriveLatestRateLimitStatus,
@@ -596,15 +604,23 @@ import {
   deriveComposerSendState,
   failWorktreeSetupSnapshot,
   filterSidechatTranscriptMessages,
+  hasLiveTurnTakenOver,
   hasServerAcknowledgedLocalDispatch,
+  LOCAL_DISPATCH_ACK_TIMEOUT_MS,
+  LOCAL_DISPATCH_TURN_TAKEOVER_TIMEOUT_MS,
   resolveNextLocalDispatchSnapshot,
+  resolveWorkingLabel,
   resolveThreadArtifactWorkspaceRoot,
   WORKTREE_SETUP_ERROR_HOLD_MS,
   worktreeSetupHasError,
+  WorktreeSetupCancelledError,
+  createWorktreeSetupResolution,
+  runWorktreeCreationFlow,
   LAST_INVOKED_SCRIPT_BY_PROJECT_KEY,
   LastInvokedScriptByProjectSchema,
   type LocalDispatchSnapshot,
   type WorktreeSetupDispatchOptions,
+  type WorktreeSetupResolution,
   PullRequestDialogState,
   type QueuedSteerGate,
   resolveQueuedSteerGateTransition,
@@ -613,6 +629,7 @@ import {
   revokeBlobPreviewUrl,
   revokeUserMessagePreviewUrls,
 } from "./ChatView.logic";
+import { clearPendingTurnDispatch, markPendingTurnDispatch } from "../pendingTurnDispatch";
 import { useLocalStorage } from "~/hooks/useLocalStorage";
 import { useComposerSlashCommands } from "../hooks/useComposerSlashCommands";
 import { useFeatureFlags } from "../featureFlags";
@@ -626,7 +643,7 @@ import {
   resolveDiffEnvironmentState,
   resolveThreadEnvironmentMode,
 } from "../lib/threadEnvironment";
-import { buildModelSelection } from "../providerModelOptions";
+import { buildModelSelection, buildNextProviderOptions } from "../providerModelOptions";
 import {
   isDuplicateProjectCreateError,
   waitForRecoverableProjectForDuplicateCreate,
@@ -672,6 +689,7 @@ function waitForSetupScriptTerminalActivity(input: {
   terminalId: string;
   observeStartTimeoutMs?: number;
   maxRuntimeMs?: number;
+  signal?: AbortSignal;
 }): Promise<void> {
   if (typeof window === "undefined") {
     return Promise.resolve();
@@ -707,6 +725,7 @@ function waitForSetupScriptTerminalActivity(input: {
       resolved = true;
       clearTimers();
       unsubscribe();
+      input.signal?.removeEventListener("abort", finish);
       resolve();
     };
 
@@ -731,6 +750,11 @@ function waitForSetupScriptTerminalActivity(input: {
       }
     }
 
+    if (input.signal?.aborted) {
+      finish();
+      return;
+    }
+    input.signal?.addEventListener("abort", finish, { once: true });
     checkRunningState();
     if (!observedRunning) {
       observeStartTimer = window.setTimeout(finish, observeStartTimeoutMs);
@@ -1454,6 +1478,9 @@ export default function ChatView({
   >({});
   const [localDispatch, setLocalDispatch] = useState<LocalDispatchSnapshot | null>(null);
   const failedWorktreeSetupDispatchStartedAtRef = useRef<string | null>(null);
+  const worktreeSetupResolutionRef = useRef<WorktreeSetupResolution | null>(null);
+  const [worktreeSetupPendingAction, setWorktreeSetupPendingAction] =
+    useState<WorktreeSetupResolutionAction | null>(null);
   const [isLocalConnecting, _setIsLocalConnecting] = useState(false);
   const [isRevertingCheckpoint, setIsRevertingCheckpoint] = useState(false);
   const [pendingFileUndo, setPendingFileUndo] = useState<PendingFileUndo | null>(null);
@@ -2268,6 +2295,7 @@ export default function ChatView({
   const featureFlags = useFeatureFlags();
   const showDebugTaskBanner = import.meta.env.DEV && featureFlags["show-debug-task-banner"];
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
+  const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
   const composerModelHintByProvider = useMemo<Record<ProviderKind, string | null>>(() => {
     const threadModelSelection = activeThread?.modelSelection ?? null;
     const projectModelSelection = activeProject?.defaultModelSelection ?? null;
@@ -2681,17 +2709,40 @@ export default function ChatView({
       threadActivities,
     ],
   );
+  const nextUserInputResponseReclaimAt = useMemo(() => {
+    let earliest: string | null = null;
+    for (const interaction of activeThread?.pendingInteractions ?? []) {
+      if (interaction.interactionKind !== "userInput" || interaction.status !== "responding") continue;
+      if (interaction.responseRequestedAt === null) return new Date(0).toISOString();
+      const reclaimAt = respondingInteractionReclaimAt(interaction.responseRequestedAt);
+      if (earliest === null || reclaimAt < earliest) earliest = reclaimAt;
+    }
+    return earliest;
+  }, [activeThread?.pendingInteractions]);
+  const [userInputResponseClaimReferenceAt, setUserInputResponseClaimReferenceAt] = useState(() =>
+    new Date().toISOString(),
+  );
+  useEffect(() => {
+    if (nextUserInputResponseReclaimAt === null) return;
+    const timeoutId = window.setTimeout(
+      () => setUserInputResponseClaimReferenceAt(new Date().toISOString()),
+      Math.max(0, Date.parse(nextUserInputResponseReclaimAt) - Date.now()),
+    );
+    return () => window.clearTimeout(timeoutId);
+  }, [nextUserInputResponseReclaimAt]);
   const pendingUserInputs = useMemo(
     () =>
       derivePendingUserInputs(threadActivities, activeThread?.pendingInteractions, {
         authoritativeHasPending: activeThread?.hasPendingUserInput,
         latestTurnId: activeThread?.latestTurn?.turnId,
+        responseClaimReferenceAt: userInputResponseClaimReferenceAt,
       }),
     [
       activeThread?.hasPendingUserInput,
       activeThread?.latestTurn?.turnId,
       activeThread?.pendingInteractions,
       threadActivities,
+      userInputResponseClaimReferenceAt,
     ],
   );
   const activePendingUserInput = pendingUserInputs[0] ?? null;
@@ -2950,7 +3001,30 @@ export default function ChatView({
       phase,
     ],
   );
+  const turnTakenOver = useMemo(
+    () =>
+      hasLiveTurnTakenOver({
+        localDispatch,
+        phase,
+        latestTurn: activeLatestTurn,
+        session: activeThread?.session ?? null,
+        hasPendingApproval: activePendingApproval !== null,
+        hasPendingUserInput: activePendingUserInput !== null,
+        threadError: activeThread?.error,
+        now: Date.now(),
+      }),
+    [
+      activeLatestTurn,
+      activePendingApproval,
+      activePendingUserInput,
+      activeThread?.error,
+      activeThread?.session,
+      localDispatch,
+      phase,
+    ],
+  );
   const isSendBusy = localDispatch !== null && !serverAcknowledgedLocalDispatch;
+  const isAwaitingTurnStart = localDispatch !== null && !turnTakenOver;
   const activeWorktreeSetup = localDispatch?.worktreeSetup ?? null;
   const isPreparingWorktree = activeWorktreeSetup !== null;
   const hasLiveTurn = phase === "running";
@@ -3020,7 +3094,10 @@ export default function ChatView({
     promptRef,
     setComposerDraftPrompt,
   });
-  const isWorking = hasLiveTurn || isSendBusy || isConnecting || isRevertingCheckpoint;
+  // Keep Thinking through the post-ack gap where the server has the message /
+  // turn request but the provider session is not live yet (common on first send).
+  const isWorking =
+    hasLiveTurn || isSendBusy || isConnecting || isRevertingCheckpoint || isAwaitingTurnStart;
   const hasStreamingAssistantText =
     activeThread?.messages.some((message) => message.role === "assistant" && message.streaming) ??
     false;
@@ -3950,11 +4027,13 @@ export default function ChatView({
   const handoffTargetProviders = useMemo(
     () =>
       activeThread
-        ? resolveAvailableHandoffTargetProviders(activeThread.modelSelection.provider).filter(
-            (provider) => isProviderUsable(findProviderStatus(providerStatuses, provider)),
-          )
+        ? resolveAvailableHandoffTargetProviders({
+            sourceProvider: activeThread.modelSelection.provider,
+            providerSettings: serverSettingsQuery.data?.providers,
+            providerStatuses,
+          })
         : [],
-    [activeThread, providerStatuses],
+    [activeThread, providerStatuses, serverSettingsQuery.data?.providers],
   );
   const handoffActionLabel = activeThread ? "Hand off thread" : "Create handoff thread";
   const activeProviderStatus = useMemo(
@@ -4830,7 +4909,7 @@ export default function ChatView({
       });
 
       if (isElectron && keybindingRule) {
-        await api.server.upsertKeybinding(keybindingRule);
+        await api.server.upsertKeybinding({ rule: keybindingRule });
         await queryClient.invalidateQueries({ queryKey: serverQueryKeys.all });
       }
     },
@@ -6106,6 +6185,54 @@ export default function ChatView({
     setLocalDispatch(null);
   }, []);
 
+  const clearLocalDispatchWorktreeSetup = useCallback(() => {
+    setLocalDispatch((current) =>
+      current?.worktreeSetup ? { ...current, worktreeSetup: null } : current,
+    );
+  }, []);
+
+  const onResolveWorktreeSetup = useCallback((action: WorktreeSetupResolutionAction) => {
+    const resolution = worktreeSetupResolutionRef.current;
+    if (!resolution || resolution.action !== null) return;
+    resolution.resolve(action);
+    setWorktreeSetupPendingAction(action);
+  }, []);
+
+  const localDispatchStartedAtRef = useRef<string | null>(null);
+  useEffect(() => {
+    localDispatchStartedAtRef.current = localDispatch?.startedAt ?? null;
+  }, [localDispatch]);
+  const serverAcknowledgedLocalDispatchRef = useRef(serverAcknowledgedLocalDispatch);
+  useEffect(() => {
+    serverAcknowledgedLocalDispatchRef.current = serverAcknowledgedLocalDispatch;
+  }, [serverAcknowledgedLocalDispatch]);
+  const localDispatchAckFallbackTimeoutRef = useRef<number | null>(null);
+  const armLocalDispatchAckFallback = useCallback((threadIdForSend: ThreadId) => {
+    markPendingTurnDispatch(threadIdForSend);
+    const armedStartedAt = localDispatchStartedAtRef.current;
+    if (armedStartedAt === null) return;
+    if (localDispatchAckFallbackTimeoutRef.current !== null) {
+      window.clearTimeout(localDispatchAckFallbackTimeoutRef.current);
+    }
+    localDispatchAckFallbackTimeoutRef.current = window.setTimeout(() => {
+      localDispatchAckFallbackTimeoutRef.current = null;
+      if (serverAcknowledgedLocalDispatchRef.current) return;
+      setLocalDispatch((current) =>
+        current && current.startedAt === armedStartedAt && !worktreeSetupHasError(current.worktreeSetup)
+          ? null
+          : current,
+      );
+    }, LOCAL_DISPATCH_ACK_TIMEOUT_MS);
+  }, []);
+  useEffect(
+    () => () => {
+      if (localDispatchAckFallbackTimeoutRef.current !== null) {
+        window.clearTimeout(localDispatchAckFallbackTimeoutRef.current);
+      }
+    },
+    [],
+  );
+
   // Fallback cleanup for a failed worktree setup: clears the dispatch after the
   // error hold unless a newer dispatch already replaced it.
   const scheduleFailedWorktreeSetupDispatchReset = useCallback(() => {
@@ -6128,11 +6255,11 @@ export default function ChatView({
 
   const localDispatchWorktreeSetupFailed = worktreeSetupHasError(activeWorktreeSetup);
   useEffect(() => {
-    if (!serverAcknowledgedLocalDispatch) {
+    if (!turnTakenOver) {
       return;
     }
     // A failed worktree setup would otherwise reset in the same commit that
-    // painted the error (thread errors count as acknowledgement), so hold the
+    // painted the error (thread errors count as takeover), so hold the
     // row briefly before letting it animate out.
     if (localDispatchWorktreeSetupFailed) {
       const failedDispatchStartedAt = localDispatch?.startedAt;
@@ -6159,8 +6286,29 @@ export default function ChatView({
     localDispatch?.startedAt,
     localDispatchWorktreeSetupFailed,
     resetLocalDispatch,
-    serverAcknowledgedLocalDispatch,
+    turnTakenOver,
   ]);
+
+  // Fail-open: if takeover never arrives, clear the awaiting-turn bridge so
+  // Thinking cannot stick forever. Skipped while worktree setup is active.
+  useEffect(() => {
+    if (!localDispatch || turnTakenOver || localDispatch.worktreeSetup) {
+      return;
+    }
+    const startedAtMs = Date.parse(localDispatch.startedAt);
+    if (!Number.isFinite(startedAtMs)) {
+      return;
+    }
+    const remainingMs = LOCAL_DISPATCH_TURN_TAKEOVER_TIMEOUT_MS - (Date.now() - startedAtMs);
+    if (remainingMs <= 0) {
+      resetLocalDispatch();
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      resetLocalDispatch();
+    }, remainingMs);
+    return () => window.clearTimeout(timer);
+  }, [localDispatch, resetLocalDispatch, turnTakenOver]);
 
   useEffect(() => {
     if (!activeThreadId) return;
@@ -8102,13 +8250,24 @@ export default function ChatView({
         ? setupProjectScript(targetProjectScriptsForSend)
         : null;
       const worktreeSetupScriptName = setupScriptForWorktree?.name ?? null;
+      const worktreeCopiesLocalChanges =
+        Boolean(baseBranchForWorktree) && baseBranchForWorktree === activeRootBranch;
       const messageIdForSend = newMessageId();
+      const worktreeSetupResolution = baseBranchForWorktree
+        ? createWorktreeSetupResolution()
+        : null;
+      worktreeSetupResolutionRef.current = worktreeSetupResolution;
+      if (worktreeSetupResolution) setWorktreeSetupPendingAction(null);
 
       sendInFlightRef.current = true;
       beginLocalDispatch({
         expectedUserMessageId: messageIdForSend,
         ...(baseBranchForWorktree
-          ? { worktreeSetupStepId: "create-worktree", setupScriptName: worktreeSetupScriptName }
+          ? {
+              worktreeSetupStepId: "create-branch",
+              setupScriptName: worktreeSetupScriptName,
+              copyLocalChanges: worktreeCopiesLocalChanges,
+            }
           : {}),
       });
 
@@ -8259,51 +8418,130 @@ export default function ChatView({
 
       let createdServerThreadForLocalDraft = false;
       let createdWorktreeForSendPath: string | null = null;
+      let switchedToLocalCheckout = false;
       let turnStartSucceeded = false;
       await (async () => {
-        // On first message: lock in branch + create worktree if needed.
-        if (baseBranchForWorktree) {
-          const result = await createWorktreeMutation.mutateAsync({
-            cwd: targetProjectCwdForSend,
-            ref: baseBranchForWorktree,
-            ...(baseBranchForWorktree === activeRootBranch
-              ? { copyChangesFrom: targetProjectCwdForSend }
-              : {}),
-          });
-          beginLocalDispatch({
-            worktreeSetupStepId: "prepare-thread",
-            setupScriptName: worktreeSetupScriptName,
-          });
-          nextThreadBranch = result.worktree.branch;
-          nextThreadWorktreePath = result.worktree.path;
-          createdWorktreeForSendPath = result.worktree.path;
-          const nextAssociatedWorktree = {
-            associatedWorktreePath: result.worktree.path,
-            associatedWorktreeBranch: null,
-            associatedWorktreeRef: result.worktree.ref,
-          };
-          nextAssociatedWorktreePath = nextAssociatedWorktree.associatedWorktreePath;
-          nextAssociatedWorktreeBranch = nextAssociatedWorktree.associatedWorktreeBranch;
-          nextAssociatedWorktreeRef = nextAssociatedWorktree.associatedWorktreeRef;
-          if (isServerThread) {
+        const applyWorkLocallySwitch = async () => {
+          switchedToLocalCheckout = true;
+          nextThreadEnvMode = "local";
+          nextThreadBranch = null;
+          nextThreadWorktreePath = null;
+          nextAssociatedWorktreePath = null;
+          nextAssociatedWorktreeBranch = null;
+          nextAssociatedWorktreeRef = null;
+          const worktreePathToRemove = createdWorktreeForSendPath;
+          createdWorktreeForSendPath = null;
+          if (worktreePathToRemove) {
+            void api.git
+              .removeWorktree({
+                cwd: targetProjectCwdForSend,
+                path: worktreePathToRemove,
+                force: true,
+                reclaimTemporaryBranch: true,
+              })
+              .catch(() => undefined);
+          }
+          if (isServerThread || createdServerThreadForLocalDraft) {
             await api.orchestration.dispatchCommand({
               type: "thread.meta.update",
               commandId: newCommandId(),
               threadId: threadIdForSend,
-              envMode: "worktree",
-              branch: result.worktree.branch,
-              worktreePath: result.worktree.path,
-              associatedWorktreePath: nextAssociatedWorktree.associatedWorktreePath,
-              associatedWorktreeBranch: nextAssociatedWorktree.associatedWorktreeBranch,
-              associatedWorktreeRef: nextAssociatedWorktree.associatedWorktreeRef,
+              envMode: "local",
+              branch: null,
+              worktreePath: null,
+              associatedWorktreePath: null,
+              associatedWorktreeBranch: null,
+              associatedWorktreeRef: null,
             });
-            // Keep local thread state in sync immediately so terminal drawer opens
-            // with the worktree cwd/env instead of briefly using the project root.
             setStoreThreadWorkspace(threadIdForSend, {
-              branch: result.worktree.branch,
-              worktreePath: result.worktree.path,
-              ...nextAssociatedWorktree,
+              envMode: "local",
+              branch: null,
+              worktreePath: null,
+              associatedWorktreePath: null,
+              associatedWorktreeBranch: null,
+              associatedWorktreeRef: null,
             });
+          }
+          clearLocalDispatchWorktreeSetup();
+        };
+        const consumeWorktreeSetupResolution = async () => {
+          const action = worktreeSetupResolution?.action ?? null;
+          if (action === null || switchedToLocalCheckout) return;
+          if (action === "cancel") throw new WorktreeSetupCancelledError();
+          await applyWorkLocallySwitch();
+        };
+
+        // On first message: lock in branch + create worktree if needed.
+        if (baseBranchForWorktree && worktreeSetupResolution) {
+          const worktreeProgressId = randomUUID();
+          const creationFlow = await runWorktreeCreationFlow({
+            progressId: worktreeProgressId,
+            subscribeToProgress: (listener) => api.git.onWorktreeSetupProgress(listener),
+            startCreation: () =>
+              createWorktreeMutation.mutateAsync({
+                cwd: targetProjectCwdForSend,
+                ref: baseBranchForWorktree,
+                newBranch: buildTemporaryWorktreeBranchName(),
+                progressId: worktreeProgressId,
+                ...(worktreeCopiesLocalChanges
+                  ? { copyChangesFrom: targetProjectCwdForSend }
+                  : {}),
+              }),
+            resolution: worktreeSetupResolution,
+            onCreationStep: (stepId) =>
+              beginLocalDispatch({
+                worktreeSetupStepId: stepId,
+                setupScriptName: worktreeSetupScriptName,
+                copyLocalChanges: worktreeCopiesLocalChanges,
+              }),
+            removeWorktree: (worktreePath) =>
+              api.git.removeWorktree({
+                cwd: targetProjectCwdForSend,
+                path: worktreePath,
+                force: true,
+                reclaimTemporaryBranch: true,
+              }),
+          });
+          if (creationFlow.outcome === "resolved") {
+            await consumeWorktreeSetupResolution();
+          } else {
+            const result = creationFlow.result;
+            beginLocalDispatch({
+              worktreeSetupStepId: "prepare-thread",
+              setupScriptName: worktreeSetupScriptName,
+              copyLocalChanges: worktreeCopiesLocalChanges,
+            });
+            nextThreadBranch = result.worktree.branch;
+            nextThreadWorktreePath = result.worktree.path;
+            createdWorktreeForSendPath = result.worktree.path;
+            const nextAssociatedWorktree = {
+              associatedWorktreePath: result.worktree.path,
+              associatedWorktreeBranch: result.worktree.branch,
+              associatedWorktreeRef: result.worktree.ref,
+            };
+            nextAssociatedWorktreePath = nextAssociatedWorktree.associatedWorktreePath;
+            nextAssociatedWorktreeBranch = nextAssociatedWorktree.associatedWorktreeBranch;
+            nextAssociatedWorktreeRef = nextAssociatedWorktree.associatedWorktreeRef;
+            if (isServerThread) {
+              await api.orchestration.dispatchCommand({
+                type: "thread.meta.update",
+                commandId: newCommandId(),
+                threadId: threadIdForSend,
+                envMode: "worktree",
+                branch: result.worktree.branch,
+                worktreePath: result.worktree.path,
+                associatedWorktreePath: nextAssociatedWorktree.associatedWorktreePath,
+                associatedWorktreeBranch: nextAssociatedWorktree.associatedWorktreeBranch,
+                associatedWorktreeRef: nextAssociatedWorktree.associatedWorktreeRef,
+              });
+              // Keep local thread state in sync immediately so terminal drawer opens
+              // with the worktree cwd/env instead of briefly using the project root.
+              setStoreThreadWorkspace(threadIdForSend, {
+                branch: result.worktree.branch,
+                worktreePath: result.worktree.path,
+                ...nextAssociatedWorktree,
+              });
+            }
           }
         }
 
@@ -8372,7 +8610,7 @@ export default function ChatView({
           createdServerThreadForLocalDraft = true;
         }
 
-        const setupScript = setupScriptForWorktree;
+        const setupScript = switchedToLocalCheckout ? null : setupScriptForWorktree;
         if (setupScript) {
           let shouldRunSetupScript = false;
           if (isServerThread) {
@@ -8386,6 +8624,7 @@ export default function ChatView({
             beginLocalDispatch({
               worktreeSetupStepId: "run-setup-action",
               setupScriptName: setupScript.name,
+              copyLocalChanges: worktreeCopiesLocalChanges,
             });
             const setupScriptOptions: Parameters<typeof runProjectScript>[1] = {
               worktreePath: nextThreadWorktreePath,
@@ -8397,13 +8636,21 @@ export default function ChatView({
             }
             const setupTerminal = await runProjectScript(setupScript, setupScriptOptions);
             if (setupTerminal) {
-              await waitForSetupScriptTerminalActivity({
+              const setupActivityAbortController = new AbortController();
+              const setupActivityWait = waitForSetupScriptTerminalActivity({
                 threadId: threadIdForSend,
                 terminalId: setupTerminal.terminalId,
+                signal: setupActivityAbortController.signal,
               });
+              await (
+                worktreeSetupResolution
+                  ? Promise.race([setupActivityWait, worktreeSetupResolution.promise])
+                  : setupActivityWait
+              ).finally(() => setupActivityAbortController.abort());
             }
           }
         }
+        await consumeWorktreeSetupResolution();
 
         if (isServerThread) {
           await persistThreadSettingsForNextTurn({
@@ -8415,12 +8662,18 @@ export default function ChatView({
           });
         }
 
-        beginLocalDispatch(
-          baseBranchForWorktree
-            ? { worktreeSetupStepId: "start-session", setupScriptName: worktreeSetupScriptName }
-            : undefined,
-        );
         const stagedTurnAttachments = await turnAttachmentsPromise;
+        await consumeWorktreeSetupResolution();
+        beginLocalDispatch({
+          expectedUserMessageId: messageIdForSend,
+          ...(baseBranchForWorktree && !switchedToLocalCheckout
+            ? {
+                worktreeSetupStepId: "start-session" as const,
+                setupScriptName: worktreeSetupScriptName,
+                copyLocalChanges: worktreeCopiesLocalChanges,
+              }
+            : {}),
+        });
         rememberCustomBinaryPathForDispatch({
           threadId: threadIdForSend,
           provider: selectedModelSelectionForSend.provider,
@@ -8454,6 +8707,7 @@ export default function ChatView({
           }),
         );
         turnStartSucceeded = true;
+        armLocalDispatchAckFallback(threadIdForSend);
         consumeDispatchedLatticeHostSelection(outgoingMessageText);
         // Steers on providers without native mid-turn steering interrupt the live
         // turn before re-dispatching; hold queued auto-dispatch through that gap
@@ -8480,6 +8734,7 @@ export default function ChatView({
           setRestoredQueuedSourceProposedPlan(threadIdForSend, null);
         }
       })().catch(async (err: unknown) => {
+        const setupCancelled = err instanceof WorktreeSetupCancelledError;
         // Uploads start in parallel with workspace/session preparation. If any
         // earlier step fails, settle that promise and release every staged blob.
         await turnAttachmentsPromise.then(
@@ -8488,7 +8743,8 @@ export default function ChatView({
         );
         // Surface the failure on whichever setup step was active (no-op for
         // sends without a worktree setup in flight).
-        failLocalDispatchWorktreeSetup();
+        if (!setupCancelled) failLocalDispatchWorktreeSetup();
+        if (!turnStartSucceeded) clearPendingTurnDispatch(threadIdForSend);
         if (createdServerThreadForLocalDraft && !turnStartSucceeded) {
           // This rollback cleans up a retryable draft promotion; do not tombstone the draft id.
           await api.orchestration
@@ -8505,6 +8761,7 @@ export default function ChatView({
               cwd: targetProjectCwdForSend,
               path: createdWorktreeForSendPath,
               force: true,
+              reclaimTemporaryBranch: true,
             })
             .then(
               () => true,
@@ -8581,14 +8838,17 @@ export default function ChatView({
           updateSelectedComposerMentions(composerMentionsSnapshot);
           setComposerTrigger(detectComposerTrigger(promptForSend, promptForSend.length));
         }
-        setThreadError(
-          threadIdForSend,
-          err instanceof Error ? err.message : "Failed to send message.",
-        );
+        if (!setupCancelled) {
+          setThreadError(
+            threadIdForSend,
+            err instanceof Error ? err.message : "Failed to send message.",
+          );
+        }
       });
       sendInFlightRef.current = false;
+      worktreeSetupResolutionRef.current = null;
       if (!turnStartSucceeded) {
-        if (baseBranchForWorktree) {
+        if (baseBranchForWorktree && (worktreeSetupResolution?.action ?? null) === null) {
           scheduleFailedWorktreeSetupDispatchReset();
         } else {
           resetLocalDispatch();
@@ -8996,6 +9256,8 @@ export default function ChatView({
 
     try {
       await dispatchPlanFollowUpTurn();
+      armLocalDispatchAckFallback(threadIdForSend);
+      consumeDispatchedLatticeHostSelection(outgoingMessageText);
       sendInFlightRef.current = false;
       return true;
     } catch (err) {
@@ -9007,6 +9269,7 @@ export default function ChatView({
         err instanceof Error ? err.message : "Failed to send plan follow-up.",
       );
       sendInFlightRef.current = false;
+      clearPendingTurnDispatch(threadIdForSend);
       resetLocalDispatch();
       return false;
     }
@@ -9401,6 +9664,7 @@ export default function ChatView({
       })
       .then(() => {
         consumeDispatchedLatticeHostSelection(outgoingImplementationPrompt);
+        markPendingTurnDispatch(nextThreadId);
         return api.orchestration.getShellSnapshot();
       })
       .then((snapshot) => {
@@ -9422,6 +9686,7 @@ export default function ChatView({
           .then(() => true)
           .catch(() => false);
         if (deletedOnServer) {
+          clearPendingTurnDispatch(nextThreadId);
           void reconcileDeletedThreadFromClient({
             threadId: nextThreadId,
             removeDeletedThreadFromClientState:
@@ -9697,6 +9962,29 @@ export default function ChatView({
       shortcutLabel={modelPickerShortcutLabel}
     />
   );
+  const toggleFastMode = useCallback(() => {
+    if (!composerTraitSelection.caps.supportsFastMode) {
+      scheduleComposerFocus();
+      return;
+    }
+    setComposerDraftProviderModelOptions(
+      threadId,
+      selectedProvider,
+      buildNextProviderOptions(selectedProvider, selectedProviderModelOptions, {
+        fastMode: !composerTraitSelection.fastModeEnabled,
+      }),
+      { persistSticky: true },
+    );
+    scheduleComposerFocus();
+  }, [
+    composerTraitSelection.caps.supportsFastMode,
+    composerTraitSelection.fastModeEnabled,
+    scheduleComposerFocus,
+    selectedProvider,
+    selectedProviderModelOptions,
+    setComposerDraftProviderModelOptions,
+    threadId,
+  ]);
   const onEnvModeChange = useCallback(
     (mode: DraftThreadEnvMode) => {
       const nextBranch =
@@ -10934,6 +11222,13 @@ export default function ChatView({
       threadId: activeThread?.id ?? null,
       onUnblocked: clearThreadErrorAfterUnblock,
     });
+  useThreadErrorToast({
+    threadId: activeThread?.id ?? null,
+    error: activeThread?.error ?? null,
+    onDismiss: dismissActiveThreadError,
+    onUnblock: unblockActiveThread,
+    unblocking: unblockingActiveThread,
+  });
   const dismissActiveProviderHealthBanner = useCallback(() => {
     if (!activeProviderHealthBannerDismissalKey) return;
     setDismissedProviderHealthBannerKeys((current) => {
@@ -11065,7 +11360,10 @@ export default function ChatView({
     <>
       <ComposerExtrasMenu
         interactionMode={interactionMode}
+        supportsFastMode={composerTraitSelection.caps.supportsFastMode}
+        fastModeEnabled={composerTraitSelection.fastModeEnabled}
         onAddAttachments={addComposerAttachments}
+        onToggleFastMode={toggleFastMode}
         onSetPlanMode={setPlanMode}
         triggerClassName={isEmbed ? "!size-8" : undefined}
       />
@@ -11612,6 +11910,20 @@ export default function ChatView({
 
                       {!isVoiceRecording && !isVoiceTranscribing ? (
                         <>
+                          {interactionMode === "plan" ? (
+                            <Button
+                              variant="ghost"
+                              className="shrink-0 whitespace-nowrap px-2 text-[length:var(--app-font-size-ui-sm,11px)] sm:text-[length:var(--app-font-size-ui-sm,11px)] font-normal text-[var(--color-text-foreground-secondary)] hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)] sm:px-3"
+                              size="sm"
+                              type="button"
+                              onClick={toggleInteractionMode}
+                              title="Plan mode — click to return to normal build mode"
+                            >
+                              <GoTasklist className="size-3.5" />
+                              <span className="sr-only sm:not-sr-only">Plan</span>
+                            </Button>
+                          ) : null}
+
                           {activeTaskList || sidebarProposedPlan || planSidebarOpen ? (
                             <Button
                               variant="ghost"
@@ -12011,7 +12323,8 @@ export default function ChatView({
         />
       ) : null}
 
-      {/* Error banner */}
+      {/* Thread-level errors render as a toast (see `useThreadErrorToast`) so they
+          never displace the transcript. */}
       <ProviderHealthBanner
         status={
           shouldShowProviderHealthBanner &&
@@ -12032,12 +12345,6 @@ export default function ChatView({
               },
             }
           : { onDismiss: dismissActiveProviderHealthBanner })}
-      />
-      <ThreadErrorBanner
-        error={activeThread.error}
-        onDismiss={dismissActiveThreadError}
-        onUnblock={unblockActiveThread}
-        unblocking={unblockingActiveThread}
       />
       <RateLimitBanner
         rateLimitStatus={visibleActiveRateLimitStatus}
@@ -12152,8 +12459,11 @@ export default function ChatView({
                     activeTurnId={activeTurnIdForTranscript}
                     agentActivityDetail={openAgentActivityDetail}
                     hasMessages={timelineEntries.length > 0}
-                    isWorking={hasLiveTurn}
+                    isWorking={isWorking}
+                    workingLabel={resolveWorkingLabel({ isSendBusy, turnTakenOver })}
                     worktreeSetup={activeWorktreeSetup}
+                    worktreeSetupPendingAction={worktreeSetupPendingAction}
+                    onResolveWorktreeSetup={onResolveWorktreeSetup}
                     activeTurnInProgress={activeTurnInProgress}
                     activeTurnStartedAt={activeWorkStartedAt}
                     listRef={legendListRef}

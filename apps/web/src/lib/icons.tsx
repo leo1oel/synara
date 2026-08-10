@@ -57,7 +57,6 @@ import {
   IconSun,
   IconTextWrap,
   IconTrash,
-  IconWorld,
   IconX,
   type TablerIcon,
 } from "@tabler/icons-react";
@@ -157,6 +156,11 @@ export const ClockIcon = centralIconWrapper("clock");
 export const EllipsisIcon = adaptIcon(IconDots);
 export const ExternalLinkIcon = adaptIcon(IconExternalLink);
 export const EyeIcon = adaptIcon(IconEye);
+// Markdown Source/Preview toggle glyphs, sourced from the Central set so the
+// file-preview header controls share one visual language with the rest of the
+// chrome (raw source = code brackets, rendered preview = open eye).
+export const CodeIcon: LucideIcon = centralIconWrapper("code");
+export const EyeOpenIcon: LucideIcon = centralIconWrapper("eye-open");
 export const PaperclipIcon = adaptIcon(IconPaperclip);
 export const ArchiveIcon = adaptIcon(IconArchive);
 export const BrainIcon = adaptIcon(IconBrain);
@@ -190,8 +194,10 @@ export const GitMergeConflictIcon: LucideIcon = centralIconWrapper("merge-confli
 export const FilterIcon: LucideIcon = centralIconWrapper("filter-2");
 // Two-person glyph for "reviewers"/"people" rows (pull request meta grid).
 export const UsersIcon: LucideIcon = centralIconWrapper("user-group");
-export const GlobeIcon = adaptIcon(IconWorld);
-export const WebSearchIcon: LucideIcon = centralIconWrapper("globe");
+// One globe for the whole app (browser rows, web search, favicon fallback,
+// local servers): the Central glyph, so it matches the other work-row icons.
+export const GlobeIcon: LucideIcon = centralIconWrapper("globe");
+export const WebSearchIcon: LucideIcon = GlobeIcon;
 export const McpIcon: LucideIcon = (props) => (
   <VscMcp className={props.className} style={props.style} />
 );

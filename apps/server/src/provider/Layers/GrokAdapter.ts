@@ -1091,6 +1091,7 @@ export function makeGrokAdapter(
             resume: resumeSessionId !== undefined,
             model: effectiveGrokSettings.model,
             reasoningEffort: effectiveGrokSettings.reasoningEffort,
+            alwaysApprove: input.runtimeMode === "full-access",
             binaryPath: effectiveGrokSettings.binaryPath ?? "grok",
           });
 
@@ -1098,6 +1099,7 @@ export function makeGrokAdapter(
             grokSettings: effectiveGrokSettings,
             childProcessSpawner,
             cwd,
+            runtimeMode: input.runtimeMode,
             ...(resumeSessionId ? { resumeSessionId } : {}),
             clientInfo: { name: ACTIVE_AGENT_HOST_PROFILE.displayName, version: "0.0.0" },
             // Grok registers client hooks from session setup metadata, not
