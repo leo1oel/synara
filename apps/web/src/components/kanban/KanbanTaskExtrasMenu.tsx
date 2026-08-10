@@ -26,11 +26,7 @@ interface KanbanTaskExtrasMenuProps {
   readonly onEnvModeChange: (mode: DraftThreadEnvMode) => void;
 }
 
-/**
- * The composer `+` analog: a single chrome icon button hosting the task's quick
- * toggles (Plan mode and Local/Worktree environment), mirroring how the
- * composer's ComposerExtrasMenu collapses mode switches behind one `+`.
- */
+/** A single chrome icon button hosting the task's Plan mode and environment toggles. */
 export function KanbanTaskExtrasMenu({
   interactionMode,
   onInteractionModeChange,

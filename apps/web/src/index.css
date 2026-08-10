@@ -763,10 +763,8 @@ html[data-synara-embed="true"] .app-settings-surface section.flex.flex-col {
   gap: 7px;
 }
 
-/* Match Lattice's compact neutral 24×14 switch in both settings and the
-   embedded composer's Plan mode row. */
-html[data-synara-embed="true"] .app-settings-surface [data-slot="switch"],
-html[data-synara-embed="true"] .composer-plan-mode-toggle [data-slot="menu-checkbox-switch"] {
+/* Match Lattice's compact neutral 24×14 switch in settings. */
+html[data-synara-embed="true"] .app-settings-surface [data-slot="switch"] {
   width: 24px;
   height: 14px;
   padding: 2px;
@@ -775,20 +773,11 @@ html[data-synara-embed="true"] .composer-plan-mode-toggle [data-slot="menu-check
   --thumb-size: 10px;
 }
 
-html[data-synara-embed="true"] .composer-plan-mode-toggle > span,
-html[data-synara-embed="true"] .composer-plan-mode-toggle [data-slot="menu-checkbox-switch"] {
-  align-self: center;
-}
-
-html[data-synara-embed="true"] .app-settings-surface [data-slot="switch"][data-checked],
-html[data-synara-embed="true"]
-  .composer-plan-mode-toggle[data-checked]
-  [data-slot="menu-checkbox-switch"] {
+html[data-synara-embed="true"] .app-settings-surface [data-slot="switch"][data-checked] {
   background: var(--lattice-settings-accent);
 }
 
-html[data-synara-embed="true"] .app-settings-surface [data-slot="switch-thumb"],
-html[data-synara-embed="true"] .composer-plan-mode-toggle [data-slot="menu-checkbox-switch-thumb"] {
+html[data-synara-embed="true"] .app-settings-surface [data-slot="switch-thumb"] {
   width: 10px;
   height: 10px;
   background: var(--lattice-settings-panel);
@@ -798,10 +787,7 @@ html[data-synara-embed="true"] .composer-plan-mode-toggle [data-slot="menu-check
 html[data-synara-embed="true"]
   .app-settings-surface
   [data-slot="switch"][data-checked]
-  [data-slot="switch-thumb"],
-html[data-synara-embed="true"]
-  .composer-plan-mode-toggle[data-checked]
-  [data-slot="menu-checkbox-switch-thumb"] {
+  [data-slot="switch-thumb"] {
   translate: 10px 0;
 }
 

@@ -1,35 +1,18 @@
 // FILE: ComposerExtrasMenu.tsx
-// Purpose: Hosts the composer `+` menu for attachments and quick composer mode toggles.
+// Purpose: Hosts the composer `+` menu for file attachments.
 // Layer: Chat composer presentation
-// Depends on: shared menu primitives, icon buttons, and caller-owned composer state callbacks.
+// Depends on: shared menu primitives, icon buttons, and the caller-owned attachment callback.
 
-import { type ProviderInteractionMode } from "@synara/contracts";
 import { useId, useRef, type ChangeEvent } from "react";
-import { GoTasklist } from "react-icons/go";
 
 import { PaperclipIcon, PlusIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
-import { ComposerPickerMenuPopup, ComposerPickerMenuSubPopup } from "./ComposerPickerMenuPopup";
+import { ComposerPickerMenuPopup } from "./ComposerPickerMenuPopup";
 import { Button } from "../ui/button";
-import {
-  Menu,
-  MenuCheckboxItem,
-  MenuItem,
-  MenuRadioGroup,
-  MenuRadioItem,
-  MenuSeparator,
-  MenuSub,
-  MenuSubTrigger,
-  MenuTrigger,
-} from "../ui/menu";
+import { Menu, MenuItem, MenuTrigger } from "../ui/menu";
 
 export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
-  interactionMode: ProviderInteractionMode;
-  supportsFastMode: boolean;
-  fastModeEnabled: boolean;
   onAddAttachments: (files: File[]) => void;
-  onToggleFastMode: () => void;
-  onSetPlanMode: (enabled: boolean) => void;
   triggerClassName?: string | undefined;
 }) {
   const inputId = useId();
@@ -79,43 +62,6 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
               <span>Add files</span>
             </span>
           </MenuItem>
-
-          <MenuSeparator />
-          <MenuCheckboxItem
-            checked={props.interactionMode === "plan"}
-            className="composer-plan-mode-toggle items-center leading-4"
-            variant="switch"
-            onCheckedChange={(checked) => {
-              props.onSetPlanMode(checked === true);
-            }}
-          >
-            <span className="inline-flex h-4 translate-y-px items-center gap-2 leading-4">
-              <GoTasklist className="block size-4 shrink-0 self-center" />
-              <span className="leading-4">Plan mode</span>
-            </span>
-          </MenuCheckboxItem>
-
-          {props.supportsFastMode ? (
-            <>
-              <MenuSeparator />
-              <MenuSub>
-                <MenuSubTrigger>Fast</MenuSubTrigger>
-                <ComposerPickerMenuSubPopup>
-                  <MenuRadioGroup
-                    value={props.fastModeEnabled ? "fast" : "normal"}
-                    onValueChange={(value) => {
-                      const shouldEnableFast = value === "fast";
-                      if (shouldEnableFast === props.fastModeEnabled) return;
-                      props.onToggleFastMode();
-                    }}
-                  >
-                    <MenuRadioItem value="normal">Default</MenuRadioItem>
-                    <MenuRadioItem value="fast">Fast</MenuRadioItem>
-                  </MenuRadioGroup>
-                </ComposerPickerMenuSubPopup>
-              </MenuSub>
-            </>
-          ) : null}
         </ComposerPickerMenuPopup>
       </Menu>
     </>

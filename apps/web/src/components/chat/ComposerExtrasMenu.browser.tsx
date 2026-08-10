@@ -1,5 +1,5 @@
 // FILE: ComposerExtrasMenu.browser.tsx
-// Purpose: Verifies the composer `+` menu exposes generic file uploads and quick mode toggles.
+// Purpose: Verifies the composer `+` menu exposes generic file uploads without duplicate mode controls.
 // Layer: Browser UI test
 // Depends on: vitest browser rendering helpers and the ComposerExtrasMenu component.
 
@@ -11,25 +11,13 @@ import { render } from "vitest-browser-react";
 
 import { ComposerExtrasMenu } from "./ComposerExtrasMenu";
 
-async function mountMenu(props?: {
-  fastModeEnabled?: boolean;
-  interactionMode?: "default" | "plan";
-  supportsFastMode?: boolean;
-  triggerClassName?: string;
-}) {
+async function mountMenu(props?: { triggerClassName?: string }) {
   const onAddAttachments = vi.fn();
-  const onToggleFastMode = vi.fn();
-  const onSetPlanMode = vi.fn();
   const host = document.createElement("div");
   document.body.append(host);
   const screen = await render(
     <ComposerExtrasMenu
-      interactionMode={props?.interactionMode ?? "default"}
-      supportsFastMode={props?.supportsFastMode ?? true}
-      fastModeEnabled={props?.fastModeEnabled ?? false}
       onAddAttachments={onAddAttachments}
-      onToggleFastMode={onToggleFastMode}
-      onSetPlanMode={onSetPlanMode}
       triggerClassName={props?.triggerClassName}
     />,
     { container: host },
@@ -44,8 +32,6 @@ async function mountMenu(props?: {
     [Symbol.asyncDispose]: cleanup,
     cleanup,
     onAddAttachments,
-    onToggleFastMode,
-    onSetPlanMode,
   };
 }
 
@@ -77,30 +63,18 @@ describe("ComposerExtrasMenu", () => {
     ]);
   });
 
-  it("shows the attachment action in the menu", async () => {
-    await using _ = await mountMenu({ interactionMode: "plan", fastModeEnabled: true });
+  it("shows only the attachment action in the menu", async () => {
+    await using _ = await mountMenu();
 
     await page.getByLabelText("Composer extras").click();
 
     await vi.waitFor(() => {
       const text = document.body.textContent ?? "";
       expect(text).toContain("Add files");
-      expect(text).toContain("Plan mode");
-      expect(text).toContain("Fast");
+      expect(text).not.toContain("Plan mode");
+      expect(text).not.toContain("Fast");
       expect(text).not.toContain("Plugins");
     });
-  });
-
-  it("wires the plan and speed controls", async () => {
-    await using menu = await mountMenu();
-
-    await page.getByLabelText("Composer extras").click();
-    await page.getByText("Plan mode").click();
-    await page.getByText("Fast").click();
-    await page.getByRole("menuitemradio", { name: "Fast" }).click();
-
-    expect(menu.onSetPlanMode).toHaveBeenCalledWith(true);
-    expect(menu.onToggleFastMode).toHaveBeenCalledTimes(1);
   });
 
   it("can keep the embed trigger at a fixed size across viewport breakpoints", async () => {

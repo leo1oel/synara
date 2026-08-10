@@ -643,7 +643,7 @@ import {
   resolveDiffEnvironmentState,
   resolveThreadEnvironmentMode,
 } from "../lib/threadEnvironment";
-import { buildModelSelection, buildNextProviderOptions } from "../providerModelOptions";
+import { buildModelSelection } from "../providerModelOptions";
 import {
   isDuplicateProjectCreateError,
   waitForRecoverableProjectForDuplicateCreate,
@@ -5275,12 +5275,6 @@ export default function ChatView({
       return !open;
     });
   }, [activeTaskList?.turnId, sidebarProposedPlan?.turnId]);
-  const setPlanMode = useCallback(
-    (enabled: boolean) => {
-      handleInteractionModeChange(enabled ? "plan" : "default");
-    },
-    [handleInteractionModeChange],
-  );
   const persistThreadSettingsForNextTurn = useCallback(
     async (input: {
       threadId: ThreadId;
@@ -9962,29 +9956,6 @@ export default function ChatView({
       shortcutLabel={modelPickerShortcutLabel}
     />
   );
-  const toggleFastMode = useCallback(() => {
-    if (!composerTraitSelection.caps.supportsFastMode) {
-      scheduleComposerFocus();
-      return;
-    }
-    setComposerDraftProviderModelOptions(
-      threadId,
-      selectedProvider,
-      buildNextProviderOptions(selectedProvider, selectedProviderModelOptions, {
-        fastMode: !composerTraitSelection.fastModeEnabled,
-      }),
-      { persistSticky: true },
-    );
-    scheduleComposerFocus();
-  }, [
-    composerTraitSelection.caps.supportsFastMode,
-    composerTraitSelection.fastModeEnabled,
-    scheduleComposerFocus,
-    selectedProvider,
-    selectedProviderModelOptions,
-    setComposerDraftProviderModelOptions,
-    threadId,
-  ]);
   const onEnvModeChange = useCallback(
     (mode: DraftThreadEnvMode) => {
       const nextBranch =
@@ -11359,12 +11330,7 @@ export default function ChatView({
   const renderComposerLeadingControls = (options: { iconOnly: boolean }) => (
     <>
       <ComposerExtrasMenu
-        interactionMode={interactionMode}
-        supportsFastMode={composerTraitSelection.caps.supportsFastMode}
-        fastModeEnabled={composerTraitSelection.fastModeEnabled}
         onAddAttachments={addComposerAttachments}
-        onToggleFastMode={toggleFastMode}
-        onSetPlanMode={setPlanMode}
         triggerClassName={isEmbed ? "!size-8" : undefined}
       />
       {!isEmbed && !isVoiceRecording && !isVoiceTranscribing ? (
