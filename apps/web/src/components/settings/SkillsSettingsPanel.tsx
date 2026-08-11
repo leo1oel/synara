@@ -1,7 +1,6 @@
 // FILE: SkillsSettingsPanel.tsx
-// Purpose: Lattice's Skills Manager: bundled skills, user-installed skills,
-//          in-app creation/editing, local-folder installation, enable/disable,
-//          preview, customization, and recoverable removal.
+// Purpose: Lattice's Skills Manager: bundled, user-installed, provider, and project skills;
+//          in-app management for Lattice-owned skills; and source-transparent discovery.
 // Layer: Settings UI
 
 import type {
@@ -25,6 +24,7 @@ import { Button } from "~/components/ui/button";
 import { SearchInput } from "~/components/ui/search-input";
 import { Switch } from "~/components/ui/switch";
 import { toastManager } from "~/components/ui/toast";
+import { readEmbedMode } from "~/embedMode";
 import {
   ChevronRightIcon,
   FolderOpenIcon,
@@ -57,9 +57,12 @@ function filterSkillGroups(
     return [...groups];
   }
   return groups.filter((group) =>
-    [group.displayName, group.primarySkill.name, group.description].some((value) =>
-      value.toLocaleLowerCase().includes(normalized),
-    ),
+    [
+      group.displayName,
+      group.primarySkill.name,
+      group.description,
+      ...group.sources.flatMap((source) => [source.originInfo.label, source.skill.path]),
+    ].some((value) => value.toLocaleLowerCase().includes(normalized)),
   );
 }
 
@@ -75,28 +78,30 @@ export function SkillsSettingsPanel() {
     readonly detail?: ProviderManagedSkillDetail;
   } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const catalogQuery = useQuery(skillsCatalogQueryOptions());
+  const workspaceRoot = readEmbedMode()?.workspaceRoot ?? null;
+  const catalogQuery = useQuery(skillsCatalogQueryOptions({ cwd: workspaceRoot }));
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
 
   const disabledSkillNames = new Set(
     (serverSettingsQuery.data?.skills.disabled ?? []).map((name) => settingsSkillNameKey(name)),
   );
 
-  const managedGroups = useMemo(
-    () =>
-      buildSettingsSkillGroups(catalogQuery.data?.skills ?? []).filter(
-        (group) => group.primarySkill.management !== undefined,
-      ),
+  const skillGroups = useMemo(
+    () => buildSettingsSkillGroups(catalogQuery.data?.skills ?? []),
     [catalogQuery.data?.skills],
   );
-  const bundledGroups = managedGroups.filter(
+  const bundledGroups = skillGroups.filter(
     (group) => group.primarySkill.management?.kind === "bundled",
   );
-  const installedGroups = managedGroups.filter(
+  const installedGroups = skillGroups.filter(
     (group) => group.primarySkill.management?.kind === "installed",
+  );
+  const detectedGroups = skillGroups.filter(
+    (group) => group.primarySkill.management === undefined,
   );
   const visibleBundledGroups = filterSkillGroups(bundledGroups, searchQuery);
   const visibleInstalledGroups = filterSkillGroups(installedGroups, searchQuery);
+  const visibleDetectedGroups = filterSkillGroups(detectedGroups, searchQuery);
 
   const setSkillEnabled = (skillName: string, enabled: boolean) => {
     // Read through the query cache so rapid toggles build on each other instead
@@ -128,8 +133,8 @@ export function SkillsSettingsPanel() {
       });
   };
 
-  const totalSkills = managedGroups.length;
-  const enabledSkills = managedGroups.filter((group) => !disabledSkillNames.has(group.key)).length;
+  const totalSkills = skillGroups.length;
+  const enabledSkills = skillGroups.filter((group) => !disabledSkillNames.has(group.key)).length;
   const refreshSkillQueries = async () => {
     await queryClient.invalidateQueries({ queryKey: providerDiscoveryQueryKeys.all });
   };
@@ -310,6 +315,9 @@ export function SkillsSettingsPanel() {
     const management = skill.management;
     const enabled = !disabledSkillNames.has(group.key);
     const isRemoving = management?.id === removingSkillId;
+    const sourceLabels = [
+      ...new Set(group.sources.map((source) => source.originInfo.label)),
+    ].join(" · ");
     return (
       <SettingsRow
         key={group.key}
@@ -319,14 +327,41 @@ export function SkillsSettingsPanel() {
               <SkillCubeIcon aria-hidden="true" className="size-3.5 text-muted-foreground" />
             </span>
             <span className="truncate">{group.displayName}</span>
-            <Badge size="sm" variant={management?.kind === "bundled" ? "info" : "outline"}>
-              {management?.kind === "bundled" ? "Included" : "Local"}
+            <Badge
+              size="sm"
+              variant={
+                management?.kind === "bundled"
+                  ? "info"
+                  : management?.kind === "installed"
+                    ? "outline"
+                    : "secondary"
+              }
+            >
+              {management?.kind === "bundled"
+                ? "Included"
+                : management?.kind === "installed"
+                  ? "Local"
+                  : "Detected"}
             </Badge>
           </span>
         }
         description={group.description}
-        status={enabled ? "Enabled" : "Disabled"}
-        onClick={() => setSelectedSkill(skill)}
+        status={
+          <span className="flex min-w-0 flex-col gap-1">
+            <span>
+              {enabled ? "Enabled" : "Disabled"} · {sourceLabels}
+            </span>
+            {group.sources.map((source) => (
+              <code
+                key={`${source.origin}:${source.skill.path}`}
+                className="break-all text-[11px] text-muted-foreground"
+              >
+                {source.skill.path}
+              </code>
+            ))}
+          </span>
+        }
+        onClick={management ? () => setSelectedSkill(skill) : undefined}
         control={
           <div className="flex items-center gap-0.5">
             <div className="flex items-center gap-1" onClick={stopRowAction}>
@@ -352,25 +387,31 @@ export function SkillsSettingsPanel() {
                 </Button>
               ) : null}
             </div>
-            <Button
-              size="icon-xs"
-              variant="ghost"
-              aria-label={`Open ${group.displayName} details`}
-              title="Open skill details"
-              onClick={(event) => {
-                event.stopPropagation();
-                setSelectedSkill(skill);
-              }}
-            >
-              <ChevronRightIcon aria-hidden="true" className="size-3.5 text-muted-foreground/65" />
-            </Button>
+            {management ? (
+              <Button
+                size="icon-xs"
+                variant="ghost"
+                aria-label={`Open ${group.displayName} details`}
+                title="Open skill details"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setSelectedSkill(skill);
+                }}
+              >
+                <ChevronRightIcon
+                  aria-hidden="true"
+                  className="size-3.5 text-muted-foreground/65"
+                />
+              </Button>
+            ) : null}
           </div>
         }
       />
     );
   };
 
-  const hasVisibleSkills = visibleBundledGroups.length + visibleInstalledGroups.length > 0;
+  const hasVisibleSkills =
+    visibleBundledGroups.length + visibleInstalledGroups.length + visibleDetectedGroups.length > 0;
 
   if (skillEditor) {
     return (
@@ -418,7 +459,7 @@ export function SkillsSettingsPanel() {
       <SettingsSection title="Skills Manager">
         <SettingsRow
           title="Your skill library"
-          description="Included skills ship with Lattice. Skills you create, import, or customize live in your user folder."
+          description="Included and imported skills are managed by Lattice. Skills found in your provider and project folders are listed here too and remain managed by their original tools."
           status={
             catalogQuery.isLoading
               ? "Scanning your library…"
@@ -491,11 +532,11 @@ export function SkillsSettingsPanel() {
       ) : null}
 
       {!catalogQuery.isLoading && !catalogQuery.isError && !hasVisibleSkills ? (
-        <SettingsSectionShell title={searchQuery.trim() ? "Search results" : "Installed by you"}>
+        <SettingsSectionShell title={searchQuery.trim() ? "Search results" : "Skills"}>
           <SettingsEmptyState>
             {searchQuery.trim()
               ? `No skills match “${searchQuery.trim()}”.`
-              : "No additional skills installed. Create one here or import a folder containing SKILL.md."}
+              : "No skills found. Create one here or import a folder containing SKILL.md."}
           </SettingsEmptyState>
         </SettingsSectionShell>
       ) : null}
@@ -509,6 +550,12 @@ export function SkillsSettingsPanel() {
       {visibleInstalledGroups.length > 0 ? (
         <SettingsSectionShell title="Installed by you">
           <SettingsCard>{visibleInstalledGroups.map(renderSkillRow)}</SettingsCard>
+        </SettingsSectionShell>
+      ) : null}
+
+      {visibleDetectedGroups.length > 0 ? (
+        <SettingsSectionShell title="Detected from your environment">
+          <SettingsCard>{visibleDetectedGroups.map(renderSkillRow)}</SettingsCard>
         </SettingsSectionShell>
       ) : null}
     </div>

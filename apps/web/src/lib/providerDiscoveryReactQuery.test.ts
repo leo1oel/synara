@@ -10,6 +10,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   isInitialModelDiscoveryPending,
   providerModelsQueryOptions,
+  providerSkillsQueryOptions,
+  skillsCatalogQueryOptions,
 } from "./providerDiscoveryReactQuery";
 import * as nativeApi from "../nativeApi";
 
@@ -20,8 +22,91 @@ function mockListModels(listModels: ReturnType<typeof vi.fn>) {
   return listModels;
 }
 
+function installLatticeEmbedStorage() {
+  vi.stubGlobal("sessionStorage", {
+    getItem: vi.fn().mockReturnValue(
+      JSON.stringify({
+        workspaceRoot: "/Users/test/project",
+        theme: "light",
+        surface: "drawer",
+        hostOrigin: "http://localhost:1420",
+      }),
+    ),
+  });
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+
+describe("Lattice skill discovery", () => {
+  it("keeps provider-native user skills in the embedded composer", async () => {
+    installLatticeEmbedStorage();
+    const result = {
+      skills: [
+        {
+          name: "user-review",
+          enabled: true,
+          path: "/Users/test/.claude/skills/user-review/SKILL.md",
+          scope: "claude",
+        },
+      ],
+      source: "claude.native",
+      cached: false,
+    };
+    const listSkills = vi.fn().mockResolvedValue(result);
+    const listSkillsCatalog = vi.fn();
+    vi.spyOn(nativeApi, "ensureNativeApi").mockReturnValue({
+      provider: { listSkills, listSkillsCatalog },
+    } as unknown as NativeApi);
+
+    const options = providerSkillsQueryOptions({
+      provider: "claudeAgent",
+      cwd: "/Users/test/project",
+    });
+    const queryClient = new QueryClient();
+
+    await expect(queryClient.fetchQuery(options)).resolves.toEqual(result);
+    expect(listSkillsCatalog).not.toHaveBeenCalled();
+  });
+
+  it("keeps user and project skills in the embedded Settings catalog", async () => {
+    installLatticeEmbedStorage();
+    const result = {
+      skills: [
+        {
+          name: "humanize-writing",
+          enabled: true,
+          path: "/Applications/Lattice/humanize-writing/SKILL.md",
+          scope: "bundled",
+        },
+        {
+          name: "user-review",
+          enabled: true,
+          path: "/Users/test/.claude/skills/user-review/SKILL.md",
+          scope: "claude",
+        },
+        {
+          name: "project-research",
+          enabled: true,
+          path: "/Users/test/project/.agents/skills/project-research/SKILL.md",
+          scope: "project",
+        },
+      ],
+      synaraSkillsDir: "/Users/test/Library/Application Support/Lattice/synara/skills",
+    };
+    const listSkillsCatalog = vi.fn().mockResolvedValue(result);
+    vi.spyOn(nativeApi, "ensureNativeApi").mockReturnValue({
+      provider: { listSkillsCatalog },
+    } as unknown as NativeApi);
+
+    const options = skillsCatalogQueryOptions({ cwd: "/Users/test/project" });
+    const queryClient = new QueryClient();
+
+    await expect(queryClient.fetchQuery(options)).resolves.toEqual(result);
+    expect(listSkillsCatalog).toHaveBeenCalledWith({ cwd: "/Users/test/project" });
+  });
 });
 
 describe("isInitialModelDiscoveryPending", () => {

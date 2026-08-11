@@ -65,6 +65,19 @@ describe("buildSettingsSkillGroups", () => {
     expect(groups[0]?.providers).toEqual([]);
     expect(groups[0]?.section).toBe("agents");
   });
+
+  it("labels Factory skill roots with the Droid provider", () => {
+    const groups = buildSettingsSkillGroups([
+      skill({
+        name: "factory-review",
+        path: "/Users/test/.factory/skills/factory-review/SKILL.md",
+        scope: "factory",
+      }),
+    ]);
+
+    expect(groups[0]?.providers).toEqual(["droid"]);
+    expect(groups[0]?.sources[0]?.originInfo.label).toBe("Droid");
+  });
 });
 
 describe("buildSettingsSkillSections", () => {

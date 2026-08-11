@@ -44,6 +44,7 @@ export const ORIGIN_SECTION_ORDER = [
   "cursor",
   "antigravity",
   "grok",
+  "factory",
   "droid",
   "kilo",
   "opencode",
@@ -67,6 +68,7 @@ export function skillOriginInfo(scope: string | undefined): SkillOriginInfo {
       return { label: PROVIDER_DISPLAY_NAMES.antigravity, provider: "antigravity" };
     case "grok":
       return { label: PROVIDER_DISPLAY_NAMES.grok, provider: "grok" };
+    case "factory":
     case "droid":
       return { label: PROVIDER_DISPLAY_NAMES.droid, provider: "droid" };
     case "kilo":

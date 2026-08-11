@@ -5,61 +5,11 @@ import type {
   ProviderListCommandsResult,
   ProviderListModelsResult,
   ProviderListPluginsResult,
-  ProviderSkillDescriptor,
   ProviderListSkillsResult,
   ProviderSkillsCatalogResult,
 } from "@synara/contracts";
 import { queryOptions } from "@tanstack/react-query";
-import { isSynaraEmbedMode } from "~/embedMode";
 import { ensureNativeApi } from "~/nativeApi";
-
-const LATTICE_SKILL_NAMES = new Set(["humanize-writing", "research-taste"]);
-
-function latticeSkillNames(skills: ReadonlyArray<ProviderSkillDescriptor>): Set<string> {
-  const names = new Set(LATTICE_SKILL_NAMES);
-  for (const skill of skills) {
-    if (skill.scope === "synara" || skill.scope === "bundled" || skill.management !== undefined) {
-      names.add(skill.name.toLocaleLowerCase());
-    }
-  }
-  return names;
-}
-
-function skillsForCurrentClient<T extends { skills: ReadonlyArray<{ name: string }> }>(
-  result: T,
-  allowedNames: ReadonlySet<string>,
-): T {
-  if (!isSynaraEmbedMode()) return result;
-  return {
-    ...result,
-    skills: result.skills.filter((skill) => allowedNames.has(skill.name.toLocaleLowerCase())),
-  };
-}
-
-function providerSkillsForLattice(
-  result: ProviderListSkillsResult,
-  catalog: ProviderSkillsCatalogResult,
-): ProviderListSkillsResult {
-  const allowedNames = latticeSkillNames(catalog.skills);
-  const managedSkills = catalog.skills.filter(
-    (
-      skill,
-    ): skill is ProviderSkillDescriptor & {
-      management: NonNullable<ProviderSkillDescriptor["management"]>;
-    } => skill.management !== undefined,
-  );
-  const byName = new Map<string, ProviderSkillDescriptor>();
-  for (const skill of [...managedSkills, ...result.skills]) {
-    const key = skill.name.toLocaleLowerCase();
-    if (allowedNames.has(key) && !byName.has(key)) {
-      byName.set(key, skill);
-    }
-  }
-  return {
-    ...result,
-    skills: [...byName.values()],
-  };
-}
 
 const EMPTY_SKILLS_RESULT: ProviderListSkillsResult = {
   skills: [],
@@ -157,17 +107,12 @@ export function providerSkillsQueryOptions(input: {
       if (!input.cwd) {
         throw new Error("Skill discovery is unavailable.");
       }
-      const result = await api.provider.listSkills({
+      return api.provider.listSkills({
         provider: input.provider,
         cwd: input.cwd,
         ...(input.threadId ? { threadId: input.threadId } : {}),
         ...(input.agentDir ? { agentDir: input.agentDir } : {}),
       });
-      if (!isSynaraEmbedMode()) {
-        return result;
-      }
-      const catalog = await api.provider.listSkillsCatalog({ cwd: input.cwd });
-      return providerSkillsForLattice(result, catalog);
     },
     enabled: (input.enabled ?? true) && input.cwd !== null,
     staleTime: 30_000,
@@ -184,8 +129,7 @@ export function skillsCatalogQueryOptions(input?: { cwd?: string | null; enabled
     queryKey: providerDiscoveryQueryKeys.skillsCatalog(cwd),
     queryFn: async (): Promise<ProviderSkillsCatalogResult> => {
       const api = ensureNativeApi();
-      const result = await api.provider.listSkillsCatalog(cwd ? { cwd } : {});
-      return skillsForCurrentClient(result, latticeSkillNames(result.skills));
+      return api.provider.listSkillsCatalog(cwd ? { cwd } : {});
     },
     enabled: input?.enabled ?? true,
     staleTime: 30_000,
