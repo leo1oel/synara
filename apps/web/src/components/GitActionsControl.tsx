@@ -391,6 +391,7 @@ export default function GitActionsControl({
     useState<PendingDefaultBranchAction | null>(null);
   const [isCreateBranchDialogOpen, setIsCreateBranchDialogOpen] = useState(false);
   const [createBranchName, setCreateBranchName] = useState("");
+  const [isPanelGitMenuOpen, setIsPanelGitMenuOpen] = useState(false);
   const [createPrDialog, setCreatePrDialog] = useState<CreatePrDialogState | null>(null);
   const activeGitActionProgressRef = useRef<ActiveGitActionProgress | null>(null);
 
@@ -1566,8 +1567,7 @@ export default function GitActionsControl({
 
   if (!gitCwd) return null;
 
-  const hasRunnableCommitPushAction = findRunnableCommitPushMenuItem(gitActionMenuItems) !== null;
-  const shouldDimPanelCommitPushRow = isGitActionRunning || !hasRunnableCommitPushAction;
+  const runnableCommitPushAction = findRunnableCommitPushMenuItem(gitActionMenuItems);
 
   // Shared dropdown body — the picker rows plus the contextual git-status warnings.
   // Rendered identically by the header split button and the panel "Commit and Push" row.
@@ -1940,7 +1940,9 @@ export default function GitActionsControl({
     });
     const panelGitActionsMenu = (
       <Menu
+        open={isPanelGitMenuOpen}
         onOpenChange={(open) => {
+          setIsPanelGitMenuOpen(open);
           if (open) requestGitActionAvailabilityRefresh();
         }}
       >
@@ -1950,36 +1952,15 @@ export default function GitActionsControl({
               type="button"
               className={cn(
                 ENVIRONMENT_ROW_CLASS_NAME,
-                showPanelPullRow
-                  ? "w-auto shrink-0 px-1.5"
-                  : shouldDimPanelCommitPushRow && "opacity-55",
+                "w-auto shrink-0 px-1.5",
+                isPanelGitMenuOpen && "bg-[var(--color-background-elevated-secondary)]",
               )}
-              aria-label={
-                showPanelPullRow
-                  ? "Git action options"
-                  : shouldDimPanelCommitPushRow
-                    ? "Commit and Push unavailable; open Git actions menu"
-                    : "Commit and Push"
-              }
-              title={
-                showPanelPullRow
-                  ? "More Git actions"
-                  : shouldDimPanelCommitPushRow
-                    ? "Commit and Push unavailable. Open for more Git actions."
-                    : "Commit and Push"
-              }
+              aria-label="More Git actions"
+              title="More Git actions"
             />
           }
         >
-          {showPanelPullRow ? (
-            <EnvironmentRowChevron />
-          ) : (
-            <EnvironmentRowBody
-              icon={<GitActionGlyph name="push" className={ENVIRONMENT_ROW_ICON_CLASS_NAME} />}
-              label="Commit and Push"
-              trailing={<EnvironmentRowChevron />}
-            />
-          )}
+          <EnvironmentRowChevron open={isPanelGitMenuOpen} />
         </MenuTrigger>
         <ComposerPickerMenuPopup align="start" side="bottom" className="w-60 min-w-60">
           {gitMenuContent}
@@ -1996,25 +1977,50 @@ export default function GitActionsControl({
             disabled={initMutation.isPending}
             onClick={() => initMutation.mutate()}
           />
-        ) : showPanelPullRow ? (
-          <div className="flex w-full items-center">
+        ) : (
+          <div className="flex w-full items-center gap-0.5">
             <button
               type="button"
               className={cn(ENVIRONMENT_ROW_CLASS_NAME, "min-w-0 flex-1")}
-              aria-label="Pull"
-              title="Pull"
-              disabled={isGitActionRunning}
-              onClick={runQuickAction}
+              aria-label={showPanelPullRow ? "Pull" : "Commit and Push"}
+              title={
+                showPanelPullRow
+                  ? "Pull"
+                  : runnableCommitPushAction
+                    ? "Commit all changes and push the current branch"
+                    : "No changes or commits to push"
+              }
+              disabled={
+                isGitActionRunning || (!showPanelPullRow && runnableCommitPushAction === null)
+              }
+              onClick={() => {
+                if (showPanelPullRow) {
+                  runQuickAction();
+                } else if (runnableCommitPushAction) {
+                  openDialogForMenuItem(runnableCommitPushAction);
+                }
+              }}
             >
               <EnvironmentRowBody
-                icon={<GitActionGlyph name="sync" className={ENVIRONMENT_ROW_ICON_CLASS_NAME} />}
-                label={isPullRunning ? "Pulling..." : "Pull"}
+                icon={
+                  <GitActionGlyph
+                    name={showPanelPullRow ? "sync" : "push"}
+                    className={ENVIRONMENT_ROW_ICON_CLASS_NAME}
+                  />
+                }
+                label={
+                  showPanelPullRow
+                    ? isPullRunning
+                      ? "Pulling..."
+                      : "Pull"
+                    : isRunStackedActionRunning
+                      ? "Git action in progress..."
+                      : "Commit and Push"
+                }
               />
             </button>
             {panelGitActionsMenu}
           </div>
-        ) : (
-          panelGitActionsMenu
         )}
         {gitActionDialogs}
       </>

@@ -41,14 +41,15 @@ import {
   CHAT_SURFACE_HEADER_ACTION_ICON_CLASS_NAME,
   DOCK_HEADER_ICON_BUTTON_CLASS,
 } from "./chatHeaderControls";
+import { BranchToolbarBranchSelector } from "../BranchToolbarBranchSelector";
 import { DiffStat } from "./DiffStatLabel";
 import { DockPaneHeader } from "./DockPaneHeader";
 import { FileDiffHeader } from "./FileDiffHeader";
 import { SingleFileDiffBody } from "./FileDiffView";
 import { FileEntryIcon } from "./FileEntryIcon";
+import GitActionsControl from "../GitActionsControl";
 import { GitHubRemoteSetupCard, GitInitializationState } from "./GitRepositorySetup";
 import { PanelStateMessage } from "./PanelStateMessage";
-import GitActionsControl from "../GitActionsControl";
 
 type GitPanelSection = "staged" | "unstaged";
 
@@ -198,7 +199,10 @@ function SelectedFileDiff(props: { fileDiff: FileDiffMetadata; theme: "light" | 
         <div className="border-b border-border bg-background">
           <FileDiffHeader fileDiff={props.fileDiff} theme={props.theme} />
         </div>
-        <div className="min-h-0 min-w-0 overflow-hidden">
+        <div
+          className="min-h-0 min-w-0 overflow-auto overscroll-contain"
+          data-git-diff-scroll=""
+        >
           <SingleFileDiffBody fileDiff={props.fileDiff} theme={props.theme} />
         </div>
       </div>
@@ -351,7 +355,18 @@ export function GitPanel(props: {
       ) : (
         <>
           {props.showActions ? (
-            <div className="border-b border-border/70 px-2 py-1.5">
+            <div className="flex flex-col gap-0.5 border-b border-border/70 px-2 py-1.5">
+              <BranchToolbarBranchSelector
+                activeProjectCwd={cwd}
+                activeThreadBranch={null}
+                activeWorktreePath={null}
+                branchCwd={cwd}
+                effectiveEnvMode="local"
+                envLocked
+                hasServerThread={false}
+                onSetThreadWorkspace={() => undefined}
+                variant="panel"
+              />
               <GitActionsControl
                 gitCwd={cwd}
                 activeThreadId={props.hostThreadId ?? null}

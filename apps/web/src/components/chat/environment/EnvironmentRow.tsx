@@ -10,6 +10,7 @@ import { useState, type ComponentPropsWithoutRef, type ReactNode } from "react";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { DisclosureChevron } from "~/components/ui/DisclosureChevron";
 import { ChevronDownIcon } from "~/lib/icons";
+import { DISCLOSURE_CHEVRON_MOTION_CLASS } from "~/lib/disclosureMotion";
 import { cn } from "~/lib/utils";
 import { ELEVATED_HOVER_SURFACE_CLASS_NAME } from "~/surfaceStyles";
 
@@ -39,8 +40,25 @@ export const ENVIRONMENT_ROW_ICON_CLASS_NAME =
   "size-4 shrink-0 text-[var(--color-text-foreground)]";
 
 /** Right-aligned caret for rows that open a picker or menu. */
-export function EnvironmentRowChevron({ className }: { className?: string }) {
-  return <ChevronDownIcon aria-hidden className={cn("size-3 shrink-0 opacity-60", className)} />;
+export function EnvironmentRowChevron({
+  className,
+  open: openProp,
+}: {
+  className?: string;
+  open?: boolean;
+}) {
+  const open = openProp ?? false;
+  return (
+    <ChevronDownIcon
+      aria-hidden
+      className={cn(
+        DISCLOSURE_CHEVRON_MOTION_CLASS,
+        "size-3 opacity-60",
+        open && "rotate-180",
+        className,
+      )}
+    />
+  );
 }
 
 /** Top-of-card title (e.g. "Environment"). */

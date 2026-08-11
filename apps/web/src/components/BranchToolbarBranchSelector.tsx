@@ -7,7 +7,7 @@ import type { GitBranch, GitStashInfoResult, GitStatusResult, NativeApi } from "
 import { pluralize } from "@synara/shared/text";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ChevronDownIcon, PlusIcon, SearchIcon } from "~/lib/icons";
+import { PlusIcon, SearchIcon } from "~/lib/icons";
 import { CentralIcon } from "~/lib/central-icons";
 import {
   type CSSProperties,
@@ -27,6 +27,7 @@ import {
   gitStatusQueryOptions,
   refreshGitQueriesScoped,
 } from "../lib/gitReactQuery";
+import { cn } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
 import { parsePullRequestReference } from "../pullRequestReference";
 import {
@@ -856,24 +857,25 @@ export function BranchToolbarBranchSelector({
       value={resolvedActiveBranch}
     >
       <ComboboxTrigger
-        className={
+        className={cn(
           isPanel
             ? ENVIRONMENT_ROW_CLASS_NAME
-            : `${COMPOSER_TOOLBAR_PICKER_TRIGGER_CLASS_NAME} disabled:cursor-not-allowed disabled:opacity-50`
-        }
+            : `${COMPOSER_TOOLBAR_PICKER_TRIGGER_CLASS_NAME} disabled:cursor-not-allowed disabled:opacity-50`,
+          isPanel && isBranchMenuOpen && "bg-[var(--color-background-elevated-secondary)]",
+        )}
         disabled={(branchesQuery.isLoading && branches.length === 0) || isBranchActionPending}
       >
         {isPanel ? (
           <EnvironmentRowBody
             icon={<CentralIcon name="branch" className={ENVIRONMENT_ROW_ICON_CLASS_NAME} />}
             label={triggerLabel}
-            trailing={<EnvironmentRowChevron />}
+            trailing={<EnvironmentRowChevron open={isBranchMenuOpen} />}
           />
         ) : (
           <>
             <CentralIcon name="branch" className="size-3.5 shrink-0" />
             <span className="max-w-[240px] truncate">{triggerLabel}</span>
-            <ChevronDownIcon className="size-3 opacity-60" />
+            <EnvironmentRowChevron open={isBranchMenuOpen} />
           </>
         )}
       </ComboboxTrigger>
