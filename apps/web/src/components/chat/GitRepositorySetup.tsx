@@ -246,6 +246,7 @@ function GitHubRepositorySetupForm(props: {
 
   return (
     <form
+      className="flex min-h-0 flex-1 flex-col"
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
@@ -312,10 +313,11 @@ function GitHubRepositorySetupForm(props: {
                       type="button"
                       role="radio"
                       aria-checked={selected}
-                      variant={selected ? "secondary-outline" : "outline"}
+                      variant="outline"
                       className={cn(
                         "h-auto min-h-14 flex-col items-start gap-0.5 px-2.5 py-2 text-left",
-                        selected && "border-foreground/20 bg-foreground/[0.055]",
+                        selected &&
+                          "border-foreground/20 bg-foreground/[0.055] [:hover,[data-pressed]]:bg-foreground/[0.075]",
                       )}
                       disabled={isPending}
                       onClick={() => setVisibility(value)}

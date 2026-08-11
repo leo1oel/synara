@@ -7,7 +7,7 @@ import "../../index.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { page } from "vitest/browser";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
 
 import { GitHubRemoteSetupCard, GitInitializationState } from "./GitRepositorySetup";
@@ -26,7 +26,19 @@ function renderWithQueryClient(element: ReactNode) {
   );
 }
 
+function backgroundAlpha(element: Element): number {
+  const color = getComputedStyle(element).backgroundColor;
+  const slashAlpha = color.match(/\/\s*([\d.]+)\s*\)$/)?.[1];
+  if (slashAlpha) return Number(slashAlpha);
+  const rgbaAlpha = color.match(/^rgba\(.+,\s*([\d.]+)\)$/)?.[1];
+  return rgbaAlpha ? Number(rgbaAlpha) : 1;
+}
+
 describe("GitRepositorySetup", () => {
+  afterEach(async () => {
+    await page.viewport(414, 896);
+  });
+
   it("uses the app typography and a compact primary action for Git initialization", async () => {
     await renderWithQueryClient(<GitInitializationState cwd="/tmp/research-writer" />);
 
@@ -44,6 +56,7 @@ describe("GitRepositorySetup", () => {
   });
 
   it("opens a styled publish dialog with private visibility selected by default", async () => {
+    await page.viewport(451, 552);
     await renderWithQueryClient(<GitHubRemoteSetupCard cwd="/tmp/research writer" />);
 
     const publishButton = page.getByRole("button", { name: "Publish" });
@@ -56,6 +69,22 @@ describe("GitRepositorySetup", () => {
       .element(page.getByRole("radio", { name: "Private Only you and invited collaborators" }))
       .toHaveAttribute("aria-checked", "true");
     await expect.element(page.getByRole("button", { name: "Create repository" })).toBeVisible();
+
+    const createButton = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
+      (button) => button.textContent?.trim() === "Create repository",
+    );
+    expect(createButton).toBeDefined();
+    expect(createButton!.getBoundingClientRect().bottom).toBeLessThanOrEqual(window.innerHeight);
+
+    const selectedVisibility = document.querySelector<HTMLButtonElement>(
+      '[role="radio"][aria-checked="true"]',
+    );
+    expect(selectedVisibility).not.toBeNull();
+    const selectedAlpha = backgroundAlpha(selectedVisibility!);
+    await page
+      .getByRole("radio", { name: "Private Only you and invited collaborators" })
+      .hover();
+    expect(backgroundAlpha(selectedVisibility!)).toBeGreaterThan(selectedAlpha);
   });
 
   it("opens the existing-repository flow without exposing upload actions", async () => {
