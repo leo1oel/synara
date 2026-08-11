@@ -152,19 +152,22 @@ describe("GitPanel", () => {
     );
     const diffHost = scrollViewport?.querySelector<HTMLElement>("diffs-container");
     const innerCodeViewport = diffHost?.shadowRoot?.querySelector<HTMLElement>("[data-code]");
-    const verticalScrollbar = scrollArea?.querySelector<HTMLElement>(
-      ':scope > [data-orientation="vertical"]',
-    );
     expect(scrollArea).not.toBeNull();
     expect(scrollViewport).not.toBeNull();
     expect(innerCodeViewport).not.toBeNull();
-    expect(verticalScrollbar).not.toBeNull();
+    await expect
+      .poll(() => scrollArea!.querySelector(':scope > [data-orientation="vertical"]'))
+      .not.toBeNull();
     await expect
       .poll(() => scrollArea!.querySelector(':scope > [data-orientation="horizontal"]'))
       .not.toBeNull();
+    const verticalScrollbar = scrollArea!.querySelector<HTMLElement>(
+      ':scope > [data-orientation="vertical"]',
+    );
     const horizontalScrollbar = scrollArea!.querySelector<HTMLElement>(
       ':scope > [data-orientation="horizontal"]',
     );
+    expect(verticalScrollbar).not.toBeNull();
     expect(horizontalScrollbar).not.toBeNull();
     expect(getComputedStyle(scrollViewport!).overflowY).toBe("scroll");
     expect(getComputedStyle(innerCodeViewport!).overflowX).toBe("visible");
@@ -271,6 +274,31 @@ describe("GitPanel", () => {
     expect(description).not.toBeNull();
     expect(getComputedStyle(description!).fontSize).toBe("12px");
     expect(getComputedStyle(description!).lineHeight).toBe("16px");
+  });
+
+  it("uses the shared dialog hierarchy and compact secondary copy for Create PR", async () => {
+    installGitApi();
+    await renderWithQueryClient(
+      <GitPanel
+        hostThreadId={null}
+        projectId={null}
+        cwdOverride={TEST_CWD}
+        showActions
+        title="Changes"
+      />,
+    );
+
+    await page.getByRole("button", { name: "More Git actions" }).click();
+    await page.getByRole("menuitem", { name: "Create PR", exact: true }).click();
+
+    await expect.element(page.getByRole("heading", { name: "Create PR" })).toBeVisible();
+    const description = document.querySelector<HTMLElement>('[data-slot="dialog-description"]');
+    expect(description).not.toBeNull();
+    expect(getComputedStyle(description!).fontSize).toBe("12px");
+    expect(getComputedStyle(description!).lineHeight).toBe("16px");
+    const dialog = document.querySelector<HTMLElement>('[data-slot="dialog-popup"]');
+    expect(dialog).not.toBeNull();
+    expect(dialog!.textContent).toContain("feature/source-control");
   });
 
   it("keeps the clean-state action legible and explains why it cannot run", async () => {

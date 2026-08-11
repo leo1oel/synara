@@ -135,24 +135,32 @@ export function GitCreatePrDialog({
           }
         }}
       >
-        <DialogHeader className="gap-0.5">
-          <DialogTitle className="font-normal font-sans text-muted-foreground text-xs">
-            {view.isNewBranch ? "New branch" : "Branch"} → {view.baseBranchName}
-          </DialogTitle>
-          <DialogDescription
-            className={cn(
-              "truncate font-medium text-sm",
-              view.willCreateFeatureBranch
-                ? "text-muted-foreground italic"
-                : "text-[var(--color-text-foreground)]",
-            )}
-          >
-            {view.willCreateFeatureBranch
-              ? "Auto-named feature branch"
-              : (view.branchName ?? "(detached HEAD)")}
+        <DialogHeader>
+          <DialogTitle>Create PR</DialogTitle>
+          <DialogDescription className="text-xs leading-4">
+            Review and confirm your pull request. Leave the title or description blank to
+            auto-generate it.
           </DialogDescription>
         </DialogHeader>
         <DialogPanel className="space-y-1 pt-2">
+          <div className="flex min-w-0 items-center gap-1.5 pb-1 text-xs">
+            <span className="shrink-0 text-muted-foreground">
+              {view.isNewBranch ? "New branch" : "Branch"}
+            </span>
+            <span
+              className={cn(
+                "truncate font-medium",
+                view.willCreateFeatureBranch
+                  ? "text-muted-foreground italic"
+                  : "text-[var(--color-text-foreground)]",
+              )}
+            >
+              {view.willCreateFeatureBranch
+                ? "Auto-named feature branch"
+                : (view.branchName ?? "(detached HEAD)")}
+            </span>
+            <span className="shrink-0 text-muted-foreground">→ {view.baseBranchName}</span>
+          </div>
           <input
             autoFocus
             aria-label="Pull request title"
