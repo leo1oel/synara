@@ -8,7 +8,7 @@ import type { GitStatusResult, NativeApi } from "@synara/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 
 import { GitPanel } from "./GitPanel";
@@ -24,11 +24,13 @@ function buildLongPatch(lineCount = 80): string {
     `@@ -1,${lineCount} +1,${lineCount} @@`,
     ...Array.from(
       { length: lineCount },
-      (_, index) => `-const oldValue${index + 1} = ${index + 1};`,
+      (_, index) =>
+        `-const oldValue${index + 1}WithANameThatMustRemainUnwrapped${"AndKeepsGoing".repeat(12)} = ${index + 1};`,
     ),
     ...Array.from(
       { length: lineCount },
-      (_, index) => `+const newValue${index + 1} = ${index + 1};`,
+      (_, index) =>
+        `+const newValue${index + 1}WithANameThatMustRemainUnwrapped${"AndKeepsGoing".repeat(12)} = ${index + 1};`,
     ),
     "",
   ].join("\n");
@@ -135,7 +137,7 @@ describe("GitPanel", () => {
     delete window.nativeApi;
   });
 
-  it("keeps every line in a long selected-file diff vertically scrollable", async () => {
+  it("keeps a long selected-file diff on one wheel-scrollable viewport with fixed scrollbars", async () => {
     installGitApi();
     await renderWithQueryClient(
       <GitPanel hostThreadId={null} projectId={null} cwdOverride={TEST_CWD} title="Changes" />,
@@ -144,15 +146,46 @@ describe("GitPanel", () => {
     await page.getByRole("button", { name: /src\/long\.ts/ }).click();
     await expect.element(page.getByText("Rendering diff…")).not.toBeInTheDocument();
 
-    const scrollContainer = document.querySelector<HTMLElement>("[data-git-diff-scroll]");
-    expect(scrollContainer).not.toBeNull();
-    expect(getComputedStyle(scrollContainer!).overflowY).toBe("auto");
-    expect(scrollContainer!.scrollHeight).toBeGreaterThan(scrollContainer!.clientHeight);
+    const scrollArea = document.querySelector<HTMLElement>("[data-git-diff-scroll]");
+    const scrollViewport = scrollArea?.querySelector<HTMLElement>(
+      ':scope > [data-slot="scroll-area-viewport"]',
+    );
+    const diffHost = scrollViewport?.querySelector<HTMLElement>("diffs-container");
+    const innerCodeViewport = diffHost?.shadowRoot?.querySelector<HTMLElement>("[data-code]");
+    const verticalScrollbar = scrollArea?.querySelector<HTMLElement>(
+      ':scope > [data-orientation="vertical"]',
+    );
+    expect(scrollArea).not.toBeNull();
+    expect(scrollViewport).not.toBeNull();
+    expect(innerCodeViewport).not.toBeNull();
+    expect(verticalScrollbar).not.toBeNull();
+    await expect
+      .poll(() => scrollArea!.querySelector(':scope > [data-orientation="horizontal"]'))
+      .not.toBeNull();
+    const horizontalScrollbar = scrollArea!.querySelector<HTMLElement>(
+      ':scope > [data-orientation="horizontal"]',
+    );
+    expect(horizontalScrollbar).not.toBeNull();
+    expect(getComputedStyle(scrollViewport!).overflowY).toBe("scroll");
+    expect(getComputedStyle(innerCodeViewport!).overflowX).toBe("visible");
+    expect(scrollViewport!.scrollHeight).toBeGreaterThan(scrollViewport!.clientHeight);
+    expect(scrollViewport!.scrollWidth).toBeGreaterThan(scrollViewport!.clientWidth);
 
-    scrollContainer!.scrollTop = scrollContainer!.scrollHeight;
-    scrollContainer!.dispatchEvent(new Event("scroll"));
-    await new Promise((resolve) => requestAnimationFrame(resolve));
-    expect(scrollContainer!.scrollTop).toBeGreaterThan(0);
+    const initialScrollbarBottom = horizontalScrollbar!.getBoundingClientRect().bottom;
+    expect(Math.abs(initialScrollbarBottom - scrollArea!.getBoundingClientRect().bottom)).toBeLessThan(
+      1,
+    );
+
+    await userEvent.hover(scrollArea!);
+    await expect.poll(() => getComputedStyle(verticalScrollbar!).opacity).toBe("1");
+    await expect.poll(() => getComputedStyle(horizontalScrollbar!).opacity).toBe("1");
+
+    await userEvent.wheel(scrollArea!, { delta: { y: 180 } });
+    await expect.poll(() => scrollViewport!.scrollTop).toBeGreaterThan(0);
+    expect(horizontalScrollbar!.getBoundingClientRect().bottom).toBe(initialScrollbarBottom);
+
+    await userEvent.wheel(scrollArea!, { delta: { x: 180 } });
+    await expect.poll(() => scrollViewport!.scrollLeft).toBeGreaterThan(0);
   });
 
   it("renders Commit and Push as a direct action with a separate, stateful options menu", async () => {
@@ -195,6 +228,16 @@ describe("GitPanel", () => {
     await moreActions.click();
     await expect.element(moreActions).toHaveAttribute("aria-expanded", "true");
     await expect.element(page.getByText("Git actions", { exact: true })).toBeVisible();
+    const actionAnchor = document.querySelector<HTMLElement>("[data-panel-git-actions-anchor]");
+    const actionMenu = document.querySelector<HTMLElement>('[data-slot="menu-positioner"]');
+    expect(actionAnchor).not.toBeNull();
+    expect(actionMenu).not.toBeNull();
+    expect(
+      Math.abs(actionMenu!.getBoundingClientRect().left - actionAnchor!.getBoundingClientRect().left),
+    ).toBeLessThan(1);
+    expect(
+      Math.abs(actionAnchor!.getBoundingClientRect().left - branchTrigger!.getBoundingClientRect().left),
+    ).toBeLessThan(1);
     await new Promise((resolve) => window.setTimeout(resolve, 250));
     const openChevron = document.querySelector<HTMLButtonElement>(
       'button[aria-label="More Git actions"]',
@@ -207,6 +250,27 @@ describe("GitPanel", () => {
     await expect.poll(() => actionCalls.length).toBe(1);
     expect(actionCalls[0]).toMatchObject({ action: "commit_push" });
     expect(actionCalls[0]?.filePaths).toBeUndefined();
+  });
+
+  it("uses compact secondary copy in the commit dialog", async () => {
+    installGitApi();
+    await renderWithQueryClient(
+      <GitPanel
+        hostThreadId={null}
+        projectId={null}
+        cwdOverride={TEST_CWD}
+        showActions
+        title="Changes"
+      />,
+    );
+
+    await page.getByRole("button", { name: "More Git actions" }).click();
+    await page.getByRole("menuitem", { name: "Commit", exact: true }).click();
+
+    const description = document.querySelector<HTMLElement>('[data-slot="dialog-description"]');
+    expect(description).not.toBeNull();
+    expect(getComputedStyle(description!).fontSize).toBe("12px");
+    expect(getComputedStyle(description!).lineHeight).toBe("16px");
   });
 
   it("keeps the clean-state action legible and explains why it cannot run", async () => {

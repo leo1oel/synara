@@ -14,7 +14,7 @@ import {
   preloadHighlighter,
 } from "@pierre/diffs";
 import { FileDiff, type FileDiffMetadata, Virtualizer } from "@pierre/diffs/react";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { buildDiffPanelUnsafeCSS, resolveDiffThemeName } from "~/lib/diffRendering";
 import { cn } from "~/lib/utils";
@@ -25,6 +25,20 @@ const DIFF_VIRTUALIZER_CONFIG = {
   overscrollSize: 400,
   intersectionObserverMargin: 600,
 };
+
+// Source Control wraps its single selected file in the app ScrollArea. Pierre's
+// scroll mode normally makes [data-code] a second, horizontal-only scroll owner
+// inside shadow DOM; letting that content overflow instead keeps unwrapped lines
+// while one outer viewport owns both axes and both visible scrollbars.
+const SINGLE_FILE_OUTER_SCROLL_CSS = `
+:host {
+  --diffs-overflow-override: visible;
+}
+
+[data-code] {
+  scrollbar-gutter: auto;
+}
+`;
 
 // Virtualized scroll container shared by single-file (GitPanel) and multi-file
 // (DiffPanel) diff lists. Callers own the inner per-file wrapper markup because
@@ -86,6 +100,7 @@ export function SingleFileDiffBody(props: { fileDiff: FileDiffMetadata; theme: "
   const language = props.fileDiff.lang ?? getFiletypeFromFileName(props.fileDiff.name);
   const preloadKey = `${themeName}:${language}`;
   const [loadResult, setLoadResult] = useState<{ key: string; error?: Error } | null>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
   const resourcesReady =
     isHighlighterLoaded() && areThemesAttached(themeName) && areLanguagesAttached(language);
 
@@ -114,6 +129,51 @@ export function SingleFileDiffBody(props: { fileDiff: FileDiffMetadata; theme: "
     };
   }, [language, preloadKey, resourcesReady, themeName]);
 
+  useLayoutEffect(() => {
+    if (!resourcesReady) return;
+
+    let cancelled = false;
+    let frame: number | null = null;
+    let resizeObserver: ResizeObserver | null = null;
+    const syncOuterScrollWidth = () => {
+      if (cancelled) return;
+      const body = bodyRef.current;
+      const host = body?.querySelector<HTMLElement>("diffs-container");
+      const code = host?.shadowRoot?.querySelector<HTMLElement>("[data-code]");
+      if (!body || !host || !code) {
+        scheduleSyncOuterScrollWidth();
+        return;
+      }
+
+      // Shadow-tree overflow does not contribute to an ancestor's scrollWidth.
+      // Give the light-DOM host the measured code width so ScrollArea can own
+      // horizontal scrolling and keep its track at the viewport's bottom edge.
+      host.style.width = "";
+      host.style.width = `${Math.max(body.clientWidth, code.scrollWidth)}px`;
+    };
+    const scheduleSyncOuterScrollWidth = () => {
+      if (cancelled || frame !== null) return;
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        syncOuterScrollWidth();
+      });
+    };
+
+    syncOuterScrollWidth();
+    scheduleSyncOuterScrollWidth();
+    if (typeof ResizeObserver !== "undefined" && bodyRef.current) {
+      resizeObserver = new ResizeObserver(syncOuterScrollWidth);
+      resizeObserver.observe(bodyRef.current);
+    }
+    window.addEventListener("resize", syncOuterScrollWidth);
+    return () => {
+      cancelled = true;
+      if (frame !== null) cancelAnimationFrame(frame);
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", syncOuterScrollWidth);
+    };
+  }, [preloadKey, resourcesReady]);
+
   if (loadResult?.key === preloadKey && loadResult.error) {
     return (
       <div className="px-3 py-2 text-xs text-destructive" role="alert">
@@ -131,19 +191,21 @@ export function SingleFileDiffBody(props: { fileDiff: FileDiffMetadata; theme: "
   }
 
   return (
-    <FileDiff
-      key={preloadKey}
-      fileDiff={props.fileDiff}
-      options={{
-        diffStyle: "unified",
-        lineDiffType: "none",
-        overflow: "scroll",
-        theme: themeName,
-        themeType: props.theme,
-        unsafeCSS: buildDiffPanelUnsafeCSS(props.theme),
-        disableFileHeader: true,
-      }}
-      disableWorkerPool
-    />
+    <div ref={bodyRef} className="min-w-full">
+      <FileDiff
+        key={preloadKey}
+        fileDiff={props.fileDiff}
+        options={{
+          diffStyle: "unified",
+          lineDiffType: "none",
+          overflow: "scroll",
+          theme: themeName,
+          themeType: props.theme,
+          unsafeCSS: `${buildDiffPanelUnsafeCSS(props.theme)}${SINGLE_FILE_OUTER_SCROLL_CSS}`,
+          disableFileHeader: true,
+        }}
+        disableWorkerPool
+      />
+    </div>
   );
 }

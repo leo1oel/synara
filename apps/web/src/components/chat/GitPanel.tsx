@@ -199,12 +199,14 @@ function SelectedFileDiff(props: { fileDiff: FileDiffMetadata; theme: "light" | 
         <div className="border-b border-border bg-background">
           <FileDiffHeader fileDiff={props.fileDiff} theme={props.theme} />
         </div>
-        <div
-          className="min-h-0 min-w-0 overflow-auto overscroll-contain"
+        <ScrollArea
+          className="min-h-0 min-w-0"
           data-git-diff-scroll=""
+          scrollbarGutter
+          viewportClassName="min-h-0 min-w-0"
         >
           <SingleFileDiffBody fileDiff={props.fileDiff} theme={props.theme} />
-        </div>
+        </ScrollArea>
       </div>
     </div>
   );

@@ -1074,7 +1074,9 @@ html[data-synara-embed="true"] .app-settings-surface .rounded-lg {
 }
 
 .synara-scrollbar[data-hovering],
-.synara-scrollbar[data-scrolling] {
+.synara-scrollbar[data-scrolling],
+[data-slot="scroll-area"]:hover > .synara-scrollbar,
+[data-slot="scroll-area"]:focus-within > .synara-scrollbar {
   opacity: 1;
   transition-duration: 160ms;
   transition-delay: 0ms;

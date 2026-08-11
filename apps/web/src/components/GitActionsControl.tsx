@@ -393,6 +393,7 @@ export default function GitActionsControl({
   const [createBranchName, setCreateBranchName] = useState("");
   const [isPanelGitMenuOpen, setIsPanelGitMenuOpen] = useState(false);
   const [createPrDialog, setCreatePrDialog] = useState<CreatePrDialogState | null>(null);
+  const panelGitActionsAnchorRef = useRef<HTMLDivElement>(null);
   const activeGitActionProgressRef = useRef<ActiveGitActionProgress | null>(null);
 
   const updateActiveProgressToast = useCallback(() => {
@@ -1659,7 +1660,9 @@ export default function GitActionsControl({
         <DialogPopup>
           <DialogHeader>
             <DialogTitle>{COMMIT_DIALOG_TITLE}</DialogTitle>
-            <DialogDescription>{COMMIT_DIALOG_DESCRIPTION}</DialogDescription>
+            <DialogDescription className="text-xs leading-4">
+              {COMMIT_DIALOG_DESCRIPTION}
+            </DialogDescription>
           </DialogHeader>
           <DialogPanel className="space-y-4">
             <div className="space-y-3 rounded-lg border border-[color:var(--color-border)] bg-[var(--color-background-elevated-secondary)] p-3 text-xs">
@@ -1970,7 +1973,12 @@ export default function GitActionsControl({
         >
           <EnvironmentRowChevron open={isPanelGitMenuOpen} />
         </MenuTrigger>
-        <ComposerPickerMenuPopup align="start" side="bottom" className="w-60 min-w-60">
+        <ComposerPickerMenuPopup
+          anchor={panelGitActionsAnchorRef}
+          align="start"
+          side="bottom"
+          className="w-60 min-w-60"
+        >
           {gitMenuContent}
         </ComposerPickerMenuPopup>
       </Menu>
@@ -1986,7 +1994,11 @@ export default function GitActionsControl({
             onClick={() => initMutation.mutate()}
           />
         ) : (
-          <div className="flex w-full items-stretch rounded-lg">
+          <div
+            ref={panelGitActionsAnchorRef}
+            className="flex w-full items-stretch rounded-lg"
+            data-panel-git-actions-anchor=""
+          >
             <button
               type="button"
               className={cn(
