@@ -1938,6 +1938,14 @@ export default function GitActionsControl({
       quickAction,
       isPullRunning,
     });
+    const panelCommitPushStatus =
+      !showPanelPullRow && !runnableCommitPushAction && !isGitActionRunning
+        ? gitStatusForActions === null
+          ? "Checking…"
+          : !gitStatusForActions.hasWorkingTreeChanges && gitStatusForActions.aheadCount === 0
+            ? "Up to date"
+            : "Unavailable"
+        : null;
     const panelGitActionsMenu = (
       <Menu
         open={isPanelGitMenuOpen}
@@ -1952,11 +1960,11 @@ export default function GitActionsControl({
               type="button"
               className={cn(
                 ENVIRONMENT_ROW_CLASS_NAME,
-                "w-auto shrink-0 px-1.5",
+                "w-7 shrink-0 justify-center gap-0 rounded-l-none border-l border-[color:var(--color-border-light)] px-0",
                 isPanelGitMenuOpen && "bg-[var(--color-background-elevated-secondary)]",
               )}
               aria-label="More Git actions"
-              title="More Git actions"
+              title="Open Git actions menu"
             />
           }
         >
@@ -1978,10 +1986,13 @@ export default function GitActionsControl({
             onClick={() => initMutation.mutate()}
           />
         ) : (
-          <div className="flex w-full items-center gap-0.5">
+          <div className="flex w-full items-stretch rounded-lg">
             <button
               type="button"
-              className={cn(ENVIRONMENT_ROW_CLASS_NAME, "min-w-0 flex-1")}
+              className={cn(
+                ENVIRONMENT_ROW_CLASS_NAME,
+                "min-w-0 flex-1 rounded-r-none disabled:opacity-100",
+              )}
               aria-label={showPanelPullRow ? "Pull" : "Commit and Push"}
               title={
                 showPanelPullRow
@@ -2016,6 +2027,13 @@ export default function GitActionsControl({
                     : isRunStackedActionRunning
                       ? "Git action in progress..."
                       : "Commit and Push"
+                }
+                trailing={
+                  panelCommitPushStatus ? (
+                    <span className="text-[10px] text-[var(--color-text-foreground-secondary)]">
+                      {panelCommitPushStatus}
+                    </span>
+                  ) : undefined
                 }
               />
             </button>

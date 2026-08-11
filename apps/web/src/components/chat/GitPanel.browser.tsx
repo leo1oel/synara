@@ -34,14 +34,16 @@ function buildLongPatch(lineCount = 80): string {
   ].join("\n");
 }
 
-function gitStatus(branch: string): GitStatusResult {
+function gitStatus(branch: string, hasWorkingTreeChanges = true): GitStatusResult {
   return {
     branch,
-    hasWorkingTreeChanges: true,
+    hasWorkingTreeChanges,
     workingTree: {
-      files: [{ path: "src/long.ts", insertions: 80, deletions: 80 }],
-      insertions: 80,
-      deletions: 80,
+      files: hasWorkingTreeChanges
+        ? [{ path: "src/long.ts", insertions: 80, deletions: 80 }]
+        : [],
+      insertions: hasWorkingTreeChanges ? 80 : 0,
+      deletions: hasWorkingTreeChanges ? 80 : 0,
     },
     hasUpstream: true,
     upstreamBranch: branch,
@@ -51,11 +53,12 @@ function gitStatus(branch: string): GitStatusResult {
   };
 }
 
-function installGitApi() {
+function installGitApi(options: { hasWorkingTreeChanges?: boolean } = {}) {
+  const hasWorkingTreeChanges = options.hasWorkingTreeChanges ?? true;
   let currentBranch = "feature/source-control";
   const checkoutCalls: string[] = [];
   const actionCalls: Array<{ action: string; filePaths?: string[] }> = [];
-  const patch = buildLongPatch();
+  const patch = hasWorkingTreeChanges ? buildLongPatch() : "";
 
   window.nativeApi = {
     git: {
@@ -77,7 +80,7 @@ function installGitApi() {
         isRepo: true,
         hasOriginRemote: true,
       }),
-      status: async () => gitStatus(currentBranch),
+      status: async () => gitStatus(currentBranch, hasWorkingTreeChanges),
       readWorkingTreeDiff: async ({ scope }: { scope?: string }) => ({
         patch: scope === "staged" ? "" : patch,
       }),
@@ -169,12 +172,24 @@ describe("GitPanel", () => {
     await expect.element(commitAndPush).toBeEnabled();
     await expect.element(moreActions).toHaveAttribute("aria-expanded", "false");
 
+    const branchTrigger = document.querySelector<HTMLElement>('[data-slot="combobox-trigger"]');
+    const commitAndPushElement = document.querySelector<HTMLButtonElement>(
+      'button[aria-label="Commit and Push"]',
+    );
     const moreActionsElement = document.querySelector<HTMLButtonElement>(
       'button[aria-label="More Git actions"]',
     );
     const chevron = moreActionsElement?.querySelector<SVGElement>("svg") ?? null;
+    expect(branchTrigger).not.toBeNull();
+    expect(commitAndPushElement).not.toBeNull();
     expect(moreActionsElement).not.toBeNull();
     expect(chevron).not.toBeNull();
+    expect(getComputedStyle(commitAndPushElement!).color).toBe(
+      getComputedStyle(branchTrigger!).color,
+    );
+    expect(getComputedStyle(commitAndPushElement!).borderTopRightRadius).toBe("0px");
+    expect(getComputedStyle(moreActionsElement!).borderTopLeftRadius).toBe("0px");
+    expect(getComputedStyle(moreActionsElement!).borderLeftWidth).toBe("1px");
     const closedRotation = getComputedStyle(chevron!).rotate;
 
     await moreActions.click();
@@ -194,6 +209,34 @@ describe("GitPanel", () => {
     expect(actionCalls[0]?.filePaths).toBeUndefined();
   });
 
+  it("keeps the clean-state action legible and explains why it cannot run", async () => {
+    installGitApi({ hasWorkingTreeChanges: false });
+    await renderWithQueryClient(
+      <GitPanel
+        hostThreadId={null}
+        projectId={null}
+        cwdOverride={TEST_CWD}
+        showActions
+        title="Changes"
+      />,
+    );
+
+    const commitAndPush = page.getByRole("button", { name: "Commit and Push" });
+    await expect.element(commitAndPush).toBeDisabled();
+    await expect.element(page.getByText("Up to date", { exact: true })).toBeVisible();
+
+    const branchTrigger = document.querySelector<HTMLElement>('[data-slot="combobox-trigger"]');
+    const commitAndPushElement = document.querySelector<HTMLButtonElement>(
+      'button[aria-label="Commit and Push"]',
+    );
+    expect(branchTrigger).not.toBeNull();
+    expect(commitAndPushElement).not.toBeNull();
+    expect(getComputedStyle(commitAndPushElement!).opacity).toBe("1");
+    expect(getComputedStyle(commitAndPushElement!).color).toBe(
+      getComputedStyle(branchTrigger!).color,
+    );
+  });
+
   it("lists existing branches and checks out the selected branch", async () => {
     const { checkoutCalls } = installGitApi();
     await renderWithQueryClient(
@@ -209,6 +252,18 @@ describe("GitPanel", () => {
     const branchPicker = page.getByText("feature/source-control", { exact: true });
     await expect.element(branchPicker).toBeVisible();
     await branchPicker.click();
+
+    const popupSurface = document.querySelector<HTMLElement>(
+      '[data-slot="combobox-positioner"] > span',
+    );
+    const searchControl = document.querySelector<HTMLElement>(
+      '[data-slot="combobox-positioner"] [data-slot="input-control"]',
+    );
+    expect(popupSurface).not.toBeNull();
+    expect(searchControl).not.toBeNull();
+    expect(popupSurface!.getBoundingClientRect().width).toBeLessThanOrEqual(260);
+    expect(getComputedStyle(searchControl!).height).toBe("28px");
+
     await page.getByRole("option", { name: /main/ }).click();
 
     await expect.poll(() => checkoutCalls).toEqual(["main"]);

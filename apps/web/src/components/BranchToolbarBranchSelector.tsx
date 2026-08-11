@@ -65,7 +65,10 @@ import {
   EnvironmentRowBody,
   EnvironmentRowChevron,
 } from "./chat/environment/EnvironmentRow";
-import { COMPOSER_TOOLBAR_PICKER_TRIGGER_CLASS_NAME } from "./chat/composerPickerStyles";
+import {
+  COMPOSER_PICKER_MENU_SURFACE_CHROME_CLASS_NAME,
+  COMPOSER_TOOLBAR_PICKER_TRIGGER_CLASS_NAME,
+} from "./chat/composerPickerStyles";
 import { ELEVATED_HOVER_SURFACE_CLASS_NAME } from "../surfaceStyles";
 import type { ThreadWorkspacePatch } from "../types";
 
@@ -755,6 +758,9 @@ export function BranchToolbarBranchSelector({
     effectiveEnvMode,
     resolvedActiveBranch,
   });
+  const panelPickerItemClassName = isPanel
+    ? "rounded-md px-2 py-1 text-[length:var(--app-font-size-ui,12px)] sm:text-[length:var(--app-font-size-ui,12px)]"
+    : undefined;
 
   function renderPickerItem(itemValue: string, index: number, style?: CSSProperties) {
     if (checkoutPullRequestItemValue && itemValue === checkoutPullRequestItemValue) {
@@ -764,6 +770,7 @@ export function BranchToolbarBranchSelector({
           key={itemValue}
           index={index}
           value={itemValue}
+          className={panelPickerItemClassName}
           style={style}
           onClick={() => {
             if (!prReference || !onCheckoutPullRequestRequest) {
@@ -806,11 +813,11 @@ export function BranchToolbarBranchSelector({
         key={itemValue}
         index={index}
         value={itemValue}
-        className={
-          itemValue === resolvedActiveBranch
-            ? "bg-[var(--color-background-elevated-secondary)] text-[var(--color-text-foreground)]"
-            : undefined
-        }
+        className={cn(
+          panelPickerItemClassName,
+          itemValue === resolvedActiveBranch &&
+            "bg-[var(--color-background-elevated-secondary)] text-[var(--color-text-foreground)]",
+        )}
         style={style}
         onClick={() => selectBranch(branch)}
       >
@@ -879,15 +886,32 @@ export function BranchToolbarBranchSelector({
           </>
         )}
       </ComboboxTrigger>
-      <ComboboxPopup align="end" side={isPanel ? "bottom" : "top"} className="w-80">
-        <div className="border-b p-1">
+      <ComboboxPopup
+        align={isPanel ? "start" : "end"}
+        side={isPanel ? "bottom" : "top"}
+        className={cn(
+          isPanel ? "w-64 min-w-0" : "w-80",
+          isPanel && COMPOSER_PICKER_MENU_SURFACE_CHROME_CLASS_NAME,
+        )}
+      >
+        <div className={cn("border-b", isPanel ? "p-1.5" : "p-1")}>
           <ComboboxInput
-            className="rounded-lg border-border shadow-none before:hidden hover:border-foreground/25 has-focus-visible:border-foreground/25 has-focus-visible:ring-0 [&_input]:font-sans"
+            className={cn(
+              "border-border shadow-none before:hidden hover:border-foreground/25 has-focus-visible:border-foreground/25 has-focus-visible:ring-0",
+              isPanel ? "rounded-md" : "rounded-lg",
+            )}
             inputClassName="ring-0"
             placeholder="Search branches..."
             showTrigger={false}
+            size={isPanel ? "sm" : "default"}
             startAddon={
-              <SearchIcon className="size-3.5 text-muted-foreground/70" aria-hidden="true" />
+              <SearchIcon
+                className={cn(
+                  "text-muted-foreground/70",
+                  isPanel ? "size-3" : "size-3.5",
+                )}
+                aria-hidden="true"
+              />
             }
             variant="soft"
             value={branchQuery}
@@ -896,7 +920,10 @@ export function BranchToolbarBranchSelector({
         </div>
         <ComboboxEmpty>No branches found.</ComboboxEmpty>
 
-        <ComboboxList ref={setBranchListRef} className="max-h-56">
+        <ComboboxList
+          ref={setBranchListRef}
+          className={cn("max-h-56", isPanel && "max-h-48")}
+        >
           {shouldVirtualizeBranchList ? (
             <div
               className="relative"
@@ -921,10 +948,21 @@ export function BranchToolbarBranchSelector({
           )}
         </ComboboxList>
         {!isSelectingWorktreeBase ? (
-          <div className="border-t border-[color:var(--color-border-light)] p-1">
+          <div
+            className={cn(
+              "border-t border-[color:var(--color-border-light)]",
+              isPanel ? "p-1.5" : "p-1",
+            )}
+          >
             <button
               type="button"
-              className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-[var(--color-text-foreground)] disabled:cursor-not-allowed disabled:opacity-50 ${ELEVATED_HOVER_SURFACE_CLASS_NAME}`}
+              className={cn(
+                "flex w-full items-center gap-2 rounded-md px-2 text-left text-[var(--color-text-foreground)] outline-none focus-visible:bg-[var(--color-background-elevated-secondary)] disabled:cursor-not-allowed disabled:opacity-50",
+                isPanel
+                  ? "py-1 text-[length:var(--app-font-size-ui,12px)]"
+                  : "py-1.5 text-sm",
+                ELEVATED_HOVER_SURFACE_CLASS_NAME,
+              )}
               disabled={isBranchActionPending}
               onClick={openCreateBranchDialog}
             >
