@@ -244,6 +244,25 @@ export function GitPanel(props: {
   const unstagedQuery = useQuery(
     gitWorkingTreeDiffQueryOptions({ cwd, scope: "unstaged", enabled: repositoryReady }),
   );
+  const refreshMutation = useMutation({
+    mutationFn: async () => {
+      if (!cwd) return;
+      const refreshes = [
+        queryClient.invalidateQueries({ queryKey: gitQueryKeys.branches(cwd) }),
+      ];
+      if (repositoryReady) {
+        refreshes.push(
+          queryClient.invalidateQueries({
+            queryKey: gitQueryKeys.workingTreeDiff(cwd, "staged"),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: gitQueryKeys.workingTreeDiff(cwd, "unstaged"),
+          }),
+        );
+      }
+      await Promise.all(refreshes);
+    },
+  });
 
   const stagedFiles = parsePatchToSortedFiles(stagedQuery.data?.patch, `git-pane:staged:${theme}`);
   const unstagedFiles = parsePatchToSortedFiles(
@@ -269,16 +288,6 @@ export function GitPanel(props: {
   };
   const selectUnstaged = (file: FileDiffMetadata) => {
     setSelected({ section: "unstaged", path: resolveFileDiffPath(file) });
-  };
-
-  const refresh = () => {
-    if (!cwd) return;
-    void queryClient.invalidateQueries({ queryKey: gitQueryKeys.branches(cwd) });
-    if (!repositoryReady) return;
-    void queryClient.invalidateQueries({ queryKey: gitQueryKeys.workingTreeDiff(cwd, "staged") });
-    void queryClient.invalidateQueries({
-      queryKey: gitQueryKeys.workingTreeDiff(cwd, "unstaged"),
-    });
   };
 
   // Resolve the selected file by path, preferring its stored section but falling
@@ -337,9 +346,16 @@ export function GitPanel(props: {
             label="Refresh changes"
             tooltip="Refresh changes"
             className={DOCK_HEADER_ICON_BUTTON_CLASS}
-            onClick={refresh}
+            disabled={refreshMutation.isPending}
+            aria-busy={refreshMutation.isPending || undefined}
+            onClick={() => refreshMutation.mutate()}
           >
-            <RefreshCwIcon className={CHAT_SURFACE_HEADER_ACTION_ICON_CLASS_NAME} />
+            <RefreshCwIcon
+              className={cn(
+                CHAT_SURFACE_HEADER_ACTION_ICON_CLASS_NAME,
+                refreshMutation.isPending && "animate-spin",
+              )}
+            />
           </IconButton>
         }
       />

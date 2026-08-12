@@ -74,6 +74,7 @@ import {
 } from "./chat/environment/EnvironmentRow";
 import { Checkbox } from "~/components/ui/checkbox";
 import {
+  dialogFieldLabelClassName,
   Dialog,
   DialogDescription,
   DialogFooter,
@@ -1877,7 +1878,7 @@ export default function GitActionsControl({
         <DialogPopup className="max-w-md">
           <DialogHeader>
             <DialogTitle>Create Branch</DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs leading-4">
               Create and switch to a branch from the current HEAD. Future commits, pushes, and PRs
               will use it.
             </DialogDescription>
@@ -1895,19 +1896,20 @@ export default function GitActionsControl({
               }}
             >
               <div className="space-y-1.5">
-                <label className="block font-medium text-sm" htmlFor="create-branch-name">
+                <label className={dialogFieldLabelClassName} htmlFor="create-branch-name">
                   Branch name
                 </label>
                 <Input
                   autoFocus
                   id="create-branch-name"
                   placeholder="feature/my-change"
+                  size="sm"
                   value={createBranchName}
                   onChange={(event) => setCreateBranchName(event.target.value)}
                 />
               </div>
               {createBranchNameConflicts ? (
-                <p className="text-destructive text-sm">A branch with this name already exists.</p>
+                <p className="text-destructive text-xs">A branch with this name already exists.</p>
               ) : null}
               <DialogFooter variant="bare">
                 <Button

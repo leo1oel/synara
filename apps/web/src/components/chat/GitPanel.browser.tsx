@@ -55,33 +55,42 @@ function gitStatus(branch: string, hasWorkingTreeChanges = true): GitStatusResul
   };
 }
 
-function installGitApi(options: { hasWorkingTreeChanges?: boolean } = {}) {
+function installGitApi(
+  options: { hasWorkingTreeChanges?: boolean; refreshGate?: Promise<void> } = {},
+) {
   const hasWorkingTreeChanges = options.hasWorkingTreeChanges ?? true;
   let currentBranch = "feature/source-control";
+  let branchReadCount = 0;
   const checkoutCalls: string[] = [];
   const actionCalls: Array<{ action: string; filePaths?: string[] }> = [];
   const patch = hasWorkingTreeChanges ? buildLongPatch() : "";
 
   window.nativeApi = {
     git: {
-      listBranches: async () => ({
-        branches: [
-          {
-            name: "main",
-            current: currentBranch === "main",
-            isDefault: true,
-            worktreePath: null,
-          },
-          {
-            name: "feature/source-control",
-            current: currentBranch === "feature/source-control",
-            isDefault: false,
-            worktreePath: null,
-          },
-        ],
-        isRepo: true,
-        hasOriginRemote: true,
-      }),
+      listBranches: async () => {
+        branchReadCount += 1;
+        if (branchReadCount > 1 && options.refreshGate) {
+          await options.refreshGate;
+        }
+        return {
+          branches: [
+            {
+              name: "main",
+              current: currentBranch === "main",
+              isDefault: true,
+              worktreePath: null,
+            },
+            {
+              name: "feature/source-control",
+              current: currentBranch === "feature/source-control",
+              isDefault: false,
+              worktreePath: null,
+            },
+          ],
+          isRepo: true,
+          hasOriginRemote: true,
+        };
+      },
       status: async () => gitStatus(currentBranch, hasWorkingTreeChanges),
       readWorkingTreeDiff: async ({ scope }: { scope?: string }) => ({
         patch: scope === "staged" ? "" : patch,
@@ -299,6 +308,55 @@ describe("GitPanel", () => {
     const dialog = document.querySelector<HTMLElement>('[data-slot="dialog-popup"]');
     expect(dialog).not.toBeNull();
     expect(dialog!.textContent).toContain("feature/source-control");
+  });
+
+  it("uses compact shared dialog styles for Create Branch", async () => {
+    installGitApi();
+    await renderWithQueryClient(
+      <GitPanel
+        hostThreadId={null}
+        projectId={null}
+        cwdOverride={TEST_CWD}
+        showActions
+        title="Changes"
+      />,
+    );
+
+    await page.getByRole("button", { name: "More Git actions" }).click();
+    await page.getByRole("menuitem", { name: "Create Branch", exact: true }).click();
+
+    await expect.element(page.getByRole("heading", { name: "Create Branch" })).toBeVisible();
+    const description = document.querySelector<HTMLElement>('[data-slot="dialog-description"]');
+    const branchNameInput = document.querySelector<HTMLElement>(
+      '[data-slot="input-control"][data-size="sm"]',
+    );
+    expect(description).not.toBeNull();
+    expect(branchNameInput).not.toBeNull();
+    expect(getComputedStyle(description!).fontSize).toBe("12px");
+    expect(getComputedStyle(description!).lineHeight).toBe("16px");
+    expect(getComputedStyle(branchNameInput!).height).toBe("28px");
+  });
+
+  it("spins the Changes refresh icon only while a manual refresh is pending", async () => {
+    let releaseRefresh!: () => void;
+    const refreshGate = new Promise<void>((resolve) => {
+      releaseRefresh = resolve;
+    });
+    installGitApi({ refreshGate });
+    await renderWithQueryClient(
+      <GitPanel hostThreadId={null} projectId={null} cwdOverride={TEST_CWD} title="Changes" />,
+    );
+
+    const refreshButton = page.getByRole("button", { name: "Refresh changes" });
+    await expect.element(refreshButton).toBeEnabled();
+    await refreshButton.click();
+
+    await expect.element(refreshButton).toHaveAttribute("aria-busy", "true");
+    expect(refreshButton.element().querySelector(".animate-spin")).not.toBeNull();
+
+    releaseRefresh();
+    await expect.poll(() => refreshButton.element().getAttribute("aria-busy")).toBeNull();
+    expect(refreshButton.element().querySelector(".animate-spin")).toBeNull();
   });
 
   it("keeps the clean-state action legible and explains why it cannot run", async () => {
