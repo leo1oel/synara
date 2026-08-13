@@ -752,6 +752,52 @@ lifecycleLayer("CodexAdapterLive lifecycle", (it) => {
     }),
   );
 
+  it.effect("keeps images opened for inspection out of generated-image artifacts", () =>
+    Effect.gen(function* () {
+      const adapter = yield* CodexAdapter;
+      const firstEventFiber = yield* Stream.runHead(adapter.streamEvents).pipe(Effect.forkChild);
+
+      lifecycleManager.emit("event", {
+        id: asEventId("evt-image-view-complete"),
+        kind: "notification",
+        provider: "codex",
+        createdAt: new Date().toISOString(),
+        method: "item/completed",
+        threadId: asThreadId("thread-1"),
+        providerThreadId: "provider-thread-1",
+        turnId: asTurnId("turn-1"),
+        itemId: asItemId("image-view-1"),
+        payload: {
+          item: {
+            type: "imageView",
+            id: "image-view-1",
+            path: "/workspace/.research/papers/paper_assets/figure-002.webp",
+          },
+        },
+      } satisfies ProviderEvent);
+
+      const firstEvent = yield* Fiber.join(firstEventFiber);
+
+      assert.equal(firstEvent._tag, "Some");
+      if (firstEvent._tag !== "Some" || firstEvent.value.type !== "item.completed") {
+        return;
+      }
+      assert.equal(firstEvent.value.payload.itemType, "image_view");
+      assert.equal(firstEvent.value.payload.title, "Image view");
+      assert.equal(
+        firstEvent.value.payload.detail,
+        "/workspace/.research/papers/paper_assets/figure-002.webp",
+      );
+      assert.deepStrictEqual(firstEvent.value.payload.data, {
+        item: {
+          type: "imageView",
+          id: "image-view-1",
+          path: "/workspace/.research/papers/paper_assets/figure-002.webp",
+        },
+      });
+    }),
+  );
+
   it.effect("maps legacy image_generation_end notifications", () =>
     Effect.gen(function* () {
       const adapter = yield* CodexAdapter;

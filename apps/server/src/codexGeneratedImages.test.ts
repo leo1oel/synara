@@ -7,6 +7,7 @@ import type { ProviderRuntimeEvent } from "@synara/contracts";
 import {
   CODEX_GENERATED_IMAGE_ARTIFACT_KIND,
   generatedImagePathFromRuntimeEvent,
+  isCodexGeneratedImageItemType,
   isGeneratedImageOnlyMarkdown,
   resolveCodexGeneratedImagesRoot,
   resolveCodexGeneratedImagesRoots,
@@ -69,6 +70,15 @@ describe("generatedImagePathFromRuntimeEvent", () => {
       payload: { ...event.payload, itemType: "assistant_message" },
     } as ProviderRuntimeEvent;
     assert.equal(generatedImagePathFromRuntimeEvent(otherItem), undefined);
+  });
+});
+
+describe("isCodexGeneratedImageItemType", () => {
+  it("distinguishes generated image artifacts from images opened for inspection", () => {
+    assert.equal(isCodexGeneratedImageItemType("imageGeneration"), true);
+    assert.equal(isCodexGeneratedImageItemType("image_generation_call"), true);
+    assert.equal(isCodexGeneratedImageItemType("image_generation_end"), true);
+    assert.equal(isCodexGeneratedImageItemType("imageView"), false);
   });
 });
 
