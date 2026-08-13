@@ -156,6 +156,7 @@ type MarkdownRehypePlugins = NonNullable<
 const MARKDOWN_REMARK_PLUGINS: MarkdownRemarkPlugins = [
   remarkGfm,
   [remarkMath, { singleDollarTextMath: true }],
+  remarkRestoreLatexMathPlaceholders,
 ];
 // User prompts are casual typing, not authored markdown: hard-break single
 // newlines and skip math entirely (the composer chip plugin is appended per
@@ -170,6 +171,65 @@ const LITERAL_DOLLAR_PLACEHOLDER = "\uE000";
 // it is restored ahead of the single-char placeholder (the two share no characters, so order is
 // only for clarity).
 const ESCAPED_DOLLAR_PLACEHOLDER = "\uE001\uE002";
+// remark-math only understands dollar delimiters, while assistants commonly emit
+// LaTeX's `\( ... \)` and `\[ ... \]` forms. Each two-character delimiter is
+// rewritten to a dollar plus a one-character marker, preserving source length
+// (and therefore thread-marker offsets); the remark transformer below removes
+// the markers from the parsed formula and promotes bracketed formulas to display.
+const LATEX_INLINE_MATH_OPEN_PLACEHOLDER = "\uE003";
+const LATEX_INLINE_MATH_CLOSE_PLACEHOLDER = "\uE004";
+const LATEX_DISPLAY_MATH_OPEN_PLACEHOLDER = "\uE005";
+const LATEX_DISPLAY_MATH_CLOSE_PLACEHOLDER = "\uE006";
+const LATEX_MATH_PLACEHOLDERS = [
+  LATEX_INLINE_MATH_OPEN_PLACEHOLDER,
+  LATEX_INLINE_MATH_CLOSE_PLACEHOLDER,
+  LATEX_DISPLAY_MATH_OPEN_PLACEHOLDER,
+  LATEX_DISPLAY_MATH_CLOSE_PLACEHOLDER,
+];
+
+type MarkdownMathNode = {
+  type?: string;
+  value?: string;
+  data?: {
+    hProperties?: Record<string, unknown>;
+    hChildren?: Array<{ type?: string; value?: string }>;
+  };
+  children?: MarkdownMathNode[];
+};
+
+function restoreLatexMathPlaceholders(node: MarkdownMathNode): void {
+  if (node.type === "inlineMath" && typeof node.value === "string") {
+    const inline =
+      node.value.startsWith(LATEX_INLINE_MATH_OPEN_PLACEHOLDER) &&
+      node.value.endsWith(LATEX_INLINE_MATH_CLOSE_PLACEHOLDER);
+    const display =
+      node.value.startsWith(LATEX_DISPLAY_MATH_OPEN_PLACEHOLDER) &&
+      node.value.endsWith(LATEX_DISPLAY_MATH_CLOSE_PLACEHOLDER);
+    if (inline || display) {
+      const formula = node.value.slice(1, -1).trim();
+      node.value = formula;
+      const renderedText = node.data?.hChildren?.find((child) => child.type === "text");
+      if (renderedText) {
+        renderedText.value = formula;
+      }
+      if (display) {
+        const data = node.data ?? (node.data = {});
+        const properties = data.hProperties ?? (data.hProperties = {});
+        properties.className = ["language-math", "math-display"];
+      }
+    }
+  }
+
+  for (const child of node.children ?? []) {
+    restoreLatexMathPlaceholders(child);
+  }
+}
+
+function remarkRestoreLatexMathPlaceholders() {
+  return (tree: unknown) => {
+    restoreLatexMathPlaceholders(tree as MarkdownMathNode);
+  };
+}
 
 function restoreLiteralDollarPlaceholders(value: string): string {
   return value
@@ -501,11 +561,77 @@ function findInlineMathClosingDollar(value: string, index: number): number {
   return -1;
 }
 
+function isEscapedAt(value: string, index: number): boolean {
+  let backslashes = 0;
+  for (let cursor = index - 1; cursor >= 0 && value[cursor] === "\\"; cursor -= 1) {
+    backslashes += 1;
+  }
+  return backslashes % 2 === 1;
+}
+
+function findUnescapedLatexDelimiter(
+  value: string,
+  delimiter: "\\)" | "\\]",
+  index: number,
+): number {
+  let cursor = value.indexOf(delimiter, index);
+  while (cursor >= 0) {
+    if (!isEscapedAt(value, cursor)) {
+      return cursor;
+    }
+    cursor = value.indexOf(delimiter, cursor + delimiter.length);
+  }
+  return -1;
+}
+
+function latexMathAt(value: string, index: number): { value: string; end: number } | null {
+  const delimiter = value.slice(index, index + 2);
+  const inline = delimiter === "\\(";
+  const display = delimiter === "\\[";
+  if ((!inline && !display) || isEscapedAt(value, index)) {
+    return null;
+  }
+
+  const closingDelimiter = inline ? "\\)" : "\\]";
+  const closingIndex = findUnescapedLatexDelimiter(value, closingDelimiter, index + 2);
+  const formula = closingIndex < 0 ? "" : value.slice(index + 2, closingIndex);
+  if (
+    closingIndex < 0 ||
+    formula.trim().length === 0 ||
+    formula.includes("$") ||
+    (inline && formula.includes("\n")) ||
+    LATEX_MATH_PLACEHOLDERS.some((placeholder) => formula.includes(placeholder))
+  ) {
+    return null;
+  }
+
+  const openPlaceholder = inline
+    ? LATEX_INLINE_MATH_OPEN_PLACEHOLDER
+    : LATEX_DISPLAY_MATH_OPEN_PLACEHOLDER;
+  const closePlaceholder = inline
+    ? LATEX_INLINE_MATH_CLOSE_PLACEHOLDER
+    : LATEX_DISPLAY_MATH_CLOSE_PLACEHOLDER;
+  return {
+    value:
+      display && formula.includes("\n")
+        ? `$$${formula}$$`
+        : `$${openPlaceholder}${formula}${closePlaceholder}$`,
+    end: closingIndex + closingDelimiter.length,
+  };
+}
+
 function protectLiteralDollarsInPlainText(value: string): string {
   let result = "";
   let cursor = 0;
 
   while (cursor < value.length) {
+    const latexMath = latexMathAt(value, cursor);
+    if (latexMath) {
+      result += latexMath.value;
+      cursor = latexMath.end;
+      continue;
+    }
+
     if (value[cursor] === "\\" && value[cursor + 1] === "$") {
       result += ESCAPED_DOLLAR_PLACEHOLDER;
       cursor += 2;
@@ -614,6 +740,27 @@ function findInlineMarkdownLinkEnd(value: string, index: number): number {
   return parenEnd === -1 ? -1 : parenEnd + 1;
 }
 
+function findNextInlineMarkdownLink(
+  value: string,
+  index: number,
+): { start: number; end: number } | null {
+  let bracketStart = value.indexOf("[", index);
+  while (bracketStart >= 0) {
+    if (!isEscapedAt(value, bracketStart)) {
+      const imageStart =
+        bracketStart > 0 && value[bracketStart - 1] === "!" && !isEscapedAt(value, bracketStart - 1)
+          ? bracketStart - 1
+          : bracketStart;
+      const end = findInlineMarkdownLinkEnd(value, imageStart);
+      if (end >= 0) {
+        return { start: imageStart, end };
+      }
+    }
+    bracketStart = value.indexOf("[", bracketStart + 1);
+  }
+  return null;
+}
+
 function protectLiteralDollarsInMarkdownLinks(value: string): string {
   let result = "";
   let cursor = 0;
@@ -622,10 +769,8 @@ function protectLiteralDollarsInMarkdownLinks(value: string): string {
     const isLinkStart =
       value[cursor] === "[" || (value[cursor] === "!" && value[cursor + 1] === "[");
     if (!isLinkStart) {
-      const nextLinkStart = value.indexOf("[", cursor);
-      const nextImageStart = value.indexOf("![", cursor);
-      const candidates = [nextLinkStart, nextImageStart].filter((candidate) => candidate >= 0);
-      const nextIndex = candidates.length > 0 ? Math.min(...candidates) : value.length;
+      const nextLink = findNextInlineMarkdownLink(value, cursor);
+      const nextIndex = nextLink?.start ?? value.length;
       result += protectLiteralDollarsInPlainText(value.slice(cursor, nextIndex));
       cursor = nextIndex;
       continue;
@@ -646,7 +791,7 @@ function protectLiteralDollarsInMarkdownLinks(value: string): string {
   return result;
 }
 
-// Tighten single-dollar math so currency and escaped dollars stay literal without touching code spans.
+// Normalize assistant math and protect literal dollars without touching code spans.
 function protectLiteralMarkdownDollars(value: string): string {
   let result = "";
   let cursor = 0;

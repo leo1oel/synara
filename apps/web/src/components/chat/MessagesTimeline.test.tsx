@@ -148,7 +148,7 @@ describe("MessagesTimeline", () => {
     // ~2s locally).
   }, 30_000);
 
-  it("renders assistant math through the shared markdown renderer", async () => {
+  it("renders assistant LaTeX math through the shared markdown renderer", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const markup = renderToStaticMarkup(
       <MessagesTimeline
@@ -164,7 +164,13 @@ describe("MessagesTimeline", () => {
             message: {
               id: MessageId.makeUnsafe("assistant-message-math"),
               role: "assistant",
-              text: ["Inline $a^2 + b^2 = c^2$", "", "$$", "\\sum_{n=1}^{4} n", "$$"].join("\n"),
+              text: [
+                "Inline \\(a^2 + b^2 = c^2\\)",
+                "",
+                "\\[",
+                "\\sum_{n=1}^{4} n",
+                "\\]",
+              ].join("\n"),
               createdAt: "2026-03-17T19:12:28.000Z",
               streaming: false,
             },

@@ -60,6 +60,78 @@ describe("ChatMarkdown", () => {
     expect(markup).not.toContain("$$");
   });
 
+  it("renders LaTeX-style inline and display delimiters with KaTeX", async () => {
+    const markup = await renderMarkdown(
+      [
+        "Euler wrote \\(e^{i\\pi} + 1 = 0\\).",
+        "",
+        "\\[\\sum_{i=1}^{n} i\\]",
+      ].join("\n"),
+    );
+
+    expect(markup.match(/class="katex"/g) ?? []).toHaveLength(2);
+    expect(markup).toContain("katex-display");
+    expect(markup).not.toContain("\\(e^{i\\pi} + 1 = 0\\)");
+    expect(markup).not.toContain("\\[\\sum_{i=1}^{n} i\\]");
+    expect(markup).not.toContain("\uE003");
+    expect(markup).not.toContain("\uE005");
+  });
+
+  it("renders multiline LaTeX display math across blank lines", async () => {
+    const markup = await renderMarkdown(
+      "\\[\n\n\\begin{aligned} x[i] &= 1 \\\\ y[i] &= 2 \\end{aligned}\n\\]",
+    );
+
+    expect(markup).toContain("katex-display");
+    expect(markup).not.toContain("\uE005");
+    expect(markup).not.toContain("\uE006");
+  });
+
+  it("keeps LaTeX-style delimiters literal in code and markdown links", async () => {
+    const markup = await renderMarkdown(
+      [
+        "Link [\\(literal\\)](./notes.md).",
+        "",
+        "Inline code `\\(x^2\\)`.",
+        "",
+        "```md",
+        "\\[",
+        "x^2",
+        "\\]",
+        "```",
+      ].join("\n"),
+    );
+
+    expect(markup).toContain('href="./notes.md"');
+    expect(markup).toContain("<code>\\(x^2\\)</code>");
+    expect(markup).toContain("\\[");
+    expect(markup).not.toContain('class="katex"');
+  });
+
+  it("keeps thread marker offsets aligned after LaTeX-style math", async () => {
+    const text = "Formula \\(x^2 + y^2\\). Highlight this phrase.";
+    const startOffset = text.indexOf("Highlight");
+    const selectedText = "Highlight this phrase";
+    const marker: ThreadMarker = {
+      id: ThreadMarkerId.makeUnsafe("marker-latex-math"),
+      messageId: MessageId.makeUnsafe("assistant-1"),
+      startOffset,
+      endOffset: startOffset + selectedText.length,
+      selectedText,
+      style: "underline",
+      color: "blue",
+      label: null,
+      done: false,
+      createdAt: "2026-06-06T00:00:00.000Z",
+      updatedAt: "2026-06-06T00:00:00.000Z",
+    };
+    const markup = await renderMarkdown(text, undefined, [marker]);
+
+    expect(markup).toContain('class="katex"');
+    expect(markup).toContain('data-thread-marker-id="marker-latex-math"');
+    expect(markup).toContain(">Highlight this phrase</span>");
+  });
+
   it("keeps links and code intact when math is present", async () => {
     const markup = await renderMarkdown(
       [
