@@ -851,6 +851,12 @@ export function applyEmbedTheme(config: EmbedModeConfig): void {
     "--lattice-settings-line-strong": colors.strongBorder,
     "--lattice-settings-accent": colors.accent,
     "--lattice-settings-accent-soft": colors.accentSoft,
+    "--lattice-control-hover-surface":
+      config.theme === "dark" ? "rgba(255, 255, 255, 0.07)" : "rgba(36, 36, 38, 0.07)",
+    "--lattice-floating-surface-shadow":
+      config.theme === "dark"
+        ? "0 1px 2px rgba(0, 0, 0, 0.18), 0 16px 36px -18px rgba(0, 0, 0, 0.8)"
+        : "0 1px 2px rgba(28, 25, 23, 0.06), 0 16px 36px -18px rgba(28, 25, 23, 0.5)",
     "--lattice-settings-content-max-width": "720px",
     "--lattice-settings-content-padding-top": "32px",
     "--lattice-settings-content-padding-inline": "40px",

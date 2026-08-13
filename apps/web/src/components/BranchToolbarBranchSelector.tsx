@@ -91,6 +91,8 @@ interface BranchToolbarBranchSelectorProps {
   onCheckoutPullRequestRequest?: (reference: string) => void;
   onComposerFocusRequest?: () => void;
   variant?: BranchSelectorVariant;
+  /** Applies Lattice's embedded Source Control field/menu visual contract. */
+  latticeSourceControl?: boolean;
 }
 
 type StashDiscardDialogState = {
@@ -384,8 +386,10 @@ export function BranchToolbarBranchSelector({
   onSetThreadWorkspace,
   onCheckoutPullRequestRequest,
   onComposerFocusRequest,
+  latticeSourceControl: latticeSourceControlProp,
   variant: variantProp,
 }: BranchToolbarBranchSelectorProps) {
+  const latticeSourceControl = latticeSourceControlProp ?? false;
   const variant = variantProp ?? "toolbar";
   const isPanel = variant === "panel";
   const queryClient = useQueryClient();
@@ -864,6 +868,7 @@ export function BranchToolbarBranchSelector({
       value={resolvedActiveBranch}
     >
       <ComboboxTrigger
+        data-lattice-source-control={latticeSourceControl || undefined}
         className={cn(
           isPanel
             ? ENVIRONMENT_ROW_CLASS_NAME
@@ -892,6 +897,7 @@ export function BranchToolbarBranchSelector({
         className={cn(
           isPanel ? "w-64 min-w-0" : "w-80",
           isPanel && COMPOSER_PICKER_MENU_SURFACE_CHROME_CLASS_NAME,
+          latticeSourceControl && "lattice-source-control-popup",
         )}
       >
         <div className={cn("border-b", isPanel ? "p-1.5" : "p-1")}>

@@ -7,6 +7,7 @@ import { TranscriptSelectionAction } from "./TranscriptSelectionAction";
 
 interface TranscriptSelectionActionLayerProps {
   action: PendingTranscriptSelectionAction | null;
+  showMarkerActions: boolean;
   onHighlight: () => void;
   onUnderline: () => void;
   onAddToChat: () => void;
@@ -22,8 +23,8 @@ export function TranscriptSelectionActionLayer(props: TranscriptSelectionActionL
       left={props.action.left}
       top={props.action.top}
       placement={props.action.placement}
-      onHighlight={props.onHighlight}
-      onUnderline={props.onUnderline}
+      onHighlight={props.showMarkerActions ? props.onHighlight : undefined}
+      onUnderline={props.showMarkerActions ? props.onUnderline : undefined}
       onAddToChat={props.onAddToChat}
     />
   );

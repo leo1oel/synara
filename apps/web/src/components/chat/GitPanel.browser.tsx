@@ -229,6 +229,17 @@ describe("GitPanel", () => {
     expect(commitAndPushElement).not.toBeNull();
     expect(moreActionsElement).not.toBeNull();
     expect(chevron).not.toBeNull();
+    const sourceControlActions = document.querySelector<HTMLElement>(
+      "[data-lattice-source-control-actions]",
+    );
+    expect(sourceControlActions).not.toBeNull();
+    expect(getComputedStyle(sourceControlActions!).rowGap).toBe("8px");
+    expect(
+      Math.abs(
+        branchTrigger!.getBoundingClientRect().left -
+          commitAndPushElement!.getBoundingClientRect().left,
+      ),
+    ).toBeLessThan(1);
     expect(getComputedStyle(commitAndPushElement!).color).toBe(
       getComputedStyle(branchTrigger!).color,
     );

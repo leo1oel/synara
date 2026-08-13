@@ -670,6 +670,108 @@ html[data-synara-embed="true"] .lattice-source-control textarea {
   font-family: var(--font-ui-family);
 }
 
+/* Source Control's Base UI popups are portalled, so an explicit component
+   contract scopes their Lattice treatment without changing standalone Synara. */
+html[data-synara-embed="true"] [data-lattice-source-control="true"] {
+  height: var(--lattice-settings-control-height);
+  min-height: var(--lattice-settings-control-height);
+  border: 1px solid color-mix(in srgb, var(--lattice-settings-text) 12%, transparent);
+  border-radius: var(--lattice-settings-control-radius) !important;
+  background: var(--lattice-settings-field);
+  color: var(--lattice-settings-text);
+  font-family: var(--font-ui-family);
+  font-size: var(--lattice-settings-control-font-size);
+  line-height: var(--lattice-settings-control-line-height);
+  font-weight: var(--lattice-settings-control-font-weight);
+  box-shadow: none;
+}
+
+html[data-synara-embed="true"] [data-lattice-source-control-split="true"] {
+  height: var(--lattice-settings-control-height);
+  min-height: var(--lattice-settings-control-height);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--lattice-settings-text) 12%, transparent);
+  border-radius: var(--lattice-settings-control-radius) !important;
+  background: var(--lattice-settings-field);
+}
+
+html[data-synara-embed="true"] [data-lattice-source-control-split="true"] > button {
+  min-height: 28px;
+  padding-block: 0;
+  border: 0;
+  border-radius: 0 !important;
+  background: transparent;
+  color: var(--lattice-settings-text);
+  font-family: var(--font-ui-family);
+  font-size: var(--lattice-settings-control-font-size);
+  line-height: var(--lattice-settings-control-line-height);
+  font-weight: var(--lattice-settings-control-font-weight);
+}
+
+html[data-synara-embed="true"] [data-lattice-source-control-split="true"] > button:last-child {
+  border-inline-start: 1px solid var(--lattice-settings-line-strong);
+}
+
+html[data-synara-embed="true"] [data-lattice-source-control="true"]:hover:not(:disabled),
+html[data-synara-embed="true"] [data-lattice-source-control="true"][data-popup-open],
+html[data-synara-embed="true"] [data-lattice-source-control="true"]:focus-visible {
+  border-color: color-mix(in srgb, var(--lattice-settings-text) 24%, transparent);
+  background: var(--lattice-settings-field);
+  box-shadow: none;
+}
+
+html[data-synara-embed="true"] [data-lattice-source-control-split="true"]:hover,
+html[data-synara-embed="true"] [data-lattice-source-control-split="true"]:focus-within {
+  border-color: color-mix(in srgb, var(--lattice-settings-text) 24%, transparent);
+}
+
+html[data-synara-embed="true"] [data-lattice-source-control="true"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+html[data-synara-embed="true"]
+  :where(
+    [data-lattice-source-control="true"],
+    [data-lattice-source-control-split="true"]
+  )
+  [data-slot="environment-row-chevron"] {
+  width: 16px;
+  height: 16px;
+  opacity: 0.55;
+}
+
+html[data-synara-embed="true"] .lattice-source-control-popup {
+  border: 1px solid var(--lattice-settings-line-strong) !important;
+  border-radius: 11px !important;
+  background: var(--lattice-settings-panel) !important;
+  box-shadow: var(--lattice-floating-surface-shadow) !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  color: var(--lattice-settings-text);
+  font-family: var(--font-ui-family);
+  font-size: var(--lattice-settings-control-font-size);
+}
+
+html[data-synara-embed="true"] .lattice-source-control-popup :where(
+    [data-slot="menu-item"],
+    [data-slot="combobox-item"]
+  ) {
+  min-height: 30px;
+  border-radius: 6px !important;
+  color: var(--lattice-settings-text);
+  font-size: var(--lattice-settings-control-font-size);
+  line-height: var(--lattice-settings-control-line-height);
+  font-weight: var(--lattice-settings-control-font-weight);
+}
+
+html[data-synara-embed="true"] .lattice-source-control-popup :where(
+    [data-slot="menu-item"],
+    [data-slot="combobox-item"]
+  )[data-highlighted] {
+  background: var(--lattice-control-hover-surface);
+}
+
 html[data-synara-embed="true"] .app-settings-surface {
   border-radius: 0 !important;
   box-shadow: none !important;

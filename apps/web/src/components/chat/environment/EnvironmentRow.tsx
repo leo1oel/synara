@@ -51,6 +51,7 @@ export function EnvironmentRowChevron({
   return (
     <ChevronDownIcon
       aria-hidden
+      data-slot="environment-row-chevron"
       className={cn(
         DISCLOSURE_CHEVRON_MOTION_CLASS,
         "size-3 opacity-60",

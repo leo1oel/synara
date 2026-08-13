@@ -373,7 +373,10 @@ export function GitPanel(props: {
       ) : (
         <>
           {props.showActions ? (
-            <div className="flex flex-col gap-0.5 border-b border-border/70 px-2 py-1.5">
+            <div
+              data-lattice-source-control-actions=""
+              className="flex flex-col gap-2 border-b border-border/70 px-2 py-2"
+            >
               <BranchToolbarBranchSelector
                 activeProjectCwd={cwd}
                 activeThreadBranch={null}
@@ -384,11 +387,13 @@ export function GitPanel(props: {
                 hasServerThread={false}
                 onSetThreadWorkspace={() => undefined}
                 variant="panel"
+                latticeSourceControl
               />
               <GitActionsControl
                 gitCwd={cwd}
                 activeThreadId={props.hostThreadId ?? null}
                 variant="panel"
+                latticeSourceControl
               />
             </div>
           ) : null}

@@ -12645,6 +12645,7 @@ export default function ChatView({
       {isInactiveSplitPane ? null : (
         <TranscriptSelectionActionLayer
           action={pendingTranscriptSelectionAction}
+          showMarkerActions={!isEmbed}
           onHighlight={createHighlightFromPendingSelection}
           onUnderline={createUnderlineFromPendingSelection}
           onAddToChat={commitTranscriptAssistantSelection}

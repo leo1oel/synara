@@ -121,6 +121,8 @@ interface GitActionsControlProps {
   // `header` renders the split quick-action button; `panel` collapses git actions into
   // an Environment row + dropdown, promoting Pull as the primary row when behind upstream.
   variant?: "header" | "panel";
+  /** Applies Lattice's embedded Source Control field/menu visual contract. */
+  latticeSourceControl?: boolean;
   // Lets a parent capture "run commit & push for this instance's repo" so a global
   // keyboard shortcut can trigger it without duplicating the action logic. Called with
   // `null` on unmount/dependency change so a stale trigger never lingers.
@@ -360,9 +362,11 @@ export default function GitActionsControl({
   activeThreadId,
   hideQuickActionLabel: hideQuickActionLabelProp,
   variant: variantProp,
+  latticeSourceControl: latticeSourceControlProp,
   onRegisterCommitAndPushTrigger,
 }: GitActionsControlProps) {
   const hideQuickActionLabel = hideQuickActionLabelProp ?? false;
+  const latticeSourceControl = latticeSourceControlProp ?? false;
   const variant = variantProp ?? "header";
   const isPanel = variant === "panel";
   const { settings } = useAppSettings();
@@ -1979,7 +1983,10 @@ export default function GitActionsControl({
           anchor={panelGitActionsAnchorRef}
           align="start"
           side="bottom"
-          className="w-60 min-w-60"
+          className={cn(
+            "w-60 min-w-60",
+            latticeSourceControl && "lattice-source-control-popup",
+          )}
         >
           {gitMenuContent}
         </ComposerPickerMenuPopup>
@@ -2000,6 +2007,7 @@ export default function GitActionsControl({
             ref={panelGitActionsAnchorRef}
             className="flex w-full items-stretch rounded-lg"
             data-panel-git-actions-anchor=""
+            data-lattice-source-control-split={latticeSourceControl || undefined}
           >
             <button
               type="button"
