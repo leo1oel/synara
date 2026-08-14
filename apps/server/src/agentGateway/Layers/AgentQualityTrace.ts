@@ -90,7 +90,13 @@ export const AgentQualityTraceLayer = Layer.effect(
     return {
       start,
       prepareTurnContext: (input) => Effect.sync(() => projector.prepareTurnContext(input)),
-      discardTurnContext: (input) => Effect.sync(() => projector.discardTurnContext(input)),
+      failTurnContext: (input) =>
+        Effect.sync(() =>
+          projector.failTurnContext({
+            ...input,
+            failedAt: new Date().toISOString(),
+          }),
+        ),
       recordCompile: (result) => writeRecords([projector.projectCompileResult(result)]),
     } satisfies AgentQualityTraceShape;
   }),

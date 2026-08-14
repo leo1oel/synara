@@ -451,7 +451,7 @@ describe("ProviderCommandReactor", () => {
       StudioOutputReactorShape["cancelPendingTurnBaseline"]
     >(input?.studioOutputReactor?.cancelPendingTurnBaseline ?? (() => Effect.void));
     const prepareTurnContext = vi.fn(() => Effect.void);
-    const discardTurnContext = vi.fn(() => Effect.void);
+    const failTurnContext = vi.fn(() => Effect.void);
     const studioOutputReactor: StudioOutputReactorShape = {
       captureBaselineBeforeTurn: captureStudioOutputBaseline,
       cancelPendingTurnBaseline: cancelPendingStudioOutputBaseline,
@@ -513,7 +513,7 @@ describe("ProviderCommandReactor", () => {
         Layer.succeed(AgentQualityTrace, {
           start: Effect.void,
           prepareTurnContext,
-          discardTurnContext,
+          failTurnContext,
           recordCompile: () => Effect.void,
         }),
       ),
@@ -635,7 +635,7 @@ describe("ProviderCommandReactor", () => {
       listSessions,
       sendTurn,
       prepareTurnContext,
-      discardTurnContext,
+      failTurnContext,
       steerTurn,
       startReview,
       forkThread,
@@ -2477,7 +2477,7 @@ describe("ProviderCommandReactor", () => {
         messageId: "retry-droid-fork-failed-user",
       }),
     );
-    expect(harness.discardTurnContext).toHaveBeenCalledWith({
+    expect(harness.failTurnContext).toHaveBeenCalledWith({
       threadId: "thread-retry-droid-fork",
       messageId: "retry-droid-fork-failed-user",
     });

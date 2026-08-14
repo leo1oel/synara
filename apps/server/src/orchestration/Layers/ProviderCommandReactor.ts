@@ -1637,23 +1637,28 @@ const make = Effect.gen(function* () {
       ...(modelForTurn !== undefined ? { modelSelection: modelForTurn } : {}),
       ...(input.interactionMode !== undefined ? { interactionMode: input.interactionMode } : {}),
     };
-    const prepareQualityContext = agentQualityTrace.prepareTurnContext({
-      threadId: input.threadId,
-      messageId: input.messageId,
-      messageText: input.messageText,
-      recordedAt: input.createdAt,
-    });
-    const discardQualityContext = agentQualityTrace.discardTurnContext({
-      threadId: input.threadId,
-      messageId: input.messageId,
-    });
-    const withQualityContext = <A, E, R>(operation: Effect.Effect<A, E, R>) =>
-      prepareQualityContext.pipe(
-        Effect.andThen(operation),
-        Effect.onExit((exit) => (Exit.isSuccess(exit) ? Effect.void : discardQualityContext)),
+    const withQualityContext = <A, E, R>(operation: () => Effect.Effect<A, E, R>) => {
+      const prepareQualityContext = agentQualityTrace.prepareTurnContext({
+        threadId: input.threadId,
+        messageId: input.messageId,
+        messageText: input.messageText,
+        recordedAt: input.createdAt,
+        dispatchStartedAt: new Date().toISOString(),
+      });
+      return prepareQualityContext.pipe(
+        Effect.andThen(operation()),
+        Effect.onExit((exit) =>
+          Exit.isSuccess(exit)
+            ? Effect.void
+            : agentQualityTrace.failTurnContext({
+                threadId: input.threadId,
+                messageId: input.messageId,
+              }),
+        ),
       );
+    };
     const sendQueuedProviderTurn = (messageText: string | undefined) =>
-      withQualityContext(
+      withQualityContext(() =>
         providerService.sendTurn({
           ...providerTurnInput,
           ...(messageText ? { input: messageText } : {}),
@@ -1712,12 +1717,13 @@ const make = Effect.gen(function* () {
     let pendingContextBootstrapAttempt: PendingContextBootstrapAttempt | undefined;
     let startedTurn: ProviderTurnStartResult | undefined;
 
-    if (input.reviewTarget !== undefined) {
+    const reviewTarget = input.reviewTarget;
+    if (reviewTarget !== undefined) {
       yield* capturePreTurnBaselines;
-      startedTurn = yield* withQualityContext(
+      startedTurn = yield* withQualityContext(() =>
         providerService.startReview({
           threadId: input.threadId,
-          target: input.reviewTarget,
+          target: reviewTarget,
         }),
       ).pipe(Effect.onError(() => cancelPendingStudioBaseline));
     } else if (input.dispatchMode === "steer") {

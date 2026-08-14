@@ -320,7 +320,7 @@ export const makeOrchestrationIntegrationHarness = (
     const agentQualityTraceLayer = Layer.succeed(AgentQualityTrace, {
       start: Effect.void,
       prepareTurnContext: () => Effect.void,
-      discardTurnContext: () => Effect.void,
+      failTurnContext: () => Effect.void,
       recordCompile: () => Effect.void,
     });
     const providerCommandReactorLayer = ProviderCommandReactorLive.pipe(

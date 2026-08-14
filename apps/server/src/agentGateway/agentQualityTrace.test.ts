@@ -63,6 +63,7 @@ describe("agent quality trace", () => {
       messageId: "message-1",
       messageText: `${sensitive.prompt}\n<lattice_active_context version="1">\n${JSON.stringify(context)}\n</lattice_active_context>`,
       recordedAt: "2026-08-14T10:00:00.010Z",
+      dispatchStartedAt: "2026-08-14T10:00:00.020Z",
     });
     const records = [
       ...projector.projectDomainEvent(
@@ -306,6 +307,7 @@ describe("agent quality trace", () => {
       messageId: "message-1",
       messageText: "first prompt",
       recordedAt: "2026-08-14T10:00:00.000Z",
+      dispatchStartedAt: "2026-08-14T10:00:00.010Z",
     });
     const first = projector.projectRuntimeEvent(
       runtimeEvent({
@@ -341,6 +343,7 @@ describe("agent quality trace", () => {
       messageId: "message-2",
       messageText: "second prompt",
       recordedAt: "2026-08-14T10:00:01.000Z",
+      dispatchStartedAt: "2026-08-14T10:00:01.010Z",
     });
     const second = projector.projectRuntimeEvent(
       runtimeEvent({
@@ -355,9 +358,56 @@ describe("agent quality trace", () => {
     expect(second[0]).toMatchObject({ type: "turn.context", messageId: "message-2" });
   });
 
+  it("correlates delayed starts across failed dispatches and retries by dispatch window", () => {
+    const projector = createAgentQualityTraceProjector();
+    const prepare = (messageId: string, dispatchStartedAt: string) =>
+      projector.prepareTurnContext({
+        threadId: "thread-1",
+        messageId,
+        messageText: `${messageId} prompt`,
+        recordedAt: dispatchStartedAt,
+        dispatchStartedAt,
+      });
+    const start = (turnId: string, createdAt: string) =>
+      projector.projectRuntimeEvent(
+        runtimeEvent({
+          type: "turn.started",
+          provider: "claudeAgent",
+          createdAt,
+          threadId: "thread-1",
+          turnId,
+          payload: {},
+        }),
+      )[0];
+
+    prepare("message-a", "2026-08-14T10:00:00.010Z");
+    projector.failTurnContext({
+      threadId: "thread-1",
+      messageId: "message-a",
+      failedAt: "2026-08-14T10:00:00.200Z",
+    });
+    prepare("message-a", "2026-08-14T10:00:00.300Z");
+    expect(start("turn-a1", "2026-08-14T10:00:00.100Z")).toMatchObject({ messageId: "message-a" });
+    expect(start("turn-a2", "2026-08-14T10:00:00.400Z")).toMatchObject({ messageId: "message-a" });
+
+    prepare("message-failed", "2026-08-14T10:00:01.000Z");
+    projector.failTurnContext({
+      threadId: "thread-1",
+      messageId: "message-failed",
+      failedAt: "2026-08-14T10:00:01.100Z",
+    });
+    prepare("message-b", "2026-08-14T10:00:01.200Z");
+    expect(start("turn-b", "2026-08-14T10:00:01.300Z")).toMatchObject({ messageId: "message-b" });
+  });
+
   it("hashes matching literature identifiers without recording their values", () => {
     const projector = createAgentQualityTraceProjector();
-    const tool = (itemId: string, toolName: string, input: Record<string, unknown>) =>
+    const tool = (
+      itemId: string,
+      toolName: string,
+      input: Record<string, unknown>,
+      data: Record<string, unknown> = {},
+    ) =>
       projector.projectRuntimeEvent(
         runtimeEvent({
           type: "item.completed",
@@ -369,21 +419,31 @@ describe("agent quality trace", () => {
           payload: {
             itemType: "mcp_tool_call",
             status: "completed",
-            data: { toolName: `mcp__lattice__${toolName}`, input },
+            data: { ...data, toolName: `mcp__lattice__${toolName}`, input },
           },
         }),
       )[0];
     const fetched = tool("fetch", "fetch_paper", { arxivId: "2401.00001v2" });
-    const read = tool("read", "Read", {
-      file_path: ".research/papers/2401.00001/paper.md",
-    });
+    const read = tool(
+      "read",
+      "Read",
+      {
+        file_path: ".research/papers/2401.00001/paper.md",
+      },
+      { path: ".research/papers/2401.00001/paper.md" },
+    );
     const cited = tool("cite", "cite", { query: "https://arxiv.org/abs/2401.00001" });
     expect(fetched).toMatchObject({
-      tool: { evidenceIds: [expect.stringMatching(/^[a-f0-9]{64}$/)] },
+      tool: {
+        evidenceAccess: "fulltext",
+        evidenceIds: [expect.stringMatching(/^[a-f0-9]{64}$/)],
+      },
     });
     const fetchedEvidenceIds = (fetched?.tool as { evidenceIds?: unknown } | undefined)
       ?.evidenceIds;
-    expect(read).toMatchObject({ tool: { evidenceIds: fetchedEvidenceIds } });
+    expect(read).toMatchObject({
+      tool: { evidenceAccess: "fulltext", evidenceIds: fetchedEvidenceIds },
+    });
     expect(cited).toMatchObject({ tool: { evidenceIds: fetchedEvidenceIds } });
     expect(JSON.stringify([fetched, read, cited])).not.toContain("2401.00001");
   });
@@ -529,6 +589,15 @@ describe("agent quality trace", () => {
       parseLatticeAgentCompileResult({ ...result, rootDocument: "sections\\main.tex" }),
     ).toEqual({ ...result, rootDocument: "sections/main.tex" });
     expect(parseLatticeAgentCompileResult({ ...result, rootDocument: "file:main.tex" })).toBeNull();
+    expect(
+      parseLatticeAgentCompileResult({ ...result, threadId: "private manuscript text" }),
+    ).toBeNull();
+    expect(
+      parseLatticeAgentCompileResult({ ...result, checkpointRef: "x".repeat(513) }),
+    ).toBeNull();
+    expect(
+      parseLatticeAgentCompileResult({ ...result, compiledAt: "2026-02-30T10:00:01.000Z" }),
+    ).toBeNull();
   });
 
   it("writes content-minimized NDJSON with private directory and file modes", () => {

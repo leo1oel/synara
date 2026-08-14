@@ -50,6 +50,8 @@ export interface AgentQualityTraceRecord extends JsonRecord {
 interface PendingTurnContext {
   readonly messageId: string;
   readonly manifest: JsonRecord;
+  readonly dispatchStartedAtMs: number;
+  failedAtMs?: number;
 }
 
 export interface AgentQualityPendingTurnContext {
@@ -57,6 +59,7 @@ export interface AgentQualityPendingTurnContext {
   readonly messageId: string;
   readonly messageText: string;
   readonly recordedAt: string;
+  readonly dispatchStartedAt: string;
 }
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -123,6 +126,32 @@ function safeRelativePath(value: unknown): string | undefined {
 function safeTraceLabel(value: unknown): string | undefined {
   const label = nonEmptyString(value);
   return label ? label.slice(0, MAX_TRACE_STRING_CHARS) : undefined;
+}
+
+function safeTraceIdentifier(value: unknown): string | undefined {
+  const identifier = nonEmptyString(value);
+  return identifier &&
+    identifier.length <= 512 &&
+    /^[A-Za-z0-9][A-Za-z0-9._:@/+-]*$/u.test(identifier)
+    ? identifier
+    : undefined;
+}
+
+function strictUtcTimestamp(value: unknown): string | undefined {
+  const timestamp = nonEmptyString(value);
+  if (
+    !timestamp ||
+    timestamp.length > 32 ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/u.test(timestamp)
+  ) {
+    return undefined;
+  }
+  const timestampMs = Date.parse(timestamp);
+  if (!Number.isFinite(timestampMs)) return undefined;
+  const canonical = new Date(timestampMs).toISOString();
+  return timestamp === canonical || timestamp === canonical.replace(".000Z", "Z")
+    ? timestamp
+    : undefined;
 }
 
 function selectionManifest(value: JsonRecord | undefined): JsonRecord {
@@ -255,11 +284,11 @@ function baseRecord(input: {
 }
 
 function turnKey(threadId: ThreadId | string, turnId: TurnId | string): string {
-  return `${threadId}\u0000${turnId}`;
+  return JSON.stringify([threadId, turnId]);
 }
 
 function requestKey(threadId: ThreadId | string, requestId: string): string {
-  return `${threadId}\u0000${requestId}`;
+  return JSON.stringify([threadId, requestId]);
 }
 
 function normalizeLatticeToolName(value: unknown): string | undefined {
@@ -273,16 +302,26 @@ function pathsFromToolData(data: JsonRecord | undefined): string[] {
   const paths = new Set<string>();
   for (const candidate of [data?.path, data?.filePath, data?.file]) {
     const path = safeRelativePath(candidate);
-    if (path) paths.add(path);
+    if (path && !cachedPaperReferenceFromPath(path)) paths.add(path);
   }
   for (const collection of [data?.files, data?.changes]) {
     if (!Array.isArray(collection)) continue;
     for (const entry of collection) {
       const path = safeRelativePath(isRecord(entry) ? entry.path : entry);
-      if (path) paths.add(path);
+      if (path && !cachedPaperReferenceFromPath(path)) paths.add(path);
     }
   }
   return [...paths].toSorted();
+}
+
+function cachedPaperReferenceFromPath(value: unknown): string | undefined {
+  const path = safeRelativePath(value);
+  const paperId = path
+    ? /^\.research\/papers\/([^/]+)\/(?:paper|blog)\.md$/u.exec(path)?.[1]
+    : undefined;
+  return paperId
+    ? (canonicalEvidenceReference("arxivId", paperId) ?? `paper:${paperId.toLowerCase()}`)
+    : undefined;
 }
 
 function canonicalEvidenceReference(key: string, value: unknown): string | undefined {
@@ -305,13 +344,7 @@ function canonicalEvidenceReference(key: string, value: unknown): string | undef
       normalizedKey,
     )
   ) {
-    const path = safeRelativePath(text);
-    const paperId = path
-      ? /^\.research\/papers\/([^/]+)\/(?:paper|blog)\.md$/u.exec(path)?.[1]
-      : undefined;
-    return paperId
-      ? (canonicalEvidenceReference("arxivId", paperId) ?? `paper:${paperId.toLowerCase()}`)
-      : undefined;
+    return cachedPaperReferenceFromPath(text);
   }
   if (normalizedKey === "url") {
     try {
@@ -333,13 +366,18 @@ function canonicalEvidenceReference(key: string, value: unknown): string | undef
   return undefined;
 }
 
-function evidenceIdsFromToolData(data: JsonRecord | undefined): string[] {
+function evidenceFromToolData(data: JsonRecord | undefined): {
+  readonly ids: string[];
+  readonly cachedPaperRead: boolean;
+} {
   const references = new Set<string>();
+  let cachedPaperRead = false;
   const visit = (value: unknown, depth: number) => {
     if (depth > 4 || references.size >= 32 || !isRecord(value)) return;
     for (const [key, entry] of Object.entries(value)) {
       const reference = canonicalEvidenceReference(key, entry);
       if (reference) references.add(hashAgentQualityValue(reference));
+      if (cachedPaperReferenceFromPath(entry)) cachedPaperRead = true;
       if (isRecord(entry)) visit(entry, depth + 1);
       else if (Array.isArray(entry)) {
         for (const item of entry.slice(0, 32)) visit(item, depth + 1);
@@ -347,7 +385,7 @@ function evidenceIdsFromToolData(data: JsonRecord | undefined): string[] {
     }
   };
   visit(data, 0);
-  return [...references].toSorted();
+  return { ids: [...references].toSorted(), cachedPaperRead };
 }
 
 function toolRecord(
@@ -362,13 +400,21 @@ function toolRecord(
   const toolName = normalizeLatticeToolName(data?.toolName ?? data?.tool ?? data?.kind);
   const input = data?.input ?? data?.rawInput ?? data?.args ?? data?.arguments;
   const output = data?.result ?? data?.rawOutput ?? data?.output;
-  const evidenceIds = evidenceIdsFromToolData(data);
+  const evidence = evidenceFromToolData(data);
   const failed =
     event.payload.status === "failed" ||
     event.payload.status === "declined" ||
     data?.isError === true ||
     data?.error === true;
   const status = event.type === "item.completed" ? (failed ? "failed" : "success") : "started";
+  const normalizedToolName = (toolName ?? event.payload.itemType).toLowerCase();
+  const fullTextEvidence =
+    status === "success" &&
+    evidence.ids.length > 0 &&
+    (["fetch_paper", "fetch_web_reference", "read_cached_paper", "read_paper"].includes(
+      normalizedToolName,
+    ) ||
+      (["read", "read_file"].includes(normalizedToolName) && evidence.cachedPaperRead));
   return {
     ...baseRecord({
       type: "tool",
@@ -391,7 +437,8 @@ function toolRecord(
       ...(input === undefined ? {} : { inputHash: hashAgentQualityValue(input) }),
       ...(output === undefined ? {} : { outputHash: hashAgentQualityValue(output) }),
       ...(pathsFromToolData(data).length > 0 ? { paths: pathsFromToolData(data) } : {}),
-      ...(evidenceIds.length > 0 ? { evidenceIds } : {}),
+      ...(evidence.ids.length > 0 ? { evidenceIds: evidence.ids } : {}),
+      ...(fullTextEvidence ? { evidenceAccess: "fulltext" } : {}),
     },
   };
 }
@@ -411,16 +458,19 @@ export function parseLatticeAgentCompileResult(value: unknown): LatticeAgentComp
     "diagnostics",
   ]);
   const allowedDiagnostics = new Set(["errors", "warnings"]);
+  const threadId = safeTraceIdentifier(value.threadId);
+  const turnId = safeTraceIdentifier(value.turnId);
+  const checkpointRef = safeTraceIdentifier(value.checkpointRef);
+  const compiledAt = strictUtcTimestamp(value.compiledAt);
   if (
     Object.keys(value).some((key) => !allowed.has(key)) ||
     Object.keys(value.diagnostics).some((key) => !allowedDiagnostics.has(key)) ||
     value.type !== LATTICE_AGENT_COMPILE_RESULT ||
     value.version !== 1 ||
-    !nonEmptyString(value.threadId) ||
-    !nonEmptyString(value.turnId) ||
-    !nonEmptyString(value.checkpointRef) ||
-    !nonEmptyString(value.compiledAt) ||
-    !Number.isFinite(Date.parse(String(value.compiledAt))) ||
+    !threadId ||
+    !turnId ||
+    !checkpointRef ||
+    !compiledAt ||
     typeof value.success !== "boolean" ||
     !(
       value.durationMs === null ||
@@ -437,10 +487,10 @@ export function parseLatticeAgentCompileResult(value: unknown): LatticeAgentComp
   return {
     type: LATTICE_AGENT_COMPILE_RESULT,
     version: 1,
-    threadId: value.threadId as string,
-    turnId: value.turnId as string,
-    checkpointRef: value.checkpointRef as string,
-    compiledAt: value.compiledAt as string,
+    threadId,
+    turnId,
+    checkpointRef,
+    compiledAt,
     success: value.success as boolean,
     durationMs: value.durationMs as number | null,
     rootDocument: value.rootDocument === null ? null : safeRelativePath(value.rootDocument)!,
@@ -569,34 +619,56 @@ export function createAgentQualityTraceProjector() {
 
   const prepareTurnContext = (input: AgentQualityPendingTurnContext): void => {
     const queue = pendingTurns.get(input.threadId) ?? [];
-    const pending = {
+    const dispatchStartedAtMs = Date.parse(input.dispatchStartedAt);
+    queue.push({
       messageId: input.messageId,
       manifest: promptContextManifest(input.messageText, input.recordedAt),
-    };
-    const existingIndex = queue.findIndex((candidate) => candidate.messageId === input.messageId);
-    if (existingIndex >= 0) queue[existingIndex] = pending;
-    else queue.push(pending);
+      dispatchStartedAtMs: Number.isFinite(dispatchStartedAtMs) ? dispatchStartedAtMs : Date.now(),
+    });
     pendingTurns.set(input.threadId, queue);
   };
 
-  const discardTurnContext = (input: {
+  const failTurnContext = (input: {
     readonly threadId: string;
     readonly messageId: string;
+    readonly failedAt: string;
   }): void => {
     const queue = pendingTurns.get(input.threadId);
     if (!queue) return;
-    const remaining = queue.filter((candidate) => candidate.messageId !== input.messageId);
-    if (remaining.length > 0) pendingTurns.set(input.threadId, remaining);
-    else pendingTurns.delete(input.threadId);
+    const failedAtMs = Date.parse(input.failedAt);
+    for (let index = queue.length - 1; index >= 0; index -= 1) {
+      const candidate = queue[index];
+      if (candidate?.messageId !== input.messageId || candidate.failedAtMs !== undefined) continue;
+      candidate.failedAtMs = Number.isFinite(failedAtMs) ? failedAtMs : Date.now();
+      break;
+    }
   };
 
   const projectRuntimeEvent = (event: ProviderRuntimeEvent): AgentQualityTraceRecord[] => {
     if (event.type === "turn.started" && event.turnId) {
       const turnId = event.turnId;
       activeTurnByThread.set(event.threadId, turnId);
-      turnStartedAt.set(turnKey(event.threadId, turnId), Date.parse(event.createdAt));
+      const eventAtMs = Date.parse(event.createdAt);
+      turnStartedAt.set(turnKey(event.threadId, turnId), eventAtMs);
       const queue = pendingTurns.get(event.threadId) ?? [];
-      const pending = queue.shift();
+      const pendingIndex = Number.isFinite(eventAtMs)
+        ? queue.findIndex(
+            (candidate) =>
+              candidate.dispatchStartedAtMs <= eventAtMs &&
+              (candidate.failedAtMs === undefined || eventAtMs < candidate.failedAtMs),
+          )
+        : 0;
+      const fallbackIndex = Number.isFinite(eventAtMs)
+        ? -1
+        : queue.findIndex((candidate) => candidate.failedAtMs === undefined);
+      const selectedIndex = pendingIndex >= 0 ? pendingIndex : fallbackIndex;
+      const pending = selectedIndex >= 0 ? queue.splice(selectedIndex, 1)[0] : undefined;
+      if (Number.isFinite(eventAtMs)) {
+        for (let index = queue.length - 1; index >= 0; index -= 1) {
+          const failedAtMs = queue[index]?.failedAtMs;
+          if (failedAtMs !== undefined && failedAtMs <= eventAtMs) queue.splice(index, 1);
+        }
+      }
       if (queue.length > 0) pendingTurns.set(event.threadId, queue);
       else pendingTurns.delete(event.threadId);
       return [
@@ -825,7 +897,7 @@ export function createAgentQualityTraceProjector() {
 
   return {
     prepareTurnContext,
-    discardTurnContext,
+    failTurnContext,
     projectDomainEvent,
     projectRuntimeEvent,
     projectCompileResult,
