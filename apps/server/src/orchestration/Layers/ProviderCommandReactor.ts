@@ -1637,8 +1637,12 @@ const make = Effect.gen(function* () {
       ...(modelForTurn !== undefined ? { modelSelection: modelForTurn } : {}),
       ...(input.interactionMode !== undefined ? { interactionMode: input.interactionMode } : {}),
     };
-    const withQualityContext = <A, E, R>(operation: () => Effect.Effect<A, E, R>) => {
+    const withQualityContext = <E, R>(
+      operation: () => Effect.Effect<ProviderTurnStartResult, E, R>,
+    ) => {
+      const dispatchId = crypto.randomUUID();
       const prepareQualityContext = agentQualityTrace.prepareTurnContext({
+        dispatchId,
         threadId: input.threadId,
         messageId: input.messageId,
         messageText: input.messageText,
@@ -1647,12 +1651,19 @@ const make = Effect.gen(function* () {
       });
       return prepareQualityContext.pipe(
         Effect.andThen(operation()),
+        Effect.tap((result) =>
+          agentQualityTrace.bindTurnContext({
+            threadId: input.threadId,
+            dispatchId,
+            turnId: result.turnId,
+          }),
+        ),
         Effect.onExit((exit) =>
           Exit.isSuccess(exit)
             ? Effect.void
             : agentQualityTrace.failTurnContext({
                 threadId: input.threadId,
-                messageId: input.messageId,
+                dispatchId,
               }),
         ),
       );

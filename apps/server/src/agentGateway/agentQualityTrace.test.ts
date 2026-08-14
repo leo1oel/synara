@@ -42,6 +42,7 @@ describe("agent quality trace", () => {
       toolTitle: "TOOL_TITLE_SECRET_2a8d",
       toolDataName: "TOOL_DATA_NAME_SECRET_4b1c",
       workspace: "/Users/researcher/private-project",
+      paperId: "2401.00001",
     };
     const context = {
       type: "lattice:host-context",
@@ -51,20 +52,22 @@ describe("agent quality trace", () => {
       activeSurface: "paper",
       paper: {
         title: sensitive.paper,
-        arxivId: "2401.00001",
-        path: ".research/papers/2401.00001/paper.md",
+        arxivId: sensitive.paperId,
+        path: `.research/papers/${sensitive.paperId}/paper.md`,
         view: "fulltext",
         selection: sensitive.selection,
         selectionOmittedChars: 12,
       },
     };
     projector.prepareTurnContext({
+      dispatchId: "dispatch-1",
       threadId,
       messageId: "message-1",
       messageText: `${sensitive.prompt}\n<lattice_active_context version="1">\n${JSON.stringify(context)}\n</lattice_active_context>`,
       recordedAt: "2026-08-14T10:00:00.010Z",
       dispatchStartedAt: "2026-08-14T10:00:00.020Z",
     });
+    projector.bindTurnContext({ threadId, dispatchId: "dispatch-1", turnId });
     const records = [
       ...projector.projectDomainEvent(
         domainEvent({
@@ -303,11 +306,17 @@ describe("agent quality trace", () => {
   it("prepares context at provider dispatch so late domain delivery cannot poison the next turn", () => {
     const projector = createAgentQualityTraceProjector();
     projector.prepareTurnContext({
+      dispatchId: "dispatch-1",
       threadId: "thread-1",
       messageId: "message-1",
       messageText: "first prompt",
       recordedAt: "2026-08-14T10:00:00.000Z",
       dispatchStartedAt: "2026-08-14T10:00:00.010Z",
+    });
+    projector.bindTurnContext({
+      threadId: "thread-1",
+      dispatchId: "dispatch-1",
+      turnId: "turn-1",
     });
     const first = projector.projectRuntimeEvent(
       runtimeEvent({
@@ -339,11 +348,17 @@ describe("agent quality trace", () => {
     );
 
     projector.prepareTurnContext({
+      dispatchId: "dispatch-2",
       threadId: "thread-1",
       messageId: "message-2",
       messageText: "second prompt",
       recordedAt: "2026-08-14T10:00:01.000Z",
       dispatchStartedAt: "2026-08-14T10:00:01.010Z",
+    });
+    projector.bindTurnContext({
+      threadId: "thread-1",
+      dispatchId: "dispatch-2",
+      turnId: "turn-2",
     });
     const second = projector.projectRuntimeEvent(
       runtimeEvent({
@@ -360,8 +375,9 @@ describe("agent quality trace", () => {
 
   it("correlates delayed starts across failed dispatches and retries by dispatch window", () => {
     const projector = createAgentQualityTraceProjector();
-    const prepare = (messageId: string, dispatchStartedAt: string) =>
+    const prepare = (dispatchId: string, messageId: string, dispatchStartedAt: string) =>
       projector.prepareTurnContext({
+        dispatchId,
         threadId: "thread-1",
         messageId,
         messageText: `${messageId} prompt`,
@@ -380,24 +396,279 @@ describe("agent quality trace", () => {
         }),
       )[0];
 
-    prepare("message-a", "2026-08-14T10:00:00.010Z");
+    prepare("dispatch-a1", "message-a", "2026-08-14T10:00:00.010Z");
     projector.failTurnContext({
       threadId: "thread-1",
-      messageId: "message-a",
+      dispatchId: "dispatch-a1",
       failedAt: "2026-08-14T10:00:00.200Z",
     });
-    prepare("message-a", "2026-08-14T10:00:00.300Z");
+    prepare("dispatch-a2", "message-a", "2026-08-14T10:00:00.300Z");
     expect(start("turn-a1", "2026-08-14T10:00:00.100Z")).toMatchObject({ messageId: "message-a" });
+    projector.bindTurnContext({
+      threadId: "thread-1",
+      dispatchId: "dispatch-a2",
+      turnId: "turn-a2",
+    });
     expect(start("turn-a2", "2026-08-14T10:00:00.400Z")).toMatchObject({ messageId: "message-a" });
 
-    prepare("message-failed", "2026-08-14T10:00:01.000Z");
+    prepare("dispatch-failed", "message-failed", "2026-08-14T10:00:01.000Z");
     projector.failTurnContext({
       threadId: "thread-1",
-      messageId: "message-failed",
+      dispatchId: "dispatch-failed",
       failedAt: "2026-08-14T10:00:01.100Z",
     });
-    prepare("message-b", "2026-08-14T10:00:01.200Z");
+    prepare("dispatch-b", "message-b", "2026-08-14T10:00:01.200Z");
+    projector.bindTurnContext({
+      threadId: "thread-1",
+      dispatchId: "dispatch-b",
+      turnId: "turn-b",
+    });
     expect(start("turn-b", "2026-08-14T10:00:01.300Z")).toMatchObject({ messageId: "message-b" });
+  });
+
+  it("uses returned turn ids for overlapping attempts and includes same-millisecond failures", () => {
+    const projector = createAgentQualityTraceProjector();
+    const prepare = (dispatchId: string, messageId: string, dispatchStartedAt: string) =>
+      projector.prepareTurnContext({
+        dispatchId,
+        threadId: "thread-1",
+        messageId,
+        messageText: `${messageId} prompt`,
+        recordedAt: dispatchStartedAt,
+        dispatchStartedAt,
+      });
+    const start = (turnId: string, createdAt: string) =>
+      projector.projectRuntimeEvent(
+        runtimeEvent({
+          type: "turn.started",
+          provider: "claudeAgent",
+          createdAt,
+          threadId: "thread-1",
+          turnId,
+          payload: {},
+        }),
+      )[0];
+
+    prepare("dispatch-a", "message-a", "2026-08-14T10:00:00.000Z");
+    projector.bindTurnContext({ threadId: "thread-1", dispatchId: "dispatch-a", turnId: "turn-a" });
+    prepare("dispatch-b", "message-b", "2026-08-14T10:00:00.100Z");
+    projector.bindTurnContext({ threadId: "thread-1", dispatchId: "dispatch-b", turnId: "turn-b" });
+    expect(start("turn-b", "2026-08-14T10:00:00.200Z")).toMatchObject({ messageId: "message-b" });
+    expect(start("turn-a", "2026-08-14T10:00:00.050Z")).toMatchObject({ messageId: "message-a" });
+
+    prepare("dispatch-c", "message-c", "2026-08-14T10:00:01.000Z");
+    projector.failTurnContext({
+      threadId: "thread-1",
+      dispatchId: "dispatch-c",
+      failedAt: "2026-08-14T10:00:01.100Z",
+    });
+    expect(start("turn-c", "2026-08-14T10:00:01.100Z")).toMatchObject({ messageId: "message-c" });
+
+    prepare("dispatch-failed", "message-failed", "2026-08-14T10:00:02.000Z");
+    projector.failTurnContext({
+      threadId: "thread-1",
+      dispatchId: "dispatch-failed",
+      failedAt: "2026-08-14T10:00:02.100Z",
+    });
+    prepare("dispatch-retry", "message-retry", "2026-08-14T10:00:02.100Z");
+    expect(start("turn-retry", "2026-08-14T10:00:02.100Z")).toBeUndefined();
+    const retryRecords = projector.bindTurnContext({
+      threadId: "thread-1",
+      dispatchId: "dispatch-retry",
+      turnId: "turn-retry",
+    });
+    expect(retryRecords[0]).toMatchObject({
+      messageId: "message-retry",
+    });
+
+    prepare("dispatch-old", "message-old", "2026-08-14T10:00:03.000Z");
+    projector.failTurnContext({
+      threadId: "thread-1",
+      dispatchId: "dispatch-old",
+      failedAt: "2026-08-14T10:00:03.100Z",
+    });
+    prepare("dispatch-next", "message-next", "2026-08-14T10:00:03.100Z");
+    expect(start("turn-old", "2026-08-14T10:00:03.100Z")).toBeUndefined();
+    const oldRecords = projector.bindTurnContext({
+      threadId: "thread-1",
+      dispatchId: "dispatch-next",
+      turnId: "turn-next",
+    });
+    expect(oldRecords[0]).toMatchObject({ messageId: "message-old" });
+    expect(start("turn-next", "2026-08-14T10:00:03.100Z")).toMatchObject({
+      messageId: "message-next",
+    });
+
+    prepare("dispatch-earlier", "message-earlier", "2026-08-14T10:00:04.000Z");
+    projector.failTurnContext({
+      threadId: "thread-1",
+      dispatchId: "dispatch-earlier",
+      failedAt: "2026-08-14T10:00:04.100Z",
+    });
+    prepare("dispatch-later", "message-later", "2026-08-14T10:00:04.100Z");
+    expect(start("turn-later", "2026-08-14T10:00:04.100Z")).toBeUndefined();
+    expect(start("turn-earlier", "2026-08-14T10:00:04.100Z")).toBeUndefined();
+    const reverseRecords = projector.bindTurnContext({
+      threadId: "thread-1",
+      dispatchId: "dispatch-later",
+      turnId: "turn-later",
+    });
+    expect(reverseRecords.filter((record) => record.type === "turn.context")).toMatchObject([
+      { turnId: "turn-later", messageId: "message-later" },
+      { turnId: "turn-earlier", messageId: "message-earlier" },
+    ]);
+  });
+
+  it("keeps all turn records behind context when provider events beat returned turn ids", () => {
+    const projector = createAgentQualityTraceProjector();
+    projector.prepareTurnContext({
+      dispatchId: "dispatch-fast",
+      threadId: "thread-fast",
+      messageId: "message-fast",
+      messageText: "fast prompt",
+      recordedAt: "2026-08-14T10:00:00.000Z",
+      dispatchStartedAt: "2026-08-14T10:00:00.010Z",
+    });
+    const runtime = (value: Record<string, unknown>) =>
+      projector.projectRuntimeEvent(runtimeEvent(value));
+
+    expect(
+      runtime({
+        type: "turn.started",
+        provider: "pi",
+        createdAt: "2026-08-14T10:00:00.020Z",
+        threadId: "thread-fast",
+        turnId: "turn-fast",
+        payload: { model: "fast-model" },
+      }),
+    ).toEqual([]);
+    expect(
+      runtime({
+        type: "content.delta",
+        provider: "pi",
+        createdAt: "2026-08-14T10:00:00.030Z",
+        threadId: "thread-fast",
+        turnId: "turn-fast",
+        payload: { streamKind: "assistant_text", delta: "private output" },
+      }),
+    ).toEqual([]);
+    expect(
+      runtime({
+        type: "item.completed",
+        provider: "pi",
+        createdAt: "2026-08-14T10:00:00.040Z",
+        threadId: "thread-fast",
+        turnId: "turn-fast",
+        itemId: "tool-fast",
+        payload: {
+          itemType: "mcp_tool_call",
+          status: "completed",
+          data: { toolName: "mcp__lattice__compile_project", input: { secret: "private" } },
+        },
+      }),
+    ).toEqual([]);
+    expect(
+      projector.projectDomainEvent(
+        domainEvent({
+          type: "thread.turn-interrupt-requested",
+          occurredAt: "2026-08-14T10:00:00.045Z",
+          payload: { threadId: "thread-fast", turnId: "turn-fast" },
+        }),
+      ),
+    ).toEqual([]);
+    expect(
+      runtime({
+        type: "turn.completed",
+        provider: "pi",
+        createdAt: "2026-08-14T10:00:00.050Z",
+        threadId: "thread-fast",
+        turnId: "turn-fast",
+        payload: { state: "completed", totalCostUsd: 0.001 },
+      }),
+    ).toEqual([]);
+    expect(
+      projector.projectDomainEvent(
+        domainEvent({
+          type: "thread.turn-interrupt-requested",
+          occurredAt: "2026-08-14T10:00:00.055Z",
+          payload: { threadId: "thread-fast" },
+        }),
+      ),
+    ).toEqual([]);
+
+    const records = projector.bindTurnContext({
+      threadId: "thread-fast",
+      dispatchId: "dispatch-fast",
+      turnId: "turn-fast",
+    });
+    expect(records.map((record) => record.type)).toEqual([
+      "turn.context",
+      "turn.started",
+      "turn.first-output",
+      "tool",
+      "stop",
+      "turn.completed",
+      "stop",
+    ]);
+    expect(records[0]).toMatchObject({ messageId: "message-fast" });
+    expect(JSON.stringify(records)).not.toContain("private output");
+    expect(JSON.stringify(records)).not.toContain('"secret":"private"');
+  });
+
+  it("flushes unresolved starts safely on session exit and correlation capacity limits", () => {
+    const projector = createAgentQualityTraceProjector();
+    const prepare = (dispatchId: string) =>
+      projector.prepareTurnContext({
+        dispatchId,
+        threadId: "thread-capacity",
+        messageId: dispatchId,
+        messageText: `${dispatchId} prompt`,
+        recordedAt: "2026-08-14T10:00:00.000Z",
+        dispatchStartedAt: "2026-08-14T10:00:00.000Z",
+      });
+    const start = () =>
+      projector.projectRuntimeEvent(
+        runtimeEvent({
+          type: "turn.started",
+          provider: "claudeAgent",
+          createdAt: "2026-08-14T10:00:00.100Z",
+          threadId: "thread-capacity",
+          turnId: "turn-unresolved",
+          payload: {},
+        }),
+      );
+
+    prepare("dispatch-0");
+    expect(start()).toEqual([]);
+    for (let index = 1; index < 64; index += 1) prepare(`dispatch-${index}`);
+    const capacityRecords = prepare("dispatch-64");
+    expect(capacityRecords.map((record) => record.type)).toEqual(["turn.context", "turn.started"]);
+    expect(capacityRecords[0]).toMatchObject({ messageId: null, turnId: "turn-unresolved" });
+
+    prepare("dispatch-exit");
+    expect(start()).toEqual([]);
+    const exitRecords = projector.projectRuntimeEvent(
+      runtimeEvent({
+        type: "session.exited",
+        provider: "claudeAgent",
+        createdAt: "2026-08-14T10:00:00.200Z",
+        threadId: "thread-capacity",
+        payload: { recoverable: true },
+      }),
+    );
+    expect(exitRecords.map((record) => record.type)).toEqual([
+      "turn.context",
+      "turn.started",
+      "session",
+    ]);
+    expect(exitRecords[0]).toMatchObject({ messageId: null });
+    expect(
+      projector.bindTurnContext({
+        threadId: "thread-capacity",
+        dispatchId: "dispatch-exit",
+        turnId: "turn-unresolved",
+      }),
+    ).toEqual([]);
   });
 
   it("hashes matching literature identifiers without recording their values", () => {
@@ -423,29 +694,155 @@ describe("agent quality trace", () => {
           },
         }),
       )[0];
-    const fetched = tool("fetch", "fetch_paper", { arxivId: "2401.00001v2" });
+    const fetched = tool(
+      "fetch",
+      "fetch_paper",
+      { arxivId: "2401.00001v2" },
+      { result: { arxivId: "2401.00001v2", text: "private full text" } },
+    );
     const read = tool(
       "read",
       "Read",
       {
         file_path: ".research/papers/2401.00001/paper.md",
       },
-      { path: ".research/papers/2401.00001/paper.md" },
+      { path: ".research/papers/2401.00001/paper.md", result: "private cached paper" },
     );
     const cited = tool("cite", "cite", { query: "https://arxiv.org/abs/2401.00001" });
     expect(fetched).toMatchObject({
       tool: {
         evidenceAccess: "fulltext",
+        evidenceProvenance: "normalized-tool-completion",
         evidenceIds: [expect.stringMatching(/^[a-f0-9]{64}$/)],
       },
     });
     const fetchedEvidenceIds = (fetched?.tool as { evidenceIds?: unknown } | undefined)
       ?.evidenceIds;
     expect(read).toMatchObject({
-      tool: { evidenceAccess: "fulltext", evidenceIds: fetchedEvidenceIds },
+      tool: {
+        evidenceAccess: "fulltext",
+        evidenceProvenance: "normalized-cached-paper-path",
+        evidenceIds: fetchedEvidenceIds,
+      },
     });
     expect(cited).toMatchObject({ tool: { evidenceIds: fetchedEvidenceIds } });
     expect(JSON.stringify([fetched, read, cited])).not.toContain("2401.00001");
+    expect(JSON.stringify([fetched, read, cited])).not.toContain("private full text");
+    expect(JSON.stringify([fetched, read, cited])).not.toContain("private cached paper");
+
+    const inputOnly = tool("input-only", "fetch_paper", { arxivId: "2401.00002" });
+    expect(inputOnly).not.toMatchObject({ tool: { evidenceAccess: "fulltext" } });
+
+    const codexNested = projector.projectRuntimeEvent(
+      runtimeEvent({
+        type: "item.completed",
+        provider: "codex",
+        createdAt: "2026-08-14T10:00:00.100Z",
+        threadId: "thread-1",
+        turnId: "turn-1",
+        itemId: "codex-fetch",
+        payload: {
+          itemType: "mcp_tool_call",
+          status: "completed",
+          data: {
+            item: {
+              type: "mcpToolCall",
+              tool: "fetch_paper",
+              arguments: { arxivId: "2401.00003" },
+              result: { content: [{ type: "text", text: "private nested full text" }] },
+            },
+          },
+        },
+      }),
+    )[0];
+    expect(codexNested).toMatchObject({
+      tool: {
+        name: "fetch_paper",
+        evidenceAccess: "fulltext",
+        evidenceProvenance: "normalized-tool-completion",
+      },
+    });
+    expect(JSON.stringify(codexNested)).not.toContain("2401.00003");
+    expect(JSON.stringify(codexNested)).not.toContain("private nested full text");
+
+    projector.projectRuntimeEvent(
+      runtimeEvent({
+        type: "item.started",
+        provider: "openCode",
+        createdAt: "2026-08-14T10:00:00.200Z",
+        threadId: "thread-1",
+        turnId: "turn-1",
+        itemId: "opencode-fetch",
+        payload: {
+          itemType: "mcp_tool_call",
+          status: "inProgress",
+          data: {
+            toolName: "fetch_paper",
+            toolCallId: "opencode-fetch",
+            input: { arxivId: "2401.00004" },
+          },
+        },
+      }),
+    );
+    const openCodeCompleted = projector.projectRuntimeEvent(
+      runtimeEvent({
+        type: "item.completed",
+        provider: "openCode",
+        createdAt: "2026-08-14T10:00:00.300Z",
+        threadId: "thread-1",
+        turnId: "turn-1",
+        itemId: "opencode-fetch",
+        payload: {
+          itemType: "dynamic_tool_call",
+          status: "completed",
+          data: {
+            toolCallId: "opencode-fetch",
+            structured: { content: "private OpenCode full text" },
+          },
+        },
+      }),
+    )[0];
+    expect(openCodeCompleted).toMatchObject({
+      tool: {
+        name: "fetch_paper",
+        evidenceAccess: "fulltext",
+        evidenceProvenance: "normalized-tool-completion",
+      },
+    });
+    expect(JSON.stringify(openCodeCompleted)).not.toContain("2401.00004");
+    expect(JSON.stringify(openCodeCompleted)).not.toContain("private OpenCode full text");
+
+    const openCodeMainLifecycle = projector.projectRuntimeEvent(
+      runtimeEvent({
+        type: "item.completed",
+        provider: "openCode",
+        createdAt: "2026-08-14T10:00:00.400Z",
+        threadId: "thread-1",
+        turnId: "turn-1",
+        itemId: "opencode-main-fetch",
+        payload: {
+          itemType: "mcp_tool_call",
+          status: "completed",
+          data: {
+            toolName: "fetch_paper",
+            input: { arxivId: "2401.00005" },
+            state: {
+              status: "completed",
+              output: "private OpenCode state output",
+            },
+          },
+        },
+      }),
+    )[0];
+    expect(openCodeMainLifecycle).toMatchObject({
+      tool: {
+        name: "fetch_paper",
+        evidenceAccess: "fulltext",
+        evidenceProvenance: "normalized-tool-completion",
+      },
+    });
+    expect(JSON.stringify(openCodeMainLifecycle)).not.toContain("2401.00005");
+    expect(JSON.stringify(openCodeMainLifecycle)).not.toContain("private OpenCode state output");
   });
 
   it("keeps stop, permission and recovery records correlated after the active turn settles", () => {

@@ -9,9 +9,14 @@ import type {
 export interface AgentQualityTraceShape {
   readonly start: Effect.Effect<void, never, Scope.Scope>;
   readonly prepareTurnContext: (input: AgentQualityPendingTurnContext) => Effect.Effect<void>;
+  readonly bindTurnContext: (input: {
+    readonly threadId: string;
+    readonly dispatchId: string;
+    readonly turnId: string;
+  }) => Effect.Effect<void>;
   readonly failTurnContext: (input: {
     readonly threadId: string;
-    readonly messageId: string;
+    readonly dispatchId: string;
   }) => Effect.Effect<void>;
   readonly recordCompile: (result: LatticeAgentCompileResult) => Effect.Effect<void>;
 }

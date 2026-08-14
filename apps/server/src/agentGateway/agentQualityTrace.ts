@@ -20,6 +20,10 @@ export const LATTICE_AGENT_COMPILE_RESULT = "lattice:agent-compile-result" as co
 const TRAILING_LATTICE_CONTEXT_PATTERN =
   /\n*<lattice_active_context version="1">\n([\s\S]*?)\n<\/lattice_active_context>\s*$/u;
 const MAX_TRACE_STRING_CHARS = 160;
+const MAX_PENDING_THREADS = 1_024;
+const MAX_PENDING_ATTEMPTS_PER_THREAD = 64;
+const MAX_PENDING_RECORDS_PER_THREAD = 1_024;
+const MAX_PENDING_TOOL_ITEMS_PER_THREAD = 1_024;
 
 type JsonRecord = Record<string, unknown>;
 
@@ -48,13 +52,27 @@ export interface AgentQualityTraceRecord extends JsonRecord {
 }
 
 interface PendingTurnContext {
+  readonly dispatchId: string;
   readonly messageId: string;
   readonly manifest: JsonRecord;
   readonly dispatchStartedAtMs: number;
+  turnId?: string;
   failedAtMs?: number;
 }
 
+interface PendingStartedTurn {
+  readonly event: Extract<ProviderRuntimeEvent, { type: "turn.started" }>;
+  readonly records: AgentQualityTraceRecord[];
+}
+
+interface PendingToolContext {
+  readonly toolName?: string;
+  readonly evidenceIds: readonly string[];
+  readonly cachedPaperRead: boolean;
+}
+
 export interface AgentQualityPendingTurnContext {
+  readonly dispatchId: string;
   readonly threadId: string;
   readonly messageId: string;
   readonly messageText: string;
@@ -205,7 +223,6 @@ function contextSources(context: JsonRecord): JsonRecord[] {
   if (paper && paperPath) {
     sources.push({
       source: "paper",
-      path: paperPath,
       view: paper.view === "blog" ? "blog" : "fulltext",
       ...(nonEmptyString(paper.arxivId)
         ? { sourceIdHash: hashAgentQualityValue(paper.arxivId) }
@@ -394,27 +411,74 @@ function toolRecord(
     { type: "item.started" | "item.updated" | "item.completed" }
   >,
   turnId: string,
+  pending?: PendingToolContext,
 ): AgentQualityTraceRecord | undefined {
   if (!isToolLifecycleItemType(event.payload.itemType)) return undefined;
   const data = isRecord(event.payload.data) ? event.payload.data : undefined;
-  const toolName = normalizeLatticeToolName(data?.toolName ?? data?.tool ?? data?.kind);
-  const input = data?.input ?? data?.rawInput ?? data?.args ?? data?.arguments;
-  const output = data?.result ?? data?.rawOutput ?? data?.output;
+  // Codex preserves its app-server payload as `{ item: ... }`, while the
+  // other adapters expose normalized tool fields at the top level.
+  const nestedItem = isRecord(data?.item) ? data.item : undefined;
+  const nestedState = isRecord(data?.state) ? data.state : undefined;
+  const toolName =
+    normalizeLatticeToolName(
+      data?.toolName ??
+        data?.tool ??
+        nestedItem?.toolName ??
+        nestedItem?.tool ??
+        data?.kind ??
+        nestedItem?.kind,
+    ) ?? pending?.toolName;
+  const input =
+    data?.input ??
+    data?.rawInput ??
+    data?.args ??
+    data?.arguments ??
+    nestedItem?.input ??
+    nestedItem?.rawInput ??
+    nestedItem?.args ??
+    nestedItem?.arguments;
+  const output =
+    data?.result ??
+    data?.rawOutput ??
+    data?.output ??
+    data?.structured ??
+    data?.content ??
+    nestedItem?.result ??
+    nestedItem?.rawOutput ??
+    nestedItem?.output ??
+    nestedItem?.structured ??
+    nestedItem?.content ??
+    nestedState?.result ??
+    nestedState?.output ??
+    nestedState?.structured ??
+    nestedState?.content;
   const evidence = evidenceFromToolData(data);
+  const evidenceIds = [...new Set([...(pending?.evidenceIds ?? []), ...evidence.ids])].toSorted();
+  const cachedPaperRead = evidence.cachedPaperRead || pending?.cachedPaperRead === true;
   const failed =
     event.payload.status === "failed" ||
     event.payload.status === "declined" ||
     data?.isError === true ||
-    data?.error === true;
+    data?.error === true ||
+    nestedItem?.isError === true ||
+    nestedItem?.error === true ||
+    nestedState?.status === "error";
   const status = event.type === "item.completed" ? (failed ? "failed" : "success") : "started";
   const normalizedToolName = (toolName ?? event.payload.itemType).toLowerCase();
+  const hasOutput =
+    output !== undefined &&
+    output !== null &&
+    (typeof output !== "string" || output.trim().length > 0) &&
+    (!Array.isArray(output) || output.length > 0) &&
+    (!isRecord(output) || Object.keys(output).length > 0);
   const fullTextEvidence =
     status === "success" &&
-    evidence.ids.length > 0 &&
+    hasOutput &&
+    evidenceIds.length > 0 &&
     (["fetch_paper", "fetch_web_reference", "read_cached_paper", "read_paper"].includes(
       normalizedToolName,
     ) ||
-      (["read", "read_file"].includes(normalizedToolName) && evidence.cachedPaperRead));
+      (["read", "read_file"].includes(normalizedToolName) && cachedPaperRead));
   return {
     ...baseRecord({
       type: "tool",
@@ -437,8 +501,15 @@ function toolRecord(
       ...(input === undefined ? {} : { inputHash: hashAgentQualityValue(input) }),
       ...(output === undefined ? {} : { outputHash: hashAgentQualityValue(output) }),
       ...(pathsFromToolData(data).length > 0 ? { paths: pathsFromToolData(data) } : {}),
-      ...(evidence.ids.length > 0 ? { evidenceIds: evidence.ids } : {}),
-      ...(fullTextEvidence ? { evidenceAccess: "fulltext" } : {}),
+      ...(evidenceIds.length > 0 ? { evidenceIds } : {}),
+      ...(fullTextEvidence
+        ? {
+            evidenceAccess: "fulltext",
+            evidenceProvenance: ["read", "read_file"].includes(normalizedToolName)
+              ? "normalized-cached-paper-path"
+              : "normalized-tool-completion",
+          }
+        : {}),
     },
   };
 }
@@ -503,9 +574,11 @@ export function parseLatticeAgentCompileResult(value: unknown): LatticeAgentComp
 
 export function createAgentQualityTraceProjector() {
   const pendingTurns = new Map<string, PendingTurnContext[]>();
+  const pendingStartedTurns = new Map<string, PendingStartedTurn[]>();
   const activeTurnByThread = new Map<string, string>();
   const recoveryTurnByThread = new Map<string, string>();
   const permissionTurnByRequest = new Map<string, string>();
+  const pendingToolsByThread = new Map<string, Map<string, PendingToolContext>>();
   const turnStartedAt = new Map<string, number>();
   const firstOutputRecorded = new Set<string>();
   const ttftByTurn = new Map<string, number>();
@@ -518,13 +591,19 @@ export function createAgentQualityTraceProjector() {
       );
       if (permissionTurn) return permissionTurn;
     }
-    return activeTurnByThread.get(event.threadId);
+    return (
+      activeTurnByThread.get(event.threadId) ??
+      pendingStartedTurns.get(event.threadId)?.at(-1)?.event.turnId
+    );
   };
 
-  const projectDomainEvent = (event: OrchestrationEvent): AgentQualityTraceRecord[] => {
+  const activeOrPendingTurnId = (threadId: string): string | undefined =>
+    activeTurnByThread.get(threadId) ?? pendingStartedTurns.get(threadId)?.at(-1)?.event.turnId;
+
+  const projectDomainEventNow = (event: OrchestrationEvent): AgentQualityTraceRecord[] => {
     switch (event.type) {
       case "thread.turn-interrupt-requested": {
-        const turnId = event.payload.turnId ?? activeTurnByThread.get(event.payload.threadId);
+        const turnId = event.payload.turnId ?? activeOrPendingTurnId(event.payload.threadId);
         if (!turnId) return [];
         return [
           {
@@ -542,7 +621,7 @@ export function createAgentQualityTraceProjector() {
         const turnId =
           permissionTurnByRequest.get(
             requestKey(event.payload.threadId, event.payload.requestId),
-          ) ?? activeTurnByThread.get(event.payload.threadId);
+          ) ?? activeOrPendingTurnId(event.payload.threadId);
         if (!turnId) return [];
         return [
           {
@@ -578,7 +657,7 @@ export function createAgentQualityTraceProjector() {
         ];
       }
       case "thread.checkpoint-revert-requested": {
-        const turnId = activeTurnByThread.get(event.payload.threadId) ?? "recovery";
+        const turnId = activeOrPendingTurnId(event.payload.threadId) ?? "recovery";
         recoveryTurnByThread.set(event.payload.threadId, turnId);
         return [
           {
@@ -596,7 +675,7 @@ export function createAgentQualityTraceProjector() {
       case "thread.reverted": {
         const turnId =
           recoveryTurnByThread.get(event.payload.threadId) ??
-          activeTurnByThread.get(event.payload.threadId) ??
+          activeOrPendingTurnId(event.payload.threadId) ??
           "recovery";
         recoveryTurnByThread.delete(event.payload.threadId);
         return [
@@ -617,83 +696,221 @@ export function createAgentQualityTraceProjector() {
     }
   };
 
-  const prepareTurnContext = (input: AgentQualityPendingTurnContext): void => {
-    const queue = pendingTurns.get(input.threadId) ?? [];
+  const startedRecords = (
+    event: Extract<ProviderRuntimeEvent, { type: "turn.started" }>,
+    pending: PendingTurnContext | undefined,
+  ): AgentQualityTraceRecord[] => [
+    {
+      ...baseRecord({
+        type: "turn.context",
+        recordedAt: event.createdAt,
+        threadId: event.threadId,
+        turnId: event.turnId,
+      }),
+      provider: event.provider,
+      messageId: pending?.messageId ?? null,
+      ...(pending?.manifest ?? promptContextManifest("", event.createdAt)),
+    },
+    {
+      ...baseRecord({
+        type: "turn.started",
+        recordedAt: event.createdAt,
+        threadId: event.threadId,
+        turnId: event.turnId,
+      }),
+      provider: event.provider,
+      model: safeTraceLabel(event.payload.model) ?? null,
+    },
+  ];
+
+  const releasePendingCorrelation = (threadId: string): AgentQualityTraceRecord[] => {
+    const starts = pendingStartedTurns.get(threadId) ?? [];
+    pendingStartedTurns.delete(threadId);
+    pendingTurns.delete(threadId);
+    return starts.flatMap((start) => [...startedRecords(start.event, undefined), ...start.records]);
+  };
+
+  const prepareTurnContext = (input: AgentQualityPendingTurnContext): AgentQualityTraceRecord[] => {
+    const released: AgentQualityTraceRecord[] = [];
+    if (!pendingTurns.has(input.threadId) && pendingTurns.size >= MAX_PENDING_THREADS) {
+      const oldestThreadId = pendingTurns.keys().next().value;
+      if (oldestThreadId !== undefined) {
+        released.push(...releasePendingCorrelation(oldestThreadId));
+      }
+    }
+    let queue = pendingTurns.get(input.threadId) ?? [];
+    if (queue.length >= MAX_PENDING_ATTEMPTS_PER_THREAD) {
+      // A provider that never returns or publishes a start must not grow this
+      // state forever. Flush any observed turns without a context rather than
+      // silently dropping a start or guessing which crowded attempt owned it.
+      released.push(...releasePendingCorrelation(input.threadId));
+      queue = [];
+    }
     const dispatchStartedAtMs = Date.parse(input.dispatchStartedAt);
     queue.push({
+      dispatchId: input.dispatchId,
       messageId: input.messageId,
       manifest: promptContextManifest(input.messageText, input.recordedAt),
       dispatchStartedAtMs: Number.isFinite(dispatchStartedAtMs) ? dispatchStartedAtMs : Date.now(),
     });
     pendingTurns.set(input.threadId, queue);
+    return released;
+  };
+
+  const cleanupFailedContexts = (threadId: string, throughMs: number): void => {
+    if (!Number.isFinite(throughMs)) return;
+    const queue = pendingTurns.get(threadId);
+    if (!queue) return;
+    for (let index = queue.length - 1; index >= 0; index -= 1) {
+      const failedAtMs = queue[index]?.failedAtMs;
+      if (failedAtMs !== undefined && failedAtMs <= throughMs) queue.splice(index, 1);
+    }
+    if (queue.length === 0) pendingTurns.delete(threadId);
+  };
+
+  const resolveStartedContext = (
+    event: Extract<ProviderRuntimeEvent, { type: "turn.started" }>,
+  ): { readonly wait: true } | { readonly wait: false; readonly pending?: PendingTurnContext } => {
+    const eventAtMs = Date.parse(event.createdAt);
+    const queue = pendingTurns.get(event.threadId) ?? [];
+    const boundIndex = queue.findIndex((candidate) => candidate.turnId === event.turnId);
+    let selectedIndex = boundIndex;
+    if (selectedIndex < 0) {
+      if (Number.isFinite(eventAtMs)) {
+        const matchingIndexes = queue.flatMap((candidate, index) =>
+          candidate.turnId === undefined &&
+          candidate.dispatchStartedAtMs <= eventAtMs &&
+          (candidate.failedAtMs === undefined || eventAtMs <= candidate.failedAtMs)
+            ? [index]
+            : [],
+        );
+        if (matchingIndexes.some((index) => queue[index]?.failedAtMs === undefined)) {
+          return { wait: true };
+        }
+        selectedIndex = matchingIndexes[0] ?? -1;
+      } else {
+        const activeIndex = queue.findIndex(
+          (candidate) => candidate.turnId === undefined && candidate.failedAtMs === undefined,
+        );
+        if (activeIndex >= 0) return { wait: true };
+      }
+    }
+    const pending = selectedIndex >= 0 ? queue.splice(selectedIndex, 1)[0] : undefined;
+    if (queue.length > 0) pendingTurns.set(event.threadId, queue);
+    else pendingTurns.delete(event.threadId);
+    return pending ? { wait: false, pending } : { wait: false };
+  };
+
+  const drainStartedEvents = (threadId: string): AgentQualityTraceRecord[] => {
+    const starts = pendingStartedTurns.get(threadId) ?? [];
+    const remaining: typeof starts = [];
+    const records: AgentQualityTraceRecord[] = [];
+    for (let index = 0; index < starts.length; index += 1) {
+      const start = starts[index]!;
+      const resolved = resolveStartedContext(start.event);
+      if (resolved.wait) {
+        remaining.push(...starts.slice(index));
+        break;
+      }
+      records.push(...startedRecords(start.event, resolved.pending), ...start.records);
+    }
+    if (remaining.length > 0) pendingStartedTurns.set(threadId, remaining);
+    else {
+      pendingStartedTurns.delete(threadId);
+      const latestEventAtMs = Math.max(...starts.map((start) => Date.parse(start.event.createdAt)));
+      cleanupFailedContexts(threadId, latestEventAtMs);
+    }
+    return records;
+  };
+
+  const deferRecordsForPendingStart = (
+    records: AgentQualityTraceRecord[],
+  ): AgentQualityTraceRecord[] => {
+    if (records.length === 0) return records;
+    const threadIds = new Set(records.map((record) => record.threadId));
+    const pendingRecordCount = [...threadIds].reduce(
+      (count, threadId) =>
+        count +
+        (pendingStartedTurns
+          .get(threadId)
+          ?.reduce((threadCount, start) => threadCount + start.records.length, 0) ?? 0),
+      0,
+    );
+    if (pendingRecordCount + records.length > MAX_PENDING_RECORDS_PER_THREAD) {
+      return [
+        ...[...threadIds].flatMap((threadId) => releasePendingCorrelation(threadId)),
+        ...records,
+      ];
+    }
+
+    const immediate: AgentQualityTraceRecord[] = [];
+    for (const record of records) {
+      const start = pendingStartedTurns
+        .get(record.threadId)
+        ?.find((candidate) => candidate.event.turnId === record.turnId);
+      if (start) start.records.push(record);
+      else immediate.push(record);
+    }
+    return immediate;
+  };
+
+  const projectDomainEvent = (event: OrchestrationEvent): AgentQualityTraceRecord[] =>
+    deferRecordsForPendingStart(projectDomainEventNow(event));
+
+  const clearPendingThread = (threadId: string): AgentQualityTraceRecord[] => {
+    const records = releasePendingCorrelation(threadId);
+    pendingTurns.delete(threadId);
+    return records;
+  };
+
+  const bindTurnContext = (input: {
+    readonly threadId: string;
+    readonly dispatchId: string;
+    readonly turnId: string;
+  }): AgentQualityTraceRecord[] => {
+    const candidate = pendingTurns
+      .get(input.threadId)
+      ?.find((pending) => pending.dispatchId === input.dispatchId);
+    if (candidate) candidate.turnId = input.turnId;
+    return drainStartedEvents(input.threadId);
   };
 
   const failTurnContext = (input: {
     readonly threadId: string;
-    readonly messageId: string;
+    readonly dispatchId: string;
     readonly failedAt: string;
-  }): void => {
+  }): AgentQualityTraceRecord[] => {
     const queue = pendingTurns.get(input.threadId);
-    if (!queue) return;
+    if (!queue) return drainStartedEvents(input.threadId);
     const failedAtMs = Date.parse(input.failedAt);
     for (let index = queue.length - 1; index >= 0; index -= 1) {
       const candidate = queue[index];
-      if (candidate?.messageId !== input.messageId || candidate.failedAtMs !== undefined) continue;
+      if (candidate?.dispatchId !== input.dispatchId) continue;
       candidate.failedAtMs = Number.isFinite(failedAtMs) ? failedAtMs : Date.now();
       break;
     }
+    return drainStartedEvents(input.threadId);
   };
 
-  const projectRuntimeEvent = (event: ProviderRuntimeEvent): AgentQualityTraceRecord[] => {
+  const projectRuntimeEventNow = (event: ProviderRuntimeEvent): AgentQualityTraceRecord[] => {
     if (event.type === "turn.started" && event.turnId) {
       const turnId = event.turnId;
       activeTurnByThread.set(event.threadId, turnId);
       const eventAtMs = Date.parse(event.createdAt);
       turnStartedAt.set(turnKey(event.threadId, turnId), eventAtMs);
-      const queue = pendingTurns.get(event.threadId) ?? [];
-      const pendingIndex = Number.isFinite(eventAtMs)
-        ? queue.findIndex(
-            (candidate) =>
-              candidate.dispatchStartedAtMs <= eventAtMs &&
-              (candidate.failedAtMs === undefined || eventAtMs < candidate.failedAtMs),
-          )
-        : 0;
-      const fallbackIndex = Number.isFinite(eventAtMs)
-        ? -1
-        : queue.findIndex((candidate) => candidate.failedAtMs === undefined);
-      const selectedIndex = pendingIndex >= 0 ? pendingIndex : fallbackIndex;
-      const pending = selectedIndex >= 0 ? queue.splice(selectedIndex, 1)[0] : undefined;
-      if (Number.isFinite(eventAtMs)) {
-        for (let index = queue.length - 1; index >= 0; index -= 1) {
-          const failedAtMs = queue[index]?.failedAtMs;
-          if (failedAtMs !== undefined && failedAtMs <= eventAtMs) queue.splice(index, 1);
-        }
+      const resolved = resolveStartedContext(event);
+      if (!resolved.wait) {
+        cleanupFailedContexts(event.threadId, eventAtMs);
+        return startedRecords(event, resolved.pending);
       }
-      if (queue.length > 0) pendingTurns.set(event.threadId, queue);
-      else pendingTurns.delete(event.threadId);
-      return [
-        {
-          ...baseRecord({
-            type: "turn.context",
-            recordedAt: event.createdAt,
-            threadId: event.threadId,
-            turnId,
-          }),
-          provider: event.provider,
-          messageId: pending?.messageId ?? null,
-          ...(pending?.manifest ?? promptContextManifest("", event.createdAt)),
-        },
-        {
-          ...baseRecord({
-            type: "turn.started",
-            recordedAt: event.createdAt,
-            threadId: event.threadId,
-            turnId,
-          }),
-          provider: event.provider,
-          model: safeTraceLabel(event.payload.model) ?? null,
-        },
-      ];
+      let starts = pendingStartedTurns.get(event.threadId) ?? [];
+      if (starts.length >= MAX_PENDING_ATTEMPTS_PER_THREAD) {
+        const released = releasePendingCorrelation(event.threadId);
+        return [...released, ...startedRecords(event, undefined)];
+      }
+      starts = [...starts, { event, records: [] }];
+      pendingStartedTurns.set(event.threadId, starts);
+      return [];
     }
 
     const turnId = resolveRuntimeTurnId(event);
@@ -751,7 +968,40 @@ export function createAgentQualityTraceProjector() {
       event.type === "item.updated" ||
       event.type === "item.completed"
     ) {
-      const record = toolRecord(event, turnId);
+      const itemKey = event.itemId ? turnKey(turnId, event.itemId) : undefined;
+      const threadTools = pendingToolsByThread.get(event.threadId) ?? new Map();
+      const pending = itemKey ? threadTools.get(itemKey) : undefined;
+      const record = toolRecord(event, turnId, pending);
+      if (itemKey && event.type !== "item.completed" && record) {
+        const tool = isRecord(record.tool) ? record.tool : undefined;
+        const recordName = nonEmptyString(tool?.name);
+        const data = isRecord(event.payload.data) ? event.payload.data : undefined;
+        const evidence = evidenceFromToolData(data);
+        if (threadTools.size >= MAX_PENDING_TOOL_ITEMS_PER_THREAD && !threadTools.has(itemKey)) {
+          const oldestKey = threadTools.keys().next().value;
+          if (oldestKey !== undefined) threadTools.delete(oldestKey);
+        }
+        threadTools.set(itemKey, {
+          ...(recordName && recordName !== event.payload.itemType
+            ? { toolName: recordName }
+            : pending?.toolName
+              ? { toolName: pending.toolName }
+              : {}),
+          evidenceIds: [...new Set([...(pending?.evidenceIds ?? []), ...evidence.ids])].toSorted(),
+          cachedPaperRead: evidence.cachedPaperRead || pending?.cachedPaperRead === true,
+        });
+        if (
+          !pendingToolsByThread.has(event.threadId) &&
+          pendingToolsByThread.size >= MAX_PENDING_THREADS
+        ) {
+          const oldestThreadId = pendingToolsByThread.keys().next().value;
+          if (oldestThreadId !== undefined) pendingToolsByThread.delete(oldestThreadId);
+        }
+        pendingToolsByThread.set(event.threadId, threadTools);
+      } else if (itemKey && event.type === "item.completed") {
+        threadTools.delete(itemKey);
+        if (threadTools.size === 0) pendingToolsByThread.delete(event.threadId);
+      }
       return record ? [record] : [];
     }
 
@@ -820,6 +1070,14 @@ export function createAgentQualityTraceProjector() {
       turnStartedAt.delete(key);
       firstOutputRecorded.delete(key);
       ttftByTurn.delete(key);
+      const threadTools = pendingToolsByThread.get(event.threadId);
+      if (threadTools) {
+        const turnPrefix = `[${JSON.stringify(turnId)},`;
+        for (const itemKey of threadTools.keys()) {
+          if (itemKey.startsWith(turnPrefix)) threadTools.delete(itemKey);
+        }
+        if (threadTools.size === 0) pendingToolsByThread.delete(event.threadId);
+      }
       if (activeTurnByThread.get(event.threadId) === turnId) {
         activeTurnByThread.delete(event.threadId);
       }
@@ -881,6 +1139,15 @@ export function createAgentQualityTraceProjector() {
     return [];
   };
 
+  const projectRuntimeEvent = (event: ProviderRuntimeEvent): AgentQualityTraceRecord[] => {
+    const records = projectRuntimeEventNow(event);
+    if (event.type === "session.exited") {
+      pendingToolsByThread.delete(event.threadId);
+      return [...clearPendingThread(event.threadId), ...records];
+    }
+    return deferRecordsForPendingStart(records);
+  };
+
   const projectCompileResult = (result: LatticeAgentCompileResult): AgentQualityTraceRecord => ({
     ...baseRecord({
       type: "compile",
@@ -897,6 +1164,7 @@ export function createAgentQualityTraceProjector() {
 
   return {
     prepareTurnContext,
+    bindTurnContext,
     failTurnContext,
     projectDomainEvent,
     projectRuntimeEvent,
