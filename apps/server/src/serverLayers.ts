@@ -89,6 +89,9 @@ export function makeServerRuntimeServicesLayer(
   const studioOutputReactorLayer = StudioOutputReactorLive.pipe(
     Layer.provideMerge(runtimeServicesLayer),
   );
+  const agentQualityTraceLayer = AgentQualityTraceLayer.pipe(
+    Layer.provideMerge(runtimeServicesLayer),
+  );
   const threadGitMetadataReactorLayer = ThreadGitMetadataReactorLive.pipe(
     Layer.provideMerge(runtimeServicesLayer),
     Layer.provideMerge(GitLayerLive),
@@ -101,11 +104,9 @@ export function makeServerRuntimeServicesLayer(
     Layer.provideMerge(TextGenerationLayerLive),
     Layer.provideMerge(ServerSettingsLive),
     Layer.provideMerge(AgentGatewayOperationRepositoryLive),
+    Layer.provideMerge(agentQualityTraceLayer),
   );
   const checkpointReactorLayer = CheckpointReactorLive.pipe(
-    Layer.provideMerge(runtimeServicesLayer),
-  );
-  const agentQualityTraceLayer = AgentQualityTraceLayer.pipe(
     Layer.provideMerge(runtimeServicesLayer),
   );
   const profileStatsArchiveLayer = ProfileStatsArchiveLive.pipe(

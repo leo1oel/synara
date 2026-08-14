@@ -52,6 +52,13 @@ interface PendingTurnContext {
   readonly manifest: JsonRecord;
 }
 
+export interface AgentQualityPendingTurnContext {
+  readonly threadId: string;
+  readonly messageId: string;
+  readonly messageText: string;
+  readonly recordedAt: string;
+}
+
 function isRecord(value: unknown): value is JsonRecord {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -102,9 +109,11 @@ function safeRelativePath(value: unknown): string | undefined {
   if (
     !path ||
     path.length > 1_024 ||
+    path.includes("\0") ||
     path.startsWith("/") ||
     /^[A-Za-z]:\//u.test(path) ||
-    path.split("/").includes("..")
+    /^[A-Za-z][A-Za-z0-9+.-]*:/u.test(path) ||
+    path.split("/").some((part) => part === "" || part === "." || part === "..")
   ) {
     return undefined;
   }
@@ -276,6 +285,71 @@ function pathsFromToolData(data: JsonRecord | undefined): string[] {
   return [...paths].toSorted();
 }
 
+function canonicalEvidenceReference(key: string, value: unknown): string | undefined {
+  const text = nonEmptyString(value);
+  if (!text) return undefined;
+  const normalizedKey = key.toLowerCase();
+  if (normalizedKey === "arxivid" || normalizedKey === "arxiv_id") {
+    const match =
+      /(?:arxiv(?:\.org\/(?:abs|pdf)\/|:))?([0-9]{4}\.[0-9]{4,5}|[a-z-]+\/[0-9]{7})(?:v[0-9]+)?/iu.exec(
+        text,
+      );
+    return match?.[1] ? `arxiv:${match[1].toLowerCase()}` : undefined;
+  }
+  if (normalizedKey === "doi") {
+    const doi = text.replace(/^https?:\/\/(?:dx\.)?doi\.org\//iu, "").replace(/^doi:\s*/iu, "");
+    return /^10\.\d{4,9}\/\S+$/u.test(doi) ? `doi:${doi.toLowerCase()}` : undefined;
+  }
+  if (
+    ["paperpath", "fulltextpath", "overviewpath", "path", "filepath", "file_path"].includes(
+      normalizedKey,
+    )
+  ) {
+    const path = safeRelativePath(text);
+    const paperId = path
+      ? /^\.research\/papers\/([^/]+)\/(?:paper|blog)\.md$/u.exec(path)?.[1]
+      : undefined;
+    return paperId
+      ? (canonicalEvidenceReference("arxivId", paperId) ?? `paper:${paperId.toLowerCase()}`)
+      : undefined;
+  }
+  if (normalizedKey === "url") {
+    try {
+      const url = new URL(text);
+      if (url.protocol !== "http:" && url.protocol !== "https:") return undefined;
+      url.hash = "";
+      return `url:${url.toString()}`;
+    } catch {
+      return undefined;
+    }
+  }
+  if (normalizedKey === "query") {
+    return (
+      canonicalEvidenceReference("arxivId", text) ??
+      canonicalEvidenceReference("doi", text) ??
+      canonicalEvidenceReference("url", text)
+    );
+  }
+  return undefined;
+}
+
+function evidenceIdsFromToolData(data: JsonRecord | undefined): string[] {
+  const references = new Set<string>();
+  const visit = (value: unknown, depth: number) => {
+    if (depth > 4 || references.size >= 32 || !isRecord(value)) return;
+    for (const [key, entry] of Object.entries(value)) {
+      const reference = canonicalEvidenceReference(key, entry);
+      if (reference) references.add(hashAgentQualityValue(reference));
+      if (isRecord(entry)) visit(entry, depth + 1);
+      else if (Array.isArray(entry)) {
+        for (const item of entry.slice(0, 32)) visit(item, depth + 1);
+      }
+    }
+  };
+  visit(data, 0);
+  return [...references].toSorted();
+}
+
 function toolRecord(
   event: Extract<
     ProviderRuntimeEvent,
@@ -288,6 +362,7 @@ function toolRecord(
   const toolName = normalizeLatticeToolName(data?.toolName ?? data?.tool ?? data?.kind);
   const input = data?.input ?? data?.rawInput ?? data?.args ?? data?.arguments;
   const output = data?.result ?? data?.rawOutput ?? data?.output;
+  const evidenceIds = evidenceIdsFromToolData(data);
   const failed =
     event.payload.status === "failed" ||
     event.payload.status === "declined" ||
@@ -316,6 +391,7 @@ function toolRecord(
       ...(input === undefined ? {} : { inputHash: hashAgentQualityValue(input) }),
       ...(output === undefined ? {} : { outputHash: hashAgentQualityValue(output) }),
       ...(pathsFromToolData(data).length > 0 ? { paths: pathsFromToolData(data) } : {}),
+      ...(evidenceIds.length > 0 ? { evidenceIds } : {}),
     },
   };
 }
@@ -358,11 +434,24 @@ export function parseLatticeAgentCompileResult(value: unknown): LatticeAgentComp
   ) {
     return null;
   }
-  return value as unknown as LatticeAgentCompileResult;
+  return {
+    type: LATTICE_AGENT_COMPILE_RESULT,
+    version: 1,
+    threadId: value.threadId as string,
+    turnId: value.turnId as string,
+    checkpointRef: value.checkpointRef as string,
+    compiledAt: value.compiledAt as string,
+    success: value.success as boolean,
+    durationMs: value.durationMs as number | null,
+    rootDocument: value.rootDocument === null ? null : safeRelativePath(value.rootDocument)!,
+    diagnostics: {
+      errors: value.diagnostics.errors as number,
+      warnings: value.diagnostics.warnings as number,
+    },
+  };
 }
 
 export function createAgentQualityTraceProjector() {
-  const messages = new Map<string, JsonRecord>();
   const pendingTurns = new Map<string, PendingTurnContext[]>();
   const activeTurnByThread = new Map<string, string>();
   const recoveryTurnByThread = new Map<string, string>();
@@ -384,28 +473,6 @@ export function createAgentQualityTraceProjector() {
 
   const projectDomainEvent = (event: OrchestrationEvent): AgentQualityTraceRecord[] => {
     switch (event.type) {
-      case "thread.message-sent": {
-        if (event.payload.role !== "user") return [];
-        messages.set(`${event.payload.threadId}\u0000${event.payload.messageId}`, {
-          messageId: event.payload.messageId,
-          manifest: promptContextManifest(event.payload.text, event.occurredAt),
-        });
-        return [];
-      }
-      case "thread.turn-start-requested": {
-        const messageKey = `${event.payload.threadId}\u0000${event.payload.messageId}`;
-        const message = messages.get(messageKey);
-        messages.delete(messageKey);
-        const queue = pendingTurns.get(event.payload.threadId) ?? [];
-        queue.push({
-          messageId: event.payload.messageId,
-          manifest: isRecord(message?.manifest)
-            ? message.manifest
-            : promptContextManifest("", event.occurredAt),
-        });
-        pendingTurns.set(event.payload.threadId, queue);
-        return [];
-      }
       case "thread.turn-interrupt-requested": {
         const turnId = event.payload.turnId ?? activeTurnByThread.get(event.payload.threadId);
         if (!turnId) return [];
@@ -498,6 +565,29 @@ export function createAgentQualityTraceProjector() {
       default:
         return [];
     }
+  };
+
+  const prepareTurnContext = (input: AgentQualityPendingTurnContext): void => {
+    const queue = pendingTurns.get(input.threadId) ?? [];
+    const pending = {
+      messageId: input.messageId,
+      manifest: promptContextManifest(input.messageText, input.recordedAt),
+    };
+    const existingIndex = queue.findIndex((candidate) => candidate.messageId === input.messageId);
+    if (existingIndex >= 0) queue[existingIndex] = pending;
+    else queue.push(pending);
+    pendingTurns.set(input.threadId, queue);
+  };
+
+  const discardTurnContext = (input: {
+    readonly threadId: string;
+    readonly messageId: string;
+  }): void => {
+    const queue = pendingTurns.get(input.threadId);
+    if (!queue) return;
+    const remaining = queue.filter((candidate) => candidate.messageId !== input.messageId);
+    if (remaining.length > 0) pendingTurns.set(input.threadId, remaining);
+    else pendingTurns.delete(input.threadId);
   };
 
   const projectRuntimeEvent = (event: ProviderRuntimeEvent): AgentQualityTraceRecord[] => {
@@ -620,7 +710,11 @@ export function createAgentQualityTraceProjector() {
 
     if (event.type === "thread.token-usage.updated") {
       const usage = event.payload.usage;
-      const cacheRead = usage.lastCacheReadInputTokens ?? usage.cacheReadInputTokens;
+      const cacheRead =
+        usage.lastCacheReadInputTokens ??
+        usage.cacheReadInputTokens ??
+        usage.lastCachedInputTokens ??
+        usage.cachedInputTokens;
       const cacheWrite = usage.lastCacheWriteInputTokens ?? usage.cacheWriteInputTokens;
       return [
         {
@@ -730,6 +824,8 @@ export function createAgentQualityTraceProjector() {
   });
 
   return {
+    prepareTurnContext,
+    discardTurnContext,
     projectDomainEvent,
     projectRuntimeEvent,
     projectCompileResult,

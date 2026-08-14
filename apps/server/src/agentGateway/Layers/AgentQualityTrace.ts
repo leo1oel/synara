@@ -30,9 +30,14 @@ export function createPrivateRotatingWriter(traceDir: string) {
   const rotate = (incomingBytes: number) => {
     if (!fs.existsSync(tracePath)) return;
     if (fs.statSync(tracePath).size + incomingBytes <= MAX_TRACE_BYTES) return;
-    const oldest = `${tracePath}.${MAX_TRACE_FILES}`;
+    const oldest = `${tracePath}.${MAX_TRACE_FILES - 1}`;
     if (fs.existsSync(oldest)) fs.rmSync(oldest);
-    for (let index = MAX_TRACE_FILES - 1; index >= 1; index -= 1) {
+    // Releases before the retention count included the active file could
+    // leave one extra generation behind. Remove it while rotating so the
+    // tighter active-plus-backups limit also applies after an upgrade.
+    const legacyOldest = `${tracePath}.${MAX_TRACE_FILES}`;
+    if (fs.existsSync(legacyOldest)) fs.rmSync(legacyOldest);
+    for (let index = MAX_TRACE_FILES - 2; index >= 1; index -= 1) {
       const source = `${tracePath}.${index}`;
       if (fs.existsSync(source)) fs.renameSync(source, `${tracePath}.${index + 1}`);
     }
@@ -84,6 +89,8 @@ export const AgentQualityTraceLayer = Layer.effect(
 
     return {
       start,
+      prepareTurnContext: (input) => Effect.sync(() => projector.prepareTurnContext(input)),
+      discardTurnContext: (input) => Effect.sync(() => projector.discardTurnContext(input)),
       recordCompile: (result) => writeRecords([projector.projectCompileResult(result)]),
     } satisfies AgentQualityTraceShape;
   }),

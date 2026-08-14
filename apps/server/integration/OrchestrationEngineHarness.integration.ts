@@ -317,6 +317,12 @@ export const makeOrchestrationIntegrationHarness = (
     const studioOutputReactorLayer = StudioOutputReactorLive.pipe(
       Layer.provideMerge(runtimeServicesLayer),
     );
+    const agentQualityTraceLayer = Layer.succeed(AgentQualityTrace, {
+      start: Effect.void,
+      prepareTurnContext: () => Effect.void,
+      discardTurnContext: () => Effect.void,
+      recordCompile: () => Effect.void,
+    });
     const providerCommandReactorLayer = ProviderCommandReactorLive.pipe(
       Layer.provideMerge(runtimeServicesLayer),
       Layer.provideMerge(studioOutputReactorLayer),
@@ -324,6 +330,7 @@ export const makeOrchestrationIntegrationHarness = (
       Layer.provideMerge(textGenerationLayer),
       Layer.provideMerge(ServerSettingsService.layerTest()),
       Layer.provideMerge(AgentGatewayOperationRepositoryLive),
+      Layer.provideMerge(agentQualityTraceLayer),
     );
     const checkpointReactorLayer = CheckpointReactorLive.pipe(
       Layer.provideMerge(runtimeServicesLayer),
@@ -333,12 +340,7 @@ export const makeOrchestrationIntegrationHarness = (
       drain: Effect.void,
     });
     const orchestrationReactorLayer = OrchestrationReactorLive.pipe(
-      Layer.provideMerge(
-        Layer.succeed(AgentQualityTrace, {
-          start: Effect.void,
-          recordCompile: () => Effect.void,
-        }),
-      ),
+      Layer.provideMerge(agentQualityTraceLayer),
       Layer.provideMerge(runtimeIngestionLayer),
       Layer.provideMerge(providerCommandReactorLayer),
       Layer.provideMerge(checkpointReactorLayer),

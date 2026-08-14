@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -58,6 +58,12 @@ describe("agent quality trace", () => {
         selectionOmittedChars: 12,
       },
     };
+    projector.prepareTurnContext({
+      threadId,
+      messageId: "message-1",
+      messageText: `${sensitive.prompt}\n<lattice_active_context version="1">\n${JSON.stringify(context)}\n</lattice_active_context>`,
+      recordedAt: "2026-08-14T10:00:00.010Z",
+    });
     const records = [
       ...projector.projectDomainEvent(
         domainEvent({
@@ -112,7 +118,7 @@ describe("agent quality trace", () => {
             title: sensitive.toolTitle,
             data: {
               toolName: "mcp__lattice__fetch_paper",
-              input: { query: sensitive.toolInput },
+              input: { arxivId: "2401.00001", query: sensitive.toolInput },
               result: { content: sensitive.toolOutput },
             },
           },
@@ -277,6 +283,109 @@ describe("agent quality trace", () => {
       ttftReported: false,
       cost: { turnReported: false, sessionReported: false },
     });
+
+    const legacyCache = projector.projectRuntimeEvent(
+      runtimeEvent({
+        type: "thread.token-usage.updated",
+        provider: "codex",
+        createdAt: "2026-08-14T10:00:01.100Z",
+        threadId: "thread-1",
+        turnId: "turn-1",
+        payload: { usage: { cachedInputTokens: 7, lastCachedInputTokens: 3 } },
+      }),
+    );
+    expect(legacyCache[0]).toMatchObject({
+      cache: { readTokens: 3, writeTokens: null, readReported: true, writeReported: false },
+    });
+  });
+
+  it("prepares context at provider dispatch so late domain delivery cannot poison the next turn", () => {
+    const projector = createAgentQualityTraceProjector();
+    projector.prepareTurnContext({
+      threadId: "thread-1",
+      messageId: "message-1",
+      messageText: "first prompt",
+      recordedAt: "2026-08-14T10:00:00.000Z",
+    });
+    const first = projector.projectRuntimeEvent(
+      runtimeEvent({
+        type: "turn.started",
+        provider: "codex",
+        createdAt: "2026-08-14T10:00:00.100Z",
+        threadId: "thread-1",
+        turnId: "turn-1",
+        payload: {},
+      }),
+    );
+    expect(first[0]).toMatchObject({ type: "turn.context", messageId: "message-1" });
+
+    // These events are observed on an independent hot stream and may arrive
+    // after turn.started. They are deliberately not used for correlation.
+    projector.projectDomainEvent(
+      domainEvent({
+        type: "thread.message-sent",
+        occurredAt: "2026-08-14T10:00:00.000Z",
+        payload: { threadId: "thread-1", messageId: "message-1", role: "user", text: "first" },
+      }),
+    );
+    projector.projectDomainEvent(
+      domainEvent({
+        type: "thread.turn-start-requested",
+        occurredAt: "2026-08-14T10:00:00.010Z",
+        payload: { threadId: "thread-1", messageId: "message-1" },
+      }),
+    );
+
+    projector.prepareTurnContext({
+      threadId: "thread-1",
+      messageId: "message-2",
+      messageText: "second prompt",
+      recordedAt: "2026-08-14T10:00:01.000Z",
+    });
+    const second = projector.projectRuntimeEvent(
+      runtimeEvent({
+        type: "turn.started",
+        provider: "codex",
+        createdAt: "2026-08-14T10:00:01.100Z",
+        threadId: "thread-1",
+        turnId: "turn-2",
+        payload: {},
+      }),
+    );
+    expect(second[0]).toMatchObject({ type: "turn.context", messageId: "message-2" });
+  });
+
+  it("hashes matching literature identifiers without recording their values", () => {
+    const projector = createAgentQualityTraceProjector();
+    const tool = (itemId: string, toolName: string, input: Record<string, unknown>) =>
+      projector.projectRuntimeEvent(
+        runtimeEvent({
+          type: "item.completed",
+          provider: "codex",
+          createdAt: "2026-08-14T10:00:00.000Z",
+          threadId: "thread-1",
+          turnId: "turn-1",
+          itemId,
+          payload: {
+            itemType: "mcp_tool_call",
+            status: "completed",
+            data: { toolName: `mcp__lattice__${toolName}`, input },
+          },
+        }),
+      )[0];
+    const fetched = tool("fetch", "fetch_paper", { arxivId: "2401.00001v2" });
+    const read = tool("read", "Read", {
+      file_path: ".research/papers/2401.00001/paper.md",
+    });
+    const cited = tool("cite", "cite", { query: "https://arxiv.org/abs/2401.00001" });
+    expect(fetched).toMatchObject({
+      tool: { evidenceIds: [expect.stringMatching(/^[a-f0-9]{64}$/)] },
+    });
+    const fetchedEvidenceIds = (fetched?.tool as { evidenceIds?: unknown } | undefined)
+      ?.evidenceIds;
+    expect(read).toMatchObject({ tool: { evidenceIds: fetchedEvidenceIds } });
+    expect(cited).toMatchObject({ tool: { evidenceIds: fetchedEvidenceIds } });
+    expect(JSON.stringify([fetched, read, cited])).not.toContain("2401.00001");
   });
 
   it("keeps stop, permission and recovery records correlated after the active turn settles", () => {
@@ -416,6 +525,10 @@ describe("agent quality trace", () => {
     expect(
       parseLatticeAgentCompileResult({ ...result, rootDocument: "/private/main.tex" }),
     ).toBeNull();
+    expect(
+      parseLatticeAgentCompileResult({ ...result, rootDocument: "sections\\main.tex" }),
+    ).toEqual({ ...result, rootDocument: "sections/main.tex" });
+    expect(parseLatticeAgentCompileResult({ ...result, rootDocument: "file:main.tex" })).toBeNull();
   });
 
   it("writes content-minimized NDJSON with private directory and file modes", () => {
@@ -439,5 +552,23 @@ describe("agent quality trace", () => {
       type: "turn.started",
       threadId: "thread-1",
     });
+
+    writeFileSync(tracePath, "x".repeat(10 * 1024 * 1024));
+    writeFileSync(`${tracePath}.1`, "first");
+    writeFileSync(`${tracePath}.2`, "second");
+    writeFileSync(`${tracePath}.3`, "must-be-removed");
+    write([
+      {
+        schemaVersion: 1,
+        type: "rotation",
+        recordedAt: "2026-08-14T10:00:01Z",
+        threadId: "t",
+        turnId: "u",
+      },
+    ]);
+    expect(existsSync(tracePath)).toBe(true);
+    expect(existsSync(`${tracePath}.1`)).toBe(true);
+    expect(existsSync(`${tracePath}.2`)).toBe(true);
+    expect(existsSync(`${tracePath}.3`)).toBe(false);
   });
 });

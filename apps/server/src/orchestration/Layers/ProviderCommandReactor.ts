@@ -66,6 +66,7 @@ import {
 } from "../../checkpointing/Utils.ts";
 import { CheckpointStore } from "../../checkpointing/Services/CheckpointStore.ts";
 import { AgentGatewayOperationRepository } from "../../agentGateway/Services/AgentGatewayOperationRepository.ts";
+import { AgentQualityTrace } from "../../agentGateway/Services/AgentQualityTrace.ts";
 import { GitCore } from "../../git/Services/GitCore.ts";
 import {
   ProviderAdapterRequestError,
@@ -478,6 +479,7 @@ const make = Effect.gen(function* () {
   const { commandEventTimeout } = yield* ProviderCommandReactorConfig;
   const orchestrationEngine = yield* OrchestrationEngineService;
   const deliveryRepository = yield* OrchestrationEventDeliveryRepository;
+  const agentQualityTrace = yield* AgentQualityTrace;
   const turnCheckpointCoordinator = yield* TurnCheckpointCoordinator;
   const queuedTurnPromotions = yield* QueuedTurnPromotionRepository;
   const projectionSnapshotQuery = yield* ProjectionSnapshotQuery;
@@ -1635,11 +1637,28 @@ const make = Effect.gen(function* () {
       ...(modelForTurn !== undefined ? { modelSelection: modelForTurn } : {}),
       ...(input.interactionMode !== undefined ? { interactionMode: input.interactionMode } : {}),
     };
+    const prepareQualityContext = agentQualityTrace.prepareTurnContext({
+      threadId: input.threadId,
+      messageId: input.messageId,
+      messageText: input.messageText,
+      recordedAt: input.createdAt,
+    });
+    const discardQualityContext = agentQualityTrace.discardTurnContext({
+      threadId: input.threadId,
+      messageId: input.messageId,
+    });
+    const withQualityContext = <A, E, R>(operation: Effect.Effect<A, E, R>) =>
+      prepareQualityContext.pipe(
+        Effect.andThen(operation),
+        Effect.onExit((exit) => (Exit.isSuccess(exit) ? Effect.void : discardQualityContext)),
+      );
     const sendQueuedProviderTurn = (messageText: string | undefined) =>
-      providerService.sendTurn({
-        ...providerTurnInput,
-        ...(messageText ? { input: messageText } : {}),
-      });
+      withQualityContext(
+        providerService.sendTurn({
+          ...providerTurnInput,
+          ...(messageText ? { input: messageText } : {}),
+        }),
+      );
 
     const captureMessageStartCheckpoint = Effect.gen(function* () {
       if ((input.dispatchMode ?? "queue") === "steer") {
@@ -1695,12 +1714,12 @@ const make = Effect.gen(function* () {
 
     if (input.reviewTarget !== undefined) {
       yield* capturePreTurnBaselines;
-      startedTurn = yield* providerService
-        .startReview({
+      startedTurn = yield* withQualityContext(
+        providerService.startReview({
           threadId: input.threadId,
           target: input.reviewTarget,
-        })
-        .pipe(Effect.onError(() => cancelPendingStudioBaseline));
+        }),
+      ).pipe(Effect.onError(() => cancelPendingStudioBaseline));
     } else if (input.dispatchMode === "steer") {
       startedTurn = yield* providerService.steerTurn({
         ...providerTurnInput,

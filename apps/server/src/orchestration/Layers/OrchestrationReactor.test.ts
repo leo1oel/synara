@@ -35,6 +35,8 @@ describe("OrchestrationReactor", () => {
               }),
               () => Effect.sync(() => stopped.push("agent-quality-trace")),
             ),
+            prepareTurnContext: () => Effect.void,
+            discardTurnContext: () => Effect.void,
             recordCompile: () => Effect.void,
           }),
         ),

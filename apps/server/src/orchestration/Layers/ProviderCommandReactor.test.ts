@@ -45,6 +45,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AgentGatewayOperationRepositoryLive } from "../../agentGateway/Layers/AgentGatewayOperationRepository.ts";
 import { AgentGatewayOperationRepository } from "../../agentGateway/Services/AgentGatewayOperationRepository.ts";
+import { AgentQualityTrace } from "../../agentGateway/Services/AgentQualityTrace.ts";
 import { deriveServerPaths, ServerConfig } from "../../config.ts";
 import { TextGenerationError } from "../../git/Errors.ts";
 import {
@@ -449,6 +450,8 @@ describe("ProviderCommandReactor", () => {
     const cancelPendingStudioOutputBaseline = vi.fn<
       StudioOutputReactorShape["cancelPendingTurnBaseline"]
     >(input?.studioOutputReactor?.cancelPendingTurnBaseline ?? (() => Effect.void));
+    const prepareTurnContext = vi.fn(() => Effect.void);
+    const discardTurnContext = vi.fn(() => Effect.void);
     const studioOutputReactor: StudioOutputReactorShape = {
       captureBaselineBeforeTurn: captureStudioOutputBaseline,
       cancelPendingTurnBaseline: cancelPendingStudioOutputBaseline,
@@ -506,6 +509,14 @@ describe("ProviderCommandReactor", () => {
       Layer.provideMerge(OrchestrationProjectionSnapshotQueryLive),
       Layer.provideMerge(TurnCheckpointCoordinatorLive),
       Layer.provideMerge(Layer.succeed(ProviderService, service)),
+      Layer.provideMerge(
+        Layer.succeed(AgentQualityTrace, {
+          start: Effect.void,
+          prepareTurnContext,
+          discardTurnContext,
+          recordCompile: () => Effect.void,
+        }),
+      ),
       Layer.provideMerge(Layer.succeed(StudioOutputReactor, studioOutputReactor)),
       Layer.provideMerge(Layer.succeed(CheckpointStore, checkpointStore)),
       Layer.provideMerge(
@@ -623,6 +634,8 @@ describe("ProviderCommandReactor", () => {
       startSession,
       listSessions,
       sendTurn,
+      prepareTurnContext,
+      discardTurnContext,
       steerTurn,
       startReview,
       forkThread,
@@ -1639,6 +1652,16 @@ describe("ProviderCommandReactor", () => {
 
     await harness.startReactor();
     await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    expect(harness.prepareTurnContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        threadId,
+        messageId,
+        messageText: "recover queued promotion",
+      }),
+    );
+    expect(harness.prepareTurnContext.mock.invocationCallOrder[0]).toBeLessThan(
+      harness.sendTurn.mock.invocationCallOrder[0]!,
+    );
     expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
       threadId,
       input: "recover queued promotion",
@@ -2448,6 +2471,16 @@ describe("ProviderCommandReactor", () => {
         (await readHarnessThread(harness, ThreadId.makeUnsafe("thread-retry-droid-fork")))?.session
           ?.status === "error",
     );
+    expect(harness.prepareTurnContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        threadId: "thread-retry-droid-fork",
+        messageId: "retry-droid-fork-failed-user",
+      }),
+    );
+    expect(harness.discardTurnContext).toHaveBeenCalledWith({
+      threadId: "thread-retry-droid-fork",
+      messageId: "retry-droid-fork-failed-user",
+    });
 
     await Effect.runPromise(
       harness.engine.dispatch({

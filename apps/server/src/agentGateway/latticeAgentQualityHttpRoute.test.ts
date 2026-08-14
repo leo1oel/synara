@@ -34,6 +34,8 @@ async function withQualityServer(
   } as unknown as ServerAuthShape;
   const qualityTrace: AgentQualityTraceShape = {
     start: Effect.void,
+    prepareTurnContext: () => Effect.void,
+    discardTurnContext: () => Effect.void,
     recordCompile: (result) =>
       Effect.sync(() => {
         recorded.push(result);
