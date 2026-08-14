@@ -6,7 +6,9 @@ import { HttpRouter } from "effect/unstable/http";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 
 import { agentGatewayRouteLayer } from "./agentGateway/httpRoute";
+import { latticeAgentQualityRouteLayer } from "./agentGateway/latticeAgentQualityHttpRoute";
 import { latticeCanvasRouteLayer } from "./agentGateway/latticeCanvasHttpRoute";
+import { AgentQualityTrace } from "./agentGateway/Services/AgentQualityTrace";
 import { AgentGatewayCredentials } from "./agentGateway/Services/AgentGatewayCredentials";
 import { AutomationRunReactor } from "./automation/Services/AutomationRunReactor";
 import { AutomationScheduler } from "./automation/Services/AutomationScheduler";
@@ -49,6 +51,7 @@ export interface ServerShape {
     http.Server,
     ServerLifecycleError | ServerSettingsError,
     | Scope.Scope
+    | AgentQualityTrace
     | ServerConfig
     | AgentGatewayCredentials
     | ExternalMcpGateway
@@ -161,6 +164,7 @@ export const createEffectServer = Effect.fn(function* (
     makeEffectHttpRouteLayer(readiness, shutdownController),
     websocketRpcRouteLayer,
     agentGatewayRouteLayer,
+    latticeAgentQualityRouteLayer,
     latticeCanvasRouteLayer,
     externalMcpRouteLayer,
   );

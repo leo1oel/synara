@@ -95,6 +95,8 @@ export function normalizeClaudeTokenUsage(
 
   const usage = value as Record<string, unknown>;
   const inputTokens = claudePromptTokensFromRawUsage(usage);
+  const cacheReadInputTokens = finiteClaudeTokenCountOrZero(usage.cache_read_input_tokens);
+  const cacheWriteInputTokens = finiteClaudeTokenCountOrZero(usage.cache_creation_input_tokens);
   const outputTokens = finiteClaudeTokenCountOrZero(usage.output_tokens);
   const derivedTotalProcessedTokens = inputTokens + outputTokens;
   const totalProcessedTokens =
@@ -114,6 +116,12 @@ export function normalizeClaudeTokenUsage(
     lastUsedTokens: usedTokens,
     ...(totalProcessedTokens > usedTokens ? { totalProcessedTokens } : {}),
     ...(inputTokens > 0 ? { inputTokens } : {}),
+    ...(cacheReadInputTokens > 0
+      ? { cacheReadInputTokens, lastCacheReadInputTokens: cacheReadInputTokens }
+      : {}),
+    ...(cacheWriteInputTokens > 0
+      ? { cacheWriteInputTokens, lastCacheWriteInputTokens: cacheWriteInputTokens }
+      : {}),
     ...(outputTokens > 0 ? { outputTokens } : {}),
     ...(maxTokens !== undefined ? { maxTokens } : {}),
     ...(typeof usage.tool_uses === "number" && Number.isFinite(usage.tool_uses)
@@ -220,6 +228,10 @@ export function snapshotFromClaudeContextUsage(
     0,
     Math.round(finiteClaudeTokenCountOrZero(rawApiUsage?.cache_read_input_tokens)),
   );
+  const cacheWriteInputTokens = Math.max(
+    0,
+    Math.round(finiteClaudeTokenCountOrZero(rawApiUsage?.cache_creation_input_tokens)),
+  );
   const outputTokens = Math.max(
     0,
     Math.round(finiteClaudeTokenCountOrZero(rawApiUsage?.output_tokens)),
@@ -239,7 +251,18 @@ export function snapshotFromClaudeContextUsage(
       : {}),
     ...(inputTokens > 0 ? { inputTokens, lastInputTokens: inputTokens } : {}),
     ...(cachedInputTokens > 0
-      ? { cachedInputTokens, lastCachedInputTokens: cachedInputTokens }
+      ? {
+          cachedInputTokens,
+          cacheReadInputTokens: cachedInputTokens,
+          lastCachedInputTokens: cachedInputTokens,
+          lastCacheReadInputTokens: cachedInputTokens,
+        }
+      : {}),
+    ...(cacheWriteInputTokens > 0
+      ? {
+          cacheWriteInputTokens,
+          lastCacheWriteInputTokens: cacheWriteInputTokens,
+        }
       : {}),
     ...(outputTokens > 0 ? { outputTokens, lastOutputTokens: outputTokens } : {}),
     compactsAutomatically: usage.isAutoCompactEnabled,

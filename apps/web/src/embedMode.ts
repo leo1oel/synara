@@ -61,6 +61,7 @@ export type LatticeHostSurface = "editor" | "pdf" | "paper";
 export interface LatticeHostContextSnapshot {
   type: typeof LATTICE_HOST_CONTEXT;
   version: 1;
+  capturedAt?: string;
   workspaceRoot: string;
   activeSurface: LatticeHostSurface;
   editor?: {
@@ -69,11 +70,13 @@ export interface LatticeHostContextSnapshot {
     column: number;
     secondaryPath?: string;
     selection?: string;
+    selectionOmittedChars?: number;
   };
   pdf?: {
     page: number;
     pageCount: number | null;
     selection?: string;
+    selectionOmittedChars?: number;
   };
   paper?: {
     title: string;
@@ -82,6 +85,7 @@ export interface LatticeHostContextSnapshot {
     path: string;
     view: "blog" | "fulltext";
     selection?: string;
+    selectionOmittedChars?: number;
   };
 }
 

@@ -745,12 +745,16 @@ function makeSessionSnapshot(context: PiSessionContext): ProviderSession {
   };
 }
 
-function normalizeTokenUsage(
+export function normalizePiTokenUsage(
   stats: ReturnType<PiAgentSession["getSessionStats"]>,
   contextWindow?: number | null,
 ): ThreadTokenUsageSnapshot | undefined {
   const inputTokens = stats.tokens.input;
-  const cachedInputTokens = stats.tokens.cacheRead;
+  const cacheReadInputTokens = stats.tokens.cacheRead;
+  const cacheWriteInputTokens = stats.tokens.cacheWrite;
+  // Preserve the existing UI-facing cached-input meaning (cache reads).
+  // Cache writes are exposed separately for quality telemetry.
+  const cachedInputTokens = cacheReadInputTokens;
   const outputTokens = stats.tokens.output;
   const totalProcessedTokens = stats.tokens.total;
   const contextUsage = stats.contextUsage;
@@ -793,11 +797,15 @@ function normalizeTokenUsage(
     ...(totalProcessedTokens > usedTokens ? { totalProcessedTokens } : {}),
     inputTokens,
     cachedInputTokens,
+    cacheReadInputTokens,
+    cacheWriteInputTokens,
     outputTokens,
     ...(maxTokens !== undefined ? { maxTokens } : {}),
     lastUsedTokens: usedTokens,
     lastInputTokens: inputTokens,
     lastCachedInputTokens: cachedInputTokens,
+    lastCacheReadInputTokens: cacheReadInputTokens,
+    lastCacheWriteInputTokens: cacheWriteInputTokens,
     lastOutputTokens: outputTokens,
   };
 }
@@ -1962,7 +1970,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         }
         case "agent_end": {
           const stats = context.runtime.session.getSessionStats();
-          const usage = normalizeTokenUsage(stats, context.runtime.session.model?.contextWindow);
+          const usage = normalizePiTokenUsage(stats, context.runtime.session.model?.contextWindow);
           context.lastKnownTokenUsage = usage;
           const turnId = context.activeTurnId;
           const errorMessage = context.runtime.session.agent.state.errorMessage;
@@ -2015,6 +2023,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
             });
           }
           const completionBase = makeEventBase(context);
+          const cumulativeCostUsd = nonNegativeFiniteNumber(stats.cost);
           if (turnId && context.gatewaySessionLease && context.gatewayConnection) {
             const outgoingLease = context.gatewaySessionLease;
             const drainage = outgoingLease.retireTurn(turnId);
@@ -2053,8 +2062,14 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
                     stopReason: failure.stopReason,
                     errorMessage,
                     usage: stats,
+                    ...(cumulativeCostUsd !== undefined ? { cumulativeCostUsd } : {}),
                   }
-                : { state: "completed", stopReason: null, usage: stats },
+                : {
+                    state: "completed",
+                    stopReason: null,
+                    usage: stats,
+                    ...(cumulativeCostUsd !== undefined ? { cumulativeCostUsd } : {}),
+                  },
             raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
           } satisfies ProviderRuntimeEvent);
           return;
@@ -2340,7 +2355,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           type: "thread.started",
           payload: { providerThreadId: runtime.session.sessionId },
         } satisfies ProviderRuntimeEvent);
-        const initialUsage = normalizeTokenUsage(
+        const initialUsage = normalizePiTokenUsage(
           runtime.session.getSessionStats(),
           runtime.session.model?.contextWindow,
         );

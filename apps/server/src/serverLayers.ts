@@ -2,6 +2,7 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Layer } from "effect";
 
 import { AgentGatewayLive } from "./agentGateway/Layers/AgentGateway";
+import { AgentQualityTraceLayer } from "./agentGateway/Layers/AgentQualityTrace";
 import { LatticeCanvasBrokerLive } from "./agentGateway/Layers/LatticeCanvasBroker";
 import { AgentGatewayOperationRepositoryLive } from "./agentGateway/Layers/AgentGatewayOperationRepository";
 import { AgentGatewayCredentialsWithSecretsLive } from "./agentGateway/Layers/AgentGatewayCredentials";
@@ -104,10 +105,14 @@ export function makeServerRuntimeServicesLayer(
   const checkpointReactorLayer = CheckpointReactorLive.pipe(
     Layer.provideMerge(runtimeServicesLayer),
   );
+  const agentQualityTraceLayer = AgentQualityTraceLayer.pipe(
+    Layer.provideMerge(runtimeServicesLayer),
+  );
   const profileStatsArchiveLayer = ProfileStatsArchiveLive.pipe(
     Layer.provideMerge(checkpointStoreLayer),
   );
   const orchestrationReactorLayer = OrchestrationReactorLive.pipe(
+    Layer.provideMerge(agentQualityTraceLayer),
     Layer.provideMerge(runtimeIngestionLayer),
     Layer.provideMerge(providerCommandReactorLayer),
     Layer.provideMerge(checkpointReactorLayer),
@@ -196,6 +201,7 @@ export function makeServerRuntimeServicesLayer(
     agentGatewayCredentialsLayer,
     LatticeCanvasBrokerLive,
     agentGatewayLayer,
+    agentQualityTraceLayer,
     BrowserAutomationHostLive,
     automationServiceLayer,
     automationSchedulerLayer,

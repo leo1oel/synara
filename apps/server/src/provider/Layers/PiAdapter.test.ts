@@ -22,9 +22,33 @@ import {
   makePiBashProcessSupervisor,
   makePiRuntimeEventBase,
   makePiUserInputOptions,
+  normalizePiTokenUsage,
   PLAIN_PI_EXTENSION_THEME,
   toPiProviderModelDescriptor,
 } from "./PiAdapter";
+
+describe("Pi token usage", () => {
+  it("preserves cache reads for the existing UI field and reports writes separately", () => {
+    expect(
+      normalizePiTokenUsage(
+        {
+          tokens: { input: 10, cacheRead: 7, cacheWrite: 3, output: 2, total: 22 },
+          contextUsage: undefined,
+        } as never,
+        200_000,
+      ),
+    ).toMatchObject({
+      inputTokens: 10,
+      cachedInputTokens: 7,
+      cacheReadInputTokens: 7,
+      cacheWriteInputTokens: 3,
+      lastCachedInputTokens: 7,
+      lastCacheReadInputTokens: 7,
+      lastCacheWriteInputTokens: 3,
+      outputTokens: 2,
+    });
+  });
+});
 
 describe("Pi native Synara gateway tools", () => {
   it("uses canonical MCP schemas and keeps same-cwd thread tokens distinct", async () => {

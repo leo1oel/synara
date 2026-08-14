@@ -4,6 +4,7 @@ import {
   OrchestrationReactor,
   type OrchestrationReactorShape,
 } from "../Services/OrchestrationReactor.ts";
+import { AgentQualityTrace } from "../../agentGateway/Services/AgentQualityTrace.ts";
 import { CheckpointReactor } from "../Services/CheckpointReactor.ts";
 import { ProviderCommandReactor } from "../Services/ProviderCommandReactor.ts";
 import { ProviderRuntimeIngestionService } from "../Services/ProviderRuntimeIngestion.ts";
@@ -11,6 +12,7 @@ import { StudioOutputReactor } from "../Services/StudioOutputReactor.ts";
 import { ThreadGitMetadataReactor } from "../Services/ThreadGitMetadataReactor.ts";
 
 export const makeOrchestrationReactor = Effect.gen(function* () {
+  const agentQualityTrace = yield* AgentQualityTrace;
   const providerRuntimeIngestion = yield* ProviderRuntimeIngestionService;
   const providerCommandReactor = yield* ProviderCommandReactor;
   const checkpointReactor = yield* CheckpointReactor;
@@ -18,6 +20,9 @@ export const makeOrchestrationReactor = Effect.gen(function* () {
   const threadGitMetadataReactor = yield* ThreadGitMetadataReactor;
 
   const start: OrchestrationReactorShape["start"] = Effect.gen(function* () {
+    // Keep the redacted quality seam around the complete provider/runtime
+    // lifecycle. It is installed before dispatch and finalized last.
+    yield* agentQualityTrace.start;
     yield* studioOutputReactor.start;
     yield* checkpointReactor.start;
     yield* threadGitMetadataReactor.start;
