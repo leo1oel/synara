@@ -12,12 +12,14 @@ import { APP_DISPLAY_NAME } from "./branding";
 import { initializeEmbedMode } from "./embedMode";
 import { startLatticeAgentQualityRelay } from "./latticeAgentQualityRelay";
 import { startLatticeCanvasRelay } from "./latticeCanvasRelay";
+import { startLatticeSpreadsheetRelay } from "./latticeSpreadsheetRelay";
 import { isElectron } from "./env";
 import { isMacPlatform } from "./lib/utils";
 
 initializeEmbedMode();
 startLatticeAgentQualityRelay();
 startLatticeCanvasRelay();
+startLatticeSpreadsheetRelay();
 const router = getRouter(appHistory);
 
 document.title = APP_DISPLAY_NAME;

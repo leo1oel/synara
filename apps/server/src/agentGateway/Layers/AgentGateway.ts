@@ -78,6 +78,7 @@ import { resolveThreadWorkspaceCwd } from "../../checkpointing/Utils.ts";
 import { ACTIVE_AGENT_HOST_PROFILE, adaptToolsForActiveHost } from "../hostProfile.ts";
 import { makeLatticeLiteratureTools } from "../latticeLiteratureTools.ts";
 import { makeLatticeCanvasTools } from "../latticeCanvasTools.ts";
+import { makeLatticeSpreadsheetTools } from "../latticeSpreadsheetTools.ts";
 
 // Providers already receive the versioned host policy exactly once in their
 // private prompt. MCP clients prepend initialize.instructions to every exposed
@@ -613,35 +614,25 @@ export const makeAgentGateway = Effect.gen(function* () {
         );
       }).pipe(Effect.orElseSucceed(() => null)),
   });
+  const resolveLatticeWorkspaceRoot = (context: import("../toolRuntime.ts").ToolContext) =>
+    Effect.gen(function* () {
+      const thread = yield* requireThreadShell(context.callerThreadId);
+      const project = yield* snapshotQuery
+        .getProjectShellById(thread.projectId)
+        .pipe(Effect.map(Option.getOrNull));
+      if (!project) return null;
+      return resolveThreadWorkspaceCwd({ thread, projects: [project] }) ?? null;
+    }).pipe(Effect.orElseSucceed(() => null));
   const latticeLiteratureTools = makeLatticeLiteratureTools({
-    resolveWorkspaceRoot: (context) =>
-      Effect.gen(function* () {
-        const thread = yield* requireThreadShell(context.callerThreadId);
-        const project = yield* snapshotQuery
-          .getProjectShellById(thread.projectId)
-          .pipe(Effect.map(Option.getOrNull));
-        if (!project) return null;
-        return (
-          resolveThreadWorkspaceCwd({
-            thread,
-            projects: [project],
-          }) ?? null
-        );
-      }).pipe(Effect.orElseSucceed(() => null)),
+    resolveWorkspaceRoot: resolveLatticeWorkspaceRoot,
   });
   const latticeCanvasTools =
     ACTIVE_AGENT_HOST_PROFILE.id === "lattice"
-      ? yield* makeLatticeCanvasTools({
-          resolveWorkspaceRoot: (context) =>
-            Effect.gen(function* () {
-              const thread = yield* requireThreadShell(context.callerThreadId);
-              const project = yield* snapshotQuery
-                .getProjectShellById(thread.projectId)
-                .pipe(Effect.map(Option.getOrNull));
-              if (!project) return null;
-              return resolveThreadWorkspaceCwd({ thread, projects: [project] }) ?? null;
-            }).pipe(Effect.orElseSucceed(() => null)),
-        })
+      ? yield* makeLatticeCanvasTools({ resolveWorkspaceRoot: resolveLatticeWorkspaceRoot })
+      : [];
+  const latticeSpreadsheetTools =
+    ACTIVE_AGENT_HOST_PROFILE.id === "lattice"
+      ? yield* makeLatticeSpreadsheetTools({ resolveWorkspaceRoot: resolveLatticeWorkspaceRoot })
       : [];
 
   const tools: ReadonlyArray<ToolEntry> = adaptToolsForActiveHost([
@@ -657,6 +648,7 @@ export const makeAgentGateway = Effect.gen(function* () {
     ...browserTools,
     ...(ACTIVE_AGENT_HOST_PROFILE.id === "lattice" ? latticeLiteratureTools : []),
     ...latticeCanvasTools,
+    ...latticeSpreadsheetTools,
   ]);
   return {
     handleMcpPost: makeAgentGatewayMcpTransport({

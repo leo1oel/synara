@@ -72,6 +72,8 @@ const LATTICE_NATIVE_TOOL_NAMES = new Set([
   "create_canvas_shapes",
   "update_canvas_shapes",
   "delete_canvas_shapes",
+  "spreadsheet_read",
+  "spreadsheet_batch_update",
 ]);
 
 export function replaceModelVisibleHostBranding(value: string): string {

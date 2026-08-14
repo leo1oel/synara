@@ -59,6 +59,7 @@ import {
 } from "../Services/AgentGatewayOperationRepository.ts";
 import { AgentGatewayLive } from "./AgentGateway.ts";
 import { LatticeCanvasBrokerLive } from "./LatticeCanvasBroker.ts";
+import { LatticeSpreadsheetBrokerLive } from "./LatticeSpreadsheetBroker.ts";
 import { recordCreatedWorktreeInPlan } from "../operationPlan.ts";
 import { makeAgentGatewayInFlightRequestRegistry } from "../inFlightRequestRegistry.ts";
 
@@ -1122,6 +1123,7 @@ function makeHarnessLayer(
 
   const gatewayLayer = AgentGatewayLive.pipe(
     Layer.provide(LatticeCanvasBrokerLive),
+    Layer.provide(LatticeSpreadsheetBrokerLive),
     Layer.provide(credentialsLayer),
     Layer.provide(snapshotLayer),
     Layer.provide(engineLayer),

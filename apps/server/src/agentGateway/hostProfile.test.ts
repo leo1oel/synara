@@ -72,6 +72,24 @@ describe("agent host profile", () => {
         },
         handler: () => Effect.succeed({ content: [] }),
       },
+      {
+        requiredCapability: "thread:read",
+        definition: {
+          name: "spreadsheet_read",
+          description: "Read an A1 range.",
+          inputSchema: { type: "object" },
+        },
+        handler: () => Effect.succeed({ content: [] }),
+      },
+      {
+        requiredCapability: "thread:write",
+        definition: {
+          name: "spreadsheet_batch_update",
+          description: "Update A1 ranges.",
+          inputSchema: { type: "object" },
+        },
+        handler: () => Effect.succeed({ content: [] }),
+      },
     ]);
 
     expect(resolveAgentHostProfile()).toMatchObject({
@@ -79,7 +97,13 @@ describe("agent host profile", () => {
       displayName: "Lattice",
       mcpServerName: "lattice",
     });
-    expect(tools.map((tool) => tool.definition.name)).toEqual(["context", "create_task", "cite"]);
+    expect(tools.map((tool) => tool.definition.name)).toEqual([
+      "context",
+      "create_task",
+      "cite",
+      "spreadsheet_read",
+      "spreadsheet_batch_update",
+    ]);
     expect(JSON.stringify(tools.map((tool) => tool.definition))).not.toMatch(/synara/i);
 
     const contextResult = await Effect.runPromise(
