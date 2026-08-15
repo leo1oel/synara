@@ -24,6 +24,7 @@ import {
   noopChatSurfaceAction,
 } from "./ChatThreadSurfacePrimitives";
 import { useBrowserPanelDesktopBridge } from "../../hooks/useBrowserPanelDesktopBridge";
+import { useDeviceEventBridge } from "../../hooks/useDeviceEventBridge";
 import { useHandleNewChat } from "../../hooks/useHandleNewChat";
 import type { ChatRightPanel } from "../../diffRouteSearch";
 import { stripDiffSearchParams } from "../../diffRouteSearch";
@@ -51,7 +52,7 @@ import {
   useSplitViewStore,
 } from "../../splitViewStore";
 import { useStore } from "../../store";
-import { createAllThreadsSelector } from "../../storeSelectors";
+import { createThreadShellsSelector } from "../../storeSelectors";
 import {
   normalizeSingleSearchFromPane,
   resolveSplitPaneCloseDecision,
@@ -580,11 +581,15 @@ function SplitPaneSurface(props: {
   );
 }
 
+// Module-level and shell-only: this surface only reads shell fields (title, projectId,
+// modelSelection, timestamps, sidechatSourceThreadId), so subscribing to full threads would
+// rebuild every thread's message/activity lists on each streaming flush for no benefit.
+const selectThreadShells = createThreadShellsSelector();
+
 export function SplitChatSurface(props: { splitViewId: SplitViewId; routeThreadId: ThreadId }) {
   const navigate = useNavigate();
   const { handleNewChat } = useHandleNewChat();
-  const selectAllThreads = createAllThreadsSelector();
-  const threads = useStore(selectAllThreads);
+  const threads = useStore(selectThreadShells);
   const projects = useStore((store) => store.projects);
   const splitView = useSplitViewStore(
     useMemo(() => selectSplitView(props.splitViewId), [props.splitViewId]),
@@ -623,7 +628,7 @@ export function SplitChatSurface(props: { splitViewId: SplitViewId; routeThreadI
       removeSplitView(activeSplitView.id);
       const fallbackThreadId = onlyThreadId ?? props.routeThreadId;
       if (!fallbackThreadId) {
-        void handleNewChat({ fresh: true });
+        void handleNewChat();
         return;
       }
       void navigate({
@@ -741,6 +746,12 @@ export function SplitChatSurface(props: { splitViewId: SplitViewId; routeThreadI
       : null,
   });
 
+  // Split view has no device panel yet: ChatRightPanel is browser|diff, so
+  // there is nowhere to open one. The bridge still runs with a null open
+  // handler because its other half keeps device state fresh, which the pane on
+  // a single-surface tab and the composer screenshot both read.
+  useDeviceEventBridge({ onOpenPaneRequested: null });
+
   const closePanePanel = (paneId: PaneId) => {
     updatePanePanelState(paneId, { panel: null });
   };
@@ -775,7 +786,7 @@ export function SplitChatSurface(props: { splitViewId: SplitViewId; routeThreadI
     }
 
     removeSplitView(activeSplitView.id);
-    void handleNewChat({ fresh: true });
+    void handleNewChat();
   };
 
   const closePaneThread = (paneId: PaneId) => {
@@ -853,7 +864,7 @@ export function SplitChatSurface(props: { splitViewId: SplitViewId; routeThreadI
       return;
     }
 
-    void handleNewChat({ fresh: true });
+    void handleNewChat();
   };
 
   const handleSetRatio = (nodeId: PaneId, ratio: number) => {
@@ -888,9 +899,14 @@ export function SplitChatSurface(props: { splitViewId: SplitViewId; routeThreadI
     });
   };
 
-  const selectableThreads = threads.toSorted(
-    (left, right) =>
-      Date.parse(right.updatedAt ?? right.createdAt) - Date.parse(left.updatedAt ?? left.createdAt),
+  const selectableThreads = useMemo(
+    () =>
+      threads.toSorted(
+        (left, right) =>
+          Date.parse(right.updatedAt ?? right.createdAt) -
+          Date.parse(left.updatedAt ?? left.createdAt),
+      ),
+    [threads],
   );
   const splitThreadIds = new Set(activeSplitView ? resolveSplitViewThreadIds(activeSplitView) : []);
 

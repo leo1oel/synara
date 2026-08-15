@@ -19,6 +19,7 @@ import {
   MessageId,
   ModelSelection,
   ProjectId,
+  THREAD_GOAL_MAX_CHARS,
   ThreadId,
   TurnId,
 } from "@synara/contracts";
@@ -62,6 +63,7 @@ import { LatticeCanvasBrokerLive } from "./LatticeCanvasBroker.ts";
 import { LatticeSpreadsheetBrokerLive } from "./LatticeSpreadsheetBroker.ts";
 import { recordCreatedWorktreeInPlan } from "../operationPlan.ts";
 import { makeAgentGatewayInFlightRequestRegistry } from "../inFlightRequestRegistry.ts";
+import { ACTIVE_AGENT_HOST_PROFILE } from "../hostProfile.ts";
 
 const NOW = "2026-03-01T10:00:00.000Z";
 const PROJECT_ID = ProjectId.makeUnsafe("project-1");
@@ -204,7 +206,10 @@ function makeAutomationDefinition(
     mode: "heartbeat",
     targetThreadId: ThreadId.makeUnsafe("thread-parent"),
     maxIterations: 50,
-    stopOnError: true,
+    stopAfterConsecutiveFailures: 3,
+    consecutiveFailureCount: 0,
+    disabledReason: null,
+    disabledAt: null,
     completionPolicyVersion: 0,
     completionPolicyUpdatedAt: NOW,
     minimumIntervalSeconds: 60,
@@ -335,6 +340,9 @@ function makeHarnessLayer(
                     "thread:write",
                     "automation:write",
                     "diagnostics:read",
+                    "browser:control",
+                    "literature:read",
+                    "literature:write",
                   ] as const),
           }
         : null;
@@ -1335,6 +1343,16 @@ describe("AgentGateway", () => {
         (toolResultJson(response.result).error as { code: string }).code,
         "capability_denied",
       );
+
+      const setGoal = yield* harness.callTool({
+        token: "token-parent-readonly",
+        name: "synara_set_thread_goal",
+        args: { goal: "Must not run" },
+      });
+      assert.equal(
+        (toolResultJson(setGoal.result).error as { code: string }).code,
+        "capability_denied",
+      );
       assert.equal(harness.dispatched.length, 0);
     }).pipe(Effect.provide(gatewayLayer));
   });
@@ -1449,6 +1467,7 @@ describe("AgentGateway", () => {
         "synara_interrupt_thread",
         "synara_set_thread_title",
         "synara_set_thread_archived",
+        "synara_set_thread_goal",
         "synara_create_automation",
         "synara_list_automations",
         "synara_view_automation",
@@ -1481,6 +1500,22 @@ describe("AgentGateway", () => {
         ["approval-required", "full-access"],
       );
 
+      const setThreadGoal = tools.find((tool) => tool.name === "synara_set_thread_goal");
+      assert.include(
+        setThreadGoal?.description ?? "",
+        "Only set a goal when the user has explicitly asked for one",
+      );
+      assert.include(setThreadGoal?.description ?? "", "Do NOT infer or invent goals");
+      assert.include(setThreadGoal?.description ?? "", "Clearing requires the same explicit");
+      assert.deepEqual(
+        (setThreadGoal?.inputSchema.properties?.goal as { type?: string[] } | undefined)?.type,
+        ["string", "null"],
+      );
+      assert.property(setThreadGoal?.inputSchema.properties, "achieved");
+      assert.property(setThreadGoal?.inputSchema.properties, "blocked");
+      assert.include(setThreadGoal?.description ?? "", "achieved: true");
+      assert.include(setThreadGoal?.description ?? "", "blocked: true");
+
       const createAutomation = tools.find((tool) => tool.name === "synara_create_automation");
       assert.include(createAutomation?.description ?? "", "self-contained brief");
       const createAutomationProperties = createAutomation?.inputSchema.properties as
@@ -1498,6 +1533,7 @@ describe("AgentGateway", () => {
         createAutomationProperties?.prompt?.description ?? "",
         "notifying the user versus staying silent",
       );
+      assert.property(createAutomationProperties, "stopAfterConsecutiveFailures");
       const updateAutomationMemory = tools.find(
         (tool) => tool.name === "synara_update_automation_memory",
       );
@@ -1524,6 +1560,46 @@ describe("AgentGateway", () => {
         updateAutomationProperties?.prompt?.description,
         createAutomationProperties?.prompt?.description,
       );
+      assert.property(updateAutomationProperties, "stopAfterConsecutiveFailures");
+    }).pipe(Effect.provide(gatewayLayer));
+  });
+
+  it.effect("publishes the complete adapted Lattice catalog without upstream identity", () => {
+    if (ACTIVE_AGENT_HOST_PROFILE.id !== "lattice") return Effect.void;
+
+    const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads);
+    return Effect.gen(function* () {
+      const harness = yield* makeHarness;
+      const response = yield* harness.postRaw({
+        authorizationHeader: "Bearer token-parent",
+        body: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      const tools = (response.body as { result: { tools: ReadonlyArray<{ name: string }> } }).result
+        .tools;
+      const names = tools.map((tool) => tool.name);
+
+      assert.includeMembers(names, [
+        "context",
+        "agent_capabilities",
+        "list_tasks",
+        "create_tasks",
+        "set_task_goal",
+        "create_automation",
+        "list_automations",
+        "view_automation",
+        "update_automation",
+        "cancel_automation",
+        "update_automation_memory",
+        "report_automation_result",
+        "search_literature",
+        "cite",
+        "list_canvas_shapes",
+        "create_canvas_shapes",
+        "spreadsheet_read",
+        "spreadsheet_batch_update",
+      ]);
+      assert.notInclude(names, "browser_open");
+      assert.notMatch(JSON.stringify(tools), /synara/i);
     }).pipe(Effect.provide(gatewayLayer));
   });
 
@@ -2775,6 +2851,10 @@ describe("AgentGateway", () => {
         {
           name: "synara_set_thread_archived",
           args: { threadId: "thread-child", archived: true },
+        },
+        {
+          name: "synara_set_thread_goal",
+          args: { threadId: "thread-child", goal: "Late goal" },
         },
         {
           name: "synara_create_automation",
@@ -4277,10 +4357,28 @@ describe("AgentGateway", () => {
       assert.equal(created.targetThreadId, "thread-parent");
       assert.deepEqual(created.schedule, { type: "interval", everySeconds: 300 });
       assert.equal(created.maxIterations, 50);
+      assert.equal(created.stopAfterConsecutiveFailures, 3);
       // Local-checkout targets must carry the matching environment + risk
       // acknowledgement so AutomationService policy checks stay enforced.
       assert.equal(created.worktreeMode, "local");
       assert.deepEqual(created.acknowledgedRisks, ["local-checkout"]);
+    }).pipe(Effect.provide(gatewayLayer));
+  });
+
+  it.effect("normalizes Debug callers to the default automation interaction mode", () => {
+    const { gatewayLayer, makeHarness } = makeHarnessLayer([
+      makeThreadShell("thread-parent", { interactionMode: "debug" }),
+    ]);
+    return Effect.gen(function* () {
+      const harness = yield* makeHarness;
+      const response = yield* harness.callTool({
+        token: "token-parent",
+        name: "synara_create_automation",
+        args: { name: "monitor children", prompt: "check the child threads", everyMinutes: 5 },
+      });
+
+      assert.isFalse(isToolError(response.result), toolErrorText(response.result));
+      assert.equal(harness.automationCreates[0]?.interactionMode, "default");
     }).pipe(Effect.provide(gatewayLayer));
   });
 
@@ -4489,8 +4587,13 @@ describe("AgentGateway", () => {
     }).pipe(Effect.provide(gatewayLayer));
   });
 
-  it.effect("views run history through the automation-scoped query", () => {
-    const definition = makeAutomationDefinition();
+  it.effect("views run history and durable disable state through the automation query", () => {
+    const definition = makeAutomationDefinition({
+      enabled: false,
+      consecutiveFailureCount: 3,
+      disabledReason: "failures",
+      disabledAt: "2026-07-01T12:05:00.000Z",
+    });
     const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads, [definition], {
       automationRuns: [
         { id: "target-newest", automationId: definition.id },
@@ -4513,6 +4616,10 @@ describe("AgentGateway", () => {
       assert.deepEqual(toolResultJson(response.result).runs, [
         { id: "target-newest", automationId: definition.id },
       ]);
+      assert.equal(
+        (toolResultJson(response.result).definition as Record<string, unknown>).disabledReason,
+        "failures",
+      );
     }).pipe(Effect.provide(gatewayLayer));
   });
 
@@ -4693,6 +4800,7 @@ describe("AgentGateway", () => {
           schedule: { type: "interval", everySeconds: 600 },
           enabled: true,
           maxIterations: null,
+          stopAfterConsecutiveFailures: 5,
           notificationPolicy: "failed-runs-only",
           completionPolicy: { type: "none" },
         },
@@ -4706,6 +4814,7 @@ describe("AgentGateway", () => {
         schedule: { type: "interval", everySeconds: 600 },
         enabled: true,
         maxIterations: null,
+        stopAfterConsecutiveFailures: 5,
         notificationPolicy: "failed-runs-only",
         completionPolicy: { type: "none" },
         acknowledgedRisks: ["local-checkout"],
@@ -4713,7 +4822,7 @@ describe("AgentGateway", () => {
     }).pipe(Effect.provide(gatewayLayer));
   });
 
-  it.effect("archives and renames threads through meta commands", () => {
+  it.effect("archives, renames, sets, and clears thread metadata", () => {
     const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads);
     return Effect.gen(function* () {
       const harness = yield* makeHarness;
@@ -4727,8 +4836,176 @@ describe("AgentGateway", () => {
         name: "synara_set_thread_archived",
         args: { threadId: "thread-child", archived: true },
       });
+      const setOwnGoal = yield* harness.callTool({
+        token: "token-parent",
+        name: "synara_set_thread_goal",
+        args: { goal: "Ship the complete gateway feature" },
+      });
+      const clearChildGoal = yield* harness.callTool({
+        token: "token-parent",
+        name: "synara_set_thread_goal",
+        args: { threadId: "thread-child", goal: null },
+      });
+
+      assert.isFalse(isToolError(setOwnGoal.result), toolErrorText(setOwnGoal.result));
+      assert.isFalse(isToolError(clearChildGoal.result), toolErrorText(clearChildGoal.result));
       assert.equal(harness.dispatched[0]?.type, "thread.meta.update");
       assert.equal(harness.dispatched[1]?.type, "thread.archive");
+      assert.deepInclude(harness.dispatched[2] as unknown as Record<string, unknown>, {
+        type: "thread.meta.update",
+        threadId: "thread-parent",
+        goal: "Ship the complete gateway feature",
+      });
+      assert.deepInclude(harness.dispatched[3] as unknown as Record<string, unknown>, {
+        type: "thread.meta.update",
+        threadId: "thread-child",
+        goal: "",
+      });
+    }).pipe(Effect.provide(gatewayLayer));
+  });
+
+  it.effect("keeps Lattice goal and automation writes inside the caller project", () => {
+    // Synara intentionally supports cross-project coordination. This case is
+    // also run explicitly under AGENT_HOST_PROFILE=lattice so the production
+    // Lattice aliases and shared drive-thread guard execute end to end.
+    if (ACTIVE_AGENT_HOST_PROFILE.id !== "lattice") return Effect.void;
+
+    const otherProjectId = ProjectId.makeUnsafe("project-other");
+    const { gatewayLayer, makeHarness } = makeHarnessLayer([
+      ...baseThreads,
+      makeThreadShell("thread-other-project", { projectId: otherProjectId }),
+    ]);
+    return Effect.gen(function* () {
+      const harness = yield* makeHarness;
+      const goal = yield* harness.callTool({
+        token: "token-parent",
+        name: "set_task_goal",
+        args: { threadId: "thread-other-project", goal: "Mutate another project" },
+      });
+      const automation = yield* harness.callTool({
+        token: "token-parent",
+        name: "create_automation",
+        args: {
+          name: "Cross-project monitor",
+          prompt: "Drive the other project.",
+          targetThreadId: "thread-other-project",
+        },
+      });
+
+      assert.isTrue(isToolError(goal.result));
+      assert.include(toolErrorText(goal.result), "different Lattice project");
+      assert.isTrue(isToolError(automation.result));
+      assert.include(toolErrorText(automation.result), "different Lattice project");
+      assert.equal(harness.dispatched.length, 0);
+      assert.equal(harness.automationCreates.length, 0);
+    }).pipe(Effect.provide(gatewayLayer));
+  });
+
+  it.effect("rejects thread goals over the contract limit", () => {
+    const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads);
+    return Effect.gen(function* () {
+      const harness = yield* makeHarness;
+      const response = yield* harness.callTool({
+        token: "token-parent",
+        name: "synara_set_thread_goal",
+        args: { goal: "x".repeat(THREAD_GOAL_MAX_CHARS + 1) },
+      });
+
+      assert.isTrue(isToolError(response.result));
+      assert.include(toolErrorText(response.result), `at most ${THREAD_GOAL_MAX_CHARS} characters`);
+      assert.equal(harness.dispatched.length, 0);
+    }).pipe(Effect.provide(gatewayLayer));
+  });
+
+  it.effect("marks an active goal achieved instead of plain-clearing it", () => {
+    const { gatewayLayer, makeHarness } = makeHarnessLayer([
+      ...baseThreads.filter((thread) => thread.id !== "thread-child"),
+      makeThreadShell("thread-child", { goal: "Ship the gateway feature" }),
+    ]);
+    return Effect.gen(function* () {
+      const harness = yield* makeHarness;
+      const response = yield* harness.callTool({
+        token: "token-parent",
+        name: "synara_set_thread_goal",
+        args: { threadId: "thread-child", achieved: true },
+      });
+
+      assert.isFalse(isToolError(response.result), toolErrorText(response.result));
+      assert.deepEqual(toolResultJson(response.result), {
+        threadId: "thread-child",
+        goal: null,
+        achieved: true,
+      });
+      const dispatched = harness.dispatched[0] as unknown as Record<string, unknown>;
+      assert.deepInclude(dispatched, {
+        type: "thread.meta.update",
+        threadId: "thread-child",
+        goalAchieved: true,
+      });
+      assert.notProperty(dispatched, "goal");
+    }).pipe(Effect.provide(gatewayLayer));
+  });
+
+  it.effect("rejects achieved intents when the thread has no active goal", () => {
+    const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads);
+    return Effect.gen(function* () {
+      const harness = yield* makeHarness;
+      const response = yield* harness.callTool({
+        token: "token-parent",
+        name: "synara_set_thread_goal",
+        args: { achieved: true },
+      });
+
+      assert.isTrue(isToolError(response.result));
+      assert.include(toolErrorText(response.result), "no active goal");
+      assert.equal(harness.dispatched.length, 0);
+    }).pipe(Effect.provide(gatewayLayer));
+  });
+
+  it.effect("pauses an active goal when the agent reports a repeated blocker", () => {
+    const { gatewayLayer, makeHarness } = makeHarnessLayer([
+      ...baseThreads.filter((thread) => thread.id !== "thread-child"),
+      makeThreadShell("thread-child", { goal: "Ship the gateway feature" }),
+    ]);
+    return Effect.gen(function* () {
+      const harness = yield* makeHarness;
+      const response = yield* harness.callTool({
+        token: "token-parent",
+        name: "synara_set_thread_goal",
+        args: { threadId: "thread-child", blocked: true },
+      });
+
+      assert.isFalse(isToolError(response.result), toolErrorText(response.result));
+      assert.deepEqual(toolResultJson(response.result), {
+        threadId: "thread-child",
+        goal: "Ship the gateway feature",
+        blocked: true,
+        paused: true,
+      });
+      assert.deepInclude(harness.dispatched[0] as unknown as Record<string, unknown>, {
+        type: "thread.meta.update",
+        threadId: "thread-child",
+        goalPaused: true,
+      });
+    }).pipe(Effect.provide(gatewayLayer));
+  });
+
+  it.effect("includes the persistent goal in synara_read_thread", () => {
+    const goal = "Keep working until every gateway check passes";
+    const { gatewayLayer, makeHarness } = makeHarnessLayer([
+      ...baseThreads.filter((thread) => thread.id !== "thread-child"),
+      makeThreadShell("thread-child", { goal }),
+    ]);
+    return Effect.gen(function* () {
+      const harness = yield* makeHarness;
+      const response = yield* harness.callTool({
+        token: "token-parent",
+        name: "synara_read_thread",
+        args: { threadId: "thread-child" },
+      });
+
+      assert.isFalse(isToolError(response.result), toolErrorText(response.result));
+      assert.equal(toolResultJson(response.result).goal, goal);
     }).pipe(Effect.provide(gatewayLayer));
   });
 
@@ -4755,6 +5032,14 @@ describe("AgentGateway", () => {
       });
       assert.isTrue(isToolError(archive.result));
       assert.include(toolErrorText(archive.result), "full-access");
+
+      const setGoal = yield* harness.callTool({
+        token: "token-parent",
+        name: "synara_set_thread_goal",
+        args: { threadId: "thread-elevated", goal: "Escalated goal" },
+      });
+      assert.isTrue(isToolError(setGoal.result));
+      assert.include(toolErrorText(setGoal.result), "full-access");
       assert.equal(harness.dispatched.length, 0);
     }).pipe(Effect.provide(gatewayLayer));
   });

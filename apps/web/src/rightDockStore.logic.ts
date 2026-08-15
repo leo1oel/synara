@@ -11,6 +11,7 @@ import { isPlainObject, sanitizeStringKeyedRecord } from "./persistedRecord";
 // from this list so they can never drift apart.
 export const RIGHT_DOCK_PANE_KINDS = [
   "browser",
+  "device",
   "diff",
   "explorer",
   "file",
@@ -67,6 +68,23 @@ export function createDefaultRightDockState(): RightDockThreadState {
     panes: [],
     activePaneId: null,
   };
+}
+
+/**
+ * Project persisted dock state onto the pane kinds a host is allowed to show.
+ * The open flag survives an empty projection so the dock can render its
+ * permitted launcher instead of reviving a hidden persisted pane.
+ */
+export function restrictRightDockStateToKinds(
+  state: RightDockThreadState,
+  allowedKinds: ReadonlySet<RightDockPaneKind>,
+): RightDockThreadState {
+  const panes = state.panes.filter((pane) => allowedKinds.has(pane.kind));
+  if (panes.length === state.panes.length) return state;
+  const activePaneId = panes.some((pane) => pane.id === state.activePaneId)
+    ? state.activePaneId
+    : (panes[0]?.id ?? null);
+  return { ...state, panes, activePaneId };
 }
 
 export function isRightDockPaneKind(value: unknown): value is RightDockPaneKind {

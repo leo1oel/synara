@@ -85,4 +85,19 @@ describe("AgentGatewaySessionRegistry", () => {
     assert.notProperty(verified, "token");
     assert.notInclude(JSON.stringify(verified), issued.token);
   });
+
+  it("issues device control only when the host explicitly enables it", () => {
+    const disabled = makeAgentGatewaySessionRegistry({
+      randomId: () => "disabled",
+      deviceControlEnabled: false,
+    }).issue(ThreadId.makeUnsafe("thread-disabled"), "codex");
+    const enabled = makeAgentGatewaySessionRegistry({
+      randomId: () => "enabled",
+      deviceControlEnabled: true,
+    }).issue(ThreadId.makeUnsafe("thread-enabled"), "codex");
+
+    assert.isFalse(disabled.capabilities.has("device:control"));
+    assert.isTrue(enabled.capabilities.has("device:control"));
+    assert.isTrue(disabled.capabilities.has("thread:write"));
+  });
 });

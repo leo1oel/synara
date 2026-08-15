@@ -8,17 +8,28 @@ import "../../index.css";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
+import type { ProviderInteractionMode } from "@synara/contracts";
 
 import { ComposerExtrasMenu } from "./ComposerExtrasMenu";
 
-async function mountMenu(props?: { triggerClassName?: string }) {
+async function mountMenu(props?: {
+  fastModeEnabled?: boolean;
+  interactionMode?: ProviderInteractionMode;
+  supportsFastMode?: boolean;
+}) {
   const onAddAttachments = vi.fn();
+  const onToggleFastMode = vi.fn();
+  const onInteractionModeChange = vi.fn();
   const host = document.createElement("div");
   document.body.append(host);
   const screen = await render(
     <ComposerExtrasMenu
+      interactionMode={props?.interactionMode ?? "default"}
+      supportsFastMode={props?.supportsFastMode ?? true}
+      fastModeEnabled={props?.fastModeEnabled ?? false}
       onAddAttachments={onAddAttachments}
-      triggerClassName={props?.triggerClassName}
+      onToggleFastMode={onToggleFastMode}
+      onInteractionModeChange={onInteractionModeChange}
     />,
     { container: host },
   );
@@ -32,6 +43,8 @@ async function mountMenu(props?: { triggerClassName?: string }) {
     [Symbol.asyncDispose]: cleanup,
     cleanup,
     onAddAttachments,
+    onToggleFastMode,
+    onInteractionModeChange,
   };
 }
 
@@ -71,17 +84,29 @@ describe("ComposerExtrasMenu", () => {
     await vi.waitFor(() => {
       const text = document.body.textContent ?? "";
       expect(text).toContain("Add files");
-      expect(text).not.toContain("Plan mode");
-      expect(text).not.toContain("Fast");
+      expect(text).toContain("Mode");
+      expect(text).toContain("Fast");
       expect(text).not.toContain("Plugins");
     });
   });
 
-  it("can keep the embed trigger at a fixed size across viewport breakpoints", async () => {
-    await using _ = await mountMenu({ triggerClassName: "!size-8" });
+  it("selects Default, Plan, and Debug exclusively", async () => {
+    await using menu = await mountMenu();
 
-    const trigger = page.getByLabelText("Composer extras").element();
-    expect(getComputedStyle(trigger).width).toBe("32px");
-    expect(getComputedStyle(trigger).height).toBe("32px");
+    await page.getByLabelText("Composer extras").click();
+    await page.getByText("Mode").click();
+    await page.getByRole("menuitemradio", { name: "Debug" }).click();
+
+    expect(menu.onInteractionModeChange).toHaveBeenCalledWith("debug");
+  });
+
+  it("wires the speed control", async () => {
+    await using menu = await mountMenu();
+
+    await page.getByLabelText("Composer extras").click();
+    await page.getByText("Fast").click();
+    await page.getByRole("menuitemradio", { name: "Fast" }).click();
+
+    expect(menu.onToggleFastMode).toHaveBeenCalledTimes(1);
   });
 });

@@ -4,10 +4,12 @@ import { Layer } from "effect";
 
 import {
   AgentGatewaySessionRegistry,
+  type AgentGatewayCapability,
   type AgentGatewaySessionIdentity,
   type AgentGatewaySessionRegistryShape,
   type AgentGatewayWriteAuthority,
 } from "../Services/AgentGatewaySessionRegistry.ts";
+import { isDeviceControlEntitled } from "../../device/deviceEntitlement.ts";
 
 const PROVIDER_SESSION_CAPABILITIES = [
   "thread:read",
@@ -22,9 +24,16 @@ const PROVIDER_SESSION_CAPABILITIES = [
 export function makeAgentGatewaySessionRegistry(options?: {
   readonly now?: () => number;
   readonly randomId?: () => string;
+  readonly deviceControlEnabled?: boolean;
 }): AgentGatewaySessionRegistryShape {
   const now = options?.now ?? Date.now;
   const randomId = options?.randomId ?? randomUUID;
+  const providerSessionCapabilities = new Set<AgentGatewayCapability>(
+    PROVIDER_SESSION_CAPABILITIES,
+  );
+  if (options?.deviceControlEnabled ?? isDeviceControlEntitled()) {
+    providerSessionCapabilities.add("device:control");
+  }
   interface RegisteredSession {
     readonly identity: AgentGatewaySessionIdentity;
     retiredWriteTurnId: string | undefined;
@@ -46,7 +55,7 @@ export function makeAgentGatewaySessionRegistry(options?: {
         threadId,
         provider,
         issuedAt,
-        capabilities: new Set(PROVIDER_SESSION_CAPABILITIES),
+        capabilities: new Set(providerSessionCapabilities),
       };
       const registered: RegisteredSession = {
         identity,

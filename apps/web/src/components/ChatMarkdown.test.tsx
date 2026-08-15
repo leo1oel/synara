@@ -62,11 +62,7 @@ describe("ChatMarkdown", () => {
 
   it("renders LaTeX-style inline and display delimiters with KaTeX", async () => {
     const markup = await renderMarkdown(
-      [
-        "Euler wrote \\(e^{i\\pi} + 1 = 0\\).",
-        "",
-        "\\[\\sum_{i=1}^{n} i\\]",
-      ].join("\n"),
+      ["Euler wrote \\(e^{i\\pi} + 1 = 0\\).", "", "\\[\\sum_{i=1}^{n} i\\]"].join("\n"),
     );
 
     expect(markup.match(/class="katex"/g) ?? []).toHaveLength(2);

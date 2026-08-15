@@ -90,6 +90,51 @@ describe("agent host profile", () => {
         },
         handler: () => Effect.succeed({ content: [] }),
       },
+      {
+        requiredCapability: "thread:write",
+        definition: {
+          name: "synara_set_thread_goal",
+          description: "Mark a Synara goal achieved.",
+          inputSchema: { type: "object" },
+        },
+        handler: () => Effect.succeed({ content: [] }),
+      },
+      {
+        requiredCapability: "automation:write",
+        definition: {
+          name: "synara_create_automation",
+          description: "Create a Synara automation.",
+          inputSchema: { type: "object" },
+        },
+        handler: () => Effect.succeed({ content: [] }),
+      },
+      {
+        requiredCapability: "automation:write",
+        definition: {
+          name: "synara_update_automation_memory",
+          description: "Update Synara automation memory.",
+          inputSchema: { type: "object" },
+        },
+        handler: () => Effect.succeed({ content: [] }),
+      },
+      {
+        requiredCapability: "device:control",
+        definition: {
+          name: "device_list",
+          description: "List devices Synara can drive.",
+          inputSchema: { type: "object" },
+        },
+        handler: () => Effect.succeed({ content: [] }),
+      },
+      {
+        requiredCapability: "browser:control",
+        definition: {
+          name: "browser_open",
+          description: "Open the Synara browser.",
+          inputSchema: { type: "object" },
+        },
+        handler: () => Effect.succeed({ content: [] }),
+      },
     ]);
 
     expect(resolveAgentHostProfile()).toMatchObject({
@@ -103,6 +148,10 @@ describe("agent host profile", () => {
       "cite",
       "spreadsheet_read",
       "spreadsheet_batch_update",
+      "set_task_goal",
+      "create_automation",
+      "update_automation_memory",
+      "device_list",
     ]);
     expect(JSON.stringify(tools.map((tool) => tool.definition))).not.toMatch(/synara/i);
 
@@ -157,11 +206,24 @@ describe("agent host profile", () => {
 
   it("describes bounded parallel task coordination without upstream identity", async () => {
     vi.stubEnv("AGENT_HOST_PROFILE", "lattice");
+    vi.stubEnv("LATTICE_DEVICE_CONTROL_ENABLED", "false");
     const { renderSynaraHarnessPolicy } = await import("./harnessPolicy.ts");
     const policy = renderSynaraHarnessPolicy({ gatewayControlAvailable: true });
     expect(policy).toContain("one exact create_tasks batch");
     expect(policy).toContain("wait_for_tasks");
     expect(policy).toContain("Provider-native subagents");
+    expect(policy).not.toContain("device_");
+    expect(policy).toContain("Simulator control is unavailable");
     expect(policy).not.toMatch(/synara/i);
+  });
+
+  it("advertises device tools only when the Lattice host grants that entitlement", async () => {
+    vi.stubEnv("AGENT_HOST_PROFILE", "lattice");
+    vi.stubEnv("LATTICE_DEVICE_CONTROL_ENABLED", "true");
+    const { renderSynaraHarnessPolicy } = await import("./harnessPolicy.ts");
+    const policy = renderSynaraHarnessPolicy({ gatewayControlAvailable: true });
+
+    expect(policy).toContain("device_list first");
+    expect(policy).not.toContain("Simulator control is unavailable");
   });
 });

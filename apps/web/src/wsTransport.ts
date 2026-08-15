@@ -17,8 +17,11 @@ import {
   WS_PROTOCOL_EPOCH,
   WS_PROTOCOL_MAX_REVISION,
   WS_PROTOCOL_MIN_REVISION,
+  DEVICE_WS_CHANNELS,
+  DEVICE_WS_METHODS,
   WsBootstrapNegotiateResult,
   WsBootstrapRpcGroup,
+  WsDeviceRpcGroup,
   WS_METHODS,
   WsCompatibilityError,
   WsFeatureRpcGroup,
@@ -37,6 +40,7 @@ import {
   type ServerLifecycleStreamEvent,
   type ServerProviderStatusesUpdatedPayload,
   type ServerSettingsUpdatedPayload,
+  type DeviceEvent,
   type TerminalEvent,
   type WsPush,
   type WsPushChannel,
@@ -59,9 +63,11 @@ import { RpcClient, RpcSerialization } from "effect/unstable/rpc";
 import * as Socket from "effect/unstable/socket/Socket";
 
 import { APP_VERSION } from "./branding";
+import { useDeviceStateStore } from "./deviceStateStore";
 import { readEmbeddedHostWsUrl } from "./embedMode";
 import {
   buildThreadSubscribeInput,
+  clearThreadDetailResumeCursor,
   resetThreadDetailResumeCursors,
 } from "./threadDetailResumeCursors";
 import type { WsTransportState } from "./wsTransportEvents";
@@ -81,11 +87,34 @@ export class WsTransportRequestInterruptedError extends Data.TaggedError(
   "WsTransportRequestInterruptedError",
 )<{
   readonly message: string;
-  readonly code: "WS_REQUEST_TIMEOUT" | "WS_REQUEST_ABORTED";
+  readonly code: "WS_REQUEST_TIMEOUT" | "WS_REQUEST_ABORTED" | "WS_REQUEST_RECONNECTED";
   readonly method: string;
   readonly timeoutMs?: number;
   readonly cause?: unknown;
+  /**
+   * True when the request died for transport-lifecycle reasons rather than a
+   * server verdict: it never (observably) completed, so an idempotent caller
+   * can safely re-issue it once the transport recovers.
+   */
+  readonly retryable?: boolean;
 }> {}
+
+/**
+ * True when a request failure is the transport's own doing — the Effect runtime
+ * that carried the request was interrupted or disposed mid-flight (reconnect,
+ * runtime swap) — rather than an error the server returned. Interrupts have no
+ * typed channel out of `runPromise`; they surface as the squashed
+ * "All fibers interrupted without error" Error or as runtime-disposal defects,
+ * which is exactly the raw leakage this classification exists to stop.
+ */
+export function isRuntimeInterruptFailure(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return (
+    error.message === "All fibers interrupted without error" ||
+    error.message === "Missing runtime for WebSocket RPC client" ||
+    error.message.includes("ManagedRuntime disposed")
+  );
+}
 
 export interface WsRequestOptions {
   readonly timeoutMs?: number | null;
@@ -162,7 +191,12 @@ function awaitWithAbort<A>(promise: Promise<A>, signal: AbortSignal | undefined)
   });
 }
 
-const makeRpcClient = RpcClient.make(WsFeatureRpcGroup);
+// The device group is declared separately in contracts because its engine is
+// macOS-only, but the client must carry the methods on every platform: the
+// server is the authority that refuses them off darwin, and the pane needs a
+// real RPC error (or an `unsupported-platform` availability) to render its
+// blocked state. Merging here keeps one socket and one client.
+const makeRpcClient = RpcClient.make(WsFeatureRpcGroup.merge(WsDeviceRpcGroup));
 const makeBootstrapRpcClient = RpcClient.make(WsBootstrapRpcGroup);
 const REQUEST_TIMEOUT_MS = 60_000;
 const FEATURE_CONNECTION_PROBE_TIMEOUT_MS = 10_000;
@@ -214,7 +248,7 @@ function rawSocketUrl(explicitUrl: string | null): string {
         : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.hostname}:${window.location.port}`;
 }
 
-function makeSocketUrl(explicitUrl: string | null, path: string): string {
+export function makeSocketUrl(explicitUrl: string | null, path: string): string {
   return resolveRpcUrl(rawSocketUrl(explicitUrl), path);
 }
 
@@ -310,7 +344,52 @@ const STREAM_ADMISSION_ERROR_CODES = new Set([
   "WS_NEGOTIATION_REQUIRED",
   "WS_PROTOCOL_INCOMPATIBLE",
   "WS_CAPABILITIES_INCOMPATIBLE",
+  // Snapshot-fence failures are a property of one stream's read model, not of
+  // the socket. Tearing the whole transport down for them interrupts every
+  // unrelated in-flight request while fixing nothing — the same fence is
+  // re-read on the next connect. RESNAPSHOT retries in place with a fresh
+  // snapshot request; STALLED / STATE_INCOMPLETE surface as stream failures
+  // and recover via the slow snapshot-fault retry (see startStream).
+  "ORCHESTRATION_RESNAPSHOT_REQUIRED",
+  "ORCHESTRATION_SNAPSHOT_STALLED",
+  "ORCHESTRATION_PROJECTION_STATE_INCOMPLETE",
 ]);
+
+const RESNAPSHOT_REQUIRED_ERROR_CODE = "ORCHESTRATION_RESNAPSHOT_REQUIRED";
+
+// Server-diagnosed snapshot faults: the projection fence is stalled or
+// underivable, and only server-side recovery (a restart's bootstrap replay, a
+// repair, or the deferred catch-up advancing the fence) can clear them. The
+// stream must neither die permanently — the shell stream has no route-level
+// fallback, so a dead stream means a silently stale sidebar — nor hammer the
+// server; a slow in-place retry converges as soon as the server heals.
+//
+// RESNAPSHOT_REQUIRED belongs here too, but only as a fallback: this
+// classifier is consulted after the bounded fast retries are exhausted (the
+// admission-retry path returns first), which is precisely the
+// advancing-but-still-behind fence — a projector working through a backlog
+// larger than the replay limit. The server keeps that demand retryable
+// because progress is real, so the stream must keep slow-retrying until the
+// gap closes rather than dying while recovery is succeeding.
+const SNAPSHOT_FAULT_ERROR_CODES = new Set([
+  "ORCHESTRATION_SNAPSHOT_STALLED",
+  "ORCHESTRATION_PROJECTION_STATE_INCOMPLETE",
+  RESNAPSHOT_REQUIRED_ERROR_CODE,
+]);
+export const SNAPSHOT_FAULT_RETRY_MS = 30_000;
+
+export function getSnapshotFaultRetryDelayMs(cause: Cause.Cause<unknown>): number | null {
+  for (const reason of cause.reasons) {
+    if (!Cause.isFailReason(reason)) continue;
+    const error = reason.error;
+    if (!error || typeof error !== "object") continue;
+    const code = "code" in error ? error.code : undefined;
+    if (typeof code === "string" && SNAPSHOT_FAULT_ERROR_CODES.has(code)) {
+      return SNAPSHOT_FAULT_RETRY_MS;
+    }
+  }
+  return null;
+}
 const TERMINAL_COMPATIBILITY_ERROR_CODES = new Set([
   "WS_NEGOTIATION_REQUIRED",
   "WS_PROTOCOL_INCOMPATIBLE",
@@ -465,16 +544,46 @@ export function getThreadSnapshotBootstrapRetryDelayMs(
   return null;
 }
 
+const DEFAULT_RESNAPSHOT_RETRY_MS = 250;
+export const MAX_RESNAPSHOT_RETRY_ATTEMPTS = 2;
+
+/**
+ * The server asks for a stream restart because its snapshot fence trails the
+ * journal beyond the replay limit. The remedy is scoped to this stream: retry
+ * the subscription in place with a fresh full-snapshot request. The attempts
+ * are deliberately few — the server escalates a non-advancing fence to the
+ * non-retryable ORCHESTRATION_SNAPSHOT_STALLED on the repeat demand, so more
+ * client-side patience only delays surfacing the fault.
+ */
+export function getResnapshotRetryDelayMs(
+  cause: Cause.Cause<unknown>,
+  previousAttempts: number,
+): number | null {
+  if (previousAttempts >= MAX_RESNAPSHOT_RETRY_ATTEMPTS) return null;
+  for (const reason of cause.reasons) {
+    if (!Cause.isFailReason(reason)) continue;
+    const error = reason.error;
+    if (!error || typeof error !== "object") continue;
+    const code = "code" in error ? error.code : undefined;
+    if (code !== RESNAPSHOT_REQUIRED_ERROR_CODE) continue;
+    if ("retryable" in error && error.retryable === false) continue;
+    return DEFAULT_RESNAPSHOT_RETRY_MS;
+  }
+  return null;
+}
+
 export type StreamAdmissionRetry =
   | { readonly kind: "capacity"; readonly attempt: number; readonly delayMs: number }
   | { readonly kind: "duplicate"; readonly attempt: number; readonly delayMs: number }
-  | { readonly kind: "thread-bootstrap"; readonly attempt: number; readonly delayMs: number };
+  | { readonly kind: "thread-bootstrap"; readonly attempt: number; readonly delayMs: number }
+  | { readonly kind: "resnapshot"; readonly attempt: number; readonly delayMs: number };
 
 export function resolveStreamAdmissionRetry(
   cause: Cause.Cause<unknown>,
   capacityAttempts: number,
   duplicateAttempts: number,
   threadBootstrapAttempts = 0,
+  resnapshotAttempts = 0,
 ): StreamAdmissionRetry | null {
   const capacityDelayMs = getStreamCapacityRetryDelayMs(cause);
   if (capacityDelayMs !== null) {
@@ -496,11 +605,19 @@ export function resolveStreamAdmissionRetry(
     cause,
     threadBootstrapAttempts,
   );
-  if (threadBootstrapDelayMs === null) return null;
+  if (threadBootstrapDelayMs !== null) {
+    return {
+      kind: "thread-bootstrap",
+      attempt: threadBootstrapAttempts + 1,
+      delayMs: threadBootstrapDelayMs,
+    };
+  }
+  const resnapshotDelayMs = getResnapshotRetryDelayMs(cause, resnapshotAttempts);
+  if (resnapshotDelayMs === null) return null;
   return {
-    kind: "thread-bootstrap",
-    attempt: threadBootstrapAttempts + 1,
-    delayMs: threadBootstrapDelayMs,
+    kind: "resnapshot",
+    attempt: resnapshotAttempts + 1,
+    delayMs: resnapshotDelayMs,
   };
 }
 
@@ -602,6 +719,7 @@ export class WsTransport {
   private readonly streamCapacityRetries = new Map<string, number>();
   private readonly streamDuplicateRetries = new Map<string, number>();
   private readonly streamThreadBootstrapRetries = new Map<string, number>();
+  private readonly streamResnapshotRetries = new Map<string, number>();
   private readonly streamCapacityRetryTimers = new Map<string, number>();
   private readonly streamCompletionRetries = new Map<string, number>();
   private readonly streamCompletionRetryTimers = new Map<string, number>();
@@ -730,6 +848,15 @@ export class WsTransport {
           code: "WS_REQUEST_ABORTED",
           method,
           cause: requestOptions.signal.reason ?? error,
+        });
+      }
+      if (isRuntimeInterruptFailure(error)) {
+        throw new WsTransportRequestInterruptedError({
+          message: `WebSocket RPC ${method} was interrupted by a transport reconnect.`,
+          code: "WS_REQUEST_RECONNECTED",
+          method,
+          cause: error,
+          retryable: true,
         });
       }
       throw error;
@@ -911,6 +1038,11 @@ export class WsTransport {
       // plain restarts of the same journal, acceptable until the protocol
       // carries a durable journal epoch.
       resetThreadDetailResumeCursors();
+      // Device thread state is gated on a per-thread version that the server
+      // restarts at 0. A stale higher version would reject the new instance's
+      // snapshots as stragglers and leave the pane showing pre-restart devices
+      // and attachments forever, so the cache is dropped with the cursors.
+      useDeviceStateStore.getState().clear();
     }
     this.lastServerInstanceId = compatibility.serverInstanceId;
     this.setCompatibility(compatibility);
@@ -1077,6 +1209,7 @@ export class WsTransport {
     this.streamCapacityRetries.delete(key);
     this.streamDuplicateRetries.delete(key);
     this.streamThreadBootstrapRetries.delete(key);
+    this.streamResnapshotRetries.delete(key);
   }
 
   private resetAllStreamCapacityRetries(): void {
@@ -1087,6 +1220,7 @@ export class WsTransport {
     this.streamCapacityRetries.clear();
     this.streamDuplicateRetries.clear();
     this.streamThreadBootstrapRetries.clear();
+    this.streamResnapshotRetries.clear();
   }
 
   private clearStreamCompletionRetryTimer(key: string): void {
@@ -1315,6 +1449,14 @@ export class WsTransport {
             (event: AutomationStreamEvent) => this.emit(WS_CHANNELS.automationEvent, event),
             restartChannel,
           );
+        } else if (channel === DEVICE_WS_CHANNELS.event) {
+          this.startStream(
+            client,
+            "device.events",
+            client[DEVICE_WS_METHODS.subscribeEvents]({}),
+            (event: DeviceEvent) => this.emit(DEVICE_WS_CHANNELS.event, event),
+            restartChannel,
+          );
         } else if (channel === ORCHESTRATION_WS_CHANNELS.domainEvent) {
           this.startStream(
             client,
@@ -1348,6 +1490,7 @@ export class WsTransport {
     else if (channel === WS_CHANNELS.terminalEvent) this.stopStream("terminal.events");
     else if (channel === WS_CHANNELS.projectDevServerEvent) this.stopStream("project.devServers");
     else if (channel === WS_CHANNELS.automationEvent) this.stopStream("automation.events");
+    else if (channel === DEVICE_WS_CHANNELS.event) this.stopStream("device.events");
     else if (channel === ORCHESTRATION_WS_CHANNELS.domainEvent)
       this.stopStream("orchestration.domain");
   }
@@ -1507,6 +1650,9 @@ export class WsTransport {
           if (this.streamThreadBootstrapRetries.has(key)) {
             this.streamThreadBootstrapRetries.delete(key);
           }
+          if (this.streamResnapshotRetries.has(key)) {
+            this.streamResnapshotRetries.delete(key);
+          }
           listener(event);
         }),
       ),
@@ -1542,6 +1688,7 @@ export class WsTransport {
               this.streamCapacityRetries.get(key) ?? 0,
               this.streamDuplicateRetries.get(key) ?? 0,
               this.streamThreadBootstrapRetries.get(key) ?? 0,
+              this.streamResnapshotRetries.get(key) ?? 0,
             );
             if (admissionRetry !== null) {
               const retries =
@@ -1549,8 +1696,22 @@ export class WsTransport {
                   ? this.streamCapacityRetries
                   : admissionRetry.kind === "duplicate"
                     ? this.streamDuplicateRetries
-                    : this.streamThreadBootstrapRetries;
+                    : admissionRetry.kind === "thread-bootstrap"
+                      ? this.streamThreadBootstrapRetries
+                      : this.streamResnapshotRetries;
               retries.set(key, admissionRetry.attempt);
+              if (admissionRetry.kind === "resnapshot") {
+                // The server refused the stream because its snapshot trails the
+                // journal beyond the replay limit. A resume cursor makes the
+                // retry ask for the same gap replay again; dropping it makes
+                // the restart request a full fresh snapshot instead. The store
+                // discards its cached detail when the new snapshot arrives, so
+                // the cursor's coherence invariant is preserved.
+                const threadId = threadIdFromStreamKey(key);
+                if (threadId !== null) {
+                  clearThreadDetailResumeCursor(ThreadId.makeUnsafe(threadId));
+                }
+              }
               this.clearStreamCapacityRetryTimer(key);
               const timeoutId = window.setTimeout(
                 () => {
@@ -1597,6 +1758,23 @@ export class WsTransport {
                 error,
               });
             }
+            // Server-diagnosed snapshot faults clear only when the server
+            // heals (restart bootstrap, repair, deferred catch-up). Surfacing
+            // the failure above is not enough for streams with no route-level
+            // fallback (the shell stream): keep a slow in-place retry armed so
+            // the subscription recovers without user action once the fence
+            // advances, without hammering a server that said "stop retrying".
+            if (restart && getSnapshotFaultRetryDelayMs(exit.cause) !== null) {
+              this.clearStreamCapacityRetryTimer(key);
+              const timeoutId = window.setTimeout(() => {
+                if (this.streamCapacityRetryTimers.get(key) !== timeoutId) return;
+                this.streamCapacityRetryTimers.delete(key);
+                if (!this.disposed && !this.streamCleanups.has(key)) {
+                  restart();
+                }
+              }, SNAPSHOT_FAULT_RETRY_MS);
+              this.streamCapacityRetryTimers.set(key, timeoutId);
+            }
           }
         },
       },
@@ -1615,6 +1793,7 @@ export class WsTransport {
       this.streamCapacityRetries.delete(key);
       this.streamDuplicateRetries.delete(key);
       this.streamThreadBootstrapRetries.delete(key);
+      this.streamResnapshotRetries.delete(key);
     }
     this.streamCompletionRetries.delete(key);
     this.activeThreadStreamInputs.delete(key);

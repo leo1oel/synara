@@ -731,10 +731,7 @@ html[data-synara-embed="true"] [data-lattice-source-control="true"]:disabled {
 }
 
 html[data-synara-embed="true"]
-  :where(
-    [data-lattice-source-control="true"],
-    [data-lattice-source-control-split="true"]
-  )
+  :where([data-lattice-source-control="true"], [data-lattice-source-control-split="true"])
   [data-slot="environment-row-chevron"] {
   width: 16px;
   height: 16px;
@@ -753,10 +750,9 @@ html[data-synara-embed="true"] .lattice-source-control-popup {
   font-size: var(--lattice-settings-control-font-size);
 }
 
-html[data-synara-embed="true"] .lattice-source-control-popup :where(
-    [data-slot="menu-item"],
-    [data-slot="combobox-item"]
-  ) {
+html[data-synara-embed="true"]
+  .lattice-source-control-popup
+  :where([data-slot="menu-item"], [data-slot="combobox-item"]) {
   min-height: 30px;
   border-radius: 6px !important;
   color: var(--lattice-settings-text);
@@ -765,10 +761,9 @@ html[data-synara-embed="true"] .lattice-source-control-popup :where(
   font-weight: var(--lattice-settings-control-font-weight);
 }
 
-html[data-synara-embed="true"] .lattice-source-control-popup :where(
-    [data-slot="menu-item"],
-    [data-slot="combobox-item"]
-  )[data-highlighted] {
+html[data-synara-embed="true"]
+  .lattice-source-control-popup
+  :where([data-slot="menu-item"], [data-slot="combobox-item"])[data-highlighted] {
   background: var(--lattice-control-hover-surface);
 }
 

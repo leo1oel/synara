@@ -3,17 +3,33 @@
 // Layer: Chat composer presentation
 // Depends on: shared menu primitives, icon buttons, and the caller-owned attachment callback.
 
+import { type ProviderInteractionMode } from "@synara/contracts";
 import { useId, useRef, type ChangeEvent } from "react";
 
-import { PaperclipIcon, PlusIcon } from "~/lib/icons";
+import { BugIcon, ListTodoIcon, MessageCircleIcon, PaperclipIcon, PlusIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
-import { ComposerPickerMenuPopup } from "./ComposerPickerMenuPopup";
+import { ComposerPickerMenuPopup, ComposerPickerMenuSubPopup } from "./ComposerPickerMenuPopup";
 import { Button } from "../ui/button";
-import { Menu, MenuItem, MenuTrigger } from "../ui/menu";
+import {
+  Menu,
+  MenuItem,
+  MenuRadioGroup,
+  MenuRadioItem,
+  MenuSeparator,
+  MenuSub,
+  MenuSubTrigger,
+  MenuTrigger,
+} from "../ui/menu";
 
 export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
+  interactionMode: ProviderInteractionMode;
+  supportsFastMode: boolean;
+  fastModeEnabled: boolean;
   onAddAttachments: (files: File[]) => void;
-  triggerClassName?: string | undefined;
+  onToggleFastMode: () => void;
+  onInteractionModeChange: (mode: ProviderInteractionMode) => void;
+  attachmentsOnly?: boolean;
+  triggerClassName?: string;
 }) {
   const inputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -57,11 +73,67 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
               fileInputRef.current?.click();
             }}
           >
-            <span className="inline-flex items-center gap-2">
-              <PaperclipIcon className="block size-4 shrink-0" />
-              <span>Add files</span>
-            </span>
+            <PaperclipIcon className="size-4 shrink-0" />
+            Add files
           </MenuItem>
+
+          {!props.attachmentsOnly ? <MenuSeparator /> : null}
+          {!props.attachmentsOnly ? (
+            <MenuSub>
+              <MenuSubTrigger>Mode</MenuSubTrigger>
+              <ComposerPickerMenuSubPopup>
+                <MenuRadioGroup
+                  value={props.interactionMode}
+                  onValueChange={(value) => {
+                    if (value === "default" || value === "plan" || value === "debug") {
+                      props.onInteractionModeChange(value);
+                    }
+                  }}
+                >
+                  <MenuRadioItem value="default">
+                    <span className="inline-flex items-center gap-2">
+                      <MessageCircleIcon className="size-4 shrink-0" />
+                      Default
+                    </span>
+                  </MenuRadioItem>
+                  <MenuRadioItem value="plan">
+                    <span className="inline-flex items-center gap-2">
+                      <ListTodoIcon className="size-4 shrink-0" />
+                      Plan
+                    </span>
+                  </MenuRadioItem>
+                  <MenuRadioItem value="debug">
+                    <span className="inline-flex items-center gap-2">
+                      <BugIcon className="size-4 shrink-0" />
+                      Debug
+                    </span>
+                  </MenuRadioItem>
+                </MenuRadioGroup>
+              </ComposerPickerMenuSubPopup>
+            </MenuSub>
+          ) : null}
+
+          {!props.attachmentsOnly && props.supportsFastMode ? (
+            <>
+              <MenuSeparator />
+              <MenuSub>
+                <MenuSubTrigger>Fast</MenuSubTrigger>
+                <ComposerPickerMenuSubPopup>
+                  <MenuRadioGroup
+                    value={props.fastModeEnabled ? "fast" : "normal"}
+                    onValueChange={(value) => {
+                      const shouldEnableFast = value === "fast";
+                      if (shouldEnableFast === props.fastModeEnabled) return;
+                      props.onToggleFastMode();
+                    }}
+                  >
+                    <MenuRadioItem value="normal">Default</MenuRadioItem>
+                    <MenuRadioItem value="fast">Fast</MenuRadioItem>
+                  </MenuRadioGroup>
+                </ComposerPickerMenuSubPopup>
+              </MenuSub>
+            </>
+          ) : null}
         </ComposerPickerMenuPopup>
       </Menu>
     </>

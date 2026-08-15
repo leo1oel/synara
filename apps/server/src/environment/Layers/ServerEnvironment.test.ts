@@ -30,6 +30,7 @@ describe("ServerEnvironmentLive", () => {
       expect(first.environmentId).toBe(second.environmentId);
       expect(first.serverVersion).toMatch(/^\d+\.\d+\.\d+/);
       expect(second.capabilities.repositoryIdentity).toBe(true);
+      expect(second.capabilities.deviceControl).toBe(process.platform === "darwin");
     }).pipe(Effect.provide(NodeServices.layer), Effect.scoped, Effect.runPromise);
   });
 });

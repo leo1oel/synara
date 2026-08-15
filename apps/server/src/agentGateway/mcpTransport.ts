@@ -85,7 +85,13 @@ export function makeAgentGatewayMcpTransport(input: {
           return jsonRpcResult(request.id, {});
         case "tools/list":
           return jsonRpcResult(request.id, {
-            tools: input.tools.map((tool) => tool.definition),
+            // The catalog itself is an authority boundary. In particular, an
+            // embedding host that did not grant device control must not teach
+            // the model that device_* tools exist and then rely only on a
+            // later tools/call refusal.
+            tools: input.tools
+              .filter((tool) => context.callerCapabilities.has(tool.requiredCapability))
+              .map((tool) => tool.definition),
           });
         case "tools/call": {
           const toolName = request.params.name;
@@ -235,6 +241,8 @@ export function makeAgentGatewayMcpTransport(input: {
         callerThreadId,
         callerSessionKey: callerSession.sessionKey,
         callerProvider: callerSession.provider,
+        callerRuntimeMode:
+          callerThread.value.session?.runtimeMode ?? callerThread.value.runtimeMode,
         callerCapabilities: callerSession.capabilities,
         callerTurnId: callerWriteAuthority?.turnId ?? null,
         assertCallerTurnActive,

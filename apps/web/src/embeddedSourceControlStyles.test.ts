@@ -6,10 +6,7 @@ const INDEX_CSS = readFileSync(new URL("./index.css", import.meta.url), "utf8").
   " ",
 );
 const EMBED_MODE = readFileSync(new URL("./embedMode.ts", import.meta.url), "utf8");
-const GIT_PANEL = readFileSync(
-  new URL("./components/chat/GitPanel.tsx", import.meta.url),
-  "utf8",
-);
+const GIT_PANEL = readFileSync(new URL("./components/chat/GitPanel.tsx", import.meta.url), "utf8");
 const BRANCH_SELECTOR = readFileSync(
   new URL("./components/BranchToolbarBranchSelector.tsx", import.meta.url),
   "utf8",
@@ -24,9 +21,7 @@ describe("embedded Source Control picker styles", () => {
     expect(INDEX_CSS).toContain(
       'html[data-synara-embed="true"] [data-lattice-source-control="true"]',
     );
-    expect(INDEX_CSS).toContain(
-      'html[data-synara-embed="true"] .lattice-source-control-popup',
-    );
+    expect(INDEX_CSS).toContain('html[data-synara-embed="true"] .lattice-source-control-popup');
     expect(INDEX_CSS).toContain('[data-lattice-source-control-split="true"]');
     expect(INDEX_CSS).toContain('[data-slot="menu-item"]');
     expect(INDEX_CSS).toContain('[data-slot="combobox-item"]');

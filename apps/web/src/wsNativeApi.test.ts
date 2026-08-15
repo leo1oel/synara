@@ -636,7 +636,7 @@ describe("wsNativeApi", () => {
       label: "Test Host",
       platform: { os: "darwin", arch: "arm64" },
       serverVersion: "0.0.38",
-      capabilities: { repositoryIdentity: true },
+      capabilities: { repositoryIdentity: true, deviceControl: true },
     });
     const { createWsNativeApi } = await import("./wsNativeApi");
 

@@ -96,9 +96,7 @@ export function SkillsSettingsPanel() {
   const installedGroups = skillGroups.filter(
     (group) => group.primarySkill.management?.kind === "installed",
   );
-  const detectedGroups = skillGroups.filter(
-    (group) => group.primarySkill.management === undefined,
-  );
+  const detectedGroups = skillGroups.filter((group) => group.primarySkill.management === undefined);
   const visibleBundledGroups = filterSkillGroups(bundledGroups, searchQuery);
   const visibleInstalledGroups = filterSkillGroups(installedGroups, searchQuery);
   const visibleDetectedGroups = filterSkillGroups(detectedGroups, searchQuery);
@@ -315,9 +313,9 @@ export function SkillsSettingsPanel() {
     const management = skill.management;
     const enabled = !disabledSkillNames.has(group.key);
     const isRemoving = management?.id === removingSkillId;
-    const sourceLabels = [
-      ...new Set(group.sources.map((source) => source.originInfo.label)),
-    ].join(" · ");
+    const sourceLabels = [...new Set(group.sources.map((source) => source.originInfo.label))].join(
+      " · ",
+    );
     return (
       <SettingsRow
         key={group.key}
@@ -361,7 +359,7 @@ export function SkillsSettingsPanel() {
             ))}
           </span>
         }
-        onClick={management ? () => setSelectedSkill(skill) : undefined}
+        {...(management ? { onClick: () => setSelectedSkill(skill) } : {})}
         control={
           <div className="flex items-center gap-0.5">
             <div className="flex items-center gap-1" onClick={stopRowAction}>

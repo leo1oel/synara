@@ -81,9 +81,7 @@ describe("GitRepositorySetup", () => {
     );
     expect(selectedVisibility).not.toBeNull();
     const selectedAlpha = backgroundAlpha(selectedVisibility!);
-    await page
-      .getByRole("radio", { name: "Private Only you and invited collaborators" })
-      .hover();
+    await page.getByRole("radio", { name: "Private Only you and invited collaborators" }).hover();
     expect(backgroundAlpha(selectedVisibility!)).toBeGreaterThan(selectedAlpha);
   });
 

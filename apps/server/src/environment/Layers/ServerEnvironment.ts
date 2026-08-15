@@ -4,6 +4,7 @@ import { Effect, FileSystem, Layer, Path, Random } from "effect";
 import packageJson from "../../../package.json" with { type: "json" };
 import { ServerConfig } from "../../config";
 import { writeFileStringAtomically } from "../../atomicWrite";
+import { isDeviceControlEntitled } from "../../device/deviceEntitlement";
 import { ServerEnvironment, type ServerEnvironmentShape } from "../Services/ServerEnvironment";
 import { resolveServerEnvironmentLabel } from "./ServerEnvironmentLabel";
 
@@ -76,6 +77,7 @@ export const makeServerEnvironment = Effect.fn(function* () {
     serverVersion: packageJson.version,
     capabilities: {
       repositoryIdentity: true,
+      deviceControl: process.platform === "darwin" && isDeviceControlEntitled(),
     },
   };
 

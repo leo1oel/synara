@@ -38,7 +38,9 @@ describe("GeneratedMarkdownImage", () => {
 
     try {
       await vi.waitFor(() =>
-        expect(document.querySelector<HTMLImageElement>(".chat-generated-image__img")).not.toBeNull(),
+        expect(
+          document.querySelector<HTMLImageElement>(".chat-generated-image__img"),
+        ).not.toBeNull(),
       );
       const image = document.querySelector<HTMLImageElement>(".chat-generated-image__img");
       if (image) {
@@ -92,7 +94,9 @@ describe("GeneratedMarkdownImage", () => {
 
     try {
       await vi.waitFor(() =>
-        expect(document.querySelector<HTMLImageElement>(".chat-generated-image__img")).not.toBeNull(),
+        expect(
+          document.querySelector<HTMLImageElement>(".chat-generated-image__img"),
+        ).not.toBeNull(),
       );
       const image = document.querySelector<HTMLImageElement>(".chat-generated-image__img");
       if (image) {

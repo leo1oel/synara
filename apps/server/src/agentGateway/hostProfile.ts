@@ -40,6 +40,13 @@ export function resolveAgentHostProfile(
 
 export const ACTIVE_AGENT_HOST_PROFILE = resolveAgentHostProfile();
 
+export function isThreadControlWithinActiveHostBoundary(
+  callerProjectId: string,
+  targetProjectId: string,
+): boolean {
+  return ACTIVE_AGENT_HOST_PROFILE.id !== "lattice" || callerProjectId === targetProjectId;
+}
+
 const LATTICE_TOOL_ALIASES = new Map<string, string>([
   ["synara_context", "context"],
   ["synara_capabilities", "agent_capabilities"],
@@ -57,6 +64,14 @@ const LATTICE_TOOL_ALIASES = new Map<string, string>([
   ["synara_interrupt_thread", "interrupt_task"],
   ["synara_set_thread_title", "set_task_title"],
   ["synara_set_thread_archived", "set_task_archived"],
+  ["synara_set_thread_goal", "set_task_goal"],
+  ["synara_create_automation", "create_automation"],
+  ["synara_list_automations", "list_automations"],
+  ["synara_view_automation", "view_automation"],
+  ["synara_update_automation_memory", "update_automation_memory"],
+  ["synara_update_automation", "update_automation"],
+  ["synara_cancel_automation", "cancel_automation"],
+  ["synara_report_automation_result", "report_automation_result"],
 ]);
 
 const LATTICE_NATIVE_TOOL_NAMES = new Set([
@@ -74,6 +89,18 @@ const LATTICE_NATIVE_TOOL_NAMES = new Set([
   "delete_canvas_shapes",
   "spreadsheet_read",
   "spreadsheet_batch_update",
+  "device_list",
+  "device_boot",
+  "device_install",
+  "device_launch",
+  "device_open_url",
+  "device_tap",
+  "device_swipe",
+  "device_type",
+  "device_press_button",
+  "device_screenshot",
+  "device_describe_ui",
+  "device_scroll_to_element",
 ]);
 
 export function replaceModelVisibleHostBranding(value: string): string {
@@ -125,8 +152,9 @@ function adaptToolResult(result: McpToolCallResult): McpToolCallResult {
 
 /**
  * Keep upstream tool implementations intact and adapt only their model-facing
- * catalog. Lattice exposes bounded task coordination while automation and
- * browser control remain unavailable.
+ * catalog. Lattice exposes task coordination, automations, and the device pane;
+ * browser control remains unavailable because the embedded runtime has no
+ * Electron browser surface to drive.
  */
 export function adaptToolsForActiveHost(tools: ReadonlyArray<ToolEntry>): ReadonlyArray<ToolEntry> {
   if (ACTIVE_AGENT_HOST_PROFILE.id !== "lattice") return tools;

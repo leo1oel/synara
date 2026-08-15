@@ -158,6 +158,32 @@ layer("reconcileMigrationLineage", (it) => {
   );
 });
 
+const forkMigration090Layer = it.layer(Layer.mergeAll(NodeSqliteClient.layerMemory()));
+
+forkMigration090Layer("fork migration 090 upgrade", (it) => {
+  it.effect("applies 091 through 096 without replaying 090 or rewriting valid lineage", () =>
+    Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      yield* runMigrations({ toMigrationInclusive: 90 });
+      const lineageThrough090 = yield* trackerRows(sql);
+
+      const executed = yield* runMigrations();
+      assert.deepStrictEqual(executed, [
+        [91, "AutomationFailureTolerance"],
+        [92, "BackfillAutomationRunThreadSource"],
+        [93, "BackfillMaxIterationsDisabledReason"],
+        [94, "ProjectionThreadsGoal"],
+        [95, "ProjectionThreadsGoalTiming"],
+        [96, "ProjectionThreadsGoalAchievements"],
+      ]);
+
+      const upgradedLineage = yield* trackerRows(sql);
+      assert.deepStrictEqual(upgradedLineage.slice(0, lineageThrough090.length), lineageThrough090);
+      assert.strictEqual(upgradedLineage.filter((row) => row.migration_id === 90).length, 1);
+    }),
+  );
+});
+
 const providerDeliveryCutoverLayer = it.layer(Layer.mergeAll(NodeSqliteClient.layerMemory()));
 
 providerDeliveryCutoverLayer(
@@ -292,10 +318,16 @@ managedAttachmentsLegacyLayer("managed attachment migration after private migrat
         [88, "ProjectionThreadsSettledAt"],
         [89, "RecoverRetentionHiddenThreads"],
         [90, "ProjectionThreadMessageTextSegments"],
+        [91, "AutomationFailureTolerance"],
+        [92, "BackfillAutomationRunThreadSource"],
+        [93, "BackfillMaxIterationsDisabledReason"],
+        [94, "ProjectionThreadsGoal"],
+        [95, "ProjectionThreadsGoalTiming"],
+        [96, "ProjectionThreadsGoalAchievements"],
       ]);
 
       const tracker = yield* trackerRows(sql);
-      assert.deepStrictEqual(tracker.slice(-36), [
+      assert.deepStrictEqual(tracker.slice(-42), [
         { migration_id: 55, name: "ManagedAttachments" },
         { migration_id: 56, name: "CommandReceiptFingerprints" },
         { migration_id: 57, name: "ThreadScopedProjectionMessageIdentity" },
@@ -332,6 +364,12 @@ managedAttachmentsLegacyLayer("managed attachment migration after private migrat
         { migration_id: 88, name: "ProjectionThreadsSettledAt" },
         { migration_id: 89, name: "RecoverRetentionHiddenThreads" },
         { migration_id: 90, name: "ProjectionThreadMessageTextSegments" },
+        { migration_id: 91, name: "AutomationFailureTolerance" },
+        { migration_id: 92, name: "BackfillAutomationRunThreadSource" },
+        { migration_id: 93, name: "BackfillMaxIterationsDisabledReason" },
+        { migration_id: 94, name: "ProjectionThreadsGoal" },
+        { migration_id: 95, name: "ProjectionThreadsGoalTiming" },
+        { migration_id: 96, name: "ProjectionThreadsGoalAchievements" },
       ]);
       const preserved = yield* sql<{ readonly count: number }>`
         SELECT COUNT(*) AS count FROM orchestration_consumer_state
@@ -414,6 +452,12 @@ agentGatewayRetentionLegacyLayer(
           [88, "ProjectionThreadsSettledAt"],
           [89, "RecoverRetentionHiddenThreads"],
           [90, "ProjectionThreadMessageTextSegments"],
+          [91, "AutomationFailureTolerance"],
+          [92, "BackfillAutomationRunThreadSource"],
+          [93, "BackfillMaxIterationsDisabledReason"],
+          [94, "ProjectionThreadsGoal"],
+          [95, "ProjectionThreadsGoalTiming"],
+          [96, "ProjectionThreadsGoalAchievements"],
         ]);
 
         const columns = yield* sql<{ readonly name: string }>`
@@ -499,11 +543,17 @@ spacesMigrationCollisionLayer("Spaces migration after the private migration 70 c
         [88, "ProjectionThreadsSettledAt"],
         [89, "RecoverRetentionHiddenThreads"],
         [90, "ProjectionThreadMessageTextSegments"],
+        [91, "AutomationFailureTolerance"],
+        [92, "BackfillAutomationRunThreadSource"],
+        [93, "BackfillMaxIterationsDisabledReason"],
+        [94, "ProjectionThreadsGoal"],
+        [95, "ProjectionThreadsGoalTiming"],
+        [96, "ProjectionThreadsGoalAchievements"],
       ]);
 
       const tracker = yield* trackerRows(sql);
       assert.deepStrictEqual(
-        tracker.slice(-20).map((row) => [row.migration_id, row.name]),
+        tracker.slice(-26).map((row) => [row.migration_id, row.name]),
         [
           [71, "ProjectionThreadsGatewayProvenance"],
           [72, "AgentGatewayOperationRetention"],
@@ -525,6 +575,12 @@ spacesMigrationCollisionLayer("Spaces migration after the private migration 70 c
           [88, "ProjectionThreadsSettledAt"],
           [89, "RecoverRetentionHiddenThreads"],
           [90, "ProjectionThreadMessageTextSegments"],
+          [91, "AutomationFailureTolerance"],
+          [92, "BackfillAutomationRunThreadSource"],
+          [93, "BackfillMaxIterationsDisabledReason"],
+          [94, "ProjectionThreadsGoal"],
+          [95, "ProjectionThreadsGoalTiming"],
+          [96, "ProjectionThreadsGoalAchievements"],
         ],
       );
 
@@ -605,11 +661,17 @@ spacesMigrationCollisionLayer("Spaces migration after the private migration 70 c
         [88, "ProjectionThreadsSettledAt"],
         [89, "RecoverRetentionHiddenThreads"],
         [90, "ProjectionThreadMessageTextSegments"],
+        [91, "AutomationFailureTolerance"],
+        [92, "BackfillAutomationRunThreadSource"],
+        [93, "BackfillMaxIterationsDisabledReason"],
+        [94, "ProjectionThreadsGoal"],
+        [95, "ProjectionThreadsGoalTiming"],
+        [96, "ProjectionThreadsGoalAchievements"],
       ]);
 
       const tracker = yield* trackerRows(sql);
       assert.deepStrictEqual(
-        tracker.slice(-16).map((row) => [row.migration_id, row.name]),
+        tracker.slice(-22).map((row) => [row.migration_id, row.name]),
         [
           [75, "ExternalMcpActiveCapacity"],
           [76, "ExternalMcpHardening"],
@@ -627,6 +689,12 @@ spacesMigrationCollisionLayer("Spaces migration after the private migration 70 c
           [88, "ProjectionThreadsSettledAt"],
           [89, "RecoverRetentionHiddenThreads"],
           [90, "ProjectionThreadMessageTextSegments"],
+          [91, "AutomationFailureTolerance"],
+          [92, "BackfillAutomationRunThreadSource"],
+          [93, "BackfillMaxIterationsDisabledReason"],
+          [94, "ProjectionThreadsGoal"],
+          [95, "ProjectionThreadsGoalTiming"],
+          [96, "ProjectionThreadsGoalAchievements"],
         ],
       );
       const preservedSpaces = yield* sql<{ readonly spaceId: string }>`

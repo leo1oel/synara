@@ -39,6 +39,7 @@ import {
   shouldSyncLocalThreadBranch,
 } from "./BranchToolbar.logic";
 import { Button } from "./ui/button";
+import { DiffStat } from "./ui/diff-stat";
 import {
   Dialog,
   DialogDescription,
@@ -87,6 +88,7 @@ interface BranchToolbarBranchSelectorProps {
   effectiveEnvMode: EnvMode;
   envLocked: boolean;
   hasServerThread: boolean;
+  isThreadSettled: boolean;
   onSetThreadWorkspace: (patch: ThreadWorkspacePatch) => void;
   onCheckoutPullRequestRequest?: (reference: string) => void;
   onComposerFocusRequest?: () => void;
@@ -383,6 +385,7 @@ export function BranchToolbarBranchSelector({
   effectiveEnvMode,
   envLocked,
   hasServerThread,
+  isThreadSettled,
   onSetThreadWorkspace,
   onCheckoutPullRequestRequest,
   onComposerFocusRequest,
@@ -464,6 +467,7 @@ export function BranchToolbarBranchSelector({
         activeThreadBranch,
         currentGitBranch,
         hasServerThread,
+        isThreadSettled,
         isBranchActionPending,
       })
     ) {
@@ -477,6 +481,7 @@ export function BranchToolbarBranchSelector({
     currentGitBranch,
     effectiveEnvMode,
     hasServerThread,
+    isThreadSettled,
     isBranchActionPending,
     onSetThreadWorkspace,
   ]);
@@ -839,12 +844,11 @@ export function BranchToolbarBranchSelector({
                   Uncommitted: {currentBranchChangeSummary.fileCount.toLocaleString()}{" "}
                   {pluralize(currentBranchChangeSummary.fileCount, "file")}
                 </span>
-                <span className="font-mono tabular-nums text-success">
-                  +{currentBranchChangeSummary.insertions.toLocaleString()}
-                </span>
-                <span className="font-mono tabular-nums text-destructive">
-                  -{currentBranchChangeSummary.deletions.toLocaleString()}
-                </span>
+                <DiffStat
+                  className="font-mono"
+                  insertions={currentBranchChangeSummary.insertions}
+                  deletions={currentBranchChangeSummary.deletions}
+                />
               </div>
             ) : null}
           </div>
@@ -912,10 +916,7 @@ export function BranchToolbarBranchSelector({
             size={isPanel ? "sm" : "default"}
             startAddon={
               <SearchIcon
-                className={cn(
-                  "text-muted-foreground/70",
-                  isPanel ? "size-3" : "size-3.5",
-                )}
+                className={cn("text-muted-foreground/70", isPanel ? "size-3" : "size-3.5")}
                 aria-hidden="true"
               />
             }
@@ -926,10 +927,7 @@ export function BranchToolbarBranchSelector({
         </div>
         <ComboboxEmpty>No branches found.</ComboboxEmpty>
 
-        <ComboboxList
-          ref={setBranchListRef}
-          className={cn("max-h-56", isPanel && "max-h-48")}
-        >
+        <ComboboxList ref={setBranchListRef} className={cn("max-h-56", isPanel && "max-h-48")}>
           {shouldVirtualizeBranchList ? (
             <div
               className="relative"
@@ -964,9 +962,7 @@ export function BranchToolbarBranchSelector({
               type="button"
               className={cn(
                 "flex w-full items-center gap-2 rounded-md px-2 text-left text-[var(--color-text-foreground)] outline-none focus-visible:bg-[var(--color-background-elevated-secondary)] disabled:cursor-not-allowed disabled:opacity-50",
-                isPanel
-                  ? "py-1 text-[length:var(--app-font-size-ui,12px)]"
-                  : "py-1.5 text-sm",
+                isPanel ? "py-1 text-[length:var(--app-font-size-ui,12px)]" : "py-1.5 text-sm",
                 ELEVATED_HOVER_SURFACE_CLASS_NAME,
               )}
               disabled={isBranchActionPending}

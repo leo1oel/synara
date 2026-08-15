@@ -41,9 +41,7 @@ function gitStatus(branch: string, hasWorkingTreeChanges = true): GitStatusResul
     branch,
     hasWorkingTreeChanges,
     workingTree: {
-      files: hasWorkingTreeChanges
-        ? [{ path: "src/long.ts", insertions: 80, deletions: 80 }]
-        : [],
+      files: hasWorkingTreeChanges ? [{ path: "src/long.ts", insertions: 80, deletions: 80 }] : [],
       insertions: hasWorkingTreeChanges ? 80 : 0,
       deletions: hasWorkingTreeChanges ? 80 : 0,
     },
@@ -184,9 +182,9 @@ describe("GitPanel", () => {
     expect(scrollViewport!.scrollWidth).toBeGreaterThan(scrollViewport!.clientWidth);
 
     const initialScrollbarBottom = horizontalScrollbar!.getBoundingClientRect().bottom;
-    expect(Math.abs(initialScrollbarBottom - scrollArea!.getBoundingClientRect().bottom)).toBeLessThan(
-      1,
-    );
+    expect(
+      Math.abs(initialScrollbarBottom - scrollArea!.getBoundingClientRect().bottom),
+    ).toBeLessThan(1);
 
     await userEvent.hover(scrollArea!);
     await expect.poll(() => getComputedStyle(verticalScrollbar!).opacity).toBe("1");
@@ -256,15 +254,19 @@ describe("GitPanel", () => {
     expect(actionAnchor).not.toBeNull();
     expect(actionMenu).not.toBeNull();
     expect(
-      Math.abs(actionMenu!.getBoundingClientRect().left - actionAnchor!.getBoundingClientRect().left),
+      Math.abs(
+        actionMenu!.getBoundingClientRect().left - actionAnchor!.getBoundingClientRect().left,
+      ),
     ).toBeLessThan(1);
     expect(
-      Math.abs(actionAnchor!.getBoundingClientRect().left - branchTrigger!.getBoundingClientRect().left),
+      Math.abs(
+        actionAnchor!.getBoundingClientRect().left - branchTrigger!.getBoundingClientRect().left,
+      ),
     ).toBeLessThan(1);
     await new Promise((resolve) => window.setTimeout(resolve, 250));
-    const openChevron = document.querySelector<HTMLButtonElement>(
-      'button[aria-label="More Git actions"]',
-    )?.querySelector<SVGElement>("svg");
+    const openChevron = document
+      .querySelector<HTMLButtonElement>('button[aria-label="More Git actions"]')
+      ?.querySelector<SVGElement>("svg");
     expect(openChevron).not.toBeNull();
     expect(getComputedStyle(openChevron!).rotate).not.toBe(closedRotation);
 

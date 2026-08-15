@@ -247,9 +247,7 @@ export function GitPanel(props: {
   const refreshMutation = useMutation({
     mutationFn: async () => {
       if (!cwd) return;
-      const refreshes = [
-        queryClient.invalidateQueries({ queryKey: gitQueryKeys.branches(cwd) }),
-      ];
+      const refreshes = [queryClient.invalidateQueries({ queryKey: gitQueryKeys.branches(cwd) })];
       if (repositoryReady) {
         refreshes.push(
           queryClient.invalidateQueries({
@@ -385,6 +383,7 @@ export function GitPanel(props: {
                 effectiveEnvMode="local"
                 envLocked
                 hasServerThread={false}
+                isThreadSettled
                 onSetThreadWorkspace={() => undefined}
                 variant="panel"
                 latticeSourceControl
