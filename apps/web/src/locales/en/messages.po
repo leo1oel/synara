@@ -38,13 +38,68 @@ msgstr "The agent can discover and work in every project, including ones you add
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "No projects are available."
+msgstr "No projects are available."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
 msgid "Advanced permissions"
 msgstr "Advanced permissions"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Optional access for existing tasks, shared checkouts, or execution without approvals. The safe defaults are recommended."
+msgstr "Optional access for existing tasks, shared checkouts, or execution without approvals. The safe defaults are recommended."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Review"
+msgstr "Review"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Read other project tasks"
+msgstr "Read other project tasks"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Without this permission, the agent can read only tasks it creates."
+msgstr "Without this permission, the agent can read only tasks it creates."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Use the shared local checkout"
+msgstr "Use the shared local checkout"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "High impact. Tasks may modify the checkout you are actively using instead of an isolated worktree."
+msgstr "High impact. Tasks may modify the checkout you are actively using instead of an isolated worktree."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Run without approval prompts"
+msgstr "Run without approval prompts"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "High impact. The external agent may start full-access execution without asking you to approve tool actions."
+msgstr "High impact. The external agent may start full-access execution without asking you to approve tool actions."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
 msgid "Create connection"
 msgstr "Create connection"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "The connection lasts 30 days and can be revoked at any time. The next screen gives you one prompt to paste into your agent."
+msgstr "The connection lasts 30 days and can be revoked at any time. The next screen gives you one prompt to paste into your agent."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Creating..."
+msgstr "Creating..."
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
@@ -290,6 +345,36 @@ msgstr "Available CLIs"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Installed providers appear in the picker. Turn off any you don't want to see, and drag them into your preferred order."
+msgstr "Installed providers appear in the picker. Turn off any you don't want to see, and drag them into your preferred order."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Checking installed CLIs"
+msgstr "Checking installed CLIs"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "No CLIs detected"
+msgstr "No CLIs detected"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "{visibleAvailableProviderCount} of {availableProviderCount} installed shown"
+msgstr "{visibleAvailableProviderCount} of {availableProviderCount} installed shown"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "{availableProviderCount} installed · custom order"
+msgstr "{availableProviderCount} installed · custom order"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "{availableProviderCount} installed"
+msgstr "{availableProviderCount} installed"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Updates"
 msgstr "Updates"
 
@@ -312,6 +397,21 @@ msgstr "Provider updates"
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Review installed provider tools that Synara can safely update."
 msgstr "Review installed provider tools that Synara can safely update."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Automatic checks off"
+msgstr "Automatic checks off"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "{outdatedProviderCount, plural, one {# update available} other {# updates available}}"
+msgstr "{outdatedProviderCount, plural, one {# update available} other {# updates available}}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "No provider updates detected"
+msgstr "No provider updates detected"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx

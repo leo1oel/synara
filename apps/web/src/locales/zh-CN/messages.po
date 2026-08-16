@@ -38,13 +38,68 @@ msgstr "智能体可以发现并处理所有项目，包括以后添加的项目
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "No projects are available."
+msgstr "暂无可用项目。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
 msgid "Advanced permissions"
 msgstr "高级权限"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Optional access for existing tasks, shared checkouts, or execution without approvals. The safe defaults are recommended."
+msgstr "可选择授予读取现有任务、使用共享检出或无需批准即可执行的权限。建议保留安全的默认设置。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Review"
+msgstr "查看"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Read other project tasks"
+msgstr "读取其他项目任务"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Without this permission, the agent can read only tasks it creates."
+msgstr "未授予此权限时，智能体只能读取由它创建的任务。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Use the shared local checkout"
+msgstr "使用共享的本地检出"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "High impact. Tasks may modify the checkout you are actively using instead of an isolated worktree."
+msgstr "高风险。任务可能会修改你当前正在使用的检出，而不是隔离的 worktree。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Run without approval prompts"
+msgstr "无需批准即可运行"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "High impact. The external agent may start full-access execution without asking you to approve tool actions."
+msgstr "高风险。外部智能体可以启动完全访问模式的执行，而无需请求你批准工具操作。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
 msgid "Create connection"
 msgstr "创建连接"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "The connection lasts 30 days and can be revoked at any time. The next screen gives you one prompt to paste into your agent."
+msgstr "连接有效期为 30 天，且可随时撤销。下一页会提供一段提示词，供你粘贴到智能体中。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Creating..."
+msgstr "正在创建..."
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
@@ -290,6 +345,36 @@ msgstr "可用 CLI"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Installed providers appear in the picker. Turn off any you don't want to see, and drag them into your preferred order."
+msgstr "已安装的提供商会显示在选择器中。关闭不想显示的提供商，并拖动调整为你偏好的顺序。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Checking installed CLIs"
+msgstr "正在检查已安装的 CLI"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "No CLIs detected"
+msgstr "未检测到 CLI"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "{visibleAvailableProviderCount} of {availableProviderCount} installed shown"
+msgstr "已显示 {visibleAvailableProviderCount} 个，共安装 {availableProviderCount} 个"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "{availableProviderCount} installed · custom order"
+msgstr "已安装 {availableProviderCount} 个 · 自定义顺序"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "{availableProviderCount} installed"
+msgstr "已安装 {availableProviderCount} 个"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Updates"
 msgstr "更新"
 
@@ -312,6 +397,21 @@ msgstr "提供商更新"
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Review installed provider tools that Synara can safely update."
 msgstr "查看 Synara 可安全更新的已安装提供商工具。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Automatic checks off"
+msgstr "自动检查已关闭"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "{outdatedProviderCount, plural, one {# update available} other {# updates available}}"
+msgstr "{outdatedProviderCount, plural, other {# 个可用更新}}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "No provider updates detected"
+msgstr "未检测到提供商更新"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx

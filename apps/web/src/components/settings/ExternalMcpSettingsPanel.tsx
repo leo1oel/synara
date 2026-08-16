@@ -298,14 +298,18 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                   );
                 })}
                 {projects.length === 0 ? (
-                  <span className="text-xs text-muted-foreground">No projects are available.</span>
+                  <span className="text-xs text-muted-foreground">
+                    {i18n._("No projects are available.")}
+                  </span>
                 ) : null}
               </div>
             </DisclosureRegion>
           </SettingsRow>
           <SettingsRow
             title={i18n._("Advanced permissions")}
-            description="Optional access for existing tasks, shared checkouts, or execution without approvals. The safe defaults are recommended."
+            description={i18n._(
+              "Optional access for existing tasks, shared checkouts, or execution without approvals. The safe defaults are recommended.",
+            )}
             control={
               <Button
                 size="xs"
@@ -313,7 +317,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                 aria-expanded={advancedOpen}
                 onClick={() => setAdvancedOpen((current) => !current)}
               >
-                Review
+                {i18n._("Review")}
                 <DisclosureChevron open={advancedOpen} className="ml-1 size-3.5" />
               </Button>
             }
@@ -324,41 +328,65 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-xs font-medium">Read other project tasks</div>
+                  <div className="text-xs font-medium">
+                    {i18n._("Read other project tasks")}
+                  </div>
                   <div className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
-                    Without this permission, the agent can read only tasks it creates.
+                    {i18n._(
+                      "Without this permission, the agent can read only tasks it creates.",
+                    )}
                   </div>
                 </div>
-                <Switch checked={allowProjectRead} onCheckedChange={setAllowProjectRead} />
+                <Switch
+                  checked={allowProjectRead}
+                  onCheckedChange={setAllowProjectRead}
+                  aria-label={i18n._("Read other project tasks")}
+                />
               </div>
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-xs font-medium">Use the shared local checkout</div>
+                  <div className="text-xs font-medium">
+                    {i18n._("Use the shared local checkout")}
+                  </div>
                   <div className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
-                    High impact. Tasks may modify the checkout you are actively using instead of an
-                    isolated worktree.
+                    {i18n._(
+                      "High impact. Tasks may modify the checkout you are actively using instead of an isolated worktree.",
+                    )}
                   </div>
                 </div>
-                <Switch checked={allowLocal} onCheckedChange={setAllowLocal} />
+                <Switch
+                  checked={allowLocal}
+                  onCheckedChange={setAllowLocal}
+                  aria-label={i18n._("Use the shared local checkout")}
+                />
               </div>
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-xs font-medium">Run without approval prompts</div>
+                  <div className="text-xs font-medium">
+                    {i18n._("Run without approval prompts")}
+                  </div>
                   <div className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
-                    High impact. The external agent may start full-access execution without asking
-                    you to approve tool actions.
+                    {i18n._(
+                      "High impact. The external agent may start full-access execution without asking you to approve tool actions.",
+                    )}
                   </div>
                 </div>
-                <Switch checked={allowFullAccess} onCheckedChange={setAllowFullAccess} />
+                <Switch
+                  checked={allowFullAccess}
+                  onCheckedChange={setAllowFullAccess}
+                  aria-label={i18n._("Run without approval prompts")}
+                />
               </div>
             </DisclosureRegion>
           </SettingsRow>
           <SettingsRow
             title={i18n._("Create connection")}
-            description="The connection lasts 30 days and can be revoked at any time. The next screen gives you one prompt to paste into your agent."
+            description={i18n._(
+              "The connection lasts 30 days and can be revoked at any time. The next screen gives you one prompt to paste into your agent.",
+            )}
             control={
               <Button size="sm" disabled={!canCreate} onClick={() => createMutation.mutate()}>
-                {createMutation.isPending ? "Creating..." : "Create connection"}
+                {createMutation.isPending ? i18n._("Creating...") : i18n._("Create connection")}
               </Button>
             }
           />

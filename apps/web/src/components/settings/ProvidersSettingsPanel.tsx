@@ -9,7 +9,6 @@ import {
   type ServerSettings,
 } from "@synara/contracts";
 import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
-import { pluralize } from "@synara/shared/text";
 import {
   closestCenter,
   DndContext,
@@ -955,17 +954,26 @@ export function ProvidersSettingsPanel({
       <SettingsSection title={i18n._("Provider picker")}>
         <SettingsRow
           title={i18n._("Available CLIs")}
-          description="Installed providers appear in the picker. Turn off any you don't want to see, and drag them into your preferred order."
+          description={i18n._(
+            "Installed providers appear in the picker. Turn off any you don't want to see, and drag them into your preferred order.",
+          )}
           status={
             serverConfigQuery.isPending || hasPendingProviderStatuses
-              ? "Checking installed CLIs"
+              ? i18n._("Checking installed CLIs")
               : availableProviderCount === 0
-                ? "No CLIs detected"
+                ? i18n._("No CLIs detected")
                 : visibleAvailableProviderCount < availableProviderCount
-                  ? `${visibleAvailableProviderCount} of ${availableProviderCount} installed shown`
+                  ? i18n._(
+                      "{visibleAvailableProviderCount} of {availableProviderCount} installed shown",
+                      { visibleAvailableProviderCount, availableProviderCount },
+                    )
                   : isProviderOrderDirty
-                    ? `${availableProviderCount} installed · custom order`
-                    : `${availableProviderCount} installed`
+                    ? i18n._("{availableProviderCount} installed · custom order", {
+                        availableProviderCount,
+                      })
+                    : i18n._("{availableProviderCount} installed", {
+                        availableProviderCount,
+                      })
           }
           resetAction={
             hiddenProviderCount > 0 || isProviderOrderDirty ? (
@@ -1049,10 +1057,13 @@ export function ProvidersSettingsPanel({
             description={i18n._("Review installed provider tools that Synara can safely update.")}
             status={
               !settings.enableProviderUpdateChecks
-                ? "Automatic checks off"
+                ? i18n._("Automatic checks off")
                 : outdatedProviderCount > 0
-                  ? `${outdatedProviderCount} ${pluralize(outdatedProviderCount, "update")} available`
-                  : "No provider updates detected"
+                  ? i18n._(
+                      "{outdatedProviderCount, plural, one {# update available} other {# updates available}}",
+                      { outdatedProviderCount },
+                    )
+                  : i18n._("No provider updates detected")
             }
           >
             {settings.enableProviderUpdateChecks && outdatedProviderStatuses.length > 0 ? (
@@ -1102,10 +1113,13 @@ export function ProvidersSettingsPanel({
             description={i18n._("Review external provider CLIs and the Pi SDK included with Lattice. Pi does not require a separate CLI installation or update.")}
             status={
               !settings.enableProviderUpdateChecks
-                ? "Automatic checks off"
+                ? i18n._("Automatic checks off")
                 : outdatedProviderCount > 0
-                  ? `${outdatedProviderCount} ${pluralize(outdatedProviderCount, "update")} available`
-                  : "No provider updates detected"
+                  ? i18n._(
+                      "{outdatedProviderCount, plural, one {# update available} other {# updates available}}",
+                      { outdatedProviderCount },
+                    )
+                  : i18n._("No provider updates detected")
             }
             resetAction={
               installSettingsDirty ? (
