@@ -163,8 +163,8 @@ msgstr "Your skill library"
 
 #. js-lingui-explicit-id
 #: src/components/settings/SkillsSettingsPanel.tsx
-msgid "Included and imported skills are managed by Lattice. Skills found in your provider and project folders are listed here too and remain managed by their original tools."
-msgstr "Included and imported skills are managed by Lattice. Skills found in your provider and project folders are listed here too and remain managed by their original tools."
+msgid "Manage Skills included with Lattice, imported by you, or detected from other tools."
+msgstr "Manage Skills included with Lattice, imported by you, or detected from other tools."
 
 #. js-lingui-explicit-id
 #: src/components/settings/SkillsSettingsPanel.tsx

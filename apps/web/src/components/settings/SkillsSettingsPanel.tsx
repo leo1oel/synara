@@ -135,8 +135,6 @@ export function SkillsSettingsPanel() {
       });
   };
 
-  const totalSkills = skillGroups.length;
-  const enabledSkills = skillGroups.filter((group) => !disabledSkillNames.has(group.key)).length;
   const refreshSkillQueries = async () => {
     await queryClient.invalidateQueries({ queryKey: providerDiscoveryQueryKeys.all });
   };
@@ -461,14 +459,9 @@ export function SkillsSettingsPanel() {
       <SettingsSection title={i18n._("Skills Manager")}>
         <SettingsRow
           title={i18n._("Your skill library")}
-          description={i18n._("Included and imported skills are managed by Lattice. Skills found in your provider and project folders are listed here too and remain managed by their original tools.")}
-          status={
-            catalogQuery.isLoading
-              ? "Scanning your library…"
-              : `${enabledSkills} of ${totalSkills} skill${totalSkills === 1 ? "" : "s"} enabled`
-          }
+          description={i18n._("Manage Skills included with Lattice, imported by you, or detected from other tools.")}
           control={
-            <div className="flex flex-wrap justify-end gap-2">
+            <div className="grid w-full grid-cols-2 gap-2 sm:w-52">
               <input
                 ref={(element) => {
                   skillFolderInputRef.current = element;
@@ -483,6 +476,7 @@ export function SkillsSettingsPanel() {
               <Button
                 size="sm"
                 variant="outline"
+                className="w-full"
                 onClick={() => {
                   setSelectedSkill(null);
                   setSkillEditor({ mode: "create" });
@@ -494,6 +488,7 @@ export function SkillsSettingsPanel() {
               <Button
                 size="sm"
                 variant="outline"
+                className="w-full"
                 disabled={isImportingSkill}
                 onClick={() => skillFolderInputRef.current?.click()}
               >
