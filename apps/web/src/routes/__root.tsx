@@ -2033,6 +2033,19 @@ function EventRouter() {
         },
       });
     });
+    // Both subscriptions can replay synchronously on mount. Register the transport
+    // boundary first so the authoritative provider replay is the final projection;
+    // reversing them marks an already-delivered snapshot unreconciled and strands
+    // provider controls in "Checking" until another status event happens.
+    const unsubWsTransportState = addWsTransportStateListener(
+      (state) => {
+        if (state !== "open") return;
+        // Reopening the socket is a projection boundary. React Query otherwise
+        // keeps the previous infinite-stale config and can strand "Checking".
+        void refreshServerConfigAfterTransportOpen(queryClient).catch(() => undefined);
+      },
+      { replayCurrent: true },
+    );
     const unsubProviderStatusesUpdated = onServerProviderStatusesUpdated((payload) => {
       const nextProviderDiscoveryFingerprint = providerModelDiscoveryInvalidationFingerprint(
         payload.providers,
@@ -2069,15 +2082,6 @@ function EventRouter() {
         });
       }
     });
-    const unsubWsTransportState = addWsTransportStateListener(
-      (state) => {
-        if (state !== "open") return;
-        // Reopening the socket is a projection boundary. React Query otherwise
-        // keeps the previous infinite-stale config and can strand "Checking".
-        void refreshServerConfigAfterTransportOpen(queryClient).catch(() => undefined);
-      },
-      { replayCurrent: true },
-    );
     const unsubServerSettingsUpdated = onServerSettingsUpdated((payload) => {
       queryClient.setQueryData(serverQueryKeys.settings(), payload.settings);
       void queryClient.invalidateQueries({

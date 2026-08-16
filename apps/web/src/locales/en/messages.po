@@ -12,6 +12,36 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Add models manually"
+msgstr "Add models manually"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "If a model does not appear automatically, choose its provider and enter its model ID. It will then be available in model pickers."
+msgstr "If a model does not appear automatically, choose its provider and enter its model ID. It will then be available in model pickers."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Add"
+msgstr "Add"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Checking"
+msgstr "Checking"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Installed"
+msgstr "Installed"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "CLI not installed"
+msgstr "CLI not installed"
+
+#. js-lingui-explicit-id
 #: src/components/ChatView.tsx
 msgid "New Chat"
 msgstr "New Chat"
@@ -328,16 +358,6 @@ msgstr "Git text generation model"
 #: src/components/settings/ModelsSettingsPanel.tsx
 msgid "Custom models"
 msgstr "Custom models"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ModelsSettingsPanel.tsx
-msgid "Saved model slugs"
-msgstr "Saved model slugs"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ModelsSettingsPanel.tsx
-msgid "Add custom model slugs for supported providers."
-msgstr "Add custom model slugs for supported providers."
 
 #. js-lingui-explicit-id
 #: src/components/settings/ModelsSettingsPanel.tsx

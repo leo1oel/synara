@@ -12,6 +12,36 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Add models manually"
+msgstr "手动添加模型"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "If a model does not appear automatically, choose its provider and enter its model ID. It will then be available in model pickers."
+msgstr "如果某个模型没有自动显示，请选择提供商并输入模型 ID。添加后即可在模型选择器中使用。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Add"
+msgstr "添加"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Checking"
+msgstr "正在检查"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Installed"
+msgstr "已安装"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "CLI not installed"
+msgstr "未安装 CLI"
+
+#. js-lingui-explicit-id
 #: src/components/ChatView.tsx
 msgid "New Chat"
 msgstr "新聊天"
@@ -328,16 +358,6 @@ msgstr "Git 文本生成模型"
 #: src/components/settings/ModelsSettingsPanel.tsx
 msgid "Custom models"
 msgstr "自定义模型"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ModelsSettingsPanel.tsx
-msgid "Saved model slugs"
-msgstr "已保存的模型标识"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ModelsSettingsPanel.tsx
-msgid "Add custom model slugs for supported providers."
-msgstr "为支持的提供商添加自定义模型标识。"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ModelsSettingsPanel.tsx

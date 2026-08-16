@@ -27,10 +27,7 @@ import { PlusIcon, XIcon } from "~/lib/icons";
 import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
-import {
-  SETTINGS_CARD_ROW_DIVIDER_CLASS_NAME,
-  SETTINGS_INSET_LIST_CLASS_NAME,
-} from "~/settingsPanelStyles";
+import { SETTINGS_INSET_LIST_CLASS_NAME } from "~/settingsPanelStyles";
 
 import { Button } from "../ui/button";
 import { DisclosureRegion } from "../ui/DisclosureRegion";
@@ -309,15 +306,17 @@ export function ModelsSettingsPanel({
 
       <SettingsSection title={i18n._("Custom models")}>
         <SettingsRow
-          title={i18n._("Saved model slugs")}
-          description={i18n._("Add custom model slugs for supported providers.")}
+          title={i18n._("Add models manually")}
+          description={i18n._(
+            "If a model does not appear automatically, choose its provider and enter its model ID. It will then be available in model pickers.",
+          )}
           resetAction={
             savedCustomModelRows.length > 0 ? (
               <SettingResetButton label="custom models" onClick={resetCustomModels} />
             ) : null
           }
         >
-          <div className={cn("mt-4 pt-4", SETTINGS_CARD_ROW_DIVIDER_CLASS_NAME)}>
+          <div className="mt-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <Select
                 value={selectedCustomModelProvider}
@@ -374,7 +373,7 @@ export function ModelsSettingsPanel({
                 onClick={() => addCustomModel(selectedCustomModelProvider)}
               >
                 <PlusIcon className="size-3.5" />
-                Add
+                {i18n._("Add")}
               </Button>
             </div>
 

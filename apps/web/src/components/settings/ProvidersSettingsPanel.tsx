@@ -446,6 +446,7 @@ function SortableProviderVisibilityRow(props: {
   isHidden: boolean;
   onHiddenChange: (hidden: boolean) => void;
 }) {
+  const { i18n } = useLingui();
   const {
     attributes,
     listeners,
@@ -488,7 +489,11 @@ function SortableProviderVisibilityRow(props: {
         <span className="min-w-0">
           <span className="block truncate text-sm text-foreground">{props.option.title}</span>
           <span className="block text-[11px] text-muted-foreground">
-            {isChecking ? "Checking" : isAvailable ? "Installed" : "CLI not installed"}
+            {isChecking
+              ? i18n._("Checking")
+              : isAvailable
+                ? i18n._("Installed")
+                : i18n._("CLI not installed")}
           </span>
         </span>
       </div>
@@ -1028,7 +1033,9 @@ export function ProvidersSettingsPanel({
         <SettingsSection title={i18n._("Updates")}>
           <SettingsRow
             title={i18n._("Automatic CLI update checks")}
-            description={i18n._("Check Codex, Claude, and other provider CLIs for newer versions in the background.")}
+            description={i18n._(
+              "Check Codex, Claude, and other provider CLIs for newer versions in the background.",
+            )}
             resetAction={
               settings.enableProviderUpdateChecks !== defaults.enableProviderUpdateChecks ? (
                 <SettingResetButton
@@ -1110,7 +1117,9 @@ export function ProvidersSettingsPanel({
         <SettingsSection title={i18n._("Provider tools")}>
           <SettingsRow
             title={i18n._("Provider runtimes")}
-            description={i18n._("Review external provider CLIs and the Pi SDK included with Lattice. Pi does not require a separate CLI installation or update.")}
+            description={i18n._(
+              "Review external provider CLIs and the Pi SDK included with Lattice. Pi does not require a separate CLI installation or update.",
+            )}
             status={
               !settings.enableProviderUpdateChecks
                 ? i18n._("Automatic checks off")
