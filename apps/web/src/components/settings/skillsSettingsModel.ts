@@ -123,9 +123,9 @@ function sectionTitle(section: string): string {
     return "Included with Lattice";
   }
   if (section === SHARED_SKILLS_SECTION || section === "synara") {
-    return section === "synara" ? "Installed by you" : "Available skills";
+    return section === "synara" ? "Installed by you" : "Shared across agents";
   }
-  return `From ${skillOriginInfo(section).label}`;
+  return skillOriginInfo(section).label;
 }
 
 function sectionRank(section: string): number {
@@ -166,8 +166,9 @@ export function buildSettingsSkillGroups(
           .flatMap((source) => providersForSkillOrigin(source.origin))
           .filter((provider, index, all) => all.indexOf(provider) === index),
       );
+      const sourceLabels = new Set(sources.map((source) => source.originInfo.label));
       const section =
-        sources.length > 1 ? SHARED_SKILLS_SECTION : (sources[0]?.origin ?? PERSONAL_ORIGIN);
+        sourceLabels.size > 1 ? SHARED_SKILLS_SECTION : (sources[0]?.origin ?? PERSONAL_ORIGIN);
       const description =
         primarySkill.interface?.shortDescription ?? primarySkill.description ?? "No description.";
       return {
@@ -184,11 +185,11 @@ export function buildSettingsSkillGroups(
     .sort((left, right) => left.displayName.localeCompare(right.displayName));
 }
 
-export function buildSettingsSkillSections(
-  skills: ReadonlyArray<ProviderSkillDescriptor>,
+export function groupSettingsSkillsBySection(
+  groups: ReadonlyArray<SettingsSkillGroup>,
 ): SettingsSkillSection[] {
   const sections = new Map<string, SettingsSkillGroup[]>();
-  for (const group of buildSettingsSkillGroups(skills)) {
+  for (const group of groups) {
     sections.set(group.section, [...(sections.get(group.section) ?? []), group]);
   }
 
@@ -199,4 +200,10 @@ export function buildSettingsSkillSections(
       groups,
     }))
     .sort((left, right) => sectionRank(left.key) - sectionRank(right.key));
+}
+
+export function buildSettingsSkillSections(
+  skills: ReadonlyArray<ProviderSkillDescriptor>,
+): SettingsSkillSection[] {
+  return groupSettingsSkillsBySection(buildSettingsSkillGroups(skills));
 }

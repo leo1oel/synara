@@ -52,6 +52,25 @@ describe("buildSettingsSkillGroups", () => {
     expect(cursorOnly?.providers).toEqual(["cursor"]);
   });
 
+  it("keeps duplicate copies from the same agent in that agent's section", () => {
+    const groups = buildSettingsSkillGroups([
+      skill({
+        name: "cursor-review",
+        path: "/Users/test/.cursor/skills/cursor-review/SKILL.md",
+        scope: "cursor",
+      }),
+      skill({
+        name: "cursor-review",
+        path: "/Users/test/.cursor/skills-cursor/cursor-review/SKILL.md",
+        scope: "cursor",
+      }),
+    ]);
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.section).toBe("cursor");
+    expect(groups[0]?.sources).toHaveLength(2);
+  });
+
   it("does not show provider icons for shared alias-only skills", () => {
     const groups = buildSettingsSkillGroups([
       skill({
@@ -99,7 +118,7 @@ describe("buildSettingsSkillSections", () => {
     expect(sections[0]?.groups[0]?.sources[0]?.originInfo.label).toBe("Installed by you");
   });
 
-  it("places duplicate skill groups before provider-only sections", () => {
+  it("groups detected skills by agent and places cross-agent skills first", () => {
     const sections = buildSettingsSkillSections([
       skill({
         name: "logic-consolidator",
@@ -118,7 +137,11 @@ describe("buildSettingsSkillSections", () => {
       }),
     ]);
 
-    expect(sections.map((section) => section.title)).toEqual(["Available skills", "From Cursor"]);
+    expect(sections.map((section) => section.title)).toEqual([
+      "Shared across agents",
+      "Cursor",
+    ]);
     expect(sections[0]?.groups.map((group) => group.key)).toEqual(["logic-consolidator"]);
+    expect(sections[1]?.groups.map((group) => group.key)).toEqual(["cursor-only"]);
   });
 });

@@ -45,6 +45,7 @@ import { ManagedSkillDetailView } from "./ManagedSkillDetailView";
 import { ManagedSkillEditorView } from "./ManagedSkillEditorView";
 import {
   buildSettingsSkillGroups,
+  groupSettingsSkillsBySection,
   settingsSkillNameKey,
   type SettingsSkillGroup,
 } from "./skillsSettingsModel";
@@ -102,6 +103,7 @@ export function SkillsSettingsPanel() {
   const visibleBundledGroups = filterSkillGroups(bundledGroups, searchQuery);
   const visibleInstalledGroups = filterSkillGroups(installedGroups, searchQuery);
   const visibleDetectedGroups = filterSkillGroups(detectedGroups, searchQuery);
+  const visibleDetectedSections = groupSettingsSkillsBySection(visibleDetectedGroups);
 
   const setSkillEnabled = (skillName: string, enabled: boolean) => {
     // Read through the query cache so rapid toggles build on each other instead
@@ -553,9 +555,16 @@ export function SkillsSettingsPanel() {
         </SettingsSectionShell>
       ) : null}
 
-      {visibleDetectedGroups.length > 0 ? (
+      {visibleDetectedSections.length > 0 ? (
         <SettingsSectionShell title={i18n._("Detected from your environment")}>
-          <SettingsCard>{visibleDetectedGroups.map(renderSkillRow)}</SettingsCard>
+          <div className="space-y-5">
+            {visibleDetectedSections.map((section) => (
+              <div key={section.key} className="space-y-1.5">
+                <h3 className="px-0.5 text-xs font-medium text-foreground">{section.title}</h3>
+                <SettingsCard>{section.groups.map(renderSkillRow)}</SettingsCard>
+              </div>
+            ))}
+          </div>
         </SettingsSectionShell>
       ) : null}
     </div>
