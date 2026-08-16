@@ -210,7 +210,7 @@ export function SettingsRow({
   onClick,
 }: {
   title: ReactNode;
-  description: string;
+  description?: string;
   status?: ReactNode;
   resetAction?: ReactNode;
   control?: ReactNode;
@@ -240,7 +240,9 @@ export function SettingsRow({
               {resetAction}
             </span>
           </div>
-          <p className={SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME}>{description}</p>
+          {description ? (
+            <p className={SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME}>{description}</p>
+          ) : null}
           {status ? <div className="pt-1 text-[11px] text-muted-foreground">{status}</div> : null}
         </div>
         {control ? (

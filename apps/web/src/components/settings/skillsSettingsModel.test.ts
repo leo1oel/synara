@@ -50,6 +50,7 @@ describe("buildSettingsSkillGroups", () => {
     const cursorOnly = groups.find((group) => group.key === "cursor-only");
     expect(cursorOnly?.section).toBe("cursor");
     expect(cursorOnly?.providers).toEqual(["cursor"]);
+    expect(cursorOnly?.description).toBeUndefined();
   });
 
   it("keeps duplicate copies from the same agent in that agent's section", () => {

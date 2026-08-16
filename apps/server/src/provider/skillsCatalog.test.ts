@@ -98,6 +98,39 @@ description: "Use when the user says \\"check this\\"."
       description: 'Use when the user says "check this".',
     });
   });
+
+  it("parses folded and literal block descriptions", () => {
+    expect(
+      parseSkillFrontmatter(`---
+name: create-skill
+description: >-
+  Create Cursor Agent Skills. Use when authoring a new skill or asking about
+  SKILL.md structure.
+notes: |-
+  First line.
+  Second line.
+enabled: true
+---
+`),
+    ).toMatchObject({
+      name: "create-skill",
+      description:
+        "Create Cursor Agent Skills. Use when authoring a new skill or asking about SKILL.md structure.",
+      notes: "First line.\nSecond line.",
+      enabled: true,
+    });
+  });
+
+  it("omits empty block descriptions instead of exposing the YAML marker", () => {
+    expect(
+      parseSkillFrontmatter(`---
+name: no-description
+description: >-
+enabled: true
+---
+`),
+    ).toEqual({ name: "no-description", enabled: true });
+  });
 });
 
 describe("importSynaraSkill", () => {
@@ -399,6 +432,44 @@ describe("discoverSkillsCatalog", () => {
     expect(byName.get("kilo-only")?.scope).toBe("kilo");
     expect(byName.get("opencode-only")?.scope).toBe("opencode");
     expect(byName.get("pi-only")?.scope).toBe("pi");
+  });
+
+  it("hides provider-owned built-in skills while preserving user and project skills", async () => {
+    await writeSkill(
+      path.join(homeDir, ".codex", "skills", ".system", "skill-creator"),
+      "codex-built-in",
+      "Codex built-in",
+    );
+    await writeSkill(
+      path.join(homeDir, ".codex", "skills", "user-review"),
+      "codex-user",
+      "Codex user skill",
+    );
+    await writeSkill(
+      path.join(homeDir, ".cursor", "skills-cursor", "create-skill"),
+      "cursor-built-in",
+      "Cursor built-in",
+    );
+    await writeSkill(
+      path.join(homeDir, ".cursor", "skills", "user-review"),
+      "cursor-user",
+      "Cursor user skill",
+    );
+    const cwd = path.join(root, "repo");
+    await writeSkill(
+      path.join(cwd, ".codex", "skills", ".system", "project-helper"),
+      "project-system-name",
+      "Project skill",
+    );
+
+    const skills = await discoverSkillsCatalog({ cwd, homeDir, synaraBaseDir });
+    const names = skills.map((skill) => skill.name);
+
+    expect(names).not.toContain("codex-built-in");
+    expect(names).not.toContain("cursor-built-in");
+    expect(names).toEqual(
+      expect.arrayContaining(["codex-user", "cursor-user", "project-system-name"]),
+    );
   });
 
   it("discovers only the registered Claude plugin version for Grok with its native namespace", async () => {

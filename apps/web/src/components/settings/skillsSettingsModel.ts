@@ -21,7 +21,7 @@ export interface SettingsSkillSource {
 export interface SettingsSkillGroup {
   readonly key: string;
   readonly displayName: string;
-  readonly description: string;
+  readonly description?: string;
   readonly primarySkill: ProviderSkillDescriptor;
   readonly providers: ReadonlyArray<ProviderKind>;
   readonly sources: ReadonlyArray<SettingsSkillSource>;
@@ -169,12 +169,13 @@ export function buildSettingsSkillGroups(
       const sourceLabels = new Set(sources.map((source) => source.originInfo.label));
       const section =
         sourceLabels.size > 1 ? SHARED_SKILLS_SECTION : (sources[0]?.origin ?? PERSONAL_ORIGIN);
-      const description =
-        primarySkill.interface?.shortDescription ?? primarySkill.description ?? "No description.";
+      const description = (
+        primarySkill.interface?.shortDescription ?? primarySkill.description
+      )?.trim();
       return {
         key,
         displayName: skillDisplayName(primarySkill),
-        description,
+        ...(description ? { description } : {}),
         primarySkill,
         providers,
         sources,

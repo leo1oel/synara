@@ -33,6 +33,8 @@ export interface SkillRoot {
   readonly path: string;
   readonly scope: string;
   readonly includeMarkdownFiles?: boolean;
+  /** Provider-owned top-level folders that should not appear in the user catalog. */
+  readonly excludedTopLevelDirectories?: ReadonlyArray<string>;
   readonly managedKind?: ProviderManagedSkillKind;
   /** Prefix used by plugin-provided skills whose native invocation is namespaced. */
   readonly namespace?: string;
@@ -69,7 +71,44 @@ function parseYamlScalar(value: string): FrontmatterValue {
   return unquoted;
 }
 
-// Parses the small scalar frontmatter subset used by Agent Skills without pulling in YAML.
+function parseYamlBlockScalar(
+  lines: ReadonlyArray<string>,
+  startIndex: number,
+  parentIndent: number,
+  style: ">" | "|",
+): { readonly value: string; readonly nextIndex: number } {
+  const blockLines: string[] = [];
+  let nextIndex = startIndex;
+  while (nextIndex < lines.length) {
+    const line = lines[nextIndex] ?? "";
+    const indent = /^\s*/.exec(line)?.[0].length ?? 0;
+    if (line.trim() && indent <= parentIndent) {
+      break;
+    }
+    blockLines.push(line);
+    nextIndex += 1;
+  }
+
+  const contentIndent = blockLines.reduce<number | null>((minimum, line) => {
+    if (!line.trim()) return minimum;
+    const indent = /^\s*/.exec(line)?.[0].length ?? 0;
+    return minimum === null ? indent : Math.min(minimum, indent);
+  }, null);
+  if (contentIndent === null) {
+    return { value: "", nextIndex };
+  }
+
+  const normalizedLines = blockLines.map((line) =>
+    line.trim() ? line.slice(contentIndent) : "",
+  );
+  const literal = normalizedLines.join("\n").trim();
+  return {
+    value: style === ">" ? literal.replace(/([^\n])\n(?=[^\n])/g, "$1 ") : literal,
+    nextIndex,
+  };
+}
+
+// Parses the scalar frontmatter subset used by Agent Skills without pulling in YAML.
 export function parseSkillFrontmatter(markdown: string): Record<string, FrontmatterValue> {
   const normalized = markdown.replace(/\r\n/g, "\n");
   const match = /^---\s*\n([\s\S]*?)\n---\s*(?:\n|$)/.exec(normalized);
@@ -78,7 +117,9 @@ export function parseSkillFrontmatter(markdown: string): Record<string, Frontmat
   }
 
   const record: Record<string, FrontmatterValue> = {};
-  for (const line of (match[1] ?? "").split("\n")) {
+  const lines = (match[1] ?? "").split("\n");
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) {
       continue;
@@ -89,7 +130,24 @@ export function parseSkillFrontmatter(markdown: string): Record<string, Frontmat
     }
     const key = trimmed.slice(0, separatorIndex).trim();
     const value = trimmed.slice(separatorIndex + 1).trim();
-    if (!key || !value) {
+    if (!key) {
+      continue;
+    }
+    const blockMarker = /^([>|])[+-]?$/.exec(value);
+    if (blockMarker) {
+      const block = parseYamlBlockScalar(
+        lines,
+        index + 1,
+        /^\s*/.exec(line)?.[0].length ?? 0,
+        blockMarker[1] as ">" | "|",
+      );
+      index = block.nextIndex - 1;
+      if (block.value) {
+        record[key] = block.value;
+      }
+      continue;
+    }
+    if (!value) {
       continue;
     }
     record[key] = parseYamlScalar(value);
@@ -194,6 +252,7 @@ export async function collectSkillMarkdownPaths(
   options?: {
     readonly includeMarkdownFiles?: boolean;
     readonly followSymlinks?: boolean;
+    readonly excludedTopLevelDirectories?: ReadonlyArray<string>;
   },
 ): Promise<string[]> {
   async function visit(dir: string, depth: number): Promise<string[]> {
@@ -239,7 +298,13 @@ export async function collectSkillMarkdownPaths(
         })),
       )
     )
-      .filter((entry) => entry.isDirectory)
+      .filter(
+        (entry) =>
+          entry.isDirectory &&
+          !(
+            depth === 0 && options?.excludedTopLevelDirectories?.includes(entry.name)
+          ),
+      )
       .map((entry) => entry.name)
       .sort();
     const nested = await Promise.all(
@@ -312,10 +377,15 @@ async function collectSkillDescriptorsFromRoots(
     roots.map(async (root) => {
       const skillPaths = await collectSkillMarkdownPaths(
         root.path,
-        root.includeMarkdownFiles || root.followSymlinks === false
+        root.includeMarkdownFiles ||
+          root.followSymlinks === false ||
+          root.excludedTopLevelDirectories
           ? {
               ...(root.includeMarkdownFiles ? { includeMarkdownFiles: true } : {}),
               ...(root.followSymlinks === false ? { followSymlinks: false } : {}),
+              ...(root.excludedTopLevelDirectories
+                ? { excludedTopLevelDirectories: root.excludedTopLevelDirectories }
+                : {}),
             }
           : undefined,
       );
@@ -1237,10 +1307,21 @@ function rootsForOrderedOrigins(
 }
 
 export function skillsCatalogRoots(input: SkillsCatalogRootInput): SkillRoot[] {
-  return rootsForOrderedOrigins(
+  const roots = rootsForOrderedOrigins(
     input,
     orderedOriginsForProvider(input.provider, input.includeSynaraRoot !== false),
   );
+  const cursorBuiltInRoot = nodePath.resolve(
+    nodePath.join(input.homeDir, ".cursor", "skills-cursor"),
+  );
+  const codexUserRoot = nodePath.resolve(nodePath.join(input.homeDir, ".codex", "skills"));
+  return roots
+    .filter((root) => nodePath.resolve(root.path) !== cursorBuiltInRoot)
+    .map((root) =>
+      nodePath.resolve(root.path) === codexUserRoot
+        ? { ...root, excludedTopLevelDirectories: [".system"] }
+        : root,
+    );
 }
 
 export function providerNativeSkillRoots(input: SkillsCatalogRootInput): SkillRoot[] {

@@ -62,7 +62,7 @@ function filterSkillGroups(
     [
       group.displayName,
       group.primarySkill.name,
-      group.description,
+      group.description ?? "",
       ...group.sources.flatMap((source) => [source.originInfo.label, source.skill.path]),
     ].some((value) => value.toLocaleLowerCase().includes(normalized)),
   );

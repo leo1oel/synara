@@ -34,6 +34,12 @@ describe("SettingsPanelPrimitives trailing regions", () => {
     expect(markup).not.toContain("sm:justify-end");
   });
 
+  it("omits the description line when no description is available", () => {
+    const markup = renderToStaticMarkup(<SettingsRow title="No description" />);
+
+    expect(markup).not.toContain("<p");
+  });
+
   it("allows inset-list consumers to add symmetric row padding", () => {
     const markup = renderToStaticMarkup(
       <SettingsListRow title="Droid" actions={<button>Update</button>} className="px-3" />,
