@@ -234,9 +234,12 @@ export function SettingsRow({
         onClick={onClick}
       >
         <div className="min-w-0 flex-1 space-y-0.5">
-          <div className="flex min-h-5 items-center gap-1.5">
+          <div data-slot="settings-row-title-line" className="flex min-h-5 items-center gap-1.5">
             <h3 className={SETTINGS_CARD_ROW_TITLE_CLASS_NAME}>{title}</h3>
-            <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center">
+            <span
+              data-slot="settings-row-reset-action"
+              className="inline-flex h-5 w-5 shrink-0 items-center justify-center"
+            >
               {resetAction}
             </span>
           </div>

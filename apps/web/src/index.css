@@ -855,6 +855,31 @@ html[data-synara-embed="true"] .app-settings-surface h2 {
 }
 
 html[data-synara-embed="true"] .app-settings-surface section.flex.flex-col {
+  gap: 4px;
+}
+
+/* Mirror Lattice's native SettingsGroup/SettingsRow geometry. The group rule
+   sits 4px above a 40px row whose content has 4px block padding, so left copy
+   and trailing controls keep the same divider rhythm on every Agent page. */
+html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] {
+  min-height: 40px;
+  padding-block: 4px;
+}
+
+html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row-title-line"] {
+  min-height: var(--lattice-type-label-line-height);
+}
+
+html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row-reset-action"]:empty {
+  display: none;
+}
+
+/* The creation form intentionally uses a roomier divider-to-field gap than a
+   standard settings row. Keep that form-specific rhythm while regular Skills,
+   Models, and MCP rows follow the native geometry above. */
+html[data-synara-embed="true"]
+  .app-settings-surface
+  section.settings-group:has(> .managed-skill-editor-fields) {
   gap: 7px;
 }
 
@@ -938,13 +963,35 @@ html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] 
 html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-control"] {
   width: var(--lattice-settings-control-width);
   flex: none;
+  align-self: flex-start;
   justify-content: flex-end;
+  margin-top: 4px;
 }
 
 /* Keep the standalone 208px Skills action inside Lattice's 170px trailing
    settings-control column when Synara is embedded. */
 html[data-synara-embed="true"] .app-settings-surface .skills-library-actions {
   width: 100%;
+}
+
+/* MenuTrigger replaces the Button's data-slot when it composes the New Skill
+   action, so apply the same native control metrics through the resulting slot. */
+html[data-synara-embed="true"]
+  .app-settings-surface
+  .skills-library-actions
+  [data-slot="menu-trigger"] {
+  height: var(--lattice-settings-control-height);
+  min-height: var(--lattice-settings-control-height);
+  border-color: var(--lattice-settings-line-strong);
+  border-radius: var(--lattice-settings-control-radius) !important;
+  background: var(--lattice-settings-field);
+  color: var(--lattice-settings-text);
+  font-family: var(--font-ui-family);
+  font-size: var(--lattice-settings-control-font-size);
+  font-style: normal;
+  font-weight: var(--lattice-settings-control-font-weight);
+  line-height: var(--lattice-settings-control-line-height);
+  letter-spacing: normal;
 }
 
 /* The portalled New Skill menu follows the same 170px embedded control width

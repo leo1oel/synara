@@ -67,12 +67,17 @@ describe("embedded Settings field styles", () => {
     expect(EMBEDDED_SETTINGS_CONTROL_LAYOUT_CSS).toContain(
       "width: var(--lattice-settings-control-width)",
     );
+    expect(EMBEDDED_SETTINGS_CONTROL_LAYOUT_CSS).toContain("align-self: flex-start");
+    expect(EMBEDDED_SETTINGS_CONTROL_LAYOUT_CSS).toContain("margin-top: 4px");
     expect(EMBEDDED_SETTINGS_CONTROL_LAYOUT_CSS).not.toContain('[data-slot="settings-actions"]');
     expect(EMBEDDED_SETTINGS_CONTROL_LAYOUT_CSS).not.toContain(":only-child");
   });
 
   it("keeps the Skills action and full-width form copy on the embedded settings grid", () => {
     expect(INDEX_CSS).toContain(".skills-library-actions { width: 100%;");
+    expect(INDEX_CSS).toContain(
+      '.skills-library-actions [data-slot="menu-trigger"] { height: var(--lattice-settings-control-height); min-height: var(--lattice-settings-control-height);',
+    );
     expect(INDEX_CSS).toContain(
       ".skills-library-menu { width: var(--lattice-settings-control-width); min-width: var(--lattice-settings-control-width);",
     );
@@ -81,6 +86,19 @@ describe("embedded Settings field styles", () => {
     );
     expect(INDEX_CSS).toContain(
       ".managed-skill-field-help { font-size: var(--lattice-type-caption-size); line-height: var(--lattice-type-caption-line-height);",
+    );
+  });
+
+  it("matches native settings divider and row spacing", () => {
+    expect(INDEX_CSS).toContain("section.flex.flex-col { gap: 4px;");
+    expect(INDEX_CSS).toContain(
+      '[data-slot="settings-row"] { min-height: 40px; padding-block: 4px;',
+    );
+    expect(INDEX_CSS).toContain(
+      '[data-slot="settings-row-title-line"] { min-height: var(--lattice-type-label-line-height);',
+    );
+    expect(INDEX_CSS).toContain(
+      "section.settings-group:has(> .managed-skill-editor-fields) { gap: 7px;",
     );
   });
 
