@@ -3,6 +3,7 @@
 // Layer: Settings UI
 
 import type { ProviderManagedSkillDetail, ProviderSaveManagedSkillResult } from "@synara/contracts";
+import { useLingui } from "@lingui/react";
 import { useMemo, useState, type FormEvent } from "react";
 
 import { SettingsCard, SettingsSectionShell } from "~/components/settings/SettingsPanelPrimitives";
@@ -24,6 +25,7 @@ export function ManagedSkillEditorView({
   onCancel: () => void;
   onSaved: (result: ProviderSaveManagedSkillResult) => void;
 }) {
+  const { i18n } = useLingui();
   const initialDisplayName = detail?.skill.interface?.displayName ?? detail?.skill.name ?? "";
   const initialDescription =
     detail?.skill.description ?? detail?.skill.interface?.shortDescription ?? "";
@@ -39,7 +41,7 @@ export function ManagedSkillEditorView({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!id) {
-      setErrorMessage("This skill does not have an editable identifier.");
+      setErrorMessage(i18n._("This skill does not have an editable identifier."));
       return;
     }
     setIsSaving(true);
@@ -54,7 +56,9 @@ export function ManagedSkillEditorView({
       });
       onSaved(result);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "The skill could not be saved.");
+      setErrorMessage(
+        error instanceof Error ? error.message : i18n._("The skill could not be saved."),
+      );
     } finally {
       setIsSaving(false);
     }
@@ -64,17 +68,19 @@ export function ManagedSkillEditorView({
     <form className="space-y-5" onSubmit={(event) => void handleSubmit(event)}>
       <Button type="button" size="sm" variant="ghost" className="-ml-2" onClick={onCancel}>
         <ChevronLeftIcon className="size-3.5" aria-hidden="true" />
-        {mode === "create" ? "All skills" : "Skill details"}
+        {mode === "create" ? i18n._("All skills") : i18n._("Skill details")}
       </Button>
 
-      <SettingsSectionShell title={mode === "create" ? "Create a skill" : "Edit skill"}>
-        <SettingsCard divided={false} className="space-y-5 p-4">
+      <SettingsSectionShell
+        title={mode === "create" ? i18n._("Create a skill") : i18n._("Edit skill")}
+      >
+        <SettingsCard divided={false} className="managed-skill-editor-fields space-y-5">
           <div className="space-y-1.5">
             <label
-              className="font-system-ui text-xs font-medium text-foreground"
+              className="managed-skill-field-label font-system-ui font-medium text-foreground"
               htmlFor="managed-skill-name"
             >
-              Skill name
+              {i18n._("Skill name")}
             </label>
             <Input
               id="managed-skill-name"
@@ -82,57 +88,62 @@ export function ManagedSkillEditorView({
               value={displayName}
               maxLength={100}
               autoFocus
-              placeholder="Literature Review"
+              placeholder={i18n._("Literature Review")}
               onChange={(event) => setDisplayName(event.target.value)}
               aria-describedby="managed-skill-name-help"
             />
             <p
               id="managed-skill-name-help"
-              className="text-[11px] leading-relaxed text-muted-foreground"
+              className="managed-skill-field-help text-muted-foreground"
             >
               {mode === "create"
-                ? `Lattice will save this as “${generatedId}”.`
-                : `Internal name: ${detail?.skill.name ?? id}`}
+                ? i18n._("Lattice will save this as “{generatedId}”.", { generatedId })
+                : i18n._("Internal name: {internalName}", {
+                    internalName: detail?.skill.name ?? id,
+                  })}
             </p>
           </div>
 
           <div className="space-y-1.5">
             <label
-              className="font-system-ui text-xs font-medium text-foreground"
+              className="managed-skill-field-label font-system-ui font-medium text-foreground"
               htmlFor="managed-skill-description"
             >
-              What should this skill do?
+              {i18n._("What should this skill do?")}
             </label>
             <Textarea
               id="managed-skill-description"
               value={description}
               maxLength={4_000}
-              placeholder="Explain what the skill does and when Lattice should use it."
+              placeholder={i18n._("Explain what the skill does and when Lattice should use it.")}
               className="[&_[data-slot=textarea]]:min-h-24"
               onChange={(event) => setDescription(event.target.value)}
             />
-            <p className="text-[11px] leading-relaxed text-muted-foreground">
-              Include the kinds of requests that should activate this skill.
+            <p className="managed-skill-field-help text-muted-foreground">
+              {i18n._("Include the kinds of requests that should activate this skill.")}
             </p>
           </div>
 
           <div className="space-y-1.5">
             <label
-              className="font-system-ui text-xs font-medium text-foreground"
+              className="managed-skill-field-label font-system-ui font-medium text-foreground"
               htmlFor="managed-skill-instructions"
             >
-              Instructions
+              {i18n._("Instructions")}
             </label>
             <Textarea
               id="managed-skill-instructions"
               value={instructions}
-              placeholder="Write the workflow, rules, examples, or guidance Lattice should follow."
+              placeholder={i18n._(
+                "Write the workflow, rules, examples, or guidance Lattice should follow.",
+              )}
               className="[&_[data-slot=textarea]]:min-h-52"
               onChange={(event) => setInstructions(event.target.value)}
             />
-            <p className="text-[11px] leading-relaxed text-muted-foreground">
-              Plain text works. Markdown formatting is optional, and everything wraps inside the
-              editor.
+            <p className="managed-skill-field-help text-muted-foreground">
+              {i18n._(
+                "Plain text works. Markdown formatting is optional, and everything wraps inside the editor.",
+              )}
             </p>
           </div>
 
@@ -144,7 +155,7 @@ export function ManagedSkillEditorView({
 
           <div className="flex flex-wrap justify-end gap-2 border-t border-border/65 pt-4">
             <Button type="button" size="sm" variant="outline" onClick={onCancel}>
-              Cancel
+              {i18n._("Cancel")}
             </Button>
             <Button
               type="submit"
@@ -154,7 +165,11 @@ export function ManagedSkillEditorView({
               }
             >
               {isSaving ? <Loader2Icon className="size-3.5 animate-spin" /> : null}
-              {isSaving ? "Saving…" : mode === "create" ? "Create skill" : "Save changes"}
+              {isSaving
+                ? i18n._("Saving…")
+                : mode === "create"
+                  ? i18n._("Create skill")
+                  : i18n._("Save changes")}
             </Button>
           </div>
         </SettingsCard>

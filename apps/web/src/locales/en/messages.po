@@ -62,6 +62,183 @@ msgid "Connect Codex, Claude, or another local MCP agent to create and follow Sy
 msgstr "Connect Codex, Claude, or another local MCP agent to create and follow Synara tasks."
 
 #. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+msgid "This skill is not managed by Lattice."
+msgstr "This skill is not managed by Lattice."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+msgid "No description is provided for this skill."
+msgstr "No description is provided for this skill."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "All skills"
+msgstr "All skills"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Included with Lattice"
+msgstr "Included with Lattice"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Installed by you"
+msgstr "Installed by you"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Enabled"
+msgstr "Enabled"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Disabled"
+msgstr "Disabled"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+msgid "{fileCount, plural, one {# file} other {# files}}"
+msgstr "{fileCount, plural, one {# file} other {# files}}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+msgid "Edit"
+msgstr "Edit"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+msgid "Creating copy…"
+msgstr "Creating copy…"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+msgid "Customize a copy…"
+msgstr "Customize a copy…"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+msgid "Remove…"
+msgstr "Remove…"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+msgid "This protected skill ships inside Lattice, so it is not stored in your user skills folder. Customize a copy to edit it without changing the original."
+msgstr "This protected skill ships inside Lattice, so it is not stored in your user skills folder. Customize a copy to edit it without changing the original."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Instructions"
+msgstr "Instructions"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+msgid "Loading skill…"
+msgstr "Loading skill…"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+msgid "The skill could not be loaded."
+msgstr "The skill could not be loaded."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "This skill does not have an editable identifier."
+msgstr "This skill does not have an editable identifier."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "The skill could not be saved."
+msgstr "The skill could not be saved."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Skill details"
+msgstr "Skill details"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Create a skill"
+msgstr "Create a skill"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Edit skill"
+msgstr "Edit skill"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Skill name"
+msgstr "Skill name"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Literature Review"
+msgstr "Literature Review"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Lattice will save this as “{generatedId}”."
+msgstr "Lattice will save this as “{generatedId}”."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Internal name: {internalName}"
+msgstr "Internal name: {internalName}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "What should this skill do?"
+msgstr "What should this skill do?"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Explain what the skill does and when Lattice should use it."
+msgstr "Explain what the skill does and when Lattice should use it."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Include the kinds of requests that should activate this skill."
+msgstr "Include the kinds of requests that should activate this skill."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Write the workflow, rules, examples, or guidance Lattice should follow."
+msgstr "Write the workflow, rules, examples, or guidance Lattice should follow."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Plain text works. Markdown formatting is optional, and everything wraps inside the editor."
+msgstr "Plain text works. Markdown formatting is optional, and everything wraps inside the editor."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Cancel"
+msgstr "Cancel"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Saving…"
+msgstr "Saving…"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Create skill"
+msgstr "Create skill"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Save changes"
+msgstr "Save changes"
+
+#. js-lingui-explicit-id
 #: src/components/settings/ModelsSettingsPanel.tsx
 msgid "Generation defaults"
 msgstr "Generation defaults"
@@ -153,6 +330,161 @@ msgstr "Review external provider CLIs and the Pi SDK included with Lattice. Pi d
 
 #. js-lingui-explicit-id
 #: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Skill updated"
+msgstr "Skill updated"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Skill added"
+msgstr "Skill added"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "{skillName} is ready to use in Lattice."
+msgstr "{skillName} is ready to use in Lattice."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "A skill named “{folderName}” is already installed. Replace it?"
+msgstr "A skill named “{folderName}” is already installed. Replace it?"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "The existing skill changed before it could be replaced. Try again."
+msgstr "The existing skill changed before it could be replaced. Try again."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Could not add skill"
+msgstr "Could not add skill"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "The selected folder is not valid."
+msgstr "The selected folder is not valid."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Skill restored"
+msgstr "Skill restored"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "{skillName} is available again."
+msgstr "{skillName} is available again."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Could not restore skill"
+msgstr "Could not restore skill"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "The skill could not be restored."
+msgstr "The skill could not be restored."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Remove “{displayName}” from Lattice? You can undo this immediately afterward."
+msgstr "Remove “{displayName}” from Lattice? You can undo this immediately afterward."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Skill removed"
+msgstr "Skill removed"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "{displayName} was removed from Lattice."
+msgstr "{displayName} was removed from Lattice."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Undo"
+msgstr "Undo"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Could not remove skill"
+msgstr "Could not remove skill"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "The skill could not be removed."
+msgstr "The skill could not be removed."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Skill created"
+msgstr "Skill created"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "{displayName} is ready to use."
+msgstr "{displayName} is ready to use."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Editable copy created"
+msgstr "Editable copy created"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "The copy is in your user skills folder. Your original is unchanged."
+msgstr "The copy is in your user skills folder. Your original is unchanged."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Could not create a copy"
+msgstr "Could not create a copy"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "The skill could not be copied."
+msgstr "The skill could not be copied."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Included"
+msgstr "Included"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Local"
+msgstr "Local"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Detected"
+msgstr "Detected"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Enable the {displayName} skill"
+msgstr "Enable the {displayName} skill"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Remove the {displayName} skill"
+msgstr "Remove the {displayName} skill"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Remove skill"
+msgstr "Remove skill"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Open {displayName} details"
+msgstr "Open {displayName} details"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Open skill details"
+msgstr "Open skill details"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
 msgid "Skills Manager"
 msgstr "Skills Manager"
 
@@ -173,6 +505,21 @@ msgstr "Choose a skill folder"
 
 #. js-lingui-explicit-id
 #: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Importing…"
+msgstr "Importing…"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "New skill"
+msgstr "New skill"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Import skill"
+msgstr "Import skill"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
 msgid "Search skills..."
 msgstr "Search skills..."
 
@@ -188,23 +535,33 @@ msgstr "Skills"
 
 #. js-lingui-explicit-id
 #: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Lattice could not scan the skill library. Check that the local service is running, then reopen Settings."
+msgstr "Lattice could not scan the skill library. Check that the local service is running, then reopen Settings."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
 msgid "Search results"
 msgstr "Search results"
 
 #. js-lingui-explicit-id
 #: src/components/settings/SkillsSettingsPanel.tsx
-msgid "Included with Lattice"
-msgstr "Included with Lattice"
+msgid "No skills match “{query}”."
+msgstr "No skills match “{query}”."
 
 #. js-lingui-explicit-id
 #: src/components/settings/SkillsSettingsPanel.tsx
-msgid "Installed by you"
-msgstr "Installed by you"
+msgid "No skills found. Create one here or import a folder containing SKILL.md."
+msgstr "No skills found. Create one here or import a folder containing SKILL.md."
 
 #. js-lingui-explicit-id
 #: src/components/settings/SkillsSettingsPanel.tsx
 msgid "Detected from your environment"
 msgstr "Detected from your environment"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "{skillCount, plural, one {# skill} other {# skills}}"
+msgstr "{skillCount, plural, one {# skill} other {# skills}}"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ChatEmptyStateHero.tsx

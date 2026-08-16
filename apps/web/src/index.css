@@ -941,6 +941,29 @@ html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-contro
   justify-content: flex-end;
 }
 
+/* Keep the standalone 208px Skills action inside Lattice's 170px trailing
+   settings-control column when Synara is embedded. */
+html[data-synara-embed="true"] .app-settings-surface .skills-library-actions {
+  width: 100%;
+}
+
+/* The Skill editor is a full-width form rather than a title/control row. Keep
+   its field copy on the same label and caption roles as the surrounding
+   settings page; Tailwind's standalone text-xs utilities otherwise shrink the
+   labels two steps below adjacent settings labels in the embedded drawer. */
+html[data-synara-embed="true"] .app-settings-surface .managed-skill-field-label {
+  display: block;
+  font-size: var(--lattice-type-label-size);
+  line-height: var(--lattice-type-label-line-height);
+  font-weight: var(--lattice-type-label-weight);
+}
+
+html[data-synara-embed="true"] .app-settings-surface .managed-skill-field-help {
+  font-size: var(--lattice-type-caption-size);
+  line-height: var(--lattice-type-caption-line-height);
+  font-weight: var(--lattice-type-caption-weight);
+}
+
 html[data-synara-embed="true"]
   .app-settings-surface
   [data-slot="settings-row"]

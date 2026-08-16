@@ -3,6 +3,7 @@
 // Layer: Settings UI
 
 import type { ProviderManagedSkillDetail, ProviderSkillDescriptor } from "@synara/contracts";
+import { useLingui } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
 
 import ChatMarkdown from "~/components/ChatMarkdown";
@@ -37,12 +38,13 @@ export function ManagedSkillDetailView({
   isCustomizing: boolean;
   onRemove: ((skill: ProviderSkillDescriptor) => void) | null;
 }) {
+  const { i18n } = useLingui();
   const management = skill.management;
   const detailQuery = useQuery({
     queryKey: ["managed-skill-detail", management?.kind, management?.id],
     queryFn: () => {
       if (!management) {
-        throw new Error("This skill is not managed by Lattice.");
+        throw new Error(i18n._("This skill is not managed by Lattice."));
       }
       return ensureNativeApi().provider.readManagedSkill({
         kind: management.kind,
@@ -58,13 +60,13 @@ export function ManagedSkillDetailView({
   const description =
     skill.interface?.shortDescription ??
     skill.description ??
-    "No description is provided for this skill.";
+    i18n._("No description is provided for this skill.");
 
   return (
     <div className="space-y-5">
       <Button size="sm" variant="ghost" className="-ml-2" onClick={onBack}>
         <ChevronLeftIcon className="size-3.5" aria-hidden="true" />
-        All skills
+        {i18n._("All skills")}
       </Button>
 
       <SettingsCard divided={false} className="p-4">
@@ -77,15 +79,16 @@ export function ManagedSkillDetailView({
               <h2 className="truncate font-heading text-base font-semibold">{displayName}</h2>
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                 <Badge variant={included ? "info" : "outline"}>
-                  {included ? "Included with Lattice" : "Installed by you"}
+                  {included ? i18n._("Included with Lattice") : i18n._("Installed by you")}
                 </Badge>
                 <Badge variant={enabled ? "success" : "secondary"}>
-                  {enabled ? "Enabled" : "Disabled"}
+                  {enabled ? i18n._("Enabled") : i18n._("Disabled")}
                 </Badge>
                 {detailQuery.data ? (
                   <span className="text-[11px] text-muted-foreground">
-                    {detailQuery.data.files.length} file
-                    {detailQuery.data.files.length === 1 ? "" : "s"}
+                    {i18n._("{fileCount, plural, one {# file} other {# files}}", {
+                      fileCount: detailQuery.data.files.length,
+                    })}
                   </span>
                 ) : null}
               </div>
@@ -98,7 +101,7 @@ export function ManagedSkillDetailView({
             {onEdit && detailQuery.data ? (
               <Button size="sm" variant="outline" onClick={() => onEdit(detailQuery.data)}>
                 <PencilIcon className="size-3.5" aria-hidden="true" />
-                Edit
+                {i18n._("Edit")}
               </Button>
             ) : null}
             {onCustomize ? (
@@ -113,33 +116,34 @@ export function ManagedSkillDetailView({
                 ) : (
                   <PencilIcon className="size-3.5" aria-hidden="true" />
                 )}
-                {isCustomizing ? "Creating copy…" : "Customize a copy…"}
+                {isCustomizing ? i18n._("Creating copy…") : i18n._("Customize a copy…")}
               </Button>
             ) : null}
             {onRemove ? (
               <Button size="sm" variant="destructive-outline" onClick={() => onRemove(skill)}>
                 <Trash2 className="size-3.5" aria-hidden="true" />
-                Remove…
+                {i18n._("Remove…")}
               </Button>
             ) : null}
           </div>
         </div>
         {included ? (
           <p className="mt-4 border-t border-border/65 pt-3 text-[11px] leading-relaxed text-muted-foreground">
-            This protected skill ships inside Lattice, so it is not stored in your user skills
-            folder. Customize a copy to edit it without changing the original.
+            {i18n._(
+              "This protected skill ships inside Lattice, so it is not stored in your user skills folder. Customize a copy to edit it without changing the original.",
+            )}
           </p>
         ) : null}
       </SettingsCard>
 
-      <SettingsSectionShell title="Instructions">
+      <SettingsSectionShell title={i18n._("Instructions")}>
         {detailQuery.isLoading ? (
-          <SettingsEmptyState layout="status">Loading skill…</SettingsEmptyState>
+          <SettingsEmptyState layout="status">{i18n._("Loading skill…")}</SettingsEmptyState>
         ) : detailQuery.isError ? (
           <SettingsEmptyState tone="destructive" layout="status">
             {detailQuery.error instanceof Error
               ? detailQuery.error.message
-              : "The skill could not be loaded."}
+              : i18n._("The skill could not be loaded.")}
           </SettingsEmptyState>
         ) : detailQuery.data ? (
           <SettingsCard divided={false} className="px-4 py-3">

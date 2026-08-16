@@ -71,6 +71,16 @@ describe("embedded Settings field styles", () => {
     expect(EMBEDDED_SETTINGS_CONTROL_LAYOUT_CSS).not.toContain(":only-child");
   });
 
+  it("keeps the Skills action and full-width form copy on the embedded settings grid", () => {
+    expect(INDEX_CSS).toContain(".skills-library-actions { width: 100%;");
+    expect(INDEX_CSS).toContain(
+      ".managed-skill-field-label { display: block; font-size: var(--lattice-type-label-size); line-height: var(--lattice-type-label-line-height);",
+    );
+    expect(INDEX_CSS).toContain(
+      ".managed-skill-field-help { font-size: var(--lattice-type-caption-size); line-height: var(--lattice-type-caption-line-height);",
+    );
+  });
+
   it("uses the same 12 to 24 percent border contrast step as Lattice fields", () => {
     expect(EMBEDDED_SETTINGS_FIELD_CSS).toContain("var(--lattice-settings-text) 12%");
     expect(EMBEDDED_SETTINGS_FIELD_CSS).toContain("var(--lattice-settings-text) 24%");
