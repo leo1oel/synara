@@ -65,7 +65,10 @@ export function ManagedSkillEditorView({
   };
 
   return (
-    <form onSubmit={(event) => void handleSubmit(event)}>
+    <form
+      className="[&>.settings-group]:mt-4!"
+      onSubmit={(event) => void handleSubmit(event)}
+    >
       <Button type="button" size="sm" variant="ghost" className="-ml-2" onClick={onCancel}>
         <ChevronLeftIcon className="size-3.5" aria-hidden="true" />
         {mode === "create" ? i18n._("All skills") : i18n._("Skill details")}
@@ -76,7 +79,7 @@ export function ManagedSkillEditorView({
       >
         <SettingsCard
           divided={false}
-          className="managed-skill-editor-fields space-y-5 pt-[var(--app-density-settings-row-padding-y,0.625rem)]"
+          className="managed-skill-editor-fields space-y-5 pt-4"
         >
           <div className="space-y-1.5">
             <label
@@ -157,9 +160,11 @@ export function ManagedSkillEditorView({
           ) : null}
 
           <div className="flex flex-wrap justify-end gap-2 border-t border-border/65 pt-4">
-            <Button type="button" size="sm" variant="outline" onClick={onCancel}>
-              {i18n._("Cancel")}
-            </Button>
+            {mode === "update" ? (
+              <Button type="button" size="sm" variant="outline" onClick={onCancel}>
+                {i18n._("Cancel")}
+              </Button>
+            ) : null}
             <Button
               type="submit"
               size="sm"

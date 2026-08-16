@@ -515,7 +515,10 @@ export function SkillsSettingsPanel() {
                     <ChevronDownIcon aria-hidden="true" className="ml-auto size-3 opacity-60" />
                   ) : null}
                 </MenuTrigger>
-                <ComposerPickerMenuPopup align="end">
+                <ComposerPickerMenuPopup
+                  align="end"
+                  className="skills-library-menu w-52 min-w-52"
+                >
                   <MenuItem
                     onClick={() => {
                       setSelectedSkill(null);

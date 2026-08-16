@@ -74,6 +74,9 @@ describe("embedded Settings field styles", () => {
   it("keeps the Skills action and full-width form copy on the embedded settings grid", () => {
     expect(INDEX_CSS).toContain(".skills-library-actions { width: 100%;");
     expect(INDEX_CSS).toContain(
+      ".skills-library-menu { width: var(--lattice-settings-control-width); min-width: var(--lattice-settings-control-width);",
+    );
+    expect(INDEX_CSS).toContain(
       ".managed-skill-field-label { display: block; font-size: var(--lattice-type-label-size); line-height: var(--lattice-type-label-line-height);",
     );
     expect(INDEX_CSS).toContain(

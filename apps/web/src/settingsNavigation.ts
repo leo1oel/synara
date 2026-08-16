@@ -147,7 +147,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     id: "skills",
     group: "coding",
     label: msg`Agent skills`,
-    description: msg`Review reusable workflows discovered across all configured providers.`,
+    description: msg`Create, import, and manage the Skills Lattice uses.`,
     icon: "building-blocks",
     eyebrow: "Reusable workflows",
   },

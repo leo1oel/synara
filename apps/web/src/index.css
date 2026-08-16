@@ -947,6 +947,13 @@ html[data-synara-embed="true"] .app-settings-surface .skills-library-actions {
   width: 100%;
 }
 
+/* The portalled New Skill menu follows the same 170px embedded control width
+   as its trigger and neighboring settings dropdowns. */
+html[data-synara-embed="true"] .skills-library-menu {
+  width: var(--lattice-settings-control-width);
+  min-width: var(--lattice-settings-control-width);
+}
+
 /* The Skill editor is a full-width form rather than a title/control row. Keep
    its field copy on the same label and caption roles as the surrounding
    settings page; Tailwind's standalone text-xs utilities otherwise shrink the

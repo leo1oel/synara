@@ -762,6 +762,10 @@ msgid "Control live responses, follow-ups, review defaults, and safety confirmat
 msgstr "控制实时回复、追问、审阅默认设置和安全确认。"
 
 #: src/settingsNavigation.ts
+msgid "Create, import, and manage the Skills Lattice uses."
+msgstr "创建、导入并管理 Lattice 使用的 Skills。"
+
+#: src/settingsNavigation.ts
 msgid "Customize the theme, typography, density, and time format."
 msgstr "自定义主题、排版、密度和时间格式。"
 
@@ -816,10 +820,6 @@ msgstr "个人资料"
 #: src/settingsNavigation.ts
 msgid "Review and clean up isolated workspaces created by Synara."
 msgstr "查看并清理 Synara 创建的隔离工作区。"
-
-#: src/settingsNavigation.ts
-msgid "Review reusable workflows discovered across all configured providers."
-msgstr "查看在所有已配置服务商中发现的可复用工作流。"
 
 #: src/components/chat/ComposerPendingApprovalPanel.tsx
 msgid "Review the request to continue."

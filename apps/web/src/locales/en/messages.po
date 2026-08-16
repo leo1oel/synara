@@ -762,6 +762,10 @@ msgid "Control live responses, follow-ups, review defaults, and safety confirmat
 msgstr "Control live responses, follow-ups, review defaults, and safety confirmations."
 
 #: src/settingsNavigation.ts
+msgid "Create, import, and manage the Skills Lattice uses."
+msgstr "Create, import, and manage the Skills Lattice uses."
+
+#: src/settingsNavigation.ts
 msgid "Customize the theme, typography, density, and time format."
 msgstr "Customize the theme, typography, density, and time format."
 
@@ -816,10 +820,6 @@ msgstr "Profile"
 #: src/settingsNavigation.ts
 msgid "Review and clean up isolated workspaces created by Synara."
 msgstr "Review and clean up isolated workspaces created by Synara."
-
-#: src/settingsNavigation.ts
-msgid "Review reusable workflows discovered across all configured providers."
-msgstr "Review reusable workflows discovered across all configured providers."
 
 #: src/components/chat/ComposerPendingApprovalPanel.tsx
 msgid "Review the request to continue."
