@@ -12,6 +12,17 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "New Chat"
+msgstr "New Chat"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+#: src/components/ChatView.tsx
+msgid "New thread"
+msgstr "New thread"
+
+#. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
 msgid "Connect a coding agent"
 msgstr "Connect a coding agent"
@@ -804,6 +815,14 @@ msgstr "Managed worktrees"
 #: src/settingsNavigation.ts
 msgid "MCP connections"
 msgstr "MCP connections"
+
+#: src/components/chat/ChatHeader.tsx
+msgid "New chat"
+msgstr "New chat"
+
+#: src/components/chat/ChatHeader.tsx
+msgid "No chats in this project yet"
+msgstr "No chats in this project yet"
 
 #: src/settingsNavigation.ts
 msgid "Notifications"

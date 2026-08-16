@@ -65,6 +65,8 @@ import type { RepoDiffTotals } from "~/hooks/useRepoDiffTotals";
 import { ProviderIcon } from "../ProviderIcon";
 import { ProviderUsageMenuControl } from "../ProviderUsageMenuControl";
 import { EnvironmentToggle, type EnvironmentToggleState } from "./environment/EnvironmentToggle";
+import { Trans } from "@lingui/react/macro";
+import { useLingui } from "@lingui/react";
 
 /**
  * Width (px) below which collapsible header controls drop their text labels and
@@ -179,6 +181,7 @@ function EditorChatHistoryMenu(props: {
   onNewChat?: () => void;
   onDeleteChat?: (threadId: ThreadId, threadTitle: string) => void;
 }) {
+  const { i18n } = useLingui();
   const { settings } = useAppSettings();
   const selectDisplayThreads = createSidebarDisplayThreadsSelector({
     hideAutomationRunThreads: !settings.showAutomationRunThreads,
@@ -221,11 +224,15 @@ function EditorChatHistoryMenu(props: {
         {props.onNewChat ? (
           <MenuItem onClick={props.onNewChat}>
             <PlusIcon className="size-3.5 shrink-0 text-muted-foreground" />
-            <span>New chat</span>
+            <span>
+              <Trans>New chat</Trans>
+            </span>
           </MenuItem>
         ) : null}
         {historyThreads.length === 0 ? (
-          <MenuItem disabled>No chats in this project yet</MenuItem>
+          <MenuItem disabled>
+            <Trans>No chats in this project yet</Trans>
+          </MenuItem>
         ) : (
           historyThreads.map((thread) => (
             <MenuItem
@@ -242,7 +249,9 @@ function EditorChatHistoryMenu(props: {
                 tone="header"
                 className="size-3.5 shrink-0"
               />
-              <span className="min-w-0 flex-1 truncate">{thread.title}</span>
+              <span className="min-w-0 flex-1 truncate">
+                {isGenericChatThreadTitle(thread.title) ? i18n._("New thread") : thread.title}
+              </span>
               {thread.id === props.activeThreadId ? (
                 <CheckIcon className="size-3.5 shrink-0 text-muted-foreground" />
               ) : (
@@ -472,7 +481,9 @@ function EditorRailTabs(props: {
           >
             <MenuItem onClick={props.onNewChat}>
               <MessageCircleIcon className="size-3.5 shrink-0 text-muted-foreground" />
-              <span>New chat</span>
+              <span>
+                <Trans>New chat</Trans>
+              </span>
             </MenuItem>
             <MenuItem onClick={newTerminalTab}>
               <TerminalIcon className="size-3.5 shrink-0 text-muted-foreground" />

@@ -49,6 +49,7 @@ import { Skeleton } from "../ui/skeleton";
 import { PlusIcon } from "~/lib/icons";
 import { Trans } from "@lingui/react/macro";
 import { useLingui } from "@lingui/react";
+import { postOpenSettingsToLattice, readEmbedMode } from "../../embedMode";
 
 function isAvailableProviderOption(option: (typeof PROVIDER_OPTIONS)[number]): option is {
   value: ProviderKind;
@@ -267,6 +268,13 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
             : setOpenCodeFavoriteModelSlugs;
     setFavoriteModelSlugs((current) => toggleFavoriteModelSlug(current, slug));
   };
+  const openProviderSettings = () => {
+    const embedConfig = readEmbedMode();
+    if (embedConfig && postOpenSettingsToLattice(embedConfig, "providers")) {
+      return;
+    }
+    appHistory.push("/settings?section=providers");
+  };
 
   const renderModelRadioGroup = (provider: ProviderKind) => {
     if (props.loadingModelProviders?.[provider]) {
@@ -417,9 +425,11 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
         );
       })}
       {visibleAvailableProviderOptions.length > 0 ? <MenuSeparator /> : null}
-      <MenuItem onClick={() => appHistory.push("/settings?section=providers")}>
+      <MenuItem onClick={openProviderSettings}>
         <PlusIcon aria-hidden="true" className="size-3 shrink-0 text-muted-foreground/85" />
-        <span><Trans>Add providers</Trans></span>
+        <span>
+          <Trans>Add providers</Trans>
+        </span>
       </MenuItem>
     </>
   );
@@ -552,7 +562,9 @@ export const ProviderModelPicker = function ProviderModelPicker(props: ProviderM
           {!isMenuOpen ? (
             <TooltipPopup side="top" sideOffset={6} variant="picker">
               <span className="inline-flex items-center gap-2 px-1 py-0.5">
-                <span><Trans>Change model</Trans></span>
+                <span>
+                  <Trans>Change model</Trans>
+                </span>
                 <ShortcutKbd
                   shortcutLabel={props.shortcutLabel}
                   className="h-4 min-w-4 px-1 text-[length:var(--app-font-size-ui-2xs,9px)] text-muted-foreground"

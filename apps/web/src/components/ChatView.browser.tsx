@@ -32,6 +32,7 @@ import { page, userEvent } from "vitest/browser";
 import { Profiler, type ProfilerOnRenderCallback } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
+import { I18nProvider } from "@lingui/react";
 
 import { type ComposerImageAttachment, useComposerDraftStore } from "../composerDraftStore";
 import {
@@ -67,6 +68,7 @@ import { useTerminalStateStore } from "../terminalStateStore";
 import { resetRetainedThreadDetailSubscriptionsForTests } from "../threadDetailSubscriptionRetention";
 import { useWorkspacePathsStore } from "../workspacePathsStore";
 import { resetWsNativeApiForTest } from "../wsNativeApi";
+import { i18n } from "../i18n";
 // Pre-transform the compiler-heavy component outside the first case's timeout.
 // The router's auto-split route otherwise requests this module on first mount.
 import "./ChatView";
@@ -97,6 +99,7 @@ const STUDIO_DRAFT_THREAD_ID = "thread-studio-draft" as ThreadId;
 const NOW_ISO = "2026-03-04T12:00:00.000Z";
 const BASE_TIME_MS = Date.parse(NOW_ISO);
 const ATTACHMENT_SVG = "<svg xmlns='http://www.w3.org/2000/svg' width='120' height='300'></svg>";
+i18n.loadAndActivate({ locale: "en", messages: {} });
 let attachmentResponseDelayMs = 0;
 let attachmentUploadSequence = 0;
 let attachmentUploadBarrier: Promise<void> | null = null;
@@ -1990,12 +1993,17 @@ async function mountChatView(options: {
     }),
   );
 
-  const content = options.onRender ? (
-    <Profiler id="issue-550-root" onRender={options.onRender}>
-      <RouterProvider router={router} />
-    </Profiler>
-  ) : (
-    <RouterProvider router={router} />
+  const app = <RouterProvider router={router} />;
+  const content = (
+    <I18nProvider i18n={i18n}>
+      {options.onRender ? (
+        <Profiler id="issue-550-root" onRender={options.onRender}>
+          {app}
+        </Profiler>
+      ) : (
+        app
+      )}
+    </I18nProvider>
   );
   const screen = await render(content, {
     container: host,
@@ -2096,6 +2104,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
     attachmentUploadBarrier = null;
     attachmentCancelBarrier = null;
     localStorage.clear();
+    sessionStorage.clear();
+    i18n.loadAndActivate({ locale: "en", messages: {} });
     useLatestProjectStore.setState({ latestProjectId: null });
     useWorkspacePathsStore.setState({
       homeDir: null,
@@ -2150,6 +2160,46 @@ describe("ChatView timeline estimator parity (full app)", () => {
     await resetStudioProjectPrewarmStateForTests();
     resetRetainedThreadDetailSubscriptionsForTests();
     document.body.innerHTML = "";
+  });
+
+  it("localizes the untouched thread title and new-chat action in the Chinese embed", async () => {
+    const { messages } = await import("../locales/zh-CN/messages.po");
+    i18n.loadAndActivate({ locale: "zh-CN", messages });
+    sessionStorage.setItem(
+      "synara.poc.embed-mode",
+      JSON.stringify({
+        workspaceRoot: "/repo/project",
+        theme: "dark",
+        surface: "chrome",
+        hostOrigin: window.location.origin,
+        locale: "zh-CN",
+      }),
+    );
+    const localizedThreadId = "thread-browser-test-localized" as ThreadId;
+    const snapshot = addThreadToSnapshot(
+      createSnapshotForTargetUser({
+        targetMessageId: "msg-user-localized-bootstrap" as MessageId,
+        targetText: "localized bootstrap",
+      }),
+      localizedThreadId,
+    );
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot,
+      initialEntry: `/${localizedThreadId}`,
+    });
+
+    try {
+      await vi.waitFor(() => {
+        expect(document.body.textContent).toContain("新线程");
+        expect(document.body.textContent).not.toContain("New thread");
+      });
+
+      await page.getByRole("button", { name: /新线程/u }).click();
+      await expect.element(page.getByRole("menuitem", { name: "新聊天" })).toBeVisible();
+    } finally {
+      await mounted.cleanup();
+    }
   });
 
   it("keeps near-cap composer work bounded while live activities arrive", async () => {

@@ -88,6 +88,7 @@ import {
   gitStatusQueryOptions,
 } from "~/lib/gitReactQuery";
 import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
+import { useLingui } from "@lingui/react";
 import {
   providerComposerCapabilitiesQueryOptions,
   providerCommandsQueryOptions,
@@ -1266,6 +1267,7 @@ export default function ChatView({
   onChangeThreadInSplitPane,
   onCloseThreadPane,
 }: ChatViewProps) {
+  const { i18n } = useLingui();
   // Prop defaults are resolved here instead of in the destructuring pattern: an
   // AssignmentPattern in the parameter list makes React Compiler bail out (silently —
   // `panicThreshold` is unset) on this entire component, the hottest one in the app.
@@ -11332,6 +11334,8 @@ export default function ChatView({
       : null,
     isHomeChat: isChatProject,
     isEmpty: timelineEntries.length === 0,
+    genericChatTitle: i18n._("New Chat"),
+    genericThreadTitle: i18n._("New thread"),
   });
 
   const handleRenameActiveThread = async (newTitle: string) => {

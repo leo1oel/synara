@@ -857,6 +857,29 @@ describe("voice helpers", () => {
     ).toBe("New Chat");
   });
 
+  it("uses localized placeholders for untouched empty chats and project threads", () => {
+    expect(
+      resolveActiveThreadTitle({
+        title: "New thread",
+        subagentTitle: null,
+        isHomeChat: true,
+        isEmpty: true,
+        genericChatTitle: "新聊天",
+        genericThreadTitle: "新线程",
+      }),
+    ).toBe("新聊天");
+    expect(
+      resolveActiveThreadTitle({
+        title: "New thread",
+        subagentTitle: null,
+        isHomeChat: false,
+        isEmpty: true,
+        genericChatTitle: "新聊天",
+        genericThreadTitle: "新线程",
+      }),
+    ).toBe("新线程");
+  });
+
   it("prefers the resolved subagent label when present", () => {
     expect(
       resolveActiveThreadTitle({

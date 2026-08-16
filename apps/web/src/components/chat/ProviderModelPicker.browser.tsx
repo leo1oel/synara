@@ -2,10 +2,15 @@ import { type ModelSlug, type ProviderKind, type ServerProviderStatus } from "@s
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
+import { I18nProvider } from "@lingui/react";
 
 import { ProviderModelPicker } from "./ProviderModelPicker";
 import type { ProviderModelOption } from "../../providerModelOptions";
 import { FAVORITE_MODEL_STORAGE_KEYS } from "../../lib/modelFavorites";
+import { SYNARA_OPEN_SETTINGS } from "../../embedMode";
+import { i18n } from "../../i18n";
+
+i18n.loadAndActivate({ locale: "en", messages: {} });
 
 const MODEL_OPTIONS_BY_PROVIDER = {
   claudeAgent: [
@@ -161,18 +166,22 @@ async function mountPicker(props: {
   document.body.append(host);
   const onProviderModelChange = vi.fn();
   const screen = await render(
-    <ProviderModelPicker
-      provider={props.provider}
-      model={props.model}
-      lockedProvider={props.lockedProvider}
-      modelOptionsByProvider={props.modelOptionsByProvider ?? MODEL_OPTIONS_BY_PROVIDER}
-      {...(props.loadingModelProviders
-        ? { loadingModelProviders: props.loadingModelProviders }
-        : {})}
-      {...(props.providers ? { providers: props.providers } : {})}
-      {...(props.onSelectionCommitted ? { onSelectionCommitted: props.onSelectionCommitted } : {})}
-      onProviderModelChange={onProviderModelChange}
-    />,
+    <I18nProvider i18n={i18n}>
+      <ProviderModelPicker
+        provider={props.provider}
+        model={props.model}
+        lockedProvider={props.lockedProvider}
+        modelOptionsByProvider={props.modelOptionsByProvider ?? MODEL_OPTIONS_BY_PROVIDER}
+        {...(props.loadingModelProviders
+          ? { loadingModelProviders: props.loadingModelProviders }
+          : {})}
+        {...(props.providers ? { providers: props.providers } : {})}
+        {...(props.onSelectionCommitted
+          ? { onSelectionCommitted: props.onSelectionCommitted }
+          : {})}
+        onProviderModelChange={onProviderModelChange}
+      />
+    </I18nProvider>,
     { container: host },
   );
 
@@ -189,6 +198,8 @@ describe("ProviderModelPicker", () => {
   afterEach(() => {
     document.body.innerHTML = "";
     localStorage.clear();
+    sessionStorage.clear();
+    vi.restoreAllMocks();
   });
 
   it("shows provider submenus when provider switching is allowed", async () => {
@@ -679,6 +690,48 @@ describe("ProviderModelPicker", () => {
         expect(text).not.toContain("Checking");
       });
       await expect.element(page.getByRole("menuitem", { name: "Add Providers" })).toBeVisible();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("asks the Lattice host to open provider settings from the embedded picker", async () => {
+    sessionStorage.setItem(
+      "synara.poc.embed-mode",
+      JSON.stringify({
+        workspaceRoot: "/repo/project",
+        theme: "dark",
+        surface: "chrome",
+        hostOrigin: window.location.origin,
+        locale: "zh-CN",
+      }),
+    );
+    const postMessage = vi.spyOn(window.parent, "postMessage");
+    const mounted = await mountPicker({
+      provider: "codex",
+      model: "gpt-5-codex",
+      lockedProvider: null,
+      providers: [
+        {
+          provider: "codex",
+          status: "ready",
+          available: true,
+          authStatus: "authenticated",
+          checkedAt: "2026-04-10T10:00:00.000Z",
+        },
+      ],
+    });
+
+    try {
+      await page.getByRole("button").click();
+      await page.getByRole("menuitem", { name: "Add Providers" }).click();
+
+      await vi.waitFor(() => {
+        expect(postMessage).toHaveBeenCalledWith(
+          { type: SYNARA_OPEN_SETTINGS, section: "providers" },
+          window.location.origin,
+        );
+      });
     } finally {
       await mounted.cleanup();
     }

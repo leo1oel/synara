@@ -12,6 +12,17 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "New Chat"
+msgstr "新聊天"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+#: src/components/ChatView.tsx
+msgid "New thread"
+msgstr "新线程"
+
+#. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
 msgid "Connect a coding agent"
 msgstr "连接编码智能体"
@@ -804,6 +815,14 @@ msgstr "托管工作树"
 #: src/settingsNavigation.ts
 msgid "MCP connections"
 msgstr "MCP 连接"
+
+#: src/components/chat/ChatHeader.tsx
+msgid "New chat"
+msgstr "新聊天"
+
+#: src/components/chat/ChatHeader.tsx
+msgid "No chats in this project yet"
+msgstr "此项目中还没有聊天"
 
 #: src/settingsNavigation.ts
 msgid "Notifications"
