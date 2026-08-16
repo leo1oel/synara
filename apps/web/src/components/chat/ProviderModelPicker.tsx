@@ -47,6 +47,8 @@ import {
 } from "../../lib/modelFavorites";
 import { Skeleton } from "../ui/skeleton";
 import { PlusIcon } from "~/lib/icons";
+import { Trans } from "@lingui/react/macro";
+import { useLingui } from "@lingui/react";
 
 function isAvailableProviderOption(option: (typeof PROVIDER_OPTIONS)[number]): option is {
   value: ProviderKind;
@@ -191,6 +193,7 @@ type ProviderModelMenuItemsProps = {
 export const ProviderModelMenuItems = function ProviderModelMenuItems(
   props: ProviderModelMenuItemsProps,
 ) {
+  const { i18n } = useLingui();
   const { onAfterSelection } = props;
   const [modelSearchQuery, setModelSearchQuery] = useState("");
   const [kiloFavoriteModelSlugs, setKiloFavoriteModelSlugs] = useLocalStorage(
@@ -268,7 +271,7 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
   const renderModelRadioGroup = (provider: ProviderKind) => {
     if (props.loadingModelProviders?.[provider]) {
       return (
-        <div className="space-y-2 px-2 py-2" aria-label="Loading models">
+        <div className="space-y-2 px-2 py-2" aria-label={i18n._("Loading models")}>
           {Array.from({ length: 6 }, (_, index) => (
             <div key={index} className="flex items-center gap-2 rounded-md px-2 py-1.5">
               <Skeleton className="size-3.5 rounded-full" />
@@ -416,7 +419,7 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
       {visibleAvailableProviderOptions.length > 0 ? <MenuSeparator /> : null}
       <MenuItem onClick={() => appHistory.push("/settings?section=providers")}>
         <PlusIcon aria-hidden="true" className="size-3 shrink-0 text-muted-foreground/85" />
-        <span>Add Providers</span>
+        <span><Trans>Add providers</Trans></span>
       </MenuItem>
     </>
   );
@@ -549,7 +552,7 @@ export const ProviderModelPicker = function ProviderModelPicker(props: ProviderM
           {!isMenuOpen ? (
             <TooltipPopup side="top" sideOffset={6} variant="picker">
               <span className="inline-flex items-center gap-2 px-1 py-0.5">
-                <span>Change model</span>
+                <span><Trans>Change model</Trans></span>
                 <ShortcutKbd
                   shortcutLabel={props.shortcutLabel}
                   className="h-4 min-w-4 px-1 text-[length:var(--app-font-size-ui-2xs,9px)] text-muted-foreground"

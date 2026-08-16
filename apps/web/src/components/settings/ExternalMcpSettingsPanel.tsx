@@ -5,6 +5,7 @@ import {
 } from "@synara/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { useLingui } from "@lingui/react";
 
 import { Button } from "~/components/ui/button";
 import { DisclosureChevron } from "~/components/ui/DisclosureChevron";
@@ -58,6 +59,7 @@ function copyWithToast(value: string, title: string): void {
 }
 
 export function ExternalMcpSettingsPanel(props: { active: boolean }) {
+  const { i18n } = useLingui();
   const queryClient = useQueryClient();
   const [name, setName] = useState<string>(DEFAULT_NAME);
   const [allProjects, setAllProjects] = useState(true);
@@ -248,10 +250,10 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
   return (
     <div className="space-y-6">
       {!setup ? (
-        <SettingsSection title="Connect a coding agent">
+        <SettingsSection title={i18n._("Connect a coding agent")}>
           <SettingsRow
-            title="Name"
-            description="How this connection appears in Synara. Works with Codex, Claude, and any other MCP-capable agent."
+            title={i18n._("Name")}
+            description={i18n._("How this connection appears in Synara. Works with Codex, Claude, and any other MCP-capable agent.")}
             control={
               <Input
                 className="w-full sm:w-64"
@@ -263,8 +265,8 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
             }
           />
           <SettingsRow
-            title="Access all of Synara"
-            description="The agent can discover and work in every project, including ones you add later. Turn off to pick specific projects."
+            title={i18n._("Access all of Synara")}
+            description={i18n._("The agent can discover and work in every project, including ones you add later. Turn off to pick specific projects.")}
             control={<Switch checked={allProjects} onCheckedChange={setAllProjects} />}
           >
             <DisclosureRegion open={!allProjects} contentClassName="mt-3">
@@ -302,7 +304,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
             </DisclosureRegion>
           </SettingsRow>
           <SettingsRow
-            title="Advanced permissions"
+            title={i18n._("Advanced permissions")}
             description="Optional access for existing tasks, shared checkouts, or execution without approvals. The safe defaults are recommended."
             control={
               <Button
@@ -352,7 +354,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
             </DisclosureRegion>
           </SettingsRow>
           <SettingsRow
-            title="Create connection"
+            title={i18n._("Create connection")}
             description="The connection lasts 30 days and can be revoked at any time. The next screen gives you one prompt to paste into your agent."
             control={
               <Button size="sm" disabled={!canCreate} onClick={() => createMutation.mutate()}>
@@ -537,7 +539,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
         </SettingsSection>
       ) : null}
 
-      <SettingsSection title="Connected agents">
+      <SettingsSection title={i18n._("Connected agents")}>
         {integrationsQuery.isLoading ? (
           <SettingsListRow title="Loading connections..." />
         ) : integrationsQuery.data?.length ? (
@@ -602,8 +604,8 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
           })
         ) : (
           <SettingsListRow
-            title="No connected agents"
-            description="Connect Codex, Claude, or another local MCP agent to create and follow Synara tasks."
+            title={i18n._("No connected agents")}
+            description={i18n._("Connect Codex, Claude, or another local MCP agent to create and follow Synara tasks.")}
           />
         )}
       </SettingsSection>

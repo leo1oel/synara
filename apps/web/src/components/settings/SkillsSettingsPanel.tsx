@@ -11,6 +11,7 @@ import type {
 } from "@synara/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from "react";
+import { useLingui } from "@lingui/react";
 
 import {
   SettingsCard,
@@ -67,6 +68,7 @@ function filterSkillGroups(
 }
 
 export function SkillsSettingsPanel() {
+  const { i18n } = useLingui();
   const queryClient = useQueryClient();
   const skillFolderInputRef = useRef<HTMLInputElement>(null);
   const [isImportingSkill, setIsImportingSkill] = useState(false);
@@ -454,10 +456,10 @@ export function SkillsSettingsPanel() {
 
   return (
     <div className="space-y-6">
-      <SettingsSection title="Skills Manager">
+      <SettingsSection title={i18n._("Skills Manager")}>
         <SettingsRow
-          title="Your skill library"
-          description="Included and imported skills are managed by Lattice. Skills found in your provider and project folders are listed here too and remain managed by their original tools."
+          title={i18n._("Your skill library")}
+          description={i18n._("Included and imported skills are managed by Lattice. Skills found in your provider and project folders are listed here too and remain managed by their original tools.")}
           status={
             catalogQuery.isLoading
               ? "Scanning your library…"
@@ -474,7 +476,7 @@ export function SkillsSettingsPanel() {
                 multiple
                 className="hidden"
                 onChange={handleSkillFolderSelection}
-                aria-label="Choose a skill folder"
+                aria-label={i18n._("Choose a skill folder")}
               />
               <Button
                 size="sm"
@@ -507,9 +509,9 @@ export function SkillsSettingsPanel() {
 
       <SearchInput
         nativeInput
-        placeholder="Search skills..."
+        placeholder={i18n._("Search skills...")}
         value={searchQuery}
-        aria-label="Search skills"
+        aria-label={i18n._("Search skills")}
         onChange={(event) => setSearchQuery(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Escape" && searchQuery.length > 0) {
@@ -521,7 +523,7 @@ export function SkillsSettingsPanel() {
       />
 
       {catalogQuery.isError ? (
-        <SettingsSectionShell title="Skills">
+        <SettingsSectionShell title={i18n._("Skills")}>
           <SettingsEmptyState tone="destructive" layout="status">
             Lattice could not scan the skill library. Check that the local service is running, then
             reopen Settings.
@@ -530,7 +532,7 @@ export function SkillsSettingsPanel() {
       ) : null}
 
       {!catalogQuery.isLoading && !catalogQuery.isError && !hasVisibleSkills ? (
-        <SettingsSectionShell title={searchQuery.trim() ? "Search results" : "Skills"}>
+        <SettingsSectionShell title={searchQuery.trim() ? i18n._("Search results") : i18n._("Skills")}>
           <SettingsEmptyState>
             {searchQuery.trim()
               ? `No skills match “${searchQuery.trim()}”.`
@@ -540,19 +542,19 @@ export function SkillsSettingsPanel() {
       ) : null}
 
       {visibleBundledGroups.length > 0 ? (
-        <SettingsSectionShell title="Included with Lattice">
+        <SettingsSectionShell title={i18n._("Included with Lattice")}>
           <SettingsCard>{visibleBundledGroups.map(renderSkillRow)}</SettingsCard>
         </SettingsSectionShell>
       ) : null}
 
       {visibleInstalledGroups.length > 0 ? (
-        <SettingsSectionShell title="Installed by you">
+        <SettingsSectionShell title={i18n._("Installed by you")}>
           <SettingsCard>{visibleInstalledGroups.map(renderSkillRow)}</SettingsCard>
         </SettingsSectionShell>
       ) : null}
 
       {visibleDetectedGroups.length > 0 ? (
-        <SettingsSectionShell title="Detected from your environment">
+        <SettingsSectionShell title={i18n._("Detected from your environment")}>
           <SettingsCard>{visibleDetectedGroups.map(renderSkillRow)}</SettingsCard>
         </SettingsSectionShell>
       ) : null}

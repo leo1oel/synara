@@ -28,6 +28,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type MouseEvent, type ReactNode, useCallback, useMemo, useState } from "react";
+import { useLingui } from "@lingui/react";
 
 import type { AppSettings, AppSettingsBinding } from "~/appSettings";
 import { postExternalLinkToLattice, readEmbedMode } from "~/embedMode";
@@ -809,6 +810,7 @@ export function ProvidersSettingsPanel({
   active,
   resetEpoch,
 }: ProvidersSettingsPanelProps) {
+  const { i18n } = useLingui();
   const queryClient = useQueryClient();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const localProviderStatuses = useProviderStatusesForLocalConfig();
@@ -950,9 +952,9 @@ export function ProvidersSettingsPanel({
 
   return (
     <div className="space-y-6">
-      <SettingsSection title="Provider picker">
+      <SettingsSection title={i18n._("Provider picker")}>
         <SettingsRow
-          title="Available CLIs"
+          title={i18n._("Available CLIs")}
           description="Installed providers appear in the picker. Turn off any you don't want to see, and drag them into your preferred order."
           status={
             serverConfigQuery.isPending || hasPendingProviderStatuses
@@ -1015,10 +1017,10 @@ export function ProvidersSettingsPanel({
       </SettingsSection>
 
       <div id={SETTINGS_TARGETS.providerUpdates}>
-        <SettingsSection title="Updates">
+        <SettingsSection title={i18n._("Updates")}>
           <SettingsRow
-            title="Automatic CLI update checks"
-            description="Check Codex, Claude, and other provider CLIs for newer versions in the background."
+            title={i18n._("Automatic CLI update checks")}
+            description={i18n._("Check Codex, Claude, and other provider CLIs for newer versions in the background.")}
             resetAction={
               settings.enableProviderUpdateChecks !== defaults.enableProviderUpdateChecks ? (
                 <SettingResetButton
@@ -1043,8 +1045,8 @@ export function ProvidersSettingsPanel({
           />
 
           <SettingsRow
-            title="Provider updates"
-            description="Review installed provider tools that Synara can safely update."
+            title={i18n._("Provider updates")}
+            description={i18n._("Review installed provider tools that Synara can safely update.")}
             status={
               !settings.enableProviderUpdateChecks
                 ? "Automatic checks off"
@@ -1094,10 +1096,10 @@ export function ProvidersSettingsPanel({
       </div>
 
       <div>
-        <SettingsSection title="Provider tools">
+        <SettingsSection title={i18n._("Provider tools")}>
           <SettingsRow
-            title="Provider runtimes"
-            description="Review external provider CLIs and the Pi SDK included with Lattice. Pi does not require a separate CLI installation or update."
+            title={i18n._("Provider runtimes")}
+            description={i18n._("Review external provider CLIs and the Pi SDK included with Lattice. Pi does not require a separate CLI installation or update.")}
             status={
               !settings.enableProviderUpdateChecks
                 ? "Automatic checks off"

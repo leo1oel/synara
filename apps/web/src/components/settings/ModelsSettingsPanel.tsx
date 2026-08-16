@@ -10,6 +10,7 @@ import {
 import { getModelOptions, normalizeModelSlug } from "@synara/shared/model";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
+import { useLingui } from "@lingui/react";
 
 import {
   CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS,
@@ -80,6 +81,7 @@ export function ModelsSettingsPanel({
   resetEpoch,
   active,
 }: AppSettingsBinding & { readonly resetEpoch: number; readonly active: boolean }) {
+  const { i18n } = useLingui();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const [selectedCustomModelProvider, setSelectedCustomModelProvider] =
     useState<ProviderKind>("codex");
@@ -257,10 +259,10 @@ export function ModelsSettingsPanel({
 
   return (
     <div className="space-y-6">
-      <SettingsSection title="Generation defaults">
+      <SettingsSection title={i18n._("Generation defaults")}>
         <SettingsRow
-          title="Git writing model"
-          description="Used for generated commit messages, PR titles, and branch names."
+          title={i18n._("Git writing model")}
+          description={i18n._("Used for generated commit messages, PR titles, and branch names.")}
           resetAction={
             isGitTextGenerationModelDirty ? (
               <SettingResetButton
@@ -288,7 +290,7 @@ export function ModelsSettingsPanel({
                   textGenerationModel: model,
                 });
               }}
-              ariaLabel="Git text generation model"
+              ariaLabel={i18n._("Git text generation model")}
               triggerClassName="w-full sm:w-52"
               valueContent={selectedGitTextGenerationModelLabel}
             >
@@ -305,10 +307,10 @@ export function ModelsSettingsPanel({
         />
       </SettingsSection>
 
-      <SettingsSection title="Custom models">
+      <SettingsSection title={i18n._("Custom models")}>
         <SettingsRow
-          title="Saved model slugs"
-          description="Add custom model slugs for supported providers."
+          title={i18n._("Saved model slugs")}
+          description={i18n._("Add custom model slugs for supported providers.")}
           resetAction={
             savedCustomModelRows.length > 0 ? (
               <SettingResetButton label="custom models" onClick={resetCustomModels} />
@@ -328,7 +330,7 @@ export function ModelsSettingsPanel({
                 <SelectTrigger
                   size="sm"
                   className="w-full sm:w-40"
-                  aria-label="Custom model provider"
+                  aria-label={i18n._("Custom model provider")}
                 >
                   <SelectValue>{selectedCustomModelProviderSettings.title}</SelectValue>
                 </SelectTrigger>

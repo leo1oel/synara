@@ -1,0 +1,261 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connect a coding agent"
+msgstr "Connect a coding agent"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Name"
+msgstr "Name"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "How this connection appears in Synara. Works with Codex, Claude, and any other MCP-capable agent."
+msgstr "How this connection appears in Synara. Works with Codex, Claude, and any other MCP-capable agent."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Access all of Synara"
+msgstr "Access all of Synara"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "The agent can discover and work in every project, including ones you add later. Turn off to pick specific projects."
+msgstr "The agent can discover and work in every project, including ones you add later. Turn off to pick specific projects."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Advanced permissions"
+msgstr "Advanced permissions"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Create connection"
+msgstr "Create connection"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connected agents"
+msgstr "Connected agents"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "No connected agents"
+msgstr "No connected agents"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connect Codex, Claude, or another local MCP agent to create and follow Synara tasks."
+msgstr "Connect Codex, Claude, or another local MCP agent to create and follow Synara tasks."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Generation defaults"
+msgstr "Generation defaults"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Git writing model"
+msgstr "Git writing model"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Used for generated commit messages, PR titles, and branch names."
+msgstr "Used for generated commit messages, PR titles, and branch names."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Git text generation model"
+msgstr "Git text generation model"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Custom models"
+msgstr "Custom models"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Saved model slugs"
+msgstr "Saved model slugs"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Add custom model slugs for supported providers."
+msgstr "Add custom model slugs for supported providers."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Custom model provider"
+msgstr "Custom model provider"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Provider picker"
+msgstr "Provider picker"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Available CLIs"
+msgstr "Available CLIs"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Updates"
+msgstr "Updates"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Automatic CLI update checks"
+msgstr "Automatic CLI update checks"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Check Codex, Claude, and other provider CLIs for newer versions in the background."
+msgstr "Check Codex, Claude, and other provider CLIs for newer versions in the background."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Provider updates"
+msgstr "Provider updates"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Review installed provider tools that Synara can safely update."
+msgstr "Review installed provider tools that Synara can safely update."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Provider tools"
+msgstr "Provider tools"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Provider runtimes"
+msgstr "Provider runtimes"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Review external provider CLIs and the Pi SDK included with Lattice. Pi does not require a separate CLI installation or update."
+msgstr "Review external provider CLIs and the Pi SDK included with Lattice. Pi does not require a separate CLI installation or update."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Skills Manager"
+msgstr "Skills Manager"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Your skill library"
+msgstr "Your skill library"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Included and imported skills are managed by Lattice. Skills found in your provider and project folders are listed here too and remain managed by their original tools."
+msgstr "Included and imported skills are managed by Lattice. Skills found in your provider and project folders are listed here too and remain managed by their original tools."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Choose a skill folder"
+msgstr "Choose a skill folder"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Search skills..."
+msgstr "Search skills..."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Search skills"
+msgstr "Search skills"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Skills"
+msgstr "Skills"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Search results"
+msgstr "Search results"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Included with Lattice"
+msgstr "Included with Lattice"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Installed by you"
+msgstr "Installed by you"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Detected from your environment"
+msgstr "Detected from your environment"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatEmptyStateHero.tsx
+msgid "Synara logo"
+msgstr "Synara logo"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Requested permission profile"
+msgstr "Requested permission profile"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerPendingUserInputPanel.tsx
+msgid "Previous question"
+msgstr "Previous question"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerPendingUserInputPanel.tsx
+msgid "Next question"
+msgstr "Next question"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProviderModelPicker.tsx
+msgid "Loading models"
+msgstr "Loading models"
+
+#. placeholder {0}: progress.questionIndex + 1
+#: src/components/chat/ComposerPendingUserInputPanel.tsx
+msgid "{0} of {questionCount}"
+msgstr "{0} of {questionCount}"
+
+#: src/components/chat/ProviderModelPicker.tsx
+msgid "Add providers"
+msgstr "Add providers"
+
+#: src/components/chat/ComposerPendingUserInputPanel.tsx
+msgid "Cancel"
+msgstr "Cancel"
+
+#: src/components/chat/ProviderModelPicker.tsx
+msgid "Change model"
+msgstr "Change model"
+
+#: src/components/chat/ChatEmptyStateHero.tsx
+msgid "Let's build"
+msgstr "Let's build"
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Review the request to continue."
+msgstr "Review the request to continue."
+
+#: src/components/chat/ComposerPendingUserInputPanel.tsx
+msgid "Select one or more."
+msgstr "Select one or more."

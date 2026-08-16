@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
+import { I18nProvider } from "@lingui/react";
 
 import "@fontsource-variable/jetbrains-mono";
 import "@fontsource-variable/inter";
@@ -15,8 +16,10 @@ import { startLatticeCanvasRelay } from "./latticeCanvasRelay";
 import { startLatticeSpreadsheetRelay } from "./latticeSpreadsheetRelay";
 import { isElectron } from "./env";
 import { isMacPlatform } from "./lib/utils";
+import { activateInitialLocale, i18n } from "./i18n";
 
 initializeEmbedMode();
+await activateInitialLocale();
 startLatticeAgentQualityRelay();
 startLatticeCanvasRelay();
 startLatticeSpreadsheetRelay();
@@ -36,6 +39,8 @@ if (isElectron) {
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <I18nProvider i18n={i18n}>
+      <RouterProvider router={router} />
+    </I18nProvider>
   </React.StrictMode>,
 );

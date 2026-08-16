@@ -46,6 +46,7 @@ import {
 function installBrowserStubs(
   theme: "light" | "dark" = "dark",
   surface: "chrome" | "drawer" = "chrome",
+  locale?: string,
 ) {
   const values = new Map<string, string>();
   const storage = {
@@ -66,7 +67,7 @@ function installBrowserStubs(
       location: {
         origin: "http://127.0.0.1:4567",
         pathname: "/",
-        search: `?embed=1&workspaceRoot=%2FUsers%2Fme%2Fpaper&theme=${theme}&surface=${surface}&hostOrigin=http%3A%2F%2Flocalhost%3A1420`,
+        search: `?embed=1&workspaceRoot=%2FUsers%2Fme%2Fpaper&theme=${theme}&surface=${surface}&hostOrigin=http%3A%2F%2Flocalhost%3A1420${locale ? `&locale=${encodeURIComponent(locale)}` : ""}`,
         hash: "#lattice-auth=secret-token",
       },
       history: { state: null, replaceState },
@@ -102,6 +103,7 @@ describe("Lattice embed mode", () => {
       theme: "dark",
       surface: "chrome",
       hostOrigin: "http://localhost:1420",
+      locale: "en",
     });
     expect(readEmbeddedHostWsUrl()).toBe("ws://127.0.0.1:4567/?token=secret-token");
     expect(replaceState).toHaveBeenCalledWith(
@@ -109,6 +111,16 @@ describe("Lattice embed mode", () => {
       "",
       "/?embed=1&workspaceRoot=%2FUsers%2Fme%2Fpaper&theme=dark&surface=chrome&hostOrigin=http%3A%2F%2Flocalhost%3A1420",
     );
+  });
+
+  it("accepts only the Simplified Chinese locale from the initial query", () => {
+    installBrowserStubs("dark", "chrome", "zh-CN");
+    initializeEmbedMode();
+    expect(readEmbedMode()?.locale).toBe("zh-CN");
+
+    installBrowserStubs("dark", "chrome", "zh-TW");
+    initializeEmbedMode();
+    expect(readEmbedMode()?.locale).toBe("en");
   });
 
   it("reports readiness only to the configured Lattice origin", () => {

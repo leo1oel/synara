@@ -37,6 +37,7 @@ export interface EmbedModeConfig {
   theme: "light" | "dark";
   surface: "chrome" | "drawer";
   hostOrigin: string | null;
+  locale: "en" | "zh-CN";
 }
 
 export interface SynaraConfirmationRequest {
@@ -893,7 +894,8 @@ export function initializeEmbedMode(): void {
   if ((embed === "1" || embed === '"1"' || embed === "true") && workspaceRoot) {
     const hostOrigin =
       normalizedOrigin(search.get("hostOrigin")) || normalizedOrigin(document.referrer);
-    const config: EmbedModeConfig = { workspaceRoot, theme, surface, hostOrigin };
+    const locale = search.get("locale") === "zh-CN" ? "zh-CN" : "en";
+    const config: EmbedModeConfig = { workspaceRoot, theme, surface, hostOrigin, locale };
     const authToken = readFragmentAuthToken();
     if (authToken) {
       sessionStorage.setItem(EMBED_AUTH_TOKEN_STORAGE_KEY, authToken);
@@ -917,7 +919,8 @@ export function readEmbedMode(): EmbedModeConfig | null {
       "hostOrigin" in parsed && typeof parsed.hostOrigin === "string"
         ? normalizedOrigin(parsed.hostOrigin)
         : null;
-    return workspaceRoot ? { workspaceRoot, theme, surface, hostOrigin } : null;
+    const locale = "locale" in parsed && parsed.locale === "zh-CN" ? "zh-CN" : "en";
+    return workspaceRoot ? { workspaceRoot, theme, surface, hostOrigin, locale } : null;
   } catch {
     return null;
   }
