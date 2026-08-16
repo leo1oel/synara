@@ -240,22 +240,154 @@ msgstr "{0} of {questionCount}"
 msgid "Add providers"
 msgstr "Add providers"
 
+#: src/settingsNavigation.ts
+msgid "Agent providers"
+msgstr "Agent providers"
+
+#: src/settingsNavigation.ts
+msgid "Agent skills"
+msgstr "Agent skills"
+
+#: src/settingsNavigation.ts
+msgid "Appearance"
+msgstr "Appearance"
+
+#: src/settingsNavigation.ts
+msgid "AppSnap"
+msgstr "AppSnap"
+
+#: src/settingsNavigation.ts
+msgid "Archived"
+msgstr "Archived"
+
+#: src/settingsNavigation.ts
+msgid "Archived threads"
+msgstr "Archived threads"
+
 #: src/components/chat/ComposerPendingUserInputPanel.tsx
 msgid "Cancel"
 msgstr "Cancel"
+
+#: src/settingsNavigation.ts
+msgid "Capture another app's frontmost window directly into a task."
+msgstr "Capture another app's frontmost window directly into a task."
+
+#: src/settingsNavigation.ts
+msgid "Capture, customize, and add shortcuts for every Synara command."
+msgstr "Capture, customize, and add shortcuts for every Synara command."
 
 #: src/components/chat/ProviderModelPicker.tsx
 msgid "Change model"
 msgstr "Change model"
 
+#: src/settingsNavigation.ts
+msgid "Chat behavior"
+msgstr "Chat behavior"
+
+#: src/settingsNavigation.ts
+msgid "Choose coding agents, their installed tools, and model defaults for Git writing."
+msgstr "Choose coding agents, their installed tools, and model defaults for Git writing."
+
+#: src/settingsNavigation.ts
+msgid "Choose defaults for new chats, navigation, and the Environment panel."
+msgstr "Choose defaults for new chats, navigation, and the Environment panel."
+
+#: src/settingsNavigation.ts
+msgid "Choose how Synara tells you when work finishes or needs attention."
+msgstr "Choose how Synara tells you when work finishes or needs attention."
+
+#: src/settingsNavigation.ts
+msgid "Coding"
+msgstr "Coding"
+
+#: src/settingsNavigation.ts
+msgid "Control live responses, follow-ups, review defaults, and safety confirmations."
+msgstr "Control live responses, follow-ups, review defaults, and safety confirmations."
+
+#: src/settingsNavigation.ts
+msgid "Customize the theme, typography, density, and time format."
+msgstr "Customize the theme, typography, density, and time format."
+
+#: src/settingsNavigation.ts
+msgid "Find and restore threads you previously archived."
+msgstr "Find and restore threads you previously archived."
+
+#: src/settingsNavigation.ts
+msgid "General"
+msgstr "General"
+
+#: src/settingsNavigation.ts
+msgid "Give Codex, Claude, and other local agents scoped access to Synara tasks."
+msgstr "Give Codex, Claude, and other local agents scoped access to Synara tasks."
+
+#: src/settingsNavigation.ts
+msgid "Integrations"
+msgstr "Integrations"
+
+#: src/settingsNavigation.ts
+msgid "Keybindings"
+msgstr "Keybindings"
+
 #: src/components/chat/ChatEmptyStateHero.tsx
 msgid "Let's build"
 msgstr "Let's build"
+
+#: src/settingsNavigation.ts
+msgid "Manage sessions, recovery tools, low-level keybindings, and version details."
+msgstr "Manage sessions, recovery tools, low-level keybindings, and version details."
+
+#: src/settingsNavigation.ts
+msgid "Managed worktrees"
+msgstr "Managed worktrees"
+
+#: src/settingsNavigation.ts
+msgid "MCP connections"
+msgstr "MCP connections"
+
+#: src/settingsNavigation.ts
+msgid "Notifications"
+msgstr "Notifications"
+
+#: src/settingsNavigation.ts
+msgid "Personal"
+msgstr "Personal"
+
+#: src/settingsNavigation.ts
+msgid "Profile"
+msgstr "Profile"
+
+#: src/settingsNavigation.ts
+msgid "Review and clean up isolated workspaces created by Synara."
+msgstr "Review and clean up isolated workspaces created by Synara."
+
+#: src/settingsNavigation.ts
+msgid "Review reusable workflows discovered across all configured providers."
+msgstr "Review reusable workflows discovered across all configured providers."
 
 #: src/components/chat/ComposerPendingApprovalPanel.tsx
 msgid "Review the request to continue."
 msgstr "Review the request to continue."
 
+#: src/settingsNavigation.ts
+msgid "See remaining quota and credits for every signed-in provider."
+msgstr "See remaining quota and credits for every signed-in provider."
+
 #: src/components/chat/ComposerPendingUserInputPanel.tsx
 msgid "Select one or more."
 msgstr "Select one or more."
+
+#: src/settingsNavigation.ts
+msgid "System"
+msgstr "System"
+
+#: src/settingsNavigation.ts
+msgid "System tools"
+msgstr "System tools"
+
+#: src/settingsNavigation.ts
+msgid "Usage & limits"
+msgstr "Usage & limits"
+
+#: src/settingsNavigation.ts
+msgid "Your local activity, streaks, and a shareable stats card."
+msgstr "Your local activity, streaks, and a shareable stats card."

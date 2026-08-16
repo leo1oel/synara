@@ -99,6 +99,7 @@ import {
   readEmbedMode,
   readLatticeSettingsSectionMessage,
 } from "../embedMode";
+import { useLingui } from "@lingui/react";
 import { sameProviderOrder } from "../providerOrdering";
 import {
   normalizeSettingsSection,
@@ -210,6 +211,7 @@ function SettingsRouteView() {
   } | null>(null);
   const settingsTarget = typeof routeSearch.target === "string" ? routeSearch.target : null;
   const activeSectionItem = SETTINGS_NAV_ITEMS.find((item) => item.id === activeSection)!;
+  const { i18n } = useLingui();
 
   const {
     isDefaultActiveTheme,
@@ -1252,10 +1254,10 @@ function SettingsRouteView() {
                 <div className="synara-settings-heading mb-8 flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <h1 className="text-xl font-medium tracking-tight text-foreground">
-                      {activeSectionItem.label}
+                      {i18n._(activeSectionItem.label)}
                     </h1>
                     <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                      {activeSectionItem.description}
+                      {i18n._(activeSectionItem.description)}
                     </p>
                   </div>
                   {!isEmbed ? (

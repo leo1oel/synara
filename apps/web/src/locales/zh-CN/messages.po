@@ -240,22 +240,154 @@ msgstr "第 {0} 个，共 {questionCount} 个"
 msgid "Add providers"
 msgstr "添加提供商"
 
+#: src/settingsNavigation.ts
+msgid "Agent providers"
+msgstr "智能助手服务商"
+
+#: src/settingsNavigation.ts
+msgid "Agent skills"
+msgstr "智能助手技能"
+
+#: src/settingsNavigation.ts
+msgid "Appearance"
+msgstr "外观"
+
+#: src/settingsNavigation.ts
+msgid "AppSnap"
+msgstr "AppSnap"
+
+#: src/settingsNavigation.ts
+msgid "Archived"
+msgstr "已归档"
+
+#: src/settingsNavigation.ts
+msgid "Archived threads"
+msgstr "已归档会话"
+
 #: src/components/chat/ComposerPendingUserInputPanel.tsx
 msgid "Cancel"
 msgstr "取消"
+
+#: src/settingsNavigation.ts
+msgid "Capture another app's frontmost window directly into a task."
+msgstr "把另一个应用的最前端窗口直接截取到任务中。"
+
+#: src/settingsNavigation.ts
+msgid "Capture, customize, and add shortcuts for every Synara command."
+msgstr "为每个 Synara 命令录制、自定义和新增快捷键。"
 
 #: src/components/chat/ProviderModelPicker.tsx
 msgid "Change model"
 msgstr "更改模型"
 
+#: src/settingsNavigation.ts
+msgid "Chat behavior"
+msgstr "对话行为"
+
+#: src/settingsNavigation.ts
+msgid "Choose coding agents, their installed tools, and model defaults for Git writing."
+msgstr "选择编程智能助手、它们已安装的工具，以及 Git 文案生成使用的默认模型。"
+
+#: src/settingsNavigation.ts
+msgid "Choose defaults for new chats, navigation, and the Environment panel."
+msgstr "设置新建对话、导航和环境面板的默认行为。"
+
+#: src/settingsNavigation.ts
+msgid "Choose how Synara tells you when work finishes or needs attention."
+msgstr "设置 Synara 在任务完成或需要你处理时如何提醒你。"
+
+#: src/settingsNavigation.ts
+msgid "Coding"
+msgstr "编程"
+
+#: src/settingsNavigation.ts
+msgid "Control live responses, follow-ups, review defaults, and safety confirmations."
+msgstr "控制实时回复、追问、审阅默认设置和安全确认。"
+
+#: src/settingsNavigation.ts
+msgid "Customize the theme, typography, density, and time format."
+msgstr "自定义主题、排版、密度和时间格式。"
+
+#: src/settingsNavigation.ts
+msgid "Find and restore threads you previously archived."
+msgstr "查找并恢复你此前归档的会话。"
+
+#: src/settingsNavigation.ts
+msgid "General"
+msgstr "通用"
+
+#: src/settingsNavigation.ts
+msgid "Give Codex, Claude, and other local agents scoped access to Synara tasks."
+msgstr "让 Codex、Claude 等本地智能助手在受限范围内访问 Synara 任务。"
+
+#: src/settingsNavigation.ts
+msgid "Integrations"
+msgstr "集成"
+
+#: src/settingsNavigation.ts
+msgid "Keybindings"
+msgstr "快捷键"
+
 #: src/components/chat/ChatEmptyStateHero.tsx
 msgid "Let's build"
 msgstr "开始构建"
+
+#: src/settingsNavigation.ts
+msgid "Manage sessions, recovery tools, low-level keybindings, and version details."
+msgstr "管理会话、恢复工具、底层快捷键和版本信息。"
+
+#: src/settingsNavigation.ts
+msgid "Managed worktrees"
+msgstr "托管工作树"
+
+#: src/settingsNavigation.ts
+msgid "MCP connections"
+msgstr "MCP 连接"
+
+#: src/settingsNavigation.ts
+msgid "Notifications"
+msgstr "通知"
+
+#: src/settingsNavigation.ts
+msgid "Personal"
+msgstr "个人"
+
+#: src/settingsNavigation.ts
+msgid "Profile"
+msgstr "个人资料"
+
+#: src/settingsNavigation.ts
+msgid "Review and clean up isolated workspaces created by Synara."
+msgstr "查看并清理 Synara 创建的隔离工作区。"
+
+#: src/settingsNavigation.ts
+msgid "Review reusable workflows discovered across all configured providers."
+msgstr "查看在所有已配置服务商中发现的可复用工作流。"
 
 #: src/components/chat/ComposerPendingApprovalPanel.tsx
 msgid "Review the request to continue."
 msgstr "查看请求后继续。"
 
+#: src/settingsNavigation.ts
+msgid "See remaining quota and credits for every signed-in provider."
+msgstr "查看每个已登录服务商的剩余配额和额度。"
+
 #: src/components/chat/ComposerPendingUserInputPanel.tsx
 msgid "Select one or more."
 msgstr "可选择一项或多项。"
+
+#: src/settingsNavigation.ts
+msgid "System"
+msgstr "系统"
+
+#: src/settingsNavigation.ts
+msgid "System tools"
+msgstr "系统工具"
+
+#: src/settingsNavigation.ts
+msgid "Usage & limits"
+msgstr "用量与限额"
+
+#: src/settingsNavigation.ts
+msgid "Your local activity, streaks, and a shareable stats card."
+msgstr "你的本地活动、连续记录，以及可分享的统计卡片。"

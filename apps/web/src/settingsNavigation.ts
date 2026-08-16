@@ -3,6 +3,9 @@
 // Layer: Route/UI support
 // Exports: section ids, nav items, and search normalization helper
 
+import { msg } from "@lingui/core/macro";
+import type { MessageDescriptor } from "@lingui/core";
+
 export const SETTINGS_SECTION_IDS = [
   "general",
   "profile",
@@ -33,11 +36,16 @@ export const SETTINGS_TARGETS = {
   environmentPanel: "environment-panel",
 } as const;
 
+/**
+ * The two fields that reach the screen are descriptors, not finished strings:
+ * this table is module state built once at import, so a locale switch would
+ * never reach it. Every consumer resolves them through `i18n._`.
+ */
 export type SettingsNavItem = {
   id: SettingsSectionId;
   group: SettingsNavGroupId;
-  label: string;
-  description: string;
+  label: MessageDescriptor;
+  description: MessageDescriptor;
   /** Basename of a SVG under `/central-icons-reversed`. */
   icon: string;
   eyebrow: string;
@@ -45,125 +53,125 @@ export type SettingsNavItem = {
 
 export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
   id: SettingsNavGroupId;
-  label: string;
+  label: MessageDescriptor;
 }> = [
-  { id: "personal", label: "Personal" },
-  { id: "integrations", label: "Integrations" },
-  { id: "coding", label: "Coding" },
-  { id: "system", label: "System" },
-  { id: "archived", label: "Archived" },
+  { id: "personal", label: msg`Personal` },
+  { id: "integrations", label: msg`Integrations` },
+  { id: "coding", label: msg`Coding` },
+  { id: "system", label: msg`System` },
+  { id: "archived", label: msg`Archived` },
 ] as const;
 
 export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   {
     id: "general",
     group: "personal",
-    label: "General",
-    description: "Choose defaults for new chats, navigation, and the Environment panel.",
+    label: msg`General`,
+    description: msg`Choose defaults for new chats, navigation, and the Environment panel.`,
     icon: "settings-gear-4",
     eyebrow: "Workflow defaults",
   },
   {
     id: "profile",
     group: "personal",
-    label: "Profile",
-    description: "Your local activity, streaks, and a shareable stats card.",
+    label: msg`Profile`,
+    description: msg`Your local activity, streaks, and a shareable stats card.`,
     icon: "user",
     eyebrow: "Your stats",
   },
   {
     id: "appearance",
     group: "personal",
-    label: "Appearance",
-    description: "Customize the theme, typography, density, and time format.",
+    label: msg`Appearance`,
+    description: msg`Customize the theme, typography, density, and time format.`,
     icon: "color-palette",
     eyebrow: "Visual language",
   },
   {
     id: "notifications",
     group: "personal",
-    label: "Notifications",
-    description: "Choose how Synara tells you when work finishes or needs attention.",
+    label: msg`Notifications`,
+    description: msg`Choose how Synara tells you when work finishes or needs attention.`,
     icon: "bell",
     eyebrow: "Alerts",
   },
   {
     id: "behavior",
     group: "personal",
-    label: "Chat behavior",
-    description: "Control live responses, follow-ups, review defaults, and safety confirmations.",
+    label: msg`Chat behavior`,
+    description: msg`Control live responses, follow-ups, review defaults, and safety confirmations.`,
     icon: "settings-slider-hor",
     eyebrow: "Interaction rules",
   },
   {
     id: "shortcuts",
     group: "personal",
-    label: "Keybindings",
-    description: "Capture, customize, and add shortcuts for every Synara command.",
+    label: msg`Keybindings`,
+    description: msg`Capture, customize, and add shortcuts for every Synara command.`,
     icon: "shortcut",
     eyebrow: "Key bindings",
   },
   {
     id: "usage",
     group: "personal",
-    label: "Usage & limits",
-    description: "See remaining quota and credits for every signed-in provider.",
+    label: msg`Usage & limits`,
+    description: msg`See remaining quota and credits for every signed-in provider.`,
     icon: "gauge",
     eyebrow: "Provider limits",
   },
   {
     id: "appsnap",
     group: "integrations",
-    label: "AppSnap",
-    description: "Capture another app's frontmost window directly into a task.",
+    label: msg`AppSnap`,
+    description: msg`Capture another app's frontmost window directly into a task.`,
     icon: "screen-capture",
     eyebrow: "Screen capture",
   },
   {
     id: "integrations",
     group: "integrations",
-    label: "MCP connections",
-    description: "Give Codex, Claude, and other local agents scoped access to Synara tasks.",
+    label: msg`MCP connections`,
+    description: msg`Give Codex, Claude, and other local agents scoped access to Synara tasks.`,
     icon: "plugin-1",
     eyebrow: "External agents",
   },
   {
     id: "providers",
     group: "coding",
-    label: "Agent providers",
-    description: "Choose coding agents, their installed tools, and model defaults for Git writing.",
+    label: msg`Agent providers`,
+    description: msg`Choose coding agents, their installed tools, and model defaults for Git writing.`,
     icon: "puzzle",
     eyebrow: "Agents & models",
   },
   {
     id: "skills",
     group: "coding",
-    label: "Agent skills",
-    description: "Review reusable workflows discovered across all configured providers.",
+    label: msg`Agent skills`,
+    description: msg`Review reusable workflows discovered across all configured providers.`,
     icon: "building-blocks",
     eyebrow: "Reusable workflows",
   },
   {
     id: "worktrees",
     group: "coding",
-    label: "Managed worktrees",
-    description: "Review and clean up isolated workspaces created by Synara.",
+    label: msg`Managed worktrees`,
+    description: msg`Review and clean up isolated workspaces created by Synara.`,
     icon: "branch-simple",
     eyebrow: "Workspace management",
   },
   {
     id: "advanced",
     group: "system",
-    label: "System tools",
-    description: "Manage sessions, recovery tools, low-level keybindings, and version details.",
+    label: msg`System tools`,
+    description: msg`Manage sessions, recovery tools, low-level keybindings, and version details.`,
     icon: "toolbox",
     eyebrow: "System tools",
   },
   {
     id: "archived",
     group: "archived",
-    label: "Archived threads",
-    description: "Find and restore threads you previously archived.",
+    label: msg`Archived threads`,
+    description: msg`Find and restore threads you previously archived.`,
     icon: "archive",
     eyebrow: "Thread management",
   },
