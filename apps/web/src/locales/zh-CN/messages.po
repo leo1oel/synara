@@ -154,37 +154,37 @@ msgstr "查看外部提供商 CLI 以及 Lattice 内置的 Pi SDK。Pi 无需单
 #. js-lingui-explicit-id
 #: src/components/settings/SkillsSettingsPanel.tsx
 msgid "Skills Manager"
-msgstr "技能管理器"
+msgstr "Skills 管理器"
 
 #. js-lingui-explicit-id
 #: src/components/settings/SkillsSettingsPanel.tsx
 msgid "Your skill library"
-msgstr "你的技能库"
+msgstr "你的 Skills 库"
 
 #. js-lingui-explicit-id
 #: src/components/settings/SkillsSettingsPanel.tsx
 msgid "Included and imported skills are managed by Lattice. Skills found in your provider and project folders are listed here too and remain managed by their original tools."
-msgstr "Lattice 管理内置及导入的技能。提供商和项目文件夹中发现的技能也会列在这里，但仍由原工具管理。"
+msgstr "Lattice 管理内置及导入的 Skills。提供商和项目文件夹中发现的 Skills 也会列在这里，但仍由原工具管理。"
 
 #. js-lingui-explicit-id
 #: src/components/settings/SkillsSettingsPanel.tsx
 msgid "Choose a skill folder"
-msgstr "选择技能文件夹"
+msgstr "选择 Skills 文件夹"
 
 #. js-lingui-explicit-id
 #: src/components/settings/SkillsSettingsPanel.tsx
 msgid "Search skills..."
-msgstr "搜索技能..."
+msgstr "搜索 Skills..."
 
 #. js-lingui-explicit-id
 #: src/components/settings/SkillsSettingsPanel.tsx
 msgid "Search skills"
-msgstr "搜索技能"
+msgstr "搜索 Skills"
 
 #. js-lingui-explicit-id
 #: src/components/settings/SkillsSettingsPanel.tsx
 msgid "Skills"
-msgstr "技能"
+msgstr "Skills"
 
 #. js-lingui-explicit-id
 #: src/components/settings/SkillsSettingsPanel.tsx
@@ -242,11 +242,11 @@ msgstr "添加提供商"
 
 #: src/settingsNavigation.ts
 msgid "Agent providers"
-msgstr "智能助手服务商"
+msgstr "模型"
 
 #: src/settingsNavigation.ts
 msgid "Agent skills"
-msgstr "智能助手技能"
+msgstr "Skills"
 
 #: src/settingsNavigation.ts
 msgid "Appearance"
