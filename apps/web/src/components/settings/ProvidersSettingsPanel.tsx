@@ -36,7 +36,6 @@ import { CentralIcon } from "~/lib/central-icons";
 import { DownloadIcon, ExternalLinkIcon, Loader2Icon } from "~/lib/icons";
 import { openExternalLink } from "~/lib/linkChips";
 import {
-  hasReconciledServerProviderStatuses,
   serverConfigQueryOptions,
   serverQueryKeys,
   serverSettingsQueryOptions,
@@ -442,7 +441,6 @@ function isProviderPickerProviderEnabled(
 function SortableProviderVisibilityRow(props: {
   option: { provider: ProviderKind; title: string };
   providerStatus: ServerProviderStatus | undefined;
-  statusReconciled: boolean;
   isHidden: boolean;
   onHiddenChange: (hidden: boolean) => void;
 }) {
@@ -456,7 +454,7 @@ function SortableProviderVisibilityRow(props: {
     transition,
     isDragging,
   } = useSortable({ id: props.option.provider });
-  const isChecking = !props.statusReconciled || props.providerStatus === undefined;
+  const isChecking = props.providerStatus === undefined;
   const isAvailable = props.providerStatus?.available === true;
   const isEnabled = isProviderPickerProviderEnabled(props.providerStatus, props.isHidden);
 
@@ -818,7 +816,6 @@ export function ProvidersSettingsPanel({
   const queryClient = useQueryClient();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const localProviderStatuses = useProviderStatusesForLocalConfig();
-  const providerStatusesReconciled = hasReconciledServerProviderStatuses(queryClient);
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
   const [openInstallProviders, setOpenInstallProviders] = useState<Record<ProviderKind, boolean>>(
     () => createProviderInstallDisclosureState(settings),
@@ -859,11 +856,9 @@ export function ProvidersSettingsPanel({
       providerStatusByProvider.get(option.provider)?.available === true &&
       !hiddenProviderSet.has(option.provider),
   ).length;
-  const hasPendingProviderStatuses =
-    !providerStatusesReconciled ||
-    orderedProviderVisibilityOptions.some(
-      (option) => !providerStatusByProvider.has(option.provider),
-    );
+  const hasPendingProviderStatuses = orderedProviderVisibilityOptions.some(
+    (option) => !providerStatusByProvider.has(option.provider),
+  );
   const providerUpdateServerSettings = useMemo(
     () =>
       serverSettingsQuery.data
@@ -1010,7 +1005,6 @@ export function ProvidersSettingsPanel({
                     key={option.provider}
                     option={option}
                     providerStatus={providerStatusByProvider.get(option.provider)}
-                    statusReconciled={providerStatusesReconciled}
                     isHidden={hiddenProviderSet.has(option.provider)}
                     onHiddenChange={(hidden) =>
                       updateSettings({
