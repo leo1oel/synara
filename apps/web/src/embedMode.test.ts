@@ -317,6 +317,26 @@ describe("Lattice embed mode", () => {
     expect(setProperty).toHaveBeenCalledWith("--lattice-settings-panel", "#F9F9FA");
   });
 
+  it("runs the settings drawer a step above the chrome type scale, as Lattice does", () => {
+    const drawer = installBrowserStubs("light", "drawer");
+    initializeEmbedMode();
+
+    expect(drawer.setProperty).toHaveBeenCalledWith("--lattice-type-heading-size", "20px");
+    expect(drawer.setProperty).toHaveBeenCalledWith("--lattice-type-group-size", "14px");
+    expect(drawer.setProperty).toHaveBeenCalledWith("--lattice-type-label-size", "13px");
+    expect(drawer.setProperty).toHaveBeenCalledWith("--lattice-type-caption-size", "12px");
+    expect(drawer.setProperty).toHaveBeenCalledWith("--lattice-settings-control-font-size", "13px");
+
+    const chrome = installBrowserStubs("light", "chrome");
+    initializeEmbedMode();
+
+    expect(chrome.setProperty).toHaveBeenCalledWith("--lattice-type-heading-size", "18px");
+    expect(chrome.setProperty).toHaveBeenCalledWith("--lattice-type-group-size", "13px");
+    expect(chrome.setProperty).toHaveBeenCalledWith("--lattice-type-label-size", "12px");
+    expect(chrome.setProperty).toHaveBeenCalledWith("--lattice-type-caption-size", "11px");
+    expect(chrome.setProperty).toHaveBeenCalledWith("--lattice-settings-control-font-size", "12px");
+  });
+
   it("uses Lattice's dark chrome surface for the embedded Agent", () => {
     const { setProperty } = installBrowserStubs("dark");
 

@@ -869,8 +869,6 @@ export function applyEmbedTheme(config: EmbedModeConfig): void {
     "--lattice-settings-control-width": "170px",
     "--lattice-settings-control-height": "30px",
     "--lattice-settings-control-radius": "9px",
-    "--lattice-settings-control-font-size": "12px",
-    "--lattice-settings-control-line-height": "16px",
     "--lattice-settings-control-font-weight": "400",
     "--lattice-settings-frame-border-width": "1px",
     "--lattice-settings-frame-radius": "8px",
@@ -880,8 +878,47 @@ export function applyEmbedTheme(config: EmbedModeConfig): void {
     // default while the rest of the chrome has already switched themes.
     "--composer-surface": config.theme === "dark" ? colors.elevated : "#f9f9fa",
     "--lattice-agent-composer-surface": config.theme === "dark" ? colors.elevated : "#f9f9fa",
+    ...embedTypography(usesDrawerSurface),
   };
   for (const [name, value] of Object.entries(variables)) root.style.setProperty(name, value);
+}
+
+/**
+ * Lattice runs its Settings dialog one step up its type scale from the rest of
+ * its chrome, so the same roles have to shift here or the embedded Providers,
+ * MCP, and Skills pages read a size smaller than every native page beside them.
+ * The drawer surface is that dialog; the chrome surface is the agent sidebar.
+ *
+ * Sizes only. Weights and the roles' meaning stay in `index.css`, and the
+ * interface-scale preference is a webview zoom that already covers the iframe.
+ */
+function embedTypography(usesDrawerSurface: boolean): Record<string, string> {
+  const scale = usesDrawerSurface
+    ? {
+        heading: ["20px", "24px"],
+        group: ["14px", "18px"],
+        label: ["13px", "18px"],
+        caption: ["12px", "18px"],
+      }
+    : {
+        heading: ["18px", "22px"],
+        group: ["13px", "18px"],
+        label: ["12px", "16px"],
+        caption: ["11px", "16px"],
+      };
+  return {
+    "--lattice-type-heading-size": scale.heading[0]!,
+    "--lattice-type-heading-line-height": scale.heading[1]!,
+    "--lattice-type-group-size": scale.group[0]!,
+    "--lattice-type-group-line-height": scale.group[1]!,
+    "--lattice-type-label-size": scale.label[0]!,
+    "--lattice-type-label-line-height": scale.label[1]!,
+    "--lattice-type-caption-size": scale.caption[0]!,
+    "--lattice-type-caption-line-height": scale.caption[1]!,
+    // Lattice sizes its settings controls on the label role.
+    "--lattice-settings-control-font-size": scale.label[0]!,
+    "--lattice-settings-control-line-height": scale.label[1]!,
+  };
 }
 
 export function initializeEmbedMode(): void {
