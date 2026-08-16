@@ -557,13 +557,49 @@ export function SkillsSettingsPanel() {
 
       {visibleDetectedSections.length > 0 ? (
         <SettingsSectionShell title={i18n._("Detected from your environment")}>
-          <div className="space-y-5">
-            {visibleDetectedSections.map((section) => (
-              <div key={section.key} className="space-y-1.5">
-                <h3 className="px-0.5 text-xs font-medium text-foreground">{section.title}</h3>
-                <SettingsCard>{section.groups.map(renderSkillRow)}</SettingsCard>
-              </div>
-            ))}
+          <div className="space-y-4">
+            {visibleDetectedSections.map((section) => {
+              const skillCountLabel = `${section.groups.length} skill${
+                section.groups.length === 1 ? "" : "s"
+              }`;
+              return (
+                <section
+                  key={section.key}
+                  aria-label={section.title}
+                  className="overflow-hidden rounded-xl border border-[color:var(--lattice-settings-line-strong,var(--color-border))] bg-[var(--color-background-elevated-primary-opaque)]"
+                >
+                  <div className="flex items-center justify-between gap-3 border-b border-[color:var(--lattice-settings-line-strong,var(--color-border))] bg-[var(--lattice-settings-accent-soft,var(--color-background-elevated-secondary))] px-3 py-2.5">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-[color:var(--lattice-settings-line-strong,var(--color-border))] bg-[var(--color-background-elevated-primary-opaque)]">
+                        <FolderOpenIcon
+                          aria-hidden="true"
+                          className="size-3.5 text-muted-foreground"
+                        />
+                      </span>
+                      <span
+                        role="heading"
+                        aria-level={3}
+                        className="truncate text-[14px] font-semibold text-foreground"
+                      >
+                        {section.title}
+                      </span>
+                    </div>
+                    <Badge
+                      size="lg"
+                      variant="outline"
+                      aria-label={skillCountLabel}
+                      title={skillCountLabel}
+                      className="rounded-md bg-background/70 tabular-nums text-muted-foreground"
+                    >
+                      {section.groups.length}
+                    </Badge>
+                  </div>
+                  <SettingsCard className="px-3">
+                    {section.groups.map(renderSkillRow)}
+                  </SettingsCard>
+                </section>
+              );
+            })}
           </div>
         </SettingsSectionShell>
       ) : null}
