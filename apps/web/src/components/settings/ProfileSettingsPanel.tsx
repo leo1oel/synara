@@ -6,6 +6,7 @@
 // Layer: web profile feature (settings panel body).
 
 import { useState } from "react";
+import { useLingui } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
 import { type ProfileStats, type ProfileTokenStats, type ProviderKind } from "@synara/contracts";
 import {
@@ -72,6 +73,7 @@ function ProfileContent({
   tokenStats: ProfileTokenStats | null;
   tokensPending: boolean;
 }) {
+  const { i18n } = useLingui();
   const [shareOpen, setShareOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
@@ -230,7 +232,7 @@ function ProfileContent({
 
       {/* Model usage */}
       <section className="flex flex-col gap-3">
-        <h3 className="text-sm font-medium">Model usage</h3>
+        <h3 className="text-sm font-medium">{i18n._("Model usage")}</h3>
         {modelUsage.entries.length > 0 ? (
           <ul className="grid grid-cols-1 gap-x-12 gap-y-3 sm:grid-cols-2">
             {modelUsage.entries.slice(0, 6).map((entry) => (
@@ -243,7 +245,7 @@ function ProfileContent({
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">No model activity yet.</p>
+          <p className="text-sm text-muted-foreground">{i18n._("No model activity yet.")}</p>
         )}
       </section>
 

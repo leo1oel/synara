@@ -3,12 +3,10 @@
 // quota/credits with linear progress meters, the provider brand icon, and plan/status pills.
 // Usage is fetched read-only from each CLI's stored credentials by the server.
 
+import type { I18n } from "@lingui/core";
+import { useLingui } from "@lingui/react";
 import type { ProviderKind, ServerProviderUsageSnapshot } from "@synara/contracts";
-import {
-  PROVIDER_USAGE_PROVIDERS,
-  providerUsageDisplayName,
-  providerUsageNeedsAuthDetail,
-} from "@synara/shared/providerUsage";
+import { PROVIDER_USAGE_PROVIDERS, providerUsageDisplayName } from "@synara/shared/providerUsage";
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -20,7 +18,10 @@ import { SettingsCard, SettingsSectionShell } from "~/components/settings/Settin
 import { Button } from "~/components/ui/button";
 import { useProviderUsageSummary } from "~/hooks/useProviderUsageSummary";
 import { RotateCcwIcon, TriangleAlertIcon } from "~/lib/icons";
-import { deriveProviderUsageDisplayRows } from "~/lib/providerUsageDisplay";
+import {
+  deriveProviderUsageDisplayRows,
+  localizeProviderUsageNotice,
+} from "~/lib/providerUsageDisplay";
 import { deriveAccountRateLimits, type ProviderRateLimit } from "~/lib/rateLimits";
 import {
   fetchAllProviderUsage,
@@ -38,20 +39,57 @@ interface StatusPill {
   className: string;
 }
 
-function statusPill(status: ServerProviderUsageSnapshot["status"]): StatusPill | null {
+function statusPill(i18n: I18n, status: ServerProviderUsageSnapshot["status"]): StatusPill | null {
   switch (status) {
     case "needs-auth":
       return {
-        label: "Not signed in",
+        label: i18n._("Not signed in"),
         className: "bg-amber-500/12 text-amber-600 dark:text-amber-400",
       };
     case "unsupported":
-      return { label: "Unsupported", className: "bg-muted text-muted-foreground" };
+      return { label: i18n._("Unsupported"), className: "bg-muted text-muted-foreground" };
     case "error":
-      return { label: "Unavailable", className: "bg-red-500/12 text-red-600 dark:text-red-400" };
+      return {
+        label: i18n._("Unavailable"),
+        className: "bg-red-500/12 text-red-600 dark:text-red-400",
+      };
     default:
       return null;
   }
+}
+
+function localizeUsageDetail(i18n: I18n, snapshot: ServerProviderUsageSnapshot): string {
+  const detail = snapshot.detail?.trim() ?? "";
+  const signInMatch = /^Sign in with `(.+)` to see usage\.$/u.exec(detail);
+  if (signInMatch) {
+    return i18n._("Sign in with {command} to see usage.", { command: signInMatch[1]! });
+  }
+  if (detail === "Sign in with the provider CLI to see usage.") {
+    return i18n._("Sign in with the provider CLI to see usage.");
+  }
+  if (detail === "Codex API-key auth has no usage endpoint. Sign in with ChatGPT to see usage.") {
+    return i18n._("Codex API-key auth has no usage endpoint. Sign in with ChatGPT to see usage.");
+  }
+  if (
+    detail === "Usage is currently unavailable." ||
+    detail === "Usage fetch failed unexpectedly."
+  ) {
+    return i18n._("Usage is currently unavailable.");
+  }
+  const requestFailedMatch = /^(.+) usage request failed \((.+)\)\.$/u.exec(detail);
+  if (requestFailedMatch) {
+    return i18n._("{provider} usage request failed ({status}).", {
+      provider: requestFailedMatch[1]!,
+      status: requestFailedMatch[2]!,
+    });
+  }
+  const unreachableMatch = /^Could not reach the (.+)\.$/u.exec(detail);
+  if (unreachableMatch) {
+    return i18n._("Could not reach the {destination}.", {
+      destination: unreachableMatch[1]!,
+    });
+  }
+  return detail || i18n._("Sign in with the provider CLI to see usage.");
 }
 
 function ProviderUsageCard({
@@ -63,6 +101,7 @@ function ProviderUsageCard({
   threadRateLimits: ReadonlyArray<ProviderRateLimit>;
   codexHomePath: string | null;
 }) {
+  const { i18n } = useLingui();
   const provider = snapshot.provider;
   const status = snapshot.status ?? "ok";
   const usageSummary = useProviderUsageSummary({
@@ -75,7 +114,7 @@ function ProviderUsageCard({
   const usageLines = usageSummary.usageLines;
 
   const hasUsage = meterRows.length > 0 || usageLines.length > 0;
-  const pill = status === "ok" ? null : statusPill(snapshot.status);
+  const pill = status === "ok" ? null : statusPill(i18n, snapshot.status);
 
   return (
     <SettingsCard>
@@ -103,7 +142,7 @@ function ProviderUsageCard({
             {usageSummary.usageNotice ? (
               <p className="flex items-start gap-1.5 text-xs leading-relaxed text-amber-600 dark:text-amber-300/90">
                 <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-                <span>{usageSummary.usageNotice}</span>
+                <span>{localizeProviderUsageNotice(i18n, usageSummary.usageNotice)}</span>
               </p>
             ) : null}
             {meterRows.length > 0 ? (
@@ -122,8 +161,8 @@ function ProviderUsageCard({
         ) : (
           <p className="text-xs leading-relaxed text-muted-foreground">
             {status === "ok"
-              ? "No usage data reported yet."
-              : (snapshot.detail ?? providerUsageNeedsAuthDetail(provider))}
+              ? i18n._("No usage data reported yet.")
+              : localizeUsageDetail(i18n, snapshot)}
           </p>
         )}
       </div>
@@ -158,6 +197,7 @@ function mergeProviderUsageRefresh(
 }
 
 export function ProviderUsageSettingsPanel() {
+  const { i18n } = useLingui();
   const queryClient = useQueryClient();
   const { settings } = useAppSettings();
   const codexHomePath = settings.codexHomePath || null;
@@ -191,7 +231,7 @@ export function ProviderUsageSettingsPanel() {
 
   return (
     <SettingsSectionShell
-      title="Provider usage"
+      title={i18n._("Provider usage")}
       action={
         <Button
           size="xs"
@@ -201,13 +241,15 @@ export function ProviderUsageSettingsPanel() {
           onClick={() => refreshMutation.mutate()}
         >
           <RotateCcwIcon className={cn("size-3.5", isRefreshing && "animate-spin")} />
-          Refresh
+          {i18n._("Refresh")}
         </Button>
       }
     >
       {showInitialLoading ? (
         <SettingsCard>
-          <div className="px-4 py-3.5 text-xs text-muted-foreground">Loading provider usage…</div>
+          <div className="px-4 py-3.5 text-xs text-muted-foreground">
+            {i18n._("Loading provider usage…")}
+          </div>
         </SettingsCard>
       ) : (
         <div className="flex flex-col gap-3">
@@ -223,9 +265,9 @@ export function ProviderUsageSettingsPanel() {
       )}
 
       <p className="px-2 text-[11px] leading-relaxed text-muted-foreground">
-        Usage is read locally from each provider CLI&apos;s stored credentials and fetched directly
-        from the provider. Short-lived tokens are refreshed through the provider&apos;s own CLI or
-        official token endpoint; if a provider shows “Not signed in”, re-authenticate with its CLI.
+        {i18n._(
+          "Usage is read locally from each provider CLI's stored credentials and fetched directly from the provider. Short-lived tokens are refreshed through the provider's own CLI or official token endpoint; if a provider shows “Not signed in”, re-authenticate with its CLI.",
+        )}
       </p>
     </SettingsSectionShell>
   );

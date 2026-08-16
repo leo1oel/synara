@@ -3,11 +3,12 @@
 // popovers. Keeps labels, progress tracks, pace details, and tones consistent.
 
 import {
-  providerUsagePaceDetails,
+  localizeProviderUsageDisplayText,
   providerUsageProgressTrackProps,
   type ProviderUsageDisplayRow,
 } from "~/lib/providerUsageDisplay";
 import { cn } from "~/lib/utils";
+import { useLingui } from "@lingui/react";
 
 import { UsageProgressTrack } from "./UsageProgressTrack";
 
@@ -20,7 +21,8 @@ function ProviderUsagePaceLine({
   row: ProviderUsageDisplayRow;
   surface: ProviderUsageLimitRowsSurface;
 }) {
-  const paceDetails = providerUsagePaceDetails(row);
+  const { i18n } = useLingui();
+  const paceDetails = localizeProviderUsageDisplayText(i18n, row).paceDetails;
   if (!paceDetails) return null;
 
   if (surface === "popover") {
@@ -55,11 +57,14 @@ function ProviderUsageTrack({
   row: ProviderUsageDisplayRow;
   surface: ProviderUsageLimitRowsSurface;
 }) {
+  const { i18n } = useLingui();
   const trackProps = providerUsageProgressTrackProps(row);
+  const localizedText = localizeProviderUsageDisplayText(i18n, row);
 
   return (
     <UsageProgressTrack
       {...trackProps}
+      label={localizedText.progressLabel}
       className={surface === "popover" ? "h-1.5 bg-muted/80" : undefined}
       markerGapClassName={surface === "popover" ? "bg-popover" : undefined}
     />
@@ -67,22 +72,24 @@ function ProviderUsageTrack({
 }
 
 function SettingsUsageLimitRow({ row }: { row: ProviderUsageDisplayRow }) {
+  const { i18n } = useLingui();
   const trackProps = providerUsageProgressTrackProps(row);
+  const localizedText = localizeProviderUsageDisplayText(i18n, row);
 
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-1.5">
-        <span className="text-xs font-medium text-foreground">{row.label}</span>
+        <span className="text-xs font-medium text-foreground">{localizedText.label}</span>
         <span
           className={cn("size-1.5 shrink-0 rounded-full", trackProps.markerClassName)}
-          title={row.pace ? `Usage pace: ${row.pace.status}` : undefined}
+          title={localizedText.paceTitle}
           aria-hidden
         />
       </div>
       <ProviderUsageTrack row={row} surface="settings" />
       <div className="flex items-center justify-between text-[11px] tabular-nums text-muted-foreground">
-        <span>{row.leftText}</span>
-        {row.resetText ? <span>{row.resetText}</span> : null}
+        <span>{localizedText.leftText}</span>
+        {localizedText.resetText ? <span>{localizedText.resetText}</span> : null}
       </div>
       <ProviderUsagePaceLine row={row} surface="settings" />
     </div>
@@ -90,15 +97,24 @@ function SettingsUsageLimitRow({ row }: { row: ProviderUsageDisplayRow }) {
 }
 
 function PopoverUsageLimitRow({ row }: { row: ProviderUsageDisplayRow }) {
+  const { i18n } = useLingui();
+  const localizedText = localizeProviderUsageDisplayText(i18n, row);
+
   return (
     <div className="space-y-1 text-[length:var(--app-font-size-chat-meta,10px)] leading-tight">
       <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-baseline gap-x-3">
         <div className="flex min-w-0 items-baseline gap-1.5">
-          <span className="shrink-0 text-[11px] font-medium text-foreground">{row.label}</span>
-          <span className="min-w-0 truncate tabular-nums text-foreground">{row.leftText}</span>
+          <span className="shrink-0 text-[11px] font-medium text-foreground">
+            {localizedText.label}
+          </span>
+          <span className="min-w-0 truncate tabular-nums text-foreground">
+            {localizedText.leftText}
+          </span>
         </div>
         <div className="min-w-0 text-right text-muted-foreground">
-          {row.resetText ? <div className="truncate tabular-nums">{row.resetText}</div> : null}
+          {localizedText.resetText ? (
+            <div className="truncate tabular-nums">{localizedText.resetText}</div>
+          ) : null}
         </div>
       </div>
       <ProviderUsageTrack row={row} surface="popover" />

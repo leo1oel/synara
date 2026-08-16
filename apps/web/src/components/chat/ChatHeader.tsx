@@ -609,6 +609,7 @@ export function ChatHeader({
   onRenameThread,
   onCloseThreadPane,
 }: ChatHeaderProps) {
+  const { i18n } = useLingui();
   const hideSidebarControls = hideSidebarControlsProp ?? false;
   const hideHandoffControls = hideHandoffControlsProp ?? false;
   const hideWorkspaceControls = hideWorkspaceControlsProp ?? false;
@@ -891,7 +892,7 @@ export function ChatHeader({
                       )}
                     />
                     {!compact || forceHandoffLabel ? (
-                      <span className="truncate font-normal">Hand off</span>
+                      <span className="truncate font-normal">{i18n._("Hand off")}</span>
                     ) : null}
                   </MenuTrigger>
                 }
@@ -903,7 +904,11 @@ export function ChatHeader({
                 <MenuItem key={provider} onClick={() => onCreateHandoff(provider)}>
                   {/* opacity-100 opts brand icons out of the option row's 80% icon dim. */}
                   {renderProviderIcon(provider, "size-3.5 shrink-0 opacity-100")}
-                  <span>Handoff to {PROVIDER_DISPLAY_NAMES[provider]}</span>
+                  <span>
+                    {i18n._("Hand off to {provider}", {
+                      provider: PROVIDER_DISPLAY_NAMES[provider],
+                    })}
+                  </span>
                 </MenuItem>
               ))}
             </ComposerPickerMenuPopup>

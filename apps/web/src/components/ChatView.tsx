@@ -23,6 +23,7 @@ import {
   type ProviderStartOptions,
   type ProviderUserInputAnswers,
   type PinnedMessage,
+  PROVIDER_DISPLAY_NAMES,
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   type ResolvedKeybindingsConfig,
   type ServerProviderStatus,
@@ -651,7 +652,6 @@ import { useHandleNewThread } from "../hooks/useHandleNewThread";
 import {
   canCreateThreadHandoff,
   resolveAvailableHandoffTargetProviders,
-  resolveThreadHandoffBadgeLabel,
 } from "../lib/threadHandoff";
 import {
   resolveDiffEnvironmentState,
@@ -4101,11 +4101,12 @@ export default function ChatView({
         .flatMap((status) => (status ? [status] : [])),
     [confirmedCustomBinaryPathsByProvider, serverConfigQuery.data?.providers, settings],
   );
-  const handoffBadgeLabel = useMemo(
-    () => (activeThread ? resolveThreadHandoffBadgeLabel(activeThread) : null),
-    [activeThread],
-  );
   const handoffBadgeSourceProvider = activeThread?.handoff?.sourceProvider ?? null;
+  const handoffBadgeLabel = handoffBadgeSourceProvider
+    ? i18n._("Hand off from {provider}", {
+        provider: PROVIDER_DISPLAY_NAMES[handoffBadgeSourceProvider],
+      })
+    : null;
   const handoffBadgeTargetProvider = activeThread?.handoff
     ? activeThread.modelSelection.provider
     : null;
@@ -4120,7 +4121,9 @@ export default function ChatView({
         : [],
     [activeThread, providerStatuses, serverSettingsQuery.data?.providers],
   );
-  const handoffActionLabel = activeThread ? "Hand off thread" : "Create handoff thread";
+  const handoffActionLabel = activeThread
+    ? i18n._("Hand off thread")
+    : i18n._("Create handoff thread");
   const activeProviderStatus = useMemo(
     () => findProviderStatus(providerStatuses, selectedProvider),
     [selectedProvider, providerStatuses],
@@ -7181,15 +7184,15 @@ export default function ChatView({
       } catch (error) {
         toastManager.add({
           type: "error",
-          title: "Could not create handoff thread",
+          title: i18n._("Could not create handoff thread"),
           description:
             error instanceof Error
               ? error.message
-              : "An error occurred while creating the handoff thread.",
+              : i18n._("An error occurred while creating the handoff thread."),
         });
       }
     },
-    [activeThread, createThreadHandoff, handoffDisabled],
+    [activeThread, createThreadHandoff, handoffDisabled, i18n],
   );
 
   const clearComposerInput = useCallback(

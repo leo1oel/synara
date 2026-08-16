@@ -88,6 +88,8 @@ import {
   type ResolvedKeybindingsConfig,
   WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY,
 } from "@synara/contracts";
+import type { I18n } from "@lingui/core";
+import { useLingui } from "@lingui/react";
 import { isGenericChatThreadTitle } from "@synara/shared/chatThreads";
 import { getDefaultModel } from "@synara/shared/model";
 import { pluralize } from "@synara/shared/text";
@@ -631,6 +633,7 @@ type ThreadMetaChip = {
  * badges because the "Sidechat:" title already identifies them.
  */
 function resolveThreadRowMetaChips(input: {
+  i18n: I18n;
   thread: Pick<
     Thread,
     "forkSourceThreadId" | "sidechatSourceThreadId" | "envMode" | "worktreePath" | "handoff"
@@ -670,7 +673,7 @@ function resolveThreadRowMetaChips(input: {
     });
   }
 
-  const handoffBadgeLabel = resolveThreadHandoffBadgeLabel(input.thread);
+  const handoffBadgeLabel = resolveThreadHandoffBadgeLabel(input.i18n, input.thread);
   if (input.includeHandoffBadge && !input.handoffShownInAvatar && handoffBadgeLabel) {
     chips.push({
       id: "handoff",
@@ -1311,6 +1314,7 @@ export function SidebarSurfacePicker({
 }
 
 export default function Sidebar() {
+  const { i18n } = useLingui();
   const githubProvisioningAvailable = useSyncExternalStore(
     subscribeGitHubProvisioningCapability,
     readGitHubProvisioningCapability,
@@ -2897,15 +2901,15 @@ export default function Sidebar() {
       } catch (error) {
         toastManager.add({
           type: "error",
-          title: "Could not create handoff thread",
+          title: i18n._("Could not create handoff thread"),
           description:
             error instanceof Error
               ? error.message
-              : "An error occurred while creating the handoff thread.",
+              : i18n._("An error occurred while creating the handoff thread."),
         });
       }
     },
-    [createThreadHandoff],
+    [createThreadHandoff, i18n],
   );
 
   const handleThreadContextMenu = useCallback(
@@ -2953,7 +2957,9 @@ export default function Sidebar() {
         : [];
       const handoffItems = handoffTargets.map((provider, index) => ({
         id: `handoff:${provider}`,
-        label: `Handoff to ${PROVIDER_DISPLAY_NAMES[provider]}`,
+        label: i18n._("Hand off to {provider}", {
+          provider: PROVIDER_DISPLAY_NAMES[provider],
+        }),
         separatorBefore: index === 0,
       }));
       const threadWorkspacePath = resolveThreadWorkspaceCwd({
@@ -3137,6 +3143,7 @@ export default function Sidebar() {
       clearDismissedThreadStatus,
       clearThreadNotification,
       handoffThread,
+      i18n,
       markThreadUnread,
       navigate,
       openRenameThreadDialog,
@@ -4367,6 +4374,7 @@ export default function Sidebar() {
     const isActive = visualActiveSidebarThreadId === thread.id;
     const projectLabel = resolvePinnedThreadProjectLabel(thread.projectId);
     const rightMetaChips = resolveThreadRowMetaChips({
+      i18n,
       thread,
       includeHandoffBadge: true,
       handoffShownInAvatar:
@@ -4536,6 +4544,7 @@ export default function Sidebar() {
       ? "text-foreground/54 dark:text-foreground/64"
       : "text-muted-foreground/34";
     const rightMetaChips = resolveThreadRowMetaChips({
+      i18n,
       thread,
       includeHandoffBadge: !isTemporaryThread,
       handoffShownInAvatar:

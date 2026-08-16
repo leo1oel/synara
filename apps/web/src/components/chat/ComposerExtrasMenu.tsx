@@ -4,6 +4,7 @@
 // Depends on: shared menu primitives, icon buttons, and the caller-owned attachment callback.
 
 import { type ProviderInteractionMode } from "@synara/contracts";
+import { useLingui } from "@lingui/react";
 import { useId, useRef, type ChangeEvent } from "react";
 
 import { BugIcon, ListTodoIcon, MessageCircleIcon, PaperclipIcon, PlusIcon } from "~/lib/icons";
@@ -31,6 +32,7 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
   attachmentsOnly?: boolean;
   triggerClassName?: string;
 }) {
+  const { i18n } = useLingui();
   const inputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -74,7 +76,7 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
             }}
           >
             <PaperclipIcon className="size-4 shrink-0" />
-            Add files
+            {i18n._("Add files")}
           </MenuItem>
 
           {!props.attachmentsOnly ? <MenuSeparator /> : null}

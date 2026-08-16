@@ -12,34 +12,152 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
-#: src/components/settings/ModelsSettingsPanel.tsx
-msgid "Add models manually"
-msgstr "手动添加模型"
+#: src/lib/providerUsageDisplay.ts
+msgid "5h"
+msgstr "5 小时"
 
 #. js-lingui-explicit-id
-#: src/components/settings/ModelsSettingsPanel.tsx
-msgid "If a model does not appear automatically, choose its provider and enter its model ID. It will then be available in model pickers."
-msgstr "如果某个模型没有自动显示，请选择提供商并输入模型 ID。添加后即可在模型选择器中使用。"
+#: src/lib/providerUsageDisplay.ts
+msgid "Weekly"
+msgstr "每周"
 
 #. js-lingui-explicit-id
-#: src/components/settings/ModelsSettingsPanel.tsx
-msgid "Add"
-msgstr "添加"
+#: src/lib/providerUsageDisplay.ts
+msgid "Weekly (overage)"
+msgstr "每周（超额部分）"
 
 #. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Checking"
-msgstr "正在检查"
+#: src/lib/providerUsageDisplay.ts
+msgid "Current"
+msgstr "当前周期"
 
 #. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Installed"
-msgstr "已安装"
+#: src/lib/providerUsageDisplay.ts
+msgid "<1m"
+msgstr "不足 1 分钟"
 
 #. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "CLI not installed"
-msgstr "未安装 CLI"
+#: src/lib/providerUsageDisplay.ts
+msgid "{count}d"
+msgstr "{count} 天"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "{count}h"
+msgstr "{count} 小时"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "{count}m"
+msgstr "{count} 分钟"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Resets soon"
+msgstr "即将重置"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Resets in {duration}"
+msgstr "将在 {duration}后重置"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "{percent}% in reserve"
+msgstr "比预期少用 {percent}%"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "{percent}% in deficit"
+msgstr "比预期多用 {percent}%"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Lasts until reset"
+msgstr "预计可用到重置"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Limit reached"
+msgstr "已达到限额"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Runs out in {duration}"
+msgstr "预计在 {duration}后用尽"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "ahead"
+msgstr "低于预期"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "on track"
+msgstr "符合预期"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "behind"
+msgstr "高于预期"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "{remaining} left"
+msgstr "剩余 {remaining}"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "{window} remaining"
+msgstr "{window}剩余额度"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Usage pace: {status}"
+msgstr "使用进度：{status}"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Anthropic is rate-limiting usage checks — showing your last values, retrying in ~{minutes}m. Manual refreshes only extend the limit."
+msgstr "Anthropic 正在限制用量查询频率——当前显示的是上次获取的数据，约 {minutes} 分钟后重试。手动刷新只会延长限流时间。"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+#: src/lib/threadHandoff.ts
+msgid "Hand off from {provider}"
+msgstr "从 {provider} 移交而来"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbar.tsx
+msgid "Hand off to new worktree"
+msgstr "移交到新工作树"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbar.tsx
+msgid "Hand off to local"
+msgstr "移交到本地"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Hand off thread"
+msgstr "移交线程"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Create handoff thread"
+msgstr "创建移交线程"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+#: src/components/Sidebar.tsx
+msgid "Could not create handoff thread"
+msgstr "无法创建移交线程"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+#: src/components/Sidebar.tsx
+msgid "An error occurred while creating the handoff thread."
+msgstr "创建移交线程时发生错误。"
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
@@ -51,6 +169,135 @@ msgstr "新聊天"
 #: src/components/ChatView.tsx
 msgid "New thread"
 msgstr "新线程"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "24h"
+msgstr "24 小时"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "7d"
+msgstr "7 天"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "30d"
+msgstr "30 天"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "Credits"
+msgstr "额度"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "On-demand"
+msgstr "按需用量"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "Extra usage"
+msgstr "额外用量"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "{count} tokens"
+msgstr "{count} 个 token"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "{remaining} of {total} remaining"
+msgstr "剩余 {remaining} / 共 {total}"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "{remaining} remaining"
+msgstr "剩余 {remaining}"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "{amount} spent"
+msgstr "已用 {amount}"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "{amount} limit"
+msgstr "限额 {amount}"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "{used} of {limit}"
+msgstr "已用 {used} / 共 {limit}"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "{count} recent sessions"
+msgstr "最近 {count} 个会话"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageMenuControl.tsx
+#: src/components/ProviderUsagePanelContent.tsx
+msgid "{provider} usage"
+msgstr "{provider} 用量"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsagePanelContent.tsx
+msgid "Scanning local usage data for the selected provider."
+msgstr "正在扫描所选提供商的本地用量数据。"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsagePanelContent.tsx
+msgid "No local usage data was found yet for the selected provider."
+msgstr "尚未找到所选提供商的本地用量数据。"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsagePanelContent.tsx
+msgid "No local usage data was found yet."
+msgstr "尚未找到本地用量数据。"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsagePanelContent.tsx
+msgid "Learn more"
+msgstr "了解更多"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+#: src/components/Sidebar.tsx
+msgid "Hand off to {provider}"
+msgstr "移交到 {provider}"
+
+#. js-lingui-explicit-id
+#: src/components/ThreadWorktreeHandoffDialog.tsx
+msgid "Hand off to worktree"
+msgstr "移交到工作树"
+
+#. js-lingui-explicit-id
+#: src/components/ThreadWorktreeHandoffDialog.tsx
+msgid "Create a detached worktree from the current branch to continue working in parallel."
+msgstr "从当前分支创建一个独立工作树，以便继续并行工作。"
+
+#. js-lingui-explicit-id
+#: src/components/ThreadWorktreeHandoffDialog.tsx
+msgid "Worktree name"
+msgstr "工作树名称"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+#: src/components/ThreadWorktreeHandoffDialog.tsx
+msgid "Cancel"
+msgstr "取消"
+
+#. js-lingui-explicit-id
+#: src/components/ThreadWorktreeHandoffDialog.tsx
+msgid "Handing off..."
+msgstr "正在移交..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+#: src/components/ThreadWorktreeHandoffDialog.tsx
+msgid "Hand off"
+msgstr "移交"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
@@ -315,11 +562,6 @@ msgstr "可以使用纯文本。Markdown 格式为可选，所有内容都会在
 
 #. js-lingui-explicit-id
 #: src/components/settings/ManagedSkillEditorView.tsx
-msgid "Cancel"
-msgstr "取消"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ManagedSkillEditorView.tsx
 msgid "Saving…"
 msgstr "正在保存…"
 
@@ -361,8 +603,118 @@ msgstr "自定义模型"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Add models manually"
+msgstr "手动添加模型"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "If a model does not appear automatically, choose its provider and enter its model ID. It will then be available in model pickers."
+msgstr "如果某个模型没有自动显示，请选择提供商并输入模型 ID。添加后即可在模型选择器中使用。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
 msgid "Custom model provider"
 msgstr "自定义模型提供商"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Add"
+msgstr "添加"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProfileSettingsPanel.tsx
+msgid "Model usage"
+msgstr "模型用量"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProfileSettingsPanel.tsx
+msgid "No model activity yet."
+msgstr "尚无模型活动。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Not signed in"
+msgstr "未登录"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Unsupported"
+msgstr "不支持"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Unavailable"
+msgstr "不可用"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Sign in with {command} to see usage."
+msgstr "请使用 {command} 登录以查看用量。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Sign in with the provider CLI to see usage."
+msgstr "请使用提供商 CLI 登录以查看用量。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Codex API-key auth has no usage endpoint. Sign in with ChatGPT to see usage."
+msgstr "Codex API 密钥登录没有用量接口。请使用 ChatGPT 登录以查看用量。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Usage is currently unavailable."
+msgstr "当前无法获取用量。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "{provider} usage request failed ({status})."
+msgstr "{provider} 用量请求失败（{status}）。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Could not reach the {destination}."
+msgstr "无法连接到{destination}。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "No usage data reported yet."
+msgstr "尚无用量数据。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Provider usage"
+msgstr "提供商用量"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Refresh"
+msgstr "刷新"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Loading provider usage…"
+msgstr "正在加载提供商用量…"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Usage is read locally from each provider CLI's stored credentials and fetched directly from the provider. Short-lived tokens are refreshed through the provider's own CLI or official token endpoint; if a provider shows “Not signed in”, re-authenticate with its CLI."
+msgstr "用量数据会从各提供商 CLI 保存的凭据中读取，并直接向提供商获取。短期凭据会通过提供商自己的 CLI 或官方凭据接口刷新；如果某个提供商显示“未登录”，请使用其 CLI 重新登录。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Checking"
+msgstr "正在检查"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Installed"
+msgstr "已安装"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "CLI not installed"
+msgstr "未安装 CLI"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
@@ -698,6 +1050,11 @@ msgstr "{skillCount, plural, other {# 个 Skills}}"
 #: src/components/chat/ChatEmptyStateHero.tsx
 msgid "Synara logo"
 msgstr "Synara 标志"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasMenu.tsx
+msgid "Add files"
+msgstr "添加文件"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerPendingApprovalPanel.tsx

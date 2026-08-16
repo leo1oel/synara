@@ -2,6 +2,7 @@
 // Purpose: Shared provider-usage chip/menu used in the chat header and Environment panel.
 
 import { PROVIDER_DISPLAY_NAMES, type ProviderKind } from "@synara/contracts";
+import { useLingui } from "@lingui/react";
 import { type ReactNode } from "react";
 
 import { useAppSettings } from "~/appSettings";
@@ -37,6 +38,7 @@ export interface ProviderUsageMenuModel {
 const selectAccountRateLimitThreads = createAccountRateLimitThreadsSelector();
 
 export function useProviderUsageMenuModel(provider: ProviderKind): ProviderUsageMenuModel | null {
+  const { i18n } = useLingui();
   const { settings } = useAppSettings();
   const threads = useStore(selectAccountRateLimitThreads);
   const usageSummary = useProviderUsageSummary({
@@ -53,7 +55,7 @@ export function useProviderUsageMenuModel(provider: ProviderKind): ProviderUsage
   }
 
   return {
-    menuTitle: `${PROVIDER_DISPLAY_NAMES[provider]} usage`,
+    menuTitle: i18n._("{provider} usage", { provider: PROVIDER_DISPLAY_NAMES[provider] }),
     primaryRow,
     rateLimits: usageSummary.rateLimits,
     usageLines: usageSummary.usageLines,

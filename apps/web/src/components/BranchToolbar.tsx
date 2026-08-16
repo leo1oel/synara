@@ -9,6 +9,7 @@ import type {
   RuntimeMode,
 } from "@synara/contracts";
 import { CheckIcon, ChevronDownIcon, HandoffIcon, WorktreeIcon } from "~/lib/icons";
+import { useLingui } from "@lingui/react";
 import { HiOutlineHandRaised } from "react-icons/hi2";
 import { CentralIcon } from "~/lib/central-icons";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
@@ -299,6 +300,7 @@ export default function BranchToolbar({
   showBranchSelector: showBranchSelectorProp,
   fixedLocalWorkspaceCwd,
 }: BranchToolbarProps) {
+  const { i18n } = useLingui();
   const handoffBusy = handoffBusyProp ?? false;
   const variant = variantProp ?? "toolbar";
   const showBranchSelector = showBranchSelectorProp ?? true;
@@ -581,7 +583,7 @@ export default function BranchToolbar({
                 {canHandoffToWorktree && onHandoffToWorktree ? (
                   <ContinueInMenuItem
                     icon={<WorktreeGlyph className={ENV_MENU_ICON_CLASS_NAME} />}
-                    label="Hand off to new worktree"
+                    label={i18n._("Hand off to new worktree")}
                     disabled={handoffBusy}
                     onSelect={() => onHandoffToWorktree()}
                   />
@@ -589,7 +591,7 @@ export default function BranchToolbar({
                 {canHandoffToLocal && onHandoffToLocal ? (
                   <ContinueInMenuItem
                     icon={<HandoffIcon className={ENV_MENU_ICON_CLASS_NAME} />}
-                    label="Hand off to local"
+                    label={i18n._("Hand off to local")}
                     disabled={handoffBusy}
                     onSelect={() => onHandoffToLocal()}
                   />

@@ -3,6 +3,7 @@
 // Layer: Web handoff utilities
 // Exports: target-provider, title, transcript, and model-selection helpers.
 
+import type { I18n } from "@lingui/core";
 import {
   EventId,
   MessageId,
@@ -71,11 +72,16 @@ export function resolveAvailableHandoffTargetProviders(input: {
   );
 }
 
-export function resolveThreadHandoffBadgeLabel(thread: Pick<Thread, "handoff">): string | null {
+export function resolveThreadHandoffBadgeLabel(
+  i18n: I18n,
+  thread: Pick<Thread, "handoff">,
+): string | null {
   if (!thread.handoff) {
     return null;
   }
-  return `Handoff from ${PROVIDER_DISPLAY_NAMES[thread.handoff.sourceProvider]}`;
+  return i18n._("Hand off from {provider}", {
+    provider: PROVIDER_DISPLAY_NAMES[thread.handoff.sourceProvider],
+  });
 }
 
 // Preserve the visible source thread name when creating the destination thread.

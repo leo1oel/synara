@@ -2,6 +2,7 @@
 // Purpose: Owns the shared identity and status content rendered by every Sidebar thread row.
 // Exports: SidebarThreadRowContent and its terminal-status presentation type.
 
+import { useLingui } from "@lingui/react";
 import { useMemo, type ReactNode } from "react";
 
 import { isGenericChatThreadTitle } from "@synara/shared/chatThreads";
@@ -34,9 +35,10 @@ function ProviderAvatarWithTerminal({
   terminalStatus: SidebarThreadTerminalStatus | null;
   terminalCount: number;
 }) {
+  const { i18n } = useLingui();
   const provider = thread.session?.provider ?? thread.modelSelection.provider;
   const handoffSourceProvider = thread.handoff?.sourceProvider ?? null;
-  const handoffTooltip = resolveThreadHandoffBadgeLabel(thread);
+  const handoffTooltip = resolveThreadHandoffBadgeLabel(i18n, thread);
   const showBadge = terminalCount > 1 || terminalStatus !== null;
   const badgeTooltip =
     terminalCount > 1

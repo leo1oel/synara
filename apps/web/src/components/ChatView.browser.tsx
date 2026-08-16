@@ -2193,6 +2193,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await vi.waitFor(() => {
         expect(document.body.textContent).toContain("新线程");
         expect(document.body.textContent).not.toContain("New thread");
+        expect(document.body.textContent).toContain("移交");
+        expect(document.body.textContent).not.toContain("Hand off");
       });
 
       await page.getByRole("button", { name: /新线程/u }).click();

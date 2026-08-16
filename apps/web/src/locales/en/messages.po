@@ -12,34 +12,152 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
-#: src/components/settings/ModelsSettingsPanel.tsx
-msgid "Add models manually"
-msgstr "Add models manually"
+#: src/lib/providerUsageDisplay.ts
+msgid "5h"
+msgstr "5h"
 
 #. js-lingui-explicit-id
-#: src/components/settings/ModelsSettingsPanel.tsx
-msgid "If a model does not appear automatically, choose its provider and enter its model ID. It will then be available in model pickers."
-msgstr "If a model does not appear automatically, choose its provider and enter its model ID. It will then be available in model pickers."
+#: src/lib/providerUsageDisplay.ts
+msgid "Weekly"
+msgstr "Weekly"
 
 #. js-lingui-explicit-id
-#: src/components/settings/ModelsSettingsPanel.tsx
-msgid "Add"
-msgstr "Add"
+#: src/lib/providerUsageDisplay.ts
+msgid "Weekly (overage)"
+msgstr "Weekly (overage)"
 
 #. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Checking"
-msgstr "Checking"
+#: src/lib/providerUsageDisplay.ts
+msgid "Current"
+msgstr "Current"
 
 #. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Installed"
-msgstr "Installed"
+#: src/lib/providerUsageDisplay.ts
+msgid "<1m"
+msgstr "<1m"
 
 #. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "CLI not installed"
-msgstr "CLI not installed"
+#: src/lib/providerUsageDisplay.ts
+msgid "{count}d"
+msgstr "{count}d"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "{count}h"
+msgstr "{count}h"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "{count}m"
+msgstr "{count}m"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Resets soon"
+msgstr "Resets soon"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Resets in {duration}"
+msgstr "Resets in {duration}"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "{percent}% in reserve"
+msgstr "{percent}% in reserve"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "{percent}% in deficit"
+msgstr "{percent}% in deficit"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Lasts until reset"
+msgstr "Lasts until reset"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Limit reached"
+msgstr "Limit reached"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Runs out in {duration}"
+msgstr "Runs out in {duration}"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "ahead"
+msgstr "ahead"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "on track"
+msgstr "on track"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "behind"
+msgstr "behind"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "{remaining} left"
+msgstr "{remaining} left"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "{window} remaining"
+msgstr "{window} remaining"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Usage pace: {status}"
+msgstr "Usage pace: {status}"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Anthropic is rate-limiting usage checks — showing your last values, retrying in ~{minutes}m. Manual refreshes only extend the limit."
+msgstr "Anthropic is rate-limiting usage checks — showing your last values, retrying in ~{minutes}m. Manual refreshes only extend the limit."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+#: src/lib/threadHandoff.ts
+msgid "Hand off from {provider}"
+msgstr "Hand off from {provider}"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbar.tsx
+msgid "Hand off to new worktree"
+msgstr "Hand off to new worktree"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbar.tsx
+msgid "Hand off to local"
+msgstr "Hand off to local"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Hand off thread"
+msgstr "Hand off thread"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Create handoff thread"
+msgstr "Create handoff thread"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+#: src/components/Sidebar.tsx
+msgid "Could not create handoff thread"
+msgstr "Could not create handoff thread"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+#: src/components/Sidebar.tsx
+msgid "An error occurred while creating the handoff thread."
+msgstr "An error occurred while creating the handoff thread."
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
@@ -51,6 +169,135 @@ msgstr "New Chat"
 #: src/components/ChatView.tsx
 msgid "New thread"
 msgstr "New thread"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "24h"
+msgstr "24h"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "7d"
+msgstr "7d"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "30d"
+msgstr "30d"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "Credits"
+msgstr "Credits"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "On-demand"
+msgstr "On-demand"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "Extra usage"
+msgstr "Extra usage"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "{count} tokens"
+msgstr "{count} tokens"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "{remaining} of {total} remaining"
+msgstr "{remaining} of {total} remaining"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "{remaining} remaining"
+msgstr "{remaining} remaining"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "{amount} spent"
+msgstr "{amount} spent"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "{amount} limit"
+msgstr "{amount} limit"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "{used} of {limit}"
+msgstr "{used} of {limit}"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "{count} recent sessions"
+msgstr "{count} recent sessions"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageMenuControl.tsx
+#: src/components/ProviderUsagePanelContent.tsx
+msgid "{provider} usage"
+msgstr "{provider} usage"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsagePanelContent.tsx
+msgid "Scanning local usage data for the selected provider."
+msgstr "Scanning local usage data for the selected provider."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsagePanelContent.tsx
+msgid "No local usage data was found yet for the selected provider."
+msgstr "No local usage data was found yet for the selected provider."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsagePanelContent.tsx
+msgid "No local usage data was found yet."
+msgstr "No local usage data was found yet."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsagePanelContent.tsx
+msgid "Learn more"
+msgstr "Learn more"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+#: src/components/Sidebar.tsx
+msgid "Hand off to {provider}"
+msgstr "Hand off to {provider}"
+
+#. js-lingui-explicit-id
+#: src/components/ThreadWorktreeHandoffDialog.tsx
+msgid "Hand off to worktree"
+msgstr "Hand off to worktree"
+
+#. js-lingui-explicit-id
+#: src/components/ThreadWorktreeHandoffDialog.tsx
+msgid "Create a detached worktree from the current branch to continue working in parallel."
+msgstr "Create a detached worktree from the current branch to continue working in parallel."
+
+#. js-lingui-explicit-id
+#: src/components/ThreadWorktreeHandoffDialog.tsx
+msgid "Worktree name"
+msgstr "Worktree name"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+#: src/components/ThreadWorktreeHandoffDialog.tsx
+msgid "Cancel"
+msgstr "Cancel"
+
+#. js-lingui-explicit-id
+#: src/components/ThreadWorktreeHandoffDialog.tsx
+msgid "Handing off..."
+msgstr "Handing off..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+#: src/components/ThreadWorktreeHandoffDialog.tsx
+msgid "Hand off"
+msgstr "Hand off"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
@@ -315,11 +562,6 @@ msgstr "Plain text works. Markdown formatting is optional, and everything wraps 
 
 #. js-lingui-explicit-id
 #: src/components/settings/ManagedSkillEditorView.tsx
-msgid "Cancel"
-msgstr "Cancel"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ManagedSkillEditorView.tsx
 msgid "Saving…"
 msgstr "Saving…"
 
@@ -361,8 +603,118 @@ msgstr "Custom models"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Add models manually"
+msgstr "Add models manually"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "If a model does not appear automatically, choose its provider and enter its model ID. It will then be available in model pickers."
+msgstr "If a model does not appear automatically, choose its provider and enter its model ID. It will then be available in model pickers."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
 msgid "Custom model provider"
 msgstr "Custom model provider"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Add"
+msgstr "Add"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProfileSettingsPanel.tsx
+msgid "Model usage"
+msgstr "Model usage"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProfileSettingsPanel.tsx
+msgid "No model activity yet."
+msgstr "No model activity yet."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Not signed in"
+msgstr "Not signed in"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Unsupported"
+msgstr "Unsupported"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Unavailable"
+msgstr "Unavailable"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Sign in with {command} to see usage."
+msgstr "Sign in with {command} to see usage."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Sign in with the provider CLI to see usage."
+msgstr "Sign in with the provider CLI to see usage."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Codex API-key auth has no usage endpoint. Sign in with ChatGPT to see usage."
+msgstr "Codex API-key auth has no usage endpoint. Sign in with ChatGPT to see usage."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Usage is currently unavailable."
+msgstr "Usage is currently unavailable."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "{provider} usage request failed ({status})."
+msgstr "{provider} usage request failed ({status})."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Could not reach the {destination}."
+msgstr "Could not reach the {destination}."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "No usage data reported yet."
+msgstr "No usage data reported yet."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Provider usage"
+msgstr "Provider usage"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Refresh"
+msgstr "Refresh"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Loading provider usage…"
+msgstr "Loading provider usage…"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Usage is read locally from each provider CLI's stored credentials and fetched directly from the provider. Short-lived tokens are refreshed through the provider's own CLI or official token endpoint; if a provider shows “Not signed in”, re-authenticate with its CLI."
+msgstr "Usage is read locally from each provider CLI's stored credentials and fetched directly from the provider. Short-lived tokens are refreshed through the provider's own CLI or official token endpoint; if a provider shows “Not signed in”, re-authenticate with its CLI."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Checking"
+msgstr "Checking"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Installed"
+msgstr "Installed"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "CLI not installed"
+msgstr "CLI not installed"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
@@ -698,6 +1050,11 @@ msgstr "{skillCount, plural, one {# skill} other {# skills}}"
 #: src/components/chat/ChatEmptyStateHero.tsx
 msgid "Synara logo"
 msgstr "Synara logo"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasMenu.tsx
+msgid "Add files"
+msgstr "Add files"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerPendingApprovalPanel.tsx

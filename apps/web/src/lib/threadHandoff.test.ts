@@ -1,3 +1,4 @@
+import { setupI18n } from "@lingui/core";
 import {
   DEFAULT_SERVER_SETTINGS_VIEW,
   EventId,
@@ -6,12 +7,15 @@ import {
   type OrchestrationThreadActivity,
   type ProviderKind,
   type ServerProviderStatus,
+  ThreadId,
 } from "@synara/contracts";
 import { describe, expect, it } from "vitest";
+import { messages as zhMessages } from "~/locales/zh-CN/messages.po";
 import {
   buildThreadHandoffImportedActivities,
   buildThreadHandoffImportedMessages,
   resolveAvailableHandoffTargetProviders,
+  resolveThreadHandoffBadgeLabel,
   resolveThreadHandoffTitle,
   resolveThreadHandoffModelSelection,
 } from "./threadHandoff";
@@ -182,6 +186,22 @@ describe("threadHandoff", () => {
     expect(resolveThreadHandoffTitle({ title: "  Debug   Grok handoff  " })).toBe(
       "Debug Grok handoff",
     );
+  });
+
+  it("localizes the handoff source badge in Chinese", () => {
+    const i18n = setupI18n();
+    i18n.loadAndActivate({ locale: "zh-CN", messages: zhMessages });
+
+    expect(
+      resolveThreadHandoffBadgeLabel(i18n, {
+        handoff: {
+          sourceThreadId: ThreadId.makeUnsafe("source-thread"),
+          sourceProvider: "claudeAgent",
+          importedAt: "2026-08-16T12:00:00.000Z",
+          bootstrapStatus: "completed",
+        },
+      }),
+    ).toBe("从 Claude 移交而来");
   });
 
   it("prefers sticky model selection for the chosen handoff target", () => {

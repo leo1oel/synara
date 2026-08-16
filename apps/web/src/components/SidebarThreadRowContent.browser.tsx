@@ -4,12 +4,21 @@
 
 import "../index.css";
 
+import { I18nProvider } from "@lingui/react";
 import { ProjectId, ThreadId } from "@synara/contracts";
+import type { ReactElement } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
 
+import { i18n } from "../i18n";
 import { DEFAULT_INTERACTION_MODE, type SidebarThreadSummary } from "../types";
 import { SidebarThreadRowContent } from "./SidebarThreadRowContent";
+
+i18n.loadAndActivate({ locale: "en", messages: {} });
+
+function renderThreadRow(content: ReactElement) {
+  return render(<I18nProvider i18n={i18n}>{content}</I18nProvider>);
+}
 
 function makeThread(overrides: Partial<SidebarThreadSummary> = {}): SidebarThreadSummary {
   return {
@@ -34,12 +43,13 @@ function makeThread(overrides: Partial<SidebarThreadSummary> = {}): SidebarThrea
 
 describe("SidebarThreadRowContent", () => {
   afterEach(() => {
+    i18n.loadAndActivate({ locale: "en", messages: {} });
     document.body.innerHTML = "";
   });
 
   it("preserves the pinned title, pending state, terminal count, and suffix", async () => {
     const thread = makeThread();
-    const screen = await render(
+    const screen = await renderThreadRow(
       <SidebarThreadRowContent
         thread={thread}
         terminalEntryPoint={false}
@@ -61,7 +71,7 @@ describe("SidebarThreadRowContent", () => {
   });
 
   it("keeps standard subagent nickname and role presentation", async () => {
-    const screen = await render(
+    const screen = await renderThreadRow(
       <SidebarThreadRowContent
         thread={makeThread({
           id: ThreadId.makeUnsafe("thread-subagent-row"),

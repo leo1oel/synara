@@ -1,3 +1,4 @@
+import { useLingui } from "@lingui/react";
 import { useEffect, useRef } from "react";
 import { Button } from "./ui/button";
 import {
@@ -28,6 +29,7 @@ export function ThreadWorktreeHandoffDialog({
   onOpenChange,
   onConfirm,
 }: ThreadWorktreeHandoffDialogProps) {
+  const { i18n } = useLingui();
   const busy = busyProp ?? false;
   const worktreeInputRef = useRef<HTMLInputElement>(null);
 
@@ -61,9 +63,11 @@ export function ThreadWorktreeHandoffDialog({
     >
       <DialogPopup className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Hand off to worktree</DialogTitle>
+          <DialogTitle>{i18n._("Hand off to worktree")}</DialogTitle>
           <DialogDescription>
-            Create a detached worktree from the current branch to continue working in parallel.
+            {i18n._(
+              "Create a detached worktree from the current branch to continue working in parallel.",
+            )}
           </DialogDescription>
         </DialogHeader>
         <DialogPanel>
@@ -74,7 +78,7 @@ export function ThreadWorktreeHandoffDialog({
             }}
           >
             <label className="grid gap-1.5">
-              <span className="text-xs font-medium text-foreground">Worktree name</span>
+              <span className="text-xs font-medium text-foreground">{i18n._("Worktree name")}</span>
               <Input
                 ref={worktreeInputRef}
                 value={worktreeName}
@@ -93,10 +97,10 @@ export function ThreadWorktreeHandoffDialog({
         </DialogPanel>
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={busy}>
-            Cancel
+            {i18n._("Cancel")}
           </Button>
           <Button size="sm" onClick={handleSubmit} disabled={!canSubmit}>
-            {busy ? "Handing off..." : "Hand off"}
+            {busy ? i18n._("Handing off...") : i18n._("Hand off")}
           </Button>
         </DialogFooter>
       </DialogPopup>
