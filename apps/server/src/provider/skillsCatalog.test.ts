@@ -455,6 +455,16 @@ describe("discoverSkillsCatalog", () => {
       "cursor-user",
       "Cursor user skill",
     );
+    await writeSkill(
+      path.join(homeDir, ".claude", "skills", ".system", "agent-guide"),
+      "claude-built-in",
+      "Claude built-in",
+    );
+    await writeSkill(
+      path.join(homeDir, ".claude", "skills", "user-review"),
+      "claude-user",
+      "Claude user skill",
+    );
     const cwd = path.join(root, "repo");
     await writeSkill(
       path.join(cwd, ".codex", "skills", ".system", "project-helper"),
@@ -467,8 +477,14 @@ describe("discoverSkillsCatalog", () => {
 
     expect(names).not.toContain("codex-built-in");
     expect(names).not.toContain("cursor-built-in");
+    expect(names).not.toContain("claude-built-in");
     expect(names).toEqual(
-      expect.arrayContaining(["codex-user", "cursor-user", "project-system-name"]),
+      expect.arrayContaining([
+        "codex-user",
+        "cursor-user",
+        "claude-user",
+        "project-system-name",
+      ]),
     );
   });
 

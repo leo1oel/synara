@@ -1314,11 +1314,10 @@ export function skillsCatalogRoots(input: SkillsCatalogRootInput): SkillRoot[] {
   const cursorBuiltInRoot = nodePath.resolve(
     nodePath.join(input.homeDir, ".cursor", "skills-cursor"),
   );
-  const codexUserRoot = nodePath.resolve(nodePath.join(input.homeDir, ".codex", "skills"));
   return roots
     .filter((root) => nodePath.resolve(root.path) !== cursorBuiltInRoot)
     .map((root) =>
-      nodePath.resolve(root.path) === codexUserRoot
+      root.scope !== "bundled" && root.scope !== "synara" && root.scope !== "project"
         ? { ...root, excludedTopLevelDirectories: [".system"] }
         : root,
     );
