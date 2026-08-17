@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { groupCommandItems, type ComposerCommandItem } from "./ComposerCommandMenu";
 
 describe("groupCommandItems", () => {
-  it("groups mention suggestions as papers, plugins, chats, local, then subagents", () => {
+  it("groups mention suggestions as files, papers, plugins, chats, local, then subagents", () => {
     const items: ComposerCommandItem[] = [
       {
         id: "paper:.research/papers/1706.03762/paper.md",
@@ -79,6 +79,11 @@ describe("groupCommandItems", () => {
 
     expect(groupCommandItems(items, "mention", true)).toEqual([
       {
+        id: "files",
+        label: "Files",
+        items: [items[2]],
+      },
+      {
         id: "papers",
         label: "Papers",
         items: [items[0]],
@@ -96,7 +101,7 @@ describe("groupCommandItems", () => {
       {
         id: "local",
         label: "Local",
-        items: [items[2], items[4]],
+        items: [items[4]],
       },
       {
         id: "subagents",

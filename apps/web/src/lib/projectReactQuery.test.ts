@@ -5,7 +5,26 @@ import {
   LOCAL_PREVIEW_GRANT_MAX_REFETCH_INTERVAL_MS,
   localPreviewGrantRefetchIntervalMs,
   projectLocalPreviewGrantQueryOptions,
+  projectSearchEntriesQueryOptions,
 } from "./projectReactQuery";
+
+describe("project search entry query options", () => {
+  it("can load an initial file list before the user types a search query", () => {
+    expect(
+      projectSearchEntriesQueryOptions({
+        cwd: "/Users/me/project",
+        query: "",
+      }).enabled,
+    ).toBe(false);
+    expect(
+      projectSearchEntriesQueryOptions({
+        cwd: "/Users/me/project",
+        query: "",
+        allowEmptyQuery: true,
+      }).enabled,
+    ).toBe(true);
+  });
+});
 
 describe("local preview grant query options", () => {
   it("refreshes active preview grants before the server-side token expires", () => {

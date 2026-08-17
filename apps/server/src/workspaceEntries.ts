@@ -140,7 +140,8 @@ function scoreSubsequenceMatch(value: string, query: string): number | null {
 
 function scoreEntry(entry: SearchableWorkspaceEntry, query: string): number | null {
   if (!query) {
-    return entry.kind === "directory" ? 0 : 1;
+    const depth = entry.path.split("/").length - 1;
+    return depth * 2 + (entry.kind === "directory" ? 0 : 1);
   }
 
   const { normalizedPath, normalizedName } = entry;

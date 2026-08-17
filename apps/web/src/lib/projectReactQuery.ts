@@ -240,6 +240,7 @@ export function projectSearchEntriesQueryOptions(input: {
   cwd: string | null;
   query: string;
   enabled?: boolean;
+  allowEmptyQuery?: boolean;
   kind?: ProjectEntry["kind"];
   limit?: number;
   staleTime?: number;
@@ -259,7 +260,10 @@ export function projectSearchEntriesQueryOptions(input: {
         ...(input.kind ? { kind: input.kind } : {}),
       });
     },
-    enabled: (input.enabled ?? true) && input.cwd !== null && input.query.length > 0,
+    enabled:
+      (input.enabled ?? true) &&
+      input.cwd !== null &&
+      (input.allowEmptyQuery === true || input.query.length > 0),
     staleTime: input.staleTime ?? DEFAULT_SEARCH_ENTRIES_STALE_TIME,
     placeholderData: (previous) => previous ?? EMPTY_SEARCH_ENTRIES_RESULT,
   });
