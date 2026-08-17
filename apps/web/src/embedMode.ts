@@ -1,8 +1,12 @@
 import type { RuntimeMode } from "@synara/contracts";
+import { isWorkspaceRelativePathSafe, workspaceRelativePathOf } from "@synara/shared/path";
 import { workspaceRootsEqual } from "@synara/shared/threadWorkspace";
+
+import { resolveMarkdownFileLinkTarget } from "./markdown-links";
 
 const EMBED_MODE_STORAGE_KEY = "synara.poc.embed-mode";
 const EMBED_AUTH_TOKEN_STORAGE_KEY = "synara.poc.embed-auth-token";
+const FILE_POSITION_SUFFIX_PATTERN = /:\d+(?::\d+)?$/;
 export const EMBED_UI_FONT_STACK = '"Inter Variable", Inter, "Avenir Next", "Segoe UI", sans-serif';
 
 export const LATTICE_AGENT_PERMISSION_MODE_REQUEST = "lattice:request-agent-permission-mode";
@@ -666,6 +670,93 @@ export function postOpenFileToLattice(config: EmbedModeConfig, filePath: string)
   return true;
 }
 
+function resolveEmbeddedWorkspaceAnchor(
+  href: string,
+  config: EmbedModeConfig,
+): string | null {
+  let candidate = href.trim();
+  if (!candidate) return null;
+
+  if (/^https?:\/\//i.test(candidate)) {
+    try {
+      const parsed = new URL(candidate);
+      if (parsed.origin !== window.location.origin) return null;
+      candidate = `${parsed.pathname}${parsed.hash}`;
+    } catch {
+      return null;
+    }
+  }
+
+  const resolved = resolveMarkdownFileLinkTarget(candidate, config.workspaceRoot);
+  if (!resolved) return null;
+  const withoutPosition = resolved.trim().replace(FILE_POSITION_SUFFIX_PATTERN, "");
+  return (
+    workspaceRelativePathOf(withoutPosition, config.workspaceRoot) ??
+    (isWorkspaceRelativePathSafe(withoutPosition) ? withoutPosition : null)
+  );
+}
+
+let embeddedFileLinkFallbackDocument: Document | null = null;
+let embeddedFileLinkFallbackConfig: EmbedModeConfig | null = null;
+
+function handleEmbeddedFileLinkFallback(event: MouseEvent): void {
+  const config = embeddedFileLinkFallbackConfig;
+  if (
+    !config ||
+    event.defaultPrevented ||
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey
+  ) {
+    return;
+  }
+  const target = event.target as { closest?: (selector: string) => Element | null } | null;
+  const anchor = target?.closest?.("a[href]");
+  if (!anchor) return;
+  const anchorTarget = anchor.getAttribute("target")?.trim().toLowerCase();
+  if ((anchorTarget && anchorTarget !== "_self") || anchor.hasAttribute("download")) return;
+  const href = anchor.getAttribute("href");
+  const filePath = href ? resolveEmbeddedWorkspaceAnchor(href, config) : null;
+  if (!filePath || !postOpenFileToLattice(config, filePath)) return;
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+// Markdown file chips handle their own activation, but historical content can
+// contain link shapes that render as plain anchors. In an embed, allowing one
+// of those to navigate this frame replaces the entire chat app with a same-
+// origin `/Users/...` request, dropping the embed theme and breaking every
+// subsequent conversation. Catch only otherwise-unhandled workspace links at
+// the document boundary and delegate them to the Lattice editor.
+function installEmbeddedFileLinkFallback(config: EmbedModeConfig): void {
+  embeddedFileLinkFallbackConfig = config;
+  if (embeddedFileLinkFallbackDocument === document) return;
+  embeddedFileLinkFallbackDocument?.removeEventListener(
+    "click",
+    handleEmbeddedFileLinkFallback,
+  );
+  embeddedFileLinkFallbackDocument = document;
+  document.addEventListener("click", handleEmbeddedFileLinkFallback);
+}
+
+function uninstallEmbeddedFileLinkFallback(): void {
+  embeddedFileLinkFallbackDocument?.removeEventListener(
+    "click",
+    handleEmbeddedFileLinkFallback,
+  );
+  embeddedFileLinkFallbackDocument = null;
+  embeddedFileLinkFallbackConfig = null;
+}
+
+function canRestoreEmbedMode(config: EmbedModeConfig): boolean {
+  if (window.parent === window || !config.hostOrigin) return false;
+  const ancestorOrigin = window.location.ancestorOrigins?.[0];
+  if (ancestorOrigin) return normalizedOrigin(ancestorOrigin) === config.hostOrigin;
+  return normalizedOrigin(document.referrer) === config.hostOrigin;
+}
+
 // Embedded chats have no RightDock, so turn-diff review is delegated to the
 // host: with a filePath Lattice opens that file in its editor, without one it
 // opens the /review drawer pinned to this thread and turn.
@@ -896,9 +987,22 @@ export function initializeEmbedMode(): void {
     }
     sessionStorage.setItem(EMBED_MODE_STORAGE_KEY, JSON.stringify(config));
     applyEmbedTheme(config);
+    installEmbeddedFileLinkFallback(config);
   } else {
-    sessionStorage.removeItem(EMBED_MODE_STORAGE_KEY);
-    sessionStorage.removeItem(EMBED_AUTH_TOKEN_STORAGE_KEY);
+    // A historical route or an unhandled same-origin link can trigger a full
+    // iframe navigation without carrying the original embed query. This is
+    // still the same isolated iframe session, so retain its trusted config and
+    // reapply the host theme instead of falling back to standalone Synara and
+    // making every subsequently opened conversation white and asset-broken.
+    const restoredConfig = readEmbedMode();
+    if (restoredConfig && canRestoreEmbedMode(restoredConfig)) {
+      applyEmbedTheme(restoredConfig);
+      installEmbeddedFileLinkFallback(restoredConfig);
+    } else {
+      uninstallEmbeddedFileLinkFallback();
+      sessionStorage.removeItem(EMBED_MODE_STORAGE_KEY);
+      sessionStorage.removeItem(EMBED_AUTH_TOKEN_STORAGE_KEY);
+    }
   }
 }
 

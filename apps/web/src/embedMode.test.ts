@@ -56,6 +56,8 @@ function installBrowserStubs(
   const replaceState = vi.fn();
   const postMessage = vi.fn();
   const setProperty = vi.fn();
+  const addEventListener = vi.fn();
+  const removeEventListener = vi.fn();
   Object.defineProperty(globalThis, "sessionStorage", {
     configurable: true,
     value: storage,
@@ -68,6 +70,7 @@ function installBrowserStubs(
         pathname: "/",
         search: `?embed=1&workspaceRoot=%2FUsers%2Fme%2Fpaper&theme=${theme}&surface=${surface}&hostOrigin=http%3A%2F%2Flocalhost%3A1420`,
         hash: "#lattice-auth=secret-token",
+        ancestorOrigins: ["http://localhost:1420"],
       },
       history: { state: null, replaceState },
       parent: { postMessage },
@@ -76,15 +79,17 @@ function installBrowserStubs(
   Object.defineProperty(globalThis, "document", {
     configurable: true,
     value: {
-      referrer: "",
+      referrer: "http://localhost:1420/",
       documentElement: {
         dataset: {},
         classList: { toggle: vi.fn() },
         style: { setProperty },
       },
+      addEventListener,
+      removeEventListener,
     },
   });
-  return { postMessage, replaceState, setProperty };
+  return { addEventListener, postMessage, removeEventListener, replaceState, setProperty };
 }
 
 afterEach(() => {
@@ -120,6 +125,168 @@ describe("Lattice embed mode", () => {
     postEmbedReadyToLattice(config!);
 
     expect(postMessage).toHaveBeenCalledWith({ type: SYNARA_EMBED_READY }, "http://localhost:1420");
+  });
+
+  it("keeps unhandled historical workspace links from navigating the embed", () => {
+    const { addEventListener, postMessage } = installBrowserStubs();
+    initializeEmbedMode();
+    const clickListener = addEventListener.mock.calls.find(([type]) => type === "click")?.[1] as
+      | ((event: MouseEvent) => void)
+      | undefined;
+    expect(clickListener).toBeTypeOf("function");
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+
+    clickListener?.({
+      button: 0,
+      defaultPrevented: false,
+      target: {
+        closest: () => ({
+          getAttribute: (name: string) =>
+            name === "href"
+              ? "http://127.0.0.1:4567/Users/me/paper/notes/vision-distillation-tricks-and-losses.md"
+              : null,
+          hasAttribute: () => false,
+        }),
+      },
+      preventDefault,
+      stopPropagation,
+    } as unknown as MouseEvent);
+
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(stopPropagation).toHaveBeenCalledOnce();
+    expect(postMessage).toHaveBeenCalledWith(
+      {
+        type: "synara:open-file",
+        filePath: "notes/vision-distillation-tricks-and-losses.md",
+      },
+      "http://localhost:1420",
+    );
+
+    clickListener?.({
+      button: 0,
+      defaultPrevented: false,
+      target: {
+        closest: () => ({
+          getAttribute: (name: string) => (name === "href" ? "notes/related-work.md" : null),
+          hasAttribute: () => false,
+        }),
+      },
+      preventDefault,
+      stopPropagation,
+    } as unknown as MouseEvent);
+    expect(postMessage).toHaveBeenCalledWith(
+      { type: "synara:open-file", filePath: "notes/related-work.md" },
+      "http://localhost:1420",
+    );
+  });
+
+  it("restores the embed theme when a historical route reload drops its query", () => {
+    const { addEventListener, setProperty } = installBrowserStubs();
+    initializeEmbedMode();
+    (window.location as unknown as { pathname: string; search: string }).pathname =
+      "/historical-thread";
+    (window.location as unknown as { pathname: string; search: string }).search = "";
+    setProperty.mockClear();
+
+    initializeEmbedMode();
+
+    expect(readEmbedMode()).toEqual({
+      workspaceRoot: "/Users/me/paper",
+      theme: "dark",
+      surface: "chrome",
+      hostOrigin: "http://localhost:1420",
+    });
+    expect(setProperty).toHaveBeenCalledWith("--app-shell-background", "#141416");
+    expect(addEventListener.mock.calls.filter(([type]) => type === "click")).toHaveLength(1);
+  });
+
+  it("clears saved embed credentials when the current parent is not the trusted host", () => {
+    const { removeEventListener } = installBrowserStubs();
+    initializeEmbedMode();
+    (window.location as unknown as {
+      pathname: string;
+      search: string;
+      ancestorOrigins: string[];
+    }).pathname = "/historical-thread";
+    (window.location as unknown as { search: string }).search = "";
+    (window.location as unknown as { ancestorOrigins: string[] }).ancestorOrigins = [
+      "https://untrusted.example",
+    ];
+
+    initializeEmbedMode();
+
+    expect(readEmbedMode()).toBeNull();
+    expect(readEmbeddedHostWsUrl()).toBeNull();
+    expect(removeEventListener).toHaveBeenCalledWith("click", expect.any(Function));
+  });
+
+  it("does not intercept web links or paths outside the embedded workspace", () => {
+    const { addEventListener, postMessage } = installBrowserStubs();
+    initializeEmbedMode();
+    const clickListener = addEventListener.mock.calls.find(([type]) => type === "click")?.[1] as
+      | ((event: MouseEvent) => void)
+      | undefined;
+    const preventDefault = vi.fn();
+    const eventFor = (href: string) =>
+      ({
+        button: 0,
+        defaultPrevented: false,
+        target: {
+          closest: () => ({
+            getAttribute: (name: string) => (name === "href" ? href : null),
+            hasAttribute: () => false,
+          }),
+        },
+        preventDefault,
+        stopPropagation: vi.fn(),
+      }) as unknown as MouseEvent;
+
+    clickListener?.(eventFor("https://example.com/paper.md"));
+    clickListener?.(eventFor("http://127.0.0.1:4567/Users/other/paper.md"));
+
+    expect(preventDefault).not.toHaveBeenCalled();
+    expect(postMessage).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: "synara:open-file" }),
+      expect.anything(),
+    );
+  });
+
+  it("preserves modified clicks, downloads, and links targeting another context", () => {
+    const { addEventListener, postMessage } = installBrowserStubs();
+    initializeEmbedMode();
+    const clickListener = addEventListener.mock.calls.find(([type]) => type === "click")?.[1] as
+      | ((event: MouseEvent) => void)
+      | undefined;
+    const dispatch = (options: { metaKey?: boolean; target?: string; download?: boolean }) => {
+      const preventDefault = vi.fn();
+      clickListener?.({
+        button: 0,
+        defaultPrevented: false,
+        metaKey: options.metaKey ?? false,
+        ctrlKey: false,
+        shiftKey: false,
+        altKey: false,
+        target: {
+          closest: () => ({
+            getAttribute: (name: string) =>
+              name === "href" ? "notes/related-work.md" : name === "target" ? options.target : null,
+            hasAttribute: (name: string) => name === "download" && options.download === true,
+          }),
+        },
+        preventDefault,
+        stopPropagation: vi.fn(),
+      } as unknown as MouseEvent);
+      expect(preventDefault).not.toHaveBeenCalled();
+    };
+
+    dispatch({ metaKey: true });
+    dispatch({ target: "_blank" });
+    dispatch({ download: true });
+    expect(postMessage).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: "synara:open-file" }),
+      expect.anything(),
+    );
   });
 
   it("asks the trusted Lattice host to open a local skill folder", () => {
