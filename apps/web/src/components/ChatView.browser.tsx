@@ -2204,6 +2204,51 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it("limits embedded chat mentions to the current Lattice project", async () => {
+    sessionStorage.setItem(
+      "synara.poc.embed-mode",
+      JSON.stringify({
+        workspaceRoot: "/repo/project",
+        theme: "dark",
+        surface: "chrome",
+        hostOrigin: window.location.origin,
+        locale: "en",
+      }),
+    );
+    const currentProjectThreadId = "thread-current-project-history" as ThreadId;
+    const otherProjectThreadId = "thread-other-project-history" as ThreadId;
+    const snapshot = addThreadToSnapshot(
+      addThreadToSnapshot(
+        withOpenProjectPickerFixtures(
+          createSnapshotForTargetUser({
+            targetMessageId: "msg-user-mention-project-scope" as MessageId,
+            targetText: "mention project scope",
+          }),
+        ),
+        currentProjectThreadId,
+      ),
+      otherProjectThreadId,
+    );
+    snapshot.threads = snapshot.threads.map((thread) => {
+      if (thread.id === currentProjectThreadId) {
+        return { ...thread, title: "Current project history" };
+      }
+      if (thread.id === otherProjectThreadId) {
+        return { ...thread, projectId: OTHER_PROJECT_ID, title: "Other project history" };
+      }
+      return thread;
+    });
+    useComposerDraftStore.getState().setPrompt(THREAD_ID, "@");
+    const mounted = await mountChatView({ viewport: DEFAULT_VIEWPORT, snapshot });
+
+    try {
+      await expect.element(page.getByText("Current project history")).toBeVisible();
+      await expect.element(page.getByText("Other project history")).not.toBeInTheDocument();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it("keeps near-cap composer work bounded while live activities arrive", async () => {
     const percentile = (samples: readonly number[], fraction: number): number => {
       const ordered = [...samples].sort((left, right) => left - right);

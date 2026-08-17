@@ -83,6 +83,34 @@ describe("buildThreadMentionComposerItems", () => {
     });
   });
 
+  it("can restrict suggestions to the current project", () => {
+    const items = buildThreadMentionComposerItems({
+      projects,
+      currentThreadId: "current",
+      scopeProjectId: "project",
+      query: "history",
+      threads: [
+        thread({ id: "current", projectId: "project", title: "Current history" }),
+        thread({ id: "same-project", projectId: "project", title: "Project history" }),
+        thread({ id: "other-project", projectId: "chats", title: "Other history" }),
+      ],
+    });
+
+    expect(items.map((item) => item.id)).toEqual(["thread:same-project"]);
+  });
+
+  it("returns no chat suggestions while a scoped project is unresolved", () => {
+    const items = buildThreadMentionComposerItems({
+      projects,
+      currentThreadId: null,
+      scopeProjectId: null,
+      query: "",
+      threads: [thread({ id: "thread", projectId: "project", title: "History" })],
+    });
+
+    expect(items).toEqual([]);
+  });
+
   it("caps the unfiltered list to the 20 most recent active threads", () => {
     const threads = Array.from({ length: 24 }, (_, index) =>
       thread({

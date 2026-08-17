@@ -3958,6 +3958,7 @@ export default function ChatView({
       threads: composerThreadSummaries,
       projects: composerThreadProjects,
       currentThreadId: threadId,
+      ...(isEmbed ? { scopeProjectId: activeProjectId } : {}),
     },
     paperMentionSources: latticePaperLibrary?.papers ?? EMPTY_LATTICE_PAPER_MENTIONS,
   });

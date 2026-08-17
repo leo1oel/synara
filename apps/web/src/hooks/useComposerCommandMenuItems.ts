@@ -176,13 +176,17 @@ export function buildThreadMentionComposerItems(input: {
   readonly threads: readonly ComposerThreadMentionSource[];
   readonly projects: readonly Project[];
   readonly currentThreadId: string | null;
+  readonly scopeProjectId?: string | null;
   readonly query: string;
 }): ComposerCommandItem[] {
   const projectById = new Map(input.projects.map((project) => [project.id, project]));
   const candidates = withDisambiguatedMentionNames(
     input.threads
       .filter(
-        (thread) => thread.id !== input.currentThreadId && (thread.archivedAt ?? null) === null,
+        (thread) =>
+          thread.id !== input.currentThreadId &&
+          (thread.archivedAt ?? null) === null &&
+          (input.scopeProjectId === undefined || thread.projectId === input.scopeProjectId),
       )
       .map((thread) => ({
         thread,
@@ -326,6 +330,7 @@ export function useComposerCommandMenuItems(input: {
     readonly threads: readonly ComposerThreadMentionSource[];
     readonly projects: readonly Project[];
     readonly currentThreadId: string | null;
+    readonly scopeProjectId?: string | null;
   };
   paperMentionSources?: readonly ComposerPaperMentionSource[];
 }): ComposerCommandItem[] {
