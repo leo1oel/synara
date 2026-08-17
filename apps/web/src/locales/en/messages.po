@@ -12,6 +12,434 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
+#: src/routes/_chat.source-control.tsx
+msgid "Source control embed mode requires a Lattice workspace."
+msgstr "Source control embed mode requires a Lattice workspace."
+
+#. js-lingui-explicit-id
+#: src/routes/_chat.source-control.tsx
+msgid "Project binding failed: {error}"
+msgstr "Project binding failed: {error}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+#: src/routes/_chat.source-control.tsx
+msgid "Changes"
+msgstr "Changes"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Add an \"origin\" remote before committing and pushing."
+msgstr "Add an \"origin\" remote before committing and pushing."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Add an \"origin\" remote before creating a PR."
+msgstr "Add an \"origin\" remote before creating a PR."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Add an \"origin\" remote before pushing."
+msgstr "Add an \"origin\" remote before pushing."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Add an \"origin\" remote before pushing or creating a PR."
+msgstr "Add an \"origin\" remote before pushing or creating a PR."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "A pull request is already open for this branch."
+msgstr "A pull request is already open for this branch."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Branch has diverged from upstream. Rebase/merge first."
+msgstr "Branch has diverged from upstream. Rebase/merge first."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Branch is already up to date."
+msgstr "Branch is already up to date."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Branch is behind upstream. Pull before creating a PR."
+msgstr "Branch is behind upstream. Pull before creating a PR."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Branch is behind upstream. Pull/rebase before committing and pushing."
+msgstr "Branch is behind upstream. Pull/rebase before committing and pushing."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Branch is behind upstream. Pull/rebase before pushing."
+msgstr "Branch is behind upstream. Pull/rebase before pushing."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Branch is up to date. No action needed."
+msgstr "Branch is up to date. No action needed."
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+#: src/lib/gitLocalization.ts
+msgid "Commit"
+msgstr "Commit"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit & push"
+msgstr "Commit & push"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit & push is currently unavailable."
+msgstr "Commit & push is currently unavailable."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit & push to default branch?"
+msgstr "Commit & push to default branch?"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit is currently unavailable."
+msgstr "Commit is currently unavailable."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit local changes before creating a PR."
+msgstr "Commit local changes before creating a PR."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit on new branch"
+msgstr "Commit on new branch"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit or stash local changes before pushing."
+msgstr "Commit or stash local changes before pushing."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit, push & PR"
+msgstr "Commit, push & PR"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Committed changes"
+msgstr "Committed changes"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Committing..."
+msgstr "Committing..."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Create and checkout a branch before pushing or opening a PR."
+msgstr "Create and checkout a branch before pushing or opening a PR."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Create and checkout new branch..."
+msgstr "Create and checkout new branch..."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Create Branch"
+msgstr "Create Branch"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Create feature branch & continue"
+msgstr "Create feature branch & continue"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Create feature branch & PR?"
+msgstr "Create feature branch & PR?"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Create feature branch, commit & PR?"
+msgstr "Create feature branch, commit & PR?"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/components/GitCreatePrDialog.tsx
+#: src/lib/gitLocalization.ts
+msgid "Create PR"
+msgstr "Create PR"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Create PR is currently unavailable."
+msgstr "Create PR is currently unavailable."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Created PR"
+msgstr "Created PR"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Creating PR..."
+msgstr "Creating PR..."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Current branch has no upstream to pull from."
+msgstr "Current branch has no upstream to pull from."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/lib/gitLocalization.ts
+msgid "Detached HEAD"
+msgstr "Detached HEAD"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Detached HEAD: checkout a branch before committing and pushing."
+msgstr "Detached HEAD: checkout a branch before committing and pushing."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Detached HEAD: checkout a branch before creating a PR."
+msgstr "Detached HEAD: checkout a branch before creating a PR."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Detached HEAD: checkout a branch before pulling."
+msgstr "Detached HEAD: checkout a branch before pulling."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Detached HEAD: checkout a branch before pushing."
+msgstr "Detached HEAD: checkout a branch before pushing."
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+#: src/lib/gitLocalization.ts
+msgid "Done"
+msgstr "Done"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Generating commit message..."
+msgstr "Generating commit message..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Git action in progress."
+msgstr "Git action in progress."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Git status is unavailable."
+msgstr "Git status is unavailable."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "No branch changes to include in a PR."
+msgstr "No branch changes to include in a PR."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "No local changes or commits to push."
+msgstr "No local changes or commits to push."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "No local commits to push."
+msgstr "No local commits to push."
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+#: src/lib/gitLocalization.ts
+msgid "Open PR in browser"
+msgstr "Open PR in browser"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Opened PR"
+msgstr "Opened PR"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Preparing feature branch..."
+msgstr "Preparing feature branch..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Pull"
+msgstr "Pull"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pulling..."
+msgstr "Pulling..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Push"
+msgstr "Push"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Push & create PR"
+msgstr "Push & create PR"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Push is currently unavailable."
+msgstr "Push is currently unavailable."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Push to default branch?"
+msgstr "Push to default branch?"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pushing..."
+msgstr "Pushing..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Refreshing git status..."
+msgstr "Refreshing git status..."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Select at least one file to commit."
+msgstr "Select at least one file to commit."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Select branch"
+msgstr "Select branch"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Sync branch"
+msgstr "Sync branch"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "This action is currently unavailable."
+msgstr "This action is currently unavailable."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "View PR"
+msgstr "View PR"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "View PR is currently unavailable."
+msgstr "View PR is currently unavailable."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Worktree is clean. Make changes before committing."
+msgstr "Worktree is clean. Make changes before committing."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "From {branch}"
+msgstr "From {branch}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Create and checkout \"{branch}\""
+msgstr "Create and checkout \"{branch}\""
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pushing to {branch}..."
+msgstr "Pushing to {branch}..."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit & push to {branch}"
+msgstr "Commit & push to {branch}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Push to {branch}"
+msgstr "Push to {branch}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "This action will commit and push changes on \"{branch}\". You can continue on this branch or create a feature branch and run the same action there."
+msgstr "This action will commit and push changes on \"{branch}\". You can continue on this branch or create a feature branch and run the same action there."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "This action will push local commits on \"{branch}\". You can continue on this branch or create a feature branch and run the same action there."
+msgstr "This action will push local commits on \"{branch}\". You can continue on this branch or create a feature branch and run the same action there."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pull requests can't be opened from \"{branch}\" into itself. This action will create a feature branch, commit your changes there, push it, and create the PR."
+msgstr "Pull requests can't be opened from \"{branch}\" into itself. This action will create a feature branch, commit your changes there, push it, and create the PR."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pull requests can't be opened from \"{branch}\" into itself. This action will create a feature branch from your current commits, push it, and create the PR."
+msgstr "Pull requests can't be opened from \"{branch}\" into itself. This action will create a feature branch from your current commits, push it, and create the PR."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Committed {revision}"
+msgstr "Committed {revision}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Created PR{number}"
+msgstr "Created PR{number}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Opened PR{number}"
+msgstr "Opened PR{number}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pushed {revision} to {branch}"
+msgstr "Pushed {revision} to {branch}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pushed {revision}"
+msgstr "Pushed {revision}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pushed to {branch}"
+msgstr "Pushed to {branch}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pushed"
+msgstr "Pushed"
+
+#. js-lingui-explicit-id
 #: src/lib/providerUsageDisplay.ts
 msgid "5h"
 msgstr "5h"
@@ -138,6 +566,245 @@ msgid "Hand off to local"
 msgstr "Hand off to local"
 
 #. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "{files} {count, plural, one {has} other {have}} uncommitted changes. Commit or stash before switching."
+msgstr "{files} {count, plural, one {has} other {have}} uncommitted changes. Commit or stash before switching."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "{files} and {count, plural, one {# other file} other {# other files}} have uncommitted changes. Commit or stash before switching."
+msgstr "{files} and {count, plural, one {# other file} other {# other files}} have uncommitted changes. Commit or stash before switching."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/GitActionsControl.tsx
+msgid "An error occurred."
+msgstr "An error occurred."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Git index is locked."
+msgstr "Git index is locked."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "{lockFile} already exists. Close any running Git operation, remove the stale lock file if none is running, then retry."
+msgstr "{lockFile} already exists. Close any running Git operation, remove the stale lock file if none is running, then retry."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Remove lock & retry"
+msgstr "Remove lock & retry"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Git index could not be written."
+msgstr "Git index could not be written."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Git could not update the repository index. Retry after any current Git operation finishes."
+msgstr "Git could not update the repository index. Retry after any current Git operation finishes."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Retry stash & switch"
+msgstr "Retry stash & switch"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Uncommitted changes block checkout."
+msgstr "Uncommitted changes block checkout."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Stash & Switch"
+msgstr "Stash & Switch"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Changes saved, but not reapplied."
+msgstr "Changes saved, but not reapplied."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Synara switched branches and kept your changes in a stash because they could not be restored onto this branch cleanly."
+msgstr "Synara switched branches and kept your changes in a stash because they could not be restored onto this branch cleanly."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Discard stash"
+msgstr "Discard stash"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Cannot switch branches."
+msgstr "Cannot switch branches."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Some conflicting files are not covered by git stash, such as ignored files. Move or remove them before switching."
+msgstr "Some conflicting files are not covered by git stash, such as ignored files. Move or remove them before switching."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Failed to stash and switch."
+msgstr "Failed to stash and switch."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Unresolved conflicts in the repository."
+msgstr "Unresolved conflicts in the repository."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Native API is unavailable."
+msgstr "Native API is unavailable."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Failed to checkout branch."
+msgstr "Failed to checkout branch."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Failed to create branch."
+msgstr "Failed to create branch."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Checkout Pull Request"
+msgstr "Checkout Pull Request"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "current"
+msgstr "current"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "worktree"
+msgstr "worktree"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "remote"
+msgstr "remote"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "default"
+msgstr "default"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Uncommitted: {count, plural, one {# file} other {# files}}"
+msgstr "Uncommitted: {count, plural, one {# file} other {# files}}"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Search branches..."
+msgstr "Search branches..."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "No branches found."
+msgstr "No branches found."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Create and switch to a new branch from {branch}."
+msgstr "Create and switch to a new branch from {branch}."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "the current HEAD"
+msgstr "the current HEAD"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/GitActionsControl.tsx
+msgid "Branch name"
+msgstr "Branch name"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/GitActionsControl.tsx
+msgid "A branch with this name already exists."
+msgstr "A branch with this name already exists."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/chat/GitRepositorySetup.tsx
+#: src/components/GitActionsControl.tsx
+#: src/components/settings/ManagedSkillEditorView.tsx
+#: src/components/ThreadWorktreeHandoffDialog.tsx
+msgid "Cancel"
+msgstr "Cancel"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Create and switch"
+msgstr "Create and switch"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Discard saved stash?"
+msgstr "Discard saved stash?"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "This will permanently drop the stash entry that preserved your uncommitted changes."
+msgstr "This will permanently drop the stash entry that preserved your uncommitted changes."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Loading stash details..."
+msgstr "Loading stash details..."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/GitCreatePrDialog.tsx
+msgid "Branch"
+msgstr "Branch"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Worktree"
+msgstr "Worktree"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Stash"
+msgstr "Stash"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Name"
+msgstr "Name"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Changed files ({count})"
+msgstr "Changed files ({count})"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Git did not report changed file names for this stash."
+msgstr "Git did not report changed file names for this stash."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Keep stash"
+msgstr "Keep stash"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Discarding..."
+msgstr "Discarding..."
+
+#. js-lingui-explicit-id
 #: src/components/ChatView.tsx
 msgid "Hand off thread"
 msgstr "Hand off thread"
@@ -169,6 +836,309 @@ msgstr "New Chat"
 #: src/components/ChatView.tsx
 msgid "New thread"
 msgstr "New thread"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Running {hook}..."
+msgstr "Running {hook}..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Link opening is unavailable."
+msgstr "Link opening is unavailable."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "No open PR found."
+msgstr "No open PR found."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Unable to open PR link"
+msgstr "Unable to open PR link"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Create PR unavailable"
+msgstr "Create PR unavailable"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Unable to open compare page."
+msgstr "Unable to open compare page."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Unable to open compare page"
+msgstr "Unable to open compare page"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "No GitHub repository detected for this project."
+msgstr "No GitHub repository detected for this project."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Syncing with remote..."
+msgstr "Syncing with remote..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Remote synced"
+msgstr "Remote synced"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Already up to date"
+msgstr "Already up to date"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Updated {branch} from {upstream}"
+msgstr "Updated {branch} from {upstream}"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "upstream"
+msgstr "upstream"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "{branch} is already synchronized."
+msgstr "{branch} is already synchronized."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Sync failed"
+msgstr "Sync failed"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Running git action..."
+msgstr "Running git action..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Waiting for Git..."
+msgstr "Waiting for Git..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Action failed"
+msgstr "Action failed"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Keeping {branch}"
+msgstr "Keeping {branch}"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Branch name confirmed."
+msgstr "Branch name confirmed."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Creating branch..."
+msgstr "Creating branch..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Switched to {branch}"
+msgstr "Switched to {branch}"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Branch created and checked out."
+msgstr "Branch created and checked out."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Failed to create branch"
+msgstr "Failed to create branch"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Editor opening is unavailable."
+msgstr "Editor opening is unavailable."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Unable to open file"
+msgstr "Unable to open file"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Git actions"
+msgstr "Git actions"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Detached HEAD: create and checkout a branch to enable push and PR actions."
+msgstr "Detached HEAD: create and checkout a branch to enable push and PR actions."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Behind upstream. Pull/rebase first."
+msgstr "Behind upstream. Pull/rebase first."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Git status refresh delayed."
+msgstr "Git status refresh delayed."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Git status refresh failed."
+msgstr "Git status refresh failed."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Run action on default branch?"
+msgstr "Run action on default branch?"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Abort"
+msgstr "Abort"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Continue"
+msgstr "Continue"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Checkout feature branch & continue"
+msgstr "Checkout feature branch & continue"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Create and switch to a branch from the current HEAD. Future commits, pushes, and PRs will use it."
+msgstr "Create and switch to a branch from the current HEAD. Future commits, pushes, and PRs will use it."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Commit and Push"
+msgstr "Commit and Push"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "More Git actions"
+msgstr "More Git actions"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Open Git actions menu"
+msgstr "Open Git actions menu"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Initializing..."
+msgstr "Initializing..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+#: src/components/GitActionsControl.tsx
+msgid "Initialize Git"
+msgstr "Initialize Git"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Git action options"
+msgstr "Git action options"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+msgid "Default branch"
+msgstr "Default branch"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+#: src/components/GitCreatePrDialog.tsx
+msgid "(detached HEAD)"
+msgstr "(detached HEAD)"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+msgid "Commit message"
+msgstr "Commit message"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+msgid "Message (leave empty to generate)"
+msgstr "Message (leave empty to generate)"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+#: src/components/settings/ManagedSkillDetailView.tsx
+msgid "Edit"
+msgstr "Edit"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+msgid "No local changes"
+msgstr "No local changes"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+msgid "{count, plural, one {# file} other {# files}}"
+msgstr "{count, plural, one {# file} other {# files}}"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+msgid "{selected} of {total} files"
+msgstr "{selected} of {total} files"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+msgid "Excluded"
+msgstr "Excluded"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "{kind} → {branch}"
+msgstr "{kind} → {branch}"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "New branch"
+msgstr "New branch"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "Auto-named feature branch"
+msgstr "Auto-named feature branch"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "Pull request title"
+msgstr "Pull request title"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "Title (leave empty to generate)"
+msgstr "Title (leave empty to generate)"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "Pull request description"
+msgstr "Pull request description"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "Description (leave empty to generate)"
+msgstr "Description (leave empty to generate)"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "Commit and push local changes"
+msgstr "Commit and push local changes"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "Create draft PR"
+msgstr "Create draft PR"
 
 #. js-lingui-explicit-id
 #: src/components/ProviderUsageLineList.tsx
@@ -281,12 +1251,6 @@ msgstr "Create a detached worktree from the current branch to continue working i
 #: src/components/ThreadWorktreeHandoffDialog.tsx
 msgid "Worktree name"
 msgstr "Worktree name"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ManagedSkillEditorView.tsx
-#: src/components/ThreadWorktreeHandoffDialog.tsx
-msgid "Cancel"
-msgstr "Cancel"
 
 #. js-lingui-explicit-id
 #: src/components/ThreadWorktreeHandoffDialog.tsx
@@ -456,11 +1420,6 @@ msgstr "Connect a coding agent"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
-msgid "Name"
-msgstr "Name"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ExternalMcpSettingsPanel.tsx
 msgid "How this connection appears in Lattice. Works with Codex, Claude, and any other MCP-capable agent."
 msgstr "How this connection appears in Lattice. Works with Codex, Claude, and any other MCP-capable agent."
 
@@ -598,11 +1557,6 @@ msgstr "Resuming..."
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
 msgid "Back"
 msgstr "Back"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ExternalMcpSettingsPanel.tsx
-msgid "Done"
-msgstr "Done"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
@@ -783,11 +1737,6 @@ msgstr "Disabled"
 #: src/components/settings/ManagedSkillDetailView.tsx
 msgid "{fileCount, plural, one {# file} other {# files}}"
 msgstr "{fileCount, plural, one {# file} other {# files}}"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ManagedSkillDetailView.tsx
-msgid "Edit"
-msgstr "Edit"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ManagedSkillDetailView.tsx
@@ -1405,6 +2354,281 @@ msgstr "Previous question"
 #: src/components/chat/ComposerPendingUserInputPanel.tsx
 msgid "Next question"
 msgstr "Next question"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Source control is unavailable for this thread."
+msgstr "Source control is unavailable for this thread."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Source control"
+msgstr "Source control"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Close source control"
+msgstr "Close source control"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Refresh changes"
+msgstr "Refresh changes"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Checking repository…"
+msgstr "Checking repository…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Loading changes..."
+msgstr "Loading changes..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "No changes in the working tree."
+msgstr "No changes in the working tree."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Staged"
+msgstr "Staged"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "No staged changes."
+msgstr "No staged changes."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Unstage file"
+msgstr "Unstage file"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Unstage all"
+msgstr "Unstage all"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "No unstaged changes."
+msgstr "No unstaged changes."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Stage file"
+msgstr "Stage file"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Stage all"
+msgstr "Stage all"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Select a file to view its diff."
+msgstr "Select a file to view its diff."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Version control enabled"
+msgstr "Version control enabled"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "This folder is now a local Git repository."
+msgstr "This folder is now a local Git repository."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Start version control"
+msgstr "Start version control"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Track changes locally, review diffs, and restore earlier work. Nothing is uploaded."
+msgstr "Track changes locally, review diffs, and restore earlier work. Nothing is uploaded."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Initializing…"
+msgstr "Initializing…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Git could not be initialized."
+msgstr "Git could not be initialized."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Connect to GitHub"
+msgstr "Connect to GitHub"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Publish a new private repository or attach one you already have."
+msgstr "Publish a new private repository or attach one you already have."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Publish"
+msgstr "Publish"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Connect existing"
+msgstr "Connect existing"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Publish to GitHub"
+msgstr "Publish to GitHub"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Connect GitHub repository"
+msgstr "Connect GitHub repository"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Create a GitHub repository for this folder. Your files stay local until you commit and push them."
+msgstr "Create a GitHub repository for this folder. Your files stay local until you commit and push them."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Attach an existing GitHub repository as origin. This does not fetch, pull, or upload files."
+msgstr "Attach an existing GitHub repository as origin. This does not fetch, pull, or upload files."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "GitHub repository created"
+msgstr "GitHub repository created"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "GitHub repository connected"
+msgstr "GitHub repository connected"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "{repository} is ready. Files stay local until your first push."
+msgstr "{repository} is ready. Files stay local until your first push."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "{repository} is now connected as {remoteName}."
+msgstr "{repository} is now connected as {remoteName}."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Repository name"
+msgstr "Repository name"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Use letters, numbers, periods, hyphens, or underscores."
+msgstr "Use letters, numbers, periods, hyphens, or underscores."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "You can also use owner/repository to publish to an organization."
+msgstr "You can also use owner/repository to publish to an organization."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Description"
+msgstr "Description"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Optional"
+msgstr "Optional"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "What is this project about?"
+msgstr "What is this project about?"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Visibility"
+msgstr "Visibility"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Repository visibility"
+msgstr "Repository visibility"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Private"
+msgstr "Private"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Only you and invited collaborators"
+msgstr "Only you and invited collaborators"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Public"
+msgstr "Public"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Visible to everyone"
+msgstr "Visible to everyone"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Repository URL"
+msgstr "Repository URL"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Enter a GitHub HTTPS or SSH repository URL."
+msgstr "Enter a GitHub HTTPS or SSH repository URL."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "HTTPS and git@github.com SSH URLs are supported."
+msgstr "HTTPS and git@github.com SSH URLs are supported."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Publishing creates the empty remote only. Review your files and .gitignore before the first push."
+msgstr "Publishing creates the empty remote only. Review your files and .gitignore before the first push."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Connecting changes repository configuration only. Your working files are not modified."
+msgstr "Connecting changes repository configuration only. Your working files are not modified."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "The GitHub setup could not be completed."
+msgstr "The GitHub setup could not be completed."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Creating…"
+msgstr "Creating…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Connecting…"
+msgstr "Connecting…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Create repository"
+msgstr "Create repository"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Connect repository"
+msgstr "Connect repository"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ProviderModelPicker.tsx

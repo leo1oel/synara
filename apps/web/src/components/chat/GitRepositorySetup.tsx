@@ -1,3 +1,4 @@
+import { useLingui } from "@lingui/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 
@@ -30,12 +31,13 @@ import {
 type GitHubRepositorySetupMode = "create" | "connect";
 type GitHubRepositoryVisibility = "private" | "public";
 
-function mutationErrorMessage(error: unknown): string | null {
+function mutationErrorMessage(error: unknown, fallback: string): string | null {
   if (!error) return null;
-  return error instanceof Error ? error.message : "The GitHub setup could not be completed.";
+  return error instanceof Error ? error.message : fallback;
 }
 
 export function GitInitializationState(props: { cwd: string }) {
+  const { i18n } = useLingui();
   const queryClient = useQueryClient();
   const initMutation = useMutation(
     gitInitMutationOptions({
@@ -49,8 +51,8 @@ export function GitInitializationState(props: { cwd: string }) {
       await initMutation.mutateAsync();
       toastManager.add({
         type: "success",
-        title: "Version control enabled",
-        description: "This folder is now a local Git repository.",
+        title: i18n._("Version control enabled"),
+        description: i18n._("This folder is now a local Git repository."),
         timeout: 4_000,
       });
     } catch {
@@ -65,10 +67,12 @@ export function GitInitializationState(props: { cwd: string }) {
           <GitBranchIcon className="size-4.5" />
         </div>
         <h2 className="font-system-ui text-[length:var(--app-font-size-ui-lg,13px)] font-medium text-foreground">
-          Start version control
+          {i18n._("Start version control")}
         </h2>
         <p className="mt-1.5 text-[length:var(--app-font-size-ui-sm,11px)] leading-relaxed text-muted-foreground">
-          Track changes locally, review diffs, and restore earlier work. Nothing is uploaded.
+          {i18n._(
+            "Track changes locally, review diffs, and restore earlier work. Nothing is uploaded.",
+          )}
         </p>
         <Button
           size="sm"
@@ -81,14 +85,14 @@ export function GitInitializationState(props: { cwd: string }) {
           ) : (
             <GitBranchIcon className="size-3.5" />
           )}
-          {initMutation.isPending ? "Initializing…" : "Initialize Git"}
+          {initMutation.isPending ? i18n._("Initializing…") : i18n._("Initialize Git")}
         </Button>
         {initMutation.error ? (
           <p
             role="alert"
             className="mt-3 text-[length:var(--app-font-size-ui-xs,10px)] leading-snug text-destructive"
           >
-            {mutationErrorMessage(initMutation.error)}
+            {mutationErrorMessage(initMutation.error, i18n._("Git could not be initialized."))}
           </p>
         ) : null}
       </div>
@@ -97,6 +101,7 @@ export function GitInitializationState(props: { cwd: string }) {
 }
 
 export function GitHubRemoteSetupCard(props: { cwd: string }) {
+  const { i18n } = useLingui();
   const [dialogMode, setDialogMode] = useState<GitHubRepositorySetupMode | null>(null);
 
   return (
@@ -108,17 +113,17 @@ export function GitHubRemoteSetupCard(props: { cwd: string }) {
           </div>
           <div className="min-w-0 flex-1">
             <h2 className="font-system-ui text-[length:var(--app-font-size-ui,12px)] font-medium text-[var(--color-text-foreground)]">
-              Connect to GitHub
+              {i18n._("Connect to GitHub")}
             </h2>
             <p className="mt-0.5 text-[length:var(--app-font-size-ui-xs,10px)] leading-relaxed text-[var(--color-text-foreground-secondary)]">
-              Publish a new private repository or attach one you already have.
+              {i18n._("Publish a new private repository or attach one you already have.")}
             </p>
           </div>
         </div>
         <div className="mt-2.5 grid grid-cols-2 gap-1.5">
           <Button size="xs" onClick={() => setDialogMode("create")}>
             <GitHubIcon />
-            Publish
+            {i18n._("Publish")}
           </Button>
           <Button
             size="xs"
@@ -127,7 +132,7 @@ export function GitHubRemoteSetupCard(props: { cwd: string }) {
             onClick={() => setDialogMode("connect")}
           >
             <LinkIcon />
-            Connect existing
+            {i18n._("Connect existing")}
           </Button>
         </div>
       </section>
@@ -152,6 +157,8 @@ function GitHubRepositorySetupDialog(props: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const { i18n } = useLingui();
+
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogPopup className="max-w-md">
@@ -164,12 +171,18 @@ function GitHubRepositorySetupDialog(props: {
             )}
           </div>
           <DialogTitle>
-            {props.mode === "create" ? "Publish to GitHub" : "Connect GitHub repository"}
+            {props.mode === "create"
+              ? i18n._("Publish to GitHub")
+              : i18n._("Connect GitHub repository")}
           </DialogTitle>
           <DialogDescription>
             {props.mode === "create"
-              ? "Create a GitHub repository for this folder. Your files stay local until you commit and push them."
-              : "Attach an existing GitHub repository as origin. This does not fetch, pull, or upload files."}
+              ? i18n._(
+                  "Create a GitHub repository for this folder. Your files stay local until you commit and push them.",
+                )
+              : i18n._(
+                  "Attach an existing GitHub repository as origin. This does not fetch, pull, or upload files.",
+                )}
           </DialogDescription>
         </DialogHeader>
         <GitHubRepositorySetupForm
@@ -182,12 +195,18 @@ function GitHubRepositorySetupDialog(props: {
               type: "success",
               title:
                 props.mode === "create"
-                  ? "GitHub repository created"
-                  : "GitHub repository connected",
+                  ? i18n._("GitHub repository created")
+                  : i18n._("GitHub repository connected"),
               description:
                 props.mode === "create"
-                  ? `${result.repository} is ready. Files stay local until your first push.`
-                  : `${result.repository} is now connected as ${result.remoteName}.`,
+                  ? i18n._(
+                      "{repository} is ready. Files stay local until your first push.",
+                      { repository: result.repository },
+                    )
+                  : i18n._("{repository} is now connected as {remoteName}.", {
+                      repository: result.repository,
+                      remoteName: result.remoteName,
+                    }),
               timeout: 5_000,
             });
           }}
@@ -203,6 +222,7 @@ function GitHubRepositorySetupForm(props: {
   onCancel: () => void;
   onComplete: (result: { repository: string; remoteName: string; url: string }) => void;
 }) {
+  const { i18n } = useLingui();
   const queryClient = useQueryClient();
   const repositoryNameId = useId();
   const descriptionId = useId();
@@ -257,7 +277,7 @@ function GitHubRepositorySetupForm(props: {
           <>
             <div className="space-y-1.5">
               <label htmlFor={repositoryNameId} className={dialogFieldLabelClassName}>
-                Repository name
+                {i18n._("Repository name")}
               </label>
               <Input
                 id={repositoryNameId}
@@ -273,37 +293,42 @@ function GitHubRepositorySetupForm(props: {
                   role="alert"
                   className="text-[length:var(--app-font-size-ui-xs,10px)] text-destructive"
                 >
-                  Use letters, numbers, periods, hyphens, or underscores.
+                  {i18n._("Use letters, numbers, periods, hyphens, or underscores.")}
                 </p>
               ) : (
                 <p className="text-[length:var(--app-font-size-ui-xs,10px)] text-muted-foreground">
-                  You can also use owner/repository to publish to an organization.
+                  {i18n._("You can also use owner/repository to publish to an organization.")}
                 </p>
               )}
             </div>
             <div className="space-y-1.5">
               <label htmlFor={descriptionId} className={dialogFieldLabelClassName}>
-                Description <span className="font-normal text-muted-foreground">Optional</span>
+                {i18n._("Description")}{" "}
+                <span className="font-normal text-muted-foreground">{i18n._("Optional")}</span>
               </label>
               <Input
                 id={descriptionId}
                 value={description}
                 disabled={isPending}
                 onChange={(event) => setDescription(event.target.value)}
-                placeholder="What is this project about?"
+                placeholder={i18n._("What is this project about?")}
               />
             </div>
             <fieldset className="space-y-1.5">
-              <legend className={dialogFieldLabelClassName}>Visibility</legend>
+              <legend className={dialogFieldLabelClassName}>{i18n._("Visibility")}</legend>
               <div
                 role="radiogroup"
-                aria-label="Repository visibility"
+                aria-label={i18n._("Repository visibility")}
                 className="grid grid-cols-2 gap-2"
               >
                 {(
                   [
-                    ["private", "Private", "Only you and invited collaborators"],
-                    ["public", "Public", "Visible to everyone"],
+                    [
+                      "private",
+                      i18n._("Private"),
+                      i18n._("Only you and invited collaborators"),
+                    ],
+                    ["public", i18n._("Public"), i18n._("Visible to everyone")],
                   ] as const
                 ).map(([value, label, help]) => {
                   const selected = visibility === value;
@@ -337,7 +362,7 @@ function GitHubRepositorySetupForm(props: {
         ) : (
           <div className="space-y-1.5">
             <label htmlFor={remoteUrlId} className={dialogFieldLabelClassName}>
-              Repository URL
+              {i18n._("Repository URL")}
             </label>
             <Input
               id={remoteUrlId}
@@ -353,11 +378,11 @@ function GitHubRepositorySetupForm(props: {
                 role="alert"
                 className="text-[length:var(--app-font-size-ui-xs,10px)] text-destructive"
               >
-                Enter a GitHub HTTPS or SSH repository URL.
+                {i18n._("Enter a GitHub HTTPS or SSH repository URL.")}
               </p>
             ) : (
               <p className="text-[length:var(--app-font-size-ui-xs,10px)] text-muted-foreground">
-                HTTPS and git@github.com SSH URLs are supported.
+                {i18n._("HTTPS and git@github.com SSH URLs are supported.")}
               </p>
             )}
           </div>
@@ -367,8 +392,12 @@ function GitHubRepositorySetupForm(props: {
           <InfoIcon className="mt-0.5 size-3.5 shrink-0" />
           <p className="text-[length:var(--app-font-size-ui-xs,10px)] leading-relaxed">
             {props.mode === "create"
-              ? "Publishing creates the empty remote only. Review your files and .gitignore before the first push."
-              : "Connecting changes repository configuration only. Your working files are not modified."}
+              ? i18n._(
+                  "Publishing creates the empty remote only. Review your files and .gitignore before the first push.",
+                )
+              : i18n._(
+                  "Connecting changes repository configuration only. Your working files are not modified.",
+                )}
           </p>
         </div>
 
@@ -377,23 +406,26 @@ function GitHubRepositorySetupForm(props: {
             role="alert"
             className="text-[length:var(--app-font-size-ui-xs,10px)] leading-snug text-destructive"
           >
-            {mutationErrorMessage(mutation.error)}
+            {mutationErrorMessage(
+              mutation.error,
+              i18n._("The GitHub setup could not be completed."),
+            )}
           </p>
         ) : null}
       </DialogPanel>
       <DialogFooter>
         <Button type="button" variant="outline" disabled={isPending} onClick={props.onCancel}>
-          Cancel
+          {i18n._("Cancel")}
         </Button>
         <Button type="submit" disabled={isPending}>
           {isPending ? <LoaderCircleIcon className="animate-spin" /> : null}
           {isPending
             ? props.mode === "create"
-              ? "Creating…"
-              : "Connecting…"
+              ? i18n._("Creating…")
+              : i18n._("Connecting…")
             : props.mode === "create"
-              ? "Create repository"
-              : "Connect repository"}
+              ? i18n._("Create repository")
+              : i18n._("Connect repository")}
         </Button>
       </DialogFooter>
     </form>

@@ -11,6 +11,7 @@
 import { type FileDiffMetadata } from "@pierre/diffs/react";
 import { type ProjectId, type ThreadId } from "@synara/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLingui } from "@lingui/react";
 import { type ReactNode, useMemo, useState } from "react";
 
 import { useTheme } from "~/hooks/useTheme";
@@ -220,6 +221,7 @@ export function GitPanel(props: {
   showActions?: boolean;
   title?: ReactNode;
 }) {
+  const { i18n } = useLingui();
   const queryClient = useQueryClient();
   const { resolvedTheme } = useTheme();
   const theme = resolvedTheme as "light" | "dark";
@@ -323,7 +325,11 @@ export function GitPanel(props: {
   const hasChanges = stagedFiles.length > 0 || unstagedFiles.length > 0;
 
   if (!cwd) {
-    return <PanelStateMessage>Source control is unavailable for this thread.</PanelStateMessage>;
+    return (
+      <PanelStateMessage>
+        {i18n._("Source control is unavailable for this thread.")}
+      </PanelStateMessage>
+    );
   }
 
   return (
@@ -334,15 +340,15 @@ export function GitPanel(props: {
       )}
     >
       <DockPaneHeader
-        title={props.title ?? "Source control"}
+        title={props.title ?? i18n._("Source control")}
         onClose={props.onClose}
-        closeLabel="Close source control"
+        closeLabel={i18n._("Close source control")}
         actions={
           <IconButton
             size="icon-xs"
             variant="ghost"
-            label="Refresh changes"
-            tooltip="Refresh changes"
+            label={i18n._("Refresh changes")}
+            tooltip={i18n._("Refresh changes")}
             className={DOCK_HEADER_ICON_BUTTON_CLASS}
             disabled={refreshMutation.isPending}
             aria-busy={refreshMutation.isPending || undefined}
@@ -365,7 +371,7 @@ export function GitPanel(props: {
           </Alert>
         </div>
       ) : !branchQuery.isSuccess ? (
-        <PanelStateMessage>Checking repository…</PanelStateMessage>
+        <PanelStateMessage>{i18n._("Checking repository…")}</PanelStateMessage>
       ) : !branchQuery.data.isRepo ? (
         <GitInitializationState cwd={cwd} />
       ) : (
@@ -411,39 +417,39 @@ export function GitPanel(props: {
                 ) : null}
                 {!error && isLoading && !hasChanges ? (
                   <p className="px-1.5 py-1 text-[11px] text-muted-foreground/70">
-                    Loading changes...
+                    {i18n._("Loading changes...")}
                   </p>
                 ) : null}
                 {!error && !isLoading && !hasChanges ? (
                   <p className="px-1.5 py-2 text-center text-[12px] text-muted-foreground/70">
-                    No changes in the working tree.
+                    {i18n._("No changes in the working tree.")}
                   </p>
                 ) : null}
                 {hasChanges ? (
                   <>
                     <GitFileSection
-                      title="Staged"
-                      emptyLabel="No staged changes."
+                      title={i18n._("Staged")}
+                      emptyLabel={i18n._("No staged changes.")}
                       files={stagedFiles}
                       theme={theme}
                       section="staged"
                       selectedPath={selectedResolved?.section === "staged" ? selectedPath : null}
-                      actionLabel="Unstage file"
-                      actionAllLabel="Unstage all"
+                      actionLabel={i18n._("Unstage file")}
+                      actionAllLabel={i18n._("Unstage all")}
                       actionIcon="unstage"
                       actionDisabled={mutating}
                       onSelect={selectStaged}
                       onAction={unstage}
                     />
                     <GitFileSection
-                      title="Changes"
-                      emptyLabel="No unstaged changes."
+                      title={i18n._("Changes")}
+                      emptyLabel={i18n._("No unstaged changes.")}
                       files={unstagedFiles}
                       theme={theme}
                       section="unstaged"
                       selectedPath={selectedResolved?.section === "unstaged" ? selectedPath : null}
-                      actionLabel="Stage file"
-                      actionAllLabel="Stage all"
+                      actionLabel={i18n._("Stage file")}
+                      actionAllLabel={i18n._("Stage all")}
                       actionIcon="stage"
                       actionDisabled={mutating}
                       onSelect={selectUnstaged}
@@ -464,7 +470,7 @@ export function GitPanel(props: {
               />
             ) : (
               <PanelStateMessage density="compact">
-                Select a file to view its diff.
+                {i18n._("Select a file to view its diff.")}
               </PanelStateMessage>
             )}
           </div>

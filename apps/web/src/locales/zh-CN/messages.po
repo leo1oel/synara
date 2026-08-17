@@ -12,6 +12,434 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
+#: src/routes/_chat.source-control.tsx
+msgid "Source control embed mode requires a Lattice workspace."
+msgstr "源代码管理嵌入模式需要绑定 Lattice 工作区。"
+
+#. js-lingui-explicit-id
+#: src/routes/_chat.source-control.tsx
+msgid "Project binding failed: {error}"
+msgstr "项目绑定失败：{error}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+#: src/routes/_chat.source-control.tsx
+msgid "Changes"
+msgstr "更改"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Add an \"origin\" remote before committing and pushing."
+msgstr "请先添加“origin”远程仓库，再提交并推送。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Add an \"origin\" remote before creating a PR."
+msgstr "请先添加“origin”远程仓库，再创建 PR。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Add an \"origin\" remote before pushing."
+msgstr "请先添加“origin”远程仓库，再推送。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Add an \"origin\" remote before pushing or creating a PR."
+msgstr "请先添加“origin”远程仓库，再推送或创建 PR。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "A pull request is already open for this branch."
+msgstr "此分支已有打开的 PR。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Branch has diverged from upstream. Rebase/merge first."
+msgstr "分支已与上游分叉。请先变基或合并。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Branch is already up to date."
+msgstr "分支已是最新状态。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Branch is behind upstream. Pull before creating a PR."
+msgstr "分支落后于上游。请先拉取，再创建 PR。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Branch is behind upstream. Pull/rebase before committing and pushing."
+msgstr "分支落后于上游。请先拉取或变基，再提交并推送。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Branch is behind upstream. Pull/rebase before pushing."
+msgstr "分支落后于上游。请先拉取或变基，再推送。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Branch is up to date. No action needed."
+msgstr "分支已是最新状态，无需操作。"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+#: src/lib/gitLocalization.ts
+msgid "Commit"
+msgstr "提交"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit & push"
+msgstr "提交并推送"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit & push is currently unavailable."
+msgstr "当前无法提交并推送。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit & push to default branch?"
+msgstr "要提交并推送到默认分支吗？"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit is currently unavailable."
+msgstr "当前无法提交。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit local changes before creating a PR."
+msgstr "请先提交本地更改，再创建 PR。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit on new branch"
+msgstr "在新分支上提交"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit or stash local changes before pushing."
+msgstr "请先提交或暂存本地更改，再推送。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit, push & PR"
+msgstr "提交、推送并创建 PR"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Committed changes"
+msgstr "已提交更改"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Committing..."
+msgstr "正在提交..."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Create and checkout a branch before pushing or opening a PR."
+msgstr "请先创建并检出分支，再推送或打开 PR。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Create and checkout new branch..."
+msgstr "创建并检出新分支..."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Create Branch"
+msgstr "创建分支"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Create feature branch & continue"
+msgstr "创建功能分支并继续"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Create feature branch & PR?"
+msgstr "要创建功能分支和 PR 吗？"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Create feature branch, commit & PR?"
+msgstr "要创建功能分支、提交并创建 PR 吗？"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/components/GitCreatePrDialog.tsx
+#: src/lib/gitLocalization.ts
+msgid "Create PR"
+msgstr "创建 PR"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Create PR is currently unavailable."
+msgstr "当前无法创建 PR。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Created PR"
+msgstr "已创建 PR"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Creating PR..."
+msgstr "正在创建 PR..."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Current branch has no upstream to pull from."
+msgstr "当前分支没有可拉取的上游分支。"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/lib/gitLocalization.ts
+msgid "Detached HEAD"
+msgstr "分离的 HEAD"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Detached HEAD: checkout a branch before committing and pushing."
+msgstr "HEAD 处于分离状态：请先检出分支，再提交并推送。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Detached HEAD: checkout a branch before creating a PR."
+msgstr "HEAD 处于分离状态：请先检出分支，再创建 PR。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Detached HEAD: checkout a branch before pulling."
+msgstr "HEAD 处于分离状态：请先检出分支，再拉取。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Detached HEAD: checkout a branch before pushing."
+msgstr "HEAD 处于分离状态：请先检出分支，再推送。"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+#: src/lib/gitLocalization.ts
+msgid "Done"
+msgstr "完成"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Generating commit message..."
+msgstr "正在生成提交信息..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Git action in progress."
+msgstr "Git 操作正在进行。"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Git status is unavailable."
+msgstr "无法获取 Git 状态。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "No branch changes to include in a PR."
+msgstr "没有可包含在 PR 中的分支更改。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "No local changes or commits to push."
+msgstr "没有可推送的本地更改或提交。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "No local commits to push."
+msgstr "没有可推送的本地提交。"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+#: src/lib/gitLocalization.ts
+msgid "Open PR in browser"
+msgstr "在浏览器中打开 PR"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Opened PR"
+msgstr "已打开 PR"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Preparing feature branch..."
+msgstr "正在准备功能分支..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Pull"
+msgstr "拉取"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pulling..."
+msgstr "正在拉取..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Push"
+msgstr "推送"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Push & create PR"
+msgstr "推送并创建 PR"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Push is currently unavailable."
+msgstr "当前无法推送。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Push to default branch?"
+msgstr "要推送到默认分支吗？"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pushing..."
+msgstr "正在推送..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Refreshing git status..."
+msgstr "正在刷新 Git 状态..."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Select at least one file to commit."
+msgstr "请至少选择一个要提交的文件。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Select branch"
+msgstr "选择分支"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Sync branch"
+msgstr "同步分支"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "This action is currently unavailable."
+msgstr "当前无法执行此操作。"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "View PR"
+msgstr "查看 PR"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "View PR is currently unavailable."
+msgstr "当前无法查看 PR。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Worktree is clean. Make changes before committing."
+msgstr "工作树没有更改。请先进行更改，再提交。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "From {branch}"
+msgstr "基于 {branch}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Create and checkout \"{branch}\""
+msgstr "创建并检出“{branch}”"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pushing to {branch}..."
+msgstr "正在推送到 {branch}..."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit & push to {branch}"
+msgstr "提交并推送到 {branch}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Push to {branch}"
+msgstr "推送到 {branch}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "This action will commit and push changes on \"{branch}\". You can continue on this branch or create a feature branch and run the same action there."
+msgstr "此操作将在“{branch}”上提交并推送更改。你可以继续使用此分支，也可以创建功能分支并在新分支上执行同一操作。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "This action will push local commits on \"{branch}\". You can continue on this branch or create a feature branch and run the same action there."
+msgstr "此操作将推送“{branch}”上的本地提交。你可以继续使用此分支，也可以创建功能分支并在新分支上执行同一操作。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pull requests can't be opened from \"{branch}\" into itself. This action will create a feature branch, commit your changes there, push it, and create the PR."
+msgstr "无法从“{branch}”向其自身创建 PR。此操作将创建功能分支，在该分支上提交并推送更改，然后创建 PR。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pull requests can't be opened from \"{branch}\" into itself. This action will create a feature branch from your current commits, push it, and create the PR."
+msgstr "无法从“{branch}”向其自身创建 PR。此操作将从当前提交创建功能分支，推送该分支，然后创建 PR。"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Committed {revision}"
+msgstr "已提交 {revision}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Created PR{number}"
+msgstr "已创建 PR{number}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Opened PR{number}"
+msgstr "已打开 PR{number}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pushed {revision} to {branch}"
+msgstr "已将 {revision} 推送到 {branch}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pushed {revision}"
+msgstr "已推送 {revision}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pushed to {branch}"
+msgstr "已推送到 {branch}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pushed"
+msgstr "已推送"
+
+#. js-lingui-explicit-id
 #: src/lib/providerUsageDisplay.ts
 msgid "5h"
 msgstr "5 小时"
@@ -138,6 +566,245 @@ msgid "Hand off to local"
 msgstr "移交到本地"
 
 #. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "{files} {count, plural, one {has} other {have}} uncommitted changes. Commit or stash before switching."
+msgstr "{files} 有未提交的更改。请先提交或暂存，再切换分支。"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "{files} and {count, plural, one {# other file} other {# other files}} have uncommitted changes. Commit or stash before switching."
+msgstr "{files} 和另外 {count} 个文件有未提交的更改。请先提交或暂存，再切换分支。"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/GitActionsControl.tsx
+msgid "An error occurred."
+msgstr "发生错误。"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Git index is locked."
+msgstr "Git 索引已锁定。"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "{lockFile} already exists. Close any running Git operation, remove the stale lock file if none is running, then retry."
+msgstr "{lockFile} 已存在。请关闭正在运行的 Git 操作；如果没有操作在运行，请移除过期的锁文件，然后重试。"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Remove lock & retry"
+msgstr "移除锁并重试"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Git index could not be written."
+msgstr "无法写入 Git 索引。"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Git could not update the repository index. Retry after any current Git operation finishes."
+msgstr "Git 无法更新仓库索引。请等待当前 Git 操作完成后重试。"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Retry stash & switch"
+msgstr "重试暂存并切换"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Uncommitted changes block checkout."
+msgstr "未提交的更改阻止了检出。"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Stash & Switch"
+msgstr "暂存并切换"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Changes saved, but not reapplied."
+msgstr "更改已保存，但未能重新应用。"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Synara switched branches and kept your changes in a stash because they could not be restored onto this branch cleanly."
+msgstr "Synara 已切换分支，并将你的更改保留在暂存中，因为这些更改无法干净地恢复到此分支。"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Discard stash"
+msgstr "丢弃暂存"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Cannot switch branches."
+msgstr "无法切换分支。"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Some conflicting files are not covered by git stash, such as ignored files. Move or remove them before switching."
+msgstr "部分冲突文件不在 git stash 的处理范围内，例如被忽略的文件。请先移动或删除这些文件，再切换分支。"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Failed to stash and switch."
+msgstr "暂存并切换失败。"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Unresolved conflicts in the repository."
+msgstr "仓库中存在未解决的冲突。"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Native API is unavailable."
+msgstr "原生 API 不可用。"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Failed to checkout branch."
+msgstr "检出分支失败。"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Failed to create branch."
+msgstr "创建分支失败。"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Checkout Pull Request"
+msgstr "检出拉取请求"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "current"
+msgstr "当前"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "worktree"
+msgstr "工作树"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "remote"
+msgstr "远程"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "default"
+msgstr "默认"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Uncommitted: {count, plural, one {# file} other {# files}}"
+msgstr "未提交：{count} 个文件"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Search branches..."
+msgstr "搜索分支..."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "No branches found."
+msgstr "未找到分支。"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Create and switch to a new branch from {branch}."
+msgstr "从 {branch} 创建并切换到新分支。"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "the current HEAD"
+msgstr "当前 HEAD"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/GitActionsControl.tsx
+msgid "Branch name"
+msgstr "分支名称"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/GitActionsControl.tsx
+msgid "A branch with this name already exists."
+msgstr "同名分支已存在。"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/chat/GitRepositorySetup.tsx
+#: src/components/GitActionsControl.tsx
+#: src/components/settings/ManagedSkillEditorView.tsx
+#: src/components/ThreadWorktreeHandoffDialog.tsx
+msgid "Cancel"
+msgstr "取消"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Create and switch"
+msgstr "创建并切换"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Discard saved stash?"
+msgstr "要丢弃已保存的暂存吗？"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "This will permanently drop the stash entry that preserved your uncommitted changes."
+msgstr "这将永久删除用于保留未提交更改的暂存条目。"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Loading stash details..."
+msgstr "正在加载暂存详情..."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/GitCreatePrDialog.tsx
+msgid "Branch"
+msgstr "分支"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Worktree"
+msgstr "工作树"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Stash"
+msgstr "暂存"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Name"
+msgstr "名称"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Changed files ({count})"
+msgstr "已更改的文件（{count}）"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Git did not report changed file names for this stash."
+msgstr "Git 未报告此暂存中已更改的文件名。"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Keep stash"
+msgstr "保留暂存"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Discarding..."
+msgstr "正在丢弃..."
+
+#. js-lingui-explicit-id
 #: src/components/ChatView.tsx
 msgid "Hand off thread"
 msgstr "移交线程"
@@ -169,6 +836,309 @@ msgstr "新聊天"
 #: src/components/ChatView.tsx
 msgid "New thread"
 msgstr "新线程"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Running {hook}..."
+msgstr "正在运行 {hook}..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Link opening is unavailable."
+msgstr "无法打开链接。"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "No open PR found."
+msgstr "未找到打开的 PR。"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Unable to open PR link"
+msgstr "无法打开 PR 链接"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Create PR unavailable"
+msgstr "无法创建 PR"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Unable to open compare page."
+msgstr "无法打开比较页面。"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Unable to open compare page"
+msgstr "无法打开比较页面"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "No GitHub repository detected for this project."
+msgstr "未检测到此项目的 GitHub 仓库。"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Syncing with remote..."
+msgstr "正在与远程仓库同步..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Remote synced"
+msgstr "远程仓库已同步"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Already up to date"
+msgstr "已是最新状态"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Updated {branch} from {upstream}"
+msgstr "已从 {upstream} 更新 {branch}"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "upstream"
+msgstr "上游"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "{branch} is already synchronized."
+msgstr "{branch} 已同步。"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Sync failed"
+msgstr "同步失败"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Running git action..."
+msgstr "正在执行 Git 操作..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Waiting for Git..."
+msgstr "正在等待 Git..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Action failed"
+msgstr "操作失败"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Keeping {branch}"
+msgstr "保留 {branch}"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Branch name confirmed."
+msgstr "分支名称已确认。"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Creating branch..."
+msgstr "正在创建分支..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Switched to {branch}"
+msgstr "已切换到 {branch}"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Branch created and checked out."
+msgstr "分支已创建并检出。"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Failed to create branch"
+msgstr "创建分支失败"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Editor opening is unavailable."
+msgstr "无法打开编辑器。"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Unable to open file"
+msgstr "无法打开文件"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Git actions"
+msgstr "Git 操作"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Detached HEAD: create and checkout a branch to enable push and PR actions."
+msgstr "HEAD 处于分离状态：请创建并检出分支，以启用推送和 PR 操作。"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Behind upstream. Pull/rebase first."
+msgstr "落后于上游。请先拉取或变基。"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Git status refresh delayed."
+msgstr "Git 状态刷新延迟。"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Git status refresh failed."
+msgstr "Git 状态刷新失败。"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Run action on default branch?"
+msgstr "要在默认分支上执行操作吗？"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Abort"
+msgstr "中止"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Continue"
+msgstr "继续"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Checkout feature branch & continue"
+msgstr "检出功能分支并继续"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Create and switch to a branch from the current HEAD. Future commits, pushes, and PRs will use it."
+msgstr "从当前 HEAD 创建并切换到新分支。后续提交、推送和 PR 将使用该分支。"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Commit and Push"
+msgstr "提交并推送"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "More Git actions"
+msgstr "更多 Git 操作"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Open Git actions menu"
+msgstr "打开 Git 操作菜单"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Initializing..."
+msgstr "正在初始化..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+#: src/components/GitActionsControl.tsx
+msgid "Initialize Git"
+msgstr "初始化 Git"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Git action options"
+msgstr "Git 操作选项"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+msgid "Default branch"
+msgstr "默认分支"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+#: src/components/GitCreatePrDialog.tsx
+msgid "(detached HEAD)"
+msgstr "（分离的 HEAD）"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+msgid "Commit message"
+msgstr "提交信息"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+msgid "Message (leave empty to generate)"
+msgstr "提交信息（留空则自动生成）"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+#: src/components/settings/ManagedSkillDetailView.tsx
+msgid "Edit"
+msgstr "编辑"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+msgid "No local changes"
+msgstr "没有本地更改"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+msgid "{count, plural, one {# file} other {# files}}"
+msgstr "{count} 个文件"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+msgid "{selected} of {total} files"
+msgstr "已选择 {selected}/{total} 个文件"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+msgid "Excluded"
+msgstr "已排除"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "{kind} → {branch}"
+msgstr "{kind} → {branch}"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "New branch"
+msgstr "新分支"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "Auto-named feature branch"
+msgstr "自动命名的功能分支"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "Pull request title"
+msgstr "拉取请求标题"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "Title (leave empty to generate)"
+msgstr "标题（留空则自动生成）"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "Pull request description"
+msgstr "拉取请求描述"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "Description (leave empty to generate)"
+msgstr "描述（留空则自动生成）"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "Commit and push local changes"
+msgstr "提交并推送本地更改"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "Create draft PR"
+msgstr "创建草稿 PR"
 
 #. js-lingui-explicit-id
 #: src/components/ProviderUsageLineList.tsx
@@ -281,12 +1251,6 @@ msgstr "从当前分支创建一个独立工作树，以便继续并行工作。
 #: src/components/ThreadWorktreeHandoffDialog.tsx
 msgid "Worktree name"
 msgstr "工作树名称"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ManagedSkillEditorView.tsx
-#: src/components/ThreadWorktreeHandoffDialog.tsx
-msgid "Cancel"
-msgstr "取消"
 
 #. js-lingui-explicit-id
 #: src/components/ThreadWorktreeHandoffDialog.tsx
@@ -456,11 +1420,6 @@ msgstr "连接编码智能体"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
-msgid "Name"
-msgstr "名称"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ExternalMcpSettingsPanel.tsx
 msgid "How this connection appears in Lattice. Works with Codex, Claude, and any other MCP-capable agent."
 msgstr "此连接在 Lattice 中的显示名称。支持 Codex、Claude 及其他兼容 MCP 的智能体。"
 
@@ -598,11 +1557,6 @@ msgstr "正在恢复..."
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
 msgid "Back"
 msgstr "返回"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ExternalMcpSettingsPanel.tsx
-msgid "Done"
-msgstr "完成"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
@@ -783,11 +1737,6 @@ msgstr "已禁用"
 #: src/components/settings/ManagedSkillDetailView.tsx
 msgid "{fileCount, plural, one {# file} other {# files}}"
 msgstr "{fileCount, plural, other {# 个文件}}"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ManagedSkillDetailView.tsx
-msgid "Edit"
-msgstr "编辑"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ManagedSkillDetailView.tsx
@@ -1405,6 +2354,281 @@ msgstr "上一个问题"
 #: src/components/chat/ComposerPendingUserInputPanel.tsx
 msgid "Next question"
 msgstr "下一个问题"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Source control is unavailable for this thread."
+msgstr "此对话无法使用源代码管理。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Source control"
+msgstr "源代码管理"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Close source control"
+msgstr "关闭源代码管理"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Refresh changes"
+msgstr "刷新更改"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Checking repository…"
+msgstr "正在检查仓库…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Loading changes..."
+msgstr "正在加载更改..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "No changes in the working tree."
+msgstr "工作树中没有更改。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Staged"
+msgstr "已暂存"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "No staged changes."
+msgstr "没有已暂存的更改。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Unstage file"
+msgstr "取消暂存文件"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Unstage all"
+msgstr "全部取消暂存"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "No unstaged changes."
+msgstr "没有未暂存的更改。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Stage file"
+msgstr "暂存文件"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Stage all"
+msgstr "全部暂存"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Select a file to view its diff."
+msgstr "选择文件以查看差异。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Version control enabled"
+msgstr "版本控制已启用"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "This folder is now a local Git repository."
+msgstr "此文件夹现在是本地 Git 仓库。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Start version control"
+msgstr "开始版本控制"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Track changes locally, review diffs, and restore earlier work. Nothing is uploaded."
+msgstr "在本地跟踪更改、查看差异并恢复早期版本。不会上传任何内容。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Initializing…"
+msgstr "正在初始化…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Git could not be initialized."
+msgstr "无法初始化 Git。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Connect to GitHub"
+msgstr "连接到 GitHub"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Publish a new private repository or attach one you already have."
+msgstr "发布新的私有仓库，或连接已有仓库。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Publish"
+msgstr "发布"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Connect existing"
+msgstr "连接已有仓库"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Publish to GitHub"
+msgstr "发布到 GitHub"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Connect GitHub repository"
+msgstr "连接 GitHub 仓库"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Create a GitHub repository for this folder. Your files stay local until you commit and push them."
+msgstr "为此文件夹创建 GitHub 仓库。在提交并推送之前，你的文件会保留在本地。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Attach an existing GitHub repository as origin. This does not fetch, pull, or upload files."
+msgstr "将已有 GitHub 仓库连接为 origin。此操作不会获取、拉取或上传文件。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "GitHub repository created"
+msgstr "GitHub 仓库已创建"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "GitHub repository connected"
+msgstr "GitHub 仓库已连接"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "{repository} is ready. Files stay local until your first push."
+msgstr "{repository} 已就绪。在首次推送之前，文件会保留在本地。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "{repository} is now connected as {remoteName}."
+msgstr "{repository} 已连接为 {remoteName}。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Repository name"
+msgstr "仓库名称"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Use letters, numbers, periods, hyphens, or underscores."
+msgstr "请使用字母、数字、句点、连字符或下划线。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "You can also use owner/repository to publish to an organization."
+msgstr "也可以使用 owner/repository 格式发布到组织。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Description"
+msgstr "描述"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Optional"
+msgstr "可选"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "What is this project about?"
+msgstr "这个项目是做什么的？"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Visibility"
+msgstr "可见性"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Repository visibility"
+msgstr "仓库可见性"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Private"
+msgstr "私有"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Only you and invited collaborators"
+msgstr "仅你和受邀协作者可见"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Public"
+msgstr "公开"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Visible to everyone"
+msgstr "所有人可见"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Repository URL"
+msgstr "仓库 URL"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Enter a GitHub HTTPS or SSH repository URL."
+msgstr "请输入 GitHub HTTPS 或 SSH 仓库 URL。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "HTTPS and git@github.com SSH URLs are supported."
+msgstr "支持 HTTPS 和 git@github.com SSH URL。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Publishing creates the empty remote only. Review your files and .gitignore before the first push."
+msgstr "发布操作只会创建空的远程仓库。首次推送前请检查文件和 .gitignore。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Connecting changes repository configuration only. Your working files are not modified."
+msgstr "连接操作只会更改仓库配置，不会修改工作文件。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "The GitHub setup could not be completed."
+msgstr "无法完成 GitHub 设置。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Creating…"
+msgstr "正在创建…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Connecting…"
+msgstr "正在连接…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Create repository"
+msgstr "创建仓库"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Connect repository"
+msgstr "连接仓库"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ProviderModelPicker.tsx

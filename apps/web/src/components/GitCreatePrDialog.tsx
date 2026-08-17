@@ -5,6 +5,7 @@
 // Depends on: GitActionsControl.logic resolvers and the shared git dialog chrome.
 
 import { useEffect, useMemo, useState } from "react";
+import { useLingui } from "@lingui/react";
 import { Checkbox } from "~/components/ui/checkbox";
 import { DiffStat } from "~/components/ui/diff-stat";
 import { SubmitShortcutKbd } from "~/components/ui/kbd";
@@ -25,6 +26,7 @@ import {
 } from "./GitDialogChrome";
 import { ArrowUpRightIcon, GitPullRequestDraftIcon, GitPullRequestIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
+import { localizeGitText } from "~/lib/gitLocalization";
 
 export interface GitCreatePrDialogSubmission {
   action: "create_pr" | "commit_push_pr";
@@ -54,6 +56,7 @@ export function GitCreatePrDialog({
   onSubmit,
   onOpenInBrowser,
 }: GitCreatePrDialogProps) {
+  const { i18n } = useLingui();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [includeLocalChanges, setIncludeLocalChanges] = useState(true);
@@ -92,29 +95,32 @@ export function GitCreatePrDialog({
   return (
     <GitDialogShell open={open} onOpenChange={onOpenChange} onSubmitShortcut={() => submit(false)}>
       <GitDialogHeading
-        eyebrow={`${view.isNewBranch ? "New branch" : "Branch"} → ${view.baseBranchName}`}
+        eyebrow={i18n._("{kind} → {branch}", {
+          kind: view.isNewBranch ? i18n._("New branch") : i18n._("Branch"),
+          branch: view.baseBranchName,
+        })}
         subject={
           view.willCreateFeatureBranch
-            ? "Auto-named feature branch"
-            : (view.branchName ?? "(detached HEAD)")
+            ? i18n._("Auto-named feature branch")
+            : (view.branchName ?? i18n._("(detached HEAD)"))
         }
         subjectMuted={view.willCreateFeatureBranch}
       />
       <GitDialogBody>
         <input
           autoFocus
-          aria-label="Pull request title"
+          aria-label={i18n._("Pull request title")}
           className={GIT_DIALOG_FIELD_CLASS}
           maxLength={300}
-          placeholder="Title (leave empty to generate)"
+          placeholder={i18n._("Title (leave empty to generate)")}
           value={title}
           onChange={(event) => setTitle(event.target.value)}
         />
         <textarea
-          aria-label="Pull request description"
+          aria-label={i18n._("Pull request description")}
           className={cn(GIT_DIALOG_FIELD_CLASS, "resize-none")}
           maxLength={60_000}
-          placeholder="Description (leave empty to generate)"
+          placeholder={i18n._("Description (leave empty to generate)")}
           rows={2}
           value={body}
           onChange={(event) => setBody(event.target.value)}
@@ -125,7 +131,7 @@ export function GitCreatePrDialog({
               checked={includeLocalChanges}
               onCheckedChange={(checked) => setIncludeLocalChanges(checked === true)}
             />
-            <span className="flex-1">Commit and push local changes</span>
+            <span className="flex-1">{i18n._("Commit and push local changes")}</span>
             <DiffStat
               className="shrink-0 font-mono text-xs"
               insertions={view.insertions}
@@ -133,27 +139,31 @@ export function GitCreatePrDialog({
             />
           </label>
         )}
-        {unavailableHint && <p className="py-1 text-warning text-xs">{unavailableHint}</p>}
+        {unavailableHint && (
+          <p className="py-1 text-warning text-xs">
+            {localizeGitText(i18n, unavailableHint)}
+          </p>
+        )}
       </GitDialogBody>
       <GitDialogActionList>
         <GitDialogActionRow
           disabled={!canCreate}
           icon={<GitPullRequestDraftIcon />}
-          label="Create draft PR"
+          label={i18n._("Create draft PR")}
           onClick={() => submit(true)}
         />
         <GitDialogActionRow
           highlighted
           disabled={!canCreate}
           icon={<GitPullRequestIcon />}
-          label="Create PR"
+          label={i18n._("Create PR")}
           trailing={<SubmitShortcutKbd />}
           onClick={() => submit(false)}
         />
         <GitDialogActionRow
           disabled={!canOpenInBrowser}
           icon={<ArrowUpRightIcon />}
-          label="Open PR in browser"
+          label={i18n._("Open PR in browser")}
           onClick={() => onOpenInBrowser({ preparation: browserPreparation, includeLocalChanges })}
         />
       </GitDialogActionList>

@@ -4,6 +4,7 @@
 
 import "../../index.css";
 
+import { I18nProvider } from "@lingui/react";
 import type { GitStatusResult, NativeApi } from "@synara/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -11,9 +12,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 
+import { i18n } from "../../i18n";
 import { GitPanel } from "./GitPanel";
 
 const TEST_CWD = "/tmp/research-writer";
+i18n.loadAndActivate({ locale: "en", messages: {} });
 
 function buildLongPatch(lineCount = 80): string {
   return [
@@ -133,9 +136,11 @@ function renderWithQueryClient(element: ReactNode) {
     },
   });
   return render(
-    <QueryClientProvider client={queryClient}>
-      <div className="h-[420px] w-[360px] bg-background text-foreground">{element}</div>
-    </QueryClientProvider>,
+    <I18nProvider i18n={i18n}>
+      <QueryClientProvider client={queryClient}>
+        <div className="h-[420px] w-[360px] bg-background text-foreground">{element}</div>
+      </QueryClientProvider>
+    </I18nProvider>,
   );
 }
 
