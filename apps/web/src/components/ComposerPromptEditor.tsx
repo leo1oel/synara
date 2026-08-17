@@ -46,6 +46,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
   type ClipboardEventHandler,
   type Ref,
 } from "react";
@@ -61,6 +62,7 @@ import {
   matchComposerSlashCommandChipToken,
   splitPromptIntoComposerSegments,
 } from "~/composer-editor-mentions";
+import { createImeKeyGuard } from "~/lib/imeComposition";
 import { parseBareComposerLink } from "~/lib/linkChips";
 import { type TerminalContextDraft } from "~/lib/terminalContext";
 import { shouldCollapsePastedText } from "~/lib/composerPastedText";
@@ -631,6 +633,7 @@ function ComposerCommandKeyPlugin(props: {
   ) => boolean;
 }) {
   const [editor] = useLexicalComposerContext();
+  const [imeKeyGuard] = useState(createImeKeyGuard);
 
   useEffect(() => {
     const handleCommand = (
@@ -639,6 +642,16 @@ function ComposerCommandKeyPlugin(props: {
     ): boolean => {
       if (!props.onCommandKeyDown || !event) {
         return false;
+      }
+      // Keys the IME consumed (candidate navigation, or the Enter/Tab that
+      // just committed a candidate — which WebKit delivers AFTER
+      // compositionend with isComposing already false) must neither run
+      // composer commands nor fall through to Lexical's default Enter
+      // handler, which would turn the commit keystroke into a line break.
+      if (imeKeyGuard.shouldIgnoreKeyDown(event)) {
+        event.preventDefault();
+        event.stopPropagation();
+        return true;
       }
       const handled = props.onCommandKeyDown(key, event);
       if (handled) {
@@ -677,6 +690,21 @@ function ComposerCommandKeyPlugin(props: {
           : false,
       COMMAND_PRIORITY_HIGH,
     );
+    // The guard needs the raw composition lifecycle from the contenteditable;
+    // Lexical's composition commands are gated behind the same keydown-order
+    // assumptions the guard exists to correct.
+    const unregisterImeListeners = editor.registerRootListener((root, prevRoot) => {
+      if (prevRoot !== null) {
+        prevRoot.removeEventListener("compositionstart", imeKeyGuard.onCompositionStart);
+        prevRoot.removeEventListener("compositionend", imeKeyGuard.onCompositionEnd);
+        prevRoot.removeEventListener("keyup", imeKeyGuard.onKeyUp);
+      }
+      if (root !== null) {
+        root.addEventListener("compositionstart", imeKeyGuard.onCompositionStart);
+        root.addEventListener("compositionend", imeKeyGuard.onCompositionEnd);
+        root.addEventListener("keyup", imeKeyGuard.onKeyUp);
+      }
+    });
 
     return () => {
       unregisterArrowDown();
@@ -684,8 +712,10 @@ function ComposerCommandKeyPlugin(props: {
       unregisterEnter();
       unregisterTab();
       unregisterSlash();
+      unregisterImeListeners();
+      imeKeyGuard.dispose();
     };
-  }, [editor, props]);
+  }, [editor, imeKeyGuard, props]);
 
   return null;
 }

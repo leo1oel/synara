@@ -56,6 +56,7 @@ import {
   Undo2Icon,
   WorktreeIcon,
 } from "~/lib/icons";
+import { createImeKeyGuard } from "~/lib/imeComposition";
 import { pinActionLabel } from "~/lib/pin";
 import { Button } from "../ui/button";
 import { CrossTaskOriginLabel, type CrossTaskOrigin } from "./CrossTaskOriginLabel";
@@ -1266,6 +1267,15 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           const canRevertAgentWork = typeof row.revertTurnCount === "number";
           const isEditingThisMessage = editingUserMessageId === row.message.id;
           const isSubmittingThisEdit = submittingEditedUserMessageId === row.message.id;
+          // The edit affordance can go stale while the composer is open (a newer
+          // message lands, the turn's rollback metadata disappears). Keep the
+          // draft on screen but block a send that would only bounce off the
+          // validators; skip during submit, when the rollback itself reshuffles
+          // the thread and would flash the hint.
+          const editSubmitBlocked =
+            isEditingThisMessage &&
+            !isSubmittingThisEdit &&
+            row.message.id !== latestEditableUserMessageId;
           const showEditUserMessage =
             Boolean(onEditUserMessage) &&
             row.message.id === latestEditableUserMessageId &&
@@ -1369,6 +1379,11 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                       key={row.message.id}
                       initialValue={displayedUserMessage.copyText}
                       disabled={isSubmittingThisEdit || isRevertingCheckpoint}
+                      submitBlockedHint={
+                        editSubmitBlocked
+                          ? "The conversation has moved on, so this message can no longer be edited and resent."
+                          : null
+                      }
                       allowEmpty={renderedBrowserAnnotations.length > 0}
                       chatTypographyStyle={userMessageTypographyStyle}
                       borderClassName={userMessageBubbleBorderClass}
@@ -2243,8 +2258,11 @@ export const MessagesTimeline = memo(function MessagesTimeline({
         // edge so streamed content dissolves toward the composer. It is scroll-aware
         // via `animation-timeline: scroll()`, so the fade clears at the live edge and a
         // pinned or non-scrollable transcript stays crisp (no permanent shadow).
+        // The native scrollbar is hidden; ChatTranscriptPane draws the shared
+        // overlay scrollbar beside this list (native `::-webkit-scrollbar`
+        // hover state sticks when the pointer exits the embed iframe).
         className={cn(
-          "lattice-native-scrollbar scroll-fade-b h-full overflow-x-hidden overscroll-y-contain py-3 [scrollbar-gutter:stable] sm:py-4",
+          "scroll-fade-b h-full overflow-x-hidden overscroll-y-contain py-3 [-ms-overflow-style:none] [scrollbar-width:none] sm:py-4 [&::-webkit-scrollbar]:hidden",
           ENVIRONMENT_CONTENT_INSET_MOTION_CLASS,
           CHAT_COLUMN_GUTTER_CLASS_NAME,
         )}
@@ -2785,6 +2803,8 @@ function hasOnlyInlineSkillChips(
 const UserMessageEditForm = memo(function UserMessageEditForm(props: {
   initialValue: string;
   disabled: boolean;
+  /** Non-null blocks Send (with this explanation) while keeping the draft and Cancel usable. */
+  submitBlockedHint: string | null;
   allowEmpty: boolean;
   chatTypographyStyle: CSSProperties;
   borderClassName: string;
@@ -2793,11 +2813,14 @@ const UserMessageEditForm = memo(function UserMessageEditForm(props: {
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [draft, setDraft] = useState(props.initialValue);
-  const canSubmit = canSubmitUserMessageEdit({
-    draft,
-    allowEmpty: props.allowEmpty,
-    disabled: props.disabled,
-  });
+  const [imeKeyGuard] = useState(createImeKeyGuard);
+  useEffect(() => () => imeKeyGuard.dispose(), [imeKeyGuard]);
+  const canSubmit =
+    canSubmitUserMessageEdit({
+      draft,
+      allowEmpty: props.allowEmpty,
+      disabled: props.disabled,
+    }) && props.submitBlockedHint === null;
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -2818,6 +2841,19 @@ const UserMessageEditForm = memo(function UserMessageEditForm(props: {
   }, [draft]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Keys the IME consumed must not act on the form: Escape dismissing the
+    // candidate list would close the whole editor and drop the draft, and the
+    // Enter that commits a candidate (delivered after compositionend on
+    // WebKit) would land a stray newline in the edited text.
+    if (imeKeyGuard.shouldIgnoreKeyDown(event.nativeEvent)) {
+      // Once composition has ended, the guard only consumes the IME's commit
+      // Enter/Tab/Escape. Prevent their native newline, focus traversal, or
+      // form cancellation while preserving live candidate-list behavior.
+      if (!event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229) {
+        event.preventDefault();
+      }
+      return;
+    }
     if (event.key === "Escape") {
       event.preventDefault();
       props.onCancel();
@@ -2855,9 +2891,17 @@ const UserMessageEditForm = memo(function UserMessageEditForm(props: {
         className="max-h-60 min-h-0 w-full resize-none overflow-y-auto border-0 bg-transparent p-0 font-system-ui text-foreground outline-none placeholder:text-muted-foreground/45 disabled:opacity-70"
         style={props.chatTypographyStyle}
         onChange={(event) => setDraft(event.target.value)}
+        onCompositionStart={imeKeyGuard.onCompositionStart}
+        onCompositionEnd={imeKeyGuard.onCompositionEnd}
         onKeyDown={handleKeyDown}
+        onKeyUp={imeKeyGuard.onKeyUp}
       />
-      <div className="mt-2 flex justify-end gap-2">
+      <div className="mt-2 flex items-center justify-end gap-2">
+        {props.submitBlockedHint !== null ? (
+          <p className="mr-auto font-system-ui text-xs text-destructive/80">
+            {props.submitBlockedHint}
+          </p>
+        ) : null}
         <Button
           type="button"
           size="xs"

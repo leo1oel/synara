@@ -499,7 +499,10 @@ import {
 import { ChatTranscriptPane } from "./chat/ChatTranscriptPane";
 import { ThreadDetailHydrationState } from "./chat/ThreadDetailHydrationState";
 import type { MessagesTimelineController } from "./chat/MessagesTimeline";
-import { buildTurnDiffSummaryByAssistantMessageId } from "./chat/MessagesTimeline.logic";
+import {
+  buildTurnDiffSummaryByAssistantMessageId,
+  userMessageEditRejectionCopy,
+} from "./chat/MessagesTimeline.logic";
 import { deriveAgentActivityTimelineState } from "./chat/agentActivity.logic";
 import { ExpandedImagePreview } from "./chat/ExpandedImagePreview";
 import {
@@ -8984,7 +8987,20 @@ export default function ChatView({
   const onEditUserMessage = useCallback(
     async (messageId: MessageId, text: string): Promise<boolean> => {
       const api = readNativeApi();
-      if (!api || !activeThread || !isServerThread || isRevertingCheckpoint) {
+      if (!activeThread) {
+        return false;
+      }
+      // Every refusal must say so: a silent `return false` leaves the edit
+      // composer open with a Send button that appears to do nothing.
+      if (!api || !isServerThread) {
+        setThreadError(
+          activeThread.id,
+          "The agent connection is still getting ready. Try again in a moment.",
+        );
+        return false;
+      }
+      if (isRevertingCheckpoint) {
+        setThreadError(activeThread.id, "The previous edit is still being applied.");
         return false;
       }
       const editTarget = resolveTailUserMessageEditTarget({
@@ -8996,12 +9012,12 @@ export default function ChatView({
             : null,
       });
       if (!editTarget.editable) {
-        setThreadError(activeThread.id, "Only the latest rollbackable user message can be edited.");
+        setThreadError(activeThread.id, userMessageEditRejectionCopy(editTarget.reason));
         return false;
       }
       const originalMessage = activeThread.messages[editTarget.messageIndex];
       if (!originalMessage || originalMessage.role !== "user") {
-        setThreadError(activeThread.id, "Only the latest rollbackable user message can be edited.");
+        setThreadError(activeThread.id, userMessageEditRejectionCopy("missing-message"));
         return false;
       }
       if (isSendBusy || isConnecting || sendInFlightRef.current) {
