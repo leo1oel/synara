@@ -807,7 +807,7 @@ function SettingsRouteView() {
         <SettingsSection title="App">
           <SettingsRow
             title="App icon"
-            description="Choose the icon Synara uses in the dock or taskbar."
+            description="Choose the icon Lattice uses in the dock or taskbar."
             resetAction={
               settings.desktopAppIcon !== defaults.desktopAppIcon ? (
                 <SettingResetButton

@@ -301,6 +301,156 @@ msgstr "移交"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Coding agent"
+msgstr "编码智能体"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Never"
+msgstr "从未"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Could not copy"
+msgstr "无法复制"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Clipboard access failed."
+msgstr "无法访问剪贴板。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connection ready"
+msgstr "连接已准备就绪"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Give your agent the setup prompt before the one-time code expires."
+msgstr "请在一次性代码过期前，将设置提示词发给你的智能体。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Could not create connection"
+msgstr "无法创建连接"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "External MCP setup failed."
+msgstr "外部 MCP 设置失败。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connection revoked"
+msgstr "连接已撤销"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Its credential stops working immediately."
+msgstr "其凭据会立即停止生效。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Could not revoke connection"
+msgstr "无法撤销连接"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Revocation failed."
+msgstr "撤销失败。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "New pairing code ready"
+msgstr "新的配对代码已准备就绪"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Copy the refreshed setup prompt. The new one-time code lasts 10 minutes."
+msgstr "请复制更新后的设置提示词。新的一次性代码有效期为 10 分钟。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Could not resume pairing"
+msgstr "无法恢复配对"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Pairing refresh failed."
+msgstr "刷新配对失败。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Pairing already completed"
+msgstr "已完成配对"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Revoked"
+msgstr "已撤销"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Expired"
+msgstr "已过期"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connected"
+msgstr "已连接"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Paired — waiting for first use"
+msgstr "已配对——等待首次使用"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Pairing code expired"
+msgstr "配对代码已过期"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Waiting for pairing"
+msgstr "等待配对"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Paired — not used yet"
+msgstr "已配对——尚未使用"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Projects: {projects}"
+msgstr "项目：{projects}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Permissions: {permissions}"
+msgstr "权限：{permissions}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Created {created} · Last used {lastUsed} · Expires {expires}"
+msgstr "创建于 {created} · 上次使用 {lastUsed} · 到期时间 {expires}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Continue setup"
+msgstr "继续设置"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Resume pairing"
+msgstr "恢复配对"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Revoke"
+msgstr "撤销"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
 msgid "Connect a coding agent"
 msgstr "连接编码智能体"
 
@@ -311,13 +461,13 @@ msgstr "名称"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
-msgid "How this connection appears in Synara. Works with Codex, Claude, and any other MCP-capable agent."
-msgstr "此连接在 Synara 中的显示名称。支持 Codex、Claude 及其他兼容 MCP 的智能体。"
+msgid "How this connection appears in Lattice. Works with Codex, Claude, and any other MCP-capable agent."
+msgstr "此连接在 Lattice 中的显示名称。支持 Codex、Claude 及其他兼容 MCP 的智能体。"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
-msgid "Access all of Synara"
-msgstr "访问整个 Synara"
+msgid "Access all Lattice projects"
+msgstr "访问所有 Lattice 项目"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
@@ -391,8 +541,178 @@ msgstr "正在创建..."
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connect {name}"
+msgstr "连接 {name}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "This connection has been revoked and can no longer access Lattice."
+msgstr "此连接已被撤销，无法再访问 Lattice。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "This connection has expired and can no longer access Lattice."
+msgstr "此连接已过期，无法再访问 Lattice。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Lattice received a request from this agent. Setup is complete."
+msgstr "Lattice 已收到此智能体的请求。设置已完成。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "The private credential is stored locally. If the agent has not registered Lattice yet, give it the setup prompt below."
+msgstr "私密凭据已保存在本地。如果智能体尚未注册 Lattice，请将下面的设置提示词发给它。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "The one-time pairing code was not used in time. Resume pairing to issue a fresh code without replacing this connection."
+msgstr "一次性配对代码未能及时使用。恢复配对可生成新代码，而无需替换此连接。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Paste the setup prompt into your agent. This page updates automatically when pairing succeeds."
+msgstr "将设置提示词粘贴到智能体中。配对成功后，此页面会自动更新。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Last connected {date}."
+msgstr "上次连接时间：{date}。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connection expires {date}."
+msgstr "连接到期时间：{date}。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Revoke and start over"
+msgstr "撤销并重新开始"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Resuming..."
+msgstr "正在恢复..."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Back"
+msgstr "返回"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Done"
+msgstr "完成"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "1. Give your agent this prompt"
+msgstr "1. 将此提示词发给你的智能体"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Copy the prompt and paste it into the agent you want to connect (Codex, Claude Code, or any MCP-capable app). The agent pairs this computer, registers Lattice in its own configuration, and verifies the connection by itself."
+msgstr "复制此提示词并粘贴到你要连接的智能体中（Codex、Claude Code 或任何兼容 MCP 的应用）。智能体会自行配对此电脑、在其配置中注册 Lattice，并验证连接。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Paired. The prompt now covers only registration and verification."
+msgstr "已配对。此提示词现在只包含注册和验证步骤。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Pairing code expires {date}."
+msgstr "配对代码到期时间：{date}。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Setup prompt copied"
+msgstr "设置提示词已复制"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Copy setup prompt"
+msgstr "复制设置提示词"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Set up by hand instead"
+msgstr "改为手动设置"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "For apps without a terminal or chat, like Claude Desktop: run the pairing command in Terminal, then add the JSON below to the app's MCP configuration."
+msgstr "对于 Claude Desktop 这类没有终端或聊天功能的应用：先在终端中运行配对命令，再将下面的 JSON 添加到应用的 MCP 配置中。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Show"
+msgstr "显示"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Pairing command (run in Terminal)"
+msgstr "配对命令（在终端中运行）"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Pairing command copied"
+msgstr "配对命令已复制"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Copy"
+msgstr "复制"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "MCP configuration (JSON)"
+msgstr "MCP 配置（JSON）"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Configuration copied"
+msgstr "配置已复制"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "2. Try it"
+msgstr "2. 试一试"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Open a new chat in the agent you just connected and send this editable example. You never need to copy project IDs, model IDs, or request IDs yourself."
+msgstr "在刚连接的智能体中新建聊天，然后发送这个可编辑的示例。你无需自行复制项目 ID、模型 ID 或请求 ID。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connection verified by Lattice."
+msgstr "Lattice 已验证此连接。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Lattice will show Connected after the agent makes its first request."
+msgstr "智能体发出首次请求后，Lattice 会显示“已连接”。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Example prompt copied"
+msgstr "示例提示词已复制"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Copy example prompt"
+msgstr "复制示例提示词"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
 msgid "Connected agents"
 msgstr "已连接的智能体"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Loading connections..."
+msgstr "正在加载连接..."
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
@@ -401,8 +721,23 @@ msgstr "没有已连接的智能体"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
-msgid "Connect Codex, Claude, or another local MCP agent to create and follow Synara tasks."
-msgstr "连接 Codex、Claude 或其他本地 MCP 智能体，以创建并跟进 Synara 任务。"
+msgid "Connect Codex, Claude, or another local MCP agent to create and follow Lattice tasks."
+msgstr "连接 Codex、Claude 或其他本地 MCP 智能体，以创建并跟进 Lattice 任务。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Revoked connections ({count})"
+msgstr "已撤销的连接（{count}）"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Revoked connections are hidden by default. Their credentials no longer work."
+msgstr "已撤销的连接默认隐藏，其凭据已无法使用。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Hide"
+msgstr "隐藏"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ManagedSkillDetailView.tsx
@@ -778,8 +1113,8 @@ msgstr "提供商更新"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Review installed provider tools that Synara can safely update."
-msgstr "查看 Synara 可安全更新的已安装提供商工具。"
+msgid "Review installed provider tools that Lattice can safely update."
+msgstr "查看 Lattice 可以安全更新的已安装服务商工具。"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
@@ -1118,8 +1453,8 @@ msgid "Capture another app's frontmost window directly into a task."
 msgstr "把另一个应用的最前端窗口直接截取到任务中。"
 
 #: src/settingsNavigation.ts
-msgid "Capture, customize, and add shortcuts for every Synara command."
-msgstr "为每个 Synara 命令录制、自定义和新增快捷键。"
+msgid "Capture, customize, and add shortcuts for every Lattice command."
+msgstr "查看、自定义并添加每个 Lattice 命令的快捷键。"
 
 #: src/components/chat/ProviderModelPicker.tsx
 msgid "Change model"
@@ -1138,8 +1473,8 @@ msgid "Choose defaults for new chats, navigation, and the Environment panel."
 msgstr "设置新建对话、导航和环境面板的默认行为。"
 
 #: src/settingsNavigation.ts
-msgid "Choose how Synara tells you when work finishes or needs attention."
-msgstr "设置 Synara 在任务完成或需要你处理时如何提醒你。"
+msgid "Choose how Lattice tells you when work finishes or needs attention."
+msgstr "选择 Lattice 在工作完成或需要关注时如何通知你。"
 
 #: src/settingsNavigation.ts
 msgid "Coding"
@@ -1166,8 +1501,8 @@ msgid "General"
 msgstr "通用"
 
 #: src/settingsNavigation.ts
-msgid "Give Codex, Claude, and other local agents scoped access to Synara tasks."
-msgstr "让 Codex、Claude 等本地智能助手在受限范围内访问 Synara 任务。"
+msgid "Give Codex, Claude, and other local agents scoped access to Lattice tasks."
+msgstr "授予 Codex、Claude 等本地智能体对 Lattice 任务的受限访问权限。"
 
 #: src/settingsNavigation.ts
 msgid "Integrations"
@@ -1214,8 +1549,8 @@ msgid "Profile"
 msgstr "个人资料"
 
 #: src/settingsNavigation.ts
-msgid "Review and clean up isolated workspaces created by Synara."
-msgstr "查看并清理 Synara 创建的隔离工作区。"
+msgid "Review and clean up isolated workspaces created by Lattice."
+msgstr "查看并清理 Lattice 创建的隔离工作区。"
 
 #: src/components/chat/ComposerPendingApprovalPanel.tsx
 msgid "Review the request to continue."

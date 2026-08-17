@@ -9,7 +9,6 @@ import {
   type ProjectId,
   type SpaceId,
 } from "@synara/contracts";
-import { getDefaultModel } from "@synara/shared/model";
 
 import { readActiveSpaceId } from "../spacesUiStore";
 import {
@@ -70,10 +69,10 @@ export async function createOrRecoverProjectFromPath(input: {
       workspaceRoot,
       createWorkspaceRootIfMissing: input.createIfMissing === true,
       reuseExistingWorkspaceRoot: input.reuseExistingWorkspaceRoot === true,
-      defaultModelSelection: {
-        provider: "codex",
-        model: getDefaultModel("codex"),
-      },
+      // Null means "use the provider's runtime-recommended model". Persisting
+      // the static catalog fallback here made every new project look like an
+      // explicit GPT-5.5 preference before runtime discovery could finish.
+      defaultModelSelection: null,
       // A project created while a space is active belongs to that space — filing it
       // afterwards would bounce the sidebar back to Void to follow the new project.
       // Callers with an explicit destination (the Create Project dialog) override it.

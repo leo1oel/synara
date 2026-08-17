@@ -81,6 +81,7 @@ describe("createOrRecoverProjectFromPath", () => {
         title: "synara",
         workspaceRoot: WORKSPACE_ROOT,
         createWorkspaceRootIfMissing: false,
+        defaultModelSelection: null,
       }),
     );
     expect(createdProjectId).not.toBeNull();

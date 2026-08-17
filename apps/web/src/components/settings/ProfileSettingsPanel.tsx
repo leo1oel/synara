@@ -78,8 +78,12 @@ function ProfileContent({
   const [editOpen, setEditOpen] = useState(false);
 
   const defaultName = toDisplayName(stats.identity.homeDirBasename);
+  const defaultHandle =
+    stats.identity.defaultHandle.toLowerCase() === "@synara"
+      ? "@lattice"
+      : stats.identity.defaultHandle;
   const { name, setName } = useProfileName(defaultName);
-  const { handle, setHandle } = useProfileHandle(stats.identity.defaultHandle);
+  const { handle, setHandle } = useProfileHandle(defaultHandle);
   const { color: avatarColor, setColor: setAvatarColor } = useProfileAvatarColor();
   const { image: avatarImage, setImage: setAvatarImage } = useProfileAvatarImage();
 
@@ -119,7 +123,7 @@ function ProfileContent({
             <span>{handle}</span>
             <span aria-hidden>·</span>
             <span className="rounded-full border px-1.5 py-px text-xs text-muted-foreground">
-              Synara
+              Lattice
             </span>
           </div>
         </div>

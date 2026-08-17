@@ -1,4 +1,5 @@
 import {
+  DEFAULT_MODEL_BY_PROVIDER,
   ProjectId,
   ThreadId,
   type GitWorktreeSetupPhase,
@@ -925,6 +926,27 @@ export function deriveComposerVoiceState(input: {
     canStartVoiceNotes,
     showVoiceNotesControl: canRenderVoiceNotes || input.isRecording || input.isTranscribing,
   };
+}
+
+/**
+ * Older project creation persisted the static Codex fallback as though the user
+ * had selected it. In Lattice embeds that value is only bootstrap data; explicit
+ * composer choices live in the sticky draft state and must continue to win.
+ */
+export function resolveEmbeddedProjectModelPreference(input: {
+  embedded: boolean;
+  selection: ModelSelection | null | undefined;
+}): ModelSelection | null {
+  const selection = input.selection ?? null;
+  if (
+    !input.embedded ||
+    selection?.provider !== "codex" ||
+    selection.model !== DEFAULT_MODEL_BY_PROVIDER.codex ||
+    selection.options !== undefined
+  ) {
+    return selection;
+  }
+  return null;
 }
 
 export function shouldShowComposerModelBootstrapSkeleton(input: {

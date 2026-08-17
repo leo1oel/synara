@@ -130,7 +130,7 @@ export function ShareDialog({
     return renderNodeToPngBlob(node, CARD_EXPORT_SIZE)
       .then((blob) => {
         if (blob) {
-          downloadBlob(blob, `synara-stats-${stats.timezone.today}.png`);
+          downloadBlob(blob, `lattice-stats-${stats.timezone.today}.png`);
           setStatus("Saved PNG to your downloads.");
         } else {
           setStatus("Could not render the image.");

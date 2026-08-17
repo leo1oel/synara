@@ -43,8 +43,11 @@ export function toDisplayName(basename: string): string {
     .replace(/[._-]+/g, " ")
     .trim()
     .replace(/\s+/g, " ");
+  if (cleaned.toLowerCase() === "synara") {
+    return "Lattice";
+  }
   if (!cleaned) {
-    return "Synara";
+    return "Lattice";
   }
   return cleaned
     .split(" ")
@@ -59,7 +62,7 @@ export function normalizeHandle(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9_]/g, "")
     .slice(0, 30);
-  return `@${slug || "synara"}`;
+  return `@${slug || "lattice"}`;
 }
 
 // Pretty short date for "peak day" tooltips ("Apr 3").

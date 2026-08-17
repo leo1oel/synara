@@ -206,6 +206,7 @@ import {
   resolveEnvironmentPanelPreferenceAfterFirstSend,
   resolveEnvironmentPanelPreferenceUpdate,
   resolveEnvironmentPanelVisible,
+  resolveEmbeddedProjectModelPreference,
   resolveGitRepoUiState,
   resolveProjectScriptTerminalTarget,
   resolvePromptHistoryNavigation,
@@ -1488,6 +1489,10 @@ export default function ChatView({
   const fallbackDraftProject = useStore(
     useMemo(() => createProjectSelector(fallbackDraftProjectId), [fallbackDraftProjectId]),
   );
+  const fallbackDraftProjectModelPreference = resolveEmbeddedProjectModelPreference({
+    embedded: isEmbed,
+    selection: fallbackDraftProject?.defaultModelSelection,
+  });
   const promptRef = useRef(prompt);
   const [isDragOverComposer, setIsDragOverComposer] = useState(false);
   const [expandedImage, setExpandedImage] = useState<ExpandedImagePreview | null>(null);
@@ -1908,14 +1913,14 @@ export default function ChatView({
         ? buildLocalDraftThread(
             threadId,
             draftThread,
-            fallbackDraftProject?.defaultModelSelection ?? {
+            fallbackDraftProjectModelPreference ?? {
               provider: "codex",
               model: DEFAULT_MODEL_BY_PROVIDER.codex,
             },
             localDraftError,
           )
         : undefined,
-    [draftThread, fallbackDraftProject?.defaultModelSelection, localDraftError, threadId],
+    [draftThread, fallbackDraftProjectModelPreference, localDraftError, threadId],
   );
   const activeThread = serverThread ?? localDraftThread;
   // Local threads reconcile their stored branch to the shared checkout as soon as the
@@ -2036,6 +2041,10 @@ export default function ChatView({
   const activeProject = useStore(
     useMemo(() => createProjectSelector(activeProjectId), [activeProjectId]),
   );
+  const activeProjectModelPreference = resolveEmbeddedProjectModelPreference({
+    embedded: isEmbed,
+    selection: activeProject?.defaultModelSelection,
+  });
   const deletePlaceholderTerminalThread = useCallback(
     async (terminalThreadId: ThreadId) => {
       const api = readNativeApi();
@@ -2362,8 +2371,8 @@ export default function ChatView({
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
   const composerModelHintByProvider = useMemo<Record<ProviderKind, string | null>>(() => {
-    const threadModelSelection = activeThread?.modelSelection ?? null;
-    const projectModelSelection = activeProject?.defaultModelSelection ?? null;
+    const threadModelSelection = serverThread?.modelSelection ?? null;
+    const projectModelSelection = activeProjectModelPreference;
     const draftSelections = composerDraft.modelSelectionByProvider;
 
     const resolveHint = (provider: ProviderKind): string | null =>
@@ -2383,9 +2392,9 @@ export default function ChatView({
       pi: resolveHint("pi"),
     };
   }, [
-    activeProject?.defaultModelSelection,
-    activeThread?.modelSelection,
+    activeProjectModelPreference,
     composerDraft.modelSelectionByProvider,
+    serverThread?.modelSelection,
   ]);
   const providerModelDiscoveryCwd = resolveProviderDiscoveryCwd({
     activeThreadWorktreePath: resolvedThreadWorktreePath,
@@ -2410,8 +2419,8 @@ export default function ChatView({
   const { modelOptions: composerModelOptions, selectedModel } = useEffectiveComposerModelState({
     threadId,
     selectedProvider,
-    threadModelSelection: activeThread?.modelSelection,
-    projectModelSelection: activeProject?.defaultModelSelection,
+    threadModelSelection: serverThread?.modelSelection,
+    projectModelSelection: activeProjectModelPreference,
     customModelsByProvider,
     availableModelOptionsByProvider: modelOptionsByProvider,
   });
@@ -2422,9 +2431,9 @@ export default function ChatView({
       ? draftModelSelectionForSelectedProvider?.provider === "claudeAgent" &&
         draftModelSelectionForSelectedProvider.model === selectedModel
         ? draftModelSelectionForSelectedProvider.supportsAutoMode
-        : activeThread?.modelSelection.provider === "claudeAgent" &&
-            activeThread.modelSelection.model === selectedModel
-          ? activeThread.modelSelection.supportsAutoMode
+        : serverThread?.modelSelection.provider === "claudeAgent" &&
+            serverThread.modelSelection.model === selectedModel
+          ? serverThread.modelSelection.supportsAutoMode
           : undefined
       : undefined;
   const selectedRuntimeModel = useMemo(() => {
@@ -2491,13 +2500,19 @@ export default function ChatView({
       : (normalizeModelSlug(selectedModelForPicker, selectedProvider) ?? selectedModelForPicker);
   }, [modelOptionsByProvider, selectedModelForPicker, selectedProvider]);
   const persistedComposerModelSelection =
-    sessionProvider && activeThread?.modelSelection.provider !== sessionProvider
-      ? activeProject?.defaultModelSelection?.provider === selectedProvider
-        ? activeProject.defaultModelSelection
+    sessionProvider && serverThread?.modelSelection.provider !== sessionProvider
+      ? activeProjectModelPreference?.provider === selectedProvider
+        ? activeProjectModelPreference
         : null
-      : (activeThread?.modelSelection ?? activeProject?.defaultModelSelection ?? null);
+      : (serverThread?.modelSelection ?? activeProjectModelPreference);
   const providerModelsLoading = selectedProviderModelsLoading;
+  const hasExplicitComposerModelPreference = Boolean(
+    draftModelSelectionForSelectedProvider ||
+    serverThread?.modelSelection.provider === selectedProvider ||
+    activeProjectModelPreference?.provider === selectedProvider,
+  );
   const selectedProviderRequiresRuntimeModels =
+    !hasExplicitComposerModelPreference ||
     selectedProvider === "cursor" ||
     selectedProvider === "antigravity" ||
     selectedProvider === "droid" ||
@@ -7604,6 +7619,7 @@ export default function ChatView({
       !activeThread ||
       isSendBusy ||
       isConnecting ||
+      (!queuedTurn && showComposerModelBootstrapSkeleton) ||
       isVoiceTranscribing ||
       sendPreflightInFlightRef.current ||
       sendInFlightRef.current
@@ -12149,6 +12165,7 @@ export default function ChatView({
                               disabled={
                                 isSendBusy ||
                                 isConnecting ||
+                                showComposerModelBootstrapSkeleton ||
                                 isVoiceTranscribing ||
                                 isPreparingComposerImages ||
                                 !composerSendState.hasSendableContent

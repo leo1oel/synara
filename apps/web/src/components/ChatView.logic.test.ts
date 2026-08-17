@@ -47,6 +47,7 @@ import {
   resolveComposerStripWorkLogEntries,
   resolveCycledModelSlug,
   resolveDefaultEnvironmentPanelOpen,
+  resolveEmbeddedProjectModelPreference,
   resolveEnvironmentPanelOpen,
   resolveEnvironmentPanelPreferenceAfterFirstSend,
   resolveEnvironmentPanelPreferenceUpdate,
@@ -1396,6 +1397,31 @@ describe("resolveActiveTurnLiveDiffState", () => {
       deletions: 0,
       hasChanges: true,
     });
+  });
+});
+
+describe("resolveEmbeddedProjectModelPreference", () => {
+  it("treats the legacy embedded static Codex default as an implicit fallback", () => {
+    expect(
+      resolveEmbeddedProjectModelPreference({
+        embedded: true,
+        selection: { provider: "codex", model: "gpt-5.5" },
+      }),
+    ).toBeNull();
+  });
+
+  it("preserves an explicit embedded model and its traits", () => {
+    const selection = {
+      provider: "codex" as const,
+      model: "gpt-5.6-sol",
+      options: { reasoningEffort: "max", fastMode: true },
+    };
+    expect(resolveEmbeddedProjectModelPreference({ embedded: true, selection })).toBe(selection);
+  });
+
+  it("does not reinterpret standalone project defaults", () => {
+    const selection = { provider: "codex" as const, model: "gpt-5.5" };
+    expect(resolveEmbeddedProjectModelPreference({ embedded: false, selection })).toBe(selection);
   });
 });
 

@@ -301,6 +301,156 @@ msgstr "Hand off"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Coding agent"
+msgstr "Coding agent"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Never"
+msgstr "Never"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Could not copy"
+msgstr "Could not copy"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Clipboard access failed."
+msgstr "Clipboard access failed."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connection ready"
+msgstr "Connection ready"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Give your agent the setup prompt before the one-time code expires."
+msgstr "Give your agent the setup prompt before the one-time code expires."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Could not create connection"
+msgstr "Could not create connection"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "External MCP setup failed."
+msgstr "External MCP setup failed."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connection revoked"
+msgstr "Connection revoked"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Its credential stops working immediately."
+msgstr "Its credential stops working immediately."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Could not revoke connection"
+msgstr "Could not revoke connection"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Revocation failed."
+msgstr "Revocation failed."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "New pairing code ready"
+msgstr "New pairing code ready"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Copy the refreshed setup prompt. The new one-time code lasts 10 minutes."
+msgstr "Copy the refreshed setup prompt. The new one-time code lasts 10 minutes."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Could not resume pairing"
+msgstr "Could not resume pairing"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Pairing refresh failed."
+msgstr "Pairing refresh failed."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Pairing already completed"
+msgstr "Pairing already completed"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Revoked"
+msgstr "Revoked"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Expired"
+msgstr "Expired"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connected"
+msgstr "Connected"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Paired — waiting for first use"
+msgstr "Paired — waiting for first use"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Pairing code expired"
+msgstr "Pairing code expired"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Waiting for pairing"
+msgstr "Waiting for pairing"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Paired — not used yet"
+msgstr "Paired — not used yet"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Projects: {projects}"
+msgstr "Projects: {projects}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Permissions: {permissions}"
+msgstr "Permissions: {permissions}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Created {created} · Last used {lastUsed} · Expires {expires}"
+msgstr "Created {created} · Last used {lastUsed} · Expires {expires}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Continue setup"
+msgstr "Continue setup"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Resume pairing"
+msgstr "Resume pairing"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Revoke"
+msgstr "Revoke"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
 msgid "Connect a coding agent"
 msgstr "Connect a coding agent"
 
@@ -311,13 +461,13 @@ msgstr "Name"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
-msgid "How this connection appears in Synara. Works with Codex, Claude, and any other MCP-capable agent."
-msgstr "How this connection appears in Synara. Works with Codex, Claude, and any other MCP-capable agent."
+msgid "How this connection appears in Lattice. Works with Codex, Claude, and any other MCP-capable agent."
+msgstr "How this connection appears in Lattice. Works with Codex, Claude, and any other MCP-capable agent."
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
-msgid "Access all of Synara"
-msgstr "Access all of Synara"
+msgid "Access all Lattice projects"
+msgstr "Access all Lattice projects"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
@@ -391,8 +541,178 @@ msgstr "Creating..."
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connect {name}"
+msgstr "Connect {name}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "This connection has been revoked and can no longer access Lattice."
+msgstr "This connection has been revoked and can no longer access Lattice."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "This connection has expired and can no longer access Lattice."
+msgstr "This connection has expired and can no longer access Lattice."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Lattice received a request from this agent. Setup is complete."
+msgstr "Lattice received a request from this agent. Setup is complete."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "The private credential is stored locally. If the agent has not registered Lattice yet, give it the setup prompt below."
+msgstr "The private credential is stored locally. If the agent has not registered Lattice yet, give it the setup prompt below."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "The one-time pairing code was not used in time. Resume pairing to issue a fresh code without replacing this connection."
+msgstr "The one-time pairing code was not used in time. Resume pairing to issue a fresh code without replacing this connection."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Paste the setup prompt into your agent. This page updates automatically when pairing succeeds."
+msgstr "Paste the setup prompt into your agent. This page updates automatically when pairing succeeds."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Last connected {date}."
+msgstr "Last connected {date}."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connection expires {date}."
+msgstr "Connection expires {date}."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Revoke and start over"
+msgstr "Revoke and start over"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Resuming..."
+msgstr "Resuming..."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Back"
+msgstr "Back"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Done"
+msgstr "Done"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "1. Give your agent this prompt"
+msgstr "1. Give your agent this prompt"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Copy the prompt and paste it into the agent you want to connect (Codex, Claude Code, or any MCP-capable app). The agent pairs this computer, registers Lattice in its own configuration, and verifies the connection by itself."
+msgstr "Copy the prompt and paste it into the agent you want to connect (Codex, Claude Code, or any MCP-capable app). The agent pairs this computer, registers Lattice in its own configuration, and verifies the connection by itself."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Paired. The prompt now covers only registration and verification."
+msgstr "Paired. The prompt now covers only registration and verification."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Pairing code expires {date}."
+msgstr "Pairing code expires {date}."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Setup prompt copied"
+msgstr "Setup prompt copied"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Copy setup prompt"
+msgstr "Copy setup prompt"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Set up by hand instead"
+msgstr "Set up by hand instead"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "For apps without a terminal or chat, like Claude Desktop: run the pairing command in Terminal, then add the JSON below to the app's MCP configuration."
+msgstr "For apps without a terminal or chat, like Claude Desktop: run the pairing command in Terminal, then add the JSON below to the app's MCP configuration."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Show"
+msgstr "Show"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Pairing command (run in Terminal)"
+msgstr "Pairing command (run in Terminal)"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Pairing command copied"
+msgstr "Pairing command copied"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Copy"
+msgstr "Copy"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "MCP configuration (JSON)"
+msgstr "MCP configuration (JSON)"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Configuration copied"
+msgstr "Configuration copied"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "2. Try it"
+msgstr "2. Try it"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Open a new chat in the agent you just connected and send this editable example. You never need to copy project IDs, model IDs, or request IDs yourself."
+msgstr "Open a new chat in the agent you just connected and send this editable example. You never need to copy project IDs, model IDs, or request IDs yourself."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connection verified by Lattice."
+msgstr "Connection verified by Lattice."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Lattice will show Connected after the agent makes its first request."
+msgstr "Lattice will show Connected after the agent makes its first request."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Example prompt copied"
+msgstr "Example prompt copied"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Copy example prompt"
+msgstr "Copy example prompt"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
 msgid "Connected agents"
 msgstr "Connected agents"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Loading connections..."
+msgstr "Loading connections..."
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
@@ -401,8 +721,23 @@ msgstr "No connected agents"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
-msgid "Connect Codex, Claude, or another local MCP agent to create and follow Synara tasks."
-msgstr "Connect Codex, Claude, or another local MCP agent to create and follow Synara tasks."
+msgid "Connect Codex, Claude, or another local MCP agent to create and follow Lattice tasks."
+msgstr "Connect Codex, Claude, or another local MCP agent to create and follow Lattice tasks."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Revoked connections ({count})"
+msgstr "Revoked connections ({count})"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Revoked connections are hidden by default. Their credentials no longer work."
+msgstr "Revoked connections are hidden by default. Their credentials no longer work."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Hide"
+msgstr "Hide"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ManagedSkillDetailView.tsx
@@ -778,8 +1113,8 @@ msgstr "Provider updates"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Review installed provider tools that Synara can safely update."
-msgstr "Review installed provider tools that Synara can safely update."
+msgid "Review installed provider tools that Lattice can safely update."
+msgstr "Review installed provider tools that Lattice can safely update."
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
@@ -1118,8 +1453,8 @@ msgid "Capture another app's frontmost window directly into a task."
 msgstr "Capture another app's frontmost window directly into a task."
 
 #: src/settingsNavigation.ts
-msgid "Capture, customize, and add shortcuts for every Synara command."
-msgstr "Capture, customize, and add shortcuts for every Synara command."
+msgid "Capture, customize, and add shortcuts for every Lattice command."
+msgstr "Capture, customize, and add shortcuts for every Lattice command."
 
 #: src/components/chat/ProviderModelPicker.tsx
 msgid "Change model"
@@ -1138,8 +1473,8 @@ msgid "Choose defaults for new chats, navigation, and the Environment panel."
 msgstr "Choose defaults for new chats, navigation, and the Environment panel."
 
 #: src/settingsNavigation.ts
-msgid "Choose how Synara tells you when work finishes or needs attention."
-msgstr "Choose how Synara tells you when work finishes or needs attention."
+msgid "Choose how Lattice tells you when work finishes or needs attention."
+msgstr "Choose how Lattice tells you when work finishes or needs attention."
 
 #: src/settingsNavigation.ts
 msgid "Coding"
@@ -1166,8 +1501,8 @@ msgid "General"
 msgstr "General"
 
 #: src/settingsNavigation.ts
-msgid "Give Codex, Claude, and other local agents scoped access to Synara tasks."
-msgstr "Give Codex, Claude, and other local agents scoped access to Synara tasks."
+msgid "Give Codex, Claude, and other local agents scoped access to Lattice tasks."
+msgstr "Give Codex, Claude, and other local agents scoped access to Lattice tasks."
 
 #: src/settingsNavigation.ts
 msgid "Integrations"
@@ -1214,8 +1549,8 @@ msgid "Profile"
 msgstr "Profile"
 
 #: src/settingsNavigation.ts
-msgid "Review and clean up isolated workspaces created by Synara."
-msgstr "Review and clean up isolated workspaces created by Synara."
+msgid "Review and clean up isolated workspaces created by Lattice."
+msgstr "Review and clean up isolated workspaces created by Lattice."
 
 #: src/components/chat/ComposerPendingApprovalPanel.tsx
 msgid "Review the request to continue."

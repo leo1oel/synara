@@ -344,6 +344,101 @@ describe("composerDraftStore modelSelection", () => {
     );
   });
 
+  it("uses the first runtime-preferred model when there is no explicit selection", () => {
+    const state = deriveEffectiveComposerModelState({
+      draft: {
+        modelSelectionByProvider: {},
+        activeProvider: null,
+      },
+      selectedProvider: "codex",
+      threadModelSelection: null,
+      projectModelSelection: null,
+      customModelsByProvider: {
+        codex: [],
+        claudeAgent: [],
+        cursor: [],
+        antigravity: [],
+        grok: [],
+        droid: [],
+        kilo: [],
+        opencode: [],
+        pi: [],
+      },
+      availableModelOptionsByProvider: {
+        codex: [
+          { slug: "gpt-5.6-sol", name: "GPT-5.6 Sol" },
+          { slug: "gpt-5.5", name: "GPT-5.5" },
+        ],
+      },
+    });
+
+    expect(state.selectedModel).toBe("gpt-5.6-sol");
+  });
+
+  it("uses the static provider default when runtime discovery has no result", () => {
+    const state = deriveEffectiveComposerModelState({
+      draft: null,
+      selectedProvider: "codex",
+      threadModelSelection: null,
+      projectModelSelection: null,
+      customModelsByProvider: {
+        codex: [],
+        claudeAgent: [],
+        cursor: [],
+        antigravity: [],
+        grok: [],
+        droid: [],
+        kilo: [],
+        opencode: [],
+        pi: [],
+      },
+      availableModelOptionsByProvider: { codex: [] },
+    });
+
+    expect(state.selectedModel).toBe("gpt-5.5");
+  });
+
+  it("preserves an explicit model, reasoning effort, and fast-mode preference", () => {
+    const state = deriveEffectiveComposerModelState({
+      draft: {
+        modelSelectionByProvider: {
+          codex: modelSelection("codex", "gpt-5.5", {
+            reasoningEffort: "xhigh",
+            fastMode: true,
+          }),
+        },
+        activeProvider: "codex",
+      },
+      selectedProvider: "codex",
+      threadModelSelection: null,
+      projectModelSelection: null,
+      customModelsByProvider: {
+        codex: [],
+        claudeAgent: [],
+        cursor: [],
+        antigravity: [],
+        grok: [],
+        droid: [],
+        kilo: [],
+        opencode: [],
+        pi: [],
+      },
+      availableModelOptionsByProvider: {
+        codex: [
+          { slug: "gpt-5.6-sol", name: "GPT-5.6 Sol" },
+          { slug: "gpt-5.5", name: "GPT-5.5" },
+        ],
+      },
+    });
+
+    expect(state).toEqual({
+      selectedModel: "gpt-5.5",
+      modelOptions: {
+        codex: { reasoningEffort: "xhigh", fastMode: true },
+      },
+    });
+  });
+
   it("prefers the active OpenCode thread model over a stale draft default when runtime models are available", () => {
     const state = deriveEffectiveComposerModelState({
       draft: {
