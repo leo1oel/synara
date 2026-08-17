@@ -3,8 +3,8 @@ import { Buffer } from "node:buffer";
 import { Effect, Layer } from "effect";
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 
-import { AuthError, ServerAuth } from "../auth/Services/ServerAuth.ts";
-import { authErrorResponse, makeEffectAuthRequest } from "../auth/effectHttp.ts";
+import { authErrorResponse } from "../auth/effectHttp.ts";
+import { authenticateLatticeRelayRequest } from "./latticeRelayAuthentication.ts";
 import {
   LatticeSpreadsheetBroker,
   type LatticeSpreadsheetResult,
@@ -63,15 +63,6 @@ export function isLatticeSpreadsheetResultBody(
   );
 }
 
-const authenticate = Effect.gen(function* () {
-  const request = yield* HttpServerRequest.HttpServerRequest;
-  const auth = yield* ServerAuth;
-  const session = yield* auth.authenticateHttpRequest(makeEffectAuthRequest(request));
-  if (session.credentialSource !== "bearer") {
-    return yield* new AuthError({ message: "Bearer authentication is required.", status: 403 });
-  }
-});
-
 function workspaceRootFromRequest(request: HttpServerRequest.HttpServerRequest): string | null {
   const value = HttpServerRequest.toURL(request)?.searchParams.get("workspaceRoot")?.trim();
   return value && value.length <= 4_096 ? value : null;
@@ -81,7 +72,7 @@ const pollRoute = HttpRouter.add(
   "GET",
   LATTICE_SPREADSHEET_POLL_PATH,
   Effect.gen(function* () {
-    yield* authenticate;
+    yield* authenticateLatticeRelayRequest;
     const httpRequest = yield* HttpServerRequest.HttpServerRequest;
     const workspaceRoot = workspaceRootFromRequest(httpRequest);
     if (!workspaceRoot) return HttpServerResponse.text("Missing workspaceRoot", { status: 400 });
@@ -100,7 +91,7 @@ const resultRoute = HttpRouter.add(
   "POST",
   LATTICE_SPREADSHEET_RESULT_PATH,
   Effect.gen(function* () {
-    yield* authenticate;
+    yield* authenticateLatticeRelayRequest;
     const request = yield* HttpServerRequest.HttpServerRequest;
     const workspaceRoot = workspaceRootFromRequest(request);
     if (!workspaceRoot) return HttpServerResponse.text("Missing workspaceRoot", { status: 400 });

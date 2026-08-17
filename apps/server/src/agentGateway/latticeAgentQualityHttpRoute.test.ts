@@ -7,6 +7,7 @@ import { HttpRouter } from "effect/unstable/http";
 import { describe, expect, it } from "vitest";
 
 import { AuthError, ServerAuth, type ServerAuthShape } from "../auth/Services/ServerAuth.ts";
+import { ServerConfig, type ServerConfigShape } from "../config.ts";
 import { LATTICE_AGENT_COMPILE_RESULT } from "./agentQualityTrace.ts";
 import {
   LATTICE_AGENT_COMPILE_RESULT_PATH,
@@ -20,6 +21,11 @@ async function withQualityServer(
   const scope = await Effect.runPromise(Scope.make("sequential"));
   const recorded: unknown[] = [];
   let nodeServer: http.Server | null = null;
+  const config = {
+    host: "127.0.0.1",
+    publicUrl: undefined,
+    authToken: "desktop-token",
+  } as ServerConfigShape;
   const auth = {
     authenticateHttpRequest: (request: { headers: Record<string, string | undefined> }) =>
       request.headers.authorization === "Bearer valid-token"
@@ -59,6 +65,7 @@ async function withQualityServer(
         }).pipe(
           Effect.provide(
             Layer.mergeAll(
+              Layer.succeed(ServerConfig, config),
               Layer.succeed(ServerAuth, auth),
               Layer.succeed(AgentQualityTrace, qualityTrace),
               NodeServices.layer,
@@ -97,6 +104,16 @@ describe("latticeAgentQualityRouteLayer", () => {
       });
       expect(unauthorized.status).toBe(401);
 
+      const desktopRelay = await fetch(`${origin}${LATTICE_AGENT_COMPILE_RESULT_PATH}`, {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer desktop-token",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(valid),
+      });
+      expect(desktopRelay.status).toBe(204);
+
       const contentBearing = await fetch(`${origin}${LATTICE_AGENT_COMPILE_RESULT_PATH}`, {
         method: "POST",
         headers: {
@@ -116,7 +133,7 @@ describe("latticeAgentQualityRouteLayer", () => {
         body: JSON.stringify(valid),
       });
       expect(accepted.status).toBe(204);
-      expect(recorded).toEqual([valid]);
+      expect(recorded).toEqual([valid, valid]);
     });
   });
 });

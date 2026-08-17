@@ -12,6 +12,7 @@ import {
   type AuthRequest,
   type ServerAuthShape,
 } from "../auth/Services/ServerAuth.ts";
+import { ServerConfig, type ServerConfigShape } from "../config.ts";
 import {
   LatticeSpreadsheetBroker,
   type LatticeSpreadsheetBrokerShape,
@@ -39,6 +40,11 @@ async function withSpreadsheetServer(
   const scope = await Effect.runPromise(Scope.make("sequential"));
   const completed: CompletedResult[] = [];
   let nodeServer: http.Server | null = null;
+  const config = {
+    host: "127.0.0.1",
+    publicUrl: undefined,
+    authToken: "desktop-token",
+  } as ServerConfigShape;
   const auth = {
     authenticateHttpRequest: (request: AuthRequest) => {
       if (request.headers.authorization === "Bearer bearer-token") {
@@ -97,6 +103,7 @@ async function withSpreadsheetServer(
         }).pipe(
           Effect.provide(
             Layer.mergeAll(
+              Layer.succeed(ServerConfig, config),
               Layer.succeed(ServerAuth, auth),
               Layer.succeed(LatticeSpreadsheetBroker, broker),
               NodeServices.layer,
@@ -148,6 +155,14 @@ describe("latticeSpreadsheetRouteLayer", () => {
         action: "read",
         args: { path: "data.lattice-sheet", range: "A1" },
       });
+
+      expect(
+        (
+          await fetch(pollUrl, {
+            headers: { Authorization: "Bearer desktop-token" },
+          })
+        ).status,
+      ).toBe(200);
 
       const otherWorkspace = await fetch(
         routeUrl(origin, LATTICE_SPREADSHEET_POLL_PATH, "/workspace/other"),
