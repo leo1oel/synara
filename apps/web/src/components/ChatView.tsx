@@ -3808,6 +3808,8 @@ export default function ChatView({
       cwd: gitCwd,
       query: effectiveMentionQuery,
       enabled: isMentionTrigger && !isLocalFolderBrowserOpen,
+      allowEmptyQuery: true,
+      kind: effectiveMentionQuery.length === 0 ? "file" : undefined,
       limit: 80,
     }),
   );

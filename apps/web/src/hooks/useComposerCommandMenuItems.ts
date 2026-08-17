@@ -433,14 +433,16 @@ export function useComposerCommandMenuItems(input: {
       papers: paperMentionSources ?? [],
       query: composerTrigger.query,
     });
-    // Papers are a primary Lattice workflow. Keep the initial slice short so a
-    // large library never crowds Plugins, Chats, Local, or Subagents out of view.
+    // Project files are the primary coding and writing workflow, so keep them
+    // first for both pointer selection and the default keyboard highlight.
+    // The menu gives large file and paper result sets their own bounded viewport
+    // so neither source can crowd the remaining mention types out of view.
     return [
+      ...pathItems,
       ...paperItems,
       ...pluginItems,
       ...threadItems,
       ...localRootItems,
-      ...pathItems,
       ...agentItems,
     ];
   }

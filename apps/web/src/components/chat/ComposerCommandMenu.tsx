@@ -262,10 +262,11 @@ export function groupCommandItems(
   groupSlashCommandSections: boolean,
 ): ComposerCommandGroupModel[] {
   if (triggerKind === "mention") {
+    const fileItems = items.filter((item) => item.type === "path");
     const paperItems = items.filter((item) => item.type === "paper");
     const pluginItems = items.filter((item) => item.type === "plugin");
     const threadItems = items.filter((item) => item.type === "thread");
-    const localItems = items.filter((item) => item.type === "local-root" || item.type === "path");
+    const localItems = items.filter((item) => item.type === "local-root");
     const agentItems = items.filter((item) => item.type === "agent");
     const otherItems = items.filter(
       (item) =>
@@ -278,6 +279,9 @@ export function groupCommandItems(
     );
 
     const groups: ComposerCommandGroupModel[] = [];
+    if (fileItems.length > 0) {
+      groups.push({ id: "files", label: "Files", items: fileItems });
+    }
     if (paperItems.length > 0) {
       groups.push({ id: "papers", label: "Papers", items: paperItems });
     }
@@ -346,6 +350,8 @@ export function ComposerCommandMenu(props: {
     props.triggerKind,
     props.groupSlashCommandSections ?? true,
   );
+  const showFileSearchHint =
+    props.triggerKind === "mention" && !groups.some((group) => group.id === "files");
   const shouldRenderList = props.items.length > 0 || props.triggerKind === "mention";
 
   useEffect(() => {
@@ -371,90 +377,90 @@ export function ComposerCommandMenu(props: {
       <div className={COMPOSER_COMMAND_MENU_SURFACE_CLASS_NAME}>
         {shouldRenderList ? (
           <CommandList className="max-h-72 scroll-py-1 p-1">
-            {groups.map((group, groupIndex) => (
-              <div key={group.id}>
-                {groupIndex > 0 ? <CommandSeparator className="my-0.5" /> : null}
-                <CommandGroup>
-                  {group.label ? (
-                    group.id === "papers" ? (
-                      <div className="flex items-center justify-between gap-3 pe-5">
-                        <CommandGroupLabel className={COMPOSER_COMMAND_GROUP_LABEL_CLASSNAME}>
-                          {group.label} · {group.items.length}
-                        </CommandGroupLabel>
-                        {group.items.length > 4 ? (
-                          <span className="text-[10.5px] text-muted-foreground/45">
-                            Scroll to browse
-                          </span>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <CommandGroupLabel className={COMPOSER_COMMAND_GROUP_LABEL_CLASSNAME}>
-                        {group.label}
-                      </CommandGroupLabel>
-                    )
-                  ) : null}
-                  {group.id === "papers" && group.items.length > 4 ? (
-                    <div className="me-3 h-28 min-h-0" data-paper-mention-scroll-region>
-                      {/* CommandList owns the menu-edge scrollbar. This viewport
-                          owns the Papers scrollbar and stays inset by 12px. */}
-                      <ScrollArea
-                        aria-label={`Papers, ${group.items.length} items`}
-                        scrollFade
-                        scrollbarGutter
-                        viewportClassName="scroll-py-1"
-                      >
-                        {group.items.map((item) => (
-                          <ComposerCommandMenuItem
-                            key={item.id}
-                            item={item}
-                            resolvedTheme={props.resolvedTheme}
-                            isActive={props.activeItemId === item.id}
-                            itemRef={(node) => {
-                              itemRefs.current[item.id] = node;
-                            }}
-                            onHighlight={props.onHighlightedItemChange}
-                            onSelect={props.onSelect}
-                          />
-                        ))}
-                      </ScrollArea>
-                    </div>
-                  ) : (
-                    group.items.map((item) => (
-                      <ComposerCommandMenuItem
-                        key={item.id}
-                        item={item}
-                        resolvedTheme={props.resolvedTheme}
-                        isActive={props.activeItemId === item.id}
-                        itemRef={(node) => {
-                          itemRefs.current[item.id] = node;
-                        }}
-                        onHighlight={props.onHighlightedItemChange}
-                        onSelect={props.onSelect}
-                      />
-                    ))
-                  )}
-                </CommandGroup>
-              </div>
-            ))}
-            {props.triggerKind === "mention" ? (
+            {showFileSearchHint ? (
               <>
-                {groups.length > 0 ? <CommandSeparator className="my-0.5" /> : null}
-                {/* This footer is informational copy, not a selectable result group. */}
-                <div className="pt-0.5 pb-2">
-                  <p
-                    className={cn(
-                      COMPOSER_COMMAND_GROUP_LABEL_CLASSNAME,
-                      "px-2 py-0 font-medium text-muted-foreground text-xs",
-                    )}
-                  >
-                    Files
-                  </p>
+                <div className="pt-0.5 pb-1.5">
+                  <p className={COMPOSER_COMMAND_GROUP_LABEL_CLASSNAME}>Files</p>
                   <p className="px-2 pt-0.5 text-[11px] text-muted-foreground/55">
-                    Type to search for files
+                    Type to search project files
                   </p>
                 </div>
+                {groups.length > 0 ? <CommandSeparator className="my-0.5" /> : null}
               </>
             ) : null}
+            {groups.map((group, groupIndex) => {
+              const isBrowsableMentionGroup = group.id === "files" || group.id === "papers";
+              const usesBoundedViewport = isBrowsableMentionGroup && group.items.length > 4;
+              return (
+                <div key={group.id}>
+                  {groupIndex > 0 ? <CommandSeparator className="my-0.5" /> : null}
+                  <CommandGroup>
+                    {group.label ? (
+                      isBrowsableMentionGroup ? (
+                        <div className="flex items-center justify-between gap-3 pe-5">
+                          <CommandGroupLabel className={COMPOSER_COMMAND_GROUP_LABEL_CLASSNAME}>
+                            {group.label} · {group.items.length}
+                          </CommandGroupLabel>
+                          {usesBoundedViewport ? (
+                            <span className="text-[10.5px] text-muted-foreground/45">
+                              Scroll to browse
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <CommandGroupLabel className={COMPOSER_COMMAND_GROUP_LABEL_CLASSNAME}>
+                          {group.label}
+                        </CommandGroupLabel>
+                      )
+                    ) : null}
+                    {usesBoundedViewport ? (
+                      <div
+                        className="me-3 h-28 min-h-0"
+                        data-mention-scroll-region={group.id}
+                      >
+                        {/* CommandList owns the menu-edge scrollbar. Large file
+                            and paper groups own an inset scrollbar so the other
+                            mention sources remain reachable. */}
+                        <ScrollArea
+                          aria-label={`${group.label}, ${group.items.length} items`}
+                          scrollFade
+                          scrollbarGutter
+                          viewportClassName="scroll-py-1"
+                        >
+                          {group.items.map((item) => (
+                            <ComposerCommandMenuItem
+                              key={item.id}
+                              item={item}
+                              resolvedTheme={props.resolvedTheme}
+                              isActive={props.activeItemId === item.id}
+                              itemRef={(node) => {
+                                itemRefs.current[item.id] = node;
+                              }}
+                              onHighlight={props.onHighlightedItemChange}
+                              onSelect={props.onSelect}
+                            />
+                          ))}
+                        </ScrollArea>
+                      </div>
+                    ) : (
+                      group.items.map((item) => (
+                        <ComposerCommandMenuItem
+                          key={item.id}
+                          item={item}
+                          resolvedTheme={props.resolvedTheme}
+                          isActive={props.activeItemId === item.id}
+                          itemRef={(node) => {
+                            itemRefs.current[item.id] = node;
+                          }}
+                          onHighlight={props.onHighlightedItemChange}
+                          onSelect={props.onSelect}
+                        />
+                      ))
+                    )}
+                  </CommandGroup>
+                </div>
+              );
+            })}
           </CommandList>
         ) : null}
         {props.items.length === 0 && (

@@ -93,6 +93,17 @@ describe("searchWorkspaceEntries", () => {
     );
   });
 
+  it("ranks shallow files first when browsing without a query", async () => {
+    const cwd = makeTempDir("synara-workspace-shallow-files-");
+    writeFile(cwd, ".research/papers/1706.03762/paper.md");
+    writeFile(cwd, "main.tex");
+
+    const result = await searchWorkspaceEntries({ cwd, query: "", kind: "file", limit: 1 });
+
+    expect(result.entries.map((entry) => entry.path)).toEqual(["main.tex"]);
+    expect(result.truncated).toBe(true);
+  });
+
   it("supports fuzzy subsequence queries for composer path search", async () => {
     const cwd = makeTempDir("synara-workspace-fuzzy-query-");
     writeFile(cwd, "src/components/Composer.tsx");
