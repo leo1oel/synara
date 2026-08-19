@@ -49,7 +49,7 @@ import { Skeleton } from "../ui/skeleton";
 import { PlusIcon } from "~/lib/icons";
 import { Trans } from "@lingui/react/macro";
 import { useLingui } from "@lingui/react";
-import { postOpenSettingsToLattice, readEmbedMode } from "../../embedMode";
+import { openEmbeddedProviderSettings } from "../../embedMode";
 
 function isAvailableProviderOption(option: (typeof PROVIDER_OPTIONS)[number]): option is {
   value: ProviderKind;
@@ -269,10 +269,7 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
     setFavoriteModelSlugs((current) => toggleFavoriteModelSlug(current, slug));
   };
   const openProviderSettings = () => {
-    const embedConfig = readEmbedMode();
-    if (embedConfig && postOpenSettingsToLattice(embedConfig, "providers")) {
-      return;
-    }
+    if (openEmbeddedProviderSettings()) return;
     appHistory.push("/settings?section=providers");
   };
 

@@ -737,6 +737,48 @@ describe("ProviderModelPicker", () => {
     }
   });
 
+  it("asks the Lattice host even when embed hostOrigin was not stored", async () => {
+    sessionStorage.setItem(
+      "synara.poc.embed-mode",
+      JSON.stringify({
+        workspaceRoot: "/repo/project",
+        theme: "dark",
+        surface: "chrome",
+        hostOrigin: null,
+        locale: "zh-CN",
+      }),
+    );
+    const postMessage = vi.spyOn(window.parent, "postMessage");
+    const mounted = await mountPicker({
+      provider: "codex",
+      model: "gpt-5-codex",
+      lockedProvider: null,
+      providers: [
+        {
+          provider: "codex",
+          status: "ready",
+          available: true,
+          authStatus: "authenticated",
+          checkedAt: "2026-04-10T10:00:00.000Z",
+        },
+      ],
+    });
+
+    try {
+      await page.getByRole("button").click();
+      await page.getByRole("menuitem", { name: "Add Providers" }).click();
+
+      await vi.waitFor(() => {
+        expect(postMessage).toHaveBeenCalledWith(
+          { type: SYNARA_OPEN_SETTINGS, section: "providers" },
+          "*",
+        );
+      });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it("keeps warning providers selectable when they are still available", async () => {
     const mounted = await mountPicker({
       provider: "codex",

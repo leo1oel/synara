@@ -334,7 +334,7 @@ function SettingsRouteView() {
   useEffect(() => {
     if (!isEmbed) return;
     const embedConfig = readEmbedMode();
-    if (!embedConfig?.hostOrigin) return;
+    if (!embedConfig) return;
     const forwardWheel = (event: WheelEvent) => {
       // Include the current height in the wheel message itself. Sending height
       // and wheel as separate postMessage tasks let the host clamp the first
@@ -347,8 +347,8 @@ function SettingsRouteView() {
       );
       event.preventDefault();
     };
-    window.addEventListener("wheel", forwardWheel, { passive: false });
-    return () => window.removeEventListener("wheel", forwardWheel);
+    window.addEventListener("wheel", forwardWheel, { capture: true, passive: false });
+    return () => window.removeEventListener("wheel", forwardWheel, { capture: true });
   }, [activeSection, isEmbed]);
 
   // Deep links and sidebar search targets all resolve to stable DOM ids in the active panel.

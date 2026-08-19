@@ -442,7 +442,7 @@ import {
   postAgentPermissionModeToLattice,
   postHostContextRequestToLattice,
   postHostContextSelectionClearToLattice,
-  postOpenSettingsToLattice,
+  openEmbeddedProviderSettings,
   postPaperLibraryRequestToLattice,
   postLayoutMetricsToLattice,
   postProjectHistoryToLattice,
@@ -12408,10 +12408,7 @@ export default function ChatView({
         {...(needsProviderSetup
           ? {
               onConfigure: () => {
-                const embedConfig = readEmbedMode();
-                if (embedConfig && postOpenSettingsToLattice(embedConfig, "providers")) {
-                  return;
-                }
+                if (openEmbeddedProviderSettings()) return;
                 void navigate({ to: "/settings", search: { section: "providers" } });
               },
             }

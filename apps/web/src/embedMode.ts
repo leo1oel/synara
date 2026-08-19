@@ -634,7 +634,7 @@ export function postSettingsWheelToLattice(
     section: string;
   },
 ): void {
-  if (!config.hostOrigin) return;
+  const targetOrigin = config.hostOrigin ?? "*";
   const contentHeight =
     content && Number.isFinite(content.height) ? Math.ceil(content.height) : undefined;
   const section = content?.section.trim() || undefined;
@@ -646,7 +646,7 @@ export function postSettingsWheelToLattice(
       deltaMode: event.deltaMode,
       ...(contentHeight !== undefined && section ? { contentHeight, section } : {}),
     },
-    config.hostOrigin,
+    targetOrigin,
   );
 }
 
@@ -692,8 +692,21 @@ export function postOpenReviewToLattice(
 }
 
 export function postOpenSettingsToLattice(config: EmbedModeConfig, section: "providers"): boolean {
-  if (!config.hostOrigin) return false;
-  window.parent.postMessage({ type: SYNARA_OPEN_SETTINGS, section }, config.hostOrigin);
+  // A missing hostOrigin still means we are inside Lattice's iframe. Falling
+  // back to in-frame `/settings` is what made "Add providers" replace the Agent
+  // panel; `*` is safe because Lattice authenticates the sender origin.
+  window.parent.postMessage(
+    { type: SYNARA_OPEN_SETTINGS, section },
+    config.hostOrigin ?? "*",
+  );
+  return true;
+}
+
+export function openEmbeddedProviderSettings(): boolean {
+  const config = readEmbedMode();
+  if (config) return postOpenSettingsToLattice(config, "providers");
+  if (typeof window === "undefined" || window.parent === window) return false;
+  window.parent.postMessage({ type: SYNARA_OPEN_SETTINGS, section: "providers" }, "*");
   return true;
 }
 

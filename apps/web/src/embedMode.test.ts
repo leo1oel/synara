@@ -6,6 +6,7 @@ import {
   initializeEmbedMode,
   postEmbedReadyToLattice,
   postOpenSettingsToLattice,
+  openEmbeddedProviderSettings,
   postShowInFolderToLattice,
   postConfirmationRequestToLattice,
   postSettingsContentHeightToLattice,
@@ -163,6 +164,52 @@ describe("Lattice embed mode", () => {
         section: "providers",
       },
       "http://localhost:1420",
+    );
+  });
+
+  it("still asks Lattice to open provider settings when hostOrigin was not stored", () => {
+    const { postMessage } = installBrowserStubs();
+    expect(
+      postOpenSettingsToLattice(
+        {
+          workspaceRoot: "/Users/me/paper",
+          theme: "dark",
+          surface: "chrome",
+          hostOrigin: null,
+          locale: "en",
+        },
+        "providers",
+      ),
+    ).toBe(true);
+    expect(postMessage).toHaveBeenCalledWith(
+      {
+        type: SYNARA_OPEN_SETTINGS,
+        section: "providers",
+      },
+      "*",
+    );
+  });
+
+  it("treats an iframe without stored embed config as a Lattice host hand-off", () => {
+    const postMessage = vi.fn();
+    Object.defineProperty(globalThis, "sessionStorage", {
+      configurable: true,
+      value: {
+        getItem: () => null,
+        setItem: () => {},
+        removeItem: () => {},
+      },
+    });
+    Object.defineProperty(globalThis, "window", {
+      configurable: true,
+      value: {
+        parent: { postMessage },
+      },
+    });
+    expect(openEmbeddedProviderSettings()).toBe(true);
+    expect(postMessage).toHaveBeenCalledWith(
+      { type: SYNARA_OPEN_SETTINGS, section: "providers" },
+      "*",
     );
   });
 

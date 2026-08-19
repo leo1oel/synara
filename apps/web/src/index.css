@@ -795,13 +795,25 @@ html[data-synara-embed="true"] .synara-settings-content {
 
 /* Embedded Settings reports its intrinsic content height to Lattice, which owns
    the only scrollbar. Keep every route shell content-sized so changing the host
-   iframe height cannot feed back into the next measured height. */
+   iframe height cannot feed back into the next measured height.
+   Use overflow:scroll rather than hidden: WebKit does not dispatch wheel events
+   into a document with nothing to scroll, which is why Lattice's scrollbar
+   could be dragged but the trackpad over Providers/MCP/Skills did nothing. */
 html[data-synara-embed="true"]:has(.app-settings-surface),
 html[data-synara-embed="true"]:has(.app-settings-surface) body,
 html[data-synara-embed="true"]:has(.app-settings-surface) #root {
   height: auto !important;
   min-height: 0 !important;
-  overflow: hidden !important;
+  overflow-y: scroll !important;
+  scrollbar-width: none !important;
+}
+
+html[data-synara-embed="true"]:has(.app-settings-surface)::-webkit-scrollbar,
+html[data-synara-embed="true"]:has(.app-settings-surface) body::-webkit-scrollbar,
+html[data-synara-embed="true"]:has(.app-settings-surface) #root::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* The route card and SidebarInset sit in horizontal flex layouts. Preserve
