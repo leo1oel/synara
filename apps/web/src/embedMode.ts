@@ -40,6 +40,16 @@ export interface EmbedModeConfig {
   locale: "en" | "zh-CN";
 }
 
+/** Handshake query keys Lattice stamps on the iframe URL. */
+export interface LatticeEmbedSearch {
+  embed?: "1";
+  workspaceRoot?: string;
+  theme?: "light" | "dark";
+  surface?: "chrome" | "drawer";
+  hostOrigin?: string;
+  locale?: "en" | "zh-CN";
+}
+
 export interface SynaraConfirmationRequest {
   type: typeof SYNARA_CONFIRMATION_REQUEST;
   id: string;
@@ -277,6 +287,49 @@ function normalizedOrigin(value: string | null): string | null {
   } catch {
     return null;
   }
+}
+
+function isEmbedFlag(value: unknown): boolean {
+  return value === "1" || value === 1 || value === true || value === '"1"' || value === "true";
+}
+
+function isNestedFrame(): boolean {
+  return typeof window !== "undefined" && window.parent !== window;
+}
+
+export function parseLatticeEmbedSearch(search: Record<string, unknown>): LatticeEmbedSearch {
+  const workspaceRoot =
+    typeof search.workspaceRoot === "string" && search.workspaceRoot.trim().length > 0
+      ? search.workspaceRoot.trim()
+      : undefined;
+  const theme = search.theme === "dark" || search.theme === "light" ? search.theme : undefined;
+  const surface =
+    search.surface === "drawer" || search.surface === "chrome" ? search.surface : undefined;
+  const hostOrigin =
+    typeof search.hostOrigin === "string"
+      ? (normalizedOrigin(search.hostOrigin) ?? undefined)
+      : undefined;
+  const locale = search.locale === "zh-CN" || search.locale === "en" ? search.locale : undefined;
+  return {
+    ...(isEmbedFlag(search.embed) ? { embed: "1" as const } : {}),
+    ...(workspaceRoot ? { workspaceRoot } : {}),
+    ...(theme ? { theme } : {}),
+    ...(surface ? { surface } : {}),
+    ...(hostOrigin ? { hostOrigin } : {}),
+    ...(locale ? { locale } : {}),
+  };
+}
+
+export function latticeEmbedSearchFromConfig(config: EmbedModeConfig | null): LatticeEmbedSearch {
+  if (!config) return {};
+  return {
+    embed: "1",
+    workspaceRoot: config.workspaceRoot,
+    theme: config.theme,
+    surface: config.surface,
+    ...(config.hostOrigin ? { hostOrigin: config.hostOrigin } : {}),
+    locale: config.locale,
+  };
 }
 
 function boundedString(value: unknown, maximum: number): value is string {
@@ -662,43 +715,50 @@ export function postShowInFolderToLattice(config: EmbedModeConfig, path: string)
   return true;
 }
 
+function postMessageToLatticeParent(message: object, hostOrigin: string | null): boolean {
+  // Same reason as Add providers: a missing hostOrigin still means we are
+  // inside Lattice's iframe. `*` is safe because Lattice authenticates the
+  // sender origin. Top-level windows must not post to themselves.
+  if (!isNestedFrame()) return false;
+  window.parent.postMessage(message, hostOrigin ?? "*");
+  return true;
+}
+
 // Same reason as the review hand-off: a file reference in an answer opens a
 // dock pane, and the embed has no dock, so clicking one did nothing at all.
 // The host owns an editor already — give it the file.
-export function postOpenFileToLattice(config: EmbedModeConfig, filePath: string): boolean {
-  if (!config.hostOrigin || !filePath.trim()) return false;
-  window.parent.postMessage({ type: SYNARA_OPEN_FILE, filePath }, config.hostOrigin);
-  return true;
+export function postOpenFileToLattice(config: EmbedModeConfig | null, filePath: string): boolean {
+  if (!filePath.trim()) return false;
+  return postMessageToLatticeParent(
+    { type: SYNARA_OPEN_FILE, filePath },
+    config?.hostOrigin ?? null,
+  );
 }
 
 // Embedded chats have no RightDock, so turn-diff review is delegated to the
 // host: with a filePath Lattice opens that file in its editor, without one it
 // opens the /review drawer pinned to this thread and turn.
 export function postOpenReviewToLattice(
-  config: EmbedModeConfig,
+  config: EmbedModeConfig | null,
   review: { threadId: string; turnId: string; filePath?: string | undefined },
 ): boolean {
-  if (!config.hostOrigin || !review.threadId.trim() || !review.turnId.trim()) return false;
-  window.parent.postMessage(
+  if (!review.threadId.trim() || !review.turnId.trim()) return false;
+  return postMessageToLatticeParent(
     {
       type: SYNARA_OPEN_REVIEW,
       threadId: review.threadId,
       turnId: review.turnId,
       ...(review.filePath?.trim() ? { filePath: review.filePath } : {}),
     },
-    config.hostOrigin,
+    config?.hostOrigin ?? null,
   );
-  return true;
 }
 
 export function postOpenSettingsToLattice(config: EmbedModeConfig, section: "providers"): boolean {
   // A missing hostOrigin still means we are inside Lattice's iframe. Falling
   // back to in-frame `/settings` is what made "Add providers" replace the Agent
   // panel; `*` is safe because Lattice authenticates the sender origin.
-  window.parent.postMessage(
-    { type: SYNARA_OPEN_SETTINGS, section },
-    config.hostOrigin ?? "*",
-  );
+  window.parent.postMessage({ type: SYNARA_OPEN_SETTINGS, section }, config.hostOrigin ?? "*");
   return true;
 }
 
@@ -952,10 +1012,28 @@ export function initializeEmbedMode(): void {
     }
     sessionStorage.setItem(EMBED_MODE_STORAGE_KEY, JSON.stringify(config));
     applyEmbedTheme(config);
-  } else {
-    sessionStorage.removeItem(EMBED_MODE_STORAGE_KEY);
-    sessionStorage.removeItem(EMBED_AUTH_TOKEN_STORAGE_KEY);
+    return;
   }
+
+  // Thread navigation and `validateSearch` used to strip the handshake query.
+  // Reloading that stripped URL took this branch, deleted sessionStorage, then
+  // `applyThemeState` painted Synara's default light surface and file/review
+  // clicks no-op'd. Keep the stored handshake while this document is still a
+  // nested frame; only a top-level window is allowed to drop embed mode.
+  if (isNestedFrame()) {
+    const existing = readEmbedMode();
+    if (!existing) return;
+    const hostOrigin = existing.hostOrigin ?? normalizedOrigin(document.referrer);
+    const config = hostOrigin === existing.hostOrigin ? existing : { ...existing, hostOrigin };
+    if (config !== existing) {
+      sessionStorage.setItem(EMBED_MODE_STORAGE_KEY, JSON.stringify(config));
+    }
+    applyEmbedTheme(config);
+    return;
+  }
+
+  sessionStorage.removeItem(EMBED_MODE_STORAGE_KEY);
+  sessionStorage.removeItem(EMBED_AUTH_TOKEN_STORAGE_KEY);
 }
 
 export function readEmbedMode(): EmbedModeConfig | null {
@@ -978,4 +1056,27 @@ export function readEmbedMode(): EmbedModeConfig | null {
 
 export function isSynaraEmbedMode(): boolean {
   return readEmbedMode() !== null;
+}
+
+/**
+ * Keep Lattice's handshake keys on in-iframe navigation. URL search is the
+ * reload-safe copy; sessionStorage fills gaps once a route has already
+ * dropped the query.
+ */
+export function mergeLatticeEmbedSearch<T extends Record<string, unknown>>(
+  previous: Record<string, unknown>,
+  next: T,
+): T & LatticeEmbedSearch {
+  const embed = {
+    ...latticeEmbedSearchFromConfig(readEmbedMode()),
+    ...parseLatticeEmbedSearch(previous),
+    ...parseLatticeEmbedSearch(next),
+  };
+  return { ...next, ...embed };
+}
+
+export function withLatticeEmbedSearch(
+  search?: (previous: Record<string, unknown>) => Record<string, unknown>,
+): (previous: Record<string, unknown>) => Record<string, unknown> {
+  return (previous) => mergeLatticeEmbedSearch(previous, search ? search(previous) : {});
 }

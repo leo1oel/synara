@@ -9,10 +9,11 @@ import { useEffect, useState } from "react";
 
 import { ThreadId, TurnId } from "@synara/contracts";
 import { LazyDiffPanel } from "../components/chat/ChatThreadSurfacePrimitives";
+import { parseLatticeEmbedSearch, type LatticeEmbedSearch } from "../embedMode";
 import { useEmbeddedWorkspaceProject } from "../hooks/useEmbeddedWorkspaceProject";
 import { retainThreadDetailSubscription } from "../threadDetailSubscriptionRetention";
 
-export interface ReviewRouteSearch {
+export interface ReviewRouteSearch extends LatticeEmbedSearch {
   threadId?: string;
   turnId?: string;
   filePath?: string;
@@ -20,6 +21,7 @@ export interface ReviewRouteSearch {
 
 function parseReviewSearch(search: Record<string, unknown>): ReviewRouteSearch {
   return {
+    ...parseLatticeEmbedSearch(search),
     ...(typeof search.threadId === "string" && search.threadId
       ? { threadId: search.threadId }
       : {}),

@@ -349,10 +349,12 @@ export function SingleChatSurface(props: {
     // for the simulator. File rows open in the host editor and the Review
     // button opens the host's changes drawer.
     if (props.embedMode) {
-      const embedConfig = readEmbedMode();
       if (
-        embedConfig &&
-        postOpenReviewToLattice(embedConfig, { threadId: props.threadId, turnId, filePath })
+        postOpenReviewToLattice(readEmbedMode(), {
+          threadId: props.threadId,
+          turnId,
+          filePath,
+        })
       ) {
         return;
       }
@@ -520,9 +522,8 @@ export function SingleChatSurface(props: {
       // The embedded dock is reserved for the simulator. Lattice already has
       // the editor, so hand workspace files to the host instead.
       if (props.embedMode && workspaceRoot) {
-        const embedConfig = readEmbedMode();
         const relativePath = resolveWorkspaceFileOpenTarget(path, workspaceRoot);
-        if (embedConfig && relativePath && postOpenFileToLattice(embedConfig, relativePath)) {
+        if (relativePath && postOpenFileToLattice(readEmbedMode(), relativePath)) {
           return true;
         }
       }

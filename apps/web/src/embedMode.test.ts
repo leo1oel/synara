@@ -5,9 +5,12 @@ import {
   embedWorkspaceMatches,
   initializeEmbedMode,
   postEmbedReadyToLattice,
+  postOpenFileToLattice,
+  postOpenReviewToLattice,
   postOpenSettingsToLattice,
   openEmbeddedProviderSettings,
   postShowInFolderToLattice,
+  withLatticeEmbedSearch,
   postConfirmationRequestToLattice,
   postSettingsContentHeightToLattice,
   postSettingsWheelToLattice,
@@ -38,6 +41,8 @@ import {
   LATTICE_RESTORE_AGENT_CHECKPOINT,
   SYNARA_EMBED_READY,
   SYNARA_CONFIRMATION_REQUEST,
+  SYNARA_OPEN_FILE,
+  SYNARA_OPEN_REVIEW,
   SYNARA_OPEN_SETTINGS,
   SYNARA_SETTINGS_CONTENT_HEIGHT,
   SYNARA_SETTINGS_WHEEL,
@@ -188,6 +193,139 @@ describe("Lattice embed mode", () => {
       },
       "*",
     );
+  });
+
+  it("keeps stored embed config when a nested frame reloads a stripped URL", () => {
+    const { setProperty } = installBrowserStubs();
+    initializeEmbedMode();
+    expect(readEmbedMode()).not.toBeNull();
+
+    window.location.search = "";
+    setProperty.mockClear();
+    initializeEmbedMode();
+
+    expect(readEmbedMode()).toEqual({
+      workspaceRoot: "/Users/me/paper",
+      theme: "dark",
+      surface: "chrome",
+      hostOrigin: "http://localhost:1420",
+      locale: "en",
+    });
+    expect(setProperty).toHaveBeenCalled();
+  });
+
+  it("recovers a missing hostOrigin from document.referrer after a nested reload", () => {
+    installBrowserStubs();
+    initializeEmbedMode();
+    sessionStorage.setItem(
+      "synara.poc.embed-mode",
+      JSON.stringify({
+        workspaceRoot: "/Users/me/paper",
+        theme: "dark",
+        surface: "chrome",
+        hostOrigin: null,
+        locale: "en",
+      }),
+    );
+    document.referrer = "http://localhost:1420/";
+    window.location.search = "";
+
+    initializeEmbedMode();
+
+    expect(readEmbedMode()?.hostOrigin).toBe("http://localhost:1420");
+  });
+
+  it("clears embed config when a top-level window has no handshake query", () => {
+    installBrowserStubs();
+    initializeEmbedMode();
+    expect(readEmbedMode()).not.toBeNull();
+
+    const isolatedWindow = window as { parent: unknown; location: { search: string } };
+    isolatedWindow.parent = isolatedWindow;
+    isolatedWindow.location.search = "";
+    initializeEmbedMode();
+
+    expect(readEmbedMode()).toBeNull();
+  });
+
+  it("asks Lattice to open a file even when hostOrigin was not stored", () => {
+    const { postMessage } = installBrowserStubs();
+    expect(
+      postOpenFileToLattice(
+        {
+          workspaceRoot: "/Users/me/paper",
+          theme: "dark",
+          surface: "chrome",
+          hostOrigin: null,
+          locale: "en",
+        },
+        "src/main.tex",
+      ),
+    ).toBe(true);
+    expect(postMessage).toHaveBeenCalledWith(
+      { type: SYNARA_OPEN_FILE, filePath: "src/main.tex" },
+      "*",
+    );
+  });
+
+  it("asks Lattice to open review even when hostOrigin was not stored", () => {
+    const { postMessage } = installBrowserStubs();
+    expect(
+      postOpenReviewToLattice(
+        {
+          workspaceRoot: "/Users/me/paper",
+          theme: "dark",
+          surface: "chrome",
+          hostOrigin: null,
+          locale: "en",
+        },
+        { threadId: "thread-1", turnId: "turn-1" },
+      ),
+    ).toBe(true);
+    expect(postMessage).toHaveBeenCalledWith(
+      { type: SYNARA_OPEN_REVIEW, threadId: "thread-1", turnId: "turn-1" },
+      "*",
+    );
+  });
+
+  it("hands a file to Lattice from a nested frame with no stored config", () => {
+    const { postMessage } = installBrowserStubs();
+    expect(postOpenFileToLattice(null, "src/main.tex")).toBe(true);
+    expect(postMessage).toHaveBeenCalledWith(
+      { type: SYNARA_OPEN_FILE, filePath: "src/main.tex" },
+      "*",
+    );
+  });
+
+  it("rebuilds Lattice handshake search after a route dropped the query", () => {
+    installBrowserStubs();
+    initializeEmbedMode();
+    expect(
+      withLatticeEmbedSearch(() => ({ splitViewId: "split-1" }))({
+        embed: "1",
+        workspaceRoot: "/Users/me/paper",
+        theme: "dark",
+      }),
+    ).toEqual({
+      splitViewId: "split-1",
+      embed: "1",
+      workspaceRoot: "/Users/me/paper",
+      theme: "dark",
+      surface: "chrome",
+      hostOrigin: "http://localhost:1420",
+      locale: "en",
+    });
+  });
+
+  it("fills handshake keys from sessionStorage when the previous URL was already stripped", () => {
+    installBrowserStubs();
+    initializeEmbedMode();
+    const next = withLatticeEmbedSearch()({});
+    expect(next).toMatchObject({
+      embed: "1",
+      workspaceRoot: "/Users/me/paper",
+      hostOrigin: "http://localhost:1420",
+    });
   });
 
   it("treats an iframe without stored embed config as a Lattice host hand-off", () => {

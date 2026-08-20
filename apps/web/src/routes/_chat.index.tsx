@@ -19,6 +19,7 @@ import { collectStudioProjectIds } from "../lib/studioProjects";
 import { resolveSplitViewThreadIds, useSplitViewStore } from "../splitViewStore";
 import { EMPTY_THREAD_IDS, useStore } from "../store";
 import { useWorkspacePathsStore } from "../workspacePathsStore";
+import { parseLatticeEmbedSearch, type LatticeEmbedSearch } from "../embedMode";
 import { resolveChatIndexRestoreRoute, type ChatIndexLandingSpace } from "./-chatIndexRoute.logic";
 
 /**
@@ -27,7 +28,7 @@ import { resolveChatIndexRestoreRoute, type ChatIndexLandingSpace } from "./-cha
  * happily reopens the *previous* Space's thread, and the route-to-Space sync then writes that
  * Space back over the user's click.
  */
-export interface ChatIndexSearch {
+export interface ChatIndexSearch extends LatticeEmbedSearch {
   readonly space?: string | undefined;
 }
 
@@ -99,7 +100,9 @@ function ChatIndexRouteView() {
 }
 
 export const Route = createFileRoute("/_chat/")({
-  validateSearch: (raw: Record<string, unknown>): ChatIndexSearch =>
-    typeof raw.space === "string" && raw.space.length > 0 ? { space: raw.space } : {},
+  validateSearch: (raw: Record<string, unknown>): ChatIndexSearch => ({
+    ...parseLatticeEmbedSearch(raw),
+    ...(typeof raw.space === "string" && raw.space.length > 0 ? { space: raw.space } : {}),
+  }),
   component: ChatIndexRouteView,
 });

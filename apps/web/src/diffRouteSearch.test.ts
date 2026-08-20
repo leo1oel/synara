@@ -120,4 +120,26 @@ describe("parseDiffRouteSearch", () => {
       splitViewId: "split-1",
     });
   });
+
+  it("preserves Lattice handshake keys independently of diff state", () => {
+    expect(
+      parseDiffRouteSearch({
+        embed: "1",
+        workspaceRoot: "/Users/me/paper",
+        theme: "dark",
+        surface: "chrome",
+        hostOrigin: "http://localhost:1420",
+        locale: "zh-CN",
+        diff: "0",
+        diffTurnId: "turn-1",
+      }),
+    ).toEqual({
+      embed: "1",
+      workspaceRoot: "/Users/me/paper",
+      theme: "dark",
+      surface: "chrome",
+      hostOrigin: "http://localhost:1420",
+      locale: "zh-CN",
+    });
+  });
 });

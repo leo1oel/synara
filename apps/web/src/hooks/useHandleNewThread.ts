@@ -32,6 +32,7 @@ import {
 } from "../lib/stagedDraftNavigation";
 import { newCommandId, newThreadId } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
+import { withLatticeEmbedSearch } from "../embedMode";
 import { useFocusedChatContext } from "../focusedChatContext";
 import { useStore } from "../store";
 import { useTemporaryThreadStore } from "../temporaryThreadStore";
@@ -41,7 +42,9 @@ export interface NewThreadNavigationOptions {
   /**
    * Search params applied when the hook navigates to the created thread.
    * Lets callers keep view-level state (e.g. the editor workspace view)
-   * across the route change; default navigation clears all search params.
+   * across the route change. Lattice embed keys are always merged back in;
+   * omitting `search` used to clear the handshake query and a later iframe
+   * reload would drop embed mode.
    */
   search?: (previous: Record<string, unknown>) => Record<string, unknown>;
 }
@@ -264,7 +267,7 @@ export function useHandleNewThread() {
         await navigate({
           to: "/$threadId",
           params: { threadId: bootstrapPlan.threadId },
-          ...(navigation?.search ? { search: navigation.search } : {}),
+          search: withLatticeEmbedSearch(navigation?.search),
         });
         restoreComposerDraft(bootstrapPlan.threadId, preservedComposerDraft);
         if (entryPoint === "terminal") {
@@ -333,7 +336,7 @@ export function useHandleNewThread() {
               navigate({
                 to: "/$threadId",
                 params: { threadId },
-                ...(navigation?.search ? { search: navigation.search } : {}),
+                search: withLatticeEmbedSearch(navigation?.search),
               }).then(resolve, reject);
             });
           }),

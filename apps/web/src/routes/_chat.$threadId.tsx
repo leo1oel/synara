@@ -114,6 +114,9 @@ function ChatThreadRouteView() {
           embed: "1",
           workspaceRoot: embedMode.workspaceRoot,
           theme: embedMode.theme,
+          surface: embedMode.surface,
+          ...(embedMode.hostOrigin ? { hostOrigin: embedMode.hostOrigin } : {}),
+          locale: embedMode.locale,
         }),
       },
     );
