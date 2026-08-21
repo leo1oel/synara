@@ -145,28 +145,40 @@ export function localizeGitText(i18n: I18n, text: string): string {
   }
   const pushBranch = /^Push to (.+)$/u.exec(text);
   if (pushBranch) return i18n._("Push to {branch}", { branch: pushBranch[1]! });
-  const commitPushDescription = /^This action will commit and push changes on "(.+)"\. You can continue on this branch or create a feature branch and run the same action there\.$/u.exec(text);
+  const commitPushDescription =
+    /^This action will commit and push changes on "(.+)"\. You can continue on this branch or create a feature branch and run the same action there\.$/u.exec(
+      text,
+    );
   if (commitPushDescription) {
     return i18n._(
       'This action will commit and push changes on "{branch}". You can continue on this branch or create a feature branch and run the same action there.',
       { branch: commitPushDescription[1]! },
     );
   }
-  const pushDescription = /^This action will push local commits on "(.+)"\. You can continue on this branch or create a feature branch and run the same action there\.$/u.exec(text);
+  const pushDescription =
+    /^This action will push local commits on "(.+)"\. You can continue on this branch or create a feature branch and run the same action there\.$/u.exec(
+      text,
+    );
   if (pushDescription) {
     return i18n._(
       'This action will push local commits on "{branch}". You can continue on this branch or create a feature branch and run the same action there.',
       { branch: pushDescription[1]! },
     );
   }
-  const featureBranchCommitPr = /^Pull requests can't be opened from "(.+)" into itself\. This action will create a feature branch, commit your changes there, push it, and create the PR\.$/u.exec(text);
+  const featureBranchCommitPr =
+    /^Pull requests can't be opened from "(.+)" into itself\. This action will create a feature branch, commit your changes there, push it, and create the PR\.$/u.exec(
+      text,
+    );
   if (featureBranchCommitPr) {
     return i18n._(
       'Pull requests can\'t be opened from "{branch}" into itself. This action will create a feature branch, commit your changes there, push it, and create the PR.',
       { branch: featureBranchCommitPr[1]! },
     );
   }
-  const featureBranchPr = /^Pull requests can't be opened from "(.+)" into itself\. This action will create a feature branch from your current commits, push it, and create the PR\.$/u.exec(text);
+  const featureBranchPr =
+    /^Pull requests can't be opened from "(.+)" into itself\. This action will create a feature branch from your current commits, push it, and create the PR\.$/u.exec(
+      text,
+    );
   if (featureBranchPr) {
     return i18n._(
       'Pull requests can\'t be opened from "{branch}" into itself. This action will create a feature branch from your current commits, push it, and create the PR.',

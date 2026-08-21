@@ -1982,8 +1982,8 @@ msgstr "正在加载提供商用量…"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProviderUsageSettingsPanel.tsx
-msgid "Usage is read locally from each provider CLI's stored credentials and fetched directly from the provider. Short-lived tokens are refreshed through the provider's own CLI or official token endpoint; if a provider shows “Not signed in”, re-authenticate with its CLI."
-msgstr "用量数据会从各提供商 CLI 保存的凭据中读取，并直接向提供商获取。短期凭据会通过提供商自己的 CLI 或官方凭据接口刷新；如果某个提供商显示“未登录”，请使用其 CLI 重新登录。"
+msgid "Usage is read locally from each provider CLI's stored credentials and fetched directly from the provider. The list follows whatever you are signed into; unsigned providers stay visible until any account is connected, then drop away. Short-lived tokens are refreshed through the provider's own CLI or official token endpoint."
+msgstr "用量数据会从各提供商 CLI 保存的凭据中读取，并直接向提供商获取。列表会根据你当前登录的账号显示；在尚未连接任何账号时，未登录的提供商仍会显示，连接账号后则会隐藏。短期凭据会通过提供商自己的 CLI 或官方凭据接口刷新。"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx

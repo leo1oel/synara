@@ -98,9 +98,7 @@ function parseYamlBlockScalar(
     return { value: "", nextIndex };
   }
 
-  const normalizedLines = blockLines.map((line) =>
-    line.trim() ? line.slice(contentIndent) : "",
-  );
+  const normalizedLines = blockLines.map((line) => (line.trim() ? line.slice(contentIndent) : ""));
   const literal = normalizedLines.join("\n").trim();
   return {
     value: style === ">" ? literal.replace(/([^\n])\n(?=[^\n])/g, "$1 ") : literal,
@@ -301,9 +299,7 @@ export async function collectSkillMarkdownPaths(
       .filter(
         (entry) =>
           entry.isDirectory &&
-          !(
-            depth === 0 && options?.excludedTopLevelDirectories?.includes(entry.name)
-          ),
+          !(depth === 0 && options?.excludedTopLevelDirectories?.includes(entry.name)),
       )
       .map((entry) => entry.name)
       .sort();

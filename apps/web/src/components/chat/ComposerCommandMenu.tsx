@@ -414,10 +414,7 @@ export function ComposerCommandMenu(props: {
                       )
                     ) : null}
                     {usesBoundedViewport ? (
-                      <div
-                        className="me-3 h-28 min-h-0"
-                        data-mention-scroll-region={group.id}
-                      >
+                      <div className="me-3 h-28 min-h-0" data-mention-scroll-region={group.id}>
                         {/* CommandList owns the menu-edge scrollbar. Large file
                             and paper groups own an inset scrollbar so the other
                             mention sources remain reachable. */}

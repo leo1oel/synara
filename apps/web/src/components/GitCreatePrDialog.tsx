@@ -140,9 +140,7 @@ export function GitCreatePrDialog({
           </label>
         )}
         {unavailableHint && (
-          <p className="py-1 text-warning text-xs">
-            {localizeGitText(i18n, unavailableHint)}
-          </p>
+          <p className="py-1 text-warning text-xs">{localizeGitText(i18n, unavailableHint)}</p>
         )}
       </GitDialogBody>
       <GitDialogActionList>

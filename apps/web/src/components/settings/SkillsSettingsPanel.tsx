@@ -313,9 +313,7 @@ export function SkillsSettingsPanel() {
       toastManager.add({
         type: "success",
         title: i18n._("Editable copy created"),
-        description: i18n._(
-          "The copy is in your user skills folder. Your original is unchanged.",
-        ),
+        description: i18n._("The copy is in your user skills folder. Your original is unchanged."),
       });
     } catch (error) {
       toastManager.add({
@@ -364,7 +362,7 @@ export function SkillsSettingsPanel() {
             </Badge>
           </span>
         }
-        description={group.description}
+        {...(group.description !== undefined ? { description: group.description } : {})}
         status={
           <span className="flex min-w-0 flex-col gap-1">
             <span>
@@ -515,10 +513,7 @@ export function SkillsSettingsPanel() {
                     <ChevronDownIcon aria-hidden="true" className="ml-auto size-3 opacity-60" />
                   ) : null}
                 </MenuTrigger>
-                <ComposerPickerMenuPopup
-                  align="end"
-                  className="skills-library-menu w-52 min-w-52"
-                >
+                <ComposerPickerMenuPopup align="end" className="skills-library-menu w-52 min-w-52">
                   <MenuItem
                     onClick={() => {
                       setSelectedSkill(null);
@@ -565,7 +560,9 @@ export function SkillsSettingsPanel() {
       ) : null}
 
       {!catalogQuery.isLoading && !catalogQuery.isError && !hasVisibleSkills ? (
-        <SettingsSectionShell title={searchQuery.trim() ? i18n._("Search results") : i18n._("Skills")}>
+        <SettingsSectionShell
+          title={searchQuery.trim() ? i18n._("Search results") : i18n._("Skills")}
+        >
           <SettingsEmptyState>
             {searchQuery.trim()
               ? i18n._("No skills match “{query}”.", { query: searchQuery.trim() })
@@ -626,9 +623,7 @@ export function SkillsSettingsPanel() {
                       {section.groups.length}
                     </Badge>
                   </div>
-                  <SettingsCard className="px-3">
-                    {section.groups.map(renderSkillRow)}
-                  </SettingsCard>
+                  <SettingsCard className="px-3">{section.groups.map(renderSkillRow)}</SettingsCard>
                 </section>
               );
             })}

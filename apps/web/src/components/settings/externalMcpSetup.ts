@@ -227,12 +227,17 @@ export function buildExternalMcpSetupPrompt(input: {
   return sections.join("\n\n");
 }
 
-export function describeExternalMcpProjects(input: {
-  readonly projectScope?: ExternalMcpProjectScope | undefined;
-  readonly allowedProjects: ReadonlyArray<{ readonly title: string }>;
-}, locale: ExternalMcpDisplayLocale = "en"): string {
+export function describeExternalMcpProjects(
+  input: {
+    readonly projectScope?: ExternalMcpProjectScope | undefined;
+    readonly allowedProjects: ReadonlyArray<{ readonly title: string }>;
+  },
+  locale: ExternalMcpDisplayLocale = "en",
+): string {
   if (input.projectScope === "all") {
-    return locale === "zh-CN" ? "所有项目，包括以后新增的项目" : "All projects, including future ones";
+    return locale === "zh-CN"
+      ? "所有项目，包括以后新增的项目"
+      : "All projects, including future ones";
   }
   const titles = input.allowedProjects.map((project) => project.title);
   return titles.length > 0 ? titles.join(", ") : locale === "zh-CN" ? "没有项目" : "No projects";

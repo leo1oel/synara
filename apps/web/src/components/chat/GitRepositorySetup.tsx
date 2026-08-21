@@ -199,10 +199,9 @@ function GitHubRepositorySetupDialog(props: {
                   : i18n._("GitHub repository connected"),
               description:
                 props.mode === "create"
-                  ? i18n._(
-                      "{repository} is ready. Files stay local until your first push.",
-                      { repository: result.repository },
-                    )
+                  ? i18n._("{repository} is ready. Files stay local until your first push.", {
+                      repository: result.repository,
+                    })
                   : i18n._("{repository} is now connected as {remoteName}.", {
                       repository: result.repository,
                       remoteName: result.remoteName,
@@ -323,11 +322,7 @@ function GitHubRepositorySetupForm(props: {
               >
                 {(
                   [
-                    [
-                      "private",
-                      i18n._("Private"),
-                      i18n._("Only you and invited collaborators"),
-                    ],
+                    ["private", i18n._("Private"), i18n._("Only you and invited collaborators")],
                     ["public", i18n._("Public"), i18n._("Visible to everyone")],
                   ] as const
                 ).map(([value, label, help]) => {

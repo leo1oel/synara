@@ -138,10 +138,7 @@ describe("buildSettingsSkillSections", () => {
       }),
     ]);
 
-    expect(sections.map((section) => section.title)).toEqual([
-      "Shared across agents",
-      "Cursor",
-    ]);
+    expect(sections.map((section) => section.title)).toEqual(["Shared across agents", "Cursor"]);
     expect(sections[0]?.groups.map((group) => group.key)).toEqual(["logic-consolidator"]);
     expect(sections[1]?.groups.map((group) => group.key)).toEqual(["cursor-only"]);
   });

@@ -182,6 +182,8 @@ import {
   ProjectListDirectoriesResult,
   ProjectReadFileInput,
   ProjectReadFileResult,
+  ProjectPrewarmSearchIndexInput,
+  ProjectPrewarmSearchIndexResult,
   ProjectResolveOutOfRootFileReferenceInput,
   ProjectResolveOutOfRootFileReferenceResult,
   ProjectRunDevServerInput,
@@ -352,6 +354,15 @@ export const WsOrchestrationReconcileProviderDeliveryRpc = Rpc.make(
   },
 );
 
+export const WsOrchestrationPrepareQuitResumeRpc = Rpc.make(
+  ORCHESTRATION_WS_METHODS.prepareQuitResume,
+  {
+    payload: OrchestrationRpcSchemas.prepareQuitResume.input,
+    success: OrchestrationRpcSchemas.prepareQuitResume.output,
+    error: WsRpcError,
+  },
+);
+
 export const WsOrchestrationSubscribeShellRpc = Rpc.make(ORCHESTRATION_WS_METHODS.subscribeShell, {
   payload: OrchestrationRpcSchemas.subscribeShell.input,
   success: OrchestrationShellStreamItem,
@@ -424,6 +435,12 @@ export const WsProjectsSearchLocalEntriesRpc = Rpc.make(WS_METHODS.projectsSearc
 export const WsProjectsSearchContentRpc = Rpc.make(WS_METHODS.projectsSearchContent, {
   payload: ProjectSearchContentInput,
   success: ProjectSearchContentResult,
+  error: WsRpcError,
+});
+
+export const WsProjectsPrewarmSearchIndexRpc = Rpc.make(WS_METHODS.projectsPrewarmSearchIndex, {
+  payload: ProjectPrewarmSearchIndexInput,
+  success: ProjectPrewarmSearchIndexResult,
   error: WsRpcError,
 });
 
@@ -1280,6 +1297,7 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsOrchestrationReplayEventsRpc,
   WsOrchestrationListProviderDeliveryBlockersRpc,
   WsOrchestrationReconcileProviderDeliveryRpc,
+  WsOrchestrationPrepareQuitResumeRpc,
   WsOrchestrationSubscribeShellRpc,
   WsOrchestrationUnsubscribeShellRpc,
   WsOrchestrationSubscribeThreadRpc,
@@ -1290,6 +1308,7 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsProjectsSearchEntriesRpc,
   WsProjectsSearchLocalEntriesRpc,
   WsProjectsSearchContentRpc,
+  WsProjectsPrewarmSearchIndexRpc,
   WsProjectsReadFileRpc,
   WsProjectsResolveOutOfRootFileReferenceRpc,
   WsProjectsCreateLocalFilePreviewGrantRpc,

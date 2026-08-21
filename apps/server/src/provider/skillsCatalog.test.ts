@@ -479,12 +479,7 @@ describe("discoverSkillsCatalog", () => {
     expect(names).not.toContain("cursor-built-in");
     expect(names).not.toContain("claude-built-in");
     expect(names).toEqual(
-      expect.arrayContaining([
-        "codex-user",
-        "cursor-user",
-        "claude-user",
-        "project-system-name",
-      ]),
+      expect.arrayContaining(["codex-user", "cursor-user", "claude-user", "project-system-name"]),
     );
   });
 

@@ -219,7 +219,9 @@ function ApprovalDetail({
   }
 
   return (
-    <p className="mt-2 text-[12px] text-muted-foreground/65"><Trans>Review the request to continue.</Trans></p>
+    <p className="mt-2 text-[12px] text-muted-foreground/65">
+      <Trans>Review the request to continue.</Trans>
+    </p>
   );
 }
 

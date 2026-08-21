@@ -159,6 +159,14 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     target: null,
   },
   {
+    id: "appearance:custom-title-bar",
+    section: "appearance",
+    title: "Use custom title bar",
+    keywords:
+      "frameless window system title bar Windows Linux caption controls minimize maximize close chrome",
+    target: null,
+  },
+  {
     id: "appearance:system-ui-font",
     section: "appearance",
     title: "Use system UI font",
@@ -430,9 +438,7 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   },
 ] as const;
 
-const SETTINGS_SECTION_ITEM_BY_ID = new Map(
-  SETTINGS_NAV_ITEMS.map((item) => [item.id, item]),
-);
+const SETTINGS_SECTION_ITEM_BY_ID = new Map(SETTINGS_NAV_ITEMS.map((item) => [item.id, item]));
 
 export function settingsSectionLabel(section: SettingsSectionId): string {
   const item = SETTINGS_SECTION_ITEM_BY_ID.get(section);

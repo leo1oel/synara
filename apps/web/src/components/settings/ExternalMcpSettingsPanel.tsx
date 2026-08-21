@@ -42,9 +42,7 @@ function dateMillis(value: string): number {
 function formatDate(value: string | null, locale: string, neverLabel: string): string {
   if (!value) return neverLabel;
   const milliseconds = dateMillis(value);
-  return Number.isNaN(milliseconds)
-    ? String(value)
-    : new Date(milliseconds).toLocaleString(locale);
+  return Number.isNaN(milliseconds) ? String(value) : new Date(milliseconds).toLocaleString(locale);
 }
 
 export function ExternalMcpSettingsPanel(props: { active: boolean }) {
@@ -124,17 +122,14 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
       toastManager.add({
         type: "success",
         title: i18n._("Connection ready"),
-        description: i18n._(
-          "Give your agent the setup prompt before the one-time code expires.",
-        ),
+        description: i18n._("Give your agent the setup prompt before the one-time code expires."),
       });
     },
     onError: (error: unknown) =>
       toastManager.add({
         type: "error",
         title: i18n._("Could not create connection"),
-        description:
-          error instanceof Error ? error.message : i18n._("External MCP setup failed."),
+        description: error instanceof Error ? error.message : i18n._("External MCP setup failed."),
       }),
   });
 
@@ -180,8 +175,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
       toastManager.add({
         type: "error",
         title: i18n._("Could not resume pairing"),
-        description:
-          error instanceof Error ? error.message : i18n._("Pairing refresh failed."),
+        description: error instanceof Error ? error.message : i18n._("Pairing refresh failed."),
       }),
   });
 
@@ -264,8 +258,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
   const revokedIntegrations = integrations.filter((integration) => integration.revokedAt !== null);
   const renderIntegrationRows = (items: typeof integrations) =>
     items.map((integration) => {
-      const active =
-        integration.revokedAt === null && dateMillis(integration.expiresAt) > nowMs;
+      const active = integration.revokedAt === null && dateMillis(integration.expiresAt) > nowMs;
       const status = active
         ? integration.lastUsedAt
           ? i18n._("Connected")
@@ -317,9 +310,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                     else refreshPairingMutation.mutate(integration.integrationId);
                   }}
                 >
-                  {integration.pairedAt
-                    ? i18n._("Continue setup")
-                    : i18n._("Resume pairing")}
+                  {integration.pairedAt ? i18n._("Continue setup") : i18n._("Resume pairing")}
                 </Button>
                 <Button
                   size="xs"
@@ -357,7 +348,9 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
           />
           <SettingsRow
             title={i18n._("Access all Lattice projects")}
-            description={i18n._("The agent can discover and work in every project, including ones you add later. Turn off to pick specific projects.")}
+            description={i18n._(
+              "The agent can discover and work in every project, including ones you add later. Turn off to pick specific projects.",
+            )}
             control={<Switch checked={allProjects} onCheckedChange={setAllProjects} />}
           >
             <DisclosureRegion open={!allProjects} contentClassName="mt-3">
@@ -420,13 +413,9 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-xs font-medium">
-                    {i18n._("Read other project tasks")}
-                  </div>
+                  <div className="text-xs font-medium">{i18n._("Read other project tasks")}</div>
                   <div className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
-                    {i18n._(
-                      "Without this permission, the agent can read only tasks it creates.",
-                    )}
+                    {i18n._("Without this permission, the agent can read only tasks it creates.")}
                   </div>
                 </div>
                 <Switch
@@ -637,9 +626,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
               ) : null}
               <div>
                 <div className="mb-2 flex items-center justify-between gap-3">
-                  <span className="text-xs font-medium">
-                    {i18n._("MCP configuration (JSON)")}
-                  </span>
+                  <span className="text-xs font-medium">{i18n._("MCP configuration (JSON)")}</span>
                   <Button
                     size="xs"
                     variant="outline"
@@ -665,9 +652,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
             status={
               connected
                 ? i18n._("Connection verified by Lattice.")
-                : i18n._(
-                    "Lattice will show Connected after the agent makes its first request.",
-                  )
+                : i18n._("Lattice will show Connected after the agent makes its first request.")
             }
             control={
               <Button

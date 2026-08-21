@@ -227,7 +227,10 @@ describe("Lattice embed mode", () => {
         locale: "en",
       }),
     );
-    document.referrer = "http://localhost:1420/";
+    Object.defineProperty(document, "referrer", {
+      configurable: true,
+      value: "http://localhost:1420/",
+    });
     window.location.search = "";
 
     initializeEmbedMode();

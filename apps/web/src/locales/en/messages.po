@@ -1982,8 +1982,8 @@ msgstr "Loading provider usage…"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProviderUsageSettingsPanel.tsx
-msgid "Usage is read locally from each provider CLI's stored credentials and fetched directly from the provider. Short-lived tokens are refreshed through the provider's own CLI or official token endpoint; if a provider shows “Not signed in”, re-authenticate with its CLI."
-msgstr "Usage is read locally from each provider CLI's stored credentials and fetched directly from the provider. Short-lived tokens are refreshed through the provider's own CLI or official token endpoint; if a provider shows “Not signed in”, re-authenticate with its CLI."
+msgid "Usage is read locally from each provider CLI's stored credentials and fetched directly from the provider. The list follows whatever you are signed into; unsigned providers stay visible until any account is connected, then drop away. Short-lived tokens are refreshed through the provider's own CLI or official token endpoint."
+msgstr "Usage is read locally from each provider CLI's stored credentials and fetched directly from the provider. The list follows whatever you are signed into; unsigned providers stay visible until any account is connected, then drop away. Short-lived tokens are refreshed through the provider's own CLI or official token endpoint."
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx

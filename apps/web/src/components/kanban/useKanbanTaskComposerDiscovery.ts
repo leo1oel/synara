@@ -174,7 +174,7 @@ export function useKanbanTaskComposerDiscovery(input: UseKanbanTaskComposerDisco
       query: effectiveMentionQuery,
       enabled: isMentionTrigger && !isLocalFolderBrowserOpen,
       allowEmptyQuery: true,
-      kind: effectiveMentionQuery.length === 0 ? "file" : undefined,
+      ...(effectiveMentionQuery.length === 0 ? { kind: "file" as const } : {}),
       limit: 80,
     }),
   );

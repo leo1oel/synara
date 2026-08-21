@@ -12,8 +12,6 @@ describe("localizeGitText", () => {
     expect(localizeGitText(i18n, "Commit & push")).toBe("提交并推送");
     expect(localizeGitText(i18n, "Created PR")).toBe("已创建 PR");
     expect(localizeGitText(i18n, "Push to feature/i18n")).toBe("推送到 feature/i18n");
-    expect(localizeGitText(i18n, "Pushed abc1234 to main")).toBe(
-      "已将 abc1234 推送到 main",
-    );
+    expect(localizeGitText(i18n, "Pushed abc1234 to main")).toBe("已将 abc1234 推送到 main");
   });
 });

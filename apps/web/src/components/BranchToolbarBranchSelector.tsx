@@ -524,35 +524,40 @@ export function BranchToolbarBranchSelector({
     setIsCreateBranchDialogOpen(true);
   }, [canPrefillCreateBranch, hasExactBranchMatch, trimmedBranchQuery]);
 
-  const openStashDiscardDialog = useCallback((input: { cwd: string }) => {
-    const api = readNativeApi();
-    setStashDiscardDialog({
-      cwd: input.cwd,
-      error: api ? null : i18n._("Native API is unavailable."),
-      info: null,
-      loading: Boolean(api),
-    });
-    if (!api) return;
-    void api.git.stashInfo({ cwd: input.cwd }).then(
-      (info) => {
-        setStashDiscardDialog((current) =>
-          current?.cwd === input.cwd ? { ...current, error: null, info, loading: false } : current,
-        );
-      },
-      (error) => {
-        setStashDiscardDialog((current) =>
-          current?.cwd === input.cwd
-            ? {
-                ...current,
-                error: toBranchActionErrorMessage(error, i18n._("An error occurred.")),
-                info: null,
-                loading: false,
-              }
-            : current,
-        );
-      },
-    );
-  }, [i18n]);
+  const openStashDiscardDialog = useCallback(
+    (input: { cwd: string }) => {
+      const api = readNativeApi();
+      setStashDiscardDialog({
+        cwd: input.cwd,
+        error: api ? null : i18n._("Native API is unavailable."),
+        info: null,
+        loading: Boolean(api),
+      });
+      if (!api) return;
+      void api.git.stashInfo({ cwd: input.cwd }).then(
+        (info) => {
+          setStashDiscardDialog((current) =>
+            current?.cwd === input.cwd
+              ? { ...current, error: null, info, loading: false }
+              : current,
+          );
+        },
+        (error) => {
+          setStashDiscardDialog((current) =>
+            current?.cwd === input.cwd
+              ? {
+                  ...current,
+                  error: toBranchActionErrorMessage(error, i18n._("An error occurred.")),
+                  info: null,
+                  loading: false,
+                }
+              : current,
+          );
+        },
+      );
+    },
+    [i18n],
+  );
 
   const discardStashFromDialog = useCallback(() => {
     const dialog = stashDiscardDialog;
@@ -1095,9 +1100,7 @@ export function BranchToolbarBranchSelector({
           </DialogHeader>
           <DialogPanel className="space-y-4">
             {stashDiscardDialog?.loading ? (
-              <p className="text-muted-foreground text-sm">
-                {i18n._("Loading stash details...")}
-              </p>
+              <p className="text-muted-foreground text-sm">{i18n._("Loading stash details...")}</p>
             ) : stashDiscardDialog?.error ? (
               <p className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-destructive text-sm">
                 {stashDiscardDialog.error}
@@ -1106,13 +1109,11 @@ export function BranchToolbarBranchSelector({
               <>
                 <div className="grid gap-2 rounded-lg border border-[color:var(--color-border-light)] bg-[var(--color-background-elevated-secondary)] p-3 text-sm">
                   <div className="flex min-w-0 gap-2">
-                    <span className="w-20 shrink-0 text-muted-foreground">
-                      {i18n._("Branch")}
-                    </span>
+                    <span className="w-20 shrink-0 text-muted-foreground">{i18n._("Branch")}</span>
                     <span className="min-w-0 truncate font-medium">
-                      {stashDiscardDialog.info.branch
-                        ?? currentGitBranch
-                        ?? i18n._("Detached HEAD")}
+                      {stashDiscardDialog.info.branch ??
+                        currentGitBranch ??
+                        i18n._("Detached HEAD")}
                     </span>
                   </div>
                   <div className="flex min-w-0 gap-2">
@@ -1124,17 +1125,13 @@ export function BranchToolbarBranchSelector({
                     </span>
                   </div>
                   <div className="flex min-w-0 gap-2">
-                    <span className="w-20 shrink-0 text-muted-foreground">
-                      {i18n._("Stash")}
-                    </span>
+                    <span className="w-20 shrink-0 text-muted-foreground">{i18n._("Stash")}</span>
                     <span className="min-w-0 truncate font-mono text-xs">
                       {stashDiscardDialog.info.stashRef}
                     </span>
                   </div>
                   <div className="flex min-w-0 gap-2">
-                    <span className="w-20 shrink-0 text-muted-foreground">
-                      {i18n._("Name")}
-                    </span>
+                    <span className="w-20 shrink-0 text-muted-foreground">{i18n._("Name")}</span>
                     <span className="min-w-0 truncate">{stashDiscardDialog.info.message}</span>
                   </div>
                 </div>

@@ -65,10 +65,7 @@ export function ManagedSkillEditorView({
   };
 
   return (
-    <form
-      className="[&>.settings-group]:mt-4!"
-      onSubmit={(event) => void handleSubmit(event)}
-    >
+    <form className="[&>.settings-group]:mt-4!" onSubmit={(event) => void handleSubmit(event)}>
       <Button type="button" size="sm" variant="ghost" className="-ml-2" onClick={onCancel}>
         <ChevronLeftIcon className="size-3.5" aria-hidden="true" />
         {mode === "create" ? i18n._("All skills") : i18n._("Skill details")}
@@ -77,10 +74,7 @@ export function ManagedSkillEditorView({
       <SettingsSectionShell
         title={mode === "create" ? i18n._("Create a skill") : i18n._("Edit skill")}
       >
-        <SettingsCard
-          divided={false}
-          className="managed-skill-editor-fields space-y-5 pt-4"
-        >
+        <SettingsCard divided={false} className="managed-skill-editor-fields space-y-5 pt-4">
           <div className="space-y-1.5">
             <label
               className="managed-skill-field-label font-system-ui font-medium text-foreground"
