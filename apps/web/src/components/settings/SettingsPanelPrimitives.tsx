@@ -227,6 +227,7 @@ export function SettingsRow({
       data-slot="settings-row"
     >
       <div
+        data-slot="settings-row-layout"
         className={cn(
           "flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between",
           onClick && "cursor-pointer",

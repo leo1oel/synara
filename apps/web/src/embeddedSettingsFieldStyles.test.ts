@@ -73,6 +73,13 @@ describe("embedded Settings field styles", () => {
     expect(EMBEDDED_SETTINGS_CONTROL_LAYOUT_CSS).not.toContain(":only-child");
   });
 
+  it("keeps embedded controls beside their copy whenever the native columns fit", () => {
+    expect(INDEX_CSS).toContain("@media (width >= 30rem)");
+    expect(INDEX_CSS).toContain(
+      '[data-slot="settings-row-layout"] { flex-direction: row; align-items: center; justify-content: space-between;',
+    );
+  });
+
   it("keeps the Skills action and full-width form copy on the embedded settings grid", () => {
     expect(INDEX_CSS).toContain(".skills-library-actions { width: 100%;");
     expect(INDEX_CSS).toContain(
