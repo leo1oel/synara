@@ -14,6 +14,7 @@ import { initializeEmbedMode } from "./embedMode";
 import { startLatticeAgentQualityRelay } from "./latticeAgentQualityRelay";
 import { startLatticeCanvasRelay } from "./latticeCanvasRelay";
 import { startLatticeSpreadsheetRelay } from "./latticeSpreadsheetRelay";
+import { startLatticeProjectDocumentRelay } from "./latticeProjectDocumentRelay";
 import { isElectron } from "./env";
 import { isMacPlatform } from "./lib/utils";
 import { activateInitialLocale, i18n } from "./i18n";
@@ -23,6 +24,7 @@ await activateInitialLocale();
 startLatticeAgentQualityRelay();
 startLatticeCanvasRelay();
 startLatticeSpreadsheetRelay();
+startLatticeProjectDocumentRelay();
 const router = getRouter(appHistory);
 
 document.title = APP_DISPLAY_NAME;

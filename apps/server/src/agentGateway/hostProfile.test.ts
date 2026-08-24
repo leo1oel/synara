@@ -93,6 +93,15 @@ describe("agent host profile", () => {
       {
         requiredCapability: "thread:write",
         definition: {
+          name: "create_project_document",
+          description: "Create a native board or spreadsheet.",
+          inputSchema: { type: "object" },
+        },
+        handler: () => Effect.succeed({ content: [] }),
+      },
+      {
+        requiredCapability: "thread:write",
+        definition: {
           name: "synara_set_thread_goal",
           description: "Mark a Synara goal achieved.",
           inputSchema: { type: "object" },
@@ -148,6 +157,7 @@ describe("agent host profile", () => {
       "cite",
       "spreadsheet_read",
       "spreadsheet_batch_update",
+      "create_project_document",
       "set_task_goal",
       "create_automation",
       "update_automation_memory",
@@ -212,6 +222,7 @@ describe("agent host profile", () => {
     expect(policy).toContain("one exact create_tasks batch");
     expect(policy).toContain("wait_for_tasks");
     expect(policy).toContain("Provider-native subagents");
+    expect(policy).toContain("create_project_document");
     expect(policy).not.toContain("device_");
     expect(policy).toContain("Simulator control is unavailable");
     expect(policy).not.toMatch(/synara/i);

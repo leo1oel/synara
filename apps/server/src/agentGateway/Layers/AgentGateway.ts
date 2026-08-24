@@ -87,6 +87,7 @@ import {
 import { makeLatticeLiteratureTools } from "../latticeLiteratureTools.ts";
 import { makeLatticeCanvasTools } from "../latticeCanvasTools.ts";
 import { makeLatticeSpreadsheetTools } from "../latticeSpreadsheetTools.ts";
+import { makeLatticeProjectDocumentTools } from "../latticeProjectDocumentTools.ts";
 
 // Providers already receive the versioned host policy exactly once in their
 // private prompt. MCP clients prepend initialize.instructions to every exposed
@@ -750,6 +751,12 @@ export const makeAgentGateway = Effect.gen(function* () {
     ACTIVE_AGENT_HOST_PROFILE.id === "lattice"
       ? yield* makeLatticeSpreadsheetTools({ resolveWorkspaceRoot: resolveLatticeWorkspaceRoot })
       : [];
+  const latticeProjectDocumentTools =
+    ACTIVE_AGENT_HOST_PROFILE.id === "lattice"
+      ? yield* makeLatticeProjectDocumentTools({
+          resolveWorkspaceRoot: resolveLatticeWorkspaceRoot,
+        })
+      : [];
 
   const tools: ReadonlyArray<ToolEntry> = adaptToolsForActiveHost([
     ...readTools,
@@ -766,6 +773,7 @@ export const makeAgentGateway = Effect.gen(function* () {
     ...(ACTIVE_AGENT_HOST_PROFILE.id === "lattice" ? latticeLiteratureTools : []),
     ...latticeCanvasTools,
     ...latticeSpreadsheetTools,
+    ...latticeProjectDocumentTools,
     ...(deviceService?.supported === true && isDeviceControlEntitled()
       ? makeAgentGatewayDeviceTools({ manager: deviceService.manager })
       : []),

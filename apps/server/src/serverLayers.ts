@@ -5,6 +5,7 @@ import { AgentGatewayLive } from "./agentGateway/Layers/AgentGateway";
 import { AgentQualityTraceLayer } from "./agentGateway/Layers/AgentQualityTrace";
 import { LatticeCanvasBrokerLive } from "./agentGateway/Layers/LatticeCanvasBroker";
 import { LatticeSpreadsheetBrokerLive } from "./agentGateway/Layers/LatticeSpreadsheetBroker";
+import { LatticeProjectDocumentBrokerLive } from "./agentGateway/Layers/LatticeProjectDocumentBroker";
 import { AgentGatewayOperationRepositoryLive } from "./agentGateway/Layers/AgentGatewayOperationRepository";
 import { AgentGatewayCredentialsWithSecretsLive } from "./agentGateway/Layers/AgentGatewayCredentials";
 import { BrowserAutomationHostLive } from "./browserAutomation/Layers/BrowserAutomationHost";
@@ -200,6 +201,7 @@ export function makeServerRuntimeServicesLayer(
   const agentGatewayLayer = AgentGatewayLive.pipe(
     Layer.provideMerge(LatticeCanvasBrokerLive),
     Layer.provideMerge(LatticeSpreadsheetBrokerLive),
+    Layer.provideMerge(LatticeProjectDocumentBrokerLive),
     Layer.provideMerge(agentGatewayCredentialsLayer),
     Layer.provideMerge(automationServiceLayer),
     Layer.provideMerge(runtimeServicesLayer),
@@ -226,6 +228,7 @@ export function makeServerRuntimeServicesLayer(
     agentGatewayCredentialsLayer,
     LatticeCanvasBrokerLive,
     LatticeSpreadsheetBrokerLive,
+    LatticeProjectDocumentBrokerLive,
     agentGatewayLayer,
     agentQualityTraceLayer,
     BrowserAutomationHostLive,

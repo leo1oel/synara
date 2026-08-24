@@ -5,7 +5,7 @@ import { isDeviceControlEntitled } from "../device/deviceEntitlement.ts";
 import { ACTIVE_AGENT_HOST_PROFILE } from "./hostProfile.ts";
 
 /** Canonical, versioned host policy delivered to every supported provider. */
-export const SYNARA_HARNESS_POLICY_VERSION = "2026-08-03.8";
+export const SYNARA_HARNESS_POLICY_VERSION = "2026-08-24.1";
 export const SYNARA_HARNESS_POLICY_MARKER = `[Synara harness policy ${SYNARA_HARNESS_POLICY_VERSION}]`;
 
 export interface SynaraHarnessCapabilities {
@@ -35,6 +35,7 @@ export function renderSynaraHarnessPolicy(capabilities: SynaraHarnessCapabilitie
             "For two or more independent tasks, submit one exact create_tasks batch. The array length must equal the requested task count; do not replace a failed durable operation with extra tasks.",
             "When delegated results are needed, call wait_for_tasks for every created task id, then synthesize all outcomes. Use send_message_to_task only for a scoped follow-up and interrupt_task only when work should stop.",
             "Provider-native subagents may be used for internal parallel work. Lattice tasks are durable project conversations; use create_task or create_tasks when the user needs separately inspectable task history.",
+            "Use create_project_document to create and open a native Lattice board or spreadsheet. After it succeeds for a board, use create_canvas_shapes to populate the newly opened canvas; after it succeeds for a spreadsheet, use spreadsheet_batch_update to populate the new workbook. Never create either native format by writing its serialized file contents directly.",
             "For task discovery and diagnosis, use list_tasks, read_task, read_task_activity, read_task_events, read_task_runtime_events, and diagnose_task before inspecting Lattice's internal SQLite files or process logs. Fall back to host storage only when a tool's coverage metadata says the required evidence is unavailable.",
             "Use set_task_goal only when the user explicitly asks for a persistent goal. When its full objective is complete, call set_task_goal with achieved: true so Lattice records the achievement and stops automatic continuation. After the same external blocker prevents meaningful progress for three consecutive goal turns, call it with blocked: true so Lattice pauses the goal.",
             ...(deviceControlAvailable

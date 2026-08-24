@@ -89,6 +89,7 @@ const LATTICE_NATIVE_TOOL_NAMES = new Set([
   "delete_canvas_shapes",
   "spreadsheet_read",
   "spreadsheet_batch_update",
+  "create_project_document",
   "device_list",
   "device_boot",
   "device_install",
