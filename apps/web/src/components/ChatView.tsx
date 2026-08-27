@@ -201,6 +201,7 @@ import {
   resolveActiveTurnLiveDiffState,
   resolveCommittedProviderModel,
   resolveCycledModelSlug,
+  resolveComposerDefaultModelSelection,
   resolveDefaultEnvironmentPanelOpen,
   resolveEnvironmentPanelOpen,
   resolveEnvironmentPanelPreferenceAfterFirstSend,
@@ -2041,10 +2042,16 @@ export default function ChatView({
   const activeProject = useStore(
     useMemo(() => createProjectSelector(activeProjectId), [activeProjectId]),
   );
-  const activeProjectModelPreference = resolveEmbeddedProjectModelPreference({
-    embedded: isEmbed,
-    selection: activeProject?.defaultModelSelection,
-  });
+  const sidebarThreadSummaryById = useStore((store) => store.sidebarThreadSummaryById);
+  const composerDefaultModelSelection = useMemo(
+    () =>
+      resolveComposerDefaultModelSelection({
+        embedded: isEmbed,
+        projectSelection: activeProject?.defaultModelSelection,
+        threadSummaries: Object.values(sidebarThreadSummaryById),
+      }),
+    [activeProject?.defaultModelSelection, isEmbed, sidebarThreadSummaryById],
+  );
   const deletePlaceholderTerminalThread = useCallback(
     async (terminalThreadId: ThreadId) => {
       const api = readNativeApi();
@@ -2337,7 +2344,7 @@ export default function ChatView({
   const sessionProvider = activeThread?.session?.provider ?? null;
   const selectedProviderByThreadId = composerDraft.activeProvider ?? null;
   const threadProvider =
-    activeThread?.modelSelection.provider ?? activeProject?.defaultModelSelection?.provider ?? null;
+    serverThread?.modelSelection.provider ?? composerDefaultModelSelection?.provider ?? null;
   const hasThreadStarted = Boolean(
     activeThread &&
     (activeThread.latestTurn !== null ||
@@ -2372,7 +2379,7 @@ export default function ChatView({
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
   const composerModelHintByProvider = useMemo<Record<ProviderKind, string | null>>(() => {
     const threadModelSelection = serverThread?.modelSelection ?? null;
-    const projectModelSelection = activeProjectModelPreference;
+    const projectModelSelection = composerDefaultModelSelection;
     const draftSelections = composerDraft.modelSelectionByProvider;
 
     const resolveHint = (provider: ProviderKind): string | null =>
@@ -2392,8 +2399,8 @@ export default function ChatView({
       pi: resolveHint("pi"),
     };
   }, [
-    activeProjectModelPreference,
     composerDraft.modelSelectionByProvider,
+    composerDefaultModelSelection,
     serverThread?.modelSelection,
   ]);
   const providerModelDiscoveryCwd = resolveProviderDiscoveryCwd({
@@ -2420,7 +2427,7 @@ export default function ChatView({
     threadId,
     selectedProvider,
     threadModelSelection: serverThread?.modelSelection,
-    projectModelSelection: activeProjectModelPreference,
+    projectModelSelection: composerDefaultModelSelection,
     customModelsByProvider,
     availableModelOptionsByProvider: modelOptionsByProvider,
   });
@@ -2434,7 +2441,10 @@ export default function ChatView({
         : serverThread?.modelSelection.provider === "claudeAgent" &&
             serverThread.modelSelection.model === selectedModel
           ? serverThread.modelSelection.supportsAutoMode
-          : undefined
+          : composerDefaultModelSelection?.provider === "claudeAgent" &&
+              composerDefaultModelSelection.model === selectedModel
+            ? composerDefaultModelSelection.supportsAutoMode
+            : undefined
       : undefined;
   const selectedRuntimeModel = useMemo(() => {
     const discovered = resolveRuntimeModelDescriptor({
@@ -2501,15 +2511,15 @@ export default function ChatView({
   }, [modelOptionsByProvider, selectedModelForPicker, selectedProvider]);
   const persistedComposerModelSelection =
     sessionProvider && serverThread?.modelSelection.provider !== sessionProvider
-      ? activeProjectModelPreference?.provider === selectedProvider
-        ? activeProjectModelPreference
+      ? composerDefaultModelSelection?.provider === selectedProvider
+        ? composerDefaultModelSelection
         : null
-      : (serverThread?.modelSelection ?? activeProjectModelPreference);
+      : (serverThread?.modelSelection ?? composerDefaultModelSelection);
   const providerModelsLoading = selectedProviderModelsLoading;
   const hasExplicitComposerModelPreference = Boolean(
     draftModelSelectionForSelectedProvider ||
     serverThread?.modelSelection.provider === selectedProvider ||
-    activeProjectModelPreference?.provider === selectedProvider,
+    composerDefaultModelSelection?.provider === selectedProvider,
   );
   const selectedProviderRequiresRuntimeModels =
     !hasExplicitComposerModelPreference ||

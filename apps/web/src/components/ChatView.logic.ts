@@ -20,6 +20,7 @@ import { isGenericTerminalThreadTitle } from "@synara/shared/terminalThreads";
 import {
   type ChatMessage,
   type SessionPhase,
+  type SidebarThreadSummary,
   type Thread,
   type ThreadPrimarySurface,
   type TurnDiffSummary,
@@ -28,6 +29,7 @@ import {
   type WorktreeSetupStepId,
 } from "../types";
 import { type DraftThreadState } from "../composerDraftStore";
+import { makeModelSelection } from "../composerDraftModels";
 import { Schema } from "effect";
 import {
   filterTerminalContextsWithText,
@@ -947,6 +949,46 @@ export function resolveEmbeddedProjectModelPreference(input: {
     return selection;
   }
   return null;
+}
+
+export function resolveComposerDefaultModelSelection(input: {
+  embedded: boolean;
+  projectSelection: ModelSelection | null | undefined;
+  threadSummaries: ReadonlyArray<
+    Pick<SidebarThreadSummary, "latestUserMessageAt" | "modelSelection">
+  >;
+}): ModelSelection | null {
+  const projectSelection = resolveEmbeddedProjectModelPreference({
+    embedded: input.embedded,
+    selection: input.projectSelection,
+  });
+  if (projectSelection) {
+    return projectSelection;
+  }
+
+  let latestSelection: ModelSelection | null = null;
+  let latestMessageAt = Number.NEGATIVE_INFINITY;
+  for (const thread of input.threadSummaries) {
+    if (!thread.latestUserMessageAt) {
+      continue;
+    }
+    const messageAt = Date.parse(thread.latestUserMessageAt);
+    if (!Number.isFinite(messageAt) || messageAt <= latestMessageAt) {
+      continue;
+    }
+    latestMessageAt = messageAt;
+    latestSelection = thread.modelSelection;
+  }
+
+  if (!latestSelection) {
+    return null;
+  }
+  return makeModelSelection(
+    latestSelection.provider,
+    latestSelection.model,
+    undefined,
+    latestSelection.provider === "claudeAgent" ? latestSelection.supportsAutoMode : undefined,
+  );
 }
 
 export function shouldShowComposerModelBootstrapSkeleton(input: {

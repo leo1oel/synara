@@ -44,6 +44,7 @@ import {
   resolveActiveThreadTitle,
   resolveActiveTurnLiveDiffState,
   resolveCommittedProviderModel,
+  resolveComposerDefaultModelSelection,
   resolveComposerStripWorkLogEntries,
   resolveCycledModelSlug,
   resolveDefaultEnvironmentPanelOpen,
@@ -1422,6 +1423,57 @@ describe("resolveEmbeddedProjectModelPreference", () => {
   it("does not reinterpret standalone project defaults", () => {
     const selection = { provider: "codex" as const, model: "gpt-5.5" };
     expect(resolveEmbeddedProjectModelPreference({ embedded: false, selection })).toBe(selection);
+  });
+});
+
+describe("resolveComposerDefaultModelSelection", () => {
+  it("uses the model from the most recent chat when an embed only has the legacy default", () => {
+    expect(
+      resolveComposerDefaultModelSelection({
+        embedded: true,
+        projectSelection: { provider: "codex", model: "gpt-5.5" },
+        threadSummaries: [
+          {
+            latestUserMessageAt: "2026-08-26T10:00:00.000Z",
+            modelSelection: { provider: "codex", model: "gpt-5.4" },
+          },
+          {
+            latestUserMessageAt: "2026-08-26T11:00:00.000Z",
+            modelSelection: {
+              provider: "claudeAgent",
+              model: "claude-opus-4-6",
+              supportsAutoMode: true,
+              options: { effort: "max", autoCompactWindow: "1m" },
+            },
+          },
+        ],
+      }),
+    ).toEqual({
+      provider: "claudeAgent",
+      model: "claude-opus-4-6",
+      supportsAutoMode: true,
+    });
+  });
+
+  it("keeps an explicit project model ahead of recent chat history", () => {
+    const projectSelection = {
+      provider: "codex" as const,
+      model: "gpt-5.6-sol",
+      options: { reasoningEffort: "max" },
+    };
+
+    expect(
+      resolveComposerDefaultModelSelection({
+        embedded: true,
+        projectSelection,
+        threadSummaries: [
+          {
+            latestUserMessageAt: "2026-08-26T11:00:00.000Z",
+            modelSelection: { provider: "claudeAgent", model: "claude-opus-4-6" },
+          },
+        ],
+      }),
+    ).toBe(projectSelection);
   });
 });
 
