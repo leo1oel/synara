@@ -160,6 +160,7 @@ type MarkdownRehypePlugins = NonNullable<
 const MARKDOWN_REMARK_PLUGINS: MarkdownRemarkPlugins = [
   remarkGfm,
   [remarkMath, { singleDollarTextMath: true }],
+  remarkConvertHtmlBreaks,
   remarkRestoreLatexMathPlaceholders,
 ];
 // User prompts are casual typing, not authored markdown: hard-break single
@@ -292,6 +293,31 @@ type ThreadMarkerFragmentContinuity = {
   readonly continuesBefore: boolean;
   readonly continuesAfter: boolean;
 };
+
+function convertHtmlBreaks(node: MarkdownNode): void {
+  if (!("children" in node) || !Array.isArray(node.children)) {
+    return;
+  }
+  node.children = node.children.map((child) => {
+    if (
+      "type" in child &&
+      child.type === "html" &&
+      "value" in child &&
+      typeof child.value === "string" &&
+      /^<br\s*\/?\s*>$/i.test(child.value)
+    ) {
+      return { type: "break", position: child.position };
+    }
+    convertHtmlBreaks(child);
+    return child;
+  });
+}
+
+function remarkConvertHtmlBreaks() {
+  return (tree: unknown) => {
+    convertHtmlBreaks(tree as MarkdownNode);
+  };
+}
 
 // The "active" ring (a transient deep-link highlight) is applied imperatively by the timeline so
 // it never re-parses the markdown tree; this className is the stable, parse-time-only part.

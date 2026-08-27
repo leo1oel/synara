@@ -56,6 +56,16 @@ describe("ChatMarkdown", () => {
     expect(markup).not.toContain("text-neutral-900");
   });
 
+  it("renders assistant HTML break tags without enabling arbitrary HTML", async () => {
+    const markup = await renderMarkdown(
+      "4. 开源社区原生模型探测 (Slide 3)<br>(sheet_probe 第 9 行)\n\n`literal <br>`\n\n<span>inert</span>",
+    );
+
+    expect(markup).toContain("(Slide 3)<br/>\n(sheet_probe 第 9 行)");
+    expect(markup).toContain("<code>literal &lt;br&gt;</code>");
+    expect(markup).not.toContain("<span>inert</span>");
+  });
+
   it("renders inline math with KaTeX", async () => {
     const markup = await renderMarkdown("Euler wrote $e^{i\\\\pi} + 1 = 0$.");
 
