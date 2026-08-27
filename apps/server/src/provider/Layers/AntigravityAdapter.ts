@@ -164,6 +164,7 @@ type AntigravitySessionContext = ToolSurfaceCounters & {
    * calls with the same name in one planner step still render independently.
    */
   sawAssistant: boolean;
+  sawFinalAssistant: boolean;
   interrupted: boolean;
   stopped: boolean;
   /** Guards against double turn.completed (process close + interrupt/stop). */
@@ -1453,6 +1454,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
           );
           if (assistantText) {
             emitTextItem(context, step, "assistant_message", "assistant_text", assistantText);
+            if (step.status === "DONE") context.sawFinalAssistant = true;
           }
         }
         return;
@@ -1994,6 +1996,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
           surfacedToolCallCounts: new Map(),
           hookToolCallCounts: new Map(),
           sawAssistant: false,
+          sawFinalAssistant: false,
           interrupted: false,
           stopped: false,
           turnTerminalEmitted: false,
@@ -2121,6 +2124,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
         context.surfacedToolCallCounts.clear();
         context.hookToolCallCounts.clear();
         context.sawAssistant = false;
+        context.sawFinalAssistant = false;
         context.interrupted = false;
         context.turnTerminalEmitted = false;
         context.turns.push({ id: turnId, items: [] });
@@ -2259,7 +2263,13 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
               return;
             }
             const interrupted = context.interrupted || signal !== null;
-            const failed = !interrupted && (code ?? 1) !== 0;
+            // Antigravity can print a complete final response and then exit 1
+            // because its wrapper times out waiting for another response. The
+            // durable DONE transcript is authoritative in that exact case;
+            // without it, the same stderr remains a real provider failure.
+            const completedResponseTimeout =
+              context.sawFinalAssistant && stderr.trim() === "Error: timeout waiting for response";
+            const failed = !interrupted && (code ?? 1) !== 0 && !completedResponseTimeout;
             if (failed && stderr.trim()) {
               offer({
                 ...base(context, { includeTurn: false }),

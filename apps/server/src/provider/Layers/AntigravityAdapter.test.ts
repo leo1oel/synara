@@ -1295,6 +1295,119 @@ describe("Antigravity CLI integration helpers", () => {
     }
   });
 
+  it("keeps a durable final response successful when the CLI times out afterward", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "synara-antigravity-final-timeout-"));
+    const transcriptFile = path.join(root, "transcript.jsonl");
+    await fs.writeFile(transcriptFile, "");
+    let eventFile: string | undefined;
+    let child: ChildProcess | undefined;
+    let stderr: PassThrough | undefined;
+    const spawnProcess = ((
+      _command: string,
+      _args: readonly string[],
+      options: { readonly env?: NodeJS.ProcessEnv },
+    ) => {
+      eventFile = options.env?.SYNARA_ANTIGRAVITY_EVENTS;
+      const spawned = new EventEmitter() as ChildProcess;
+      stderr = new PassThrough();
+      Object.assign(spawned, {
+        stdout: new PassThrough(),
+        stderr,
+        killed: false,
+        kill: () => true,
+      });
+      child = spawned;
+      return spawned;
+    }) as NonNullable<AntigravityAdapterDependencies["spawnProcess"]>;
+
+    try {
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const adapter = yield* AntigravityAdapter;
+          const assistantObserved = yield* Deferred.make<void>();
+          const turnCompleted = yield* Deferred.make<void>();
+          const events: Array<unknown> = [];
+          const eventsFiber = yield* adapter.streamEvents.pipe(
+            Stream.runForEach((event) =>
+              Effect.gen(function* () {
+                events.push(event);
+                if (
+                  event.type === "item.completed" &&
+                  event.payload.itemType === "assistant_message"
+                ) {
+                  yield* Deferred.succeed(assistantObserved, undefined);
+                }
+                if (event.type === "turn.completed") {
+                  yield* Deferred.succeed(turnCompleted, undefined);
+                }
+              }),
+            ),
+            Effect.forkChild,
+          );
+          const threadId = ThreadId.makeUnsafe("thread-antigravity-final-timeout");
+          yield* adapter.startSession({
+            provider: "antigravity",
+            threadId,
+            runtimeMode: "full-access",
+            cwd: root,
+            providerOptions: { antigravity: { binaryPath: "/fake/agy" } },
+          });
+          yield* adapter.sendTurn({ threadId, input: "finish the task", attachments: [] });
+
+          yield* Effect.promise(() =>
+            fs.appendFile(
+              eventFile!,
+              `pre-invocation\t${JSON.stringify({
+                conversationId: "conversation-final-timeout",
+                transcriptPath: transcriptFile,
+              })}\n`,
+            ),
+          );
+          yield* Effect.promise(() =>
+            fs.appendFile(
+              transcriptFile,
+              `${JSON.stringify({
+                step_index: 1,
+                type: "PLANNER_RESPONSE",
+                status: "DONE",
+                content: "The requested change is complete.",
+              })}\n`,
+            ),
+          );
+          yield* Deferred.await(assistantObserved).pipe(Effect.timeout("2 seconds"));
+
+          stderr?.end("Error: timeout waiting for response\n");
+          child?.emit("close", 1, null);
+          yield* Deferred.await(turnCompleted).pipe(Effect.timeout("2 seconds"));
+
+          expect(events).toContainEqual(
+            expect.objectContaining({
+              type: "turn.completed",
+              payload: { state: "completed", stopReason: "model_stop" },
+            }),
+          );
+          expect(events).not.toContainEqual(expect.objectContaining({ type: "runtime.error" }));
+          yield* Fiber.interrupt(eventsFiber);
+          yield* adapter.stopSession(threadId);
+        }).pipe(
+          Effect.provide(
+            makeAntigravityAdapterLive({
+              ensurePlugin: async () => undefined,
+              spawnProcess,
+            }).pipe(
+              Layer.provideMerge(
+                ServerConfig.layerTest(root, { prefix: "antigravity-final-timeout-" }),
+              ),
+              Layer.provideMerge(NodeServices.layer),
+            ),
+          ),
+        ),
+      );
+    } finally {
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("terminates helper processes that exceed their timeout", async () => {
     await expect(
       runAntigravityHelperProcess(process.execPath, ["-e", "setInterval(() => {}, 1_000)"], {

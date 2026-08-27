@@ -2156,6 +2156,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         messageId: command.messageId,
         activeTurnId:
           thread.session?.status === "running" ? (thread.session.activeTurnId ?? null) : null,
+        latestTurn: thread.latestTurn,
       });
       if (!editTarget.editable) {
         return yield* new OrchestrationCommandInvariantError({

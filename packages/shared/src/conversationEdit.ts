@@ -13,6 +13,11 @@ type EditableMessageLike = TurnMessageLike & {
   readonly source?: string | undefined;
 };
 
+type LatestTurnLike = {
+  readonly turnId: string;
+  readonly pendingMessageId?: string | null | undefined;
+};
+
 export type TailUserMessageEditTarget =
   | {
       readonly editable: true;
@@ -69,6 +74,7 @@ export function resolveTailUserMessageEditTarget(input: {
   readonly messages: ReadonlyArray<EditableMessageLike>;
   readonly messageId: string;
   readonly activeTurnId?: string | null | undefined;
+  readonly latestTurn?: LatestTurnLike | null | undefined;
 }): TailUserMessageEditTarget {
   const messageIndex = input.messages.findIndex((message) => message.id === input.messageId);
   if (messageIndex < 0) {
@@ -118,12 +124,28 @@ export function resolveTailUserMessageEditTarget(input: {
     };
   }
 
+  // A turn interrupted before its first assistant message has no turn id in
+  // the message tail: user messages intentionally stay turn-less. The turn
+  // projection retains the exact pending-message association, so it remains
+  // safely rollbackable after the active session id clears.
+  if (input.latestTurn?.pendingMessageId === message.id) {
+    return {
+      editable: true,
+      messageId: message.id,
+      messageIndex,
+      mode: "rollback",
+      rollbackTurnCount: 1,
+      removedTurnIds: [input.latestTurn.turnId],
+    };
+  }
+
   return { editable: false, reason: "missing-turn-metadata" };
 }
 
 export function resolveLatestTailUserMessageEditTarget(input: {
   readonly messages: ReadonlyArray<EditableMessageLike>;
   readonly activeTurnId?: string | null | undefined;
+  readonly latestTurn?: LatestTurnLike | null | undefined;
 }): TailUserMessageEditTarget {
   const latestNativeUserIndex = findLatestNativeUserMessageIndex(input.messages);
   const latestNativeUserMessage = input.messages[latestNativeUserIndex];
@@ -134,5 +156,6 @@ export function resolveLatestTailUserMessageEditTarget(input: {
     messages: input.messages,
     messageId: latestNativeUserMessage.id,
     activeTurnId: input.activeTurnId,
+    latestTurn: input.latestTurn,
   });
 }

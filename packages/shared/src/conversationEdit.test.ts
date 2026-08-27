@@ -54,6 +54,39 @@ describe("conversationEdit", () => {
     });
   });
 
+  it("allows replaying a turn interrupted before assistant output exists", () => {
+    expect(
+      resolveTailUserMessageEditTarget({
+        messages: [{ id: "user-interrupted", role: "user", source: "native", turnId: null }],
+        messageId: "user-interrupted",
+        latestTurn: {
+          turnId: "turn-interrupted",
+          pendingMessageId: "user-interrupted",
+        },
+      }),
+    ).toEqual({
+      editable: true,
+      messageId: "user-interrupted",
+      messageIndex: 0,
+      mode: "rollback",
+      rollbackTurnCount: 1,
+      removedTurnIds: ["turn-interrupted"],
+    });
+  });
+
+  it("does not associate an unstarted newer prompt with the prior turn", () => {
+    expect(
+      resolveTailUserMessageEditTarget({
+        messages: [{ id: "user-new", role: "user", source: "native", turnId: null }],
+        messageId: "user-new",
+        latestTurn: {
+          turnId: "turn-prior",
+          pendingMessageId: "user-prior",
+        },
+      }),
+    ).toEqual({ editable: false, reason: "missing-turn-metadata" });
+  });
+
   it("rejects older native user messages", () => {
     expect(
       resolveTailUserMessageEditTarget({

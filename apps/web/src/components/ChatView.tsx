@@ -3139,6 +3139,7 @@ export default function ChatView({
         activeThread.session?.orchestrationStatus === "running"
           ? (activeThread.session.activeTurnId ?? null)
           : null,
+      latestTurn: activeThread.latestTurn,
     });
     return editTarget.editable ? (editTarget.messageId as MessageId) : null;
   }, [activeThread, isServerThread]);
@@ -9351,6 +9352,7 @@ export default function ChatView({
           activeThread.session?.orchestrationStatus === "running"
             ? (activeThread.session.activeTurnId ?? null)
             : null,
+        latestTurn: activeThread.latestTurn,
       });
       if (!editTarget.editable) {
         setThreadError(activeThread.id, userMessageEditRejectionCopy(editTarget.reason));

@@ -1361,6 +1361,13 @@ function ChatMarkdown({
           </MarkdownCodeBlock>
         );
       },
+      table({ node: _node, children, ...props }) {
+        return (
+          <div className="chat-markdown-table-scroll">
+            <table {...props}>{children}</table>
+          </div>
+        );
+      },
       code({ node: _node, className, children, ...props }) {
         // Fenced blocks carry a `language-*` class and are rendered by `pre`;
         // only inline code (no class) that names a file becomes an openable

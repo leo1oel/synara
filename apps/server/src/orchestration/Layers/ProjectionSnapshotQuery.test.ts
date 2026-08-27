@@ -328,7 +328,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           (
             'thread-1',
             'turn-1',
-            NULL,
+            'message-0',
             'thread-1',
             'plan-1',
             'message-1',
@@ -444,6 +444,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           hasActionableProposedPlan: true,
           latestTurn: {
             turnId: asTurnId("turn-1"),
+            pendingMessageId: asMessageId("message-0"),
             state: "completed",
             requestedAt: "2026-02-24T00:00:08.000Z",
             startedAt: "2026-02-24T00:00:08.000Z",
@@ -1743,6 +1744,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           goalPausedAt: null,
           latestTurn: {
             turnId: asTurnId("turn-shell"),
+            pendingMessageId: null,
             state: "completed",
             requestedAt: "2026-03-03T00:00:05.000Z",
             startedAt: "2026-03-03T00:00:05.000Z",

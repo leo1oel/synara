@@ -3427,6 +3427,7 @@ const make = Effect.gen(function* () {
               (originalThread.session?.status === "running"
                 ? (originalThread.session.activeTurnId ?? null)
                 : null),
+            latestTurn: originalThread.latestTurn,
           });
     if (!editTarget.editable) {
       return yield* Effect.fail(

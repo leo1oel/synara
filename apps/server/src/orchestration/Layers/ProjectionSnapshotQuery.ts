@@ -167,6 +167,7 @@ const ProjectionGeneratedImageActivityDbRowSchema = Schema.Struct({
 const ProjectionLatestTurnDbRowSchema = Schema.Struct({
   threadId: ProjectionThread.fields.threadId,
   turnId: TurnId,
+  pendingMessageId: Schema.NullOr(MessageId),
   state: Schema.String,
   requestedAt: IsoDateTime,
   startedAt: Schema.NullOr(IsoDateTime),
@@ -409,6 +410,7 @@ function toProjectedCheckpoint(row: ProjectionCheckpointDbRow): OrchestrationChe
 function toProjectedLatestTurn(row: ProjectionLatestTurnDbRow): OrchestrationLatestTurn {
   return {
     turnId: row.turnId,
+    pendingMessageId: row.pendingMessageId,
     state:
       row.state === "error"
         ? "error"
@@ -1339,6 +1341,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         SELECT
           thread_id AS "threadId",
           turn_id AS "turnId",
+          pending_message_id AS "pendingMessageId",
           state,
           requested_at AS "requestedAt",
           started_at AS "startedAt",
@@ -1871,6 +1874,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         SELECT
           thread_id AS "threadId",
           turn_id AS "turnId",
+          pending_message_id AS "pendingMessageId",
           state,
           requested_at AS "requestedAt",
           started_at AS "startedAt",

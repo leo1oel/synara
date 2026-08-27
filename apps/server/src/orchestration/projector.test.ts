@@ -441,11 +441,36 @@ describe("orchestration projector", () => {
       ),
     );
 
-    const afterRunning = await Effect.runPromise(
+    const afterUserMessage = await Effect.runPromise(
       projectEvent(
         afterCreate,
         makeEvent({
           sequence: 2,
+          type: "thread.message-sent",
+          aggregateKind: "thread",
+          aggregateId: "thread-1",
+          occurredAt: createdAt,
+          commandId: "cmd-user-message",
+          payload: {
+            threadId: "thread-1",
+            messageId: "message-1",
+            role: "user",
+            text: "Please do the work",
+            turnId: null,
+            streaming: false,
+            source: "native",
+            createdAt,
+            updatedAt: createdAt,
+          },
+        }),
+      ),
+    );
+
+    const afterRunning = await Effect.runPromise(
+      projectEvent(
+        afterUserMessage,
+        makeEvent({
+          sequence: 3,
           type: "thread.session-set",
           aggregateKind: "thread",
           aggregateId: "thread-1",
@@ -471,6 +496,7 @@ describe("orchestration projector", () => {
 
     const thread = afterRunning.threads[0];
     expect(thread?.latestTurn?.turnId).toBe("turn-1");
+    expect(thread?.latestTurn?.pendingMessageId).toBe("message-1");
     expect(thread?.session?.status).toBe("running");
   });
 
