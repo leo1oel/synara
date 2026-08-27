@@ -435,6 +435,7 @@ function splitTextNodeWithMarkers(
   return nodes.length > 0 ? nodes : [node];
 }
 const INLINE_MATH_HINT_REGEX = /[\\^_=+\-*/<>()[\]{}]/;
+const DECIMAL_INLINE_MATH_REGEX = /^(?:\d+\.\d*|\.\d+)$/;
 const ALL_CAPS_DOLLAR_IDENTIFIER_REGEX = /^[A-Z][A-Z0-9_]{1,31}$/;
 
 function isLineStart(value: string, index: number): boolean {
@@ -529,13 +530,16 @@ function looksLikeInlineMath(content: string): boolean {
   if (INLINE_MATH_HINT_REGEX.test(trimmed)) {
     return true;
   }
+  if (DECIMAL_INLINE_MATH_REGEX.test(trimmed)) {
+    return true;
+  }
   return /^[A-Za-z][A-Za-z0-9]{0,15}$/.test(trimmed);
 }
 
 // Reject obvious literal/currency dollars before searching for a closing math delimiter.
 function canOpenInlineMath(value: string, index: number): boolean {
   const next = value[index + 1];
-  if (!next || /\s|\d/.test(next)) {
+  if (!next || /\s/.test(next)) {
     return false;
   }
   return true;

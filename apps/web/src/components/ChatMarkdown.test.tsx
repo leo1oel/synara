@@ -64,6 +64,17 @@ describe("ChatMarkdown", () => {
     expect(markup).not.toContain("$e^{i\\\\pi} + 1 = 0$");
   });
 
+  it("renders decimal assistant math without mistaking ordinary currency for a formula", async () => {
+    const markup = await renderMarkdown(
+      "区间 $0.58 \\sim 0.70$，中位数 $0.59$。It costs $5 to $10 per seat.",
+    );
+
+    expect(markup.match(/class="katex"/g) ?? []).toHaveLength(2);
+    expect(markup).not.toContain("$0.58 \\sim 0.70$");
+    expect(markup).not.toContain("$0.59$");
+    expect(markup).toContain("$5 to $10");
+  });
+
   it("renders display math with KaTeX block output", async () => {
     const markup = await renderMarkdown("$$\n\\\\int_0^1 x^2 \\, dx\n$$");
 
