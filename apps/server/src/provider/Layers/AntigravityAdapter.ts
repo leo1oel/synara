@@ -2033,6 +2033,10 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
           attachments: input.attachments,
           attachmentsDir: serverConfig.attachmentsDir,
           include: "all-files",
+          // Antigravity print mode has no native image argument. Give the
+          // agent the persisted path so its multimodal file tools can inspect
+          // the image instead of silently dropping it from the turn.
+          includeImage: () => true,
         });
         const normalizedPrompt = trim(prompt);
         if (!normalizedPrompt) {

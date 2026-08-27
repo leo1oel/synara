@@ -215,6 +215,83 @@ Claude Sonnet 5 (Thinking)
 });
 
 describe("Antigravity CLI integration helpers", () => {
+  it("projects image attachments into the print prompt", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "synara-antigravity-image-prompt-"));
+    let spawnedArgs: readonly string[] | undefined;
+    let child: ChildProcess | undefined;
+    const spawnProcess = ((_command: string, args: readonly string[]) => {
+      spawnedArgs = args;
+      const spawned = new EventEmitter() as ChildProcess;
+      Object.assign(spawned, {
+        stdout: new PassThrough(),
+        stderr: new PassThrough(),
+        killed: false,
+        kill: () => true,
+      });
+      child = spawned;
+      return spawned;
+    }) as NonNullable<AntigravityAdapterDependencies["spawnProcess"]>;
+
+    try {
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const adapter = yield* AntigravityAdapter;
+          const serverConfig = yield* ServerConfig;
+          const attachmentId = "antigravity-image-prompt";
+          const attachmentPath = path.join(serverConfig.attachmentsDir, `${attachmentId}.png`);
+          yield* Effect.promise(() => fs.mkdir(serverConfig.attachmentsDir, { recursive: true }));
+          yield* Effect.promise(() => fs.writeFile(attachmentPath, Uint8Array.from([1, 2, 3])));
+
+          const threadId = ThreadId.makeUnsafe("thread-antigravity-image-prompt");
+          yield* adapter.startSession({
+            provider: "antigravity",
+            threadId,
+            runtimeMode: "full-access",
+            cwd: root,
+            providerOptions: { antigravity: { binaryPath: "/fake/agy" } },
+          });
+          yield* adapter.sendTurn({
+            threadId,
+            input: "Inspect this diagram",
+            attachments: [
+              {
+                type: "image",
+                id: attachmentId,
+                name: "mechanism.png",
+                mimeType: "image/png",
+                sizeBytes: 3,
+              },
+            ],
+          });
+
+          const promptIndex = spawnedArgs?.indexOf("-p") ?? -1;
+          const prompt = promptIndex >= 0 ? spawnedArgs?.[promptIndex + 1] : undefined;
+          expect(prompt).toContain("<attached_files>");
+          expect(prompt).toContain('"mechanism.png" - image/png');
+          expect(prompt).toContain(attachmentPath);
+
+          child?.emit("close", 0, null);
+          yield* Effect.sleep("25 millis");
+          yield* adapter.stopSession(threadId);
+        }).pipe(
+          Effect.provide(
+            makeAntigravityAdapterLive({
+              ensurePlugin: async () => undefined,
+              spawnProcess,
+            }).pipe(
+              Layer.provideMerge(
+                ServerConfig.layerTest(root, { prefix: "antigravity-image-prompt-" }),
+              ),
+              Layer.provideMerge(NodeServices.layer),
+            ),
+          ),
+        ),
+      );
+    } finally {
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("rotates the gateway lease per print turn and rejects a retained prior bootstrap", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "synara-antigravity-turn-lease-"));
     const liveTokens = new Set<string>();
