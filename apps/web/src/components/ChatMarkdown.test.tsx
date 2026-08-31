@@ -66,6 +66,21 @@ describe("ChatMarkdown", () => {
     expect(markup).not.toContain("<span>inert</span>");
   });
 
+  it(
+    "renders Codex file citations as readable local file links",
+    async () => {
+      const markup = await renderMarkdown(
+        '英文稿：:codex-file-citation{path="/Users/leonardo/Documents/research/Native VLM/main.pdf" purpose="output"}',
+        "/Users/leonardo/Documents/research/Native VLM",
+      );
+
+      expect(markup).toContain('href="main.pdf"');
+      expect(markup).toContain(">main.pdf</span>");
+      expect(markup).not.toContain("codex-file-citation");
+    },
+    15_000,
+  );
+
   it("renders inline math with KaTeX", async () => {
     const markup = await renderMarkdown("Euler wrote $e^{i\\\\pi} + 1 = 0$.");
 

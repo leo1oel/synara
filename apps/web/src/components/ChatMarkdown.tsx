@@ -56,6 +56,8 @@ import { InlineLinkChip } from "./InlineLinkChip";
 import { InlineMentionChip } from "./chat/InlineMentionChip";
 import { InlineSkillChip } from "./chat/InlineSkillChip";
 import { InlineSlashCommandChip } from "./chat/InlineSlashCommandChip";
+import { openExternalLink } from "../lib/linkChips";
+import { createCodexFileCitationsRemarkPlugin } from "../lib/remarkCodexFileCitations";
 import {
   COMPOSER_CHIP_SEGMENT_ATTRIBUTE,
   COMPOSER_CHIP_TAG_NAME,
@@ -1306,14 +1308,20 @@ function ChatMarkdown({
         : null,
     [isUserVariant, mentionReferences, terminalContexts],
   );
+  const codexFileCitationsRemarkPlugin = useMemo(
+    () => createCodexFileCitationsRemarkPlugin(cwd),
+    [cwd],
+  );
   const remarkPlugins = useMemo<MarkdownRemarkPlugins>(() => {
     if (composerChipsRemarkPlugin) {
       return [...USER_MARKDOWN_REMARK_PLUGINS, composerChipsRemarkPlugin];
     }
-    return threadMarkerRemarkPlugin
-      ? [...MARKDOWN_REMARK_PLUGINS, threadMarkerRemarkPlugin]
-      : MARKDOWN_REMARK_PLUGINS;
-  }, [composerChipsRemarkPlugin, threadMarkerRemarkPlugin]);
+    return [
+      ...MARKDOWN_REMARK_PLUGINS,
+      ...(threadMarkerRemarkPlugin ? [threadMarkerRemarkPlugin] : []),
+      codexFileCitationsRemarkPlugin,
+    ];
+  }, [codexFileCitationsRemarkPlugin, composerChipsRemarkPlugin, threadMarkerRemarkPlugin]);
   const rehypePlugins = isUserVariant ? USER_MARKDOWN_REHYPE_PLUGINS : MARKDOWN_REHYPE_PLUGINS;
   const markdownComponents = useMemo<Components>(
     () => ({
@@ -1343,6 +1351,14 @@ function ChatMarkdown({
               target="_blank"
               rel="noopener noreferrer"
               className={isExternalHttp ? MARKDOWN_EXTERNAL_LINK_CLASS_NAME : props.className}
+              onClick={
+                isExternalHttp
+                  ? (event) => {
+                      event.preventDefault();
+                      openExternalLink(restoredHref);
+                    }
+                  : props.onClick
+              }
             >
               {isExternalHttp ? (
                 <LinkChipIcon
