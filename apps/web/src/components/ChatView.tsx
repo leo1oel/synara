@@ -469,6 +469,7 @@ import {
   composerFooterPlanForTier,
   EMBED_COMPOSER_SEND_EDGE_INSET_PX,
   embedComposerMinimumSidebarWidth,
+  embedHorizontalContentMinimumSidebarWidth,
   resolveNextComposerFooterTier,
   shouldUseCompactComposerFooter,
 } from "./composerFooterLayout";
@@ -481,7 +482,7 @@ import {
 } from "../splitViewStore";
 import { ComposerPromptEditor, type ComposerPromptEditorHandle } from "./ComposerPromptEditor";
 import { PullRequestThreadDialog } from "./PullRequestThreadDialog";
-import { ChatHeader } from "./chat/ChatHeader";
+import { ChatHeader, EDITOR_CHAT_HISTORY_MENU_WIDTH_REM } from "./chat/ChatHeader";
 import { dispatchThreadNotes } from "~/pinnedMessages";
 import { dispatchThreadGoal } from "~/threadGoal";
 import {
@@ -9871,6 +9872,10 @@ export default function ChatView({
     const leading = footer?.querySelector<HTMLElement>("[data-chat-composer-leading]");
     const actions = footer?.querySelector<HTMLElement>("[data-chat-composer-actions='right']");
     if (!footer || !leading || !actions) return;
+    const composerSurface = composerForm.querySelector<HTMLElement>(".chat-composer-surface");
+    const historyTrigger = document.querySelector<HTMLElement>(
+      "[data-chat-history-menu-trigger='true']",
+    );
     let frame = 0;
     const reportMinimumWidth = () => {
       window.cancelAnimationFrame(frame);
@@ -9888,22 +9893,63 @@ export default function ChatView({
           actionsIntrinsicWidth: intrinsicFlexRowWidth(actions),
         });
 
+        // Attachment cards use their rendered composer geometry. The history
+        // popup is portalled, so reserve its fixed width before it mounts;
+        // otherwise opening it can make Lattice resize and dismiss the popup.
+        let horizontalContentMinimum = 0;
+        if (composerSurface) {
+          const surfaceRect = composerSurface.getBoundingClientRect();
+          const attachmentCards = composerForm.querySelectorAll<HTMLElement>(
+            "[data-composer-reference-attachments='true'] [data-slot='attachment-card']",
+          );
+          for (const card of attachmentCards) {
+            const cardRect = card.getBoundingClientRect();
+            if (cardRect.width <= 0) continue;
+            horizontalContentMinimum = Math.max(
+              horizontalContentMinimum,
+              embedHorizontalContentMinimumSidebarWidth({
+                viewportWidth: window.innerWidth,
+                surfaceWidth: surfaceRect.width,
+                contentRightOffset: cardRect.right - surfaceRect.left,
+                endInset: EMBED_COMPOSER_SEND_EDGE_INSET_PX,
+              }),
+            );
+          }
+        }
+        if (historyTrigger) {
+          const triggerRect = historyTrigger.getBoundingClientRect();
+          const rootFontSize =
+            Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+          horizontalContentMinimum = Math.max(
+            horizontalContentMinimum,
+            embedHorizontalContentMinimumSidebarWidth({
+              viewportWidth: window.innerWidth,
+              surfaceWidth: window.innerWidth,
+              contentRightOffset:
+                triggerRect.left + EDITOR_CHAT_HISTORY_MENU_WIDTH_REM * rootFontSize,
+              endInset: EMBED_COMPOSER_SEND_EDGE_INSET_PX,
+            }),
+          );
+        }
+
         // Keep a direct geometry guard as a final defense against subpixel/grid
         // rounding. Unlike a retained historical maximum, this can decrease
         // when Fast Mode is disabled or a shorter model is selected.
-        const surface = composerForm.querySelector<HTMLElement>(".chat-composer-surface");
         const sendControl =
           actions.lastElementChild instanceof HTMLElement ? actions.lastElementChild : null;
         let sendInsetMinimum = 0;
-        if (surface && sendControl) {
+        if (composerSurface && sendControl) {
           const currentInset =
-            surface.getBoundingClientRect().right - sendControl.getBoundingClientRect().right;
+            composerSurface.getBoundingClientRect().right - sendControl.getBoundingClientRect().right;
           const missingInset = Math.max(0, EMBED_COMPOSER_SEND_EDGE_INSET_PX - currentInset);
           if (missingInset > 0) {
             sendInsetMinimum = window.innerWidth + missingInset;
           }
         }
-        postLayoutMetricsToLattice(embedConfig, Math.max(intrinsicMinimum, sendInsetMinimum));
+        postLayoutMetricsToLattice(
+          embedConfig,
+          Math.max(intrinsicMinimum, horizontalContentMinimum, sendInsetMinimum),
+        );
       });
     };
     reportMinimumWidth();
@@ -9915,6 +9961,7 @@ export default function ChatView({
     observer.observe(footer);
     observer.observe(leading);
     observer.observe(actions);
+    if (historyTrigger) observer.observe(historyTrigger);
     return () => {
       observer.disconnect();
       window.cancelAnimationFrame(frame);

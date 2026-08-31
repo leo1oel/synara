@@ -160,6 +160,7 @@ interface ChatHeaderProps {
 }
 
 const EDITOR_CHAT_HISTORY_LIMIT = 30;
+export const EDITOR_CHAT_HISTORY_MENU_WIDTH_REM = 18;
 
 type EditorRailChatTab = EditorRailChatTabSnapshot;
 
@@ -205,6 +206,7 @@ function EditorChatHistoryMenu(props: {
               type="button"
               className="flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-left text-[length:var(--app-font-size-ui,12px)] leading-[var(--app-line-height-ui,1.5)] font-normal text-foreground transition-colors hover:bg-secondary"
               aria-label={`${props.triggerTitle}, open chat history`}
+              data-chat-history-menu-trigger="true"
             >
               <span className="max-w-[min(10rem,calc(100vw-5.5rem))] truncate">
                 {props.triggerTitle}
@@ -224,7 +226,12 @@ function EditorChatHistoryMenu(props: {
           )
         }
       />
-      <ComposerPickerMenuPopup align="start" side="bottom" sideOffset={6} className="w-72 min-w-72">
+      <ComposerPickerMenuPopup
+        align="start"
+        side="bottom"
+        sideOffset={6}
+        className="w-[18rem] min-w-[18rem]"
+      >
         {props.onNewChat ? (
           <MenuItem onClick={props.onNewChat}>
             <PlusIcon className="size-3.5 shrink-0 text-muted-foreground" />

@@ -2219,6 +2219,110 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it("reports enough embedded sidebar width for chat history and composer attachment cards", async () => {
+    sessionStorage.setItem(
+      "synara.poc.embed-mode",
+      JSON.stringify({
+        workspaceRoot: "/repo/project",
+        theme: "light",
+        surface: "chrome",
+        hostOrigin: window.location.origin,
+        locale: "en",
+      }),
+    );
+    const historyThreadId = "thread-embedded-width-history" as ThreadId;
+    const snapshot = addThreadToSnapshot(
+      createSnapshotForTargetUser({
+        targetMessageId: "msg-user-embedded-width" as MessageId,
+        targetText: "embedded width",
+      }),
+      historyThreadId,
+    );
+    const snapshotWithLongHistoryTitle = {
+      ...snapshot,
+      threads: snapshot.threads.map((thread) =>
+        thread.id === historyThreadId
+          ? {
+              ...thread,
+              title:
+                "Complete experimental configuration, data supervision, and training analysis",
+            }
+          : thread,
+      ),
+    };
+    const parentPostMessage = vi
+      .spyOn(window.parent, "postMessage")
+      .mockImplementation(() => undefined);
+    const mounted = await mountChatView({
+      viewport: { ...DEFAULT_VIEWPORT, width: 260 },
+      snapshot: snapshotWithLongHistoryTitle,
+    });
+
+    try {
+      useComposerDraftStore.getState().addPastedTexts(THREAD_ID, [
+        {
+          id: "paste-embedded-width",
+          createdAt: NOW_ISO,
+          text:
+            "| Complete experimental configuration | Data and supervision | Training analysis",
+          lineCount: 1,
+          charCount: 79,
+        },
+      ]);
+
+      const historyTrigger = await waitForElement(
+        () => document.querySelector<HTMLElement>("button[aria-label$=', open chat history']"),
+        "Unable to find the embedded chat-history trigger.",
+      );
+      const attachmentCard = await waitForElement(
+        () => {
+          const action = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
+            (button) => button.textContent?.includes("Show in text field"),
+          );
+          return action?.closest<HTMLElement>("span.group") ?? null;
+        },
+        "Unable to find the composer attachment card.",
+      );
+      const composerSurface = document.querySelector<HTMLElement>(".chat-composer-surface");
+      expect(composerSurface).not.toBeNull();
+
+      const reportedMinimums = () =>
+        parentPostMessage.mock.calls.flatMap(([message]) =>
+          message?.type === "synara:layout-metrics" &&
+          typeof message.minimumSidebarWidth === "number"
+            ? [message.minimumSidebarWidth]
+            : [],
+        );
+      await vi.waitFor(() => expect(reportedMinimums().length).toBeGreaterThan(0));
+      const rootFontSize = Number.parseFloat(
+        window.getComputedStyle(document.documentElement).fontSize,
+      );
+      const historyMinimum = Math.ceil(
+        historyTrigger.getBoundingClientRect().left + rootFontSize * 18 + 8,
+      );
+      const surfaceRect = composerSurface!.getBoundingClientRect();
+      const attachmentMinimum = Math.ceil(
+        window.innerWidth -
+          surfaceRect.width +
+          (attachmentCard.getBoundingClientRect().right - surfaceRect.left) +
+          8,
+      );
+      const requiredMinimum = Math.max(historyMinimum, attachmentMinimum);
+
+      await vi.waitFor(() => {
+        expect(Math.max(...reportedMinimums())).toBeGreaterThanOrEqual(requiredMinimum);
+      });
+
+      await page.getByRole("button", { name: /open chat history/i }).click();
+      await expect.element(page.getByText(snapshotWithLongHistoryTitle.threads.at(-1)!.title)).toBeVisible();
+      await waitForLayout();
+      await expect.element(page.getByText(snapshotWithLongHistoryTitle.threads.at(-1)!.title)).toBeVisible();
+    } finally {
+      parentPostMessage.mockRestore();
+      await mounted.cleanup();
+    }
+  });
+
   it("limits embedded chat mentions to the current Lattice project", async () => {
     sessionStorage.setItem(
       "synara.poc.embed-mode",

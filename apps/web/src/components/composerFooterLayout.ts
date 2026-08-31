@@ -98,6 +98,19 @@ export function embedComposerMinimumSidebarWidth(input: {
   );
 }
 
+export function embedHorizontalContentMinimumSidebarWidth(input: {
+  viewportWidth: number;
+  surfaceWidth: number;
+  contentRightOffset: number;
+  endInset: number;
+}): number {
+  return Math.ceil(
+    Math.max(0, input.viewportWidth - input.surfaceWidth) +
+      Math.max(0, input.contentRightOffset) +
+      Math.max(0, input.endInset),
+  );
+}
+
 export function composerFooterPlanForTier(
   tier: number,
   hasContextMeter: boolean,

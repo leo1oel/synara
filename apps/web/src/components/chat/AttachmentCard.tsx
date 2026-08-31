@@ -79,6 +79,7 @@ export const AttachmentCard = forwardRef<HTMLSpanElement, AttachmentCardProps>(
           onRemove ? styles.shellWithRemove : styles.shellWithoutRemove,
           className,
         )}
+        data-slot="attachment-card"
         {...rest}
       >
         <span

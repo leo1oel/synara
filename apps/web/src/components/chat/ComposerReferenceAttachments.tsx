@@ -67,7 +67,10 @@ export function ComposerReferenceAttachments({
   }
 
   return (
-    <div className="-mx-1.5 -mt-1 mb-2 flex flex-wrap items-start gap-1.5">
+    <div
+      className="-mx-1.5 -mt-1 mb-2 flex flex-wrap items-start gap-1.5"
+      data-composer-reference-attachments="true"
+    >
       <AssistantSelectionsSummaryChip
         selections={assistantSelections}
         onRemove={assistantSelections.length > 0 ? onRemoveAssistantSelections : undefined}

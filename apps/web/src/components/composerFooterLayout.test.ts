@@ -12,6 +12,7 @@ import {
   composerFooterIsOverflowing,
   composerFooterPlanForTier,
   embedComposerMinimumSidebarWidth,
+  embedHorizontalContentMinimumSidebarWidth,
   resolveNextComposerFooterTier,
   shouldUseCompactComposerFooter,
 } from "./composerFooterLayout";
@@ -207,6 +208,30 @@ describe("embedComposerMinimumSidebarWidth", () => {
     });
 
     expect(fastHighEffort - regular).toBe(52);
+  });
+});
+
+describe("embedHorizontalContentMinimumSidebarWidth", () => {
+  it("includes the surface gutters, content width, and trailing inset", () => {
+    expect(
+      embedHorizontalContentMinimumSidebarWidth({
+        viewportWidth: 320,
+        surfaceWidth: 296,
+        contentRightOffset: 262,
+        endInset: 8,
+      }),
+    ).toBe(294);
+  });
+
+  it("ignores invalid negative geometry", () => {
+    expect(
+      embedHorizontalContentMinimumSidebarWidth({
+        viewportWidth: 280,
+        surfaceWidth: 300,
+        contentRightOffset: -20,
+        endInset: -4,
+      }),
+    ).toBe(0);
   });
 });
 
