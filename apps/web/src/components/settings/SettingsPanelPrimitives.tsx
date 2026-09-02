@@ -176,6 +176,7 @@ export function SettingsListRow({
       onContextMenu={onContextMenu}
     >
       <div
+        data-slot="settings-row-layout"
         className={cn(
           "flex flex-col gap-2.5 sm:flex-row sm:justify-between",
           align === "start" ? "sm:items-start" : "sm:items-center",

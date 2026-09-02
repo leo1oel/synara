@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { setupI18n } from "@lingui/core";
 
 import { type AppSettings, AppSettingsSchema } from "~/appSettings";
 
@@ -88,5 +89,26 @@ describe("providerUpdateStatusLabel", () => {
         message: "Pi SDK is included with Synara.",
       }),
     ).toBe("Included with Lattice");
+  });
+});
+
+describe("provider activity localization", () => {
+  it("translates the section and interpolates its enabled count in Chinese", async () => {
+    const { messages } = await import("../../locales/zh-CN/messages.po");
+    const catalog = setupI18n();
+    catalog.loadAndActivate({ locale: "zh-CN", messages });
+
+    expect(catalog._("Provider activity")).toBe("提供商活动");
+    expect(
+      catalog._("{enabledProviderCount} of {providerCount} enabled", {
+        enabledProviderCount: 8,
+        providerCount: 9,
+      }),
+    ).toBe("已启用 8 个，共 9 个");
+    expect(
+      catalog._(
+        "Show or hide installed providers in the picker and drag them into your preferred order. Hiding a provider here does not disable its server activity.",
+      ),
+    ).toBe("在选择器中显示或隐藏已安装的提供商，并拖动调整顺序。在此隐藏提供商不会停用其服务端活动。");
   });
 });

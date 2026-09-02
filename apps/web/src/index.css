@@ -961,14 +961,19 @@ html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] 
 
 /* The host's Settings navigation and the embedded page consume width in
    separate documents, so Synara's generic 640px viewport breakpoint stacks
-   controls while Lattice still has room for its native 170px trailing column.
-   Keep embedded rows horizontal at the narrower usable threshold; genuinely
-   small hosts retain the base stacked layout. */
+   controls and list actions while Lattice still has room for its trailing
+   column. Keep embedded rows horizontal at the narrower usable threshold;
+   genuinely small hosts retain the base stacked layout. */
 @media (width >= 30rem) {
   html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row-layout"] {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
+  }
+
+  html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-actions"] {
+    width: auto;
+    flex: none;
   }
 }
 

@@ -2002,6 +2002,51 @@ msgstr "CLI not installed"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Provider activity"
+msgstr "Provider activity"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Enabled providers"
+msgstr "Enabled providers"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Disabling a provider stops its background health checks, model and command discovery, updates, and new turns. Existing threads stay visible and continue after you re-enable it; a turn already running is not interrupted."
+msgstr "Disabling a provider stops its background health checks, model and command discovery, updates, and new turns. Existing threads stay visible and continue after you re-enable it; a turn already running is not interrupted."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Saving provider activity"
+msgstr "Saving provider activity"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "{enabledProviderCount} of {providerCount} enabled"
+msgstr "{enabledProviderCount} of {providerCount} enabled"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Background activity allowed"
+msgstr "Background activity allowed"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Disabled on the server"
+msgstr "Disabled on the server"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Disable {provider}"
+msgstr "Disable {provider}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Enable {provider}"
+msgstr "Enable {provider}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Provider picker"
 msgstr "Provider picker"
 
@@ -2012,8 +2057,8 @@ msgstr "Available CLIs"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Installed providers appear in the picker. Turn off any you don't want to see, and drag them into your preferred order."
-msgstr "Installed providers appear in the picker. Turn off any you don't want to see, and drag them into your preferred order."
+msgid "Show or hide installed providers in the picker and drag them into your preferred order. Hiding a provider here does not disable its server activity."
+msgstr "Show or hide installed providers in the picker and drag them into your preferred order. Hiding a provider here does not disable its server activity."
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx

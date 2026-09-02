@@ -997,6 +997,7 @@ export function ProvidersSettingsPanel({
               return (
                 <SettingsListRow
                   key={option.provider}
+                  className="px-3"
                   title={
                     <span className="flex items-center gap-2">
                       <ProviderIcon provider={option.provider} className="size-4 shrink-0" />

@@ -2002,6 +2002,51 @@ msgstr "未安装 CLI"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Provider activity"
+msgstr "提供商活动"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Enabled providers"
+msgstr "已启用的提供商"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Disabling a provider stops its background health checks, model and command discovery, updates, and new turns. Existing threads stay visible and continue after you re-enable it; a turn already running is not interrupted."
+msgstr "停用提供商后，会停止其后台健康检查、模型和命令发现、更新以及新的对话轮次。现有对话仍会保留，重新启用后可继续；正在运行的轮次不会中断。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Saving provider activity"
+msgstr "正在保存提供商活动设置"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "{enabledProviderCount} of {providerCount} enabled"
+msgstr "已启用 {enabledProviderCount} 个，共 {providerCount} 个"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Background activity allowed"
+msgstr "允许后台活动"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Disabled on the server"
+msgstr "已在服务端停用"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Disable {provider}"
+msgstr "停用 {provider}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Enable {provider}"
+msgstr "启用 {provider}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Provider picker"
 msgstr "提供商选择器"
 
@@ -2012,8 +2057,8 @@ msgstr "可用 CLI"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Installed providers appear in the picker. Turn off any you don't want to see, and drag them into your preferred order."
-msgstr "已安装的提供商会显示在选择器中。关闭不想显示的提供商，并拖动调整为你偏好的顺序。"
+msgid "Show or hide installed providers in the picker and drag them into your preferred order. Hiding a provider here does not disable its server activity."
+msgstr "在选择器中显示或隐藏已安装的提供商，并拖动调整顺序。在此隐藏提供商不会停用其服务端活动。"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
