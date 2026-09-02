@@ -8,6 +8,7 @@ import {
   coalescePullRequestListEntries,
   isValidGitHubRepositoryNameWithOwner,
 } from "@synara/shared/githubRepository";
+import { useLingui } from "@lingui/react";
 import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
@@ -151,6 +152,7 @@ const STATE_TABS: ReadonlyArray<{ value: PullRequestState; label: string }> = [
 ];
 
 function PullRequestsRouteView() {
+  const { i18n } = useLingui();
   const { settings } = useAppSettings();
   const search = Route.useSearch();
   const { embedMode, projectId: embeddedProjectId, bindingError } = useEmbeddedWorkspaceProject();
@@ -487,7 +489,7 @@ function PullRequestsRouteView() {
                   <div className="w-full min-w-0 max-w-[22rem]">
                     {/* The long field list belonged in a spec, not a placeholder. */}
                     <SearchInput
-                      placeholder="Search pull requests"
+                      placeholder={i18n._("Search pull requests")}
                       value={search.q ?? ""}
                       onChange={(event) => updateSearch({ q: event.target.value || undefined })}
                     />
@@ -525,12 +527,12 @@ function PullRequestsRouteView() {
                     <EmptyTitle className="font-system-ui text-[length:var(--app-font-size-ui-lg,13px)] leading-5 font-medium tracking-normal">
                       {search.involvement === "reviewing" && search.state !== "open"
                         ? "Review requests only apply to open pull requests"
-                        : "No pull requests found"}
+                        : i18n._("No pull requests found")}
                     </EmptyTitle>
                     <EmptyDescription className="font-system-ui text-[length:var(--app-font-size-ui,12px)] leading-5 font-normal">
                       {search.involvement === "reviewing" && search.state !== "open"
                         ? "Select Open to see pull requests currently awaiting your review."
-                        : "Try another involvement, state, project, or search filter."}
+                        : i18n._("Try another involvement, state, project, or search filter.")}
                     </EmptyDescription>
                   </EmptyHeader>
                 </Empty>

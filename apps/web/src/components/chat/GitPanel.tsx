@@ -27,6 +27,7 @@ import {
   gitBranchesQueryOptions,
   gitQueryKeys,
   gitStageFilesMutationOptions,
+  gitStatusQueryOptions,
   gitUnstageFilesMutationOptions,
   gitWorkingTreeDiffQueryOptions,
 } from "~/lib/gitReactQuery";
@@ -236,6 +237,7 @@ export function GitPanel(props: {
   const [selected, setSelected] = useState<SelectedFile | null>(null);
   const branchQuery = useQuery(gitBranchesQueryOptions(cwd));
   const repositoryReady = branchQuery.isSuccess && branchQuery.data.isRepo;
+  const statusQuery = useQuery(gitStatusQueryOptions(cwd, repositoryReady));
 
   // No fixed polling: turn-driven file changes already push-invalidate the
   // working-tree-diff cache (see __root.tsx), and focus + the Refresh button +
@@ -252,6 +254,7 @@ export function GitPanel(props: {
       const refreshes = [queryClient.invalidateQueries({ queryKey: gitQueryKeys.branches(cwd) })];
       if (repositoryReady) {
         refreshes.push(
+          queryClient.invalidateQueries({ queryKey: gitQueryKeys.status(cwd) }),
           queryClient.invalidateQueries({
             queryKey: gitQueryKeys.workingTreeDiff(cwd, "staged"),
           }),
@@ -323,6 +326,10 @@ export function GitPanel(props: {
         ? unstagedQuery.error.message
         : null;
   const hasChanges = stagedFiles.length > 0 || unstagedFiles.length > 0;
+  const showCleanState = !error && !isLoading && !hasChanges;
+  const unpushedCommitCount = statusQuery.data?.hasUpstream
+    ? statusQuery.data.aheadCount
+    : 0;
 
   if (!cwd) {
     return (
@@ -405,75 +412,93 @@ export function GitPanel(props: {
 
           {!branchQuery.data.hasOriginRemote ? <GitHubRemoteSetupCard cwd={cwd} /> : null}
 
-          <div className="flex max-h-[48%] min-h-0 shrink-0 overflow-hidden">
-            <ScrollArea className="min-h-0 flex-1" scrollFade>
-              <div
-                className={cn("flex flex-col gap-2 py-2", props.showActions ? "px-2" : "px-1.5")}
-              >
-                {error ? (
-                  <Alert variant="error" size="sm" className="text-destructive">
-                    {error}
-                  </Alert>
-                ) : null}
-                {!error && isLoading && !hasChanges ? (
-                  <p className="px-1.5 py-1 text-[11px] text-muted-foreground/70">
-                    {i18n._("Loading changes...")}
-                  </p>
-                ) : null}
-                {!error && !isLoading && !hasChanges ? (
-                  <p className="px-1.5 py-2 text-center text-[12px] text-muted-foreground/70">
-                    {i18n._("No changes in the working tree.")}
-                  </p>
-                ) : null}
-                {hasChanges ? (
-                  <>
-                    <GitFileSection
-                      title={i18n._("Staged")}
-                      emptyLabel={i18n._("No staged changes.")}
-                      files={stagedFiles}
-                      theme={theme}
-                      section="staged"
-                      selectedPath={selectedResolved?.section === "staged" ? selectedPath : null}
-                      actionLabel={i18n._("Unstage file")}
-                      actionAllLabel={i18n._("Unstage all")}
-                      actionIcon="unstage"
-                      actionDisabled={mutating}
-                      onSelect={selectStaged}
-                      onAction={unstage}
-                    />
-                    <GitFileSection
-                      title={i18n._("Changes")}
-                      emptyLabel={i18n._("No unstaged changes.")}
-                      files={unstagedFiles}
-                      theme={theme}
-                      section="unstaged"
-                      selectedPath={selectedResolved?.section === "unstaged" ? selectedPath : null}
-                      actionLabel={i18n._("Stage file")}
-                      actionAllLabel={i18n._("Stage all")}
-                      actionIcon="stage"
-                      actionDisabled={mutating}
-                      onSelect={selectUnstaged}
-                      onAction={stage}
-                    />
-                  </>
-                ) : null}
+          {showCleanState ? (
+            <PanelStateMessage density="compact" fill="flex" className="flex-col gap-1 py-6">
+              <span>{i18n._("No uncommitted changes.")}</span>
+              {unpushedCommitCount > 0 ? (
+                <span>
+                  {i18n._(
+                    "{count, plural, one {# local commit has not been pushed.} other {# local commits have not been pushed.}}",
+                    { count: unpushedCommitCount },
+                  )}
+                </span>
+              ) : null}
+            </PanelStateMessage>
+          ) : (
+            <>
+              <div className="flex max-h-[48%] min-h-0 shrink-0 overflow-hidden">
+                <ScrollArea className="min-h-0 flex-1" scrollFade>
+                  <div
+                    className={cn(
+                      "flex flex-col gap-2 py-2",
+                      props.showActions ? "px-2" : "px-1.5",
+                    )}
+                  >
+                    {error ? (
+                      <Alert variant="error" size="sm" className="text-destructive">
+                        {error}
+                      </Alert>
+                    ) : null}
+                    {!error && isLoading && !hasChanges ? (
+                      <p className="px-1.5 py-1 text-[11px] text-muted-foreground/70">
+                        {i18n._("Loading changes...")}
+                      </p>
+                    ) : null}
+                    {hasChanges ? (
+                      <>
+                        <GitFileSection
+                          title={i18n._("Staged")}
+                          emptyLabel={i18n._("No staged changes.")}
+                          files={stagedFiles}
+                          theme={theme}
+                          section="staged"
+                          selectedPath={
+                            selectedResolved?.section === "staged" ? selectedPath : null
+                          }
+                          actionLabel={i18n._("Unstage file")}
+                          actionAllLabel={i18n._("Unstage all")}
+                          actionIcon="unstage"
+                          actionDisabled={mutating}
+                          onSelect={selectStaged}
+                          onAction={unstage}
+                        />
+                        <GitFileSection
+                          title={i18n._("Changes")}
+                          emptyLabel={i18n._("No unstaged changes.")}
+                          files={unstagedFiles}
+                          theme={theme}
+                          section="unstaged"
+                          selectedPath={
+                            selectedResolved?.section === "unstaged" ? selectedPath : null
+                          }
+                          actionLabel={i18n._("Stage file")}
+                          actionAllLabel={i18n._("Stage all")}
+                          actionIcon="stage"
+                          actionDisabled={mutating}
+                          onSelect={selectUnstaged}
+                          onAction={stage}
+                        />
+                      </>
+                    ) : null}
+                  </div>
+                </ScrollArea>
               </div>
-            </ScrollArea>
-          </div>
 
-          <div className="diff-panel-viewport min-h-0 min-w-0 flex-1 overflow-hidden border-t border-border/70">
-            {selectedFileDiff && selectedFileRenderKey ? (
-              <SelectedFileDiff
-                key={selectedFileRenderKey}
-                fileDiff={selectedFileDiff}
-                theme={theme}
-              />
-            ) : (
-              <PanelStateMessage density="compact">
-                {i18n._("Select a file to view its diff.")}
-              </PanelStateMessage>
-            )}
-          </div>
+              <div className="diff-panel-viewport min-h-0 min-w-0 flex-1 overflow-hidden border-t border-border/70">
+                {selectedFileDiff && selectedFileRenderKey ? (
+                  <SelectedFileDiff
+                    key={selectedFileRenderKey}
+                    fileDiff={selectedFileDiff}
+                    theme={theme}
+                  />
+                ) : (
+                  <PanelStateMessage density="compact">
+                    {i18n._("Select a file to view its diff.")}
+                  </PanelStateMessage>
+                )}
+              </div>
+            </>
+          )}
         </>
       )}
     </div>

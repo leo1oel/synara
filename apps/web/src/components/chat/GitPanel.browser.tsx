@@ -39,7 +39,11 @@ function buildLongPatch(lineCount = 80): string {
   ].join("\n");
 }
 
-function gitStatus(branch: string, hasWorkingTreeChanges = true): GitStatusResult {
+function gitStatus(
+  branch: string,
+  hasWorkingTreeChanges = true,
+  aheadCount = 0,
+): GitStatusResult {
   return {
     branch,
     hasWorkingTreeChanges,
@@ -50,16 +54,21 @@ function gitStatus(branch: string, hasWorkingTreeChanges = true): GitStatusResul
     },
     hasUpstream: true,
     upstreamBranch: branch,
-    aheadCount: 0,
+    aheadCount,
     behindCount: 0,
     pr: null,
   };
 }
 
 function installGitApi(
-  options: { hasWorkingTreeChanges?: boolean; refreshGate?: Promise<void> } = {},
+  options: {
+    hasWorkingTreeChanges?: boolean;
+    aheadCount?: number;
+    refreshGate?: Promise<void>;
+  } = {},
 ) {
   const hasWorkingTreeChanges = options.hasWorkingTreeChanges ?? true;
+  const aheadCount = options.aheadCount ?? 0;
   let currentBranch = "feature/source-control";
   let branchReadCount = 0;
   const checkoutCalls: string[] = [];
@@ -92,7 +101,7 @@ function installGitApi(
           hasOriginRemote: true,
         };
       },
-      status: async () => gitStatus(currentBranch, hasWorkingTreeChanges),
+      status: async () => gitStatus(currentBranch, hasWorkingTreeChanges, aheadCount),
       readWorkingTreeDiff: async ({ scope }: { scope?: string }) => ({
         patch: scope === "staged" ? "" : patch,
       }),
@@ -402,6 +411,32 @@ describe("GitPanel", () => {
     expect(getComputedStyle(commitAndPushElement!).opacity).toBe("1");
     expect(getComputedStyle(commitAndPushElement!).color).toBe(
       getComputedStyle(branchTrigger!).color,
+    );
+  });
+
+  it("uses one consistent clean state and reports committed work waiting to push", async () => {
+    installGitApi({ hasWorkingTreeChanges: false, aheadCount: 3 });
+    await renderWithQueryClient(
+      <GitPanel
+        hostThreadId={null}
+        projectId={null}
+        cwdOverride={TEST_CWD}
+        showActions
+        title="Changes"
+      />,
+    );
+
+    const cleanMessage = page.getByText("No uncommitted changes.", { exact: true });
+    const committedMessage = page.getByText("3 local commits have not been pushed.", {
+      exact: true,
+    });
+    await expect.element(cleanMessage).toBeVisible();
+    await expect.element(committedMessage).toBeVisible();
+    await expect
+      .element(page.getByText("Select a file to view its diff.", { exact: true }))
+      .not.toBeInTheDocument();
+    expect(getComputedStyle(cleanMessage.element()).fontSize).toBe(
+      getComputedStyle(committedMessage.element()).fontSize,
     );
   });
 

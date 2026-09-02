@@ -12,6 +12,21 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
+#: src/routes/_chat.pull-requests.index.tsx
+msgid "Search pull requests"
+msgstr "Search pull requests"
+
+#. js-lingui-explicit-id
+#: src/routes/_chat.pull-requests.index.tsx
+msgid "No pull requests found"
+msgstr "No pull requests found"
+
+#. js-lingui-explicit-id
+#: src/routes/_chat.pull-requests.index.tsx
+msgid "Try another involvement, state, project, or search filter."
+msgstr "Try another involvement, state, project, or search filter."
+
+#. js-lingui-explicit-id
 #: src/routes/_chat.source-control.tsx
 msgid "Source control embed mode requires a Lattice workspace."
 msgstr "Source control embed mode requires a Lattice workspace."
@@ -2427,13 +2442,18 @@ msgstr "Checking repository…"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
-msgid "Loading changes..."
-msgstr "Loading changes..."
+msgid "No uncommitted changes."
+msgstr "No uncommitted changes."
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
-msgid "No changes in the working tree."
-msgstr "No changes in the working tree."
+msgid "{count, plural, one {# local commit has not been pushed.} other {# local commits have not been pushed.}}"
+msgstr "{count, plural, one {# local commit has not been pushed.} other {# local commits have not been pushed.}}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Loading changes..."
+msgstr "Loading changes..."
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx

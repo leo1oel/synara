@@ -12,6 +12,21 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
+#: src/routes/_chat.pull-requests.index.tsx
+msgid "Search pull requests"
+msgstr "搜索拉取请求"
+
+#. js-lingui-explicit-id
+#: src/routes/_chat.pull-requests.index.tsx
+msgid "No pull requests found"
+msgstr "未找到拉取请求"
+
+#. js-lingui-explicit-id
+#: src/routes/_chat.pull-requests.index.tsx
+msgid "Try another involvement, state, project, or search filter."
+msgstr "请尝试其他参与方式、状态、项目或搜索筛选条件。"
+
+#. js-lingui-explicit-id
 #: src/routes/_chat.source-control.tsx
 msgid "Source control embed mode requires a Lattice workspace."
 msgstr "源代码管理嵌入模式需要绑定 Lattice 工作区。"
@@ -2427,13 +2442,18 @@ msgstr "正在检查仓库…"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
-msgid "Loading changes..."
-msgstr "正在加载更改..."
+msgid "No uncommitted changes."
+msgstr "没有未提交的更改。"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
-msgid "No changes in the working tree."
-msgstr "工作树中没有更改。"
+msgid "{count, plural, one {# local commit has not been pushed.} other {# local commits have not been pushed.}}"
+msgstr "有 {count} 个本地提交尚未推送。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Loading changes..."
+msgstr "正在加载更改..."
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
