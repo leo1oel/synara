@@ -26,7 +26,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type MouseEvent, type ReactNode, useCallback, useMemo, useState } from "react";
+import { type MouseEvent, type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 import { useLingui } from "@lingui/react";
 
 import type { AppSettings, AppSettingsBinding } from "~/appSettings";
@@ -36,6 +36,7 @@ import { CentralIcon } from "~/lib/central-icons";
 import { DownloadIcon, ExternalLinkIcon, Loader2Icon } from "~/lib/icons";
 import { openExternalLink } from "~/lib/linkChips";
 import {
+  hasReconciledServerProviderStatuses,
   serverConfigQueryOptions,
   serverQueryKeys,
   serverSettingsQueryOptions,
@@ -77,19 +78,16 @@ type ProviderInstallTextKey =
   | "codexHomePath"
   | "cursorBinaryPath"
   | "cursorApiEndpoint"
+  | "devinBinaryPath"
   | "antigravityBinaryPath"
   | "grokBinaryPath"
   | "droidBinaryPath"
-  | "kiloBinaryPath"
-  | "kiloServerUrl"
   | "openCodeBinaryPath"
   | "openCodeServerUrl"
   | "piBinaryPath"
   | "piAgentDir";
-type ProviderInstallPasswordKey = "kiloServerPassword" | "openCodeServerPassword";
-type ProviderInstallPasswordConfiguredKey =
-  | "kiloServerPasswordConfigured"
-  | "openCodeServerPasswordConfigured";
+type ProviderInstallPasswordKey = "openCodeServerPassword";
+type ProviderInstallPasswordConfiguredKey = "openCodeServerPasswordConfigured";
 type ProviderInstallBooleanKey = "openCodeExperimentalWebSockets";
 
 type ProviderInstallTextField = {
@@ -273,38 +271,24 @@ const PROVIDER_INSTALL_SETTINGS: readonly ProviderInstallSettings[] = [
     ],
   },
   {
-    provider: "kilo",
+    provider: "devin",
     docs: [
-      { label: "Install", href: "https://kilo.ai/docs/cli" },
-      { label: "Update", href: "https://kilo.ai/docs/cli" },
-      { label: "Config", href: "https://kilo.ai/docs/cli#configuration" },
+      { label: "Install", href: "https://docs.devin.ai/cli" },
+      { label: "Commands", href: "https://docs.devin.ai/cli/reference/commands" },
+      { label: "Config", href: "https://docs.devin.ai/cli/reference/configuration/config-file" },
     ],
     fields: [
       {
         kind: "text",
-        settingsKey: "kiloBinaryPath",
-        label: "Kilo binary path",
-        placeholder: "Kilo binary path",
+        settingsKey: "devinBinaryPath",
+        label: "Devin binary path",
+        placeholder: "devin",
         description: (
           <>
-            Leave blank to use <code>kilo</code> from your PATH.
+            Leave blank to use <code>devin</code> from your PATH. Authenticate with{" "}
+            <code>devin auth login</code> or set WINDSURF_API_KEY.
           </>
         ),
-      },
-      {
-        kind: "text",
-        settingsKey: "kiloServerUrl",
-        label: "Kilo server URL",
-        placeholder: "http://127.0.0.1:4096",
-        description: "Optional existing Kilo server URL. Leave blank to spawn a local server.",
-      },
-      {
-        kind: "password",
-        settingsKey: "kiloServerPassword",
-        configuredKey: "kiloServerPasswordConfigured",
-        label: "Kilo server password",
-        placeholder: "Kilo server password",
-        description: "Optional password for an externally managed Kilo server.",
       },
     ],
   },
@@ -422,13 +406,13 @@ export function createProviderInstallResetPatch(defaults: AppSettings): Partial<
   ) as Partial<AppSettings>;
 }
 
-function setProviderHidden(
+function setProviderListMembership(
   current: ReadonlyArray<ProviderKind>,
   provider: ProviderKind,
-  hidden: boolean,
+  included: boolean,
 ): ProviderKind[] {
   const withoutTarget = current.filter((entry) => entry !== provider);
-  return hidden ? [...withoutTarget, provider] : withoutTarget;
+  return included ? [...withoutTarget, provider] : withoutTarget;
 }
 
 function isProviderPickerProviderEnabled(
@@ -803,12 +787,14 @@ function ProviderToolRow(props: {
 export type ProvidersSettingsPanelProps = AppSettingsBinding & {
   readonly active: boolean;
   readonly resetEpoch: number;
+  readonly updateSettingsAndWait: (patch: Partial<AppSettings>) => Promise<void>;
 };
 
 export function ProvidersSettingsPanel({
   settings,
   defaults,
   updateSettings,
+  updateSettingsAndWait,
   active,
   resetEpoch,
 }: ProvidersSettingsPanelProps) {
@@ -816,6 +802,7 @@ export function ProvidersSettingsPanel({
   const queryClient = useQueryClient();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const localProviderStatuses = useProviderStatusesForLocalConfig();
+  const providerStatusesReconciled = hasReconciledServerProviderStatuses(queryClient);
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
   const [openInstallProviders, setOpenInstallProviders] = useState<Record<ProviderKind, boolean>>(
     () => createProviderInstallDisclosureState(settings),
@@ -823,11 +810,18 @@ export function ProvidersSettingsPanel({
   const [updatingProviders, setUpdatingProviders] = useState<ReadonlySet<ProviderKind>>(
     () => new Set(),
   );
+  const providerEnablementMutationInFlightRef = useRef(false);
+  const [providerEnablementMutationPending, setProviderEnablementMutationPending] = useState(false);
   const hiddenProviderSet = useMemo(
     () => new Set<ProviderKind>(settings.hiddenProviders),
     [settings.hiddenProviders],
   );
   const hiddenProviderCount = hiddenProviderSet.size;
+  const disabledProviderSet = useMemo(
+    () => new Set<ProviderKind>(settings.disabledProviders),
+    [settings.disabledProviders],
+  );
+  const enabledProviderCount = PROVIDER_VISIBILITY_OPTIONS.length - disabledProviderSet.size;
   const providerVisibilityOptionsByProvider = useMemo(
     () => new Map(PROVIDER_VISIBILITY_OPTIONS.map((option) => [option.provider, option])),
     [],
@@ -856,9 +850,11 @@ export function ProvidersSettingsPanel({
       providerStatusByProvider.get(option.provider)?.available === true &&
       !hiddenProviderSet.has(option.provider),
   ).length;
-  const hasPendingProviderStatuses = orderedProviderVisibilityOptions.some(
-    (option) => !providerStatusByProvider.has(option.provider),
-  );
+  const hasPendingProviderStatuses =
+    !providerStatusesReconciled ||
+    orderedProviderVisibilityOptions.some(
+      (option) => !providerStatusByProvider.has(option.provider),
+    );
   const providerUpdateServerSettings = useMemo(
     () =>
       serverSettingsQuery.data
@@ -880,6 +876,21 @@ export function ProvidersSettingsPanel({
   );
   const outdatedProviderCount = outdatedProviderStatuses.length;
   const installSettingsDirty = isProviderInstallSettingsDirty(settings, defaults);
+
+  const updateProviderEnablement = useCallback(
+    async (disabledProviders: ProviderKind[]) => {
+      if (providerEnablementMutationInFlightRef.current) return;
+      providerEnablementMutationInFlightRef.current = true;
+      setProviderEnablementMutationPending(true);
+      try {
+        await updateSettingsAndWait({ disabledProviders });
+      } finally {
+        providerEnablementMutationInFlightRef.current = false;
+        setProviderEnablementMutationPending(false);
+      }
+    },
+    [updateSettingsAndWait],
+  );
 
   useSettingsRestoreSignal(resetEpoch, () => {
     setOpenInstallProviders(createClosedProviderInstallDisclosureState());
@@ -951,11 +962,84 @@ export function ProvidersSettingsPanel({
 
   return (
     <div className="space-y-6">
+      <SettingsSection title={i18n._("Provider activity")}>
+        <SettingsRow
+          title={i18n._("Enabled providers")}
+          description={i18n._(
+            "Disabling a provider stops its background health checks, model and command discovery, updates, and new turns. Existing threads stay visible and continue after you re-enable it; a turn already running is not interrupted.",
+          )}
+          status={
+            providerEnablementMutationPending
+              ? i18n._("Saving provider activity")
+              : i18n._("{enabledProviderCount} of {providerCount} enabled", {
+                  enabledProviderCount,
+                  providerCount: PROVIDER_VISIBILITY_OPTIONS.length,
+                })
+          }
+          resetAction={
+            disabledProviderSet.size > 0 && !providerEnablementMutationPending ? (
+              <SettingResetButton
+                label="enabled providers"
+                onClick={() => void updateProviderEnablement([...defaults.disabledProviders])}
+              />
+            ) : null
+          }
+        >
+          <div
+            className={cn(
+              "mt-4",
+              SETTINGS_INSET_LIST_CLASS_NAME,
+              SETTINGS_STACKED_ROWS_DIVIDER_CLASS_NAME,
+            )}
+          >
+            {orderedProviderVisibilityOptions.map((option) => {
+              const enabled = !disabledProviderSet.has(option.provider);
+              return (
+                <SettingsListRow
+                  key={option.provider}
+                  title={
+                    <span className="flex items-center gap-2">
+                      <ProviderIcon provider={option.provider} className="size-4 shrink-0" />
+                      <span>{option.title}</span>
+                    </span>
+                  }
+                  description={
+                    enabled
+                      ? i18n._("Background activity allowed")
+                      : i18n._("Disabled on the server")
+                  }
+                  actions={
+                    <Switch
+                      checked={enabled}
+                      disabled={!serverSettingsQuery.data || providerEnablementMutationPending}
+                      onCheckedChange={(checked) =>
+                        void updateProviderEnablement(
+                          setProviderListMembership(
+                            settings.disabledProviders,
+                            option.provider,
+                            !Boolean(checked),
+                          ),
+                        )
+                      }
+                      aria-label={
+                        enabled
+                          ? i18n._("Disable {provider}", { provider: option.title })
+                          : i18n._("Enable {provider}", { provider: option.title })
+                      }
+                    />
+                  }
+                />
+              );
+            })}
+          </div>
+        </SettingsRow>
+      </SettingsSection>
+
       <SettingsSection title={i18n._("Provider picker")}>
         <SettingsRow
           title={i18n._("Available CLIs")}
           description={i18n._(
-            "Installed providers appear in the picker. Turn off any you don't want to see, and drag them into your preferred order.",
+            "Show or hide installed providers in the picker and drag them into your preferred order. Hiding a provider here does not disable its server activity.",
           )}
           status={
             serverConfigQuery.isPending || hasPendingProviderStatuses
@@ -1008,7 +1092,7 @@ export function ProvidersSettingsPanel({
                     isHidden={hiddenProviderSet.has(option.provider)}
                     onHiddenChange={(hidden) =>
                       updateSettings({
-                        hiddenProviders: setProviderHidden(
+                        hiddenProviders: setProviderListMembership(
                           settings.hiddenProviders,
                           option.provider,
                           hidden,

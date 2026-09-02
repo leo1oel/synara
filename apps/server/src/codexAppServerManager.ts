@@ -1,4 +1,4 @@
-import { type ChildProcess, type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
+import type { ChildProcess, ChildProcessWithoutNullStreams } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 
@@ -37,7 +37,7 @@ import {
 import { prewarmChatGptVoiceTranscriptionConnection } from "@synara/shared/chatGptVoiceTranscription";
 import { getModelSelectionBooleanOptionValue, normalizeModelSlug } from "@synara/shared/model";
 import { decodeSubagentReceiverThreadIds } from "@synara/shared/subagents";
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+import { spawnProcess } from "@synara/shared/processRuntime";
 import { Effect, ServiceMap } from "effect";
 
 import {
@@ -653,6 +653,13 @@ export function buildCodexThreadOpenRequest(input: {
   };
 }
 
+export function shouldWarnCodexFreshStartWithoutResume(input: {
+  readonly threadOpenMethod: string;
+  readonly previouslyBound: boolean;
+}): boolean {
+  return input.threadOpenMethod === "thread/start" && input.previouslyBound;
+}
+
 // turn/start uses sandboxPolicy objects, so keep this separate from thread/start.
 function mapCodexRuntimeModeToTurnOverrides(runtimeMode: RuntimeMode): {
   readonly approvalPolicy: CodexApprovalPolicy;
@@ -717,30 +724,24 @@ function spawnCodexAppServer(input: {
   readonly cwd: string;
   readonly env: NodeJS.ProcessEnv;
 }): ChildProcessWithoutNullStreams {
-  const prepared = prepareWindowsSafeProcess(input.binaryPath, ["app-server"], {
-    cwd: input.cwd,
-    env: input.env,
-  });
   const latticeBibGuard =
     ACTIVE_AGENT_HOST_PROFILE.id === "lattice" && process.platform === "darwin";
-  const command = latticeBibGuard ? "/usr/bin/sandbox-exec" : prepared.command;
+  const command = latticeBibGuard ? "/usr/bin/sandbox-exec" : input.binaryPath;
   const args = latticeBibGuard
     ? [
         "-p",
         ["(version 1)", "(allow default)", '(deny file-write* (regex #".*[.][bB][iI][bB]$"))'].join(
           "\n",
         ),
-        prepared.command,
-        ...prepared.args,
+        input.binaryPath,
+        "app-server",
       ]
-    : prepared.args;
-  return spawn(command, args, {
+    : ["app-server"];
+  return spawnProcess(command, args, {
+    requireExecutable: true,
     cwd: input.cwd,
     env: input.env,
     stdio: ["pipe", "pipe", "pipe"],
-    shell: latticeBibGuard ? false : prepared.shell,
-    windowsHide: prepared.windowsHide,
-    windowsVerbatimArguments: prepared.windowsVerbatimArguments,
   });
 }
 
@@ -971,6 +972,7 @@ function setRecentCacheEntry<K, V>(
 
 export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEvents> {
   private readonly sessions = new Map<ThreadId, CodexSessionContext>();
+  private readonly previouslyBoundThreadIds = new Set<ThreadId>();
   private readonly discoverySessions = new Map<string, CodexSessionContext>();
   private readonly discoverySessionStartups = new Map<string, Promise<CodexSessionContext>>();
   private readonly discoverySessionIdleTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -1173,6 +1175,28 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         ...(resumeThreadId ? { resumeThreadId } : {}),
         sessionOverrides,
       });
+      const previouslyBound =
+        this.previouslyBoundThreadIds.has(threadId) || input.resumeCursor !== undefined;
+      if (
+        shouldWarnCodexFreshStartWithoutResume({
+          threadOpenMethod: threadOpenRequest.method,
+          previouslyBound,
+        })
+      ) {
+        this.emitLifecycleEvent(
+          context,
+          "session/threadStartWithoutResume",
+          "Starting a new Codex thread for a Synara thread that previously had a provider binding.",
+        );
+        await Effect.logWarning(
+          "codex app-server starting a fresh thread for a previously bound Synara thread",
+          {
+            threadId,
+            threadOpenMethod: "thread/start",
+            resumeThreadId: resumeThreadId ?? null,
+          },
+        ).pipe(this.runPromise);
+      }
       this.emitLifecycleEvent(
         context,
         "session/threadOpenRequested",
@@ -1260,15 +1284,10 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       }
       const providerThreadId = threadIdRaw;
 
-      this.updateSession(context, {
-        status: "ready",
-        resumeCursor: { threadId: providerThreadId },
+      this.markSessionReadyAfterThreadOpen(context, {
+        threadOpenMethod,
+        providerThreadId,
       });
-      this.emitLifecycleEvent(
-        context,
-        "session/threadOpenResolved",
-        `Codex ${threadOpenMethod} resolved.`,
-      );
       await Effect.logInfo("codex app-server thread open resolved", {
         threadId,
         threadOpenMethod,
@@ -1277,7 +1296,6 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         resolvedThreadId: providerThreadId,
         requestedRuntimeMode: input.runtimeMode,
       }).pipe(this.runPromise);
-      this.emitLifecycleEvent(context, "session/ready", `Connected to thread ${providerThreadId}`);
       return { ...context.session };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to start Codex session.";
@@ -1952,16 +1970,10 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       const response = await this.sendRequest(context, "thread/fork", forkParams);
       const forkedProviderThreadId = this.readThreadIdFromResponse("thread/fork", response);
 
-      this.updateSession(context, {
-        status: "ready",
-        resumeCursor: { threadId: forkedProviderThreadId },
+      this.markSessionReadyAfterThreadOpen(context, {
+        threadOpenMethod: "thread/fork",
+        providerThreadId: forkedProviderThreadId,
       });
-      this.emitLifecycleEvent(context, "session/threadOpenResolved", "Codex thread/fork resolved.");
-      this.emitLifecycleEvent(
-        context,
-        "session/ready",
-        `Connected to thread ${forkedProviderThreadId}`,
-      );
 
       return {
         threadId,
@@ -3506,6 +3518,36 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     });
   }
 
+  private markSessionReadyAfterThreadOpen(
+    context: CodexSessionContext,
+    input: {
+      readonly threadOpenMethod: string;
+      readonly providerThreadId: string;
+    },
+  ): void {
+    this.updateSession(context, {
+      status: "ready",
+      resumeCursor: { threadId: input.providerThreadId },
+    });
+    this.previouslyBoundThreadIds.add(context.session.threadId);
+    this.emitLifecycleEvent(
+      context,
+      "session/threadOpenResolved",
+      `Codex ${input.threadOpenMethod} resolved.`,
+    );
+    this.emitLifecycleEvent(
+      context,
+      "session/ready",
+      `Connected to thread ${input.providerThreadId}`,
+    );
+    // Resume/fork do not notify session start; emit it so idle-stop re-arms.
+    this.emitLifecycleEvent(
+      context,
+      "session/started",
+      `Codex session ready for thread ${input.providerThreadId}`,
+    );
+  }
+
   private emitLifecycleEvent(context: CodexSessionContext, method: string, message: string): void {
     if (context.discovery) {
       return;
@@ -4101,21 +4143,14 @@ function runCodexVersionCommand(input: {
   readonly cwd: string;
   readonly env: NodeJS.ProcessEnv;
 }): Promise<CodexVersionCommandResult> {
-  const prepared = prepareWindowsSafeProcess(input.binaryPath, ["--version"], {
-    cwd: input.cwd,
-    env: input.env,
-  });
-
   return new Promise<CodexVersionCommandResult>((resolve) => {
     let child: ChildProcess;
     try {
-      child = spawn(prepared.command, prepared.args, {
+      child = spawnProcess(input.binaryPath, ["--version"], {
+        requireExecutable: true,
         cwd: input.cwd,
         env: input.env,
         stdio: ["ignore", "pipe", "pipe"],
-        shell: prepared.shell,
-        windowsHide: prepared.windowsHide,
-        windowsVerbatimArguments: prepared.windowsVerbatimArguments,
       });
     } catch (error) {
       resolve({

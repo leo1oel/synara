@@ -83,6 +83,7 @@ import {
   AutomationApprovalBanner,
   AutomationModelPicker,
   automationIntervalPresetOptions,
+  automationTargetThreads,
   canCancelAutomationRun,
   datetimeLocalFromIso,
   formatRelativeTime,
@@ -386,7 +387,7 @@ function AutomationDetailView() {
   // Mode changes: switching to heartbeat must patch {mode, targetThreadId} atomically
   // (the server refuses a heartbeat without a target), and leaving a mode that holds a
   // thread deserves a confirm — the automation stops writing to it, the thread stays.
-  const projectThreads = threads.filter((thread) => thread.projectId === definition.projectId);
+  const projectThreads = automationTargetThreads(threads, definition.projectId);
   const requestModeChange = (nextMode: AutomationDefinition["mode"]) => {
     if (nextMode === definition.mode) return;
     if (nextMode === "heartbeat") {

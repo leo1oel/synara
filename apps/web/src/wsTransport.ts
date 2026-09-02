@@ -66,6 +66,10 @@ import { APP_VERSION } from "./branding";
 import { useDeviceStateStore } from "./deviceStateStore";
 import { readEmbeddedHostWsUrl } from "./embedMode";
 import {
+  getUnaryRpcCapacityRetryDelayMs,
+  MAX_UNARY_RPC_CAPACITY_RETRY_ATTEMPTS,
+} from "./lib/expensiveReadRetry";
+import {
   buildThreadSubscribeInput,
   clearThreadDetailResumeCursor,
   resetThreadDetailResumeCursors,
@@ -225,6 +229,13 @@ function delayWithAbort(ms: number, signal: AbortSignal): Promise<void> {
       signal.removeEventListener("abort", onAbort);
     };
     signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+function delayMs(ms: number, signal: AbortSignal | undefined): Promise<void> {
+  if (signal) return delayWithAbort(ms, signal);
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
   });
 }
 
@@ -460,6 +471,8 @@ export function getUnexpectedStreamCompletionRetryDelayMs(attempt: number): numb
     MAX_UNEXPECTED_STREAM_COMPLETION_RETRY_MS,
   );
 }
+
+export { getUnaryRpcCapacityRetryDelayMs, MAX_UNARY_RPC_CAPACITY_RETRY_ATTEMPTS };
 
 /**
  * Capacity rejections are admission failures the server marks retryable: the
@@ -826,10 +839,18 @@ export class WsTransport {
       )[method];
       if (!call) throw new WsTransportRpcError({ message: `Unknown RPC method: ${method}` });
       const clientRuntime = this.getClientRuntime(client);
-      return (await clientRuntime.runPromise(
-        call(normalizedRpcInput),
-        abortScope.signal ? { signal: abortScope.signal } : undefined,
-      )) as T;
+      const runOptions = abortScope.signal ? { signal: abortScope.signal } : undefined;
+      let capacityAttempts = 0;
+      while (true) {
+        try {
+          return (await clientRuntime.runPromise(call(normalizedRpcInput), runOptions)) as T;
+        } catch (error) {
+          const retryDelayMs = getUnaryRpcCapacityRetryDelayMs(error, capacityAttempts);
+          if (retryDelayMs === null) throw error;
+          capacityAttempts += 1;
+          await delayMs(retryDelayMs, abortScope.signal);
+        }
+      }
     } catch (error) {
       if (abortScope.didTimeout()) {
         throw new WsTransportRequestInterruptedError({

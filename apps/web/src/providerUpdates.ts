@@ -91,6 +91,7 @@ export function shouldOfferProviderUpdateAction(provider: ServerProviderStatus):
     typeof provider.version === "string" &&
     provider.version.trim().length > 0 &&
     advisory?.canUpdate === true &&
+    advisory.currentVersion !== null &&
     advisory.updateCommand !== null &&
     (advisory.status === "behind_latest" || advisory.status === "unknown")
   );

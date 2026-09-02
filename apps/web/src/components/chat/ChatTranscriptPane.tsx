@@ -10,6 +10,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type ComponentProps,
   type CSSProperties,
   type MouseEventHandler,
@@ -31,6 +32,7 @@ import { ExternalScrollbar } from "../ui/external-scrollbar";
 import { MessagesTimeline, type MessagesTimelineController } from "./MessagesTimeline";
 import { MessageTrail } from "./MessageTrail";
 import { createActiveTrailStore, deriveMessageTrailItems } from "./messageTrail.logic";
+import { createThreadFindHighlightStore, type ThreadFindHighlightStore } from "./threadFind.logic";
 import { AgentActivityDetailView } from "./AgentActivityDetailView";
 import type { AgentActivityDetail } from "./agentActivity.logic";
 
@@ -98,11 +100,14 @@ interface ChatTranscriptPaneProps {
   timestampFormat: TimestampFormat;
   turnDiffSummaryByAssistantMessageId: Map<MessageId, TurnDiffSummary>;
   workspaceRoot: string | undefined;
+  keybindings?: ComponentProps<typeof MessagesTimeline>["keybindings"];
+  availableEditors?: ComponentProps<typeof MessagesTimeline>["availableEditors"];
   worktreeSetup: WorktreeSetupSnapshot | null;
   worktreeSetupPendingAction?: ComponentProps<
     typeof MessagesTimeline
   >["worktreeSetupPendingAction"];
   onResolveWorktreeSetup?: ComponentProps<typeof MessagesTimeline>["onResolveWorktreeSetup"];
+  findHighlightStore?: ThreadFindHighlightStore | null;
 }
 
 export function ChatTranscriptPane({
@@ -167,9 +172,12 @@ export function ChatTranscriptPane({
   timestampFormat,
   turnDiffSummaryByAssistantMessageId,
   workspaceRoot,
+  keybindings,
+  availableEditors,
   worktreeSetup,
   worktreeSetupPendingAction,
   onResolveWorktreeSetup,
+  findHighlightStore: findHighlightStoreProp,
 }: ChatTranscriptPaneProps) {
   const scrollButtonFrameStyle: CSSProperties | undefined = contentInsetRightPx
     ? { paddingRight: contentInsetRightPx }
@@ -182,6 +190,13 @@ export function ChatTranscriptPane({
   // highlights can't linger.
   const trailItems = deriveMessageTrailItems(timelineEntries);
   const [activeTrailStore] = useState(() => createActiveTrailStore());
+  const [fallbackFindHighlightStore] = useState(() => createThreadFindHighlightStore());
+  const findHighlightStore = findHighlightStoreProp ?? fallbackFindHighlightStore;
+  const findHighlight = useSyncExternalStore(
+    findHighlightStore.subscribe,
+    findHighlightStore.get,
+    findHighlightStore.get,
+  );
   useEffect(() => {
     activeTrailStore.set(null);
   }, [activeThreadId, activeTrailStore]);
@@ -274,8 +289,11 @@ export function ChatTranscriptPane({
             chatFontSizePx={chatFontSizePx}
             timestampFormat={timestampFormat}
             workspaceRoot={workspaceRoot}
+            {...(keybindings ? { keybindings } : {})}
+            {...(availableEditors ? { availableEditors } : {})}
             contentInsetRightPx={contentInsetRightPx}
             {...(onOpenAgentActivity ? { onOpenAgentActivity } : {})}
+            findHighlight={findHighlight}
             emptyStateContent={
               emptyStateContent === undefined ? (
                 <ChatEmptyStateHero projectName={emptyStateProjectName} />

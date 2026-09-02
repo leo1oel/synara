@@ -5,6 +5,7 @@ import { AgentQualityTrace } from "../../agentGateway/Services/AgentQualityTrace
 import { CheckpointReactor } from "../Services/CheckpointReactor.ts";
 import { ProviderCommandReactor } from "../Services/ProviderCommandReactor.ts";
 import { ProviderRuntimeIngestionService } from "../Services/ProviderRuntimeIngestion.ts";
+import { SidechatExpiryReactor } from "../Services/SidechatExpiryReactor.ts";
 import { StudioOutputReactor } from "../Services/StudioOutputReactor.ts";
 import { ThreadGitMetadataReactor } from "../Services/ThreadGitMetadataReactor.ts";
 import { OrchestrationReactor } from "../Services/OrchestrationReactor.ts";
@@ -39,6 +40,18 @@ describe("OrchestrationReactor", () => {
             bindTurnContext: () => Effect.void,
             failTurnContext: () => Effect.void,
             recordCompile: () => Effect.void,
+          }),
+        ),
+        Layer.provideMerge(
+          Layer.succeed(SidechatExpiryReactor, {
+            start: Effect.acquireRelease(
+              Effect.sync(() => {
+                started.push("sidechat-expiry-reactor");
+              }),
+              () => Effect.sync(() => stopped.push("sidechat-expiry-reactor")),
+            ),
+            viewStarted: () => Effect.void,
+            viewEnded: () => Effect.void,
           }),
         ),
         Layer.provideMerge(
@@ -117,6 +130,7 @@ describe("OrchestrationReactor", () => {
       "checkpoint-reactor",
       "thread-git-metadata-reactor",
       "provider-runtime-ingestion",
+      "sidechat-expiry-reactor",
       "provider-command-reactor",
     ]);
     expect(reconciledOpenTurns).toBe(1);
@@ -124,6 +138,7 @@ describe("OrchestrationReactor", () => {
     await Effect.runPromise(Scope.close(scope, Exit.void));
     expect(stopped).toEqual([
       "provider-command-reactor",
+      "sidechat-expiry-reactor",
       "provider-runtime-ingestion",
       "thread-git-metadata-reactor",
       "checkpoint-reactor",

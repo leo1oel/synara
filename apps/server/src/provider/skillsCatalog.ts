@@ -464,9 +464,9 @@ const HOME_ORIGIN_ORDER = [
   "cursor",
   "grok",
   "factory",
-  "kilo",
   "opencode",
   "pi",
+  "devin",
   "agents",
 ] as const;
 export type SkillsCatalogOrigin = (typeof HOME_ORIGIN_ORDER)[number] | "project";
@@ -1177,10 +1177,6 @@ const SKILL_ORIGIN_ROOTS = {
     homeRoots: (input) => [nodePath.join(input.homeDir, ".factory", "skills")],
     projectRootNames: [".factory"],
   },
-  kilo: {
-    homeRoots: (input) => [nodePath.join(input.homeDir, ".kilo", "skills")],
-    projectRootNames: [".kilo"],
-  },
   opencode: {
     homeRoots: (input) => [nodePath.join(input.homeDir, ".config", "opencode", "skills")],
     projectRootNames: [".opencode"],
@@ -1188,6 +1184,24 @@ const SKILL_ORIGIN_ROOTS = {
   pi: {
     homeRoots: (input) => [nodePath.join(input.homeDir, ".pi", "agent", "skills")],
     projectRootNames: [".pi"],
+  },
+  devin: {
+    homeRoots: (input) => [
+      ...(process.platform === "win32"
+        ? [
+            nodePath.join(input.homeDir, "AppData", "Roaming", "devin", "skills"),
+            nodePath.join(input.homeDir, "AppData", "Roaming", "cognition", "skills"),
+          ]
+        : []),
+      nodePath.join(input.homeDir, ".config", "devin", "skills"),
+      nodePath.join(input.homeDir, ".config", "cognition", "skills"),
+      nodePath.join(input.homeDir, ".codeium", "windsurf", "skills"),
+      nodePath.join(input.homeDir, ".codeium", "windsurf-next", "skills"),
+      nodePath.join(input.homeDir, ".codeium", "windsurf-insiders", "skills"),
+      // Keep the original path as a compatibility fallback for early Devin CLI builds.
+      nodePath.join(input.homeDir, ".devin", "skills"),
+    ],
+    projectRootNames: [".devin", ".cognition", ".windsurf"],
   },
   agents: {
     homeRoots: (input) => [nodePath.join(input.homeDir, ".agents", "skills")],
@@ -1202,9 +1216,9 @@ const PROVIDER_SKILL_ORIGIN_PREFERENCES = {
   antigravity: ["agents"],
   grok: ["grok", "claude", "agents"],
   droid: ["factory", "agents", "claude", "codex"],
-  kilo: ["kilo", "agents", "claude"],
   opencode: ["opencode", "claude", "agents"],
   pi: ["pi", "agents"],
+  devin: ["devin", "claude", "agents"],
 } as const satisfies Partial<Record<ProviderKind, readonly SkillsHomeOrigin[]>>;
 
 function homeRootsForOrigin(

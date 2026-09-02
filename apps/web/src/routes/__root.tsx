@@ -7,6 +7,7 @@ import {
   type OrchestrationThread,
   type ServerConfig,
   type ServerProviderStatus,
+  type ServerSettingsView,
   type WsCompatibilityError,
 } from "@synara/contracts";
 import { defaultTerminalTitleForCliKind } from "@synara/shared/terminalThreads";
@@ -29,6 +30,7 @@ import { DesktopWindowControls } from "../components/DesktopWindowControls";
 import { RunningChatsQuitCoordinator } from "../components/RunningChatsQuitCoordinator";
 import { AppSnapCoordinator } from "../components/AppSnapCoordinator";
 import { AppSnapWelcomeDialog } from "../components/AppSnapWelcomeDialog";
+import { QueuedComposerDrainCoordinator } from "../components/QueuedComposerDrainCoordinator";
 import { FeedbackDialog } from "../components/FeedbackDialog";
 import { SETTINGS_TARGETS } from "../settingsNavigation";
 import ShortcutsDialog from "../components/ShortcutsDialog";
@@ -46,6 +48,7 @@ import { useFeedbackDialogStore } from "../feedbackDialogStore";
 import type { FeedbackThreadContext } from "../feedback";
 import { isTerminalFocused } from "../lib/terminalFocus";
 import {
+  invalidateProviderUsageQueries,
   reconcileServerProviderStatuses,
   refreshServerConfigAfterTransportOpen,
   serverConfigQueryOptions,
@@ -129,7 +132,7 @@ import { resolveVisibleDockSidechatThreadIds } from "../rightDockStore.logic";
 import { arraysShallowEqual } from "../storeNormalization";
 import { providerModelDiscoveryInvalidationFingerprint } from "../lib/providerDiscoveryInvalidation";
 import { providerDiscoveryQueryKeys } from "../lib/providerDiscoveryReactQuery";
-import { useAppSettings } from "../appSettings";
+import { didProviderEnablementChange, useAppSettings } from "../appSettings";
 import { getNavigatorPlatform } from "../lib/utils";
 import {
   getNotifiableProviderUpdateStatuses,
@@ -293,6 +296,7 @@ function RootRouteView() {
           <GlobalFeedbackDialog />
           <GlobalWhatsNewSurface />
           <TaskCompletionNotifications />
+          <QueuedComposerDrainCoordinator />
           <AppSnapWelcomeDialog />
           <AppSnapCoordinator />
           <DesktopProjectBootstrap />
@@ -1076,6 +1080,16 @@ function EventRouter() {
   );
   const retainedThreadIds = useRetainedThreadDetailIds();
   const serverThreadIdSet = useMemo(() => new Set(serverThreadIds), [serverThreadIds]);
+  const sidebarThreadSummaryById = useStore((store) => store.sidebarThreadSummaryById);
+  const sidechatThreadIdSet = useMemo(
+    () =>
+      new Set(
+        serverThreadIds.filter((threadId) =>
+          Boolean(sidebarThreadSummaryById[threadId]?.sidechatSourceThreadId),
+        ),
+      ),
+    [serverThreadIds, sidebarThreadSummaryById],
+  );
   // Stabilize the lease array by content: `serverThreads` re-emits on every
   // streaming update, and an identity-changing lease list would enqueue a no-op
   // subscription reconcile per render onto the serialized subscribe chain.
@@ -1083,6 +1097,7 @@ function EventRouter() {
     visibleThreadIds,
     retainedThreadIds,
     serverThreadIds: serverThreadIdSet,
+    retentionExcludedThreadIds: sidechatThreadIdSet,
   });
   const subscribedThreadIdsRef = useRef(nextSubscribedThreadIds);
   const subscribedThreadIds = arraysShallowEqual(
@@ -1124,6 +1139,8 @@ function EventRouter() {
     const immediatelyFlushedAssistantMessageIds = new Set<string>();
     let providerDiscoveryInvalidationFingerprint: string | null = null;
     let shellSnapshotSequence = -1;
+    let shellSubscriptionGeneration = 0;
+    let shellSnapshotReceivedGeneration = -1;
     let pendingShellEvents: OrchestrationShellStreamEvent[] = [];
     const subscribedThreadIds = new Set<ThreadId>();
     const threadSnapshotSequenceById = new Map<ThreadId, number>();
@@ -1443,15 +1460,12 @@ function EventRouter() {
       }
     }
 
-    const applyQueriedShellSnapshot = (snapshot: OrchestrationShellSnapshot) => {
-      if (disposed) return;
+    const applyAuthoritativeShellSnapshot = (snapshot: OrchestrationShellSnapshot) => {
+      if (disposed) return false;
       // A query can resolve after the live shell stream has already moved
       // forward. Never roll the store back behind the EventRouter fence.
       if (shellSnapshotSequence >= 0 && snapshot.snapshotSequence < shellSnapshotSequence) {
-        return;
-      }
-      if (!shouldApplyBootstrapShellSnapshot(snapshot)) {
-        return;
+        return false;
       }
       const promotedDraftThreadIds = collectSubscribedDraftsInShell(snapshot.threads);
       shellSnapshotSequence = snapshot.snapshotSequence;
@@ -1460,13 +1474,55 @@ function EventRouter() {
       removeOrphanedTerminalsForCurrentState();
       flushShellBuffer(snapshot.snapshotSequence);
       reconcileMissingSubscribedThreadProjections(promotedDraftThreadIds);
+      return true;
     };
 
-    const loadShellSnapshotOnce = async () => {
-      if (disposed) return;
+    const applyQueriedShellSnapshot = (snapshot: OrchestrationShellSnapshot) => {
+      if (!shouldApplyBootstrapShellSnapshot(snapshot)) {
+        return false;
+      }
+      return applyAuthoritativeShellSnapshot(snapshot);
+    };
+
+    // The live shell stream normally delivers the bootstrap snapshot. Only
+    // fall back until either the stream or a query has returned one. Collection
+    // emptiness is valid user state, so it cannot indicate whether bootstrap
+    // succeeded. Every extra request recomputes and ships the whole sidebar
+    // (about 1 MB per 600 threads) and queues behind the thread-detail snapshot
+    // on the server's single SQLite connection.
+    const needsBootstrapShellSnapshot = (generation: number) =>
+      shellSnapshotReceivedGeneration < generation;
+
+    const loadBootstrapShellSnapshotIfMissing = async (generation: number) => {
+      if (
+        disposed ||
+        generation !== shellSubscriptionGeneration ||
+        !needsBootstrapShellSnapshot(generation)
+      ) {
+        return;
+      }
       const snapshot = await api.orchestration.getShellSnapshot();
-      if (disposed) return;
-      applyQueriedShellSnapshot(snapshot);
+      if (
+        disposed ||
+        generation !== shellSubscriptionGeneration ||
+        !needsBootstrapShellSnapshot(generation)
+      ) {
+        return;
+      }
+      if (applyAuthoritativeShellSnapshot(snapshot)) {
+        shellSnapshotReceivedGeneration = generation;
+      }
+    };
+
+    // Each subscription generation owns one fallback timer. Deferring it gives
+    // the shell stream's snapshot time to land first, while replacing an older
+    // generation's timer keeps reconnect recovery tied to the current stream.
+    let shellSnapshotFallbackTimer: number | null = null;
+    const scheduleShellSnapshotFallback = (generation: number) => {
+      shellSnapshotFallbackTimer = window.setTimeout(() => {
+        shellSnapshotFallbackTimer = null;
+        void loadBootstrapShellSnapshotIfMissing(generation).catch(() => undefined);
+      }, SHELL_SNAPSHOT_BOOTSTRAP_FALLBACK_DELAY_MS);
     };
 
     const unregisterEmptyRouteRestoreRefresh = registerEmptyRouteRestoreRefresh(() =>
@@ -1484,10 +1540,19 @@ function EventRouter() {
       if (scopedSubscriptionRefresh) {
         return scopedSubscriptionRefresh;
       }
+      shellSubscriptionGeneration += 1;
+      const generation = shellSubscriptionGeneration;
+      if (shellSnapshotFallbackTimer !== null) {
+        window.clearTimeout(shellSnapshotFallbackTimer);
+        shellSnapshotFallbackTimer = null;
+      }
+      scheduleShellSnapshotFallback(generation);
       const refresh = (async () => {
         shellSnapshotSequence = -1;
         pendingShellEvents = [];
-        await api.orchestration.subscribeShell().catch(() => loadShellSnapshotOnce());
+        await api.orchestration
+          .subscribeShell()
+          .catch(() => loadBootstrapShellSnapshotIfMissing(generation));
         await enqueueThreadSubscriptionOperation(async () => {
           threadSnapshotSequenceById.clear();
           pendingThreadEventsById.clear();
@@ -1830,6 +1895,7 @@ function EventRouter() {
 
     const unsubShellEvent = api.orchestration.onShellEvent((item) => {
       if (item.kind === "snapshot") {
+        shellSnapshotReceivedGeneration = shellSubscriptionGeneration;
         const promotedDraftThreadIds = collectSubscribedDraftsInShell(item.snapshot.threads);
         shellSnapshotSequence = item.snapshot.snapshotSequence;
         syncServerShellSnapshot(item.snapshot);
@@ -2066,7 +2132,6 @@ function EventRouter() {
         if (disposed) {
           return;
         }
-        await loadShellSnapshotOnce();
 
         if (!payload.bootstrapProjectId || !payload.bootstrapThreadId) {
           return;
@@ -2160,16 +2225,10 @@ function EventRouter() {
         // Model and agent discovery can depend on auth, availability, and installed versions,
         // but not on every provider-status timestamp replay.
         void queryClient.invalidateQueries({
-          queryKey: ["provider-discovery", "models", "kilo"],
-        });
-        void queryClient.invalidateQueries({
           queryKey: ["provider-discovery", "models", "opencode"],
         });
         void queryClient.invalidateQueries({
           queryKey: ["provider-discovery", "models", "cursor"],
-        });
-        void queryClient.invalidateQueries({
-          queryKey: providerDiscoveryQueryKeys.agentsForProvider("kilo"),
         });
         void queryClient.invalidateQueries({
           queryKey: providerDiscoveryQueryKeys.agentsForProvider("opencode"),
@@ -2177,18 +2236,20 @@ function EventRouter() {
       }
     });
     const unsubServerSettingsUpdated = onServerSettingsUpdated((payload) => {
+      const previousSettings = queryClient.getQueryData<ServerSettingsView>(
+        serverQueryKeys.settings(),
+      );
       queryClient.setQueryData(serverQueryKeys.settings(), payload.settings);
+      if (didProviderEnablementChange(previousSettings, payload.settings)) {
+        void queryClient.invalidateQueries({ queryKey: providerDiscoveryQueryKeys.all });
+        void invalidateProviderUsageQueries(queryClient);
+      }
       void queryClient.invalidateQueries({
         queryKey: serverSettingsQueryOptions().queryKey,
       });
     });
     subscribed = true;
     void ensureScopedSubscriptions();
-    // The shell stream normally delivers the sidebar snapshot. If it fails before
-    // the first event, use the same lightweight query instead of the full history.
-    const shellBootstrapFallbackTimer = window.setTimeout(() => {
-      void loadShellSnapshotOnce().catch(() => undefined);
-    }, SHELL_SNAPSHOT_BOOTSTRAP_FALLBACK_DELAY_MS);
     const threadDetailCatchupInterval = window.setInterval(() => {
       const now = Date.now();
       let availableProjectionReconcileSlots = Math.max(
@@ -2247,7 +2308,10 @@ function EventRouter() {
     return () => {
       flushPendingDomainEvents();
       disposed = true;
-      window.clearTimeout(shellBootstrapFallbackTimer);
+      if (shellSnapshotFallbackTimer !== null) {
+        window.clearTimeout(shellSnapshotFallbackTimer);
+        shellSnapshotFallbackTimer = null;
+      }
       window.clearInterval(threadDetailCatchupInterval);
       needsProviderInvalidation = false;
       needsBroadGitInvalidation = false;
