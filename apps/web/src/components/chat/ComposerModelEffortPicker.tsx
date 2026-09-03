@@ -140,7 +140,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
       disabled={props.disabled ?? false}
       className={cn(
         "min-w-0 justify-start gap-1.5 whitespace-nowrap px-2 sm:px-2.5 [&_svg]:mx-0",
-        props.dense ? "!h-8 shrink" : "shrink-0",
+        props.dense ? "!h-8 shrink-0" : "shrink-0",
         COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME,
       )}
       aria-label="Change model and reasoning"

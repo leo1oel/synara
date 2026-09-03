@@ -356,6 +356,32 @@ describe("createSidechatSummariesForSourceSelector", () => {
 });
 
 describe("createComposerThreadMentionSourcesSelector", () => {
+  it("excludes subagent and sidechat threads from chat mentions", () => {
+    const selectSources = createComposerThreadMentionSourcesSelector();
+    const childThreadId = "thread-child" as ThreadId;
+    const sidechatThreadId = "thread-sidechat" as ThreadId;
+    const state = makeState({
+      threadIds: [threadIdA, childThreadId, sidechatThreadId],
+      sidebarThreadSummaryById: {
+        [threadIdA]: summaryA,
+        [childThreadId]: {
+          ...summaryA,
+          id: childThreadId,
+          title: "Research subagent",
+          parentThreadId: threadIdA,
+        },
+        [sidechatThreadId]: {
+          ...summaryA,
+          id: sidechatThreadId,
+          title: "Side chat",
+          sidechatSourceThreadId: threadIdA,
+        },
+      },
+    });
+
+    expect(selectSources(state).map((source) => source.id)).toEqual([threadIdA]);
+  });
+
   it("does not rescan summaries when only streaming detail changes", () => {
     const selectSources = createComposerThreadMentionSourcesSelector();
     const threadIds = [threadIdA];

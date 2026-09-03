@@ -326,7 +326,7 @@ export function createComposerThreadMentionSourcesSelector(): (
 
     const nextSources = (threadIds ?? []).flatMap((threadId) => {
       const thread = summaryById[threadId];
-      return thread && !thread.sidechatSourceThreadId
+      return thread && !thread.parentThreadId && !thread.sidechatSourceThreadId
         ? [
             {
               id: thread.id,

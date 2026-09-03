@@ -10019,82 +10019,85 @@ export default function ChatView({
       "[data-chat-history-menu-trigger='true']",
     );
     let frame = 0;
-    const reportMinimumWidth = () => {
-      window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(() => {
-        if (!footer || footer.clientWidth <= 0) return;
-        const footerStyle = window.getComputedStyle(footer);
-        const gap = Number.parseFloat(footerStyle.columnGap || footerStyle.gap) || 0;
-        const intrinsicMinimum = embedComposerMinimumSidebarWidth({
-          viewportWidth: window.innerWidth,
-          footerWidth: footer.clientWidth,
-          footerPaddingLeft: Number.parseFloat(footerStyle.paddingLeft) || 0,
-          footerPaddingRight: Number.parseFloat(footerStyle.paddingRight) || 0,
-          footerGap: gap,
-          leadingIntrinsicWidth: leading.scrollWidth,
-          actionsIntrinsicWidth: intrinsicFlexRowWidth(actions),
-        });
+    const publishMinimumWidth = () => {
+      if (footer.clientWidth <= 0) return;
+      const footerStyle = window.getComputedStyle(footer);
+      const gap = Number.parseFloat(footerStyle.columnGap || footerStyle.gap) || 0;
+      const intrinsicMinimum = embedComposerMinimumSidebarWidth({
+        viewportWidth: window.innerWidth,
+        footerWidth: footer.clientWidth,
+        footerPaddingLeft: Number.parseFloat(footerStyle.paddingLeft) || 0,
+        footerPaddingRight: Number.parseFloat(footerStyle.paddingRight) || 0,
+        footerGap: gap,
+        leadingIntrinsicWidth: leading.scrollWidth,
+        actionsIntrinsicWidth: intrinsicFlexRowWidth(actions),
+      });
 
-        // Attachment cards use their rendered composer geometry. The history
-        // popup is portalled, so reserve its fixed width before it mounts;
-        // otherwise opening it can make Lattice resize and dismiss the popup.
-        let horizontalContentMinimum = 0;
-        if (composerSurface) {
-          const surfaceRect = composerSurface.getBoundingClientRect();
-          const attachmentCards = composerForm.querySelectorAll<HTMLElement>(
-            "[data-composer-reference-attachments='true'] [data-slot='attachment-card']",
-          );
-          for (const card of attachmentCards) {
-            const cardRect = card.getBoundingClientRect();
-            if (cardRect.width <= 0) continue;
-            horizontalContentMinimum = Math.max(
-              horizontalContentMinimum,
-              embedHorizontalContentMinimumSidebarWidth({
-                viewportWidth: window.innerWidth,
-                surfaceWidth: surfaceRect.width,
-                contentRightOffset: cardRect.right - surfaceRect.left,
-                endInset: EMBED_COMPOSER_SEND_EDGE_INSET_PX,
-              }),
-            );
-          }
-        }
-        if (historyTrigger) {
-          const triggerRect = historyTrigger.getBoundingClientRect();
-          const rootFontSize =
-            Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+      // Attachment cards use their rendered composer geometry. The history
+      // popup is portalled, so reserve its fixed width before it mounts;
+      // otherwise opening it can make Lattice resize and dismiss the popup.
+      let horizontalContentMinimum = 0;
+      if (composerSurface) {
+        const surfaceRect = composerSurface.getBoundingClientRect();
+        const attachmentCards = composerForm.querySelectorAll<HTMLElement>(
+          "[data-composer-reference-attachments='true'] [data-slot='attachment-card']",
+        );
+        for (const card of attachmentCards) {
+          const cardRect = card.getBoundingClientRect();
+          if (cardRect.width <= 0) continue;
           horizontalContentMinimum = Math.max(
             horizontalContentMinimum,
             embedHorizontalContentMinimumSidebarWidth({
               viewportWidth: window.innerWidth,
-              surfaceWidth: window.innerWidth,
-              contentRightOffset:
-                triggerRect.left + EDITOR_CHAT_HISTORY_MENU_WIDTH_REM * rootFontSize,
+              surfaceWidth: surfaceRect.width,
+              contentRightOffset: cardRect.right - surfaceRect.left,
               endInset: EMBED_COMPOSER_SEND_EDGE_INSET_PX,
             }),
           );
         }
-
-        // Keep a direct geometry guard as a final defense against subpixel/grid
-        // rounding. Unlike a retained historical maximum, this can decrease
-        // when Fast Mode is disabled or a shorter model is selected.
-        const sendControl =
-          actions.lastElementChild instanceof HTMLElement ? actions.lastElementChild : null;
-        let sendInsetMinimum = 0;
-        if (composerSurface && sendControl) {
-          const currentInset =
-            composerSurface.getBoundingClientRect().right - sendControl.getBoundingClientRect().right;
-          const missingInset = Math.max(0, EMBED_COMPOSER_SEND_EDGE_INSET_PX - currentInset);
-          if (missingInset > 0) {
-            sendInsetMinimum = window.innerWidth + missingInset;
-          }
-        }
-        postLayoutMetricsToLattice(
-          embedConfig,
-          Math.max(intrinsicMinimum, horizontalContentMinimum, sendInsetMinimum),
+      }
+      if (historyTrigger) {
+        const triggerRect = historyTrigger.getBoundingClientRect();
+        const rootFontSize =
+          Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+        horizontalContentMinimum = Math.max(
+          horizontalContentMinimum,
+          embedHorizontalContentMinimumSidebarWidth({
+            viewportWidth: window.innerWidth,
+            surfaceWidth: window.innerWidth,
+            contentRightOffset:
+              triggerRect.left + EDITOR_CHAT_HISTORY_MENU_WIDTH_REM * rootFontSize,
+            endInset: EMBED_COMPOSER_SEND_EDGE_INSET_PX,
+          }),
         );
-      });
+      }
+
+      // Keep a direct geometry guard as a final defense against subpixel/grid
+      // rounding. Unlike a retained historical maximum, this can decrease
+      // when Fast Mode is disabled or a shorter model is selected.
+      const sendControl =
+        actions.lastElementChild instanceof HTMLElement ? actions.lastElementChild : null;
+      let sendInsetMinimum = 0;
+      if (composerSurface && sendControl) {
+        const currentInset =
+          composerSurface.getBoundingClientRect().right - sendControl.getBoundingClientRect().right;
+        const missingInset = Math.max(0, EMBED_COMPOSER_SEND_EDGE_INSET_PX - currentInset);
+        if (missingInset > 0) {
+          sendInsetMinimum = window.innerWidth + missingInset;
+        }
+      }
+      postLayoutMetricsToLattice(
+        embedConfig,
+        Math.max(intrinsicMinimum, horizontalContentMinimum, sendInsetMinimum),
+      );
     };
-    reportMinimumWidth();
+    const reportMinimumWidth = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(publishMinimumWidth);
+    };
+    // Publish once during layout so repeated responsive-tier commits cannot
+    // cancel every queued frame before Lattice learns the safe minimum width.
+    publishMinimumWidth();
     if (typeof ResizeObserver === "undefined") {
       return () => window.cancelAnimationFrame(frame);
     }
@@ -11398,9 +11401,9 @@ export default function ChatView({
       if (!api) return;
       const confirmed = await api.dialogs.confirm(
         [
-          `Delete "${targetThreadTitle}"?`,
-          "This permanently clears this conversation history.",
-          "This action cannot be undone.",
+          i18n._('Delete "{targetThreadTitle}"?', { targetThreadTitle }),
+          i18n._("This permanently clears this conversation history."),
+          i18n._("This action cannot be undone."),
         ].join("\n"),
       );
       if (!confirmed) return;
@@ -11431,7 +11434,14 @@ export default function ChatView({
         });
       }
     },
-    [activeThread?.id, clearTemporaryThread, isEmbed, onNewEmbedChat, removeThreadFromSplitViews],
+    [
+      activeThread?.id,
+      clearTemporaryThread,
+      i18n,
+      isEmbed,
+      onNewEmbedChat,
+      removeThreadFromSplitViews,
+    ],
   );
   const onOpenEditorChat = useCallback(
     (nextThreadId: ThreadId) => {
@@ -12200,7 +12210,7 @@ export default function ChatView({
                       "@container",
                       COMPOSER_FOOTER_ROW_CLASS_NAME,
                       isEmbed
-                        ? "!grid min-h-[38px] grid-cols-[auto_minmax(0,1fr)] gap-0 overflow-hidden"
+                        ? "!grid min-h-[38px] grid-cols-[auto_max-content] gap-1 overflow-hidden"
                         : isComposerFooterCompact
                           ? "gap-1.5"
                           : "flex-wrap gap-1.5 sm:flex-nowrap sm:gap-0",
@@ -12270,12 +12280,12 @@ export default function ChatView({
                       className={cn(
                         "flex items-center",
                         isEmbed && !isVoiceRecording && !isVoiceTranscribing
-                          ? "min-w-0 max-w-full shrink justify-end gap-0.5 overflow-hidden"
+                          ? "min-w-max shrink-0 justify-end gap-0.5"
                           : "gap-2",
                         isVoiceRecording || isVoiceTranscribing
                           ? "min-w-0 flex-1"
                           : isEmbed
-                            ? "min-w-0 shrink"
+                            ? "min-w-max shrink-0"
                             : "shrink-0",
                       )}
                     >

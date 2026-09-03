@@ -12,6 +12,7 @@ import {
   DEVICE_WS_METHODS,
   ORCHESTRATION_WS_METHODS,
   type OrchestrationReadModel,
+  type ProjectEntry,
   type ProjectId,
   type ServerConfig,
   SpaceId,
@@ -118,6 +119,7 @@ interface TestFixture {
   serverConfig: ServerConfig;
   welcome: WsWelcomePayload;
   gitBranchByCwd: Record<string, string>;
+  workspaceEntries: ProjectEntry[];
 }
 
 let fixture: TestFixture;
@@ -499,6 +501,7 @@ function buildFixture(snapshot: OrchestrationReadModel): TestFixture {
     snapshot,
     serverConfig: createBaseServerConfig(),
     gitBranchByCwd: {},
+    workspaceEntries: [],
     welcome: {
       cwd: "/repo/project",
       projectName: "Project",
@@ -1268,7 +1271,7 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
   }
   if (tag === WS_METHODS.projectsSearchEntries) {
     return {
-      entries: [],
+      entries: fixture.workspaceEntries,
       truncated: false,
     };
   }
@@ -1953,6 +1956,7 @@ async function waitForMountedChatReady(options: {
   host: HTMLElement;
   snapshot: OrchestrationReadModel;
   routeThreadId: ThreadId;
+  timeoutMs?: number;
 }): Promise<void> {
   const expectedThread = options.snapshot.threads.find(
     (thread) => thread.id === options.routeThreadId,
@@ -1978,7 +1982,7 @@ async function waitForMountedChatReady(options: {
         "Active thread detail did not hydrate.",
       ).toBe(true);
     },
-    { timeout: 20_000, interval: 16 },
+    { timeout: options.timeoutMs ?? 20_000, interval: 16 },
   );
   await waitForLayout();
 }
@@ -1989,6 +1993,7 @@ async function mountChatView(options: {
   configureFixture?: (fixture: TestFixture) => void;
   initialEntry?: string;
   onRender?: ProfilerOnRenderCallback;
+  readyTimeoutMs?: number;
 }): Promise<MountedChatView> {
   fixture = buildFixture(options.snapshot);
   options.configureFixture?.(fixture);
@@ -2026,6 +2031,7 @@ async function mountChatView(options: {
       host,
       snapshot: options.snapshot,
       routeThreadId: ThreadId.makeUnsafe(initialEntry.slice(1)),
+      timeoutMs: options.readyTimeoutMs,
     });
   } catch (cause) {
     await screen.unmount();
@@ -2198,19 +2204,114 @@ describe("ChatView timeline estimator parity (full app)", () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot,
-      initialEntry: `/${localizedThreadId}`,
+      // This is the first full-app mount in the file and can pay the browser
+      // runner's cold route-transform cost before React commits any DOM.
+      readyTimeoutMs: 60_000,
     });
 
     try {
       await vi.waitFor(() => {
-        expect(document.body.textContent).toContain("新线程");
-        expect(document.body.textContent).not.toContain("New thread");
         expect(document.body.textContent).toContain("移交");
         expect(document.body.textContent).not.toContain("Hand off");
       });
 
-      await page.getByRole("button", { name: /新线程/u }).click();
+      for (const viewportLayer of [
+        document.documentElement,
+        document.body,
+        document.querySelector<HTMLElement>(".chat-content-card"),
+      ]) {
+        expect(viewportLayer).not.toBeNull();
+        expect(window.getComputedStyle(viewportLayer!).backgroundColor).toBe("rgb(20, 20, 22)");
+      }
+
+      const historyTrigger = await waitForElement(
+        () => document.querySelector<HTMLButtonElement>("[data-chat-history-menu-trigger='true']"),
+        "Unable to find the embedded chat-history trigger.",
+      );
+      await userEvent.click(historyTrigger);
       await expect.element(page.getByRole("menuitem", { name: "新聊天" })).toBeVisible();
+      await expect.element(page.getByText("新线程", { exact: true })).toBeVisible();
+      expect(document.body.textContent).not.toContain("New thread");
+
+      const nativeApi = readNativeApi();
+      expect(nativeApi).not.toBeNull();
+      const confirm = vi.fn(async () => false);
+      Object.defineProperty(window, "nativeApi", {
+        configurable: true,
+        value: {
+          ...nativeApi,
+          dialogs: { ...nativeApi!.dialogs, confirm },
+        },
+      });
+      const deleteButton = document.querySelector<HTMLButtonElement>(
+        'button[aria-label=\'Delete thread "New thread"\']',
+      );
+      expect(deleteButton).not.toBeNull();
+      await userEvent.click(deleteButton!);
+      await vi.waitFor(() => expect(confirm).toHaveBeenCalledTimes(1));
+      expect(confirm.mock.calls[0]?.[0]).toMatch(
+        /^删除“.+”？\n这会永久清除此对话的历史记录。\n此操作无法撤销。$/u,
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("creates an embedded chat with the most recently used ordinary model", async () => {
+    sessionStorage.setItem(
+      "synara.poc.embed-mode",
+      JSON.stringify({
+        workspaceRoot: "/repo/project",
+        theme: "light",
+        surface: "chrome",
+        hostOrigin: window.location.origin,
+        locale: "en",
+      }),
+    );
+    const baseSnapshot = createSnapshotForTargetUser({
+      targetMessageId: "msg-user-new-chat-model" as MessageId,
+      targetText: "remember this model",
+    });
+    const snapshot = {
+      ...baseSnapshot,
+      projects: baseSnapshot.projects.map((project) => ({
+        ...project,
+        defaultModelSelection: { provider: "codex" as const, model: "gpt-5.5" },
+      })),
+      threads: baseSnapshot.threads.map((thread) => ({
+        ...thread,
+        latestUserMessageAt: NOW_ISO,
+        modelSelection: {
+          provider: "codex" as const,
+          model: "gpt-5.6-sol",
+          options: { reasoningEffort: "xhigh" as const },
+        },
+      })),
+    };
+    const mounted = await mountChatView({ viewport: DEFAULT_VIEWPORT, snapshot });
+
+    try {
+      const historyTrigger = await waitForElement(
+        () => document.querySelector<HTMLButtonElement>("[data-chat-history-menu-trigger='true']"),
+        "Unable to find the embedded chat-history trigger.",
+      );
+      await userEvent.click(historyTrigger);
+      await page.getByRole("menuitem", { name: "New chat" }).click();
+      const draftPath = await waitForURL(
+        mounted.router,
+        (path) => UUID_ROUTE_RE.test(path),
+        "New chat should navigate to a fresh draft.",
+      );
+      const draftThreadId = draftPath.slice(1) as ThreadId;
+
+      await vi.waitFor(() => {
+        const draft = useComposerDraftStore.getState().draftsByThreadId[draftThreadId];
+        expect(draft?.activeProvider).toBe("codex");
+        expect(draft?.modelSelectionByProvider.codex).toEqual({
+          provider: "codex",
+          model: "gpt-5.6-sol",
+        });
+      });
     } finally {
       await mounted.cleanup();
     }
@@ -2282,6 +2383,22 @@ describe("ChatView timeline estimator parity (full app)", () => {
       );
       const composerSurface = document.querySelector<HTMLElement>(".chat-composer-surface");
       expect(composerSurface).not.toBeNull();
+
+      const extrasTrigger = await waitForElement(
+        () => document.querySelector<HTMLButtonElement>("button[aria-label='Composer extras']"),
+        "Unable to find the composer extras trigger.",
+      );
+      const modelTrigger = await waitForElement(
+        () =>
+          document.querySelector<HTMLButtonElement>(
+            "button[aria-label='Change model and reasoning']",
+          ),
+        "Unable to find the embedded model trigger.",
+      );
+      await waitForLayout();
+      expect(
+        modelTrigger.getBoundingClientRect().left - extrasTrigger.getBoundingClientRect().right,
+      ).toBeGreaterThanOrEqual(4);
 
       const reportedMinimums = () =>
         parentPostMessage.mock.calls.flatMap(([message]) =>
@@ -2366,6 +2483,41 @@ describe("ChatView timeline estimator parity (full app)", () => {
     try {
       await expect.element(page.getByText("Current project history")).toBeVisible();
       await expect.element(page.getByText("Other project history")).not.toBeInTheDocument();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("shows project files as soon as a bare @ opens the mention picker", async () => {
+    sessionStorage.setItem(
+      "synara.poc.embed-mode",
+      JSON.stringify({
+        workspaceRoot: "/repo/project",
+        theme: "dark",
+        surface: "chrome",
+        hostOrigin: window.location.origin,
+        locale: "en",
+      }),
+    );
+    useComposerDraftStore.getState().setPrompt(THREAD_ID, "@");
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-initial-files" as MessageId,
+        targetText: "initial files",
+      }),
+      configureFixture: (nextFixture) => {
+        nextFixture.workspaceEntries = [
+          { path: "README.md", kind: "file" },
+          { path: "src/App.tsx", kind: "file", parentPath: "src" },
+        ];
+      },
+    });
+
+    try {
+      await expect.element(page.getByText("README.md", { exact: true })).toBeVisible();
+      await expect.element(page.getByText("App.tsx", { exact: true })).toBeVisible();
+      await expect.element(page.getByText("Type to search project files")).not.toBeInTheDocument();
     } finally {
       await mounted.cleanup();
     }

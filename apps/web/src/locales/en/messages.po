@@ -843,6 +843,21 @@ msgstr "An error occurred while creating the handoff thread."
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
+msgid "Delete \"{targetThreadTitle}\"?"
+msgstr "Delete \"{targetThreadTitle}\"?"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "This permanently clears this conversation history."
+msgstr "This permanently clears this conversation history."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "This action cannot be undone."
+msgstr "This action cannot be undone."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
 msgid "New Chat"
 msgstr "New Chat"
 

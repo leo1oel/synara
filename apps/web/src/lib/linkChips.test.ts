@@ -85,23 +85,32 @@ describe("normalizeComposerLinkUrl", () => {
 describe("openExternalLink", () => {
   it("routes links through the Lattice host when Synara is embedded", () => {
     embedMode.readEmbedMode.mockReturnValue({
-      embedded: true,
+      workspaceRoot: "/repo",
+      theme: "light",
+      surface: "chrome",
       hostOrigin: "http://localhost:1420",
+      locale: "en",
     });
     embedMode.postExternalLinkToLattice.mockReturnValue(true);
 
     openExternalLink("https://example.com/paper");
 
     expect(embedMode.postExternalLinkToLattice).toHaveBeenCalledWith(
+      {
+        workspaceRoot: "/repo",
+        theme: "light",
+        surface: "chrome",
+        hostOrigin: "http://localhost:1420",
+        locale: "en",
+      },
       "https://example.com/paper",
-      { embedded: true, hostOrigin: "http://localhost:1420" },
     );
     expect(windowOpen).not.toHaveBeenCalled();
   });
 
   it("keeps using the native shell outside an embed", () => {
     const openExternal = vi.fn().mockResolvedValue(undefined);
-    embedMode.readEmbedMode.mockReturnValue({ embedded: false, hostOrigin: null });
+    embedMode.readEmbedMode.mockReturnValue(null);
     nativeApi.readNativeApi.mockReturnValue({ shell: { openExternal } });
 
     openExternalLink("https://example.com/paper");

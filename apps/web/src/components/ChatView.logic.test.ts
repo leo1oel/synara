@@ -46,6 +46,7 @@ import {
   resolveActiveTurnLiveDiffState,
   resolveCommittedProviderModel,
   resolveComposerDefaultModelSelection,
+  resolveEmbeddedNewThreadModelSelection,
   resolveComposerStripWorkLogEntries,
   resolveCycledModelSlug,
   resolveDefaultEnvironmentPanelOpen,
@@ -1475,6 +1476,73 @@ describe("resolveComposerDefaultModelSelection", () => {
         ],
       }),
     ).toBe(projectSelection);
+  });
+
+  it("does not inherit a newer subagent model over the latest ordinary chat", () => {
+    expect(
+      resolveComposerDefaultModelSelection({
+        embedded: true,
+        projectSelection: { provider: "codex", model: "gpt-5.5" },
+        threadSummaries: [
+          {
+            latestUserMessageAt: "2026-08-26T10:00:00.000Z",
+            modelSelection: { provider: "codex", model: "gpt-5.6-sol" },
+          },
+          {
+            latestUserMessageAt: "2026-08-26T11:00:00.000Z",
+            modelSelection: { provider: "claudeAgent", model: "claude-opus-4-6" },
+            parentThreadId: ThreadId.makeUnsafe("parent-thread"),
+          },
+        ],
+      }),
+    ).toEqual({ provider: "codex", model: "gpt-5.6-sol" });
+  });
+});
+
+describe("resolveEmbeddedNewThreadModelSelection", () => {
+  const providerStatus = (
+    provider: "codex" | "claudeAgent" | "cursor",
+    overrides?: { available?: boolean; authStatus?: "authenticated" | "unauthenticated" },
+  ) => ({
+    provider,
+    status: overrides?.available === false ? ("warning" as const) : ("ready" as const),
+    available: overrides?.available ?? true,
+    authStatus: overrides?.authStatus ?? ("authenticated" as const),
+    checkedAt: "2026-08-26T12:00:00.000Z",
+  });
+
+  it("uses GPT-5.6 Sol at high effort when there is no previous chat", () => {
+    expect(
+      resolveEmbeddedNewThreadModelSelection({
+        projectSelection: { provider: "codex", model: "gpt-5.5" },
+        threadSummaries: [],
+        providerStatuses: [providerStatus("codex")],
+        providerStatusesReconciled: true,
+        providerOrder: ["codex", "claudeAgent"],
+        hiddenProviders: [],
+      }),
+    ).toEqual({
+      provider: "codex",
+      model: "gpt-5.6-sol",
+      options: { reasoningEffort: "high" },
+    });
+  });
+
+  it("falls back to a visible authenticated subscription when Codex is unavailable", () => {
+    expect(
+      resolveEmbeddedNewThreadModelSelection({
+        projectSelection: { provider: "codex", model: "gpt-5.5" },
+        threadSummaries: [],
+        providerStatuses: [
+          providerStatus("codex", { authStatus: "unauthenticated" }),
+          providerStatus("claudeAgent"),
+          providerStatus("cursor"),
+        ],
+        providerStatusesReconciled: true,
+        providerOrder: ["cursor", "claudeAgent", "codex"],
+        hiddenProviders: ["cursor"],
+      }),
+    ).toEqual({ provider: "claudeAgent", model: "claude-sonnet-5" });
   });
 });
 

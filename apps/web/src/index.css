@@ -601,9 +601,19 @@ html[data-synara-embed="true"] {
   --app-line-height-ui: var(--lattice-type-caption-line-height);
 }
 
+/* Keep the host-provided sidebar material on every viewport-owning layer.
+   Explicit fills prevent transparent root/overscroll regions from exposing the
+   iframe's default white canvas during route updates or long transcripts. */
+html[data-synara-embed="true"],
+html[data-synara-embed="true"] body,
+html[data-synara-embed="true"] #root {
+  background-color: var(--app-shell-background);
+}
+
 html[data-synara-embed="true"] .chat-content-card {
   border-radius: 0 !important;
   box-shadow: none !important;
+  background-color: var(--color-background-surface);
 }
 
 /* The embedded Agent is a resizable sidebar, not a reading-width page. Keep the
@@ -3353,6 +3363,25 @@ label:has(> select#reasoning-effort) select {
   width: 100%;
   overflow-x: auto;
   overscroll-behavior-x: contain;
+}
+
+/* Table overflow is a content affordance rather than incidental page chrome:
+   leave breathing room below the final row and keep its horizontal thumb
+   visible in the embedded Agent even when the pointer is elsewhere. */
+html[data-synara-embed="true"] .chat-markdown-table-scroll {
+  padding-bottom: 4px;
+}
+
+@media (pointer: fine) {
+  @supports not selector(::-webkit-scrollbar) {
+    html[data-synara-embed="true"] .chat-markdown-table-scroll {
+      scrollbar-color: color-mix(in srgb, var(--foreground) 10%, transparent) transparent;
+    }
+  }
+
+  html[data-synara-embed="true"] .chat-markdown-table-scroll::-webkit-scrollbar-thumb {
+    background-color: color-mix(in srgb, var(--foreground) 10%, transparent);
+  }
 }
 
 .chat-markdown table {

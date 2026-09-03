@@ -33,11 +33,12 @@ import {
 } from "../lib/stagedDraftNavigation";
 import { newCommandId, newThreadId } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
-import { withLatticeEmbedSearch } from "../embedMode";
+import { isSynaraEmbedMode, withLatticeEmbedSearch } from "../embedMode";
 import { useFocusedChatContext } from "../focusedChatContext";
 import { useStore } from "../store";
 import { useTemporaryThreadStore } from "../temporaryThreadStore";
 import { useTerminalStateStore } from "../terminalStateStore";
+import { resolveEmbeddedNewThreadModelSelection } from "../components/ChatView.logic";
 
 export interface NewThreadNavigationOptions {
   /**
@@ -80,13 +81,25 @@ export function useHandleNewThread() {
     }
 
     const entryPoint = options?.entryPoint ?? "chat";
+    const storeState = useStore.getState();
+    const project = storeState.projects.find((candidate) => candidate.id === projectId);
+    const projectDefaultModelSelection = project?.defaultModelSelection ?? null;
+    const newThreadProjectModelSelection = isSynaraEmbedMode()
+      ? resolveEmbeddedNewThreadModelSelection({
+          projectSelection: projectDefaultModelSelection,
+          threadSummaries: Object.values(storeState.sidebarThreadSummaryById),
+          providerStatuses,
+          providerStatusesReconciled,
+          providerOrder: settings.providerOrder,
+          hiddenProviders: settings.hiddenProviders,
+        })
+      : projectDefaultModelSelection;
     if (entryPoint === "chat") {
       const draftStore = useComposerDraftStore.getState();
       const draftThread = draftStore.getDraftThreadByProjectId(projectId, "chat");
       const draftComposer = draftThread
         ? (draftStore.draftsByThreadId[draftThread.threadId] ?? null)
         : null;
-      const project = useStore.getState().projects.find((candidate) => candidate.id === projectId);
 
       prefetchModelsForNewThread(queryClient, {
         settings,
@@ -95,7 +108,7 @@ export function useHandleNewThread() {
         providerOverride: options?.provider ?? null,
         draftActiveProvider: draftComposer?.activeProvider ?? null,
         stickyActiveProvider: draftStore.stickyActiveProvider,
-        projectDefaultProvider: project?.defaultModelSelection?.provider ?? null,
+        projectDefaultProvider: newThreadProjectModelSelection?.provider ?? null,
         projectCwd: project?.cwd ?? null,
         draftWorktreePath: draftThread?.worktreePath ?? null,
         worktreePath: options?.worktreePath ?? null,
@@ -136,7 +149,7 @@ export function useHandleNewThread() {
       const modelSelection = resolvePreferredComposerModelSelection({
         draft: draftComposerState,
         threadModelSelection: null,
-        projectModelSelection: projectDefaultModelSelection,
+        projectModelSelection: newThreadProjectModelSelection,
         defaultProvider: settings.defaultProvider,
         fresh: true,
       });
@@ -229,10 +242,6 @@ export function useHandleNewThread() {
     // resolve its model selection against explicit thread/project/default
     // providers instead of that stale sticky provider.
     const freshBootstrap = options?.fresh === true || bootstrapPlan.kind === "fresh";
-    // Read from the store at call time so post-sync sidebar flows can use the latest project defaults.
-    const projectDefaultModelSelection =
-      useStore.getState().projects.find((project) => project.id === projectId)
-        ?.defaultModelSelection ?? null;
     const activeThreadSnapshot = createActiveThreadSnapshot(activeThread, projectId);
     const activeDraftThreadSnapshot = createActiveDraftThreadSnapshot(activeDraftThread, projectId);
     const resolveCreationState = (
@@ -249,7 +258,7 @@ export function useHandleNewThread() {
         draftThread,
         fresh: freshBootstrap,
         options: creationOptions,
-        projectDefaultModelSelection,
+        projectDefaultModelSelection: newThreadProjectModelSelection,
         projectId,
       });
     // Terminal-first threads need a real orchestration thread immediately so

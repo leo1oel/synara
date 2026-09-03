@@ -843,6 +843,21 @@ msgstr "创建移交线程时发生错误。"
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
+msgid "Delete \"{targetThreadTitle}\"?"
+msgstr "删除“{targetThreadTitle}”？"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "This permanently clears this conversation history."
+msgstr "这会永久清除此对话的历史记录。"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "This action cannot be undone."
+msgstr "此操作无法撤销。"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
 msgid "New Chat"
 msgstr "新聊天"
 

@@ -21,6 +21,7 @@ const WIDE_TABLE = [
 
 describe("ChatMarkdown table layout", () => {
   afterEach(() => {
+    delete document.documentElement.dataset.synaraEmbed;
     document.body.innerHTML = "";
   });
 
@@ -41,5 +42,22 @@ describe("ChatMarkdown table layout", () => {
     expect(
       Math.min(...cells.map((cell) => cell.getBoundingClientRect().width)),
     ).toBeGreaterThanOrEqual(127);
+  });
+
+  it("keeps an inset horizontal scrollbar visible in the embedded Agent", async () => {
+    document.documentElement.dataset.synaraEmbed = "true";
+    await render(
+      <div style={{ width: 280 }}>
+        <ChatMarkdown text={WIDE_TABLE} cwd={undefined} isStreaming={false} />
+      </div>,
+    );
+
+    const scrollRegion = document.querySelector<HTMLElement>(".chat-markdown-table-scroll");
+    expect(scrollRegion).not.toBeNull();
+    expect(window.getComputedStyle(scrollRegion!).paddingBottom).toBe("4px");
+
+    const thumbStyle = window.getComputedStyle(scrollRegion!, "::-webkit-scrollbar-thumb");
+    expect(thumbStyle.backgroundColor).not.toBe("transparent");
+    expect(thumbStyle.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
   });
 });

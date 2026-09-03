@@ -195,7 +195,7 @@ export function describeLinkChip(url: string): LinkChipDescriptor {
 export function openExternalLink(url: string): void {
   const href = normalizeComposerLinkUrl(url) ?? url;
   const embed = readEmbedMode();
-  if (embed.embedded && postExternalLinkToLattice(href, embed)) {
+  if (embed && postExternalLinkToLattice(embed, href)) {
     return;
   }
   const api = readNativeApi();

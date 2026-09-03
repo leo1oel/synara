@@ -11,6 +11,7 @@ import {
   type ProviderRequestKind,
   type RuntimeMode,
   type ServerProviderAuthStatus,
+  type ServerProviderStatus,
   type ThreadId as ThreadIdType,
 } from "@synara/contracts";
 import { getDefaultModel, normalizeModelSlug } from "@synara/shared/model";
@@ -50,6 +51,11 @@ import {
 } from "../session-logic";
 import { localSubagentThreadId } from "./ChatView.selectors";
 import { buildModelSelection, type ProviderModelOption } from "../providerModelOptions";
+import {
+  findFirstUsableDefaultProvider,
+  findProviderStatus,
+  isProviderUsable,
+} from "../lib/providerAvailability";
 
 export const LAST_INVOKED_SCRIPT_BY_PROJECT_KEY = "synara:last-invoked-script-by-project";
 export const DISMISSED_PROVIDER_HEALTH_BANNERS_KEY = "synara:dismissed-provider-health-banners";
@@ -976,7 +982,10 @@ export function resolveComposerDefaultModelSelection(input: {
   embedded: boolean;
   projectSelection: ModelSelection | null | undefined;
   threadSummaries: ReadonlyArray<
-    Pick<SidebarThreadSummary, "latestUserMessageAt" | "modelSelection">
+    Pick<
+      SidebarThreadSummary,
+      "latestUserMessageAt" | "modelSelection" | "parentThreadId" | "sidechatSourceThreadId"
+    >
   >;
 }): ModelSelection | null {
   const projectSelection = resolveEmbeddedProjectModelPreference({
@@ -990,7 +999,7 @@ export function resolveComposerDefaultModelSelection(input: {
   let latestSelection: ModelSelection | null = null;
   let latestMessageAt = Number.NEGATIVE_INFINITY;
   for (const thread of input.threadSummaries) {
-    if (!thread.latestUserMessageAt) {
+    if (thread.parentThreadId || thread.sidechatSourceThreadId || !thread.latestUserMessageAt) {
       continue;
     }
     const messageAt = Date.parse(thread.latestUserMessageAt);
@@ -1010,6 +1019,53 @@ export function resolveComposerDefaultModelSelection(input: {
     undefined,
     latestSelection.provider === "claudeAgent" ? latestSelection.supportsAutoMode : undefined,
   );
+}
+
+/**
+ * Lattice starts a new embedded chat with the last model the user actually used.
+ * A legacy project bootstrap default is ignored by the resolver above; if there
+ * is no chat history yet, prefer GPT-5.6 Sol at high effort. Once provider health
+ * is authoritative, fall back to the first visible authenticated provider so a
+ * stale Codex default cannot strand the new draft on an unusable subscription.
+ */
+export function resolveEmbeddedNewThreadModelSelection(input: {
+  projectSelection: ModelSelection | null | undefined;
+  threadSummaries: ReadonlyArray<
+    Pick<
+      SidebarThreadSummary,
+      "latestUserMessageAt" | "modelSelection" | "parentThreadId" | "sidechatSourceThreadId"
+    >
+  >;
+  providerStatuses: readonly ServerProviderStatus[];
+  providerStatusesReconciled: boolean;
+  providerOrder: readonly ProviderKind[];
+  hiddenProviders: readonly ProviderKind[];
+}): ModelSelection {
+  const preferredSelection =
+    resolveComposerDefaultModelSelection({
+      embedded: true,
+      projectSelection: input.projectSelection,
+      threadSummaries: input.threadSummaries,
+    }) ?? makeModelSelection("codex", "gpt-5.6-sol", { reasoningEffort: "high" });
+
+  if (
+    !input.providerStatusesReconciled ||
+    isProviderUsable(findProviderStatus(input.providerStatuses, preferredSelection.provider))
+  ) {
+    return preferredSelection;
+  }
+
+  const hiddenProviders = new Set(input.hiddenProviders);
+  const statusProviders = input.providerStatuses.map((status) => status.provider);
+  const orderedProviders = [...new Set([...input.providerOrder, ...statusProviders])];
+  const visibleProviders = orderedProviders.filter((provider) => !hiddenProviders.has(provider));
+  const fallbackProvider =
+    findFirstUsableDefaultProvider(input.providerStatuses, visibleProviders) ??
+    findFirstUsableDefaultProvider(input.providerStatuses, orderedProviders);
+  const fallbackModel = fallbackProvider ? getDefaultModel(fallbackProvider) : null;
+  return fallbackProvider && fallbackModel
+    ? makeModelSelection(fallbackProvider, fallbackModel)
+    : preferredSelection;
 }
 
 export function shouldShowComposerModelBootstrapSkeleton(input: {
