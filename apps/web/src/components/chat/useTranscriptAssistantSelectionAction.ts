@@ -19,6 +19,7 @@ import {
   createAssistantSelectionAttachment,
   getAssistantSelectionValidationError,
 } from "../../lib/assistantSelections";
+import { selectionActionDelayForClickCount } from "../../lib/selectionActions";
 import {
   readTranscriptAssistantSelection,
   resolveTranscriptSelectionActionLayout,
@@ -86,6 +87,8 @@ export function useTranscriptAssistantSelectionAction(
     action: PendingTranscriptSelectionAction;
   } | null>(null);
   const pendingActionThreadIdRef = useRef(threadId);
+  const selectionActionRequestIdRef = useRef(0);
+  const selectionActionTimerRef = useRef<number | null>(null);
   useEffect(() => {
     pendingActionThreadIdRef.current = threadId;
   }, [threadId]);
@@ -98,7 +101,16 @@ export function useTranscriptAssistantSelectionAction(
       action === null ? null : { threadId: pendingActionThreadIdRef.current, action },
     );
 
+  const cancelPendingTranscriptSelectionActionRequest = () => {
+    selectionActionRequestIdRef.current += 1;
+    if (selectionActionTimerRef.current !== null) {
+      window.clearTimeout(selectionActionTimerRef.current);
+      selectionActionTimerRef.current = null;
+    }
+  };
+
   const dismissTranscriptSelectionAction = () => {
+    cancelPendingTranscriptSelectionActionRequest();
     setPendingTranscriptSelectionAction(null);
   };
 
@@ -149,34 +161,58 @@ export function useTranscriptAssistantSelectionAction(
     const container = event.currentTarget;
     const clientX = event.clientX;
     const clientY = event.clientY;
-    window.requestAnimationFrame(() => {
-      if (!enabled || !container) {
-        setPendingTranscriptSelectionAction(null);
-        return;
-      }
+    cancelPendingTranscriptSelectionActionRequest();
+    const requestId = selectionActionRequestIdRef.current;
+    const readSelectionAfterGesture = () => {
+      selectionActionTimerRef.current = null;
+      window.requestAnimationFrame(() => {
+        if (requestId !== selectionActionRequestIdRef.current) {
+          return;
+        }
+        if (!enabled || !container.isConnected) {
+          setPendingTranscriptSelectionAction(null);
+          return;
+        }
 
-      const selectionState = readTranscriptAssistantSelection({ container });
-      if (
-        !selectionState ||
-        (canReferenceAssistantSelection &&
-          !canReferenceAssistantSelection(selectionState.selection))
-      ) {
-        setPendingTranscriptSelectionAction(null);
-        return;
-      }
+        const selectionState = readTranscriptAssistantSelection({ container });
+        if (
+          !selectionState ||
+          (canReferenceAssistantSelection &&
+            !canReferenceAssistantSelection(selectionState.selection))
+        ) {
+          setPendingTranscriptSelectionAction(null);
+          return;
+        }
 
-      const layout = resolveTranscriptSelectionActionLayout({
-        selectionRect: selectionState.selectionRect,
-        pointer: { x: clientX, y: clientY },
+        const layout = resolveTranscriptSelectionActionLayout({
+          selectionRect: selectionState.selectionRect,
+          pointer: { x: clientX, y: clientY },
+        });
+        setPendingTranscriptSelectionAction({
+          selection: selectionState.selection,
+          left: layout.left,
+          top: layout.top,
+          placement: layout.placement,
+        });
       });
-      setPendingTranscriptSelectionAction({
-        selection: selectionState.selection,
-        left: layout.left,
-        top: layout.top,
-        placement: layout.placement,
-      });
-    });
+    };
+    const delay = selectionActionDelayForClickCount(event.detail);
+    if (delay === 0) {
+      readSelectionAfterGesture();
+      return;
+    }
+    selectionActionTimerRef.current = window.setTimeout(readSelectionAfterGesture, delay);
   };
+
+  useEffect(() => {
+    return () => {
+      selectionActionRequestIdRef.current += 1;
+      if (selectionActionTimerRef.current !== null) {
+        window.clearTimeout(selectionActionTimerRef.current);
+        selectionActionTimerRef.current = null;
+      }
+    };
+  }, [enabled, threadId]);
 
   const commitTranscriptAssistantSelection = () => {
     const pendingSelection = pendingTranscriptSelectionAction;

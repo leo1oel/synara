@@ -34,8 +34,8 @@ import {
   resolveTerminalSelectionActionPosition,
   resolveTerminalSelectionContextMenuItems,
   shouldHandleTerminalSelectionMouseUp,
-  terminalSelectionActionDelayForClickCount,
 } from "./terminal/terminalSelectionActions";
+import { selectionActionDelayForClickCount } from "~/lib/selectionActions";
 import {
   buildTerminalRuntimeKey,
   terminalRuntimeRegistry,
@@ -415,7 +415,7 @@ function TerminalViewport({
         return;
       }
       selectionPointerRef.current = { x: event.clientX, y: event.clientY };
-      const delay = terminalSelectionActionDelayForClickCount(event.detail);
+      const delay = selectionActionDelayForClickCount(event.detail);
       selectionActionTimerRef.current = window.setTimeout(() => {
         selectionActionTimerRef.current = null;
         window.requestAnimationFrame(() => {

@@ -33,7 +33,7 @@ function TranscriptSelectionToolbarButton({
       aria-label={label}
       title={label}
       className={cn(
-        "pointer-events-auto inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium text-[var(--color-text-foreground)]",
+        "pointer-events-auto inline-flex h-6 items-center gap-1 rounded px-1.5 text-[10px] leading-none font-medium text-[var(--color-text-foreground)]",
         ELEVATED_HOVER_SURFACE_CLASS_NAME,
       )}
       onMouseDown={(event) => {
@@ -63,22 +63,22 @@ export function TranscriptSelectionAction(props: TranscriptSelectionActionProps)
     >
       <div
         className={cn(
-          "pointer-events-auto inline-flex items-center gap-0.5 rounded-full border border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] p-0.5 shadow-xl backdrop-blur-xl transition-transform duration-150 hover:scale-[1.01]",
+          "pointer-events-auto inline-flex items-center gap-px rounded-md border border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] p-px shadow-md backdrop-blur-md",
           props.placement === "top" ? "origin-bottom" : "origin-top",
         )}
       >
         {props.onHighlight ? (
           <TranscriptSelectionToolbarButton label="Highlight" onClick={props.onHighlight}>
-            <PencilIcon className="size-3.5" />
+            <PencilIcon className="size-3" />
           </TranscriptSelectionToolbarButton>
         ) : null}
         {props.onUnderline ? (
           <TranscriptSelectionToolbarButton label="Underline" onClick={props.onUnderline}>
-            <TextWrapIcon className="size-3.5" />
+            <TextWrapIcon className="size-3" />
           </TranscriptSelectionToolbarButton>
         ) : null}
         <TranscriptSelectionToolbarButton label="Add to chat" onClick={props.onAddToChat}>
-          <MessageCircleIcon className="size-3.5" />
+          <MessageCircleIcon className="size-3" />
         </TranscriptSelectionToolbarButton>
       </div>
     </div>
