@@ -50,4 +50,32 @@ describe("ComposerLatticeContextBar", () => {
     expect(markup).toBe("");
     setLiveLatticeHostContext(null);
   });
+
+  it("makes an inspected Open Slide element visible above the composer", () => {
+    setLiveLatticeHostContext({
+      type: LATTICE_HOST_CONTEXT,
+      version: 1,
+      workspaceRoot: "/Users/me/paper",
+      activeSurface: "editor",
+      editor: { path: "slides/talk/index.tsx", line: 1, column: 0 },
+      presentation: {
+        slideId: "talk",
+        pageIndex: 2,
+        pageNumber: 3,
+        totalPages: 8,
+        slideTitle: "Research update",
+        view: "slides",
+        pagePath: "slides/talk/index.tsx",
+        selection: { line: 42, column: 6, tagName: "h1", text: "Q2 Roadmap" },
+        updatedAt: "2026-09-04T12:00:00.000Z",
+      },
+    });
+    const markup = renderToStaticMarkup(<ComposerLatticeContextBar />);
+
+    expect(markup).toContain("Slides · Research update · Page 3 of 8");
+    expect(markup).toContain("Slide element");
+    expect(markup).toContain("Q2 Roadmap");
+    expect(markup).toContain('data-testid="composer-lattice-context"');
+    setLiveLatticeHostContext(null);
+  });
 });

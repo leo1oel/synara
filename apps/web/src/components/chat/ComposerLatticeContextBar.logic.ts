@@ -11,7 +11,7 @@ export interface LatticeContextDetail {
 }
 
 export interface LatticeContextSelection {
-  source: LatticeHostSurface;
+  source: LatticeHostSurface | "presentation";
   label: string;
   text: string;
   length: number;
@@ -26,6 +26,12 @@ function pageLabel(page: number, pageCount: number | null): string {
 }
 
 export function latticeContextSummary(context: LatticeHostContextSnapshot): string {
+  if (context.presentation) {
+    return `Slides · ${context.presentation.slideTitle} · ${pageLabel(
+      context.presentation.pageNumber,
+      context.presentation.totalPages,
+    )}`;
+  }
   if (context.activeSurface === "paper" && context.paper) {
     return `Paper · ${context.paper.title}`;
   }
@@ -41,6 +47,16 @@ export function latticeContextSummary(context: LatticeHostContextSnapshot): stri
 export function latticeContextSelection(
   context: LatticeHostContextSnapshot,
 ): LatticeContextSelection | null {
+  if (context.presentation?.selection) {
+    const selection = context.presentation.selection;
+    const text = selection.text.trim() || `<${selection.tagName}>`;
+    return {
+      source: "presentation",
+      label: "Slide element",
+      text,
+      length: text.length,
+    };
+  }
   const candidates: ReadonlyArray<{
     source: LatticeHostSurface;
     label: string;
@@ -66,15 +82,33 @@ export function latticeContextDetails(context: LatticeHostContextSnapshot): Latt
     {
       label: "Active view",
       value:
-        context.activeSurface === "paper"
-          ? "Paper"
-          : context.activeSurface === "pdf"
-            ? "PDF"
-            : "Editor",
+        context.presentation
+          ? "Slides"
+          : context.activeSurface === "paper"
+            ? "Paper"
+            : context.activeSurface === "pdf"
+              ? "PDF"
+              : "Editor",
     },
     { label: "Workspace", value: context.workspaceRoot },
   ];
 
+  if (context.presentation) {
+    details.push(
+      { label: "Presentation", value: context.presentation.slideTitle },
+      {
+        label: "Slide",
+        value: pageLabel(context.presentation.pageNumber, context.presentation.totalPages),
+      },
+    );
+    if (context.presentation.selection) {
+      const selection = context.presentation.selection;
+      details.push({
+        label: "Selected element",
+        value: `<${selection.tagName}> · Line ${selection.line}, column ${selection.column}`,
+      });
+    }
+  }
   if (context.editor) {
     details.push({
       label: "Editor",
@@ -118,5 +152,8 @@ export function clearLatticeContextSelection(
     ...(context.editor ? { editor: withoutSelection(context.editor) } : {}),
     ...(context.pdf ? { pdf: withoutSelection(context.pdf) } : {}),
     ...(context.paper ? { paper: withoutSelection(context.paper) } : {}),
+    ...(context.presentation
+      ? { presentation: { ...context.presentation, selection: null } }
+      : {}),
   };
 }

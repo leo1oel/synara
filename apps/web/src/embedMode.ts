@@ -98,6 +98,22 @@ export interface LatticeHostContextSnapshot {
     selection?: string;
     selectionOmittedChars?: number;
   };
+  presentation?: {
+    slideId: string;
+    pageIndex: number;
+    pageNumber: number;
+    totalPages: number;
+    slideTitle: string;
+    view: "slides" | "assets";
+    pagePath: string;
+    selection: {
+      line: number;
+      column: number;
+      tagName: string;
+      text: string;
+    } | null;
+    updatedAt: string;
+  };
 }
 
 export interface LatticePaperLibraryEntry {
@@ -422,6 +438,39 @@ export function readLatticeHostContextMessage(
       (candidate.selection !== undefined && !boundedString(candidate.selection, 12_001))
     ) {
       return null;
+    }
+  }
+
+  const presentation = value.presentation;
+  if (presentation !== undefined) {
+    if (!presentation || typeof presentation !== "object") return null;
+    const candidate = presentation as Record<string, unknown>;
+    if (
+      !nonEmptyBoundedString(candidate.slideId, 256) ||
+      !nonNegativeInteger(candidate.pageIndex) ||
+      !positiveInteger(candidate.pageNumber) ||
+      !positiveInteger(candidate.totalPages) ||
+      candidate.pageIndex >= candidate.totalPages ||
+      candidate.pageNumber !== candidate.pageIndex + 1 ||
+      !boundedString(candidate.slideTitle, 1_000) ||
+      (candidate.view !== "slides" && candidate.view !== "assets") ||
+      !nonEmptyBoundedString(candidate.pagePath, 4_096) ||
+      !boundedString(candidate.updatedAt, 128)
+    ) {
+      return null;
+    }
+    const selection = candidate.selection;
+    if (selection !== null) {
+      if (!selection || typeof selection !== "object") return null;
+      const selected = selection as Record<string, unknown>;
+      if (
+        !positiveInteger(selected.line) ||
+        !nonNegativeInteger(selected.column) ||
+        !nonEmptyBoundedString(selected.tagName, 32) ||
+        !boundedString(selected.text, 120)
+      ) {
+        return null;
+      }
     }
   }
 

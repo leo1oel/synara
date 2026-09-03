@@ -27,7 +27,7 @@ export interface ExtractedLatticeHostContext {
 }
 
 interface LatticeHostContextSelection {
-  source: "editor" | "pdf" | "paper";
+  source: "editor" | "pdf" | "paper" | "presentation";
   text: string;
 }
 
@@ -35,6 +35,13 @@ function latticeHostContextSelection(
   context: LatticeHostContextSnapshot | null,
 ): LatticeHostContextSelection | null {
   if (!context) return null;
+  if (context.presentation?.selection) {
+    const selection = context.presentation.selection;
+    return {
+      source: "presentation",
+      text: `${selection.line}:${selection.column}:${selection.tagName}:${selection.text}`,
+    };
+  }
   const activeSelection =
     context.activeSurface === "editor"
       ? context.editor?.selection

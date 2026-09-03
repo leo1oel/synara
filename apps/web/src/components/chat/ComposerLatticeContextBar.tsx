@@ -1,5 +1,5 @@
 // FILE: ComposerLatticeContextBar.tsx
-// Purpose: Makes Lattice's automatically injected editor/PDF/paper context
+// Purpose: Makes Lattice's automatically injected editor/PDF/paper/slide context
 // visible and inspectable immediately above the embedded chat composer.
 // Layer: Chat composer UI
 

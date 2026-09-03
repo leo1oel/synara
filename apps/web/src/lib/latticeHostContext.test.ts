@@ -23,6 +23,25 @@ const context = {
   },
 };
 
+const presentationContext = {
+  type: "lattice:host-context" as const,
+  version: 1 as const,
+  workspaceRoot: "/tmp/paper",
+  activeSurface: "editor" as const,
+  editor: { path: "slides/talk/index.tsx", line: 1, column: 0 },
+  presentation: {
+    slideId: "talk",
+    pageIndex: 2,
+    pageNumber: 3,
+    totalPages: 8,
+    slideTitle: "Talk",
+    view: "slides" as const,
+    pagePath: "slides/talk/index.tsx",
+    selection: { line: 42, column: 6, tagName: "h1", text: "Q2 Roadmap" },
+    updatedAt: "2026-09-04T12:00:00.000Z",
+  },
+};
+
 describe("Lattice host context prompt block", () => {
   it("publishes live snapshots without coupling them to the chat view render", () => {
     const listener = vi.fn();
@@ -72,5 +91,20 @@ describe("Lattice host context prompt block", () => {
       }),
     ).toBe(false);
     expect(promptContainsLiveLatticeHostSelection("Explain this", context)).toBe(false);
+  });
+
+  it("tracks an inspected Open Slide element as the dispatched selection", () => {
+    const prompt = appendLatticeHostContextToPrompt("Revise this", presentationContext);
+
+    expect(promptContainsLiveLatticeHostSelection(prompt, presentationContext)).toBe(true);
+    expect(
+      promptContainsLiveLatticeHostSelection(prompt, {
+        ...presentationContext,
+        presentation: {
+          ...presentationContext.presentation,
+          selection: { line: 50, column: 2, tagName: "p", text: "New selection" },
+        },
+      }),
+    ).toBe(false);
   });
 });

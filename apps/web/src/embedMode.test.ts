@@ -755,6 +755,17 @@ describe("Lattice embed mode", () => {
         column: 2,
         selection: "introduction",
       },
+      presentation: {
+        slideId: "research-update",
+        pageIndex: 2,
+        pageNumber: 3,
+        totalPages: 8,
+        slideTitle: "Research update",
+        view: "slides",
+        pagePath: "slides/research-update/index.tsx",
+        selection: { line: 42, column: 6, tagName: "h1", text: "Q2 Roadmap" },
+        updatedAt: "2026-09-04T12:00:00.000Z",
+      },
       pdf: { page: 2, pageCount: 6 },
     };
 
@@ -774,6 +785,19 @@ describe("Lattice embed mode", () => {
           source: window.parent,
           origin: "http://localhost:1420",
           data: { ...context, workspaceRoot: "/Users/me/other" },
+        } as MessageEvent,
+        config,
+      ),
+    ).toBeNull();
+    expect(
+      readLatticeHostContextMessage(
+        {
+          source: window.parent,
+          origin: "http://localhost:1420",
+          data: {
+            ...context,
+            presentation: { ...context.presentation, pageNumber: 9 },
+          },
         } as MessageEvent,
         config,
       ),
