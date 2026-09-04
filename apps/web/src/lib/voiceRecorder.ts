@@ -10,6 +10,10 @@ import { encodeVoiceRecordingWav } from "./voiceRecorderEncoding";
 
 const TARGET_SAMPLE_RATE = 24_000;
 const BUFFER_SIZE = 2_048;
+// Display loudness on a decibel scale so quiet speech does not flatten at the
+// visual floor. The recorded PCM remains untouched for transcription.
+const WAVEFORM_FLOOR_DB = -60;
+const WAVEFORM_CEILING_DB = -12;
 
 export interface VoiceRecordingPayload {
   readonly audioBase64: string;
@@ -184,14 +188,21 @@ export function useVoiceRecorder() {
 
         runtime.chunks.push(monoSamples);
 
-        const rmsLevel = Math.min(
-          1,
-          Math.sqrt(sumOfSquares / Math.max(1, monoSamples.length)) * 3.2,
+        const rms = Math.sqrt(sumOfSquares / Math.max(1, monoSamples.length));
+        const decibels = rms > 0 ? 20 * Math.log10(rms) : WAVEFORM_FLOOR_DB;
+        const waveformLevel = Math.max(
+          0,
+          Math.min(
+            1,
+            (decibels - WAVEFORM_FLOOR_DB) / (WAVEFORM_CEILING_DB - WAVEFORM_FLOOR_DB),
+          ),
         );
         const now = performance.now();
         if (now - waveformLastEmitAtRef.current >= 45) {
           waveformLastEmitAtRef.current = now;
-          const nextLevels = [...waveformLevelsRef.current, rmsLevel].slice(-MAX_WAVEFORM_SAMPLES);
+          const nextLevels = [...waveformLevelsRef.current, waveformLevel].slice(
+            -MAX_WAVEFORM_SAMPLES,
+          );
           waveformLevelsRef.current = nextLevels;
           setWaveformLevels(nextLevels);
         }

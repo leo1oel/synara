@@ -705,11 +705,11 @@ function looksLikeInlineMath(content: string): boolean {
   if (trimmed.length === 0) {
     return false;
   }
-  if (ALL_CAPS_DOLLAR_IDENTIFIER_REGEX.test(trimmed)) {
-    return false;
-  }
   if (INLINE_MATH_HINT_REGEX.test(trimmed)) {
     return true;
+  }
+  if (ALL_CAPS_DOLLAR_IDENTIFIER_REGEX.test(trimmed)) {
+    return false;
   }
   if (DECIMAL_INLINE_MATH_REGEX.test(trimmed)) {
     return true;

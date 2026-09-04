@@ -1,5 +1,5 @@
 // FILE: ComposerVoiceRecorderBar.browser.tsx
-// Purpose: Verifies voice recording exposes cancel plus a send-styled primary stop action.
+// Purpose: Verifies voice recording actions and responsive waveform layout.
 // Layer: Browser UI test
 // Depends on: vitest browser rendering and ComposerVoiceRecorderBar.
 
@@ -45,6 +45,37 @@ describe("ComposerVoiceRecorderBar", () => {
     await page.getByRole("button", { name: "Cancel voice recording" }).click();
     expect(onDiscard).toHaveBeenCalledTimes(1);
     expect(onStop).toHaveBeenCalledTimes(1);
+
+    await screen.unmount();
+  });
+
+  it("fills the flexible portion of an embedded composer footer", async () => {
+    const screen = await render(
+      <div
+        data-testid="footer"
+        className="grid w-[430px] grid-cols-[auto_minmax(0,1fr)] gap-1"
+      >
+        <div data-testid="leading" className="w-8" />
+        <div className="flex min-w-0">
+          <ComposerVoiceRecorderBar
+            durationLabel="0:02"
+            isRecording
+            isTranscribing={false}
+            waveformLevels={[]}
+            onDiscard={() => undefined}
+            onStop={() => undefined}
+          />
+        </div>
+      </div>,
+    );
+
+    const footer = screen.getByTestId("footer").element();
+    const leading = screen.getByTestId("leading").element();
+    const waveform = document.querySelector<HTMLElement>("[data-voice-waveform-track='true']");
+    expect(waveform).not.toBeNull();
+    expect(waveform!.clientWidth).toBeGreaterThan(
+      (footer.clientWidth - leading.clientWidth) / 2,
+    );
 
     await screen.unmount();
   });

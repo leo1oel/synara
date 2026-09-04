@@ -260,6 +260,14 @@ describe("ChatMarkdown", () => {
     expect(markup).not.toContain('class="katex"');
   });
 
+  it("renders all-caps subscript expressions as inline math", async () => {
+    const markup = await renderMarkdown("Attention uses $W_K$ and $W_O$ projections.");
+
+    expect(markup.match(/class="katex"/g) ?? []).toHaveLength(2);
+    expect(markup).not.toContain("$W_K$");
+    expect(markup).not.toContain("$W_O$");
+  });
+
   it("renders a table whose delimiter row is missing cells", async () => {
     // Models regularly emit a delimiter row with fewer cells than the header;
     // GFM rejects the whole block on the mismatch and the table degrades into

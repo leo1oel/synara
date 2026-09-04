@@ -12209,11 +12209,17 @@ export default function ChatView({
                     className={cn(
                       "@container",
                       COMPOSER_FOOTER_ROW_CLASS_NAME,
+                      // Normal embed controls stay intrinsic for sidebar-width negotiation. Recording
+                      // needs the remainder or its waveform track collapses to the sampled bars.
                       isEmbed
-                        ? "!grid min-h-[38px] grid-cols-[auto_max-content] gap-1 overflow-hidden"
+                        ? "!grid min-h-[38px] gap-1 overflow-hidden"
                         : isComposerFooterCompact
                           ? "gap-1.5"
                           : "flex-wrap gap-1.5 sm:flex-nowrap sm:gap-0",
+                      isEmbed &&
+                        (isVoiceRecording || isVoiceTranscribing
+                          ? "grid-cols-[auto_minmax(0,1fr)]"
+                          : "grid-cols-[auto_max-content]"),
                     )}
                   >
                     <div
