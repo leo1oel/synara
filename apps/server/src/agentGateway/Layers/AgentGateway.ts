@@ -89,6 +89,7 @@ import { makeLatticeLiteratureTools } from "../latticeLiteratureTools.ts";
 import { makeLatticeCanvasTools } from "../latticeCanvasTools.ts";
 import { makeLatticeSpreadsheetTools } from "../latticeSpreadsheetTools.ts";
 import { makeLatticeProjectDocumentTools } from "../latticeProjectDocumentTools.ts";
+import { LatticeBibliographyBroker } from "../Services/LatticeBibliographyBroker.ts";
 
 // Providers already receive the versioned host policy exactly once in their
 // private prompt. MCP clients prepend initialize.instructions to every exposed
@@ -128,6 +129,7 @@ export const makeAgentGateway = Effect.gen(function* () {
   const gitManager = yield* GitManager;
   const providerDiscovery = yield* ProviderDiscoveryService;
   const providerHealth = yield* ProviderHealth;
+  const latticeBibliographyBroker = yield* LatticeBibliographyBroker;
   const serverSettings = yield* ServerSettingsService;
   const operationRepository = yield* AgentGatewayOperationRepository;
   const projectionTurns = yield* ProjectionTurnRepository;
@@ -808,6 +810,7 @@ export const makeAgentGateway = Effect.gen(function* () {
     }).pipe(Effect.orElseSucceed(() => null));
   const latticeLiteratureTools = makeLatticeLiteratureTools({
     resolveWorkspaceRoot: resolveLatticeWorkspaceRoot,
+    mutateBibliography: latticeBibliographyBroker.invoke,
   });
   const latticeCanvasTools =
     ACTIVE_AGENT_HOST_PROFILE.id === "lattice"

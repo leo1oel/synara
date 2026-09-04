@@ -62,6 +62,7 @@ import {
 } from "../Services/AgentGatewayOperationRepository.ts";
 import { AgentGatewayLive } from "./AgentGateway.ts";
 import { LatticeCanvasBrokerLive } from "./LatticeCanvasBroker.ts";
+import { LatticeBibliographyBrokerLive } from "./LatticeBibliographyBroker.ts";
 import { LatticeSpreadsheetBrokerLive } from "./LatticeSpreadsheetBroker.ts";
 import { LatticeProjectDocumentBrokerLive } from "./LatticeProjectDocumentBroker.ts";
 import { recordCreatedWorktreeInPlan } from "../operationPlan.ts";
@@ -1153,7 +1154,7 @@ function makeHarnessLayer(
   } as unknown as (typeof ProjectionTurnRepository)["Service"]);
 
   const gatewayLayer = AgentGatewayLive.pipe(
-    Layer.provide(LatticeCanvasBrokerLive),
+    Layer.provide(Layer.mergeAll(LatticeCanvasBrokerLive, LatticeBibliographyBrokerLive)),
     Layer.provide(LatticeSpreadsheetBrokerLive),
     Layer.provide(LatticeProjectDocumentBrokerLive),
     Layer.provide(credentialsLayer),

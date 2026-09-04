@@ -4,6 +4,7 @@ import { Effect } from "effect";
 
 import { mcpToolResultError, mcpToolResultJson, mcpToolResultText } from "./protocol.ts";
 import { readBooleanArg, readStringArg } from "./toolInput.ts";
+import type { LatticeBibliographyAction } from "./Services/LatticeBibliographyBroker.ts";
 import {
   READ_ONLY_TOOL_ANNOTATIONS,
   WRITE_TOOL_ANNOTATIONS,
@@ -15,6 +16,15 @@ interface LatticeLiteratureToolsInput {
   readonly resolveWorkspaceRoot: (
     context: ToolContext,
   ) => Effect.Effect<string | null, unknown, never>;
+  readonly mutateBibliography: (
+    workspaceRoot: string,
+    action: LatticeBibliographyAction,
+    params: Record<string, unknown>,
+  ) => Effect.Effect<Record<string, unknown>, Error>;
+}
+
+function isBibliographyMutation(tool: string): tool is LatticeBibliographyAction {
+  return tool === "cite" || tool === "upgrade_bibliography" || tool === "remove_reference";
 }
 
 function executeLatticeLiteratureTool(input: {
@@ -76,7 +86,13 @@ export function makeLatticeLiteratureTools(
       if (!workspaceRoot) {
         return mcpToolResultError("The active Lattice project has no writable workspace.");
       }
-      const value = yield* executeLatticeLiteratureTool({ tool, params, workspaceRoot });
+      // The provider and every process it can launch run inside a filesystem
+      // sandbox that denies .bib writes. Only these typed mutations cross to
+      // the unsandboxed Lattice host; all other literature helpers remain
+      // ordinary sidecar children.
+      const value = yield* isBibliographyMutation(tool)
+        ? input.mutateBibliography(workspaceRoot, tool, params)
+        : executeLatticeLiteratureTool({ tool, params, workspaceRoot });
       if (tool !== "cite") return mcpToolResultJson(value);
       const key = typeof value.citationKey === "string" ? value.citationKey : null;
       if (!key) return mcpToolResultError("Lattice returned no citation key.");

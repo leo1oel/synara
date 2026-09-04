@@ -18,29 +18,20 @@ afterEach(async () => {
 });
 
 describe("Lattice literature tools", () => {
-  it("delegates citation mutations to the Lattice executable for the active workspace", async () => {
+  it("delegates citation mutations to the unsandboxed Lattice host broker", async () => {
     const workspaceRoot = await mkdtemp(path.join(tmpdir(), "lattice-literature-"));
     temporaryRoots.push(workspaceRoot);
-    const executable = path.join(workspaceRoot, "lattice-stub.mjs");
-    await writeFile(
-      executable,
-      [
-        "#!/usr/bin/env node",
-        "const request = JSON.parse(process.argv[3]);",
-        "if (process.argv[2] !== 'literature') process.exit(2);",
-        "process.stdout.write(JSON.stringify({",
-        "  citationKey: 'vaswani2017attention',",
-        "  title: 'Attention Is All You Need',",
-        "  paperPath: process.env.LATTICE_PROJECT_ROOT + '/papers/attention.md',",
-        "  request,",
-        "}));",
-      ].join("\n"),
+    const mutateBibliography = vi.fn(() =>
+      Effect.succeed({
+        citationKey: "vaswani2017attention",
+        title: "Attention Is All You Need",
+        paperPath: `${workspaceRoot}/papers/attention.md`,
+      }),
     );
-    await chmod(executable, 0o755);
-    vi.stubEnv("LATTICE_BIN", executable);
 
     const tools = makeLatticeLiteratureTools({
       resolveWorkspaceRoot: () => Effect.succeed(workspaceRoot),
+      mutateBibliography,
     });
     const cite = tools.find((tool) => tool.definition.name === "cite");
     expect(cite).toBeDefined();
@@ -72,6 +63,37 @@ describe("Lattice literature tools", () => {
       text: expect.stringContaining("\\cite{vaswani2017attention}"),
     });
     expect(JSON.stringify(result)).toContain(`${workspaceRoot}/papers/attention.md`);
+    expect(mutateBibliography).toHaveBeenCalledWith(workspaceRoot, "cite", {
+      query: "Attention Is All You Need",
+    });
+    const upgrade = tools.find((tool) => tool.definition.name === "upgrade_bibliography");
+    const remove = tools.find((tool) => tool.definition.name === "remove_reference");
+    expect(upgrade).toBeDefined();
+    expect(remove).toBeDefined();
+    const mutationContext: ToolContext = {
+      principal: {
+        kind: "provider-session",
+        sessionKey: "session",
+        threadId: "thread",
+        provider: "codex",
+        turnId: "turn",
+      },
+      callerThreadId: "thread",
+      callerSessionKey: "session",
+      callerProvider: "codex",
+      callerCapabilities: new Set(["literature:write"]),
+      callerTurnId: "turn",
+      assertCallerTurnActive: () => Effect.void,
+      jsonRpcRequestId: "request",
+    };
+    await Effect.runPromise(upgrade!.handler({ dryRun: true }, mutationContext));
+    await Effect.runPromise(remove!.handler({ key: "incorrect2024" }, mutationContext));
+    expect(mutateBibliography).toHaveBeenCalledWith(workspaceRoot, "upgrade_bibliography", {
+      dryRun: true,
+    });
+    expect(mutateBibliography).toHaveBeenCalledWith(workspaceRoot, "remove_reference", {
+      key: "incorrect2024",
+    });
   });
 
   it("lists and searches the paper library through the executable dispatch", async () => {
@@ -110,6 +132,7 @@ describe("Lattice literature tools", () => {
     };
     const tools = makeLatticeLiteratureTools({
       resolveWorkspaceRoot: () => Effect.succeed(workspaceRoot),
+      mutateBibliography: () => Effect.die("unexpected bibliography mutation"),
     });
 
     const listPapers = tools.find((tool) => tool.definition.name === "list_papers");
@@ -154,6 +177,7 @@ describe("Lattice literature tools", () => {
 
     const tools = makeLatticeLiteratureTools({
       resolveWorkspaceRoot: () => Effect.succeed(workspaceRoot),
+      mutateBibliography: () => Effect.die("unexpected bibliography mutation"),
     });
     const capture = tools.find((tool) => tool.definition.name === "fetch_web_reference");
     expect(capture).toBeDefined();
