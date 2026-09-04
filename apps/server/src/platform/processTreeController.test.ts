@@ -20,6 +20,48 @@ function windowsTree(): ProcessChildrenMap {
   ]);
 }
 
+describe("POSIX process-tree controller", () => {
+  it("retries a transient asynchronous snapshot failure", async () => {
+    let attempts = 0;
+    const childrenByParentPid: ProcessChildrenMap = new Map([
+      [100, [{ pid: 101, command: "provider-child --serve" }]],
+      [101, [{ pid: 102, command: "provider-worker" }]],
+    ]);
+
+    const captured = await captureProcessTree(100, {
+      platform: "darwin",
+      capturePosixChildren: async () => {
+        attempts += 1;
+        return attempts === 1 ? null : childrenByParentPid;
+      },
+    });
+
+    expect(attempts).toBe(2);
+    expect(captured).toEqual({
+      captureComplete: true,
+      descendants: [
+        { pid: 101, command: "provider-child --serve" },
+        { pid: 102, command: "provider-worker" },
+      ],
+    });
+  });
+
+  it("reports an incomplete tree when every asynchronous snapshot fails", async () => {
+    let attempts = 0;
+
+    const captured = await captureProcessTree(100, {
+      platform: "linux",
+      capturePosixChildren: async () => {
+        attempts += 1;
+        return null;
+      },
+    });
+
+    expect(attempts).toBe(2);
+    expect(captured).toEqual({ descendants: [], captureComplete: false });
+  });
+});
+
 describe("Windows process-tree controller", () => {
   it("captures child and grandchild identities from one platform snapshot", async () => {
     await expect(

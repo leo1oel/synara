@@ -2,12 +2,13 @@
 // Purpose: Captures, inspects, and signals owned process trees across platforms.
 // Layer: Server platform runtime
 
-import { spawnProcessSync } from "@synara/shared/processRuntime";
+import { execProcessFile, spawnProcessSync } from "@synara/shared/processRuntime";
 import treeKill from "tree-kill";
 
 import { captureWindowsProcessChildrenMap } from "./windowsProcessSnapshot";
 
-const PROCESS_TREE_SCAN_TIMEOUT_MS = 1_000;
+const PROCESS_TREE_SYNC_SCAN_TIMEOUT_MS = 1_000;
+const PROCESS_TREE_TEARDOWN_SCAN_TIMEOUT_MS = 3_000;
 const PROCESS_TREE_CAPTURE_ATTEMPTS = 2;
 const PROCESS_TREE_SCAN_MAX_BUFFER_BYTES = 8_388_608;
 const PROCESS_COMMAND_SCAN_MAX_BUFFER_BYTES = 8_388_608;
@@ -71,6 +72,7 @@ export interface ProcessTreeKillerDependencies {
 export interface PlatformProcessTreeOptions {
   readonly platform?: NodeJS.Platform;
   readonly processTreeKiller?: ProcessTreeKiller;
+  readonly capturePosixChildren?: () => Promise<ProcessChildrenMap | null>;
   readonly captureWindowsChildren?: () => Promise<ProcessChildrenMap | null>;
 }
 
@@ -131,13 +133,34 @@ function captureProcessChildrenMapSync(): ProcessChildrenMap | null {
     const result = spawnProcessSync("ps", ["-eo", "pid=,ppid=,command="], {
       encoding: "utf8",
       maxBuffer: PROCESS_TREE_SCAN_MAX_BUFFER_BYTES,
-      timeout: PROCESS_TREE_SCAN_TIMEOUT_MS,
+      timeout: PROCESS_TREE_SYNC_SCAN_TIMEOUT_MS,
     });
     if (result.error || result.status !== 0) return null;
     return parseProcessChildrenMap(result.stdout);
   } catch {
     return null;
   }
+}
+
+function captureProcessChildrenMap(): Promise<ProcessChildrenMap | null> {
+  return new Promise((resolve) => {
+    try {
+      execProcessFile(
+        "ps",
+        ["-eo", "pid=,ppid=,command="],
+        {
+          encoding: "utf8",
+          maxBuffer: PROCESS_TREE_SCAN_MAX_BUFFER_BYTES,
+          timeout: PROCESS_TREE_TEARDOWN_SCAN_TIMEOUT_MS,
+        },
+        (error, stdout) => {
+          resolve(error ? null : parseProcessChildrenMap(stdout));
+        },
+      );
+    } catch {
+      resolve(null);
+    }
+  });
 }
 
 function readCurrentCommands(pids: readonly number[]): ProcessCommandMap | null {
@@ -147,7 +170,7 @@ function readCurrentCommands(pids: readonly number[]): ProcessCommandMap | null 
     const result = spawnProcessSync("ps", ["-p", uniquePids.join(","), "-o", "pid=,command="], {
       encoding: "utf8",
       maxBuffer: PROCESS_COMMAND_SCAN_MAX_BUFFER_BYTES,
-      timeout: PROCESS_TREE_SCAN_TIMEOUT_MS,
+      timeout: PROCESS_TREE_SYNC_SCAN_TIMEOUT_MS,
     });
     if (result.error) return null;
     if (result.status !== 0) return new Map();
@@ -297,7 +320,25 @@ export async function captureProcessTree(
   }
   const platform = options.platform ?? process.platform;
   const killer = options.processTreeKiller ?? defaultProcessTreeKiller;
-  if (platform !== "win32") return killer.capture(rootPid);
+  if (platform !== "win32") {
+    if (options.processTreeKiller && !options.capturePosixChildren) {
+      return killer.capture(rootPid);
+    }
+    const capturePosixChildren = options.capturePosixChildren ?? captureProcessChildrenMap;
+    let childrenByParentPid: ProcessChildrenMap | null = null;
+    for (
+      let attempt = 0;
+      attempt < PROCESS_TREE_CAPTURE_ATTEMPTS && !childrenByParentPid;
+      attempt += 1
+    ) {
+      childrenByParentPid = await capturePosixChildren();
+    }
+    if (!childrenByParentPid) return { descendants: [], captureComplete: false };
+    return {
+      descendants: collectDescendantProcesses(rootPid, childrenByParentPid),
+      captureComplete: true,
+    };
+  }
 
   const childrenByParentPid = await (
     options.captureWindowsChildren ?? captureWindowsProcessChildrenMap
