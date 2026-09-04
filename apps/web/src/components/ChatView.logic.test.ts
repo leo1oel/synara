@@ -1454,6 +1454,7 @@ describe("resolveComposerDefaultModelSelection", () => {
       provider: "claudeAgent",
       model: "claude-opus-4-6",
       supportsAutoMode: true,
+      options: { effort: "max" },
     });
   });
 

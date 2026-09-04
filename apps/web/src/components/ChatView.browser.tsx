@@ -2284,11 +2284,16 @@ describe("ChatView timeline estimator parity (full app)", () => {
         modelSelection: {
           provider: "codex" as const,
           model: "gpt-5.6-sol",
-          options: { reasoningEffort: "xhigh" as const },
+          options: { reasoningEffort: "xhigh" as const, fastMode: true },
         },
       })),
     };
-    const mounted = await mountChatView({ viewport: DEFAULT_VIEWPORT, snapshot });
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot,
+      // This test can be the first full-app mount in a focused run.
+      readyTimeoutMs: 60_000,
+    });
 
     try {
       const historyTrigger = await waitForElement(
@@ -2310,6 +2315,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(draft?.modelSelectionByProvider.codex).toEqual({
           provider: "codex",
           model: "gpt-5.6-sol",
+          options: { reasoningEffort: "xhigh" },
         });
       });
     } finally {

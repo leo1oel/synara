@@ -978,6 +978,47 @@ export function resolveEmbeddedProjectModelPreference(input: {
   return null;
 }
 
+// A new chat inherits the last reasoning level without carrying thread-scoped
+// controls such as context windows, agent variants, or Fast Mode with it.
+function keepReasoningEffort(selection: ModelSelection): ModelSelection {
+  switch (selection.provider) {
+    case "codex":
+    case "cursor":
+    case "devin":
+    case "antigravity":
+    case "grok":
+    case "droid":
+      return makeModelSelection(
+        selection.provider,
+        selection.model,
+        selection.options?.reasoningEffort
+          ? { reasoningEffort: selection.options.reasoningEffort }
+          : undefined,
+      );
+    case "claudeAgent":
+      return makeModelSelection(
+        selection.provider,
+        selection.model,
+        selection.options?.effort ? { effort: selection.options.effort } : undefined,
+        selection.supportsAutoMode,
+      );
+    case "pi":
+      return makeModelSelection(
+        selection.provider,
+        selection.model,
+        selection.options?.thinkingLevel
+          ? { thinkingLevel: selection.options.thinkingLevel }
+          : undefined,
+      );
+    case "opencode":
+      return makeModelSelection(
+        selection.provider,
+        selection.model,
+        selection.options?.variant ? { variant: selection.options.variant } : undefined,
+      );
+  }
+}
+
 export function resolveComposerDefaultModelSelection(input: {
   embedded: boolean;
   projectSelection: ModelSelection | null | undefined;
@@ -1013,12 +1054,7 @@ export function resolveComposerDefaultModelSelection(input: {
   if (!latestSelection) {
     return null;
   }
-  return makeModelSelection(
-    latestSelection.provider,
-    latestSelection.model,
-    undefined,
-    latestSelection.provider === "claudeAgent" ? latestSelection.supportsAutoMode : undefined,
-  );
+  return keepReasoningEffort(latestSelection);
 }
 
 /**
