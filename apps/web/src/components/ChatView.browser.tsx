@@ -2323,6 +2323,73 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it("does not widen the embedded sidebar while models are loading", async () => {
+    sessionStorage.setItem(
+      "synara.poc.embed-mode",
+      JSON.stringify({
+        workspaceRoot: "/repo/project",
+        theme: "light",
+        surface: "chrome",
+        hostOrigin: window.location.origin,
+        locale: "en",
+      }),
+    );
+    const api = readNativeApi()!;
+    let finishDiscovery!: (value: Awaited<ReturnType<typeof api.provider.listModels>>) => void;
+    const discovery = vi.spyOn(api.provider, "listModels").mockImplementation(
+      () => new Promise((resolve) => { finishDiscovery = resolve; }),
+    );
+    const parentPostMessage = vi.spyOn(window.parent, "postMessage").mockImplementation(() => undefined);
+    const snapshot = createSnapshotForTargetUser({
+      targetMessageId: "msg-user-loading-width" as MessageId,
+      targetText: "Loading model catalog",
+    });
+    const mounted = await mountChatView({
+      viewport: { ...DEFAULT_VIEWPORT, width: 340 },
+      snapshot: {
+        ...snapshot,
+        threads: snapshot.threads.map((thread) => ({
+          ...thread,
+          modelSelection: { provider: "cursor", model: "auto" },
+          session: null,
+        })),
+      },
+      configureFixture: (nextFixture) => {
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          providers: [{
+            provider: "cursor",
+            status: "ready",
+            available: true,
+            authStatus: "authenticated",
+            checkedAt: NOW_ISO,
+          }],
+        };
+      },
+    });
+    try {
+      const loading = await waitForElement(
+        () => document.querySelector<HTMLElement>("[aria-label='Loading models']"),
+        "Expected slow model discovery to show its loading control.",
+      );
+      await waitForLayout();
+      const reportedMinimums = () => parentPostMessage.mock.calls.flatMap(([message]) =>
+        message?.type === "synara:layout-metrics" ? [message.minimumSidebarWidth as number] : [],
+      );
+      expect(loading.getBoundingClientRect().width).toBeLessThanOrEqual(40);
+      expect(reportedMinimums().length).toBeGreaterThan(0);
+      expect(reportedMinimums().every((width) => width <= window.innerWidth)).toBe(true);
+      parentPostMessage.mockClear();
+      finishDiscovery({ models: [{ slug: "auto", name: "Auto" }] });
+      await vi.waitFor(() => expect(document.querySelector("[aria-label='Loading models']")).toBeNull());
+      await vi.waitFor(() => expect(reportedMinimums().length).toBeGreaterThan(0));
+    } finally {
+      discovery.mockRestore();
+      parentPostMessage.mockRestore();
+      await mounted.cleanup();
+    }
+  });
+
   it("reports enough embedded sidebar width for chat history and composer attachment cards", async () => {
     sessionStorage.setItem(
       "synara.poc.embed-mode",

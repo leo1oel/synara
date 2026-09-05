@@ -1141,17 +1141,19 @@ function ComposerControlSkeleton(props: { widthClassName: string }) {
   );
 }
 
-function ComposerModelLoadingControl(props: { widthClassName: string }) {
+function ComposerModelLoadingControl(props: { widthClassName?: string; compact?: boolean }) {
   return (
     <div
       aria-label="Loading models"
       className={cn(
         "flex h-8 shrink-0 items-center gap-2 rounded-md border border-border/50 px-2 text-muted-foreground",
-        props.widthClassName,
+        props.compact ? "w-8 justify-center" : props.widthClassName,
       )}
     >
       <RefreshCwIcon aria-hidden="true" className="size-3.5 animate-spin" />
-      <span className="truncate text-[length:var(--app-font-size-ui-xs,11px)]">Loading models</span>
+      {!props.compact && (
+        <span className="truncate text-[length:var(--app-font-size-ui-xs,11px)]">Loading models</span>
+      )}
     </div>
   );
 }
@@ -10088,7 +10090,13 @@ export default function ChatView({
       }
       postLayoutMetricsToLattice(
         embedConfig,
-        Math.max(intrinsicMinimum, horizontalContentMinimum, sendInsetMinimum),
+        // Loading placeholders must not become a persisted sidebar width in
+        // Lattice. Other content (history/attachments) still needs its minimum.
+        Math.max(
+          showComposerModelBootstrapSkeleton ? 0 : intrinsicMinimum,
+          horizontalContentMinimum,
+          showComposerModelBootstrapSkeleton ? 0 : sendInsetMinimum,
+        ),
       );
     };
     const reportMinimumWidth = () => {
@@ -10111,7 +10119,7 @@ export default function ChatView({
       observer.disconnect();
       window.cancelAnimationFrame(frame);
     };
-  }, [composerFooterPlanInputsKey, composerFooterTier, isEmbed]);
+  }, [composerFooterPlanInputsKey, composerFooterTier, isEmbed, showComposerModelBootstrapSkeleton]);
   const composerModelPickerWidthClassName = isComposerFooterCompact ? "w-32" : "w-36 sm:w-44";
   const composerOptionsPickerWidthClassName = isComposerFooterCompact ? "w-28" : "w-32";
   const composerModelEffortPickerWidthClassName = isComposerFooterCompact ? "w-40" : "w-44 sm:w-52";
@@ -10128,7 +10136,9 @@ export default function ChatView({
     [handleModelPickerOpenChange],
   );
   const composerPickerControls = showComposerModelBootstrapSkeleton ? (
-    useSplitComposerPickerControls ? (
+    isEmbed ? (
+      <ComposerModelLoadingControl compact />
+    ) : useSplitComposerPickerControls ? (
       <>
         {selectedProviderRuntimeModelDiscoveryPending ? (
           <ComposerModelLoadingControl widthClassName={composerModelPickerWidthClassName} />
