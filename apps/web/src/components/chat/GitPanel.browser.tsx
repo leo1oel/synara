@@ -39,11 +39,7 @@ function buildLongPatch(lineCount = 80): string {
   ].join("\n");
 }
 
-function gitStatus(
-  branch: string,
-  hasWorkingTreeChanges = true,
-  aheadCount = 0,
-): GitStatusResult {
+function gitStatus(branch: string, hasWorkingTreeChanges = true, aheadCount = 0): GitStatusResult {
   return {
     branch,
     hasWorkingTreeChanges,
@@ -62,6 +58,7 @@ function gitStatus(
 
 function installGitApi(
   options: {
+    branch?: string;
     hasWorkingTreeChanges?: boolean;
     aheadCount?: number;
     refreshGate?: Promise<void>;
@@ -69,7 +66,7 @@ function installGitApi(
 ) {
   const hasWorkingTreeChanges = options.hasWorkingTreeChanges ?? true;
   const aheadCount = options.aheadCount ?? 0;
-  let currentBranch = "feature/source-control";
+  let currentBranch = options.branch ?? "feature/source-control";
   let branchReadCount = 0;
   const checkoutCalls: string[] = [];
   const actionCalls: Array<{ action: string; filePaths?: string[] }> = [];
@@ -156,6 +153,7 @@ function renderWithQueryClient(element: ReactNode) {
 describe("GitPanel", () => {
   afterEach(() => {
     delete window.nativeApi;
+    i18n.loadAndActivate({ locale: "en", messages: {} });
   });
 
   it("keeps a long selected-file diff on one wheel-scrollable viewport with fixed scrollbars", async () => {
@@ -290,6 +288,60 @@ describe("GitPanel", () => {
     expect(actionCalls[0]).toMatchObject({ action: "commit_push" });
     expect(actionCalls[0]?.filePaths).toBeUndefined();
   });
+
+  it.each([
+    { locale: "en", hasWorkingTreeChanges: true },
+    { locale: "en", hasWorkingTreeChanges: false },
+    { locale: "zh-CN", hasWorkingTreeChanges: true },
+    { locale: "zh-CN", hasWorkingTreeChanges: false },
+  ])(
+    "keeps the $locale default-branch confirmation compact and dismissible (changes: $hasWorkingTreeChanges)",
+    async ({ locale, hasWorkingTreeChanges }) => {
+      const { actionCalls } = installGitApi({
+        branch: "main",
+        aheadCount: 1,
+        hasWorkingTreeChanges,
+      });
+      if (locale === "zh-CN") {
+        const { messages } = await import("../../locales/zh-CN/messages.po");
+        i18n.loadAndActivate({ locale, messages });
+      }
+      await page.viewport(480, 720);
+      await renderWithQueryClient(
+        <GitPanel
+          hostThreadId={null}
+          projectId={null}
+          cwdOverride={TEST_CWD}
+          showActions
+          title="Changes"
+        />,
+      );
+
+      const openConfirmation = () =>
+        page.getByRole("button", { name: i18n._("Commit & push"), exact: true }).click();
+      await openConfirmation();
+      await expect.element(page.getByRole("dialog")).toBeVisible();
+      const popup = document.querySelector<HTMLElement>('[data-slot="dialog-popup"]')!;
+      const description = popup.querySelector<HTMLElement>('[data-slot="dialog-description"]')!;
+      expect(getComputedStyle(description).fontSize).toBe("12px");
+      expect(popup.getBoundingClientRect().width).toBeLessThanOrEqual(448);
+      expect(popup.getBoundingClientRect().height).toBeLessThan(260);
+      await new Promise((resolve) => window.setTimeout(resolve, 250));
+      await page.screenshot();
+      await page.getByRole("button", { name: "Close", exact: true }).click();
+      await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+
+      await openConfirmation();
+      await userEvent.keyboard("{Escape}");
+      await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+
+      await openConfirmation();
+      await page.getByRole("button", { name: i18n._("Abort"), exact: true }).click();
+      await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+      expect(actionCalls).toEqual([]);
+      await page.viewport(1280, 720);
+    },
+  );
 
   it("uses compact secondary copy in the commit dialog", async () => {
     installGitApi();

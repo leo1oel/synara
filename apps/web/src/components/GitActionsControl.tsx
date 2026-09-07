@@ -1617,34 +1617,29 @@ export default function GitActionsControl({
           }
         }}
       >
-        <DialogPopup className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle>
+        <DialogPopup className="max-w-md rounded-xl" bottomStickOnMobile={false}>
+          <DialogHeader className="gap-2 pr-12">
+            <DialogTitle className="text-sm">
               {pendingDefaultBranchActionCopy
                 ? localizeGit(pendingDefaultBranchActionCopy.title)
                 : i18n._("Run action on default branch?")}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs leading-5">
               {pendingDefaultBranchActionCopy
                 ? localizeGit(pendingDefaultBranchActionCopy.description)
                 : null}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="flex-row flex-wrap items-center justify-end">
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
-              shape="capsule"
+              className="mr-auto"
               onClick={() => setPendingDefaultBranchAction(null)}
             >
               {i18n._("Abort")}
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              shape="capsule"
-              onClick={continuePendingDefaultBranchAction}
-            >
+            <Button variant="outline" size="sm" onClick={continuePendingDefaultBranchAction}>
               {pendingDefaultBranchAction &&
               requiresFeatureBranchForDefaultBranchAction(pendingDefaultBranchAction.action)
                 ? i18n._("Create feature branch & continue")
@@ -1654,11 +1649,7 @@ export default function GitActionsControl({
             </Button>
             {pendingDefaultBranchAction &&
             !requiresFeatureBranchForDefaultBranchAction(pendingDefaultBranchAction.action) ? (
-              <Button
-                size="sm"
-                shape="capsule"
-                onClick={checkoutFeatureBranchAndContinuePendingAction}
-              >
+              <Button size="sm" onClick={checkoutFeatureBranchAndContinuePendingAction}>
                 {i18n._("Checkout feature branch & continue")}
               </Button>
             ) : null}
