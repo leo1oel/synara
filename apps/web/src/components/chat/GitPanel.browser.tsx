@@ -210,7 +210,7 @@ describe("GitPanel", () => {
     await expect.poll(() => scrollViewport!.scrollLeft).toBeGreaterThan(0);
   });
 
-  it("renders Commit and Push as a direct action with a separate, stateful options menu", async () => {
+  it("renders Commit & push as a direct action with a separate, stateful options menu", async () => {
     const { actionCalls } = installGitApi();
     await renderWithQueryClient(
       <GitPanel
@@ -222,14 +222,14 @@ describe("GitPanel", () => {
       />,
     );
 
-    const commitAndPush = page.getByRole("button", { name: "Commit and Push" });
+    const commitAndPush = page.getByRole("button", { name: "Commit & push", exact: true });
     const moreActions = page.getByRole("button", { name: "More Git actions" });
     await expect.element(commitAndPush).toBeEnabled();
     await expect.element(moreActions).toHaveAttribute("aria-expanded", "false");
 
     const branchTrigger = document.querySelector<HTMLElement>('[data-slot="combobox-trigger"]');
     const commitAndPushElement = document.querySelector<HTMLButtonElement>(
-      'button[aria-label="Commit and Push"]',
+      'button[aria-label="Commit & push"]',
     );
     const moreActionsElement = document.querySelector<HTMLButtonElement>(
       'button[aria-label="More Git actions"]',
@@ -343,7 +343,7 @@ describe("GitPanel", () => {
     },
   );
 
-  it("uses compact secondary copy in the commit dialog", async () => {
+  it("shows the target branch and editable message in the commit dialog", async () => {
     installGitApi();
     await renderWithQueryClient(
       <GitPanel
@@ -360,11 +360,12 @@ describe("GitPanel", () => {
 
     const description = document.querySelector<HTMLElement>('[data-slot="dialog-description"]');
     expect(description).not.toBeNull();
-    expect(getComputedStyle(description!).fontSize).toBe("12px");
-    expect(getComputedStyle(description!).lineHeight).toBe("16px");
+    expect(description!.textContent).toBe("feature/source-control");
+    expect(getComputedStyle(description!).fontSize).toBe("14px");
+    await expect.element(page.getByRole("textbox", { name: "Commit message" })).toBeVisible();
   });
 
-  it("uses the shared dialog hierarchy and compact secondary copy for Create PR", async () => {
+  it("shows the source branch, base branch and editable title for Create PR", async () => {
     installGitApi();
     await renderWithQueryClient(
       <GitPanel
@@ -379,11 +380,12 @@ describe("GitPanel", () => {
     await page.getByRole("button", { name: "More Git actions" }).click();
     await page.getByRole("menuitem", { name: "Create PR", exact: true }).click();
 
-    await expect.element(page.getByRole("heading", { name: "Create PR" })).toBeVisible();
+    await expect.element(page.getByRole("heading", { name: "Branch → main" })).toBeVisible();
     const description = document.querySelector<HTMLElement>('[data-slot="dialog-description"]');
     expect(description).not.toBeNull();
-    expect(getComputedStyle(description!).fontSize).toBe("12px");
-    expect(getComputedStyle(description!).lineHeight).toBe("16px");
+    expect(description!.textContent).toBe("feature/source-control");
+    expect(getComputedStyle(description!).fontSize).toBe("14px");
+    await expect.element(page.getByRole("textbox", { name: "Pull request title" })).toBeVisible();
     const dialog = document.querySelector<HTMLElement>('[data-slot="dialog-popup"]');
     expect(dialog).not.toBeNull();
     expect(dialog!.textContent).toContain("feature/source-control");
@@ -452,7 +454,7 @@ describe("GitPanel", () => {
 
     const commitAndPush = page.getByRole("button", { name: "Commit and Push" });
     await expect.element(commitAndPush).toBeDisabled();
-    await expect.element(page.getByText("Up to date", { exact: true })).toBeVisible();
+    await expect.element(page.getByText("No uncommitted changes.", { exact: true })).toBeVisible();
 
     const branchTrigger = document.querySelector<HTMLElement>('[data-slot="combobox-trigger"]');
     const commitAndPushElement = document.querySelector<HTMLButtonElement>(
