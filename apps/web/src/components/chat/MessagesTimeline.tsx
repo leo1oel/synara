@@ -47,6 +47,7 @@ import {
   type WorktreeSetupStep,
 } from "../../types";
 import ChatMarkdown from "../ChatMarkdown";
+import type { WorkingLabel } from "../ChatView.logic";
 import { InlineLinkChip } from "../InlineLinkChip";
 import {
   BotIcon,
@@ -243,8 +244,7 @@ export interface MessagesTimelineController {
 }
 
 // Keeps the origin/steer marker visually attached to the whole sent-message stack.
-// Which marker (if any) applies comes from the shared resolveUserTurnMarker predicate,
-// which the timelineHeight estimator also uses — keep presentation-only concerns here.
+// Which marker (if any) applies comes from the shared resolveUserTurnMarker predicate.
 const USER_TURN_MARKER_PRESENTATION: Record<
   UserTurnMarkerKind,
   { readonly Icon: LucideIcon; readonly label: string }
@@ -421,7 +421,7 @@ function WorktreeSetupCard({
 interface MessagesTimelineProps {
   hasMessages: boolean;
   isWorking: boolean;
-  workingLabel?: "Loading" | "Thinking" | undefined;
+  workingLabel?: WorkingLabel | undefined;
   activeTurnInProgress: boolean;
   activeTurnStartedAt: string | null;
   /** Transient "New worktree" setup progress; rendered as an ephemeral step card at the tail. */
@@ -490,6 +490,7 @@ interface MessagesTimelineProps {
   isRevertingCheckpoint: boolean;
   onImageExpand: (preview: ExpandedImagePreview) => void;
   onIsAtEndChange?: (isAtEnd: boolean) => void;
+  onNavigate?: () => void;
   /** Emits current + visible sent-message anchors as the viewport scrolls (drives the trail). */
   onTrailHighlightsChange?: (snapshot: ActiveTrailSnapshot) => void;
   onMessagesClickCapture?: ComponentProps<typeof LegendList>["onClickCapture"];
@@ -570,6 +571,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   isRevertingCheckpoint,
   onImageExpand,
   onIsAtEndChange,
+  onNavigate,
   onTrailHighlightsChange,
   onMessagesClickCapture,
   onMessagesMouseUp,
@@ -983,6 +985,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       if (!target) {
         return null;
       }
+      onNavigate?.();
       if (target.expandCollapsedWorkMessageId) {
         setCollapsedWorkExpanded(target.expandCollapsedWorkMessageId, true);
       }
@@ -1137,6 +1140,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     applyActiveMarkerDecoration,
     clearActiveMarkerDecoration,
     controllerRef,
+    onNavigate,
     resolvedListRef,
     setCollapsedWorkExpanded,
   ]);

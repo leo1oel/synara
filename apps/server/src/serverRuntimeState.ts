@@ -1,4 +1,4 @@
-import { Effect, FileSystem, Option, Schema } from "effect";
+import { Schema } from "effect";
 
 import { writeFileStringAtomically } from "./atomicWrite";
 import type { ServerConfigShape } from "./config";
@@ -15,10 +15,6 @@ export const PersistedServerRuntimeState = Schema.Struct({
   externalMcpRuntimeSecret: Schema.String,
 });
 export type PersistedServerRuntimeState = typeof PersistedServerRuntimeState.Type;
-
-const decodePersistedServerRuntimeState = Schema.decodeUnknownEffect(
-  Schema.fromJsonString(PersistedServerRuntimeState),
-);
 
 const runtimeOriginForConfig = (
   config: Pick<ServerConfigShape, "host">,
@@ -49,21 +45,4 @@ export const persistServerRuntimeState = (input: {
   writeFileStringAtomically({
     filePath: input.path,
     contents: `${JSON.stringify(input.state)}\n`,
-  });
-
-export const readPersistedServerRuntimeState = (path: string) =>
-  Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
-    const exists = yield* fs.exists(path).pipe(Effect.orElseSucceed(() => false));
-    if (!exists) {
-      return Option.none<PersistedServerRuntimeState>();
-    }
-
-    const raw = yield* fs.readFileString(path).pipe(Effect.orElseSucceed(() => ""));
-    const trimmed = raw.trim();
-    if (trimmed.length === 0) {
-      return Option.none<PersistedServerRuntimeState>();
-    }
-
-    return yield* decodePersistedServerRuntimeState(trimmed).pipe(Effect.option);
   });

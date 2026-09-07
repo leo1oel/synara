@@ -3,9 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   appendOriginalComposerPromptBlocks,
-  appendOriginalTerminalContextBlock,
   appendTerminalContextsToPrompt,
-  buildTerminalContextPreviewTitle,
   buildTerminalContextBlock,
   countInlineTerminalContextPlaceholders,
   deriveDisplayedUserMessageState,
@@ -126,7 +124,7 @@ describe("terminalContext", () => {
   it("preserves the original terminal context block when editing display text", () => {
     const originalPrompt = appendTerminalContextsToPrompt("Investigate this", [makeContext()]);
     expect(
-      appendOriginalTerminalContextBlock({
+      appendOriginalComposerPromptBlocks({
         editedPrompt: "Investigate this edited",
         originalPrompt,
       }),
@@ -445,20 +443,6 @@ describe("terminalContext", () => {
       pastedTexts: [],
       browserAnnotations: [],
     });
-  });
-
-  it("returns null preview title when every context is invalid", () => {
-    expect(
-      buildTerminalContextPreviewTitle([
-        makeContext({
-          terminalId: "   ",
-        }),
-        makeContext({
-          id: "context-2",
-          text: "\n\n",
-        }),
-      ]),
-    ).toBeNull();
   });
 
   it("tracks inline terminal context placeholders in prompt text", () => {

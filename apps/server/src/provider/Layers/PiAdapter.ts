@@ -1,3 +1,4 @@
+import { refreshPiOpenCodeCatalog } from "../piOpenCodeCatalog";
 import crypto from "node:crypto";
 import path from "node:path";
 import type { ChildProcess } from "node:child_process";
@@ -77,6 +78,8 @@ import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { makeBoundedCallbackIngress } from "../boundedCallbackIngress.ts";
 import { settleConcurrentTeardowns } from "../settleConcurrentTeardowns.ts";
 import { classifyPiTurnFailure } from "../piTurnFailure.ts";
+import { fetchOpenRouterModels, OPENROUTER_BASE_URL } from "../OpenRouterDiscovery.ts";
+import { openrouterProvider } from "@earendil-works/pi-ai/providers/openrouter";
 import {
   compactProviderRuntimeEventForIngress,
   isTerminalProviderRuntimeEvent,
@@ -686,6 +689,13 @@ function createProviderModelFallback(
   if (!providerDefault) {
     return undefined;
   }
+  // Zen mixes four protocols. A missing model must not inherit an arbitrary API.
+  if (
+    parsed.provider === "opencode" &&
+    /^https:\/\/opencode\.ai\/zen(?:\/|$)/u.test(providerDefault.baseUrl)
+  ) {
+    return undefined;
+  }
   if (parsed.provider === "anthropic" && isPiAnthropicEnsuredModelId(parsed.id)) {
     const template = PI_ANTHROPIC_ENSURED_MODEL_TEMPLATES[parsed.id];
     return {
@@ -713,7 +723,7 @@ function createProviderModelFallback(
   };
 }
 
-function findModelInRegistry(
+export function findModelInRegistry(
   registry: PiModelRegistry,
   modelId: string | null | undefined,
 ): Model<Api> | undefined {
@@ -1240,11 +1250,42 @@ function makeAgentDir(
 export async function createPiModelRuntime(
   agentDir: string,
   piSdk: Pick<PiCodingAgentModule, "ModelRuntime">,
+  signal?: AbortSignal,
 ): Promise<ModelRuntime> {
-  return piSdk.ModelRuntime.create({
+  const runtime = await piSdk.ModelRuntime.create({
     authPath: path.join(agentDir, "auth.json"),
     modelsPath: path.join(agentDir, "models.json"),
   });
+  await refreshPiOpenCodeCatalog(runtime, { signal });
+  return runtime;
+}
+
+export async function refreshPiOpenRouterModels(runtime: ModelRuntime): Promise<void> {
+  // Explicit extension catalogs and custom endpoints own their model metadata.
+  if (
+    process.env.PI_OFFLINE !== undefined ||
+    runtime.getRegisteredProviderIds().includes("openrouter") ||
+    !runtime.hasConfiguredAuth("openrouter") ||
+    runtime.getProvider("openrouter")?.baseUrl !== OPENROUTER_BASE_URL
+  )
+    return;
+  const live = await fetchOpenRouterModels();
+  if (live.length === 0) return;
+  const base = openrouterProvider();
+  const models = new Map(base.getModels().map((model) => [model.id, model]));
+  for (const model of live) models.set(model.id, model);
+  // Native providers remain below models.json, preserving user model overrides.
+  runtime.registerNativeProvider({
+    ...base,
+    getModels: () => [...models.values()],
+    // Reuse the SDK store so a later session keeps discovered capacities offline.
+    refreshModels: async ({ publish }) => {
+      await publish({
+        persist: { models: live, lastModified: Date.now(), checkedAt: Date.now() },
+      });
+    },
+  });
+  await runtime.refresh({ allowNetwork: false });
 }
 
 function modelRegistryFacade(
@@ -2113,8 +2154,10 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
       thinkingLevel?: ThinkingLevel;
       processSupervisor: PiBashProcessSupervisor;
       gatewayTools?: ReadonlyArray<ToolDefinition>;
+      signal?: AbortSignal;
     }) => {
-      const modelRuntime = await createPiModelRuntime(input.agentDir, input.sdk);
+      const modelRuntime = await createPiModelRuntime(input.agentDir, input.sdk, input.signal);
+      input.signal?.throwIfAborted();
       const createRuntime: CreateAgentSessionRuntimeFactory = async ({
         cwd,
         agentDir,
@@ -2127,6 +2170,13 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           modelRuntime,
         });
         const registry = modelRegistryFacade(services.modelRuntime, input.sdk);
+        const requested = parseModelReference(input.modelId);
+        if (
+          requested?.provider === "openrouter" &&
+          !registry.find(requested.provider, requested.id)
+        ) {
+          await refreshPiOpenRouterModels(services.modelRuntime);
+        }
         const model = findModelInRegistry(registry, input.modelId);
         if (input.modelId && !model) {
           throw new Error(
@@ -2248,8 +2298,9 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         const { runtime, modelRegistry } = yield* releaseAgentGatewaySessionLeaseOnInterrupt(
           agentGatewaySessionLease,
           Effect.tryPromise({
-            try: () =>
+            try: (signal) =>
               createSdkRuntime({
+                signal,
                 sdk: piSdk,
                 cwd,
                 agentDir,
@@ -2761,16 +2812,17 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
 
     const listModels: NonNullable<PiAdapterShape["listModels"]> = (input) =>
       Effect.tryPromise({
-        try: async () => {
+        try: async (signal) => {
           const piSdk = await loadPiCodingAgentModule();
           const agentDir = makeAgentDir(input.agentDir, piSdk);
           const cwd = trimToUndefined(input.cwd) ?? serverConfig.cwd;
-          const modelRuntime = await createPiModelRuntime(agentDir, piSdk);
+          const modelRuntime = await createPiModelRuntime(agentDir, piSdk, signal);
           const services = await piSdk.createAgentSessionServices({
             cwd,
             agentDir,
             modelRuntime,
           });
+          await refreshPiOpenRouterModels(services.modelRuntime);
           const registry = modelRegistryFacade(services.modelRuntime, piSdk);
           const extensionCount = services.resourceLoader.getExtensions().extensions.length;
           const models = getPiDiscoverableModels(registry).flatMap((model) => {
@@ -2780,6 +2832,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
             );
             return descriptor ? [descriptor] : [];
           });
+
           return {
             models,
             source: extensionCount > 0 ? "pi.sdk+extensions" : "pi.sdk",
@@ -2974,8 +3027,6 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
       },
     } satisfies PiAdapterShape;
   });
-
-export const PiAdapterLive = Layer.effect(PiAdapter, makePiAdapter());
 
 export function makePiAdapterLive(options?: PiAdapterLiveOptions) {
   return Layer.effect(PiAdapter, makePiAdapter(options));

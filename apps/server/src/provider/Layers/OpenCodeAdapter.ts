@@ -4588,5 +4588,3 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
     Layer.provide(NodeServices.layer),
   );
 }
-
-export const OpenCodeAdapterLive = makeOpenCodeAdapterLive();

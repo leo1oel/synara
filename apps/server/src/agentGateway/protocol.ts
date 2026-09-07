@@ -19,11 +19,9 @@ import { ACTIVE_AGENT_HOST_PROFILE } from "./hostProfile.ts";
 export const MCP_DEFAULT_PROTOCOL_VERSION = "2025-06-18";
 const MCP_SUPPORTED_PROTOCOL_VERSIONS = new Set(["2025-06-18", "2025-03-26", "2024-11-05"]);
 
-export const JSON_RPC_PARSE_ERROR = -32700;
 export const JSON_RPC_INVALID_REQUEST = -32600;
 export const JSON_RPC_METHOD_NOT_FOUND = -32601;
 export const JSON_RPC_INVALID_PARAMS = -32602;
-export const JSON_RPC_INTERNAL_ERROR = -32603;
 
 export type JsonRpcId = string | number | null;
 

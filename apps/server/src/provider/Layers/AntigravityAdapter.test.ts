@@ -524,8 +524,8 @@ describe("Antigravity CLI integration helpers", () => {
       prompt: "Ouvre YouTube dans le navigateur intégré.",
       hasGatewaySessionLease: true,
     });
-    expect(autonomousPrompt).toContain("Use the browser_* tools autonomously");
-    expect(autonomousPrompt).toContain("browser_open");
+    expect(autonomousPrompt).toContain("use browser_* autonomously");
+    expect(autonomousPrompt).toContain("Detailed rules live in each tool description");
     expect(autonomousPrompt).toContain("Ouvre YouTube dans le navigateur intégré.");
     expect(
       buildAntigravityTurnPrompt(withLease, {
@@ -900,8 +900,21 @@ describe("Antigravity CLI integration helpers", () => {
             },
           ]);
 
+          const turnTerminalFiber = yield* adapter.streamEvents.pipe(
+            Stream.filter((event) => event.type === "turn.completed"),
+            Stream.take(1),
+            Stream.runCollect,
+            Effect.forkChild,
+          );
           child?.emit("close", 0, null);
-          yield* Effect.sleep("25 millis");
+          // The close handler settles the turn asynchronously (gateway cancel,
+          // hook-file drain, run-dir cleanup) and clears activeProcess before
+          // emitting turn.completed. Wait for that event instead of a fixed
+          // sleep so stopSession cannot race the pid-less fake into teardown.
+          const terminalEvents = Array.from(
+            yield* Fiber.join(turnTerminalFiber).pipe(Effect.timeout("2 seconds")),
+          );
+          expect(terminalEvents).toHaveLength(1);
           yield* adapter.stopSession(threadId);
         }).pipe(
           Effect.provide(
@@ -1062,8 +1075,19 @@ describe("Antigravity CLI integration helpers", () => {
             },
           ]);
 
+          const turnTerminalFiber = yield* adapter.streamEvents.pipe(
+            Stream.filter(
+              (event) => event.type === "turn.completed" && event.turnId === turn.turnId,
+            ),
+            Stream.take(1),
+            Stream.runCollect,
+            Effect.forkChild,
+          );
           child?.emit("close", 0, null);
-          yield* Effect.sleep("25 millis");
+          const terminalEvents = Array.from(
+            yield* Fiber.join(turnTerminalFiber).pipe(Effect.timeout("2 seconds")),
+          );
+          expect(terminalEvents).toHaveLength(1);
           yield* adapter.stopSession(threadId);
         }).pipe(
           Effect.provide(
@@ -1242,8 +1266,23 @@ describe("Antigravity CLI integration helpers", () => {
           expect(parentItem?.providerRefs).toEqual({ providerThreadId: "conv-parent-1" });
           expect(parentItem?.payload).toMatchObject({ title: "run_command" });
 
+          const parentTurnTerminalFiber = yield* adapter.streamEvents.pipe(
+            Stream.filter(
+              (event) =>
+                event.type === "turn.completed" &&
+                event.turnId === turn.turnId &&
+                event.providerRefs?.providerThreadId === "conv-parent-1" &&
+                event.providerRefs?.providerParentThreadId === undefined,
+            ),
+            Stream.take(1),
+            Stream.runCollect,
+            Effect.forkChild,
+          );
           child?.emit("close", 0, null);
-          yield* Effect.sleep("25 millis");
+          const parentTerminalEvents = Array.from(
+            yield* Fiber.join(parentTurnTerminalFiber).pipe(Effect.timeout("2 seconds")),
+          );
+          expect(parentTerminalEvents).toHaveLength(1);
           yield* adapter.stopSession(threadId);
         }).pipe(
           Effect.provide(
@@ -1590,8 +1629,20 @@ describe("Antigravity turn settle on cancel (#465)", () => {
           expect(afterLateClose?.status).toBe("running");
           expect(afterLateClose?.activeTurnId).toBe(followUp.turnId);
 
+          const followUpTerminalFiber = yield* adapter.streamEvents.pipe(
+            Stream.filter(
+              (event) =>
+                event.type === "turn.completed" && event.turnId === followUp.turnId,
+            ),
+            Stream.take(1),
+            Stream.runCollect,
+            Effect.forkChild,
+          );
           children[1]?.emit("close", 0, null);
-          yield* Effect.sleep("25 millis");
+          const followUpTerminalEvents = Array.from(
+            yield* Fiber.join(followUpTerminalFiber).pipe(Effect.timeout("2 seconds")),
+          );
+          expect(followUpTerminalEvents).toHaveLength(1);
           yield* adapter.stopSession(threadId);
         }).pipe(
           Effect.provide(

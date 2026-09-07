@@ -17,6 +17,7 @@ import {
   type JsonRpcId,
   type JsonRpcRequest,
 } from "./protocol.ts";
+import { sanitizeToolInputSchema } from "./sanitizeToolInputSchema.ts";
 import {
   GatewayToolError,
   gatewayToolErrorResult,
@@ -91,7 +92,15 @@ export function makeAgentGatewayMcpTransport(input: {
             // later tools/call refusal.
             tools: input.tools
               .filter((tool) => context.callerCapabilities.has(tool.requiredCapability))
-              .map((tool) => tool.definition),
+              .map((tool) => ({
+                ...tool.definition,
+                // SAFETY: ToolEntry.inputSchema is typed Record<string, unknown>; the sanitizer
+                // returns a fresh object for object input, so this restores the static type.
+                inputSchema: sanitizeToolInputSchema(tool.definition.inputSchema) as Record<
+                  string,
+                  unknown
+                >,
+              })),
           });
         case "tools/call": {
           const toolName = request.params.name;

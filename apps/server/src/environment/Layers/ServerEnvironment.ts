@@ -82,7 +82,6 @@ export const makeServerEnvironment = Effect.fn(function* () {
   };
 
   return {
-    getEnvironmentId: Effect.succeed(environmentId),
     getDescriptor: Effect.succeed(descriptor),
   } satisfies ServerEnvironmentShape;
 });
