@@ -6151,7 +6151,7 @@ export default function ChatView({
     return () => {
       observer.disconnect();
     };
-  }, [activeThread?.id, composerFooterHasWideActions, isInactiveSplitPane]);
+  }, [activeThread?.id, composerFooterHasWideActions, isInactiveSplitPane, secondaryChromeReady, shouldRenderChatPaneContent]);
 
   useLayoutEffect(() => {
     if (isInactiveSplitPane || typeof ResizeObserver === "undefined") return;
@@ -10356,7 +10356,10 @@ export default function ChatView({
       observer.disconnect();
       window.cancelAnimationFrame(frame);
     };
-  }, [composerFooterPlanInputsKey, composerFooterTier, isEmbed, showComposerModelBootstrapSkeleton]);
+    // Deferred secondary chrome unmounts/remounts the form even when its thread
+    // and model stay unchanged; approvals similarly replace the footer. Follow
+    // these mount gates just like the composer height observer above.
+  }, [activeThread?.id, composerFooterPlanInputsKey, composerFooterTier, isComposerApprovalState, isEmbed, secondaryChromeReady, shouldRenderChatPaneContent, showComposerModelBootstrapSkeleton]);
   const composerModelPickerWidthClassName = isComposerFooterCompact ? "w-32" : "w-36 sm:w-44";
   const composerOptionsPickerWidthClassName = isComposerFooterCompact ? "w-28" : "w-32";
   const composerModelEffortPickerWidthClassName = isComposerFooterCompact ? "w-40" : "w-44 sm:w-52";

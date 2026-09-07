@@ -2350,13 +2350,15 @@ describe("ChatView transcript geometry (full app)", () => {
     const discovery = vi.spyOn(api.provider, "listModels").mockImplementation(
       () => new Promise((resolve) => { finishDiscovery = resolve; }),
     );
-    const parentPostMessage = vi.spyOn(window.parent, "postMessage").mockImplementation(() => undefined);
+    const parentPostMessage = vi.spyOn(window.parent, "postMessage");
     const snapshot = createSnapshotForTargetUser({
       targetMessageId: "msg-user-loading-width" as MessageId,
       targetText: "Loading model catalog",
     });
     const mounted = await mountChatView({
       viewport: { ...DEFAULT_VIEWPORT, width: 340 },
+      // This can be the first cold full-app mount when running embed tests alone.
+      readyTimeoutMs: 60_000,
       snapshot: {
         ...snapshot,
         threads: snapshot.threads.map((thread) => ({
@@ -2398,6 +2400,70 @@ describe("ChatView transcript geometry (full app)", () => {
       discovery.mockRestore();
       parentPostMessage.mockRestore();
       await mounted.cleanup();
+    }
+  });
+
+  it("keeps reporting the embedded sidebar minimum after a persisted thread hydrates", async () => {
+    sessionStorage.setItem(
+      "synara.poc.embed-mode",
+      JSON.stringify({
+        workspaceRoot: "/repo/project",
+        theme: "light",
+        surface: "chrome",
+        hostOrigin: window.location.origin,
+        locale: "en",
+      }),
+    );
+    const parentPostMessage = vi.spyOn(window.parent, "postMessage");
+    const reportedMinimums = () => parentPostMessage.mock.calls.flatMap(([message]) =>
+      message?.type === "synara:layout-metrics" ? [message.minimumSidebarWidth as number] : [],
+    );
+    let mounted: MountedChatView | undefined;
+    try {
+      const snapshot = createSnapshotForTargetUser({
+        targetMessageId: "msg-user-resize-width" as MessageId,
+        targetText: "Keep room for the editor while the agent works.",
+      });
+      mounted = await mountChatView({
+        viewport: { ...DEFAULT_VIEWPORT, width: 680 },
+        readyTimeoutMs: 60_000,
+        snapshot: {
+          ...snapshot,
+          threads: snapshot.threads.map((thread) => ({
+            ...thread,
+            modelSelection: {
+              provider: "codex",
+              model: "gpt-5.6-sol",
+              options: { reasoningEffort: "xhigh", fastMode: true },
+            },
+          })),
+        },
+      });
+      await waitForElement(
+        () => document.querySelector<HTMLButtonElement>("button[aria-label='Change model and reasoning']"),
+        "Expected the loaded embedded model picker.",
+      );
+      await vi.waitFor(() => expect(reportedMinimums().length).toBeGreaterThan(0));
+      const minimum = reportedMinimums().at(-1)!;
+      expect(minimum).toBeLessThan(640);
+
+      parentPostMessage.mockClear();
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 720 });
+      await vi.waitFor(() => expect(reportedMinimums().length).toBeGreaterThan(0));
+      expect(Math.abs(reportedMinimums().at(-1)! - minimum)).toBeLessThanOrEqual(2);
+
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: Math.max(310, minimum) });
+      await waitForLayout();
+      const extras = document.querySelector<HTMLElement>("button[aria-label='Composer extras']")!;
+      const model = document.querySelector<HTMLElement>("button[aria-label='Change model and reasoning']")!;
+      const surface = document.querySelector<HTMLElement>(".chat-composer-surface")!;
+      const actions = document.querySelector<HTMLElement>("[data-chat-composer-actions='right']")!;
+      expect(model.getBoundingClientRect().left).toBeGreaterThanOrEqual(extras.getBoundingClientRect().right);
+      expect(actions.getBoundingClientRect().right).toBeLessThanOrEqual(surface.getBoundingClientRect().right - 7);
+      await page.screenshot();
+    } finally {
+      parentPostMessage.mockRestore();
+      await mounted?.cleanup();
     }
   });
 

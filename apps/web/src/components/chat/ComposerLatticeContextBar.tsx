@@ -106,10 +106,12 @@ export function ComposerLatticeContextBar({
         <ScrollArea
           className={cn(
             COMPOSER_STACKED_PANEL_DIVIDER_CLASS_NAME,
+            "h-auto max-h-56",
+          )}
+          viewportClassName={cn(
             COMPOSER_STACKED_PANEL_BODY_PADDING_CLASS_NAME,
             "h-auto max-h-56 pt-2",
           )}
-          viewportClassName="h-auto max-h-56"
           scrollFade
         >
           <div className="mb-2 flex items-center justify-between gap-2">
