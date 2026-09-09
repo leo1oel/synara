@@ -35,9 +35,9 @@ export const DISCLOSURE_CHEVRON_MOTION_CLASS =
 export const DISCLOSURE_COLLAPSIBLE_PANEL_CLASS =
   "h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-220 ease-out motion-reduce:transition-none data-ending-style:h-0 data-starting-style:h-0 data-open:data-ending-style:[height:var(--collapsible-panel-height)]";
 
-/** Menu/select popup entrance and exit, shared with the Lattice host. */
+/** Menu/select popup entrance and faster exit, shared with Lattice's moderate tier. */
 export const DISCLOSURE_POPUP_MOTION_CLASS =
-  "transition-[opacity,transform] duration-220 ease-out motion-reduce:transition-none data-starting-style:-translate-y-1 data-starting-style:scale-[0.97] data-starting-style:opacity-0 data-ending-style:-translate-y-1 data-ending-style:scale-[0.97] data-ending-style:opacity-0";
+  "transition-[opacity,transform] duration-160 data-ending-style:duration-120 ease-out motion-reduce:transition-none data-starting-style:-translate-y-1 data-starting-style:scale-[0.97] data-starting-style:opacity-0 data-ending-style:-translate-y-1 data-ending-style:scale-[0.97] data-ending-style:opacity-0";
 
 /**
  * Inline-axis (width) reveal for side panels that open/close along the

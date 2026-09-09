@@ -41,6 +41,8 @@ export interface DroidAcpRuntimeInput extends Omit<
 > {
   readonly childProcessSpawner: ChildProcessSpawner.ChildProcessSpawner["Service"];
   readonly droidSettings: DroidAcpRuntimeSettings | null | undefined;
+  /** Background discovery must never open Factory's device-pairing login. */
+  readonly allowDevicePairing?: boolean;
 }
 
 export interface DroidAcpModelSelectionErrorContext {
@@ -141,13 +143,14 @@ function availableAuthMethodIds(initializeResult: Acp.InitializeResponse): Reado
 
 export const resolveDroidAcpAuthMethodId = (
   initializeResult: Acp.InitializeResponse,
+  allowDevicePairing = true,
 ): Effect.Effect<string, AcpErrors.AcpError> =>
   Effect.gen(function* () {
     const authMethodIds = availableAuthMethodIds(initializeResult);
     if (hasDroidApiKeyEnv() && authMethodIds.has(DROID_API_KEY_AUTH_METHOD_ID)) {
       return DROID_API_KEY_AUTH_METHOD_ID;
     }
-    if (authMethodIds.has(DROID_DEVICE_PAIRING_AUTH_METHOD_ID)) {
+    if (allowDevicePairing && authMethodIds.has(DROID_DEVICE_PAIRING_AUTH_METHOD_ID)) {
       return DROID_DEVICE_PAIRING_AUTH_METHOD_ID;
     }
     return yield* new AcpErrors.AcpRequestError({
@@ -168,7 +171,11 @@ export const makeDroidAcpRuntime = (
       AcpSessionRuntime.layer({
         ...input,
         spawn: buildDroidAcpSpawnInput(input.droidSettings, input.cwd),
-        resolveAuthMethodId: resolveDroidAcpAuthMethodId,
+        // Reuse cached CLI login before considering auth. Discovery may use an
+        // API key, but must fail quietly if device pairing would be required.
+        ...(input.allowDevicePairing === false ? { authPolicy: "on-demand" as const } : {}),
+        resolveAuthMethodId: (result) =>
+          resolveDroidAcpAuthMethodId(result, input.allowDevicePairing),
         authenticateMeta: { headless: true },
       }).pipe(
         Layer.provide(

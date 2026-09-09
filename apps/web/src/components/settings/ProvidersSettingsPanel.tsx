@@ -562,12 +562,13 @@ function providerUpdateFailureMessage(provider: ServerProviderStatus | undefined
   return state.output?.trim() || state.message || "The provider update did not complete.";
 }
 
-function ProviderUpdateAction(props: {
+export function ProviderUpdateAction(props: {
   providerStatus: ServerProviderStatus;
   active: boolean;
   disabled: boolean;
   onUpdate: (provider: ProviderKind) => void;
 }) {
+  const { i18n } = useLingui();
   const advisory = props.providerStatus.versionAdvisory;
   return (
     <Button
@@ -586,8 +587,27 @@ function ProviderUpdateAction(props: {
       ) : (
         <DownloadIcon className="size-3.5" />
       )}
-      {props.active ? "Updating" : "Update"}
+      {props.active ? i18n._("Updating") : i18n._("Update")}
     </Button>
+  );
+}
+
+export function ProviderUpdateRow(props: {
+  provider: ReactNode;
+  status: ReactNode;
+  action: ReactNode;
+}) {
+  return (
+    <div
+      data-slot="provider-update-row"
+      className="flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2"
+    >
+      <div className="min-w-0 flex-1 text-sm font-medium text-foreground">{props.provider}</div>
+      <div className="ml-auto flex shrink-0 items-center justify-end gap-2">
+        <span className="text-right text-[11px] text-muted-foreground">{props.status}</span>
+        {props.action}
+      </div>
+    </div>
   );
 }
 
@@ -1166,12 +1186,11 @@ export function ProvidersSettingsPanel({
                     updatingProviders.has(providerStatus.provider);
                   const updateLabel = providerUpdateStatusLabel(providerStatus);
                   return (
-                    <SettingsListRow
+                    <ProviderUpdateRow
                       key={providerStatus.provider}
-                      className="px-3"
-                      title={PROVIDER_DISPLAY_NAMES[providerStatus.provider]}
-                      description={updateLabel || undefined}
-                      actions={
+                      provider={PROVIDER_DISPLAY_NAMES[providerStatus.provider]}
+                      status={updateLabel}
+                      action={
                         providerStatus.versionAdvisory?.canUpdate ? (
                           <ProviderUpdateAction
                             providerStatus={providerStatus}
@@ -1180,7 +1199,9 @@ export function ProvidersSettingsPanel({
                             onUpdate={(provider) => void runProviderUpdate(provider)}
                           />
                         ) : (
-                          <span className="text-[11px] text-muted-foreground">Manual update</span>
+                          <span className="text-[11px] text-muted-foreground">
+                            {i18n._("Manual update")}
+                          </span>
                         )
                       }
                     />

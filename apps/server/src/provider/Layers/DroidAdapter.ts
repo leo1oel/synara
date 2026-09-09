@@ -459,6 +459,7 @@ export function makeDroidAdapter(
         childProcessSpawner,
         cwd: input.cwd,
         clientInfo: { name: input.clientName, version: "0.0.0" },
+        allowDevicePairing: false,
       });
 
     const logNative = (threadId: ThreadId, method: string, payload: unknown) =>

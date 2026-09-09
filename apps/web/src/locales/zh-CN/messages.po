@@ -12,6 +12,21 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Updating"
+msgstr "正在更新"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Update"
+msgstr "更新"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Manual update"
+msgstr "需手动更新"
+
+#. js-lingui-explicit-id
 #: src/routes/_chat.pull-requests.index.tsx
 msgid "Search pull requests"
 msgstr "搜索拉取请求"
@@ -104,6 +119,7 @@ msgid "Commit"
 msgstr "提交"
 
 #. js-lingui-explicit-id
+#: src/components/chat/GitPanel.browser.tsx
 #: src/lib/gitLocalization.ts
 msgid "Commit & push"
 msgstr "提交并推送"
@@ -1028,6 +1044,7 @@ msgid "Run action on default branch?"
 msgstr "要在默认分支上执行操作吗？"
 
 #. js-lingui-explicit-id
+#: src/components/chat/GitPanel.browser.tsx
 #: src/components/GitActionsControl.tsx
 msgid "Abort"
 msgstr "中止"

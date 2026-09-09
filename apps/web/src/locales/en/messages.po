@@ -12,6 +12,21 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Updating"
+msgstr "Updating"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Update"
+msgstr "Update"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Manual update"
+msgstr "Manual update"
+
+#. js-lingui-explicit-id
 #: src/routes/_chat.pull-requests.index.tsx
 msgid "Search pull requests"
 msgstr "Search pull requests"
@@ -104,6 +119,7 @@ msgid "Commit"
 msgstr "Commit"
 
 #. js-lingui-explicit-id
+#: src/components/chat/GitPanel.browser.tsx
 #: src/lib/gitLocalization.ts
 msgid "Commit & push"
 msgstr "Commit & push"
@@ -1028,6 +1044,7 @@ msgid "Run action on default branch?"
 msgstr "Run action on default branch?"
 
 #. js-lingui-explicit-id
+#: src/components/chat/GitPanel.browser.tsx
 #: src/components/GitActionsControl.tsx
 msgid "Abort"
 msgstr "Abort"

@@ -20,6 +20,7 @@ import {
   teardownAcpChildProcess,
 } from "./AcpSessionRuntime.ts";
 import * as AcpErrors from "./AcpErrors.ts";
+import { makeDroidAcpRuntime } from "./DroidAcpSupport.ts";
 
 describe("makeAcpIncomingFrameGuard", () => {
   const encode = (value: string) => new TextEncoder().encode(value);
@@ -455,6 +456,7 @@ describe("AcpSessionRuntime initialize validation", () => {
     validateInitializeResult: NonNullable<
       Parameters<typeof AcpSessionRuntime.layer>[0]["validateInitializeResult"]
     >,
+    droidDiscovery = false,
   ) => {
     const clientToAgent = Effect.runSync(Queue.unbounded<Uint8Array>());
     const agentToClient = Effect.runSync(Queue.unbounded<Uint8Array>());
@@ -491,6 +493,23 @@ describe("AcpSessionRuntime initialize validation", () => {
       ),
     );
 
+    if (droidDiscovery) {
+      return Layer.effect(
+        AcpSessionRuntime,
+        Effect.gen(function* () {
+          const childProcessSpawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+          return yield* makeDroidAcpRuntime({
+            childProcessSpawner,
+            droidSettings: {},
+            cwd: process.cwd(),
+            clientInfo: { name: "discovery-test", version: "0.0.0" },
+            allowDevicePairing: false,
+            teardownProcessTree: async () => ({ escalated: false, signalErrors: [] }),
+          });
+        }),
+      ).pipe(Layer.provide(spawnerLayer));
+    }
+
     return AcpSessionRuntime.layer({
       spawn: { command: "in-memory-acp-agent", args: [] },
       cwd: process.cwd(),
@@ -500,6 +519,49 @@ describe("AcpSessionRuntime initialize validation", () => {
       teardownProcessTree: async () => ({ escalated: false, signalErrors: [] }),
     }).pipe(Layer.provide(spawnerLayer));
   };
+
+  it.each([false, true])(
+    "does not request Factory device pairing (cached session: %s)",
+    async (cached) => {
+      const calls: string[] = [];
+      const agentApp = OfficialAcp.agent({ name: "factory-discovery-agent" })
+        .onRequest(OfficialAcp.methods.agent.initialize, () => ({
+          protocolVersion: 1,
+          agentCapabilities: {},
+          authMethods: [{ id: "device-pairing", name: "Factory login" }],
+        }))
+        .onRequest(OfficialAcp.methods.agent.authenticate, () => {
+          calls.push("authenticate/device-pairing");
+          return {};
+        })
+        .onRequest(OfficialAcp.methods.agent.session.new, () => {
+          calls.push("session/new");
+          if (!cached) {
+            throw new OfficialAcp.RequestError(-32000, "Authentication required");
+          }
+          return { sessionId: "cached-login-session" };
+        });
+
+      const exit = await Effect.runPromise(
+        Effect.gen(function* () {
+          const runtime = yield* AcpSessionRuntime;
+          return yield* runtime.start();
+        }).pipe(
+          Effect.provide(makeRuntimeLayer(agentApp, () => Effect.void, true)),
+          Effect.scoped,
+          Effect.exit,
+        ),
+      );
+
+      expect(calls).not.toContain("authenticate/device-pairing");
+      expect(calls).toEqual(["session/new"]);
+      if (cached) {
+        expect(Exit.isSuccess(exit)).toBe(true);
+      } else {
+        expect(Exit.isFailure(exit)).toBe(true);
+      }
+    },
+  );
 
   it("validates after initialize and before session/new", async () => {
     const calls: string[] = [];
