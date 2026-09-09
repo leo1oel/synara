@@ -496,7 +496,7 @@ import {
 } from "../splitViewStore";
 import { ComposerPromptEditor, type ComposerPromptEditorHandle } from "./ComposerPromptEditor";
 import { PullRequestThreadDialog } from "./PullRequestThreadDialog";
-import { ChatHeader, EDITOR_CHAT_HISTORY_MENU_WIDTH_REM } from "./chat/ChatHeader";
+import { ChatHeader } from "./chat/ChatHeader";
 import { ChatSurfaceHeader } from "./chat/ChatSurfaceHeader";
 import { dispatchThreadNotes } from "~/pinnedMessages";
 import { dispatchThreadGoal } from "~/threadGoal";
@@ -10254,9 +10254,6 @@ export default function ChatView({
     const actions = footer?.querySelector<HTMLElement>("[data-chat-composer-actions='right']");
     if (!footer || !leading || !actions) return;
     const composerSurface = composerForm.querySelector<HTMLElement>(".chat-composer-surface");
-    const historyTrigger = document.querySelector<HTMLElement>(
-      "[data-chat-history-menu-trigger='true']",
-    );
     let frame = 0;
     const publishMinimumWidth = () => {
       if (footer.clientWidth <= 0) return;
@@ -10272,9 +10269,9 @@ export default function ChatView({
         actionsIntrinsicWidth: intrinsicFlexRowWidth(actions),
       });
 
-      // Attachment cards use their rendered composer geometry. The history
-      // popup is portalled, so reserve its fixed width before it mounts;
-      // otherwise opening it can make Lattice resize and dismiss the popup.
+      // Only visible composer content constrains the sidebar. The portalled
+      // history popup fits the iframe viewport instead of reserving its full
+      // preferred width even when closed.
       let horizontalContentMinimum = 0;
       if (composerSurface) {
         const surfaceRect = composerSurface.getBoundingClientRect();
@@ -10295,22 +10292,6 @@ export default function ChatView({
           );
         }
       }
-      if (historyTrigger) {
-        const triggerRect = historyTrigger.getBoundingClientRect();
-        const rootFontSize =
-          Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
-        horizontalContentMinimum = Math.max(
-          horizontalContentMinimum,
-          embedHorizontalContentMinimumSidebarWidth({
-            viewportWidth: window.innerWidth,
-            surfaceWidth: window.innerWidth,
-            contentRightOffset:
-              triggerRect.left + EDITOR_CHAT_HISTORY_MENU_WIDTH_REM * rootFontSize,
-            endInset: EMBED_COMPOSER_SEND_EDGE_INSET_PX,
-          }),
-        );
-      }
-
       // Keep a direct geometry guard as a final defense against subpixel/grid
       // rounding. Unlike a retained historical maximum, this can decrease
       // when Fast Mode is disabled or a shorter model is selected.
@@ -10328,7 +10309,7 @@ export default function ChatView({
       postLayoutMetricsToLattice(
         embedConfig,
         // Loading placeholders must not become a persisted sidebar width in
-        // Lattice. Other content (history/attachments) still needs its minimum.
+        // Lattice. Visible attachment cards still need their minimum.
         Math.max(
           showComposerModelBootstrapSkeleton ? 0 : intrinsicMinimum,
           horizontalContentMinimum,
@@ -10351,7 +10332,6 @@ export default function ChatView({
     observer.observe(footer);
     observer.observe(leading);
     observer.observe(actions);
-    if (historyTrigger) observer.observe(historyTrigger);
     return () => {
       observer.disconnect();
       window.cancelAnimationFrame(frame);

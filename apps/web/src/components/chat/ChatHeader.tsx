@@ -160,7 +160,6 @@ interface ChatHeaderProps {
 }
 
 const EDITOR_CHAT_HISTORY_LIMIT = 30;
-export const EDITOR_CHAT_HISTORY_MENU_WIDTH_REM = 18;
 
 type EditorRailChatTab = EditorRailChatTabSnapshot;
 
@@ -230,7 +229,7 @@ function EditorChatHistoryMenu(props: {
         align="start"
         side="bottom"
         sideOffset={6}
-        className="w-[18rem] min-w-[18rem]"
+        className="w-[18rem] min-w-0"
       >
         {props.onNewChat ? (
           <MenuItem onClick={props.onNewChat}>

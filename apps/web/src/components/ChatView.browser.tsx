@@ -2012,6 +2012,9 @@ async function mountChatView(options: {
   await waitForProductionStyles();
 
   const host = createFullscreenTestHost();
+  // Match the width-constrained production root rather than letting the test
+  // grid's automatic minimum expand the app beyond a narrow iframe viewport.
+  host.style.gridTemplateColumns = "minmax(0, 1fr)";
 
   const initialEntry = options.initialEntry ?? `/${THREAD_ID}`;
 
@@ -2445,20 +2448,23 @@ describe("ChatView transcript geometry (full app)", () => {
       );
       await vi.waitFor(() => expect(reportedMinimums().length).toBeGreaterThan(0));
       const minimum = reportedMinimums().at(-1)!;
-      expect(minimum).toBeLessThan(640);
+      // A closed history popup must not reserve an entire 18rem menu here.
+      expect(minimum).toBeLessThan(310);
 
       parentPostMessage.mockClear();
       await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 720 });
       await vi.waitFor(() => expect(reportedMinimums().length).toBeGreaterThan(0));
       expect(Math.abs(reportedMinimums().at(-1)! - minimum)).toBeLessThanOrEqual(2);
 
-      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: Math.max(310, minimum) });
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: Math.max(180, minimum) });
       await waitForLayout();
       const extras = document.querySelector<HTMLElement>("button[aria-label='Composer extras']")!;
       const model = document.querySelector<HTMLElement>("button[aria-label='Change model and reasoning']")!;
       const surface = document.querySelector<HTMLElement>(".chat-composer-surface")!;
       const actions = document.querySelector<HTMLElement>("[data-chat-composer-actions='right']")!;
+      expect(surface.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth);
       expect(model.getBoundingClientRect().left).toBeGreaterThanOrEqual(extras.getBoundingClientRect().right);
+      expect(model.getBoundingClientRect().left - extras.getBoundingClientRect().right).toBeLessThanOrEqual(6);
       expect(actions.getBoundingClientRect().right).toBeLessThanOrEqual(surface.getBoundingClientRect().right - 7);
       await page.screenshot();
     } finally {
@@ -2558,12 +2564,6 @@ describe("ChatView transcript geometry (full app)", () => {
             : [],
         );
       await vi.waitFor(() => expect(reportedMinimums().length).toBeGreaterThan(0));
-      const rootFontSize = Number.parseFloat(
-        window.getComputedStyle(document.documentElement).fontSize,
-      );
-      const historyMinimum = Math.ceil(
-        historyTrigger.getBoundingClientRect().left + rootFontSize * 18 + 8,
-      );
       const surfaceRect = composerSurface!.getBoundingClientRect();
       const attachmentMinimum = Math.ceil(
         window.innerWidth -
@@ -2571,16 +2571,20 @@ describe("ChatView transcript geometry (full app)", () => {
           (attachmentCard.getBoundingClientRect().right - surfaceRect.left) +
           8,
       );
-      const requiredMinimum = Math.max(historyMinimum, attachmentMinimum);
-
       await vi.waitFor(() => {
-        expect(Math.max(...reportedMinimums())).toBeGreaterThanOrEqual(requiredMinimum);
+        expect(reportedMinimums().at(-1)).toBeGreaterThanOrEqual(attachmentMinimum);
       });
 
-      await page.getByRole("button", { name: /open chat history/i }).click();
+      const minimumBeforeHistory = reportedMinimums().at(-1);
+      await userEvent.click(historyTrigger);
       await expect.element(page.getByText(snapshotWithLongHistoryTitle.threads.at(-1)!.title)).toBeVisible();
       await waitForLayout();
       await expect.element(page.getByText(snapshotWithLongHistoryTitle.threads.at(-1)!.title)).toBeVisible();
+      const popup = document.querySelector<HTMLElement>("[data-slot='menu-popup']")!;
+      expect(popup.getBoundingClientRect().left).toBeGreaterThanOrEqual(0);
+      expect(popup.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth);
+      expect(reportedMinimums().at(-1)).toBe(minimumBeforeHistory);
+      await page.screenshot();
     } finally {
       parentPostMessage.mockRestore();
       await mounted.cleanup();
