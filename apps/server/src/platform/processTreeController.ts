@@ -5,8 +5,10 @@
 import { execProcessFile, spawnProcessSync } from "@synara/shared/processRuntime";
 import treeKill from "tree-kill";
 
+import { createLogger } from "../logger";
 import { captureWindowsProcessChildrenMap } from "./windowsProcessSnapshot";
 
+const log = createLogger("process-tree");
 const PROCESS_TREE_SYNC_SCAN_TIMEOUT_MS = 1_000;
 const PROCESS_TREE_TEARDOWN_SCAN_TIMEOUT_MS = 3_000;
 const PROCESS_TREE_CAPTURE_ATTEMPTS = 2;
@@ -154,10 +156,23 @@ function captureProcessChildrenMap(): Promise<ProcessChildrenMap | null> {
           timeout: PROCESS_TREE_TEARDOWN_SCAN_TIMEOUT_MS,
         },
         (error, stdout) => {
+          if (error) {
+            // Do not log stdout: a process table can contain prompt text and
+            // credentials in argv. Keep the OS failure that was previously lost.
+            log.warn("process-tree snapshot failed", {
+              code: error.code,
+              signal: error.signal,
+              killed: error.killed,
+              message: error.message,
+            });
+          }
           resolve(error ? null : parseProcessChildrenMap(stdout));
         },
       );
-    } catch {
+    } catch (error) {
+      log.warn("process-tree snapshot could not start", {
+        message: error instanceof Error ? error.message : String(error),
+      });
       resolve(null);
     }
   });

@@ -23,6 +23,15 @@ const DEFAULT_INSPECT_INTERVAL_MS = 250;
 const DEFAULT_WINDOWS_INITIAL_CAPTURE_MS = 3_000;
 const FINAL_PROOF_INSPECTION_MAX_MS = 250;
 
+// Evidence belongs to the owned process, not a stop attempt. A retry after root
+// exit must inspect the original identities, never rediscover an empty tree
+// from a dead PID whose children may have been reparented.
+const ownedProcessExits = new WeakMap<
+  ProcessExitHandle | EffectProcessExitHandle,
+  Promise<unknown>
+>();
+const capturedTrees = new WeakMap<Promise<unknown>, CapturedProcessTree>();
+
 export interface SupervisedProcessTeardownInput {
   readonly rootPid: number;
   /** Must resolve only after the owned root process has emitted its terminal exit. */
@@ -96,16 +105,22 @@ function positiveDuration(value: number | undefined, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
-function waitForOwnedProcessExit(process: ProcessExitHandle): Promise<void> {
-  if (process.exitCode !== null || process.signalCode !== null) return Promise.resolve();
-  return new Promise((resolve) => {
-    const onExit = () => resolve();
-    process.once("exit", onExit);
-    if (process.exitCode !== null || process.signalCode !== null) {
-      process.removeListener("exit", onExit);
-      resolve();
-    }
-  });
+function waitForOwnedProcessExit(process: ProcessExitHandle): Promise<unknown> {
+  const existing = ownedProcessExits.get(process);
+  if (existing) return existing;
+  const exited =
+    process.exitCode !== null || process.signalCode !== null
+      ? Promise.resolve()
+      : new Promise<void>((resolve) => {
+          const onExit = () => resolve();
+          process.once("exit", onExit);
+          if (process.exitCode !== null || process.signalCode !== null) {
+            process.removeListener("exit", onExit);
+            resolve();
+          }
+        });
+  ownedProcessExits.set(process, exited);
+  return exited;
 }
 
 export async function teardownChildProcessTree(
@@ -125,9 +140,14 @@ export function teardownEffectProcessTree(
   process: EffectProcessExitHandle,
   teardownProcessTree: typeof teardownProviderProcessTree = teardownProviderProcessTree,
 ): Promise<SupervisedProcessTeardownResult> {
+  let rootExited = ownedProcessExits.get(process);
+  if (!rootExited) {
+    rootExited = Effect.runPromise(Effect.exit(process.exitCode));
+    ownedProcessExits.set(process, rootExited);
+  }
   return teardownProcessTree({
     rootPid: Number(process.pid),
-    rootExited: Effect.runPromise(Effect.exit(process.exitCode)),
+    rootExited,
   });
 }
 
@@ -204,7 +224,47 @@ export async function teardownProviderProcessTree(
   );
 
   try {
-    const tree = await captureTree(input.rootPid);
+    await Promise.resolve();
+    const previousTree = capturedTrees.get(input.rootExited);
+    let tree: CapturedProcessTree;
+    if (rootExited && previousTree) {
+      tree = previousTree;
+    } else {
+      tree = await captureTree(input.rootPid);
+      if (previousTree && rootExited) {
+        // A retry racing root exit cannot repair missing capture coverage:
+        // children may have reparented since the preceding stop attempt.
+        tree = { ...tree, captureComplete: false };
+      }
+      if (previousTree) {
+        tree = {
+          ...tree,
+          descendants: [
+            ...previousTree.descendants,
+            ...tree.descendants.filter(
+              (child) =>
+                !previousTree.descendants.some(
+                  (previous) =>
+                    previous.pid === child.pid &&
+                    previous.command === child.command &&
+                    previous.startedAt === child.startedAt,
+                ),
+            ),
+          ],
+        };
+      }
+    }
+    capturedTrees.set(input.rootExited, tree);
+    if (tree.captureComplete === false) {
+      // Killing now would destroy the ancestry needed for a safe retry. Keep
+      // the adapter unroutable but leave the root observable until capture works.
+      throw new ProviderProcessExitUnprovenError({
+        rootPid: input.rootPid,
+        rootExited,
+        remainingDescendantPids: null,
+        captureComplete: false,
+      });
+    }
     const signalErrors: Error[] = [];
 
     const signal = (
@@ -274,7 +334,22 @@ export async function teardownProviderProcessTree(
       return { proven: false as const, remainingDescendants };
     };
 
-    signal("SIGTERM", !rootExited);
+    let termTree = tree;
+    if (rootExited) {
+      // Retained identities can be older than this attempt. Recheck before
+      // TERM as well as KILL so a retry cannot signal a reused descendant PID.
+      const inspection = await inspectTree(tree, DEFAULT_INSPECT_INTERVAL_MS);
+      if (!inspection.verified) {
+        throw new ProviderProcessExitUnprovenError({
+          rootPid: input.rootPid,
+          rootExited,
+          remainingDescendantPids: null,
+          captureComplete: true,
+        });
+      }
+      termTree = { descendants: inspection.survivors, captureComplete: true };
+    }
+    signal("SIGTERM", !rootExited, termTree);
     const graceful = await waitForExitProof(
       positiveDuration(input.termGraceMs, DEFAULT_TERM_GRACE_MS),
     );
