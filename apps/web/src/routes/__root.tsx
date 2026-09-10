@@ -7,7 +7,6 @@ import {
   type OrchestrationThread,
   type ServerConfig,
   type ServerProviderStatus,
-  type ServerSettingsView,
   type WsCompatibilityError,
 } from "@synara/contracts";
 import { defaultTerminalTitleForCliKind } from "@synara/shared/terminalThreads";
@@ -48,7 +47,6 @@ import { useFeedbackDialogStore } from "../feedbackDialogStore";
 import type { FeedbackThreadContext } from "../feedback";
 import { isTerminalFocused } from "../lib/terminalFocus";
 import {
-  invalidateProviderUsageQueries,
   reconcileServerProviderStatuses,
   refreshServerConfigAfterTransportOpen,
   serverConfigQueryOptions,
@@ -136,7 +134,7 @@ import { resolveVisibleDockSidechatThreadIds } from "../rightDockStore.logic";
 import { arraysShallowEqual } from "../storeNormalization";
 import { providerModelDiscoveryInvalidationFingerprint } from "../lib/providerDiscoveryInvalidation";
 import { providerDiscoveryQueryKeys } from "../lib/providerDiscoveryReactQuery";
-import { didProviderEnablementChange, useAppSettings } from "../appSettings";
+import { useAppSettings } from "../appSettings";
 import { getNavigatorPlatform } from "../lib/utils";
 import {
   getNotifiableProviderUpdateStatuses,
@@ -2328,14 +2326,7 @@ function EventRouter() {
       }
     });
     const unsubServerSettingsUpdated = onServerSettingsUpdated((payload) => {
-      const previousSettings = queryClient.getQueryData<ServerSettingsView>(
-        serverQueryKeys.settings(),
-      );
       queryClient.setQueryData(serverQueryKeys.settings(), payload.settings);
-      if (didProviderEnablementChange(previousSettings, payload.settings)) {
-        void queryClient.invalidateQueries({ queryKey: providerDiscoveryQueryKeys.all });
-        void invalidateProviderUsageQueries(queryClient);
-      }
       void queryClient.invalidateQueries({
         queryKey: serverSettingsQueryOptions().queryKey,
       });
