@@ -62,10 +62,7 @@ function Switch({ className, ...props }: SwitchPrimitive.Root.Props) {
   return (
     <SwitchPrimitive.Root
       className={(state) =>
-        cn(
-          SWITCH_TRACK_CLASS_NAME,
-          typeof className === "function" ? className(state) : className,
-        )
+        cn(SWITCH_TRACK_CLASS_NAME, typeof className === "function" ? className(state) : className)
       }
       data-slot="switch"
       {...props}

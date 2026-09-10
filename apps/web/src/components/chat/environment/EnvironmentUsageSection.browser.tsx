@@ -111,5 +111,4 @@ describe("EnvironmentUsageSection", () => {
       .element(page.getByRole("button", { name: "Droid usage: Connected" }))
       .toBeVisible();
   });
-
 });

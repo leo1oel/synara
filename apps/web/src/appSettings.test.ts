@@ -42,7 +42,7 @@ import {
 
 describe("removed provider enablement preference", () => {
   it("drops a legacy local disabled list while retaining picker visibility", () => {
-    const decoded = Schema.decodeSync(AppSettingsSchema)({
+    const decoded = Schema.decodeUnknownSync(AppSettingsSchema)({
       disabledProviders: ["opencode"],
       hiddenProviders: ["pi"],
     });

@@ -104,9 +104,7 @@ const runListSkills = (input: {
   );
 };
 
-const runListModels = (input: {
-  adapter: Partial<ProviderAdapterShape<ProviderAdapterError>>;
-}) => {
+const runListModels = (input: { adapter: Partial<ProviderAdapterShape<ProviderAdapterError>> }) => {
   const baseLayer = Layer.mergeAll(
     makeConfigLayer(),
     ServerSettingsService.layerTest(),
@@ -338,7 +336,6 @@ describe("ProviderDiscoveryService.listModels", () => {
             cached: false,
           } as ProviderListModelsResult),
       },
-      enabled: true,
     });
 
     expect(result).toEqual({

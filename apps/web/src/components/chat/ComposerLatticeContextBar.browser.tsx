@@ -24,9 +24,10 @@ it("keeps the bottom of a long context selection inside its scroll area", async 
       path: "sections/introduction.tex",
       line: 42,
       column: 7,
-      selection: Array.from({ length: 24 }, (_, index) => `Selected context line ${index + 1}`).join(
-        "\n",
-      ),
+      selection: Array.from(
+        { length: 24 },
+        (_, index) => `Selected context line ${index + 1}`,
+      ).join("\n"),
     },
     pdf: { page: 4, pageCount: 12 },
   });

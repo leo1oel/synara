@@ -104,10 +104,7 @@ export function ComposerLatticeContextBar({
 
       <DisclosureRegion open={expanded}>
         <ScrollArea
-          className={cn(
-            COMPOSER_STACKED_PANEL_DIVIDER_CLASS_NAME,
-            "h-auto max-h-56",
-          )}
+          className={cn(COMPOSER_STACKED_PANEL_DIVIDER_CLASS_NAME, "h-auto max-h-56")}
           viewportClassName={cn(
             COMPOSER_STACKED_PANEL_BODY_PADDING_CLASS_NAME,
             "h-auto max-h-56 pt-2",

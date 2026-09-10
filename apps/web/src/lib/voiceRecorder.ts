@@ -192,10 +192,7 @@ export function useVoiceRecorder() {
         const decibels = rms > 0 ? 20 * Math.log10(rms) : WAVEFORM_FLOOR_DB;
         const waveformLevel = Math.max(
           0,
-          Math.min(
-            1,
-            (decibels - WAVEFORM_FLOOR_DB) / (WAVEFORM_CEILING_DB - WAVEFORM_FLOOR_DB),
-          ),
+          Math.min(1, (decibels - WAVEFORM_FLOOR_DB) / (WAVEFORM_CEILING_DB - WAVEFORM_FLOOR_DB)),
         );
         const now = performance.now();
         if (now - waveformLastEmitAtRef.current >= 45) {

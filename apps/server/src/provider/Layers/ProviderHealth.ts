@@ -1966,9 +1966,7 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
       ).pipe(
         Effect.map((statuses) =>
           orderProviderStatuses(
-            statuses.filter(
-              (status): status is ServerProviderStatus => status !== undefined,
-            ),
+            statuses.filter((status): status is ServerProviderStatus => status !== undefined),
           ),
         ),
       );

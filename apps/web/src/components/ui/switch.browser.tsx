@@ -71,10 +71,14 @@ describe("Switch", () => {
     await expect.poll(() => thumb.getBoundingClientRect().width).toBeCloseTo(14.4, 1);
     await userEvent.click(toggle);
     await userEvent.unhover(toggle);
-    await expect.poll(() => thumb.getBoundingClientRect().left - toggle.getBoundingClientRect().left).toBeCloseTo(2, 1);
+    await expect
+      .poll(() => thumb.getBoundingClientRect().left - toggle.getBoundingClientRect().left)
+      .toBeCloseTo(2, 1);
     await userEvent.click(toggle);
     await userEvent.unhover(toggle);
-    await expect.poll(() => thumb.getBoundingClientRect().left - toggle.getBoundingClientRect().left).toBeCloseTo(14, 1);
+    await expect
+      .poll(() => thumb.getBoundingClientRect().left - toggle.getBoundingClientRect().left)
+      .toBeCloseTo(14, 1);
     await expect.poll(() => thumb.getBoundingClientRect().width).toBeCloseTo(12, 1);
     await page.screenshot();
 

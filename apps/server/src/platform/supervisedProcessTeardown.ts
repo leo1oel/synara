@@ -357,7 +357,7 @@ export async function teardownProviderProcessTree(
 
     let forceTree = tree;
     let forceDescendantsVerified = false;
-    if (platform === "win32" && rootExited && tree.captureComplete !== false) {
+    if (platform === "win32" && rootExited) {
       // When the Windows root is already gone, taskkill /T can no longer own
       // traversal. Re-snapshot through CIM immediately before escalation and
       // pass only descendants whose PID, command, and creation identity match.
@@ -392,7 +392,7 @@ export async function teardownProviderProcessTree(
       rootExited,
       remainingDescendantPids:
         forced.remainingDescendants?.map((descendant) => descendant.pid) ?? null,
-      captureComplete: tree.captureComplete !== false,
+      captureComplete: true,
     });
   } finally {
     windowsObserver?.dispose();

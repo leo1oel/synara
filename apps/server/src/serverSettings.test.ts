@@ -1,7 +1,6 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { dirname } from "node:path";
 import {
-  DEFAULT_DROID_GIT_TEXT_GENERATION_MODEL,
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
   DEFAULT_MODEL_BY_PROVIDER,
   ServerSettingsPatch,
@@ -237,9 +236,7 @@ describe("ServerSettingsService", () => {
 
     expect(settings.textGenerationModelSelection.provider).toBe(expectedProvider);
     expect(settings.textGenerationModelSelection.model).toBe(
-      expectedProvider === "droid"
-        ? DEFAULT_DROID_GIT_TEXT_GENERATION_MODEL
-        : DEFAULT_MODEL_BY_PROVIDER[expectedProvider],
+      DEFAULT_MODEL_BY_PROVIDER[expectedProvider],
     );
   });
 });

@@ -18,15 +18,13 @@ it("keeps the error banner when retrying a skipped message blocks the thread aga
   const threadId = ThreadId.makeUnsafe("unblock-replay-failure");
   const onUnblocked = vi.fn();
   const initial = { eventSequence: 17, state: "uncertain" };
-  api.listProviderDeliveryBlockers
-    .mockResolvedValueOnce([initial])
-    .mockResolvedValueOnce([
-      {
-        eventSequence: 43,
-        state: "uncertain",
-        lastError: "Codex process exit could not be verified",
-      },
-    ]);
+  api.listProviderDeliveryBlockers.mockResolvedValueOnce([initial]).mockResolvedValueOnce([
+    {
+      eventSequence: 43,
+      state: "uncertain",
+      lastError: "Codex process exit could not be verified",
+    },
+  ]);
   api.reconcileProviderDelivery.mockResolvedValue({ state: "succeeded" });
 
   const hook = await renderHook(() => useThreadUnblock({ threadId, onUnblocked }));

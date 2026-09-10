@@ -1154,7 +1154,9 @@ function ComposerModelLoadingControl(props: { widthClassName?: string; compact?:
     >
       <RefreshCwIcon aria-hidden="true" className="size-3.5 animate-spin" />
       {!props.compact && (
-        <span className="truncate text-[length:var(--app-font-size-ui-xs,11px)]">Loading models</span>
+        <span className="truncate text-[length:var(--app-font-size-ui-xs,11px)]">
+          Loading models
+        </span>
       )}
     </div>
   );
@@ -6149,7 +6151,13 @@ export default function ChatView({
     return () => {
       observer.disconnect();
     };
-  }, [activeThread?.id, composerFooterHasWideActions, isInactiveSplitPane, secondaryChromeReady, shouldRenderChatPaneContent]);
+  }, [
+    activeThread?.id,
+    composerFooterHasWideActions,
+    isInactiveSplitPane,
+    secondaryChromeReady,
+    shouldRenderChatPaneContent,
+  ]);
 
   useLayoutEffect(() => {
     if (isInactiveSplitPane || typeof ResizeObserver === "undefined") return;
@@ -8481,7 +8489,6 @@ export default function ChatView({
             formatPastedTextTitleSeed(sendableComposerPastedTexts) ?? GENERIC_CHAT_THREAD_TITLE;
         } else {
           titleSeed = GENERIC_CHAT_THREAD_TITLE;
-
         }
       }
       // Keep the optimistic label short while the server asks Codex for a better summary.
@@ -8856,7 +8863,6 @@ export default function ChatView({
               associatedWorktreePath: null,
               associatedWorktreeBranch: null,
               associatedWorktreeRef: null,
-
             });
           }
           clearLocalDispatchWorktreeSetup();
@@ -10337,7 +10343,16 @@ export default function ChatView({
     // Deferred secondary chrome unmounts/remounts the form even when its thread
     // and model stay unchanged; approvals similarly replace the footer. Follow
     // these mount gates just like the composer height observer above.
-  }, [activeThread?.id, composerFooterPlanInputsKey, composerFooterTier, isComposerApprovalState, isEmbed, secondaryChromeReady, shouldRenderChatPaneContent, showComposerModelBootstrapSkeleton]);
+  }, [
+    activeThread?.id,
+    composerFooterPlanInputsKey,
+    composerFooterTier,
+    isComposerApprovalState,
+    isEmbed,
+    secondaryChromeReady,
+    shouldRenderChatPaneContent,
+    showComposerModelBootstrapSkeleton,
+  ]);
   const composerModelPickerWidthClassName = isComposerFooterCompact ? "w-32" : "w-36 sm:w-44";
   const composerOptionsPickerWidthClassName = isComposerFooterCompact ? "w-28" : "w-32";
   const composerModelEffortPickerWidthClassName = isComposerFooterCompact ? "w-40" : "w-44 sm:w-52";
@@ -12665,7 +12680,6 @@ export default function ChatView({
                                 isConnecting ||
                                 showComposerModelBootstrapSkeleton ||
                                 isSidechatExpired ||
-
                                 isVoiceTranscribing ||
                                 isPreparingComposerImages ||
                                 !composerSendState.hasSendableContent

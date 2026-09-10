@@ -97,7 +97,7 @@ export function useHandleNewThread() {
           providerOrder: settings.providerOrder,
           hiddenProviders: settings.hiddenProviders,
         })
-      : project?.defaultModelSelection ?? null;
+      : (project?.defaultModelSelection ?? null);
     if (entryPoint === "chat") {
       const draftStore = useComposerDraftStore.getState();
       const draftThread = draftStore.getDraftThreadByProjectId(projectId, "chat");

@@ -327,9 +327,7 @@ export function GitPanel(props: {
         : null;
   const hasChanges = stagedFiles.length > 0 || unstagedFiles.length > 0;
   const showCleanState = !error && !isLoading && !hasChanges;
-  const unpushedCommitCount = statusQuery.data?.hasUpstream
-    ? statusQuery.data.aheadCount
-    : 0;
+  const unpushedCommitCount = statusQuery.data?.hasUpstream ? statusQuery.data.aheadCount : 0;
 
   if (!cwd) {
     return (

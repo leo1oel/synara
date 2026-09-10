@@ -360,7 +360,6 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         );
       }),
     );
-
   });
 
   describe("provider update checks", () => {
@@ -382,7 +381,6 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           },
         ],
         { ...DEFAULT_SERVER_SETTINGS, enableProviderUpdateChecks: false },
-        "2026-06-16T12:05:00.000Z",
       );
       const codex = statuses.find((status) => status.provider === "codex");
 
@@ -393,7 +391,6 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
       assert.strictEqual(codex?.versionAdvisory?.canUpdate, false);
       assert.strictEqual(codex?.versionAdvisory?.updateCommand, null);
     });
-
   });
 
   describe("startup refresh behavior", () => {

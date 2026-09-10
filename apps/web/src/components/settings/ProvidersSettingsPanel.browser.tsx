@@ -35,6 +35,8 @@ const codexStatus: ServerProviderStatus = {
     status: "behind_latest",
     currentVersion: "1.2.3",
     latestVersion: "1.3.0",
+    checkedAt: "2026-09-09T12:00:00.000Z",
+    message: null,
     canUpdate: true,
     updateCommand: "npm update -g @openai/codex",
   },

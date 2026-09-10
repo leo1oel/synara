@@ -14,10 +14,10 @@ interface MdastNode {
 }
 
 interface CodexFileCitation {
-  path?: string;
-  sheet?: string;
-  range?: string;
-  line?: number;
+  path: string | undefined;
+  sheet: string | undefined;
+  range: string | undefined;
+  line: number | undefined;
 }
 
 const CODEX_FILE_CITATION_PATTERN = /:codex-file-citation\{([^}]+)\}/g;
@@ -51,9 +51,10 @@ function citationLinkNode(citation: CodexFileCitation, cwd?: string): MdastNode 
   if (!path) return null;
   const href = (cwd ? workspaceRelativePathOf(path, cwd) : null) ?? path.replace(/\\/g, "/");
   const baseName = href.split("/").at(-1) || href;
-  const location = citation.sheet && citation.range
-    ? `${citation.sheet}!${citation.range}`
-    : citation.sheet ?? citation.range;
+  const location =
+    citation.sheet && citation.range
+      ? `${citation.sheet}!${citation.range}`
+      : (citation.sheet ?? citation.range);
   const label = location
     ? `${baseName} • ${location}`
     : citation.line

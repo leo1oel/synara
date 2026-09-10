@@ -2045,7 +2045,7 @@ async function mountChatView(options: {
       host,
       snapshot: options.snapshot,
       routeThreadId: ThreadId.makeUnsafe(initialEntry.slice(1)),
-      timeoutMs: options.readyTimeoutMs,
+      ...(options.readyTimeoutMs !== undefined ? { timeoutMs: options.readyTimeoutMs } : {}),
     });
   } catch (cause) {
     await screen.unmount();
@@ -2249,7 +2249,7 @@ describe("ChatView transcript geometry (full app)", () => {
 
       const nativeApi = readNativeApi();
       expect(nativeApi).not.toBeNull();
-      const confirm = vi.fn(async () => false);
+      const confirm = vi.fn<NonNullable<typeof nativeApi>["dialogs"]["confirm"]>(async () => false);
       Object.defineProperty(window, "nativeApi", {
         configurable: true,
         value: {
@@ -2258,7 +2258,7 @@ describe("ChatView transcript geometry (full app)", () => {
         },
       });
       const deleteButton = document.querySelector<HTMLButtonElement>(
-        'button[aria-label=\'Delete thread "New thread"\']',
+        "button[aria-label='Delete thread \"New thread\"']",
       );
       expect(deleteButton).not.toBeNull();
       await userEvent.click(deleteButton!);
@@ -2351,7 +2351,10 @@ describe("ChatView transcript geometry (full app)", () => {
     const api = readNativeApi()!;
     let finishDiscovery!: (value: Awaited<ReturnType<typeof api.provider.listModels>>) => void;
     const discovery = vi.spyOn(api.provider, "listModels").mockImplementation(
-      () => new Promise((resolve) => { finishDiscovery = resolve; }),
+      () =>
+        new Promise((resolve) => {
+          finishDiscovery = resolve;
+        }),
     );
     const parentPostMessage = vi.spyOn(window.parent, "postMessage");
     const snapshot = createSnapshotForTargetUser({
@@ -2373,13 +2376,15 @@ describe("ChatView transcript geometry (full app)", () => {
       configureFixture: (nextFixture) => {
         nextFixture.serverConfig = {
           ...nextFixture.serverConfig,
-          providers: [{
-            provider: "cursor",
-            status: "ready",
-            available: true,
-            authStatus: "authenticated",
-            checkedAt: NOW_ISO,
-          }],
+          providers: [
+            {
+              provider: "cursor",
+              status: "ready",
+              available: true,
+              authStatus: "authenticated",
+              checkedAt: NOW_ISO,
+            },
+          ],
         };
       },
     });
@@ -2389,15 +2394,18 @@ describe("ChatView transcript geometry (full app)", () => {
         "Expected slow model discovery to show its loading control.",
       );
       await waitForLayout();
-      const reportedMinimums = () => parentPostMessage.mock.calls.flatMap(([message]) =>
-        message?.type === "synara:layout-metrics" ? [message.minimumSidebarWidth as number] : [],
-      );
+      const reportedMinimums = () =>
+        parentPostMessage.mock.calls.flatMap(([message]) =>
+          message?.type === "synara:layout-metrics" ? [message.minimumSidebarWidth as number] : [],
+        );
       expect(loading.getBoundingClientRect().width).toBeLessThanOrEqual(40);
       expect(reportedMinimums().length).toBeGreaterThan(0);
       expect(reportedMinimums().every((width) => width <= window.innerWidth)).toBe(true);
       parentPostMessage.mockClear();
       finishDiscovery({ models: [{ slug: "auto", name: "Auto" }] });
-      await vi.waitFor(() => expect(document.querySelector("[aria-label='Loading models']")).toBeNull());
+      await vi.waitFor(() =>
+        expect(document.querySelector("[aria-label='Loading models']")).toBeNull(),
+      );
       await vi.waitFor(() => expect(reportedMinimums().length).toBeGreaterThan(0));
     } finally {
       discovery.mockRestore();
@@ -2418,9 +2426,10 @@ describe("ChatView transcript geometry (full app)", () => {
       }),
     );
     const parentPostMessage = vi.spyOn(window.parent, "postMessage");
-    const reportedMinimums = () => parentPostMessage.mock.calls.flatMap(([message]) =>
-      message?.type === "synara:layout-metrics" ? [message.minimumSidebarWidth as number] : [],
-    );
+    const reportedMinimums = () =>
+      parentPostMessage.mock.calls.flatMap(([message]) =>
+        message?.type === "synara:layout-metrics" ? [message.minimumSidebarWidth as number] : [],
+      );
     let mounted: MountedChatView | undefined;
     try {
       const snapshot = createSnapshotForTargetUser({
@@ -2443,7 +2452,10 @@ describe("ChatView transcript geometry (full app)", () => {
         },
       });
       await waitForElement(
-        () => document.querySelector<HTMLButtonElement>("button[aria-label='Change model and reasoning']"),
+        () =>
+          document.querySelector<HTMLButtonElement>(
+            "button[aria-label='Change model and reasoning']",
+          ),
         "Expected the loaded embedded model picker.",
       );
       await vi.waitFor(() => expect(reportedMinimums().length).toBeGreaterThan(0));
@@ -2459,13 +2471,21 @@ describe("ChatView transcript geometry (full app)", () => {
       await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: Math.max(180, minimum) });
       await waitForLayout();
       const extras = document.querySelector<HTMLElement>("button[aria-label='Composer extras']")!;
-      const model = document.querySelector<HTMLElement>("button[aria-label='Change model and reasoning']")!;
+      const model = document.querySelector<HTMLElement>(
+        "button[aria-label='Change model and reasoning']",
+      )!;
       const surface = document.querySelector<HTMLElement>(".chat-composer-surface")!;
       const actions = document.querySelector<HTMLElement>("[data-chat-composer-actions='right']")!;
       expect(surface.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth);
-      expect(model.getBoundingClientRect().left).toBeGreaterThanOrEqual(extras.getBoundingClientRect().right);
-      expect(model.getBoundingClientRect().left - extras.getBoundingClientRect().right).toBeLessThanOrEqual(6);
-      expect(actions.getBoundingClientRect().right).toBeLessThanOrEqual(surface.getBoundingClientRect().right - 7);
+      expect(model.getBoundingClientRect().left).toBeGreaterThanOrEqual(
+        extras.getBoundingClientRect().right,
+      );
+      expect(
+        model.getBoundingClientRect().left - extras.getBoundingClientRect().right,
+      ).toBeLessThanOrEqual(6);
+      expect(actions.getBoundingClientRect().right).toBeLessThanOrEqual(
+        surface.getBoundingClientRect().right - 7,
+      );
       await page.screenshot();
     } finally {
       parentPostMessage.mockRestore();
@@ -2498,8 +2518,7 @@ describe("ChatView transcript geometry (full app)", () => {
         thread.id === historyThreadId
           ? {
               ...thread,
-              title:
-                "Complete experimental configuration, data supervision, and training analysis",
+              title: "Complete experimental configuration, data supervision, and training analysis",
             }
           : thread,
       ),
@@ -2517,8 +2536,7 @@ describe("ChatView transcript geometry (full app)", () => {
         {
           id: "paste-embedded-width",
           createdAt: NOW_ISO,
-          text:
-            "| Complete experimental configuration | Data and supervision | Training analysis",
+          text: "| Complete experimental configuration | Data and supervision | Training analysis",
           lineCount: 1,
           charCount: 79,
         },
@@ -2528,15 +2546,12 @@ describe("ChatView transcript geometry (full app)", () => {
         () => document.querySelector<HTMLElement>("button[aria-label$=', open chat history']"),
         "Unable to find the embedded chat-history trigger.",
       );
-      const attachmentCard = await waitForElement(
-        () => {
-          const action = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
-            (button) => button.textContent?.includes("Show in text field"),
-          );
-          return action?.closest<HTMLElement>("span.group") ?? null;
-        },
-        "Unable to find the composer attachment card.",
-      );
+      const attachmentCard = await waitForElement(() => {
+        const action = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
+          (button) => button.textContent?.includes("Show in text field"),
+        );
+        return action?.closest<HTMLElement>("span.group") ?? null;
+      }, "Unable to find the composer attachment card.");
       const composerSurface = document.querySelector<HTMLElement>(".chat-composer-surface");
       expect(composerSurface).not.toBeNull();
 
@@ -2577,9 +2592,13 @@ describe("ChatView transcript geometry (full app)", () => {
 
       const minimumBeforeHistory = reportedMinimums().at(-1);
       await userEvent.click(historyTrigger);
-      await expect.element(page.getByText(snapshotWithLongHistoryTitle.threads.at(-1)!.title)).toBeVisible();
+      await expect
+        .element(page.getByText(snapshotWithLongHistoryTitle.threads.at(-1)!.title))
+        .toBeVisible();
       await waitForLayout();
-      await expect.element(page.getByText(snapshotWithLongHistoryTitle.threads.at(-1)!.title)).toBeVisible();
+      await expect
+        .element(page.getByText(snapshotWithLongHistoryTitle.threads.at(-1)!.title))
+        .toBeVisible();
       const popup = document.querySelector<HTMLElement>("[data-slot='menu-popup']")!;
       expect(popup.getBoundingClientRect().left).toBeGreaterThanOrEqual(0);
       expect(popup.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth);

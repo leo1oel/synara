@@ -1631,8 +1631,7 @@ describe("Antigravity turn settle on cancel (#465)", () => {
 
           const followUpTerminalFiber = yield* adapter.streamEvents.pipe(
             Stream.filter(
-              (event) =>
-                event.type === "turn.completed" && event.turnId === followUp.turnId,
+              (event) => event.type === "turn.completed" && event.turnId === followUp.turnId,
             ),
             Stream.take(1),
             Stream.runCollect,

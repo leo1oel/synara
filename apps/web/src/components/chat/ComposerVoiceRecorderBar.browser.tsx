@@ -51,10 +51,7 @@ describe("ComposerVoiceRecorderBar", () => {
 
   it("fills the flexible portion of an embedded composer footer", async () => {
     const screen = await render(
-      <div
-        data-testid="footer"
-        className="grid w-[430px] grid-cols-[auto_minmax(0,1fr)] gap-1"
-      >
+      <div data-testid="footer" className="grid w-[430px] grid-cols-[auto_minmax(0,1fr)] gap-1">
         <div data-testid="leading" className="w-8" />
         <div className="flex min-w-0">
           <ComposerVoiceRecorderBar
@@ -73,9 +70,7 @@ describe("ComposerVoiceRecorderBar", () => {
     const leading = screen.getByTestId("leading").element();
     const waveform = document.querySelector<HTMLElement>("[data-voice-waveform-track='true']");
     expect(waveform).not.toBeNull();
-    expect(waveform!.clientWidth).toBeGreaterThan(
-      (footer.clientWidth - leading.clientWidth) / 2,
-    );
+    expect(waveform!.clientWidth).toBeGreaterThan((footer.clientWidth - leading.clientWidth) / 2);
 
     await screen.unmount();
   });

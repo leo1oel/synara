@@ -6,7 +6,6 @@
  * and process-authoritative on the server.
  */
 import {
-  DEFAULT_DROID_GIT_TEXT_GENERATION_MODEL,
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
   DEFAULT_MODEL_BY_PROVIDER,
   DEFAULT_SERVER_SETTINGS,
@@ -166,10 +165,7 @@ function resolveTextGenerationProvider(settings: ServerSettings): ServerSettings
     ...settings,
     textGenerationModelSelection: {
       provider: fallback,
-      model:
-        fallback === "droid"
-          ? DEFAULT_DROID_GIT_TEXT_GENERATION_MODEL
-          : DEFAULT_MODEL_BY_PROVIDER[fallback],
+      model: DEFAULT_MODEL_BY_PROVIDER[fallback],
     } as ModelSelection,
   };
 }

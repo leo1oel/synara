@@ -1795,26 +1795,12 @@ const makeWsRpcHandlersLayer = () =>
           ),
         [WS_METHODS.serverPrewarmVoice]: (input) =>
           rpcEffect(
-            providerAdapterRegistry.getByProvider(input.provider).pipe(
-              Effect.flatMap((adapter) =>
-                adapter.prewarmVoice
-                  ? adapter.prewarmVoice(input)
-                  : Effect.fail(
-                      new Error(
-                        `Voice transcription is unavailable for provider '${input.provider}'.`,
-                      ),
-                    ),
-              ),
-            ),
-            "Voice transcription prewarm failed",
-          ),
-        [WS_METHODS.serverTranscribeVoice]: (input) =>
-          rpcEffect(
-            voiceUploadAdmissionGate.run(
-              providerAdapterRegistry.getByProvider(input.provider).pipe(
+            providerAdapterRegistry
+              .getByProvider(input.provider)
+              .pipe(
                 Effect.flatMap((adapter) =>
-                  adapter.transcribeVoice
-                    ? adapter.transcribeVoice(input)
+                  adapter.prewarmVoice
+                    ? adapter.prewarmVoice(input)
                     : Effect.fail(
                         new Error(
                           `Voice transcription is unavailable for provider '${input.provider}'.`,
@@ -1822,6 +1808,24 @@ const makeWsRpcHandlersLayer = () =>
                       ),
                 ),
               ),
+            "Voice transcription prewarm failed",
+          ),
+        [WS_METHODS.serverTranscribeVoice]: (input) =>
+          rpcEffect(
+            voiceUploadAdmissionGate.run(
+              providerAdapterRegistry
+                .getByProvider(input.provider)
+                .pipe(
+                  Effect.flatMap((adapter) =>
+                    adapter.transcribeVoice
+                      ? adapter.transcribeVoice(input)
+                      : Effect.fail(
+                          new Error(
+                            `Voice transcription is unavailable for provider '${input.provider}'.`,
+                          ),
+                        ),
+                  ),
+                ),
             ),
             "Voice transcription failed",
           ),

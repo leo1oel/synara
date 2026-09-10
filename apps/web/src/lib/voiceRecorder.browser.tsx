@@ -111,7 +111,7 @@ describe("useVoiceRecorder", () => {
           length: samples.length,
           getChannelData: () => samples,
         },
-      } as AudioProcessingEvent);
+      } as unknown as AudioProcessingEvent);
     };
 
     emitLevel(0.004);

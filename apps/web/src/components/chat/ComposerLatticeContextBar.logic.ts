@@ -81,14 +81,13 @@ export function latticeContextDetails(context: LatticeHostContextSnapshot): Latt
   const details: LatticeContextDetail[] = [
     {
       label: "Active view",
-      value:
-        context.presentation
-          ? "Slides"
-          : context.activeSurface === "paper"
-            ? "Paper"
-            : context.activeSurface === "pdf"
-              ? "PDF"
-              : "Editor",
+      value: context.presentation
+        ? "Slides"
+        : context.activeSurface === "paper"
+          ? "Paper"
+          : context.activeSurface === "pdf"
+            ? "PDF"
+            : "Editor",
     },
     { label: "Workspace", value: context.workspaceRoot },
   ];
@@ -152,8 +151,6 @@ export function clearLatticeContextSelection(
     ...(context.editor ? { editor: withoutSelection(context.editor) } : {}),
     ...(context.pdf ? { pdf: withoutSelection(context.pdf) } : {}),
     ...(context.paper ? { paper: withoutSelection(context.paper) } : {}),
-    ...(context.presentation
-      ? { presentation: { ...context.presentation, selection: null } }
-      : {}),
+    ...(context.presentation ? { presentation: { ...context.presentation, selection: null } } : {}),
   };
 }
