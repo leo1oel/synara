@@ -92,19 +92,14 @@ describe("providerUpdateStatusLabel", () => {
   });
 });
 
-describe("provider activity localization", () => {
-  it("translates the section and interpolates its enabled count in Chinese", async () => {
+describe("provider picker localization", () => {
+  it("removes provider activity controls while retaining the picker explanation", async () => {
     const { messages } = await import("../../locales/zh-CN/messages.po");
     const catalog = setupI18n();
     catalog.loadAndActivate({ locale: "zh-CN", messages });
 
-    expect(catalog._("Provider activity")).toBe("提供商活动");
-    expect(
-      catalog._("{enabledProviderCount} of {providerCount} enabled", {
-        enabledProviderCount: 8,
-        providerCount: 9,
-      }),
-    ).toBe("已启用 8 个，共 9 个");
+    expect(messages).not.toHaveProperty("Provider activity");
+    expect(messages).not.toHaveProperty("Enabled providers");
     expect(
       catalog._(
         "Show or hide installed providers in the picker and drag them into your preferred order. Hiding a provider here does not disable its server activity.",

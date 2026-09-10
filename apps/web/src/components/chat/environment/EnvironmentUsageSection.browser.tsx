@@ -112,25 +112,4 @@ describe("EnvironmentUsageSection", () => {
       .toBeVisible();
   });
 
-  it("hides the section when the active provider is disabled", async () => {
-    const queryClient = createQueryClient();
-    queryClient.setQueryData(serverQueryKeys.allProviderUsage(), [
-      snapshot("cursor", [{ window: "Current", usedPercent: 30 }]),
-    ]);
-    queryClient.setQueryData(serverQueryKeys.settings(), {
-      ...DEFAULT_SERVER_SETTINGS_VIEW,
-      providers: {
-        ...DEFAULT_SERVER_SETTINGS_VIEW.providers,
-        cursor: { ...DEFAULT_SERVER_SETTINGS_VIEW.providers.cursor, enabled: false },
-      },
-    });
-
-    await render(
-      <QueryClientProvider client={queryClient}>
-        <EnvironmentUsageSection provider="cursor" />
-      </QueryClientProvider>,
-    );
-
-    expect(document.querySelector('button[aria-label^="Cursor usage:"]')).toBeNull();
-  });
 });

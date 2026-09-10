@@ -1,6 +1,5 @@
 import { setupI18n } from "@lingui/core";
 import {
-  DEFAULT_SERVER_SETTINGS_VIEW,
   EventId,
   MessageId,
   type ModelSelection,
@@ -135,7 +134,7 @@ describe("threadHandoff", () => {
     ]);
   });
 
-  it("excludes disabled, missing, unavailable, and unauthenticated handoff targets", () => {
+  it("excludes missing, unavailable, and unauthenticated handoff targets", () => {
     const readyStatus = (
       provider: ProviderKind,
       overrides: Partial<ServerProviderStatus> = {},
@@ -147,18 +146,9 @@ describe("threadHandoff", () => {
       checkedAt: "2026-08-07T12:00:00.000Z",
       ...overrides,
     });
-    const providerSettings = {
-      ...DEFAULT_SERVER_SETTINGS_VIEW.providers,
-      antigravity: {
-        ...DEFAULT_SERVER_SETTINGS_VIEW.providers.antigravity,
-        enabled: false,
-      },
-    };
-
     expect(
       resolveAvailableHandoffTargetProviders({
         sourceProvider: "codex",
-        providerSettings,
         providerStatuses: [
           readyStatus("codex"),
           readyStatus("claudeAgent"),
@@ -168,14 +158,13 @@ describe("threadHandoff", () => {
           readyStatus("opencode", { authStatus: "unknown" }),
         ],
       }),
-    ).toEqual(["claudeAgent", "opencode"]);
+    ).toEqual(["claudeAgent", "antigravity", "opencode"]);
   });
 
-  it("does not expose targets before enabled-provider settings are available", () => {
+  it("does not require settings to expose an available handoff target", () => {
     expect(
       resolveAvailableHandoffTargetProviders({
         sourceProvider: "codex",
-        providerSettings: undefined,
         providerStatuses: [
           {
             provider: "claudeAgent",
@@ -186,7 +175,7 @@ describe("threadHandoff", () => {
           },
         ],
       }),
-    ).toEqual([]);
+    ).toEqual(["claudeAgent"]);
   });
 
   it("preserves the source thread title for the created handoff thread", () => {

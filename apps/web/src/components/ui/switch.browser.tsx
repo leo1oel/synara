@@ -44,7 +44,7 @@ describe("Switch", () => {
     await mounted.unmount();
   });
 
-  it("uses the compact 24 by 14 geometry in embedded settings", async () => {
+  it("uses the compact 28 by 16 geometry in embedded settings", async () => {
     document.documentElement.dataset.synaraEmbed = "true";
     const host = document.createElement("div");
     host.className = "app-settings-surface flex gap-4 p-10";
@@ -62,20 +62,20 @@ describe("Switch", () => {
     const toggle = mounted.getByRole("switch", { name: "Embedded", exact: true }).element();
     const thumb = toggle.querySelector<HTMLElement>("[data-slot='switch-thumb']")!;
 
-    expect(toggle.getBoundingClientRect().width).toBe(24);
-    expect(toggle.getBoundingClientRect().height).toBe(14);
-    expect(thumb.getBoundingClientRect().width).toBe(10);
-    expect(thumb.getBoundingClientRect().height).toBe(10);
-    expect(thumb.getBoundingClientRect().left - toggle.getBoundingClientRect().left).toBe(12);
+    expect(toggle.getBoundingClientRect().width).toBe(28);
+    expect(toggle.getBoundingClientRect().height).toBe(16);
+    expect(thumb.getBoundingClientRect().width).toBe(12);
+    expect(thumb.getBoundingClientRect().height).toBe(12);
+    expect(thumb.getBoundingClientRect().left - toggle.getBoundingClientRect().left).toBe(14);
     await userEvent.hover(toggle);
-    await expect.poll(() => thumb.getBoundingClientRect().width).toBeCloseTo(12, 1);
+    await expect.poll(() => thumb.getBoundingClientRect().width).toBeCloseTo(14.4, 1);
     await userEvent.click(toggle);
     await userEvent.unhover(toggle);
     await expect.poll(() => thumb.getBoundingClientRect().left - toggle.getBoundingClientRect().left).toBeCloseTo(2, 1);
     await userEvent.click(toggle);
     await userEvent.unhover(toggle);
-    await expect.poll(() => thumb.getBoundingClientRect().left - toggle.getBoundingClientRect().left).toBeCloseTo(12, 1);
-    await expect.poll(() => thumb.getBoundingClientRect().width).toBeCloseTo(10, 1);
+    await expect.poll(() => thumb.getBoundingClientRect().left - toggle.getBoundingClientRect().left).toBeCloseTo(14, 1);
+    await expect.poll(() => thumb.getBoundingClientRect().width).toBeCloseTo(12, 1);
     await page.screenshot();
 
     await mounted.unmount();

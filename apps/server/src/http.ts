@@ -39,7 +39,6 @@ import { ProjectFaviconResolver } from "./project/Services/ProjectFaviconResolve
 import { OrchestrationEngineService } from "./orchestration/Services/OrchestrationEngine";
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
 import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegistry";
-import { getEnabledProviderAdapter } from "./provider/enabledProviderAdapter";
 import { threadArchiveChunks, threadArchiveFileName } from "./orchestration/exportThreadArchive";
 import type { ServerReadiness } from "./server/readiness";
 import { ServerSettingsService } from "./serverSettings";
@@ -996,8 +995,7 @@ const binaryUploadEffectHandler = Effect.gen(function* () {
     return yield* Effect.gen(function* () {
       const bytes = yield* readEffectBinary(request, SERVER_VOICE_TRANSCRIPTION_MAX_AUDIO_BYTES);
       const registry = yield* ProviderAdapterRegistry;
-      const serverSettings = yield* ServerSettingsService;
-      const adapter = yield* getEnabledProviderAdapter(provider as never, serverSettings, registry);
+      const adapter = yield* registry.getByProvider(provider as never);
       if (!adapter.transcribeVoice) {
         return HttpServerResponse.jsonUnsafe(
           { error: `Voice transcription is unavailable for provider '${provider}'.` },

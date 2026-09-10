@@ -4206,7 +4206,6 @@ export default function ChatView({
             status,
             customBinaryPath,
             confirmedCustomBinaryPath: confirmedCustomBinaryPathsByProvider[status.provider],
-            disabled: settings.disabledProviders.includes(status.provider),
           });
         })
         .flatMap((status) => (status ? [status] : [])),
@@ -4226,11 +4225,10 @@ export default function ChatView({
       activeThread
         ? resolveAvailableHandoffTargetProviders({
             sourceProvider: activeThread.modelSelection.provider,
-            providerSettings: serverSettingsQuery.data?.providers,
             providerStatuses,
           })
         : [],
-    [activeThread, providerStatuses, serverSettingsQuery.data?.providers],
+    [activeThread, providerStatuses],
   );
   const handoffActionLabel = activeThread
     ? i18n._("Hand off thread")

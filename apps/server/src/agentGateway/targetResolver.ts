@@ -270,19 +270,17 @@ export function loadAgentGatewayProviderCatalog(input: {
   const defaultModel = providerDefaultModel(input.provider);
   const availability = input.availability ?? { enabled: true };
   const unavailableReason =
-    availability.enabled === false
-      ? `Provider "${input.provider}" is disabled in Synara settings.`
-      : availability.available === false
-        ? (availability.message ?? `Provider "${input.provider}" is not available.`)
-        : availability.authStatus === "unauthenticated"
-          ? (availability.message ?? `Provider "${input.provider}" is not authenticated.`)
-          : null;
+    availability.available === false
+      ? (availability.message ?? `Provider "${input.provider}" is not available.`)
+      : availability.authStatus === "unauthenticated"
+        ? (availability.message ?? `Provider "${input.provider}" is not authenticated.`)
+        : null;
   if (unavailableReason !== null) {
     return Effect.succeed({
       provider: input.provider,
       defaultModel,
       models: [],
-      enabled: availability.enabled,
+      enabled: true,
       available: false,
       ...(availability.authStatus ? { authStatus: availability.authStatus } : {}),
       error: unavailableReason,

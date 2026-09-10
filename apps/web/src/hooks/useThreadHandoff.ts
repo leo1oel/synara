@@ -18,7 +18,6 @@ import {
   resolveThreadHandoffTitle,
 } from "../lib/threadHandoff";
 import { resolveProviderSendAvailabilityWithRefresh } from "../lib/providerAvailability";
-import { serverSettingsQueryOptions } from "../lib/serverReactQuery";
 import { newCommandId, newThreadId } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
 import { useStore } from "../store";
@@ -30,7 +29,6 @@ export function useThreadHandoff() {
   const syncServerShellSnapshot = useStore((store) => store.syncServerShellSnapshot);
   const providerStatuses = useProviderStatusesForLocalConfig();
   const refreshProviderStatuses = useRefreshProviderStatusesNow();
-  const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
 
   const createThreadHandoff = async (
     thread: Thread,
@@ -58,7 +56,6 @@ export function useThreadHandoff() {
       !isEligibleHandoffTargetProvider({
         sourceProvider: thread.modelSelection.provider,
         targetProvider,
-        targetProviderEnabled: serverSettingsQuery.data?.providers[targetProvider].enabled,
         targetProviderStatus: targetAvailability.status,
       })
     ) {

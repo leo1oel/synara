@@ -106,17 +106,10 @@ const runListSkills = (input: {
 
 const runListModels = (input: {
   adapter: Partial<ProviderAdapterShape<ProviderAdapterError>>;
-  enabled: boolean;
 }) => {
   const baseLayer = Layer.mergeAll(
     makeConfigLayer(),
-    ServerSettingsService.layerTest({
-      providers: {
-        cursor: {
-          enabled: input.enabled,
-        },
-      },
-    }),
+    ServerSettingsService.layerTest(),
     makeRegistryLayer(input.adapter),
   ).pipe(Layer.provideMerge(NodeServices.layer));
   const testLayer = ProviderDiscoveryServiceLive.pipe(Layer.provideMerge(baseLayer));
@@ -231,7 +224,7 @@ describe("ProviderDiscoveryService.getComposerCapabilities", () => {
 });
 
 describe("ProviderDiscoveryService.listModels", () => {
-  it("skips OpenCode agent and command discovery until re-enabled", async () => {
+  it("dispatches OpenCode agent and command discovery", async () => {
     const adapterCalls: string[] = [];
     const adapter: Partial<ProviderAdapterShape<ProviderAdapterError>> = {
       listAgents: () => {
@@ -245,9 +238,7 @@ describe("ProviderDiscoveryService.listModels", () => {
     };
     const baseLayer = Layer.mergeAll(
       makeConfigLayer(),
-      ServerSettingsService.layerTest({
-        providers: { opencode: { enabled: false } },
-      }),
+      ServerSettingsService.layerTest(),
       makeRegistryLayer(adapter),
     ).pipe(Layer.provideMerge(NodeServices.layer));
     const testLayer = ProviderDiscoveryServiceLive.pipe(Layer.provideMerge(baseLayer));
@@ -255,40 +246,25 @@ describe("ProviderDiscoveryService.listModels", () => {
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         const discovery = yield* ProviderDiscoveryService;
-        const settings = yield* ServerSettingsService;
-        const disabledAgents = yield* discovery.listAgents({ provider: "opencode", cwd });
-        const disabledCommands = yield* discovery.listCommands({ provider: "opencode", cwd });
-
-        yield* settings.updateSettings({ providers: { opencode: { enabled: true } } });
-        const enabledAgents = yield* discovery.listAgents({ provider: "opencode", cwd });
-        const enabledCommands = yield* discovery.listCommands({ provider: "opencode", cwd });
-
-        return {
-          disabledAgents,
-          disabledCommands,
-          enabledAgents,
-          enabledCommands,
-        };
+        const agents = yield* discovery.listAgents({ provider: "opencode", cwd });
+        const commands = yield* discovery.listCommands({ provider: "opencode", cwd });
+        return { agents, commands };
       }).pipe(Effect.provide(testLayer)) as Effect.Effect<
         {
-          disabledAgents: ProviderListAgentsResult;
-          disabledCommands: ProviderListCommandsResult;
-          enabledAgents: ProviderListAgentsResult;
-          enabledCommands: ProviderListCommandsResult;
+          agents: ProviderListAgentsResult;
+          commands: ProviderListCommandsResult;
         },
         never,
         never
       >,
     );
 
-    expect(result.disabledAgents).toMatchObject({ agents: [], source: "disabled" });
-    expect(result.disabledCommands).toMatchObject({ commands: [], source: "disabled" });
-    expect(result.enabledAgents.source).toBe("opencode");
-    expect(result.enabledCommands.source).toBe("opencode");
+    expect(result.agents.source).toBe("opencode");
+    expect(result.commands.source).toBe("opencode");
     expect(adapterCalls).toEqual(["agents", "commands"]);
   });
 
-  it("does not invoke the adapter for a disabled provider", async () => {
+  it("dispatches model discovery", async () => {
     let adapterCalls = 0;
     const result = await runListModels({
       adapter: {
@@ -301,31 +277,6 @@ describe("ProviderDiscoveryService.listModels", () => {
           });
         },
       },
-      enabled: false,
-    });
-
-    expect(result).toEqual({
-      models: [],
-      source: "disabled",
-      cached: false,
-    });
-    expect(adapterCalls).toBe(0);
-  });
-
-  it("dispatches model discovery for an enabled provider", async () => {
-    let adapterCalls = 0;
-    const result = await runListModels({
-      adapter: {
-        listModels: () => {
-          adapterCalls += 1;
-          return Effect.succeed({
-            models: [{ slug: "cursor-model", name: "Cursor Model" }],
-            source: "cursor.cli",
-            cached: false,
-          });
-        },
-      },
-      enabled: true,
     });
 
     expect(result.models).toEqual([{ slug: "cursor-model", name: "Cursor Model" }]);

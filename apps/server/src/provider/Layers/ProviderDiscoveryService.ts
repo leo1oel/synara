@@ -99,15 +99,6 @@ const make = Effect.gen(function* () {
   // stale-while-revalidate, single-flight, and failure-replay behaviour that
   // codex/claude implement privately.
   const modelDiscoveryCache = makeProviderModelDiscoveryCache<ProviderDiscoveryError>();
-  const providerIsEnabled = Effect.fn("providerIsEnabled")(function* (
-    provider: ProviderGetComposerCapabilitiesInput["provider"],
-  ) {
-    return yield* serverSettings.getSettings.pipe(
-      Effect.map((settings) => settings.providers[provider].enabled),
-      Effect.orElseSucceed(() => true),
-    );
-  });
-
   const getComposerCapabilities: ProviderDiscoveryServiceShape["getComposerCapabilities"] = (
     input,
   ) =>
@@ -117,9 +108,6 @@ const make = Effect.gen(function* () {
         schema: ProviderGetComposerCapabilitiesInput,
         payload: input,
       });
-      if (!(yield* providerIsEnabled(parsed.provider))) {
-        return disabledCapabilitiesForProvider(parsed.provider);
-      }
       const adapter = yield* registry.getByProvider(parsed.provider);
       const capabilities = adapter.getComposerCapabilities
         ? yield* adapter.getComposerCapabilities()
@@ -140,13 +128,6 @@ const make = Effect.gen(function* () {
         schema: ProviderListSkillsInput,
         payload: input,
       });
-      if (!(yield* providerIsEnabled(parsed.provider))) {
-        return {
-          skills: [],
-          source: "disabled",
-          cached: false,
-        };
-      }
       const adapter = yield* registry.getByProvider(parsed.provider);
       const nativeResult: ProviderListSkillsResult | null = adapter.listSkills
         ? yield* adapter
@@ -197,13 +178,6 @@ const make = Effect.gen(function* () {
         schema: ProviderListCommandsInput,
         payload: input,
       });
-      if (!(yield* providerIsEnabled(parsed.provider))) {
-        return {
-          commands: [],
-          source: "disabled",
-          cached: false,
-        };
-      }
       const adapter = yield* registry.getByProvider(parsed.provider);
       if (!adapter.listCommands) {
         return {
@@ -222,16 +196,6 @@ const make = Effect.gen(function* () {
         schema: ProviderListPluginsInput,
         payload: input,
       });
-      if (!(yield* providerIsEnabled(parsed.provider))) {
-        return {
-          marketplaces: [],
-          marketplaceLoadErrors: [],
-          remoteSyncError: null,
-          featuredPluginIds: [],
-          source: "disabled",
-          cached: false,
-        };
-      }
       const adapter = yield* registry.getByProvider(parsed.provider);
       if (!adapter.listPlugins) {
         return {
@@ -253,12 +217,6 @@ const make = Effect.gen(function* () {
         schema: ProviderReadPluginInput,
         payload: input,
       });
-      if (!(yield* providerIsEnabled(parsed.provider))) {
-        return yield* new ProviderValidationError({
-          operation: "ProviderDiscoveryService.readPlugin",
-          issue: `Provider '${parsed.provider}' is disabled in Synara settings.`,
-        });
-      }
       const adapter = yield* registry.getByProvider(parsed.provider);
       if (!adapter.readPlugin) {
         return yield* new ProviderValidationError({
@@ -276,13 +234,6 @@ const make = Effect.gen(function* () {
         schema: ProviderListModelsInput,
         payload: input,
       });
-      if (!(yield* providerIsEnabled(parsed.provider))) {
-        return {
-          models: [],
-          source: "disabled",
-          cached: false,
-        };
-      }
       const adapter = yield* registry.getByProvider(parsed.provider);
       if (!adapter.listModels) {
         return {
@@ -310,13 +261,6 @@ const make = Effect.gen(function* () {
         schema: ProviderListAgentsInput,
         payload: input,
       });
-      if (!(yield* providerIsEnabled(parsed.provider))) {
-        return {
-          agents: [],
-          source: "disabled",
-          cached: false,
-        };
-      }
       const adapter = yield* registry.getByProvider(parsed.provider);
       if (!adapter.listAgents) {
         return {

@@ -15,6 +15,12 @@ const PROCESS_TREE_CAPTURE_ATTEMPTS = 2;
 const PROCESS_TREE_SCAN_MAX_BUFFER_BYTES = 8_388_608;
 const PROCESS_COMMAND_SCAN_MAX_BUFFER_BYTES = 8_388_608;
 
+// Sandboxed macOS hosts supply an unprivileged copy: Seatbelt refuses to exec
+// the system setuid ps. Use it for both ancestry capture and identity checks.
+function processSnapshotCommand(): string {
+  return process.env.SYNARA_PROCESS_PS_PATH?.trim() || "ps";
+}
+
 export type ProcessChildrenMap = Map<number, Array<CapturedProcess>>;
 export type ProcessCommandMap = Map<number, string>;
 
@@ -132,7 +138,7 @@ export function collectDescendantProcesses(
 
 function captureProcessChildrenMapSync(): ProcessChildrenMap | null {
   try {
-    const result = spawnProcessSync("ps", ["-eo", "pid=,ppid=,command="], {
+    const result = spawnProcessSync(processSnapshotCommand(), ["-eo", "pid=,ppid=,command="], {
       encoding: "utf8",
       maxBuffer: PROCESS_TREE_SCAN_MAX_BUFFER_BYTES,
       timeout: PROCESS_TREE_SYNC_SCAN_TIMEOUT_MS,
@@ -148,7 +154,7 @@ function captureProcessChildrenMap(): Promise<ProcessChildrenMap | null> {
   return new Promise((resolve) => {
     try {
       execProcessFile(
-        "ps",
+        processSnapshotCommand(),
         ["-eo", "pid=,ppid=,command="],
         {
           encoding: "utf8",
@@ -182,11 +188,15 @@ function readCurrentCommands(pids: readonly number[]): ProcessCommandMap | null 
   const uniquePids = [...new Set(pids.filter((pid) => Number.isInteger(pid) && pid > 0))];
   if (uniquePids.length === 0) return new Map();
   try {
-    const result = spawnProcessSync("ps", ["-p", uniquePids.join(","), "-o", "pid=,command="], {
-      encoding: "utf8",
-      maxBuffer: PROCESS_COMMAND_SCAN_MAX_BUFFER_BYTES,
-      timeout: PROCESS_TREE_SYNC_SCAN_TIMEOUT_MS,
-    });
+    const result = spawnProcessSync(
+      processSnapshotCommand(),
+      ["-p", uniquePids.join(","), "-o", "pid=,command="],
+      {
+        encoding: "utf8",
+        maxBuffer: PROCESS_COMMAND_SCAN_MAX_BUFFER_BYTES,
+        timeout: PROCESS_TREE_SYNC_SCAN_TIMEOUT_MS,
+      },
+    );
     if (result.error) return null;
     if (result.status !== 0) return new Map();
     return parseProcessCommandMap(result.stdout);

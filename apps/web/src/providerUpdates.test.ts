@@ -92,17 +92,6 @@ describe("getVisibleProviderUpdateStatuses", () => {
     expect(result.map((provider) => provider.provider)).toEqual(["codex"]);
   });
 
-  it("excludes server-disabled providers", () => {
-    const result = getVisibleProviderUpdateStatuses({
-      providers: [providerStatus("codex"), providerStatus("pi")],
-      serverSettings: serverSettings({
-        pi: { enabled: false, binaryPath: "pi", agentDir: "", customModels: [] },
-      }),
-    });
-
-    expect(result.map((provider) => provider.provider)).toEqual(["codex"]);
-  });
-
   it("waits for server settings before showing provider updates", () => {
     const result = getVisibleProviderUpdateStatuses({
       providers: [providerStatus("codex")],
@@ -216,20 +205,17 @@ describe("providerUpdateNotificationKey", () => {
 });
 
 describe("shouldShowProviderUpdateStatus", () => {
-  it("matches the list filter for hidden and server-disabled providers", () => {
+  it("matches the list filter for hidden providers", () => {
     const codex = providerStatus("codex");
     const hiddenPi = providerStatus("pi");
-    const settings = serverSettings({
-      codex: { enabled: false, binaryPath: "codex", homePath: "", customModels: [] },
-    });
 
     expect(
       shouldShowProviderUpdateStatus({
         provider: codex,
         hiddenProviderSet: new Set(),
-        serverSettings: settings,
+        serverSettings: serverSettings(),
       }),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       shouldShowProviderUpdateStatus({
         provider: hiddenPi,

@@ -110,36 +110,6 @@ function makeProviderTextGenerationTestLayer(
 }
 
 describe("ProviderTextGenerationLive", () => {
-  it("blocks generation when the selected provider is disabled", async () => {
-    const { layer, codex, cursor, opencode } = makeProviderTextGenerationTestLayer({
-      providers: {
-        codex: { enabled: false },
-        cursor: { enabled: false },
-        droid: { enabled: false },
-        opencode: { enabled: false },
-      },
-    });
-
-    await expect(
-      Effect.runPromise(
-        Effect.gen(function* () {
-          const textGeneration = yield* TextGeneration;
-          return yield* textGeneration.generateDiffSummary({
-            cwd: "/repo",
-            patch: "diff --git a/file.ts b/file.ts",
-            modelSelection: { provider: "codex", model: "gpt-5.5" },
-          });
-        }).pipe(Effect.provide(layer)),
-      ),
-    ).rejects.toMatchObject({
-      _tag: "TextGenerationError",
-      detail: "Codex is disabled in Settings > Providers.",
-    });
-    expect(codex.generateDiffSummary).not.toHaveBeenCalled();
-    expect(cursor.generateDiffSummary).not.toHaveBeenCalled();
-    expect(opencode.generateDiffSummary).not.toHaveBeenCalled();
-  });
-
   it("routes unsupported selections through the configured supported fallback", async () => {
     const { layer, codex, cursor } = makeProviderTextGenerationTestLayer({
       textGenerationModelSelection: { provider: "cursor", model: "composer-2" },

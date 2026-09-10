@@ -11,10 +11,7 @@ import {
 } from "~/components/ProviderUsageMenuControl";
 import { ProviderIcon } from "~/components/ProviderIcon";
 import { MenuTrigger } from "~/components/ui/menu";
-import {
-  serverAllProviderUsageQueryOptions,
-  serverSettingsQueryOptions,
-} from "~/lib/serverReactQuery";
+import { serverAllProviderUsageQueryOptions } from "~/lib/serverReactQuery";
 
 import { resolveEnvironmentProviderUsageSummary } from "./EnvironmentUsageSection.logic";
 import {
@@ -27,16 +24,12 @@ import {
 
 export function EnvironmentUsageSection({ provider }: { provider: ProviderKind }) {
   const usageQuery = useQuery(serverAllProviderUsageQueryOptions());
-  const settingsQuery = useQuery(serverSettingsQueryOptions());
   // The batch snapshot is an enrichment, not a gate: when the provider's live fetch fails or is
   // missing from the batch, the menu model still blends local archives and thread rate limits, so
-  // the row must render regardless. Only an explicitly disabled provider hides the section.
+  // the row must render regardless.
   const snapshot = (usageQuery.data ?? []).find((entry) => entry.provider === provider);
   const model = useProviderUsageMenuModel(provider, { providerSnapshot: snapshot });
 
-  if (settingsQuery.data?.providers[provider].enabled === false) {
-    return null;
-  }
   // Nothing displayable yet (first fetch still running, sign-in required, or the provider
   // exposes no usage): hide the section entirely — it appears once any source yields data.
   if (model.rows.length === 0 && model.usageLines.length === 0) {

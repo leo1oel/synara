@@ -63,7 +63,7 @@ export function ManagedSkillDetailView({
     i18n._("No description is provided for this skill.");
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" data-slot="managed-skill-detail">
       <Button size="sm" variant="ghost" className="-ml-2" onClick={onBack}>
         <ChevronLeftIcon className="size-3.5" aria-hidden="true" />
         {i18n._("All skills")}

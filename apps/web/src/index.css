@@ -892,15 +892,15 @@ html[data-synara-embed="true"]
   gap: 7px;
 }
 
-/* Match Lattice's compact neutral 24×14 switch in settings. */
+/* Match Lattice's compact neutral 28×16 switch in settings. */
 html[data-synara-embed="true"] .app-settings-surface [data-slot="switch"] {
-  width: 24px;
-  height: 14px;
+  width: 28px;
+  height: 16px;
   padding: 2px;
   border: 0;
   background: var(--lattice-settings-line-strong);
-  --thumb-size: 10px;
-  --switch-thumb-travel: 10px;
+  --thumb-size: 12px;
+  --switch-thumb-travel: 12px;
   transition-duration: 160ms;
 }
 
@@ -913,8 +913,8 @@ html[data-synara-embed="true"] .app-settings-surface [data-slot="switch"][data-c
 }
 
 html[data-synara-embed="true"] .app-settings-surface [data-slot="switch-thumb"] {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   background: var(--lattice-settings-panel);
   box-shadow: none;
   transition: none;

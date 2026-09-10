@@ -160,7 +160,7 @@ export const makeAgentGateway = Effect.gen(function* () {
         return [
           provider,
           {
-            enabled: settings.providers[provider].enabled,
+            enabled: true,
             ...(status
               ? {
                   available: status.available,

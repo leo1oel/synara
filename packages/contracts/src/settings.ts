@@ -9,6 +9,8 @@ const CustomModels = Schema.Array(Schema.String.check(Schema.isMaxLength(256))).
 );
 
 const ProviderSettingsBase = {
+  // Compatibility-only view field. The server normalizes persisted values to true
+  // and the patch contract deliberately has no corresponding mutation.
   enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "")),
   customModels: CustomModels,
@@ -132,7 +134,6 @@ const ModelSelectionPatch = Schema.Struct({
 });
 
 const ProviderSettingsBasePatch = {
-  enabled: Schema.optionalKey(Schema.Boolean),
   binaryPath: Schema.optionalKey(StringSetting),
   customModels: Schema.optionalKey(CustomModels),
 };

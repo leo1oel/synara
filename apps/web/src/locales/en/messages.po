@@ -12,21 +12,6 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Updating"
-msgstr "Updating"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Update"
-msgstr "Update"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Manual update"
-msgstr "Manual update"
-
-#. js-lingui-explicit-id
 #: src/routes/_chat.pull-requests.index.tsx
 msgid "Search pull requests"
 msgstr "Search pull requests"
@@ -2033,6 +2018,18 @@ msgid "Usage is read locally from each provider CLI's stored credentials and fet
 msgstr "Usage is read locally from each provider CLI's stored credentials and fetched directly from the provider. The list follows whatever you are signed into; unsigned providers stay visible until any account is connected, then drop away. Short-lived tokens are refreshed through the provider's own CLI or official token endpoint."
 
 #. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.browser.tsx
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Manual update"
+msgstr "Manual update"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.browser.tsx
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Updating"
+msgstr "Updating"
+
+#. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Checking"
 msgstr "Checking"
@@ -2049,48 +2046,8 @@ msgstr "CLI not installed"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Provider activity"
-msgstr "Provider activity"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Enabled providers"
-msgstr "Enabled providers"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Disabling a provider stops its background health checks, model and command discovery, updates, and new turns. Existing threads stay visible and continue after you re-enable it; a turn already running is not interrupted."
-msgstr "Disabling a provider stops its background health checks, model and command discovery, updates, and new turns. Existing threads stay visible and continue after you re-enable it; a turn already running is not interrupted."
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Saving provider activity"
-msgstr "Saving provider activity"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "{enabledProviderCount} of {providerCount} enabled"
-msgstr "{enabledProviderCount} of {providerCount} enabled"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Background activity allowed"
-msgstr "Background activity allowed"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Disabled on the server"
-msgstr "Disabled on the server"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Disable {provider}"
-msgstr "Disable {provider}"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Enable {provider}"
-msgstr "Enable {provider}"
+msgid "Update"
+msgstr "Update"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx

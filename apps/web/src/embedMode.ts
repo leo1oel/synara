@@ -22,6 +22,7 @@ export const SYNARA_AGENT_PERMISSION_MODE_STATUS = "synara:agent-permission-mode
 export const SYNARA_LAYOUT_METRICS = "synara:layout-metrics";
 export const SYNARA_SETTINGS_CONTENT_HEIGHT = "synara:settings-content-height";
 export const SYNARA_SETTINGS_WHEEL = "synara:settings-wheel";
+export const SYNARA_SETTINGS_NAVIGATION = "synara:settings-navigation";
 export const SYNARA_OPEN_SETTINGS = "synara:open-settings";
 export const SYNARA_OPEN_EXTERNAL = "synara:open-external";
 export const SYNARA_SHOW_IN_FOLDER = "synara:show-in-folder";
@@ -726,6 +727,15 @@ export function postSettingsContentHeightToLattice(
     },
     config.hostOrigin,
   );
+}
+
+export function postSettingsNavigationToLattice(
+  config: EmbedModeConfig,
+  section: string,
+  view: "detail" | "list",
+): void {
+  if (!config.hostOrigin || !section) return;
+  window.parent.postMessage({ type: SYNARA_SETTINGS_NAVIGATION, section, view }, config.hostOrigin);
 }
 
 export function postSettingsWheelToLattice(

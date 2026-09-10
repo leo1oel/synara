@@ -9,6 +9,7 @@ import * as React from "react";
 
 import { DISCLOSURE_POPUP_MOTION_CLASS } from "~/lib/disclosureMotion";
 import { cn } from "~/lib/utils";
+import { FluidHoverSurface } from "./fluid-hover-surface";
 import {
   FIELD_CONTROL_COMPACT_HEIGHT_CLASS_NAME,
   FIELD_CONTROL_HEIGHT_CLASS_NAME,
@@ -218,6 +219,7 @@ function SelectPopup({
                 className={cn(listClassName, "relative z-1")}
                 data-slot="menu-popup-body"
               >
+                <FluidHoverSurface selector='[role="option"]' />
                 {children}
               </SelectPrimitive.List>
             </div>

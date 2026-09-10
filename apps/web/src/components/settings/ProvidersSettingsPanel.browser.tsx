@@ -6,13 +6,23 @@ import "../../index.css";
 
 import type { ServerProviderStatus } from "@synara/contracts";
 import { I18nProvider } from "@lingui/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
-import { ProviderUpdateAction, ProviderUpdateRow } from "./ProvidersSettingsPanel";
+import {
+  ProvidersSettingsPanel,
+  ProviderUpdateAction,
+  ProviderUpdateRow,
+} from "./ProvidersSettingsPanel";
+import { AppSettingsSchema } from "../../appSettings";
 import { i18n } from "../../i18n";
 import { messages } from "../../locales/zh-CN/messages.po";
+
+vi.mock("../../hooks/useProviderStatusesForLocalConfig", () => ({
+  useProviderStatusesForLocalConfig: () => [],
+}));
 
 const codexStatus: ServerProviderStatus = {
   provider: "codex",
@@ -35,6 +45,40 @@ describe("ProvidersSettingsPanel embedded update rows", () => {
     await page.viewport(1280, 720);
     delete document.documentElement.dataset.synaraEmbed;
     document.body.innerHTML = "";
+  });
+
+  it("starts with picker visibility instead of provider enablement controls", async () => {
+    await page.viewport(760, 900);
+    document.documentElement.dataset.synaraEmbed = "true";
+    i18n.loadAndActivate({ locale: "zh-CN", messages });
+    const defaults = AppSettingsSchema.makeUnsafe({});
+    const client = new QueryClient({
+      defaultOptions: { queries: { enabled: false, retry: false } },
+    });
+    const host = document.createElement("div");
+    host.className = "app-settings-surface p-6";
+    document.body.append(host);
+    const mounted = await render(
+      <I18nProvider i18n={i18n}>
+        <QueryClientProvider client={client}>
+          <ProvidersSettingsPanel
+            active
+            resetEpoch={0}
+            settings={defaults}
+            defaults={defaults}
+            updateSettings={vi.fn()}
+          />
+        </QueryClientProvider>
+      </I18nProvider>,
+      { container: host },
+    );
+    expect(host.textContent).not.toContain("已启用的提供商");
+    expect(host.textContent).not.toContain("Enabled providers");
+    expect(host.textContent).toContain(i18n._("Provider picker"));
+    expect(host.textContent).toContain(i18n._("Provider tools"));
+    await page.screenshot();
+    await mounted.unmount();
+    client.clear();
   });
 
   it("matches provider runtime row geometry and keeps update states on the right", async () => {

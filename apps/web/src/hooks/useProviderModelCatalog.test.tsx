@@ -214,24 +214,10 @@ describe("useProviderModelCatalog", () => {
     expect(readModelQueryEnabled("cursor")).toBe(true);
   });
 
-  it("does not discover a disabled provider even when it is selected", () => {
-    mocks.useAppSettings.mockReturnValue({
-      settings: SETTINGS,
-      serverSettings: {
-        ...DEFAULT_SERVER_SETTINGS,
-        providers: {
-          ...DEFAULT_SERVER_SETTINGS.providers,
-          cursor: {
-            ...DEFAULT_SERVER_SETTINGS.providers.cursor,
-            enabled: false,
-          },
-        },
-      },
-    });
-
+  it("discovers the selected provider", () => {
     readCatalogRenders({ selectedProvider: "cursor", discoveryEnabled: true });
 
-    expect(readModelQueryEnabled("cursor")).toBe(false);
+    expect(readModelQueryEnabled("cursor")).toBe(true);
   });
 
   it("keeps discovering while the server settings are unavailable", () => {

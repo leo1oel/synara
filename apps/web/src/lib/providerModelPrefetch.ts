@@ -362,12 +362,6 @@ export function prefetchModelsForNewThread(
   const statusesReconciled = input.statusesReconciled === true;
   const providerStatuses = input.providerStatuses ?? EMPTY_PROVIDER_STATUSES;
   const isProviderWarmable = (provider: ProviderKind): boolean => {
-    // Mirrors useProviderModelCatalog.shouldDiscoverProvider exactly:
-    // the enabled flag short-circuits even the selected provider, then the
-    // selected provider always wins, then hidden providers are skipped.
-    if (input.serverSettings?.providers[provider]?.enabled === false) {
-      return false;
-    }
     // ChatView's useProviderModelCatalog always discovers the selected provider
     // (even hidden/unavailable — the picker preserves it as protected), so the
     // warm must too, or mount re-runs discovery with the loading state this

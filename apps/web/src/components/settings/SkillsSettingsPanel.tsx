@@ -10,7 +10,14 @@ import type {
   ServerSettings,
 } from "@synara/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from "react";
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type MouseEvent,
+} from "react";
 import { useLingui } from "@lingui/react";
 
 import { ComposerPickerMenuPopup } from "~/components/chat/ComposerPickerMenuPopup";
@@ -27,7 +34,7 @@ import { Menu, MenuItem, MenuTrigger } from "~/components/ui/menu";
 import { SearchInput } from "~/components/ui/search-input";
 import { Switch } from "~/components/ui/switch";
 import { toastManager } from "~/components/ui/toast";
-import { readEmbedMode } from "~/embedMode";
+import { postSettingsNavigationToLattice, readEmbedMode } from "~/embedMode";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -84,6 +91,9 @@ export function SkillsSettingsPanel() {
     readonly detail?: ProviderManagedSkillDetail;
   } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const panelRef = useRef<HTMLDivElement>(null);
+  const listScrollTopRef = useRef(0);
+  const pendingScrollRef = useRef<"detail-top" | "list-position" | null>(null);
   const workspaceRoot = readEmbedMode()?.workspaceRoot ?? null;
   const catalogQuery = useQuery(skillsCatalogQueryOptions({ cwd: workspaceRoot }));
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
@@ -107,6 +117,31 @@ export function SkillsSettingsPanel() {
   const visibleInstalledGroups = filterSkillGroups(installedGroups, searchQuery);
   const visibleDetectedGroups = filterSkillGroups(detectedGroups, searchQuery);
   const visibleDetectedSections = groupSettingsSkillsBySection(visibleDetectedGroups);
+
+  useLayoutEffect(() => {
+    const pendingScroll = pendingScrollRef.current;
+    const scrollOwner = panelRef.current?.closest<HTMLElement>(".synara-settings-scroll");
+    if (!pendingScroll || !scrollOwner) return;
+
+    scrollOwner.scrollTop = pendingScroll === "detail-top" ? 0 : listScrollTopRef.current;
+    pendingScrollRef.current = null;
+  }, [selectedSkill]);
+
+  const openSkillDetail = (skill: ProviderSkillDescriptor) => {
+    const scrollOwner = panelRef.current?.closest<HTMLElement>(".synara-settings-scroll");
+    listScrollTopRef.current = scrollOwner?.scrollTop ?? 0;
+    pendingScrollRef.current = "detail-top";
+    const embedConfig = readEmbedMode();
+    if (embedConfig) postSettingsNavigationToLattice(embedConfig, "skills", "detail");
+    setSelectedSkill(skill);
+  };
+
+  const closeSkillDetail = () => {
+    pendingScrollRef.current = "list-position";
+    const embedConfig = readEmbedMode();
+    if (embedConfig) postSettingsNavigationToLattice(embedConfig, "skills", "list");
+    setSelectedSkill(null);
+  };
 
   const setSkillEnabled = (skillName: string, enabled: boolean) => {
     // Read through the query cache so rapid toggles build on each other instead
@@ -378,7 +413,7 @@ export function SkillsSettingsPanel() {
             ))}
           </span>
         }
-        {...(management ? { onClick: () => setSelectedSkill(skill) } : {})}
+        {...(management ? { onClick: () => openSkillDetail(skill) } : {})}
         control={
           <div className="flex items-center gap-0.5">
             <div className="flex items-center gap-1" onClick={stopRowAction}>
@@ -418,7 +453,7 @@ export function SkillsSettingsPanel() {
                 title={i18n._("Open skill details")}
                 onClick={(event) => {
                   event.stopPropagation();
-                  setSelectedSkill(skill);
+                  openSkillDetail(skill);
                 }}
               >
                 <ChevronRightIcon
@@ -454,31 +489,33 @@ export function SkillsSettingsPanel() {
 
   if (selectedSkill) {
     return (
-      <ManagedSkillDetailView
-        skill={selectedSkill}
-        enabled={!disabledSkillNames.has(settingsSkillNameKey(selectedSkill.name))}
-        onBack={() => setSelectedSkill(null)}
-        onEdit={
-          selectedSkill.management?.kind === "installed"
-            ? (detail) => {
-                setSelectedSkill(null);
-                setSkillEditor({ mode: "update", detail });
-              }
-            : null
-        }
-        onCustomize={
-          selectedSkill.management?.kind === "bundled"
-            ? (skill) => void customizeSkill(skill)
-            : null
-        }
-        isCustomizing={customizingSkillId === selectedSkill.management?.id}
-        onRemove={selectedSkill.management?.canDelete ? (skill) => void removeSkill(skill) : null}
-      />
+      <div ref={panelRef}>
+        <ManagedSkillDetailView
+          skill={selectedSkill}
+          enabled={!disabledSkillNames.has(settingsSkillNameKey(selectedSkill.name))}
+          onBack={closeSkillDetail}
+          onEdit={
+            selectedSkill.management?.kind === "installed"
+              ? (detail) => {
+                  setSelectedSkill(null);
+                  setSkillEditor({ mode: "update", detail });
+                }
+              : null
+          }
+          onCustomize={
+            selectedSkill.management?.kind === "bundled"
+              ? (skill) => void customizeSkill(skill)
+              : null
+          }
+          isCustomizing={customizingSkillId === selectedSkill.management?.id}
+          onRemove={selectedSkill.management?.canDelete ? (skill) => void removeSkill(skill) : null}
+        />
+      </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div ref={panelRef} className="space-y-6">
       <SettingsSection title={i18n._("Skills Manager")}>
         <SettingsRow
           title={i18n._("Your skill library")}

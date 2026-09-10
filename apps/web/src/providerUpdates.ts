@@ -109,7 +109,7 @@ function isProviderEnabled(
   if (!serverSettings) {
     return false;
   }
-  return serverSettings.providers[provider]?.enabled !== false;
+  return serverSettings.providers[provider] !== undefined;
 }
 
 // Central visibility gate used by both global toasts and Settings update rows.

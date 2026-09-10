@@ -13,6 +13,7 @@ import {
   withLatticeEmbedSearch,
   postConfirmationRequestToLattice,
   postSettingsContentHeightToLattice,
+  postSettingsNavigationToLattice,
   postSettingsWheelToLattice,
   postHostContextRequestToLattice,
   postHostContextSelectionClearToLattice,
@@ -45,6 +46,7 @@ import {
   SYNARA_OPEN_REVIEW,
   SYNARA_OPEN_SETTINGS,
   SYNARA_SETTINGS_CONTENT_HEIGHT,
+  SYNARA_SETTINGS_NAVIGATION,
   SYNARA_SETTINGS_WHEEL,
   SYNARA_SHOW_IN_FOLDER,
 } from "./embedMode";
@@ -468,6 +470,26 @@ describe("Lattice embed mode", () => {
         contentHeight: 4_813,
         section: "providers",
       },
+      "http://localhost:1420",
+    );
+  });
+
+  it("tells Lattice which settings view owns the host scroll position", () => {
+    const { postMessage } = installBrowserStubs();
+    initializeEmbedMode();
+    const config = readEmbedMode();
+
+    postSettingsNavigationToLattice(config!, "skills", "detail");
+    postSettingsNavigationToLattice(config!, "skills", "list");
+
+    expect(postMessage).toHaveBeenNthCalledWith(
+      1,
+      { type: SYNARA_SETTINGS_NAVIGATION, section: "skills", view: "detail" },
+      "http://localhost:1420",
+    );
+    expect(postMessage).toHaveBeenNthCalledWith(
+      2,
+      { type: SYNARA_SETTINGS_NAVIGATION, section: "skills", view: "list" },
       "http://localhost:1420",
     );
   });

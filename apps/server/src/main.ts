@@ -450,7 +450,7 @@ const makeServerProgram = (input: CliInput) =>
     }) =>
       Effect.promise(() =>
         claudeKeepalive.reconcile({
-          enabled: settings.providers.claudeAgent.enabled,
+          enabled: true,
           ...(settings.providers.claudeAgent.binaryPath !== undefined
             ? { binaryPath: settings.providers.claudeAgent.binaryPath }
             : {}),

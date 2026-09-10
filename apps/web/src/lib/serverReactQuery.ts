@@ -310,8 +310,7 @@ export async function fetchAllProviderUsage(input: ServerListProviderUsageInput 
   return api.server.listProviderUsage(input);
 }
 
-/** Provider enablement changes alter the membership of the batch and invalidate any
- * provider-scoped result that may otherwise survive after a provider is disabled. */
+/** Invalidate both the batch and provider-scoped usage snapshots. */
 export async function invalidateProviderUsageQueries(queryClient: QueryClient): Promise<void> {
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: serverQueryKeys.allProviderUsage() }),

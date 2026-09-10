@@ -7,7 +7,6 @@ import {
 import { Effect, Layer } from "effect";
 
 import { parseOpenCodeModelSlug } from "../../provider/opencodeRuntime.ts";
-import { providerDisabledSettingsMessage } from "../../provider/enabledProviderAdapter.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import { TextGenerationError } from "../Errors.ts";
 import * as TextGen from "../Services/TextGeneration.ts";
@@ -57,7 +56,7 @@ const makeProviderTextGeneration = Effect.gen(function* () {
           (cause) =>
             new TextGenerationError({
               operation,
-              detail: "Failed to read provider enablement settings.",
+              detail: "Failed to read provider settings.",
               cause,
             }),
         ),
@@ -72,11 +71,6 @@ const makeProviderTextGeneration = Effect.gen(function* () {
             operation,
             detail: `${PROVIDER_DISPLAY_NAMES[requestedProvider]} does not support Git text generation, and no supported fallback is enabled.`,
           }),
-        );
-      }
-      if (!settings.providers[provider].enabled) {
-        return yield* Effect.fail(
-          new TextGenerationError({ operation, detail: providerDisabledSettingsMessage(provider) }),
         );
       }
       return {

@@ -12,21 +12,6 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Updating"
-msgstr "正在更新"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Update"
-msgstr "更新"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Manual update"
-msgstr "需手动更新"
-
-#. js-lingui-explicit-id
 #: src/routes/_chat.pull-requests.index.tsx
 msgid "Search pull requests"
 msgstr "搜索拉取请求"
@@ -2033,6 +2018,18 @@ msgid "Usage is read locally from each provider CLI's stored credentials and fet
 msgstr "用量数据会从各提供商 CLI 保存的凭据中读取，并直接向提供商获取。列表会根据你当前登录的账号显示；在尚未连接任何账号时，未登录的提供商仍会显示，连接账号后则会隐藏。短期凭据会通过提供商自己的 CLI 或官方凭据接口刷新。"
 
 #. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.browser.tsx
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Manual update"
+msgstr "需手动更新"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.browser.tsx
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Updating"
+msgstr "正在更新"
+
+#. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Checking"
 msgstr "正在检查"
@@ -2049,48 +2046,8 @@ msgstr "未安装 CLI"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Provider activity"
-msgstr "提供商活动"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Enabled providers"
-msgstr "已启用的提供商"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Disabling a provider stops its background health checks, model and command discovery, updates, and new turns. Existing threads stay visible and continue after you re-enable it; a turn already running is not interrupted."
-msgstr "停用提供商后，会停止其后台健康检查、模型和命令发现、更新以及新的对话轮次。现有对话仍会保留，重新启用后可继续；正在运行的轮次不会中断。"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Saving provider activity"
-msgstr "正在保存提供商活动设置"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "{enabledProviderCount} of {providerCount} enabled"
-msgstr "已启用 {enabledProviderCount} 个，共 {providerCount} 个"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Background activity allowed"
-msgstr "允许后台活动"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Disabled on the server"
-msgstr "已在服务端停用"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Disable {provider}"
-msgstr "停用 {provider}"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Enable {provider}"
-msgstr "启用 {provider}"
+msgid "Update"
+msgstr "更新"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx

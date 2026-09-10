@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
+import { teardownChildProcessTree } from "./supervisedProcessTeardown";
 
 import {
   captureProcessTree,
@@ -21,6 +24,36 @@ function windowsTree(): ProcessChildrenMap {
 }
 
 describe("POSIX process-tree controller", () => {
+  it.skipIf(process.platform === "win32")(
+    "captures, inspects and stops a real owned process",
+    async () => {
+      const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], {
+        stdio: "ignore",
+      });
+      try {
+        await once(child, "spawn");
+        const tree = await captureProcessTree(process.pid);
+        expect(tree.captureComplete).toBe(true);
+        const owned = tree.descendants.find((entry) => entry.pid === child.pid);
+        expect(owned).toBeDefined();
+        const killer = createProcessTreeKiller();
+        expect(
+          killer.capture(process.pid).descendants.some((entry) => entry.pid === child.pid),
+        ).toBe(true);
+        const captured = { descendants: [owned!], captureComplete: true };
+        expect(await inspectProcessTree(captured)).toEqual({ verified: true, survivors: [owned] });
+        await teardownChildProcessTree(child);
+        expect(child.exitCode !== null || child.signalCode !== null).toBe(true);
+        expect(await inspectProcessTree(captured)).toEqual({ verified: true, survivors: [] });
+      } finally {
+        if (child.exitCode === null && child.signalCode === null) {
+          child.kill("SIGKILL");
+          await once(child, "exit");
+        }
+      }
+    },
+  );
+
   it("retries a transient asynchronous snapshot failure", async () => {
     let attempts = 0;
     const childrenByParentPid: ProcessChildrenMap = new Map([

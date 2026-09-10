@@ -110,7 +110,6 @@ import {
 } from "./provider/skillsCatalog";
 import { recoverUnregisteredGitHubCheckout } from "./project/githubProjectRegistration";
 import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegistry";
-import { getEnabledProviderAdapter } from "./provider/enabledProviderAdapter";
 import { ProviderHealth } from "./provider/Services/ProviderHealth";
 import { ProviderService } from "./provider/Services/ProviderService";
 import { listProviderUsage } from "./providerUsage";
@@ -1796,7 +1795,7 @@ const makeWsRpcHandlersLayer = () =>
           ),
         [WS_METHODS.serverPrewarmVoice]: (input) =>
           rpcEffect(
-            getEnabledProviderAdapter(input.provider, serverSettings, providerAdapterRegistry).pipe(
+            providerAdapterRegistry.getByProvider(input.provider).pipe(
               Effect.flatMap((adapter) =>
                 adapter.prewarmVoice
                   ? adapter.prewarmVoice(input)
@@ -1812,11 +1811,7 @@ const makeWsRpcHandlersLayer = () =>
         [WS_METHODS.serverTranscribeVoice]: (input) =>
           rpcEffect(
             voiceUploadAdmissionGate.run(
-              getEnabledProviderAdapter(
-                input.provider,
-                serverSettings,
-                providerAdapterRegistry,
-              ).pipe(
+              providerAdapterRegistry.getByProvider(input.provider).pipe(
                 Effect.flatMap((adapter) =>
                   adapter.transcribeVoice
                     ? adapter.transcribeVoice(input)

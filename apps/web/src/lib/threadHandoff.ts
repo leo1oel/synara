@@ -12,7 +12,6 @@ import {
   type ModelSelection,
   type ProviderKind,
   type ServerProviderStatus,
-  type ServerSettingsView,
   type ThreadHandoffImportedMessage,
 } from "@synara/contracts";
 import { getDefaultModel } from "@synara/shared/model";
@@ -48,12 +47,10 @@ function isImportableThreadActivity(
 export function isEligibleHandoffTargetProvider(input: {
   readonly sourceProvider: ProviderKind;
   readonly targetProvider: ProviderKind;
-  readonly targetProviderEnabled: boolean | null | undefined;
   readonly targetProviderStatus: ServerProviderStatus | null | undefined;
 }): boolean {
   return (
     input.targetProvider !== input.sourceProvider &&
-    input.targetProviderEnabled === true &&
     input.targetProviderStatus?.provider === input.targetProvider &&
     isProviderUsable(input.targetProviderStatus)
   );
@@ -61,14 +58,12 @@ export function isEligibleHandoffTargetProvider(input: {
 
 export function resolveAvailableHandoffTargetProviders(input: {
   readonly sourceProvider: ProviderKind;
-  readonly providerSettings: ServerSettingsView["providers"] | null | undefined;
   readonly providerStatuses: readonly ServerProviderStatus[];
 }): ReadonlyArray<ProviderKind> {
   return DEFAULT_PROVIDER_ORDER.filter((targetProvider) =>
     isEligibleHandoffTargetProvider({
       sourceProvider: input.sourceProvider,
       targetProvider,
-      targetProviderEnabled: input.providerSettings?.[targetProvider].enabled,
       targetProviderStatus: findProviderStatus(input.providerStatuses, targetProvider),
     }),
   );

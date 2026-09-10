@@ -4,8 +4,9 @@ import {
   DEFAULT_DROID_GIT_TEXT_GENERATION_MODEL,
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
   DEFAULT_MODEL_BY_PROVIDER,
+  ServerSettingsPatch,
 } from "@synara/contracts";
-import { Effect, FileSystem, Layer } from "effect";
+import { Effect, FileSystem, Layer, Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import { ServerConfig } from "./config";
 import { ServerSettingsLive, ServerSettingsService } from "./serverSettings";
@@ -36,49 +37,61 @@ describe("ServerSettingsService", () => {
     expect(settings.enableProviderUpdateChecks).toBe(true);
   });
 
-  it("persists updates and reloads them", async () => {
+  it("ignores legacy disabled providers while retaining their custom configuration", async () => {
     const result = await runWithSettings(
       Effect.gen(function* () {
         const service = yield* ServerSettingsService;
-        const { settingsPath } = yield* ServerConfig;
+        const config = yield* ServerConfig;
+        const { settingsPath } = config;
         const fs = yield* FileSystem.FileSystem;
-        yield* service.start;
-
-        const updated = yield* service.updateSettings({
-          enableAssistantStreaming: true,
-          enableProviderUpdateChecks: false,
-          providers: {
-            codex: {
-              enabled: false,
-              binaryPath: "/usr/local/bin/codex",
-              customModels: ["gpt-custom"],
+        yield* fs.makeDirectory(dirname(settingsPath), { recursive: true });
+        yield* fs.writeFileString(
+          settingsPath,
+          JSON.stringify({
+            revision: 4,
+            migrationVersion: 2,
+            settings: {
+              enableProviderUpdateChecks: false,
+              providers: {
+                codex: {
+                  enabled: false,
+                  binaryPath: "/usr/local/bin/codex",
+                  customModels: ["gpt-custom"],
+                },
+              },
             },
-          },
+          }),
+        );
+        yield* service.start;
+        const updated = yield* service.getSettings;
+        const legacyPatch = Schema.decodeUnknownSync(ServerSettingsPatch)({
+          providers: { codex: { enabled: false, customModels: ["gpt-custom"] } },
         });
+        yield* service.updateSettings(legacyPatch);
         const raw = yield* fs.readFileString(settingsPath);
-        return { updated, parsed: JSON.parse(raw) as unknown };
+        const restarted = yield* Effect.gen(function* () {
+          const next = yield* ServerSettingsService;
+          yield* next.start;
+          return yield* next.getSettings;
+        }).pipe(
+          Effect.provide(
+            ServerSettingsLive.pipe(
+              Layer.provide(Layer.merge(NodeServices.layer, Layer.succeed(ServerConfig, config))),
+            ),
+          ),
+        );
+        return { updated, restarted, legacyPatch, parsed: JSON.parse(raw) as unknown };
       }),
     );
 
-    expect(result.updated.enableAssistantStreaming).toBe(true);
     expect(result.updated.enableProviderUpdateChecks).toBe(false);
-    expect(result.updated.providers.codex.enabled).toBe(false);
+    expect(result.updated.providers.codex.enabled).toBe(true);
     expect(result.updated.providers.codex.binaryPath).toBe("/usr/local/bin/codex");
-    expect(result.parsed).toMatchObject({
-      revision: 1,
-      migrationVersion: 2,
-      settings: {
-        enableAssistantStreaming: true,
-        enableProviderUpdateChecks: false,
-        providers: {
-          codex: {
-            enabled: false,
-            binaryPath: "/usr/local/bin/codex",
-            customModels: ["gpt-custom"],
-          },
-        },
-      },
-    });
+    expect(result.updated.providers.codex.customModels).toEqual(["gpt-custom"]);
+    expect(result.legacyPatch.providers?.codex).not.toHaveProperty("enabled");
+    expect(result.restarted.providers.codex).toEqual(result.updated.providers.codex);
+    expect(result.parsed).toHaveProperty("migrationVersion", 3);
+    expect(result.parsed).toHaveProperty("settings.providers.codex.enabled", true);
   });
 
   it("migrates the previous Git writing default to GPT-5.6 Luna", async () => {
@@ -115,7 +128,7 @@ describe("ServerSettingsService", () => {
     expect(result.settings.textGenerationModelSelection.model).toBe(
       DEFAULT_GIT_TEXT_GENERATION_MODEL,
     );
-    expect(result.persisted.migrationVersion).toBe(2);
+    expect(result.persisted.migrationVersion).toBe(3);
     expect(result.persisted.settings.textGenerationModelSelection.model).toBe(
       DEFAULT_GIT_TEXT_GENERATION_MODEL,
     );
@@ -171,7 +184,6 @@ describe("ServerSettingsService", () => {
       model: "kilo/kilo-auto/free",
     });
     expect(result.settings.providers.opencode).toMatchObject({
-      enabled: true,
       binaryPath: "/opt/opencode",
       customModels: ["provider/opencode-model", "provider/shared-model"],
     });
@@ -206,33 +218,6 @@ describe("ServerSettingsService", () => {
 
   it.each([
     {
-      name: "resolves text generation selection away from disabled providers",
-      overrides: {
-        textGenerationModelSelection: {
-          provider: "antigravity" as const,
-          model: DEFAULT_MODEL_BY_PROVIDER.antigravity,
-        },
-        providers: { antigravity: { enabled: false } },
-      },
-      expectedProvider: "codex" as const,
-    },
-    {
-      name: "falls back only to providers with dedicated Git text generation",
-      overrides: {
-        textGenerationModelSelection: {
-          provider: "codex" as const,
-          model: DEFAULT_MODEL_BY_PROVIDER.codex,
-        },
-        providers: {
-          codex: { enabled: false },
-          claudeAgent: { enabled: true },
-          cursor: { enabled: false },
-          opencode: { enabled: true },
-        },
-      },
-      expectedProvider: "opencode" as const,
-    },
-    {
       name: "normalizes enabled but unsupported Git text generation selections",
       overrides: {
         textGenerationModelSelection: {
@@ -241,22 +226,6 @@ describe("ServerSettingsService", () => {
         },
       },
       expectedProvider: "codex" as const,
-    },
-    {
-      name: "falls back to droid when all ordered providers are disabled",
-      overrides: {
-        textGenerationModelSelection: {
-          provider: "opencode" as const,
-          model: DEFAULT_MODEL_BY_PROVIDER.opencode,
-        },
-        providers: {
-          codex: { enabled: false },
-          cursor: { enabled: false },
-          opencode: { enabled: false },
-          droid: { enabled: true },
-        },
-      },
-      expectedProvider: "droid" as const,
     },
   ])("$name", async ({ overrides, expectedProvider }) => {
     const settings = await Effect.runPromise(

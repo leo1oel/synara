@@ -1,8 +1,8 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import type { ServerProviderStatus } from "@synara/contracts";
-import { DEFAULT_SERVER_SETTINGS, ServerProviderUpdateError } from "@synara/contracts";
+import { DEFAULT_SERVER_SETTINGS } from "@synara/contracts";
 import { describe, it, assert } from "@effect/vitest";
-import { Duration, Effect, Fiber, FileSystem, Layer, Path, Sink, Stream } from "effect";
+import { Effect, FileSystem, Layer, Path, Sink, Stream } from "effect";
 import { TestClock } from "effect/testing";
 import * as PlatformError from "effect/PlatformError";
 import { ChildProcessSpawner } from "effect/unstable/process";
@@ -12,11 +12,7 @@ import { SYNARA_CODEX_HOME_OVERLAY_DIR } from "../../codexHomePaths";
 import { ServerConfig } from "../../config";
 import { ServerSettingsService } from "../../serverSettings";
 import { ProviderHealth } from "../Services/ProviderHealth";
-import {
-  readProviderStatusCache,
-  resolveProviderStatusCachePath,
-  writeProviderStatusCache,
-} from "../providerStatusCache";
+import { resolveProviderStatusCachePath, writeProviderStatusCache } from "../providerStatusCache";
 import {
   checkClaudeProviderStatus,
   checkAntigravityProviderStatus,
@@ -26,7 +22,6 @@ import {
   checkGrokProviderStatus,
   checkOpenCodeProviderStatus,
   checkPiProviderStatus,
-  makeDisabledProviderStatus,
   makeCheckClaudeProviderStatus,
   makeCheckCodexProviderStatus,
   makeCheckCursorProviderStatus,
@@ -150,42 +145,6 @@ function hangingSpawnerLayer(input: {
     }),
   );
 }
-
-const allProvidersDisabledSettings = {
-  providers: {
-    codex: { enabled: false },
-    claudeAgent: { enabled: false },
-    cursor: { enabled: false },
-    devin: { enabled: false },
-    antigravity: { enabled: false },
-    grok: { enabled: false },
-    droid: { enabled: false },
-    opencode: { enabled: false },
-    pi: { enabled: false },
-  },
-} as const;
-
-const allProvidersDisabledServerSettings = {
-  ...DEFAULT_SERVER_SETTINGS,
-  providers: {
-    codex: { ...DEFAULT_SERVER_SETTINGS.providers.codex, enabled: false },
-    claudeAgent: { ...DEFAULT_SERVER_SETTINGS.providers.claudeAgent, enabled: false },
-    cursor: { ...DEFAULT_SERVER_SETTINGS.providers.cursor, enabled: false },
-    devin: { ...DEFAULT_SERVER_SETTINGS.providers.devin, enabled: false },
-    antigravity: { ...DEFAULT_SERVER_SETTINGS.providers.antigravity, enabled: false },
-    grok: { ...DEFAULT_SERVER_SETTINGS.providers.grok, enabled: false },
-    droid: { ...DEFAULT_SERVER_SETTINGS.providers.droid, enabled: false },
-    opencode: { ...DEFAULT_SERVER_SETTINGS.providers.opencode, enabled: false },
-    pi: { ...DEFAULT_SERVER_SETTINGS.providers.pi, enabled: false },
-  },
-} satisfies typeof DEFAULT_SERVER_SETTINGS;
-
-const disabledProviderHealthLayer = ProviderHealthLive.pipe(
-  Layer.provideMerge(ServerSettingsService.layerTest(allProvidersDisabledSettings)),
-  Layer.provideMerge(
-    ServerConfig.layerTest(process.cwd(), { prefix: "provider-health-disabled-" }),
-  ),
-);
 
 const cachedReadyCodexStatus = {
   provider: "codex" as const,
@@ -363,12 +322,11 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           },
         });
         const settings = {
-          ...allProvidersDisabledServerSettings,
+          ...DEFAULT_SERVER_SETTINGS,
           providers: {
-            ...allProvidersDisabledServerSettings.providers,
+            ...DEFAULT_SERVER_SETTINGS.providers,
             codex: {
               ...DEFAULT_SERVER_SETTINGS.providers.codex,
-              enabled: true,
               binaryPath:
                 "/Users/test/.nvm/versions/node/v24.13.0/lib/node_modules/@openai/codex/bin/codex",
             },
@@ -403,110 +361,9 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
       }),
     );
 
-    it.effect("stops a running provider update when the provider is disabled", () =>
-      Effect.gen(function* () {
-        let killed = false;
-        let markStarted!: () => void;
-        const started = new Promise<void>((resolve) => {
-          markStarted = resolve;
-        });
-        const fileSystem = yield* FileSystem.FileSystem;
-        const path = yield* Path.Path;
-        const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "provider-update-disable-",
-        });
-        yield* writeProviderStatusCache({
-          filePath: resolveProviderStatusCachePath({
-            stateDir: path.join(baseDir, "userdata"),
-            provider: "codex",
-          }),
-          provider: {
-            provider: "codex",
-            status: "ready",
-            available: true,
-            authStatus: "authenticated",
-            checkedAt: "2026-07-15T12:00:00.000Z",
-            message: "Codex CLI is installed and authenticated.",
-            version: "7.3.46",
-          },
-        });
-        const settings = {
-          ...allProvidersDisabledServerSettings,
-          providers: {
-            ...allProvidersDisabledServerSettings.providers,
-            codex: {
-              ...DEFAULT_SERVER_SETTINGS.providers.codex,
-              enabled: true,
-              binaryPath:
-                "/Users/test/.nvm/versions/node/v24.13.0/lib/node_modules/@openai/codex/bin/codex",
-            },
-          },
-        } satisfies typeof DEFAULT_SERVER_SETTINGS;
-        const serverSettingsLayer = ServerSettingsService.layerTest(settings);
-        const layer = makeProviderHealthLive({ providerUpdateTimeoutMs: 10_000 }).pipe(
-          Layer.provideMerge(serverSettingsLayer),
-          Layer.provideMerge(ServerConfig.layerTest(process.cwd(), baseDir)),
-          Layer.provideMerge(
-            hangingSpawnerLayer({
-              onKill: () => (killed = true),
-              onHang: markStarted,
-              shouldHang: (args, command) =>
-                command === "npm" &&
-                args.join(" ") ===
-                  "install -g --prefix /Users/test/.nvm/versions/node/v24.13.0 @openai/codex@latest",
-            }),
-          ),
-        );
-
-        const result = yield* TestClock.withLive(
-          Effect.gen(function* () {
-            const providerHealth = yield* ProviderHealth;
-            const serverSettings = yield* ServerSettingsService;
-            const updateFiber = yield* providerHealth
-              .updateProvider({ provider: "codex" })
-              .pipe(Effect.forkChild);
-            yield* Effect.promise(() => started);
-            yield* serverSettings.updateSettings({ providers: { codex: { enabled: false } } });
-            return yield* Fiber.join(updateFiber);
-          }).pipe(Effect.provide(layer)),
-        );
-        const codex = result.providers.find((provider) => provider.provider === "codex");
-
-        assert.strictEqual(killed, true);
-        assert.strictEqual(codex?.updateState?.status, "failed");
-        assert.strictEqual(
-          codex?.updateState?.message,
-          "Update stopped because the provider was disabled.",
-        );
-      }),
-    );
   });
 
-  describe("disabled provider handling", () => {
-    it("builds an inert status for disabled providers", () => {
-      assert.deepStrictEqual(makeDisabledProviderStatus("opencode", "2026-06-16T12:00:00.000Z"), {
-        provider: "opencode",
-        status: "warning",
-        available: false,
-        authStatus: "unknown",
-        checkedAt: "2026-06-16T12:00:00.000Z",
-        message: "Provider is disabled in Synara settings.",
-      });
-    });
-
-    it("projects disabled settings over cached ready statuses", () => {
-      const statuses = projectProviderStatusesForSettings(
-        [cachedReadyCodexStatus],
-        allProvidersDisabledServerSettings,
-        "2026-06-16T12:05:00.000Z",
-      );
-      const codex = statuses.find((status) => status.provider === "codex");
-
-      assert.strictEqual(statuses.length, 9);
-      assert.strictEqual(codex?.available, false);
-      assert.strictEqual(codex?.message, "Provider is disabled in Synara settings.");
-    });
-
+  describe("provider update checks", () => {
     it("suppresses cached update advisories when automatic update checks are disabled", () => {
       const statuses = projectProviderStatusesForSettings(
         [
@@ -537,237 +394,6 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
       assert.strictEqual(codex?.versionAdvisory?.updateCommand, null);
     });
 
-    it.effect("does not expose cached ready statuses for disabled providers", () =>
-      Effect.gen(function* () {
-        const fileSystem = yield* FileSystem.FileSystem;
-        const path = yield* Path.Path;
-        const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "provider-health-disabled-cache-",
-        });
-        const cachePath = resolveProviderStatusCachePath({
-          stateDir: path.join(baseDir, "userdata"),
-          provider: "codex",
-        });
-        yield* writeProviderStatusCache({
-          filePath: cachePath,
-          provider: cachedReadyCodexStatus,
-        });
-
-        const layer = ProviderHealthLive.pipe(
-          Layer.provideMerge(ServerSettingsService.layerTest(allProvidersDisabledSettings)),
-          Layer.provideMerge(ServerConfig.layerTest(process.cwd(), baseDir)),
-        );
-        const statuses = yield* Effect.gen(function* () {
-          const providerHealth = yield* ProviderHealth;
-          return yield* providerHealth.getStatuses;
-        }).pipe(Effect.provide(layer));
-        const codex = statuses.find((status) => status.provider === "codex");
-        const cachedCodex = yield* readProviderStatusCache(cachePath);
-
-        assert.strictEqual(codex?.available, false);
-        assert.strictEqual(codex?.message, "Provider is disabled in Synara settings.");
-        assert.deepStrictEqual(cachedCodex, cachedReadyCodexStatus);
-      }),
-    );
-
-    it.effect("projects cached ready status when a disabled provider is re-enabled", () =>
-      Effect.gen(function* () {
-        const fileSystem = yield* FileSystem.FileSystem;
-        const path = yield* Path.Path;
-        const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "provider-health-enable-cache-",
-        });
-        const cachePath = resolveProviderStatusCachePath({
-          stateDir: path.join(baseDir, "userdata"),
-          provider: "codex",
-        });
-        yield* writeProviderStatusCache({
-          filePath: cachePath,
-          provider: cachedReadyCodexStatus,
-        });
-
-        let spawnCount = 0;
-        const layer = ProviderHealthLive.pipe(
-          Layer.provideMerge(ServerSettingsService.layerTest(allProvidersDisabledSettings)),
-          Layer.provideMerge(ServerConfig.layerTest(process.cwd(), baseDir)),
-          Layer.provideMerge(
-            mockSpawnerLayer((args) => {
-              spawnCount += 1;
-              const joined = args.join(" ");
-              if (joined === "--version") {
-                return { stdout: "codex 1.0.0\n", stderr: "", code: 0 };
-              }
-              if (joined === "-c mcp_servers={} login status") {
-                return { stdout: '{"authenticated":true}\n', stderr: "", code: 0 };
-              }
-              throw new Error(`Unexpected args: ${joined}`);
-            }),
-          ),
-        );
-
-        yield* Effect.gen(function* () {
-          const providerHealth = yield* ProviderHealth;
-          const serverSettings = yield* ServerSettingsService;
-          const disabledStatuses = yield* providerHealth.getStatuses;
-          const disabledCodex = disabledStatuses.find((status) => status.provider === "codex");
-
-          assert.strictEqual(disabledCodex?.available, false);
-          assert.strictEqual(disabledCodex?.message, "Provider is disabled in Synara settings.");
-
-          yield* serverSettings.updateSettings({
-            providers: {
-              codex: {
-                enabled: true,
-              },
-            },
-          });
-
-          const currentStatuses = yield* providerHealth.getStatuses;
-          const currentCodex = currentStatuses.find((status) => status.provider === "codex");
-          assert.strictEqual(currentCodex?.available, true);
-          assert.strictEqual(currentCodex?.authStatus, "authenticated");
-          assert.notStrictEqual(currentCodex?.message, "Provider is disabled in Synara settings.");
-          assert.strictEqual(spawnCount, 0);
-        }).pipe(Effect.provide(layer));
-      }),
-    );
-
-    it.effect("does not offer updates for disabled providers", () =>
-      Effect.gen(function* () {
-        const providerHealth = yield* ProviderHealth;
-        const statuses = yield* providerHealth.refresh;
-
-        assert.strictEqual(statuses.length, 9);
-        for (const status of statuses) {
-          assert.strictEqual(status.available, false);
-          assert.strictEqual(status.message, "Provider is disabled in Synara settings.");
-          assert.strictEqual(status.versionAdvisory?.status, "unknown");
-          assert.strictEqual(status.versionAdvisory?.canUpdate, false);
-          assert.strictEqual(status.versionAdvisory?.updateCommand, null);
-        }
-      }).pipe(Effect.provide(disabledProviderHealthLayer)),
-    );
-
-    it.effect("queues another bounded refresh when the follow-up also becomes stale", () =>
-      Effect.gen(function* () {
-        const fileSystem = yield* FileSystem.FileSystem;
-        const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "provider-health-enable-race-",
-        });
-        const commands: string[] = [];
-        const makeProbeGate = () => {
-          let release!: () => void;
-          let markStarted!: () => void;
-          const released = new Promise<void>((resolve) => {
-            release = resolve;
-          });
-          const started = new Promise<void>((resolve) => {
-            markStarted = resolve;
-          });
-          return { release, released, markStarted, started };
-        };
-        const probeGates = Array.from({ length: 5 }, makeProbeGate);
-        let codexVersionAttempts = 0;
-        const spawnerLayer = Layer.succeed(
-          ChildProcessSpawner.ChildProcessSpawner,
-          ChildProcessSpawner.make((command) => {
-            const input = command as unknown as {
-              readonly command: string;
-              readonly args: ReadonlyArray<string>;
-            };
-            commands.push(input.command);
-            const result = input.args.includes("--version")
-              ? { stdout: `${input.command} 1.0.0\n`, stderr: "", code: 0 }
-              : { stdout: '{"authenticated":true}\n', stderr: "", code: 0 };
-            if (input.command !== "codex" || !input.args.includes("--version")) {
-              return Effect.succeed(mockHandle(result));
-            }
-            const attemptIndex = codexVersionAttempts;
-            codexVersionAttempts += 1;
-            const gate = probeGates[attemptIndex];
-            gate?.markStarted();
-            if (!gate || attemptIndex >= 4) {
-              return Effect.succeed(mockHandle(result));
-            }
-            return Effect.succeed(
-              mockHandle(result, {
-                exitCode: Effect.promise(() => gate.released).pipe(
-                  Effect.as(ChildProcessSpawner.ExitCode(0)),
-                ),
-              }),
-            );
-          }),
-        );
-        const layer = ProviderHealthLive.pipe(
-          Layer.provideMerge(
-            ServerSettingsService.layerTest({
-              ...allProvidersDisabledSettings,
-              providers: {
-                ...allProvidersDisabledSettings.providers,
-                codex: { enabled: true },
-              },
-            }),
-          ),
-          Layer.provideMerge(ServerConfig.layerTest(process.cwd(), baseDir)),
-          Layer.provideMerge(spawnerLayer),
-        );
-
-        yield* Effect.gen(function* () {
-          const providerHealth = yield* ProviderHealth;
-          const serverSettings = yield* ServerSettingsService;
-          const firstRefresh = yield* providerHealth.refresh.pipe(Effect.forkChild);
-          yield* Effect.promise(() => probeGates[0]!.started);
-          yield* serverSettings.updateSettings({ providers: { opencode: { enabled: true } } });
-          const joinedRefresh = yield* providerHealth.refresh.pipe(Effect.forkChild);
-          probeGates[0]!.release();
-          yield* Effect.promise(() => probeGates[1]!.started);
-          yield* serverSettings.updateSettings({ providers: { pi: { enabled: true } } });
-          probeGates[1]!.release();
-          yield* Effect.promise(() => probeGates[2]!.started);
-          yield* serverSettings.updateSettings({ providers: { grok: { enabled: true } } });
-          probeGates[2]!.release();
-          yield* Effect.promise(() => probeGates[3]!.started);
-          yield* serverSettings.updateSettings({ providers: { droid: { enabled: true } } });
-          probeGates[3]!.release();
-          yield* Fiber.join(joinedRefresh);
-          yield* Fiber.join(firstRefresh);
-          yield* Effect.yieldNow;
-          yield* TestClock.adjust(Duration.millis(100));
-          yield* Effect.promise(() => probeGates[4]!.started);
-          const statuses = yield* providerHealth.refresh;
-
-          assert.ok(commands.some((command) => command.includes("opencode")));
-          // Pi is bundled in Lattice; refreshing its health must not spawn a CLI.
-          assert.ok(!commands.some((command) => command.includes("pi")));
-          assert.strictEqual(statuses.find((status) => status.provider === "pi")?.status, "ready");
-          assert.ok(commands.some((command) => command.includes("grok")));
-          assert.ok(commands.some((command) => command.includes("droid")));
-          assert.notStrictEqual(
-            statuses.find((status) => status.provider === "opencode")?.message,
-            "Provider is disabled in Synara settings.",
-          );
-          assert.notStrictEqual(
-            statuses.find((status) => status.provider === "pi")?.message,
-            "Provider is disabled in Synara settings.",
-          );
-          assert.notStrictEqual(
-            statuses.find((status) => status.provider === "droid")?.message,
-            "Provider is disabled in Synara settings.",
-          );
-        }).pipe(Effect.provide(layer));
-      }),
-    );
-
-    it.effect("rejects one-click updates for disabled providers", () =>
-      Effect.gen(function* () {
-        const providerHealth = yield* ProviderHealth;
-        const error = yield* Effect.flip(providerHealth.updateProvider({ provider: "opencode" }));
-
-        assert.ok(error instanceof ServerProviderUpdateError);
-        assert.strictEqual(error.provider, "opencode");
-        assert.strictEqual(error.reason, "Provider is disabled in Synara settings.");
-      }).pipe(Effect.provide(disabledProviderHealthLayer)),
-    );
   });
 
   describe("startup refresh behavior", () => {

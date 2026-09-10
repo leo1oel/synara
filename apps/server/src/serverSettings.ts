@@ -67,7 +67,7 @@ export interface ServerSettingsSnapshot {
   readonly settings: ServerSettings;
 }
 
-const SERVER_SETTINGS_MIGRATION_VERSION = 2;
+const SERVER_SETTINGS_MIGRATION_VERSION = 3;
 const PREVIOUS_GIT_TEXT_GENERATION_MODEL = "gpt-5.4-mini";
 
 function migrateSettings(settings: ServerSettings, migrationVersion: number): ServerSettings {
@@ -156,19 +156,11 @@ export class ServerSettingsService extends ServiceMap.Service<
 
 function resolveTextGenerationProvider(settings: ServerSettings): ServerSettings {
   const selection = settings.textGenerationModelSelection;
-  if (
-    hasDedicatedTextGenerationProvider(selection.provider) &&
-    settings.providers[selection.provider].enabled
-  ) {
+  if (hasDedicatedTextGenerationProvider(selection.provider)) {
     return settings;
   }
 
-  const fallback = GIT_TEXT_GENERATION_PROVIDER_ORDER.find(
-    (provider) => settings.providers[provider].enabled,
-  );
-  if (!fallback) {
-    return settings;
-  }
+  const fallback = GIT_TEXT_GENERATION_PROVIDER_ORDER[0];
 
   return {
     ...settings,
@@ -187,7 +179,9 @@ function normalizeSettings(
   current: ServerSettings,
   patch: ServerSettingsPatch,
 ): Effect.Effect<ServerSettings, ServerSettingsError> {
-  return Schema.decodeUnknownEffect(ServerSettings)(applyServerSettingsPatch(current, patch)).pipe(
+  return Schema.decodeUnknownEffect(ServerSettings)(
+    forceAllProvidersEnabled(applyServerSettingsPatch(current, patch)),
+  ).pipe(
     Effect.mapError(
       (cause) =>
         new ServerSettingsError({
@@ -231,8 +225,8 @@ function omitProviderPasswords(patch: ServerSettingsPatch): ServerSettingsPatch 
   };
 }
 
-// Migrate only portable Kilo state. Its model/options shape and enabled flag
-// remain meaningful, but Kilo binary paths, endpoints, and credentials are not
+// Migrate only portable Kilo state. Its model/options shape remains meaningful,
+// but Kilo binary paths, endpoints, and credentials are not
 // compatible with the OpenCode process protocol and must not be copied.
 function migrateRemovedKiloSettings(settings: unknown): unknown {
   if (settings === null || typeof settings !== "object" || Array.isArray(settings)) {
@@ -288,7 +282,6 @@ function migrateRemovedKiloSettings(settings: unknown): unknown {
           ...remainingProviders,
           opencode: {
             ...existingOpenCode,
-            ...(kiloRecord.enabled === true ? { enabled: true } : {}),
             ...(portableCustomModels.length > 0 ? { customModels: portableCustomModels } : {}),
           },
         },
@@ -296,6 +289,24 @@ function migrateRemovedKiloSettings(settings: unknown): unknown {
     }
   }
   return migrated;
+}
+
+function forceAllProvidersEnabled(settings: unknown): unknown {
+  if (settings === null || typeof settings !== "object" || Array.isArray(settings)) return settings;
+  const record = settings as Record<string, unknown>;
+  if (record.providers === null || typeof record.providers !== "object") return settings;
+  const providers = record.providers as Record<string, unknown>;
+  return {
+    ...record,
+    providers: Object.fromEntries(
+      Object.entries(providers).map(([provider, value]) => [
+        provider,
+        value !== null && typeof value === "object" && !Array.isArray(value)
+          ? { ...(value as Record<string, unknown>), enabled: true }
+          : value,
+      ]),
+    ),
+  };
 }
 
 function decodeSettingsFromJson(settingsPath: string, raw: string) {
@@ -306,7 +317,7 @@ function decodeSettingsFromJson(settingsPath: string, raw: string) {
         ? (parsed as { revision?: unknown; migrationVersion?: unknown; settings: unknown })
         : null;
     const decoded = Schema.decodeUnknownExit(ServerSettings)(
-      migrateRemovedKiloSettings(envelope?.settings ?? parsed),
+      forceAllProvidersEnabled(migrateRemovedKiloSettings(envelope?.settings ?? parsed)),
     );
     if (decoded._tag === "Failure") {
       return { _tag: "Failure" as const, error: Cause.pretty(decoded.cause) };

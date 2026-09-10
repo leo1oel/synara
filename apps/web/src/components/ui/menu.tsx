@@ -5,6 +5,7 @@ import { ChevronRightIcon } from "~/lib/icons";
 import * as React from "react";
 
 import { cn } from "~/lib/utils";
+import { FluidHoverSurface } from "./fluid-hover-surface";
 import {
   APP_TRANSLUCENT_POPUP_SURFACE_CLASS_NAME,
   COMPOSER_PICKER_MENU_OPTION_CLASS_NAME,
@@ -118,10 +119,14 @@ function MenuPopupBase({
               data-picker-size={pickerSize}
               data-slot="menu-popup-body"
             >
+              <FluidHoverSurface selector='[role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"]' />
               {children}
             </div>
           ) : (
-            <div className="max-h-(--available-height) w-full overflow-y-auto p-1">{children}</div>
+            <div className="max-h-(--available-height) w-full overflow-y-auto p-1">
+              <FluidHoverSurface selector='[role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"]' />
+              {children}
+            </div>
           )}
         </MenuPrimitive.Popup>
       </MenuPrimitive.Positioner>

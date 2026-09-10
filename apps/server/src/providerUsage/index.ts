@@ -247,16 +247,7 @@ export const listProviderUsage = Effect.fn(function* (input: ServerListProviderU
   const supportedProviders = PROVIDER_USAGE_PROVIDERS.filter(
     (provider) => PROVIDER_USAGE_FETCHERS[provider] !== undefined,
   );
-  const enabledProviders = supportedProviders.filter(
-    (provider) => settings.providers[provider].enabled,
-  );
-  invalidateProviderUsageSnapshots(
-    supportedProviders.filter((provider) => !settings.providers[provider].enabled),
-  );
-
-  if (input.provider && !settings.providers[input.provider].enabled) {
-    return [];
-  }
+  const enabledProviders = supportedProviders;
 
   return yield* Effect.tryPromise({
     try: () =>

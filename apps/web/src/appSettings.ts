@@ -372,9 +372,6 @@ export const AppSettingsSchema = Schema.Struct({
   // The active/locked provider for a thread is always shown regardless, so users
   // never get stuck on a thread whose provider they later chose to hide.
   hiddenProviders: PersistedProviderKindList.pipe(withDefaults(() => [])),
-  // Server-backed provider shutdown policy. Unlike `hiddenProviders`, entries here
-  // cannot run discovery, health checks, updates, or new turns until re-enabled.
-  disabledProviders: PersistedProviderKindList.pipe(withDefaults(() => [])),
   // Local-only UI preference: top-level provider order in Settings and the composer picker.
   providerOrder: PersistedProviderKindList.pipe(withDefaults(() => [...DEFAULT_PROVIDER_ORDER])),
   // Deprecated local-only preference kept for backward-compatible decoding.
@@ -646,30 +643,11 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     customOpenCodeModels: normalizeCustomModelSlugs(settings.customOpenCodeModels, "opencode"),
     customPiModels: normalizeCustomModelSlugs(settings.customPiModels, "pi"),
     hiddenProviders: normalizeHiddenProviders(settings.hiddenProviders),
-    disabledProviders: normalizeHiddenProviders(settings.disabledProviders),
     providerOrder: normalizeProviderOrder(settings.providerOrder),
     sidebarNavOrder: normalizeSidebarNavOrder(settings.sidebarNavOrder),
     hiddenSidebarNavItems: normalizeHiddenSidebarNavItems(settings.hiddenSidebarNavItems),
     hiddenModels: [],
   };
-}
-
-export function getServerDisabledProviders(
-  settings: Pick<ServerSettingsView, "providers">,
-): ProviderKind[] {
-  return DEFAULT_PROVIDER_ORDER.filter((provider) => !settings.providers[provider].enabled);
-}
-
-export function didProviderEnablementChange(
-  previous: Pick<ServerSettingsView, "providers"> | undefined,
-  next: Pick<ServerSettingsView, "providers">,
-): boolean {
-  return (
-    previous === undefined ||
-    DEFAULT_PROVIDER_ORDER.some(
-      (provider) => previous.providers[provider].enabled !== next.providers[provider].enabled,
-    )
-  );
 }
 
 function serverSettingsToAppSettings(settings: ServerSettingsView): Partial<AppSettings> {
@@ -701,7 +679,6 @@ function serverSettingsToAppSettings(settings: ServerSettingsView): Partial<AppS
     customDroidModels: settings.providers.droid.customModels,
     customOpenCodeModels: settings.providers.opencode.customModels,
     customPiModels: settings.providers.pi.customModels,
-    disabledProviders: getServerDisabledProviders(settings),
     textGenerationProvider: settings.textGenerationModelSelection.provider,
     textGenerationModel: settings.textGenerationModelSelection.model,
   };
@@ -729,8 +706,7 @@ function touchesProviderDiscoverySettings(patch: Partial<AppSettings>): boolean 
     hasOwn(patch, "openCodeExperimentalWebSockets") ||
     hasOwn(patch, "openCodeServerPassword") ||
     hasOwn(patch, "openCodeServerUrl") ||
-    hasOwn(patch, "piAgentDir") ||
-    hasOwn(patch, "disabledProviders")
+    hasOwn(patch, "piAgentDir")
   );
 }
 
@@ -894,20 +870,6 @@ export function appSettingsPatchToServerSettingsPatch(
       ...(hasOwn(patch, "customPiModels") ? { customModels: patch.customPiModels ?? [] } : {}),
     };
   }
-  if (hasOwn(patch, "disabledProviders")) {
-    const disabledProviders = new Set(normalizeHiddenProviders(patch.disabledProviders ?? []));
-    for (const provider of DEFAULT_PROVIDER_ORDER) {
-      const enabled = !disabledProviders.has(provider);
-      if (currentSettings?.providers[provider].enabled === enabled) {
-        continue;
-      }
-      providers[provider] = {
-        ...providers[provider],
-        enabled,
-      };
-    }
-  }
-
   if (currentSettings) {
     pruneProviderPatchAgainstCurrentSettings(providers, currentSettings);
   }
@@ -980,22 +942,16 @@ function buildInitialServerSettingsMigrationPatch(settings: AppSettings): Server
 }
 
 export function normalizeStoredAppSettings(settings: AppSettings): AppSettings {
-  return {
-    ...normalizeAppSettings(settings),
-    // Provider enablement belongs to the connected server. Scrub legacy values
-    // so a browser profile cannot project one server's shutdown state onto another.
-    disabledProviders: [],
-  };
+  return normalizeAppSettings(settings);
 }
 
 export function applyLocalAppSettingsPatch(
   settings: AppSettings,
   patch: Partial<AppSettings>,
 ): AppSettings {
-  const { disabledProviders: _disabledProviders, ...localPatch } = patch;
   return normalizeStoredAppSettings({
     ...settings,
-    ...localPatch,
+    ...patch,
     ...(hasOwn(patch, "openCodeServerPassword")
       ? { openCodeServerPasswordConfigured: Boolean(patch.openCodeServerPassword?.trim()) }
       : {}),
@@ -1455,9 +1411,7 @@ export function useAppSettings() {
       try {
         const nextSettings = await api.server.updateSettings(serverPatch);
         queryClient.setQueryData(serverQueryKeys.settings(), nextSettings);
-        if (hasOwn(patch, "disabledProviders")) {
-          await refreshProvidersAfterEnablementChange();
-        } else if (touchesProviderDiscoverySettings(patch)) {
+        if (touchesProviderDiscoverySettings(patch)) {
           await queryClient
             .invalidateQueries({ queryKey: providerDiscoveryQueryKeys.all })
             .catch(() => undefined);

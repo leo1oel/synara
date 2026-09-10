@@ -122,10 +122,6 @@ export interface ProviderServiceLiveOptions {
   /** Test override for supervised event retry timing. */
   readonly runtimeEventRetryBaseDelayMs?: number;
   readonly runtimeEventRetryMaxDelayMs?: number;
-  /** Server-authoritative start gate. Omit only in isolated tests and embedded callers. */
-  readonly providerIsEnabled?: (
-    provider: ProviderKind,
-  ) => Effect.Effect<boolean, ProviderValidationError>;
 }
 
 const DEFAULT_PROVIDER_RUNTIME_IDLE_STOP_MS = 10 * 60 * 1000;
@@ -436,21 +432,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
             ),
         ),
       );
-    const ensureProviderEnabled = (provider: ProviderKind, operation: string) =>
-      options?.providerIsEnabled
-        ? options.providerIsEnabled(provider).pipe(
-            Effect.flatMap((enabled) =>
-              enabled
-                ? Effect.void
-                : Effect.fail(
-                    new ProviderValidationError({
-                      operation,
-                      issue: `${provider} is disabled in Settings > Providers.`,
-                    }),
-                  ),
-            ),
-          )
-        : Effect.void;
     const lifecycle = makeProviderLifecycleCoordinator();
     for (const binding of yield* directory.listBindings()) {
       if (binding.lifecycleGeneration !== undefined) {
@@ -1512,8 +1493,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
               binding.provider,
               binding.runtimeMode ?? "full-access",
             );
-            yield* ensureProviderEnabled(binding.provider, input.operation);
-
             const resumeStartInput = {
               threadId,
               provider: binding.provider,
@@ -1657,9 +1636,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           // the provider binding, but the adapter already owns a live session.
           const liveAdapter = yield* findLiveSessionAdapter(input.threadId);
           if (liveAdapter) {
-            if (input.allowRecovery) {
-              yield* ensureProviderEnabled(liveAdapter.provider, input.operation);
-            }
             return {
               adapter: liveAdapter,
               isActive: true,
@@ -1672,10 +1648,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           );
         }
         const adapter = yield* registry.getByProvider(binding.provider);
-        if (input.allowRecovery) {
-          yield* ensureProviderEnabled(binding.provider, input.operation);
-        }
-
         const hasActiveSession = yield* adapter.hasSession(input.threadId);
         const requiresCredentialRotation =
           runtimePayloadRecord(binding.runtimePayload)[
@@ -1742,7 +1714,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           threadId,
           provider: resolvedProvider,
         };
-        yield* ensureProviderEnabled(input.provider, "ProviderService.startSession");
         yield* validateAutoRuntimeMode(
           "ProviderService.startSession",
           input.provider,
@@ -1780,7 +1751,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
             let replacementStarted = false;
             const startupLifecycle = new ProviderStartupLifecycle();
             const startAndPersistReplacement = Effect.gen(function* () {
-              yield* ensureProviderEnabled(input.provider, "ProviderService.startSession");
               const resolvedAdapterStartInput = {
                 ...adapterStartInput,
                 lifecycleGeneration: lease.generation,

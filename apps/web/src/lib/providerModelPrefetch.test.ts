@@ -272,19 +272,12 @@ describe("prefetchModelsForNewThread", () => {
     );
   });
 
-  it("skips hidden and disabled providers", async () => {
+  it("skips hidden providers", async () => {
     const queryClient = new QueryClient();
     const prefetchQuery = vi.spyOn(queryClient, "prefetchQuery").mockResolvedValue(undefined);
 
     prefetchModelsForNewThread(queryClient, {
       settings: makeSettings(),
-      serverSettings: {
-        ...DEFAULT_SERVER_SETTINGS,
-        providers: {
-          ...DEFAULT_SERVER_SETTINGS.providers,
-          cursor: { ...DEFAULT_SERVER_SETTINGS.providers.cursor, enabled: false },
-        },
-      },
       hiddenProviders: ["pi"],
       projectCwd: "/tmp/project",
     });
@@ -292,9 +285,9 @@ describe("prefetchModelsForNewThread", () => {
     const modelKeys = prefetchQuery.mock.calls
       .map((call) => call[0].queryKey)
       .filter((key) => key[0] === "provider-discovery" && key[1] === "models");
-    expect(modelKeys).toHaveLength(6);
-    expect(modelKeys).not.toContainEqual(
-      providerDiscoveryQueryKeys.models("cursor", null, null, null, "/tmp/project"),
+    expect(modelKeys).toHaveLength(7);
+    expect(modelKeys).toContainEqual(
+      providerDiscoveryQueryKeys.models("cursor", null, null, null, null),
     );
     expect(modelKeys).not.toContainEqual(
       providerDiscoveryQueryKeys.models("pi", null, null, null, "/tmp/project"),
@@ -423,27 +416,6 @@ describe("prefetchModelsForNewThread — availability parity (#652)", () => {
     modelKeys = modelKeysFromCalls(prefetchQuery);
     expect(modelKeys[0]).toEqual(
       providerDiscoveryQueryKeys.models("codex", null, null, null, null),
-    );
-
-    // Disabled beats selected (useProviderModelCatalog short-circuit parity).
-    prefetchQuery.mockClear();
-    prefetchModelsForNewThread(queryClient, {
-      settings: makeSettings(),
-      serverSettings: {
-        ...DEFAULT_SERVER_SETTINGS,
-        providers: {
-          ...DEFAULT_SERVER_SETTINGS.providers,
-          cursor: { ...DEFAULT_SERVER_SETTINGS.providers.cursor, enabled: false },
-        },
-      },
-      providerOverride: "cursor",
-      providerStatuses: availableStatuses([]),
-      statusesReconciled: true,
-      projectCwd: "/tmp/project",
-    });
-    modelKeys = modelKeysFromCalls(prefetchQuery);
-    expect(modelKeys).not.toContainEqual(
-      providerDiscoveryQueryKeys.models("cursor", null, null, null, null),
     );
 
     // Selected but unavailable → still warmed (ChatView discovers it on mount).

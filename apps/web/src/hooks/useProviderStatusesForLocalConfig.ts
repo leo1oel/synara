@@ -15,7 +15,6 @@ const EMPTY_PROVIDER_STATUSES: ServerProviderStatus[] = [];
 export function useProviderStatusesForLocalConfig(): readonly ServerProviderStatus[] {
   const { settings } = useAppSettings();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
-  const disabledProviders = new Set(settings.disabledProviders);
 
   return (serverConfigQuery.data?.providers ?? EMPTY_PROVIDER_STATUSES)
     .map((status) =>
@@ -23,7 +22,6 @@ export function useProviderStatusesForLocalConfig(): readonly ServerProviderStat
         provider: status.provider,
         status,
         customBinaryPath: getCustomBinaryPathForProvider(settings, status.provider),
-        disabled: disabledProviders.has(status.provider),
       }),
     )
     .flatMap((status) => (status ? [status] : []));

@@ -4,6 +4,7 @@ import { IconLayoutSidebar } from "@tabler/icons-react";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 import { cn } from "~/lib/utils";
+import { FluidHoverSurface } from "./fluid-hover-surface";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { ScrollArea } from "~/components/ui/scroll-area";
@@ -874,13 +875,21 @@ function SidebarGroupContent({ className, ...props }: React.ComponentProps<"div"
 }
 
 function SidebarMenu({ className, ...props }: React.ComponentProps<"ul">) {
+  const { children, ...listProps } = props;
   return (
     <ul
       className={cn("flex w-full min-w-0 flex-col gap-1", className)}
       data-sidebar="menu"
       data-slot="sidebar-menu"
-      {...props}
-    />
+      {...listProps}
+    >
+      <FluidHoverSurface
+        asListItem
+        className="[--fluid-hover-fill:var(--sidebar-accent)]"
+        selector='[data-slot="sidebar-menu-button"], [data-slot="sidebar-menu-sub-button"]'
+      />
+      {children}
+    </ul>
   );
 }
 
@@ -1062,6 +1071,7 @@ function SidebarMenuSkeleton({
 }
 
 function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
+  const { children, ...listProps } = props;
   return (
     <ul
       className={cn(
@@ -1071,8 +1081,15 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
       )}
       data-sidebar="menu-sub"
       data-slot="sidebar-menu-sub"
-      {...props}
-    />
+      {...listProps}
+    >
+      <FluidHoverSurface
+        asListItem
+        className="[--fluid-hover-fill:var(--sidebar-accent)]"
+        selector='[data-slot="sidebar-menu-sub-button"]'
+      />
+      {children}
+    </ul>
   );
 }
 

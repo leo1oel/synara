@@ -355,47 +355,6 @@ describe("authEffectRouteLayer", () => {
 });
 
 describe("binaryUploadEffectRouteLayer", () => {
-  it("rejects voice uploads before transcription when the provider is disabled", async () => {
-    const transcribeVoice = vi.fn(() => Effect.succeed({ text: "unexpected" }));
-    await withAuthEffectServer(
-      { host: "127.0.0.1", publicUrl: undefined } as ServerConfigShape,
-      makeServerAuth({ count: 0 }),
-      async (serverOrigin) => {
-        const params = new URLSearchParams({
-          provider: "codex",
-          cwd: "/tmp/project",
-          mimeType: "audio/wav",
-          sampleRateHz: "16000",
-          durationMs: "250",
-        });
-        const response = await fetch(
-          `${serverOrigin}${VOICE_TRANSCRIPTION_UPLOAD_ROUTE_PATH}?${params.toString()}`,
-          {
-            method: "POST",
-            headers: { Authorization: "Bearer bearer-token" },
-            body: Uint8Array.from([1]),
-          },
-        );
-
-        expect(response.status).toBe(409);
-        await expect(response.json()).resolves.toEqual({
-          error: "Codex is disabled in Settings > Providers.",
-        });
-        expect(transcribeVoice).not.toHaveBeenCalled();
-      },
-      binaryUploadEffectRouteLayer,
-      {
-        providerAdapterRegistry: {
-          getByProvider: () => Effect.succeed({ provider: "codex", transcribeVoice } as never),
-          listProviders: () => Effect.succeed(["codex"]),
-        },
-        serverSettingsLayer: ServerSettingsService.layerTest({
-          providers: { codex: { enabled: false } },
-        }),
-      },
-    );
-  });
-
   it("allows credentialed Canary attachment upload preflights", async () => {
     const config = {
       host: "127.0.0.1",

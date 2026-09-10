@@ -287,6 +287,7 @@ import {
   MenuTrigger,
 } from "./ui/menu";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
+import { FluidHoverSurface } from "./ui/fluid-hover-surface";
 import {
   SidebarContent,
   SidebarFooter,
@@ -3004,7 +3005,6 @@ export default function Sidebar() {
       const handoffTargets = canHandoff
         ? resolveAvailableHandoffTargetProviders({
             sourceProvider: thread.modelSelection.provider,
-            providerSettings: serverSettingsQuery.data?.providers,
             providerStatuses,
           })
         : [];
@@ -4459,6 +4459,7 @@ export default function Sidebar() {
           <span className={SIDEBAR_SECTION_LABEL_CLASS_NAME}>Pinned</span>
         </div>
         <div className="flex flex-col gap-0.5">
+          <FluidHoverSurface selector='[data-thread-item][role="button"]' />
           {pinnedThreads.map((thread) => renderPinnedThreadRow(thread))}
         </div>
       </div>

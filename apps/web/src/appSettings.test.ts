@@ -18,7 +18,6 @@ import {
   DEFAULT_TERMINAL_FONT_SIZE_PX,
   DEFAULT_SIDEBAR_THREAD_SORT_ORDER,
   DEFAULT_TIMESTAMP_FORMAT,
-  didProviderEnablementChange,
   getAppModelOptions,
   getCustomBinaryPathForProvider,
   getDefaultNativeFontSmoothing,
@@ -27,7 +26,6 @@ import {
   getCustomModelsForProvider,
   getDefaultCustomModelsForProvider,
   getGitTextGenerationModelOptions,
-  getServerDisabledProviders,
   isGitTextGenerationSettingsDirty,
   getProviderStartOptions,
   MODEL_PROVIDER_SETTINGS,
@@ -42,117 +40,15 @@ import {
   resolveTerminalFontFamilyStack,
 } from "./appSettings";
 
-describe("server-backed provider enablement", () => {
-  it("reads disabled providers from the server settings view", () => {
-    expect(
-      getServerDisabledProviders({
-        ...DEFAULT_SERVER_SETTINGS_VIEW,
-        providers: {
-          ...DEFAULT_SERVER_SETTINGS_VIEW.providers,
-          opencode: {
-            ...DEFAULT_SERVER_SETTINGS_VIEW.providers.opencode,
-            enabled: false,
-          },
-          pi: {
-            ...DEFAULT_SERVER_SETTINGS_VIEW.providers.pi,
-            enabled: false,
-          },
-        },
-      }),
-    ).toEqual(["opencode", "pi"]);
-  });
-
-  it("keeps server-backed provider disablement out of local settings", () => {
-    const stored = AppSettingsSchema.makeUnsafe({
+describe("removed provider enablement preference", () => {
+  it("drops a legacy local disabled list while retaining picker visibility", () => {
+    const decoded = Schema.decodeSync(AppSettingsSchema)({
       disabledProviders: ["opencode"],
       hiddenProviders: ["pi"],
     });
 
-    expect(normalizeStoredAppSettings(stored)).toMatchObject({
-      disabledProviders: [],
-      hiddenProviders: ["pi"],
-    });
-    expect(
-      applyLocalAppSettingsPatch(stored, {
-        disabledProviders: ["codex", "opencode"],
-        hiddenProviders: ["grok"],
-      }),
-    ).toMatchObject({
-      disabledProviders: [],
-      hiddenProviders: ["grok"],
-    });
-  });
-
-  it("persists disable and re-enable patches for every provider", () => {
-    const disabledPatch = appSettingsPatchToServerSettingsPatch({
-      disabledProviders: ["opencode", "pi"],
-    });
-    expect(disabledPatch.providers?.opencode?.enabled).toBe(false);
-    expect(disabledPatch.providers?.pi?.enabled).toBe(false);
-    expect(disabledPatch.providers?.codex?.enabled).toBe(true);
-
-    const reenabledPatch = appSettingsPatchToServerSettingsPatch({ disabledProviders: [] });
-    expect(reenabledPatch.providers?.opencode?.enabled).toBe(true);
-    expect(reenabledPatch.providers?.pi?.enabled).toBe(true);
-
-    const combinedPatch = appSettingsPatchToServerSettingsPatch({
-      disabledProviders: [],
-      openCodeBinaryPath: "/custom/opencode",
-    });
-    expect(combinedPatch.providers?.opencode).toMatchObject({
-      binaryPath: "/custom/opencode",
-      enabled: true,
-    });
-  });
-
-  it("sends sparse enablement patches against the latest server view", () => {
-    const currentSettings = {
-      ...DEFAULT_SERVER_SETTINGS_VIEW,
-      providers: {
-        ...DEFAULT_SERVER_SETTINGS_VIEW.providers,
-        opencode: {
-          ...DEFAULT_SERVER_SETTINGS_VIEW.providers.opencode,
-          enabled: false,
-        },
-      },
-    };
-    const patch = appSettingsPatchToServerSettingsPatch(
-      { disabledProviders: ["opencode", "pi"] },
-      currentSettings,
-    );
-
-    expect(patch.providers).toEqual({ pi: { enabled: false } });
-  });
-
-  it("omits unchanged provider defaults from a reset patch", () => {
-    const patch = appSettingsPatchToServerSettingsPatch(
-      {
-        disabledProviders: [],
-        openCodeBinaryPath: DEFAULT_SERVER_SETTINGS_VIEW.providers.opencode.binaryPath,
-      },
-      DEFAULT_SERVER_SETTINGS_VIEW,
-    );
-
-    expect(patch.providers).toBeUndefined();
-  });
-
-  it("invalidates discovery for initial and changed streamed provider settings", () => {
-    const disabledOpenCode = {
-      ...DEFAULT_SERVER_SETTINGS_VIEW,
-      providers: {
-        ...DEFAULT_SERVER_SETTINGS_VIEW.providers,
-        opencode: {
-          ...DEFAULT_SERVER_SETTINGS_VIEW.providers.opencode,
-          enabled: false,
-        },
-      },
-    };
-
-    expect(didProviderEnablementChange(undefined, disabledOpenCode)).toBe(true);
-    expect(
-      didProviderEnablementChange(DEFAULT_SERVER_SETTINGS_VIEW, DEFAULT_SERVER_SETTINGS_VIEW),
-    ).toBe(false);
-    expect(didProviderEnablementChange(DEFAULT_SERVER_SETTINGS_VIEW, disabledOpenCode)).toBe(true);
+    expect(normalizeStoredAppSettings(decoded)).toMatchObject({ hiddenProviders: ["pi"] });
+    expect(normalizeStoredAppSettings(decoded)).not.toHaveProperty("disabledProviders");
   });
 });
 

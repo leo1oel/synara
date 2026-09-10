@@ -126,7 +126,6 @@ const DEVIN_PROVIDER = "devin" as const;
 const OPENCODE_PROVIDER = "opencode" as const;
 const PI_PROVIDER = "pi" as const;
 type ProviderStatuses = ReadonlyArray<ServerProviderStatus>;
-const DISABLED_PROVIDER_STATUS_MESSAGE = "Provider is disabled in Synara settings.";
 const MINIMUM_ANTIGRAVITY_CLI_VERSION = "1.0.12";
 
 const PROVIDERS = [
@@ -150,7 +149,6 @@ const providerCommandEnv = (provider: ProviderKind): NodeJS.ProcessEnv =>
 const UPDATE_OUTPUT_MAX_BYTES = 10_000;
 const MAX_REFRESH_REVISION_RETRIES = 1;
 const REFRESH_REVISION_RESCHEDULE_DELAY_MS = 100;
-const PROVIDER_UPDATE_ENABLEMENT_POLL_MS = 100;
 export const PROVIDER_UPDATE_TIMEOUT_MS = 2 * 60_000;
 
 function formatProviderUpdateTimeout(timeoutMs: number): string {
@@ -1879,33 +1877,6 @@ export function stabilizeProviderStatusesAgainstTransientTimeouts(
   });
 }
 
-export function isProviderEnabledForSettings(
-  provider: ProviderKind,
-  settings: ServerSettings,
-): boolean {
-  return (
-    settings.providers[provider]?.enabled !== false && settings.providers[provider] !== undefined
-  );
-}
-
-export function makeDisabledProviderStatus(
-  provider: ProviderKind,
-  checkedAt = new Date().toISOString(),
-): ServerProviderStatus {
-  return {
-    provider,
-    status: "warning" as const,
-    available: false,
-    authStatus: "unknown" as const,
-    checkedAt,
-    message: DISABLED_PROVIDER_STATUS_MESSAGE,
-  } satisfies ServerProviderStatus;
-}
-
-function isDisabledProviderStatusOverlay(status: ServerProviderStatus): boolean {
-  return status.message === DISABLED_PROVIDER_STATUS_MESSAGE && status.available === false;
-}
-
 function mergeProviderStatusUpdates(
   previousStatuses: ReadonlyArray<ServerProviderStatus>,
   updatedStatuses: ReadonlyArray<ServerProviderStatus>,
@@ -1942,40 +1913,15 @@ function suppressProviderVersionAdvisory(status: ServerProviderStatus): ServerPr
   };
 }
 
-// Disabled providers are a settings overlay, not a probe result. Keep the raw
-// cached/probed status intact so re-enabling a provider can reuse it immediately.
 export function projectProviderStatusesForSettings(
   statuses: ReadonlyArray<ServerProviderStatus>,
   settings: ServerSettings,
-  checkedAt = new Date().toISOString(),
 ): ProviderStatuses {
-  const statusByProvider = new Map(statuses.map((status) => [status.provider, status] as const));
-  const projected: ServerProviderStatus[] = [];
-
-  for (const provider of PROVIDERS) {
-    const status = statusByProvider.get(provider);
-    if (!isProviderEnabledForSettings(provider, settings)) {
-      const disabledStatus = makeDisabledProviderStatus(provider, status?.checkedAt ?? checkedAt);
-      const disabledStatusWithAdvisory = {
-        ...disabledStatus,
-        versionAdvisory: makeSuppressedProviderVersionAdvisory(disabledStatus, status?.version),
-      } satisfies ServerProviderStatus;
-      projected.push(
-        status?.updateState
-          ? { ...disabledStatusWithAdvisory, updateState: status.updateState }
-          : disabledStatusWithAdvisory,
-      );
-      continue;
-    }
-
-    if (status && !isDisabledProviderStatusOverlay(status)) {
-      projected.push(
-        settings.enableProviderUpdateChecks ? status : suppressProviderVersionAdvisory(status),
-      );
-    }
-  }
-
-  return orderProviderStatuses(projected);
+  return orderProviderStatuses(
+    statuses.map((status) =>
+      settings.enableProviderUpdateChecks ? status : suppressProviderVersionAdvisory(status),
+    ),
+  );
 }
 
 // ── Layer ───────────────────────────────────────────────────────────
@@ -2021,8 +1967,7 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
         Effect.map((statuses) =>
           orderProviderStatuses(
             statuses.filter(
-              (status): status is ServerProviderStatus =>
-                status !== undefined && !isDisabledProviderStatusOverlay(status),
+              (status): status is ServerProviderStatus => status !== undefined,
             ),
           ),
         ),
@@ -2081,16 +2026,6 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
       const getProviderMaintenanceCapabilities = Effect.fn("getProviderMaintenanceCapabilities")(
         function* (provider: ProviderKind) {
           const settings = yield* serverSettings.getSettings;
-          if (!isProviderEnabledForSettings(provider, settings)) {
-            return makeProviderMaintenanceCapabilities({
-              provider,
-              packageName: null,
-              latestVersionSource: null,
-              updateExecutable: null,
-              updateArgs: [],
-              updateLockKey: null,
-            });
-          }
           if (provider === "cursor") {
             const command = buildCursorAgentCommand(getProviderBinaryPath(provider, settings), [
               "update",
@@ -2220,73 +2155,28 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
         });
       });
 
-      const checkProviderWhenEnabled = <R>(
-        settings: ServerSettings,
-        provider: ProviderKind,
-        check: Effect.Effect<ServerProviderStatus, never, R>,
-      ): Effect.Effect<Option.Option<ServerProviderStatus>, never, R> =>
-        isProviderEnabledForSettings(provider, settings)
-          ? check.pipe(Effect.map(Option.some))
-          : Effect.succeed(Option.none());
-
       const loadProviderStatuses = serverSettings.ready
         .pipe(
           Effect.flatMap(() => serverSettings.getSettings),
           Effect.flatMap((settings) =>
             Effect.all(
               [
-                checkProviderWhenEnabled(
-                  settings,
-                  CODEX_PROVIDER,
-                  makeCheckCodexProviderStatus(
-                    settings.providers.codex.binaryPath,
-                    settings.providers.codex.homePath,
-                  ),
+                makeCheckCodexProviderStatus(
+                  settings.providers.codex.binaryPath,
+                  settings.providers.codex.homePath,
                 ),
-                checkProviderWhenEnabled(
-                  settings,
-                  CLAUDE_AGENT_PROVIDER,
-                  makeCheckClaudeProviderStatus(
-                    resolveClaudeSubscription,
-                    settings.providers.claudeAgent.binaryPath,
-                    serverConfig.homeDir,
-                  ),
+                makeCheckClaudeProviderStatus(
+                  resolveClaudeSubscription,
+                  settings.providers.claudeAgent.binaryPath,
+                  serverConfig.homeDir,
                 ),
-                checkProviderWhenEnabled(
-                  settings,
-                  CURSOR_PROVIDER,
-                  makeCheckCursorProviderStatus(settings.providers.cursor.binaryPath),
-                ),
-                checkProviderWhenEnabled(
-                  settings,
-                  DEVIN_PROVIDER,
-                  makeCheckDevinProviderStatus(settings.providers.devin?.binaryPath),
-                ),
-                checkProviderWhenEnabled(
-                  settings,
-                  ANTIGRAVITY_PROVIDER,
-                  checkAntigravityProviderStatus(settings.providers.antigravity.binaryPath),
-                ),
-                checkProviderWhenEnabled(
-                  settings,
-                  GROK_PROVIDER,
-                  makeCheckGrokProviderStatus(settings.providers.grok.binaryPath),
-                ),
-                checkProviderWhenEnabled(
-                  settings,
-                  DROID_PROVIDER,
-                  makeCheckDroidProviderStatus(settings.providers.droid.binaryPath),
-                ),
-                checkProviderWhenEnabled(
-                  settings,
-                  OPENCODE_PROVIDER,
-                  makeCheckOpenCodeProviderStatus(settings.providers.opencode.binaryPath),
-                ),
-                checkProviderWhenEnabled(
-                  settings,
-                  PI_PROVIDER,
-                  checkPiProviderStatus(settings.providers.pi.agentDir),
-                ),
+                makeCheckCursorProviderStatus(settings.providers.cursor.binaryPath),
+                makeCheckDevinProviderStatus(settings.providers.devin?.binaryPath),
+                checkAntigravityProviderStatus(settings.providers.antigravity.binaryPath),
+                makeCheckGrokProviderStatus(settings.providers.grok.binaryPath),
+                makeCheckDroidProviderStatus(settings.providers.droid.binaryPath),
+                makeCheckOpenCodeProviderStatus(settings.providers.opencode.binaryPath),
+                checkPiProviderStatus(settings.providers.pi.agentDir),
               ],
               {
                 concurrency: "unbounded",
@@ -2298,11 +2188,7 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
           Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
           Effect.provideService(FileSystem.FileSystem, fileSystem),
           Effect.provideService(Path.Path, path),
-          Effect.map((statuses) =>
-            orderProviderStatuses(
-              statuses.flatMap((status) => (Option.isSome(status) ? [status.value] : [])),
-            ),
-          ),
+          Effect.map(orderProviderStatuses),
           Effect.flatMap(enrichStatuses),
         );
 
@@ -2509,18 +2395,6 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
             provider,
             reason: reason instanceof Error ? reason.message : String(reason),
           });
-        const providerIsEnabled = serverSettings.getSettings.pipe(
-          Effect.mapError(toUpdateError),
-          Effect.map((settings) => isProviderEnabledForSettings(provider, settings)),
-        );
-        const disabledError = () =>
-          new ServerProviderUpdateError({
-            provider,
-            reason: "Provider is disabled in Synara settings.",
-          });
-        if (!(yield* providerIsEnabled)) {
-          return yield* disabledError();
-        }
         const capabilities = yield* getProviderMaintenanceCapabilities(provider).pipe(
           Effect.mapError(toUpdateError),
         );
@@ -2533,19 +2407,6 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
         }
 
         const run = Effect.gen(function* () {
-          if (!(yield* providerIsEnabled)) {
-            const finishedAt = yield* nowIso;
-            yield* setProviderUpdateState(
-              provider,
-              makeUpdateState({
-                status: "failed",
-                startedAt: null,
-                finishedAt,
-                message: "Provider was disabled before its queued update could start.",
-              }),
-            );
-            return yield* disabledError();
-          }
           const startedAt = yield* nowIso;
           yield* setProviderUpdateState(
             provider,
@@ -2557,39 +2418,18 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
             }),
           );
 
-          const waitForProviderDisablement = Effect.gen(function* () {
-            while (yield* providerIsEnabled.pipe(Effect.catch(() => Effect.succeed(true)))) {
-              yield* Effect.sleep(Duration.millis(PROVIDER_UPDATE_ENABLEMENT_POLL_MS));
-            }
-          });
-          const commandOutcome = yield* Effect.raceFirst(
-            runUpdateCommand({
-              provider,
-              command: update.executable,
-              args: update.args,
-              ...(update.pathPrepend ? { pathPrepend: update.pathPrepend } : {}),
-            }).pipe(
-              Effect.scoped,
-              Effect.timeoutOption(Duration.millis(providerUpdateTimeoutMs)),
-              Effect.result,
-              Effect.map((result) => ({ _tag: "completed" as const, result })),
-            ),
-            waitForProviderDisablement.pipe(Effect.as({ _tag: "disabled" as const })),
+          const commandOutcome = yield* runUpdateCommand({
+            provider,
+            command: update.executable,
+            args: update.args,
+            ...(update.pathPrepend ? { pathPrepend: update.pathPrepend } : {}),
+          }).pipe(
+            Effect.scoped,
+            Effect.timeoutOption(Duration.millis(providerUpdateTimeoutMs)),
+            Effect.result,
           );
           const finishedAt = yield* nowIso;
-          if (commandOutcome._tag === "disabled") {
-            const providers = yield* setProviderUpdateState(
-              provider,
-              makeUpdateState({
-                status: "failed",
-                startedAt,
-                finishedAt,
-                message: "Update stopped because the provider was disabled.",
-              }),
-            );
-            return { providers };
-          }
-          const commandResult = commandOutcome.result;
+          const commandResult = commandOutcome;
           if (Result.isFailure(commandResult)) {
             const providers = yield* setProviderUpdateState(
               provider,

@@ -6,6 +6,7 @@ import type { ProviderDiscoveryServiceShape } from "../provider/Services/Provide
 import {
   AgentGatewayTargetError,
   agentGatewayTargetOptionGuidance,
+  loadAgentGatewayProviderCatalog,
   resolveAgentGatewayTarget,
 } from "./targetResolver.ts";
 
@@ -519,7 +520,7 @@ describe("agent gateway target resolver", () => {
     }),
   );
 
-  it.effect("fails closed before discovery when Synara disables a provider", () =>
+  it.effect("ignores the legacy enabled flag when loading a provider catalog", () =>
     Effect.gen(function* () {
       let discoveryCalls = 0;
       const trackedDiscovery = {
@@ -528,16 +529,14 @@ describe("agent gateway target resolver", () => {
           return Effect.succeed({ models: [], source: "test" });
         },
       } as unknown as ProviderDiscoveryServiceShape;
-      const result = yield* resolveAgentGatewayTarget({
-        target: { provider: "codex", model: "gpt-5.5" },
+      const result = yield* loadAgentGatewayProviderCatalog({
+        provider: "codex",
         discovery: trackedDiscovery,
         availability: { enabled: false },
-      }).pipe(
-        Effect.map(() => ({ code: "unexpected-success" })),
-        Effect.catch((error) => Effect.succeed(error)),
-      );
-      assert.equal(result.code, "provider_unavailable");
-      assert.equal(discoveryCalls, 0);
+      });
+      assert.equal(result.enabled, true);
+      assert.equal(result.available, true);
+      assert.equal(discoveryCalls, 1);
     }),
   );
 
