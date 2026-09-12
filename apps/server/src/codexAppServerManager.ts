@@ -2006,15 +2006,78 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       throw new Error("numTurns must be an integer >= 1.");
     }
 
-    const response = await this.sendRequest(context, "thread/rollback", {
+    // History mode belongs to the persisted provider thread, not the CLI version
+    // or conversation length. Read it on resume too, before attempting a mutation.
+    const metadata = await this.sendRequest(context, "thread/read", {
       threadId: providerThreadId,
-      numTurns,
+      includeTurns: false,
     });
+    const thread = this.readObject(this.readObject(metadata), "thread");
+    let snapshot: CodexThreadSnapshot;
+    if (this.readString(thread, "historyMode") === "paginated") {
+      const before = await this.readPaginatedThreadSnapshot(context, metadata);
+      const boundary = before.turns[before.turns.length - numTurns];
+      if (!boundary) {
+        throw new Error("Cannot revert more turns than the provider thread contains.");
+      }
+      const response = await this.sendRequest(context, "thread/revert", {
+        threadId: providerThreadId,
+        beforeTurnId: boundary.id,
+      });
+      // Revert returns metadata with an empty turns array, even when history
+      // remains. The adapter needs the retained turns to rebuild its snapshot.
+      snapshot = await this.readPaginatedThreadSnapshot(context, response);
+    } else {
+      const response = await this.sendRequest(context, "thread/rollback", {
+        threadId: providerThreadId,
+        numTurns,
+      });
+      snapshot = this.parseThreadSnapshot("thread/rollback", response);
+    }
     this.updateSession(context, {
       status: "ready",
       activeTurnId: undefined,
     });
-    return this.parseThreadSnapshot("thread/rollback", response);
+    return snapshot;
+  }
+
+  private async readPaginatedThreadSnapshot(
+    context: CodexSessionContext,
+    metadata: unknown,
+  ): Promise<CodexThreadSnapshot> {
+    const snapshot = this.parseThreadSnapshot("thread/read", metadata);
+    const turns: CodexThreadTurnSnapshot[] = [];
+    const seenCursors = new Set<string>();
+    let cursor: string | undefined;
+    do {
+      const response = this.readObject(
+        await this.sendRequest(context, "thread/turns/list", {
+          threadId: snapshot.threadId,
+          sortDirection: "asc",
+          itemsView: "full",
+          ...(cursor ? { cursor } : {}),
+        }),
+      );
+      const data = this.readArray(response, "data");
+      if (!data) {
+        throw new Error("thread/turns/list response did not include turns.");
+      }
+      for (const value of data) {
+        const turn = this.readObject(value);
+        const id = this.readString(turn, "id");
+        // Synthetic display IDs are never safe as destructive API boundaries.
+        if (!id) {
+          throw new Error("thread/turns/list response did not include a turn id.");
+        }
+        turns.push({ id: TurnId.makeUnsafe(id), items: this.readArray(turn, "items") ?? [] });
+      }
+      cursor = this.readString(response, "nextCursor");
+      if (cursor && seenCursors.has(cursor)) {
+        throw new Error("thread/turns/list returned a repeated cursor.");
+      }
+      if (cursor) seenCursors.add(cursor);
+    } while (cursor);
+    return { ...snapshot, turns };
   }
 
   async compactThread(threadId: ThreadId): Promise<void> {

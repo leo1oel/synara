@@ -2992,6 +2992,75 @@ describe("thread checkpoint control", () => {
     });
   });
 
+  it.each([1, 2, 3])("reverts %i paginated turns at the native boundary", async (numTurns) => {
+    const { manager, context, sendRequest, updateSession } = createThreadControlHarness();
+    const original = [
+      { id: "native-a", items: [{ type: "userMessage", text: "keep first" }] },
+      { id: "native-b", items: [{ type: "userMessage", text: "edit middle" }] },
+      { id: "native-c", items: [{ type: "userMessage", text: "discard last" }] },
+    ];
+    const retained = original.slice(0, 3 - numTurns);
+    sendRequest
+      .mockResolvedValueOnce({ thread: { id: "thread_1", historyMode: "paginated", turns: [] } })
+      .mockResolvedValueOnce({ data: original.slice(0, 1), nextCursor: "page-2" })
+      .mockResolvedValueOnce({ data: original.slice(1), nextCursor: null })
+      .mockResolvedValueOnce({ thread: { id: "thread_1", historyMode: "paginated", turns: [] } })
+      .mockResolvedValueOnce({ data: retained, nextCursor: null });
+
+    const result = await manager.rollbackThread(asThreadId("thread_1"), numTurns);
+
+    expect(sendRequest).toHaveBeenNthCalledWith(1, context, "thread/read", {
+      threadId: "thread_1",
+      includeTurns: false,
+    });
+    expect(sendRequest).toHaveBeenNthCalledWith(3, context, "thread/turns/list", {
+      threadId: "thread_1",
+      sortDirection: "asc",
+      itemsView: "full",
+      cursor: "page-2",
+    });
+    expect(sendRequest).toHaveBeenNthCalledWith(4, context, "thread/revert", {
+      threadId: "thread_1",
+      beforeTurnId: ["native-c", "native-b", "native-a"][numTurns - 1],
+    });
+    expect(sendRequest).not.toHaveBeenCalledWith(context, "thread/rollback", expect.anything());
+    expect(result.turns).toEqual(retained);
+    expect(updateSession).toHaveBeenCalledWith(context, {
+      status: "ready",
+      activeTurnId: undefined,
+    });
+  });
+
+  it.each([
+    { data: [], nextCursor: null },
+    { data: [{ items: [] }], nextCursor: null },
+    { nextCursor: null },
+  ])("does not mutate paginated history without a valid boundary: %j", async (page) => {
+    const { manager, context, sendRequest, updateSession } = createThreadControlHarness();
+    sendRequest
+      .mockResolvedValueOnce({ thread: { id: "thread_1", historyMode: "paginated" } })
+      .mockResolvedValueOnce(page);
+
+    await expect(manager.rollbackThread(asThreadId("thread_1"), 1)).rejects.toThrow();
+    expect(sendRequest).not.toHaveBeenCalledWith(context, "thread/revert", expect.anything());
+    expect(sendRequest).not.toHaveBeenCalledWith(context, "thread/rollback", expect.anything());
+    expect(updateSession).not.toHaveBeenCalled();
+  });
+
+  it("does not retry a rejected revert with a different destructive API", async () => {
+    const { manager, context, sendRequest, updateSession } = createThreadControlHarness();
+    sendRequest
+      .mockResolvedValueOnce({ thread: { id: "thread_1", historyMode: "paginated" } })
+      .mockResolvedValueOnce({ data: [{ id: "native-a", items: [] }], nextCursor: null })
+      .mockRejectedValueOnce(new Error("thread/revert failed: thread is still in progress"));
+
+    await expect(manager.rollbackThread(asThreadId("thread_1"), 1)).rejects.toThrow(
+      "thread is still in progress",
+    );
+    expect(sendRequest).not.toHaveBeenCalledWith(context, "thread/rollback", expect.anything());
+    expect(updateSession).not.toHaveBeenCalled();
+  });
+
   it("retries review interrupt with the latest review turn from thread/read after timeout", async () => {
     const { manager, context, sendRequest, updateSession } = createThreadControlHarness();
     context.session.status = "running";
