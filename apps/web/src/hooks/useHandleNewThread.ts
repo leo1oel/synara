@@ -387,6 +387,16 @@ export function useHandleNewThread() {
           // Seed the draft from the sticky (last-used) selection so a new chat
           // reopens with the model and options used most recently.
           applyUsableStickyState(threadId);
+          // A fresh installation has no sticky composer yet. Seed Lattice's
+          // resolved history preference before the route falls back to the
+          // project's bootstrap model, while preserving explicit overrides.
+          if (
+            isSynaraEmbedMode() &&
+            !useComposerDraftStore.getState().draftsByThreadId[threadId]?.activeProvider &&
+            projectDefaultModelSelection
+          ) {
+            setModelSelection(threadId, projectDefaultModelSelection);
+          }
           applyProviderOverride(threadId);
         },
         // Mark the draft-landing navigation as a transition so the new route

@@ -2603,6 +2603,16 @@ describe("ChatView transcript geometry (full app)", () => {
       expect(popup.getBoundingClientRect().left).toBeGreaterThanOrEqual(0);
       expect(popup.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth);
       expect(reportedMinimums().at(-1)).toBe(minimumBeforeHistory);
+      // Emulate the host applying the reported minimum, not just receiving it.
+      // The attachment may overflow the deliberately undersized initial viewport.
+      await mounted.setViewport({
+        ...DEFAULT_VIEWPORT,
+        width: Math.max(260, minimumBeforeHistory!),
+      });
+      await waitForLayout();
+      expect(attachmentCard.getBoundingClientRect().right).toBeLessThanOrEqual(
+        composerSurface!.getBoundingClientRect().right - 7,
+      );
       await page.screenshot();
     } finally {
       parentPostMessage.mockRestore();

@@ -13,8 +13,18 @@ import {
   WsRpcError,
 } from "./rpc";
 import { ORCHESTRATION_WS_METHODS } from "./orchestration";
+import { WS_METHODS } from "./ws";
 
 describe("WS RPC contracts", () => {
+  it("registers every declared WebSocket method before server handlers are installed", () => {
+    expect(
+      Object.values(WS_METHODS).filter(
+        (method) =>
+          !WsBootstrapRpcGroup.requests.has(method) && !WsFeatureRpcGroup.requests.has(method),
+      ),
+    ).toEqual([]);
+  });
+
   it("keeps bootstrap and feature RPCs in separate groups", () => {
     expect(WsBootstrapRpcGroup.requests.has("bootstrap.negotiate")).toBe(true);
     expect(WsFeatureRpcGroup.requests.has("bootstrap.negotiate")).toBe(false);

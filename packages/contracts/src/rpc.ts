@@ -70,6 +70,8 @@ import {
 } from "./githubProjectProvisioning";
 import { StudioListThreadOutputsInput, StudioListThreadOutputsResult } from "./studio";
 import {
+  GitBlameLineInput,
+  GitBlameLineResult,
   GitCheckoutInput,
   GitActionProgressEvent,
   GitConnectGitHubRemoteInput,
@@ -87,6 +89,8 @@ import {
   GitInitInput,
   GitListBranchesInput,
   GitListBranchesResult,
+  GitListRecentCommitsInput,
+  GitListRecentCommitsResult,
   GitPreparePullRequestThreadInput,
   GitPreparePullRequestThreadResult,
   GitPullInput,
@@ -94,6 +98,8 @@ import {
   GitPullRequestSnapshotInput,
   GitPullRequestSnapshotResult,
   GitPullResult,
+  GitReadFileAtRevInput,
+  GitReadFileAtRevResult,
   GitReadWorkingTreeDiffInput,
   GitReadWorkingTreeDiffResult,
   GitWorkingTreeDiffStatsResult,
@@ -719,6 +725,24 @@ export const WsGitGithubRepositoryRpc = Rpc.make(WS_METHODS.gitGithubRepository,
 export const WsGitReadWorkingTreeDiffRpc = Rpc.make(WS_METHODS.gitReadWorkingTreeDiff, {
   payload: GitReadWorkingTreeDiffInput,
   success: GitReadWorkingTreeDiffResult,
+  error: WsRpcError,
+});
+
+export const WsGitBlameLineRpc = Rpc.make(WS_METHODS.gitBlameLine, {
+  payload: GitBlameLineInput,
+  success: GitBlameLineResult,
+  error: WsRpcError,
+});
+
+export const WsGitReadFileAtRevRpc = Rpc.make(WS_METHODS.gitReadFileAtRev, {
+  payload: GitReadFileAtRevInput,
+  success: GitReadFileAtRevResult,
+  error: WsRpcError,
+});
+
+export const WsGitListRecentCommitsRpc = Rpc.make(WS_METHODS.gitListRecentCommits, {
+  payload: GitListRecentCommitsInput,
+  success: GitListRecentCommitsResult,
   error: WsRpcError,
 });
 
@@ -1356,6 +1380,9 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsGitGithubRepositoryRpc,
   WsGitStatusRpc,
   WsGitReadWorkingTreeDiffRpc,
+  WsGitBlameLineRpc,
+  WsGitReadFileAtRevRpc,
+  WsGitListRecentCommitsRpc,
   WsGitWorkingTreeDiffStatsRpc,
   WsGitSummarizeDiffRpc,
   WsGitPullRpc,

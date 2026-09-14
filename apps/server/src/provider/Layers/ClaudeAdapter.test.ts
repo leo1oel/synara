@@ -9692,6 +9692,8 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         totalProcessedTokens: 370_000,
         maxTokens: 1_000_000,
         inputTokens: 20_000,
+        cacheReadInputTokens: 19_999,
+        lastCacheReadInputTokens: 19_999,
       });
       assertTokenUsageEvent(usageEvents[1]);
       assert.equal(usageEvents[1].payload.usage.totalProcessedTokens, 400_000);
