@@ -3,7 +3,7 @@
 // Layer: Chat transcript shell
 // Depends on: MessagesTimeline and ChatView's list-owned scroll contract.
 
-import { type MessageId, type ThreadId, type ThreadMarker, type TurnId } from "@synara/contracts";
+import { type MessageId, type ThreadId, type TurnId } from "@synara/contracts";
 import { type LegendListRef } from "@legendapp/list/react";
 import {
   useCallback,
@@ -43,6 +43,10 @@ interface ChatTranscriptPaneProps {
   activeTurnStartedAt: string | null;
   agentActivityDetail?: AgentActivityDetail | null;
   contentInsetRightPx?: ComponentProps<typeof MessagesTimeline>["contentInsetRightPx"];
+  contentInsetBottomPx?: ComponentProps<typeof MessagesTimeline>["contentInsetBottomPx"];
+  contentInsetBottomClearancePx?: ComponentProps<
+    typeof MessagesTimeline
+  >["contentInsetBottomClearancePx"];
   chatFontSizePx: number;
   emptyStateContent?: ReactNode;
   emptyStateProjectName: string | undefined;
@@ -59,7 +63,6 @@ interface ChatTranscriptPaneProps {
   canPinMessage?: (messageId: MessageId) => boolean;
   onTogglePinMessage?: (messageId: MessageId) => void;
   onForkFromMessage?: (messageId: MessageId) => void;
-  threadMarkers?: readonly ThreadMarker[];
   goalAchievements?: ComponentProps<typeof MessagesTimeline>["goalAchievements"];
   enteringUserMessageIds?: ComponentProps<typeof MessagesTimeline>["enteringUserMessageIds"];
   tailAnchorMessageId?: ComponentProps<typeof MessagesTimeline>["tailAnchorMessageId"];
@@ -98,6 +101,7 @@ interface ChatTranscriptPaneProps {
   scrollButtonVisible: boolean;
   terminalWorkspaceTerminalTabActive: boolean;
   timelineEntries: ComponentProps<typeof MessagesTimeline>["timelineEntries"];
+  messageChangeSignal?: ComponentProps<typeof MessagesTimeline>["messageChangeSignal"];
   timestampFormat: TimestampFormat;
   turnDiffSummaryByAssistantMessageId: Map<MessageId, TurnDiffSummary>;
   workspaceRoot: string | undefined;
@@ -118,6 +122,8 @@ export function ChatTranscriptPane({
   activeTurnStartedAt,
   agentActivityDetail,
   contentInsetRightPx,
+  contentInsetBottomPx,
+  contentInsetBottomClearancePx,
   chatFontSizePx,
   emptyStateContent,
   emptyStateProjectName,
@@ -134,7 +140,6 @@ export function ChatTranscriptPane({
   canPinMessage,
   onTogglePinMessage,
   onForkFromMessage,
-  threadMarkers,
   goalAchievements,
   enteringUserMessageIds,
   tailAnchorMessageId,
@@ -171,6 +176,7 @@ export function ChatTranscriptPane({
   scrollButtonVisible,
   terminalWorkspaceTerminalTabActive,
   timelineEntries,
+  messageChangeSignal,
   timestampFormat,
   turnDiffSummaryByAssistantMessageId,
   workspaceRoot,
@@ -253,7 +259,6 @@ export function ChatTranscriptPane({
             {...(canPinMessage ? { canPinMessage } : {})}
             {...(onTogglePinMessage ? { onTogglePinMessage } : {})}
             {...(onForkFromMessage ? { onForkFromMessage } : {})}
-            {...(threadMarkers ? { threadMarkers } : {})}
             {...(goalAchievements ? { goalAchievements } : {})}
             {...(enteringUserMessageIds ? { enteringUserMessageIds } : {})}
             tailAnchorMessageId={tailAnchorMessageId ?? null}
@@ -262,6 +267,7 @@ export function ChatTranscriptPane({
             {...(forkSource ? { forkSource } : {})}
             isTemporaryThread={isTemporaryThread ?? false}
             timelineEntries={timelineEntries}
+            messageChangeSignal={messageChangeSignal}
             turnDiffSummaryByAssistantMessageId={turnDiffSummaryByAssistantMessageId}
             onOpenTurnDiff={onOpenTurnDiff}
             onOpenThread={onOpenThread}
@@ -295,6 +301,8 @@ export function ChatTranscriptPane({
             {...(keybindings ? { keybindings } : {})}
             {...(availableEditors ? { availableEditors } : {})}
             contentInsetRightPx={contentInsetRightPx}
+            contentInsetBottomPx={contentInsetBottomPx}
+            contentInsetBottomClearancePx={contentInsetBottomClearancePx}
             {...(onOpenAgentActivity ? { onOpenAgentActivity } : {})}
             findHighlight={findHighlight}
             emptyStateContent={

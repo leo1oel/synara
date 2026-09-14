@@ -24,6 +24,7 @@ const MENU_NAVIGATION_KEYS = new Set([
 ]);
 
 export function PickerPanelShell(props: {
+  variant?: "default" | "plain";
   searchInput?: ReactNode;
   searchPlaceholder?: string;
   query?: string;
@@ -37,6 +38,7 @@ export function PickerPanelShell(props: {
   listMaxHeightClassName?: string;
 }) {
   const {
+    variant: variantProp,
     searchInput,
     searchPlaceholder: searchPlaceholderProp,
     query: queryProp,
@@ -49,6 +51,7 @@ export function PickerPanelShell(props: {
     bleedParentPadding: bleedParentPaddingProp,
     listMaxHeightClassName,
   } = props;
+  const variant = variantProp ?? "default";
   const searchPlaceholder = searchPlaceholderProp ?? "Search";
   const query = queryProp ?? "";
   const stopSearchKeyPropagation = stopSearchKeyPropagationProp ?? false;
@@ -82,9 +85,11 @@ export function PickerPanelShell(props: {
       {searchInput || onQueryChange ? (
         <div
           className={cn(
-            bleedParentPadding
-              ? cn(COMPOSER_PICKER_SEARCH_HEADER_CLASS_NAME, "-top-1 pt-2")
-              : "sticky top-0 z-20 shrink-0 border-b border-border bg-[var(--composer-surface)] p-1",
+            variant === "plain"
+              ? "shrink-0 border-b border-border"
+              : bleedParentPadding
+                ? cn(COMPOSER_PICKER_SEARCH_HEADER_CLASS_NAME, "-top-1 pt-2")
+                : "sticky top-0 z-20 shrink-0 border-b border-border bg-[var(--composer-surface)] p-1",
           )}
         >
           {searchInput ?? (
@@ -116,7 +121,9 @@ export function PickerPanelShell(props: {
       >
         {children}
       </div>
-      {footer ? <div className="border-t p-1">{footer}</div> : null}
+      {footer ? (
+        <div className={cn("border-t", variant === "plain" ? "p-1" : "p-1")}>{footer}</div>
+      ) : null}
     </div>
   );
 }

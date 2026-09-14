@@ -286,11 +286,14 @@ export function buildPatchCacheKey(patch: string, scope = "diff-panel"): string 
 }
 
 // Returns copyable source text for diff surfaces without depending on virtualized DOM rows.
-export function resolveDiffCopyText(patch: string | undefined): string | null {
+export function resolveDiffCopyText(patch: string | undefined, truncated = false): string | null {
   if (typeof patch !== "string") {
     return null;
   }
-  return patch.trim().length > 0 ? patch : null;
+  if (patch.trim().length === 0) return null;
+  return truncated
+    ? `${patch}${patch.endsWith("\n") ? "\n" : "\n\n"}[Synara: partial diff. Output was truncated at the size limit; some files or changes may be missing.]\n`
+    : patch;
 }
 
 export type RenderablePatch =
@@ -373,6 +376,23 @@ export function resolveFileDiffPath(fileDiff: FileDiffMetadata): string {
     return raw.slice(2);
   }
   return raw;
+}
+
+export function resolveFileDiffPrevPath(fileDiff: FileDiffMetadata): string | null {
+  if (
+    fileDiff.prevName === undefined ||
+    (fileDiff.type !== "rename-pure" && fileDiff.type !== "rename-changed")
+  ) {
+    return null;
+  }
+  const raw = fileDiff.prevName;
+  return raw.startsWith("a/") || raw.startsWith("b/") ? raw.slice(2) : raw;
+}
+
+const UNEDITABLE_GIT_MODES = new Set(["120000", "160000"]);
+
+export function hasUneditableGitMode(fileDiff: FileDiffMetadata): boolean {
+  return UNEDITABLE_GIT_MODES.has(fileDiff.mode ?? fileDiff.prevMode ?? "");
 }
 
 // Stable identity for a parsed file diff, used as a React key and selection id.
@@ -478,6 +498,18 @@ function diffStatPathsReferToSameFile(left: string, right: string): boolean {
     normalizedLeft.endsWith(`/${normalizedRight}`) ||
     normalizedRight.endsWith(`/${normalizedLeft}`)
   );
+}
+
+export function resolveDiffEntryByPath<T>(
+  entriesByPath: ReadonlyMap<string, T>,
+  changedFilePath: string,
+): T | undefined {
+  const direct = entriesByPath.get(changedFilePath);
+  if (direct) return direct;
+  const matches = Array.from(entriesByPath.entries())
+    .filter(([path]) => diffStatPathsReferToSameFile(path, changedFilePath))
+    .map(([, entry]) => entry);
+  return matches.length === 1 ? matches.at(0) : undefined;
 }
 
 // Resolve a parsed patch stat for a visible changed-file row. Parsed patch paths are

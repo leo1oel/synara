@@ -54,8 +54,10 @@ const ANCHOR_OVERFLOW_SLACK_PX = 16;
 // row's content position to repeat, but no longer than this.
 const ANCHOR_POSITION_CONFIRM_MAX_MS = 150;
 
+type ScrollableListRef = RefObject<Pick<LegendListRef, "getScrollableNode"> | null>;
+
 interface UseTailAnchorScrollOptions {
-  listRef: RefObject<LegendListRef | null>;
+  listRef: ScrollableListRef;
   timelineRootRef: RefObject<HTMLElement | null>;
   /** User message currently anchored at the viewport top; null releases the hook. */
   anchorMessageId: MessageId | null;
@@ -69,13 +71,15 @@ interface UseTailAnchorScrollOptions {
   onAnchorSlideFinished?: ((messageId: MessageId) => void) | undefined;
   /** Changes whenever transcript content may have moved the anchor row. */
   contentChangeSignal?: unknown;
+  /** Changes only when a real transcript message is added or updated. */
+  messageChangeSignal?: unknown;
   /** Normal sends slide; steering an already-streaming turn anchors immediately. */
   animateAnchorSlide?: boolean | undefined;
   /** Keep correcting the anchor while its turn is active, until the response outgrows the reserve. */
   holdWhileTurnInProgress?: boolean | undefined;
 }
 
-function getScrollContainer(listRef: RefObject<LegendListRef | null>): HTMLElement | null {
+function getScrollContainer(listRef: ScrollableListRef): HTMLElement | null {
   const node: unknown = listRef.current?.getScrollableNode?.();
   return node instanceof HTMLElement ? node : null;
 }
@@ -126,10 +130,12 @@ export function useTailAnchorScroll({
   anchorScrollInFlightRef,
   onAnchorSlideFinished,
   contentChangeSignal,
+  messageChangeSignal,
   animateAnchorSlide = true,
   holdWhileTurnInProgress = false,
 }: UseTailAnchorScrollOptions): void {
   const anchorSlideCorrectionRef = useRef<(() => void) | null>(null);
+  const lastContentChangeAtRef = useRef(0);
   const animateAnchorSlideRef = useRef(animateAnchorSlide);
   const holdWhileTurnInProgressRef = useRef(holdWhileTurnInProgress);
 
@@ -372,7 +378,7 @@ export function useTailAnchorScroll({
       const quiet =
         hasLanded &&
         !holdWhileTurnInProgressRef.current &&
-        now - lastCorrectionAt >= ANCHOR_HOLD_QUIET_MS;
+        now - Math.max(lastCorrectionAt, lastContentChangeAtRef.current) >= ANCHOR_HOLD_QUIET_MS;
       if ((!quiet || elapsedMs < minHoldMs) && elapsedMs < ANCHOR_SLIDE_MAX_MS) {
         return false;
       }
@@ -423,6 +429,13 @@ export function useTailAnchorScroll({
       }
     };
   }, [anchorMessageId, anchorScrollInFlightRef, listRef, onAnchorSlideFinished, timelineRootRef]);
+
+  // Only real message changes should restart the quiet-period hold. Tool and
+  // work activity also update the full timeline, but they must not extend the
+  // live-output anchor past the message-stream settle window.
+  useLayoutEffect(() => {
+    lastContentChangeAtRef.current = performance.now();
+  }, [messageChangeSignal]);
 
   // React commits streamed text before paint. Re-apply the current slide
   // coordinate in that layout window so a chunk landing above the anchor cannot

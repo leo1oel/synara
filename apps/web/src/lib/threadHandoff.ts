@@ -3,7 +3,6 @@
 // Layer: Web handoff utilities
 // Exports: target-provider, title, transcript, and model-selection helpers.
 
-import type { I18n } from "@lingui/core";
 import {
   EventId,
   MessageId,
@@ -15,6 +14,7 @@ import {
   type ThreadHandoffImportedMessage,
 } from "@synara/contracts";
 import { getDefaultModel } from "@synara/shared/model";
+import { i18n } from "../i18n";
 import { type Thread } from "../types";
 import { DEFAULT_PROVIDER_ORDER } from "../providerOrdering";
 import { stripEmbeddedAssistantSelections } from "./assistantSelections";
@@ -70,13 +70,13 @@ export function resolveAvailableHandoffTargetProviders(input: {
 }
 
 export function resolveThreadHandoffBadgeLabel(
-  i18n: I18n,
   thread: Pick<Thread, "handoff">,
+  translator = i18n,
 ): string | null {
   if (!thread.handoff) {
     return null;
   }
-  return i18n._("Hand off from {provider}", {
+  return translator._("Hand off from {provider}", {
     provider: PROVIDER_DISPLAY_NAMES[thread.handoff.sourceProvider],
   });
 }

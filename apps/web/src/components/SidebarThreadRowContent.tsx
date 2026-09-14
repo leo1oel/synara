@@ -38,7 +38,7 @@ function ProviderAvatarWithTerminal({
   const { i18n } = useLingui();
   const provider = thread.session?.provider ?? thread.modelSelection.provider;
   const handoffSourceProvider = thread.handoff?.sourceProvider ?? null;
-  const handoffTooltip = resolveThreadHandoffBadgeLabel(i18n, thread);
+  const handoffTooltip = resolveThreadHandoffBadgeLabel(thread);
   const showBadge = terminalCount > 1 || terminalStatus !== null;
   const badgeTooltip =
     terminalCount > 1

@@ -1,31 +1,100 @@
-// FILE: TranscriptSelectionActionLayer.tsx
-// Purpose: Renders the transcript selection floating action from controller state.
-// Layer: Chat transcript interaction UI
-
-import { type PendingTranscriptSelectionAction } from "./useTranscriptAssistantSelectionAction";
+import type { ThreadEnvironmentMode } from "@synara/contracts";
+import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { toastManager } from "../ui/toast";
+import type { TranscriptAssistantSelection } from "./chatSelectionActions";
+import { SelectionNewChatComposer } from "./SelectionNewChatComposer";
+import type { PendingTranscriptSelectionAction } from "./useTranscriptAssistantSelectionAction";
 import { TranscriptSelectionAction } from "./TranscriptSelectionAction";
 
 interface TranscriptSelectionActionLayerProps {
   action: PendingTranscriptSelectionAction | null;
-  showMarkerActions: boolean;
-  onHighlight: () => void;
-  onUnderline: () => void;
+  defaultEnvMode?: ThreadEnvironmentMode;
+  canUseWorktree?: boolean;
+  canAddToSide?: boolean;
+  onDismiss?: () => void;
   onAddToChat: () => void;
+  onAddToSide?: (selection: TranscriptAssistantSelection) => Promise<void>;
+  onNewChat?: (
+    selection: TranscriptAssistantSelection,
+    prompt: string,
+    envMode: ThreadEnvironmentMode,
+    intent: "send" | "compose",
+  ) => Promise<void>;
+  showMarkerActions?: boolean;
+  onHighlight?: () => void;
+  onUnderline?: () => void;
 }
 
 export function TranscriptSelectionActionLayer(props: TranscriptSelectionActionLayerProps) {
-  if (!props.action) {
-    return null;
+  const [composerAction, setComposerAction] = useState<PendingTranscriptSelectionAction | null>(
+    null,
+  );
+  const [sideBusy, setSideBusy] = useState(false);
+  const sideInFlightRef = useRef(false);
+  if (composerAction) {
+    return createPortal(
+      <SelectionNewChatComposer
+        action={composerAction}
+        defaultEnvMode={props.defaultEnvMode ?? "local"}
+        canUseWorktree={props.canUseWorktree ?? false}
+        onSend={(prompt, envMode) =>
+          props.onNewChat?.(composerAction.selection, prompt, envMode, "send") ?? Promise.resolve()
+        }
+        onOpenInChat={(prompt, envMode) =>
+          props.onNewChat?.(composerAction.selection, prompt, envMode, "compose") ??
+          Promise.resolve()
+        }
+        onClose={() => setComposerAction(null)}
+      />,
+      document.body,
+    );
   }
-
-  return (
+  const action = props.action;
+  if (!action) return null;
+  return createPortal(
     <TranscriptSelectionAction
-      left={props.action.left}
-      top={props.action.top}
-      placement={props.action.placement}
-      onHighlight={props.showMarkerActions ? props.onHighlight : undefined}
-      onUnderline={props.showMarkerActions ? props.onUnderline : undefined}
+      left={action.left}
+      top={action.top}
+      placement={action.placement}
       onAddToChat={props.onAddToChat}
-    />
+      disabled={sideBusy}
+      sideDisabled={!props.canAddToSide}
+      onAddToSide={
+        props.onAddToSide
+          ? () => {
+              if (sideInFlightRef.current) return;
+              sideInFlightRef.current = true;
+              setSideBusy(true);
+              void props.onAddToSide!(action.selection)
+                .then(() => {
+                  props.onDismiss?.();
+                  window.getSelection()?.removeAllRanges();
+                })
+                .catch((error: unknown) =>
+                  toastManager.add({
+                    type: "error",
+                    title: "Could not add selection to Side",
+                    description: error instanceof Error ? error.message : "Try again.",
+                  }),
+                )
+                .finally(() => {
+                  sideInFlightRef.current = false;
+                  setSideBusy(false);
+                });
+            }
+          : undefined
+      }
+      onAddToNewChat={
+        props.onNewChat
+          ? () => {
+              setComposerAction(action);
+              props.onDismiss?.();
+              window.getSelection()?.removeAllRanges();
+            }
+          : undefined
+      }
+    />,
+    document.body,
   );
 }

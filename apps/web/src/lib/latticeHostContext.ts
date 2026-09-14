@@ -1,4 +1,8 @@
-import type { LatticeHostContextSnapshot } from "../embedMode";
+import {
+  postHostContextSelectionClearToLattice,
+  readEmbedMode,
+  type LatticeHostContextSnapshot,
+} from "../embedMode";
 
 export const TRAILING_LATTICE_HOST_CONTEXT_BLOCK_PATTERN =
   /\n*(<lattice_active_context version="1">\n[\s\S]*?\n<\/lattice_active_context>)\s*$/u;
@@ -19,6 +23,32 @@ export function setLiveLatticeHostContext(context: LatticeHostContextSnapshot | 
 export function subscribeLiveLatticeHostContext(listener: () => void): () => void {
   liveLatticeHostContextListeners.add(listener);
   return () => liveLatticeHostContextListeners.delete(listener);
+}
+
+export function clearLatticeContextSelection(
+  context: LatticeHostContextSnapshot,
+): LatticeHostContextSnapshot {
+  const withoutSelection = <T extends { selection?: string }>(value: T): T => {
+    const clone = { ...value };
+    delete clone.selection;
+    return clone;
+  };
+  return {
+    ...context,
+    ...(context.editor ? { editor: withoutSelection(context.editor) } : {}),
+    ...(context.pdf ? { pdf: withoutSelection(context.pdf) } : {}),
+    ...(context.paper ? { paper: withoutSelection(context.paper) } : {}),
+    ...(context.presentation ? { presentation: { ...context.presentation, selection: null } } : {}),
+  };
+}
+
+// A successful dispatch must not clear a newer selection made during the RPC.
+export function consumeDispatchedLatticeHostSelection(prompt: string): void {
+  const context = getLiveLatticeHostContext();
+  if (!context || !promptContainsLiveLatticeHostSelection(prompt, context)) return;
+  setLiveLatticeHostContext(clearLatticeContextSelection(context));
+  const config = readEmbedMode();
+  if (config?.hostOrigin) postHostContextSelectionClearToLattice(config);
 }
 
 export interface ExtractedLatticeHostContext {

@@ -3,7 +3,6 @@
 // Layer: Web hook
 // Exports: useThreadHandoff
 
-import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { type ProviderKind } from "@synara/contracts";
 import { useComposerDraftStore } from "../composerDraftStore";

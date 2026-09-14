@@ -190,14 +190,17 @@ describe("threadHandoff", () => {
     i18n.loadAndActivate({ locale: "zh-CN", messages: zhMessages });
 
     expect(
-      resolveThreadHandoffBadgeLabel(i18n, {
-        handoff: {
-          sourceThreadId: ThreadId.makeUnsafe("source-thread"),
-          sourceProvider: "claudeAgent",
-          importedAt: "2026-08-16T12:00:00.000Z",
-          bootstrapStatus: "completed",
+      resolveThreadHandoffBadgeLabel(
+        {
+          handoff: {
+            sourceThreadId: ThreadId.makeUnsafe("source-thread"),
+            sourceProvider: "claudeAgent",
+            importedAt: "2026-08-16T12:00:00.000Z",
+            bootstrapStatus: "completed",
+          },
         },
-      }),
+        i18n,
+      ),
     ).toBe("从 Claude 移交而来");
   });
 
@@ -242,7 +245,7 @@ describe("threadHandoff", () => {
       }),
     ).toEqual({
       provider: "codex",
-      model: "gpt-5.5",
+      model: "gpt-6-astra",
     });
   });
 });

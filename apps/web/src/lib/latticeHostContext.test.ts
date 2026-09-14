@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   appendLatticeHostContextToPrompt,
+  consumeDispatchedLatticeHostSelection,
   extractTrailingLatticeHostContext,
   getLiveLatticeHostContext,
   promptContainsLiveLatticeHostSelection,
@@ -106,5 +107,19 @@ describe("Lattice host context prompt block", () => {
         },
       }),
     ).toBe(false);
+  });
+
+  it("clears a dispatched selection but preserves a newer live selection", () => {
+    const sent = appendLatticeHostContextToPrompt("Explain this", context);
+    const newer = { ...context, paper: { ...context.paper, selection: "Another result" } };
+    setLiveLatticeHostContext(newer);
+    consumeDispatchedLatticeHostSelection(sent);
+    expect(getLiveLatticeHostContext()).toBe(newer);
+
+    setLiveLatticeHostContext(context);
+    consumeDispatchedLatticeHostSelection(sent);
+    expect(getLiveLatticeHostContext()?.paper?.selection).toBeUndefined();
+    expect(getLiveLatticeHostContext()?.paper?.title).toBe("A Paper");
+    setLiveLatticeHostContext(null);
   });
 });

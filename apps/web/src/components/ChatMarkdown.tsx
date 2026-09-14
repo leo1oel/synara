@@ -4,9 +4,10 @@
 // Exports: ChatMarkdown
 
 import { CheckIcon, CopyIcon, TextWrapIcon } from "~/lib/icons";
-import type { ProviderMentionReference, ThreadMarker } from "@synara/contracts";
+import type { ProviderMentionReference } from "@synara/contracts";
 import { isLocalAbsolutePath } from "@synara/shared/path";
 import "katex/dist/katex.min.css";
+import { remarkWikiLinks } from "../lib/remarkWikiLinks";
 import React, {
   Children,
   createContext,
@@ -121,11 +122,11 @@ class CodeHighlightErrorBoundary extends React.Component<
 interface ChatMarkdownProps {
   text: string;
   cwd: string | undefined;
+  wikiLinkRoot?: string | undefined;
   isStreaming?: boolean;
   className?: string | undefined;
   style?: CSSProperties | undefined;
   onImageExpand?: ((preview: ExpandedImagePreview) => void) | undefined;
-  markers?: readonly ThreadMarker[] | undefined;
   /** Case-insensitive substring to wrap while in-thread find is open. */
   findQuery?: string | undefined;
   /** Active occurrence in this markdown body; other hits stay dimmer. */
@@ -376,85 +377,6 @@ type MarkdownRangeDecoration = {
   properties: Record<string, string>;
 };
 
-type RenderableThreadMarker = ThreadMarker & { className: string };
-
-// The "active" ring (a transient deep-link highlight) is applied imperatively by the timeline so
-// it never re-parses the markdown tree; this className is the stable, parse-time-only part.
-function markerClassNameFor(marker: ThreadMarker) {
-  return [
-    "thread-marker",
-    marker.style === "highlight" ? "thread-marker-highlight" : "thread-marker-underline",
-    `thread-marker-${marker.color}`,
-    marker.done ? "thread-marker-done" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
-
-function rangeFragmentClassName(
-  className: string,
-  continuity: TextRangeFragmentContinuity,
-  continuesBeforeClass: string,
-  continuesAfterClass: string,
-): string {
-  return [
-    className,
-    continuity.continuesBefore ? continuesBeforeClass : "",
-    continuity.continuesAfter ? continuesAfterClass : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
-
-function normalizeRenderableMarkers(input: {
-  text: string;
-  markers: readonly ThreadMarker[] | undefined;
-}): RenderableThreadMarker[] {
-  const markers = input.markers ?? [];
-  const result: RenderableThreadMarker[] = [];
-  let previousEnd = -1;
-  for (const marker of markers.toSorted((left, right) => left.startOffset - right.startOffset)) {
-    if (marker.startOffset < previousEnd) {
-      continue;
-    }
-    if (marker.endOffset <= marker.startOffset || marker.endOffset > input.text.length) {
-      continue;
-    }
-    if (input.text.slice(marker.startOffset, marker.endOffset) !== marker.selectedText) {
-      continue;
-    }
-    result.push({
-      ...marker,
-      className: markerClassNameFor(marker),
-    });
-    previousEnd = marker.endOffset;
-  }
-  return result;
-}
-
-function threadMarkerDecorations(input: {
-  text: string;
-  markers: readonly ThreadMarker[] | undefined;
-}): MarkdownRangeDecoration[] {
-  return normalizeRenderableMarkers(input).map((marker) => ({
-    startOffset: marker.startOffset,
-    endOffset: marker.endOffset,
-    nodeType: "threadMarker",
-    classNameFor: (continuity) =>
-      rangeFragmentClassName(
-        marker.className,
-        continuity,
-        "thread-marker-continues-before",
-        "thread-marker-continues-after",
-      ),
-    properties: {
-      "data-thread-marker-id": marker.id,
-      "data-thread-marker-style": marker.style,
-      "data-thread-marker-color": marker.color,
-    },
-  }));
-}
-
 function collapseOverlappingDecorations(
   decorations: readonly MarkdownRangeDecoration[],
 ): MarkdownRangeDecoration[] {
@@ -484,6 +406,8 @@ function createTextRangeRemarkPlugin(decorations: readonly MarkdownRangeDecorati
     wrapFindableTextNodes(tree);
   };
 }
+
+const remarkFindableText = createTextRangeRemarkPlugin([]);
 
 function wrapFindableTextNodes(node: MarkdownNode): void {
   if (!node || typeof node !== "object" || !("children" in node) || !Array.isArray(node.children)) {
@@ -1677,11 +1601,11 @@ const MARKDOWN_COMPONENTS: Components = {
 function ChatMarkdown({
   text,
   cwd,
+  wikiLinkRoot,
   isStreaming: isStreamingProp,
   className: classNameProp,
   style,
   onImageExpand,
-  markers,
   findQuery: findQueryProp,
   findActiveRange: findActiveRangeProp,
   onTaskToggle,
@@ -1718,8 +1642,7 @@ function ChatMarkdown({
   const smoothedText = useSmoothStreamedText(text, isStreaming);
   // The dollar rewrite exists to disambiguate math from currency; the user
   // variant has no math, so its text must stay byte-for-byte what was typed.
-  // Table repair runs first and can change text length, so the thread-marker
-  // plugin below must resolve offsets against the same repaired text.
+  // Table repair runs first so find offsets use the same normalized text.
   const normalizedText = useMemo(
     () =>
       isUserVariant
@@ -1737,16 +1660,6 @@ function ChatMarkdown({
     () => (isUserVariant ? text : repairMarkdownTableDelimiters(text)),
     [isUserVariant, text],
   );
-  // Marker offsets are applied against mdast positions, which come from the
-  // repaired text — validate them against the same string. A marker recorded
-  // after a repaired delimiter row fails its `selectedText` check and is
-  // dropped instead of highlighting a shifted range.
-  const markerSourceText = markers?.length ? sourceText : "";
-  const rangeDecorationRemarkPlugin = useMemo(() => {
-    return createTextRangeRemarkPlugin(
-      threadMarkerDecorations({ text: markerSourceText, markers }),
-    );
-  }, [markers, markerSourceText]);
   const composerChipsRemarkPlugin = useMemo(
     () =>
       isUserVariant
@@ -1766,18 +1679,15 @@ function ChatMarkdown({
   );
   const remarkPlugins = useMemo<MarkdownRemarkPlugins>(() => {
     if (composerChipsRemarkPlugin) {
-      return [
-        ...USER_MARKDOWN_REMARK_PLUGINS,
-        composerChipsRemarkPlugin,
-        rangeDecorationRemarkPlugin,
-      ];
+      return [...USER_MARKDOWN_REMARK_PLUGINS, composerChipsRemarkPlugin, remarkFindableText];
     }
     return [
       ...MARKDOWN_REMARK_PLUGINS,
       codexFileCitationsRemarkPlugin,
-      rangeDecorationRemarkPlugin,
+      [remarkWikiLinks, { root: wikiLinkRoot ?? cwd }],
+      remarkFindableText,
     ];
-  }, [codexFileCitationsRemarkPlugin, composerChipsRemarkPlugin, rangeDecorationRemarkPlugin]);
+  }, [codexFileCitationsRemarkPlugin, composerChipsRemarkPlugin, cwd, wikiLinkRoot]);
   const rehypePlugins = isUserVariant ? USER_MARKDOWN_REHYPE_PLUGINS : MARKDOWN_REHYPE_PLUGINS;
   const rootRef = useRef<HTMLDivElement | null>(null);
   useLayoutEffect(() => {

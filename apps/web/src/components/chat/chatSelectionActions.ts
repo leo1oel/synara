@@ -14,7 +14,7 @@ export interface TranscriptSelectionActionLayout {
 }
 
 const TRANSCRIPT_SELECTION_ACTION_WIDTH_PX = 220;
-const TRANSCRIPT_SELECTION_ACTION_HEIGHT_PX = 26;
+export const TRANSCRIPT_SELECTION_ACTION_HEIGHT_PX = 26;
 const TRANSCRIPT_SELECTION_ACTION_GAP_PX = 8;
 const NON_BREAKING_SPACE_PATTERN = /\u00a0/g;
 const WHITESPACE_PATTERN = /\s/;
@@ -218,8 +218,11 @@ export function readTranscriptAssistantSelection(input: {
 export function resolveTranscriptSelectionActionLayout(input: {
   selectionRect: DOMRect | null;
   pointer: { x: number; y: number };
+  size?: { width: number; height: number };
   viewport?: { width: number; height: number } | null;
 }): TranscriptSelectionActionLayout {
+  const actionWidth = input.size?.width ?? TRANSCRIPT_SELECTION_ACTION_WIDTH_PX;
+  const actionHeight = input.size?.height ?? TRANSCRIPT_SELECTION_ACTION_HEIGHT_PX;
   const viewportWidth =
     input.viewport?.width ??
     (typeof window === "undefined" ? input.pointer.x + 8 : window.innerWidth);
@@ -236,29 +239,26 @@ export function resolveTranscriptSelectionActionLayout(input: {
   const availableAbove = selectionTop;
   const availableBelow = viewportHeight - selectionBottom;
   const placement =
-    availableAbove >= TRANSCRIPT_SELECTION_ACTION_HEIGHT_PX + TRANSCRIPT_SELECTION_ACTION_GAP_PX ||
+    availableAbove >= actionHeight + TRANSCRIPT_SELECTION_ACTION_GAP_PX ||
     availableAbove >= availableBelow
       ? "top"
       : "bottom";
   const unclampedTop =
     placement === "top"
-      ? selectionTop - TRANSCRIPT_SELECTION_ACTION_HEIGHT_PX - TRANSCRIPT_SELECTION_ACTION_GAP_PX
+      ? selectionTop - actionHeight - TRANSCRIPT_SELECTION_ACTION_GAP_PX
       : selectionBottom + TRANSCRIPT_SELECTION_ACTION_GAP_PX;
 
   return {
     left: Math.max(
       8,
       Math.min(
-        Math.round(anchorCenterX - TRANSCRIPT_SELECTION_ACTION_WIDTH_PX / 2),
-        Math.max(viewportWidth - TRANSCRIPT_SELECTION_ACTION_WIDTH_PX - 8, 8),
+        Math.round(anchorCenterX - actionWidth / 2),
+        Math.max(viewportWidth - actionWidth - 8, 8),
       ),
     ),
     top: Math.max(
       8,
-      Math.min(
-        Math.round(unclampedTop),
-        Math.max(viewportHeight - TRANSCRIPT_SELECTION_ACTION_HEIGHT_PX - 8, 8),
-      ),
+      Math.min(Math.round(unclampedTop), Math.max(viewportHeight - actionHeight - 8, 8)),
     ),
     placement,
   };

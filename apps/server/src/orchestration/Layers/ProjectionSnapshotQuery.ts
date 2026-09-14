@@ -1,4 +1,9 @@
 import {
+  selectMessageTextChunks,
+  selectSegmentEndedAt,
+  joinMessageTextChunks,
+} from "../../persistence/messageTextChunks.ts";
+import {
   CheckpointRef,
   IsoDateTime,
   MessageId,
@@ -13,7 +18,6 @@ import {
   OrchestrationThreadDetailSnapshot,
   OrchestrationThreadPullRequest,
   ThreadPinnedMessages,
-  ThreadMarkers,
   ThreadGoalAchievements,
   ProjectScript,
   ProjectId,
@@ -108,7 +112,6 @@ const ProjectionThreadDbRowSchema = ProjectionThread.mapFields(
     handoff: Schema.NullOr(Schema.fromJsonString(ThreadHandoff)),
     lastKnownPr: Schema.NullOr(Schema.fromJsonString(OrchestrationThreadPullRequest)),
     pinnedMessages: Schema.NullOr(Schema.fromJsonString(ThreadPinnedMessages)),
-    threadMarkers: Schema.NullOr(Schema.fromJsonString(ThreadMarkers)),
     goalAchievements: Schema.optional(
       Schema.NullOr(Schema.fromJsonString(ThreadGoalAchievements)),
     ).pipe(Schema.withDecodingDefault(() => null)),
@@ -117,7 +120,6 @@ const ProjectionThreadDbRowSchema = ProjectionThread.mapFields(
 );
 const {
   pinnedMessages: _projectionThreadPinnedMessagesField,
-  threadMarkers: _projectionThreadMarkersField,
   notes: _projectionThreadNotesField,
   goalAchievements: _projectionThreadGoalAchievementsField,
   ...ProjectionThreadShellFields
@@ -534,7 +536,7 @@ function attachThreadMessageSegments(
       sequence: segment.sequence,
       startedAt: segment.startedAt,
       endedAt: segment.endedAt,
-      text: segment.text,
+      text: joinMessageTextChunks(segment),
     };
     const existing = segmentsByMessage.get(key);
     if (existing) {
@@ -761,7 +763,6 @@ function toProjectedThread(input: {
     pendingInteractions: input.pendingInteractions,
     checkpoints: input.checkpoints,
     ...(threadRow.pinnedMessages !== null ? { pinnedMessages: threadRow.pinnedMessages } : {}),
-    ...(threadRow.threadMarkers !== null ? { threadMarkers: threadRow.threadMarkers } : {}),
     ...(threadRow.notes !== null ? { notes: threadRow.notes } : {}),
     ...(threadRow.goal !== null ? { goal: threadRow.goal } : {}),
     ...(threadRow.goalStartedAt !== null ? { goalStartedAt: threadRow.goalStartedAt } : {}),
@@ -896,7 +897,6 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           create_branch_flow_completed AS "createBranchFlowCompleted",
           is_pinned AS "isPinned",
           pinned_messages_json AS "pinnedMessages",
-          thread_markers_json AS "threadMarkers",
           notes,
           goal,
           goal_started_at AS "goalStartedAt",
@@ -1051,11 +1051,14 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           turn_id AS "turnId",
           role,
           text,
+          text_json AS "encodedText",
+          ${selectMessageTextChunks(sql, "projection_thread_messages")},
           attachments_json AS "attachments",
           skills_json AS "skills",
           mentions_json AS "mentions",
           dispatch_mode AS "dispatchMode",
           dispatch_origin AS "dispatchOrigin",
+          starts_new_turn AS "startsNewTurn",
           is_streaming AS "isStreaming",
           source,
           sequence,
@@ -1063,7 +1066,8 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           updated_at AS "updatedAt"
         FROM (
           SELECT
-            *,
+            thread_id,
+            message_id,
             ROW_NUMBER() OVER (
               PARTITION BY thread_id
               ORDER BY
@@ -1074,7 +1078,8 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
             ) AS message_rank
           FROM projection_thread_messages
           WHERE ${liveThreadScope}
-        )
+        ) AS ranks
+        JOIN projection_thread_messages USING (thread_id, message_id)
         WHERE message_rank <= ${MAX_THREAD_MESSAGES}
         ORDER BY
           thread_id ASC,
@@ -1095,8 +1100,10 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           message_id AS "messageId",
           sequence,
           started_at AS "startedAt",
-          ended_at AS "endedAt",
-          text
+          ${selectSegmentEndedAt(sql, "message_text_segments")},
+          text,
+          text_json AS "encodedText",
+          ${selectMessageTextChunks(sql, "message_text_segments", true)}
         FROM message_text_segments
         WHERE thread_id IN (SELECT thread_id FROM projection_threads WHERE deleted_at IS NULL)
         ORDER BY sequence ASC, message_id ASC
@@ -1113,8 +1120,10 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           message_id AS "messageId",
           sequence,
           started_at AS "startedAt",
-          ended_at AS "endedAt",
-          text
+          ${selectSegmentEndedAt(sql, "message_text_segments")},
+          text,
+          text_json AS "encodedText",
+          ${selectMessageTextChunks(sql, "message_text_segments", true)}
         FROM message_text_segments
         WHERE thread_id = ${threadId}
         ORDER BY sequence ASC, message_id ASC
@@ -1534,7 +1543,6 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           create_branch_flow_completed AS "createBranchFlowCompleted",
           is_pinned AS "isPinned",
           pinned_messages_json AS "pinnedMessages",
-          thread_markers_json AS "threadMarkers",
           notes,
           goal,
           goal_started_at AS "goalStartedAt",
@@ -1594,7 +1602,6 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           create_branch_flow_completed AS "createBranchFlowCompleted",
           is_pinned AS "isPinned",
           pinned_messages_json AS "pinnedMessages",
-          thread_markers_json AS "threadMarkers",
           notes,
           goal,
           goal_started_at AS "goalStartedAt",
@@ -1644,11 +1651,14 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           turn_id AS "turnId",
           role,
           text,
+          text_json AS "encodedText",
+          ${selectMessageTextChunks(sql, "projection_thread_messages")},
           attachments_json AS "attachments",
           skills_json AS "skills",
           mentions_json AS "mentions",
           dispatch_mode AS "dispatchMode",
           dispatch_origin AS "dispatchOrigin",
+          starts_new_turn AS "startsNewTurn",
           is_streaming AS "isStreaming",
           source,
           sequence,
@@ -1656,7 +1666,8 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           updated_at AS "updatedAt"
         FROM (
           SELECT
-            *,
+            thread_id,
+            message_id,
             ROW_NUMBER() OVER (
               PARTITION BY thread_id
               ORDER BY
@@ -1667,7 +1678,8 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
             ) AS message_rank
           FROM projection_thread_messages
           WHERE thread_id = ${threadId}
-        )
+        ) AS ranks
+        JOIN projection_thread_messages USING (thread_id, message_id)
         WHERE thread_id = ${threadId}
           AND (${maxMessages} IS NULL OR message_rank <= ${maxMessages})
         ORDER BY

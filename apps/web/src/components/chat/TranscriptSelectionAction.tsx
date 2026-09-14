@@ -2,8 +2,6 @@
 // Purpose: Renders the floating toolbar for assistant transcript selections.
 // Layer: Chat transcript interaction UI
 
-import type { ReactNode } from "react";
-import { MessageCircleIcon, PencilIcon, TextWrapIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { ELEVATED_HOVER_SURFACE_CLASS_NAME } from "~/surfaceStyles";
 
@@ -11,27 +9,28 @@ interface TranscriptSelectionActionProps {
   left: number;
   top: number;
   placement: "top" | "bottom";
-  // Highlight/underline only make sense for transcript text; read-only code
-  // surfaces (file preview, diff view) omit them and get an add-only toolbar.
-  onHighlight?: (() => void) | undefined;
-  onUnderline?: (() => void) | undefined;
   onAddToChat: () => void;
+  onAddToSide?: (() => void) | undefined;
+  onAddToNewChat?: (() => void) | undefined;
+  sideDisabled?: boolean;
+  disabled?: boolean | undefined;
 }
 
 function TranscriptSelectionToolbarButton({
   label,
   onClick,
-  children,
+  disabled,
 }: {
   label: string;
   onClick: () => void;
-  children: ReactNode;
+  disabled?: boolean | undefined;
 }) {
   return (
     <button
       type="button"
       aria-label={label}
       title={label}
+      disabled={disabled}
       className={cn(
         "pointer-events-auto inline-flex h-6 items-center gap-1 rounded px-1.5 text-[10px] leading-none font-medium text-[var(--color-text-foreground)]",
         ELEVATED_HOVER_SURFACE_CLASS_NAME,
@@ -46,7 +45,6 @@ function TranscriptSelectionToolbarButton({
         onClick();
       }}
     >
-      {children}
       <span>{label}</span>
     </button>
   );
@@ -67,19 +65,25 @@ export function TranscriptSelectionAction(props: TranscriptSelectionActionProps)
           props.placement === "top" ? "origin-bottom" : "origin-top",
         )}
       >
-        {props.onHighlight ? (
-          <TranscriptSelectionToolbarButton label="Highlight" onClick={props.onHighlight}>
-            <PencilIcon className="size-3" />
-          </TranscriptSelectionToolbarButton>
+        <TranscriptSelectionToolbarButton
+          label="Add to Chat"
+          onClick={props.onAddToChat}
+          disabled={props.disabled}
+        />
+        {props.onAddToSide ? (
+          <TranscriptSelectionToolbarButton
+            label="Add to Side"
+            onClick={props.onAddToSide}
+            disabled={props.disabled || props.sideDisabled}
+          />
         ) : null}
-        {props.onUnderline ? (
-          <TranscriptSelectionToolbarButton label="Underline" onClick={props.onUnderline}>
-            <TextWrapIcon className="size-3" />
-          </TranscriptSelectionToolbarButton>
+        {props.onAddToNewChat ? (
+          <TranscriptSelectionToolbarButton
+            label="Add to new Chat"
+            onClick={props.onAddToNewChat}
+            disabled={props.disabled}
+          />
         ) : null}
-        <TranscriptSelectionToolbarButton label="Add to chat" onClick={props.onAddToChat}>
-          <MessageCircleIcon className="size-3" />
-        </TranscriptSelectionToolbarButton>
       </div>
     </div>
   );

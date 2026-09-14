@@ -8,10 +8,14 @@
  */
 import {
   GitActionProgressEvent,
+  GitBlameLineInput,
+  GitBlameLineResult,
   GitConnectGitHubRemoteInput,
   GitConnectGitHubRemoteResult,
   GitCreateGitHubRepositoryInput,
   GitCreateGitHubRepositoryResult,
+  GitReadFileAtRevInput,
+  GitReadFileAtRevResult,
   GitHandoffThreadInput,
   GitHandoffThreadResult,
   GitPreparePullRequestThreadInput,
@@ -86,6 +90,14 @@ export interface GitManagerShape {
   readonly readWorkingTreeDiff: (
     input: GitReadWorkingTreeDiffInput,
   ) => Effect.Effect<GitReadWorkingTreeDiffResult, GitManagerServiceError>;
+
+  readonly blameLine: (
+    input: GitBlameLineInput,
+  ) => Effect.Effect<GitBlameLineResult, GitManagerServiceError>;
+
+  readonly readFileAtRev: (
+    input: GitReadFileAtRevInput,
+  ) => Effect.Effect<GitReadFileAtRevResult, GitManagerServiceError>;
 
   /**
    * Count the lines a scope's patch changes without returning the patch text.

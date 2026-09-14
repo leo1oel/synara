@@ -21,7 +21,9 @@ import {
   MessageId,
   THREAD_GOAL_MAX_CHARS,
   ThreadId,
+  type ModelSelection,
   type OrchestrationThreadShell,
+  type ProjectId,
   type ProviderKind,
   type ServerProviderStatus,
   type TurnDispatchMode,
@@ -49,6 +51,7 @@ import { ProviderHealth } from "../../provider/Services/ProviderHealth.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import {
   AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION,
+  resolveAgentGatewayTarget,
   type AgentGatewayProviderAvailability,
 } from "../targetResolver.ts";
 import { mcpToolResultError, mcpToolResultJson } from "../protocol.ts";
@@ -160,7 +163,8 @@ export const makeAgentGateway = Effect.gen(function* () {
         return [
           provider,
           {
-            enabled: true,
+            enabled:
+              ACTIVE_AGENT_HOST_PROFILE.id === "lattice" || settings.providers[provider].enabled,
             ...(status
               ? {
                   available: status.available,
@@ -191,6 +195,33 @@ export const makeAgentGateway = Effect.gen(function* () {
         }),
       ),
     );
+
+  // Automation targets resolve like thread-creation targets: live provider availability
+  // and model discovery, against the workspace of the project the automation belongs to.
+  const resolveAutomationTarget = (input: {
+    readonly target: ModelSelection;
+    readonly projectId: ProjectId;
+  }): Effect.Effect<ModelSelection, unknown> =>
+    Effect.gen(function* () {
+      const project = yield* snapshotQuery.getProjectShellById(input.projectId).pipe(
+        Effect.mapError((error) => new ToolInputError(errorText(error))),
+        Effect.flatMap(
+          Option.match({
+            onNone: () =>
+              Effect.fail(new ToolInputError(`Project "${input.projectId}" was not found.`)),
+            onSome: Effect.succeed,
+          }),
+        ),
+      );
+      const providerAvailabilities = yield* loadProviderAvailabilities;
+      const availability = providerAvailabilities.get(input.target.provider);
+      return yield* resolveAgentGatewayTarget({
+        target: input.target,
+        discovery: providerDiscovery,
+        ...(availability !== undefined ? { availability } : {}),
+        cwd: project.workspaceRoot,
+      });
+    });
 
   // Privilege boundary shared by every tool that makes another thread execute
   // work or mutates another thread's state: a caller must not drive a thread
@@ -767,6 +798,7 @@ export const makeAgentGateway = Effect.gen(function* () {
     automationService,
     requireThreadShell,
     assertCallerMayDriveThread,
+    resolveAutomationTarget,
     surfaceAutomationProposal: ({ callerThreadId, definition }) => {
       const createdAt = isoNow();
       return orchestrationEngine

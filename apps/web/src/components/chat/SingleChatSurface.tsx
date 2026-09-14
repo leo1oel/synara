@@ -20,6 +20,7 @@ import { useAppSettings } from "../../appSettings";
 import { useComposerDraftStore } from "../../composerDraftStore";
 import type { DiffRouteSearch } from "../../diffRouteSearch";
 import { stripDiffSearchParams } from "../../diffRouteSearch";
+import { editorCenterModeFamily, type EditorCenterMode } from "../../lib/editorCenterMode";
 import { readEditorViewState, storeEditorViewState } from "../../editorViewState";
 import { postOpenFileToLattice, postOpenReviewToLattice, readEmbedMode } from "../../embedMode";
 import { basenameOfPath } from "../../file-icons";
@@ -265,7 +266,7 @@ export function SingleChatSurface(props: {
   const [editorExpandedDirectories, setEditorExpandedDirectories] = useState<ReadonlySet<string>>(
     () => new Set(readEditorViewState(props.threadId)?.expandedDirectories ?? []),
   );
-  const [editorCenterMode, setEditorCenterMode] = useState<"file" | "diff">(() =>
+  const [editorCenterMode, setEditorCenterMode] = useState<EditorCenterMode>(() =>
     props.search.editorFilePath
       ? "file"
       : (readEditorViewState(props.threadId)?.centerMode ?? "diff"),
@@ -295,7 +296,7 @@ export function SingleChatSurface(props: {
     }
     storeEditorViewState(props.threadId, {
       expandedDirectories: [...editorExpandedDirectories],
-      centerMode: editorCenterMode,
+      centerMode: editorCenterModeFamily(editorCenterMode),
     });
   }, [editorCenterMode, editorExpandedDirectories, editorViewActive, props.threadId]);
   const [editorDiffPanelState, setEditorDiffPanelState] = useState<
@@ -1084,6 +1085,13 @@ export function SingleChatSurface(props: {
               selectedFilePath={selectedEditorFilePath}
               expandedDirectories={editorExpandedDirectories}
               centerMode={editorCenterMode}
+              editFilePath={null}
+              editDiffBaseRev={null}
+              onEditFile={(filePath) => {
+                handleSelectEditorFile(filePath);
+                setEditorCenterMode("fileEdit");
+              }}
+              onCloseEdit={() => setEditorCenterMode(editorCenterModeFamily(editorCenterMode))}
               diffFiles={editorDiffFiles}
               diffFilesLoading={editorDiffFilesLoading}
               selectedDiffFilePath={editorDiffPanelState.diffFilePath ?? null}

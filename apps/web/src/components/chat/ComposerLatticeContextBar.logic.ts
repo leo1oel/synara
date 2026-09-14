@@ -138,19 +138,4 @@ export function latticeContextDetails(context: LatticeHostContextSnapshot): Latt
   return details;
 }
 
-export function clearLatticeContextSelection(
-  context: LatticeHostContextSnapshot,
-): LatticeHostContextSnapshot {
-  const withoutSelection = <T extends { selection?: string }>(value: T): T => {
-    const clone = { ...value };
-    delete clone.selection;
-    return clone;
-  };
-  return {
-    ...context,
-    ...(context.editor ? { editor: withoutSelection(context.editor) } : {}),
-    ...(context.pdf ? { pdf: withoutSelection(context.pdf) } : {}),
-    ...(context.paper ? { paper: withoutSelection(context.paper) } : {}),
-    ...(context.presentation ? { presentation: { ...context.presentation, selection: null } } : {}),
-  };
-}
+export { clearLatticeContextSelection } from "../../lib/latticeHostContext";

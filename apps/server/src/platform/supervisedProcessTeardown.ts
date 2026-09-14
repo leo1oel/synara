@@ -8,6 +8,7 @@ import {
   captureProcessTree,
   defaultProcessTreeKiller,
   inspectProcessTree,
+  isProcessRunning,
   type CapturedProcess,
   type CapturedProcessTree,
   type CapturedProcessTreeInspection,
@@ -58,6 +59,8 @@ export interface EffectProcessExitHandle {
 export interface SupervisedProcessTeardownResult {
   readonly escalated: boolean;
   readonly signalErrors: ReadonlyArray<Error>;
+  /** Only true when the initial descendant snapshot completed before root exit. */
+  readonly capturedBeforeRootExit?: boolean;
 }
 
 export interface SupervisedProcessTeardownDependencies {
@@ -67,6 +70,8 @@ export interface SupervisedProcessTeardownDependencies {
   readonly inspectProcessTree: (
     tree: CapturedProcessTree,
   ) => Promise<CapturedProcessTreeInspection>;
+  /** Fresh native liveness observation, taken after the descendant snapshot. */
+  readonly isRootRunning: (rootPid: number) => Promise<boolean>;
   readonly now: () => number;
   readonly sleep: (milliseconds: number) => Promise<void>;
 }
@@ -255,6 +260,23 @@ export async function teardownProviderProcessTree(
       }
     }
     capturedTrees.set(input.rootExited, tree);
+    // PPID traversal after root exit can miss reparented descendants. Preserve
+    // the upstream proof bit even when this fork reuses stronger cached tree evidence.
+    const rootRunningAfterCapture =
+      !rootExited &&
+      (await (
+        dependencies.isRootRunning?.(input.rootPid) ??
+        isProcessRunning(input.rootPid, {
+          platform,
+          ...(windowsObserver
+            ? {
+                captureWindowsChildren: () =>
+                  windowsObserver.captureWithin(FINAL_PROOF_INSPECTION_MAX_MS),
+              }
+            : {}),
+        })
+      ).catch(() => false));
+    const capturedBeforeRootExit = rootRunningAfterCapture && !rootExited;
     if (tree.captureComplete === false) {
       // Killing now would destroy the ancestry needed for a safe retry. Keep
       // the adapter unroutable but leave the root observable until capture works.
@@ -353,7 +375,7 @@ export async function teardownProviderProcessTree(
     const graceful = await waitForExitProof(
       positiveDuration(input.termGraceMs, DEFAULT_TERM_GRACE_MS),
     );
-    if (graceful.proven) return { escalated: false, signalErrors };
+    if (graceful.proven) return { escalated: false, signalErrors, capturedBeforeRootExit };
 
     let forceTree = tree;
     let forceDescendantsVerified = false;
@@ -385,7 +407,7 @@ export async function teardownProviderProcessTree(
     const forced = await waitForExitProof(
       positiveDuration(input.forceExitMs, DEFAULT_FORCE_EXIT_MS),
     );
-    if (forced.proven) return { escalated: true, signalErrors };
+    if (forced.proven) return { escalated: true, signalErrors, capturedBeforeRootExit };
 
     throw new ProviderProcessExitUnprovenError({
       rootPid: input.rootPid,

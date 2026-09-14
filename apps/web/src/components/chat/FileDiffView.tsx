@@ -13,7 +13,12 @@ import {
   isHighlighterLoaded,
   preloadHighlighter,
 } from "@pierre/diffs";
-import { FileDiff, type FileDiffMetadata, Virtualizer } from "@pierre/diffs/react";
+import {
+  FileDiff,
+  type FileDiffMetadata,
+  type FileDiffProps,
+  Virtualizer,
+} from "@pierre/diffs/react";
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { buildDiffPanelUnsafeCSS, resolveDiffThemeName } from "~/lib/diffRendering";
@@ -54,6 +59,10 @@ export function FileDiffSurface(props: { className?: string; children: ReactNode
   );
 }
 
+type FileDiffCardOptions = NonNullable<FileDiffProps<unknown>["options"]>;
+
+export type DiffLineClickProps = Parameters<NonNullable<FileDiffCardOptions["onLineClick"]>>[0];
+
 // A single themed file diff with Synara's custom file header. Bakes in the shared
 // `unsafeCSS` theming so every surface renders with the chat code font and
 // themed addition/deletion backgrounds.
@@ -65,6 +74,7 @@ export function FileDiffCard(props: {
   collapsed?: boolean;
   /** Trailing header chrome (actions menu, collapse chevron). */
   renderHeaderTrailing?: () => ReactNode;
+  onLineClick?: ((line: DiffLineClickProps) => void) | undefined;
 }) {
   const options = {
     diffStyle: props.diffStyle ?? "unified",
@@ -74,6 +84,7 @@ export function FileDiffCard(props: {
     themeType: props.theme,
     unsafeCSS: buildDiffPanelUnsafeCSS(props.theme),
     ...(props.collapsed !== undefined ? { collapsed: props.collapsed } : {}),
+    ...(props.onLineClick ? { onLineClick: props.onLineClick } : {}),
   };
 
   return (

@@ -450,7 +450,7 @@ describe("composerDraftStore modelSelection", () => {
       availableModelOptionsByProvider: { codex: [] },
     });
 
-    expect(state.selectedModel).toBe("gpt-5.5");
+    expect(state.selectedModel).toBe("gpt-6-astra");
   });
 
   it("preserves an explicit model, reasoning effort, and fast-mode preference", () => {
