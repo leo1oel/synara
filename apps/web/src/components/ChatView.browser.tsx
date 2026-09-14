@@ -2222,6 +2222,7 @@ describe("ChatView transcript geometry (full app)", () => {
       // runner's cold route-transform cost before React commits any DOM.
       readyTimeoutMs: 60_000,
     });
+    const originalNativeApi = Object.getOwnPropertyDescriptor(window, "nativeApi");
 
     try {
       await vi.waitFor(() => {
@@ -2267,6 +2268,10 @@ describe("ChatView transcript geometry (full app)", () => {
         /^删除“.+”？\n这会永久清除此对话的历史记录。\n此操作无法撤销。$/u,
       );
     } finally {
+      // The next mount must not inherit the disposed transport captured by
+      // this dialog mock; resetWsNativeApiForTest only resets the web client.
+      if (originalNativeApi) Object.defineProperty(window, "nativeApi", originalNativeApi);
+      else Reflect.deleteProperty(window, "nativeApi");
       await mounted.cleanup();
     }
   });

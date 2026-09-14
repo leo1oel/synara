@@ -177,6 +177,7 @@ const ProjectionLatestTurnDbRowSchema = Schema.Struct({
   assistantMessageId: Schema.NullOr(MessageId),
   sourceProposedPlanThreadId: Schema.NullOr(ThreadId),
   sourceProposedPlanId: Schema.NullOr(OrchestrationProposedPlanId),
+  historyUpdatedAt: Schema.optional(Schema.NullOr(IsoDateTime)),
 });
 const ProjectionStateDbRowSchema = ProjectionState;
 const ProjectionCountsRowSchema = Schema.Struct({
@@ -612,6 +613,7 @@ function collectProjectedLatestTurns(rows: ReadonlyArray<ProjectionLatestTurnDbR
   const byThread = new Map<string, OrchestrationLatestTurn>();
   let updatedAt: string | null = null;
   for (const row of rows) {
+    updatedAt = maxOptionalIso(updatedAt, row.historyUpdatedAt);
     updatedAt = maxIso(updatedAt, row.requestedAt);
     updatedAt = maxOptionalIso(updatedAt, row.startedAt);
     updatedAt = maxOptionalIso(updatedAt, row.completedAt);
@@ -1040,6 +1042,8 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
       `,
   });
 
+  // Rank only identities before loading bodies. Sorting full tool outputs/text
+  // makes SQLite copy the entire history into temporary b-trees before the cap.
   const listThreadMessageRows = SqlSchema.findAll({
     Request: Schema.Void,
     Result: ProjectionThreadMessageDbRowSchema,
@@ -1091,44 +1095,43 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
   });
 
   const listThreadMessageSegmentRows = SqlSchema.findAll({
-    Request: Schema.Void,
+    Request: Schema.Array(Schema.Struct({ threadId: ThreadId, messageId: MessageId })),
     Result: ProjectionThreadMessageSegmentDbRow,
-    execute: () =>
+    execute: (messages) =>
       sql`
         SELECT
-          thread_id AS "threadId",
-          message_id AS "messageId",
-          sequence,
-          started_at AS "startedAt",
-          ${selectSegmentEndedAt(sql, "message_text_segments")},
-          text,
-          text_json AS "encodedText",
-          ${selectMessageTextChunks(sql, "message_text_segments", true)}
-        FROM message_text_segments
-        WHERE thread_id IN (SELECT thread_id FROM projection_threads WHERE deleted_at IS NULL)
-        ORDER BY sequence ASC, message_id ASC
+          segments.thread_id AS "threadId",
+          segments.message_id AS "messageId",
+          segments.sequence,
+          segments.started_at AS "startedAt",
+          ${selectSegmentEndedAt(sql, "segments")},
+          segments.text,
+          segments.text_json AS "encodedText",
+          ${selectMessageTextChunks(sql, "segments", true)}
+        FROM json_each(${JSON.stringify(messages)}) AS selected
+        JOIN message_text_segments AS segments
+          ON segments.thread_id = json_extract(selected.value, '$.threadId')
+          AND segments.message_id = json_extract(selected.value, '$.messageId')
+        ORDER BY segments.sequence ASC, segments.message_id ASC
       `,
   });
 
-  const listThreadMessageSegmentRowsByThread = SqlSchema.findAll({
-    Request: ThreadIdLookupInput,
-    Result: ProjectionThreadMessageSegmentDbRow,
-    execute: ({ threadId }) =>
-      sql`
-        SELECT
-          thread_id AS "threadId",
-          message_id AS "messageId",
-          sequence,
-          started_at AS "startedAt",
-          ${selectSegmentEndedAt(sql, "message_text_segments")},
-          text,
-          text_json AS "encodedText",
-          ${selectMessageTextChunks(sql, "message_text_segments", true)}
-        FROM message_text_segments
-        WHERE thread_id = ${threadId}
-        ORDER BY sequence ASC, message_id ASC
-      `,
-  });
+  // Fetch only segments belonging to the retained message window, including
+  // both identity columns: provider message ids may repeat across threads.
+  const loadMessageSegments = (
+    messages: ReadonlyArray<ProjectionThreadMessageDbRow>,
+    tracePrefix: string,
+  ) =>
+    listThreadMessageSegmentRows(
+      messages.map(({ threadId, messageId }) => ({ threadId, messageId })),
+    ).pipe(
+      Effect.mapError(
+        toPersistenceSqlOrDecodeError(
+          `${tracePrefix}:listMessageSegments:query`,
+          `${tracePrefix}:listMessageSegments:decodeRows`,
+        ),
+      ),
+    );
 
   const listThreadProposedPlanRows = SqlSchema.findAll({
     Request: Schema.Void,
@@ -1161,12 +1164,35 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           tone,
           kind,
           summary,
-          payload_json AS "payload",
+          COALESCE((
+            SELECT CASE WHEN json_type(totals, '$.inputTokens') = 'integer'
+              AND json_type(totals, '$.outputTokens') = 'integer'
+              THEN json_patch(ranked.payload_json, json_object(
+                'cumulativeUsage', json_object(
+                  'inputTokens', json_extract(totals, '$.inputTokens'),
+                  'outputTokens', json_extract(totals, '$.outputTokens'),
+                  'cachedInputTokens', json_extract(totals, '$.cachedInputTokens'),
+                  'cacheCreationInputTokens', json_extract(totals, '$.cacheWriteInputTokens')
+                ),
+                'usageSessionId', session_id
+              )) END
+            FROM (
+              SELECT json_extract(event_json, '$.raw.payload.tokenUsage.total') AS totals,
+                json_extract(event_json, '$.providerRefs.providerThreadId') ||
+                CASE WHEN json_type(event_json, '$.lifecycleGeneration') = 'text'
+                  THEN ':' || json_extract(event_json, '$.lifecycleGeneration') ELSE '' END AS session_id
+              FROM provider_runtime_events
+              WHERE event_id = ranked.activity_id AND thread_id = ranked.thread_id
+                AND ranked.kind = 'context-window.updated'
+                AND json_extract(event_json, '$.provider') = 'codex'
+            )
+          ), ranked.payload_json) AS "payload",
           sequence,
           created_at AS "createdAt"
         FROM (
           SELECT
-            *,
+            thread_id,
+            activity_id,
             ROW_NUMBER() OVER (
               PARTITION BY thread_id
               ORDER BY
@@ -1177,7 +1203,8 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
             ) AS activity_rank
           FROM projection_thread_activities
           WHERE ${liveThreadScope}
-        ) AS ranked
+        ) AS ranks
+        JOIN projection_thread_activities AS ranked USING (thread_id, activity_id)
         WHERE activity_rank <= ${MAX_SNAPSHOT_THREAD_ACTIVITIES}
           OR (
             kind IN ('approval.requested', 'user-input.requested')
@@ -1264,7 +1291,8 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           created_at AS "createdAt"
         FROM (
           SELECT
-            *,
+            thread_id,
+            activity_id,
             ROW_NUMBER() OVER (
               PARTITION BY thread_id
               ORDER BY
@@ -1279,7 +1307,8 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
             'checkpoint.revert.succeeded',
             'checkpoint.revert.failed'
           )
-        ) AS ranked
+        ) AS ranks
+        JOIN projection_thread_activities AS ranked USING (thread_id, activity_id)
         WHERE activity_rank = 1
         ORDER BY thread_id ASC
       `,
@@ -1350,25 +1379,43 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
       `,
   });
 
+  // Seek one turn per thread using the existing (thread_id, requested_at) index.
+  // Keep the history timestamp as a scalar aggregate instead of decoding every
+  // historical turn merely to discard it in collectProjectedLatestTurns.
   const listLatestTurnRows = SqlSchema.findAll({
     Request: Schema.Void,
     Result: ProjectionLatestTurnDbRowSchema,
     execute: () =>
       sql`
         SELECT
-          thread_id AS "threadId",
-          turn_id AS "turnId",
-          pending_message_id AS "pendingMessageId",
-          state,
-          requested_at AS "requestedAt",
-          started_at AS "startedAt",
-          completed_at AS "completedAt",
-          assistant_message_id AS "assistantMessageId",
-          source_proposed_plan_thread_id AS "sourceProposedPlanThreadId",
-          source_proposed_plan_id AS "sourceProposedPlanId"
-        FROM projection_turns
-        WHERE turn_id IS NOT NULL
-        ORDER BY thread_id ASC, requested_at DESC, turn_id DESC
+          latest.thread_id AS "threadId",
+          latest.turn_id AS "turnId",
+          latest.pending_message_id AS "pendingMessageId",
+          latest.state,
+          latest.requested_at AS "requestedAt",
+          latest.started_at AS "startedAt",
+          latest.completed_at AS "completedAt",
+          latest.assistant_message_id AS "assistantMessageId",
+          latest.source_proposed_plan_thread_id AS "sourceProposedPlanThreadId",
+          latest.source_proposed_plan_id AS "sourceProposedPlanId",
+          (
+            SELECT MAX(MAX(
+              requested_at,
+              COALESCE(started_at, requested_at),
+              COALESCE(completed_at, requested_at)
+            ))
+            FROM projection_turns
+            WHERE turn_id IS NOT NULL
+          ) AS "historyUpdatedAt"
+        FROM projection_threads AS threads
+        JOIN projection_turns AS latest ON latest.row_id = (
+          SELECT row_id
+          FROM projection_turns
+          WHERE thread_id = threads.thread_id AND turn_id IS NOT NULL
+          ORDER BY requested_at DESC, turn_id DESC
+          LIMIT 1
+        )
+        ORDER BY latest.thread_id ASC
       `,
   });
 
@@ -1717,7 +1764,9 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
       sql`
         WITH ranked AS (
           SELECT
-            *,
+            thread_id,
+            activity_id,
+            turn_id,
             ROW_NUMBER() OVER (
               PARTITION BY thread_id
               ORDER BY
@@ -1754,14 +1803,37 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         SELECT
           activity_id AS "activityId",
           thread_id AS "threadId",
-          turn_id AS "turnId",
+          ranked.turn_id AS "turnId",
           tone,
           kind,
           summary,
-          payload_json AS "payload",
+          COALESCE((
+            SELECT CASE WHEN json_type(totals, '$.inputTokens') = 'integer'
+              AND json_type(totals, '$.outputTokens') = 'integer'
+              THEN json_patch(activity.payload_json, json_object(
+                'cumulativeUsage', json_object(
+                  'inputTokens', json_extract(totals, '$.inputTokens'),
+                  'outputTokens', json_extract(totals, '$.outputTokens'),
+                  'cachedInputTokens', json_extract(totals, '$.cachedInputTokens'),
+                  'cacheCreationInputTokens', json_extract(totals, '$.cacheWriteInputTokens')
+                ),
+                'usageSessionId', session_id
+              )) END
+            FROM (
+              SELECT json_extract(event_json, '$.raw.payload.tokenUsage.total') AS totals,
+                json_extract(event_json, '$.providerRefs.providerThreadId') ||
+                CASE WHEN json_type(event_json, '$.lifecycleGeneration') = 'text'
+                  THEN ':' || json_extract(event_json, '$.lifecycleGeneration') ELSE '' END AS session_id
+              FROM provider_runtime_events
+              WHERE event_id = ranked.activity_id AND thread_id = ranked.thread_id
+                AND activity.kind = 'context-window.updated'
+                AND json_extract(event_json, '$.provider') = 'codex'
+            )
+          ), activity.payload_json) AS "payload",
           sequence,
           created_at AS "createdAt"
         FROM ranked
+        JOIN projection_thread_activities AS activity USING (thread_id, activity_id)
         WHERE thread_id = ${threadId}
           AND (
             (
@@ -1772,8 +1844,8 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
               AND NOT (
                 EXISTS (SELECT 1 FROM cutoff_turn_state)
                 AND (SELECT cutoff_turn_id FROM cutoff_turn_state) IS NOT NULL
-                AND turn_id IS NOT NULL
-                AND turn_id = (SELECT cutoff_turn_id FROM cutoff_turn_state)
+                AND ranked.turn_id IS NOT NULL
+                AND ranked.turn_id = (SELECT cutoff_turn_id FROM cutoff_turn_state)
                 AND (SELECT is_split FROM cutoff_turn_state)
                 AND (SELECT has_newer_turn FROM cutoff_turn_state)
               )
@@ -1786,11 +1858,11 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
                 FROM projection_thread_activities AS later
                 WHERE later.thread_id = ranked.thread_id
                   AND json_extract(later.payload_json, '$.requestId') =
-                    json_extract(ranked.payload_json, '$.requestId')
+                    json_extract(activity.payload_json, '$.requestId')
                   AND (
-                    (ranked.kind = 'approval.requested' AND later.kind = 'approval.resolved')
+                    (activity.kind = 'approval.requested' AND later.kind = 'approval.resolved')
                     OR (
-                      ranked.kind = 'approval.requested'
+                      activity.kind = 'approval.requested'
                       AND later.kind = 'provider.approval.respond.failed'
                       AND (
                         lower(COALESCE(json_extract(later.payload_json, '$.detail'), '')) LIKE
@@ -1801,9 +1873,9 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
                           '%unknown pending permission request%'
                       )
                     )
-                    OR (ranked.kind = 'user-input.requested' AND later.kind = 'user-input.resolved')
+                    OR (activity.kind = 'user-input.requested' AND later.kind = 'user-input.resolved')
                     OR (
-                      ranked.kind = 'user-input.requested'
+                      activity.kind = 'user-input.requested'
                       AND later.kind = 'provider.user-input.respond.failed'
                       AND (
                         lower(COALESCE(json_extract(later.payload_json, '$.detail'), '')) LIKE
@@ -1815,23 +1887,23 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
                   )
                   AND (
                     CASE WHEN later.sequence IS NULL THEN 0 ELSE 1 END >
-                      CASE WHEN ranked.sequence IS NULL THEN 0 ELSE 1 END
+                      CASE WHEN activity.sequence IS NULL THEN 0 ELSE 1 END
                     OR (
                       CASE WHEN later.sequence IS NULL THEN 0 ELSE 1 END =
-                        CASE WHEN ranked.sequence IS NULL THEN 0 ELSE 1 END
-                      AND COALESCE(later.sequence, -1) > COALESCE(ranked.sequence, -1)
+                        CASE WHEN activity.sequence IS NULL THEN 0 ELSE 1 END
+                      AND COALESCE(later.sequence, -1) > COALESCE(activity.sequence, -1)
                     )
                     OR (
                       CASE WHEN later.sequence IS NULL THEN 0 ELSE 1 END =
-                        CASE WHEN ranked.sequence IS NULL THEN 0 ELSE 1 END
-                      AND COALESCE(later.sequence, -1) = COALESCE(ranked.sequence, -1)
-                      AND later.created_at > ranked.created_at
+                        CASE WHEN activity.sequence IS NULL THEN 0 ELSE 1 END
+                      AND COALESCE(later.sequence, -1) = COALESCE(activity.sequence, -1)
+                      AND later.created_at > activity.created_at
                     )
                     OR (
                       CASE WHEN later.sequence IS NULL THEN 0 ELSE 1 END =
-                        CASE WHEN ranked.sequence IS NULL THEN 0 ELSE 1 END
-                      AND COALESCE(later.sequence, -1) = COALESCE(ranked.sequence, -1)
-                      AND later.created_at = ranked.created_at
+                        CASE WHEN activity.sequence IS NULL THEN 0 ELSE 1 END
+                      AND COALESCE(later.sequence, -1) = COALESCE(activity.sequence, -1)
+                      AND later.created_at = activity.created_at
                       AND later.activity_id > ranked.activity_id
                     )
                   )
@@ -2062,7 +2134,6 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
             projectRows,
             threadRows,
             messageRows,
-            segmentRows,
             proposedPlanRows,
             activityRows,
             pendingInteractionRows,
@@ -2112,14 +2183,6 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
                 toPersistenceSqlOrDecodeError(
                   "ProjectionSnapshotQuery.getSnapshot:listThreadMessages:query",
                   "ProjectionSnapshotQuery.getSnapshot:listThreadMessages:decodeRows",
-                ),
-              ),
-            ),
-            listThreadMessageSegmentRows(undefined).pipe(
-              Effect.mapError(
-                toPersistenceSqlOrDecodeError(
-                  "ProjectionSnapshotQuery.getSnapshot:listThreadMessageSegments:query",
-                  "ProjectionSnapshotQuery.getSnapshot:listThreadMessageSegments:decodeRows",
                 ),
               ),
             ),
@@ -2181,6 +2244,10 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
             ),
           ]);
 
+          const segmentRows = yield* loadMessageSegments(
+            messageRows,
+            "ProjectionSnapshotQuery.getSnapshot",
+          );
           const messages = collectProjectedMessages(
             attachThreadMessageSegments(messageRows, segmentRows),
           );
@@ -2907,7 +2974,6 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
 
       const [
         messageRows,
-        segmentRows,
         proposedPlanRows,
         activityRows,
         pendingInteractionRows,
@@ -2920,14 +2986,6 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
             toPersistenceSqlOrDecodeError(
               `${options.tracePrefix}:listMessages:query`,
               `${options.tracePrefix}:listMessages:decodeRows`,
-            ),
-          ),
-        ),
-        listThreadMessageSegmentRowsByThread({ threadId }).pipe(
-          Effect.mapError(
-            toPersistenceSqlOrDecodeError(
-              `${options.tracePrefix}:listMessageSegments:query`,
-              `${options.tracePrefix}:listMessageSegments:decodeRows`,
             ),
           ),
         ),
@@ -2981,6 +3039,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         ),
       ]);
 
+      const segmentRows = yield* loadMessageSegments(messageRows, options.tracePrefix);
       const thread = toProjectedThread({
         threadRow: threadRow.value,
         latestTurn: Option.match(latestTurnRow, {
