@@ -62,6 +62,7 @@ function installGitApi(
     hasWorkingTreeChanges?: boolean;
     aheadCount?: number;
     refreshGate?: Promise<void>;
+    statusGate?: Promise<void>;
   } = {},
 ) {
   const hasWorkingTreeChanges = options.hasWorkingTreeChanges ?? true;
@@ -98,7 +99,10 @@ function installGitApi(
           hasOriginRemote: true,
         };
       },
-      status: async () => gitStatus(currentBranch, hasWorkingTreeChanges, aheadCount),
+      status: async () => {
+        await options.statusGate;
+        return gitStatus(currentBranch, hasWorkingTreeChanges, aheadCount);
+      },
       readWorkingTreeDiff: async ({ scope }: { scope?: string }) => ({
         patch: scope === "staged" ? "" : patch,
       }),
@@ -466,6 +470,35 @@ describe("GitPanel", () => {
     expect(getComputedStyle(commitAndPushElement!).color).toBe(
       getComputedStyle(branchTrigger!).color,
     );
+  });
+
+  it("waits for remote status before showing the clean state and Git actions", async () => {
+    let releaseStatus!: () => void;
+    const statusGate = new Promise<void>((resolve) => {
+      releaseStatus = resolve;
+    });
+    installGitApi({ hasWorkingTreeChanges: false, aheadCount: 86, statusGate });
+    await renderWithQueryClient(
+      <GitPanel projectId={null} cwdOverride={TEST_CWD} showActions title="Changes" />,
+    );
+    try {
+      await expect.element(page.getByText("Loading changes...", { exact: true })).toBeVisible();
+      await expect
+        .element(page.getByText("No uncommitted changes.", { exact: true }))
+        .not.toBeInTheDocument();
+      await expect.element(page.getByRole("button", { name: "More Git actions" })).toBeDisabled();
+      await expect
+        .element(page.getByRole("button", { name: "Refreshing git status..." }))
+        .toBeDisabled();
+      await page.screenshot();
+    } finally {
+      releaseStatus();
+    }
+    await expect
+      .element(page.getByText("86 local commits have not been pushed.", { exact: true }))
+      .toBeVisible();
+    await expect.element(page.getByRole("button", { name: "More Git actions" })).toBeEnabled();
+    await page.screenshot();
   });
 
   it("uses one consistent clean state and reports committed work waiting to push", async () => {

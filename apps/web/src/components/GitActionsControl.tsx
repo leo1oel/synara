@@ -327,6 +327,7 @@ export default function GitActionsControl({
     data: gitStatusData,
     error: gitStatusError,
     isFetching: isGitStatusFetching,
+    isPending: isGitStatusPending,
   } = useQuery(gitStatusQueryOptions(gitCwd, branchListReady && branchList?.isRepo === true));
   const gitStatus = gitStatusData ?? null;
   const isGitStatusRefreshDelayed = isGitExpensiveReadCapacityError(gitStatusError);
@@ -1736,11 +1737,13 @@ export default function GitActionsControl({
     const showPanelPullRow = showPromotedPullAction;
     // The panel row runs its action on click — exactly like Pull — and the chevron
     // beside it is the only way into the git actions menu (and its dialogs).
-    const panelPrimaryLabel = showPanelPullRow
-      ? localizeGit(promotedPull?.label ?? "Pull")
-      : runnableCommitPushMenuItem
-        ? localizeGit(runnableCommitPushMenuItem.label)
-        : i18n._("Commit and Push");
+    const panelPrimaryLabel = isGitStatusPending
+      ? i18n._("Refreshing git status...")
+      : showPanelPullRow
+        ? localizeGit(promotedPull?.label ?? "Pull")
+        : runnableCommitPushMenuItem
+          ? localizeGit(runnableCommitPushMenuItem.label)
+          : i18n._("Commit and Push");
     const panelPrimaryGlyph: GitGlyphName = showPanelPullRow ? "sync" : "push";
     const runPanelPrimaryAction = () => {
       if (showPanelPullRow) {
@@ -1770,6 +1773,7 @@ export default function GitActionsControl({
               )}
               aria-label={i18n._("More Git actions")}
               title={i18n._("Open Git actions menu")}
+              disabled={isGitStatusPending}
             />
           }
         >
@@ -1810,7 +1814,11 @@ export default function GitActionsControl({
               )}
               aria-label={panelPrimaryLabel}
               title={panelPrimaryLabel}
-              disabled={isGitActionRunning || (!showPanelPullRow && !runnableCommitPushMenuItem)}
+              disabled={
+                isGitStatusPending ||
+                isGitActionRunning ||
+                (!showPanelPullRow && !runnableCommitPushMenuItem)
+              }
               onClick={runPanelPrimaryAction}
             >
               <EnvironmentRowBody

@@ -317,14 +317,18 @@ export function GitPanel(props: {
     : null;
   const selectedPath = selected?.path ?? null;
 
-  const isLoading = stagedQuery.isLoading || unstagedQuery.isLoading;
+  // Diffs can finish before status (upstream/ahead counts). Do not present a
+  // clean repository until all initial reads have resolved.
+  const isLoading = stagedQuery.isPending || unstagedQuery.isPending || statusQuery.isPending;
   const branchError = branchQuery.error instanceof Error ? branchQuery.error.message : null;
   const error =
     stagedQuery.error instanceof Error
       ? stagedQuery.error.message
       : unstagedQuery.error instanceof Error
         ? unstagedQuery.error.message
-        : null;
+        : !statusQuery.data && statusQuery.error instanceof Error
+          ? statusQuery.error.message
+          : null;
   const hasChanges = stagedFiles.length > 0 || unstagedFiles.length > 0;
   const showCleanState = !error && !isLoading && !hasChanges;
   const unpushedCommitCount = statusQuery.data?.hasUpstream ? statusQuery.data.aheadCount : 0;
