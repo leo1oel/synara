@@ -55,8 +55,9 @@ function installBrowserStubs(
   theme: "light" | "dark" = "dark",
   surface: "chrome" | "drawer" = "chrome",
   locale?: string,
+  // Sibling embed frames of one Lattice window share the tab's sessionStorage.
+  values = new Map<string, string>(),
 ) {
-  const values = new Map<string, string>();
   const storage = {
     getItem: (key: string) => values.get(key) ?? null,
     setItem: (key: string, value: string) => values.set(key, value),
@@ -69,18 +70,20 @@ function installBrowserStubs(
     configurable: true,
     value: storage,
   });
+  const frame = {
+    name: "",
+    location: {
+      origin: "http://127.0.0.1:4567",
+      pathname: "/",
+      search: `?embed=1&workspaceRoot=%2FUsers%2Fme%2Fpaper&theme=${theme}&surface=${surface}&hostOrigin=http%3A%2F%2Flocalhost%3A1420${locale ? `&locale=${encodeURIComponent(locale)}` : ""}`,
+      hash: "#lattice-auth=secret-token",
+    },
+    history: { state: null, replaceState },
+    parent: { postMessage },
+  };
   Object.defineProperty(globalThis, "window", {
     configurable: true,
-    value: {
-      location: {
-        origin: "http://127.0.0.1:4567",
-        pathname: "/",
-        search: `?embed=1&workspaceRoot=%2FUsers%2Fme%2Fpaper&theme=${theme}&surface=${surface}&hostOrigin=http%3A%2F%2Flocalhost%3A1420${locale ? `&locale=${encodeURIComponent(locale)}` : ""}`,
-        hash: "#lattice-auth=secret-token",
-      },
-      history: { state: null, replaceState },
-      parent: { postMessage },
-    },
+    value: frame,
   });
   Object.defineProperty(globalThis, "document", {
     configurable: true,
@@ -93,7 +96,7 @@ function installBrowserStubs(
       },
     },
   });
-  return { postMessage, replaceState, setProperty };
+  return { frame, postMessage, replaceState, setProperty, values };
 }
 
 afterEach(() => {
@@ -220,7 +223,7 @@ describe("Lattice embed mode", () => {
     installBrowserStubs();
     initializeEmbedMode();
     sessionStorage.setItem(
-      "synara.poc.embed-mode",
+      "synara.poc.embed-mode:chrome",
       JSON.stringify({
         workspaceRoot: "/Users/me/paper",
         theme: "dark",
@@ -238,6 +241,23 @@ describe("Lattice embed mode", () => {
     initializeEmbedMode();
 
     expect(readEmbedMode()?.hostOrigin).toBe("http://localhost:1420");
+  });
+
+  it("keeps each embed frame's handshake when a sibling frame boots in the same tab", () => {
+    // Lattice's Agent panel (chrome) and its Git/settings drawers are iframes of
+    // one origin in one tab, so they share sessionStorage. A single slot let the
+    // drawer's surface reach the Agent panel, whose next theme apply then
+    // repainted the sidebar with the drawer's lighter surface.
+    const agent = installBrowserStubs("light", "chrome");
+    initializeEmbedMode();
+
+    const drawer = installBrowserStubs("light", "drawer", undefined, agent.values);
+    initializeEmbedMode();
+    expect(readEmbedMode()?.surface).toBe("drawer");
+
+    Object.defineProperty(globalThis, "window", { configurable: true, value: agent.frame });
+    expect(readEmbedMode()?.surface).toBe("chrome");
+    expect(drawer.frame.name).not.toBe(agent.frame.name);
   });
 
   it("clears embed config when a top-level window has no handshake query", () => {

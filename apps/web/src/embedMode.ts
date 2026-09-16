@@ -3,6 +3,7 @@ import { workspaceRootsEqual } from "@synara/shared/threadWorkspace";
 
 const EMBED_MODE_STORAGE_KEY = "synara.poc.embed-mode";
 const EMBED_AUTH_TOKEN_STORAGE_KEY = "synara.poc.embed-auth-token";
+const EMBED_FRAME_NAME_PREFIX = "synara-embed-";
 export const EMBED_UI_FONT_STACK = '"Inter Variable", Inter, "Avenir Next", "Segoe UI", sans-serif';
 
 export const LATTICE_AGENT_PERMISSION_MODE_REQUEST = "lattice:request-agent-permission-mode";
@@ -900,9 +901,33 @@ function readFragmentAuthToken(): string | null {
   return token;
 }
 
+/**
+ * sessionStorage belongs to the tab, not the frame: Lattice's Agent panel, Git
+ * drawer, and settings dialog are three iframes of this same origin, so one
+ * handshake slot means the last frame to boot overwrites the others. That let a
+ * drawer's `surface` reach the Agent panel, and the next `applyThemeState` — it
+ * re-reads the slot — repainted the sidebar with the drawer's lighter surface.
+ * Scope the slot to the surface that booted this frame. `window.name` survives
+ * this frame's own reloads, so the recovery path below can still find its slot
+ * after a route strips the handshake query.
+ */
+function embedFrameSurface(): "chrome" | "drawer" | null {
+  if (typeof window === "undefined") return null;
+  const name = typeof window.name === "string" ? window.name : "";
+  if (!name.startsWith(EMBED_FRAME_NAME_PREFIX)) return null;
+  const surface = name.slice(EMBED_FRAME_NAME_PREFIX.length);
+  return surface === "chrome" || surface === "drawer" ? surface : null;
+}
+
+/** Pre-surface builds shared one slot; keep it as the unnamed-frame fallback. */
+function embedStorageKey(base: string): string {
+  const surface = embedFrameSurface();
+  return surface ? `${base}:${surface}` : base;
+}
+
 export function readEmbeddedHostWsUrl(): string | null {
   if (typeof window === "undefined" || !readEmbedMode()) return null;
-  const token = sessionStorage.getItem(EMBED_AUTH_TOKEN_STORAGE_KEY)?.trim();
+  const token = sessionStorage.getItem(embedStorageKey(EMBED_AUTH_TOKEN_STORAGE_KEY))?.trim();
   if (!token) return null;
   const url = new URL(window.location.origin);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
@@ -1065,11 +1090,14 @@ export function initializeEmbedMode(): void {
       normalizedOrigin(search.get("hostOrigin")) || normalizedOrigin(document.referrer);
     const locale = search.get("locale") === "zh-CN" ? "zh-CN" : "en";
     const config: EmbedModeConfig = { workspaceRoot, theme, surface, hostOrigin, locale };
+    // Claim this frame's storage slot before writing, so sibling embed frames in
+    // the same tab cannot overwrite each other's handshake.
+    window.name = `${EMBED_FRAME_NAME_PREFIX}${surface}`;
     const authToken = readFragmentAuthToken();
     if (authToken) {
-      sessionStorage.setItem(EMBED_AUTH_TOKEN_STORAGE_KEY, authToken);
+      sessionStorage.setItem(embedStorageKey(EMBED_AUTH_TOKEN_STORAGE_KEY), authToken);
     }
-    sessionStorage.setItem(EMBED_MODE_STORAGE_KEY, JSON.stringify(config));
+    sessionStorage.setItem(embedStorageKey(EMBED_MODE_STORAGE_KEY), JSON.stringify(config));
     applyEmbedTheme(config);
     return;
   }
@@ -1085,19 +1113,21 @@ export function initializeEmbedMode(): void {
     const hostOrigin = existing.hostOrigin ?? normalizedOrigin(document.referrer);
     const config = hostOrigin === existing.hostOrigin ? existing : { ...existing, hostOrigin };
     if (config !== existing) {
-      sessionStorage.setItem(EMBED_MODE_STORAGE_KEY, JSON.stringify(config));
+      sessionStorage.setItem(embedStorageKey(EMBED_MODE_STORAGE_KEY), JSON.stringify(config));
     }
     applyEmbedTheme(config);
     return;
   }
 
-  sessionStorage.removeItem(EMBED_MODE_STORAGE_KEY);
-  sessionStorage.removeItem(EMBED_AUTH_TOKEN_STORAGE_KEY);
+  sessionStorage.removeItem(embedStorageKey(EMBED_MODE_STORAGE_KEY));
+  sessionStorage.removeItem(embedStorageKey(EMBED_AUTH_TOKEN_STORAGE_KEY));
 }
 
 export function readEmbedMode(): EmbedModeConfig | null {
   try {
-    const parsed = JSON.parse(sessionStorage.getItem(EMBED_MODE_STORAGE_KEY) ?? "null") as unknown;
+    const parsed = JSON.parse(
+      sessionStorage.getItem(embedStorageKey(EMBED_MODE_STORAGE_KEY)) ?? "null",
+    ) as unknown;
     if (!parsed || typeof parsed !== "object" || !("workspaceRoot" in parsed)) return null;
     const workspaceRoot = String(parsed.workspaceRoot).trim();
     const theme = "theme" in parsed && parsed.theme === "dark" ? "dark" : "light";
