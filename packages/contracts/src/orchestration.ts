@@ -80,11 +80,17 @@ export const ProviderSandboxMode = Schema.Literals([
 export type ProviderSandboxMode = typeof ProviderSandboxMode.Type;
 export const DEFAULT_PROVIDER_KIND: ProviderKind = "codex";
 
-export const CodexModelSelection = Schema.Struct({
-  provider: Schema.Literal("codex"),
-  model: TrimmedNonEmptyString,
-  options: Schema.optional(CodexModelOptions),
-});
+const modelSelection = <const Kind extends ProviderKind, Options extends Schema.Top>(
+  provider: Kind,
+  options: Options,
+) =>
+  Schema.Struct({
+    provider: Schema.Literal(provider),
+    model: TrimmedNonEmptyString,
+    options: Schema.optional(options),
+  });
+
+export const CodexModelSelection = modelSelection("codex", CodexModelOptions);
 export type CodexModelSelection = typeof CodexModelSelection.Type;
 
 export const ClaudeModelSelection = Schema.Struct({
@@ -95,53 +101,25 @@ export const ClaudeModelSelection = Schema.Struct({
 });
 export type ClaudeModelSelection = typeof ClaudeModelSelection.Type;
 
-export const CursorModelSelection = Schema.Struct({
-  provider: Schema.Literal("cursor"),
-  model: TrimmedNonEmptyString,
-  options: Schema.optional(CursorModelOptions),
-});
+export const CursorModelSelection = modelSelection("cursor", CursorModelOptions);
 export type CursorModelSelection = typeof CursorModelSelection.Type;
 
-export const AntigravityModelSelection = Schema.Struct({
-  provider: Schema.Literal("antigravity"),
-  model: TrimmedNonEmptyString,
-  options: Schema.optional(AntigravityModelOptions),
-});
+export const AntigravityModelSelection = modelSelection("antigravity", AntigravityModelOptions);
 export type AntigravityModelSelection = typeof AntigravityModelSelection.Type;
 
-export const GrokModelSelection = Schema.Struct({
-  provider: Schema.Literal("grok"),
-  model: TrimmedNonEmptyString,
-  options: Schema.optional(GrokModelOptions),
-});
+export const GrokModelSelection = modelSelection("grok", GrokModelOptions);
 export type GrokModelSelection = typeof GrokModelSelection.Type;
 
-export const DroidModelSelection = Schema.Struct({
-  provider: Schema.Literal("droid"),
-  model: TrimmedNonEmptyString,
-  options: Schema.optional(DroidModelOptions),
-});
+export const DroidModelSelection = modelSelection("droid", DroidModelOptions);
 export type DroidModelSelection = typeof DroidModelSelection.Type;
 
-export const OpenCodeModelSelection = Schema.Struct({
-  provider: Schema.Literal("opencode"),
-  model: TrimmedNonEmptyString,
-  options: Schema.optional(OpenCodeModelOptions),
-});
+export const OpenCodeModelSelection = modelSelection("opencode", OpenCodeModelOptions);
 export type OpenCodeModelSelection = typeof OpenCodeModelSelection.Type;
 
-export const KiloModelSelection = Schema.Struct({
-  provider: Schema.Literal("kilo"),
-  model: TrimmedNonEmptyString,
-  options: Schema.optional(OpenCodeModelOptions),
-});
+export const KiloModelSelection = modelSelection("kilo", OpenCodeModelOptions);
 export type KiloModelSelection = typeof KiloModelSelection.Type;
 
-export const PiModelSelection = Schema.Struct({
-  provider: Schema.Literal("pi"),
-  model: TrimmedNonEmptyString,
-  options: Schema.optional(PiModelOptions),
-});
+export const PiModelSelection = modelSelection("pi", PiModelOptions);
 export type PiModelSelection = typeof PiModelSelection.Type;
 
 export const ModelSelection = Schema.Union([
@@ -157,47 +135,38 @@ export const ModelSelection = Schema.Union([
 ]);
 export type ModelSelection = typeof ModelSelection.Type;
 
-export const CodexProviderStartOptions = Schema.Struct({
-  binaryPath: Schema.optional(TrimmedNonEmptyString),
+const providerStartOptions = <Fields extends Schema.Struct.Fields>(fields: Fields) =>
+  Schema.Struct({ binaryPath: Schema.optional(TrimmedNonEmptyString), ...fields });
+
+export const CodexProviderStartOptions = providerStartOptions({
   homePath: Schema.optional(TrimmedNonEmptyString),
 });
 
-export const ClaudeProviderStartOptions = Schema.Struct({
-  binaryPath: Schema.optional(TrimmedNonEmptyString),
+export const ClaudeProviderStartOptions = providerStartOptions({
   permissionMode: Schema.optional(TrimmedNonEmptyString),
   maxThinkingTokens: Schema.optional(NonNegativeInt),
 });
 
-export const AntigravityProviderStartOptions = Schema.Struct({
-  binaryPath: Schema.optional(TrimmedNonEmptyString),
-});
+export const AntigravityProviderStartOptions = providerStartOptions({});
 
-export const CursorProviderStartOptions = Schema.Struct({
-  binaryPath: Schema.optional(TrimmedNonEmptyString),
+export const CursorProviderStartOptions = providerStartOptions({
   apiEndpoint: Schema.optional(TrimmedNonEmptyString),
 });
 
-export const GrokProviderStartOptions = Schema.Struct({
-  binaryPath: Schema.optional(TrimmedNonEmptyString),
-});
+export const GrokProviderStartOptions = providerStartOptions({});
 
-export const DroidProviderStartOptions = Schema.Struct({
-  binaryPath: Schema.optional(TrimmedNonEmptyString),
-});
+export const DroidProviderStartOptions = providerStartOptions({});
 
-export const OpenCodeProviderStartOptions = Schema.Struct({
-  binaryPath: Schema.optional(TrimmedNonEmptyString),
+export const OpenCodeProviderStartOptions = providerStartOptions({
   serverUrl: Schema.optional(TrimmedNonEmptyString),
   experimentalWebSockets: Schema.optional(Schema.Boolean),
 });
 
-export const KiloProviderStartOptions = Schema.Struct({
-  binaryPath: Schema.optional(TrimmedNonEmptyString),
+export const KiloProviderStartOptions = providerStartOptions({
   serverUrl: Schema.optional(TrimmedNonEmptyString),
 });
 
-export const PiProviderStartOptions = Schema.Struct({
-  binaryPath: Schema.optional(TrimmedNonEmptyString),
+export const PiProviderStartOptions = providerStartOptions({
   agentDir: Schema.optional(TrimmedNonEmptyString),
 });
 

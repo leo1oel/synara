@@ -9,7 +9,6 @@ import {
   type ClaudeCodeEffort,
   type CodexModelOptions,
   type GrokModelOptions,
-  type GrokReasoningEffort,
   type ModelCapabilities,
   type ModelSelection,
   type ModelSlug,
@@ -640,11 +639,11 @@ export function claudeSelectionRequiresRestart(
   return prev.maxEffort !== desired.maxEffort;
 }
 
-export function normalizeGrokModelOptions(
-  model: string | null | undefined,
-  modelOptions: GrokModelOptions | null | undefined,
-): GrokModelOptions | undefined {
-  const caps = getModelCapabilities("grok", model);
+// Shared "effort validated against capabilities, omitted when default" rule.
+function normalizeReasoningEffortOptions<Options extends { reasoningEffort?: string | undefined }>(
+  caps: ModelCapabilities,
+  modelOptions: Options | null | undefined,
+): Options | undefined {
   const reasoningEffort = trimOrNull(modelOptions?.reasoningEffort);
   if (!reasoningEffort || !hasEffortLevel(caps, reasoningEffort)) {
     return undefined;
@@ -652,7 +651,14 @@ export function normalizeGrokModelOptions(
   if (reasoningEffort === getDefaultEffort(caps)) {
     return undefined;
   }
-  return { reasoningEffort: reasoningEffort as GrokReasoningEffort };
+  return { reasoningEffort } as Options;
+}
+
+export function normalizeGrokModelOptions(
+  model: string | null | undefined,
+  modelOptions: GrokModelOptions | null | undefined,
+): GrokModelOptions | undefined {
+  return normalizeReasoningEffortOptions(getModelCapabilities("grok", model), modelOptions);
 }
 
 export function normalizeAntigravityModelOptions(
@@ -660,14 +666,7 @@ export function normalizeAntigravityModelOptions(
   modelOptions: AntigravityModelOptions | null | undefined,
   capabilities: ModelCapabilities = getModelCapabilities("antigravity", model),
 ): AntigravityModelOptions | undefined {
-  const reasoningEffort = trimOrNull(modelOptions?.reasoningEffort);
-  if (!reasoningEffort || !hasEffortLevel(capabilities, reasoningEffort)) {
-    return undefined;
-  }
-  if (reasoningEffort === getDefaultEffort(capabilities)) {
-    return undefined;
-  }
-  return { reasoningEffort };
+  return normalizeReasoningEffortOptions(capabilities, modelOptions);
 }
 
 export function normalizePiModelOptions(

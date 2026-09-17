@@ -211,318 +211,270 @@ export class WsRpcError extends Schema.TaggedErrorClass<WsRpcError>()("WsRpcErro
   retryAfterMs: Schema.optional(Schema.Number),
 }) {}
 
-export const WsBootstrapNegotiateRpc = Rpc.make(WS_BOOTSTRAP_METHOD, {
+// Every WS endpoint below carries WsRpcError unless it declares its own error schema.
+const wsRpc = <
+  const Tag extends string,
+  Payload extends Schema.Struct.Fields | Schema.Top = Schema.Void,
+  Success extends Schema.Top = Schema.Void,
+  Error extends Schema.Top = typeof WsRpcError,
+  const Stream extends boolean = false,
+>(
+  tag: Tag,
+  options: {
+    readonly payload?: Payload;
+    readonly success?: Success;
+    readonly error?: Error;
+    readonly stream?: Stream;
+  },
+) => Rpc.make(tag, { ...options, error: options.error ?? WsRpcError });
+
+export const WsBootstrapNegotiateRpc = wsRpc(WS_BOOTSTRAP_METHOD, {
   payload: WsBootstrapNegotiateInput,
   success: WsBootstrapNegotiateResult,
   error: WsCompatibilityError,
 });
 
-export const WsOrchestrationDispatchCommandRpc = Rpc.make(
-  ORCHESTRATION_WS_METHODS.dispatchCommand,
-  {
-    payload: ClientOrchestrationCommand,
-    success: OrchestrationRpcSchemas.dispatchCommand.output,
-    error: WsRpcError,
-  },
-);
+export const WsOrchestrationDispatchCommandRpc = wsRpc(ORCHESTRATION_WS_METHODS.dispatchCommand, {
+  payload: ClientOrchestrationCommand,
+  success: OrchestrationRpcSchemas.dispatchCommand.output,
+});
 
-export const WsOrchestrationImportThreadRpc = Rpc.make(ORCHESTRATION_WS_METHODS.importThread, {
+export const WsOrchestrationImportThreadRpc = wsRpc(ORCHESTRATION_WS_METHODS.importThread, {
   payload: OrchestrationImportThreadInput,
   success: OrchestrationImportThreadResult,
-  error: WsRpcError,
 });
 
-export const WsOrchestrationGetSnapshotRpc = Rpc.make(ORCHESTRATION_WS_METHODS.getSnapshot, {
+export const WsOrchestrationGetSnapshotRpc = wsRpc(ORCHESTRATION_WS_METHODS.getSnapshot, {
   payload: OrchestrationRpcSchemas.getSnapshot.input,
   success: OrchestrationRpcSchemas.getSnapshot.output,
-  error: WsRpcError,
 });
 
-export const WsOrchestrationGetShellSnapshotRpc = Rpc.make(
-  ORCHESTRATION_WS_METHODS.getShellSnapshot,
-  {
-    payload: OrchestrationRpcSchemas.getShellSnapshot.input,
-    success: OrchestrationRpcSchemas.getShellSnapshot.output,
-    error: WsRpcError,
-  },
-);
+export const WsOrchestrationGetShellSnapshotRpc = wsRpc(ORCHESTRATION_WS_METHODS.getShellSnapshot, {
+  payload: OrchestrationRpcSchemas.getShellSnapshot.input,
+  success: OrchestrationRpcSchemas.getShellSnapshot.output,
+});
 
-export const WsOrchestrationRepairStateRpc = Rpc.make(ORCHESTRATION_WS_METHODS.repairState, {
+export const WsOrchestrationRepairStateRpc = wsRpc(ORCHESTRATION_WS_METHODS.repairState, {
   payload: OrchestrationRpcSchemas.repairState.input,
   success: OrchestrationRpcSchemas.repairState.output,
-  error: WsRpcError,
 });
 
-export const WsOrchestrationGetTurnDiffRpc = Rpc.make(ORCHESTRATION_WS_METHODS.getTurnDiff, {
+export const WsOrchestrationGetTurnDiffRpc = wsRpc(ORCHESTRATION_WS_METHODS.getTurnDiff, {
   payload: OrchestrationRpcSchemas.getTurnDiff.input,
   success: OrchestrationRpcSchemas.getTurnDiff.output,
-  error: WsRpcError,
 });
 
-export const WsOrchestrationGetFullThreadDiffRpc = Rpc.make(
+export const WsOrchestrationGetFullThreadDiffRpc = wsRpc(
   ORCHESTRATION_WS_METHODS.getFullThreadDiff,
   {
     payload: OrchestrationRpcSchemas.getFullThreadDiff.input,
     success: OrchestrationRpcSchemas.getFullThreadDiff.output,
-    error: WsRpcError,
   },
 );
 
-export const WsOrchestrationGetThreadDetailSnapshotRpc = Rpc.make(
+export const WsOrchestrationGetThreadDetailSnapshotRpc = wsRpc(
   ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot,
   {
     payload: OrchestrationRpcSchemas.getThreadDetailSnapshot.input,
     success: OrchestrationRpcSchemas.getThreadDetailSnapshot.output,
-    error: WsRpcError,
   },
 );
 
-export const WsOrchestrationReplayEventsRpc = Rpc.make(ORCHESTRATION_WS_METHODS.replayEvents, {
+export const WsOrchestrationReplayEventsRpc = wsRpc(ORCHESTRATION_WS_METHODS.replayEvents, {
   payload: OrchestrationRpcSchemas.replayEvents.input,
   success: OrchestrationRpcSchemas.replayEvents.output,
-  error: WsRpcError,
 });
 
-export const WsOrchestrationListProviderDeliveryBlockersRpc = Rpc.make(
+export const WsOrchestrationListProviderDeliveryBlockersRpc = wsRpc(
   ORCHESTRATION_WS_METHODS.listProviderDeliveryBlockers,
   {
     payload: OrchestrationRpcSchemas.listProviderDeliveryBlockers.input,
     success: OrchestrationRpcSchemas.listProviderDeliveryBlockers.output,
-    error: WsRpcError,
   },
 );
 
-export const WsOrchestrationReconcileProviderDeliveryRpc = Rpc.make(
+export const WsOrchestrationReconcileProviderDeliveryRpc = wsRpc(
   ORCHESTRATION_WS_METHODS.reconcileProviderDelivery,
   {
     payload: OrchestrationRpcSchemas.reconcileProviderDelivery.input,
     success: OrchestrationRpcSchemas.reconcileProviderDelivery.output,
-    error: WsRpcError,
   },
 );
 
-export const WsOrchestrationSubscribeShellRpc = Rpc.make(ORCHESTRATION_WS_METHODS.subscribeShell, {
+export const WsOrchestrationSubscribeShellRpc = wsRpc(ORCHESTRATION_WS_METHODS.subscribeShell, {
   payload: OrchestrationRpcSchemas.subscribeShell.input,
   success: OrchestrationShellStreamItem,
-  error: WsRpcError,
   stream: true,
 });
 
-export const WsOrchestrationUnsubscribeShellRpc = Rpc.make(
-  ORCHESTRATION_WS_METHODS.unsubscribeShell,
-  {
-    payload: OrchestrationRpcSchemas.unsubscribeShell.input,
-    success: Schema.Void,
-    error: WsRpcError,
-  },
-);
+export const WsOrchestrationUnsubscribeShellRpc = wsRpc(ORCHESTRATION_WS_METHODS.unsubscribeShell, {
+  payload: OrchestrationRpcSchemas.unsubscribeShell.input,
+  success: Schema.Void,
+});
 
-export const WsOrchestrationSubscribeThreadRpc = Rpc.make(
-  ORCHESTRATION_WS_METHODS.subscribeThread,
-  {
-    payload: OrchestrationRpcSchemas.subscribeThread.input,
-    success: OrchestrationThreadStreamItem,
-    error: WsRpcError,
-    stream: true,
-  },
-);
+export const WsOrchestrationSubscribeThreadRpc = wsRpc(ORCHESTRATION_WS_METHODS.subscribeThread, {
+  payload: OrchestrationRpcSchemas.subscribeThread.input,
+  success: OrchestrationThreadStreamItem,
+  stream: true,
+});
 
-export const WsOrchestrationSubscribeDomainEventsRpc = Rpc.make(
+export const WsOrchestrationSubscribeDomainEventsRpc = wsRpc(
   WS_METHODS.subscribeOrchestrationDomainEvents,
-  {
-    payload: Schema.Struct({}),
-    success: OrchestrationEvent,
-    error: WsRpcError,
-    stream: true,
-  },
+  { payload: Schema.Struct({}), success: OrchestrationEvent, stream: true },
 );
 
-export const WsOrchestrationUnsubscribeThreadRpc = Rpc.make(
+export const WsOrchestrationUnsubscribeThreadRpc = wsRpc(
   ORCHESTRATION_WS_METHODS.unsubscribeThread,
-  {
-    payload: OrchestrationRpcSchemas.unsubscribeThread.input,
-    success: Schema.Void,
-    error: WsRpcError,
-  },
+  { payload: OrchestrationRpcSchemas.unsubscribeThread.input, success: Schema.Void },
 );
 
-export const WsProjectsListDirectoriesRpc = Rpc.make(WS_METHODS.projectsListDirectories, {
+export const WsProjectsListDirectoriesRpc = wsRpc(WS_METHODS.projectsListDirectories, {
   payload: ProjectListDirectoriesInput,
   success: ProjectListDirectoriesResult,
-  error: WsRpcError,
 });
 
-export const WsProjectsDiscoverScriptsRpc = Rpc.make(WS_METHODS.projectsDiscoverScripts, {
+export const WsProjectsDiscoverScriptsRpc = wsRpc(WS_METHODS.projectsDiscoverScripts, {
   payload: ProjectDiscoverScriptsInput,
   success: ProjectDiscoverScriptsResult,
-  error: WsRpcError,
 });
 
-export const WsProjectsSearchEntriesRpc = Rpc.make(WS_METHODS.projectsSearchEntries, {
+export const WsProjectsSearchEntriesRpc = wsRpc(WS_METHODS.projectsSearchEntries, {
   payload: ProjectSearchEntriesInput,
   success: ProjectSearchEntriesResult,
-  error: WsRpcError,
 });
 
-export const WsProjectsSearchLocalEntriesRpc = Rpc.make(WS_METHODS.projectsSearchLocalEntries, {
+export const WsProjectsSearchLocalEntriesRpc = wsRpc(WS_METHODS.projectsSearchLocalEntries, {
   payload: ProjectSearchLocalEntriesInput,
   success: ProjectSearchLocalEntriesResult,
-  error: WsRpcError,
 });
 
-export const WsProjectsReadFileRpc = Rpc.make(WS_METHODS.projectsReadFile, {
+export const WsProjectsReadFileRpc = wsRpc(WS_METHODS.projectsReadFile, {
   payload: ProjectReadFileInput,
   success: ProjectReadFileResult,
-  error: WsRpcError,
 });
 
-export const WsProjectsResolveOutOfRootFileReferenceRpc = Rpc.make(
+export const WsProjectsResolveOutOfRootFileReferenceRpc = wsRpc(
   WS_METHODS.projectsResolveOutOfRootFileReference,
   {
     payload: ProjectResolveOutOfRootFileReferenceInput,
     success: ProjectResolveOutOfRootFileReferenceResult,
-    error: WsRpcError,
   },
 );
 
-export const WsProjectsCreateLocalFilePreviewGrantRpc = Rpc.make(
+export const WsProjectsCreateLocalFilePreviewGrantRpc = wsRpc(
   WS_METHODS.projectsCreateLocalFilePreviewGrant,
   {
     payload: ProjectCreateLocalFilePreviewGrantInput,
     success: ProjectCreateLocalFilePreviewGrantResult,
-    error: WsRpcError,
   },
 );
 
-export const WsProjectsWriteFileRpc = Rpc.make(WS_METHODS.projectsWriteFile, {
+export const WsProjectsWriteFileRpc = wsRpc(WS_METHODS.projectsWriteFile, {
   payload: ProjectWriteFileInput,
   success: ProjectWriteFileResult,
-  error: WsRpcError,
 });
 
-export const WsProjectsRunDevServerRpc = Rpc.make(WS_METHODS.projectsRunDevServer, {
+export const WsProjectsRunDevServerRpc = wsRpc(WS_METHODS.projectsRunDevServer, {
   payload: ProjectRunDevServerInput,
   success: ProjectRunDevServerResult,
-  error: WsRpcError,
 });
 
-export const WsProjectsStopDevServerRpc = Rpc.make(WS_METHODS.projectsStopDevServer, {
+export const WsProjectsStopDevServerRpc = wsRpc(WS_METHODS.projectsStopDevServer, {
   payload: ProjectStopDevServerInput,
   success: ProjectStopDevServerResult,
-  error: WsRpcError,
 });
 
-export const WsProjectsListDevServersRpc = Rpc.make(WS_METHODS.projectsListDevServers, {
+export const WsProjectsListDevServersRpc = wsRpc(WS_METHODS.projectsListDevServers, {
   payload: Schema.Struct({}),
   success: ProjectListDevServersResult,
-  error: WsRpcError,
 });
 
-export const WsSubscribeProjectDevServerEventsRpc = Rpc.make(
+export const WsSubscribeProjectDevServerEventsRpc = wsRpc(
   WS_METHODS.subscribeProjectDevServerEvents,
-  {
-    payload: Schema.Struct({}),
-    success: ProjectDevServerEvent,
-    error: WsRpcError,
-    stream: true,
-  },
+  { payload: Schema.Struct({}), success: ProjectDevServerEvent, stream: true },
 );
 
-export const WsProjectsProvisionFromGitHubRpc = Rpc.make(WS_METHODS.projectsProvisionFromGitHub, {
+export const WsProjectsProvisionFromGitHubRpc = wsRpc(WS_METHODS.projectsProvisionFromGitHub, {
   payload: GitHubProjectProvisionInput,
   success: GitHubProjectProvisionProgressEvent,
-  error: WsRpcError,
   stream: true,
 });
 
-export const WsStudioListThreadOutputsRpc = Rpc.make(WS_METHODS.studioListThreadOutputs, {
+export const WsStudioListThreadOutputsRpc = wsRpc(WS_METHODS.studioListThreadOutputs, {
   payload: StudioListThreadOutputsInput,
   success: StudioListThreadOutputsResult,
-  error: WsRpcError,
 });
 
-export const WsFilesystemBrowseRpc = Rpc.make(WS_METHODS.filesystemBrowse, {
+export const WsFilesystemBrowseRpc = wsRpc(WS_METHODS.filesystemBrowse, {
   payload: FilesystemBrowseInput,
   success: FilesystemBrowseResult,
-  error: WsRpcError,
 });
 
-export const WsShellOpenInEditorRpc = Rpc.make(WS_METHODS.shellOpenInEditor, {
+export const WsShellOpenInEditorRpc = wsRpc(WS_METHODS.shellOpenInEditor, {
   payload: OpenInEditorInput,
   success: Schema.Void,
-  error: WsRpcError,
 });
 
-export const WsGitStatusRpc = Rpc.make(WS_METHODS.gitStatus, {
+export const WsGitStatusRpc = wsRpc(WS_METHODS.gitStatus, {
   payload: GitStatusInput,
   success: GitStatusResult,
-  error: WsRpcError,
 });
 
-export const WsGitGithubRepositoryRpc = Rpc.make(WS_METHODS.gitGithubRepository, {
+export const WsGitGithubRepositoryRpc = wsRpc(WS_METHODS.gitGithubRepository, {
   payload: GitHubRepositoryInput,
   success: GitHubRepositoryResult,
-  error: WsRpcError,
 });
 
-export const WsGitReadWorkingTreeDiffRpc = Rpc.make(WS_METHODS.gitReadWorkingTreeDiff, {
+export const WsGitReadWorkingTreeDiffRpc = wsRpc(WS_METHODS.gitReadWorkingTreeDiff, {
   payload: GitReadWorkingTreeDiffInput,
   success: GitReadWorkingTreeDiffResult,
-  error: WsRpcError,
 });
 
-export const WsGitWorkingTreeDiffStatsRpc = Rpc.make(WS_METHODS.gitWorkingTreeDiffStats, {
+export const WsGitWorkingTreeDiffStatsRpc = wsRpc(WS_METHODS.gitWorkingTreeDiffStats, {
   payload: GitReadWorkingTreeDiffInput,
   success: GitWorkingTreeDiffStatsResult,
-  error: WsRpcError,
 });
 
-export const WsGitSummarizeDiffRpc = Rpc.make(WS_METHODS.gitSummarizeDiff, {
+export const WsGitSummarizeDiffRpc = wsRpc(WS_METHODS.gitSummarizeDiff, {
   payload: GitSummarizeDiffInput,
   success: GitSummarizeDiffResult,
-  error: WsRpcError,
 });
 
-export const WsGitPullRpc = Rpc.make(WS_METHODS.gitPull, {
+export const WsGitPullRpc = wsRpc(WS_METHODS.gitPull, {
   payload: GitPullInput,
   success: GitPullResult,
-  error: WsRpcError,
 });
 
-export const WsGitRunStackedActionRpc = Rpc.make(WS_METHODS.gitRunStackedAction, {
+export const WsGitRunStackedActionRpc = wsRpc(WS_METHODS.gitRunStackedAction, {
   payload: GitRunStackedActionInput,
   success: GitActionProgressEvent,
-  error: WsRpcError,
   stream: true,
 });
 
-export const WsGitResolvePullRequestRpc = Rpc.make(WS_METHODS.gitResolvePullRequest, {
+export const WsGitResolvePullRequestRpc = wsRpc(WS_METHODS.gitResolvePullRequest, {
   payload: GitPullRequestRefInput,
   success: GitResolvePullRequestResult,
-  error: WsRpcError,
 });
 
-export const WsGitPullRequestSnapshotRpc = Rpc.make(WS_METHODS.gitPullRequestSnapshot, {
+export const WsGitPullRequestSnapshotRpc = wsRpc(WS_METHODS.gitPullRequestSnapshot, {
   payload: GitPullRequestSnapshotInput,
   success: GitPullRequestSnapshotResult,
-  error: WsRpcError,
 });
 
-export const WsGitPreparePullRequestThreadRpc = Rpc.make(WS_METHODS.gitPreparePullRequestThread, {
+export const WsGitPreparePullRequestThreadRpc = wsRpc(WS_METHODS.gitPreparePullRequestThread, {
   payload: GitPreparePullRequestThreadInput,
   success: GitPreparePullRequestThreadResult,
-  error: WsRpcError,
 });
 
 const PullRequestsRpcError = Schema.Union([PullRequestsUnavailableError, WsRpcError]);
 
-export const WsPullRequestsListRpc = Rpc.make(WS_METHODS.pullRequestsList, {
+export const WsPullRequestsListRpc = wsRpc(WS_METHODS.pullRequestsList, {
   payload: PullRequestsListInput,
   success: PullRequestsListResult,
   error: PullRequestsRpcError,
 });
 
-export const WsPullRequestsReviewRequestCountRpc = Rpc.make(
+export const WsPullRequestsReviewRequestCountRpc = wsRpc(
   WS_METHODS.pullRequestsReviewRequestCount,
   {
     payload: PullRequestReviewRequestCountInput,
@@ -531,19 +483,19 @@ export const WsPullRequestsReviewRequestCountRpc = Rpc.make(
   },
 );
 
-export const WsPullRequestsDetailRpc = Rpc.make(WS_METHODS.pullRequestsDetail, {
+export const WsPullRequestsDetailRpc = wsRpc(WS_METHODS.pullRequestsDetail, {
   payload: PullRequestDetailInput,
   success: PullRequestDetail,
   error: PullRequestsRpcError,
 });
 
-export const WsPullRequestsDiffRpc = Rpc.make(WS_METHODS.pullRequestsDiff, {
+export const WsPullRequestsDiffRpc = wsRpc(WS_METHODS.pullRequestsDiff, {
   payload: PullRequestDetailInput,
   success: PullRequestDiffResult,
   error: PullRequestsRpcError,
 });
 
-export const WsPullRequestsActionRpc = Rpc.make(WS_METHODS.pullRequestsAction, {
+export const WsPullRequestsActionRpc = wsRpc(WS_METHODS.pullRequestsAction, {
   payload: PullRequestActionInput,
   success: PullRequestActionResult,
   error: PullRequestsRpcError,
@@ -551,459 +503,368 @@ export const WsPullRequestsActionRpc = Rpc.make(WS_METHODS.pullRequestsAction, {
 
 // Comments reuse the action acknowledgment shape: the mutation is confirmed independently of
 // the follow-up detail refetch that surfaces the new comment.
-export const WsPullRequestsCommentRpc = Rpc.make(WS_METHODS.pullRequestsComment, {
+export const WsPullRequestsCommentRpc = wsRpc(WS_METHODS.pullRequestsComment, {
   payload: PullRequestCommentInput,
   success: PullRequestActionResult,
   error: PullRequestsRpcError,
 });
 
-export const WsPullRequestsSetPinnedRpc = Rpc.make(WS_METHODS.pullRequestsSetPinned, {
+export const WsPullRequestsSetPinnedRpc = wsRpc(WS_METHODS.pullRequestsSetPinned, {
   payload: PullRequestSetPinnedInput,
   success: PullRequestSetPinnedResult,
-  error: WsRpcError,
 });
 
-export const WsGitListBranchesRpc = Rpc.make(WS_METHODS.gitListBranches, {
+export const WsGitListBranchesRpc = wsRpc(WS_METHODS.gitListBranches, {
   payload: GitListBranchesInput,
   success: GitListBranchesResult,
-  error: WsRpcError,
 });
 
-export const WsGitCreateWorktreeRpc = Rpc.make(WS_METHODS.gitCreateWorktree, {
+export const WsGitCreateWorktreeRpc = wsRpc(WS_METHODS.gitCreateWorktree, {
   payload: GitCreateWorktreeInput,
   success: GitCreateWorktreeResult,
-  error: WsRpcError,
 });
 
-export const WsGitCreateDetachedWorktreeRpc = Rpc.make(WS_METHODS.gitCreateDetachedWorktree, {
+export const WsGitCreateDetachedWorktreeRpc = wsRpc(WS_METHODS.gitCreateDetachedWorktree, {
   payload: GitCreateDetachedWorktreeInput,
   success: GitCreateDetachedWorktreeResult,
-  error: WsRpcError,
 });
 
-export const WsGitRemoveWorktreeRpc = Rpc.make(WS_METHODS.gitRemoveWorktree, {
+export const WsGitRemoveWorktreeRpc = wsRpc(WS_METHODS.gitRemoveWorktree, {
   payload: GitRemoveWorktreeInput,
   success: Schema.Void,
-  error: WsRpcError,
 });
 
-export const WsGitCreateBranchRpc = Rpc.make(WS_METHODS.gitCreateBranch, {
+export const WsGitCreateBranchRpc = wsRpc(WS_METHODS.gitCreateBranch, {
   payload: GitCreateBranchInput,
   success: Schema.Void,
-  error: WsRpcError,
 });
 
-export const WsGitCheckoutRpc = Rpc.make(WS_METHODS.gitCheckout, {
+export const WsGitCheckoutRpc = wsRpc(WS_METHODS.gitCheckout, {
   payload: GitCheckoutInput,
   success: Schema.Void,
-  error: WsRpcError,
 });
 
-export const WsGitStashAndCheckoutRpc = Rpc.make(WS_METHODS.gitStashAndCheckout, {
+export const WsGitStashAndCheckoutRpc = wsRpc(WS_METHODS.gitStashAndCheckout, {
   payload: GitStashAndCheckoutInput,
   success: Schema.Void,
-  error: WsRpcError,
 });
 
-export const WsGitStashDropRpc = Rpc.make(WS_METHODS.gitStashDrop, {
+export const WsGitStashDropRpc = wsRpc(WS_METHODS.gitStashDrop, {
   payload: GitStashDropInput,
   success: Schema.Void,
-  error: WsRpcError,
 });
 
-export const WsGitStashInfoRpc = Rpc.make(WS_METHODS.gitStashInfo, {
+export const WsGitStashInfoRpc = wsRpc(WS_METHODS.gitStashInfo, {
   payload: GitStashInfoInput,
   success: GitStashInfoResult,
-  error: WsRpcError,
 });
 
-export const WsGitRemoveIndexLockRpc = Rpc.make(WS_METHODS.gitRemoveIndexLock, {
+export const WsGitRemoveIndexLockRpc = wsRpc(WS_METHODS.gitRemoveIndexLock, {
   payload: GitRemoveIndexLockInput,
   success: Schema.Void,
-  error: WsRpcError,
 });
 
-export const WsGitInitRpc = Rpc.make(WS_METHODS.gitInit, {
+export const WsGitInitRpc = wsRpc(WS_METHODS.gitInit, {
   payload: GitInitInput,
   success: Schema.Void,
-  error: WsRpcError,
 });
 
-export const WsGitStageFilesRpc = Rpc.make(WS_METHODS.gitStageFiles, {
+export const WsGitStageFilesRpc = wsRpc(WS_METHODS.gitStageFiles, {
   payload: GitStageFilesInput,
   success: GitStageFilesResult,
-  error: WsRpcError,
 });
 
-export const WsGitUnstageFilesRpc = Rpc.make(WS_METHODS.gitUnstageFiles, {
+export const WsGitUnstageFilesRpc = wsRpc(WS_METHODS.gitUnstageFiles, {
   payload: GitUnstageFilesInput,
   success: GitUnstageFilesResult,
-  error: WsRpcError,
 });
 
-export const WsGitHandoffThreadRpc = Rpc.make(WS_METHODS.gitHandoffThread, {
+export const WsGitHandoffThreadRpc = wsRpc(WS_METHODS.gitHandoffThread, {
   payload: GitHandoffThreadInput,
   success: GitHandoffThreadResult,
-  error: WsRpcError,
 });
 
-export const WsTerminalOpenRpc = Rpc.make(WS_METHODS.terminalOpen, {
+export const WsTerminalOpenRpc = wsRpc(WS_METHODS.terminalOpen, {
   payload: TerminalOpenInput,
   success: TerminalSessionSnapshot,
-  error: WsRpcError,
 });
 
-export const WsTerminalWriteRpc = Rpc.make(WS_METHODS.terminalWrite, {
+export const WsTerminalWriteRpc = wsRpc(WS_METHODS.terminalWrite, {
   payload: TerminalWriteInput,
   success: Schema.Void,
-  error: WsRpcError,
 });
 
-export const WsTerminalAckOutputRpc = Rpc.make(WS_METHODS.terminalAckOutput, {
+export const WsTerminalAckOutputRpc = wsRpc(WS_METHODS.terminalAckOutput, {
   payload: TerminalAckOutputInput,
   success: Schema.Void,
-  error: WsRpcError,
 });
 
-export const WsTerminalResizeRpc = Rpc.make(WS_METHODS.terminalResize, {
+export const WsTerminalResizeRpc = wsRpc(WS_METHODS.terminalResize, {
   payload: TerminalResizeInput,
   success: Schema.Void,
-  error: WsRpcError,
 });
 
-export const WsTerminalClearRpc = Rpc.make(WS_METHODS.terminalClear, {
+export const WsTerminalClearRpc = wsRpc(WS_METHODS.terminalClear, {
   payload: TerminalClearInput,
   success: Schema.Void,
-  error: WsRpcError,
 });
 
-export const WsTerminalRestartRpc = Rpc.make(WS_METHODS.terminalRestart, {
+export const WsTerminalRestartRpc = wsRpc(WS_METHODS.terminalRestart, {
   payload: TerminalRestartInput,
   success: TerminalSessionSnapshot,
-  error: WsRpcError,
 });
 
-export const WsTerminalCloseRpc = Rpc.make(WS_METHODS.terminalClose, {
+export const WsTerminalCloseRpc = wsRpc(WS_METHODS.terminalClose, {
   payload: TerminalCloseInput,
   success: Schema.Void,
-  error: WsRpcError,
 });
 
-export const WsSubscribeTerminalEventsRpc = Rpc.make(WS_METHODS.subscribeTerminalEvents, {
+export const WsSubscribeTerminalEventsRpc = wsRpc(WS_METHODS.subscribeTerminalEvents, {
   payload: Schema.Struct({}),
   success: TerminalEvent,
-  error: WsRpcError,
   stream: true,
 });
 
-export const WsServerGetConfigRpc = Rpc.make(WS_METHODS.serverGetConfig, {
+export const WsServerGetConfigRpc = wsRpc(WS_METHODS.serverGetConfig, {
   payload: Schema.Struct({}),
   success: ServerConfig,
-  error: WsRpcError,
 });
 
-export const WsServerGetEnvironmentRpc = Rpc.make(WS_METHODS.serverGetEnvironment, {
+export const WsServerGetEnvironmentRpc = wsRpc(WS_METHODS.serverGetEnvironment, {
   payload: Schema.Struct({}),
   success: ServerGetEnvironmentResult,
-  error: WsRpcError,
 });
 
-export const WsServerGetSettingsRpc = Rpc.make(WS_METHODS.serverGetSettings, {
+export const WsServerGetSettingsRpc = wsRpc(WS_METHODS.serverGetSettings, {
   payload: Schema.Struct({}),
   success: ServerGetSettingsResult,
-  error: WsRpcError,
 });
 
-export const WsServerUpdateSettingsRpc = Rpc.make(WS_METHODS.serverUpdateSettings, {
+export const WsServerUpdateSettingsRpc = wsRpc(WS_METHODS.serverUpdateSettings, {
   payload: ServerUpdateSettingsInput,
   success: ServerUpdateSettingsResult,
-  error: WsRpcError,
 });
 
-export const WsServerRefreshProvidersRpc = Rpc.make(WS_METHODS.serverRefreshProviders, {
+export const WsServerRefreshProvidersRpc = wsRpc(WS_METHODS.serverRefreshProviders, {
   payload: Schema.Struct({}),
   success: ServerRefreshProvidersResult,
-  error: WsRpcError,
 });
 
-export const WsServerUpdateProviderRpc = Rpc.make(WS_METHODS.serverUpdateProvider, {
+export const WsServerUpdateProviderRpc = wsRpc(WS_METHODS.serverUpdateProvider, {
   payload: ServerProviderUpdateInput,
   success: ServerProviderUpdateResult,
   error: ServerProviderUpdateError,
 });
 
-export const WsServerListExternalMcpIntegrationsRpc = Rpc.make(
+export const WsServerListExternalMcpIntegrationsRpc = wsRpc(
   WS_METHODS.serverListExternalMcpIntegrations,
-  {
-    payload: Schema.Struct({}),
-    success: Schema.Array(ExternalMcpIntegration),
-    error: WsRpcError,
-  },
+  { payload: Schema.Struct({}), success: Schema.Array(ExternalMcpIntegration) },
 );
 
-export const WsServerCreateExternalMcpIntegrationRpc = Rpc.make(
+export const WsServerCreateExternalMcpIntegrationRpc = wsRpc(
   WS_METHODS.serverCreateExternalMcpIntegration,
-  {
-    payload: ExternalMcpCreateIntegrationInput,
-    success: ExternalMcpCreateIntegrationResult,
-    error: WsRpcError,
-  },
+  { payload: ExternalMcpCreateIntegrationInput, success: ExternalMcpCreateIntegrationResult },
 );
 
-export const WsServerRevokeExternalMcpIntegrationRpc = Rpc.make(
+export const WsServerRevokeExternalMcpIntegrationRpc = wsRpc(
   WS_METHODS.serverRevokeExternalMcpIntegration,
   {
     payload: ExternalMcpRevokeIntegrationInput,
     success: Schema.Struct({ revoked: Schema.Boolean }),
-    error: WsRpcError,
   },
 );
 
-export const WsServerRefreshExternalMcpPairingRpc = Rpc.make(
+export const WsServerRefreshExternalMcpPairingRpc = wsRpc(
   WS_METHODS.serverRefreshExternalMcpPairing,
-  {
-    payload: ExternalMcpRefreshPairingInput,
-    success: ExternalMcpCreateIntegrationResult,
-    error: WsRpcError,
-  },
+  { payload: ExternalMcpRefreshPairingInput, success: ExternalMcpCreateIntegrationResult },
 );
 
-export const WsServerListWorktreesRpc = Rpc.make(WS_METHODS.serverListWorktrees, {
+export const WsServerListWorktreesRpc = wsRpc(WS_METHODS.serverListWorktrees, {
   payload: Schema.Struct({}),
   success: ServerListWorktreesResult,
-  error: WsRpcError,
 });
 
-export const WsServerListLocalServersRpc = Rpc.make(WS_METHODS.serverListLocalServers, {
+export const WsServerListLocalServersRpc = wsRpc(WS_METHODS.serverListLocalServers, {
   payload: Schema.Struct({}),
   success: ServerListLocalServersResult,
-  error: WsRpcError,
 });
 
-export const WsServerStopLocalServerRpc = Rpc.make(WS_METHODS.serverStopLocalServer, {
+export const WsServerStopLocalServerRpc = wsRpc(WS_METHODS.serverStopLocalServer, {
   payload: ServerStopLocalServerInput,
   success: ServerStopLocalServerResult,
-  error: WsRpcError,
 });
 
-export const WsServerGetProviderUsageSnapshotRpc = Rpc.make(
+export const WsServerGetProviderUsageSnapshotRpc = wsRpc(
   WS_METHODS.serverGetProviderUsageSnapshot,
-  {
-    payload: ServerGetProviderUsageSnapshotInput,
-    success: ServerGetProviderUsageSnapshotResult,
-    error: WsRpcError,
-  },
+  { payload: ServerGetProviderUsageSnapshotInput, success: ServerGetProviderUsageSnapshotResult },
 );
 
-export const WsServerListProviderUsageRpc = Rpc.make(WS_METHODS.serverListProviderUsage, {
+export const WsServerListProviderUsageRpc = wsRpc(WS_METHODS.serverListProviderUsage, {
   payload: ServerListProviderUsageInput,
   success: ServerListProviderUsageResult,
-  error: WsRpcError,
 });
 
-export const WsStatsGetProfileStatsRpc = Rpc.make(WS_METHODS.statsGetProfileStats, {
+export const WsStatsGetProfileStatsRpc = wsRpc(WS_METHODS.statsGetProfileStats, {
   payload: StatsGetProfileStatsInput,
   success: StatsGetProfileStatsResult,
-  error: WsRpcError,
 });
 
-export const WsStatsGetProfileTokenStatsRpc = Rpc.make(WS_METHODS.statsGetProfileTokenStats, {
+export const WsStatsGetProfileTokenStatsRpc = wsRpc(WS_METHODS.statsGetProfileTokenStats, {
   payload: StatsGetProfileTokenStatsInput,
   success: StatsGetProfileTokenStatsResult,
-  error: WsRpcError,
 });
 
-export const WsServerGetDiagnosticsRpc = Rpc.make(WS_METHODS.serverGetDiagnostics, {
+export const WsServerGetDiagnosticsRpc = wsRpc(WS_METHODS.serverGetDiagnostics, {
   payload: Schema.Struct({}),
   success: ServerDiagnosticsResult,
-  error: WsRpcError,
 });
 
-export const WsServerPrewarmVoiceRpc = Rpc.make(WS_METHODS.serverPrewarmVoice, {
+export const WsServerPrewarmVoiceRpc = wsRpc(WS_METHODS.serverPrewarmVoice, {
   payload: ServerVoicePrewarmInput,
   success: ServerVoicePrewarmResult,
-  error: WsRpcError,
 });
 
-export const WsServerTranscribeVoiceRpc = Rpc.make(WS_METHODS.serverTranscribeVoice, {
+export const WsServerTranscribeVoiceRpc = wsRpc(WS_METHODS.serverTranscribeVoice, {
   payload: ServerVoiceTranscriptionInput,
   success: ServerVoiceTranscriptionResult,
-  error: WsRpcError,
 });
 
-export const WsServerGenerateThreadRecapRpc = Rpc.make(WS_METHODS.serverGenerateThreadRecap, {
+export const WsServerGenerateThreadRecapRpc = wsRpc(WS_METHODS.serverGenerateThreadRecap, {
   payload: ServerGenerateThreadRecapInput,
   success: ServerGenerateThreadRecapResult,
-  error: WsRpcError,
 });
 
-export const WsServerGenerateAutomationIntentRpc = Rpc.make(
+export const WsServerGenerateAutomationIntentRpc = wsRpc(
   WS_METHODS.serverGenerateAutomationIntent,
-  {
-    payload: ServerGenerateAutomationIntentInput,
-    success: ServerGenerateAutomationIntentResult,
-    error: WsRpcError,
-  },
+  { payload: ServerGenerateAutomationIntentInput, success: ServerGenerateAutomationIntentResult },
 );
 
-export const WsServerUpsertKeybindingRpc = Rpc.make(WS_METHODS.serverUpsertKeybinding, {
+export const WsServerUpsertKeybindingRpc = wsRpc(WS_METHODS.serverUpsertKeybinding, {
   payload: KeybindingRule,
   success: ServerUpsertKeybindingResult,
-  error: WsRpcError,
 });
 
-export const WsSubscribeServerLifecycleRpc = Rpc.make(WS_METHODS.subscribeServerLifecycle, {
+export const WsSubscribeServerLifecycleRpc = wsRpc(WS_METHODS.subscribeServerLifecycle, {
   payload: Schema.Struct({}),
   success: ServerLifecycleStreamEvent,
-  error: WsRpcError,
   stream: true,
 });
 
-export const WsSubscribeServerConfigRpc = Rpc.make(WS_METHODS.subscribeServerConfig, {
+export const WsSubscribeServerConfigRpc = wsRpc(WS_METHODS.subscribeServerConfig, {
   payload: Schema.Struct({}),
   success: ServerConfigStreamEvent,
-  error: WsRpcError,
   stream: true,
 });
 
-export const WsSubscribeServerProviderStatusesRpc = Rpc.make(
+export const WsSubscribeServerProviderStatusesRpc = wsRpc(
   WS_METHODS.subscribeServerProviderStatuses,
-  {
-    payload: Schema.Struct({}),
-    success: ServerRefreshProvidersResult,
-    error: WsRpcError,
-    stream: true,
-  },
+  { payload: Schema.Struct({}), success: ServerRefreshProvidersResult, stream: true },
 );
 
-export const WsSubscribeServerSettingsRpc = Rpc.make(WS_METHODS.subscribeServerSettings, {
+export const WsSubscribeServerSettingsRpc = wsRpc(WS_METHODS.subscribeServerSettings, {
   payload: Schema.Struct({}),
   success: Schema.Struct({ settings: ServerGetSettingsResult }),
-  error: WsRpcError,
   stream: true,
 });
 
-export const WsProviderGetComposerCapabilitiesRpc = Rpc.make(
+export const WsProviderGetComposerCapabilitiesRpc = wsRpc(
   WS_METHODS.providerGetComposerCapabilities,
-  {
-    payload: ProviderGetComposerCapabilitiesInput,
-    success: ProviderComposerCapabilities,
-    error: WsRpcError,
-  },
+  { payload: ProviderGetComposerCapabilitiesInput, success: ProviderComposerCapabilities },
 );
 
-export const WsProviderCompactThreadRpc = Rpc.make(WS_METHODS.providerCompactThread, {
+export const WsProviderCompactThreadRpc = wsRpc(WS_METHODS.providerCompactThread, {
   payload: ProviderCompactThreadInput,
   success: Schema.Void,
-  error: WsRpcError,
 });
 
-export const WsProviderListCommandsRpc = Rpc.make(WS_METHODS.providerListCommands, {
+export const WsProviderListCommandsRpc = wsRpc(WS_METHODS.providerListCommands, {
   payload: ProviderListCommandsInput,
   success: ProviderListCommandsResult,
-  error: WsRpcError,
 });
 
-export const WsProviderListSkillsRpc = Rpc.make(WS_METHODS.providerListSkills, {
+export const WsProviderListSkillsRpc = wsRpc(WS_METHODS.providerListSkills, {
   payload: ProviderListSkillsInput,
   success: ProviderListSkillsResult,
-  error: WsRpcError,
 });
 
-export const WsProviderListSkillsCatalogRpc = Rpc.make(WS_METHODS.providerListSkillsCatalog, {
+export const WsProviderListSkillsCatalogRpc = wsRpc(WS_METHODS.providerListSkillsCatalog, {
   payload: ProviderSkillsCatalogInput,
   success: ProviderSkillsCatalogResult,
-  error: WsRpcError,
 });
 
-export const WsProviderListPluginsRpc = Rpc.make(WS_METHODS.providerListPlugins, {
+export const WsProviderListPluginsRpc = wsRpc(WS_METHODS.providerListPlugins, {
   payload: ProviderListPluginsInput,
   success: ProviderListPluginsResult,
-  error: WsRpcError,
 });
 
-export const WsProviderReadPluginRpc = Rpc.make(WS_METHODS.providerReadPlugin, {
+export const WsProviderReadPluginRpc = wsRpc(WS_METHODS.providerReadPlugin, {
   payload: ProviderReadPluginInput,
   success: ProviderReadPluginResult,
-  error: WsRpcError,
 });
 
-export const WsProviderListModelsRpc = Rpc.make(WS_METHODS.providerListModels, {
+export const WsProviderListModelsRpc = wsRpc(WS_METHODS.providerListModels, {
   payload: ProviderListModelsInput,
   success: ProviderListModelsResult,
-  error: WsRpcError,
 });
 
-export const WsProviderListAgentsRpc = Rpc.make(WS_METHODS.providerListAgents, {
+export const WsProviderListAgentsRpc = wsRpc(WS_METHODS.providerListAgents, {
   payload: ProviderListAgentsInput,
   success: ProviderListAgentsResult,
-  error: WsRpcError,
 });
 
-export const WsAutomationListRpc = Rpc.make(WS_METHODS.automationList, {
+export const WsAutomationListRpc = wsRpc(WS_METHODS.automationList, {
   payload: AutomationListInput,
   success: AutomationListResult,
-  error: WsRpcError,
 });
 
-export const WsAutomationGetMemoryRpc = Rpc.make(WS_METHODS.automationGetMemory, {
+export const WsAutomationGetMemoryRpc = wsRpc(WS_METHODS.automationGetMemory, {
   payload: AutomationGetMemoryInput,
   success: Schema.NullOr(AutomationMemory),
-  error: WsRpcError,
 });
 
-export const WsAutomationCreateRpc = Rpc.make(WS_METHODS.automationCreate, {
+export const WsAutomationCreateRpc = wsRpc(WS_METHODS.automationCreate, {
   payload: AutomationCreateInput,
   success: AutomationDefinition,
-  error: WsRpcError,
 });
 
-export const WsAutomationUpdateRpc = Rpc.make(WS_METHODS.automationUpdate, {
+export const WsAutomationUpdateRpc = wsRpc(WS_METHODS.automationUpdate, {
   payload: AutomationUpdateInput,
   success: AutomationDefinition,
-  error: WsRpcError,
 });
 
-export const WsAutomationDeleteRpc = Rpc.make(WS_METHODS.automationDelete, {
+export const WsAutomationDeleteRpc = wsRpc(WS_METHODS.automationDelete, {
   payload: AutomationDeleteInput,
   success: Schema.Void,
-  error: WsRpcError,
 });
 
-export const WsAutomationRunNowRpc = Rpc.make(WS_METHODS.automationRunNow, {
+export const WsAutomationRunNowRpc = wsRpc(WS_METHODS.automationRunNow, {
   payload: AutomationRunNowInput,
   success: AutomationRunNowResult,
-  error: WsRpcError,
 });
 
-export const WsAutomationCancelRunRpc = Rpc.make(WS_METHODS.automationCancelRun, {
+export const WsAutomationCancelRunRpc = wsRpc(WS_METHODS.automationCancelRun, {
   payload: AutomationCancelRunInput,
   success: AutomationCancelRunResult,
-  error: WsRpcError,
 });
 
-export const WsAutomationMarkRunReadRpc = Rpc.make(WS_METHODS.automationMarkRunRead, {
+export const WsAutomationMarkRunReadRpc = wsRpc(WS_METHODS.automationMarkRunRead, {
   payload: AutomationMarkRunReadInput,
   success: AutomationRunActionResult,
-  error: WsRpcError,
 });
 
-export const WsAutomationArchiveRunRpc = Rpc.make(WS_METHODS.automationArchiveRun, {
+export const WsAutomationArchiveRunRpc = wsRpc(WS_METHODS.automationArchiveRun, {
   payload: AutomationArchiveRunInput,
   success: AutomationRunActionResult,
-  error: WsRpcError,
 });
 
-export const WsAutomationResolveProposalRpc = Rpc.make(WS_METHODS.automationResolveProposal, {
+export const WsAutomationResolveProposalRpc = wsRpc(WS_METHODS.automationResolveProposal, {
   payload: AutomationResolveProposalInput,
   success: AutomationResolveProposalResult,
-  error: WsRpcError,
 });
 
-export const WsSubscribeAutomationEventsRpc = Rpc.make(WS_METHODS.subscribeAutomationEvents, {
+export const WsSubscribeAutomationEventsRpc = wsRpc(WS_METHODS.subscribeAutomationEvents, {
   payload: Schema.Struct({}),
   success: AutomationStreamEvent,
-  error: WsRpcError,
   stream: true,
 });
 
