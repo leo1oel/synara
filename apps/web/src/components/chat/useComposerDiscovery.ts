@@ -134,6 +134,10 @@ export function useComposerDiscovery({
       cwd: gitCwd,
       query: effectiveMentionQuery,
       enabled: isMentionTrigger && !isLocalFolderBrowserOpen,
+      // A bare `@` must already list project files; directories would crowd
+      // out the files that ranking has nothing to rank yet.
+      allowEmptyQuery: true,
+      ...(effectiveMentionQuery.length === 0 ? { kind: "file" as const } : {}),
       limit: 80,
     }),
   );

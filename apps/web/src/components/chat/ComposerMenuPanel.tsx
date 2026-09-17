@@ -7,6 +7,7 @@
 import { memo, useEffect, useRef, type ReactNode } from "react";
 
 import { cn } from "~/lib/utils";
+import { ScrollArea } from "../ui/scroll-area";
 import {
   Command,
   CommandGroup,
@@ -47,6 +48,14 @@ export type ComposerMenuPanelRow = {
 export type ComposerMenuPanelGroup = {
   id: string;
   label?: string | null;
+  /** Dimmed copy right-aligned on the label row (e.g. a scroll affordance). */
+  labelTrailing?: string | null;
+  /**
+   * Give this group its own inset scroll viewport. Result sets that can run to
+   * dozens of rows (files, papers) would otherwise push every later group out
+   * of the menu's own scroll region.
+   */
+  boundedViewport?: boolean;
   rows: ComposerMenuPanelRow[];
 };
 
@@ -90,22 +99,55 @@ export function ComposerMenuPanel(props: {
                 {groupIndex > 0 ? <CommandSeparator className="my-0.5" /> : null}
                 <CommandGroup>
                   {group.label ? (
-                    <CommandGroupLabel className={COMPOSER_MENU_PANEL_GROUP_LABEL_CLASS_NAME}>
-                      {group.label}
-                    </CommandGroupLabel>
+                    <div className="flex items-center justify-between gap-3 pe-5">
+                      <CommandGroupLabel className={COMPOSER_MENU_PANEL_GROUP_LABEL_CLASS_NAME}>
+                        {group.label}
+                      </CommandGroupLabel>
+                      {group.labelTrailing ? (
+                        <span className="text-[10.5px] text-muted-foreground/45">
+                          {group.labelTrailing}
+                        </span>
+                      ) : null}
+                    </div>
                   ) : null}
-                  {group.rows.map((row) => (
-                    <ComposerMenuPanelItem
-                      key={row.id}
-                      row={row}
-                      isActive={props.activeRowId === row.id}
-                      rowRef={(node) => {
-                        rowRefs.current[row.id] = node;
-                      }}
-                      onHighlight={props.onHighlightRow}
-                      onSelect={props.onSelectRow}
-                    />
-                  ))}
+                  {group.boundedViewport ? (
+                    // CommandList owns the menu-edge scrollbar; a bounded group
+                    // owns an inset one so later groups stay reachable.
+                    <div className="me-3 h-28 min-h-0" data-menu-scroll-region={group.id}>
+                      <ScrollArea
+                        aria-label={`${group.label ?? group.id}, ${group.rows.length} items`}
+                        scrollFade
+                        scrollbarGutter
+                        viewportClassName="scroll-py-1"
+                      >
+                        {group.rows.map((row) => (
+                          <ComposerMenuPanelItem
+                            key={row.id}
+                            row={row}
+                            isActive={props.activeRowId === row.id}
+                            rowRef={(node) => {
+                              rowRefs.current[row.id] = node;
+                            }}
+                            onHighlight={props.onHighlightRow}
+                            onSelect={props.onSelectRow}
+                          />
+                        ))}
+                      </ScrollArea>
+                    </div>
+                  ) : (
+                    group.rows.map((row) => (
+                      <ComposerMenuPanelItem
+                        key={row.id}
+                        row={row}
+                        isActive={props.activeRowId === row.id}
+                        rowRef={(node) => {
+                          rowRefs.current[row.id] = node;
+                        }}
+                        onHighlight={props.onHighlightRow}
+                        onSelect={props.onSelectRow}
+                      />
+                    ))
+                  )}
                 </CommandGroup>
               </div>
             ))}

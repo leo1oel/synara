@@ -2705,7 +2705,66 @@ describe("ChatView transcript geometry (full app)", () => {
     try {
       await expect.element(page.getByText("README.md", { exact: true })).toBeVisible();
       await expect.element(page.getByText("App.tsx", { exact: true })).toBeVisible();
-      await expect.element(page.getByText("Type to search project files")).not.toBeInTheDocument();
+      await expect.element(page.getByText("Type to search for files")).not.toBeInTheDocument();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("inserts a paper mention when a Papers row is clicked", async () => {
+    sessionStorage.setItem(
+      "synara.poc.embed-mode",
+      JSON.stringify({
+        workspaceRoot: "/repo/project",
+        theme: "dark",
+        surface: "chrome",
+        hostOrigin: window.location.origin,
+        locale: "en",
+      }),
+    );
+    useComposerDraftStore.getState().setPrompt(THREAD_ID, "@");
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-paper-mention" as MessageId,
+        targetText: "paper mention",
+      }),
+    });
+
+    try {
+      // The host answers the panel's library request over postMessage. The
+      // reader only trusts events whose source is the embedding frame, which a
+      // same-window postMessage cannot set from inside the test runner iframe.
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          origin: window.location.origin,
+          source: window.parent,
+          data: {
+            type: "lattice:paper-library",
+            version: 1,
+            workspaceRoot: "/repo/project",
+            papers: [
+              {
+                title: "Attention",
+                arxivId: "1706.03762",
+                citationKey: "vaswani2017",
+                path: ".research/papers/1706.03762/paper.md",
+                view: "fulltext",
+              },
+            ],
+          },
+        }),
+      );
+
+      const paperRow = page.getByText("Attention", { exact: true });
+      await expect.element(paperRow).toBeVisible();
+      await userEvent.click(paperRow);
+
+      await vi.waitFor(() => {
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt).toBe(
+          "@Attention ",
+        );
+      });
     } finally {
       await mounted.cleanup();
     }

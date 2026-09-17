@@ -317,6 +317,10 @@ export function groupCommandItems(
   return groups;
 }
 
+/** Mention groups whose result count is unbounded enough to need its own viewport. */
+const BROWSABLE_MENTION_GROUP_IDS = new Set(["files", "papers"]);
+const BROWSABLE_MENTION_GROUP_ROW_CAP = 4;
+
 export function ComposerCommandMenu(props: {
   items: ComposerCommandItem[];
   resolvedTheme: "light" | "dark";
@@ -335,7 +339,16 @@ export function ComposerCommandMenu(props: {
   );
   const panelGroups: ComposerMenuPanelGroup[] = groups.map((group) => ({
     id: group.id,
-    label: group.label,
+    // Files and papers can each return dozens of rows; count them and cap
+    // their height so Plugins, Chats, Local, and Subagents stay in view.
+    label:
+      group.label && BROWSABLE_MENTION_GROUP_IDS.has(group.id)
+        ? `${group.label} · ${group.items.length}`
+        : group.label,
+    ...(BROWSABLE_MENTION_GROUP_IDS.has(group.id) &&
+    group.items.length > BROWSABLE_MENTION_GROUP_ROW_CAP
+      ? { boundedViewport: true, labelTrailing: "Scroll to browse" }
+      : {}),
     rows: group.items.map((item) => ({
       id: item.id,
       icon: commandMenuItemGlyph(item, props.resolvedTheme),
@@ -348,6 +361,10 @@ export function ComposerCommandMenu(props: {
     })),
   }));
   const itemsById = new Map(props.items.map((item) => [item.id, item]));
+  // A bare `@` already lists project files, so the "type to search" hint is
+  // only an invitation while there is no Files group to read instead.
+  const showFileSearchHint =
+    props.triggerKind === "mention" && !groups.some((group) => group.id === "files");
 
   return (
     <ComposerMenuPanel
@@ -359,17 +376,10 @@ export function ComposerCommandMenu(props: {
         if (item) props.onSelect(item);
       }}
       footer={
-        props.triggerKind === "mention" ? (
+        showFileSearchHint ? (
           /* This footer is informational copy, not a selectable result group. */
           <div className="pt-0.5 pb-2">
-            <p
-              className={cn(
-                COMPOSER_MENU_PANEL_GROUP_LABEL_CLASS_NAME,
-                "px-2 py-0 font-medium text-muted-foreground text-xs",
-              )}
-            >
-              Files
-            </p>
+            <p className={cn(COMPOSER_MENU_PANEL_GROUP_LABEL_CLASS_NAME, "px-2 py-0")}>Files</p>
             <p className="px-2 pt-0.5 text-[11px] text-muted-foreground/55">
               Type to search for files
             </p>
