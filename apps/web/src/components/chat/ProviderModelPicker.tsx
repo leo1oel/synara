@@ -28,7 +28,6 @@ import { ProviderModelOptionGroupList } from "./ProviderModelOptionGroupList";
 import { ComposerPickerMenuPopup, ComposerPickerMenuSubPopup } from "./ComposerPickerMenuPopup";
 import {
   COMPOSER_PICKER_MODEL_LIST_MAX_HEIGHT_CLASS_NAME,
-  COMPOSER_PICKER_MODEL_LIST_SCROLL_CLASS_NAME,
   COMPOSER_PICKER_MODEL_SUBMENU_HEIGHT_CLASS_NAME,
 } from "./composerPickerStyles";
 import { ShortcutKbd } from "../ui/shortcut-kbd";
@@ -36,7 +35,6 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import {
   groupProviderModelOptions,
   groupProviderModelOptionsWithFavorites,
-  shouldUseCollapsibleModelGroups,
   type ProviderModelOption,
 } from "../../providerModelOptions";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
@@ -338,25 +336,8 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
       );
 
     if (!shouldShowSearch) {
-      const needsScrollContainer =
-        filteredOptions.length >= SEARCHABLE_MODEL_PICKER_THRESHOLD ||
-        shouldUseCollapsibleModelGroups(groupedOptions.length, false);
-      if (needsScrollContainer) {
-        return (
-          <>
-            {discoveryErrorElement}
-            <div
-              className={cn(
-                "overflow-y-auto overscroll-contain py-0.5",
-                COMPOSER_PICKER_MODEL_LIST_SCROLL_CLASS_NAME,
-                COMPOSER_PICKER_MODEL_LIST_MAX_HEIGHT_CLASS_NAME,
-              )}
-            >
-              {content}
-            </div>
-          </>
-        );
-      }
+      // The popup body already scrolls. Nesting a capped list inside it creates
+      // a second scrollbar once the popup's padding exceeds the available height.
       return (
         <>
           {discoveryErrorElement}
@@ -411,7 +392,8 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
         }
         return (
           <MenuSub key={option.value}>
-            <MenuSubTrigger>
+            {/* Allow crossing lower providers on the way up from the composer. */}
+            <MenuSubTrigger delay={450}>
               <OptionIcon
                 aria-hidden="true"
                 className={cn(

@@ -1,3 +1,5 @@
+import "../../index.css";
+
 import { type ModelSlug, type ProviderKind, type ServerProviderStatus } from "@synara/contracts";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -220,6 +222,84 @@ describe("ProviderModelPicker", () => {
     localStorage.clear();
     sessionStorage.clear();
     vi.restoreAllMocks();
+  });
+
+  it("waits for hover intent and cancels providers crossed on the way to Codex", async () => {
+    const mounted = await mountPicker({
+      provider: "codex",
+      model: "gpt-5-codex",
+      lockedProvider: null,
+      providers: (["codex", "droid", "pi"] as const).map((provider) => ({
+        provider,
+        status: "ready",
+        available: true,
+        authStatus: "authenticated",
+        checkedAt: "2026-04-10T10:00:00.000Z",
+      })),
+    });
+    try {
+      await page.getByRole("button").click();
+      for (const name of ["Pi", "Droid"]) {
+        await page.getByRole("menuitem", { name, exact: true }).hover();
+        await new Promise((resolve) => window.setTimeout(resolve, 200));
+        expect(document.querySelector('[data-slot="menu-sub-content"]')).toBeNull();
+      }
+      await page.getByRole("menuitem", { name: "Codex", exact: true }).hover();
+      await expect
+        .element(page.getByRole("menuitemradio", { name: "GPT-5.3 Codex" }))
+        .toBeVisible();
+      expect(document.body.textContent).not.toContain("GPT-5.6 Luna");
+      expect(document.body.textContent).not.toContain("Claude Sonnet 4.5");
+      await page.getByRole("menuitemradio", { name: "GPT-5.3 Codex" }).click();
+      expect(mounted.onProviderModelChange).toHaveBeenCalledWith("codex", "gpt-5.3-codex");
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("uses one scroll container for a long Droid submenu", async () => {
+    const models = Array.from({ length: 40 }, (_, index) => ({
+      slug: `droid-model-${index}` as ModelSlug,
+      name: `Droid Model ${index}`,
+    }));
+    const mounted = await mountPicker({
+      provider: "droid",
+      model: models[0]!.slug,
+      lockedProvider: null,
+      providers: [
+        {
+          provider: "droid",
+          status: "ready",
+          available: true,
+          authStatus: "authenticated",
+          checkedAt: "2026-04-10T10:00:00.000Z",
+        },
+      ],
+      modelOptionsByProvider: { ...MODEL_OPTIONS_BY_PROVIDER, droid: models },
+    });
+    try {
+      await page.getByRole("button").click();
+      await page.getByRole("menuitem", { name: "Droid", exact: true }).click();
+      await expect
+        .element(page.getByRole("menuitemradio", { name: "Droid Model 0", exact: true }))
+        .toBeVisible();
+      const popup = document.querySelector<HTMLElement>('[data-slot="menu-sub-content"]')!;
+      const scrollers = Array.from(popup.querySelectorAll<HTMLElement>("*")).filter(
+        (element) =>
+          /auto|scroll/.test(getComputedStyle(element).overflowY) &&
+          element.scrollHeight > element.clientHeight,
+      );
+      expect(scrollers).toHaveLength(1);
+      const viewport = { width: window.innerWidth, height: window.innerHeight };
+      await page.viewport(900, 700);
+      await page.screenshot();
+      await page.viewport(viewport.width, viewport.height);
+      scrollers[0]!.scrollTop = scrollers[0]!.scrollHeight;
+      await page.getByRole("menuitemradio", { name: "Droid Model 39", exact: true }).click();
+      expect(mounted.onProviderModelChange).toHaveBeenCalledWith("droid", "droid-model-39");
+    } finally {
+      await mounted.cleanup();
+    }
   });
 
   it("shows provider submenus when provider switching is allowed", async () => {
