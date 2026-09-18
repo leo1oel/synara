@@ -75,6 +75,7 @@ export interface LatticeHostContextSnapshot {
   type: typeof LATTICE_HOST_CONTEXT;
   version: 1;
   capturedAt?: string;
+  requestId?: string;
   workspaceRoot: string;
   activeSurface: LatticeHostSurface;
   editor?: {
@@ -115,6 +116,34 @@ export interface LatticeHostContextSnapshot {
       text: string;
     } | null;
     updatedAt: string;
+  };
+  editorComments?: LatticeEditorCommentsSnapshot;
+}
+
+export interface LatticeAgentComment {
+  id: string;
+  origin: "local" | "overleaf";
+  path: string;
+  from: number;
+  to: number;
+  quote: string;
+  body: string;
+  authorName: string;
+  resolved: boolean;
+  replies: Array<{ authorName: string; body: string; createdAt: string }>;
+  updatedAt: string;
+  anchorStatus: "exact" | "moved" | "missing" | "unchecked";
+}
+
+export interface LatticeEditorCommentsSnapshot {
+  workspaceRoot: string;
+  capturedAt: string;
+  comments: LatticeAgentComment[];
+  omittedCount: number;
+  overleaf: {
+    status: "not-linked" | "fresh" | "cached" | "unavailable";
+    fetchedAt?: string;
+    error?: string;
   };
 }
 
@@ -398,6 +427,7 @@ export function readLatticeHostContextMessage(
   ) {
     return null;
   }
+  if (value.requestId !== undefined && !nonEmptyBoundedString(value.requestId, 128)) return null;
 
   const editor = value.editor;
   if (editor !== undefined) {
@@ -411,6 +441,61 @@ export function readLatticeHostContextMessage(
       (candidate.selection !== undefined && !boundedString(candidate.selection, 12_001))
     ) {
       return null;
+    }
+  }
+
+  if (value.editorComments !== undefined) {
+    const snapshot = value.editorComments;
+    if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return null;
+    const candidate = snapshot as Record<string, unknown>;
+    if (
+      !boundedString(candidate.workspaceRoot, 4_096) ||
+      !workspaceRootsEqual(candidate.workspaceRoot, config.workspaceRoot) ||
+      !nonEmptyBoundedString(candidate.capturedAt, 128) ||
+      !Array.isArray(candidate.comments) ||
+      candidate.comments.length > 1_000 ||
+      !nonNegativeInteger(candidate.omittedCount) ||
+      !candidate.overleaf ||
+      typeof candidate.overleaf !== "object" ||
+      Array.isArray(candidate.overleaf)
+    )
+      return null;
+    const overleaf = candidate.overleaf as Record<string, unknown>;
+    if (
+      !["not-linked", "fresh", "cached", "unavailable"].includes(String(overleaf.status)) ||
+      (overleaf.fetchedAt !== undefined && !nonEmptyBoundedString(overleaf.fetchedAt, 128)) ||
+      (overleaf.error !== undefined && !boundedString(overleaf.error, 2_000))
+    )
+      return null;
+    for (const comment of candidate.comments) {
+      if (!comment || typeof comment !== "object" || Array.isArray(comment)) return null;
+      const item = comment as Record<string, unknown>;
+      if (
+        !nonEmptyBoundedString(item.id, 256) ||
+        (item.origin !== "local" && item.origin !== "overleaf") ||
+        !boundedString(item.path, 4_096) ||
+        !nonNegativeInteger(item.from) ||
+        !nonNegativeInteger(item.to) ||
+        !boundedString(item.quote, 12_000) ||
+        !boundedString(item.body, 20_000) ||
+        !boundedString(item.authorName, 1_024) ||
+        typeof item.resolved !== "boolean" ||
+        !Array.isArray(item.replies) ||
+        item.replies.length > 1_000 ||
+        !nonEmptyBoundedString(item.updatedAt, 128) ||
+        !["exact", "moved", "missing", "unchecked"].includes(String(item.anchorStatus))
+      )
+        return null;
+      for (const reply of item.replies) {
+        if (!reply || typeof reply !== "object" || Array.isArray(reply)) return null;
+        const entry = reply as Record<string, unknown>;
+        if (
+          !boundedString(entry.authorName, 1_024) ||
+          !boundedString(entry.body, 20_000) ||
+          !nonEmptyBoundedString(entry.createdAt, 128)
+        )
+          return null;
+      }
     }
   }
 
@@ -589,9 +674,19 @@ export function readLatticeComposerFilesMessage(
   return files;
 }
 
-export function postHostContextRequestToLattice(config: EmbedModeConfig): void {
+export function postHostContextRequestToLattice(
+  config: EmbedModeConfig,
+  options?: { requestId?: string; refreshComments?: boolean },
+): void {
   if (!config.hostOrigin) return;
-  window.parent.postMessage({ type: LATTICE_HOST_CONTEXT_REQUEST }, config.hostOrigin);
+  window.parent.postMessage(
+    {
+      type: LATTICE_HOST_CONTEXT_REQUEST,
+      ...options,
+      ...(options ? { workspaceRoot: config.workspaceRoot } : {}),
+    },
+    config.hostOrigin,
+  );
 }
 
 export function postPaperLibraryRequestToLattice(config: EmbedModeConfig): void {

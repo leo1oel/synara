@@ -92,6 +92,7 @@ import { makeLatticeLiteratureTools } from "../latticeLiteratureTools.ts";
 import { makeLatticeCanvasTools } from "../latticeCanvasTools.ts";
 import { makeLatticeSpreadsheetTools } from "../latticeSpreadsheetTools.ts";
 import { makeLatticeProjectDocumentTools } from "../latticeProjectDocumentTools.ts";
+import { makeLatticeEditorCommentsTools } from "../latticeEditorCommentsTools.ts";
 import { LatticeBibliographyBroker } from "../Services/LatticeBibliographyBroker.ts";
 
 // Providers already receive the versioned host policy exactly once in their
@@ -858,6 +859,10 @@ export const makeAgentGateway = Effect.gen(function* () {
           resolveWorkspaceRoot: resolveLatticeWorkspaceRoot,
         })
       : [];
+  const latticeEditorCommentsTools =
+    ACTIVE_AGENT_HOST_PROFILE.id === "lattice"
+      ? yield* makeLatticeEditorCommentsTools({ resolveWorkspaceRoot: resolveLatticeWorkspaceRoot })
+      : [];
 
   const tools: ReadonlyArray<ToolEntry> = adaptToolsForActiveHost([
     ...readTools,
@@ -876,6 +881,7 @@ export const makeAgentGateway = Effect.gen(function* () {
     ...latticeCanvasTools,
     ...latticeSpreadsheetTools,
     ...latticeProjectDocumentTools,
+    ...latticeEditorCommentsTools,
     ...(deviceService?.supported === true && isDeviceControlEntitled()
       ? makeAgentGatewayDeviceTools({ manager: deviceService.manager })
       : []),

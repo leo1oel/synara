@@ -90,6 +90,7 @@ const LATTICE_NATIVE_TOOL_NAMES = new Set([
   "spreadsheet_read",
   "spreadsheet_batch_update",
   "create_project_document",
+  "read_editor_comments",
   "device_list",
   "device_boot",
   "device_install",

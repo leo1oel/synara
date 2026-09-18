@@ -77,6 +77,7 @@ import { LatticeCanvasBrokerLive } from "./LatticeCanvasBroker.ts";
 import { LatticeBibliographyBrokerLive } from "./LatticeBibliographyBroker.ts";
 import { LatticeSpreadsheetBrokerLive } from "./LatticeSpreadsheetBroker.ts";
 import { LatticeProjectDocumentBrokerLive } from "./LatticeProjectDocumentBroker.ts";
+import { LatticeEditorCommentsBrokerLive } from "./LatticeEditorCommentsBroker.ts";
 import { recordCreatedWorktreeInPlan } from "../operationPlan.ts";
 import { makeAgentGatewayInFlightRequestRegistry } from "../inFlightRequestRegistry.ts";
 import { ACTIVE_AGENT_HOST_PROFILE } from "../hostProfile.ts";
@@ -1236,9 +1237,15 @@ function makeHarnessLayer(
   } as unknown as (typeof ProjectionTurnRepository)["Service"]);
 
   const gatewayLayer = AgentGatewayLive.pipe(
-    Layer.provide(Layer.mergeAll(LatticeCanvasBrokerLive, LatticeBibliographyBrokerLive)),
-    Layer.provide(LatticeSpreadsheetBrokerLive),
-    Layer.provide(LatticeProjectDocumentBrokerLive),
+    Layer.provide(
+      Layer.mergeAll(
+        LatticeCanvasBrokerLive,
+        LatticeBibliographyBrokerLive,
+        LatticeSpreadsheetBrokerLive,
+        LatticeProjectDocumentBrokerLive,
+        LatticeEditorCommentsBrokerLive,
+      ),
+    ),
     Layer.provide(credentialsLayer),
     Layer.provide(snapshotLayer),
     Layer.provide(engineLayer),

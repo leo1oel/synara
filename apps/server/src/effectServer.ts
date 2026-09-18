@@ -12,6 +12,7 @@ import { latticeBibliographyRouteLayer } from "./agentGateway/latticeBibliograph
 import { latticeCanvasRouteLayer } from "./agentGateway/latticeCanvasHttpRoute";
 import { latticeSpreadsheetRouteLayer } from "./agentGateway/latticeSpreadsheetHttpRoute";
 import { latticeProjectDocumentRouteLayer } from "./agentGateway/latticeProjectDocumentHttpRoute";
+import { latticeEditorCommentsRouteLayer } from "./agentGateway/latticeEditorCommentsHttpRoute";
 import { AgentQualityTrace } from "./agentGateway/Services/AgentQualityTrace";
 import { AgentGatewayCredentials } from "./agentGateway/Services/AgentGatewayCredentials";
 import { AutomationRunReactor } from "./automation/Services/AutomationRunReactor";
@@ -177,6 +178,7 @@ export const createEffectServer = Effect.fn(function* (
     latticeCanvasRouteLayer,
     latticeSpreadsheetRouteLayer,
     latticeProjectDocumentRouteLayer,
+    latticeEditorCommentsRouteLayer,
     externalMcpRouteLayer,
   );
   const httpApp = yield* HttpRouter.toHttpEffect(routesLayer);

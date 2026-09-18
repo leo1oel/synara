@@ -2,7 +2,7 @@ import { flushWorkspaceEditors } from "~/lib/workspaceEditorSession";
 import {
   appendLatticeHostContextToPrompt,
   consumeDispatchedLatticeHostSelection,
-  getLiveLatticeHostContext,
+  refreshLatticeHostContextForSend,
 } from "../../lib/latticeHostContext";
 import { useCallback } from "react";
 import {
@@ -728,6 +728,7 @@ export function useChatTurnSubmission({
       const outgoingTextSeed =
         messageTextForSend ||
         (composerImagesSnapshot.length > 0 ? IMAGE_ONLY_BOOTSTRAP_PROMPT : "");
+      const refreshedHostContext = await refreshLatticeHostContextForSend();
       const outgoingMessageText = appendLatticeHostContextToPrompt(
         formatOutgoingComposerPrompt({
           provider: selectedProviderForSend,
@@ -735,7 +736,7 @@ export function useChatTurnSubmission({
           effort: selectedPromptEffortForSend,
           text: outgoingTextSeed,
         }),
-        getLiveLatticeHostContext(),
+        refreshedHostContext,
       );
       const mentionedSkillsForSend = filterPromptSkillReferences(
         outgoingMessageText,

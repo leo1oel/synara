@@ -16,6 +16,7 @@ import { startLatticeBibliographyRelay } from "./latticeBibliographyRelay";
 import { startLatticeCanvasRelay } from "./latticeCanvasRelay";
 import { startLatticeSpreadsheetRelay } from "./latticeSpreadsheetRelay";
 import { startLatticeProjectDocumentRelay } from "./latticeProjectDocumentRelay";
+import { startLatticeEditorCommentsRelay } from "./latticeEditorCommentsRelay";
 import { isElectron } from "./env";
 import { isMacPlatform } from "./lib/utils";
 import { activateInitialLocale, i18n } from "./i18n";
@@ -27,6 +28,7 @@ startLatticeBibliographyRelay();
 startLatticeCanvasRelay();
 startLatticeSpreadsheetRelay();
 startLatticeProjectDocumentRelay();
+startLatticeEditorCommentsRelay();
 const router = getRouter(appHistory);
 
 document.title = APP_DISPLAY_NAME;

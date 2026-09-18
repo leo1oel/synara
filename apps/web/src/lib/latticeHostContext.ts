@@ -1,8 +1,12 @@
 import {
   postHostContextSelectionClearToLattice,
+  postHostContextRequestToLattice,
+  readLatticeHostContextMessage,
   readEmbedMode,
   type LatticeHostContextSnapshot,
 } from "../embedMode";
+import { randomUUID } from "./utils";
+import { workspaceRootsEqual } from "@synara/shared/threadWorkspace";
 
 export const TRAILING_LATTICE_HOST_CONTEXT_BLOCK_PATTERN =
   /\n*(<lattice_active_context version="1">\n[\s\S]*?\n<\/lattice_active_context>)\s*$/u;
@@ -139,4 +143,48 @@ export function appendLatticeHostContextToPrompt(
     "</lattice_active_context>",
   ].join("\n");
   return visiblePrompt ? `${visiblePrompt}\n\n${block}` : block;
+}
+
+/** Refresh comments at dispatch time without ever blocking the user's send indefinitely. */
+export async function refreshLatticeHostContextForSend(
+  timeoutMs = 5_000,
+): Promise<LatticeHostContextSnapshot | null> {
+  const current = getLiveLatticeHostContext();
+  const config = readEmbedMode();
+  if (!config?.hostOrigin || window.parent === window) return current;
+  const requestId = randomUUID();
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (context: LatticeHostContextSnapshot | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      window.removeEventListener("message", onMessage);
+      resolve(context);
+    };
+    const onMessage = (event: MessageEvent) => {
+      const context = readLatticeHostContextMessage(event, config);
+      if (!context || context.requestId !== requestId) return;
+      setLiveLatticeHostContext(context);
+      finish(context);
+    };
+    const timer = window.setTimeout(() => {
+      const latest = getLiveLatticeHostContext();
+      if (!latest || !workspaceRootsEqual(latest.workspaceRoot, config.workspaceRoot)) {
+        return finish(null);
+      }
+      finish({
+        ...latest,
+        editorComments: {
+          workspaceRoot: config.workspaceRoot,
+          capturedAt: latest.editorComments?.capturedAt ?? latest.capturedAt ?? "unknown",
+          comments: latest.editorComments?.comments ?? [],
+          omittedCount: latest.editorComments?.omittedCount ?? 0,
+          overleaf: { status: "unavailable", error: "Comment refresh timed out." },
+        },
+      });
+    }, timeoutMs);
+    window.addEventListener("message", onMessage);
+    postHostContextRequestToLattice(config, { requestId, refreshComments: true });
+  });
 }
