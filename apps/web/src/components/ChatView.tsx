@@ -3682,9 +3682,9 @@ export default function ChatView({
       }
       const confirmed = await api.dialogs.confirm(
         [
-          `Revert this thread to checkpoint ${turnCount}?`,
-          "This will discard newer messages and turn diffs in this thread.",
-          "This action cannot be undone.",
+          i18n._("Revert this thread to checkpoint {turnCount}?", { turnCount }),
+          i18n._("This will discard newer messages and turn diffs in this thread."),
+          i18n._("This action cannot be undone."),
         ].join("\n"),
       );
       if (!confirmed) {
@@ -3711,6 +3711,7 @@ export default function ChatView({
       setIsRevertingCheckpoint(false);
     },
     [
+      i18n,
       setIsRevertingCheckpoint,
       activeThread,
       hasLiveTurn,

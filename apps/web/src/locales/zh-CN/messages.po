@@ -12,6 +12,16 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Revert this thread to checkpoint {turnCount}?"
+msgstr "要将此对话回退到检查点 {turnCount} 吗？"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "This will discard newer messages and turn diffs in this thread."
+msgstr "这会丢弃此对话中该检查点之后的消息和轮次差异记录。"
+
+#. js-lingui-explicit-id
 #: src/routes/_chat.pull-requests.index.tsx
 msgid "Search pull requests"
 msgstr "搜索拉取请求"

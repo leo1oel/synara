@@ -2276,6 +2276,74 @@ describe("ChatView transcript geometry (full app)", () => {
     }
   });
 
+  it("localizes checkpoint revert confirmation in the Chinese embed without reverting on cancel", async () => {
+    const { messages } = await import("../locales/zh-CN/messages.po");
+    i18n.loadAndActivate({ locale: "zh-CN", messages });
+    sessionStorage.setItem(
+      "synara.poc.embed-mode",
+      JSON.stringify({
+        workspaceRoot: "/repo/project",
+        theme: "dark",
+        surface: "chrome",
+        hostOrigin: window.location.origin,
+        locale: "zh-CN",
+      }),
+    );
+    const snapshot = createSnapshotForTargetUser({
+      targetMessageId: MessageId.makeUnsafe("localized-revert"),
+      targetText: "Revert fixture",
+    });
+    const thread = snapshot.threads[0]!;
+    const turnId = TurnId.makeUnsafe("localized-revert-turn");
+    const revertMessages = [
+      { ...thread.messages.at(-2)!, turnId },
+      { ...thread.messages.at(-1)!, turnId },
+    ];
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: {
+        ...snapshot,
+        threads: [
+          {
+            ...thread,
+            messages: revertMessages,
+            checkpoints: [
+              {
+                turnId,
+                checkpointTurnCount: 2,
+                checkpointRef: CheckpointRef.makeUnsafe("localized-revert-checkpoint"),
+                status: "ready",
+                files: [],
+                assistantMessageId: revertMessages[1]!.id,
+                completedAt: revertMessages[1]!.updatedAt,
+              },
+            ],
+          },
+        ],
+      },
+      readyTimeoutMs: 60_000,
+    });
+    const originalNativeApi = Object.getOwnPropertyDescriptor(window, "nativeApi");
+    try {
+      const nativeApi = readNativeApi()!;
+      const confirm = vi.fn(async () => false);
+      Object.defineProperty(window, "nativeApi", {
+        configurable: true,
+        value: { ...nativeApi, dialogs: { ...nativeApi.dialogs, confirm } },
+      });
+      await userEvent.click(page.getByRole("button", { name: "Revert to this message" }));
+      await vi.waitFor(() => expect(confirm).toHaveBeenCalledOnce());
+      expect(confirm).toHaveBeenCalledWith(
+        "要将此对话回退到检查点 1 吗？\n这会丢弃此对话中该检查点之后的消息和轮次差异记录。\n此操作无法撤销。",
+      );
+      expect(JSON.stringify(wsRequests)).not.toContain("thread.checkpoint.revert");
+    } finally {
+      if (originalNativeApi) Object.defineProperty(window, "nativeApi", originalNativeApi);
+      else Reflect.deleteProperty(window, "nativeApi");
+      await mounted.cleanup();
+    }
+  });
+
   it("creates an embedded chat with the most recently used ordinary model", async () => {
     sessionStorage.setItem(
       "synara.poc.embed-mode",
