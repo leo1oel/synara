@@ -185,7 +185,7 @@ const EMPTY_AVAILABLE_EDITORS: ReadonlyArray<EditorId> = [];
 const MAX_VISIBLE_CHANGED_FILES = 5;
 // The composer overlaps the transcript by design, so the list needs extra tail
 // space beyond the overlap to keep final cards from sitting flush against it.
-const BOTTOM_CONTENT_INSET_PX = 64;
+const BOTTOM_CONTENT_INSET_PX = 80;
 const MESSAGE_HOVER_REVEAL_CLASS_NAME =
   "opacity-0 transition-opacity pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto";
 // How long a jumped-to message keeps its highlight tint before fading back out.
@@ -610,10 +610,14 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   );
   // Inset rows from the right (overriding the gutter's right padding) without moving the
   // scroll viewport, so the scrollbar stays pinned to the far right while content clears
-  // any right-edge overlay. Kept stable so LegendList isn't re-rendered on unrelated updates.
+  // any right-edge overlay. The measured bottom inset also clears the floating composer,
+  // including taller drafts and stacked panels; the footer adds breathing room beyond it.
   const listScrollStyle = useMemo(
-    () => (contentInsetRightPx ? { paddingRight: contentInsetRightPx } : undefined),
-    [contentInsetRightPx],
+    () => ({
+      ...(contentInsetRightPx ? { paddingRight: contentInsetRightPx } : {}),
+      ...(contentInsetBottomPx ? { paddingBottom: contentInsetBottomPx } : {}),
+    }),
+    [contentInsetRightPx, contentInsetBottomPx],
   );
   const appTypographyScale = useMemo(
     () => getAppTypographyScale(normalizedChatFontSizePx),

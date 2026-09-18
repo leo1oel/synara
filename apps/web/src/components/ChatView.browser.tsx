@@ -9294,6 +9294,42 @@ describe("ChatView transcript geometry (full app)", () => {
     }
   });
 
+  it("leaves breathing room above the embedded composer at the end of a response", async () => {
+    sessionStorage.setItem(
+      "synara.poc.embed-mode",
+      JSON.stringify({
+        workspaceRoot: "/repo/project",
+        theme: "light",
+        surface: "chrome",
+        hostOrigin: window.location.origin,
+        locale: "en",
+      }),
+    );
+    const mounted = await mountChatView({
+      viewport: { name: "embedded-spacing", width: 420, height: 800 },
+      snapshot: createSnapshotWithLongAssistantResponse(),
+      readyTimeoutMs: 60_000,
+    });
+    try {
+      const scroller = await waitForElement(
+        () => document.querySelector<HTMLElement>("[data-chat-scroll-container='true']"),
+        "Unable to find transcript scroller.",
+      );
+      scroller.scrollTop = scroller.scrollHeight;
+      scroller.dispatchEvent(new Event("scroll"));
+      await waitForLayout();
+      const composer = document.querySelector<HTMLElement>(".chat-composer-surface")!;
+      const rows = Array.from(document.querySelectorAll<HTMLElement>("[data-timeline-row-kind]"));
+      const lastRowBottom = Math.max(...rows.map((row) => row.getBoundingClientRect().bottom));
+      const gap = composer.getBoundingClientRect().top - lastRowBottom;
+      await page.screenshot();
+      expect(gap).toBeGreaterThanOrEqual(56);
+      expect(gap).toBeLessThanOrEqual(88);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it("keeps the final transcript row clear of a tall composer panel stack", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
