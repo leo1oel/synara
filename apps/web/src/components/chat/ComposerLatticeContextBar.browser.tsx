@@ -14,6 +14,29 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
+it("does not change composer height when a selection appears", async () => {
+  await render(
+    <div className="w-[420px] p-4 pt-80">
+      <ComposerColumnFrame>
+        <div data-testid="overlay" className="relative">
+          <ComposerLatticeContextBar />
+          <div className="h-24">Composer</div>
+        </div>
+      </ComposerColumnFrame>
+    </div>,
+  );
+  const before = page.getByTestId("overlay").element().getBoundingClientRect().height;
+  setLiveLatticeHostContext({
+    type: LATTICE_HOST_CONTEXT,
+    version: 1,
+    workspaceRoot: "/Users/me/paper",
+    activeSurface: "editor",
+    editor: { path: "chapter.tex", line: 1, column: 1, selection: "Selected text" },
+  });
+  await expect.element(page.getByTestId("composer-lattice-context")).toBeVisible();
+  expect(page.getByTestId("overlay").element().getBoundingClientRect().height).toBe(before);
+});
+
 it("keeps the bottom of a long context selection inside its scroll area", async () => {
   setLiveLatticeHostContext({
     type: LATTICE_HOST_CONTEXT,
@@ -32,7 +55,7 @@ it("keeps the bottom of a long context selection inside its scroll area", async 
     pdf: { page: 4, pageCount: 12 },
   });
   await render(
-    <div className="w-[420px] p-4">
+    <div className="w-[420px] p-4 pt-80">
       <ComposerColumnFrame>
         <ComposerLatticeContextBar />
         <div data-testid="composer" className="h-24 border bg-background p-3">

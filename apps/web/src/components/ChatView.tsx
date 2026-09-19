@@ -5196,6 +5196,9 @@ export default function ChatView({
             {/* A bare wrapper keeps the normal-flow panels' -mb-px seam onto the input shell
                 via margin collapse. */}
             <div>
+              {isEmbed ? (
+                <ComposerLatticeContextBar onClearSelection={clearLiveLatticeHostSelection} />
+              ) : null}
               {isSidechatExpired ? (
                 <ExpiredSidechatNotice onStartNew={startReplacementSidechat} />
               ) : null}
@@ -5254,18 +5257,6 @@ export default function ChatView({
                   showComposerSubagentStrip
                 }
               />
-              {isEmbed ? (
-                <ComposerLatticeContextBar
-                  onClearSelection={clearLiveLatticeHostSelection}
-                  attachedToPrevious={
-                    showComposerLiveChangesHeader ||
-                    showComposerActiveTaskListCard ||
-                    showComposerWorkflowRunCard ||
-                    showComposerSubagentStrip ||
-                    queuedComposerTurns.length > 0
-                  }
-                />
-              ) : null}
               {showComposerGoalHeader && activeThread ? (
                 <ComposerGoalHeader
                   goal={activeThreadGoalText}

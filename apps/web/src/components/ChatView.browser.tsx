@@ -48,6 +48,8 @@ import {
 } from "../lib/terminalContext";
 import { extractTrailingBrowserAnnotations } from "../lib/browserAnnotations";
 import { isMacNavigatorPlatform } from "../lib/utils";
+import { LATTICE_HOST_CONTEXT } from "../embedMode";
+import { setLiveLatticeHostContext } from "../lib/latticeHostContext";
 import { readNativeApi } from "../nativeApi";
 import { resetHomeChatProjectPrewarmStateForTests } from "../lib/chatProjects";
 import { resetStudioProjectPrewarmStateForTests } from "../lib/studioProjects";
@@ -2406,6 +2408,69 @@ describe("ChatView transcript geometry (full app)", () => {
         });
       });
     } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("keeps embedded sidebar scroll geometry unchanged when editor context appears or expands", async () => {
+    sessionStorage.setItem(
+      "synara.poc.embed-mode",
+      JSON.stringify({
+        workspaceRoot: "/repo/project",
+        theme: "light",
+        surface: "chrome",
+        hostOrigin: window.location.origin,
+        locale: "en",
+      }),
+    );
+    const mounted = await mountChatView({
+      viewport: { ...DEFAULT_VIEWPORT, width: 420 },
+      readyTimeoutMs: 60_000,
+      snapshot: createSnapshotWithLongAssistantResponse(),
+    });
+    try {
+      const scroller = await waitForElement(
+        () => document.querySelector<HTMLElement>("[data-chat-scroll-container='true']"),
+        "Expected transcript scroller",
+      );
+      await waitForLayout();
+      scroller.scrollTop = scroller.scrollHeight;
+      scroller.dispatchEvent(new Event("scroll"));
+      await waitForLayout();
+      const before = { top: scroller.scrollTop, height: scroller.scrollHeight };
+      expect(before.top).toBeGreaterThan(0);
+      const assertUnchanged = () => {
+        expect(scroller.scrollHeight).toBe(before.height);
+        expect(Math.abs(scroller.scrollTop - before.top)).toBeLessThanOrEqual(1);
+      };
+      for (const path of ["chapter.tex", "notes.md"]) {
+        setLiveLatticeHostContext({
+          type: LATTICE_HOST_CONTEXT,
+          version: 1,
+          workspaceRoot: "/repo/project",
+          activeSurface: "editor",
+          editor: {
+            path,
+            line: 12,
+            column: 3,
+            selection: "Selected passage from the document.\n".repeat(20),
+          },
+        });
+        await vi.waitFor(() =>
+          expect(document.querySelector("[data-testid='composer-lattice-context']")).not.toBeNull(),
+        );
+        await waitForLayout();
+        assertUnchanged();
+      }
+      await page.getByRole("button", { name: "Show included context details" }).click();
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      assertUnchanged();
+      await page.screenshot();
+      await page.getByRole("button", { name: "Exclude selected text from context" }).click();
+      await waitForLayout();
+      assertUnchanged();
+    } finally {
+      setLiveLatticeHostContext(null);
       await mounted.cleanup();
     }
   });
