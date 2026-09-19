@@ -183,9 +183,9 @@ const EMPTY_AVAILABLE_EDITORS: ReadonlyArray<EditorId> = [];
 // Changed-files list in the per-turn card is capped so large turns stay compact;
 // the rest are revealed via an inline "Show more" row.
 const MAX_VISIBLE_CHANGED_FILES = 5;
-// The composer overlaps the transcript by design, so the list needs extra tail
-// space beyond the overlap to keep final cards from sitting flush against it.
-const BOTTOM_CONTENT_INSET_PX = 80;
+// The measured composer inset already clears its height minus the 20px tuck.
+// This leaves about 24px between the final row and the composer at rest.
+const BOTTOM_CONTENT_INSET_PX = 44;
 const MESSAGE_HOVER_REVEAL_CLASS_NAME =
   "opacity-0 transition-opacity pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto";
 // How long a jumped-to message keeps its highlight tint before fading back out.

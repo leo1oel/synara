@@ -20,14 +20,19 @@ const MIN_THUMB_HEIGHT = 18;
 export function calculateVerticalScrollGeometry(
   viewport: Pick<HTMLElement, "clientHeight" | "scrollHeight" | "scrollTop">,
   top = 0,
+  bottomInset = 0,
 ): VerticalScrollGeometry {
-  const height = Math.max(0, viewport.clientHeight);
-  const maxScrollTop = Math.max(0, viewport.scrollHeight - height);
+  const viewportHeight = Math.max(0, viewport.clientHeight);
+  // An overlay shortens only the drawn track, never the scroll owner's range.
+  const height = Math.max(0, viewportHeight - Math.max(0, bottomInset));
+  const maxScrollTop = Math.max(0, viewport.scrollHeight - viewportHeight);
   const overflow = maxScrollTop > 0 && height > 0;
   const scrollTop = Math.min(Math.max(0, viewport.scrollTop), maxScrollTop);
   const availableTrack = Math.max(0, height - EXTERNAL_SCROLLBAR_TRACK_INSET * 2);
   const proportionalHeight =
-    viewport.scrollHeight > 0 ? availableTrack * (height / viewport.scrollHeight) : availableTrack;
+    viewport.scrollHeight > 0
+      ? availableTrack * (viewportHeight / viewport.scrollHeight)
+      : availableTrack;
   const thumbHeight = overflow
     ? Math.min(availableTrack, Math.max(MIN_THUMB_HEIGHT, proportionalHeight))
     : availableTrack;

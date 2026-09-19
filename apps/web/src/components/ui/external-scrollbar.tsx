@@ -28,6 +28,8 @@ import {
 
 type ExternalScrollbarProps = {
   getViewport: () => HTMLElement | null;
+  /** Keep the track above a floating surface without resizing its scroll owner. */
+  bottomInsetPx?: number;
 };
 
 const SCROLLING_HIDE_DELAY_MS = 500;
@@ -42,7 +44,7 @@ const EMPTY_GEOMETRY: VerticalScrollGeometry = {
   top: 0,
 };
 
-export function ExternalScrollbar({ getViewport }: ExternalScrollbarProps) {
+export function ExternalScrollbar({ getViewport, bottomInsetPx = 0 }: ExternalScrollbarProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLElement | null>(null);
   const scrollingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -67,8 +69,10 @@ export function ExternalScrollbar({ getViewport }: ExternalScrollbarProps) {
     }
     const viewportRect = viewport.getBoundingClientRect();
     const surfaceRect = surface.getBoundingClientRect();
-    setGeometry(calculateVerticalScrollGeometry(viewport, viewportRect.top - surfaceRect.top));
-  }, []);
+    setGeometry(
+      calculateVerticalScrollGeometry(viewport, viewportRect.top - surfaceRect.top, bottomInsetPx),
+    );
+  }, [bottomInsetPx]);
 
   const scheduleMeasure = useCallback(() => {
     if (frameRef.current != null) return;

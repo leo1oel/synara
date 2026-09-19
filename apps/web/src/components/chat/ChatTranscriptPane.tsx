@@ -35,6 +35,7 @@ import { createActiveTrailStore, deriveMessageTrailItems } from "./messageTrail.
 import { createThreadFindHighlightStore, type ThreadFindHighlightStore } from "./threadFind.logic";
 import { AgentActivityDetailView } from "./AgentActivityDetailView";
 import type { AgentActivityDetail } from "./agentActivity.logic";
+import { COMPOSER_OVERLAY_TUCK_PX, composerOverlayAffordanceBottomPx } from "./composerOverlay";
 
 interface ChatTranscriptPaneProps {
   activeThreadId: string;
@@ -187,9 +188,15 @@ export function ChatTranscriptPane({
   onResolveWorktreeSetup,
   findHighlightStore: findHighlightStoreProp,
 }: ChatTranscriptPaneProps) {
-  const scrollButtonFrameStyle: CSSProperties | undefined = contentInsetRightPx
-    ? { paddingRight: contentInsetRightPx }
-    : undefined;
+  const composerHeightPx = contentInsetBottomPx
+    ? contentInsetBottomPx + COMPOSER_OVERLAY_TUCK_PX
+    : 0;
+  const scrollButtonFrameStyle: CSSProperties = {
+    ...(contentInsetRightPx ? { paddingRight: contentInsetRightPx } : {}),
+    ...(composerHeightPx
+      ? { bottom: composerOverlayAffordanceBottomPx(contentInsetBottomPx ?? 0) }
+      : {}),
+  };
 
   // Left-edge navigation trail: one tick per sent message. Current + visible
   // highlights are pushed up from MessagesTimeline as the viewport scrolls. They
@@ -327,6 +334,7 @@ export function ChatTranscriptPane({
           <ExternalScrollbar
             key={`external-scrollbar:${activeThreadId}`}
             getViewport={getTimelineViewport}
+            bottomInsetPx={composerHeightPx}
           />
         ) : null}
 

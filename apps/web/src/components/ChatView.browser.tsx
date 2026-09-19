@@ -9362,7 +9362,7 @@ describe("ChatView transcript geometry (full app)", () => {
     }
   });
 
-  it("leaves breathing room above the embedded composer at the end of a response", async () => {
+  it("keeps the embedded transcript scrollbar above the composer with a compact tail gap", async () => {
     sessionStorage.setItem(
       "synara.poc.embed-mode",
       JSON.stringify({
@@ -9390,9 +9390,47 @@ describe("ChatView transcript geometry (full app)", () => {
       const rows = Array.from(document.querySelectorAll<HTMLElement>("[data-timeline-row-kind]"));
       const lastRowBottom = Math.max(...rows.map((row) => row.getBoundingClientRect().bottom));
       const gap = composer.getBoundingClientRect().top - lastRowBottom;
+      expect(gap).toBeGreaterThanOrEqual(16);
+      expect(gap).toBeLessThanOrEqual(32);
+      const track = document.querySelector<HTMLElement>(".external-scrollbar")!;
+      expect(track.getBoundingClientRect().height).toBeGreaterThan(100);
+      expect(track.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+        composer.getBoundingClientRect().top + 1,
+      );
+      await userEvent.hover(track);
+      await vi.waitFor(() => expect(getComputedStyle(track).opacity).toBe("1"));
       await page.screenshot();
-      expect(gap).toBeGreaterThanOrEqual(56);
-      expect(gap).toBeLessThanOrEqual(88);
+
+      scroller.dispatchEvent(new WheelEvent("wheel", { bubbles: true, deltaY: -100 }));
+      scroller.scrollTop = 0;
+      scroller.dispatchEvent(new Event("scroll"));
+      const arrow = page.getByRole("button", { name: "Scroll to bottom" });
+      await expect.element(arrow).toBeVisible();
+      const arrowElement = document.querySelector<HTMLElement>(
+        'button[aria-label="Scroll to bottom"]',
+      )!;
+      expect(arrowElement.getBoundingClientRect().bottom).toBeLessThan(
+        composer.getBoundingClientRect().top,
+      );
+      await userEvent.click(arrow);
+      await vi.waitFor(() =>
+        expect(getScrollContainerDistanceFromBottom(scroller)).toBeLessThanOrEqual(2),
+      );
+
+      const oldTop = composer.getBoundingClientRect().top;
+      const editor = await waitForComposerEditor();
+      await userEvent.fill(
+        editor,
+        Array.from({ length: 8 }, (_, index) => `Draft line ${index}`).join("\n"),
+      );
+      await vi.waitFor(() => {
+        expect(composer.getBoundingClientRect().top).toBeLessThan(oldTop - 30);
+        expect(
+          Math.abs(track.getBoundingClientRect().bottom - composer.getBoundingClientRect().top),
+        ).toBeLessThanOrEqual(2);
+      });
+      await userEvent.hover(track);
+      await page.screenshot();
     } finally {
       await mounted.cleanup();
     }
