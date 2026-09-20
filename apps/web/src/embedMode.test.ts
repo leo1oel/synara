@@ -20,6 +20,7 @@ import {
   postPaperLibraryRequestToLattice,
   postProjectHistoryToLattice,
   readEmbedMode,
+  readEmbeddedHostAuthToken,
   readEmbeddedHostWsUrl,
   readLatticeAgentPanelOpenedMessage,
   readLatticeCheckpointRestoreMessage,
@@ -252,12 +253,20 @@ describe("Lattice embed mode", () => {
     initializeEmbedMode();
 
     const drawer = installBrowserStubs("light", "drawer", undefined, agent.values);
+    drawer.frame.location.hash = "#lattice-auth=drawer-token";
     initializeEmbedMode();
     expect(readEmbedMode()?.surface).toBe("drawer");
+    expect(readEmbeddedHostAuthToken()).toBe("drawer-token");
 
     Object.defineProperty(globalThis, "window", { configurable: true, value: agent.frame });
     expect(readEmbedMode()?.surface).toBe("chrome");
+    expect(readEmbeddedHostAuthToken()).toBe("secret-token");
     expect(drawer.frame.name).not.toBe(agent.frame.name);
+
+    agent.values.delete("synara.poc.embed-auth-token:chrome");
+    agent.values.set("synara.poc.embed-auth-token", "stale-token");
+    expect(readEmbeddedHostAuthToken()).toBeNull();
+    expect(readEmbeddedHostWsUrl()).toBeNull();
   });
 
   it("clears embed config when a top-level window has no handshake query", () => {

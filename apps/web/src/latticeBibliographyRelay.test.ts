@@ -4,6 +4,7 @@ import {
   awaitBibliographyHostResult,
   LATTICE_BIBLIOGRAPHY_TOOL_RESULT,
   parseBibliographyRequest,
+  startLatticeBibliographyRelay,
   SYNARA_BIBLIOGRAPHY_TOOL_REQUEST,
 } from "./latticeBibliographyRelay";
 
@@ -11,6 +12,7 @@ const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow);
   else Reflect.deleteProperty(globalThis, "window");
 });
@@ -34,6 +36,36 @@ function installWindow() {
 }
 
 describe("Lattice bibliography relay protocol", () => {
+  it("starts polling with the chrome frame credential instead of a stale shared credential", () => {
+    installWindow();
+    window.name = "synara-embed-chrome";
+    const storage = new Map([
+      [
+        "synara.poc.embed-mode:chrome",
+        JSON.stringify({
+          workspaceRoot: "/workspace/Native VLM",
+          surface: "chrome",
+          hostOrigin: "https://lattice.test",
+        }),
+      ],
+      ["synara.poc.embed-auth-token:chrome", "chrome-token"],
+      ["synara.poc.embed-auth-token:drawer", "drawer-token"],
+      ["synara.poc.embed-auth-token", "stale-token"],
+    ]);
+    vi.stubGlobal("sessionStorage", { getItem: (key: string) => storage.get(key) ?? null });
+    const fetchMock = vi.fn(() => new Promise<Response>(() => {}));
+    vi.stubGlobal("fetch", fetchMock);
+    const stop = startLatticeBibliographyRelay();
+    try {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/lattice/bibliography-tools/poll?workspaceRoot=%2Fworkspace%2FNative+VLM",
+        expect.objectContaining({ headers: { Authorization: "Bearer chrome-token" } }),
+      );
+    } finally {
+      stop();
+    }
+  });
+
   it("posts the project-scoped request and accepts only the trusted host response", async () => {
     const { listeners, parent } = installWindow();
     const request = {

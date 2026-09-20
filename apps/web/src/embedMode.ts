@@ -1020,9 +1020,13 @@ function embedStorageKey(base: string): string {
   return surface ? `${base}:${surface}` : base;
 }
 
-export function readEmbeddedHostWsUrl(): string | null {
+export function readEmbeddedHostAuthToken(): string | null {
   if (typeof window === "undefined" || !readEmbedMode()) return null;
-  const token = sessionStorage.getItem(embedStorageKey(EMBED_AUTH_TOKEN_STORAGE_KEY))?.trim();
+  return sessionStorage.getItem(embedStorageKey(EMBED_AUTH_TOKEN_STORAGE_KEY))?.trim() || null;
+}
+
+export function readEmbeddedHostWsUrl(): string | null {
+  const token = readEmbeddedHostAuthToken();
   if (!token) return null;
   const url = new URL(window.location.origin);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";

@@ -1,4 +1,4 @@
-import { readEmbedMode } from "./embedMode";
+import { readEmbeddedHostAuthToken, readEmbedMode } from "./embedMode";
 
 export const SYNARA_PROJECT_DOCUMENT_TOOL_REQUEST = "synara:project-document-tool-request";
 export const LATTICE_PROJECT_DOCUMENT_TOOL_RESULT = "lattice:project-document-tool-result";
@@ -142,10 +142,6 @@ function parseHostResult(
   return value as unknown as ProjectDocumentResult;
 }
 
-function readAuthToken(): string | null {
-  return sessionStorage.getItem("synara.poc.embed-auth-token")?.trim() || null;
-}
-
 export function awaitProjectDocumentHostResult(
   request: ProjectDocumentRequest,
   hostOrigin: string,
@@ -231,7 +227,7 @@ async function submitResult(
 
 export function startLatticeProjectDocumentRelay(): () => void {
   const config = readEmbedMode();
-  const token = readAuthToken();
+  const token = readEmbeddedHostAuthToken();
   if (!config?.hostOrigin || config.surface !== "chrome" || !token || window.parent === window) {
     return () => undefined;
   }

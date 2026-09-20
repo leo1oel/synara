@@ -1,11 +1,7 @@
-import { readEmbedMode } from "./embedMode";
+import { readEmbeddedHostAuthToken, readEmbedMode } from "./embedMode";
 
 export const LATTICE_AGENT_COMPILE_RESULT = "lattice:agent-compile-result";
 const COMPILE_RESULT_PATH = "/api/lattice/agent-quality/compile-result";
-
-function readAuthToken(): string | null {
-  return sessionStorage.getItem("synara.poc.embed-auth-token")?.trim() || null;
-}
 
 function isCompileResult(value: unknown): value is Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
@@ -48,7 +44,7 @@ function isCompileResult(value: unknown): value is Record<string, unknown> {
 
 export function startLatticeAgentQualityRelay(): () => void {
   const config = readEmbedMode();
-  const token = readAuthToken();
+  const token = readEmbeddedHostAuthToken();
   if (!config?.hostOrigin || !token || window.parent === window) return () => undefined;
   const controller = new AbortController();
   const onMessage = (event: MessageEvent) => {

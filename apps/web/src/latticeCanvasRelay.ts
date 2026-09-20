@@ -1,4 +1,4 @@
-import { readEmbedMode } from "./embedMode";
+import { readEmbeddedHostAuthToken, readEmbedMode } from "./embedMode";
 
 export const SYNARA_CANVAS_TOOL_REQUEST = "synara:canvas-tool-request";
 export const LATTICE_CANVAS_TOOL_RESULT = "lattice:canvas-tool-result";
@@ -20,10 +20,6 @@ interface CanvasResult {
   readonly ok: boolean;
   readonly result?: unknown;
   readonly error?: { readonly code: string; readonly message: string };
-}
-
-function readAuthToken(): string | null {
-  return sessionStorage.getItem("synara.poc.embed-auth-token")?.trim() || null;
 }
 
 export function awaitCanvasHostResult(
@@ -121,7 +117,7 @@ async function submitResult(
 
 export function startLatticeCanvasRelay(): () => void {
   const config = readEmbedMode();
-  const token = readAuthToken();
+  const token = readEmbeddedHostAuthToken();
   if (!config?.hostOrigin || config.surface !== "chrome" || !token || window.parent === window)
     return () => undefined;
   const controller = new AbortController();

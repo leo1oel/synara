@@ -1,4 +1,4 @@
-import { readEmbedMode } from "./embedMode";
+import { readEmbeddedHostAuthToken, readEmbedMode } from "./embedMode";
 
 export const SYNARA_SPREADSHEET_TOOL_REQUEST = "synara:spreadsheet-tool-request";
 export const LATTICE_SPREADSHEET_TOOL_RESULT = "lattice:spreadsheet-tool-result";
@@ -130,10 +130,6 @@ function parseHostResult(value: Record<string, unknown>, id: string): Spreadshee
   return value as unknown as SpreadsheetResult;
 }
 
-function readAuthToken(): string | null {
-  return sessionStorage.getItem("synara.poc.embed-auth-token")?.trim() || null;
-}
-
 export function awaitSpreadsheetHostResult(
   request: SpreadsheetRequest,
   hostOrigin: string,
@@ -220,7 +216,7 @@ async function submitResult(
 
 export function startLatticeSpreadsheetRelay(): () => void {
   const config = readEmbedMode();
-  const token = readAuthToken();
+  const token = readEmbeddedHostAuthToken();
   if (!config?.hostOrigin || config.surface !== "chrome" || !token || window.parent === window) {
     return () => undefined;
   }

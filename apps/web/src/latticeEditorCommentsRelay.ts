@@ -1,4 +1,4 @@
-import { readEmbedMode } from "./embedMode";
+import { readEmbeddedHostAuthToken, readEmbedMode } from "./embedMode";
 export const SYNARA_EDITOR_COMMENTS_TOOL_REQUEST = "synara:editor-comments-tool-request";
 export const LATTICE_EDITOR_COMMENTS_TOOL_RESULT = "lattice:editor-comments-tool-result";
 type Request = {
@@ -15,7 +15,6 @@ type HostResult = {
   result?: Record<string, unknown>;
   error?: { code: string; message: string };
 };
-const token = () => sessionStorage.getItem("synara.poc.embed-auth-token")?.trim() || null;
 const record = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 const only = (value: Record<string, unknown>, keys: string[]) =>
@@ -213,7 +212,7 @@ export function awaitEditorCommentsHostResult(
 }
 export function startLatticeEditorCommentsRelay(): () => void {
   const config = readEmbedMode();
-  const auth = token();
+  const auth = readEmbeddedHostAuthToken();
   if (!config?.hostOrigin || config.surface !== "chrome" || !auth || window.parent === window)
     return () => undefined;
   const hostOrigin = config.hostOrigin;

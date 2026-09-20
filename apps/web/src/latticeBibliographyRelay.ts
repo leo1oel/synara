@@ -1,4 +1,4 @@
-import { readEmbedMode } from "./embedMode";
+import { readEmbeddedHostAuthToken, readEmbedMode } from "./embedMode";
 
 export const SYNARA_BIBLIOGRAPHY_TOOL_REQUEST = "synara:bibliography-tool-request";
 export const LATTICE_BIBLIOGRAPHY_TOOL_RESULT = "lattice:bibliography-tool-result";
@@ -143,10 +143,6 @@ function parseHostResult(value: Record<string, unknown>, id: string): Bibliograp
   return value as unknown as BibliographyResult;
 }
 
-function readAuthToken(): string | null {
-  return sessionStorage.getItem("synara.poc.embed-auth-token")?.trim() || null;
-}
-
 export function awaitBibliographyHostResult(
   request: BibliographyRequest,
   hostOrigin: string,
@@ -235,7 +231,7 @@ async function submitResult(
 
 export function startLatticeBibliographyRelay(): () => void {
   const config = readEmbedMode();
-  const token = readAuthToken();
+  const token = readEmbeddedHostAuthToken();
   if (!config?.hostOrigin || config.surface !== "chrome" || !token || window.parent === window) {
     return () => undefined;
   }
