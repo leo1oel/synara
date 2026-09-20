@@ -47,6 +47,17 @@ export type WorkLogRequestKind = ApprovalRequestKind;
 // apps/server/src/orchestration/commandInvariants.ts, which the web app cannot
 // import.
 const CHECKPOINT_REVERT_FAILED_ACTIVITY_KIND = "checkpoint.revert.failed";
+// Older adapters persisted these native notifications as transcript activities.
+// Keep diagnostics in storage, but apply the adapter's bookkeeping filter on replay too.
+const DIAGNOSTIC_ONLY_CODEX_METHODS = new Set([
+  "remoteControl/status/changed",
+  "skills/changed",
+  "session/threadOpenRequested",
+  "session/threadOpenResolved",
+  "thread/settings/updated",
+  "thread/goal/cleared",
+  "thread/reverted",
+]);
 export const PROVIDER_CONTEXT_LIFECYCLE_ACTIVITY_KIND = "provider.context.changed";
 const SESSION_CONTEXT_RECAP_PREVIEW_MAX_CHARS = 600;
 
@@ -305,6 +316,7 @@ export function deriveWorkLogEntries(
         activity.kind !== "task.completed",
     )
     .filter((activity) => !isQuietTurnLifecycleActivity(activity))
+    .filter((activity) => !isDiagnosticOnlyNativeActivity(activity))
     .filter((activity) => activity.kind !== "account.rate-limits.updated")
     .filter(
       (activity) =>
@@ -380,6 +392,25 @@ function shouldKeepActivityForWorkLog(
   }
 
   return latestTurnId ? activity.turnId === latestTurnId : true;
+}
+
+function isDiagnosticOnlyNativeActivity(activity: OrchestrationThreadActivity): boolean {
+  if (activity.kind !== "provider.event.unmapped" || activity.tone === "error") {
+    return false;
+  }
+  const payload = asRecord(activity.payload);
+  const method = asTrimmedString(payload?.nativeEventType);
+  if (method && DIAGNOSTIC_ONLY_CODEX_METHODS.has(method)) {
+    return true;
+  }
+  const data = asRecord(payload?.data);
+  // MCP initialization isn't a tool call. Unknown states and failures must remain visible.
+  return (
+    method === "mcpServer/startupStatus/updated" &&
+    (data?.status === "starting" || data?.status === "ready") &&
+    !data.error &&
+    !data.failureReason
+  );
 }
 
 function isQuietTurnLifecycleActivity(activity: OrchestrationThreadActivity): boolean {
@@ -1092,13 +1123,21 @@ function shouldCollapseRuntimeWarningEntries(
   }
   return (
     normalizeToolTextForComparison(previous.label) === normalizeToolTextForComparison(next.label) &&
-    normalizeToolTextForComparison(
+    normalizeRuntimeWarningForComparison(
       previous.runtimeWarningMessage ?? previous.detail ?? previous.preview ?? "",
     ) ===
-      normalizeToolTextForComparison(
+      normalizeRuntimeWarningForComparison(
         next.runtimeWarningMessage ?? next.detail ?? next.preview ?? "",
       )
   );
+}
+
+function normalizeRuntimeWarningForComparison(message: string): string {
+  // Codex's Rust stderr prefixes each retry with a fresh timestamp. Ignore only
+  // that prefix, not destination URLs, error details, or case-sensitive paths.
+  return message
+    .replace(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z\s+(?=(?:ERROR|WARN)\s)/, "")
+    .trim();
 }
 
 function mergeRuntimeWarningEntries(

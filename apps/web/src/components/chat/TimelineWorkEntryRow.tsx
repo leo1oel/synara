@@ -361,10 +361,12 @@ function capitalizePhrase(value: string): string {
 }
 
 function toolWorkEntryHeading(workEntry: TimelineWorkEntry): string {
-  // Task progress is semantic copy, not a tool lifecycle status. Preserve the
-  // trailing "completed" instead of passing it through the compact tool-label
-  // normalizer, which intentionally strips lifecycle suffixes.
-  if (workEntry.activityKind === "turn.tasks.updated") {
+  // Task and checkpoint progress are semantic copy, not tool lifecycle labels.
+  // Stripping "started" / "completed" makes a revert's two outcomes identical.
+  if (
+    workEntry.activityKind === "turn.tasks.updated" ||
+    workEntry.activityKind?.startsWith("checkpoint.revert.")
+  ) {
     return capitalizePhrase(workEntry.label);
   }
   const synaraTitle = deriveSynaraMcpToolTitle({

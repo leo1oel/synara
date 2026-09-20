@@ -1934,6 +1934,10 @@ lifecycleLayer("CodexAdapterLive lifecycle", (it) => {
       emit("remoteControl/status/changed");
       emit("skills/changed");
       emit("session/threadOpenRequested", "session");
+      emit("session/threadOpenResolved", "session");
+      emit("thread/settings/updated");
+      emit("thread/goal/cleared");
+      emit("thread/reverted");
       // Real errors and useful unknown events must survive the filter.
       emit("session/threadOpenRequested", "error");
       emit("item/future/completed");

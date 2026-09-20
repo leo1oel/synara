@@ -12,6 +12,63 @@ import type { ChatMessage } from "./types";
 import { makeActivity } from "./storeTestFixtures";
 
 describe("deriveWorkLogEntries", () => {
+  it("hides persisted Codex bookkeeping and healthy MCP startup but keeps failures and unknown events", () => {
+    const methods = [
+      "session/threadOpenResolved",
+      "thread/settings/updated",
+      "thread/goal/cleared",
+      "thread/reverted",
+    ];
+    const entries = deriveWorkLogEntries(
+      [
+        ...methods.map((method) =>
+          makeActivity({
+            id: method,
+            kind: "provider.event.unmapped",
+            payload: { nativeEventType: method },
+          }),
+        ),
+        ...["starting", "ready", "failed", "future-status"].map((status) =>
+          makeActivity({
+            id: status,
+            kind: "provider.event.unmapped",
+            payload: {
+              nativeEventType: "mcpServer/startupStatus/updated",
+              data: { name: "example", status },
+            },
+          }),
+        ),
+        makeActivity({
+          id: "unknown",
+          kind: "provider.event.unmapped",
+          payload: { nativeEventType: "item/future/completed" },
+        }),
+        makeActivity({
+          id: "error",
+          kind: "runtime.error",
+          tone: "error",
+          payload: { nativeEventType: "thread/reverted", message: "Rollback failed" },
+        }),
+        makeActivity({
+          id: "startup-error",
+          kind: "provider.event.unmapped",
+          payload: {
+            nativeEventType: "mcpServer/startupStatus/updated",
+            data: { status: "starting", error: "Connection refused" },
+          },
+        }),
+      ],
+      undefined,
+    );
+    expect(entries.map((entry) => entry.id).sort()).toEqual([
+      "error",
+      "failed",
+      "future-status",
+      "startup-error",
+      "unknown",
+    ]);
+  });
+
   it("keeps started tool entries so pending Cursor calls appear immediately", () => {
     const activities: OrchestrationThreadActivity[] = [
       makeActivity({
@@ -771,6 +828,32 @@ describe("deriveWorkLogEntries", () => {
       detail: "3 notices - Provider request failed; retrying.",
       preview: "3 notices - Provider request failed; retrying.",
     });
+  });
+
+  it("collapses timestamped Codex stderr retries without hiding different destinations", () => {
+    const warning = (id: number, url: string) =>
+      makeActivity({
+        id: `stderr-${id}`,
+        sequence: id,
+        kind: "runtime.warning",
+        summary: "Runtime warning",
+        payload: {
+          message: `2026-09-20T16:48:0${id}.034254Z ERROR rmcp::transport::worker: http/request failed (${url})`,
+        },
+      });
+    const entries = deriveWorkLogEntries(
+      [
+        warning(1, "http://127.0.0.1:14242/mcp"),
+        warning(2, "http://127.0.0.1:14242/mcp"),
+        warning(3, "https://chatgpt.com/backend-api/ps/mcp"),
+      ],
+      undefined,
+    );
+    expect(entries).toHaveLength(2);
+    expect(entries[0]?.detail).toBe(
+      "2 notices - 2026-09-20T16:48:02.034254Z ERROR rmcp::transport::worker: http/request failed (http://127.0.0.1:14242/mcp)",
+    );
+    expect(entries[1]?.detail).toContain("https://chatgpt.com/backend-api/ps/mcp");
   });
 
   it("does not collapse identical runtime warnings across turn boundaries", () => {

@@ -1036,6 +1036,11 @@ const DIAGNOSTIC_ONLY_CODEX_METHODS = new Set([
   "remoteControl/status/changed",
   "skills/changed",
   "session/threadOpenRequested",
+  "session/threadOpenResolved",
+  "thread/settings/updated",
+  "thread/goal/cleared",
+  // The checkpoint reactor emits the authoritative revert outcome separately.
+  "thread/reverted",
 ]);
 
 function mapUnmappedCodexEvent(
