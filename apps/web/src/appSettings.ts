@@ -370,6 +370,8 @@ export const AppSettingsSchema = Schema.Struct({
   customPiModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   textGenerationProvider: PersistedProviderKind.pipe(withDefaults(() => "codex" as const)),
   textGenerationModel: Schema.optional(TrimmedNonEmptyString),
+  compileRepairProvider: PersistedProviderKind.pipe(withDefaults(() => "codex" as const)),
+  compileRepairModel: Schema.optional(TrimmedNonEmptyString),
   uiFontFamily: Schema.String.check(Schema.isMaxLength(256)).pipe(withDefaults(() => "")),
   defaultProvider: PersistedProviderKind.pipe(withDefaults(() => "codex" as const)),
   // Local-only UI preference: providers explicitly hidden from the composer picker.
@@ -685,6 +687,8 @@ function serverSettingsToAppSettings(settings: ServerSettingsView): Partial<AppS
     customPiModels: settings.providers.pi.customModels,
     textGenerationProvider: settings.textGenerationModelSelection.provider,
     textGenerationModel: settings.textGenerationModelSelection.model,
+    compileRepairProvider: settings.compileRepairModelSelection.provider,
+    compileRepairModel: settings.compileRepairModelSelection.model,
     onboardingCompletedAt: settings.onboardingCompletedAt ?? null,
   };
 }
@@ -772,6 +776,18 @@ export function appSettingsPatchToServerSettingsPatch(
       provider: resolveTextGenerationProvider({
         ...(patch.textGenerationProvider !== undefined
           ? { provider: patch.textGenerationProvider }
+          : {}),
+        model,
+      }),
+      model,
+    };
+  }
+  if (hasOwn(patch, "compileRepairModel") || hasOwn(patch, "compileRepairProvider")) {
+    const model = patch.compileRepairModel ?? DEFAULT_GIT_TEXT_GENERATION_MODEL;
+    serverPatch.compileRepairModelSelection = {
+      provider: resolveTextGenerationProvider({
+        ...(patch.compileRepairProvider !== undefined
+          ? { provider: patch.compileRepairProvider }
           : {}),
         model,
       }),

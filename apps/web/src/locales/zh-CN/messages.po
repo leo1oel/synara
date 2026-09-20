@@ -1924,6 +1924,16 @@ msgstr "Git 文本生成模型"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Compile repair model"
+msgstr "编译修复模型"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Used by Lattice to repair one compile diagnostic in an independent background task."
+msgstr "供 Lattice 在独立后台任务中修复一条编译诊断。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
 msgid "Custom models"
 msgstr "自定义模型"
 

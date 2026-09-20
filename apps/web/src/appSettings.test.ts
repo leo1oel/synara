@@ -40,6 +40,17 @@ import {
   resolveTerminalFontFamilyStack,
 } from "./appSettings";
 
+describe("compile repair model persistence patch", () => {
+  it("routes an explicit provider/model independently of Git writing", () => {
+    expect(
+      appSettingsPatchToServerSettingsPatch({
+        compileRepairProvider: "pi",
+        compileRepairModel: "vendor/custom-model",
+      }),
+    ).toEqual({ compileRepairModelSelection: { provider: "pi", model: "vendor/custom-model" } });
+  });
+});
+
 describe("removed provider enablement preference", () => {
   it("drops a legacy local disabled list while retaining picker visibility", () => {
     const decoded = Schema.decodeUnknownSync(AppSettingsSchema)({

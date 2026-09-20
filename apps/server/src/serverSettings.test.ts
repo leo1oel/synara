@@ -21,6 +21,39 @@ const runWithSettings = <A, E>(
 ) => Effect.runPromise(effect.pipe(Effect.provide(testLayer)) as Effect.Effect<A, E, never>);
 
 describe("ServerSettingsService", () => {
+  it("persists an independent compile repair model across restart", async () => {
+    const result = await runWithSettings(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        const config = yield* ServerConfig;
+        yield* service.start;
+        const before = yield* service.getSettings;
+        yield* service.updateSettings({
+          compileRepairModelSelection: { provider: "claudeAgent", model: "claude-sonnet-4-6" },
+        });
+        const restarted = yield* Effect.gen(function* () {
+          const next = yield* ServerSettingsService;
+          yield* next.start;
+          return yield* next.getSettings;
+        }).pipe(
+          Effect.provide(
+            ServerSettingsLive.pipe(
+              Layer.provide(Layer.merge(NodeServices.layer, Layer.succeed(ServerConfig, config))),
+            ),
+          ),
+        );
+        return { before, restarted };
+      }),
+    );
+    expect(result.restarted.compileRepairModelSelection).toEqual({
+      provider: "claudeAgent",
+      model: "claude-sonnet-4-6",
+    });
+    expect(result.restarted.textGenerationModelSelection).toEqual(
+      result.before.textGenerationModelSelection,
+    );
+  });
+
   it("loads defaults when settings file does not exist", async () => {
     const settings = await runWithSettings(
       Effect.gen(function* () {

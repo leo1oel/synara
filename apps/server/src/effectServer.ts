@@ -8,6 +8,7 @@ import * as SqlClient from "effect/unstable/sql/SqlClient";
 
 import { agentGatewayRouteLayer } from "./agentGateway/httpRoute";
 import { latticeAgentQualityRouteLayer } from "./agentGateway/latticeAgentQualityHttpRoute";
+import { latticeCompileRepairRouteLayer } from "./agentGateway/latticeCompileRepairHttpRoute";
 import { latticeBibliographyRouteLayer } from "./agentGateway/latticeBibliographyHttpRoute";
 import { latticeCanvasRouteLayer } from "./agentGateway/latticeCanvasHttpRoute";
 import { latticeSpreadsheetRouteLayer } from "./agentGateway/latticeSpreadsheetHttpRoute";
@@ -174,6 +175,7 @@ export const createEffectServer = Effect.fn(function* (
     websocketRpcRouteLayer,
     agentGatewayRouteLayer,
     latticeAgentQualityRouteLayer,
+    latticeCompileRepairRouteLayer,
     latticeBibliographyRouteLayer,
     latticeCanvasRouteLayer,
     latticeSpreadsheetRouteLayer,

@@ -1,9 +1,43 @@
 import { DEFAULT_SERVER_SETTINGS, ProviderSessionStartInput } from "@synara/contracts";
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
-import { providerStartOptionsFromServerSettings } from "./serverSettings";
+import { applyServerSettingsPatch, providerStartOptionsFromServerSettings } from "./serverSettings";
 
 const decodeProviderSessionStartInput = Schema.decodeUnknownSync(ProviderSessionStartInput);
+
+describe("compile repair selection patches", () => {
+  it("keeps options on empty patches, accepts options-only patches, and drops options on model/provider changes", () => {
+    const current = {
+      ...DEFAULT_SERVER_SETTINGS,
+      compileRepairModelSelection: {
+        provider: "codex" as const,
+        model: "gpt-5.4",
+        options: { reasoningEffort: "high" as const },
+      },
+    };
+    expect(
+      applyServerSettingsPatch(current, { compileRepairModelSelection: {} })
+        .compileRepairModelSelection,
+    ).toEqual(current.compileRepairModelSelection);
+    expect(
+      applyServerSettingsPatch(current, {
+        compileRepairModelSelection: { options: { reasoningEffort: "low" } },
+      }).compileRepairModelSelection,
+    ).toEqual({ provider: "codex", model: "gpt-5.4", options: { reasoningEffort: "low" } });
+    expect(
+      applyServerSettingsPatch(current, { compileRepairModelSelection: { model: "gpt-other" } })
+        .compileRepairModelSelection,
+    ).toEqual({ provider: "codex", model: "gpt-other" });
+    expect(
+      applyServerSettingsPatch(current, {
+        compileRepairModelSelection: { provider: "claudeAgent", model: "claude-sonnet-4-6" },
+      }).compileRepairModelSelection,
+    ).toEqual({ provider: "claudeAgent", model: "claude-sonnet-4-6" });
+    expect(current.textGenerationModelSelection).toEqual(
+      DEFAULT_SERVER_SETTINGS.textGenerationModelSelection,
+    );
+  });
+});
 
 describe("providerStartOptionsFromServerSettings", () => {
   it("omits blank launch settings from provider session input", () => {

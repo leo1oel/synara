@@ -315,6 +315,7 @@ describe("wsNativeApi", () => {
         defaultThreadEnvMode: "local",
         addProjectBaseDirectory: "",
         textGenerationModelSelection: { provider: "codex", model: "gpt-5.4-mini" },
+        compileRepairModelSelection: { provider: "codex", model: "gpt-5.4-mini" },
         providers: {
           codex: { enabled: true, binaryPath: "codex", homePath: "", customModels: [] },
           claudeAgent: { enabled: true, binaryPath: "claude", launchArgs: "", customModels: [] },

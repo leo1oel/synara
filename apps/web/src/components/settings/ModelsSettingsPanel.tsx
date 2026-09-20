@@ -18,6 +18,7 @@ import {
   CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS,
   type AppSettingsBinding,
   MAX_CUSTOM_MODEL_LENGTH,
+  getAppModelOptions,
   getCustomModelsForProvider,
   getDefaultCustomModelsForProvider,
   getGitTextGenerationModelOptions,
@@ -100,6 +101,9 @@ export function ModelsSettingsPanel({
   const { textGenerationModel, textGenerationProvider } = settings;
   const currentGitTextGenerationProvider = textGenerationProvider ?? "codex";
   const currentGitTextGenerationModel = textGenerationModel ?? DEFAULT_GIT_TEXT_GENERATION_MODEL;
+  const currentCompileRepairProvider = settings.compileRepairProvider ?? "codex";
+  const currentCompileRepairModel =
+    settings.compileRepairModel ?? DEFAULT_GIT_TEXT_GENERATION_MODEL;
   const gitWritingModelHintByProvider = useMemo<Partial<Record<ProviderKind, string | null>>>(
     () => ({ [currentGitTextGenerationProvider]: currentGitTextGenerationModel }),
     [currentGitTextGenerationModel, currentGitTextGenerationProvider],
@@ -115,6 +119,33 @@ export function ModelsSettingsPanel({
     cwd: providerModelDiscoveryCwd,
     modelHintByProvider: gitWritingModelHintByProvider,
     prefetchProviders: GIT_TEXT_GENERATION_PROVIDERS,
+  });
+  const repairProviders = useMemo(
+    () => CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.map((config) => config.provider),
+    [],
+  );
+  const repairModelHintByProvider = useMemo(
+    () => ({ [currentCompileRepairProvider]: currentCompileRepairModel }),
+    [currentCompileRepairProvider, currentCompileRepairModel],
+  );
+  const { modelOptionsByProvider: repairCatalogOptionsByProvider } = useProviderModelCatalog({
+    selectedProvider: currentCompileRepairProvider,
+    discoveryEnabled: active,
+    cwd: providerModelDiscoveryCwd,
+    modelHintByProvider: repairModelHintByProvider,
+    prefetchProviders: repairProviders,
+  });
+  const compileRepairModelOptions = repairProviders.flatMap((provider) => {
+    const options = repairCatalogOptionsByProvider[provider];
+    const fallback = getAppModelOptions(
+      provider,
+      getCustomModelsForProvider(settings, provider),
+      provider === currentCompileRepairProvider ? currentCompileRepairModel : null,
+    );
+    return [
+      ...options.map((option) => ({ ...option, provider })),
+      ...fallback.filter((option) => !options.some((known) => known.slug === option.slug)),
+    ];
   });
   const gitTextGenerationModelOptions = useMemo(() => {
     const discoveredOptionsByProvider = {} as Record<
@@ -269,6 +300,57 @@ export function ModelsSettingsPanel({
               valueContent={selectedGitTextGenerationModelLabel}
             >
               {gitTextGenerationModelOptions.map((option) => (
+                <SelectItem
+                  key={`${option.provider}:${option.slug}`}
+                  value={`${option.provider}:${option.slug}`}
+                >
+                  {PROVIDER_DISPLAY_NAMES[option.provider]} / {option.name}
+                </SelectItem>
+              ))}
+            </SettingsSelectControl>
+          }
+        />
+        <SettingsRow
+          title={i18n._("Compile repair model")}
+          description={i18n._(
+            "Used by Lattice to repair one compile diagnostic in an independent background task.",
+          )}
+          resetAction={
+            settings.compileRepairProvider !== defaults.compileRepairProvider ||
+            settings.compileRepairModel !== defaults.compileRepairModel ? (
+              <SettingResetButton
+                label="compile repair model"
+                onClick={() =>
+                  updateSettings({
+                    compileRepairProvider: defaults.compileRepairProvider,
+                    compileRepairModel: defaults.compileRepairModel,
+                  })
+                }
+              />
+            ) : null
+          }
+          control={
+            <SettingsSelectControl
+              value={`${currentCompileRepairProvider}:${currentCompileRepairModel}`}
+              onValueChange={(value) => {
+                if (!value) return;
+                const separatorIndex = value.indexOf(":");
+                const provider = value.slice(0, separatorIndex) as ProviderKind;
+                const model = value.slice(separatorIndex + 1);
+                if (!provider || !model) return;
+                updateSettings({ compileRepairProvider: provider, compileRepairModel: model });
+              }}
+              ariaLabel={i18n._("Compile repair model")}
+              triggerClassName="w-full sm:w-52"
+              valueContent={
+                compileRepairModelOptions.find(
+                  (option) =>
+                    option.provider === currentCompileRepairProvider &&
+                    option.slug === currentCompileRepairModel,
+                )?.name ?? currentCompileRepairModel
+              }
+            >
+              {compileRepairModelOptions.map((option) => (
                 <SelectItem
                   key={`${option.provider}:${option.slug}`}
                   value={`${option.provider}:${option.slug}`}

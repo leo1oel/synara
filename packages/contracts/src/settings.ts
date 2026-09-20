@@ -101,6 +101,12 @@ export const ServerSettings = Schema.Struct({
       model: DEFAULT_GIT_TEXT_GENERATION_MODEL,
     })),
   ),
+  compileRepairModelSelection: ModelSelection.pipe(
+    Schema.withDecodingDefault(() => ({
+      provider: "codex" as const,
+      model: DEFAULT_GIT_TEXT_GENERATION_MODEL,
+    })),
+  ),
   providers: Schema.Struct({
     codex: CodexServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     claudeAgent: ClaudeServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
@@ -147,6 +153,7 @@ export const ServerSettingsPatch = Schema.Struct({
   defaultThreadEnvMode: Schema.optionalKey(ThreadEnvironmentMode),
   addProjectBaseDirectory: Schema.optionalKey(StringSetting),
   textGenerationModelSelection: Schema.optionalKey(ModelSelectionPatch),
+  compileRepairModelSelection: Schema.optionalKey(ModelSelectionPatch),
   providers: Schema.optionalKey(
     Schema.Struct({
       codex: Schema.optionalKey(

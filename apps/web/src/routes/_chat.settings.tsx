@@ -493,6 +493,10 @@ function SettingsRouteView() {
       ? ["Terminal close confirmation"]
       : []),
     ...(isGitTextGenerationModelDirty ? ["Git writing model"] : []),
+    ...(settings.compileRepairProvider !== defaults.compileRepairProvider ||
+    settings.compileRepairModel !== defaults.compileRepairModel
+      ? ["Compile repair model"]
+      : []),
     ...(settings.customCodexModels.length > 0 ||
     settings.customClaudeModels.length > 0 ||
     settings.customCursorModels.length > 0 ||

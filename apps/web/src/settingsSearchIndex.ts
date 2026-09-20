@@ -358,6 +358,12 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
 
   // ── Models (owned by Agent providers) ─────────────────────────────────────────
   {
+    id: "models:compile-repair-model",
+    section: "providers",
+    title: "Compile repair model",
+    keywords: "Lattice LaTeX diagnostic fix independent background task provider model",
+  },
+  {
     id: "models:git-writing-model",
     section: "providers",
     title: "Git writing model",

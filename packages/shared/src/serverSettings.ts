@@ -6,6 +6,7 @@ import {
   type ServerSettingsPatch,
 } from "@synara/contracts";
 import { deepMerge, type DeepPartial } from "./Struct";
+import { getDefaultModel } from "./model";
 
 function shouldReplaceTextGenerationModelSelection(
   patch: ServerSettingsPatch["textGenerationModelSelection"] | undefined,
@@ -18,10 +19,29 @@ export function applyServerSettingsPatch(
   patch: ServerSettingsPatch,
 ): ServerSettings {
   const selectionPatch = patch.textGenerationModelSelection;
-  const next = deepMerge(current, patch as DeepPartial<ServerSettings>);
-  if (!selectionPatch) {
-    return next;
+  const repairSelectionPatch = patch.compileRepairModelSelection;
+  let next = deepMerge(current, patch as DeepPartial<ServerSettings>);
+  if (repairSelectionPatch) {
+    const provider = repairSelectionPatch.provider ?? current.compileRepairModelSelection.provider;
+    const options = shouldReplaceTextGenerationModelSelection(repairSelectionPatch)
+      ? repairSelectionPatch.options
+      : (repairSelectionPatch.options ?? current.compileRepairModelSelection.options);
+    next = {
+      ...next,
+      compileRepairModelSelection: {
+        provider,
+        model:
+          repairSelectionPatch.model ??
+          (repairSelectionPatch.provider &&
+          repairSelectionPatch.provider !== "pi" &&
+          repairSelectionPatch.provider !== current.compileRepairModelSelection.provider
+            ? (getDefaultModel(provider) ?? current.compileRepairModelSelection.model)
+            : current.compileRepairModelSelection.model),
+        ...(options !== undefined ? { options } : {}),
+      } as ModelSelection,
+    };
   }
+  if (!selectionPatch) return next;
 
   const provider = selectionPatch.provider ?? current.textGenerationModelSelection.provider;
   const model =
