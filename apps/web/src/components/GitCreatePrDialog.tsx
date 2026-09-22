@@ -126,14 +126,14 @@ export function GitCreatePrDialog({
           onChange={(event) => setBody(event.target.value)}
         />
         {view.showCommitToggle && (
-          <label className="flex cursor-pointer items-center gap-2 py-1 text-sm">
+          <label className="flex cursor-pointer items-center gap-2 py-1 text-ui leading-snug">
             <Checkbox
               checked={includeLocalChanges}
               onCheckedChange={(checked) => setIncludeLocalChanges(checked === true)}
             />
             <span className="flex-1">{i18n._("Commit and push local changes")}</span>
             <DiffStat
-              className="shrink-0 font-mono text-xs"
+              className="shrink-0 font-mono text-ui leading-snug"
               insertions={view.insertions}
               deletions={view.deletions}
             />

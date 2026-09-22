@@ -35,6 +35,7 @@ import {
 } from "./orchestration/Services/OrchestrationEngine";
 import { OrchestrationReactor } from "./orchestration/Services/OrchestrationReactor";
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
+import { ProjectionPendingInteractionRepository } from "./persistence/Services/ProjectionPendingInteractions";
 import { ThreadDeletionReactor } from "./orchestration/Services/ThreadDeletionReactor";
 import {
   claimQuitResumeRecordAtStartup,
@@ -76,6 +77,7 @@ export interface ServerShape {
     | ServerLifecycleEvents
     | OrchestrationEngineService
     | OrchestrationReactor
+    | ProjectionPendingInteractionRepository
     | ProjectionSnapshotQuery
     | ProviderSessionReaper
     | ProviderRuntimeReconciler

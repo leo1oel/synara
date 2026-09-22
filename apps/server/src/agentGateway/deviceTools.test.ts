@@ -7,6 +7,7 @@ import { DeviceBackendError } from "../device/DeviceBackend.ts";
 import { DeviceManager } from "../device/DeviceManager.ts";
 import { FakeDeviceBackend } from "../device/FakeDeviceBackend.ts";
 import { makeAgentGatewayDeviceTools } from "./deviceTools.ts";
+import { PROVIDERS_WITHOUT_APPROVAL_GATE } from "./approvalGate.ts";
 import type { McpToolCallResult } from "./protocol.ts";
 import type { ToolContext, ToolEntry } from "./toolRuntime.ts";
 
@@ -26,6 +27,7 @@ function makeContext(
       turnId: "turn-a",
     },
     callerThreadId: THREAD,
+    callerThreadLabel: null,
     callerSessionKey: "gateway-session:test",
     callerProvider: provider,
     callerRuntimeMode: runtimeMode,

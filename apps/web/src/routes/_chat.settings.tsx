@@ -37,6 +37,7 @@ import {
   AppSnapSettingsPanel,
   NotificationsSettingsPanel,
 } from "~/components/settings/DesktopSettingsPanels";
+import { ComputerSettingsPanel } from "~/components/settings/ComputerSettingsPanel";
 import { ModelsSettingsPanel } from "~/components/settings/ModelsSettingsPanel";
 import {
   isProviderInstallSettingsDirty,
@@ -77,6 +78,7 @@ import {
   AutocompleteList,
   AutocompletePopup,
 } from "../components/ui/autocomplete";
+import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { SelectItem } from "../components/ui/select";
@@ -476,6 +478,15 @@ function SettingsRouteView() {
       ? ["AppSnap shortcut"]
       : []),
     ...(settings.appSnapPlaySound !== defaults.appSnapPlaySound ? ["AppSnap capture sound"] : []),
+    ...(settings.computerControlEnabled !== defaults.computerControlEnabled
+      ? ["Computer control"]
+      : []),
+    ...(settings.autoOpenComputerPane !== defaults.autoOpenComputerPane
+      ? ["Computer preview auto-open"]
+      : []),
+    ...(settings.agentCursorColorMode !== defaults.agentCursorColorMode
+      ? ["Agent cursor colors"]
+      : []),
     ...(settings.enableProviderUpdateChecks !== defaults.enableProviderUpdateChecks
       ? ["Provider update checks"]
       : []),
@@ -1061,7 +1072,7 @@ function SettingsRouteView() {
                 }}
                 aria-label="Base font size in pixels"
               />
-              <span className="text-xs text-muted-foreground">px</span>
+              <span className="text-ui leading-snug text-muted-foreground">px</span>
             </div>
           }
         />
@@ -1102,7 +1113,7 @@ function SettingsRouteView() {
                 }}
                 aria-label="Terminal font size in pixels"
               />
-              <span className="text-xs text-muted-foreground">px</span>
+              <span className="text-ui leading-snug text-muted-foreground">px</span>
             </div>
           }
         />
@@ -1416,6 +1427,12 @@ function SettingsRouteView() {
                 />
                 <AppSnapSettingsPanel
                   active={activeSection === "appsnap"}
+                  settings={settings}
+                  defaults={defaults}
+                  updateSettings={updateSettings}
+                />
+                <ComputerSettingsPanel
+                  active={activeSection === "computer"}
                   settings={settings}
                   defaults={defaults}
                   updateSettings={updateSettings}

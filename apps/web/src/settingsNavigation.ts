@@ -13,6 +13,7 @@ export const SETTINGS_SECTION_IDS = [
   "notifications",
   "behavior",
   "appsnap",
+  "computer",
   "shortcuts",
   "worktrees",
   "archived",
@@ -49,6 +50,12 @@ export type SettingsNavItem = {
   /** Basename of a SVG under `/central-icons-reversed`. */
   icon: string;
   eyebrow: string;
+  /**
+   * Maturity label shown beside the section name, in the sidebar and on the
+   * panel's own heading. Absent for a settled feature; one source so the two
+   * places can never disagree about what is still in beta.
+   */
+  badge?: string;
 };
 
 export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
@@ -126,6 +133,15 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     description: msg`Capture another app's frontmost window directly into a task.`,
     icon: "screen-capture",
     eyebrow: "Screen capture",
+  },
+  {
+    id: "computer",
+    group: "integrations",
+    label: "Computer use",
+    description: "Let agents see and control this computer's desktop, and check backend status.",
+    icon: "computer-use",
+    eyebrow: "Desktop control",
+    badge: "Beta",
   },
   {
     id: "integrations",

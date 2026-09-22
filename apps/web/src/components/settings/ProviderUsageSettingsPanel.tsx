@@ -18,6 +18,7 @@ import { useAppSettings } from "~/appSettings";
 import { ProviderIcon } from "~/components/ProviderIcon";
 import { ProviderUsageLimitRows } from "~/components/ProviderUsageLimitRows";
 import { ProviderUsageLineList } from "~/components/ProviderUsageLineList";
+import { ProviderUsageResetCredits } from "~/components/ProviderUsageResetCredits";
 import { SettingsCard, SettingsSectionShell } from "~/components/settings/SettingsPanelPrimitives";
 import { Button } from "~/components/ui/button";
 import { useProviderUsageSummary } from "~/hooks/useProviderUsageSummary";
@@ -36,7 +37,7 @@ import { cn } from "~/lib/utils";
 import { useStore } from "~/store";
 import { createAllThreadsSelector } from "~/storeSelectors";
 
-const PILL_CLASS_NAME = "shrink-0 rounded-full px-2 py-1 text-[11px] font-medium leading-none";
+const PILL_CLASS_NAME = "shrink-0 rounded-full px-2 py-1 text-ui-sm font-medium leading-none";
 
 interface StatusPill {
   label: string;
@@ -128,7 +129,7 @@ function ProviderUsageCard({
             <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-[color:var(--color-border)] bg-muted/60">
               <ProviderIcon provider={provider} className="size-4" />
             </span>
-            <span className="truncate text-sm font-semibold text-foreground">
+            <span className="truncate text-ui-lg font-semibold text-foreground">
               {providerUsageDisplayName(provider)}
             </span>
           </div>
@@ -144,7 +145,7 @@ function ProviderUsageCard({
         {status === "ok" && hasUsage ? (
           <>
             {usageSummary.usageNotice ? (
-              <p className="flex items-start gap-1.5 text-xs leading-relaxed text-amber-600 dark:text-amber-300/90">
+              <p className="flex items-start gap-1.5 text-ui leading-relaxed text-amber-600 dark:text-amber-300/90">
                 <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
                 <span>{localizeProviderUsageNotice(i18n, usageSummary.usageNotice)}</span>
               </p>
@@ -152,10 +153,14 @@ function ProviderUsageCard({
             {meterRows.length > 0 ? (
               <ProviderUsageLimitRows rows={meterRows} surface="settings" />
             ) : null}
+            {hasResetCredits && resetCredits ? (
+              <ProviderUsageResetCredits resetCredits={resetCredits} />
+            ) : null}
             {usageLines.length > 0 ? (
               <ProviderUsageLineList
                 className={cn(
-                  meterRows.length > 0 && "border-t border-[color:var(--color-border)] pt-3",
+                  (meterRows.length > 0 || hasResetCredits) &&
+                    "border-t border-[color:var(--color-border)] pt-3",
                 )}
                 lines={usageLines}
                 surface="settings"
@@ -163,7 +168,7 @@ function ProviderUsageCard({
             ) : null}
           </>
         ) : (
-          <p className="text-xs leading-relaxed text-muted-foreground">
+          <p className="text-ui leading-relaxed text-muted-foreground">
             {status === "ok"
               ? i18n._("No usage data reported yet.")
               : localizeUsageDetail(i18n, snapshot)}

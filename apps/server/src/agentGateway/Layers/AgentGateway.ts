@@ -13,14 +13,22 @@
  *
  * @module agentGateway/Layers/AgentGateway
  */
+import { computerSpaceDesignationForMessages } from "../../computer/computerSpaceDesignation.ts";
 import { randomUUID } from "node:crypto";
 
 import {
+  COMPUTER_SETUP_REQUIRED_ACTIVITY_KIND,
+  COMPUTER_CONTROL_DENIED_ACTIVITY_KIND,
   CommandId,
+  EventId,
   SYNARA_GATEWAY_MAX_THREADS_PER_OPERATION,
   MessageId,
   THREAD_GOAL_MAX_CHARS,
   ThreadId,
+  TurnId,
+  type ComputerBuildSignature,
+  type ComputerPermission,
+  type ComputerSetupRequiredPayload,
   type ModelSelection,
   type OrchestrationThreadShell,
   type ProjectId,
@@ -55,7 +63,7 @@ import {
   type AgentGatewayProviderAvailability,
 } from "../targetResolver.ts";
 import { mcpToolResultError, mcpToolResultJson } from "../protocol.ts";
-import { gatewayIsoNow as isoNow } from "../creationUtils.ts";
+import { gatewayIsoNow as isoNow, stableGatewayDigest } from "../creationUtils.ts";
 import {
   MODEL_SELECTION_INPUT_SCHEMA,
   PROVIDER_KINDS,
@@ -68,12 +76,14 @@ import {
   readRecordArg,
   readStringArg,
 } from "../toolInput.ts";
-import { WRITE_TOOL_ANNOTATIONS, type ToolEntry } from "../toolRuntime.ts";
+import { WRITE_TOOL_ANNOTATIONS, type ToolContext, type ToolEntry } from "../toolRuntime.ts";
 import { makeAgentGatewayMcpTransport } from "../mcpTransport.ts";
+import { deliverGatewayCompletions } from "../completionDelivery.ts";
 import { recoverInterruptedAgentGatewayOperations } from "../startupRecovery.ts";
 import { makeCreateThreadsHandler } from "../creationCoordinator.ts";
 import { makeAgentGatewayAutomationTools } from "../automationTools.ts";
 import { makeAgentGatewayBrowserTools } from "../browserTools.ts";
+import { makeAgentGatewayComputerBrowserTools } from "../computerBrowserTools.ts";
 import { makeAgentGatewayDeviceTools } from "../deviceTools.ts";
 import { DeviceService } from "../../device/Services/DeviceService.ts";
 import { isDeviceControlEntitled } from "../../device/deviceEntitlement.ts";
@@ -150,6 +160,7 @@ export const makeAgentGateway = Effect.gen(function* () {
   // it) the agent never sees the device_* tools at all, rather than being
   // offered eleven tools that can only report an unsupported platform.
   const deviceService = Option.getOrUndefined(yield* Effect.serviceOption(DeviceService));
+  const computerService = Option.getOrUndefined(yield* Effect.serviceOption(ComputerService));
   const loadProviderAvailabilities = Effect.gen(function* () {
     const [settings, statuses] = yield* Effect.all([
       serverSettings.getSettings,
@@ -185,6 +196,20 @@ export const makeAgentGateway = Effect.gen(function* () {
     orchestrationEngine,
     git,
   });
+
+  yield* Effect.forkScoped(
+    Effect.forever(
+      deliverGatewayCompletions({
+        repository: operationRepository.completions,
+        snapshotQuery,
+        projectionTurns,
+        orchestrationEngine,
+      }).pipe(
+        Effect.catch((error) => Effect.logWarning("gateway completion scan failed", { error })),
+        Effect.andThen(Effect.sleep(1000)),
+      ),
+    ),
+  );
 
   const requireThreadShell = (threadId: string) =>
     snapshotQuery.getThreadShellById(ThreadId.makeUnsafe(threadId)).pipe(
@@ -311,6 +336,11 @@ export const makeAgentGateway = Effect.gen(function* () {
             items: {
               type: "object",
               properties: {
+                notifyCreatorOnComplete: {
+                  type: "boolean",
+                  description:
+                    "Passively return the initial run result to this creating thread. Does not wake the creator; goal runs are unsupported.",
+                },
                 prompt: { type: "string" },
                 title: { type: "string" },
                 target: {
@@ -364,6 +394,11 @@ export const makeAgentGateway = Effect.gen(function* () {
         type: "object",
         properties: {
           requestId: { type: "string", maxLength: 256 },
+          notifyCreatorOnComplete: {
+            type: "boolean",
+            description:
+              "Passively return the initial run result to this creating thread. Does not wake the creator; goal runs are unsupported.",
+          },
           prompt: { type: "string" },
           title: { type: "string" },
           target: {
@@ -422,6 +457,7 @@ export const makeAgentGateway = Effect.gen(function* () {
           "baseBranch",
           "branchName",
           "runtimeMode",
+          "notifyCreatorOnComplete",
         ]) {
           const value = args[key];
           if (value !== undefined) spec[key] = value;
@@ -816,21 +852,27 @@ export const makeAgentGateway = Effect.gen(function* () {
         .pipe(Effect.asVoid);
     },
   });
+  /**
+   * The caller thread's canonical workspace root. Shared by the integrated
+   * browser surface and the driver-backed `computer_browser_*` file-transfer
+   * tools — both bound model-supplied paths to it.
+   */
+  const resolveWorkspaceRoot = (context: ToolContext) =>
+    Effect.gen(function* () {
+      const thread = yield* requireThreadShell(context.callerThreadId);
+      const project = yield* snapshotQuery
+        .getProjectShellById(thread.projectId)
+        .pipe(Effect.map(Option.getOrNull));
+      if (!project) return null;
+      return (
+        resolveThreadWorkspaceCwd({
+          thread,
+          projects: [project],
+        }) ?? null
+      );
+    }).pipe(Effect.orElseSucceed(() => null));
   const browserTools = makeAgentGatewayBrowserTools(browserAutomationHost, {
-    resolveWorkspaceRoot: (context) =>
-      Effect.gen(function* () {
-        const thread = yield* requireThreadShell(context.callerThreadId);
-        const project = yield* snapshotQuery
-          .getProjectShellById(thread.projectId)
-          .pipe(Effect.map(Option.getOrNull));
-        if (!project) return null;
-        return (
-          resolveThreadWorkspaceCwd({
-            thread,
-            projects: [project],
-          }) ?? null
-        );
-      }).pipe(Effect.orElseSucceed(() => null)),
+    resolveWorkspaceRoot,
   });
   const resolveLatticeWorkspaceRoot = (context: import("../toolRuntime.ts").ToolContext) =>
     Effect.gen(function* () {
@@ -891,6 +933,15 @@ export const makeAgentGateway = Effect.gen(function* () {
       credentials,
       snapshotQuery,
       tools,
+      onCapabilityDenied: surfaceCapabilityDenial,
+      // Namespace-insensitive: a session that never saw the catalog reaches
+      // for prefixed spellings (synara_computer_click,
+      // mcp__synara__computer_click). Those must deny with the card, never die
+      // as Unknown-tool. The exact set stays as a backstop for any catalog
+      // computer name outside the static family list.
+      isComputerToolName: (toolName) =>
+        computerToolNames.has(toolName) || isSynaraComputerToolFamilyName(toolName),
+      computerControlCapability: COMPUTER_CONTROL_CAPABILITY,
       instructions: AGENT_GATEWAY_INSTRUCTIONS,
       requireThreadShell,
     }),

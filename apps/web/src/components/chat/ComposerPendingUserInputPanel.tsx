@@ -28,9 +28,6 @@ interface PendingUserInputPanelProps {
   onCancel: () => void;
 }
 
-const NAV_BUTTON_CLASS_NAME =
-  "flex size-5 items-center justify-center rounded-md text-[var(--color-text-foreground-tertiary)] transition-colors duration-150 hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)] disabled:pointer-events-none disabled:opacity-30";
-
 // Keep pending-input choices neutral so they read like Codex list controls instead of accent buttons.
 export function ComposerPendingUserInputPanel({
   pendingUserInputs,
@@ -48,9 +45,9 @@ export function ComposerPendingUserInputPanel({
   if (!activePrompt) return null;
 
   return (
-    <ComposerPendingUserInputCard
+    <UserInputQuestionForm
       key={`${activePrompt.requestId}:${activePrompt.lifecycleGeneration ?? "legacy"}`}
-      prompt={activePrompt}
+      questions={activePrompt.questions}
       submissionVersion={submissionVersion}
       isResponding={isResponding}
       answers={answers}

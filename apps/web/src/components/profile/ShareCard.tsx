@@ -10,7 +10,8 @@ import type { ProfileStats, ProfileTokenStats } from "@synara/contracts";
 import { ProviderIcon } from "~/components/ProviderIcon";
 import { ActivityHeatmap, CARD_HEATMAP_INTENSITY_CLASSES } from "./ActivityHeatmap";
 import { ProfileAvatar } from "./ProfileAvatar";
-import { formatCompact, formatDays } from "./profileFormatting";
+import { ProfileUsageCoverage } from "./ProfileUsageCoverage";
+import { formatCompact, formatDays, formatProfileUsageBasis } from "./profileFormatting";
 import { selectProfileHeatmap, selectProfileTopProvider } from "./profileSelectors";
 
 export const SHARE_CARD_WIDTH = 860;
@@ -89,7 +90,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(function Sha
       ) : (
         <span className={VALUE_CLASS}>—</span>
       ),
-      label: "top provider",
+      label: `top provider · ${formatProfileUsageBasis(topProvider.metric)}`,
     },
   ];
 
@@ -142,6 +143,10 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(function Sha
           </div>
         ))}
       </div>
+      <ProfileUsageCoverage
+        unavailableProviders={topProvider.unavailableProviders}
+        className="text-xs leading-4 text-slate-500"
+      />
     </div>
   );
 });

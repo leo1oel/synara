@@ -53,7 +53,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     props.type === "search" &&
       "[&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none [&::-webkit-search-results-button]:appearance-none [&::-webkit-search-results-decoration]:appearance-none",
     props.type === "file" &&
-      "text-muted-foreground file:me-3 file:bg-transparent file:font-medium file:text-[length:var(--app-font-size-ui-sm,11px)] file:text-foreground",
+      "text-muted-foreground file:me-3 file:bg-transparent file:font-medium file:text-ui-sm file:text-foreground",
   );
 
   // `cn` always returns a string; an empty one must become `undefined` so the

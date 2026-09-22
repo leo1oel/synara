@@ -21,6 +21,7 @@ import { cn } from "~/lib/utils";
 
 import { ProviderUsageLimitRows } from "./ProviderUsageLimitRows";
 import { ProviderUsageLineList } from "./ProviderUsageLineList";
+import { ProviderUsageResetCredits } from "./ProviderUsageResetCredits";
 
 export { providerUsageLabel };
 
@@ -33,6 +34,8 @@ export function ProviderUsagePanelContent(props: {
   isLoading?: boolean | undefined;
   learnMoreHref?: string | null | undefined;
   showUsageLines?: boolean | undefined;
+  resetCredits?: ServerCodexResetCredits | undefined;
+  resetCreditsSurface?: "settings" | "popover" | undefined;
   showTitle?: boolean | undefined;
   showLearnMore?: boolean | undefined;
   className?: string | undefined;
@@ -54,12 +57,18 @@ export function ProviderUsagePanelContent(props: {
         </div>
       ) : null}
       {props.notice ? (
-        <p className="flex items-start gap-1.5 text-[length:var(--app-font-size-chat-meta,10px)] leading-relaxed text-amber-600 dark:text-amber-300/90">
+        <p className="flex items-start gap-1.5 text-chat-meta leading-relaxed text-amber-600 dark:text-amber-300/90">
           <TriangleAlertIcon className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
           <span>{localizeProviderUsageNotice(i18n, props.notice)}</span>
         </p>
       ) : null}
       <ProviderUsageLimitRows rows={visibleRows} surface="popover" />
+      {props.resetCredits ? (
+        <ProviderUsageResetCredits
+          resetCredits={props.resetCredits}
+          surface={props.resetCreditsSurface ?? "popover"}
+        />
+      ) : null}
       {props.showUsageLines !== false && props.usageLines && props.usageLines.length > 0 ? (
         <ProviderUsageLineList
           className={cn(visibleRows.length > 0 && "pt-0.5")}
@@ -71,7 +80,7 @@ export function ProviderUsagePanelContent(props: {
           {i18n._("Scanning local usage data for the selected provider.")}
         </p>
       ) : visibleRows.length === 0 ? (
-        <p className="text-[length:var(--app-font-size-chat-meta,10px)] leading-relaxed text-muted-foreground">
+        <p className="text-chat-meta leading-relaxed text-muted-foreground">
           {props.emptyMessage ??
             (props.provider
               ? i18n._("No local usage data was found yet for the selected provider.")
@@ -83,7 +92,7 @@ export function ProviderUsagePanelContent(props: {
           href={learnMoreHref}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1 pt-0.5 text-[length:var(--app-font-size-chat-meta,10px)] text-muted-foreground transition-colors hover:text-foreground"
+          className="flex items-center gap-1 pt-0.5 text-chat-meta text-muted-foreground transition-colors hover:text-foreground"
         >
           {i18n._("Learn more")}
           <ExternalLinkIcon className="size-3" />

@@ -54,18 +54,23 @@ export function SettingsCard({
  * optional trailing header action (Refresh, …). Use it when a group holds something
  * other than a single card (a card plus editors, a loading/empty swap); use
  * {@link SettingsSection} for the common card-only case.
+ *
+ * `id` exposes the section itself as a search/deep-link target for the case where
+ * the header owns the setting (a toggle in the action slot) and no row carries it.
  */
 export function SettingsSectionShell({
   title,
   action,
+  id,
   children,
 }: {
   title: string;
   action?: ReactNode;
+  id?: string;
   children: ReactNode;
 }) {
   return (
-    <section className={SETTINGS_PANEL_SECTION_CLASS_NAME}>
+    <section id={id} className={cn(SETTINGS_PANEL_SECTION_CLASS_NAME, id && "scroll-mt-24")}>
       {action != null ? (
         <div className="flex items-center justify-between gap-2">
           <h2 className={SETTINGS_SECTION_LABEL_CLASS_NAME}>{title}</h2>
@@ -110,7 +115,7 @@ export function SettingsEmptyState({
     <div
       className={cn(
         SETTINGS_EMPTY_STATE_CLASS_NAME,
-        "px-4 text-sm",
+        "px-4 text-ui leading-snug",
         layout === "block" ? "py-10 text-center" : "py-6",
         tone === "destructive"
           ? "border-destructive/30 bg-destructive/5 text-destructive"

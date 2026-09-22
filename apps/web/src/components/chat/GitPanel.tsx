@@ -94,7 +94,7 @@ function GitFileRow(props: {
     >
       <button type="button" className="flex min-w-0 flex-1 items-center gap-1.5" title={filePath}>
         <FileEntryIcon pathValue={filePath} kind="file" theme={props.theme} className="size-4" />
-        <span className="min-w-0 truncate text-[12px] text-foreground">
+        <span className="min-w-0 truncate text-ui text-foreground">
           {dir ? <span className="text-muted-foreground/70">{dir}</span> : null}
           <span>{name}</span>
         </span>
@@ -102,7 +102,7 @@ function GitFileRow(props: {
       <DiffStat
         additions={stat.additions}
         deletions={stat.deletions}
-        className="shrink-0 text-[11px]"
+        className="shrink-0 text-ui-sm"
       />
       <IconButton
         size="icon-xs"
@@ -151,7 +151,7 @@ function GitFileSection(props: {
         <span className="rounded-full bg-muted px-1.5 text-[10px] font-medium text-[var(--color-text-foreground-secondary)]">
           {props.files.length}
         </span>
-        <DiffStat additions={stat.additions} deletions={stat.deletions} className="text-[10px]" />
+        <DiffStat additions={stat.additions} deletions={stat.deletions} className="text-ui-xs" />
         {props.files.length > 0 ? (
           <Button
             type="button"

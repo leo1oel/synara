@@ -1,17 +1,20 @@
 import type { ProviderKind } from "@synara/contracts";
 
+import { computerToolInstructions } from "./computerGuidance.ts";
+
 import { AUTOMATION_AUTHORING_GUIDANCE } from "./automationAuthoringGuidance.ts";
 import { isDeviceControlEntitled } from "../device/deviceEntitlement.ts";
 import { ACTIVE_AGENT_HOST_PROFILE } from "./hostProfile.ts";
 
 /** Canonical, versioned host policy delivered to every supported provider. */
-export const SYNARA_HARNESS_POLICY_VERSION = "2026-09-03.1";
+export const SYNARA_HARNESS_POLICY_VERSION = "2026-09-20.1";
 export const SYNARA_HARNESS_POLICY_MARKER = `[Synara harness policy ${SYNARA_HARNESS_POLICY_VERSION}]`;
 
 export interface SynaraHarnessCapabilities {
   readonly gatewayControlAvailable: boolean;
   readonly deviceControlAvailable?: boolean;
   readonly automationAuthoring?: "tool-descriptions";
+  readonly enableComputerControl?: boolean | undefined;
 }
 
 /**
@@ -116,6 +119,9 @@ export function renderSynaraHarnessPolicy(capabilities: SynaraHarnessCapabilitie
     'Synara collapses progress and tools under "Worked for...". Final responses must restate every needed scope, plan, decision, result, caveat, instruction, or question. Never request approval using "this", "the above", or another referent available only in collapsed content.',
     "When a structured user-input tool is available for a genuine decision, prefer it and include all decision context in its question or card.",
     ...controlPolicy,
+    ...(capabilities.gatewayControlAvailable && capabilities.enableComputerControl === true
+      ? [computerToolInstructions()]
+      : []),
   ].join("\n");
 }
 
@@ -129,6 +135,7 @@ export const SYNARA_IDENTITY_ONLY_HARNESS_POLICY = renderSynaraHarnessPolicy({
 
 export interface SynaraHarnessPolicyDeliveryState {
   harnessPolicyDelivered?: boolean | undefined;
+  enableComputerControl?: boolean | undefined;
 }
 
 const PROVIDERS_WITH_THREAD_SCOPED_SYNARA_MCP = new Set<ProviderKind>([
@@ -179,6 +186,7 @@ export function takeSynaraHarnessPolicyForProviderSession(
 ): string | null {
   return takeSynaraHarnessPolicyForSession(state, {
     gatewayControlAvailable: providerHasSynaraGatewayControl(input),
+    enableComputerControl: state.enableComputerControl === true,
   });
 }
 

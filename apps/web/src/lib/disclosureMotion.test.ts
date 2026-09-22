@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   disclosureChevronClassName,
   disclosureContentClassName,
+  disclosurePopClassName,
   disclosureShellClassName,
   DISCLOSURE_CHEVRON_MOTION_CLASS,
   DISCLOSURE_COLLAPSIBLE_PANEL_CLASS,
