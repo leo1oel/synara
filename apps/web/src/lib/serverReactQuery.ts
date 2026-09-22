@@ -346,6 +346,11 @@ export async function fetchAllProviderUsage(input: ServerListProviderUsageInput 
   return api.server.listProviderUsage(input);
 }
 
+export async function consumeCodexResetCredit(input: ServerConsumeCodexResetCreditInput) {
+  const api = ensureNativeApi();
+  return api.server.consumeCodexResetCredit(input);
+}
+
 /** Invalidate both the batch and provider-scoped usage snapshots. */
 export async function invalidateProviderUsageQueries(queryClient: QueryClient): Promise<void> {
   await Promise.all([

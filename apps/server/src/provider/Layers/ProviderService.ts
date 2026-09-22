@@ -1840,80 +1840,57 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
         const replacementFence = yield* waitForCurrentInterruptionFence(threadId);
         clearRuntimeIdleTimer(threadId);
         yield* waitForRuntimeIdleStop(threadId);
-        return yield* lifecycle.run(threadId, (lease) =>
-          Effect.gen(function* () {
-            const persistedBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
-            const effectiveResumeCursor =
-              input.forkSourceResumeCursor !== undefined
-                ? undefined
-                : (input.resumeCursor ??
-                  (persistedBinding?.provider === input.provider
-                    ? persistedBinding.resumeCursor
-                    : undefined));
-            const persistedPriorTranscriptBootstrapPending =
-              persistedBinding?.provider === input.provider &&
-              runtimePayloadRecord(persistedBinding.runtimePayload)[
-                PRIOR_TRANSCRIPT_BOOTSTRAP_PENDING
-              ] === true;
-            const { resumeCursor: _inputResumeCursor, ...adapterStartInput } = input;
-            const effectiveProviderOptions =
-              input.providerOptions ??
-              (persistedBinding?.provider === input.provider
-                ? readPersistedProviderOptions(persistedBinding.runtimePayload)
-                : undefined);
-            const adapter = yield* registry.getByProvider(input.provider);
-            let replacementStarted = false;
-            const startupLifecycle = new ProviderStartupLifecycle();
-            const startAndPersistReplacement = Effect.gen(function* () {
-              const resolvedAdapterStartInput = {
-                ...adapterStartInput,
-                lifecycleGeneration: lease.generation,
-                ...(effectiveProviderOptions !== undefined
-                  ? { providerOptions: effectiveProviderOptions }
-                  : {}),
-                ...(hasResumeCursor(effectiveResumeCursor)
-                  ? { resumeCursor: effectiveResumeCursor }
-                  : {}),
-              };
-              // A provider start that never returns holds this thread's
-              // lifecycle lock and the caller's command slot forever. Bound it,
-              // retire whatever the adapter may have half-spawned, and fail
-              // with text the caller can surface as a session error.
-              startupLifecycle.transition("starting");
-              startupLifecycle.transition("handshaking");
-              // The lifecycle is updated inside observeProviderStartup; these taps
-              // only log the already-recorded outcome.
-              const started = yield* observeProviderStartup(
-                startAdapterWithStaleDevinFallback(adapter, resolvedAdapterStartInput),
-                { lifecycle: startupLifecycle, timeout: PROVIDER_START_SESSION_TIMEOUT },
-              ).pipe(
-                Effect.tapError((cause) =>
-                  Effect.logError("provider.session.start_failed", {
-                    threadId,
-                    provider: input.provider,
-                    startup: startupLifecycle.snapshot(),
-                    cause: cause instanceof Error ? cause.message : String(cause),
-                  }),
-                ),
-                Effect.onInterrupt(() =>
-                  Effect.logInfo("provider.session.start_cancelled", {
-                    threadId,
-                    provider: input.provider,
-                    startup: startupLifecycle.snapshot(),
-                  }),
-                ),
-              );
-              if (Option.isNone(started)) {
-                yield* Effect.logError("provider session start exceeded its deadline", {
-                  threadId,
-                  provider: input.provider,
-                  timeoutMs: Duration.toMillis(PROVIDER_START_SESSION_TIMEOUT),
-                  startup: startupLifecycle.snapshot(),
-                });
-                yield* adapter.stopSession(threadId).pipe(
-                  Effect.timeoutOption(PROVIDER_STOP_SESSION_TIMEOUT),
-                  Effect.catchCause((cause) =>
-                    Effect.logWarning("failed to retire a timed-out provider session start", {
+        return yield* lifecycle.run(
+          threadId,
+          (lease) =>
+            Effect.gen(function* () {
+              const persistedBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
+              const effectiveResumeCursor =
+                input.forkSourceResumeCursor !== undefined
+                  ? undefined
+                  : (input.resumeCursor ??
+                    (persistedBinding?.provider === input.provider
+                      ? persistedBinding.resumeCursor
+                      : undefined));
+              const persistedPriorTranscriptBootstrapPending =
+                persistedBinding?.provider === input.provider &&
+                runtimePayloadRecord(persistedBinding.runtimePayload)[
+                  PRIOR_TRANSCRIPT_BOOTSTRAP_PENDING
+                ] === true;
+              const { resumeCursor: _inputResumeCursor, ...adapterStartInput } = input;
+              const effectiveProviderOptions =
+                input.providerOptions ??
+                (persistedBinding?.provider === input.provider
+                  ? readPersistedProviderOptions(persistedBinding.runtimePayload)
+                  : undefined);
+              const adapter = yield* registry.getByProvider(input.provider);
+              let replacementStarted = false;
+              const startupLifecycle = new ProviderStartupLifecycle();
+              const startAndPersistReplacement = Effect.gen(function* () {
+                const resolvedAdapterStartInput = {
+                  ...adapterStartInput,
+                  lifecycleGeneration: lease.generation,
+                  ...(effectiveProviderOptions !== undefined
+                    ? { providerOptions: effectiveProviderOptions }
+                    : {}),
+                  ...(hasResumeCursor(effectiveResumeCursor)
+                    ? { resumeCursor: effectiveResumeCursor }
+                    : {}),
+                };
+                // A provider start that never returns holds this thread's
+                // lifecycle lock and the caller's command slot forever. Bound it,
+                // retire whatever the adapter may have half-spawned, and fail
+                // with text the caller can surface as a session error.
+                startupLifecycle.transition("starting");
+                startupLifecycle.transition("handshaking");
+                // The lifecycle is updated inside observeProviderStartup; these taps
+                // only log the already-recorded outcome.
+                const started = yield* observeProviderStartup(
+                  startAdapterWithStaleDevinFallback(adapter, resolvedAdapterStartInput),
+                  { lifecycle: startupLifecycle, timeout: PROVIDER_START_SESSION_TIMEOUT },
+                ).pipe(
+                  Effect.tapError((cause) =>
+                    Effect.logError("provider.session.start_failed", {
                       threadId,
                       provider: input.provider,
                       startup: startupLifecycle.snapshot(),

@@ -9,7 +9,8 @@ export type AgentGatewayCapability =
   | "browser:control"
   | "literature:read"
   | "literature:write"
-  | "device:control";
+  | "device:control"
+  | "computer:control";
 
 export interface AgentGatewaySessionIdentity {
   readonly sessionKey: string;
