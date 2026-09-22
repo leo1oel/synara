@@ -74,16 +74,16 @@ export function ComposerLatticeContextBar({
               onClick={() => setExpanded((current) => !current)}
             >
               <EyeIcon className={COMPOSER_STACKED_PANEL_ICON_CLASS_NAME} />
-              <span className="shrink-0 text-[12px] font-medium text-foreground/90">Context</span>
-              <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground/75">
+              <span className="shrink-0 text-ui font-medium text-foreground/90">Context</span>
+              <span className="min-w-0 flex-1 truncate text-ui-sm text-muted-foreground/75">
                 {summary}
               </span>
               {selection ? (
-                <span className="shrink-0 rounded-full bg-[var(--color-background-button-secondary)] px-1.5 py-0.5 text-[10px] text-[var(--color-text-foreground-secondary)]">
+                <span className="shrink-0 rounded-full bg-[var(--color-background-button-secondary)] px-1.5 py-0.5 text-ui-xs text-[var(--color-text-foreground-secondary)]">
                   {selection.length.toLocaleString()} chars
                 </span>
               ) : (
-                <span className="shrink-0 text-[10px] text-muted-foreground/55">Included</span>
+                <span className="shrink-0 text-ui-xs text-muted-foreground/55">Included</span>
               )}
               {expanded ? (
                 <PanelCollapseIcon className="size-3 shrink-0 text-muted-foreground/65" />
@@ -116,14 +116,14 @@ export function ComposerLatticeContextBar({
               scrollFade
             >
               <div className="mb-2 flex items-center justify-between gap-2">
-                <p className="text-[11px] text-muted-foreground/75">
+                <p className="text-ui-sm text-muted-foreground/75">
                   Included automatically with your next message
                 </p>
-                <span className="shrink-0 rounded-full bg-[var(--color-background-button-secondary)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-text-foreground-secondary)]">
+                <span className="shrink-0 rounded-full bg-[var(--color-background-button-secondary)] px-1.5 py-0.5 text-ui-xs font-medium text-[var(--color-text-foreground-secondary)]">
                   Included
                 </span>
               </div>
-              <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-[11px]">
+              <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-ui-sm">
                 {details.map((detail) => (
                   <div key={`${detail.label}:${detail.value}`} className="contents">
                     <dt className="text-muted-foreground/60">{detail.label}</dt>
@@ -135,10 +135,10 @@ export function ComposerLatticeContextBar({
                 <section className="mt-2 border-t border-border/45 pt-2">
                   <div className="mb-1.5 flex items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="truncate text-[11px] font-medium text-foreground/85">
+                      <p className="truncate text-ui-sm font-medium text-foreground/85">
                         {selection.label}
                       </p>
-                      <p className="text-[10px] text-muted-foreground/55">
+                      <p className="text-ui-xs text-muted-foreground/55">
                         {selection.length.toLocaleString()} characters
                       </p>
                     </div>
@@ -147,14 +147,14 @@ export function ComposerLatticeContextBar({
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-6 shrink-0 px-2 text-[10px] font-normal text-muted-foreground"
+                        className="h-6 shrink-0 px-2 text-ui-xs font-normal text-muted-foreground"
                         onClick={onClearSelection}
                       >
                         Exclude selection
                       </Button>
                     ) : null}
                   </div>
-                  <pre className="whitespace-pre-wrap break-words rounded-md bg-[var(--color-background-button-secondary)] px-2 py-1.5 font-chat-code text-[10px] leading-relaxed text-foreground/75">
+                  <pre className="whitespace-pre-wrap break-words rounded-md bg-[var(--color-background-button-secondary)] px-2 py-1.5 font-chat-code text-ui-xs leading-relaxed text-foreground/75">
                     {selection.text}
                   </pre>
                 </section>

@@ -66,10 +66,10 @@ export function GitInitializationState(props: { cwd: string }) {
         <div className="mb-3 flex size-10 items-center justify-center rounded-xl border border-border/70 bg-foreground/[0.035] text-foreground/80">
           <GitBranchIcon className="size-4.5" />
         </div>
-        <h2 className="font-system-ui text-[length:var(--app-font-size-ui-lg,13px)] font-medium text-foreground">
+        <h2 className="font-system-ui text-ui-lg font-medium text-foreground">
           {i18n._("Start version control")}
         </h2>
-        <p className="mt-1.5 text-[length:var(--app-font-size-ui-sm,11px)] leading-relaxed text-muted-foreground">
+        <p className="mt-1.5 text-ui-sm leading-relaxed text-muted-foreground">
           {i18n._(
             "Track changes locally, review diffs, and restore earlier work. Nothing is uploaded.",
           )}
@@ -88,10 +88,7 @@ export function GitInitializationState(props: { cwd: string }) {
           {initMutation.isPending ? i18n._("Initializing…") : i18n._("Initialize Git")}
         </Button>
         {initMutation.error ? (
-          <p
-            role="alert"
-            className="mt-3 text-[length:var(--app-font-size-ui-xs,10px)] leading-snug text-destructive"
-          >
+          <p role="alert" className="mt-3 text-ui-xs leading-snug text-destructive">
             {mutationErrorMessage(initMutation.error, i18n._("Git could not be initialized."))}
           </p>
         ) : null}
@@ -112,10 +109,10 @@ export function GitHubRemoteSetupCard(props: { cwd: string }) {
             <GitHubIcon className="size-3.5" />
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="font-system-ui text-[length:var(--app-font-size-ui,12px)] font-medium text-[var(--color-text-foreground)]">
+            <h2 className="font-system-ui text-ui font-medium text-[var(--color-text-foreground)]">
               {i18n._("Connect to GitHub")}
             </h2>
-            <p className="mt-0.5 text-[length:var(--app-font-size-ui-xs,10px)] leading-relaxed text-[var(--color-text-foreground-secondary)]">
+            <p className="mt-0.5 text-ui-xs leading-relaxed text-[var(--color-text-foreground-secondary)]">
               {i18n._("Publish a new private repository or attach one you already have.")}
             </p>
           </div>
@@ -288,14 +285,11 @@ function GitHubRepositorySetupForm(props: {
                 placeholder="research-writer"
               />
               {submitted && !createNameValid ? (
-                <p
-                  role="alert"
-                  className="text-[length:var(--app-font-size-ui-xs,10px)] text-destructive"
-                >
+                <p role="alert" className="text-ui-xs text-destructive">
                   {i18n._("Use letters, numbers, periods, hyphens, or underscores.")}
                 </p>
               ) : (
-                <p className="text-[length:var(--app-font-size-ui-xs,10px)] text-muted-foreground">
+                <p className="text-ui-xs text-muted-foreground">
                   {i18n._("You can also use owner/repository to publish to an organization.")}
                 </p>
               )}
@@ -342,10 +336,8 @@ function GitHubRepositorySetupForm(props: {
                       disabled={isPending}
                       onClick={() => setVisibility(value)}
                     >
-                      <span className="text-[length:var(--app-font-size-ui,12px)] font-medium">
-                        {label}
-                      </span>
-                      <span className="whitespace-normal text-[length:var(--app-font-size-ui-xs,10px)] font-normal leading-snug text-muted-foreground">
+                      <span className="text-ui font-medium">{label}</span>
+                      <span className="whitespace-normal text-ui-xs font-normal leading-snug text-muted-foreground">
                         {help}
                       </span>
                     </Button>
@@ -369,14 +361,11 @@ function GitHubRepositorySetupForm(props: {
               placeholder="https://github.com/owner/repository.git"
             />
             {submitted && !remoteUrlValid ? (
-              <p
-                role="alert"
-                className="text-[length:var(--app-font-size-ui-xs,10px)] text-destructive"
-              >
+              <p role="alert" className="text-ui-xs text-destructive">
                 {i18n._("Enter a GitHub HTTPS or SSH repository URL.")}
               </p>
             ) : (
-              <p className="text-[length:var(--app-font-size-ui-xs,10px)] text-muted-foreground">
+              <p className="text-ui-xs text-muted-foreground">
                 {i18n._("HTTPS and git@github.com SSH URLs are supported.")}
               </p>
             )}
@@ -385,7 +374,7 @@ function GitHubRepositorySetupForm(props: {
 
         <div className="flex gap-2 rounded-lg bg-foreground/[0.035] px-2.5 py-2 text-muted-foreground">
           <InfoIcon className="mt-0.5 size-3.5 shrink-0" />
-          <p className="text-[length:var(--app-font-size-ui-xs,10px)] leading-relaxed">
+          <p className="text-ui-xs leading-relaxed">
             {props.mode === "create"
               ? i18n._(
                   "Publishing creates the empty remote only. Review your files and .gitignore before the first push.",
@@ -397,10 +386,7 @@ function GitHubRepositorySetupForm(props: {
         </div>
 
         {mutation.error ? (
-          <p
-            role="alert"
-            className="text-[length:var(--app-font-size-ui-xs,10px)] leading-snug text-destructive"
-          >
+          <p role="alert" className="text-ui-xs leading-snug text-destructive">
             {mutationErrorMessage(
               mutation.error,
               i18n._("The GitHub setup could not be completed."),

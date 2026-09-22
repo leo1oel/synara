@@ -63,6 +63,7 @@ require("node:readline").createInterface({ input: process.stdin }).on("line", (l
       threadId,
       cwd: dir,
       runtimeMode: "full-access" as const,
+      agentGatewayCapabilityInput: {},
       providerOptions: { codex: { binaryPath, homePath } },
     };
     try {

@@ -328,6 +328,25 @@ export function groupCommandItems(
   return groups;
 }
 
+function CommandNoticeBadge(props: { notice: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={<span role="img" aria-label={props.notice} className="inline-flex items-center" />}
+      >
+        <CircleAlertIcon className="size-3.5 text-warning" />
+      </TooltipTrigger>
+      <TooltipPopup
+        side="top"
+        align="end"
+        className="max-w-72 whitespace-normal text-ui-sm leading-snug"
+      >
+        {props.notice}
+      </TooltipPopup>
+    </Tooltip>
+  );
+}
+
 /** Mention groups whose result count is unbounded enough to need its own viewport. */
 const BROWSABLE_MENTION_GROUP_IDS = new Set(["files", "papers"]);
 const BROWSABLE_MENTION_GROUP_ROW_CAP = 4;
@@ -399,7 +418,7 @@ export function ComposerCommandMenu(props: {
           /* This footer is informational copy, not a selectable result group. */
           <div className="pt-0.5 pb-2">
             <p className={cn(COMPOSER_MENU_PANEL_GROUP_LABEL_CLASS_NAME, "px-2 py-0")}>Files</p>
-            <p className="px-2 pt-0.5 text-[11px] text-muted-foreground/55">
+            <p className="px-2 pt-0.5 text-ui-sm text-muted-foreground/55">
               Type to search for files
             </p>
           </div>

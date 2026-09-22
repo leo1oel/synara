@@ -76,7 +76,7 @@ export function ManagedSkillDetailView({
               <SkillCubeIcon className="size-4.5 text-muted-foreground" aria-hidden="true" />
             </span>
             <div className="min-w-0">
-              <h2 className="truncate font-heading text-base font-semibold">{displayName}</h2>
+              <h2 className="truncate font-heading text-ui-lg font-semibold">{displayName}</h2>
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                 <Badge variant={included ? "info" : "outline"}>
                   {included ? i18n._("Included with Lattice") : i18n._("Installed by you")}
@@ -85,14 +85,14 @@ export function ManagedSkillDetailView({
                   {enabled ? i18n._("Enabled") : i18n._("Disabled")}
                 </Badge>
                 {detailQuery.data ? (
-                  <span className="text-[11px] text-muted-foreground">
+                  <span className="text-ui-sm text-muted-foreground">
                     {i18n._("{fileCount, plural, one {# file} other {# files}}", {
                       fileCount: detailQuery.data.files.length,
                     })}
                   </span>
                 ) : null}
               </div>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+              <p className="mt-2 max-w-2xl text-ui leading-relaxed text-muted-foreground">
                 {description}
               </p>
             </div>
@@ -128,7 +128,7 @@ export function ManagedSkillDetailView({
           </div>
         </div>
         {included ? (
-          <p className="mt-4 border-t border-border/65 pt-3 text-[11px] leading-relaxed text-muted-foreground">
+          <p className="mt-4 border-t border-border/65 pt-3 text-ui-sm leading-relaxed text-muted-foreground">
             {i18n._(
               "This protected skill ships inside Lattice, so it is not stored in your user skills folder. Customize a copy to edit it without changing the original.",
             )}
@@ -151,7 +151,7 @@ export function ManagedSkillDetailView({
               text={skillBody(detailQuery.data.markdown)}
               cwd={undefined}
               isStreaming={false}
-              className="text-sm leading-relaxed"
+              className="text-ui leading-relaxed"
             />
           </SettingsCard>
         ) : null}

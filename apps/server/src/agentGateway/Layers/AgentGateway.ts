@@ -86,7 +86,19 @@ import { makeAgentGatewayBrowserTools } from "../browserTools.ts";
 import { makeAgentGatewayComputerBrowserTools } from "../computerBrowserTools.ts";
 import { makeAgentGatewayDeviceTools } from "../deviceTools.ts";
 import { DeviceService } from "../../device/Services/DeviceService.ts";
+import {
+  COMPUTER_CONTROL_CAPABILITY,
+  makeAgentGatewayComputerTools,
+  type AgentGatewayComputerToolsOptions,
+} from "../computerTools.ts";
+import { isSynaraComputerToolFamilyName } from "../computerToolPermission.ts";
 import { isDeviceControlEntitled } from "../../device/deviceEntitlement.ts";
+import { ComputerService } from "../../computer/Services/ComputerService.ts";
+import { computerApprovalGate } from "../../computer/ComputerApprovalGate.ts";
+import {
+  COMPUTER_FOREGROUND_NOT_AUTHORIZED,
+  computerForegroundAuthorizationForMessages,
+} from "../../computer/computerVisibleUse.ts";
 import { BrowserAutomationHost } from "../../browserAutomation/Services/BrowserAutomationHost.ts";
 import { makeBrowserAutomationHost } from "../../browserAutomation/Layers/BrowserAutomationHost.ts";
 import { makeThreadReadTools } from "../threadReadTools.ts";
@@ -874,6 +886,262 @@ export const makeAgentGateway = Effect.gen(function* () {
   const browserTools = makeAgentGatewayBrowserTools(browserAutomationHost, {
     resolveWorkspaceRoot,
   });
+  const surfacedComputerControlDenials = new Set<string>();
+  const surfaceCapabilityDenial: NonNullable<
+    Parameters<typeof makeAgentGatewayMcpTransport>[0]["onCapabilityDenied"]
+  > = (denial) => {
+    if (denial.requiredCapability !== COMPUTER_CONTROL_CAPABILITY) return Effect.void;
+    const dedupeKey = `${denial.callerThreadId}:${denial.callerTurnId ?? "no-turn"}:${denial.toolName}`;
+    if (surfacedComputerControlDenials.has(dedupeKey)) return Effect.void;
+    while (surfacedComputerControlDenials.size >= 512) {
+      surfacedComputerControlDenials.delete(surfacedComputerControlDenials.keys().next().value!);
+    }
+    surfacedComputerControlDenials.add(dedupeKey);
+    const marker = stableGatewayDigest({
+      kind: "computer-control-denied",
+      threadId: denial.callerThreadId,
+      turnId: denial.callerTurnId,
+      toolName: denial.toolName,
+    });
+    const createdAt = isoNow();
+    return orchestrationEngine
+      .dispatch({
+        type: "thread.activity.append",
+        commandId: CommandId.makeUnsafe(`agent:${marker}:computer-control-denied`),
+        threadId: ThreadId.makeUnsafe(denial.callerThreadId),
+        activity: {
+          id: EventId.makeUnsafe(`gateway:${marker}:computer-control-denied`),
+          tone: "error",
+          kind: COMPUTER_CONTROL_DENIED_ACTIVITY_KIND,
+          summary: "Computer control is off for this chat",
+          payload: { toolName: denial.toolName },
+          turnId: denial.callerTurnId === null ? null : TurnId.makeUnsafe(denial.callerTurnId),
+          createdAt,
+        },
+        createdAt,
+      })
+      .pipe(
+        Effect.catch((error) =>
+          Effect.logWarning("agent gateway could not surface computer-control denial", {
+            callerThreadId: denial.callerThreadId,
+            toolName: denial.toolName,
+            error: errorText(error),
+          }),
+        ),
+        Effect.asVoid,
+      );
+  };
+  const COMPUTER_CONTROL_ON_DISCLOSURE =
+    "Computer control ON for this turn: the agent is driving the desktop and the user can switch it off in Settings.";
+  const surfacedComputerControlDisclosures = new Set<string>();
+  const surfaceComputerControlDisclosure = (
+    threadId: string,
+    turnId: string | null,
+  ): Effect.Effect<void> => {
+    const dedupeKey = `${threadId}:${turnId ?? "no-turn"}`;
+    if (surfacedComputerControlDisclosures.has(dedupeKey)) return Effect.void;
+    while (surfacedComputerControlDisclosures.size >= 512) {
+      surfacedComputerControlDisclosures.delete(
+        surfacedComputerControlDisclosures.keys().next().value!,
+      );
+    }
+    surfacedComputerControlDisclosures.add(dedupeKey);
+    const marker = stableGatewayDigest({
+      kind: "computer-control-disclosure",
+      threadId,
+      turnId,
+    });
+    const createdAt = isoNow();
+    return orchestrationEngine
+      .dispatch({
+        type: "thread.activity.append",
+        commandId: CommandId.makeUnsafe(`agent:${marker}:computer-control-on`),
+        threadId: ThreadId.makeUnsafe(threadId),
+        activity: {
+          id: EventId.makeUnsafe(`gateway:${marker}:computer-control-on`),
+          tone: "info",
+          kind: "computer.control-disclosure",
+          summary: COMPUTER_CONTROL_ON_DISCLOSURE,
+          payload: { disclosure: COMPUTER_CONTROL_ON_DISCLOSURE },
+          turnId: turnId === null ? null : TurnId.makeUnsafe(turnId),
+          createdAt,
+        },
+        createdAt,
+      })
+      .pipe(
+        Effect.catch((error) =>
+          Effect.logWarning("agent gateway could not surface computer-control disclosure", {
+            callerThreadId: threadId,
+            error: errorText(error),
+          }),
+        ),
+        Effect.asVoid,
+      );
+  };
+
+  const surfacedComputerSetupPrompts = new Set<string>();
+  const surfaceComputerSetupRequired = (input: {
+    readonly toolName: string;
+    readonly missing: readonly ComputerPermission[];
+    readonly buildSignature?: ComputerBuildSignature;
+    readonly bundleId?: string;
+    readonly context: ToolContext;
+  }): Effect.Effect<void> => {
+    const callerThreadId = input.context.callerThreadId;
+    const callerTurnId = input.context.callerTurnId;
+    const missingKey = [...input.missing].sort().join(",");
+    const dedupeKey = `${callerThreadId}:${callerTurnId ?? "no-turn"}:${missingKey}`;
+    if (surfacedComputerSetupPrompts.has(dedupeKey)) return Effect.void;
+    while (surfacedComputerSetupPrompts.size >= 512) {
+      surfacedComputerSetupPrompts.delete(surfacedComputerSetupPrompts.keys().next().value!);
+    }
+    surfacedComputerSetupPrompts.add(dedupeKey);
+    const marker = stableGatewayDigest({
+      kind: "computer-setup-required",
+      threadId: callerThreadId,
+      turnId: callerTurnId,
+      missing: missingKey,
+    });
+    const createdAt = isoNow();
+    return orchestrationEngine
+      .dispatch({
+        type: "thread.activity.append",
+        commandId: CommandId.makeUnsafe(`agent:${marker}:computer-setup-required`),
+        threadId: ThreadId.makeUnsafe(callerThreadId),
+        activity: {
+          id: EventId.makeUnsafe(`gateway:${marker}:computer-setup-required`),
+          tone: "error",
+          kind: COMPUTER_SETUP_REQUIRED_ACTIVITY_KIND,
+          summary: "Computer control needs setup",
+          payload: {
+            toolName: input.toolName,
+            missing: [...input.missing],
+            ...(input.buildSignature === undefined ? {} : { buildSignature: input.buildSignature }),
+            ...(input.bundleId === undefined ? {} : { bundleId: input.bundleId }),
+          } satisfies ComputerSetupRequiredPayload,
+          turnId: callerTurnId === null ? null : TurnId.makeUnsafe(callerTurnId),
+          createdAt,
+        },
+        createdAt,
+      })
+      .pipe(
+        Effect.catch((error) =>
+          Effect.logWarning("agent gateway could not surface a computer setup prompt", {
+            callerThreadId,
+            toolName: input.toolName,
+            error: errorText(error),
+          }),
+        ),
+        Effect.asVoid,
+      );
+  };
+
+  const authorizeComputerAction: NonNullable<
+    AgentGatewayComputerToolsOptions["authorizeAction"]
+  > = async (name, args, context, signal) => {
+    await Effect.runPromise(context.assertCallerTurnActive(), { signal });
+    const caller = await Effect.runPromise(
+      snapshotQuery.getThreadShellById(ThreadId.makeUnsafe(context.callerThreadId)),
+      { signal },
+    );
+    if (Option.isNone(caller)) return false;
+    if (caller.value.runtimeMode === "full-access") {
+      await Effect.runPromise(
+        surfaceComputerControlDisclosure(context.callerThreadId, context.callerTurnId),
+        { signal },
+      ).catch(() => undefined);
+      return true;
+    }
+    const taskConsent = name !== "computer_read_clipboard" && context.callerTurnId !== null;
+    const requestApproval = taskConsent
+      ? computerApprovalGate.requestTask.bind(computerApprovalGate)
+      : computerApprovalGate.request.bind(computerApprovalGate);
+    const approved = await requestApproval({
+      threadId: context.callerThreadId,
+      turnId: context.callerTurnId ?? "",
+      signal,
+      publish: async (requestId, decision) => {
+        const createdAt = isoNow();
+        const eventKey = `${requestId}:${decision === undefined ? "open" : "resolved"}`;
+        await Effect.runPromise(
+          orchestrationEngine.dispatch({
+            type: "thread.activity.append",
+            commandId: CommandId.makeUnsafe(eventKey),
+            threadId: ThreadId.makeUnsafe(context.callerThreadId),
+            activity: {
+              id: EventId.makeUnsafe(eventKey),
+              tone: "info",
+              kind: decision === undefined ? "approval.requested" : "approval.resolved",
+              summary:
+                decision === undefined
+                  ? taskConsent
+                    ? "Allow Computer for this task"
+                    : "Computer action needs approval"
+                  : "Computer approval resolved",
+              payload: {
+                requestId,
+                requestKind: "tool",
+                requestType: "tool",
+                toolName: name,
+                toolParamsDisplay: JSON.stringify(
+                  Object.fromEntries(
+                    Object.entries(args).filter(
+                      ([key]) => key !== "text" && key !== "value" && key !== "prompt_text",
+                    ),
+                  ),
+                ),
+                sessionApprovalAvailable: false,
+                ...(taskConsent ? { approvalScope: "computer-task" } : {}),
+                ...(decision === undefined ? {} : { decision }),
+              },
+              turnId: context.callerTurnId ? TurnId.makeUnsafe(context.callerTurnId) : null,
+              createdAt,
+            },
+            createdAt,
+          }),
+        );
+      },
+    });
+    if (approved) {
+      await Effect.runPromise(
+        surfaceComputerControlDisclosure(context.callerThreadId, context.callerTurnId),
+        { signal },
+      ).catch(() => undefined);
+    }
+    return approved;
+  };
+
+  const resolveComputerForegroundAuthorization: NonNullable<
+    AgentGatewayComputerToolsOptions["resolveForegroundAuthorization"]
+  > = async (context) => {
+    const detail = await Effect.runPromise(
+      snapshotQuery.getThreadDetailById(ThreadId.makeUnsafe(context.callerThreadId)),
+    );
+    return Option.isNone(detail)
+      ? COMPUTER_FOREGROUND_NOT_AUTHORIZED
+      : computerForegroundAuthorizationForMessages(detail.value.messages, {
+          knownAppNames: computerService?.manager.observedAppNames() ?? [],
+        });
+  };
+
+  const resolveComputerSpaceDesignation: NonNullable<
+    AgentGatewayComputerToolsOptions["resolveSpaceDesignation"]
+  > = async (context) => {
+    const detail = await Effect.runPromise(
+      snapshotQuery.getThreadDetailById(ThreadId.makeUnsafe(context.callerThreadId)),
+    );
+    return Option.isNone(detail) ? [] : computerSpaceDesignationForMessages(detail.value.messages);
+  };
+
+  const computerBrowserTools =
+    computerService?.supported === true && computerService.manager.supportsBrowser
+      ? makeAgentGatewayComputerBrowserTools({
+          manager: computerService.manager,
+          authorizeAction: authorizeComputerAction,
+          resolveForegroundAuthorization: resolveComputerForegroundAuthorization,
+          resolveWorkspaceRoot,
+        })
+      : [];
   const resolveLatticeWorkspaceRoot = (context: import("../toolRuntime.ts").ToolContext) =>
     Effect.gen(function* () {
       const thread = yield* requireThreadShell(context.callerThreadId);
@@ -927,7 +1195,23 @@ export const makeAgentGateway = Effect.gen(function* () {
     ...(deviceService?.supported === true && isDeviceControlEntitled()
       ? makeAgentGatewayDeviceTools({ manager: deviceService.manager })
       : []),
+    ...(computerService?.supported === true
+      ? makeAgentGatewayComputerTools({
+          manager: computerService.manager,
+          onSetupRequired: surfaceComputerSetupRequired,
+          authorizeAction: authorizeComputerAction,
+          resolveForegroundAuthorization: resolveComputerForegroundAuthorization,
+          resolveSpaceDesignation: resolveComputerSpaceDesignation,
+          relatedTools: computerBrowserTools,
+        })
+      : []),
+    ...computerBrowserTools,
   ]);
+  const computerToolNames = new Set(
+    tools
+      .filter((tool) => tool.requiredCapability === COMPUTER_CONTROL_CAPABILITY)
+      .map((tool) => tool.definition.name),
+  );
   return {
     handleMcpPost: makeAgentGatewayMcpTransport({
       credentials,

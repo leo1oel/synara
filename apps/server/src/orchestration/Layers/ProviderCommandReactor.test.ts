@@ -53,7 +53,18 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AgentGatewayOperationRepositoryLive } from "../../agentGateway/Layers/AgentGatewayOperationRepository.ts";
 import { AgentGatewayOperationRepository } from "../../agentGateway/Services/AgentGatewayOperationRepository.ts";
+import { makeAgentGatewaySessionRegistry } from "../../agentGateway/Layers/AgentGatewaySessionRegistry.ts";
+import {
+  AgentGatewaySessionRegistry,
+  type AgentGatewaySessionRegistryShape,
+} from "../../agentGateway/Services/AgentGatewaySessionRegistry.ts";
 import { AgentQualityTrace } from "../../agentGateway/Services/AgentQualityTrace.ts";
+import { ComputerManager } from "../../computer/ComputerManager.ts";
+import { FakeComputerBackend } from "../../computer/FakeComputerBackend.ts";
+import {
+  ComputerService,
+  type ComputerServiceShape,
+} from "../../computer/Services/ComputerService.ts";
 import { deriveServerPaths, ServerConfig } from "../../config.ts";
 import { TextGenerationError } from "../../git/Errors.ts";
 import {
@@ -655,6 +666,16 @@ describe("ProviderCommandReactor", () => {
       Layer.provideMerge(OrchestrationProjectionSnapshotQueryLive),
       Layer.provideMerge(TurnCheckpointCoordinatorLive),
       Layer.provideMerge(Layer.succeed(ProviderService, service)),
+      Layer.provideMerge(
+        input?.computerService
+          ? Layer.succeed(ComputerService, input.computerService)
+          : Layer.empty,
+      ),
+      Layer.provideMerge(
+        input?.gatewaySessions
+          ? Layer.succeed(AgentGatewaySessionRegistry, input.gatewaySessions)
+          : Layer.empty,
+      ),
       Layer.provideMerge(
         Layer.succeed(AgentQualityTrace, {
           start: Effect.void,

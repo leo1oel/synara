@@ -22,7 +22,7 @@ import type { TimestampFormat } from "../../appSettings";
 import {
   ArrowUpCircleIcon,
   BackgroundTrayIcon,
-  BookOpenIcon,
+  BookIcon,
   BotIcon,
   CheckIcon,
   CircleAlertIcon,
@@ -132,7 +132,7 @@ function workToneIcon(tone: TimelineWorkEntry["tone"]): {
   }
   // Generic tool calls with no recognizable kind read as "consulted something".
   return {
-    icon: BookOpenIcon,
+    icon: BookIcon,
     className: "text-muted-foreground/45",
   };
 }
@@ -378,6 +378,15 @@ function capitalizePhrase(value: string): string {
 }
 
 function toolWorkEntryHeading(workEntry: TimelineWorkEntry): string {
+  if (computerToolName(workEntry.toolName)) {
+    for (const candidate of [workEntry.toolTitle, workEntry.label]) {
+      const title = normalizeCompactToolLabel(candidate ?? "");
+      if (title && !isGenericToolTitle(title) && !computerToolName(title)) {
+        return capitalizePhrase(title);
+      }
+    }
+    return describeComputerToolCall({ toolName: workEntry.toolName, args: undefined })!.summary;
+  }
   // Task and checkpoint progress are semantic copy, not tool lifecycle labels.
   // Stripping "started" / "completed" makes a revert's two outcomes identical.
   if (

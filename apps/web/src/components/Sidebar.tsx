@@ -5008,14 +5008,14 @@ export default function Sidebar() {
               >
                 <span
                   className={cn(
-                    "truncate font-system-ui text-[length:var(--app-font-size-ui,12px)] font-normal",
+                    "truncate font-system-ui text-ui font-normal",
                     SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
                   )}
                 >
                   {project.name}
                 </span>
                 {project.localName ? (
-                  <span className="shrink-0 truncate text-[length:var(--app-font-size-ui,12px)] text-muted-foreground/40">
+                  <span className="shrink-0 truncate text-ui text-muted-foreground/40">
                     {project.folderName}
                   </span>
                 ) : null}
@@ -6853,7 +6853,7 @@ export default function Sidebar() {
       >
         <DialogPopup className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base">
+            <DialogTitle className="flex items-center gap-2 text-ui-lg">
               <PlayIcon className="size-4 text-emerald-500" />
               Start dev
             </DialogTitle>

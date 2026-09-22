@@ -1840,6 +1840,25 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
         const replacementFence = yield* waitForCurrentInterruptionFence(threadId);
         clearRuntimeIdleTimer(threadId);
         yield* waitForRuntimeIdleStop(threadId);
+        const adapter = yield* registry.getByProvider(input.provider);
+        let retiredSession: ProviderSession | undefined;
+        let preparedStart: ProviderAdapterShape<ProviderAdapterError>["startSession"] | undefined;
+        const prepareReplacement = adapter.prepareSessionReplacement
+          ? Effect.gen(function* () {
+              const binding = Option.getOrUndefined(yield* directory.getBinding(threadId));
+              const providerOptions =
+                input.providerOptions ??
+                (binding?.provider === input.provider
+                  ? readPersistedProviderOptions(binding.runtimePayload)
+                  : undefined);
+              const prepared = yield* adapter.prepareSessionReplacement!({
+                ...input,
+                ...(providerOptions !== undefined ? { providerOptions } : {}),
+              });
+              retiredSession = prepared?.previousSession;
+              preparedStart = prepared?.startSession;
+            })
+          : undefined;
         return yield* lifecycle.run(
           threadId,
           (lease) =>
@@ -1849,6 +1868,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                 input.forkSourceResumeCursor !== undefined
                   ? undefined
                   : (input.resumeCursor ??
+                    retiredSession?.resumeCursor ??
                     (persistedBinding?.provider === input.provider
                       ? persistedBinding.resumeCursor
                       : undefined));
@@ -1863,12 +1883,17 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                 (persistedBinding?.provider === input.provider
                   ? readPersistedProviderOptions(persistedBinding.runtimePayload)
                   : undefined);
-              const adapter = yield* registry.getByProvider(input.provider);
+              const effectiveComputerControl =
+                input.enableComputerControl ??
+                (persistedBinding?.provider === input.provider
+                  ? readPersistedComputerControl(persistedBinding.runtimePayload)
+                  : false);
               let replacementStarted = false;
               const startupLifecycle = new ProviderStartupLifecycle();
               const startAndPersistReplacement = Effect.gen(function* () {
                 const resolvedAdapterStartInput = {
                   ...adapterStartInput,
+                  enableComputerControl: effectiveComputerControl,
                   lifecycleGeneration: lease.generation,
                   ...(effectiveProviderOptions !== undefined
                     ? { providerOptions: effectiveProviderOptions }
@@ -1886,7 +1911,11 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                 // The lifecycle is updated inside observeProviderStartup; these taps
                 // only log the already-recorded outcome.
                 const started = yield* observeProviderStartup(
-                  startAdapterWithStaleDevinFallback(adapter, resolvedAdapterStartInput),
+                  startAdapterWithStaleDevinFallback(
+                    adapter,
+                    resolvedAdapterStartInput,
+                    preparedStart,
+                  ),
                   { lifecycle: startupLifecycle, timeout: PROVIDER_START_SESSION_TIMEOUT },
                 ).pipe(
                   Effect.tapError((cause) =>
@@ -2258,7 +2287,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
             "Import model and source provider must match.",
           );
         }
-        yield* ensureProviderEnabled(input.provider, operation);
         yield* validateAutoRuntimeMode(operation, input.provider, input.runtimeMode);
         yield* waitForCurrentInterruptionFence(input.threadId);
         clearRuntimeIdleTimer(input.threadId);
@@ -2282,7 +2310,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                 "The target conversation already has a different provider binding.",
               );
             }
-            yield* ensureProviderEnabled(input.provider, operation);
             const adapter = yield* registry.getByProvider(input.provider);
             if (!adapter.forkThread) {
               return yield* toValidationError(

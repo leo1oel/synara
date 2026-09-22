@@ -23,7 +23,6 @@ import {
   discoverCodexProjects,
   resolveCodexProjectImportHome,
 } from "../provider/codexProjectImport";
-import { ensureProviderEnabled } from "../provider/enabledProviderAdapter";
 import { makeKeyedLock } from "../provider/keyedLock";
 import type { NativeProjectImportCatalog } from "../provider/projectImportTypes";
 import type { ProviderAdapterRegistryShape } from "../provider/Services/ProviderAdapterRegistry";
@@ -218,8 +217,12 @@ export function makeProjectImportHandlers(options: ProjectImportRouteOptions) {
           if (known) return { ...known, status: "already-present" } satisfies ImportProjectResult;
         }
         if (source) {
-          yield* ensureProviderEnabled(source.provider, options.serverSettings);
           const settings = yield* options.serverSettings.getSettings;
+          if (!settings.providers[source.provider].enabled) {
+            return yield* new ProjectImportError({
+              message: `${source.provider} is disabled in Settings > Providers.`,
+            });
+          }
           const currentHome = yield* projectImportPromise(() =>
             source.provider === "codex"
               ? resolveCodexProjectImportHome({ homePath: settings.providers.codex.homePath })

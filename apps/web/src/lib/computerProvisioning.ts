@@ -27,6 +27,7 @@ import {
 
 import { computerStatusNeedsSetup } from "~/components/ComputerPanel.logic";
 import { isLoopbackHostname } from "~/components/Sidebar.logic";
+import { isSynaraEmbedMode } from "~/embedMode";
 
 /** The desktop bridge identifies its live server; remote servers own their own grants. */
 export function readLocalComputerPermissionBridge(): DesktopBridge["appSnap"] | null {
@@ -60,6 +61,14 @@ export async function prepareComputerPermissionGuide(input: {
   ) => Promise<unknown>;
   readonly isCurrent: () => boolean;
 }): Promise<boolean> {
+  // Lattice's Tauri host does not yet own a Cua driver, permission setup, or
+  // physical Escape monitoring. Keep the draft rather than dispatching a task
+  // whose Computer tools are intentionally absent from the host catalog.
+  if (isSynaraEmbedMode()) {
+    throw new Error(
+      "Computer Use is not available in Lattice yet; native host integration is required.",
+    );
+  }
   if (!input.getPermissionState || !input.startPermissionSetup) return input.isCurrent();
   if (!input.isCurrent()) return false;
   const state = await input.getPermissionState(COMPUTER_PERMISSION_KINDS);

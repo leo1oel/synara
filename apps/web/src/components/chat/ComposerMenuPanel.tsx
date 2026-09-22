@@ -104,7 +104,7 @@ export function ComposerMenuPanel(props: {
                         {group.label}
                       </CommandGroupLabel>
                       {group.labelTrailing ? (
-                        <span className="text-[10.5px] text-muted-foreground/45">
+                        <span className="text-ui-xs text-muted-foreground/45">
                           {group.labelTrailing}
                         </span>
                       ) : null}

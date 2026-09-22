@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
+import * as processRuntime from "@synara/shared/processRuntime";
 import { teardownChildProcessTree } from "./supervisedProcessTeardown";
 
 import {
@@ -24,6 +25,15 @@ function windowsTree(): ProcessChildrenMap {
     ],
   ]);
 }
+
+function snapshotResult(stdout: string, status = 0, stderr = "") {
+  return { pid: 1, output: [null, stdout, stderr], stdout, stderr, status, signal: null };
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  delete process.env.SYNARA_PROCESS_PS_PATH;
+});
 
 describe("POSIX process-tree controller", () => {
   it.skipIf(process.platform === "win32")(
@@ -94,6 +104,70 @@ describe("POSIX process-tree controller", () => {
 
     expect(attempts).toBe(2);
     expect(captured).toEqual({ descendants: [], captureComplete: false });
+  });
+
+  it("uses the host snapshot contract and captures parent relationships without parsing identity tokens", () => {
+    process.env.SYNARA_PROCESS_PS_PATH = "/signed/lattice-process-snapshot";
+    const spawnSync = vi
+      .spyOn(processRuntime, "spawnProcessSync")
+      .mockImplementation(() => snapshotResult("101 100 lattice-process:1700000000:42\n") as never);
+
+    expect(createProcessTreeKiller().capture(100)).toEqual({
+      captureComplete: true,
+      descendants: [{ pid: 101, command: "lattice-process:1700000000:42" }],
+    });
+    expect(spawnSync).toHaveBeenCalledExactlyOnceWith(
+      "/signed/lattice-process-snapshot",
+      ["-eo", "pid=,ppid=,command="],
+      expect.objectContaining({ encoding: "utf8" }),
+    );
+  });
+
+  it("uses opaque host identities for inspection and rejects PID reuse", () => {
+    process.env.SYNARA_PROCESS_PS_PATH = "/signed/lattice-process-snapshot";
+    const spawnSync = vi
+      .spyOn(processRuntime, "spawnProcessSync")
+      .mockImplementation(() => snapshotResult("101 lattice-process:1700000001:7\n") as never);
+    const captured = { pid: 101, command: "lattice-process:1700000000:42" };
+
+    expect(createProcessTreeKiller().inspect?.({ descendants: [captured] })).toEqual({
+      verified: true,
+      survivors: [],
+    });
+    expect(spawnSync).toHaveBeenCalledExactlyOnceWith(
+      "/signed/lattice-process-snapshot",
+      ["-p", "101", "-o", "pid=,command="],
+      expect.objectContaining({ encoding: "utf8" }),
+    );
+  });
+
+  it("treats every nonzero host snapshot exit as unknown", () => {
+    process.env.SYNARA_PROCESS_PS_PATH = "/signed/lattice-process-snapshot";
+    vi.spyOn(processRuntime, "spawnProcessSync").mockImplementation(
+      () => snapshotResult("", 1) as never,
+    );
+    const captured = { pid: 101, command: "lattice-process:1700000000:42" };
+
+    expect(createProcessTreeKiller().inspect?.({ descendants: [captured] })).toEqual({
+      verified: false,
+      survivors: [captured],
+    });
+  });
+
+  it("keeps standard ps status 1 with empty stderr as a proven absence", () => {
+    vi.spyOn(processRuntime, "spawnProcessSync").mockImplementation(
+      () => snapshotResult("", 1) as never,
+    );
+    const captured = {
+      pid: 101,
+      command: "worker",
+      startedAt: "Fri Sep 18 10:00:00 2026",
+    };
+
+    expect(createProcessTreeKiller().inspect?.({ descendants: [captured] })).toEqual({
+      verified: true,
+      survivors: [],
+    });
   });
 });
 

@@ -145,6 +145,9 @@ export function makeAgentGatewayMcpTransport(input: {
             // later tools/call refusal.
             tools: input.tools
               .filter((tool) => context.callerCapabilities.has(tool.requiredCapability))
+              // Keep exact-name dispatch available without advertising large
+              // specialist families in every provider prompt.
+              .filter((tool) => tool.discoveryOnly !== true)
               .map((tool) => ({
                 ...tool.definition,
                 // SAFETY: ToolEntry.inputSchema is typed Record<string, unknown>; the sanitizer

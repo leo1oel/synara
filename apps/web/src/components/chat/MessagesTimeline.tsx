@@ -3370,7 +3370,7 @@ const UserMessageEditForm = memo(function UserMessageEditForm(props: {
       />
       <div className="mt-2 flex items-center justify-end gap-2">
         {props.submitBlockedHint !== null ? (
-          <p className="mr-auto font-system-ui text-xs text-destructive/80">
+          <p className="mr-auto font-system-ui text-ui-xs text-destructive/80">
             {props.submitBlockedHint}
           </p>
         ) : null}

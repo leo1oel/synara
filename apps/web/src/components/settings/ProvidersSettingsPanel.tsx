@@ -26,7 +26,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type MouseEvent, type ReactNode, useCallback, useMemo, useState } from "react";
+import { type MouseEvent, type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 import { useLingui } from "@lingui/react";
 
 import type { AppSettings, AppSettingsBinding } from "~/appSettings";
@@ -482,8 +482,8 @@ function SortableProviderVisibilityRow(props: {
         </button>
         <ProviderIcon provider={props.option.provider} className="size-4 shrink-0" />
         <span className="min-w-0">
-          <span className="block truncate text-sm text-foreground">{props.option.title}</span>
-          <span className="block text-[11px] text-muted-foreground">
+          <span className="block truncate text-ui text-foreground">{props.option.title}</span>
+          <span className="block text-ui-sm text-muted-foreground">
             {isChecking
               ? i18n._("Checking")
               : isAvailable
@@ -615,9 +615,9 @@ export function ProviderUpdateRow(props: {
       data-slot="provider-update-row"
       className="flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2"
     >
-      <div className="min-w-0 flex-1 text-sm font-medium text-foreground">{props.provider}</div>
+      <div className="min-w-0 flex-1 text-ui font-medium text-foreground">{props.provider}</div>
       <div className="ml-auto flex shrink-0 items-center justify-end gap-2">
-        <span className="text-right text-[11px] text-muted-foreground">{props.status}</span>
+        <span className="text-right text-ui-sm text-muted-foreground">{props.status}</span>
         {props.action}
       </div>
     </div>
@@ -795,7 +795,7 @@ function ProviderToolRow(props: {
               ) : null}
               {showSelfManagedUpdate && props.providerStatus ? (
                 <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0 text-xs text-muted-foreground">
+                  <div className="min-w-0 text-ui-xs text-muted-foreground">
                     {title} manages its own releases, so Lattice cannot tell whether a newer version
                     exists. Run the update to be sure.
                   </div>
@@ -1135,7 +1135,7 @@ export function ProvidersSettingsPanel({
                             onUpdate={(provider) => void runProviderUpdate(provider)}
                           />
                         ) : (
-                          <span className="text-[11px] text-muted-foreground">
+                          <span className="text-ui-sm text-muted-foreground">
                             {i18n._("Manual update")}
                           </span>
                         )

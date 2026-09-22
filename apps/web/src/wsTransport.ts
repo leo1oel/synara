@@ -71,6 +71,7 @@ import * as Socket from "effect/unstable/socket/Socket";
 
 import { APP_VERSION } from "./branding";
 import { useDeviceStateStore } from "./deviceStateStore";
+import { useComputerStateStore } from "./computerStateStore";
 import { readEmbeddedHostWsUrl } from "./embedMode";
 import {
   getUnaryRpcCapacityRetryDelayMs,

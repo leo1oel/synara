@@ -37,7 +37,12 @@ import {
   type WorktreeSetupSnapshot,
   type WorktreeSetupStepId,
 } from "../types";
-import { type DraftThreadState } from "../composerDraftStore";
+import {
+  type DraftThreadEnvMode,
+  type DraftThreadState,
+  type QueuedComposerChatTurn,
+  type QueuedComposerTurn,
+} from "../composerDraftStore";
 import { makeModelSelection } from "../composerDraftModels";
 import { Schema } from "effect";
 import {

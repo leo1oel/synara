@@ -2804,12 +2804,28 @@ const make = Effect.gen(function* () {
       );
     };
     const sendQueuedProviderTurn = (messageText: string | undefined) =>
-      withQualityContext(() =>
-        providerService.sendTurn({
-          ...providerTurnInput,
-          ...(messageText ? { input: messageText } : {}),
-        }),
-      );
+      Effect.gen(function* () {
+        if (
+          input.acceptedCacheReview &&
+          !(yield* isClaudeReviewAuthorized(
+            input.threadId,
+            input.acceptedCacheReview.reviewId,
+            "responding",
+          ))
+        ) {
+          return yield* new ProviderAdapterValidationError({
+            provider: selectedProvider,
+            operation: "thread.turn.start",
+            issue: "The saved send was cancelled before delivery.",
+          });
+        }
+        return yield* withQualityContext(() =>
+          providerService.sendTurn({
+            ...providerTurnInput,
+            ...(messageText ? { input: messageText } : {}),
+          }),
+        );
+      });
 
     const captureMessageStartCheckpoint = Effect.gen(function* () {
       if ((input.dispatchMode ?? "queue") === "steer") {

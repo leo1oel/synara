@@ -1396,7 +1396,7 @@ function SettingsRouteView() {
                     <h1 className="text-xl font-medium tracking-tight text-foreground">
                       {i18n._(activeSectionItem.label)}
                     </h1>
-                    <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                    <p className="mt-1.5 text-ui leading-relaxed text-muted-foreground">
                       {i18n._(activeSectionItem.description)}
                     </p>
                   </div>

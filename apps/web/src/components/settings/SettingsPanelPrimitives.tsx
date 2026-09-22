@@ -253,7 +253,7 @@ export function SettingsRow({
           {description ? (
             <p className={SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME}>{description}</p>
           ) : null}
-          {status ? <div className="pt-1 text-[11px] text-muted-foreground">{status}</div> : null}
+          {status ? <div className="pt-1 text-ui-sm text-muted-foreground">{status}</div> : null}
         </div>
         {control ? (
           <div

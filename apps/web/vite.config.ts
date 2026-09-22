@@ -15,6 +15,7 @@ import { defineConfig, type Plugin } from "vite";
 import pkg from "./package.json" with { type: "json" };
 import { lingui } from "@lingui/vite-plugin";
 import linguiMacro from "@lingui/babel-plugin-lingui-macro";
+import { listFiles, pruneProductionIcons } from "./scripts/production-assets";
 
 const port = Number(process.env.PORT ?? 5733);
 const sourcemapEnv = process.env.SYNARA_WEB_SOURCEMAP?.trim().toLowerCase();

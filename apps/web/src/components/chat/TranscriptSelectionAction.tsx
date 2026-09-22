@@ -32,7 +32,7 @@ function TranscriptSelectionToolbarButton({
       title={label}
       disabled={disabled}
       className={cn(
-        "pointer-events-auto inline-flex h-6 items-center gap-1 rounded px-1.5 text-[10px] leading-none font-medium text-[var(--color-text-foreground)]",
+        "pointer-events-auto inline-flex h-6 items-center gap-1 rounded px-1.5 text-ui-xs leading-none font-medium text-[var(--color-text-foreground)]",
         ELEVATED_HOVER_SURFACE_CLASS_NAME,
       )}
       onMouseDown={(event) => {

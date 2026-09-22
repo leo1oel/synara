@@ -15,10 +15,11 @@ const PROCESS_TREE_CAPTURE_ATTEMPTS = 2;
 const PROCESS_TREE_SCAN_MAX_BUFFER_BYTES = 8_388_608;
 const PROCESS_COMMAND_SCAN_MAX_BUFFER_BYTES = 8_388_608;
 
-// Sandboxed macOS hosts supply an unprivileged copy: Seatbelt refuses to exec
-// the system setuid ps. Use it for both ancestry capture and identity checks.
-function processSnapshotCommand(): string {
-  return process.env.SYNARA_PROCESS_PS_PATH?.trim() || "ps";
+// Sandboxed hosts can supply a process snapshot executable with the legacy
+// two-query contract. Its command field is an opaque birth-time identity.
+function processSnapshot(): { command: string; overridden: boolean } {
+  const override = process.env.SYNARA_PROCESS_PS_PATH?.trim();
+  return override ? { command: override, overridden: true } : { command: "ps", overridden: false };
 }
 
 export type ProcessChildrenMap = Map<number, Array<CapturedProcess>>;
@@ -108,6 +109,19 @@ export function parseProcessChildrenMap(
   return childrenByParentPid;
 }
 
+function parseProcessIdentityMap(psOutput: string, includeStartTime: boolean): ProcessIdentityMap {
+  if (includeStartTime) return processesByPid(parseProcessChildrenMap(psOutput, true));
+  const processes = new Map<number, CapturedProcess>();
+  for (const line of psOutput.split(/\r?\n/g)) {
+    const match = /^\s*(\d+)\s+(.*\S)\s*$/.exec(line);
+    if (!match) continue;
+    const pid = Number(match[1]);
+    const command = match[2]?.trim() ?? "";
+    if (Number.isInteger(pid) && command.length > 0) processes.set(pid, { pid, command });
+  }
+  return processes;
+}
+
 export function collectDescendantProcesses(
   parentPid: number,
   childrenByParentPid: ProcessChildrenMap,
@@ -133,13 +147,20 @@ export function collectDescendantProcesses(
 
 function captureProcessChildrenMapSync(): ProcessChildrenMap | null {
   try {
-    const result = spawnProcessSync(processSnapshotCommand(), ["-eo", "pid=,ppid=,command="], {
-      encoding: "utf8",
-      maxBuffer: PROCESS_TREE_SCAN_MAX_BUFFER_BYTES,
-      timeout: PROCESS_TREE_SYNC_SCAN_TIMEOUT_MS,
-    });
+    const snapshot = processSnapshot();
+    const result = spawnProcessSync(
+      snapshot.command,
+      ["-eo", snapshot.overridden ? "pid=,ppid=,command=" : "pid=,ppid=,lstart=,command="],
+      {
+        // lstart uses locale-dependent %c; the parser expects the C locale's five tokens.
+        env: { ...process.env, LC_ALL: "C" },
+        encoding: "utf8",
+        maxBuffer: PROCESS_TREE_SCAN_MAX_BUFFER_BYTES,
+        timeout: PROCESS_TREE_SYNC_SCAN_TIMEOUT_MS,
+      },
+    );
     if (result.error || result.status !== 0) return null;
-    return parseProcessChildrenMap(result.stdout, true);
+    return parseProcessChildrenMap(result.stdout, !snapshot.overridden);
   } catch {
     return null;
   }
@@ -148,10 +169,13 @@ function captureProcessChildrenMapSync(): ProcessChildrenMap | null {
 function captureProcessChildrenMap(): Promise<ProcessChildrenMap | null> {
   return new Promise((resolve) => {
     try {
+      const snapshot = processSnapshot();
       execProcessFile(
-        processSnapshotCommand(),
-        ["-eo", "pid=,ppid=,command="],
+        snapshot.command,
+        ["-eo", snapshot.overridden ? "pid=,ppid=,command=" : "pid=,ppid=,lstart=,command="],
         {
+          // Keep identity parsing stable across the host locale.
+          env: { ...process.env, LC_ALL: "C" },
           encoding: "utf8",
           maxBuffer: PROCESS_TREE_SCAN_MAX_BUFFER_BYTES,
           timeout: PROCESS_TREE_TEARDOWN_SCAN_TIMEOUT_MS,
@@ -167,7 +191,7 @@ function captureProcessChildrenMap(): Promise<ProcessChildrenMap | null> {
               message: error.message,
             });
           }
-          resolve(error ? null : parseProcessChildrenMap(stdout));
+          resolve(error ? null : parseProcessChildrenMap(stdout, !snapshot.overridden));
         },
       );
     } catch (error) {
@@ -179,24 +203,32 @@ function captureProcessChildrenMap(): Promise<ProcessChildrenMap | null> {
   });
 }
 
-function readCurrentCommands(pids: readonly number[]): ProcessCommandMap | null {
-  const uniquePids = [...new Set(pids.filter((pid) => Number.isInteger(pid) && pid > 0))];
+function readCurrentProcesses(pids: readonly number[]): ProcessIdentityMap | null {
+  const uniquePids = [...new Set(pids.filter(isSignalablePid))];
   if (uniquePids.length === 0) return new Map();
   try {
+    const snapshot = processSnapshot();
     const result = spawnProcessSync(
-      processSnapshotCommand(),
-      ["-p", uniquePids.join(","), "-o", "pid=,command="],
+      snapshot.command,
+      [
+        "-p",
+        uniquePids.join(","),
+        "-o",
+        snapshot.overridden ? "pid=,command=" : "pid=,ppid=,lstart=,command=",
+      ],
       {
+        env: { ...process.env, LC_ALL: "C" },
         encoding: "utf8",
         maxBuffer: PROCESS_COMMAND_SCAN_MAX_BUFFER_BYTES,
         timeout: PROCESS_TREE_SYNC_SCAN_TIMEOUT_MS,
       },
     );
     if (result.error) return null;
+    if (snapshot.overridden && result.status !== 0) return null;
     // ps exits 1 when none of the requested PIDs exist; other errors are unknown.
     if (result.status !== 0 && (result.status !== 1 || result.stderr.trim().length > 0))
       return null;
-    return processesByPid(parseProcessChildrenMap(result.stdout, true));
+    return parseProcessIdentityMap(result.stdout, !snapshot.overridden);
   } catch {
     return null;
   }

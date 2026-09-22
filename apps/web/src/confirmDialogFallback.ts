@@ -88,7 +88,7 @@ export function showConfirmDialogFallback(message: string): Promise<boolean> {
     header.className = "flex flex-col gap-1.5 px-4 py-3.5 text-center sm:text-left";
 
     const titleEl = document.createElement("h2");
-    titleEl.className = "font-heading font-semibold text-base leading-snug";
+    titleEl.className = "font-heading font-semibold text-ui-lg leading-snug";
     titleEl.textContent = title;
     header.appendChild(titleEl);
 

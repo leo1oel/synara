@@ -71,9 +71,18 @@ export interface McpTransportTestDenial {
 }
 
 function makeTransport(input: {
-  readonly tools: ReadonlyArray<ToolEntry>;
+  readonly tools?: ReadonlyArray<ToolEntry>;
+  readonly tool?: ToolEntry;
   readonly threads: ReadonlyArray<OrchestrationThreadShell>;
   readonly deviceControlEnabled?: boolean;
+  readonly leaseCapabilities?: AgentGatewayCapabilityInput;
+  /** Thread ids that hold a session lease but no longer exist in the snapshot. */
+  readonly ghostThreads?: ReadonlyArray<string>;
+  /** Computer family names threaded to the transport (absent from tools). */
+  readonly computerToolNames?: ReadonlyArray<string>;
+  /** Full family-predicate override (e.g. the namespace-insensitive matcher). */
+  readonly isComputerToolName?: (toolName: string) => boolean;
+  readonly onCapabilityDenied?: (denial: McpTransportTestDenial) => Effect.Effect<void>;
 }) {
   const threads = new Map(input.threads.map((thread) => [String(thread.id), thread]));
   let nextSession = 0;
@@ -160,7 +169,7 @@ function makeTransport(input: {
   const transport = makeAgentGatewayMcpTransport({
     credentials,
     snapshotQuery,
-    tools: input.tools,
+    tools: input.tools ?? (input.tool ? [input.tool] : []),
     instructions: "test",
     requireThreadShell: (threadId) => {
       const thread = threads.get(threadId);

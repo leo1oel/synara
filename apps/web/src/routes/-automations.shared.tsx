@@ -1263,7 +1263,7 @@ export function AutomationDialog({
                           step={1}
                           value={form.onceRunAt}
                           onChange={(event) => setField("onceRunAt", event.target.value)}
-                          className="w-full text-xs"
+                          className="w-full text-ui-xs"
                         />
                       </div>
                     </MenuGroup>
@@ -1280,7 +1280,7 @@ export function AutomationDialog({
                           value={form.cronExpression}
                           onChange={(event) => setField("cronExpression", event.target.value)}
                           placeholder="0 9 * * *"
-                          className="w-full text-xs"
+                          className="w-full text-ui-xs"
                         />
                       </div>
                     </MenuGroup>
@@ -1342,7 +1342,7 @@ export function AutomationDialog({
                           value={form.timezone}
                           onChange={(event) => setField("timezone", event.target.value)}
                           placeholder="Europe/Rome"
-                          className="w-full text-xs"
+                          className="w-full text-ui-xs"
                         />
                       </div>
                     </MenuGroup>
@@ -1412,7 +1412,7 @@ export function AutomationDialog({
                       value={form.stopWhen}
                       onChange={(event) => setField("stopWhen", event.target.value)}
                       placeholder="PR is ready to merge"
-                      className="w-full text-xs"
+                      className="w-full text-ui-xs"
                     />
                   </div>
                 </MenuGroup>

@@ -2,6 +2,7 @@
 import "../index.css";
 
 import {
+  ApprovalRequestId,
   AutomationId,
   type AutomationCreateInput,
   type AutomationDefinition,
@@ -67,7 +68,11 @@ import {
   sendEffectRpcExit,
 } from "../test/effectRpcWebSocketMock";
 import { makeDomainEvent } from "../storeTestFixtures";
-import { createBrowserTestServerConfig, createFullscreenTestHost } from "../test/browserHarness";
+import {
+  acknowledgeProjectImportAnnouncementForTest,
+  createBrowserTestServerConfig,
+  createFullscreenTestHost,
+} from "../test/browserHarness";
 import { useTemporaryThreadStore } from "../temporaryThreadStore";
 import { useTerminalStateStore } from "../terminalStateStore";
 import { resetRetainedThreadDetailSubscriptionsForTests } from "../threadDetailSubscriptionRetention";
@@ -2140,6 +2145,7 @@ describe("ChatView transcript geometry (full app)", () => {
     attachmentUploadBarrier = null;
     attachmentCancelBarrier = null;
     localStorage.clear();
+    acknowledgeProjectImportAnnouncementForTest(createBaseServerConfig());
     sessionStorage.clear();
     i18n.loadAndActivate({ locale: "en", messages: {} });
     useLatestProjectStore.setState({ latestProjectId: null });

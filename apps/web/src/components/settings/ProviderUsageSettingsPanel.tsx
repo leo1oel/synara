@@ -118,7 +118,9 @@ function ProviderUsageCard({
   const meterRows = deriveProviderUsageDisplayRows(usageSummary.rateLimits);
   const usageLines = usageSummary.usageLines;
 
-  const hasUsage = meterRows.length > 0 || usageLines.length > 0;
+  const resetCredits = provider === "codex" ? snapshot.resetCredits : undefined;
+  const hasResetCredits = Boolean(resetCredits && resetCredits.availableCount > 0);
+  const hasUsage = meterRows.length > 0 || usageLines.length > 0 || hasResetCredits;
   const pill = status === "ok" ? null : statusPill(i18n, snapshot.status);
 
   return (
@@ -238,7 +240,7 @@ export function ProviderUsageSettingsPanel() {
     >
       {showInitialLoading ? (
         <SettingsCard>
-          <div className="px-4 py-3.5 text-xs text-muted-foreground">
+          <div className="px-4 py-3.5 text-ui-xs text-muted-foreground">
             {i18n._("Loading provider usage…")}
           </div>
         </SettingsCard>
@@ -255,7 +257,7 @@ export function ProviderUsageSettingsPanel() {
         </div>
       )}
 
-      <p className="px-2 text-[11px] leading-relaxed text-muted-foreground">
+      <p className="px-2 text-ui-sm leading-relaxed text-muted-foreground">
         {i18n._(
           "Usage is read locally from each provider CLI's stored credentials and fetched directly from the provider. The list follows whatever you are signed into; unsigned providers stay visible until any account is connected, then drop away. Short-lived tokens are refreshed through the provider's own CLI or official token endpoint.",
         )}

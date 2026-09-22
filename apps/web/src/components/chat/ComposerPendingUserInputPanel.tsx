@@ -15,6 +15,10 @@ import { ComposerChoiceRow } from "./ComposerChoiceRow";
 import { COMPOSER_INPUT_SURFACE_CLASS_NAME } from "./composerPickerStyles";
 import { Trans } from "@lingui/react/macro";
 import { useLingui } from "@lingui/react";
+import { UserInputQuestionForm } from "./UserInputQuestionForm";
+
+const NAV_BUTTON_CLASS_NAME =
+  "flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40";
 
 interface PendingUserInputPanelProps {
   pendingUserInputs: PendingUserInput[];
@@ -161,7 +165,7 @@ function ComposerPendingUserInputCard({
   return (
     <div className={cn(COMPOSER_INPUT_SURFACE_CLASS_NAME, "overflow-hidden px-3.5 py-3")}>
       <div className="flex items-start justify-between gap-3">
-        <p className="min-w-0 text-[13px] font-medium leading-snug text-foreground/90">
+        <p className="min-w-0 text-ui font-medium leading-snug text-foreground/90">
           {activeQuestion.question}
         </p>
         {showNavigation ? (
@@ -175,7 +179,7 @@ function ComposerPendingUserInputCard({
             >
               <ChevronLeftIcon className="size-3.5" />
             </button>
-            <span className="px-0.5 text-[11px] tabular-nums">
+            <span className="px-0.5 text-ui-sm tabular-nums">
               <Trans>
                 {progress.questionIndex + 1} of {questionCount}
               </Trans>
@@ -193,7 +197,7 @@ function ComposerPendingUserInputCard({
         ) : null}
       </div>
       {activeQuestion.multiSelect ? (
-        <p className="mt-1 text-[11px] text-muted-foreground/55">
+        <p className="mt-1 text-ui-sm text-muted-foreground/55">
           <Trans>Select one or more.</Trans>
         </p>
       ) : null}
@@ -227,7 +231,7 @@ function ComposerPendingUserInputCard({
             disabled={isResponding}
             onClick={onCancel}
             className={cn(
-              "rounded-md px-2 py-1 text-[12px] text-[var(--color-text-foreground-secondary)] transition-colors duration-150 hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)]",
+              "rounded-md px-2 py-1 text-ui text-[var(--color-text-foreground-secondary)] transition-colors duration-150 hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)]",
               isResponding && "cursor-not-allowed opacity-50",
             )}
           >

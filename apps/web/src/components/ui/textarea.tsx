@@ -21,7 +21,7 @@ function Textarea({ className, size: sizeProp, unstyled: unstyledProp, ...props 
         cn(
           !unstyled &&
             cn(
-              "relative inline-flex w-full rounded-lg text-[length:var(--app-font-size-ui,12px)] text-foreground has-aria-invalid:border-destructive/36 has-focus-visible:has-aria-invalid:border-destructive/64 has-disabled:opacity-64 sm:text-[length:var(--app-font-size-ui,12px)]",
+              "relative inline-flex w-full rounded-lg text-ui text-foreground has-aria-invalid:border-destructive/36 has-focus-visible:has-aria-invalid:border-destructive/64 has-disabled:opacity-64 sm:text-ui",
               FIELD_CONTROL_CLASS_NAME,
             ),
           className,

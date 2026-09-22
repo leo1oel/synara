@@ -127,7 +127,7 @@ function ProfileContent({
           <div className="flex items-center gap-1.5 text-ui leading-snug text-muted-foreground">
             <span>{handle}</span>
             <span aria-hidden>·</span>
-            <span className="rounded-full border px-1.5 py-px text-xs text-muted-foreground">
+            <span className="rounded-full border px-1.5 py-px text-ui-xs text-muted-foreground">
               Lattice
             </span>
           </div>
@@ -253,7 +253,10 @@ function ProfileContent({
 
       {/* Model usage */}
       <section className="flex flex-col gap-3">
-        <h3 className="text-sm font-medium">{i18n._("Model usage")}</h3>
+        <h3 className="text-ui font-medium">{i18n._("Model usage")}</h3>
+        <p className="text-ui leading-snug text-muted-foreground">
+          Share of {formatProfileUsageBasis(modelUsage.metric)}.
+        </p>
         {modelUsage.entries.length > 0 ? (
           <ul className="grid grid-cols-1 gap-x-12 gap-y-3 sm:grid-cols-2">
             {modelUsage.entries.slice(0, 6).map((entry) => (
@@ -266,7 +269,7 @@ function ProfileContent({
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">{i18n._("No model activity yet.")}</p>
+          <p className="text-ui text-muted-foreground">{i18n._("No model activity yet.")}</p>
         )}
         <ProfileUsageCoverage unavailableProviders={modelUsage.unavailableProviders} />
       </section>

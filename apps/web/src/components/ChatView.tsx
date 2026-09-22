@@ -299,6 +299,7 @@ import {
   ComposerModelPicker,
   type ComposerModelSelectionOptions,
 } from "./chat/ComposerModelPicker";
+import { ComposerModelEffortPicker } from "./chat/ComposerModelEffortPicker";
 import { ComposerPendingApprovalPanel } from "./chat/ComposerPendingApprovalPanel";
 import {
   ComposerClaudeCacheReviewPanel,
@@ -509,14 +510,7 @@ function ComposerModelLoadingControl(props: { widthClassName?: string; compact?:
       )}
     >
       <RefreshCwIcon aria-hidden="true" className="size-3.5 animate-spin" />
-      <span
-        className={cn(
-          "truncate text-[length:var(--app-font-size-ui-xs,11px)]",
-          props.compact && "sr-only",
-        )}
-      >
-        Loading models
-      </span>
+      <span className={cn("truncate text-ui-xs", props.compact && "sr-only")}>Loading models</span>
     </div>
   );
 }
@@ -4401,6 +4395,7 @@ export default function ChatView({
     composerContextWindowLabel,
     Boolean(runtimeUsageContextWindow),
   ].join(":");
+  const useSplitComposerPickerControls = isLocalDraftThread && !hasThreadStarted;
   useLayoutEffect(() => {
     composerFooterDemotionWidthsRef.current = [];
     composerFooterTierRef.current = 0;
@@ -4472,7 +4467,6 @@ export default function ChatView({
       dense={isEmbed}
       hideModelLabel={!composerFooterControlsPlan.showModelLabel}
       hideStatusLabel={!composerFooterControlsPlan.showTraitsLabel}
-      contextWindowLabel={composerContextWindowLabel}
       effortControl={settings.composerEffortSlider ? "slider" : "menu"}
       provider={selectedProvider}
       model={selectedModelForPickerWithCustomFallback}
@@ -4485,7 +4479,7 @@ export default function ChatView({
       providerOrder={settings.providerOrder}
       threadId={threadId}
       runtimeModel={selectedRuntimeModel}
-      runtimeModelsByProvider={runtimeModelsByProvider}
+      runtimeModels={runtimeModelsByProvider[selectedProvider]}
       runtimeAgents={dynamicAgents}
       modelOptions={selectedProviderModelOptions}
       prompt={prompt}
@@ -5354,6 +5348,29 @@ export default function ChatView({
   const environmentAppliesContentInset =
     !isEmbed && environmentPanelVisible && !environmentUsesFloatingOverlay;
   const environmentOverlayVariant = environmentUsesFloatingOverlay ? "floating" : "docked";
+  const environmentInsetPx = environmentAppliesContentInset
+    ? ENVIRONMENT_DOCKED_CONTENT_INSET_PX
+    : 0;
+  const previewCaps = computerPreviewCardCaps(
+    settings.computerPreviewSize === "large" ? "large" : "compact",
+  );
+  const previewBudgetPx = computerPreviewBudgetPx({
+    mainContentWidthPx: mainContentWidth,
+    environmentInsetPx,
+    caps: previewCaps,
+  });
+  const previewReservesInset =
+    !isEmbed &&
+    environmentOverlayVariant === "docked" &&
+    settings.autoOpenComputerPane &&
+    previewSession?.phase === "live" &&
+    (previewLayout?.hasFrame === true || previewLayout?.hasVisibleStatus === true) &&
+    previewLayout?.floating !== true;
+  const previewInsetPx = previewReservesInset
+    ? Math.min(previewLayout?.width ?? previewBudgetPx, previewBudgetPx) + 24
+    : 0;
+  const contentInsetRightPx =
+    environmentInsetPx + previewInsetPx > 0 ? environmentInsetPx + previewInsetPx : undefined;
   const environmentHeaderState =
     environmentEnabled && !isEmbed
       ? {

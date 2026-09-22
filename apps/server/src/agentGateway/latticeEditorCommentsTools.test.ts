@@ -16,6 +16,7 @@ const context = {
     turnId: "turn",
   },
   callerThreadId: "t",
+  callerThreadLabel: "t",
   callerSessionKey: "s",
   callerProvider: "codex",
   callerCapabilities: new Set(["thread:read"]),

@@ -53,13 +53,6 @@ import { PROVIDERS_WITHOUT_APPROVAL_GATE } from "./approvalGate.ts";
 
 export const DEVICE_CONTROL_CAPABILITY = "device:control" as const;
 
-/**
- * Providers whose sessions run without a per-tool approval gate. Effectful
- * device actions fail closed unless the session carries the user's explicit
- * Full Access grant.
- */
-const PROVIDERS_WITHOUT_APPROVAL_GATE = new Set<ProviderKind>(["antigravity", "pi"]);
-
 export function deviceToolRequiresApproval(name: string): boolean {
   return DEVICE_APPROVAL_REQUIRED_TOOLS.has(name);
 }

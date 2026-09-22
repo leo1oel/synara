@@ -148,7 +148,7 @@ export function ManagedSkillEditorView({
           </div>
 
           {errorMessage ? (
-            <p role="alert" className="text-xs leading-relaxed text-destructive">
+            <p role="alert" className="text-ui-xs leading-relaxed text-destructive">
               {errorMessage}
             </p>
           ) : null}

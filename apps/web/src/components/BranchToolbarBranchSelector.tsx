@@ -795,9 +795,7 @@ export function BranchToolbarBranchSelector({
       resolvedActiveBranch,
     }),
   );
-  const panelPickerItemClassName = isPanel
-    ? "rounded-md px-2 py-1 text-[length:var(--app-font-size-ui,12px)] sm:text-[length:var(--app-font-size-ui,12px)]"
-    : undefined;
+  const panelPickerItemClassName = isPanel ? "rounded-md px-2 py-1 text-ui sm:text-ui" : undefined;
 
   function renderPickerItem(itemValue: string, index: number, style?: CSSProperties) {
     if (checkoutPullRequestItemValue && itemValue === checkoutPullRequestItemValue) {
@@ -821,7 +819,7 @@ export function BranchToolbarBranchSelector({
         >
           <div className="flex min-w-0 flex-col items-start py-1">
             <span className="truncate font-medium">{i18n._("Checkout Pull Request")}</span>
-            <span className="truncate text-muted-foreground text-xs">{prReference}</span>
+            <span className="truncate text-muted-foreground text-ui-xs">{prReference}</span>
           </div>
         </ComboboxItem>
       );
@@ -991,7 +989,7 @@ export function BranchToolbarBranchSelector({
               type="button"
               className={cn(
                 "flex w-full items-center gap-2 rounded-md px-2 text-left text-[var(--color-text-foreground)] outline-none focus-visible:bg-[var(--color-background-elevated-secondary)] disabled:cursor-not-allowed disabled:opacity-50",
-                isPanel ? "py-1 text-[length:var(--app-font-size-ui,12px)]" : "py-1.5 text-sm",
+                isPanel ? "py-1 text-ui" : "py-1.5 text-ui",
                 ELEVATED_HOVER_SURFACE_CLASS_NAME,
               )}
               disabled={isBranchActionPending}
@@ -1037,7 +1035,7 @@ export function BranchToolbarBranchSelector({
               }}
             >
               <div className="space-y-1.5">
-                <label className="block font-medium text-sm" htmlFor="branch-create-name">
+                <label className="block font-medium text-ui" htmlFor="branch-create-name">
                   {i18n._("Branch name")}
                 </label>
                 <Input
@@ -1049,7 +1047,7 @@ export function BranchToolbarBranchSelector({
                 />
               </div>
               {branchByName.has(createBranchName.trim()) ? (
-                <p className="text-destructive text-sm">
+                <p className="text-destructive text-ui">
                   {i18n._("A branch with this name already exists.")}
                 </p>
               ) : null}
@@ -1100,7 +1098,7 @@ export function BranchToolbarBranchSelector({
           </DialogHeader>
           <DialogPanel className="space-y-4">
             {stashDiscardDialog?.loading ? (
-              <p className="text-muted-foreground text-sm">{i18n._("Loading stash details...")}</p>
+              <p className="text-muted-foreground text-ui">{i18n._("Loading stash details...")}</p>
             ) : stashDiscardDialog?.error ? (
               <p className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-destructive text-ui leading-snug">
                 {stashDiscardDialog.error}
@@ -1120,13 +1118,13 @@ export function BranchToolbarBranchSelector({
                     <span className="w-20 shrink-0 text-muted-foreground">
                       {i18n._("Worktree")}
                     </span>
-                    <span className="min-w-0 truncate font-mono text-xs">
+                    <span className="min-w-0 truncate font-mono text-ui-xs">
                       {stashDiscardDialog.info.cwd}
                     </span>
                   </div>
                   <div className="flex min-w-0 gap-2">
                     <span className="w-20 shrink-0 text-muted-foreground">{i18n._("Stash")}</span>
-                    <span className="min-w-0 truncate font-mono text-xs">
+                    <span className="min-w-0 truncate font-mono text-ui-xs">
                       {stashDiscardDialog.info.stashRef}
                     </span>
                   </div>
@@ -1136,7 +1134,7 @@ export function BranchToolbarBranchSelector({
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <p className="font-medium text-sm">
+                  <p className="font-medium text-ui">
                     {i18n._("Changed files ({count})", {
                       count: stashDiscardDialog.info.files.length,
                     })}
@@ -1154,7 +1152,7 @@ export function BranchToolbarBranchSelector({
                       ))}
                     </ul>
                   ) : (
-                    <p className="rounded-lg border border-[color:var(--color-border-light)] px-3 py-2 text-muted-foreground text-sm">
+                    <p className="rounded-lg border border-[color:var(--color-border-light)] px-3 py-2 text-muted-foreground text-ui">
                       {i18n._("Git did not report changed file names for this stash.")}
                     </p>
                   )}

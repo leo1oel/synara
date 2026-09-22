@@ -74,6 +74,9 @@ import {
   type AgentGatewayOperationRecord,
 } from "../Services/AgentGatewayOperationRepository.ts";
 import { AgentGatewayLive } from "./AgentGateway.ts";
+import { ComputerService } from "../../computer/Services/ComputerService.ts";
+import { makeComputerServiceLayer } from "../../computer/Layers/ComputerService.ts";
+import { FakeComputerBackend } from "../../computer/FakeComputerBackend.ts";
 import { LatticeCanvasBrokerLive } from "./LatticeCanvasBroker.ts";
 import { LatticeBibliographyBrokerLive } from "./LatticeBibliographyBroker.ts";
 import { LatticeSpreadsheetBrokerLive } from "./LatticeSpreadsheetBroker.ts";
@@ -462,15 +465,17 @@ function makeHarnessLayer(
             capabilities:
               token === "token-parent-readonly"
                 ? new Set(["thread:read"] as const)
-                : new Set([
-                    "thread:read",
-                    "thread:write",
-                    "automation:write",
-                    "diagnostics:read",
-                    "browser:control",
-                    "literature:read",
-                    "literature:write",
-                  ] as const),
+                : token === "token-parent-computer"
+                  ? new Set(["thread:read", "computer:control"] as const)
+                  : new Set([
+                      "thread:read",
+                      "thread:write",
+                      "automation:write",
+                      "diagnostics:read",
+                      "browser:control",
+                      "literature:read",
+                      "literature:write",
+                    ] as const),
           }
         : null;
     },

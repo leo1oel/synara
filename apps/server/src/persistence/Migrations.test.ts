@@ -182,6 +182,11 @@ forkMigration090Layer("fork migration 090 upgrade", (it) => {
         [101, "RemoveTranscriptMarkers"],
         [102, "ProjectionThreadMessagesTurnBoundary"],
         [103, "ClaudeTokenAccounting"],
+        [104, "ProjectionThreadsClaudeCacheReview"],
+        [105, "AsyncUserInput"],
+        [106, "ProjectImportOrigins"],
+        [107, "ProjectionThreadsHumanMessage"],
+        [108, "GatewayCompletions"],
       ]);
 
       const upgradedLineage = yield* trackerRows(sql);

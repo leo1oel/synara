@@ -17,6 +17,7 @@ const context: ToolContext = {
     turnId: "turn",
   },
   callerThreadId: "thread",
+  callerThreadLabel: "thread",
   callerSessionKey: "session",
   callerProvider: "codex",
   callerCapabilities: new Set(["thread:read", "thread:write"]),

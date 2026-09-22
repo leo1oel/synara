@@ -1552,7 +1552,7 @@ export default function GitActionsControl({
         isGitStatusOutOfSync ||
         gitStatusError) && <MenuSeparator className="mx-3 mt-2" />}
       {gitStatusForActions?.branch === null && (
-        <p className="px-3 py-1.5 text-xs text-warning">
+        <p className="px-3 py-1.5 text-ui-xs text-warning">
           {i18n._("Detached HEAD: create and checkout a branch to enable push and PR actions.")}
         </p>
       )}
@@ -1561,24 +1561,24 @@ export default function GitActionsControl({
         !gitStatusForActions.hasWorkingTreeChanges &&
         gitStatusForActions.behindCount > 0 &&
         gitStatusForActions.aheadCount === 0 && (
-          <p className="px-3 py-1.5 text-xs text-warning">
+          <p className="px-3 py-1.5 text-ui-xs text-warning">
             {i18n._("Behind upstream. Pull/rebase first.")}
           </p>
         )}
       {isGitStatusOutOfSync && (
-        <p className="px-3 py-1.5 text-xs text-muted-foreground">
+        <p className="px-3 py-1.5 text-ui-xs text-muted-foreground">
           {i18n._("Refreshing git status...")}
         </p>
       )}
       {isGitStatusRefreshDelayed && !isGitStatusOutOfSync && (
-        <p className="px-3 py-1.5 text-xs text-muted-foreground">
+        <p className="px-3 py-1.5 text-ui-xs text-muted-foreground">
           {isGitStatusFetching
             ? i18n._("Refreshing git status...")
             : i18n._("Git status refresh delayed.")}
         </p>
       )}
       {gitStatusError && !isGitStatusRefreshDelayed && (
-        <p className="px-3 py-1.5 text-xs text-destructive">
+        <p className="px-3 py-1.5 text-ui-xs text-destructive">
           {gitStatusError instanceof Error
             ? gitStatusError.message
             : i18n._("Git status refresh failed.")}
@@ -1620,12 +1620,12 @@ export default function GitActionsControl({
       >
         <DialogPopup className="max-w-md rounded-xl" bottomStickOnMobile={false}>
           <DialogHeader className="gap-2 pr-12">
-            <DialogTitle className="text-sm">
+            <DialogTitle className="text-ui">
               {pendingDefaultBranchActionCopy
                 ? localizeGit(pendingDefaultBranchActionCopy.title)
                 : i18n._("Run action on default branch?")}
             </DialogTitle>
-            <DialogDescription className="text-xs leading-5">
+            <DialogDescription className="text-ui-xs leading-5">
               {pendingDefaultBranchActionCopy
                 ? localizeGit(pendingDefaultBranchActionCopy.description)
                 : null}
@@ -1670,7 +1670,7 @@ export default function GitActionsControl({
         <DialogPopup className="max-w-md">
           <DialogHeader>
             <DialogTitle>{i18n._("Create Branch")}</DialogTitle>
-            <DialogDescription className="text-xs leading-4">
+            <DialogDescription className="text-ui-xs leading-4">
               {i18n._(
                 "Create and switch to a branch from the current HEAD. Future commits, pushes, and PRs will use it.",
               )}
@@ -1689,7 +1689,7 @@ export default function GitActionsControl({
               }}
             >
               <div className="space-y-1.5">
-                <label className="block font-medium text-sm" htmlFor={createBranchNameFieldId}>
+                <label className="block font-medium text-ui" htmlFor={createBranchNameFieldId}>
                   {i18n._("Branch name")}
                 </label>
                 <Input
@@ -1702,7 +1702,7 @@ export default function GitActionsControl({
                 />
               </div>
               {createBranchNameConflicts ? (
-                <p className="text-destructive text-xs">
+                <p className="text-destructive text-ui-xs">
                   {i18n._("A branch with this name already exists.")}
                 </p>
               ) : null}

@@ -384,7 +384,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                   );
                 })}
                 {projects.length === 0 ? (
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-ui-xs text-muted-foreground">
                     {i18n._("No projects are available.")}
                   </span>
                 ) : null}
@@ -415,8 +415,8 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-xs font-medium">{i18n._("Read other project tasks")}</div>
-                  <div className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+                  <div className="text-ui-xs font-medium">{i18n._("Read other project tasks")}</div>
+                  <div className="mt-0.5 text-ui-sm leading-relaxed text-muted-foreground">
                     {i18n._("Without this permission, the agent can read only tasks it creates.")}
                   </div>
                 </div>
@@ -428,10 +428,10 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
               </div>
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-xs font-medium">
+                  <div className="text-ui-xs font-medium">
                     {i18n._("Use the shared local checkout")}
                   </div>
-                  <div className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+                  <div className="mt-0.5 text-ui-sm leading-relaxed text-muted-foreground">
                     {i18n._(
                       "High impact. Tasks may modify the checkout you are actively using instead of an isolated worktree.",
                     )}
@@ -445,10 +445,10 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
               </div>
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-xs font-medium">
+                  <div className="text-ui-xs font-medium">
                     {i18n._("Run without approval prompts")}
                   </div>
-                  <div className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+                  <div className="mt-0.5 text-ui-sm leading-relaxed text-muted-foreground">
                     {i18n._(
                       "High impact. The external agent may start full-access execution without asking you to approve tool actions.",
                     )}
@@ -462,8 +462,8 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
               </div>
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-xs font-medium">Computer control</div>
-                  <div className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+                  <div className="text-ui-xs font-medium">Computer control</div>
+                  <div className="mt-0.5 text-ui-sm leading-relaxed text-muted-foreground">
                     High impact. Tasks may drive this Mac&apos;s screen — observe, click, type,
                     menus, clipboard. Every computer action still asks for your approval.
                   </div>
@@ -617,7 +617,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
               {!paired ? (
                 <div>
                   <div className="mb-2 flex items-center justify-between gap-3">
-                    <span className="text-xs font-medium">
+                    <span className="text-ui-xs font-medium">
                       {i18n._("Pairing command (run in Terminal)")}
                     </span>
                     <Button
@@ -638,7 +638,9 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
               ) : null}
               <div>
                 <div className="mb-2 flex items-center justify-between gap-3">
-                  <span className="text-xs font-medium">{i18n._("MCP configuration (JSON)")}</span>
+                  <span className="text-ui-xs font-medium">
+                    {i18n._("MCP configuration (JSON)")}
+                  </span>
                   <Button
                     size="xs"
                     variant="outline"

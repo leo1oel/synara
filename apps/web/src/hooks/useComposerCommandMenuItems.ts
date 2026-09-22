@@ -180,7 +180,7 @@ function buildThreadMentionCandidates(input: {
   readonly currentThreadId: string | null;
   readonly scopeProjectId?: string | null;
   readonly query: string;
-}): ComposerCommandItem[] {
+}): ThreadMentionCandidate[] {
   const projectById = new Map(input.projects.map((project) => [project.id, project]));
   return withDisambiguatedMentionNames(
     input.threads
@@ -206,7 +206,7 @@ export function resolveThreadMentionForThreadId(input: {
   readonly currentThreadId: string | null;
   readonly threadId: string;
 }): { name: string; path: string } | null {
-  const candidate = buildThreadMentionCandidates(input).find(
+  const candidate = buildThreadMentionCandidates({ ...input, query: "" }).find(
     ({ thread }) => thread.id === input.threadId,
   );
   if (!candidate) return null;
@@ -220,6 +220,7 @@ export function buildThreadMentionComposerItems(input: {
   readonly threads: readonly ComposerThreadMentionSource[];
   readonly projects: readonly Project[];
   readonly currentThreadId: string | null;
+  readonly scopeProjectId?: string | null;
   readonly query: string;
 }): ComposerCommandItem[] {
   const candidates = buildThreadMentionCandidates(input);

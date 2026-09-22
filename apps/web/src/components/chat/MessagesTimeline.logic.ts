@@ -52,6 +52,8 @@ export function userMessageEditRejectionCopy(
     case "not-user-message":
     case "non-native-message":
       return "Only your own chat messages can be edited.";
+    case "structured-answer":
+      return "Structured answers can't be edited and resent.";
   }
 }
 

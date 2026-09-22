@@ -4,6 +4,7 @@
 // Exports: NotificationsSettingsPanel, AppSnapSettingsPanel
 
 import {
+  type DesktopAppSnapPermission,
   type DesktopAppSnapSettingsPane,
   type DesktopAppSnapState,
   type ResolvedKeybindingsConfig,
@@ -57,6 +58,33 @@ function appSnapStatusText(state: DesktopAppSnapState | null): string {
 }
 
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
+
+const APPSNAP_PERMISSION_LABELS: Record<DesktopAppSnapPermission, string> = {
+  granted: "Granted",
+  denied: "Denied",
+  "not-determined": "Not requested yet",
+  restricted: "Restricted",
+  unknown: "Unknown",
+};
+
+function AppSnapPermissionBadge({ permission }: { permission: DesktopAppSnapPermission }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-ui-xs font-medium text-muted-foreground">
+      <span
+        aria-hidden
+        className={cn(
+          "size-1.5 rounded-full",
+          permission === "granted"
+            ? "bg-emerald-500"
+            : permission === "denied" || permission === "restricted"
+              ? "bg-red-500"
+              : "bg-[color:var(--color-border)]",
+        )}
+      />
+      {APPSNAP_PERMISSION_LABELS[permission]}
+    </span>
+  );
+}
 
 export function NotificationsSettingsPanel({
   settings,
@@ -300,6 +328,26 @@ export function AppSnapSettingsPanel({
     }
   }
 
+  async function recheckAppSnapPermissions() {
+    const bridge = window.desktopBridge?.appSnap;
+    if (!bridge) return;
+    const requestGuard = appSnapRequestGuardRef.current;
+    const requestId = requestGuard.begin();
+    try {
+      await bridge.requestPermissions();
+      const state = await bridge.setEnabled(settings.enableAppSnap);
+      if (!requestGuard.isCurrent(requestId)) return;
+      setAppSnapState(state);
+    } catch (error) {
+      if (!requestGuard.isCurrent(requestId)) return;
+      toastManager.add({
+        type: "error",
+        title: "Could not check AppSnap permissions",
+        description: error instanceof Error ? error.message : "Permission check failed.",
+      });
+    }
+  }
+
   const supported = appSnapState?.supported === true;
   const enabled = supported && settings.enableAppSnap;
 
@@ -379,7 +427,7 @@ export function AppSnapSettingsPanel({
         <SettingsRow
           title="Destination"
           description="Snaps join the task you interacted with in the last minute, and consecutive snaps stay together. Otherwise Lattice opens a fresh task with the capture attached."
-          control={<span className="text-xs font-medium text-muted-foreground">Automatic</span>}
+          control={<span className="text-ui-xs font-medium text-muted-foreground">Automatic</span>}
         />
 
         <SettingsRow

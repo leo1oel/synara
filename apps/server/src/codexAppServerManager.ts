@@ -62,7 +62,11 @@ import {
   SYNARA_AGENT_GATEWAY_TOKEN_ENV,
   SYNARA_MCP_SERVER_NAME,
 } from "./agentGateway/mcpInjection.ts";
-import { SYNARA_GATEWAY_HARNESS_POLICY } from "./agentGateway/harnessPolicy.ts";
+import { shouldAllowSynaraComputerProviderTool } from "./agentGateway/computerToolPermission.ts";
+import {
+  SYNARA_GATEWAY_HARNESS_POLICY,
+  renderSynaraHarnessPolicy,
+} from "./agentGateway/harnessPolicy.ts";
 import { ACTIVE_AGENT_HOST_PROFILE } from "./agentGateway/hostProfile.ts";
 import {
   AGENT_GATEWAY_TURN_AUTHORITY_RETIRED,

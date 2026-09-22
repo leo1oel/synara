@@ -65,6 +65,7 @@ require("node:readline").createInterface({ input: process.stdin }).on("line", li
         threadId,
         cwd: dir,
         runtimeMode: "full-access",
+        agentGatewayCapabilityInput: {},
         resumeCursor: { threadId: "native-thread" },
         providerOptions: { codex: { binaryPath, homePath } },
       });

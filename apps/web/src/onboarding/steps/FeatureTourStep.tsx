@@ -88,7 +88,7 @@ export function FeatureTourStep() {
         aria-labelledby={`onboarding-tour-tab-${selectedCard.id}`}
         className="flex min-w-0 flex-col gap-3.5 pt-1.5"
       >
-        <h3 className="text-base font-medium tracking-[-0.005em] text-foreground">
+        <h3 className="text-ui-lg font-medium tracking-[-0.005em] text-foreground">
           {selectedCard.title}
         </h3>
         <p className="text-ui-lg leading-relaxed text-muted-foreground">

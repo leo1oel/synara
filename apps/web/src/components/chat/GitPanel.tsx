@@ -145,10 +145,10 @@ function GitFileSection(props: {
   return (
     <section className="min-w-0">
       <header className="flex items-center gap-2 px-1.5 py-1">
-        <span className="text-[11px] font-semibold text-[var(--color-text-foreground-secondary)]">
+        <span className="text-ui-sm font-semibold text-[var(--color-text-foreground-secondary)]">
           {props.title}
         </span>
-        <span className="rounded-full bg-muted px-1.5 text-[10px] font-medium text-[var(--color-text-foreground-secondary)]">
+        <span className="rounded-full bg-muted px-1.5 text-ui-xs font-medium text-[var(--color-text-foreground-secondary)]">
           {props.files.length}
         </span>
         <DiffStat additions={stat.additions} deletions={stat.deletions} className="text-ui-xs" />
@@ -166,7 +166,7 @@ function GitFileSection(props: {
         ) : null}
       </header>
       {props.files.length === 0 ? (
-        <p className="px-1.5 py-1 text-[11px] text-[var(--color-text-foreground-tertiary)]">
+        <p className="px-1.5 py-1 text-ui-sm text-[var(--color-text-foreground-tertiary)]">
           {props.emptyLabel}
         </p>
       ) : (
@@ -442,7 +442,7 @@ export function GitPanel(props: {
                       </Alert>
                     ) : null}
                     {!error && isLoading && !hasChanges ? (
-                      <p className="px-1.5 py-1 text-[11px] text-muted-foreground/70">
+                      <p className="px-1.5 py-1 text-ui-sm text-muted-foreground/70">
                         {i18n._("Loading changes...")}
                       </p>
                     ) : null}

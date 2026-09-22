@@ -8,6 +8,7 @@ import { DEFAULT_MODEL_BY_PROVIDER, DEFAULT_SERVER_SETTINGS_VIEW } from "@synara
 import { describe, expect, it } from "vitest";
 
 import {
+  didProviderCommandDiscoverySettingsChange,
   AppSettingsSchema,
   applyLocalAppSettingsPatch,
   appSettingsPatchToServerSettingsPatch,

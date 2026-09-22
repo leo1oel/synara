@@ -420,12 +420,7 @@ function PullRequestsRouteView() {
                   <span aria-hidden className="text-muted-foreground/50">
                     ·
                   </span>
-                  <span
-                    className={cn(
-                      "truncate text-muted-foreground",
-                      "text-[length:var(--app-font-size-ui-sm,11px)]",
-                    )}
-                  >
+                  <span className={cn("truncate text-muted-foreground", "text-ui-sm")}>
                     {scopedProjectName}
                   </span>
                 </>
@@ -524,12 +519,12 @@ function PullRequestsRouteView() {
               ) : entries.length === 0 ? (
                 <Empty className="py-16 font-system-ui">
                   <EmptyHeader>
-                    <EmptyTitle className="font-system-ui text-[length:var(--app-font-size-ui-lg,13px)] leading-5 font-medium tracking-normal">
+                    <EmptyTitle className="font-system-ui text-ui-lg leading-5 font-medium tracking-normal">
                       {search.involvement === "reviewing" && search.state !== "open"
                         ? "Review requests only apply to open pull requests"
                         : i18n._("No pull requests found")}
                     </EmptyTitle>
-                    <EmptyDescription className="font-system-ui text-[length:var(--app-font-size-ui,12px)] leading-5 font-normal">
+                    <EmptyDescription className="font-system-ui text-ui leading-5 font-normal">
                       {search.involvement === "reviewing" && search.state !== "open"
                         ? "Select Open to see pull requests currently awaiting your review."
                         : i18n._("Try another involvement, state, project, or search filter.")}

@@ -492,7 +492,7 @@ function ColorPill({
               className={cn(
                 FIELD_CONTROL_CLASS_NAME,
                 SETTINGS_CONTROL_RADIUS_CLASS_NAME,
-                "h-8 px-2 text-center font-chat-code text-xs uppercase outline-none",
+                "h-8 px-2 text-center font-chat-code text-ui-xs uppercase outline-none",
               )}
               aria-label={`${ariaLabel} hex value`}
             />

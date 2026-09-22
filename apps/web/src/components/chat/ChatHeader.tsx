@@ -203,7 +203,7 @@ function EditorChatHistoryMenu(props: {
           props.triggerTitle ? (
             <button
               type="button"
-              className="flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-left text-[length:var(--app-font-size-ui,12px)] leading-[var(--app-line-height-ui,1.5)] font-normal text-foreground transition-colors hover:bg-secondary"
+              className="flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-left text-ui leading-[var(--app-line-height-ui,1.5)] font-normal text-foreground transition-colors hover:bg-secondary"
               aria-label={`${props.triggerTitle}, open chat history`}
               data-chat-history-menu-trigger="true"
             >
@@ -811,7 +811,7 @@ export function ChatHeader({
                   />
                 ) : (
                   <h2
-                    className="max-w-[clamp(12rem,42vw,36rem)] truncate font-system-ui text-[length:var(--app-font-size-ui,12px)] font-normal text-foreground"
+                    className="max-w-[clamp(12rem,42vw,36rem)] truncate font-system-ui text-ui font-normal text-foreground"
                     title={activeThreadTitle}
                     onDoubleClick={() => onRenameThread()}
                   >

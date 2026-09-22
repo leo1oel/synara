@@ -33,7 +33,7 @@ const Select = SelectPrimitive.Root;
 type SelectPopupSurface = "composer" | "settings";
 
 const settingsSelectOptionClassName =
-  "[&>svg]:-mx-0.5 flex cursor-default select-none items-center rounded-lg text-[length:var(--app-font-size-ui,12px)] leading-[var(--app-line-height-ui,16px)] font-normal text-[var(--color-text-foreground)] outline-none transition-[color,background-color] duration-120 ease-out motion-reduce:transition-none data-disabled:pointer-events-none data-highlighted:bg-[var(--color-background-button-secondary-hover)] data-highlighted:text-[var(--color-text-foreground)] data-disabled:opacity-64 [&>svg:not([class*='opacity-'])]:opacity-80 [&>svg]:pointer-events-none [&>svg]:shrink-0 grid in-data-[side=none]:min-w-[calc(var(--anchor-width)+1.25rem)]";
+  "[&>svg]:-mx-0.5 flex cursor-default select-none items-center rounded-lg text-ui leading-[var(--app-line-height-ui,16px)] font-normal text-[var(--color-text-foreground)] outline-none transition-[color,background-color] duration-120 ease-out motion-reduce:transition-none data-disabled:pointer-events-none data-highlighted:bg-[var(--color-background-button-secondary-hover)] data-highlighted:text-[var(--color-text-foreground)] data-disabled:opacity-64 [&>svg:not([class*='opacity-'])]:opacity-80 [&>svg]:pointer-events-none [&>svg]:shrink-0 grid in-data-[side=none]:min-w-[calc(var(--anchor-width)+1.25rem)]";
 
 const SelectPopupSurfaceContext = React.createContext<SelectPopupSurface>("composer");
 
@@ -56,7 +56,7 @@ const selectTriggerVariants = cva(
         default: cn(FIELD_CONTROL_HEIGHT_CLASS_NAME, "px-[calc(--spacing(3)-1px)]"),
         lg: cn(FIELD_CONTROL_LARGE_HEIGHT_CLASS_NAME, "px-[calc(--spacing(3)-1px)]"),
         sm: cn(FIELD_CONTROL_COMPACT_HEIGHT_CLASS_NAME, "gap-1.5 px-[calc(--spacing(2.5)-1px)]"),
-        xs: "h-7 gap-1 rounded-sm px-[calc(--spacing(2)-1px)] text-[length:var(--app-font-size-ui-sm,11px)] sm:h-6 sm:text-[length:var(--app-font-size-ui-xs,10px)] [&_svg:not([class*='size-'])]:size-4 sm:[&_svg:not([class*='size-'])]:size-3.5",
+        xs: "h-7 gap-1 rounded-sm px-[calc(--spacing(2)-1px)] text-ui-sm sm:h-6 sm:text-ui-xs [&_svg:not([class*='size-'])]:size-4 sm:[&_svg:not([class*='size-'])]:size-3.5",
       },
     },
   },

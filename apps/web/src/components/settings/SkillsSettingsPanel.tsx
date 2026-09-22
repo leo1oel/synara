@@ -406,7 +406,7 @@ export function SkillsSettingsPanel() {
             {group.sources.map((source) => (
               <code
                 key={`${source.origin}:${source.skill.path}`}
-                className="break-all text-[11px] text-muted-foreground"
+                className="break-all text-ui-sm text-muted-foreground"
               >
                 {source.skill.path}
               </code>
@@ -645,7 +645,7 @@ export function SkillsSettingsPanel() {
                       <span
                         role="heading"
                         aria-level={3}
-                        className="truncate text-[14px] font-semibold text-foreground"
+                        className="truncate text-ui-lg font-semibold text-foreground"
                       >
                         {section.title}
                       </span>

@@ -2,7 +2,7 @@
 // Purpose: Render a provider usage summary panel that can show both classic
 // rate-limit rows and archive-derived local usage lines in the same popover.
 
-import type { ProviderKind } from "@synara/contracts";
+import type { ProviderKind, ServerCodexResetCredits } from "@synara/contracts";
 import { providerUsageDisplayName, providerUsageLabel } from "@synara/shared/providerUsage";
 import { useLingui } from "@lingui/react";
 
@@ -50,7 +50,7 @@ export function ProviderUsagePanelContent(props: {
   return (
     <div className={cn("space-y-2", props.className)}>
       {props.showTitle !== false ? (
-        <div className="text-[length:var(--app-font-size-chat-meta,10px)] font-medium text-muted-foreground">
+        <div className="text-chat-meta font-medium text-muted-foreground">
           {i18n._("{provider} usage", {
             provider: providerUsageDisplayName(props.provider),
           })}
@@ -76,7 +76,7 @@ export function ProviderUsagePanelContent(props: {
           surface="popover"
         />
       ) : visibleRows.length === 0 && props.isLoading ? (
-        <p className="text-[length:var(--app-font-size-chat-meta,10px)] leading-relaxed text-muted-foreground">
+        <p className="text-chat-meta leading-relaxed text-muted-foreground">
           {i18n._("Scanning local usage data for the selected provider.")}
         </p>
       ) : visibleRows.length === 0 ? (

@@ -365,7 +365,13 @@ describe("wsNativeApi", () => {
         compileRepairModelSelection: { provider: "codex", model: "gpt-5.4-mini" },
         providers: {
           codex: { enabled: true, binaryPath: "codex", homePath: "", customModels: [] },
-          claudeAgent: { enabled: true, binaryPath: "claude", launchArgs: "", customModels: [] },
+          claudeAgent: {
+            enabled: true,
+            binaryPath: "claude",
+            launchArgs: "",
+            customModels: [],
+            enableArtifacts: false,
+          },
           cursor: { enabled: true, binaryPath: "agent", apiEndpoint: "", customModels: [] },
           devin: { enabled: true, binaryPath: "devin", customModels: [] },
           antigravity: { enabled: true, binaryPath: "agy", customModels: [] },

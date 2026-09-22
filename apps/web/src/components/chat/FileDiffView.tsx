@@ -187,7 +187,7 @@ export function SingleFileDiffBody(props: { fileDiff: FileDiffMetadata; theme: "
 
   if (loadResult?.key === preloadKey && loadResult.error) {
     return (
-      <div className="px-3 py-2 text-xs text-destructive" role="alert">
+      <div className="px-3 py-2 text-ui-xs text-destructive" role="alert">
         Could not render this diff: {loadResult.error.message}
       </div>
     );
@@ -195,7 +195,7 @@ export function SingleFileDiffBody(props: { fileDiff: FileDiffMetadata; theme: "
 
   if (!resourcesReady) {
     return (
-      <div className="px-3 py-2 text-xs text-muted-foreground" role="status">
+      <div className="px-3 py-2 text-ui-xs text-muted-foreground" role="status">
         Rendering diff…
       </div>
     );

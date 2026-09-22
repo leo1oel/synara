@@ -17,6 +17,7 @@ import type { ProviderMentionReference } from "@synara/contracts";
 import { isLocalAbsolutePath } from "@synara/shared/path";
 import "katex/dist/katex.min.css";
 import { remarkWikiLinks } from "../lib/remarkWikiLinks";
+import { remarkGithubAlerts, type GithubAlertKind } from "../lib/remarkGithubAlerts";
 import React, {
   Children,
   createContext,
@@ -217,6 +218,7 @@ const ParsedMarkdown = memo(function ParsedMarkdown(props: ParsedMarkdownProps) 
 
 const MARKDOWN_REMARK_PLUGINS: MarkdownRemarkPlugins = [
   remarkGfm,
+  remarkGithubAlerts,
   [remarkMath, { singleDollarTextMath: true }],
   remarkConvertHtmlBreaks,
   remarkRestoreLatexMathPlaceholders,
@@ -1650,7 +1652,7 @@ function ChatMarkdown({
   // values in parameter destructuring make React Compiler 1.0.0 bail on the
   // whole component (BuildHIR AssignmentPattern), losing its auto-memoization.
   const isStreaming = isStreamingProp ?? false;
-  const className = classNameProp ?? "text-sm leading-relaxed";
+  const className = classNameProp ?? "text-ui leading-relaxed";
   const variant = variantProp ?? "assistant";
   const findQuery = findQueryProp ?? "";
   const findActiveRange = findActiveRangeProp ?? null;

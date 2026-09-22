@@ -88,7 +88,13 @@ export function makeAgentGatewaySessionRegistry(options?: {
         threadId,
         provider,
         issuedAt,
-        capabilities: new Set(providerSessionCapabilities),
+        capabilities: new Set<AgentGatewayCapability>([
+          ...providerSessionCapabilities,
+          ...(issueOptions?.additionalCapabilities ?? []).filter(
+            (capability) =>
+              capability !== "computer:control" || !disabledComputerThreads.has(threadId),
+          ),
+        ]),
       };
       const registered: RegisteredSession = {
         identity,

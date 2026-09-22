@@ -78,7 +78,9 @@ export function ThreadWorktreeHandoffDialog({
             }}
           >
             <label className="grid gap-1.5">
-              <span className="text-xs font-medium text-foreground">{i18n._("Worktree name")}</span>
+              <span className="text-ui-xs font-medium text-foreground">
+                {i18n._("Worktree name")}
+              </span>
               <Input
                 ref={worktreeInputRef}
                 value={worktreeName}

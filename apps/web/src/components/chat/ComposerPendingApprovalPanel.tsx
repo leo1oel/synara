@@ -44,6 +44,16 @@ type ApprovalAction = {
   tone: ComposerChoiceTone;
 };
 
+function formatToolParameterValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value === null) return "null";
+  try {
+    return JSON.stringify(value) ?? String(value);
+  } catch {
+    return String(value);
+  }
+}
+
 // Order is the card-local shortcut order (1-4): recommended action first, stop-everything last.
 const APPROVAL_ACTIONS: ReadonlyArray<ApprovalAction> = [
   {
@@ -218,7 +228,7 @@ function ApprovalDetail({
           </p>
         ) : null}
         <pre
-          className="max-h-36 overflow-auto whitespace-pre-wrap break-words rounded-md bg-[var(--color-background-elevated-secondary)] px-2.5 py-2 font-mono text-[11px] leading-relaxed text-foreground/85"
+          className="max-h-36 overflow-auto whitespace-pre-wrap break-words rounded-md bg-[var(--color-background-elevated-secondary)] px-2.5 py-2 font-mono text-ui-sm leading-relaxed text-foreground/85"
           title={i18n._("Requested permission profile")}
         >
           <code>{JSON.stringify(permissionProfile, null, 2)}</code>
@@ -285,7 +295,7 @@ function ApprovalDetail({
   }
 
   return (
-    <p className="mt-2 text-[12px] text-muted-foreground/65">
+    <p className="mt-2 text-ui text-muted-foreground/65">
       <Trans>Review the request to continue.</Trans>
     </p>
   );

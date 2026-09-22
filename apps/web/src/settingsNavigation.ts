@@ -137,8 +137,8 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   {
     id: "computer",
     group: "integrations",
-    label: "Computer use",
-    description: "Let agents see and control this computer's desktop, and check backend status.",
+    label: msg`Computer use`,
+    description: msg`Let agents see and control this computer's desktop, and check backend status.`,
     icon: "computer-use",
     eyebrow: "Desktop control",
     badge: "Beta",

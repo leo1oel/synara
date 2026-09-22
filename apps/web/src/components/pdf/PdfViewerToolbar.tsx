@@ -198,7 +198,7 @@ function PdfPageIndicator({
         aria-label="Current page"
         className={cn(
           FIELD_CONTROL_CLASS_NAME,
-          "h-6 w-8 rounded-lg text-center text-[11px] text-foreground tabular-nums outline-none",
+          "h-6 w-8 rounded-lg text-center text-ui-sm text-foreground tabular-nums outline-none",
         )}
         onChange={(event) => setDraft(event.target.value.replace(/[^0-9]/g, ""))}
         onBlur={commit}

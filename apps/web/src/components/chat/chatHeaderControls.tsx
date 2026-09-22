@@ -75,7 +75,7 @@ export const CHAT_SURFACE_HEADER_ROW_CLASS_NAME = cn(
 
 /** Typography shared by the title inside every Git/dock surface header. */
 export const CHAT_SURFACE_HEADER_TITLE_CLASS_NAME =
-  "font-system-ui truncate text-[length:var(--app-font-size-ui-lg,13px)] leading-4 font-medium tracking-[-0.01em] text-foreground";
+  "font-system-ui truncate text-ui-lg leading-4 font-medium tracking-[-0.01em] text-foreground";
 
 /** Glyph size shared by refresh and other single-icon dock-header actions. */
 export const CHAT_SURFACE_HEADER_ACTION_ICON_CLASS_NAME = "size-3.5";

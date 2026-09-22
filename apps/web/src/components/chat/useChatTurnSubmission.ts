@@ -1,4 +1,9 @@
 import { flushWorkspaceEditors } from "~/lib/workspaceEditorSession";
+import { resolveComputerInvocationMode } from "@synara/shared/computerInvocation";
+import {
+  prepareComputerPermissionGuide,
+  readLocalComputerPermissionBridge,
+} from "~/lib/computerProvisioning";
 import {
   appendLatticeHostContextToPrompt,
   consumeDispatchedLatticeHostSelection,

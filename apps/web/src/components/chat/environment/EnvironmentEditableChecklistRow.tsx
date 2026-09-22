@@ -163,7 +163,7 @@ export function EnvironmentEditableChecklistRow({
           placeholder={editPlaceholder}
           className={cn(
             FIELD_CONTROL_CLASS_NAME,
-            "min-w-0 flex-1 rounded-lg px-1.5 py-0.5 text-[length:var(--app-font-size-ui,12px)] text-foreground outline-none",
+            "min-w-0 flex-1 rounded-lg px-1.5 py-0.5 text-ui text-foreground outline-none",
           )}
         />
       ) : (

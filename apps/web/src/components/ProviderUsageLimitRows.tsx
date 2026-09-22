@@ -79,7 +79,7 @@ function SettingsUsageLimitRow({ row }: { row: ProviderUsageDisplayRow }) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-1.5">
-        <span className="text-xs font-medium text-foreground">{localizedText.label}</span>
+        <span className="text-ui-xs font-medium text-foreground">{localizedText.label}</span>
         <span
           className={cn("size-1.5 shrink-0 rounded-full", trackProps.markerClassName)}
           title={localizedText.paceTitle}
@@ -87,7 +87,7 @@ function SettingsUsageLimitRow({ row }: { row: ProviderUsageDisplayRow }) {
         />
       </div>
       <ProviderUsageTrack row={row} surface="settings" />
-      <div className="flex items-center justify-between text-[11px] tabular-nums text-muted-foreground">
+      <div className="flex items-center justify-between text-ui-sm tabular-nums text-muted-foreground">
         <span>{localizedText.leftText}</span>
         {localizedText.resetText ? <span>{localizedText.resetText}</span> : null}
       </div>
@@ -104,7 +104,7 @@ function PopoverUsageLimitRow({ row }: { row: ProviderUsageDisplayRow }) {
     <div className="space-y-1 text-chat-meta leading-tight">
       <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-baseline gap-x-3">
         <div className="flex min-w-0 items-baseline gap-1.5">
-          <span className="shrink-0 text-[11px] font-medium text-foreground">
+          <span className="shrink-0 text-ui-sm font-medium text-foreground">
             {localizedText.label}
           </span>
           <span className="min-w-0 truncate tabular-nums text-foreground">
