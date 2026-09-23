@@ -10,6 +10,7 @@ import {
   readEmbedMode,
   readLatticeConfirmationMessage,
 } from "./embedMode";
+import { notifyNativeSurfaceOcclusionChange } from "./lib/nativeSurfaceOcclusion";
 import { ELEVATED_HOVER_SURFACE_CLASS_NAME } from "./surfaceStyles";
 
 const EMBEDDED_CONFIRMATION_ACK_TIMEOUT_MS = 1_000;
@@ -71,14 +72,20 @@ export function showConfirmDialogFallback(message: string): Promise<boolean> {
     // Backdrop
     const backdrop = document.createElement("div");
     backdrop.className = "fixed inset-0 z-50 bg-black/50";
+    // The data-slot markers let native surfaces (the browser panel) hide under this dialog.
+    backdrop.dataset.slot = "alert-dialog-backdrop";
     backdrop.style.cssText = "animation:fadeIn .15s ease-out";
 
     // Viewport (centers the dialog)
     const viewport = document.createElement("div");
     viewport.className = "fixed inset-0 z-50 flex items-center justify-center p-4";
+    viewport.dataset.slot = "alert-dialog-viewport";
 
     // Popup
     const popup = document.createElement("div");
+    popup.dataset.slot = "alert-dialog-popup";
+    popup.setAttribute("role", "alertdialog");
+    popup.setAttribute("aria-modal", "true");
     popup.className =
       "flex w-full max-w-[22rem] flex-col rounded-xl border border-[color:var(--color-border-light)] bg-[var(--composer-surface)] text-[var(--color-text-foreground)] shadow-xl";
     popup.style.cssText = "animation:scaleIn .15s ease-out";
@@ -109,6 +116,7 @@ export function showConfirmDialogFallback(message: string): Promise<boolean> {
       document.removeEventListener("keydown", onKeyDown);
       backdrop.remove();
       viewport.remove();
+      notifyNativeSurfaceOcclusionChange();
       resolve(result);
     }
 
@@ -150,6 +158,7 @@ export function showConfirmDialogFallback(message: string): Promise<boolean> {
 
     document.body.appendChild(backdrop);
     document.body.appendChild(viewport);
+    notifyNativeSurfaceOcclusionChange();
 
     // Auto-focus confirm button
     requestAnimationFrame(() => confirmBtn.focus());

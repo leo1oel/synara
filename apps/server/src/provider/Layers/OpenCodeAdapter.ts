@@ -5,6 +5,7 @@ import {
   forgetOpenCodePart,
   openCodeSnapshotKey,
   type OpenCodeMessageState,
+  OpenCodePartIndex,
 } from "../openCodeMessageState.ts";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -894,12 +895,7 @@ function isOpenCodeAssistantMessageTextSettled(
   context: OpenCodeSessionContext,
   messageId: string,
 ): boolean {
-  const messageParts: Array<Part> = [];
-  for (const part of context.partById.values()) {
-    if (part.messageID === messageId) {
-      messageParts.push(part);
-    }
-  }
+  const messageParts = context.partById.partsForMessage(messageId);
   return (
     areOpenCodeAssistantTextPartsSettled(messageParts) &&
     messageParts.every(
@@ -2218,10 +2214,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                 });
               }
 
-              for (const part of context.partById.values()) {
-                if (part.messageID !== event.properties.info.id) {
-                  continue;
-                }
+              for (const part of context.partById.partsForMessage(event.properties.info.id)) {
                 const resolvedPart = applyPendingTextDeltaToPart(context, part);
                 if (resolvedPart !== part) {
                   context.partById.set(resolvedPart.id, resolvedPart);
@@ -3675,7 +3668,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                   locallyResolvedPermissionIds: new Set(),
                   pendingQuestions: new Map(),
                   pendingTextDeltasByPartId: new Map(),
-                  partById: new Map(),
+                  partById: new OpenCodePartIndex(),
                   partSnapshotKeyById: new Map(),
                   emittedTextByPartId: new Map(),
                   messageRoleById: new Map(),

@@ -126,7 +126,14 @@ describe("ServerSettingsService", () => {
     expect(result.parsed).toHaveProperty("settings.providers.codex.enabled", true);
   });
 
-  it("migrates the previous Git writing default to GPT-5.6 Luna", async () => {
+  it.each([
+    [1, "gpt-5.4-mini", DEFAULT_GIT_TEXT_GENERATION_MODEL],
+    [2, "gpt-5.6-luna", DEFAULT_GIT_TEXT_GENERATION_MODEL],
+    [2, "gpt-5.5", "gpt-5.5"],
+    // Lattice already persisted version 3 before 0.9.1; keep those selections.
+    [3, "gpt-5.6-luna", "gpt-5.6-luna"],
+    [3, "gpt-5.4-mini", "gpt-5.4-mini"],
+  ])("updates saved Git writing selection %s/%s", async (migrationVersion, model, expected) => {
     const result = await runWithSettings(
       Effect.gen(function* () {
         const service = yield* ServerSettingsService;
@@ -137,11 +144,11 @@ describe("ServerSettingsService", () => {
           settingsPath,
           JSON.stringify({
             revision: 7,
-            migrationVersion: 1,
+            migrationVersion,
             settings: {
               textGenerationModelSelection: {
                 provider: "codex",
-                model: "gpt-5.4-mini",
+                model,
               },
             },
           }),
@@ -157,13 +164,9 @@ describe("ServerSettingsService", () => {
       }),
     );
 
-    expect(result.settings.textGenerationModelSelection.model).toBe(
-      DEFAULT_GIT_TEXT_GENERATION_MODEL,
-    );
+    expect(result.settings.textGenerationModelSelection.model).toBe(expected);
     expect(result.persisted.migrationVersion).toBe(3);
-    expect(result.persisted.settings.textGenerationModelSelection.model).toBe(
-      DEFAULT_GIT_TEXT_GENERATION_MODEL,
-    );
+    expect(result.persisted.settings.textGenerationModelSelection.model).toBe(expected);
   });
 
   it("migrates a removed Kilo text-generation selection to OpenCode", async () => {

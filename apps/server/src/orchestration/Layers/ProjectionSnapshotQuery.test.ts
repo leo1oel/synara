@@ -141,6 +141,32 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           ('latest-a', NULL, 'pending', '2026-09-10T00:00:10.000Z', NULL, '[]'),
           ('latest-b', 'turn-old', 'completed', '2026-09-10T00:00:03.000Z', NULL, '[]')
       `;
+        yield* sql`
+          UPDATE projection_turns SET pending_message_id = 'message-z'
+          WHERE thread_id = 'latest-a' AND turn_id = 'turn-z'
+        `;
+        const shells = yield* query.getThreadShellsByIds([
+          asThreadId("latest-b"),
+          asThreadId("latest-a"),
+          asThreadId("latest-a"),
+          asThreadId("missing"),
+        ]);
+        assert.equal(shells.length, 2);
+        assert.equal(
+          shells.find((thread) => thread.id === "latest-a")?.latestTurn?.turnId,
+          "turn-z",
+        );
+        assert.equal(
+          shells.find((thread) => thread.id === "latest-a")?.latestTurn?.pendingMessageId,
+          "message-z",
+        );
+        assert.equal(
+          shells.find((thread) => thread.id === "latest-b")?.latestTurn?.turnId,
+          "turn-old",
+        );
+        assert.isNull(
+          shells.find((thread) => thread.id === "latest-b")?.latestTurn?.pendingMessageId,
+        );
         for (const snapshot of [
           yield* query.getSnapshot(),
           yield* query.getShellSnapshot(),
