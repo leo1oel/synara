@@ -6,6 +6,20 @@ afterEach(() => {
 });
 
 describe("Lattice model boundary", () => {
+  it.each([true, false])(
+    "keeps LaTeX build ownership with the host (gateway: %s)",
+    async (gatewayControlAvailable) => {
+      vi.stubEnv("AGENT_HOST_PROFILE", "lattice");
+      const { renderSynaraHarnessPolicy } = await import("./harnessPolicy.ts");
+      const policy = renderSynaraHarnessPolicy({ gatewayControlAvailable });
+      expect(policy).toContain("Do not run latexmk");
+      expect(policy).toContain("isolated temporary output directory");
+      expect(policy).toContain("manual build mode");
+      expect(policy).toContain("Auto-saved version");
+      expect(policy).toContain("not proof of an Overleaf sync or a Git push");
+    },
+  );
+
   it("removes upstream branding from provider prompts and MCP identity", async () => {
     vi.stubEnv("AGENT_HOST_PROFILE", "lattice");
     const [
