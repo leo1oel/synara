@@ -22,6 +22,7 @@ const storageKey = "synara:project-import-announcement:v1";
 
 beforeEach(() => {
   localStorage.removeItem(storageKey);
+  sessionStorage.removeItem("synara.poc.embed-mode");
   useOnboardingDialogStore.setState({
     isOpen: false,
     openReason: null,
@@ -34,6 +35,7 @@ beforeEach(() => {
 afterEach(() => {
   for (const client of clients.splice(0)) client.clear();
   localStorage.removeItem(storageKey);
+  sessionStorage.removeItem("synara.poc.embed-mode");
 });
 async function renderDialog() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -64,4 +66,29 @@ it("stays dismissed after Not now without opening the import dialog", async () =
   await expect
     .element(page.getByRole("heading", { name: "Import projects" }))
     .not.toBeInTheDocument();
+});
+
+it("never auto-announces in Lattice even without dismissal storage, but allows manual import", async () => {
+  sessionStorage.setItem(
+    "synara.poc.embed-mode",
+    JSON.stringify({ workspaceRoot: "/repo/project", surface: "chrome", theme: "light" }),
+  );
+  for (let launch = 0; launch < 2; launch++) {
+    localStorage.removeItem(storageKey);
+    const view = await renderDialog();
+    await vi.waitFor(() =>
+      expect(clients.at(-1)?.getQueryData(["server", "config"])).toBeDefined(),
+    );
+    // Let the config-driven render and announcement-slot effect settle before
+    // asserting absence; a not-yet-loaded announcement is not a passing case.
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+    await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+    expect(useAnnouncementSheetSlotStore.getState().owner).toBeNull();
+    expect(useProjectImportDialogStore.getState().isOpen).toBe(false);
+    await view.unmount();
+  }
+  useProjectImportDialogStore.getState().openDialog();
+  expect(useProjectImportDialogStore.getState().isOpen).toBe(true);
 });
