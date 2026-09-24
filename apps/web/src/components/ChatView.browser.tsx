@@ -3752,15 +3752,28 @@ describe("ChatView transcript geometry (full app)", () => {
     }
   });
 
-  it("anchors a freshly sent user message at the top of the transcript viewport", async () => {
+  it.each([false, true])("anchors a freshly sent message (embedded: %s)", async (embedded) => {
+    if (embedded) {
+      sessionStorage.setItem(
+        "synara.poc.embed-mode",
+        JSON.stringify({
+          workspaceRoot: "/repo/project",
+          theme: "light",
+          surface: "chrome",
+          hostOrigin: window.location.origin,
+          locale: "en",
+        }),
+      );
+    }
     const restoreNativeApi = installDeterministicSendNativeApi();
     let currentSnapshot = createSnapshotForTargetUser({
       targetMessageId: "msg-user-send-tail-anchor" as MessageId,
       targetText: "tail anchor target",
     });
     const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
+      viewport: embedded ? { ...DEFAULT_VIEWPORT, width: 420 } : DEFAULT_VIEWPORT,
       snapshot: currentSnapshot,
+      readyTimeoutMs: 60_000,
     });
 
     const syncActiveThread = (
@@ -3790,7 +3803,9 @@ describe("ChatView transcript geometry (full app)", () => {
       scrollContainer.dispatchEvent(new Event("scroll"));
       await waitForLayout();
 
-      const prompt = "anchor this message at the viewport top";
+      const prompt = embedded
+        ? "Please explain this result.\nInclude the assumptions.\nCompare both alternatives.\nKeep the conclusion concise."
+        : "anchor this message at the viewport top";
       useComposerDraftStore.getState().setPrompt(THREAD_ID, prompt);
       const sendButton = await waitForSendButton();
       expect(sendButton.disabled).toBe(false);

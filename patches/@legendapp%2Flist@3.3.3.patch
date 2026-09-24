@@ -1,7 +1,8 @@
 diff --git a/react.js b/react.js
+index 544cca82136ab14cbeec0a01499f554bd4eca75f..af2728c0d91a2fc5f6d76cc22f0f8725232b9f09 100644
 --- a/react.js
 +++ b/react.js
-@@ -1392,7 +1392,7 @@
+@@ -1392,7 +1392,7 @@ function doMaintainScrollAtEnd(ctx) {
        const activeState = maintainScrollAtEnd.animated ? "animated" : "instant";
        state.maintainingScrollAtEnd = pendingState;
        requestAnimationFrame(() => {
@@ -10,7 +11,7 @@ diff --git a/react.js b/react.js
            state.maintainingScrollAtEnd = activeState;
            const scroller = refScroller.current;
            if (state.props.horizontal && isHorizontalRTL(state)) {
-@@ -4072,7 +4072,8 @@
+@@ -4072,7 +4072,8 @@ function trackVisibleRange(range, i, top, size, scroll, scrollBottom) {
  function getIdsInVisibleRange(state, range) {
    var _a3, _b;
    const idsInView = [];
@@ -20,10 +21,19 @@ diff --git a/react.js b/react.js
    if (firstVisibleAnchorIndex !== null && firstVisibleAnchorIndex !== void 0 && range.endNoBuffer !== null) {
      for (let i = firstVisibleAnchorIndex; i <= range.endNoBuffer; i++) {
        const id = (_b = state.idCache[i]) != null ? _b : getId(state, i);
+@@ -7976,6 +7977,7 @@ var LegendListInner = typedForwardRef(function LegendListInner2(props, forwarded
+     anchoredEndSpace == null ? void 0 : anchoredEndSpace.anchorMaxSize,
+     anchoredEndSpace == null ? void 0 : anchoredEndSpace.anchorOffset,
+     didAnchoredEndSpaceAnchorIndexChange,
++    stylePaddingBottomState,
+     numColumnsProp
+   ]);
+   React3.useLayoutEffect(() => {
 diff --git a/react.mjs b/react.mjs
+index 6b2d9011f6c5e85664eca195de538617fe7d9dee..3807551a08f20881e70b37335779ad7fc8d877a7 100644
 --- a/react.mjs
 +++ b/react.mjs
-@@ -1371,7 +1371,7 @@
+@@ -1371,7 +1371,7 @@ function doMaintainScrollAtEnd(ctx) {
        const activeState = maintainScrollAtEnd.animated ? "animated" : "instant";
        state.maintainingScrollAtEnd = pendingState;
        requestAnimationFrame(() => {
@@ -32,7 +42,7 @@ diff --git a/react.mjs b/react.mjs
            state.maintainingScrollAtEnd = activeState;
            const scroller = refScroller.current;
            if (state.props.horizontal && isHorizontalRTL(state)) {
-@@ -4051,7 +4051,8 @@
+@@ -4051,7 +4051,8 @@ function trackVisibleRange(range, i, top, size, scroll, scrollBottom) {
  function getIdsInVisibleRange(state, range) {
    var _a3, _b;
    const idsInView = [];
@@ -42,3 +52,11 @@ diff --git a/react.mjs b/react.mjs
    if (firstVisibleAnchorIndex !== null && firstVisibleAnchorIndex !== void 0 && range.endNoBuffer !== null) {
      for (let i = firstVisibleAnchorIndex; i <= range.endNoBuffer; i++) {
        const id = (_b = state.idCache[i]) != null ? _b : getId(state, i);
+@@ -7955,6 +7956,7 @@ var LegendListInner = typedForwardRef(function LegendListInner2(props, forwarded
+     anchoredEndSpace == null ? void 0 : anchoredEndSpace.anchorMaxSize,
+     anchoredEndSpace == null ? void 0 : anchoredEndSpace.anchorOffset,
+     didAnchoredEndSpaceAnchorIndexChange,
++    stylePaddingBottomState,
+     numColumnsProp
+   ]);
+   useLayoutEffect(() => {

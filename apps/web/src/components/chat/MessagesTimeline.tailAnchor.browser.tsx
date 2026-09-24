@@ -20,7 +20,7 @@ import type { deriveTimelineEntries } from "../../session-logic";
 type TimelineEntries = ReturnType<typeof deriveTimelineEntries>;
 
 const VIEWPORT_HEIGHT_PX = 420;
-const BASE_BOTTOM_INSET_PX = 64;
+const BASE_BOTTOM_INSET_PX = 44;
 // maintainScrollAtEnd re-sticks within its threshold rather than to the exact
 // pixel bottom; anything within this tolerance counts as following the tail.
 const AUTO_FOLLOW_TOLERANCE_PX = 96;
@@ -74,7 +74,13 @@ interface HarnessHandle {
   listRef: React.RefObject<LegendListRef | null>;
 }
 
-function TailAnchorTimeline({ handleRef }: { handleRef: { current: HarnessHandle | null } }) {
+function TailAnchorTimeline({
+  handleRef,
+  bottomInsetPx,
+}: {
+  handleRef: { current: HarnessHandle | null };
+  bottomInsetPx?: number;
+}) {
   const listRef = useRef<LegendListRef | null>(null);
   const [entries, setEntries] = useState<TimelineEntries>(seedEntries);
   const [tailAnchorMessageId, setTailAnchorMessageId] = useState<MessageId | null>(null);
@@ -135,6 +141,7 @@ function TailAnchorTimeline({ handleRef }: { handleRef: { current: HarnessHandle
         activeTurnInProgress={false}
         activeTurnStartedAt={activeTurnStartedAt}
         listRef={listRef}
+        contentInsetBottomPx={bottomInsetPx}
         tailAnchorMessageId={tailAnchorMessageId}
         followLiveOutput={followLiveOutput}
         timelineEntries={entries}
@@ -204,6 +211,30 @@ async function settleFrames(count: number): Promise<void> {
 describe("MessagesTimeline tail anchor", () => {
   afterEach(() => {
     document.body.innerHTML = "";
+  });
+
+  it("anchors with a floating composer that shrinks after sending", async () => {
+    const handleRef: { current: HarnessHandle | null } = { current: null };
+    const screen = await render(<TailAnchorTimeline handleRef={handleRef} bottomInsetPx={178} />);
+    try {
+      await settleFrames(5);
+      const handle = handleRef.current!;
+      handle.send(FIRST_SENT_MESSAGE_ID);
+      await settleFrames(2);
+      await screen.rerender(<TailAnchorTimeline handleRef={handleRef} bottomInsetPx={82} />);
+      const topGap = Number.parseFloat(getComputedStyle(getScrollContainer(handle)).paddingTop);
+      await expect
+        .poll(
+          () => {
+            const offset = anchorTopOffsetPx(handle, FIRST_SENT_MESSAGE_ID);
+            return offset === null ? Infinity : Math.abs(offset - topGap);
+          },
+          { timeout: 5_000 },
+        )
+        .toBeLessThanOrEqual(8);
+    } finally {
+      await screen.unmount();
+    }
   });
 
   it("anchors a sent message below the top inset, pins it while streaming, keeps the reserve at turn end, follows overflow, and collapses only when cleared", async () => {

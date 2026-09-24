@@ -828,10 +828,14 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       return;
     }
     const style = getComputedStyle(node);
+    // LegendList already subtracts the inline composer inset from its reserve.
+    // Its DOM can still carry the previous inset in this layout pass, so don't
+    // derive CSS padding by subtracting the new prop from that stale measurement.
     const inset =
-      (Number.parseFloat(style.paddingTop) || 0) + (Number.parseFloat(style.paddingBottom) || 0);
+      (Number.parseFloat(style.paddingTop) || 0) +
+      (contentInsetBottomPx ? 0 : Number.parseFloat(style.paddingBottom) || 0);
     setAnchorVerticalInsetPx((current) => (Math.abs(current - inset) > 0.5 ? inset : current));
-  }, [resolvedListRef, tailAnchorMessageId]);
+  }, [resolvedListRef, tailAnchorMessageId, contentInsetBottomPx]);
   const anchoredEndSpace = useMemo(
     () =>
       tailAnchorRowIndex < 0
