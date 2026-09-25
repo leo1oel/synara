@@ -385,6 +385,7 @@ export function ChatTranscriptPane({
             items={trailItems}
             activeStore={activeTrailStore}
             onSelect={handleTrailSelect}
+            contentInsetRightPx={contentInsetRightPx}
           />
         ) : null}
       </div>

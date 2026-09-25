@@ -23,7 +23,11 @@ import {
 } from "react";
 import { cn } from "~/lib/utils";
 import { DISCLOSURE_CONTENT_MOTION_CLASS } from "~/lib/disclosureMotion";
-import { APP_TOOLTIP_SURFACE_CLASS_NAME } from "./composerPickerStyles";
+import {
+  APP_TOOLTIP_SURFACE_CLASS_NAME,
+  CHAT_COLUMN_FRAME_CLASS_NAME,
+  CHAT_COLUMN_GUTTER_CLASS_NAME,
+} from "./composerPickerStyles";
 import {
   clampNumber,
   clampTooltipTop,
@@ -44,12 +48,11 @@ interface MessageTrailProps {
   /** Stable holder for current + visible highlights; only this component re-renders on change. */
   activeStore: ActiveTrailStore;
   onSelect: (messageId: MessageId) => void;
+  contentInsetRightPx?: number | undefined;
 }
 
-// Rail only renders once the centered transcript column (max 46rem) leaves a left
-// gutter wide enough for the rail to sit clear of message text. Measured off the
-// pane so a docked side panel / the sidebar is accounted for.
-const MIN_PANE_WIDTH_PX = 864;
+// Require breathing room beyond the entire hit target, not just the resting ticks.
+const RAIL_CLEARANCE_PX = 8;
 // Fixed rail box. Ticks grow rightward inside it (left-aligned, like the Dock).
 const RAIL_WIDTH_PX = 56;
 // Cap the scrollable tick viewport a bit below the full pane height so the rail
@@ -78,8 +81,14 @@ const TICK_FOCUS_OPACITY = 1;
 const TOOLTIP_ESTIMATED_H_PX = 56;
 const TOOLTIP_OFFSET_X_PX = 8;
 
-export function MessageTrail({ items, activeStore, onSelect }: MessageTrailProps) {
+export function MessageTrail({
+  items,
+  activeStore,
+  onSelect,
+  contentInsetRightPx,
+}: MessageTrailProps) {
   const rootRef = useRef<HTMLElement | null>(null);
+  const columnRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
@@ -331,18 +340,22 @@ export function MessageTrail({ items, activeStore, onSelect }: MessageTrailProps
   };
 
   // --- Gutter visibility: rail only shows when the pane is wide enough --------
-  // Width-only ResizeObserver; the tick layout is count-driven (see `geometry`),
-  // so observing size never feeds back into the layout.
+  // Measure a zero-height copy of the transcript frame. A fixed pane breakpoint
+  // assumes standard width and overlaps wide/full transcripts. Observing the
+  // frame also catches preference/font changes without a pane resize, and does
+  // not depend on virtualized message rows being mounted.
   useEffect(() => {
     const root = rootRef.current;
     const pane = root?.parentElement;
-    if (!pane || typeof ResizeObserver === "undefined") {
+    const column = columnRef.current;
+    if (!pane || !column || typeof ResizeObserver === "undefined") {
       return;
     }
     let pendingRaf: number | null = null;
     const measure = () => {
       pendingRaf = null;
-      setHasGutter(pane.clientWidth >= MIN_PANE_WIDTH_PX);
+      const gutter = column.getBoundingClientRect().left - pane.getBoundingClientRect().left;
+      setHasGutter(gutter >= RAIL_WIDTH_PX + RAIL_CLEARANCE_PX);
     };
     const schedule = () => {
       if (pendingRaf === null) {
@@ -352,13 +365,15 @@ export function MessageTrail({ items, activeStore, onSelect }: MessageTrailProps
     schedule();
     const observer = new ResizeObserver(schedule);
     observer.observe(pane);
+    observer.observe(column);
+    observer.observe(column.parentElement!);
     return () => {
       if (pendingRaf !== null) {
         cancelAnimationFrame(pendingRaf);
       }
       observer.disconnect();
     };
-  }, []);
+  }, [contentInsetRightPx]);
 
   // Reposition the ticks whenever the layout changes (count → new centres).
   useEffect(() => {
@@ -521,86 +536,102 @@ export function MessageTrail({ items, activeStore, onSelect }: MessageTrailProps
   const tabStop = clampNumber(rovingIndex, 0, Math.max(0, items.length - 1));
 
   return (
-    <nav
-      ref={rootRef}
-      aria-label="Message navigation"
-      aria-hidden={!visible}
-      onKeyDown={handleKeyDown}
-      onBlur={handleRailBlur}
-      className={cn(
-        "absolute inset-y-0 left-0 z-20 hidden flex-col justify-center sm:flex",
-        DISCLOSURE_CONTENT_MOTION_CLASS,
-        visible ? "opacity-100" : "pointer-events-none opacity-0",
-      )}
-      style={{ width: RAIL_WIDTH_PX }}
-    >
-      {/* Capped, centered, scrollable viewport. `scroll-fade-y` masks the top/bottom
+    <>
+      <div
+        aria-hidden="true"
+        className={cn(
+          "pointer-events-none invisible absolute inset-x-0 top-0",
+          CHAT_COLUMN_GUTTER_CLASS_NAME,
+        )}
+        style={contentInsetRightPx ? { paddingRight: contentInsetRightPx } : undefined}
+      >
+        <div ref={columnRef} className={CHAT_COLUMN_FRAME_CLASS_NAME} />
+      </div>
+      <nav
+        ref={rootRef}
+        aria-label="Message navigation"
+        aria-hidden={!visible}
+        onKeyDown={handleKeyDown}
+        onBlur={handleRailBlur}
+        className={cn(
+          "absolute inset-y-0 left-0 z-20 hidden flex-col justify-center sm:flex",
+          DISCLOSURE_CONTENT_MOTION_CLASS,
+          visible ? "opacity-100" : "pointer-events-none opacity-0",
+        )}
+        style={{ width: RAIL_WIDTH_PX }}
+      >
+        {/* Capped, centered, scrollable viewport. `scroll-fade-y` masks the top/bottom
           edges only while there is overflow to scroll (auto-off when it all fits). */}
-      <div
-        ref={viewportRef}
-        onPointerEnter={handlePointerEnter}
-        onPointerMove={handlePointerMove}
-        onPointerLeave={handlePointerLeave}
-        onScroll={handleScroll}
-        onClick={handleClick}
-        className={cn(
-          "scroll-fade-y relative w-full overflow-y-auto overscroll-contain [contain:layout] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-          visible ? "pointer-events-auto" : "pointer-events-none",
-        )}
-        style={{ maxHeight: `${RAIL_MAX_HEIGHT_RATIO * 100}%` }}
-      >
-        <div ref={trackRef} className="relative w-full" style={{ height: geometry?.contentHeight }}>
-          {items.map((item, index) => (
-            <button
-              key={item.id}
-              ref={(el) => {
-                tickRefs.current[index] = el;
-              }}
-              type="button"
-              tabIndex={visible && index === tabStop ? 0 : -1}
-              aria-label={`Message ${item.ordinal}: ${item.preview.slice(0, 60)}`}
-              aria-describedby={tooltipId}
-              aria-current={index === anchorIndex ? "location" : undefined}
-              onFocus={() => handleTickFocus(index)}
-              className="absolute rounded-full transition-[width,opacity] duration-[90ms] ease-out outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-border)] motion-reduce:transition-none"
-              style={{
-                left: TICK_LEFT_PAD_PX,
-                height: TICK_HEIGHT_PX,
-                width: TICK_BASE_W,
-                opacity:
-                  index === anchorIndex
-                    ? TICK_ANCHOR_OPACITY
-                    : visibleIndexSet.has(index)
-                      ? TICK_VISIBLE_OPACITY
-                      : TICK_REST_OPACITY,
-                backgroundColor: "var(--color-text-foreground)",
-                willChange: "width, opacity",
-              }}
-            />
-          ))}
+        <div
+          ref={viewportRef}
+          onPointerEnter={handlePointerEnter}
+          onPointerMove={handlePointerMove}
+          onPointerLeave={handlePointerLeave}
+          onScroll={handleScroll}
+          onClick={handleClick}
+          className={cn(
+            "scroll-fade-y relative w-full overflow-y-auto overscroll-contain [contain:layout] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+            visible ? "pointer-events-auto" : "pointer-events-none",
+          )}
+          style={{ maxHeight: `${RAIL_MAX_HEIGHT_RATIO * 100}%` }}
+        >
+          <div
+            ref={trackRef}
+            className="relative w-full"
+            style={{ height: geometry?.contentHeight }}
+          >
+            {items.map((item, index) => (
+              <button
+                key={item.id}
+                ref={(el) => {
+                  tickRefs.current[index] = el;
+                }}
+                type="button"
+                tabIndex={visible && index === tabStop ? 0 : -1}
+                aria-label={`Message ${item.ordinal}: ${item.preview.slice(0, 60)}`}
+                aria-describedby={tooltipId}
+                aria-current={index === anchorIndex ? "location" : undefined}
+                onFocus={() => handleTickFocus(index)}
+                className="absolute rounded-full transition-[width,opacity] duration-[90ms] ease-out outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-border)] motion-reduce:transition-none"
+                style={{
+                  left: TICK_LEFT_PAD_PX,
+                  height: TICK_HEIGHT_PX,
+                  width: TICK_BASE_W,
+                  opacity:
+                    index === anchorIndex
+                      ? TICK_ANCHOR_OPACITY
+                      : visibleIndexSet.has(index)
+                        ? TICK_VISIBLE_OPACITY
+                        : TICK_REST_OPACITY,
+                  backgroundColor: "var(--color-text-foreground)",
+                  willChange: "width, opacity",
+                }}
+              />
+            ))}
+          </div>
         </div>
-      </div>
-      <div
-        ref={tooltipRef}
-        role="tooltip"
-        id={tooltipId}
-        className={cn(
-          APP_TOOLTIP_SURFACE_CLASS_NAME,
-          "pointer-events-none invisible absolute z-30 w-64 -translate-y-1/2 rounded-xl p-2",
-        )}
-        style={{ left: RAIL_WIDTH_PX + TOOLTIP_OFFSET_X_PX, top: 0 }}
-      >
-        {/* The sent message: dark, max two lines (matches the projects/threads card title). */}
         <div
-          ref={tooltipMessageRef}
-          className="line-clamp-2 text-ui leading-snug font-medium text-foreground"
-        />
-        {/* The turn's first reply: muted gray, max three lines. */}
-        <div
-          ref={tooltipResponseRef}
-          className="mt-1 line-clamp-3 text-ui leading-snug text-muted-foreground"
-        />
-      </div>
-    </nav>
+          ref={tooltipRef}
+          role="tooltip"
+          id={tooltipId}
+          className={cn(
+            APP_TOOLTIP_SURFACE_CLASS_NAME,
+            "pointer-events-none invisible absolute z-30 w-64 -translate-y-1/2 rounded-xl p-2",
+          )}
+          style={{ left: RAIL_WIDTH_PX + TOOLTIP_OFFSET_X_PX, top: 0 }}
+        >
+          {/* The sent message: dark, max two lines (matches the projects/threads card title). */}
+          <div
+            ref={tooltipMessageRef}
+            className="line-clamp-2 text-ui leading-snug font-medium text-foreground"
+          />
+          {/* The turn's first reply: muted gray, max three lines. */}
+          <div
+            ref={tooltipResponseRef}
+            className="mt-1 line-clamp-3 text-ui leading-snug text-muted-foreground"
+          />
+        </div>
+      </nav>
+    </>
   );
 }
