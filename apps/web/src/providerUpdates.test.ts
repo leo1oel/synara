@@ -68,6 +68,7 @@ function serverSettings(overrides: Partial<ServerSettings["providers"]> = {}): S
       antigravity: { ...provider, binaryPath: "agy" },
       grok: { ...provider, binaryPath: "grok" },
       droid: { ...provider, binaryPath: "droid" },
+      omp: { ...provider, binaryPath: "omp", agentDir: "" },
       opencode: {
         ...provider,
         binaryPath: "opencode",

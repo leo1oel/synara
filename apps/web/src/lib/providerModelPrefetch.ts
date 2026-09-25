@@ -10,6 +10,7 @@ import type { ProviderKind, ServerProviderStatus, ServerSettings } from "@synara
 import type { QueryClient } from "@tanstack/react-query";
 
 import type { AppSettings } from "../appSettings";
+import { isBetaFeatureOn } from "../betaFeatures";
 import type { DraftThreadEnvMode } from "../composerDraftDomain";
 import { findProviderStatus, resolveAvailableProviderPreference } from "./providerAvailability";
 import { resolveProviderDiscoveryCwd } from "./providerDiscovery";
@@ -35,6 +36,8 @@ export type ProviderModelPrefetchSettings = Pick<
   | "openCodeBinaryPath"
   | "piBinaryPath"
   | "piAgentDir"
+  | "ompBinaryPath"
+  | "ompAgentDir"
 >;
 
 /**
@@ -52,10 +55,16 @@ export const NEW_THREAD_MODEL_PREFETCH_PROVIDERS: ReadonlyArray<Exclude<Provider
   "opencode",
   "pi",
   "devin",
+  // One global `omp models` spawn, not per-model sessions like Droid — safe to
+  // keep warm across hover/mount prefetches.
+  "omp",
 ];
 
-/** Warm results stay fresh for 30 minutes instead of the interactive 60s. */
+/** Warm results stay fresh for 30 minutes; the interactive staleTime is 15min. */
 export const NEW_THREAD_MODEL_PREFETCH_STALE_TIME_MS = 30 * 60_000;
+
+/** Retain warmed catalogs as long as the server's stale-while-revalidate window. */
+export const NEW_THREAD_MODEL_PREFETCH_GC_TIME_MS = 24 * 60 * 60_000;
 
 const EMPTY_PROVIDER_STATUSES: readonly ServerProviderStatus[] = [];
 
@@ -180,6 +189,13 @@ export function providerModelsPrefetchQueryOptions(input: {
         cwd,
         priority,
       });
+    case "omp":
+      return providerModelsQueryOptions({
+        provider: "omp",
+        binaryPath: settings.ompBinaryPath || null,
+        agentDir: settings.ompAgentDir || null,
+        priority,
+      });
   }
 }
 
@@ -218,7 +234,7 @@ export function prefetchProviderModelsForNewThread(
 ): void {
   const cwd = input.cwd ?? null;
   const providers = (input.providers ?? NEW_THREAD_MODEL_PREFETCH_PROVIDERS).filter(
-    (provider) => provider !== "droid",
+    (provider) => provider !== "droid" && isBetaFeatureOn(provider),
   );
 
   for (const provider of providers) {
@@ -238,7 +254,7 @@ export function prefetchProviderModelsForNewThread(
         provider === "devin"
           ? (query) => (query.state.data?.error ? 0 : NEW_THREAD_MODEL_PREFETCH_STALE_TIME_MS)
           : NEW_THREAD_MODEL_PREFETCH_STALE_TIME_MS,
-      gcTime: NEW_THREAD_MODEL_PREFETCH_STALE_TIME_MS,
+      gcTime: NEW_THREAD_MODEL_PREFETCH_GC_TIME_MS,
     });
 
     // Agent/mode lists ride along for providers that surface them next to models.
@@ -252,7 +268,7 @@ export function prefetchProviderModelsForNewThread(
         ...agentsOptions,
         retry: 0,
         staleTime: NEW_THREAD_MODEL_PREFETCH_STALE_TIME_MS,
-        gcTime: NEW_THREAD_MODEL_PREFETCH_STALE_TIME_MS,
+        gcTime: NEW_THREAD_MODEL_PREFETCH_GC_TIME_MS,
       });
     }
 
@@ -263,7 +279,7 @@ export function prefetchProviderModelsForNewThread(
     void queryClient.prefetchQuery({
       ...providerComposerCapabilitiesQueryOptions(provider),
       retry: 0,
-      gcTime: NEW_THREAD_MODEL_PREFETCH_STALE_TIME_MS,
+      gcTime: NEW_THREAD_MODEL_PREFETCH_GC_TIME_MS,
     });
   }
 }
@@ -289,12 +305,12 @@ export function prefetchDroidModelsForNewThread(
       priority: "prefetch",
     }),
     staleTime: NEW_THREAD_MODEL_PREFETCH_STALE_TIME_MS,
-    gcTime: NEW_THREAD_MODEL_PREFETCH_STALE_TIME_MS,
+    gcTime: NEW_THREAD_MODEL_PREFETCH_GC_TIME_MS,
   });
   void queryClient.prefetchQuery({
     ...providerComposerCapabilitiesQueryOptions("droid"),
     retry: 0,
-    gcTime: NEW_THREAD_MODEL_PREFETCH_STALE_TIME_MS,
+    gcTime: NEW_THREAD_MODEL_PREFETCH_GC_TIME_MS,
   });
 }
 
@@ -362,6 +378,9 @@ export function prefetchModelsForNewThread(
   const statusesReconciled = input.statusesReconciled === true;
   const providerStatuses = input.providerStatuses ?? EMPTY_PROVIDER_STATUSES;
   const isProviderWarmable = (provider: ProviderKind): boolean => {
+    if (!isBetaFeatureOn(provider)) {
+      return false;
+    }
     // ChatView's useProviderModelCatalog always discovers the selected provider
     // (even hidden/unavailable — the picker preserves it as protected), so the
     // warm must too, or mount re-runs discovery with the loading state this

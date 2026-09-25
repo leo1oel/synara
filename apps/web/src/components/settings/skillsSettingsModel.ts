@@ -49,6 +49,7 @@ export const ORIGIN_SECTION_ORDER = [
   "opencode",
   "pi",
   "devin",
+  "omp",
   "agents",
   "project",
 ] as const;
@@ -77,6 +78,8 @@ export function skillOriginInfo(scope: string | undefined): SkillOriginInfo {
       return { label: PROVIDER_DISPLAY_NAMES.opencode, provider: "opencode" };
     case "pi":
       return { label: PROVIDER_DISPLAY_NAMES.pi, provider: "pi" };
+    case "omp":
+      return { label: PROVIDER_DISPLAY_NAMES.omp, provider: "omp" };
     case "agents":
       return { label: "Shared (.agents)", provider: null };
     case "project":
@@ -208,3 +211,6 @@ export function buildSettingsSkillSections(
 ): SettingsSkillSection[] {
   return groupSettingsSkillsBySection(buildSettingsSkillGroups(skills));
 }
+
+/** Upstream-compatible name for callers that already built the canonical groups. */
+export const buildSettingsSkillSectionsFromGroups = groupSettingsSkillsBySection;

@@ -6,11 +6,10 @@
 // The popup is a fixed 800×540 frame for every step so the window never resizes as the
 // user moves through the tour; hero steps (welcome, done) center their content in it.
 
-import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
+import { VISIBLE_PROVIDER_DESCRIPTORS } from "../betaFeatures";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { useAppSettings } from "~/appSettings";
 import { APP_BASE_NAME } from "~/branding";
 import { SynaraLogo } from "~/components/SynaraLogo";
 import {
@@ -30,6 +29,7 @@ import { CODE_THEME_OPTIONS } from "~/theme/theme.logic";
 import { ONBOARDING_INSET_CLASS_NAME } from "./layout";
 import {
   classifyProviderSetup,
+  describeOnboardingAgentSummary,
   isOnboardingSetupStep,
   nextOnboardingStep,
   ONBOARDING_STEPS,
@@ -45,6 +45,7 @@ import { ProjectStep, type OnboardingProjectResult } from "./steps/ProjectStep";
 import { ProvidersStep } from "./steps/ProvidersStep";
 import { ThemeStep } from "./steps/ThemeStep";
 import { WelcomeStep } from "./steps/WelcomeStep";
+import { useProviderDetection } from "./useProviderDetection";
 
 const STEP_TITLES: Record<OnboardingStep, string> = {
   welcome: `Welcome to ${APP_BASE_NAME}`,
@@ -79,9 +80,9 @@ function OnboardingFlow(props: {
 }) {
   const [step, setStep] = useState<OnboardingStep>("welcome");
   const [projectResults, setProjectResults] = useState<ReadonlyArray<OnboardingProjectResult>>([]);
-  const { settings } = useAppSettings();
   const statuses = useProviderStatusesForLocalConfig();
   const serverSettings = useQuery(serverSettingsQueryOptions()).data;
+  const providerDetection = useProviderDetection();
   const { activeTheme } = useTheme();
 
   const goBack = () => setStep(previousOnboardingStep(step));
@@ -94,11 +95,13 @@ function OnboardingFlow(props: {
   }, [markEngaged, step]);
 
   const providerSummary = summarizeProviderSetup(
-    PROVIDER_DESCRIPTORS.map((descriptor) => ({
+    VISIBLE_PROVIDER_DESCRIPTORS.map((descriptor) => ({
       provider: descriptor.kind,
       state: classifyProviderSetup({
         status: findProviderStatus(statuses, descriptor.kind),
         disabled: serverSettings?.providers[descriptor.kind].enabled === false,
+        detecting: providerDetection.detecting,
+        detectionFailed: providerDetection.failed,
       }),
     })),
   );
@@ -106,7 +109,7 @@ function OnboardingFlow(props: {
     CODE_THEME_OPTIONS.find((option) => option.id === activeTheme.codeThemeId)?.label ??
     activeTheme.codeThemeId;
   const doneSummary = [
-    `${plural(providerSummary.connected, "agent")} connected`,
+    describeOnboardingAgentSummary(providerSummary),
     `${themeLabel} theme`,
     projectResults.length > 0
       ? `${plural(projectResults.length, "project")} added`
@@ -174,7 +177,7 @@ function OnboardingFlow(props: {
       >
         {step === "welcome" ? <WelcomeStep /> : null}
         {step === "tour" ? <FeatureTourStep /> : null}
-        {step === "providers" ? <ProvidersStep /> : null}
+        {step === "providers" ? <ProvidersStep detection={providerDetection} /> : null}
         {step === "theme" ? <ThemeStep /> : null}
         {step === "project" ? (
           <ProjectStep

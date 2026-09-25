@@ -32,6 +32,7 @@ const EMPTY_MODEL_OPTIONS_BY_PROVIDER: Record<ProviderKind, ReadonlyArray<Provid
   antigravity: [],
   grok: [],
   droid: [],
+  omp: [],
   opencode: [],
   pi: [],
 };
@@ -44,6 +45,7 @@ const EMPTY_CUSTOM_MODELS_BY_PROVIDER: Record<ProviderKind, never[]> = {
   antigravity: [],
   grok: [],
   droid: [],
+  omp: [],
   opencode: [],
   pi: [],
 };

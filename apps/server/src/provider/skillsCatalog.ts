@@ -449,6 +449,8 @@ export interface SkillsCatalogDiscoveryInput {
   readonly includeDuplicateOrigins?: boolean;
   /** Bypass the short-lived discovery cache. */
   readonly forceReload?: boolean;
+  /** Provider-configured agent dir (pi/omp) — overrides the default profile root. */
+  readonly agentDir?: string | null;
 }
 
 export interface SkillsCatalogRootInput extends SkillsCatalogDiscoveryInput {
@@ -467,6 +469,7 @@ const HOME_ORIGIN_ORDER = [
   "opencode",
   "pi",
   "devin",
+  "omp",
   "agents",
 ] as const;
 export type SkillsCatalogOrigin = (typeof HOME_ORIGIN_ORDER)[number] | "project";
@@ -1182,7 +1185,9 @@ const SKILL_ORIGIN_ROOTS = {
     projectRootNames: [".opencode"],
   },
   pi: {
-    homeRoots: (input) => [nodePath.join(input.homeDir, ".pi", "agent", "skills")],
+    homeRoots: (input) => [
+      nodePath.join(input.agentDir ?? nodePath.join(input.homeDir, ".pi", "agent"), "skills"),
+    ],
     projectRootNames: [".pi"],
   },
   devin: {
@@ -1203,6 +1208,12 @@ const SKILL_ORIGIN_ROOTS = {
     ],
     projectRootNames: [".devin", ".cognition", ".windsurf"],
   },
+  omp: {
+    homeRoots: (input) => [
+      nodePath.join(input.agentDir ?? nodePath.join(input.homeDir, ".omp", "agent"), "skills"),
+    ],
+    projectRootNames: [".omp"],
+  },
   agents: {
     homeRoots: (input) => [nodePath.join(input.homeDir, ".agents", "skills")],
     projectRootNames: [".agents"],
@@ -1219,6 +1230,7 @@ const PROVIDER_SKILL_ORIGIN_PREFERENCES = {
   opencode: ["opencode", "claude", "agents"],
   pi: ["pi", "agents"],
   devin: ["devin", "claude", "agents"],
+  omp: ["omp", "agents"],
 } as const satisfies Partial<Record<ProviderKind, readonly SkillsHomeOrigin[]>>;
 
 function homeRootsForOrigin(
@@ -1279,7 +1291,7 @@ function rootsForOrderedOrigins(
       scope: origin,
       ...(origin === "bundled" ? { managedKind: "bundled" as const } : {}),
       ...(origin === "synara" ? { managedKind: "installed" as const } : {}),
-      ...(origin === "pi" ? { includeMarkdownFiles: true } : {}),
+      ...(origin === "pi" || origin === "omp" ? { includeMarkdownFiles: true } : {}),
     })),
   );
   const homeRootPaths = new Set(homeRoots.map((root) => nodePath.resolve(root.path)));
@@ -1303,11 +1315,11 @@ function rootsForOrderedOrigins(
           if (homeRootPaths.has(nodePath.resolve(rootPath))) {
             continue;
           }
-          projectRoots.push({
-            path: rootPath,
-            scope: "project",
-            ...(origin === "pi" ? { includeMarkdownFiles: true } : {}),
-          });
+          projectRoots.push(
+            origin === "pi" || origin === "omp"
+              ? { path: rootPath, scope: "project", includeMarkdownFiles: true }
+              : { path: rootPath, scope: "project" },
+          );
         }
       }
     }
@@ -1346,6 +1358,7 @@ export async function discoverSkillsCatalog(
     input.homeDir,
     input.synaraBaseDir,
     bundledSkillsDir() ?? "",
+    input.agentDir?.trim() ?? "",
     input.includeDuplicateOrigins ? "all-origins" : "deduped",
   ].join("\u0000");
 

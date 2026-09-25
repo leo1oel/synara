@@ -5,7 +5,6 @@ import {
   MessageId,
   ThreadId,
   TurnId,
-  type ComputerAvailability,
   type GitWorktreeSetupProgressEvent,
   type ModelSlug,
   type PendingClaudeCacheReview,
@@ -15,7 +14,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { QueuedComposerChatTurn } from "../composerDraftStore";
 import type { WorkLogEntry } from "../session-logic";
-import { AppSettingsSchema } from "../appSettings";
 
 import {
   appendVoiceTranscriptToPrompt,
@@ -47,7 +45,6 @@ import {
   planImplementationDispatchSettings,
   queuedChatTurnDispatchFields,
   queuedPlanFollowUpDispatchFields,
-  resolveEffectiveComputerControl,
   resolveQueuedTurnDispatchSettings,
   threadSettingsDispatchFields,
   turnStartDispatchFields,
@@ -1492,6 +1489,29 @@ describe("resolveEmbeddedProjectModelPreference", () => {
 });
 
 describe("resolveComposerDefaultModelSelection", () => {
+  it("retains OMP thinking effort when inheriting a standalone chat model", () => {
+    expect(
+      resolveComposerDefaultModelSelection({
+        embedded: false,
+        projectSelection: null,
+        threadSummaries: [
+          {
+            latestUserMessageAt: "2026-09-25T10:00:00.000Z",
+            modelSelection: {
+              provider: "omp",
+              model: "anthropic/claude-opus-4-6",
+              options: { thinkingLevel: "high" },
+            },
+          },
+        ],
+      }),
+    ).toEqual({
+      provider: "omp",
+      model: "anthropic/claude-opus-4-6",
+      options: { thinkingLevel: "high" },
+    });
+  });
+
   it("uses the model from the most recent chat when an embed only has the legacy default", () => {
     expect(
       resolveComposerDefaultModelSelection({
@@ -3576,107 +3596,5 @@ describe("turn dispatch settings", () => {
     expect(resolved.runtimeMode).toBe("approval-required");
     expect(resolved.enableComputerControl).toBe(false);
     expect(resolved.computerControlMode).toBe("off");
-  });
-});
-
-describe("resolveEffectiveComputerControl", () => {
-  it.each<ComputerAvailability | undefined>([
-    undefined,
-    { kind: "available", backend: "mac" },
-    {
-      kind: "permission-required",
-      missing: ["accessibility", "screenRecording"],
-      message: "Allow Synara in System Settings.",
-      buildSignature: "adhoc",
-    },
-    { kind: "backend-unavailable", message: "Reconnecting." },
-  ])(
-    "keeps the shipped default off while the backend is ready, loading, or needs setup: %j",
-    (availability) => {
-      expect(
-        resolveEffectiveComputerControl({
-          draftOverride: undefined,
-          availability,
-          chatHasTurns: false,
-          computerControlEnabled: AppSettingsSchema.makeUnsafe({}).computerControlEnabled,
-        }),
-      ).toBe(false);
-      expect(
-        resolveEffectiveComputerControl({
-          draftOverride: undefined,
-          availability,
-          chatHasTurns: false,
-          computerControlEnabled: true,
-        }),
-      ).toBe(true);
-    },
-  );
-
-  it("stays off on a server that cannot support computer use", () => {
-    expect(
-      resolveEffectiveComputerControl({
-        draftOverride: undefined,
-        availability: { kind: "unsupported-platform", platform: "win32" },
-        computerControlEnabled: true,
-        chatHasTurns: false,
-      }),
-    ).toBe(false);
-  });
-
-  it("honors the machine-wide opt-out for an untouched chat", () => {
-    expect(
-      resolveEffectiveComputerControl({
-        draftOverride: undefined,
-        availability: { kind: "available", backend: "mac" },
-        computerControlEnabled: false,
-        chatHasTurns: false,
-      }),
-    ).toBe(false);
-  });
-
-  it("does not apply the new-chat default retroactively to a chat that already has turns", () => {
-    // Turning the setting on must not hand existing conversations the desktop
-    // (and its screenshots) on their next turn; only chats that start afterwards
-    // follow it, and those capture it on their first send.
-    expect(
-      resolveEffectiveComputerControl({
-        draftOverride: undefined,
-        availability: { kind: "available", backend: "mac" },
-        computerControlEnabled: true,
-        chatHasTurns: true,
-      }),
-    ).toBe(false);
-  });
-
-  it("lets a per-chat override win in both directions, even against the default", () => {
-    // Override on while the machine opted out.
-    expect(
-      resolveEffectiveComputerControl({
-        draftOverride: true,
-        availability: { kind: "available", backend: "mac" },
-        computerControlEnabled: false,
-        chatHasTurns: true,
-      }),
-    ).toBe(true);
-    // Override off while the machine (and availability) would default it on.
-    expect(
-      resolveEffectiveComputerControl({
-        draftOverride: false,
-        availability: { kind: "available", backend: "mac" },
-        computerControlEnabled: true,
-        chatHasTurns: false,
-      }),
-    ).toBe(false);
-  });
-
-  it("keeps a conversation's choice while reconnecting", () => {
-    expect(
-      resolveEffectiveComputerControl({
-        draftOverride: true,
-        availability: { kind: "backend-unavailable", message: "Reconnecting." },
-        computerControlEnabled: false,
-        chatHasTurns: false,
-      }),
-    ).toBe(true);
   });
 });

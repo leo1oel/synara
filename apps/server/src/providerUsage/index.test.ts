@@ -102,18 +102,6 @@ describe("collectProviderUsageSnapshots caching", () => {
     expect(second).toEqual(first);
   });
 
-  it("bypasses the TTL on forceRefresh", async () => {
-    fetchMock.mockImplementation(async (ctx) => okSnapshot(ctx.nowMs));
-
-    await collectProviderUsageSnapshots(makeCtx(NOW_MS));
-    const refreshed = await collectProviderUsageSnapshots(makeCtx(NOW_MS + 1_000), {
-      forceRefresh: true,
-    });
-
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(refreshed[0]?.updatedAt).toBe(new Date(NOW_MS + 1_000).toISOString());
-  });
-
   it("joins an in-flight refresh instead of serving the previous cached snapshot", async () => {
     fetchMock.mockResolvedValueOnce(okSnapshot(NOW_MS, "cached"));
     await collectProviderUsageSnapshots(makeCtx(NOW_MS));

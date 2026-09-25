@@ -4,7 +4,11 @@
 // Exports: Vitest suites for appSettings.ts
 
 import { Schema } from "effect";
-import { DEFAULT_MODEL_BY_PROVIDER, DEFAULT_SERVER_SETTINGS_VIEW } from "@synara/contracts";
+import {
+  DEFAULT_MODEL_BY_PROVIDER,
+  DEFAULT_SERVER_SETTINGS_VIEW,
+  type ProviderKind,
+} from "@synara/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -22,7 +26,6 @@ import {
   getAppModelOptions,
   getCustomBinaryPathForProvider,
   getDefaultNativeFontSmoothing,
-  getCustomModelOptionsByProvider,
   getCustomModelsByProvider,
   getCustomModelsForProvider,
   getDefaultCustomModelsForProvider,
@@ -366,6 +369,7 @@ describe("resolveAppModelSelection", () => {
           antigravity: [],
           grok: [],
           droid: [],
+          omp: [],
           opencode: [],
           pi: [],
         },
@@ -386,6 +390,7 @@ describe("resolveAppModelSelection", () => {
           antigravity: [],
           grok: [],
           droid: [],
+          omp: [],
           opencode: [],
           pi: [],
         },
@@ -406,6 +411,7 @@ describe("resolveAppModelSelection", () => {
           antigravity: [],
           grok: [],
           droid: [],
+          omp: [],
           opencode: [],
           pi: [],
         },
@@ -426,6 +432,7 @@ describe("resolveAppModelSelection", () => {
           antigravity: [],
           grok: [],
           droid: [],
+          omp: [],
           opencode: [],
           pi: [],
         },
@@ -446,6 +453,7 @@ describe("resolveAppModelSelection", () => {
           antigravity: [],
           grok: [],
           droid: [],
+          omp: [],
           opencode: [],
           pi: [],
         },
@@ -604,6 +612,8 @@ describe("getProviderStartOptions", () => {
         openCodeBinaryPath: "",
         openCodeExperimentalWebSockets: false,
         openCodeServerUrl: "",
+        ompAgentDir: "",
+        ompBinaryPath: "",
         piAgentDir: "",
         piBinaryPath: "",
         devinBinaryPath: "/usr/local/bin/devin",
@@ -645,6 +655,8 @@ describe("getProviderStartOptions", () => {
         openCodeBinaryPath: "",
         openCodeExperimentalWebSockets: false,
         openCodeServerUrl: "",
+        ompAgentDir: "",
+        ompBinaryPath: "",
         piAgentDir: "",
         piBinaryPath: "",
         devinBinaryPath: "",
@@ -667,6 +679,8 @@ describe("getProviderStartOptions", () => {
         openCodeBinaryPath: "opencode",
         openCodeExperimentalWebSockets: false,
         openCodeServerUrl: "",
+        ompAgentDir: "",
+        ompBinaryPath: "omp",
         piAgentDir: "",
         piBinaryPath: "pi",
       }),
@@ -683,6 +697,7 @@ describe("provider-indexed custom model settings", () => {
     customGrokModels: ["grok/custom-fast"],
     customDroidModels: ["claude-opus-4-8-custom"],
     customDevinModels: ["devin/custom-model"],
+    customOmpModels: ["omp/custom-model"],
     customOpenCodeModels: ["openrouter/gpt-oss-120b"],
     customPiModels: ["anthropic/custom-pi"],
   } as const;
@@ -698,6 +713,7 @@ describe("provider-indexed custom model settings", () => {
       "droid",
       "opencode",
       "pi",
+      "omp",
     ]);
   });
 
@@ -714,6 +730,7 @@ describe("provider-indexed custom model settings", () => {
     expect(getCustomModelsForProvider(settings, "grok")).toEqual(["grok/custom-fast"]);
     expect(getCustomModelsForProvider(settings, "droid")).toEqual(["claude-opus-4-8-custom"]);
     expect(getCustomModelsForProvider(settings, "devin")).toEqual(["devin/custom-model"]);
+    expect(getCustomModelsForProvider(settings, "omp")).toEqual(["omp/custom-model"]);
     expect(getCustomModelsForProvider(settings, "opencode")).toEqual(["openrouter/gpt-oss-120b"]);
     expect(getCustomModelsForProvider(settings, "pi")).toEqual(["anthropic/custom-pi"]);
   });
@@ -727,6 +744,7 @@ describe("provider-indexed custom model settings", () => {
       customGrokModels: ["grok/default-fast"],
       customDroidModels: ["droid/default-model"],
       customDevinModels: ["adaptive"],
+      customOmpModels: ["omp/default-model"],
       customOpenCodeModels: ["openai/gpt-5"],
       customPiModels: ["anthropic/default-pi"],
     } as const;
@@ -742,6 +760,7 @@ describe("provider-indexed custom model settings", () => {
     expect(getDefaultCustomModelsForProvider(defaults, "grok")).toEqual(["grok/default-fast"]);
     expect(getDefaultCustomModelsForProvider(defaults, "droid")).toEqual(["droid/default-model"]);
     expect(getDefaultCustomModelsForProvider(defaults, "devin")).toEqual(["adaptive"]);
+    expect(getDefaultCustomModelsForProvider(defaults, "omp")).toEqual(["omp/default-model"]);
     expect(getDefaultCustomModelsForProvider(defaults, "opencode")).toEqual(["openai/gpt-5"]);
     expect(getDefaultCustomModelsForProvider(defaults, "pi")).toEqual(["anthropic/default-pi"]);
   });
@@ -782,6 +801,12 @@ describe("provider-indexed custom model settings", () => {
     });
   });
 
+  it("patches custom models for OMP", () => {
+    expect(patchCustomModels("omp", ["omp/custom-model"])).toEqual({
+      customOmpModels: ["omp/custom-model"],
+    });
+  });
+
   it("patches custom models for cursor", () => {
     expect(patchCustomModels("cursor", ["cursor/custom-model"])).toEqual({
       customCursorModels: ["cursor/custom-model"],
@@ -809,13 +834,20 @@ describe("provider-indexed custom model settings", () => {
       grok: ["grok/custom-fast"],
       droid: ["claude-opus-4-8-custom"],
       devin: ["devin/custom-model"],
+      omp: ["omp/custom-model"],
       opencode: ["openrouter/gpt-oss-120b"],
       pi: ["anthropic/custom-pi"],
     });
   });
 
   it("builds provider-indexed model options including custom models", () => {
-    const modelOptionsByProvider = getCustomModelOptionsByProvider(settings);
+    const customModelsByProvider = getCustomModelsByProvider(settings);
+    const modelOptionsByProvider = Object.fromEntries(
+      Object.entries(customModelsByProvider).map(([provider, models]) => [
+        provider,
+        getAppModelOptions(provider as ProviderKind, models),
+      ]),
+    ) as Record<ProviderKind, ReturnType<typeof getAppModelOptions>>;
 
     expect(
       modelOptionsByProvider.codex.some((option) => option.slug === "custom/codex-model"),
@@ -846,7 +878,7 @@ describe("provider-indexed custom model settings", () => {
   });
 
   it("normalizes and deduplicates custom model options per provider", () => {
-    const modelOptionsByProvider = getCustomModelOptionsByProvider({
+    const customModelsByProvider = getCustomModelsByProvider({
       customCodexModels: ["  custom/codex-model ", "gpt-5.4", "custom/codex-model"],
       customClaudeModels: [" sonnet ", "claude/custom-opus", "claude/custom-opus"],
       customCursorModels: [" composer-2 ", "cursor/custom-model", "cursor/custom-model"],
@@ -858,6 +890,7 @@ describe("provider-indexed custom model settings", () => {
       customGrokModels: [" grok-build ", "grok/custom-fast", "grok/custom-fast"],
       customDroidModels: [" opus ", "droid/custom-model", "droid/custom-model"],
       customDevinModels: [" adaptive ", "devin/custom-model", "devin/custom-model"],
+      customOmpModels: [" omp/custom-model ", "omp/custom-model"],
       customOpenCodeModels: [
         " openai/gpt-5 ",
         "openrouter/gpt-oss-120b",
@@ -869,6 +902,12 @@ describe("provider-indexed custom model settings", () => {
         "anthropic/custom-pi",
       ],
     });
+    const modelOptionsByProvider = Object.fromEntries(
+      Object.entries(customModelsByProvider).map(([provider, models]) => [
+        provider,
+        getAppModelOptions(provider as ProviderKind, models),
+      ]),
+    ) as Record<ProviderKind, ReturnType<typeof getAppModelOptions>>;
 
     expect(
       modelOptionsByProvider.codex.filter((option) => option.slug === "custom/codex-model"),

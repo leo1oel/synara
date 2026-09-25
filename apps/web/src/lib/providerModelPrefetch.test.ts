@@ -4,14 +4,13 @@
 //          and gates Droid to explicit intent.
 // Layer: Web lib tests
 
-import { DEFAULT_SERVER_SETTINGS } from "@synara/contracts";
 import type { ProviderKind, ServerProviderStatus } from "@synara/contracts";
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import * as betaFeatures from "../betaFeatures";
 
 import {
   NEW_THREAD_MODEL_PREFETCH_PROVIDERS,
-  NEW_THREAD_MODEL_PREFETCH_STALE_TIME_MS,
   prefetchModelsForNewThread,
   prefetchProviderModelsForNewThread,
   providerModelsPrefetchQueryOptions,
@@ -38,6 +37,8 @@ function makeSettings(
     grokBinaryPath: "",
     droidBinaryPath: "",
     openCodeBinaryPath: "",
+    ompBinaryPath: "",
+    ompAgentDir: "",
     piBinaryPath: "",
     piAgentDir: "",
     ...overrides,
@@ -219,6 +220,27 @@ describe("providerModelsPrefetchQueryOptions", () => {
 });
 
 describe("prefetchModelsForNewThread", () => {
+  it("never warms Beta-only models or capabilities in Lattice, even from a saved selection", () => {
+    vi.spyOn(betaFeatures, "isBetaFeatureOn").mockImplementation((provider) => provider !== "omp");
+    const queryClient = new QueryClient();
+    const prefetchQuery = vi.spyOn(queryClient, "prefetchQuery").mockResolvedValue(undefined);
+
+    prefetchModelsForNewThread(queryClient, {
+      settings: makeSettings(),
+      providerOverride: "omp",
+      projectCwd: "/tmp/project",
+    });
+    expect(modelKeysFromCalls(prefetchQuery)).toHaveLength(8);
+    expect(prefetchQuery.mock.calls.some(([options]) => options.queryKey[2] === "omp")).toBe(false);
+
+    prefetchQuery.mockClear();
+    prefetchProviderModelsForNewThread(queryClient, {
+      settings: makeSettings(),
+      providers: ["omp"],
+    });
+    expect(prefetchQuery).not.toHaveBeenCalled();
+  });
+
   it("warms every provider except Droid, selected provider first", async () => {
     const queryClient = new QueryClient();
     const cancelQueries = vi.spyOn(queryClient, "cancelQueries");
@@ -238,7 +260,7 @@ describe("prefetchModelsForNewThread", () => {
     );
     // Warm results stay fresh for 30 minutes, so repeated hovers do not re-probe.
     expect(prefetchQuery.mock.calls[0]?.[0].staleTime).toBe(30 * 60_000);
-    expect(modelKeys).toHaveLength(8);
+    expect(modelKeys).toHaveLength(9);
     expect(modelKeys).not.toContainEqual(
       providerDiscoveryQueryKeys.models("droid", null, null, null, "/tmp/project"),
     );
@@ -285,7 +307,7 @@ describe("prefetchModelsForNewThread", () => {
     const modelKeys = prefetchQuery.mock.calls
       .map((call) => call[0].queryKey)
       .filter((key) => key[0] === "provider-discovery" && key[1] === "models");
-    expect(modelKeys).toHaveLength(7);
+    expect(modelKeys).toHaveLength(8);
     expect(modelKeys).toContainEqual(
       providerDiscoveryQueryKeys.models("cursor", null, null, null, null),
     );
@@ -381,7 +403,7 @@ describe("prefetchModelsForNewThread — availability parity (#652)", () => {
     const queryClient = new QueryClient();
     const prefetchQuery = vi.spyOn(queryClient, "prefetchQuery").mockResolvedValue(undefined);
 
-    // Reconciled + confirmed-unavailable cursor → skipped (8 - 1 = 7).
+    // Reconciled + confirmed-unavailable cursor → skipped (9 - 1 = 8).
     prefetchModelsForNewThread(queryClient, {
       settings: makeSettings(),
       providerStatuses: availableStatuses(["cursor"]),
@@ -389,12 +411,12 @@ describe("prefetchModelsForNewThread — availability parity (#652)", () => {
       projectCwd: "/tmp/project",
     });
     let modelKeys = modelKeysFromCalls(prefetchQuery);
-    expect(modelKeys).toHaveLength(7);
+    expect(modelKeys).toHaveLength(8);
     expect(modelKeys).not.toContainEqual(
       providerDiscoveryQueryKeys.models("cursor", null, null, null, null),
     );
 
-    // Unreconciled → safe default: warm everything (8), even confirmed-unavailable.
+    // Unreconciled → safe default: warm everything (9), even confirmed-unavailable.
     prefetchQuery.mockClear();
     prefetchModelsForNewThread(queryClient, {
       settings: makeSettings(),
@@ -403,7 +425,7 @@ describe("prefetchModelsForNewThread — availability parity (#652)", () => {
       projectCwd: "/tmp/project",
     });
     modelKeys = modelKeysFromCalls(prefetchQuery);
-    expect(modelKeys).toHaveLength(8);
+    expect(modelKeys).toHaveLength(9);
 
     // Preferred provider unavailable → warm leads with ChatView's swap target (codex).
     prefetchQuery.mockClear();
@@ -443,10 +465,10 @@ describe("prefetchModelsForNewThread — warm-option invariants", () => {
     });
 
     const calls = prefetchQuery.mock.calls.map((call) => call[0]);
-    // 8 models + 8 capabilities + 3 agents (claudeAgent, codex, opencode).
-    expect(calls).toHaveLength(8 + 8 + 3);
+    // 9 models + 9 capabilities + 3 agents (claudeAgent, codex, opencode).
+    expect(calls).toHaveLength(9 + 9 + 3);
     for (const options of calls) {
-      expect(options.gcTime).toBe(NEW_THREAD_MODEL_PREFETCH_STALE_TIME_MS);
+      expect(options.gcTime).toBe(24 * 60 * 60_000);
     }
     const modelCalls = calls.filter((options) => options.queryKey[1] === "models");
     expect(modelCalls.find((options) => options.queryKey[2] === "cursor")?.retry).toBe(0);

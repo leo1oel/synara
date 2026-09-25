@@ -27,6 +27,8 @@ describe("isProviderInstallSettingsDirty", () => {
       { openCodeServerUrl: "http://127.0.0.1:5001" },
       { openCodeExperimentalWebSockets: true },
       { piAgentDir: "/tmp/pi-agent" },
+      { ompBinaryPath: "/opt/omp" },
+      { ompAgentDir: "/tmp/omp-agent" },
     ] satisfies ReadonlyArray<Partial<AppSettings>>;
 
     expect(isProviderInstallSettingsDirty(defaults, defaults)).toBe(false);
@@ -67,6 +69,8 @@ describe("createProviderInstallResetPatch", () => {
         "devinBinaryPath",
         "droidBinaryPath",
         "grokBinaryPath",
+        "ompAgentDir",
+        "ompBinaryPath",
         "openCodeBinaryPath",
         "openCodeExperimentalWebSockets",
         "openCodeServerPassword",

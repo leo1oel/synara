@@ -1,4 +1,5 @@
 import { appendAppSnapPromptContext } from "../../provider/appSnapPromptContext.ts";
+import { isServerBetaFeatureEnabled } from "../../betaFeatureGate";
 import { computerActivationMetadata } from "../../computer/computerActivation.ts";
 import { parseComputerInvocation } from "@synara/shared/computerInvocation";
 import { AgentGatewaySessionRegistry } from "../../agentGateway/Services/AgentGatewaySessionRegistry";

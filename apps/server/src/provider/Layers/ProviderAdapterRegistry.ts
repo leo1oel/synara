@@ -9,6 +9,7 @@
  */
 import { Effect, Layer } from "effect";
 
+import { isServerBetaFeatureEnabled } from "../../betaFeatureGate.ts";
 import { ProviderUnsupportedError, type ProviderAdapterError } from "../Errors.ts";
 import {
   assertProviderAdapterConformance,
@@ -27,6 +28,7 @@ import { DroidAdapter } from "../Services/DroidAdapter.ts";
 import { GrokAdapter } from "../Services/GrokAdapter.ts";
 import { OpenCodeAdapter } from "../Services/OpenCodeAdapter.ts";
 import { PiAdapter } from "../Services/PiAdapter.ts";
+import { OmpAdapter } from "../Services/OmpAdapter.ts";
 import { AntigravityAdapter } from "../Services/AntigravityAdapter.ts";
 
 export interface ProviderAdapterRegistryLiveOptions {
@@ -47,6 +49,7 @@ const makeProviderAdapterRegistry = (options?: ProviderAdapterRegistryLiveOption
             yield* GrokAdapter,
             yield* DroidAdapter,
             yield* OpenCodeAdapter,
+            yield* OmpAdapter,
             yield* PiAdapter,
           ];
 
@@ -64,6 +67,12 @@ const makeProviderAdapterRegistry = (options?: ProviderAdapterRegistryLiveOption
     const byProvider = new Map(adapters.map((adapter) => [adapter.provider, adapter]));
 
     const getByProvider: ProviderAdapterRegistryShape["getByProvider"] = (provider) => {
+      // The registry is the authoritative server boundary. OMP remains
+      // unavailable on Stable even though its adapter is wired into the shared
+      // runtime and the old enabled-provider wrapper no longer exists.
+      if (!isServerBetaFeatureEnabled(provider)) {
+        return Effect.fail(new ProviderUnsupportedError({ provider }));
+      }
       const adapter = byProvider.get(provider);
       if (!adapter) {
         return Effect.fail(new ProviderUnsupportedError({ provider }));
@@ -72,7 +81,7 @@ const makeProviderAdapterRegistry = (options?: ProviderAdapterRegistryLiveOption
     };
 
     const listProviders: ProviderAdapterRegistryShape["listProviders"] = () =>
-      Effect.sync(() => Array.from(byProvider.keys()));
+      Effect.sync(() => Array.from(byProvider.keys()).filter(isServerBetaFeatureEnabled));
 
     return {
       getByProvider,

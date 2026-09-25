@@ -684,7 +684,7 @@ export function resolveStreamAdmissionRetry(
   };
 }
 
-export function getStreamFailureCode(cause: Cause.Cause<unknown>): string | null {
+function getStreamFailureCode(cause: Cause.Cause<unknown>): string | null {
   for (const reason of cause.reasons) {
     if (!Cause.isFailReason(reason)) continue;
     const error = reason.error;

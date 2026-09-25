@@ -377,6 +377,12 @@ describe("wsNativeApi", () => {
           antigravity: { enabled: true, binaryPath: "agy", customModels: [] },
           grok: { enabled: true, binaryPath: "grok", customModels: [] },
           droid: { enabled: true, binaryPath: "droid", customModels: [] },
+          omp: {
+            enabled: true,
+            binaryPath: "omp",
+            agentDir: "",
+            customModels: [],
+          },
           opencode: {
             enabled: true,
             binaryPath: "opencode",

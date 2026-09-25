@@ -41,6 +41,7 @@ const MODEL_OPTIONS_BY_PROVIDER = {
     },
     { slug: "custom:GPT-5.6-Luna-0", name: "Custom GPT-5.6 Luna" },
   ],
+  omp: [],
   opencode: [
     {
       slug: "opencode/nemotron-3-super-free",

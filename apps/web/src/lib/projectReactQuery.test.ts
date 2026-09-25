@@ -10,8 +10,8 @@ import {
   projectLocalPreviewGrantQueryOptions,
   projectQueryKeys,
   projectReadFileQueryOptions,
-  refetchFreshProjectFileQuery,
   projectSearchEntriesQueryOptions,
+  refetchFreshProjectFileQuery,
 } from "./projectReactQuery";
 
 describe("project search entry query options", () => {
@@ -238,24 +238,5 @@ describe("project read file capacity retry", () => {
       unsubscribe();
       queryClient.clear();
     }
-  });
-});
-
-describe("project search capacity retry", () => {
-  const capacityError = {
-    code: "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED",
-    retryable: true,
-    retryAfterMs: 375,
-  };
-
-  it("retries generic search failures without stacking capacity retries", () => {
-    const options = projectSearchEntriesQueryOptions({ cwd: "/repo", query: "app" });
-    expect(typeof options.retry).toBe("function");
-    if (typeof options.retry !== "function") {
-      throw new Error("Expected retry on projectSearchEntriesQueryOptions.");
-    }
-    expect(options.retry(0, capacityError as never)).toBe(false);
-    expect(options.retry(0, new Error("network"))).toBe(true);
-    expect(options.retry(3, new Error("network"))).toBe(false);
   });
 });

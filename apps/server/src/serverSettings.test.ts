@@ -1,14 +1,21 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { dirname } from "node:path";
 import {
+  DEFAULT_SERVER_SETTINGS,
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
   DEFAULT_MODEL_BY_PROVIDER,
+  type ServerSettings,
   ServerSettingsPatch,
 } from "@synara/contracts";
 import { Effect, FileSystem, Layer, Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import { ServerConfig } from "./config";
-import { ServerSettingsLive, ServerSettingsService } from "./serverSettings";
+import {
+  gateBetaOnlyProviders,
+  resolveTextGenerationProvider,
+  ServerSettingsLive,
+  ServerSettingsService,
+} from "./serverSettings";
 
 const serverConfigLayer = ServerConfig.layerTest(process.cwd(), {
   prefix: "synara-settings-test-",
@@ -274,5 +281,53 @@ describe("ServerSettingsService", () => {
     expect(settings.textGenerationModelSelection.model).toBe(
       DEFAULT_MODEL_BY_PROVIDER[expectedProvider],
     );
+  });
+});
+
+const ompGatedOff = (feature: string) => feature !== "omp";
+
+describe("gateBetaOnlyProviders", () => {
+  const withOmpEnabled: ServerSettings = {
+    ...DEFAULT_SERVER_SETTINGS,
+    providers: {
+      ...DEFAULT_SERVER_SETTINGS.providers,
+      omp: { ...DEFAULT_SERVER_SETTINGS.providers.omp, enabled: true },
+    },
+  };
+
+  it("reads a gated-off provider as disabled without touching the others", () => {
+    const gated = gateBetaOnlyProviders(withOmpEnabled, ompGatedOff);
+    expect(gated.providers.omp.enabled).toBe(false);
+    expect(gated.providers.codex.enabled).toBe(true);
+    // The input object is untouched — the persisted value survives.
+    expect(withOmpEnabled.providers.omp.enabled).toBe(true);
+  });
+
+  it("returns the same object when nothing is gated", () => {
+    expect(gateBetaOnlyProviders(withOmpEnabled, () => true)).toBe(withOmpEnabled);
+  });
+
+  it("leaves an already-disabled provider unchanged", () => {
+    const settings: ServerSettings = {
+      ...DEFAULT_SERVER_SETTINGS,
+      providers: {
+        ...DEFAULT_SERVER_SETTINGS.providers,
+        omp: { ...DEFAULT_SERVER_SETTINGS.providers.omp, enabled: false },
+      },
+    };
+    expect(gateBetaOnlyProviders(settings, ompGatedOff)).toBe(settings);
+  });
+
+  it("falls back to a non-gated provider for text generation", () => {
+    const settings: ServerSettings = {
+      ...DEFAULT_SERVER_SETTINGS,
+      textGenerationModelSelection: { provider: "omp", model: "omp-auto" },
+      providers: {
+        ...DEFAULT_SERVER_SETTINGS.providers,
+        omp: { ...DEFAULT_SERVER_SETTINGS.providers.omp, enabled: true },
+      },
+    };
+    const projected = resolveTextGenerationProvider(gateBetaOnlyProviders(settings, ompGatedOff));
+    expect(projected.textGenerationModelSelection.provider).not.toBe("omp");
   });
 });
