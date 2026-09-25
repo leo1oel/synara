@@ -213,6 +213,45 @@ describe("MessagesTimeline tail anchor", () => {
     document.body.innerHTML = "";
   });
 
+  it.each([2, 30])(
+    "anchors consecutive sends after a %s-paragraph answer without clearing the old anchor",
+    async (paragraphs) => {
+      const handleRef: { current: HarnessHandle | null } = { current: null };
+      const screen = await render(<TailAnchorTimeline handleRef={handleRef} bottomInsetPx={82} />);
+      try {
+        await settleFrames(5);
+        const handle = handleRef.current!;
+        const topGap = Number.parseFloat(getComputedStyle(getScrollContainer(handle)).paddingTop);
+        handle.send(FIRST_SENT_MESSAGE_ID);
+        await expect
+          .poll(
+            () => {
+              const offset = anchorTopOffsetPx(handle, FIRST_SENT_MESSAGE_ID);
+              return offset === null ? Infinity : Math.abs(offset - topGap);
+            },
+            { timeout: 5_000 },
+          )
+          .toBeLessThanOrEqual(8);
+        handle.growStream(FIRST_STREAMING_MESSAGE_ID, paragraphs);
+        await settleFrames(40);
+        handle.finishTurn();
+        await settleFrames(40);
+        handle.send(SECOND_SENT_MESSAGE_ID);
+        await expect
+          .poll(
+            () => {
+              const offset = anchorTopOffsetPx(handle, SECOND_SENT_MESSAGE_ID);
+              return offset === null ? Infinity : Math.abs(offset - topGap);
+            },
+            { timeout: 5_000 },
+          )
+          .toBeLessThanOrEqual(8);
+      } finally {
+        await screen.unmount();
+      }
+    },
+  );
+
   it("anchors with a floating composer that shrinks after sending", async () => {
     const handleRef: { current: HarnessHandle | null } = { current: null };
     const screen = await render(<TailAnchorTimeline handleRef={handleRef} bottomInsetPx={178} />);

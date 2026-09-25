@@ -188,10 +188,6 @@ export function useTailAnchorScroll({
     // the row was still mid-layout when they were taken.
     let glideStartedAt: number | null = null;
     let glideFromOffsetPx = 0;
-    // Once the reserve has been deep enough to lift the anchor even once, a
-    // later shortfall means the response outgrew it — the hand-off below, not a
-    // reserve that has yet to appear.
-    let hasBeenReachable = false;
 
     function stopFrameLoop(): void {
       if (frameId !== null) {
@@ -272,7 +268,6 @@ export function useTailAnchorScroll({
       // still parked at the bottom and has not landed, however close scrollTop
       // is to the (clamped) target.
       const reachable = target.desired <= target.clamped + 1;
-      hasBeenReachable = hasBeenReachable || reachable;
       // The mirror image: holding the anchor at the top leaves the live tail
       // below the viewport bottom, so the response has outgrown its reserve.
       // That is the hand-off to the list's own follow-the-tail — from here the
@@ -309,17 +304,16 @@ export function useTailAnchorScroll({
                 toPx: restOffsetPx,
                 elapsedMs: now - glideStartedAt,
               });
-        // Finding the message below where the glide expects it means the glide
-        // never actually moved it. Two causes, both answered by restarting the
-        // schedule from where the message really is rather than yanking it up:
-        // the reserve is not yet deep enough to lift the anchor at all (the
-        // motion has not started, so its clock should not be running either), or
-        // the seed was taken from a row still mid-layout, which can report a
-        // transient position for a frame after being committed.
+        // Only re-seed during initial layout. Before applying this frame's
+        // movement, the row naturally lags behind the scheduled offset. Letting
+        // an unreachable target extend this window restarts the clock every
+        // frame, even when the reserve is only two pixels short. After the
+        // window, advance toward the reachable target and keep correcting it
+        // as the reserve catches up.
         const belowSchedule = target.offsetFromViewportTop > scheduledOffsetPx + 1;
         if (
           glideStartedAt === null ||
-          (belowSchedule && (!hasBeenReachable || elapsedMs < ANCHOR_POSITION_CONFIRM_MAX_MS))
+          (belowSchedule && elapsedMs < ANCHOR_POSITION_CONFIRM_MAX_MS)
         ) {
           glideFromOffsetPx = Math.min(
             Math.max(target.offsetFromViewportTop, restOffsetPx),
@@ -336,7 +330,10 @@ export function useTailAnchorScroll({
       // against `target.clamped` to decide the anchor has arrived.
       const glideElapsedMs = glideStartedAt === null ? 0 : now - glideStartedAt;
       const gliding =
-        glideStartedAt !== null && !hasLanded && glideElapsedMs < ANCHOR_SLIDE_DURATION_MS;
+        glideStartedAt !== null &&
+        !hasLanded &&
+        glideElapsedMs < ANCHOR_SLIDE_DURATION_MS &&
+        elapsedMs < ANCHOR_SLIDE_MAX_MS;
       // While it does run, positioning the anchor relative to where it was just
       // measured keeps the motion on schedule even as the content above it
       // resizes: the scroll coordinate that holds a given visible offset moves,

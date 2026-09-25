@@ -15,10 +15,14 @@ function DelayedLayout({
   contentRevision,
   messageRevision,
   onFinished,
+  animateAnchorSlide = false,
+  reserveHeight = 180,
 }: {
   contentRevision: unknown;
   messageRevision: unknown;
   onFinished: () => void;
+  animateAnchorSlide?: boolean;
+  reserveHeight?: number;
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -27,7 +31,7 @@ function DelayedLayout({
     listRef,
     timelineRootRef: rootRef,
     anchorMessageId: ANCHOR_ID,
-    animateAnchorSlide: false,
+    animateAnchorSlide,
     contentChangeSignal: contentRevision,
     messageChangeSignal: messageRevision,
     onAnchorSlideFinished: onFinished,
@@ -41,11 +45,44 @@ function DelayedLayout({
       >
         <div data-testid="delayed-content" style={{ height: 300 }} />
         <div data-message-id={ANCHOR_ID} style={{ height: 20 }} />
-        <div style={{ height: 180 }} />
+        <div style={{ height: reserveHeight }} />
       </div>
     </div>
   );
 }
+
+it("finishes the slide when the reserve is two pixels short of the requested anchor", async () => {
+  vi.useFakeTimers({ toFake: ["performance", "requestAnimationFrame", "cancelAnimationFrame"] });
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  const onFinished = vi.fn();
+  try {
+    flushSync(() =>
+      root.render(
+        <DelayedLayout
+          contentRevision={0}
+          messageRevision={0}
+          onFinished={onFinished}
+          animateAnchorSlide
+          reserveHeight={178}
+        />,
+      ),
+    );
+    await vi.advanceTimersByTimeAsync(600);
+    const viewport = host.querySelector<HTMLElement>('[data-testid="viewport"]')!;
+    const anchor = host.querySelector<HTMLElement>(`[data-message-id="${ANCHOR_ID}"]`)!;
+    const offset = () => anchor.getBoundingClientRect().top - viewport.getBoundingClientRect().top;
+    expect(offset()).toBeCloseTo(2, 0);
+    await vi.advanceTimersByTimeAsync(2_600);
+    expect(offset()).toBeCloseTo(2, 0);
+    expect(onFinished).toHaveBeenCalledTimes(1);
+  } finally {
+    flushSync(() => root.unmount());
+    host.remove();
+    vi.useRealTimers();
+  }
+});
 
 it("holds a steer while newly received content is still waiting for layout", async () => {
   vi.useFakeTimers({ toFake: ["performance", "requestAnimationFrame", "cancelAnimationFrame"] });
