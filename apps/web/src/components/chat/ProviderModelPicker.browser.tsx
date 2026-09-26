@@ -2,7 +2,7 @@ import "../../index.css";
 
 import { type ModelSlug, type ProviderKind, type ServerProviderStatus } from "@synara/contracts";
 import { useState } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { I18nProvider } from "@lingui/react";
@@ -218,11 +218,73 @@ async function mountPicker(props: {
 }
 
 describe("ProviderModelPicker", () => {
+  beforeEach(async () => {
+    await page.viewport(1000, 700);
+  });
+
   afterEach(() => {
     document.body.innerHTML = "";
     localStorage.clear();
     sessionStorage.clear();
     vi.restoreAllMocks();
+  });
+
+  it("keeps Cursor groups reachable after expanding in a narrow bottom-docked picker", async () => {
+    const viewport = { width: window.innerWidth, height: window.innerHeight };
+    await page.viewport(380, 600);
+    const models = ["Cursor", "xAI", "Anthropic", "OpenAI", "Google", "Moonshot AI"].flatMap(
+      (provider, group) =>
+        Array.from({ length: 8 }, (_, index) => ({
+          slug: `group-${group}-model-${index}` as ModelSlug,
+          name: `${provider} model ${index}`,
+          upstreamProviderId: provider.toLowerCase(),
+          upstreamProviderName: provider,
+        })),
+    );
+    const mounted = await mountPicker({
+      provider: "codex",
+      model: "gpt-5-codex",
+      lockedProvider: null,
+      providers: (["codex", "claudeAgent", "cursor", "droid", "pi"] as const).map((provider) => ({
+        provider,
+        status: "ready",
+        available: true,
+        authStatus: "authenticated",
+        checkedAt: "2026-04-10T10:00:00.000Z",
+      })),
+      modelOptionsByProvider: { ...MODEL_OPTIONS_BY_PROVIDER, cursor: models },
+    });
+    try {
+      const trigger = page.getByRole("button").element() as HTMLElement;
+      trigger.parentElement!.style.cssText = "position:fixed;bottom:16px;left:16px";
+      await page.getByRole("button").click();
+      await page.getByRole("menuitem", { name: "Cursor", exact: true }).click();
+      await expect
+        .element(page.getByRole("menuitem", { name: "Droid", exact: true }))
+        .not.toBeInTheDocument();
+      const group = page.getByRole("button", { name: "Anthropic 8", exact: true });
+      await expect.element(group).toBeVisible();
+      await group.click();
+      await page.screenshot();
+      await page.getByRole("menuitemradio", { name: /^Anthropic model 3/ }).hover();
+      await new Promise((resolve) => window.setTimeout(resolve, 600));
+      await page.getByRole("menuitemradio", { name: /^Anthropic model 3/ }).click();
+      expect(mounted.onProviderModelChange).toHaveBeenCalledWith("cursor", "group-2-model-3");
+      await expect.element(page.getByRole("menu")).not.toBeInTheDocument();
+      await page.getByRole("button").click();
+      await page.getByRole("menuitem", { name: "Cursor", exact: true }).click();
+      await page.getByPlaceholder("Search models or providers").fill("Anthropic");
+      await page.getByRole("menuitem", { name: "Back", exact: true }).click();
+      await page.getByRole("menuitem", { name: "Droid", exact: true }).click();
+      await page.getByRole("menuitemradio", { name: "Custom GPT-5.6 Luna" }).click();
+      expect(mounted.onProviderModelChange).toHaveBeenLastCalledWith(
+        "droid",
+        "custom:GPT-5.6-Luna-0",
+      );
+    } finally {
+      await mounted.cleanup();
+      await page.viewport(viewport.width, viewport.height);
+    }
   });
 
   it("waits for hover intent and cancels providers crossed on the way to Codex", async () => {

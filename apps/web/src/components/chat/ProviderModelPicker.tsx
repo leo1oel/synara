@@ -27,7 +27,7 @@ import {
 } from "../ui/menu";
 import { PROVIDER_ICON_COMPONENT_BY_PROVIDER } from "../ProviderIcon";
 import { cn } from "~/lib/utils";
-import { TriangleAlertIcon } from "~/lib/icons";
+import { ChevronLeftIcon, TriangleAlertIcon } from "~/lib/icons";
 import { PickerPanelShell } from "./PickerPanelShell";
 import { PickerTriggerButton } from "./PickerTriggerButton";
 import { ProviderModelOptionGroupList } from "./ProviderModelOptionGroupList";
@@ -44,6 +44,7 @@ import {
   type ProviderModelOption,
 } from "../../providerModelOptions";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
+import { useIsMobile } from "../../hooks/useMediaQuery";
 import {
   FAVORITE_MODEL_STORAGE_KEYS,
   supportsModelFavorites,
@@ -233,6 +234,8 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
   const { i18n } = useLingui();
   const { onAfterSelection } = props;
   const [modelSearchQuery, setModelSearchQuery] = useState("");
+  const isNarrow = useIsMobile();
+  const [expandedProvider, setExpandedProvider] = useState<ProviderKind | null>(null);
   const [cursorFavoriteModelSlugs, setCursorFavoriteModelSlugs] = useLocalStorage(
     FAVORITE_MODEL_STORAGE_KEYS.cursor,
     EMPTY_FAVORITE_MODEL_SLUGS,
@@ -428,6 +431,27 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
     return <>{renderModelRadioGroup(props.lockedProvider)}</>;
   }
 
+  // Sideways hover menus overlap in the embedded panel. Drill into the same
+  // popup instead, so expanding model groups cannot expose sibling triggers.
+  if (isNarrow && expandedProvider !== null) {
+    return (
+      <>
+        <MenuItem
+          closeOnClick={false}
+          onClick={() => {
+            setExpandedProvider(null);
+            setModelSearchQuery("");
+          }}
+        >
+          <ChevronLeftIcon aria-hidden="true" className="size-3 shrink-0" />
+          <Trans>Back</Trans>
+        </MenuItem>
+        <MenuSeparator />
+        {renderModelRadioGroup(expandedProvider)}
+      </>
+    );
+  }
+
   return (
     <>
       {visibleAvailableProviderOptions.map((option) => {
@@ -448,6 +472,24 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
               <span className="ms-auto text-ui-sm text-muted-foreground/80">
                 {availability.label}
               </span>
+            </MenuItem>
+          );
+        }
+        if (isNarrow) {
+          return (
+            <MenuItem
+              key={option.value}
+              closeOnClick={false}
+              onClick={() => setExpandedProvider(option.value)}
+            >
+              <OptionIcon
+                aria-hidden="true"
+                className={cn(
+                  "size-3 shrink-0",
+                  providerIconClassName(option.value, "text-muted-foreground/85"),
+                )}
+              />
+              {option.label}
             </MenuItem>
           );
         }
