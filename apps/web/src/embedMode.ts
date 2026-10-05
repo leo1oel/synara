@@ -1074,6 +1074,17 @@ export function applyEmbedTheme(config: EmbedModeConfig): void {
         };
   const variables: Record<string, string> = {
     "--app-shell-background": colors.background,
+    // Synara 1.0 route shells, detail panes, and sidechat docks use these
+    // app-level surfaces instead of --background. Override them at the same
+    // iframe boundary so a persisted/system theme cannot leave light fills
+    // behind host-themed text. Root tokens also reach portalled menus.
+    "--app-window-background": colors.background,
+    "--app-content-surface": colors.surface,
+    "--app-overlay-surface": colors.elevated,
+    "--app-overlay-backing": "transparent",
+    "--app-composer-picker-surface": colors.elevated,
+    "--app-chat-code-surface": colors.elevated,
+    "--app-user-message-background": colors.elevated,
     "--color-background-panel": colors.surface,
     "--color-background-surface": colors.surface,
     "--color-background-surface-under": colors.background,
@@ -1091,6 +1102,7 @@ export function applyEmbedTheme(config: EmbedModeConfig): void {
     "--color-text-foreground-tertiary": colors.faint,
     "--color-icon-primary": colors.foreground,
     "--color-icon-secondary": colors.muted,
+    "--color-border": colors.border,
     "--background": colors.background,
     "--foreground": colors.foreground,
     "--card": colors.surface,

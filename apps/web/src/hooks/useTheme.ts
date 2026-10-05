@@ -320,7 +320,9 @@ export function useTheme() {
     desktopBlurUnavailable: false,
   }));
   const theme = snapshot.state.mode;
-  const resolvedTheme = resolveThemeVariant(theme, snapshot.systemDark);
+  // Code/diff renderers and sidechat content must agree with the DOM palette
+  // projected by applyEmbedTheme, without changing standalone theme storage.
+  const resolvedTheme = readEmbedMode()?.theme ?? resolveThemeVariant(theme, snapshot.systemDark);
   const activeTheme = resolveThemePack(snapshot.state, resolvedTheme);
   const darkTheme = resolveThemePack(snapshot.state, "dark");
   const lightTheme = resolveThemePack(snapshot.state, "light");
