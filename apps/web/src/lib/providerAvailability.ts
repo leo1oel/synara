@@ -8,6 +8,7 @@ import { isProviderKind } from "../providerOrdering";
 
 const CUSTOM_BINARY_CONFIRMATION_SUFFIX =
   "Availability will be confirmed when you start a session.";
+import { getDefaultModel } from "@synara/shared/model";
 
 export interface ProviderSendAvailability {
   readonly provider: ProviderKind;
@@ -33,24 +34,11 @@ export function normalizeProviderStatusForLocalConfig(input: {
   status: ServerProviderStatus | null | undefined;
   customBinaryPath?: string | null | undefined;
   confirmedCustomBinaryPath?: string | null | undefined;
-  disabled?: boolean | undefined;
 }): ServerProviderStatus | null {
   const status = input.status ?? null;
   if (!status) {
     return null;
   }
-  if (input.disabled) {
-    return {
-      ...status,
-      provider: input.provider,
-      status: "warning",
-      available: false,
-      authStatus: "unknown",
-      checkedAt: status.checkedAt,
-      message: "Provider is disabled in Synara settings.",
-    };
-  }
-
   if (status.enabled === false) {
     return status;
   }
@@ -145,6 +133,24 @@ export function findProviderStatus(
     );
   }
   return statuses.find((status) => (status.driver ?? status.provider) === provider) ?? null;
+}
+
+export function findFirstUsableDefaultProvider(
+  statuses: readonly ServerProviderStatus[],
+  providerOrder: readonly ProviderKind[],
+): ProviderKind | null {
+  const checked = new Set<ProviderKind>();
+  for (const provider of providerOrder) {
+    if (checked.has(provider)) continue;
+    checked.add(provider);
+    if (
+      getDefaultModel(provider) !== null &&
+      isProviderUsable(findProviderStatus(statuses, provider))
+    ) {
+      return provider;
+    }
+  }
+  return null;
 }
 
 export function resolveAvailableProviderPreference(input: {

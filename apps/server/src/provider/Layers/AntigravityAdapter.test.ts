@@ -193,6 +193,92 @@ claude-sonnet-4-6\tClaude Sonnet 4.6 (Thinking)
 });
 
 describe("Antigravity CLI integration helpers", () => {
+  it("projects image attachments into the print prompt", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "synara-antigravity-image-prompt-"));
+    let spawnedArgs: readonly string[] | undefined;
+    let child: ChildProcess | undefined;
+    const spawnProcess = ((_command: string, args: readonly string[]) => {
+      spawnedArgs = args;
+      const spawned = new EventEmitter() as ChildProcess;
+      Object.assign(spawned, {
+        stdout: new PassThrough(),
+        stderr: new PassThrough(),
+        killed: false,
+        kill: () => true,
+      });
+      child = spawned;
+      return spawned;
+    }) as NonNullable<AntigravityAdapterDependencies["spawnProcess"]>;
+
+    try {
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const adapter = yield* AntigravityAdapter;
+          const serverConfig = yield* ServerConfig;
+          const attachmentId = "antigravity-image-prompt";
+          const attachmentPath = path.join(serverConfig.attachmentsDir, `${attachmentId}.png`);
+          yield* Effect.promise(() => fs.mkdir(serverConfig.attachmentsDir, { recursive: true }));
+          yield* Effect.promise(() => fs.writeFile(attachmentPath, Uint8Array.from([1, 2, 3])));
+
+          const threadId = ThreadId.makeUnsafe("thread-antigravity-image-prompt");
+          yield* adapter.startSession({
+            provider: "antigravity",
+            threadId,
+            runtimeMode: "full-access",
+            cwd: root,
+            providerOptions: { antigravity: { binaryPath: "/fake/agy" } },
+          });
+          yield* adapter.sendTurn({
+            threadId,
+            input: "Inspect this diagram",
+            attachments: [
+              {
+                type: "image",
+                id: attachmentId,
+                name: "mechanism.png",
+                mimeType: "image/png",
+                sizeBytes: 3,
+              },
+            ],
+          });
+
+          const promptIndex = spawnedArgs?.indexOf("-p") ?? -1;
+          const prompt = promptIndex >= 0 ? spawnedArgs?.[promptIndex + 1] : undefined;
+          expect(prompt).toContain("<attached_files>");
+          expect(prompt).toContain('\"mechanism.png\" - image/png');
+          expect(prompt).toContain(attachmentPath);
+
+          const turnTerminalFiber = yield* adapter.streamEvents.pipe(
+            Stream.filter((event) => event.type === "turn.completed"),
+            Stream.take(1),
+            Stream.runCollect,
+            Effect.forkChild,
+          );
+          child?.emit("close", 0, null);
+          const terminalEvents = Array.from(
+            yield* Fiber.join(turnTerminalFiber).pipe(Effect.timeout("2 seconds")),
+          );
+          expect(terminalEvents).toHaveLength(1);
+          yield* adapter.stopSession(threadId);
+        }).pipe(
+          Effect.provide(
+            makeAntigravityAdapterLive({
+              ensurePlugin: async () => undefined,
+              spawnProcess,
+            }).pipe(
+              Layer.provideMerge(
+                ServerConfig.layerTest(root, { prefix: "antigravity-image-prompt-" }),
+              ),
+              Layer.provideMerge(NodeServices.layer),
+            ),
+          ),
+        ),
+      );
+    } finally {
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("rotates the gateway lease per print turn and rejects a retained prior bootstrap", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "synara-antigravity-turn-lease-"));
     const liveTokens = new Set<string>();
@@ -1306,6 +1392,119 @@ describe("Antigravity CLI integration helpers", () => {
             }).pipe(
               Layer.provideMerge(
                 ServerConfig.layerTest(root, { prefix: "antigravity-child-failure-" }),
+              ),
+              Layer.provideMerge(NodeServices.layer),
+            ),
+          ),
+        ),
+      );
+    } finally {
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not treat transcript text as proof of success after a CLI timeout", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "synara-antigravity-final-timeout-"));
+    const transcriptFile = path.join(root, "transcript.jsonl");
+    await fs.writeFile(transcriptFile, "");
+    let eventFile: string | undefined;
+    let child: ChildProcess | undefined;
+    let stderr: PassThrough | undefined;
+    const spawnProcess = ((
+      _command: string,
+      _args: readonly string[],
+      options: { readonly env?: NodeJS.ProcessEnv },
+    ) => {
+      eventFile = options.env?.SYNARA_ANTIGRAVITY_EVENTS;
+      const spawned = new EventEmitter() as ChildProcess;
+      stderr = new PassThrough();
+      Object.assign(spawned, {
+        stdout: new PassThrough(),
+        stderr,
+        killed: false,
+        kill: () => true,
+      });
+      child = spawned;
+      return spawned;
+    }) as NonNullable<AntigravityAdapterDependencies["spawnProcess"]>;
+
+    try {
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const adapter = yield* AntigravityAdapter;
+          const assistantObserved = yield* Deferred.make<void>();
+          const turnCompleted = yield* Deferred.make<void>();
+          const events: Array<unknown> = [];
+          const eventsFiber = yield* adapter.streamEvents.pipe(
+            Stream.runForEach((event) =>
+              Effect.gen(function* () {
+                events.push(event);
+                if (
+                  event.type === "item.completed" &&
+                  event.payload.itemType === "assistant_message"
+                ) {
+                  yield* Deferred.succeed(assistantObserved, undefined);
+                }
+                if (event.type === "turn.completed") {
+                  yield* Deferred.succeed(turnCompleted, undefined);
+                }
+              }),
+            ),
+            Effect.forkChild,
+          );
+          const threadId = ThreadId.makeUnsafe("thread-antigravity-final-timeout");
+          yield* adapter.startSession({
+            provider: "antigravity",
+            threadId,
+            runtimeMode: "full-access",
+            cwd: root,
+            providerOptions: { antigravity: { binaryPath: "/fake/agy" } },
+          });
+          yield* adapter.sendTurn({ threadId, input: "finish the task", attachments: [] });
+
+          yield* Effect.promise(() =>
+            fs.appendFile(
+              eventFile!,
+              `pre-invocation\t${JSON.stringify({
+                conversationId: "conversation-final-timeout",
+                transcriptPath: transcriptFile,
+              })}\n`,
+            ),
+          );
+          yield* Effect.promise(() =>
+            fs.appendFile(
+              transcriptFile,
+              `${JSON.stringify({
+                step_index: 1,
+                type: "PLANNER_RESPONSE",
+                status: "DONE",
+                content: "The requested change is complete.",
+              })}\n`,
+            ),
+          );
+          yield* Deferred.await(assistantObserved).pipe(Effect.timeout("2 seconds"));
+
+          stderr?.end("Error: timeout waiting for response\n");
+          child?.emit("close", 1, null);
+          yield* Deferred.await(turnCompleted).pipe(Effect.timeout("2 seconds"));
+
+          expect(events).toContainEqual(
+            expect.objectContaining({
+              type: "turn.completed",
+              payload: expect.objectContaining({ state: "failed", stopReason: "error" }),
+            }),
+          );
+          expect(events).toContainEqual(expect.objectContaining({ type: "runtime.error" }));
+          yield* Fiber.interrupt(eventsFiber);
+          yield* adapter.stopSession(threadId);
+        }).pipe(
+          Effect.provide(
+            makeAntigravityAdapterLive({
+              ensurePlugin: async () => undefined,
+              spawnProcess,
+            }).pipe(
+              Layer.provideMerge(
+                ServerConfig.layerTest(root, { prefix: "antigravity-final-timeout-" }),
               ),
               Layer.provideMerge(NodeServices.layer),
             ),

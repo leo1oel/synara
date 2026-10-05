@@ -1,5 +1,6 @@
 import type {
   GitHubInboxState,
+  GitHubInboxListInput,
   GitHubInboxSort,
   PullRequestActionInput,
   PullRequestAutoFixListResult,
@@ -379,9 +380,9 @@ export function pullRequestsForceRefreshMutationOptions(queryClient: QueryClient
     // merged field-by-field through the retained identity protection below.
     scope: { id: PULL_REQUEST_ACTION_REFRESH_SCOPE_ID },
     networkMode: "always",
-    mutationFn: (input: { state: GitHubInboxState; sort?: GitHubInboxSort }) =>
+    mutationFn: (input: GitHubInboxListInput) =>
       ensureNativeApi().githubInbox.list({
-        state: input.state,
+        ...input,
         sort: input.sort ?? "created",
         forceRefresh: true,
       }),
@@ -389,7 +390,7 @@ export function pullRequestsForceRefreshMutationOptions(queryClient: QueryClient
       const context = beginPullRequestRefresh(queryClient);
       try {
         await queryClient.cancelQueries({
-          queryKey: githubInboxQueryKeys.list(input.state, input.sort),
+          queryKey: githubInboxQueryKeys.list(input.state, input.sort, input),
           exact: true,
         });
         return context;
@@ -399,7 +400,7 @@ export function pullRequestsForceRefreshMutationOptions(queryClient: QueryClient
       }
     },
     onSuccess: (result, input, context) => {
-      const refreshedQueryKey = githubInboxQueryKeys.list(input.state, input.sort);
+      const refreshedQueryKey = githubInboxQueryKeys.list(input.state, input.sort, input);
       const protectedIdentities = context
         ? protectedPinIdentitiesForRefresh(queryClient, context)
         : new Set<string>();

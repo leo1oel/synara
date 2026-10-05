@@ -1192,6 +1192,12 @@ export function projectEvent(
                   ? thread.latestTurn
                   : {
                       turnId: session.activeTurnId,
+                      pendingMessageId:
+                        thread.latestTurn?.turnId === session.activeTurnId
+                          ? (thread.latestTurn.pendingMessageId ?? null)
+                          : thread.messages.at(-1)?.role === "user"
+                            ? thread.messages.at(-1)?.id
+                            : null,
                       state: "running",
                       requestedAt:
                         thread.latestTurn?.turnId === session.activeTurnId

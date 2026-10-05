@@ -6,8 +6,9 @@
 // Layer: Web UI component
 
 import type { ProviderKind, ServerProviderStatus } from "@synara/contracts";
+import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { VISIBLE_PROVIDER_DESCRIPTORS } from "../../betaFeatures";
-import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { getCustomBinaryPathForProvider, useAppSettings } from "~/appSettings";
@@ -21,7 +22,8 @@ import {
   findProviderStatus,
   normalizeProviderStatusForLocalConfig,
 } from "~/lib/providerAvailability";
-import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
+import { serverConfigQueryOptions, serverSettingsQueryOptions } from "~/lib/serverReactQuery";
+import { ensureNativeApi } from "~/nativeApi";
 import { cn } from "~/lib/utils";
 import { isProviderKind } from "~/providerOrdering";
 import { useWorkspacePathsStore } from "~/workspacePathsStore";
@@ -83,16 +85,25 @@ function useDisabledProvidersDraft(): {
   readonly disabled: ReadonlySet<ProviderKind>;
   readonly setProviderDisabled: (provider: ProviderKind, disabled: boolean) => void;
 } {
-  const { settings, updateSettingsAndWait } = useAppSettings();
+  const queryClient = useQueryClient();
+  const settingsQuery = useQuery(serverSettingsQueryOptions());
+  const providerSettings = settingsQuery.data?.providers;
   const [draft, setDraft] = useState<ReadonlySet<ProviderKind>>(
-    () => new Set(settings.disabledProviders),
+    () =>
+      new Set(
+        PROVIDER_DESCRIPTORS.map((item) => item.kind).filter(
+          (kind) => providerSettings?.[kind].enabled === false,
+        ),
+      ),
   );
   const draftRef = useRef(draft);
   // State, not a ref: a rejected write refetches settings *before* the count drops, so the
   // resync must run again once the final write settles or the draft would stay rolled
   // forward on the rejected value.
   const [pendingWrites, setPendingWrites] = useState(0);
-  const serverDisabledProviders = settings.disabledProviders;
+  const serverDisabledProviders = PROVIDER_DESCRIPTORS.map((item) => item.kind).filter(
+    (kind) => providerSettings?.[kind].enabled === false,
+  );
 
   useEffect(() => {
     if (pendingWrites > 0) return;
@@ -111,9 +122,21 @@ function useDisabledProvidersDraft(): {
     draftRef.current = next;
     setDraft(next);
     setPendingWrites((count) => count + 1);
-    void updateSettingsAndWait({ disabledProviders: [...next] }).finally(() => {
-      setPendingWrites((count) => count - 1);
-    });
+    const current = settingsQuery.data;
+    if (!current) return;
+    void ensureNativeApi()
+      .server.updateSettings({
+        providers: {
+          ...current.providers,
+          [provider]: { ...current.providers[provider], enabled: !disabled },
+        },
+      })
+      .then(() =>
+        queryClient.invalidateQueries({ queryKey: serverSettingsQueryOptions().queryKey }),
+      )
+      .finally(() => {
+        setPendingWrites((count) => count - 1);
+      });
   };
 
   return { disabled: draft, setProviderDisabled };

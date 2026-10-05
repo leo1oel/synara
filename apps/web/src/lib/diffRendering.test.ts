@@ -7,24 +7,69 @@ import { describe, expect, it } from "vitest";
 import {
   buildFileDiffRenderKey,
   buildPatchCacheKey,
+  buildDiffPanelUnsafeCSS,
+  compareDiffPaths,
   fileDiffStatsByPath,
   getRenderablePatch,
-  hasUneditableGitMode,
+  MAX_RENDERABLE_LINE_LENGTH,
+  MAX_RENDERABLE_PATCH_BYTES,
   resolveDiffCopyText,
-  PARTIAL_DIFF_COPY_NOTICE,
   resolveFileDiffStatByChangedPath,
   resolveFileDiffPath,
-  resolveFileDiffPrevPath,
   sortFileDiffsByPath,
-  splitPatchIntoFileSegments,
   splitRepoRelativePath,
+  summarizePatchTotals,
 } from "./diffRendering";
 
+describe("buildDiffPanelUnsafeCSS", () => {
+  it("exposes semantic font sizes and line height to every Pierre diff surface", () => {
+    const css = buildDiffPanelUnsafeCSS("light");
+
+    expect(css).toContain(
+      "--diffs-font-size: var(--app-font-size-diff-code, var(--app-font-size-chat-code, 11px))",
+    );
+    expect(css).toContain("--diffs-line-height: var(--app-line-height-diff-code, 20px)");
+    expect(css).toContain("--app-font-size-diff-header");
+    expect(css).toContain("--app-font-size-diff-meta");
+    expect(css).toContain("--app-font-weight-diff-meta");
+  });
+
+  it("pins Pierre's text branch to the selected theme", () => {
+    const css = buildDiffPanelUnsafeCSS("dark");
+
+    expect(css).toContain("color-scheme: dark");
+    expect(css).toContain("--diffs-fg: var(--foreground) !important");
+    expect(css).toContain("--diffs-dark: var(--foreground) !important");
+  });
+
+  it("injects Lattice-style scrollbars into Pierre's shadow DOM", () => {
+    const css = buildDiffPanelUnsafeCSS("light");
+
+    expect(css).toContain("*::-webkit-scrollbar-thumb:vertical");
+    expect(css).toContain("*::-webkit-scrollbar-thumb:horizontal");
+    expect(css).toContain("border-bottom-width: 5px");
+    expect(css).toContain("scrollbar-color: color-mix(in srgb, var(--foreground) 8%");
+  });
+});
+
 describe("buildPatchCacheKey", () => {
+  it("returns a stable cache key for identical content", () => {
+    const patch = "diff --git a/a.ts b/a.ts\n+console.log('hello')";
+
+    expect(buildPatchCacheKey(patch)).toBe(buildPatchCacheKey(patch));
+  });
+
   it("normalizes outer whitespace before hashing", () => {
     const patch = "diff --git a/a.ts b/a.ts\n+console.log('hello')";
 
     expect(buildPatchCacheKey(`\n${patch}\n`)).toBe(buildPatchCacheKey(patch));
+  });
+
+  it("changes when diff content changes", () => {
+    const before = "diff --git a/a.ts b/a.ts\n+console.log('hello')";
+    const after = "diff --git a/a.ts b/a.ts\n+console.log('hello world')";
+
+    expect(buildPatchCacheKey(before)).not.toBe(buildPatchCacheKey(after));
   });
 
   it("changes when cache scope changes", () => {
@@ -36,58 +81,24 @@ describe("buildPatchCacheKey", () => {
   });
 });
 
-const FILE_A_PATCH = [
-  "diff --git a/a.ts b/a.ts",
-  "index 0000001..0000002 100644",
-  "--- a/a.ts",
-  "+++ b/a.ts",
-  "@@ -1,2 +1,2 @@",
-  " const shared = 1;",
-  "-const a = 1;",
-  "+const a = 2;",
-].join("\n");
-
-const FILE_B_PATCH = [
-  "diff --git a/b.ts b/b.ts",
-  "index 0000003..0000004 100644",
-  "--- a/b.ts",
-  "+++ b/b.ts",
-  "@@ -1,1 +1,2 @@",
-  " const b = 1;",
-  "+const added = 2;",
-].join("\n");
-
-const FILE_B_PATCH_EDITED = FILE_B_PATCH.replace("const added = 2;", "const added = 3;");
-
-describe("splitPatchIntoFileSegments", () => {
-  it("keeps leading metadata attached to the first segment", () => {
-    const segments = splitPatchIntoFileSegments(`commit message\n${FILE_A_PATCH}\n${FILE_B_PATCH}`);
-
-    expect(segments).toHaveLength(2);
-    expect(segments[0]).toContain("commit message");
-  });
-});
-
-describe("getRenderablePatch per-file cache keys", () => {
-  it("keeps a file's render key stable when another file changes", () => {
-    const before = getRenderablePatch(`${FILE_A_PATCH}\n${FILE_B_PATCH}`);
-    const after = getRenderablePatch(`${FILE_A_PATCH}\n${FILE_B_PATCH_EDITED}`);
-    if (before?.kind !== "files" || after?.kind !== "files") {
-      throw new Error("expected parsed files");
-    }
-
-    const keyOf = (renderable: typeof before, path: string) => {
-      const file = renderable.files.find((candidate) => resolveFileDiffPath(candidate) === path);
-      if (!file) throw new Error(`missing ${path}`);
-      return buildFileDiffRenderKey(file);
-    };
-
-    expect(keyOf(after, "a.ts")).toBe(keyOf(before, "a.ts"));
-    expect(keyOf(after, "b.ts")).not.toBe(keyOf(before, "b.ts"));
-  });
-});
-
 describe("resolveDiffCopyText", () => {
+  it("preserves the original patch content for clipboard writes", () => {
+    const patch = "diff --git a/a.ts b/a.ts\n+console.log('hello')\n";
+
+    expect(resolveDiffCopyText(patch)).toBe(patch);
+  });
+
+  it("preserves mode-only metadata without reconstructing the patch", () => {
+    const patch = [
+      "diff --git a/script.sh b/script.sh",
+      "old mode 100644",
+      "new mode 100755",
+      "",
+    ].join("\n");
+
+    expect(resolveDiffCopyText(patch)).toBe(patch);
+  });
+
   it("preserves every line of a large patch without depending on mounted rows", () => {
     const bodyLines = Array.from({ length: 6000 }, (_, index) => `+line ${index + 1}`);
     const patch = [
@@ -104,152 +115,9 @@ describe("resolveDiffCopyText", () => {
     expect(resolveDiffCopyText(patch)).toBe(patch);
   });
 
-  it("marks truncated clipboard content as a partial diff", () => {
-    const patch = "diff --git a/a.ts b/a.ts\n+partial  ";
-
-    expect(resolveDiffCopyText(patch, true)).toBe(`${patch}\n\n${PARTIAL_DIFF_COPY_NOTICE}\n`);
-  });
-
   it("does not expose empty or missing patches as copyable", () => {
     expect(resolveDiffCopyText(undefined)).toBeNull();
     expect(resolveDiffCopyText(" \n\t ")).toBeNull();
-  });
-});
-
-describe("resolveFileDiffPrevPath", () => {
-  const parseSingleFile = (patch: string) => {
-    const renderable = getRenderablePatch(patch, "prev-path:test");
-    if (renderable?.kind !== "files" || renderable.files.length !== 1) {
-      throw new Error("expected one parsed file");
-    }
-    return renderable.files[0]!;
-  };
-
-  it("returns the old path only for renamed files", () => {
-    const renamed = parseSingleFile(
-      [
-        "diff --git a/src/old.ts b/src/new.ts",
-        "similarity index 80%",
-        "rename from src/old.ts",
-        "rename to src/new.ts",
-        "index 1111111..2222222 100644",
-        "--- a/src/old.ts",
-        "+++ b/src/new.ts",
-        "@@ -1,1 +1,1 @@",
-        "-const value = 1;",
-        "+const value = 2;",
-        "",
-      ].join("\n"),
-    );
-    expect(resolveFileDiffPath(renamed)).toBe("src/new.ts");
-    expect(resolveFileDiffPrevPath(renamed)).toBe("src/old.ts");
-  });
-
-  it("reports no old path for added files, whose base side does not exist", () => {
-    const added = parseSingleFile(
-      [
-        "diff --git a/src/added.ts b/src/added.ts",
-        "new file mode 100644",
-        "index 0000000..2222222",
-        "--- /dev/null",
-        "+++ b/src/added.ts",
-        "@@ -0,0 +1,1 @@",
-        "+const value = 1;",
-        "",
-      ].join("\n"),
-    );
-    expect(added.type).toBe("new");
-    expect(resolveFileDiffPrevPath(added)).toBeNull();
-  });
-
-  it("reports no old path for in-place edits", () => {
-    const changed = parseSingleFile(
-      [
-        "diff --git a/src/one.ts b/src/one.ts",
-        "index 1111111..2222222 100644",
-        "--- a/src/one.ts",
-        "+++ b/src/one.ts",
-        "@@ -1,1 +1,1 @@",
-        "-const one = 1;",
-        "+const one = 2;",
-        "",
-      ].join("\n"),
-    );
-    expect(resolveFileDiffPrevPath(changed)).toBeNull();
-  });
-});
-
-describe("hasUneditableGitMode", () => {
-  const parseSingleFile = (patch: string) => {
-    const renderable = getRenderablePatch(patch, "symlink:test");
-    if (renderable?.kind !== "files" || renderable.files.length !== 1) {
-      throw new Error("expected one parsed file");
-    }
-    return renderable.files[0]!;
-  };
-
-  it("recognizes changed and added symlinks by their git mode", () => {
-    const changed = parseSingleFile(
-      [
-        "diff --git a/link b/link",
-        "index 1111111..2222222 120000",
-        "--- a/link",
-        "+++ b/link",
-        "@@ -1 +1 @@",
-        "-old-target",
-        "\\ No newline at end of file",
-        "+new-target",
-        "\\ No newline at end of file",
-        "",
-      ].join("\n"),
-    );
-    expect(hasUneditableGitMode(changed)).toBe(true);
-    const added = parseSingleFile(
-      [
-        "diff --git a/link b/link",
-        "new file mode 120000",
-        "index 0000000..2222222",
-        "--- /dev/null",
-        "+++ b/link",
-        "@@ -0,0 +1 @@",
-        "+target",
-        "\\ No newline at end of file",
-        "",
-      ].join("\n"),
-    );
-    expect(hasUneditableGitMode(added)).toBe(true);
-  });
-
-  it("recognizes submodule entries by their gitlink mode", () => {
-    const submodule = parseSingleFile(
-      [
-        "diff --git a/vendor/lib b/vendor/lib",
-        "index 1111111..2222222 160000",
-        "--- a/vendor/lib",
-        "+++ b/vendor/lib",
-        "@@ -1 +1 @@",
-        "-Subproject commit 1111111111111111111111111111111111111111",
-        "+Subproject commit 2222222222222222222222222222222222222222",
-        "",
-      ].join("\n"),
-    );
-    expect(hasUneditableGitMode(submodule)).toBe(true);
-  });
-
-  it("treats regular files as editable", () => {
-    const regular = parseSingleFile(
-      [
-        "diff --git a/src/one.ts b/src/one.ts",
-        "index 1111111..2222222 100644",
-        "--- a/src/one.ts",
-        "+++ b/src/one.ts",
-        "@@ -1,1 +1,1 @@",
-        "-const one = 1;",
-        "+const one = 2;",
-        "",
-      ].join("\n"),
-    );
-    expect(hasUneditableGitMode(regular)).toBe(false);
   });
 });
 
@@ -271,6 +139,16 @@ describe("file diff identity helpers", () => {
     "+const two = 2;",
     "",
   ].join("\n");
+
+  it("strips a/ and b/ prefixes from parsed file paths", () => {
+    const renderable = getRenderablePatch(twoFilePatch, "git-pane:test");
+    expect(renderable?.kind).toBe("files");
+    if (renderable?.kind !== "files") return;
+
+    const paths = renderable.files.map((file) => resolveFileDiffPath(file));
+    expect(paths).toContain("src/one.ts");
+    expect(paths).toContain("src/two.ts");
+  });
 
   it("derives a unique, stable render key per file", () => {
     const renderable = getRenderablePatch(twoFilePatch, "git-pane:test");
@@ -320,6 +198,30 @@ describe("splitRepoRelativePath", () => {
 });
 
 describe("sortFileDiffsByPath", () => {
+  it("preserves default-locale ordering and stable case, accent, and numeric ties", () => {
+    const paths = [
+      "File2.ts",
+      "file02.ts",
+      "file10.ts",
+      "é.ts",
+      "E.ts",
+      "e.ts",
+      "日本2.ts",
+      "日本10.ts",
+    ];
+    const expected = paths.toSorted((left, right) =>
+      left.localeCompare(right, undefined, { numeric: true, sensitivity: "base" }),
+    );
+    expect(paths.toSorted(compareDiffPaths)).toEqual(expected);
+    for (const left of paths) {
+      for (const right of paths) {
+        expect(Math.sign(compareDiffPaths(left, right))).toBe(
+          Math.sign(left.localeCompare(right, undefined, { numeric: true, sensitivity: "base" })),
+        );
+      }
+    }
+  });
+
   const outOfOrderPatch = [
     "diff --git a/src/zebra.ts b/src/zebra.ts",
     "index 1111111..2222222 100644",
@@ -360,6 +262,53 @@ describe("sortFileDiffsByPath", () => {
       "src/zebra.ts",
     ]);
     expect(renderable.files).toEqual(original);
+  });
+});
+
+describe("summarizePatchTotals", () => {
+  it("summarizes additions and deletions from a single-file unified patch", () => {
+    const patch = [
+      "diff --git a/src/example.ts b/src/example.ts",
+      "index 1111111..2222222 100644",
+      "--- a/src/example.ts",
+      "+++ b/src/example.ts",
+      "@@ -1,3 +1,4 @@",
+      " const stable = true;",
+      "-const oldValue = 1;",
+      "+const newValue = 1;",
+      "+const addedValue = 2;",
+      " export { stable };",
+      "",
+    ].join("\n");
+
+    expect(summarizePatchTotals(patch)).toEqual({ additions: 2, deletions: 1, fileCount: 1 });
+  });
+
+  it("includes the changed file count alongside additions and deletions", () => {
+    const patch = [
+      "diff --git a/src/one.ts b/src/one.ts",
+      "index 1111111..2222222 100644",
+      "--- a/src/one.ts",
+      "+++ b/src/one.ts",
+      "@@ -1,2 +1,2 @@",
+      " const a = 1;",
+      "-const b = 1;",
+      "+const b = 2;",
+      "diff --git a/src/two.ts b/src/two.ts",
+      "index 3333333..4444444 100644",
+      "--- a/src/two.ts",
+      "+++ b/src/two.ts",
+      "@@ -0,0 +1,2 @@",
+      "+const c = 3;",
+      "+const d = 4;",
+      "",
+    ].join("\n");
+
+    expect(summarizePatchTotals(patch)).toEqual({ additions: 3, deletions: 1, fileCount: 2 });
+  });
+
+  it("returns null when the patch has no file diffs", () => {
+    expect(summarizePatchTotals(undefined)).toBeNull();
   });
 });
 
@@ -429,5 +378,38 @@ describe("resolveFileDiffStatByChangedPath", () => {
     ]);
 
     expect(resolveFileDiffStatByChangedPath(statsByPath, "index.ts", 2)).toBeUndefined();
+  });
+});
+
+describe("getRenderablePatch budget", () => {
+  const header = ["diff --git a/main.log b/main.log", "--- a/main.log", "+++ b/main.log"];
+
+  it("renders an ordinary patch file by file", () => {
+    const patch = [...header, "@@ -1 +1 @@", "-before", "+after", ""].join("\n");
+    expect(getRenderablePatch(patch, "budget:test")?.kind).toBe("files");
+  });
+
+  it("falls back to raw text for one pathologically long line", () => {
+    // What a LaTeX .log or a minified bundle looks like to the highlighter.
+    const patch = [
+      ...header,
+      "@@ -1 +1 @@",
+      `+${"x".repeat(MAX_RENDERABLE_LINE_LENGTH + 1)}`,
+      "",
+    ].join("\n");
+    const renderable = getRenderablePatch(patch, "budget:test");
+    expect(renderable?.kind).toBe("raw");
+    if (renderable?.kind !== "raw") return;
+    expect(renderable.reason).toContain("too large");
+    // The content is still reachable, just not syntax highlighted.
+    expect(renderable.text).toContain("xxx");
+  });
+
+  it("falls back to raw text past the total size budget", () => {
+    const line = `+${"content ".repeat(10)}`;
+    const body = Array.from({ length: 8000 }, () => line).join("\n");
+    const patch = [...header, "@@ -1 +1 @@", body, ""].join("\n");
+    expect(patch.length).toBeGreaterThan(MAX_RENDERABLE_PATCH_BYTES);
+    expect(getRenderablePatch(patch, "budget:test")?.kind).toBe("raw");
   });
 });

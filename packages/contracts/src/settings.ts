@@ -30,6 +30,8 @@ const CodexAccountConfigs = Schema.Array(CodexAccountConfig).pipe(
 );
 
 const ProviderSettingsBase = {
+  // Compatibility-only view field. The server normalizes persisted values to true
+  // and the patch contract deliberately has no corresponding mutation.
   enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "")),
   customModels: CustomModels,
@@ -138,6 +140,12 @@ export const ServerSettings = Schema.Struct({
       model: DEFAULT_GIT_TEXT_GENERATION_MODEL,
     })),
   ),
+  compileRepairModelSelection: ModelSelection.pipe(
+    Schema.withDecodingDefault(() => ({
+      provider: "codex" as const,
+      model: DEFAULT_GIT_TEXT_GENERATION_MODEL,
+    })),
+  ),
   providers: Schema.Struct({
     codex: CodexServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     claudeAgent: ClaudeServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
@@ -177,7 +185,6 @@ const ModelSelectionPatch = Schema.Struct({
 });
 
 const ProviderSettingsBasePatch = {
-  enabled: Schema.optionalKey(Schema.Boolean),
   binaryPath: Schema.optionalKey(StringSetting),
   customModels: Schema.optionalKey(CustomModels),
 };
@@ -190,6 +197,7 @@ export const ServerSettingsPatch = Schema.Struct({
   githubInboxIncludeUpstreams: Schema.optionalKey(Schema.Boolean),
   sidechatExpiry: Schema.optionalKey(SidechatExpiry),
   textGenerationModelSelection: Schema.optionalKey(ModelSelectionPatch),
+  compileRepairModelSelection: Schema.optionalKey(ModelSelectionPatch),
   providers: Schema.optionalKey(
     Schema.Struct({
       codex: Schema.optionalKey(

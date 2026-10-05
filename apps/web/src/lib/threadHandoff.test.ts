@@ -1,3 +1,4 @@
+import { setupI18n } from "@lingui/core";
 import {
   DEFAULT_MODEL_BY_PROVIDER,
   EventId,
@@ -6,6 +7,7 @@ import {
   type OrchestrationThreadActivity,
   type ProviderKind,
   type ServerProviderStatus,
+  ThreadId,
 } from "@synara/contracts";
 import { describe, expect, it } from "vitest";
 import { AppSettingsSchema, getProviderInstanceOptions } from "../appSettings";
@@ -224,7 +226,33 @@ describe("threadHandoff", () => {
         providerInstances: getProviderInstanceOptions(AppSettingsSchema.makeUnsafe({})),
         providerStatuses: [],
       }),
-    ).toEqual([]);
+    ).toEqual(["claudeAgent"]);
+  });
+
+  it("preserves the source thread title for the created handoff thread", () => {
+    expect(resolveThreadHandoffTitle({ title: "General Greeting" })).toBe("General Greeting");
+    expect(resolveThreadHandoffTitle({ title: "  Debug   Grok handoff  " })).toBe(
+      "Debug Grok handoff",
+    );
+  });
+
+  it("localizes the handoff source badge in Chinese", () => {
+    const i18n = setupI18n();
+    i18n.loadAndActivate({ locale: "zh-CN", messages: zhMessages });
+
+    expect(
+      resolveThreadHandoffBadgeLabel(
+        {
+          handoff: {
+            sourceThreadId: ThreadId.makeUnsafe("source-thread"),
+            sourceProvider: "claudeAgent",
+            importedAt: "2026-08-16T12:00:00.000Z",
+            bootstrapStatus: "completed",
+          },
+        },
+        i18n,
+      ),
+    ).toBe("从 Claude 移交而来");
   });
 
   it("does not borrow a default account's health for unavailable or unchecked accounts", () => {

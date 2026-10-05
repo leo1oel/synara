@@ -87,6 +87,8 @@ import {
 } from "../../checkpointing/Utils.ts";
 import { CheckpointStore } from "../../checkpointing/Services/CheckpointStore.ts";
 import { AgentGatewayOperationRepository } from "../../agentGateway/Services/AgentGatewayOperationRepository.ts";
+import { AgentQualityTrace } from "../../agentGateway/Services/AgentQualityTrace.ts";
+import { ACTIVE_AGENT_HOST_PROFILE } from "../../agentGateway/hostProfile.ts";
 import { GitCore } from "../../git/Services/GitCore.ts";
 import {
   ProviderAdapterProcessError,
@@ -683,7 +685,7 @@ function withProviderThreadStatePrompts(input: {
 function providerPromptOverflowIssue(goalPromptOverheadChars: number): string {
   return goalPromptOverheadChars > 0
     ? "The latest message is too long to include the persistent thread goal. Shorten the message and retry."
-    : "The latest message is too long to include Synara Debug mode instructions. Shorten the message and retry.";
+    : `The latest message is too long to include ${ACTIVE_AGENT_HOST_PROFILE.displayName} Debug mode instructions. Shorten the message and retry.`;
 }
 
 function isUnavailableInteractionRuntime(cause: Cause.Cause<ProviderServiceError>): boolean {
@@ -852,6 +854,7 @@ const make = Effect.gen(function* () {
   const { commandEventTimeout } = yield* ProviderCommandReactorConfig;
   const orchestrationEngine = yield* OrchestrationEngineService;
   const deliveryRepository = yield* OrchestrationEventDeliveryRepository;
+  const agentQualityTrace = yield* AgentQualityTrace;
   const turnCheckpointCoordinator = yield* TurnCheckpointCoordinator;
   const queuedTurnPromotions = yield* QueuedTurnPromotionRepository;
   const projectionSnapshotQuery = yield* ProjectionSnapshotQuery;
@@ -3347,6 +3350,37 @@ const make = Effect.gen(function* () {
       ...(modelForTurn !== undefined ? { modelSelection: modelForTurn } : {}),
       ...(input.interactionMode !== undefined ? { interactionMode: input.interactionMode } : {}),
     };
+    const withQualityContext = <E, R>(
+      operation: () => Effect.Effect<ProviderTurnStartResult, E, R>,
+    ) => {
+      const dispatchId = crypto.randomUUID();
+      const prepareQualityContext = agentQualityTrace.prepareTurnContext({
+        dispatchId,
+        threadId: input.threadId,
+        messageId: input.messageId,
+        messageText: input.messageText,
+        recordedAt: input.createdAt,
+        dispatchStartedAt: new Date().toISOString(),
+      });
+      return prepareQualityContext.pipe(
+        Effect.andThen(operation()),
+        Effect.tap((result) =>
+          agentQualityTrace.bindTurnContext({
+            threadId: input.threadId,
+            dispatchId,
+            turnId: result.turnId,
+          }),
+        ),
+        Effect.onExit((exit) =>
+          Exit.isSuccess(exit)
+            ? Effect.void
+            : agentQualityTrace.failTurnContext({
+                threadId: input.threadId,
+                dispatchId,
+              }),
+        ),
+      );
+    };
     const sendQueuedProviderTurn = (messageText: string | undefined) =>
       Effect.gen(function* () {
         if (
@@ -3375,11 +3409,11 @@ const make = Effect.gen(function* () {
           ...providerTurnInput,
           ...(messageText ? { input: messageText } : {}),
         };
-        return yield* input.claudeCompactionCancellation
+        return yield* withQualityContext(() => input.claudeCompactionCancellation
           ? providerService.sendTurn(turnInput, {
               claudeCompactionCancellation: input.claudeCompactionCancellation,
             })
-          : providerService.sendTurn(turnInput);
+          : providerService.sendTurn(turnInput));
       });
 
     const captureMessageStartCheckpoint = Effect.gen(function* () {
@@ -3439,14 +3473,15 @@ const make = Effect.gen(function* () {
     let pendingContextBootstrapAttempt: PendingContextBootstrapAttempt | undefined;
     let startedTurn: ProviderTurnStartResult | undefined;
 
-    if (input.reviewTarget !== undefined) {
+    const reviewTarget = input.reviewTarget;
+    if (reviewTarget !== undefined) {
       yield* capturePreTurnBaselines;
-      startedTurn = yield* providerService
-        .startReview({
+      startedTurn = yield* withQualityContext(() =>
+        providerService.startReview({
           threadId: input.threadId,
-          target: input.reviewTarget,
-        })
-        .pipe(Effect.onError(() => cancelPendingStudioBaseline));
+          target: reviewTarget,
+        }),
+      ).pipe(Effect.onError(() => cancelPendingStudioBaseline));
     } else if (input.dispatchMode === "steer") {
       if (input.claudeCompactionCancellation) {
         yield* cancelClaudeCompactionFromJournal(
@@ -6030,6 +6065,7 @@ const make = Effect.gen(function* () {
               (originalThread.session?.status === "running"
                 ? (originalThread.session.activeTurnId ?? null)
                 : null),
+            latestTurn: originalThread.latestTurn,
           });
     if (!editTarget.editable) {
       return yield* Effect.fail(
@@ -7757,7 +7793,7 @@ const make = Effect.gen(function* () {
                 threadId: blocker.threadId,
                 kind: "provider.turn.start.failed",
                 summary: "Previous messages were not sent",
-                detail: `Synara recovered an earlier provider failure, but ${skippedPromptCount} ${noun} skipped while the thread was blocked. Resend ${skippedPromptCount === 1 ? "it" : "them"} to continue.`,
+                detail: `${ACTIVE_AGENT_HOST_PROFILE.displayName} recovered an earlier provider failure, but ${skippedPromptCount} ${noun} skipped while the thread was blocked. Resend ${skippedPromptCount === 1 ? "it" : "them"} to continue.`,
                 turnId: null,
                 createdAt,
               });

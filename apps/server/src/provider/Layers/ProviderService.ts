@@ -148,10 +148,6 @@ export interface ProviderServiceLiveOptions {
   /** Test override for supervised event retry timing. */
   readonly runtimeEventRetryBaseDelayMs?: number;
   readonly runtimeEventRetryMaxDelayMs?: number;
-  /** Server-authoritative start gate. Omit only in isolated tests and embedded callers. */
-  readonly providerIsEnabled?: (
-    provider: ProviderKind,
-  ) => Effect.Effect<boolean, ProviderValidationError>;
 }
 
 const DEFAULT_PROVIDER_RUNTIME_IDLE_STOP_MS = 10 * 60 * 1000;
@@ -950,21 +946,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
             ),
         ),
       );
-    const ensureProviderEnabled = (provider: ProviderKind, operation: string) =>
-      options?.providerIsEnabled
-        ? options.providerIsEnabled(provider).pipe(
-            Effect.flatMap((enabled) =>
-              enabled
-                ? Effect.void
-                : Effect.fail(
-                    new ProviderValidationError({
-                      operation,
-                      issue: `${provider} is disabled in Settings > Providers.`,
-                    }),
-                  ),
-            ),
-          )
-        : Effect.void;
     const lifecycle = makeProviderLifecycleCoordinator();
     for (const binding of yield* directory.listBindings()) {
       if (binding.lifecycleGeneration !== undefined) {
@@ -2367,8 +2348,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
               resolved.instance.driver,
               binding.runtimeMode ?? "full-access",
             );
-            yield* ensureProviderEnabled(resolved.instance.driver, input.operation);
-
             const resumeStartInput = {
               threadId,
               provider: resolved.instance.driver,
@@ -2793,9 +2772,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           threadId,
           provider: resolvedProvider,
         };
-        // Reject disabled providers before waiting on lifecycle work, then
-        // check again immediately before spawning in case settings changed.
-        yield* ensureProviderEnabled(resolvedProvider, "ProviderService.startSession");
         // An explicit start is the recovery authority for a failed retirement,
         // but it must never interleave with one still in progress. Capture the
         // exact settled fence so this replacement cannot delete a newer fence
@@ -2839,7 +2815,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           Option.getOrUndefined(yield* directory.getBinding(threadId)),
         );
         const adapter = yield* getAdapterForInstance(initialResolved.instance);
-        yield* ensureProviderEnabled(adapter.provider, "ProviderService.startSession");
+
         yield* validateAutoRuntimeMode(
           "ProviderService.startSession",
           adapter.provider,
@@ -2994,10 +2970,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
               let replacementStarted = false;
               const startupLifecycle = new ProviderStartupLifecycle();
               const startAndPersistReplacement = Effect.gen(function* () {
-                yield* ensureProviderEnabled(
-                  resolved.instance.driver,
-                  "ProviderService.startSession",
-                );
                 yield* stopStaleSessionsForThread({
                   threadId,
                   provider: resolved.instance.driver,
@@ -3584,7 +3556,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
             "Import model and source provider must match.",
           );
         }
-        yield* ensureProviderEnabled(input.provider, operation);
         yield* validateAutoRuntimeMode(operation, input.provider, input.runtimeMode);
         yield* waitForCurrentInterruptionFence(input.threadId);
         clearRuntimeIdleTimer(input.threadId);
@@ -3608,7 +3579,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                 "The target conversation already has a different provider binding.",
               );
             }
-            yield* ensureProviderEnabled(input.provider, operation);
             const resolved = yield* resolveLaunchProviderInstance({
               operation,
               provider: input.provider,

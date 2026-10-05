@@ -59,7 +59,7 @@ export interface ExecuteGitResult {
   readonly stderrTruncated?: boolean;
 }
 
-export interface GitStatusDetails extends Omit<GitStatusResult, "pr"> {
+export interface GitStatusDetails extends GitStatusResult {
   isRepo: boolean;
   hasOriginRemote: boolean;
   isDefaultBranch: boolean;

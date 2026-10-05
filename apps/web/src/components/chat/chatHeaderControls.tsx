@@ -56,7 +56,8 @@ export const CHAT_SURFACE_HEADER_HEIGHT_CLASS: `h-[${typeof CHAT_SURFACE_HEADER_
  * headers all sit their content at this x). Kept as one token so the leading controls
  * line up across surfaces and the inset is tuned in a single place.
  */
-export const CHAT_SURFACE_HEADER_PADDING_X_CLASS = "px-3 sm:px-5";
+export const CHAT_SURFACE_HEADER_PADDING_X_CLASS =
+  "px-[var(--app-chat-surface-gutter-x)] sm:px-[var(--app-chat-surface-gutter-x-lg)]";
 
 /**
  * Bottom hairline shared by every chat-surface chrome bar (chat header, workspace
@@ -84,6 +85,13 @@ export const CHAT_SURFACE_HEADER_ROW_CLASS_NAME = cn(
   CHAT_SURFACE_HEADER_HEIGHT_CLASS,
   CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
 );
+
+/** Typography shared by the title inside every Git/dock surface header. */
+export const CHAT_SURFACE_HEADER_TITLE_CLASS_NAME =
+  "font-system-ui truncate text-ui-lg leading-4 font-medium tracking-[-0.01em] text-foreground";
+
+/** Glyph size shared by refresh and other single-icon dock-header actions. */
+export const CHAT_SURFACE_HEADER_ACTION_ICON_CLASS_NAME = "size-3.5";
 
 /**
  * Force header control glyphs to full-strength foreground. The base Button caps

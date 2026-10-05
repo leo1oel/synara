@@ -590,9 +590,12 @@ export const resolveProviderMaintenanceCapabilitiesEffect = Effect.fn(
     });
   }
 
-  return resolvePackageManagedProviderMaintenance(definition, {
-    ...options,
-    binaryPath,
+  // A provider may ship an SDK inside Synara while its standalone CLI is absent
+  // (Pi is the main example). Do not advertise a native "update" command that
+  // cannot be spawned, and do not treat one-click update as one-click install.
+  return makeManualOnlyProviderMaintenanceCapabilities({
+    provider: definition.provider,
+    packageName: definition.npmPackageName,
   });
 });
 

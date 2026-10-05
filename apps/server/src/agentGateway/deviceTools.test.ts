@@ -14,7 +14,10 @@ import type { ToolContext, ToolEntry } from "./toolRuntime.ts";
 const THREAD = "thread-a";
 const DEVICE = "FAKE-0001";
 
-function makeContext(provider: ProviderKind = "claudeAgent"): ToolContext {
+function makeContext(
+  provider: ProviderKind = "claudeAgent",
+  runtimeMode: ToolContext["callerRuntimeMode"] = "approval-required",
+): ToolContext {
   return {
     principal: {
       kind: "provider-session",
@@ -27,6 +30,7 @@ function makeContext(provider: ProviderKind = "claudeAgent"): ToolContext {
     callerThreadLabel: null,
     callerSessionKey: "gateway-session:test",
     callerProvider: provider,
+    callerRuntimeMode: runtimeMode,
     callerCapabilities: new Set(["device:control"]),
     callerTurnId: "turn-a",
     assertCallerTurnActive: () => Effect.void,
@@ -57,10 +61,11 @@ async function setup(options?: {
     name: string,
     args: Record<string, unknown>,
     provider?: ProviderKind,
+    runtimeMode?: ToolContext["callerRuntimeMode"],
   ): Promise<McpToolCallResult> => {
     const tool = byName.get(name);
     if (!tool) throw new Error(`no such tool: ${name}`);
-    return await Effect.runPromise(tool.handler(args, makeContext(provider)));
+    return await Effect.runPromise(tool.handler(args, makeContext(provider, runtimeMode)));
   };
   const structured = async (
     name: string,
@@ -417,6 +422,20 @@ describe("agent gateway device tools approval surface", () => {
     expect(backend.calls.filter((entry) => entry.kind !== "attachStream")).toEqual([
       { kind: "boot", udid: DEVICE },
     ]);
+  });
+
+  it("allows a gateless provider only with the user's explicit Full Access grant", async () => {
+    const { backend, call } = await setup();
+
+    const result = await call(
+      "device_tap",
+      { udid: DEVICE, x: 5, y: 5 },
+      "antigravity",
+      "full-access",
+    );
+
+    expect(result.isError).toBeUndefined();
+    expect(backend.callsOfKind("tap")).toHaveLength(1);
   });
 });
 

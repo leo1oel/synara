@@ -14,6 +14,8 @@ import { type PendingApproval } from "../../session-logic";
 import { cn } from "~/lib/utils";
 import { ComposerChoiceRow, type ComposerChoiceTone } from "./ComposerChoiceRow";
 import { COMPOSER_INPUT_SURFACE_CLASS_NAME } from "./composerPickerStyles";
+import { Trans } from "@lingui/react/macro";
+import { useLingui } from "@lingui/react";
 
 interface ComposerPendingApprovalPanelProps {
   approval: PendingApproval;
@@ -41,6 +43,16 @@ type ApprovalAction = {
   description: string;
   tone: ComposerChoiceTone;
 };
+
+function formatToolParameterValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value === null) return "null";
+  try {
+    return JSON.stringify(value) ?? String(value);
+  } catch {
+    return String(value);
+  }
+}
 
 // Order is the card-local shortcut order (1-4): recommended action first, stop-everything last.
 const APPROVAL_ACTIONS: ReadonlyArray<ApprovalAction> = [
@@ -264,6 +276,7 @@ function ApprovalDetail({
   toolName?: string;
   toolParamsDisplay?: PendingApproval["toolParamsDisplay"];
 }) {
+  const { i18n } = useLingui();
   if (permissionProfile) {
     return (
       <div className="mt-2">
@@ -274,7 +287,7 @@ function ApprovalDetail({
         ) : null}
         <pre
           className="max-h-36 overflow-auto whitespace-pre-wrap break-words rounded-md bg-[var(--color-background-elevated-secondary)] px-2.5 py-2 font-mono text-ui-sm leading-relaxed text-foreground/85"
-          title="Requested permission profile"
+          title={i18n._("Requested permission profile")}
         >
           <code>{JSON.stringify(permissionProfile, null, 2)}</code>
         </pre>
@@ -339,21 +352,11 @@ function ApprovalDetail({
     );
   }
 
-  return <p className="mt-2 text-ui text-muted-foreground/65">Review the request to continue.</p>;
-}
-
-function formatToolParameterValue(value: unknown): string {
-  if (typeof value === "string") {
-    return value;
-  }
-  if (value === null) {
-    return "null";
-  }
-  try {
-    return JSON.stringify(value) ?? String(value);
-  } catch {
-    return String(value);
-  }
+  return (
+    <p className="mt-2 text-ui text-muted-foreground/65">
+      <Trans>Review the request to continue.</Trans>
+    </p>
+  );
 }
 
 /**

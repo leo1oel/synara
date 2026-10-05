@@ -34,9 +34,9 @@ export const ComposerVoiceButton = function ComposerVoiceButton(props: {
       onClick={props.onClick}
     >
       {isBusy ? (
-        <Loader2Icon aria-hidden="true" className="size-4 animate-spin text-primary" />
+        <Loader2Icon aria-hidden="true" className="size-4 animate-spin" />
       ) : (
-        <MicIcon aria-hidden="true" className="size-4 text-primary" />
+        <MicIcon aria-hidden="true" className="size-4" />
       )}
     </Button>
   );

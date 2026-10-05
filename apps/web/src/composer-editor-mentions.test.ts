@@ -96,6 +96,30 @@ describe("splitPromptIntoComposerSegments", () => {
     ]);
   });
 
+  it("marks selected Lattice paper references as paper mentions", () => {
+    expect(
+      splitPromptIntoComposerSegments(
+        'Compare @"Attention Is All You Need" please',
+        [],
+        [
+          {
+            name: "Attention Is All You Need",
+            path: ".research/papers/1706.03762/paper.md",
+          },
+        ],
+      ),
+    ).toEqual([
+      { type: "text", text: "Compare " },
+      {
+        type: "mention",
+        path: "Attention Is All You Need",
+        kind: "paper",
+        tokenLength: '@"Attention Is All You Need"'.length,
+      },
+      { type: "text", text: " please" },
+    ]);
+  });
+
   it("does not convert an incomplete trailing mention token", () => {
     expect(splitPromptIntoComposerSegments("Inspect @AGENTS.md")).toEqual([
       { type: "text", text: "Inspect @AGENTS.md" },

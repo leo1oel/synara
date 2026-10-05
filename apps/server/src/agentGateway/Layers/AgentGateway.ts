@@ -33,9 +33,9 @@ import {
   type ComputerSetupRequiredPayload,
   type ModelSelection,
   type OrchestrationCommand,
+  type OrchestrationThreadShell,
   type ProviderApprovalDecision,
   type ProviderKind,
-  type RuntimeMode,
   type ServerProviderStatus,
   type TurnDispatchMode,
 } from "@synara/contracts";
@@ -108,6 +108,7 @@ import {
   type AgentGatewayComputerToolsOptions,
 } from "../computerTools.ts";
 import { isSynaraComputerToolFamilyName } from "../computerToolPermission.ts";
+import { isDeviceControlEntitled } from "../../device/deviceEntitlement.ts";
 import { ComputerService } from "../../computer/Services/ComputerService.ts";
 import { computerApprovalGate } from "../../computer/ComputerApprovalGate.ts";
 import { makeComputerForegroundConsent } from "../computerForegroundConsent.ts";
@@ -120,13 +121,26 @@ import { makeThreadDiagnosticTools } from "../threadDiagnosticTools.ts";
 import { makeAgentGatewayKanbanTools } from "../kanbanTools.ts";
 import { pruneProjectedArchivedManagedWorktrees } from "../../managedWorktrees.ts";
 import { resolveThreadWorkspaceCwd } from "../../checkpointing/Utils.ts";
+import {
+  ACTIVE_AGENT_HOST_PROFILE,
+  adaptToolsForActiveHost,
+  isThreadControlWithinActiveHostBoundary,
+} from "../hostProfile.ts";
+import { makeLatticeLiteratureTools } from "../latticeLiteratureTools.ts";
+import { makeLatticeCanvasTools } from "../latticeCanvasTools.ts";
+import { makeLatticeSpreadsheetTools } from "../latticeSpreadsheetTools.ts";
+import { makeLatticeProjectDocumentTools } from "../latticeProjectDocumentTools.ts";
+import { makeLatticeEditorCommentsTools } from "../latticeEditorCommentsTools.ts";
+import { LatticeBibliographyBroker } from "../Services/LatticeBibliographyBroker.ts";
 
 // Providers already receive the versioned host policy exactly once in their
 // private prompt. MCP clients prepend initialize.instructions to every exposed
 // tool definition, so repeating the full policy here adds tens of thousands of
 // context characters per round without adding authority or safety.
 const AGENT_GATEWAY_INSTRUCTIONS =
-  "Synara tools are thread-scoped. Use browser_* only for Synara's shared in-app browser runtime; follow the provider-delivered <synara_host_context> for full policy.";
+  ACTIVE_AGENT_HOST_PROFILE.id === "lattice"
+    ? "Lattice tools are scoped to the active task and project. Follow the provider-delivered <lattice_host_context> for the complete citation and bibliography policy."
+    : "Synara tools are thread-scoped. Use browser_* only for Synara's shared in-app browser runtime; follow the provider-delivered <synara_host_context> for full policy.";
 
 function readThreadGoalArg(args: Record<string, unknown>): string {
   if (!("goal" in args)) {
@@ -158,6 +172,7 @@ export const makeAgentGateway = Effect.gen(function* () {
   const gitManager = yield* GitManager;
   const providerDiscovery = yield* ProviderDiscoveryService;
   const providerHealth = yield* ProviderHealth;
+  const latticeBibliographyBroker = yield* LatticeBibliographyBroker;
   const serverSettings = yield* ServerSettingsService;
   const operationRepository = yield* AgentGatewayOperationRepository;
   const projectionTurns = yield* ProjectionTurnRepository;
@@ -192,7 +207,8 @@ export const makeAgentGateway = Effect.gen(function* () {
         return [
           provider,
           {
-            enabled: settings.providers[provider].enabled,
+            enabled:
+              ACTIVE_AGENT_HOST_PROFILE.id === "lattice" || settings.providers[provider].enabled,
             ...(status
               ? {
                   available: status.available,
@@ -270,18 +286,17 @@ export const makeAgentGateway = Effect.gen(function* () {
   // that runs with more privileges than the user granted the caller itself —
   // otherwise an approval-required or worktree-isolated agent escalates by proxy.
   const assertCallerMayDriveThread = (
-    caller: {
-      readonly id: string;
-      readonly runtimeMode: RuntimeMode;
-      readonly envMode?: string | null | undefined;
-    },
-    target: {
-      readonly id: string;
-      readonly runtimeMode: RuntimeMode;
-      readonly envMode?: string | null | undefined;
-    },
+    caller: OrchestrationThreadShell,
+    target: OrchestrationThreadShell,
   ) =>
     Effect.gen(function* () {
+      if (!isThreadControlWithinActiveHostBoundary(caller.projectId, target.projectId)) {
+        return yield* Effect.fail(
+          new ToolInputError(
+            `Task "${target.id}" belongs to a different Lattice project and cannot be controlled from the active project.`,
+          ),
+        );
+      }
       if (runtimeModeEscalatesPrivilege(caller.runtimeMode, target.runtimeMode)) {
         return yield* Effect.fail(
           new ToolInputError(
@@ -1090,23 +1105,14 @@ export const makeAgentGateway = Effect.gen(function* () {
     projectAgent: projectAgentService,
   });
 
-  // One denial activity per (thread, turn, tool): agents typically retry the denied
-  // tool several times in a row, and repeated cards would bury the chat — but a
-  // second, different tool denied in the same turn is a different fact and earns
-  // its own card. The decider appends activities verbatim, so the dedupe lives here.
-  const surfacedComputerControlDenials = new Set<string>();
-  const SURFACED_DENIALS_MAX = 512;
+    const surfacedComputerControlDenials = new Set<string>();
   const surfaceCapabilityDenial: NonNullable<
     Parameters<typeof makeAgentGatewayMcpTransport>[0]["onCapabilityDenied"]
   > = (denial) => {
-    // Only computer control has a user-facing switch to point at; other
-    // capability denials stay plain tool errors.
     if (denial.requiredCapability !== COMPUTER_CONTROL_CAPABILITY) return Effect.void;
     const dedupeKey = `${denial.callerThreadId}:${denial.callerTurnId ?? "no-turn"}:${denial.toolName}`;
     if (surfacedComputerControlDenials.has(dedupeKey)) return Effect.void;
-    // FIFO eviction, not a wholesale clear: clearing forgets every live turn's
-    // dedupe key at once and would let each of them surface a duplicate card.
-    while (surfacedComputerControlDenials.size >= SURFACED_DENIALS_MAX) {
+    while (surfacedComputerControlDenials.size >= 512) {
       surfacedComputerControlDenials.delete(surfacedComputerControlDenials.keys().next().value!);
     }
     surfacedComputerControlDenials.add(dedupeKey);
@@ -1114,9 +1120,6 @@ export const makeAgentGateway = Effect.gen(function* () {
       kind: "computer-control-denied",
       threadId: denial.callerThreadId,
       turnId: denial.callerTurnId,
-      // Part of the identity for the same reason it is part of the dedupe key:
-      // two cards naming different tools are two different cards, and sharing
-      // one command id would make the second a replay of the first.
       toolName: denial.toolName,
     });
     const createdAt = isoNow();
@@ -1147,21 +1150,16 @@ export const makeAgentGateway = Effect.gen(function* () {
         Effect.asVoid,
       );
   };
-
-  // First mutation of a turn prepends a transcript line naming the switch.
-  // The disclosure rides as its own activity so the chat says Computer
-  // control is ON from the first input, once per turn.
   const COMPUTER_CONTROL_ON_DISCLOSURE =
     "Computer control ON for this turn: the agent is driving the desktop and the user can switch it off in Settings.";
   const surfacedComputerControlDisclosures = new Set<string>();
-  const SURFACED_CONTROL_DISCLOSURES_MAX = 512;
   const surfaceComputerControlDisclosure = (
     threadId: string,
     turnId: string | null,
   ): Effect.Effect<void> => {
     const dedupeKey = `${threadId}:${turnId ?? "no-turn"}`;
     if (surfacedComputerControlDisclosures.has(dedupeKey)) return Effect.void;
-    while (surfacedComputerControlDisclosures.size >= SURFACED_CONTROL_DISCLOSURES_MAX) {
+    while (surfacedComputerControlDisclosures.size >= 512) {
       surfacedComputerControlDisclosures.delete(
         surfacedComputerControlDisclosures.keys().next().value!,
       );
@@ -1200,33 +1198,20 @@ export const makeAgentGateway = Effect.gen(function* () {
       );
   };
 
-  // One setup card per (thread, turn): an agent that hits a missing grant
-  // typically retries the same tool several times in a row, and repeated cards
-  // would bury the chat. The decider appends activities verbatim, so the dedupe
-  // lives here.
   const surfacedComputerSetupPrompts = new Set<string>();
-  const SURFACED_SETUP_PROMPTS_MAX = 512;
   const surfaceComputerSetupRequired = (input: {
     readonly toolName: string;
     readonly missing: readonly ComputerPermission[];
     readonly buildSignature?: ComputerBuildSignature;
-    /** The app macOS holds responsible for the grants, when the desktop shell reported one. */
     readonly bundleId?: string;
     readonly context: ToolContext;
   }): Effect.Effect<void> => {
     const callerThreadId = input.context.callerThreadId;
     const callerTurnId = input.context.callerTurnId;
-    // Keyed by which grants are missing as well as by the turn. One card per
-    // turn is right for the same gap reported by ten calls; it was wrong for a
-    // second, different gap discovered in the same turn — a run that lost
-    // Accessibility after already reporting Screen Recording showed the user
-    // one card naming the wrong permission and nothing about the other.
     const missingKey = [...input.missing].sort().join(",");
     const dedupeKey = `${callerThreadId}:${callerTurnId ?? "no-turn"}:${missingKey}`;
     if (surfacedComputerSetupPrompts.has(dedupeKey)) return Effect.void;
-    // FIFO eviction, not a wholesale clear: clearing forgets every live turn's
-    // dedupe key at once and would let each of them surface a duplicate card.
-    while (surfacedComputerSetupPrompts.size >= SURFACED_SETUP_PROMPTS_MAX) {
+    while (surfacedComputerSetupPrompts.size >= 512) {
       surfacedComputerSetupPrompts.delete(surfacedComputerSetupPrompts.keys().next().value!);
     }
     surfacedComputerSetupPrompts.add(dedupeKey);
@@ -1234,9 +1219,6 @@ export const makeAgentGateway = Effect.gen(function* () {
       kind: "computer-setup-required",
       threadId: callerThreadId,
       turnId: callerTurnId,
-      // Part of the identity for the same reason it is part of the dedupe key:
-      // two cards naming different grants are two different cards, and sharing
-      // one command id would make the second a replay of the first.
       missing: missingKey,
     });
     const createdAt = isoNow();
@@ -1250,12 +1232,6 @@ export const makeAgentGateway = Effect.gen(function* () {
           tone: "error",
           kind: COMPUTER_SETUP_REQUIRED_ACTIVITY_KIND,
           summary: "Computer control needs setup",
-          // The grant names ride along so the card can say which permission is
-          // missing rather than "a permission Synara needs"; an empty list is a
-          // backend that refused without naming one, and the card falls back.
-          // The build signature rides with them because on a locally built copy
-          // the switch in System Settings can already be on — its grant pinned
-          // to a binary a rebuild replaced — and the card has to say so.
           payload: {
             toolName: input.toolName,
             missing: [...input.missing],
@@ -1411,8 +1387,6 @@ export const makeAgentGateway = Effect.gen(function* () {
     return Option.isNone(detail) ? [] : computerSpaceDesignationForMessages(detail.value.messages);
   };
 
-  // Construct the browser family once so help reads the same conditional
-  // catalog the gateway exposes; a desktop-only backend has no browser entries.
   const computerBrowserTools =
     computerService?.supported === true && computerService.manager.supportsBrowser
       ? makeAgentGatewayComputerBrowserTools({
@@ -1422,6 +1396,37 @@ export const makeAgentGateway = Effect.gen(function* () {
           requestForegroundConsent: requestComputerForegroundConsent,
           resolveWorkspaceRoot,
         })
+      : [];
+  const resolveLatticeWorkspaceRoot = (context: import("../toolRuntime.ts").ToolContext) =>
+    Effect.gen(function* () {
+      const thread = yield* requireThreadShell(context.callerThreadId);
+      const project = yield* snapshotQuery
+        .getProjectShellById(thread.projectId)
+        .pipe(Effect.map(Option.getOrNull));
+      if (!project) return null;
+      return resolveThreadWorkspaceCwd({ thread, projects: [project] }) ?? null;
+    }).pipe(Effect.orElseSucceed(() => null));
+  const latticeLiteratureTools = makeLatticeLiteratureTools({
+    resolveWorkspaceRoot: resolveLatticeWorkspaceRoot,
+    mutateBibliography: latticeBibliographyBroker.invoke,
+  });
+  const latticeCanvasTools =
+    ACTIVE_AGENT_HOST_PROFILE.id === "lattice"
+      ? yield* makeLatticeCanvasTools({ resolveWorkspaceRoot: resolveLatticeWorkspaceRoot })
+      : [];
+  const latticeSpreadsheetTools =
+    ACTIVE_AGENT_HOST_PROFILE.id === "lattice"
+      ? yield* makeLatticeSpreadsheetTools({ resolveWorkspaceRoot: resolveLatticeWorkspaceRoot })
+      : [];
+  const latticeProjectDocumentTools =
+    ACTIVE_AGENT_HOST_PROFILE.id === "lattice"
+      ? yield* makeLatticeProjectDocumentTools({
+          resolveWorkspaceRoot: resolveLatticeWorkspaceRoot,
+        })
+      : [];
+  const latticeEditorCommentsTools =
+    ACTIVE_AGENT_HOST_PROFILE.id === "lattice"
+      ? yield* makeLatticeEditorCommentsTools({ resolveWorkspaceRoot: resolveLatticeWorkspaceRoot })
       : [];
 
   const kanbanTools = makeAgentGatewayKanbanTools({
@@ -1536,7 +1541,7 @@ export const makeAgentGateway = Effect.gen(function* () {
     },
   });
 
-  const tools: ReadonlyArray<ToolEntry> = [
+  const tools: ReadonlyArray<ToolEntry> = adaptToolsForActiveHost([
     ...readTools,
     ...diagnosticTools,
     createThreads,
@@ -1550,7 +1555,12 @@ export const makeAgentGateway = Effect.gen(function* () {
     ...automationTools,
     ...browserTools,
     ...kanbanTools,
-    ...(deviceService?.supported === true
+    ...(ACTIVE_AGENT_HOST_PROFILE.id === "lattice" ? latticeLiteratureTools : []),
+    ...latticeCanvasTools,
+    ...latticeSpreadsheetTools,
+    ...latticeProjectDocumentTools,
+    ...latticeEditorCommentsTools,
+    ...(deviceService?.supported === true && isDeviceControlEntitled()
       ? makeAgentGatewayDeviceTools({
           manager: deviceService.manager,
           authorizeAction: authorizeComputerAction,
@@ -1570,18 +1580,12 @@ export const makeAgentGateway = Effect.gen(function* () {
     ...computerBrowserTools,
     // Group tools are Beta-only: Stable does not offer them to agents at all.
     ...(isServerGroupsEnabled() ? [...projectAgentTools, ...(hubGateway?.tools ?? [])] : []),
-  ];
-
-  // The computer family by name, read off the unfiltered catalog above: a
-  // caller whose session was never granted computer control still gets a
-  // capability_denied (and the denial card) when it calls one of these by
-  // name, even though tools/list never advertised them to it.
+  ]);
   const computerToolNames = new Set(
     tools
       .filter((tool) => tool.requiredCapability === COMPUTER_CONTROL_CAPABILITY)
       .map((tool) => tool.definition.name),
   );
-
   return {
     handleMcpPost: makeAgentGatewayMcpTransport({
       credentials,

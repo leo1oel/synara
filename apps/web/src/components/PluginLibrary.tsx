@@ -47,17 +47,10 @@ import {
 } from "~/lib/providerDiscoveryReactQuery";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { useFocusedChatContext } from "~/focusedChatContext";
-import {
-  CheckIcon,
-  CircleAlertIcon,
-  HammerIcon,
-  ListChecksIcon,
-  PluginIcon,
-  SearchIcon,
-} from "~/lib/icons";
+import { CheckIcon, CircleAlertIcon, HammerIcon, ListChecksIcon, PluginIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
-import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "./ui/input-group";
 import { CHAT_BACKGROUND_CLASS_NAME } from "./chat/composerPickerStyles";
+import { SearchInput } from "./ui/search-input";
 import { SidebarInset } from "./ui/sidebar";
 import { SidebarHeaderNavigationControls } from "./SidebarHeaderNavigationControls";
 import {
@@ -598,22 +591,15 @@ export function PluginLibrary(props?: {
 
       {/* Search */}
       <div className="mx-auto max-w-2xl px-6 pb-6">
-        <InputGroup className="rounded-xl bg-background/70 shadow-xs">
-          <InputGroupAddon>
-            <InputGroupText>
-              <SearchIcon className="size-4 text-muted-foreground/60" />
-            </InputGroupText>
-          </InputGroupAddon>
-          <InputGroupInput
+          <SearchInput
             value={selectedTab === "plugins" ? pluginSearch : skillSearch}
             onChange={(e) => {
               if (selectedTab === "plugins") setPluginSearch(e.target.value);
               else setSkillSearch(e.target.value);
             }}
             placeholder={selectedTab === "plugins" ? "Search plugins" : "Search skills"}
-            className="text-ui leading-snug"
+            aria-label={selectedTab === "plugins" ? "Search plugins" : "Search skills"}
           />
-        </InputGroup>
       </div>
 
       {/* Warnings */}

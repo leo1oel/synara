@@ -288,6 +288,9 @@ export function GitHubInbox({
   onSearchChange,
   sidechat,
   dockOpen: dockOpenProp,
+  embedded = false,
+  scopedProjectId,
+  bindingError,
 }: {
   search: GitHubInboxSearch;
   onSearchChange: (patch: GitHubInboxSearchPatch) => void;
@@ -295,6 +298,9 @@ export function GitHubInbox({
   sidechat?: GitHubInboxSidechatHost;
   /** Whether the route's Ask dock is open; the column fractions reset when it changes. */
   dockOpen?: boolean;
+  embedded?: boolean;
+  scopedProjectId?: ProjectId | null;
+  bindingError?: string | null;
 }) {
   const { settings, updateSettings } = useAppSettings();
   const dockOpen = dockOpenProp ?? false;
@@ -321,13 +327,21 @@ export function GitHubInbox({
     () => new Set(repositoryProjects.map((project) => project.id)),
     [repositoryProjects],
   );
-  const filters = resolveGitHubInboxFilters(search, settings, existingProjectIds);
+  const resolvedFilters = resolveGitHubInboxFilters(search, settings, existingProjectIds);
+  const filters = embedded ? { ...resolvedFilters, projectIds: scopedProjectId ? [scopedProjectId] : [] } : resolvedFilters;
   const selection = githubInboxSelection(search);
   const listState = githubInboxListState(filters.state);
 
   // One list per state and sort; kind, project, involvement, label, and text filters apply below, so
   // switching them never reaches GitHub.
-  const listQuery = useQuery(githubInboxListQueryOptions(listState, settings.githubInboxSort));
+  const listScope = embedded && scopedProjectId
+    ? { projectId: scopedProjectId, ...(filters.involvement === "authored" || filters.involvement === "reviewRequested" ? { involvement: filters.involvement } : {}) }
+    : undefined;
+  const bindingPending = embedded && !scopedProjectId && !bindingError;
+  const listQuery = useQuery({
+    ...githubInboxListQueryOptions(listState, settings.githubInboxSort, listScope),
+    enabled: !embedded || Boolean(scopedProjectId),
+  });
   const refreshMutation = useMutation(pullRequestsForceRefreshMutationOptions(queryClient));
   const pinMutation = useMutation(pullRequestSetPinnedMutationOptions(queryClient));
   const activeActionCount = useIsMutating({
@@ -391,6 +405,7 @@ export function GitHubInbox({
     if (search.involvement !== undefined) onSearchChange({ involvement: undefined });
   };
   const setProjectIds = (projectIds: ProjectId[]) => {
+    if (embedded) return;
     updateSettings({ githubInboxProjectIds: projectIds });
     if (search.projectId !== undefined) onSearchChange({ projectId: undefined });
   };
@@ -422,7 +437,9 @@ export function GitHubInbox({
       });
     }
   };
-  const refreshBlockedReason = refreshMutation.isPending
+  const refreshBlockedReason = embedded && !scopedProjectId
+    ? bindingError ?? "Waiting for the Lattice project…"
+    : refreshMutation.isPending
     ? "Refreshing…"
     : activeActionCount > 0
       ? "Wait for the pull request action to finish"
@@ -430,7 +447,7 @@ export function GitHubInbox({
   const refresh = () => {
     if (refreshBlockedReason !== null) return;
     refreshMutation.mutate(
-      { state: listState, sort: settings.githubInboxSort },
+      { state: listState, sort: settings.githubInboxSort, ...listScope },
       {
         onError: (error) =>
           toastManager.add({
@@ -509,7 +526,7 @@ export function GitHubInbox({
           ref={columnRef}
           aria-label="Code review list"
           className={cn(
-            "relative flex min-h-0 flex-col",
+            "relative flex min-h-0 min-w-0 flex-col",
             isMobile ? "min-w-0 flex-1" : "min-w-[16rem] max-w-[calc(100%-18rem)] shrink-0",
           )}
           style={
@@ -537,7 +554,8 @@ export function GitHubInbox({
                     })
                   : null
               }
-              projectOptions={projectOptions}
+              projectOptions={embedded ? projectOptions.filter((option) => option.id === scopedProjectId) : projectOptions}
+              projectLocked={embedded}
               labelOptions={labelOptions}
               refreshing={refreshMutation.isPending}
               refreshBlockedReason={refreshBlockedReason}
@@ -554,7 +572,9 @@ export function GitHubInbox({
           </div>
           <div className="@container/list min-h-0 flex-1 overflow-y-auto px-6 pt-2 pb-8">
             <div className="flex flex-col gap-3">
-              {listQuery.isPending ? (
+              {bindingError ? (
+                <PullRequestsUnavailableState error={new Error(bindingError)} subject="Lattice project" />
+              ) : bindingPending || listQuery.isPending ? (
                 <ListSkeleton />
               ) : initialError ? (
                 <PullRequestsUnavailableState

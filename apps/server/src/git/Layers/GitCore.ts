@@ -437,6 +437,8 @@ const DIRTY_WORKTREE_PATTERN =
   /Your local changes to the following files would be overwritten by (?:checkout|merge):\s*([\s\S]*?)Please commit your changes or stash them/;
 const UNTRACKED_OVERWRITE_PATTERN =
   /The following untracked working tree files would be overwritten by (?:checkout|merge):\s*([\s\S]*?)Please move or remove them/;
+const PULL_REQUIRES_CLEAN_WORKTREE_PATTERN =
+  /cannot pull with rebase:\s*you have (?:unstaged|uncommitted) changes|please commit or stash them/i;
 
 function parseDirtyWorktreeFiles(stderr: string): string[] | null {
   const match = DIRTY_WORKTREE_PATTERN.exec(stderr) ?? UNTRACKED_OVERWRITE_PATTERN.exec(stderr);
@@ -448,8 +450,16 @@ function parseDirtyWorktreeFiles(stderr: string): string[] | null {
   return files.length > 0 ? files : null;
 }
 
-function explainPullBlockedByLocalChanges(error: GitCommandError): string | null {
-  const files = parseDirtyWorktreeFiles(error.detail);
+function explainPullBlockedByLocalChanges(
+  error: GitCommandError,
+  fallbackFiles: readonly string[] = [],
+): string | null {
+  const files =
+    parseDirtyWorktreeFiles(error.detail) ??
+    (PULL_REQUIRES_CLEAN_WORKTREE_PATTERN.test(`${error.detail}\n${error.message}`) &&
+    fallbackFiles.length > 0
+      ? [...fallbackFiles]
+      : null);
   if (!files) return null;
   const fileList = files.map((file) => `  - ${file}`).join("\n");
   return `Local changes block pull. Commit or stash these files first:\n${fileList}`;
@@ -1270,7 +1280,9 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
         "GitCore.resolveDefaultBranchName",
         cwd,
         ["symbolic-ref", `refs/remotes/${remoteName}/HEAD`],
-        { allowNonZeroExit: true },
+        {
+          allowNonZeroExit: true,
+        },
       ).pipe(
         Effect.map((result) => {
           if (result.code !== 0) {
@@ -1763,7 +1775,6 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
           upstreamBranch: details.upstreamBranch,
           aheadCount: details.aheadCount,
           behindCount: details.behindCount,
-          pr: null,
         };
       });
 
@@ -2735,7 +2746,10 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
           fallbackErrorMessage: "git pull failed",
         }).pipe(
           Effect.mapError((error) => {
-            const friendlyDetail = explainPullBlockedByLocalChanges(error);
+            const friendlyDetail = explainPullBlockedByLocalChanges(
+              error,
+              details.workingTree.files.map((file) => file.path),
+            );
             if (!friendlyDetail) return error;
             return createGitCommandError(
               "GitCore.pullCurrentBranch.pull",
@@ -3111,7 +3125,9 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
               "GitCore.readWorktreeStateHash.unstaged",
               cwd,
               ["diff", "--binary", "--full-index", "--"],
-              { maxOutputBytes: WORKTREE_TRANSFER_MAX_OUTPUT_BYTES },
+              {
+                maxOutputBytes: WORKTREE_TRANSFER_MAX_OUTPUT_BYTES,
+              },
             ),
             listWorktreeTransferPaths(cwd),
           ],
@@ -4015,13 +4031,19 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
           "GitCore.stashAndCheckout.abortConflictedApply",
           input.cwd,
           ["reset", "--hard"],
-          { timeoutMs: 30_000, allowNonZeroExit: true },
+          {
+            timeoutMs: 30_000,
+            allowNonZeroExit: true,
+          },
         ).pipe(Effect.ignore);
         yield* executeGit(
           "GitCore.stashAndCheckout.cleanConflictedApply",
           input.cwd,
           ["clean", "-fd"],
-          { timeoutMs: 30_000, allowNonZeroExit: true },
+          {
+            timeoutMs: 30_000,
+            allowNonZeroExit: true,
+          },
         ).pipe(Effect.ignore);
 
         return yield* createGitCommandError(

@@ -5,11 +5,7 @@ import {
   disclosurePopClassName,
   DISCLOSURE_CHEVRON_MOTION_CLASS,
   DISCLOSURE_COLLAPSIBLE_PANEL_CLASS,
-  DISCLOSURE_POP_CLOSED_CLASS,
-  DISCLOSURE_POP_CLOSE_MS,
-  DISCLOSURE_POP_MOTION_CLASS,
-  DISCLOSURE_POP_OPEN_CLASS,
-  DISCLOSURE_POP_OPEN_MS,
+  DISCLOSURE_POPUP_MOTION_CLASS,
   DISCLOSURE_SHELL_MOTION_CLASS,
 } from "./disclosureMotion";
 
@@ -19,7 +15,7 @@ describe("disclosureMotion", () => {
     expect(disclosureContentClassName(true)).not.toContain("pointer-events-none");
   });
 
-  it("keeps every disclosure path on the shared 220ms reduced-motion contract", () => {
+  it("keeps height disclosures on the shared 220ms reduced-motion contract", () => {
     for (const className of [
       DISCLOSURE_SHELL_MOTION_CLASS,
       DISCLOSURE_CHEVRON_MOTION_CLASS,

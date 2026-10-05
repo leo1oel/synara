@@ -103,6 +103,11 @@ const FILE_ICON_BY_EXTENSION = createIconTable({
   log: "file-text",
   csv: "file-chart",
   tsv: "file-chart",
+  // TeX documents, bibliography databases, and document configuration files.
+  tex: "page-text",
+  bib: "books",
+  sty: "settings-gear-1",
+  cls: "settings-gear-1",
   rtf: "page-text",
   doc: "page-text",
   docx: "page-text",

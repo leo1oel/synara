@@ -54,7 +54,6 @@ import {
 } from "../../git/textGenerationSelection.ts";
 import { OrchestrationEngineService } from "../../orchestration/Services/OrchestrationEngine.ts";
 import { ProjectionSnapshotQuery } from "../../orchestration/Services/ProjectionSnapshotQuery.ts";
-import { providerDisabledSettingsMessage } from "../../provider/enabledProviderAdapter.ts";
 import { threadHasInFlightTurn } from "../../orchestration/commandInvariants.ts";
 import {
   AutomationRepository,
@@ -1972,23 +1971,6 @@ export const AutomationServiceLive = Layer.effect(
       }).pipe(
         Effect.catch((error) =>
           Effect.gen(function* () {
-            const disabledReason = yield* completionEvaluationProviderDisabledReason(
-              definition,
-            ).pipe(
-              Effect.catch((settingsError) =>
-                Effect.logWarning(
-                  "automation completion evaluation provider state could not be rechecked",
-                  {
-                    automationId: definition.id,
-                    runId: run.id,
-                    error: errorMessage(settingsError),
-                  },
-                ).pipe(Effect.as(null)),
-              ),
-            );
-            if (disabledReason) {
-              return false;
-            }
             const reason = completionFailureReason(error);
             yield* Effect.logWarning("automation completion evaluation failed", {
               automationId: definition.id,
@@ -2090,17 +2072,7 @@ export const AutomationServiceLive = Layer.effect(
               if (!runUsesCurrentCompletionPolicy(run, definition)) {
                 return Effect.void;
               }
-              return completionEvaluationProviderDisabledReason(definition).pipe(
-                Effect.flatMap((disabledReason) =>
-                  disabledReason
-                    ? Effect.void
-                    : enqueueCompletionEvaluationJob({
-                        definition,
-                        run,
-                        policy,
-                      }),
-                ),
-              );
+              return enqueueCompletionEvaluationJob({ definition, run, policy });
             },
           }),
         ),
@@ -3365,14 +3337,6 @@ export const AutomationServiceLive = Layer.effect(
             }),
           );
         }
-        const disabledReason = yield* providerDisabledReason(definition);
-        if (disabledReason) {
-          return yield* Effect.fail(
-            new AutomationServiceError({
-              message: `Automation is paused because ${disabledReason}`,
-            }),
-          );
-        }
         const now = isoNow();
         let heartbeatRunState:
           | { readonly activeRuns: number; readonly pendingCompletionEvaluations: number }
@@ -3542,41 +3506,6 @@ export const AutomationServiceLive = Layer.effect(
           return Option.none<AutomationRunNowResult>();
         }
 
-        const disabledReason = yield* providerDisabledReason(definition);
-        if (disabledReason && definition.schedule.type === "once") {
-          const deferredRun = yield* claimPendingRun(
-            definition,
-            { type: "scheduled" },
-            scheduledFor,
-            now,
-            { nextRunAt, disable: false },
-            new Date(Date.parse(now) + AUTOMATION_HEARTBEAT_DEFER_RETRY_MS).toISOString(),
-          );
-          yield* publishDefinition(definition.id);
-          return Option.match(deferredRun, {
-            onNone: () => Option.none<AutomationRunNowResult>(),
-            onSome: (run) => Option.some({ run }),
-          });
-        }
-        if (disabledReason) {
-          const claimedRun = yield* claimPendingRun(
-            definition,
-            { type: "scheduled" },
-            scheduledFor,
-            now,
-            { nextRunAt, disable: false, consumeIteration: false },
-            undefined,
-            null,
-          );
-          yield* publishDefinition(definition.id);
-          const skipped = Option.isSome(claimedRun)
-            ? yield* markScheduledRunSkipped(claimedRun.value, disabledReason, now)
-            : null;
-          return skipped
-            ? Option.some<AutomationRunNowResult>({ run: skipped })
-            : Option.none<AutomationRunNowResult>();
-        }
-
         if (automationRequiresTargetThread(definition.mode) && !definition.targetThreadId) {
           return yield* Effect.fail(
             new AutomationServiceError({
@@ -3716,20 +3645,6 @@ export const AutomationServiceLive = Layer.effect(
         const definition = yield* requireDefinition(run.automationId);
         if (!isAutomationAvailable(definition)) return Option.none<AutomationRunNowResult>();
         if (!definition.enabled) {
-          return Option.none<AutomationRunNowResult>();
-        }
-        const disabledReason = yield* providerDisabledReason(definition);
-        if (disabledReason) {
-          const deferred = yield* automationRepository
-            .setRunDeferred({
-              id: run.id,
-              deferredUntil: new Date(
-                Date.parse(now) + AUTOMATION_HEARTBEAT_DEFER_RETRY_MS,
-              ).toISOString(),
-              updatedAt: now,
-            })
-            .pipe(Effect.mapError(toServiceError("Failed to defer automation run.")));
-          yield* publish({ type: "run-upserted", run: deferred });
           return Option.none<AutomationRunNowResult>();
         }
         if (!automationContinuesThread(definition.mode)) {

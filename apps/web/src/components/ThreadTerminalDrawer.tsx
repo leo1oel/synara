@@ -4,10 +4,7 @@
 
 import { Plus, SquareSplitHorizontal, SquareSplitVertical, Trash2 } from "~/lib/icons";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import {
-  buildTerminalRuntimeKey,
-  terminalRuntimeRegistry,
-} from "./terminal/terminalRuntimeRegistry";
+
 import { type ThreadId } from "@synara/contracts";
 import { type TerminalActivityState, type TerminalCliKind } from "@synara/shared/terminalThreads";
 import { type TerminalContextSelection } from "~/lib/terminalContext";

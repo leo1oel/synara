@@ -1,6 +1,6 @@
 import { realpathSync } from "node:fs";
 
-import { Effect, Layer, PubSub, Ref, Stream } from "effect";
+import { Effect, Layer, PubSub, Ref, Result, Stream } from "effect";
 import type {
   GitStatusLocalResult,
   GitStatusRemoteResult,
@@ -16,15 +16,14 @@ import {
   type GitStatusBroadcasterShape,
 } from "../Services/GitStatusBroadcaster";
 import {
-  canReuseCachedRemoteStatus,
+  branchPullRequestCacheKey,
+  type CachedBranchPullRequest,
   type CachedGitStatus,
-  isCachedRemoteStatusFresh,
   makeCachedStatusValue,
-  setCachedGitStatus,
+  readFreshBranchPullRequest,
+  setBoundedCacheEntry,
   splitLocalStatus,
-  splitLocalStatusDetails,
   splitRemoteStatus,
-  splitRemoteStatusDetails,
 } from "../gitStatusCache";
 
 interface GitStatusChange {
@@ -50,9 +49,15 @@ export const GitStatusBroadcasterLive = Layer.effect(
       (pubsub) => PubSub.shutdown(pubsub),
     );
     const cacheRef = yield* Ref.make(new Map<string, CachedGitStatus>());
-
-    const getCachedStatus = (cwd: string) =>
-      Ref.get(cacheRef).pipe(Effect.map((cache) => cache.get(cwd) ?? null));
+    // `generation` is bumped by every refresh. A lookup that started before a refresh may
+    // have read GitHub before the mutation that triggered it, so it must not be cached.
+    const pullRequestCacheRef = yield* Ref.make({
+      generation: 0,
+      entries: new Map<string, CachedBranchPullRequest>() as ReadonlyMap<
+        string,
+        CachedBranchPullRequest
+      >,
+    });
 
     const updateCachedLocalStatus = (
       cwd: string,
@@ -63,7 +68,7 @@ export const GitStatusBroadcasterLive = Layer.effect(
         const nextLocal = makeCachedStatusValue(local);
         const shouldPublish = yield* Ref.modify(cacheRef, (cache) => {
           const previous = cache.get(cwd) ?? { local: null, remote: null };
-          const nextCache = setCachedGitStatus(cache, cwd, { ...previous, local: nextLocal });
+          const nextCache = setBoundedCacheEntry(cache, cwd, { ...previous, local: nextLocal });
           return [previous.local?.fingerprint !== nextLocal.fingerprint, nextCache] as const;
         });
 
@@ -86,7 +91,7 @@ export const GitStatusBroadcasterLive = Layer.effect(
         const nextRemote = makeCachedStatusValue(remote);
         const shouldPublish = yield* Ref.modify(cacheRef, (cache) => {
           const previous = cache.get(cwd) ?? { local: null, remote: null };
-          const nextCache = setCachedGitStatus(cache, cwd, { ...previous, remote: nextRemote });
+          const nextCache = setBoundedCacheEntry(cache, cwd, { ...previous, remote: nextRemote });
           return [previous.remote?.fingerprint !== nextRemote.fingerprint, nextCache] as const;
         });
 
@@ -108,31 +113,71 @@ export const GitStatusBroadcasterLive = Layer.effect(
         return mergeGitStatusParts(local, remote) as GitStatusResult;
       });
 
+    // Status is local git state only, so every read goes to git; the cache above only
+    // fingerprints the last result so stream subscribers hear about real changes.
     const getStatus: GitStatusBroadcasterShape["getStatus"] = (input) =>
-      Effect.gen(function* () {
-        const normalizedCwd = normalizeCwd(input.cwd);
-        const cached = yield* getCachedStatus(normalizedCwd);
-        // Only probe git for details when the cached remote metadata could still be
-        // reused. `statusDetails` spawns several git subprocesses, and a full status
-        // load runs it again, so probing against expired cache state would double the
-        // git work on every poll (the sidebar polls at 60 s against a 30 s TTL, so the
-        // reuse check could never pass on that path).
-        if (cached?.remote && isCachedRemoteStatusFresh({ cached })) {
-          const details = yield* gitCore.statusDetails(normalizedCwd);
-          if (canReuseCachedRemoteStatus({ cached, details })) {
-            const local = yield* updateCachedLocalStatus(
-              normalizedCwd,
-              splitLocalStatusDetails(details),
-            );
-            const remote = splitRemoteStatusDetails(details, cached.remote.value);
-            return mergeGitStatusParts(local, remote) as GitStatusResult;
-          }
-        }
-        return yield* loadStatus(normalizedCwd);
-      });
+      loadStatus(normalizeCwd(input.cwd));
 
     const refreshStatus: GitStatusBroadcasterShape["refreshStatus"] = (cwd) =>
-      loadStatus(normalizeCwd(cwd), { publish: true });
+      Effect.gen(function* () {
+        const normalizedCwd = normalizeCwd(cwd);
+        // Refreshes follow git mutations (push, PR creation, checkout), any of which can
+        // change the branch's pull request, so the next lookup must go back to GitHub.
+        yield* Ref.update(pullRequestCacheRef, (cache) => {
+          const entries = new Map(cache.entries);
+          entries.delete(normalizedCwd);
+          return { generation: cache.generation + 1, entries };
+        });
+        return yield* loadStatus(normalizedCwd, { publish: true });
+      });
+
+    const getBranchPullRequest: GitStatusBroadcasterShape["getBranchPullRequest"] = (input) =>
+      Effect.gen(function* () {
+        const normalizedCwd = normalizeCwd(input.cwd);
+        const branchContext = yield* gitCore.readBranchContext(normalizedCwd);
+        if (!branchContext.isRepo || branchContext.branch === null) {
+          return { branch: branchContext.branch, pr: null };
+        }
+        const branch = branchContext.branch;
+        const branchKey = branchPullRequestCacheKey({
+          branch,
+          upstreamRef: branchContext.upstreamRef,
+        });
+        const cache = yield* Ref.get(pullRequestCacheRef);
+        const cached = readFreshBranchPullRequest({
+          cached: cache.entries.get(normalizedCwd),
+          branchKey,
+        });
+        if (cached) {
+          return { branch, pr: cached.pr };
+        }
+
+        const lookup = yield* gitManager
+          .pullRequestForBranch({
+            cwd: normalizedCwd,
+            branch,
+            upstreamRef: branchContext.upstreamRef,
+          })
+          .pipe(Effect.result);
+        // A failed lookup (gh missing, signed out, offline) reads as "no PR" but is not
+        // cached, so the next poll retries instead of pinning the failure for the TTL.
+        if (Result.isFailure(lookup)) {
+          return { branch: branchContext.branch, pr: null };
+        }
+        yield* Ref.update(pullRequestCacheRef, (current) =>
+          current.generation === cache.generation
+            ? {
+                generation: current.generation,
+                entries: setBoundedCacheEntry(current.entries, normalizedCwd, {
+                  branchKey,
+                  updatedAt: Date.now(),
+                  pr: lookup.success,
+                }),
+              }
+            : current,
+        );
+        return { branch, pr: lookup.success };
+      });
 
     const refreshLocalStatus: GitStatusBroadcasterShape["refreshLocalStatus"] = (cwd) =>
       refreshStatus(cwd).pipe(Effect.map(splitLocalStatus));
@@ -161,6 +206,7 @@ export const GitStatusBroadcasterLive = Layer.effect(
 
     return {
       getStatus,
+      getBranchPullRequest,
       refreshLocalStatus,
       refreshStatus,
       streamStatus,

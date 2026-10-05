@@ -308,10 +308,7 @@ describe("teardownProviderProcessTree", () => {
       captureComplete: false,
       remainingDescendantPids: null,
     });
-    expect(signals).toEqual([
-      { signal: "SIGTERM", includeRootTree: false },
-      { signal: "SIGKILL", includeRootTree: false },
-    ]);
+    expect(signals).toEqual([]);
   });
 
   it("still fails closed on an incomplete snapshot when the root never proves exit", async () => {
@@ -450,12 +447,13 @@ describe("teardownProviderProcessTree", () => {
     let descendantRunning = true;
     const signals: TerminalKillSignal[] = [];
     let now = 0;
+    const rootExit = deferred<void>();
 
     await expect(
       teardownProviderProcessTree(
         {
           rootPid: 901,
-          rootExited: Promise.resolve(),
+          rootExited: rootExit.promise,
           termGraceMs: 5,
           forceExitMs: 5,
           pollMs: 5,
@@ -467,7 +465,10 @@ describe("teardownProviderProcessTree", () => {
               verified: true,
               survivors: descendantRunning ? [descendant] : [],
             }),
-            signal: ({ signal }) => signals.push(signal),
+            signal: ({ signal }) => {
+              signals.push(signal);
+              rootExit.resolve();
+            },
           },
           now: () => now,
           sleep: async (milliseconds) => {
@@ -488,11 +489,12 @@ describe("teardownProviderProcessTree", () => {
     };
     let inspectCalls = 0;
     let now = 0;
+    const rootExit = deferred<void>();
 
     const failure = await teardownProviderProcessTree(
       {
         rootPid: 911,
-        rootExited: Promise.resolve(),
+        rootExited: rootExit.promise,
         termGraceMs: 5,
         forceExitMs: 5,
         pollMs: 5,
@@ -506,7 +508,7 @@ describe("teardownProviderProcessTree", () => {
               ? { verified: true, survivors: [descendant] }
               : { verified: false, survivors: [] };
           },
-          signal: () => undefined,
+          signal: () => rootExit.resolve(),
         },
         now: () => now,
         sleep: async (milliseconds) => {
@@ -516,5 +518,72 @@ describe("teardownProviderProcessTree", () => {
     ).catch((error: unknown) => error);
 
     expect(failure).toMatchObject({ remainingDescendantPids: [912] });
+  });
+
+  it("retains reparented descendant identities across failed stop attempts", async () => {
+    const rootExit = deferred<void>();
+    const child = { pid: 1002, command: "provider-worker" };
+    let scans = 0;
+    let surviving = true;
+    const signalled: CapturedProcessTree[] = [];
+    const input = { rootPid: 1001, rootExited: rootExit.promise, termGraceMs: 5, forceExitMs: 5 };
+    const dependencies = {
+      processTreeKiller: {
+        capture: () => {
+          scans += 1;
+          return { descendants: scans === 1 ? [child] : [], captureComplete: true };
+        },
+        inspect: (tree: CapturedProcessTree) => ({
+          verified: true,
+          survivors: surviving ? tree.descendants : [],
+        }),
+        signal: ({ tree }: { tree: CapturedProcessTree }) => {
+          signalled.push(tree);
+          rootExit.resolve();
+        },
+      },
+      ...deterministicClock(),
+    };
+    await expect(teardownProviderProcessTree(input, dependencies)).rejects.toMatchObject({
+      rootExited: true,
+      remainingDescendantPids: [1002],
+    });
+    await expect(teardownProviderProcessTree(input, dependencies)).rejects.toMatchObject({
+      remainingDescendantPids: [1002],
+    });
+    expect(scans).toBe(1);
+    surviving = false;
+    await expect(teardownProviderProcessTree(input, dependencies)).resolves.toMatchObject({
+      escalated: false,
+    });
+    // If the PID now belongs to another process, it must not receive retry TERM.
+    expect(signalled.at(-1)?.descendants).toEqual([]);
+  });
+
+  it("cannot turn failed capture into empty-tree proof after the root exits", async () => {
+    const rootExit = deferred<void>();
+    let scans = 0;
+    let signals = 0;
+    const input = { rootPid: 1101, rootExited: rootExit.promise };
+    const dependencies = {
+      processTreeKiller: {
+        capture: () => ({ descendants: [], captureComplete: ++scans > 1 }),
+        signal: () => {
+          signals += 1;
+        },
+      },
+      ...deterministicClock(),
+    };
+    await expect(teardownProviderProcessTree(input, dependencies)).rejects.toMatchObject({
+      rootExited: false,
+      captureComplete: false,
+    });
+    expect(signals).toBe(0);
+    rootExit.resolve();
+    await expect(teardownProviderProcessTree(input, dependencies)).rejects.toMatchObject({
+      rootExited: true,
+      captureComplete: false,
+    });
+    expect(scans).toBe(1);
   });
 });

@@ -47,17 +47,20 @@ import {
 } from "../lib/stagedDraftNavigation";
 import { newCommandId, newThreadId } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
+import { isSynaraEmbedMode, withLatticeEmbedSearch } from "../embedMode";
 import { useFocusedChatContext } from "../focusedChatContext";
 import { useStore } from "../store";
-import { useProjectEnvironmentStore } from "../projectEnvironmentStore";
 import { useTemporaryThreadStore } from "../temporaryThreadStore";
 import { useTerminalStateStore } from "../terminalStateStore";
+import { resolveEmbeddedNewThreadModelSelection } from "../components/ChatView.logic";
 
 export interface NewThreadNavigationOptions {
   /**
    * Search params applied when the hook navigates to the created thread.
    * Lets callers keep view-level state (e.g. the editor workspace view)
-   * across the route change; default navigation clears all search params.
+   * across the route change. Lattice embed keys are always merged back in;
+   * omitting `search` used to clear the handshake query and a later iframe
+   * reload would drop embed mode.
    */
   search?: (previous: Record<string, unknown>) => Record<string, unknown>;
 }
@@ -100,17 +103,24 @@ export function useHandleNewThread() {
     }
 
     const entryPoint = options?.entryPoint ?? "chat";
-    const defaultEnvMode =
-      (entryPoint === "chat"
-        ? useProjectEnvironmentStore.getState().envModeByProjectId[projectId]
-        : undefined) ?? settings.defaultThreadEnvMode;
+    const storeState = useStore.getState();
+    const project = storeState.projects.find((candidate) => candidate.id === projectId);
+    const projectDefaultModelSelection = isSynaraEmbedMode()
+      ? resolveEmbeddedNewThreadModelSelection({
+          projectSelection: project?.defaultModelSelection ?? null,
+          threadSummaries: Object.values(storeState.sidebarThreadSummaryById),
+          providerStatuses,
+          providerStatusesReconciled,
+          providerOrder: settings.providerOrder,
+          hiddenProviders: settings.hiddenProviders,
+        })
+      : (project?.defaultModelSelection ?? null);
     if (entryPoint === "chat") {
       const draftStore = useComposerDraftStore.getState();
       const draftThread = draftStore.getDraftThreadByProjectId(projectId, "chat");
       const draftComposer = draftThread
         ? (draftStore.draftsByThreadId[draftThread.threadId] ?? null)
         : null;
-      const project = useStore.getState().projects.find((candidate) => candidate.id === projectId);
 
       prefetchModelsForNewThread(queryClient, {
         settings,
@@ -119,13 +129,13 @@ export function useHandleNewThread() {
         providerOverride: options?.provider ?? null,
         draftActiveProvider: draftComposer?.activeProvider ?? null,
         stickyActiveProvider: draftStore.stickyActiveProvider,
-        projectDefaultProvider: project?.defaultModelSelection?.provider ?? null,
+        projectDefaultProvider: projectDefaultModelSelection?.provider ?? null,
         projectCwd: project?.cwd ?? null,
         draftWorktreePath: draftThread?.worktreePath ?? null,
         worktreePath: options?.worktreePath ?? null,
         hasExplicitWorktreePath: options?.worktreePath !== undefined,
         fresh: options?.fresh === true,
-        envMode: options?.envMode ?? draftThread?.envMode ?? defaultEnvMode,
+        envMode: options?.envMode ?? null,
         serverCwd,
         providerStatuses,
         statusesReconciled: providerStatusesReconciled,
@@ -211,10 +221,6 @@ export function useHandleNewThread() {
       projectId,
       routeThreadId: focusedThreadId,
     });
-    // Read from the store at call time so post-sync sidebar flows can use the latest project defaults.
-    const projectDefaultModelSelection =
-      useStore.getState().projects.find((project) => project.id === projectId)
-        ?.defaultModelSelection ?? null;
     const applyUsableStickyState = (threadId: ThreadId) => {
       applyStickyState(threadId);
       if (options?.provider || !hasReconciledServerProviderStatuses(queryClient)) {
@@ -348,7 +354,7 @@ export function useHandleNewThread() {
         await navigate({
           to: "/$threadId",
           params: { threadId: bootstrapPlan.threadId },
-          ...(navigation?.search ? { search: navigation.search } : {}),
+          search: withLatticeEmbedSearch(navigation?.search),
         });
         restoreComposerDraft(bootstrapPlan.threadId, preservedComposerDraft);
         if (entryPoint === "terminal") {
@@ -402,7 +408,7 @@ export function useHandleNewThread() {
         createdAt,
         entryPoint,
         options,
-        defaultEnvMode,
+        defaultEnvMode: isSynaraEmbedMode() ? "local" : defaultEnvMode,
       });
       const containerDefaults = await resolveGroupContainerThreadDefaults({
         projectId,
@@ -424,6 +430,16 @@ export function useHandleNewThread() {
               providerStatuses: providerStatusesReconciled ? providerStatuses : [],
             });
           }
+          // A fresh installation has no sticky composer yet. Seed Lattice's
+          // resolved history preference before the route falls back to the
+          // project's bootstrap model, while preserving explicit overrides.
+          if (
+            isSynaraEmbedMode() &&
+            !useComposerDraftStore.getState().draftsByThreadId[threadId]?.activeProvider &&
+            projectDefaultModelSelection
+          ) {
+            setModelSelection(threadId, projectDefaultModelSelection);
+          }
           applyProviderOverride(threadId);
         },
         // Mark the draft-landing navigation as a transition so the new route
@@ -435,7 +451,7 @@ export function useHandleNewThread() {
               navigate({
                 to: "/$threadId",
                 params: { threadId },
-                ...(navigation?.search ? { search: navigation.search } : {}),
+                search: withLatticeEmbedSearch(navigation?.search),
               }).then(resolve, reject);
             });
           }),

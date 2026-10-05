@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Schema } from "effect";
 import { useCallback, useEffect } from "react";
 
+import { isSynaraEmbedMode } from "~/embedMode";
 import { useLocalStorage } from "~/hooks/useLocalStorage";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { useOnboardingDialogStore } from "~/onboarding/onboardingDialogStore";
@@ -34,6 +35,9 @@ export function useProjectImportAnnouncement() {
   }, [dialogOpen, installation, markSeen, onboardingOpen, seen]);
   return {
     visible: Boolean(
+      // Lattice owns onboarding; sidecar-origin storage is not a durable
+      // dismissal record when its loopback port changes. Manual import stays available.
+      !isSynaraEmbedMode() &&
       startupSettled &&
       installation &&
       !seen.includes(installation) &&

@@ -1,7 +1,7 @@
 import { splitPromptIntoComposerSegments } from "./composer-editor-mentions";
 import { isBuiltInComposerSlashCommand, type ComposerSlashCommand } from "./composerSlashCommands";
 import {
-  composerMentionQuotedPathHasClosingQuote,
+  composerMentionQuotedPathClosingQuoteIndex,
   decodeComposerMentionQuotedPath,
 } from "./lib/composerMentions";
 import { INLINE_TERMINAL_CONTEXT_PLACEHOLDER } from "./lib/terminalContext";
@@ -366,10 +366,25 @@ export function detectComposerTrigger(text: string, cursorInput: number): Compos
   const quotedMentionStart = linePrefix.lastIndexOf('@"');
   if (quotedMentionStart !== -1) {
     const afterOpen = linePrefix.slice(quotedMentionStart + 2);
-    if (!composerMentionQuotedPathHasClosingQuote(afterOpen)) {
+    const closingQuoteIndex = composerMentionQuotedPathClosingQuoteIndex(afterOpen);
+    if (closingQuoteIndex === -1) {
       return {
         kind: "mention",
         query: decodeComposerMentionQuotedPath(afterOpen),
+        rangeStart: lineStart + quotedMentionStart,
+        rangeEnd: cursor,
+      };
+    }
+    // A selected quoted mention is followed by a delimiter, so its picker is
+    // closed. Removing that delimiter with Backspace leaves the caret directly
+    // after the closing quote while Lexical still owns the mention chip. Reopen
+    // the picker for that exact token, matching the edit/delete flow of simple
+    // `@plugin` and `@file` mentions. Any following text keeps it completed.
+    const closingQuoteEnd = quotedMentionStart + 2 + closingQuoteIndex + 1;
+    if (closingQuoteEnd === linePrefix.length) {
+      return {
+        kind: "mention",
+        query: decodeComposerMentionQuotedPath(afterOpen.slice(0, closingQuoteIndex)),
         rangeStart: lineStart + quotedMentionStart,
         rangeEnd: cursor,
       };
@@ -398,6 +413,22 @@ export function detectComposerTrigger(text: string, cursorInput: number): Compos
     rangeStart: mentionStart,
     rangeEnd: cursor,
   };
+}
+
+export function resolveComposerTriggerAfterEditorChange(options: {
+  previousText: string;
+  nextText: string;
+  expandedCursor: number;
+  cursorAdjacentToInlineToken: boolean;
+}): ComposerTrigger | null {
+  // Moving the caret beside an atomic chip must not reopen its picker. A real
+  // text edit is different: removing the delimiter after a completed mention
+  // with Backspace intentionally exposes that mention as the active query, so
+  // the picker can reopen before a second Backspace removes the chip.
+  if (options.cursorAdjacentToInlineToken && options.previousText === options.nextText) {
+    return null;
+  }
+  return detectComposerTrigger(options.nextText, options.expandedCursor);
 }
 
 export function parseStandaloneComposerSlashCommand(

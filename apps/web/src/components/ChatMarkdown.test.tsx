@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -64,6 +65,17 @@ describe("streamingCodeHighlightIntervalMs", () => {
 });
 
 describe("ChatMarkdown", () => {
+  it(
+    "uses the theme foreground token for markdown text",
+    async () => {
+      const markup = await renderMarkdown("Theme-aware text");
+
+      expect(markup).toContain("text-foreground");
+      expect(markup).not.toContain("text-neutral-900");
+    },
+    HEAVY_MODULE_TEST_TIMEOUT_MS,
+  );
+
   it("renders GitHub alert blockquotes with a title and strips the marker", async () => {
     const markup = await renderMarkdown("> [!NOTE]\n> **Medium Risk**\n> Details");
 
@@ -103,6 +115,26 @@ describe("ChatMarkdown", () => {
     expect(markup).toContain("Mars research");
     expect(markup).not.toContain("thread://thread-abc-123");
   });
+  it("renders assistant HTML break tags without enabling arbitrary HTML", async () => {
+    const markup = await renderMarkdown(
+      "4. 开源社区原生模型探测 (Slide 3)<br>(sheet_probe 第 9 行)\n\n`literal <br>`\n\n<span>inert</span>",
+    );
+
+    expect(markup).toContain("(Slide 3)<br/>\n(sheet_probe 第 9 行)");
+    expect(markup).toContain("<code>literal &lt;br&gt;</code>");
+    expect(markup).not.toContain("<span>inert</span>");
+  });
+
+  it("renders Codex file citations as readable local file links", async () => {
+    const markup = await renderMarkdown(
+      '英文稿：:codex-file-citation{path="/Users/leonardo/Documents/research/Native VLM/main.pdf" purpose="output"}',
+      "/Users/leonardo/Documents/research/Native VLM",
+    );
+
+    expect(markup).toContain('href="main.pdf"');
+    expect(markup).toContain(">main.pdf</span>");
+    expect(markup).not.toContain("codex-file-citation");
+  }, 15_000);
 
   it("renders inline math with KaTeX", async () => {
     const markup = await renderMarkdown("Euler wrote $e^{i\\\\pi} + 1 = 0$.");
@@ -112,11 +144,66 @@ describe("ChatMarkdown", () => {
     expect(markup).not.toContain("$e^{i\\\\pi} + 1 = 0$");
   });
 
+  it("renders decimal assistant math without mistaking ordinary currency for a formula", async () => {
+    const markup = await renderMarkdown(
+      "区间 $0.58 \\sim 0.70$，中位数 $0.59$。It costs $5 to $10 per seat.",
+    );
+
+    expect(markup.match(/class="katex"/g) ?? []).toHaveLength(2);
+    expect(markup).not.toContain("$0.58 \\sim 0.70$");
+    expect(markup).not.toContain("$0.59$");
+    expect(markup).toContain("$5 to $10");
+  });
+
   it("renders display math with KaTeX block output", async () => {
     const markup = await renderMarkdown("$$\n\\\\int_0^1 x^2 \\, dx\n$$");
 
     expect(markup).toContain("katex-display");
     expect(markup).not.toContain("$$");
+  });
+
+  it("renders LaTeX-style inline and display delimiters with KaTeX", async () => {
+    const markup = await renderMarkdown(
+      ["Euler wrote \\(e^{i\\pi} + 1 = 0\\).", "", "\\[\\sum_{i=1}^{n} i\\]"].join("\n"),
+    );
+
+    expect(markup.match(/class="katex"/g) ?? []).toHaveLength(2);
+    expect(markup).toContain("katex-display");
+    expect(markup).not.toContain("\\(e^{i\\pi} + 1 = 0\\)");
+    expect(markup).not.toContain("\\[\\sum_{i=1}^{n} i\\]");
+    expect(markup).not.toContain("\uE003");
+    expect(markup).not.toContain("\uE005");
+  });
+
+  it("renders multiline LaTeX display math across blank lines", async () => {
+    const markup = await renderMarkdown(
+      "\\[\n\n\\begin{aligned} x[i] &= 1 \\\\ y[i] &= 2 \\end{aligned}\n\\]",
+    );
+
+    expect(markup).toContain("katex-display");
+    expect(markup).not.toContain("\uE005");
+    expect(markup).not.toContain("\uE006");
+  });
+
+  it("keeps LaTeX-style delimiters literal in code and markdown links", async () => {
+    const markup = await renderMarkdown(
+      [
+        "Link [\\(literal\\)](./notes.md).",
+        "",
+        "Inline code `\\(x^2\\)`.",
+        "",
+        "```md",
+        "\\[",
+        "x^2",
+        "\\]",
+        "```",
+      ].join("\n"),
+    );
+
+    expect(markup).toContain('href="./notes.md"');
+    expect(markup).toContain("<code>\\(x^2\\)</code>");
+    expect(markup).toContain("\\[");
+    expect(markup).not.toContain('class="katex"');
   });
 
   it("keeps links and code intact when math is present", async () => {
@@ -144,47 +231,16 @@ describe("ChatMarkdown", () => {
     expect(markup.match(/class="katex"/g) ?? []).toHaveLength(1);
   });
 
-  it("keeps bracketed display formulas intact without swallowing subsequent prose and tables", async () => {
-    const markup = await renderMarkdown(String.raw`- **Decay gate**:
-
-$$
-\alpha_t
-=
-\exp\left[-\exp(A)\operatorname{softplus}(W_\alpha x_t+b_\alpha)\right],
-$$
-
-正常正文 **仍然加粗**。
-
-$$
-o_t
-=
-W_o\left[\sigma(W_zx_t)\odot\operatorname{RMSNorm}(y_t)\right].
-$$
-
-| Operation | FLOPs |
-|---|---:|
-| Read | $d_kd_v$ |
-
-[route](/src/_chat.$threadId.tsx)`);
-
-    expect(markup.match(/class="katex-display"/g) ?? []).toHaveLength(2);
-    expect(markup).not.toContain("katex-error");
-    expect(markup).not.toMatch(/<h[12][ >]/);
-    expect(markup).toContain("<strong>仍然加粗</strong>");
-    expect(markup).toContain("<table>");
-    expect(markup).toContain('href="/src/_chat.$threadId.tsx"');
-  });
-
-  it("preserves brackets inside inline math and ordinary prose beside links", async () => {
+  it("renders external assistant links with the shared favicon icon slot", async () => {
     const markup = await renderMarkdown(
-      String.raw`[note] $x[0]+y[1]$ and $\left[f(x)\right]$; [route](/src/$id.tsx). Price $5.`,
+      "Closest source: [OpenAI benchmark](https://openai.com/research).",
     );
 
-    expect(markup.match(/class="katex"/g) ?? []).toHaveLength(2);
-    expect(markup).not.toContain("katex-error");
-    expect(markup).toContain("[note]");
-    expect(markup).toContain('href="/src/$id.tsx"');
-    expect(markup).toContain("Price $5.");
+    expect(markup).toContain(
+      'class="inline font-medium text-[var(--info-foreground)] underline-offset-2 hover:underline"',
+    );
+    expect(markup).toContain("inline-block size-[1em] shrink-0 align-middle -translate-y-px mr-1");
+    expect(markup).toContain("OpenAI benchmark");
   });
 
   it("keeps dollar signs in markdown file links from becoming math", async () => {
@@ -200,56 +256,6 @@ $$
     expect(markup).not.toContain("CHATMARKDOWNLITERALDOLLARPLACEHOLDER");
   });
 
-  it.each([["Price $5/month; [plan](/pricing/$tier).", "Price $5/month;", "/pricing/$tier"]])(
-    "keeps literal dollars before Markdown links: %s",
-    async (text, literal, href) => {
-      const markup = await renderMarkdown(text);
-
-      expect(markup).toContain(literal);
-      expect(markup).toContain(`href="${href}"`);
-      expect(markup).not.toContain('class="katex"');
-    },
-  );
-
-  it("keeps literal dollars before Markdown images without consuming their URLs", async () => {
-    const markup = await renderMarkdown(
-      "Use $ASSET for ![preview](https://example.com/assets/$variant.png).",
-    );
-
-    expect(markup).toContain("Use $ASSET for");
-    expect(markup).toContain('src="https://example.com/assets/$variant.png"');
-    expect(markup).not.toContain('class="katex"');
-  });
-
-  it("preserves bracketed TeX that also resembles a dollar-free Markdown link", async () => {
-    const markup = await renderMarkdown("Math $[f](x)$ and $2[f](x)$.");
-
-    expect(markup.match(/class="katex"/g) ?? []).toHaveLength(2);
-    expect(markup).not.toContain("katex-error");
-    expect(markup).not.toContain('href="x"');
-  });
-
-  it.each([
-    ["$x[0]+y[", "$x[0]+y[1]$"],
-    ["$$\n\\left[x[0]", "$$\n\\left[x[0]\\right]\n$$"],
-  ])(
-    "renders partial and completed bracketed formulas beside links: %s",
-    async (partial, complete) => {
-      const prefix = "Use $PATH and [route](/src/$id.tsx).\n\n";
-      const partialMarkup = await renderMarkdown(prefix + partial);
-      const completeMarkup = await renderMarkdown(prefix + complete + "\n\n**Still prose.**");
-
-      expect(partialMarkup).not.toContain('class="katex"');
-      expect(completeMarkup.match(/class="katex"/g) ?? []).toHaveLength(1);
-      expect(completeMarkup).toContain("<strong>Still prose.</strong>");
-      for (const markup of [partialMarkup, completeMarkup]) {
-        expect(markup).toContain("Use $PATH and");
-        expect(markup).toContain('href="/src/$id.tsx"');
-        expect(markup).not.toContain("katex-error");
-      }
-    },
-  );
-
   it("does not turn ordinary dollar text or escaped dollars into math", async () => {
     const markup = await renderMarkdown(
       "It costs $5 to $10 per seat. Escape \\$E=mc^2\\$ when you want literal TeX.",
@@ -260,6 +266,14 @@ $$
     expect(markup).not.toContain('class="katex"');
   });
 
+  it("keeps currency literal without swallowing later inline math", async () => {
+    const markup = await renderMarkdown("Price $5. Formula $x$ still renders.");
+
+    expect(markup).toContain("$5. Formula");
+    expect(markup).toContain('class="katex"');
+    expect(markup).not.toContain("$x$");
+  });
+
   it("keeps all-caps dollar identifiers literal", async () => {
     const markup = await renderMarkdown("Use $USD$ for price and $PATH$ for shell lookup.");
 
@@ -268,29 +282,12 @@ $$
     expect(markup).not.toContain('class="katex"');
   });
 
-  it("renders numeric coefficients in every table row", async () => {
-    const markup = await renderMarkdown(String.raw`| Operation | FLOPs |
-|---|---:|
-| Decay | $d_kd_v$ |
-| Read | $2d_kd_v$ |
-| Write | $2d_kd_v$ |
-| Output | $2d_kd_v$ |`);
-    expect(markup.match(/class="katex"/g) ?? []).toHaveLength(4);
-    expect(markup).not.toContain("katex-error");
-    expect(markup).not.toContain("$2d_kd_v$");
-  });
+  it("renders all-caps subscript expressions as inline math", async () => {
+    const markup = await renderMarkdown("Attention uses $W_K$ and $W_O$ projections.");
 
-  it("renders numeric expressions while keeping prices and code literal", async () => {
-    const markup = await renderMarkdown(
-      String.raw`Prices $5, $5 to $10, $5-$10 and $29.470. Math $2x$, $2.5x$, $2 + 3 = 5$, $2^{10}$ and $2\pi$.` +
-        " Code `$2d_kd_v$`.",
-    );
-    expect(markup.match(/class="katex"/g) ?? []).toHaveLength(5);
-    expect(markup).not.toContain("katex-error");
-    expect(markup).toContain("$5 to $10");
-    expect(markup).toContain("$5-$10");
-    expect(markup).toContain("$29.470");
-    expect(markup).toContain("<code>$2d_kd_v$</code>");
+    expect(markup.match(/class="katex"/g) ?? []).toHaveLength(2);
+    expect(markup).not.toContain("$W_K$");
+    expect(markup).not.toContain("$W_O$");
   });
 
   it("renders a table whose delimiter row is missing cells", async () => {
@@ -371,6 +368,13 @@ $$
     expect(markup).toContain(">error</span>");
   });
 
+  it("keeps relative inline-code as code until a real file is known", async () => {
+    const markup = await renderMarkdown("See `src/index.ts`.", "/Users/tester/project");
+
+    expect(markup).toContain("<code>src/index.ts</code>");
+    expect(markup).not.toContain('href="/Users/tester/project/src/index.ts"');
+  });
+
   it("joins a relative chip onto a directory declared in the same message", async () => {
     const markup = await renderMarkdown(
       [
@@ -389,6 +393,42 @@ $$
     );
   });
 
+  it("prefers a unique same-turn absolute path over the workspace cwd join", async () => {
+    const { default: ChatMarkdown } = await import("./ChatMarkdown");
+    const absolutePath = "/Users/tester/.agents/skills/annotate-pr/references/uploadthing.md";
+    const markup = renderWithQueryClient(
+      <ChatMarkdown
+        text="See `references/uploadthing.md`."
+        cwd="/Users/tester/chat-workspace"
+        isStreaming={false}
+        knownAbsoluteFilePaths={[absolutePath]}
+      />,
+    );
+
+    expect(markup).toContain(`title="${absolutePath}"`);
+    expect(markup).not.toContain('href="/Users/tester/chat-workspace/references/uploadthing.md"');
+  });
+
+  it("chips absolute inline-code paths and authored file URLs", async () => {
+    const absolutePath = "/Users/tester/.agents/skills/annotate-pr/references/uploadthing.md";
+    const markup = await renderMarkdown(
+      [`See \`${absolutePath}\`.`, "", `[uploadthing.md](file://${absolutePath})`].join("\n"),
+      "/Users/tester/chat-workspace",
+    );
+
+    expect(markup).toContain(`title="${absolutePath}"`);
+    expect(markup).toContain(`href="${absolutePath}"`);
+    expect(markup).not.toContain(`<code>${absolutePath}</code>`);
+  });
+
+  it("chips an absolute directory path that has no file extension", async () => {
+    const absoluteDir = "/Users/tester/.agents/skills/annotate-pr";
+    const markup = await renderMarkdown(`Dir: \`${absoluteDir}\``, "/Users/tester/chat-workspace");
+
+    expect(markup).toContain(`title="${absoluteDir}"`);
+    expect(markup).not.toContain(`<code>${absoluteDir}</code>`);
+  });
+
   it("chips a line-suffixed relative file against a directory declared in the same message", async () => {
     const markup = await renderMarkdown(
       ["**Dir:** `/Users/tester/.agents/skills/annotate-pr`", "", "- `SKILL.md:1`"].join("\n"),
@@ -397,6 +437,25 @@ $$
 
     expect(markup).toContain('title="/Users/tester/.agents/skills/annotate-pr/SKILL.md"');
     expect(markup).not.toContain('href="/Users/tester/Documents/Synara/thread/SKILL.md"');
+  });
+
+  it("keeps plan, diff, and transcript surfaces routed through the shared renderer", () => {
+    const planSidebarSource = readFileSync(new URL("./PlanSidebar.tsx", import.meta.url), "utf8");
+    const proposedPlanCardSource = readFileSync(
+      new URL("./chat/ProposedPlanCard.tsx", import.meta.url),
+      "utf8",
+    );
+    const messagesTimelineSource = readFileSync(
+      new URL("./chat/MessagesTimeline.tsx", import.meta.url),
+      "utf8",
+    );
+
+    expect(planSidebarSource).toContain('import ChatMarkdown from "./ChatMarkdown"');
+    expect(planSidebarSource).toContain("<ChatMarkdown");
+    expect(proposedPlanCardSource).toContain('import ChatMarkdown from "../ChatMarkdown"');
+    expect(proposedPlanCardSource).toContain("<ChatMarkdown");
+    expect(messagesTimelineSource).toContain('import ChatMarkdown from "../ChatMarkdown"');
+    expect(messagesTimelineSource).toContain("<ChatMarkdown");
   });
 });
 
@@ -461,119 +520,13 @@ describe("ChatMarkdown user variant", () => {
     expect(markup).toContain('title="https://example.com/docs"');
     expect(markup).toContain("<button");
   });
-});
 
-it("opens Obsidian aliases relative to the vault and leaves code unchanged", async () => {
-  const { default: ChatMarkdown } = await import("./ChatMarkdown");
-  const markup = renderWithQueryClient(
-    <ChatMarkdown
-      text={
-        "Read [[03-Resources/papers/Qwen-3.8-Flash-Next.pdf|论文]] and [[My note]]. Code `[[literal|text]]`."
-      }
-      cwd="/vault/02-Areas/Career"
-      wikiLinkRoot="/vault"
-    />,
-  );
-  expect(markup).toContain('href="/vault/03-Resources/papers/Qwen-3.8-Flash-Next.pdf"');
-  expect(markup).toContain("论文");
-  expect(markup).toContain('href="/vault/My%20note.md"');
-  expect(markup).toContain("<code>[[literal|text]]</code>");
-  expect(markup).not.toContain("[[03-Resources");
-});
-
-it.each(["\n", "\r\n"])(
-  "keeps wiki links on the first line of a GitHub alert (%j)",
-  async (eol) => {
-    const { default: ChatMarkdown } = await import("./ChatMarkdown");
-    const markup = renderWithQueryClient(
-      <ChatMarkdown
-        text={`> [!NOTE]${eol}> See [[My note]] now`}
-        cwd="/vault"
-        wikiLinkRoot="/vault"
-      />,
+  it("renders fenced code with the shared code block chrome", async () => {
+    const markup = await renderUserMarkdown(
+      ["look at this:", "", "```ts", "const value = 1;", "```"].join("\n"),
     );
-    expect(markup).toContain('data-github-alert="note"');
-    expect(markup).toContain('href="/vault/My%20note.md"');
-    expect(markup).not.toContain("[[My note]]");
-  },
-);
 
-describe("workspace Wiki links", () => {
-  it.each([
-    ["/vault/root #1", "/vault/root%20%231/My%20%2520%20note.md", "/vault/root #1/My %20 note.md"],
-    [
-      "C:\\Users\\me\\vault",
-      "C:/Users/me/vault/My%20%2520%20note.md",
-      "C:/Users/me/vault/My %20 note.md",
-    ],
-    [
-      "\\\\server\\share\\vault",
-      "//server/share/vault/My%20%2520%20note.md",
-      "//server/share/vault/My %20 note.md",
-    ],
-  ])("opens encoded file paths under %s", async (root, href, target) => {
-    const { default: ChatMarkdown } = await import("./ChatMarkdown");
-    const markup = renderWithQueryClient(
-      <ChatMarkdown text="[[My %20 note|Read note]]" cwd={root} wikiLinkRoot={root} />,
-    );
-    expect(markup).toContain(`href="${href}"`);
-    expect(markup).toContain(`title="${target}"`);
-    expect(markup).not.toContain('target="_blank"');
+    expect(markup).toContain("chat-markdown-codeblock");
+    expect(markup).toContain("const value = 1;");
   });
-
-  it.each([
-    "Before [[note|Alias]] after",
-    "Escaped \\* and &amp; Before [[note]] after",
-    "First line\r\nBefore [[note]] after",
-    "> First line\r\n> [[note]] after",
-    "> [!TIP]\r\n>   Before [[note]] after",
-    "- First line\n  [[note]] after",
-    "[[note]] &amp; \\* after",
-    "[[note|Label &amp; after]]",
-    "Cost \\$5 [[note]] after",
-  ])("keeps find source offsets in %s", async (text) => {
-    const { default: ChatMarkdown } = await import("./ChatMarkdown");
-    const startOffset = text.indexOf("after");
-    const markup = renderWithQueryClient(
-      <ChatMarkdown
-        text={text}
-        cwd="/vault"
-        findQuery="after"
-        findActiveRange={{ startOffset, endOffset: startOffset + 5 }}
-      />,
-    );
-    expect(markup).toContain(`data-chat-find-start="${startOffset}"`);
-    expect(markup).toContain('data-chat-find-match="active"');
-  });
-
-  it("leaves escaped syntax, embeds, and unsupported headings literal", async () => {
-    const markup = await renderMarkdown(
-      "\\[\\[escaped]] ![[embed]] [[note#Heading]] [[#Heading]] `[[code]]`",
-      "/vault",
-    );
-    expect(markup).toContain("[[escaped]]");
-    expect(markup).toContain("![[embed]]");
-    expect(markup).toContain("[[note#Heading]]");
-    expect(markup).not.toContain("href=");
-  });
-});
-
-it.each(["> First line\n> [[note|Read note]] after", "- First line\n  [[note|Read note]] after"])(
-  "opens Wiki links on Markdown continuation lines: %s",
-  async (text) => {
-    const markup = await renderMarkdown(text, "/vault");
-    expect(markup).toContain('href="/vault/note.md"');
-    expect(markup).toContain("Read note");
-  },
-);
-
-it("keeps dollar filenames separate from math and rejects escaped delimiters", async () => {
-  const text = String.raw`Use $PATH: [[notes/$threadId.tsx|Route]]. Formula $2x[0]$; \[\[literal\]\]. [[foo\]] [[note\|alias]]`;
-  const markup = await renderMarkdown(text, "/vault");
-  expect(markup).toContain('href="/vault/notes/$threadId.tsx"');
-  expect(markup.match(/class="katex"/g)).toHaveLength(1);
-  expect(markup).toContain("[[literal]]");
-  expect(markup).not.toContain("foo.md");
-  expect(markup).not.toContain("alias.md");
-  expect(markup.match(/href=/g)).toHaveLength(1);
 });

@@ -9,6 +9,14 @@ import {
 
 // Pull request lists live in the GitHub inbox query (`githubInboxQueryOptions.ts`); these keys
 // cover pull request detail and diff only.
+import { isPullRequestsUnavailableError } from "./pullRequestErrors";
+
+function shouldRetryPullRequestQuery(failureCount: number, error: unknown): boolean {
+  // Missing CLI/authentication cannot recover during retry backoff. All other
+  // errors retain React Query's browser default of three retries and its default delay.
+  return !isPullRequestsUnavailableError(error) && failureCount < 3;
+}
+
 export const pullRequestQueryKeys = {
   all: ["pull-requests"] as const,
   detail: (input: PullRequestDetailInput | null) =>
@@ -47,6 +55,7 @@ export function pullRequestDetailQueryOptions(
 ) {
   const pollingEnabled = behavior.pollingEnabled ?? true;
   return queryOptions({
+    retry: shouldRetryPullRequestQuery,
     queryKey: pullRequestQueryKeys.detail(input),
     queryFn: () => {
       if (!input) throw new Error("Pull request detail is unavailable.");
@@ -63,6 +72,7 @@ export function pullRequestDetailQueryOptions(
 
 export function pullRequestDiffQueryOptions(input: PullRequestDetailInput | null) {
   return queryOptions({
+    retry: shouldRetryPullRequestQuery,
     queryKey: pullRequestQueryKeys.diff(input),
     queryFn: () => {
       if (!input) throw new Error("Pull request diff is unavailable.");

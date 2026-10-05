@@ -37,6 +37,7 @@ export function SettingsCard({
   const divided = dividedProp ?? true;
   return (
     <div
+      data-slot="settings-card"
       className={cn(
         SETTINGS_CARD_CLASS_NAME,
         divided && SETTINGS_STACKED_ROWS_DIVIDER_CLASS_NAME,
@@ -161,23 +162,26 @@ export function SettingsListRow({
   title,
   description,
   actions,
+  className,
   align: alignProp,
   onContextMenu,
 }: {
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
+  className?: string;
   align?: "center" | "start";
   onContextMenu?: ComponentProps<"div">["onContextMenu"];
 }) {
   const align = alignProp ?? "center";
   return (
     <div
-      className={SETTINGS_CARD_ROW_CLASS_NAME}
+      className={cn(SETTINGS_CARD_ROW_CLASS_NAME, className)}
       data-slot="settings-row"
       onContextMenu={onContextMenu}
     >
       <div
+        data-slot="settings-row-layout"
         className={cn(
           "flex flex-col gap-2.5 sm:flex-row sm:justify-between",
           align === "start" ? "sm:items-start" : "sm:items-center",
@@ -190,7 +194,10 @@ export function SettingsListRow({
           ) : null}
         </div>
         {actions != null ? (
-          <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto sm:justify-end">
+          <div
+            data-slot="settings-actions"
+            className="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto"
+          >
             {actions}
           </div>
         ) : null}
@@ -209,7 +216,7 @@ export function SettingsRow({
   onClick,
 }: {
   title: ReactNode;
-  description: string;
+  description?: string;
   status?: ReactNode;
   resetAction?: ReactNode;
   control?: ReactNode;
@@ -226,6 +233,7 @@ export function SettingsRow({
       data-slot="settings-row"
     >
       <div
+        data-slot="settings-row-layout"
         className={cn(
           "flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between",
           onClick && "cursor-pointer",
@@ -233,17 +241,25 @@ export function SettingsRow({
         onClick={onClick}
       >
         <div className="min-w-0 flex-1 space-y-0.5">
-          <div className="flex min-h-5 items-center gap-1.5">
+          <div data-slot="settings-row-title-line" className="flex min-h-5 items-center gap-1.5">
             <h3 className={SETTINGS_CARD_ROW_TITLE_CLASS_NAME}>{title}</h3>
-            <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center">
+            <span
+              data-slot="settings-row-reset-action"
+              className="inline-flex h-5 w-5 shrink-0 items-center justify-center"
+            >
               {resetAction}
             </span>
           </div>
-          <p className={SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME}>{description}</p>
+          {description ? (
+            <p className={SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME}>{description}</p>
+          ) : null}
           {status ? <div className="pt-1 text-ui-sm text-muted-foreground">{status}</div> : null}
         </div>
         {control ? (
-          <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto sm:justify-end">
+          <div
+            data-slot="settings-control"
+            className="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto"
+          >
             {control}
           </div>
         ) : null}

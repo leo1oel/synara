@@ -6,6 +6,7 @@
 // Layer: web profile feature (settings panel body).
 
 import { useState } from "react";
+import { useLingui } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
 import { type ProfileStats, type ProfileTokenStats, type ProviderKind } from "@synara/contracts";
 import {
@@ -77,12 +78,17 @@ function ProfileContent({
   tokenStats: ProfileTokenStats | null;
   tokensPending: boolean;
 }) {
+  const { i18n } = useLingui();
   const [shareOpen, setShareOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
   const defaultName = toDisplayName(stats.identity.homeDirBasename);
+  const defaultHandle =
+    stats.identity.defaultHandle.toLowerCase() === "@synara"
+      ? "@lattice"
+      : stats.identity.defaultHandle;
   const { name, setName } = useProfileName(defaultName);
-  const { handle, setHandle } = useProfileHandle(stats.identity.defaultHandle);
+  const { handle, setHandle } = useProfileHandle(defaultHandle);
   const { color: avatarColor, setColor: setAvatarColor } = useProfileAvatarColor();
   const { image: avatarImage, setImage: setAvatarImage } = useProfileAvatarImage();
 
@@ -121,8 +127,8 @@ function ProfileContent({
           <div className="flex items-center gap-1.5 text-ui leading-snug text-muted-foreground">
             <span>{handle}</span>
             <span aria-hidden>·</span>
-            <span className="rounded-full border px-1.5 py-px text-ui leading-snug text-muted-foreground">
-              Synara
+            <span className="rounded-full border px-1.5 py-px text-ui-xs text-muted-foreground">
+              Lattice
             </span>
           </div>
         </div>
@@ -247,7 +253,7 @@ function ProfileContent({
 
       {/* Model usage */}
       <section className="flex flex-col gap-3">
-        <h3 className="text-ui-lg font-medium">Model usage</h3>
+        <h3 className="text-ui font-medium">{i18n._("Model usage")}</h3>
         <p className="text-ui leading-snug text-muted-foreground">
           Share of {formatProfileUsageBasis(modelUsage.metric)}.
         </p>
@@ -263,7 +269,7 @@ function ProfileContent({
             ))}
           </ul>
         ) : (
-          <p className="text-ui leading-snug text-muted-foreground">No model activity yet.</p>
+          <p className="text-ui text-muted-foreground">{i18n._("No model activity yet.")}</p>
         )}
         <ProfileUsageCoverage unavailableProviders={modelUsage.unavailableProviders} />
       </section>

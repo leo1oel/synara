@@ -1,32 +1,29 @@
-// FILE: TranscriptSelectionActionLayer.tsx
-// Purpose: Renders the transcript selection floating action from controller state.
-// Layer: Chat transcript interaction UI
-
 import type { ThreadEnvironmentMode } from "@synara/contracts";
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
-
 import { toastManager } from "../ui/toast";
 import type { TranscriptAssistantSelection } from "./chatSelectionActions";
 import { SelectionNewChatComposer } from "./SelectionNewChatComposer";
-
-import { type PendingTranscriptSelectionAction } from "./useTranscriptAssistantSelectionAction";
+import type { PendingTranscriptSelectionAction } from "./useTranscriptAssistantSelectionAction";
 import { TranscriptSelectionAction } from "./TranscriptSelectionAction";
 
 interface TranscriptSelectionActionLayerProps {
   action: PendingTranscriptSelectionAction | null;
-  defaultEnvMode: ThreadEnvironmentMode;
-  canUseWorktree: boolean;
-  canAddToSide: boolean;
-  onDismiss: () => void;
+  defaultEnvMode?: ThreadEnvironmentMode;
+  canUseWorktree?: boolean;
+  canAddToSide?: boolean;
+  onDismiss?: () => void;
   onAddToChat: () => void;
-  onAddToSide: (selection: TranscriptAssistantSelection) => Promise<void>;
-  onNewChat: (
+  onAddToSide?: (selection: TranscriptAssistantSelection) => Promise<void>;
+  onNewChat?: (
     selection: TranscriptAssistantSelection,
     prompt: string,
     envMode: ThreadEnvironmentMode,
     intent: "send" | "compose",
   ) => Promise<void>;
+  showMarkerActions?: boolean;
+  onHighlight?: () => void;
+  onUnderline?: () => void;
 }
 
 export function TranscriptSelectionActionLayer(props: TranscriptSelectionActionLayerProps) {
@@ -35,18 +32,18 @@ export function TranscriptSelectionActionLayer(props: TranscriptSelectionActionL
   );
   const [sideBusy, setSideBusy] = useState(false);
   const sideInFlightRef = useRef(false);
-
   if (composerAction) {
     return createPortal(
       <SelectionNewChatComposer
         action={composerAction}
-        defaultEnvMode={props.defaultEnvMode}
-        canUseWorktree={props.canUseWorktree}
+        defaultEnvMode={props.defaultEnvMode ?? "local"}
+        canUseWorktree={props.canUseWorktree ?? false}
         onSend={(prompt, envMode) =>
-          props.onNewChat(composerAction.selection, prompt, envMode, "send")
+          props.onNewChat?.(composerAction.selection, prompt, envMode, "send") ?? Promise.resolve()
         }
         onOpenInChat={(prompt, envMode) =>
-          props.onNewChat(composerAction.selection, prompt, envMode, "compose")
+          props.onNewChat?.(composerAction.selection, prompt, envMode, "compose") ??
+          Promise.resolve()
         }
         onClose={() => setComposerAction(null)}
       />,
@@ -55,7 +52,6 @@ export function TranscriptSelectionActionLayer(props: TranscriptSelectionActionL
   }
   const action = props.action;
   if (!action) return null;
-
   return createPortal(
     <TranscriptSelectionAction
       left={action.left}
@@ -64,33 +60,40 @@ export function TranscriptSelectionActionLayer(props: TranscriptSelectionActionL
       onAddToChat={props.onAddToChat}
       disabled={sideBusy}
       sideDisabled={!props.canAddToSide}
-      onAddToSide={() => {
-        if (sideInFlightRef.current) return;
-        sideInFlightRef.current = true;
-        setSideBusy(true);
-        void props
-          .onAddToSide(action.selection)
-          .then(() => {
-            props.onDismiss();
-            window.getSelection()?.removeAllRanges();
-          })
-          .catch((error: unknown) => {
-            toastManager.add({
-              type: "error",
-              title: "Could not add selection to Side",
-              description: error instanceof Error ? error.message : "Try again.",
-            });
-          })
-          .finally(() => {
-            sideInFlightRef.current = false;
-            setSideBusy(false);
-          });
-      }}
-      onAddToNewChat={() => {
-        setComposerAction(action);
-        props.onDismiss();
-        window.getSelection()?.removeAllRanges();
-      }}
+      onAddToSide={
+        props.onAddToSide
+          ? () => {
+              if (sideInFlightRef.current) return;
+              sideInFlightRef.current = true;
+              setSideBusy(true);
+              void props.onAddToSide!(action.selection)
+                .then(() => {
+                  props.onDismiss?.();
+                  window.getSelection()?.removeAllRanges();
+                })
+                .catch((error: unknown) =>
+                  toastManager.add({
+                    type: "error",
+                    title: "Could not add selection to Side",
+                    description: error instanceof Error ? error.message : "Try again.",
+                  }),
+                )
+                .finally(() => {
+                  sideInFlightRef.current = false;
+                  setSideBusy(false);
+                });
+            }
+          : undefined
+      }
+      onAddToNewChat={
+        props.onNewChat
+          ? () => {
+              setComposerAction(action);
+              props.onDismiss?.();
+              window.getSelection()?.removeAllRanges();
+            }
+          : undefined
+      }
     />,
     document.body,
   );

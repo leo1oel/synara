@@ -4,7 +4,6 @@
 
 import { cn } from "~/lib/utils";
 import { ELEVATED_HOVER_SURFACE_CLASS_NAME } from "~/surfaceStyles";
-import { TRANSCRIPT_SELECTION_ACTION_WIDTH_PX } from "./chatSelectionActions";
 
 interface TranscriptSelectionActionProps {
   left: number;
@@ -13,7 +12,7 @@ interface TranscriptSelectionActionProps {
   onAddToChat: () => void;
   onAddToSide?: (() => void) | undefined;
   onAddToNewChat?: (() => void) | undefined;
-  sideDisabled?: boolean | undefined;
+  sideDisabled?: boolean;
   disabled?: boolean | undefined;
 }
 
@@ -33,7 +32,7 @@ function TranscriptSelectionToolbarButton({
       title={label}
       disabled={disabled}
       className={cn(
-        "pointer-events-auto inline-flex h-7 flex-none items-center justify-center whitespace-nowrap px-2.5 text-ui leading-snug text-[var(--color-text-foreground)] outline-none focus-visible:bg-[var(--color-background-elevated-secondary)] disabled:pointer-events-none disabled:opacity-40",
+        "pointer-events-auto inline-flex h-6 items-center gap-1 rounded px-1.5 text-ui-xs leading-none font-medium text-[var(--color-text-foreground)]",
         ELEVATED_HOVER_SURFACE_CLASS_NAME,
       )}
       onMouseDown={(event) => {
@@ -55,14 +54,17 @@ export function TranscriptSelectionAction(props: TranscriptSelectionActionProps)
   return (
     <div
       data-transcript-selection-action="true"
-      className="pointer-events-none fixed z-50 flex justify-center"
-      style={{ left: props.left, top: props.top, width: TRANSCRIPT_SELECTION_ACTION_WIDTH_PX }}
+      className="pointer-events-none fixed z-50"
+      style={{ left: props.left, top: props.top }}
       role="toolbar"
       aria-label="Selection actions"
     >
-      {/* Sized to its labels and centered in the layout's slot, so labels never clip
-          regardless of font size or which actions are present. */}
-      <div className="pointer-events-auto inline-flex w-max max-w-[calc(100vw-16px)] shrink-0 items-center divide-x divide-[var(--color-border)] overflow-hidden rounded-lg border border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] shadow-md">
+      <div
+        className={cn(
+          "pointer-events-auto inline-flex items-center gap-px rounded-md border border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] p-px shadow-md backdrop-blur-md",
+          props.placement === "top" ? "origin-bottom" : "origin-top",
+        )}
+      >
         <TranscriptSelectionToolbarButton
           label="Add to Chat"
           onClick={props.onAddToChat}

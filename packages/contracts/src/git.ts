@@ -47,7 +47,7 @@ const GitPushStepStatus = Schema.Literals([
 ]);
 const GitBranchStepStatus = Schema.Literals(["created", "skipped_not_requested"]);
 const GitPrStepStatus = Schema.Literals(["created", "opened_existing", "skipped_not_requested"]);
-const GitStatusPrState = Schema.Literals(["open", "closed", "merged"]);
+const GitBranchPullRequestState = Schema.Literals(["open", "closed", "merged"]);
 const GitPullRequestReference = TrimmedNonEmptyStringSchema;
 const GitPullRequestState = Schema.Literals(["open", "closed", "merged"]);
 // GitHub's mergeability is eventually consistent: "unknown" is a real transient state
@@ -136,6 +136,11 @@ export const GitStatusInput = Schema.Struct({
   cwd: TrimmedNonEmptyStringSchema,
 });
 export type GitStatusInput = typeof GitStatusInput.Type;
+
+export const GitBranchPullRequestInput = Schema.Struct({
+  cwd: TrimmedNonEmptyStringSchema,
+});
+export type GitBranchPullRequestInput = typeof GitBranchPullRequestInput.Type;
 
 export const GitHubRepositoryInput = Schema.Struct({
   cwd: TrimmedNonEmptyStringSchema,
@@ -380,6 +385,20 @@ export const GitInitInput = Schema.Struct({
 });
 export type GitInitInput = typeof GitInitInput.Type;
 
+export const GitConnectGitHubRemoteInput = Schema.Struct({
+  cwd: TrimmedNonEmptyStringSchema,
+  url: TrimmedNonEmptyStringSchema,
+});
+export type GitConnectGitHubRemoteInput = typeof GitConnectGitHubRemoteInput.Type;
+
+export const GitCreateGitHubRepositoryInput = Schema.Struct({
+  cwd: TrimmedNonEmptyStringSchema,
+  name: TrimmedNonEmptyStringSchema,
+  description: Schema.optional(Schema.String),
+  visibility: Schema.Literals(["private", "public"]),
+});
+export type GitCreateGitHubRepositoryInput = typeof GitCreateGitHubRepositoryInput.Type;
+
 export const GitStageFilesInput = Schema.Struct({
   cwd: TrimmedNonEmptyStringSchema,
   paths: Schema.Array(TrimmedNonEmptyStringSchema).check(Schema.isMinLength(1)),
@@ -394,20 +413,23 @@ export type GitUnstageFilesInput = typeof GitUnstageFilesInput.Type;
 
 // RPC Results
 
-const GitStatusPr = Schema.Struct({
+const GitBranchPullRequest = Schema.Struct({
   number: PositiveInt,
   title: TrimmedNonEmptyStringSchema,
   url: Schema.String,
   baseBranch: TrimmedNonEmptyStringSchema,
   headBranch: TrimmedNonEmptyStringSchema,
-  state: GitStatusPrState,
+  state: GitBranchPullRequestState,
   isDraft: Schema.Boolean,
   mergeability: GitPullRequestMergeability,
   additions: Schema.NullOr(NonNegativeInt),
   deletions: Schema.NullOr(NonNegativeInt),
   changedFiles: Schema.NullOr(NonNegativeInt),
 });
+export type GitBranchPullRequest = typeof GitBranchPullRequest.Type;
 
+// Local repository state only. The current branch's pull request needs GitHub round trips,
+// so it is served separately by `git.branchPullRequest` and never delays status.
 export const GitStatusResult = Schema.Struct({
   branch: TrimmedNonEmptyStringSchema.pipe(Schema.NullOr),
   hasWorkingTreeChanges: Schema.Boolean,
@@ -427,9 +449,18 @@ export const GitStatusResult = Schema.Struct({
   configuredPrBaseBranch: Schema.optional(TrimmedNonEmptyStringSchema.pipe(Schema.NullOr)),
   aheadCount: NonNegativeInt,
   behindCount: NonNegativeInt,
-  pr: Schema.NullOr(GitStatusPr),
 });
 export type GitStatusResult = typeof GitStatusResult.Type;
+
+export const GitBranchPullRequestResult = Schema.Struct({
+  // Checkout identity, which may differ from the remote PR head on imported PR branches.
+  branch: GitStatusResult.fields.branch,
+  pr: Schema.NullOr(GitBranchPullRequest),
+});
+export type GitBranchPullRequestResult = typeof GitBranchPullRequestResult.Type;
+
+/** Client-side join of `git.status` with `git.branchPullRequest` for surfaces that need both. */
+export type GitStatusWithPullRequest = GitStatusResult & GitBranchPullRequestResult;
 
 export const GitStatusLocalResult = Schema.Struct({
   branch: TrimmedNonEmptyStringSchema.pipe(Schema.NullOr),
@@ -444,7 +475,6 @@ export const GitStatusRemoteResult = Schema.Struct({
   configuredPrBaseBranch: GitStatusResult.fields.configuredPrBaseBranch,
   aheadCount: NonNegativeInt,
   behindCount: NonNegativeInt,
-  pr: Schema.NullOr(GitStatusPr),
 });
 export type GitStatusRemoteResult = typeof GitStatusRemoteResult.Type;
 
@@ -518,6 +548,16 @@ export type GitStageFilesResult = typeof GitStageFilesResult.Type;
 
 export const GitUnstageFilesResult = GitStageFilesResult;
 export type GitUnstageFilesResult = GitStageFilesResult;
+
+export const GitConnectGitHubRemoteResult = Schema.Struct({
+  remoteName: TrimmedNonEmptyStringSchema,
+  repository: TrimmedNonEmptyStringSchema,
+  url: TrimmedNonEmptyStringSchema,
+});
+export type GitConnectGitHubRemoteResult = typeof GitConnectGitHubRemoteResult.Type;
+
+export const GitCreateGitHubRepositoryResult = GitConnectGitHubRemoteResult;
+export type GitCreateGitHubRepositoryResult = GitConnectGitHubRemoteResult;
 
 export const GitListBranchesResult = Schema.Struct({
   branches: Schema.Array(GitBranch),

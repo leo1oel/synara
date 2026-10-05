@@ -50,6 +50,7 @@ import {
 import { CHAT_BACKGROUND_CLASS_NAME } from "~/components/chat/composerPickerStyles";
 import { Button } from "~/components/ui/button";
 import { StatusDot } from "~/components/ui/status-chip";
+import { FIELD_CONTROL_CLASS_NAME } from "~/components/ui/field-styles";
 import { RouteInsetSurface } from "~/components/RouteInsetSurface";
 import { automationApprovalGaps, buildAutomationDraftWarnings } from "~/lib/automationDraft";
 import {

@@ -1,4 +1,4 @@
-import { Effect, FileSystem, Schema } from "effect";
+import { Schema } from "effect";
 
 import { writeFileStringAtomically } from "./atomicWrite";
 import type { ServerConfigShape } from "./config";
@@ -45,10 +45,4 @@ export const persistServerRuntimeState = (input: {
   writeFileStringAtomically({
     filePath: input.path,
     contents: `${JSON.stringify(input.state)}\n`,
-  });
-
-export const clearPersistedServerRuntimeState = (path: string) =>
-  Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
-    yield* fs.remove(path, { force: true }).pipe(Effect.ignore({ log: true }));
   });

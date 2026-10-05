@@ -5,6 +5,8 @@ import { Effect, FileSystem, Layer, Option, Path } from "effect";
 import type {
   GitActionProgressEvent,
   GitActionProgressPhase,
+  GitConnectGitHubRemoteInput,
+  GitCreateGitHubRepositoryInput,
   GitStackedAction,
   ModelSelection,
   ProviderStartOptions,
@@ -14,7 +16,10 @@ import {
   sanitizeBranchFragment,
   sanitizeFeatureBranchName,
 } from "@synara/shared/git";
-import { parseGitHubRepositoryNameWithOwnerFromRemoteUrl } from "@synara/shared/githubRepository";
+import {
+  isValidGitHubRepositoryNameWithOwner,
+  parseGitHubRepositoryNameWithOwnerFromRemoteUrl,
+} from "@synara/shared/githubRepository";
 import { resolveWorktreeHandoffIntent } from "@synara/shared/worktreeHandoff";
 
 import { GitManagerError } from "../Errors.ts";
@@ -36,6 +41,7 @@ const MAX_PROGRESS_TEXT_LENGTH = 500;
 const OPEN_PR_LOOKUP_LIMIT = 10;
 // Any-state lookups scan more PRs so the newest merged/closed PR still surfaces.
 const PR_LOOKUP_ALL_STATES_LIMIT = 20;
+const GITHUB_REPOSITORY_CREATE_TIMEOUT_MS = 60_000;
 type StripProgressContext<T> = T extends any ? Omit<T, "actionId" | "cwd" | "action"> : never;
 type GitActionProgressPayload = StripProgressContext<GitActionProgressEvent>;
 
@@ -179,6 +185,20 @@ function normalizeOptionalString(value: string | null | undefined): string | nul
 function normalizeOptionalRepositoryNameWithOwner(value: string | null | undefined): string | null {
   const normalized = normalizeOptionalString(value);
   return normalized ? normalized.toLowerCase() : null;
+}
+
+function isValidGitHubRepositoryCreateName(value: string): boolean {
+  const normalized = value.trim();
+  if (normalized.length === 0) return false;
+  if (normalized.includes("/")) {
+    return isValidGitHubRepositoryNameWithOwner(normalized);
+  }
+  return (
+    normalized.length <= 100 &&
+    normalized !== "." &&
+    normalized !== ".." &&
+    /^[A-Za-z0-9._-]+$/.test(normalized)
+  );
 }
 
 function normalizeOptionalOwnerLogin(value: string | null | undefined): string | null {
@@ -693,6 +713,84 @@ export const makeGitManager = Effect.gen(function* () {
   const gitHubCli = yield* GitHubCli;
   const textGeneration = yield* TextGeneration;
 
+  const connectGitHubRemote = (input: GitConnectGitHubRemoteInput) =>
+    Effect.gen(function* () {
+      const repository = parseGitHubRepositoryNameWithOwnerFromRemoteUrl(input.url);
+      if (!repository) {
+        return yield* Effect.fail(
+          new GitManagerError({
+            operation: "connectGitHubRemote",
+            detail:
+              "Enter a GitHub HTTPS or SSH repository URL, for example https://github.com/owner/repository.git.",
+          }),
+        );
+      }
+
+      const remoteName = yield* gitCore.ensureRemote({
+        cwd: input.cwd,
+        preferredName: "origin",
+        url: input.url.trim(),
+      });
+      return {
+        remoteName,
+        repository,
+        url: `https://github.com/${repository}`,
+      };
+    });
+
+  const createGitHubRepository = (input: GitCreateGitHubRepositoryInput) =>
+    Effect.gen(function* () {
+      const repositoryName = input.name.trim();
+      if (!isValidGitHubRepositoryCreateName(repositoryName)) {
+        return yield* Effect.fail(
+          new GitManagerError({
+            operation: "createGitHubRepository",
+            detail:
+              "Repository names may contain letters, numbers, periods, hyphens, and underscores.",
+          }),
+        );
+      }
+
+      const description = input.description?.trim() ?? "";
+      const args = [
+        "repo",
+        "create",
+        repositoryName,
+        "--source",
+        input.cwd,
+        "--remote",
+        "origin",
+        input.visibility === "public" ? "--public" : "--private",
+        ...(description.length > 0 ? ["--description", description] : []),
+      ];
+
+      // Deliberately omit `--push`: creating the remote must not upload the
+      // working tree before the user has reviewed and committed it.
+      yield* gitHubCli.execute({
+        cwd: input.cwd,
+        args,
+        timeoutMs: GITHUB_REPOSITORY_CREATE_TIMEOUT_MS,
+      });
+
+      const remoteUrl = yield* gitCore.readConfigValue(input.cwd, "remote.origin.url");
+      const repository = parseGitHubRepositoryNameWithOwnerFromRemoteUrl(remoteUrl);
+      if (!remoteUrl || !repository) {
+        return yield* Effect.fail(
+          new GitManagerError({
+            operation: "createGitHubRepository",
+            detail:
+              "GitHub created the repository, but the local origin remote could not be verified.",
+          }),
+        );
+      }
+
+      return {
+        remoteName: "origin",
+        repository,
+        url: `https://github.com/${repository}`,
+      };
+    });
+
   const createProgressEmitter = (
     input: { cwd: string; action: GitStackedAction },
     options?: GitRunStackedActionOptions,
@@ -968,17 +1066,22 @@ export const makeGitManager = Effect.gen(function* () {
       const headContext = yield* resolveBranchHeadContext(cwd, details);
       const parsedByNumber = new Map<number, PullRequestInfo>();
 
-      for (const headSelector of headContext.headSelectors) {
+      // Each selector is an independent `gh pr list` network round trip, so query them
+      // together; results are merged in selector order to keep the outcome deterministic.
+      const pullRequestsBySelector = yield* Effect.forEach(
+        headContext.headSelectors,
+        (headSelector) =>
+          gitHubCli
+            .listPullRequests({ cwd, headSelector, limit: PR_LOOKUP_ALL_STATES_LIMIT })
+            .pipe(Effect.map((pullRequests) => ({ headSelector, pullRequests }))),
+        { concurrency: "unbounded" },
+      );
+
+      for (const { headSelector, pullRequests } of pullRequestsBySelector) {
         const inferredHeadInfo = inferPullRequestHeadRemoteInfoFromSelector(
           headSelector,
           headContext,
         );
-        const pullRequests = yield* gitHubCli.listPullRequests({
-          cwd,
-          headSelector,
-          limit: PR_LOOKUP_ALL_STATES_LIMIT,
-        });
-
         for (const pullRequest of pullRequests) {
           const candidate = withInferredHeadRemoteInfo(
             toPullRequestInfo(pullRequest),
@@ -1387,15 +1490,6 @@ export const makeGitManager = Effect.gen(function* () {
   const status: GitManagerShape["status"] = Effect.fnUntraced(function* (input) {
     const details = yield* gitCore.statusDetails(input.cwd);
 
-    const pr =
-      details.branch !== null
-        ? yield* pullRequestForBranch({
-            cwd: input.cwd,
-            branch: details.branch,
-            upstreamRef: details.upstreamRef,
-          }).pipe(Effect.catch(() => Effect.succeed(null)))
-        : null;
-
     return {
       branch: details.branch,
       hasWorkingTreeChanges: details.hasWorkingTreeChanges,
@@ -1405,7 +1499,6 @@ export const makeGitManager = Effect.gen(function* () {
       configuredPrBaseBranch: details.configuredPrBaseBranch,
       aheadCount: details.aheadCount,
       behindCount: details.behindCount,
-      pr,
     };
   });
 
@@ -2849,6 +2942,9 @@ The local stash entry was kept for recovery.`,
   );
 
   return {
+    connectGitHubRemote: (input) => gitCore.withMutation(input.cwd, connectGitHubRemote(input)),
+    createGitHubRepository: (input) =>
+      gitCore.withMutation(input.cwd, createGitHubRepository(input)),
     status,
     pullRequestForBranch,
     readWorkingTreeDiff,

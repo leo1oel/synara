@@ -6,6 +6,7 @@ import "../../index.css";
 
 import { MessageId, TurnId } from "@synara/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 
 import { WorkspaceFileOpenerContext } from "../../lib/workspaceFileOpener";
@@ -111,6 +112,41 @@ async function settleLayout(): Promise<void> {
 describe("MessagesTimeline tool details", () => {
   afterEach(() => {
     document.body.innerHTML = "";
+  });
+
+  it("preserves checkpoint revert progress and outcome labels", async () => {
+    const screen = await render(
+      <div style={{ width: 600, padding: 24 }}>
+        {["started", "succeeded", "failed"].map((status) => (
+          <TimelineWorkEntryRow
+            key={status}
+            workEntry={{
+              id: `revert-${status}`,
+              createdAt: "2026-09-20T16:48:57Z",
+              activityKind: `checkpoint.revert.${status}`,
+              label: `Checkpoint revert ${status === "succeeded" ? "completed" : status}`,
+              tone: status === "failed" ? "error" : "info",
+            }}
+            chatMetaFontSizePx={12}
+            textFontSizePx={13}
+            density="compact"
+            onImageExpand={() => {}}
+            markdownCwd={undefined}
+            timestampFormat="24-hour"
+          />
+        ))}
+      </div>,
+    );
+    await expect
+      .element(screen.getByText("Checkpoint revert started", { exact: true }))
+      .toBeVisible();
+    await expect
+      .element(screen.getByText("Checkpoint revert completed", { exact: true }))
+      .toBeVisible();
+    await expect
+      .element(screen.getByText("Checkpoint revert failed", { exact: true }))
+      .toBeVisible();
+    await page.screenshot();
   });
 
   it("keeps historical tool disclosures above the next request after late updates", async () => {

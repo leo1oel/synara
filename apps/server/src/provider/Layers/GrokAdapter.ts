@@ -53,6 +53,7 @@ import {
   type SynaraHarnessPolicyDeliveryState,
   takeSynaraHarnessPolicyTextPartForProviderSession,
 } from "../../agentGateway/harnessPolicy.ts";
+import { ACTIVE_AGENT_HOST_PROFILE } from "../../agentGateway/hostProfile.ts";
 import { AgentGatewayCredentials } from "../../agentGateway/Services/AgentGatewayCredentials.ts";
 import { PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY } from "../Services/ProviderAdapter.ts";
 import {
@@ -198,7 +199,7 @@ const GROK_TURN_SETTLE_DRAIN_POLL_MS = 25;
 const GROK_EXIT_PLAN_RESPONSE_GRACE_MS = 25;
 const XAI_API_BASE_URL = "https://api.x.ai/v1";
 const GROK_PLAN_MODE_PROMPT_PREFIX = [
-  "Synara requested Grok's native plan mode.",
+  `${ACTIVE_AGENT_HOST_PROFILE.displayName} requested Grok's native plan mode.`,
   "Do not implement or mutate files in this turn.",
   "Do not ask follow-up questions or wait for confirmation; if scope is ambiguous, choose a reasonable default and state the assumption in the plan.",
   "When ready, create the final implementation plan.",
@@ -298,7 +299,7 @@ export function resolveGrokPlanHookResponse(
   }
   return {
     decision: "deny",
-    systemMessage: `Synara Plan mode blocks the mutating or unknown Grok tool "${toolName || "unknown"}".`,
+    systemMessage: `${ACTIVE_AGENT_HOST_PROFILE.displayName} Plan mode blocks the mutating or unknown Grok tool "${toolName || "unknown"}".`,
   };
 }
 
@@ -1119,7 +1120,7 @@ export function makeGrokAdapter(
             cwd,
             runtimeMode: input.runtimeMode,
             ...(resumeSessionId ? { resumeSessionId } : {}),
-            clientInfo: { name: "Synara", version: "0.0.0" },
+            clientInfo: { name: ACTIVE_AGENT_HOST_PROFILE.displayName, version: "0.0.0" },
             // Grok registers client hooks from session setup metadata, not
             // initialize.clientCapabilities. Re-send this on load/resume so a
             // reconnected session keeps the Plan-mode write gate.

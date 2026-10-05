@@ -1,0 +1,27 @@
+[data-fluid-hover-scope] {
+  position: relative;
+  isolation: isolate;
+}
+
+.fluid-hover-highlight {
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: -1;
+  border-radius: var(--radius-lg);
+  background: var(--fluid-hover-fill, var(--color-background-button-secondary-hover));
+}
+
+/* The shared fill replaces only the pointer-highlighted paint. Checked and active
+   rows retain their native selected fill, and keyboard focus remains primitive-owned. */
+[data-fluid-hover-scope]:has(> [data-slot="fluid-hover-highlight"])
+  [data-fluid-hover-active]:not(
+    [data-checked],
+    [aria-checked="true"],
+    [data-active="true"],
+    [data-popup-open],
+    [data-variant="destructive"]
+  ) {
+  background-color: transparent;
+}

@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ChatRouteImport } from './routes/_chat'
 import { Route as ChatIndexRouteImport } from './routes/_chat.index'
+import { Route as ChatSourceControlRouteImport } from './routes/_chat.source-control'
 import { Route as ChatSettingsRouteImport } from './routes/_chat.settings'
+import { Route as ChatReviewRouteImport } from './routes/_chat.review'
 import { Route as ChatPullRequestsRouteImport } from './routes/_chat.pull-requests'
 import { Route as ChatPluginsRouteImport } from './routes/_chat.plugins'
 import { Route as ChatInboxRouteImport } from './routes/_chat.inbox'
@@ -36,9 +38,19 @@ const ChatIndexRoute = ChatIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ChatRoute,
 } as any)
+const ChatSourceControlRoute = ChatSourceControlRouteImport.update({
+  id: '/source-control',
+  path: '/source-control',
+  getParentRoute: () => ChatRoute,
+} as any)
 const ChatSettingsRoute = ChatSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => ChatRoute,
+} as any)
+const ChatReviewRoute = ChatReviewRouteImport.update({
+  id: '/review',
+  path: '/review',
   getParentRoute: () => ChatRoute,
 } as any)
 const ChatPullRequestsRoute = ChatPullRequestsRouteImport.update({
@@ -120,7 +132,9 @@ export interface FileRoutesByFullPath {
   '/inbox': typeof ChatInboxRoute
   '/plugins': typeof ChatPluginsRoute
   '/pull-requests': typeof ChatPullRequestsRouteWithChildren
+  '/review': typeof ChatReviewRoute
   '/settings': typeof ChatSettingsRoute
+  '/source-control': typeof ChatSourceControlRoute
   '/automations/$automationId': typeof ChatAutomationsAutomationIdRoute
   '/kanban/$projectId': typeof ChatKanbanProjectIdRoute
   '/automations/': typeof ChatAutomationsIndexRoute
@@ -135,7 +149,9 @@ export interface FileRoutesByTo {
   '/$threadId': typeof ChatThreadIdRoute
   '/inbox': typeof ChatInboxRoute
   '/plugins': typeof ChatPluginsRoute
+  '/review': typeof ChatReviewRoute
   '/settings': typeof ChatSettingsRoute
+  '/source-control': typeof ChatSourceControlRoute
   '/': typeof ChatIndexRoute
   '/automations/$automationId': typeof ChatAutomationsAutomationIdRoute
   '/kanban/$projectId': typeof ChatKanbanProjectIdRoute
@@ -155,7 +171,9 @@ export interface FileRoutesById {
   '/_chat/inbox': typeof ChatInboxRoute
   '/_chat/plugins': typeof ChatPluginsRoute
   '/_chat/pull-requests': typeof ChatPullRequestsRouteWithChildren
+  '/_chat/review': typeof ChatReviewRoute
   '/_chat/settings': typeof ChatSettingsRoute
+  '/_chat/source-control': typeof ChatSourceControlRoute
   '/_chat/': typeof ChatIndexRoute
   '/_chat/automations/$automationId': typeof ChatAutomationsAutomationIdRoute
   '/_chat/kanban/$projectId': typeof ChatKanbanProjectIdRoute
@@ -176,7 +194,9 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/plugins'
     | '/pull-requests'
+    | '/review'
     | '/settings'
+    | '/source-control'
     | '/automations/$automationId'
     | '/kanban/$projectId'
     | '/automations/'
@@ -191,7 +211,9 @@ export interface FileRouteTypes {
     | '/$threadId'
     | '/inbox'
     | '/plugins'
+    | '/review'
     | '/settings'
+    | '/source-control'
     | '/'
     | '/automations/$automationId'
     | '/kanban/$projectId'
@@ -210,7 +232,9 @@ export interface FileRouteTypes {
     | '/_chat/inbox'
     | '/_chat/plugins'
     | '/_chat/pull-requests'
+    | '/_chat/review'
     | '/_chat/settings'
+    | '/_chat/source-control'
     | '/_chat/'
     | '/_chat/automations/$automationId'
     | '/_chat/kanban/$projectId'
@@ -243,11 +267,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatIndexRouteImport
       parentRoute: typeof ChatRoute
     }
+    '/_chat/source-control': {
+      id: '/_chat/source-control'
+      path: '/source-control'
+      fullPath: '/source-control'
+      preLoaderRoute: typeof ChatSourceControlRouteImport
+      parentRoute: typeof ChatRoute
+    }
     '/_chat/settings': {
       id: '/_chat/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof ChatSettingsRouteImport
+      parentRoute: typeof ChatRoute
+    }
+    '/_chat/review': {
+      id: '/_chat/review'
+      path: '/review'
+      fullPath: '/review'
+      preLoaderRoute: typeof ChatReviewRouteImport
       parentRoute: typeof ChatRoute
     }
     '/_chat/pull-requests': {
@@ -382,7 +420,9 @@ interface ChatRouteChildren {
   ChatInboxRoute: typeof ChatInboxRoute
   ChatPluginsRoute: typeof ChatPluginsRoute
   ChatPullRequestsRoute: typeof ChatPullRequestsRouteWithChildren
+  ChatReviewRoute: typeof ChatReviewRoute
   ChatSettingsRoute: typeof ChatSettingsRoute
+  ChatSourceControlRoute: typeof ChatSourceControlRoute
   ChatIndexRoute: typeof ChatIndexRoute
   ChatKanbanProjectIdRoute: typeof ChatKanbanProjectIdRoute
   ChatGroupsIndexRoute: typeof ChatGroupsIndexRoute
@@ -398,7 +438,9 @@ const ChatRouteChildren: ChatRouteChildren = {
   ChatInboxRoute: ChatInboxRoute,
   ChatPluginsRoute: ChatPluginsRoute,
   ChatPullRequestsRoute: ChatPullRequestsRouteWithChildren,
+  ChatReviewRoute: ChatReviewRoute,
   ChatSettingsRoute: ChatSettingsRoute,
+  ChatSourceControlRoute: ChatSourceControlRoute,
   ChatIndexRoute: ChatIndexRoute,
   ChatKanbanProjectIdRoute: ChatKanbanProjectIdRoute,
   ChatGroupsIndexRoute: ChatGroupsIndexRoute,

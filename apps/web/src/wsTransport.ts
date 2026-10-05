@@ -80,6 +80,7 @@ import { APP_VERSION } from "./branding";
 import { isRequestOutcomeUnknown } from "./lib/requestOutcome";
 import { useDeviceStateStore } from "./deviceStateStore";
 import { useComputerStateStore } from "./computerStateStore";
+import { readEmbeddedHostWsUrl } from "./embedMode";
 import {
   getUnaryRpcCapacityRetryDelayMs,
   MAX_UNARY_RPC_CAPACITY_RETRY_ATTEMPTS,
@@ -278,12 +279,15 @@ function resolveRpcUrl(rawUrl: string, path: string): string {
 function rawSocketUrl(explicitUrl: string | null): string {
   if (explicitUrl) return explicitUrl;
   const bridgeUrl = window.desktopBridge?.getWsUrl();
+  const embeddedHostUrl = readEmbeddedHostWsUrl();
   const envUrl = import.meta.env.VITE_WS_URL as string | undefined;
   return bridgeUrl && bridgeUrl.length > 0
     ? bridgeUrl
-    : envUrl && envUrl.length > 0
-      ? envUrl
-      : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.hostname}:${window.location.port}`;
+    : embeddedHostUrl
+      ? embeddedHostUrl
+      : envUrl && envUrl.length > 0
+        ? envUrl
+        : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.hostname}:${window.location.port}`;
 }
 
 export function makeSocketUrl(explicitUrl: string | null, path: string): string {

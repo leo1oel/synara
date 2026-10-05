@@ -17,7 +17,7 @@ type ThreadUnblockApi = Pick<
 >;
 
 export type ThreadUnblockResult =
-  /** At least one blocker was abandoned, so the thread accepts commands again. */
+  /** Delivery blockers were abandoned; provider runtime recovery is separate. */
   | { readonly kind: "unblocked"; readonly reconciledCount: number }
   /** Nothing was blocking the thread anymore. */
   | { readonly kind: "already-clear" }
@@ -72,6 +72,17 @@ export async function unblockThreadFromClient(
     }
   }
 
+  // Reconciliation replays skipped messages. If the provider is still broken,
+  // that replay can create a new blocker before the RPC returns. Do not clear
+  // the error banner or announce success from the old delivery's outcome alone.
+  const remaining = await api.listProviderDeliveryBlockers({ threadId });
+  if (remaining.length > 0) {
+    throw new Error(
+      "The provider is still blocking this thread. " +
+        (remaining[0]?.lastError ?? "Resolve the provider error before retrying."),
+    );
+  }
+
   if (reconciledCount > 0) return { kind: "unblocked", reconciledCount };
   return conflictCount > 0 ? { kind: "resolved-elsewhere" } : { kind: "already-clear" };
 }
@@ -89,9 +100,9 @@ export function describeThreadUnblockResult(result: ThreadUnblockResult): Thread
     case "unblocked":
       return {
         type: "success",
-        title: "Thread unblocked",
+        title: "Delivery blockers cleared",
         description:
-          "Messages skipped while it was blocked were retried. Resend your last message if the thread stays idle.",
+          "Skipped messages were retried. Resend your last message if idle; clearing a delivery blocker does not repair a provider runtime error.",
       };
     case "resolved-elsewhere":
       return {
@@ -102,9 +113,9 @@ export function describeThreadUnblockResult(result: ThreadUnblockResult): Thread
     case "already-clear":
       return {
         type: "info",
-        title: "Thread is already unblocked",
+        title: "No delivery blockers",
         description:
-          "No provider failure is holding it back. Resend your last message to continue.",
+          "No delivery is blocking this thread. If the provider still reports an error, resolve it before you resend your message.",
       };
   }
 }

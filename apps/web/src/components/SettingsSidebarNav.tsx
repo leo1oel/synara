@@ -6,6 +6,7 @@
 // Exports: SettingsSidebarNav
 
 import { type KeyboardEvent as ReactKeyboardEvent, useState } from "react";
+import { useLingui } from "@lingui/react";
 
 import { CentralIcon } from "~/lib/central-icons";
 import { cn } from "~/lib/utils";
@@ -96,6 +97,7 @@ export function SettingsSidebarNav(props: {
    */
   searchContext?: SettingsSearchContext | undefined;
 }) {
+  const { i18n } = useLingui();
   const { onSelectSection } = props;
   const [query, setQuery] = useState("");
   const trimmedQuery = query.trim();
@@ -174,7 +176,7 @@ export function SettingsSidebarNav(props: {
                   id={`settings-nav-${group.id}`}
                   className={SETTINGS_SIDEBAR_SECTION_LABEL_CLASS_NAME}
                 >
-                  {group.label}
+                  {i18n._(group.label)}
                 </h2>
                 <ul className={cn("flex flex-col", SETTINGS_SIDEBAR_LIST_GAP_CLASS_NAME)}>
                   {items.map((item) => {
@@ -199,7 +201,7 @@ export function SettingsSidebarNav(props: {
                             />
                           </SidebarLeadingIcon>
                           <span className={SETTINGS_SIDEBAR_ITEM_LABEL_CLASS_NAME}>
-                            {item.label}
+                            {i18n._(item.label)}
                           </span>
                           {item.badge ? (
                             <Badge

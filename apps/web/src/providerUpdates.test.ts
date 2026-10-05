@@ -14,6 +14,7 @@ import {
   providerUpdateNotificationKey,
   shouldOfferProviderUpdateAction,
   shouldPromptProviderUpdate,
+  shouldShowProviderUpdateStatus,
   withProviderUpdateTimeout,
 } from "./providerUpdates";
 
@@ -62,6 +63,7 @@ function serverSettings(overrides: Partial<ServerSettings["providers"]> = {}): S
     githubInboxIncludeUpstreams: false,
     sidechatExpiry: "1h",
     textGenerationModelSelection: { provider: "codex", model: "gpt-5.4-mini" },
+    compileRepairModelSelection: { provider: "codex", model: "gpt-5.4-mini" },
     providers: {
       codex: {
         ...provider,
@@ -82,6 +84,7 @@ function serverSettings(overrides: Partial<ServerSettings["providers"]> = {}): S
       antigravity: { ...provider, binaryPath: "agy" },
       grok: { ...provider, binaryPath: "grok" },
       droid: { ...provider, binaryPath: "droid" },
+      omp: { ...provider, binaryPath: "omp", agentDir: "" },
       opencode: {
         ...provider,
         binaryPath: "opencode",
@@ -90,7 +93,6 @@ function serverSettings(overrides: Partial<ServerSettings["providers"]> = {}): S
         experimentalWebSockets: false,
       },
       pi: { ...provider, binaryPath: "pi", agentDir: "" },
-      omp: { ...provider, binaryPath: "omp", agentDir: "" },
       ...overrides,
     },
     providerInstances: {},
@@ -181,7 +183,7 @@ describe("getVisibleProviderUpdateStatuses", () => {
   });
 
   it("can narrow notifications to one-click updates while settings keep manual updates visible", () => {
-    const manualOnly = providerStatus("pi", {
+    const manualOnly = providerStatus("droid", {
       versionAdvisory: {
         status: "behind_latest",
         currentVersion: "1.0.0",
@@ -198,7 +200,7 @@ describe("getVisibleProviderUpdateStatuses", () => {
         providers: [providerStatus("codex"), manualOnly],
         serverSettings: serverSettings(),
       }).map((provider) => provider.provider),
-    ).toEqual(["codex", "pi"]);
+    ).toEqual(["codex", "droid"]);
     expect(
       getVisibleProviderUpdateStatuses({
         providers: [providerStatus("codex"), manualOnly],
@@ -271,6 +273,28 @@ describe("providerUpdateNotificationKey", () => {
     ]);
 
     expect(left).toBe(right);
+  });
+});
+
+describe("shouldShowProviderUpdateStatus", () => {
+  it("matches the list filter for hidden providers", () => {
+    const codex = providerStatus("codex");
+    const hiddenPi = providerStatus("pi");
+
+    expect(
+      shouldShowProviderUpdateStatus({
+        provider: codex,
+        hiddenProviderSet: new Set(),
+        serverSettings: serverSettings(),
+      }),
+    ).toBe(true);
+    expect(
+      shouldShowProviderUpdateStatus({
+        provider: hiddenPi,
+        hiddenProviders: ["pi"],
+        serverSettings: serverSettings(),
+      }),
+    ).toBe(false);
   });
 });
 
@@ -362,6 +386,10 @@ describe("shouldOfferProviderUpdateAction", () => {
     expect(shouldOfferProviderUpdateAction(uninstalledDroid)).toBe(false);
   });
 
+  it("offers updates for installed outdated CLIs", () => {
+    expect(shouldOfferProviderUpdateAction(providerStatus("codex"))).toBe(true);
+  });
+
   it("offers native AGY updates even when upstream latest-version metadata is unavailable", () => {
     expect(
       shouldOfferProviderUpdateAction(
@@ -378,6 +406,66 @@ describe("shouldOfferProviderUpdateAction", () => {
         }),
       ),
     ).toBe(true);
+  });
+
+  it("does not offer updates for a missing CLI even when stale capabilities say it can update", () => {
+    expect(
+      shouldOfferProviderUpdateAction(
+        providerStatus("antigravity", {
+          available: false,
+          version: undefined,
+          versionAdvisory: {
+            status: "unknown",
+            currentVersion: null,
+            latestVersion: null,
+            updateCommand: "agy update",
+            canUpdate: true,
+            checkedAt: "2026-07-15T14:00:00.000Z",
+            message: null,
+          },
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it("does not offer Pi CLI updates when only the bundled SDK is available", () => {
+    expect(
+      shouldOfferProviderUpdateAction(
+        providerStatus("pi", {
+          available: true,
+          version: undefined,
+          versionAdvisory: {
+            status: "unknown",
+            currentVersion: null,
+            latestVersion: null,
+            updateCommand: "pi update",
+            canUpdate: true,
+            checkedAt: "2026-07-15T14:00:00.000Z",
+            message: null,
+          },
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it("never exposes a Pi update even when stale status contains an external CLI version", () => {
+    expect(
+      shouldOfferProviderUpdateAction(
+        providerStatus("pi", {
+          available: true,
+          version: "0.74.0",
+          versionAdvisory: {
+            status: "behind_latest",
+            currentVersion: "0.74.0",
+            latestVersion: "0.75.0",
+            updateCommand: "pi update",
+            canUpdate: true,
+            checkedAt: "2026-07-15T14:00:00.000Z",
+            message: "Update available.",
+          },
+        }),
+      ),
+    ).toBe(false);
   });
 });
 

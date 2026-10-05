@@ -19,10 +19,7 @@ import {
 } from "~/components/ProviderUsageMenuControl";
 import { ProviderIcon } from "~/components/ProviderIcon";
 import { MenuTrigger } from "~/components/ui/menu";
-import {
-  serverAllProviderUsageQueryOptions,
-  serverSettingsQueryOptions,
-} from "~/lib/serverReactQuery";
+import { serverAllProviderUsageQueryOptions } from "~/lib/serverReactQuery";
 
 import { resolveEnvironmentProviderUsageSummary } from "./EnvironmentUsageSection.logic";
 import {

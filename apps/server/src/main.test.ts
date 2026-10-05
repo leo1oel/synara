@@ -65,6 +65,7 @@ const serverStart = Effect.acquireRelease(
     ),
 ).pipe(Effect.map(({ server }) => server));
 const findAvailablePort = vi.fn((preferred: number) => Effect.succeed(preferred));
+const reserveLoopbackPort = vi.fn((_host?: string) => Effect.succeed(0));
 let defaultSynaraHome = "";
 const tempHomes = new Set<string>();
 
@@ -88,7 +89,7 @@ const testLayer = Layer.mergeAll(
   Layer.succeed(NetService, {
     canListenOnHost: () => Effect.succeed(true),
     isPortAvailableOnLoopback: () => Effect.succeed(true),
-    reserveLoopbackPort: () => Effect.succeed(0),
+    reserveLoopbackPort,
     findAvailablePort,
   }),
   Layer.succeed(Server, {
@@ -130,6 +131,7 @@ beforeEach(() => {
   start.mockImplementation(() => undefined);
   stop.mockImplementation(() => undefined);
   findAvailablePort.mockImplementation((preferred: number) => Effect.succeed(preferred));
+  reserveLoopbackPort.mockImplementation((_host?: string) => Effect.succeed(0));
 });
 
 afterEach(() => {
@@ -637,6 +639,23 @@ it.layer(testLayer)("server CLI command", (it) => {
       assert.equal(findAvailablePort.mock.calls.length, 0);
       assert.equal(start.mock.calls.length, 1);
       assert.equal(resolvedConfig?.port, 3773);
+      assert.equal(resolvedConfig?.host, "127.0.0.1");
+      assert.equal(resolvedConfig?.mode, "desktop");
+    }),
+  );
+
+  it.effect("supports dynamic localhost port discovery for an embedded desktop host", () =>
+    Effect.gen(function* () {
+      reserveLoopbackPort.mockImplementation((_host?: string) => Effect.succeed(5888));
+      yield* runCli(["--dynamic-port"], {
+        SYNARA_MODE: "desktop",
+        SYNARA_NO_BROWSER: "true",
+      });
+
+      assert.deepStrictEqual(reserveLoopbackPort.mock.calls, [["127.0.0.1"]]);
+      assert.equal(findAvailablePort.mock.calls.length, 0);
+      assert.equal(start.mock.calls.length, 1);
+      assert.equal(resolvedConfig?.port, 5888);
       assert.equal(resolvedConfig?.host, "127.0.0.1");
       assert.equal(resolvedConfig?.mode, "desktop");
     }),

@@ -113,10 +113,14 @@ import type {
 import type {
   GitCheckoutInput,
   GitActionProgressEvent,
+  GitConnectGitHubRemoteInput,
+  GitConnectGitHubRemoteResult,
   GitWorktreeSetupProgressEvent,
   GitCreateBranchInput,
   GitCreateDetachedWorktreeInput,
   GitCreateDetachedWorktreeResult,
+  GitCreateGitHubRepositoryInput,
+  GitCreateGitHubRepositoryResult,
   GitHubRepositoryInput,
   GitHubRepositoryResult,
   GitHandoffThreadInput,
@@ -155,6 +159,8 @@ import type {
   GitStashInfoResult,
   GitStatusInput,
   GitStatusResult,
+  GitBranchPullRequestInput,
+  GitBranchPullRequestResult,
   GitSummarizeDiffInput,
   GitSummarizeDiffResult,
   GitUnstageFilesInput,
@@ -364,6 +370,18 @@ import type {
   ProviderListSkillsResult,
   ProviderSkillsCatalogInput,
   ProviderSkillsCatalogResult,
+  ProviderImportSkillInput,
+  ProviderImportSkillResult,
+  ProviderReadManagedSkillInput,
+  ProviderManagedSkillDetail,
+  ProviderSaveManagedSkillInput,
+  ProviderSaveManagedSkillResult,
+  ProviderDuplicateManagedSkillInput,
+  ProviderDuplicateManagedSkillResult,
+  ProviderRemoveManagedSkillInput,
+  ProviderRemoveManagedSkillResult,
+  ProviderRestoreManagedSkillInput,
+  ProviderRestoreManagedSkillResult,
   ProviderReadPluginInput,
   ProviderReadPluginResult,
 } from "./providerDiscovery";
@@ -1154,6 +1172,12 @@ export interface NativeApi {
     stashInfo: (input: GitStashInfoInput) => Promise<GitStashInfoResult>;
     removeIndexLock: (input: GitRemoveIndexLockInput) => Promise<void>;
     init: (input: GitInitInput) => Promise<void>;
+    connectGitHubRemote: (
+      input: GitConnectGitHubRemoteInput,
+    ) => Promise<GitConnectGitHubRemoteResult>;
+    createGitHubRepository: (
+      input: GitCreateGitHubRepositoryInput,
+    ) => Promise<GitCreateGitHubRepositoryResult>;
     stageFiles: (input: GitStageFilesInput) => Promise<GitStageFilesResult>;
     unstageFiles: (input: GitUnstageFilesInput) => Promise<GitUnstageFilesResult>;
     handoffThread: (input: GitHandoffThreadInput) => Promise<GitHandoffThreadResult>;
@@ -1167,6 +1191,7 @@ export interface NativeApi {
     // Stacked action API
     pull: (input: GitPullInput) => Promise<GitPullResult>;
     status: (input: GitStatusInput) => Promise<GitStatusResult>;
+    branchPullRequest: (input: GitBranchPullRequestInput) => Promise<GitBranchPullRequestResult>;
     readWorkingTreeDiff: (
       input: GitReadWorkingTreeDiffInput,
     ) => Promise<GitReadWorkingTreeDiffResult>;
@@ -1276,6 +1301,20 @@ export interface NativeApi {
     listCommands: (input: ProviderListCommandsInput) => Promise<ProviderListCommandsResult>;
     listSkills: (input: ProviderListSkillsInput) => Promise<ProviderListSkillsResult>;
     listSkillsCatalog: (input: ProviderSkillsCatalogInput) => Promise<ProviderSkillsCatalogResult>;
+    importSkill: (input: ProviderImportSkillInput) => Promise<ProviderImportSkillResult>;
+    readManagedSkill: (input: ProviderReadManagedSkillInput) => Promise<ProviderManagedSkillDetail>;
+    saveManagedSkill: (
+      input: ProviderSaveManagedSkillInput,
+    ) => Promise<ProviderSaveManagedSkillResult>;
+    duplicateManagedSkill: (
+      input: ProviderDuplicateManagedSkillInput,
+    ) => Promise<ProviderDuplicateManagedSkillResult>;
+    removeManagedSkill: (
+      input: ProviderRemoveManagedSkillInput,
+    ) => Promise<ProviderRemoveManagedSkillResult>;
+    restoreManagedSkill: (
+      input: ProviderRestoreManagedSkillInput,
+    ) => Promise<ProviderRestoreManagedSkillResult>;
     listPlugins: (input: ProviderListPluginsInput) => Promise<ProviderListPluginsResult>;
     readPlugin: (input: ProviderReadPluginInput) => Promise<ProviderReadPluginResult>;
     listModels: (input: ProviderListModelsInput) => Promise<ProviderListModelsResult>;

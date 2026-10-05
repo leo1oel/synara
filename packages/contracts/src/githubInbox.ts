@@ -84,6 +84,10 @@ export type GitHubInboxItem = typeof GitHubInboxItem.Type;
  */
 export const GitHubInboxListInput = Schema.Struct({
   state: GitHubInboxState,
+  /** Lattice embedded workspace scope; omitted keeps the standalone superset. */
+  projectId: Schema.optional(ProjectId),
+  /** Exact project-scoped recovery when the repository superset is truncated. */
+  involvement: Schema.optional(Schema.Literals(["authored", "reviewRequested"])),
   /** Omitted by older clients, which use the last-updated order. */
   sort: Schema.optional(GitHubInboxSort),
   forceRefresh: Schema.optional(Schema.Boolean),

@@ -28,6 +28,7 @@ import { CheckpointStore } from "../src/checkpointing/Services/CheckpointStore.t
 import { GitCoreLive } from "../src/git/Layers/GitCore.ts";
 import { GitCore, type GitCoreShape } from "../src/git/Services/GitCore.ts";
 import { TextGeneration, type TextGenerationShape } from "../src/git/Services/TextGeneration.ts";
+import { AgentQualityTrace } from "../src/agentGateway/Services/AgentQualityTrace.ts";
 import { OrchestrationCommandReceiptRepositoryLive } from "../src/persistence/Layers/OrchestrationCommandReceipts.ts";
 import { OrchestrationEventStoreLive } from "../src/persistence/Layers/OrchestrationEventStore.ts";
 import { ProjectionCheckpointRepositoryLive } from "../src/persistence/Layers/ProjectionCheckpoints.ts";
@@ -341,6 +342,13 @@ export const makeOrchestrationIntegrationHarness = (
     const studioOutputReactorLayer = StudioOutputReactorLive.pipe(
       Layer.provideMerge(runtimeServicesLayer),
     );
+    const agentQualityTraceLayer = Layer.succeed(AgentQualityTrace, {
+      start: Effect.void,
+      prepareTurnContext: () => Effect.void,
+      bindTurnContext: () => Effect.void,
+      failTurnContext: () => Effect.void,
+      recordCompile: () => Effect.void,
+    });
     const providerHealthLayer = Layer.succeed(ProviderHealth, {
       getStatuses: Effect.succeed([]),
       refresh: Effect.succeed([]),
@@ -355,6 +363,7 @@ export const makeOrchestrationIntegrationHarness = (
       Layer.provideMerge(textGenerationLayer),
       Layer.provideMerge(ServerSettingsService.layerTest()),
       Layer.provideMerge(AgentGatewayOperationRepositoryLive),
+      Layer.provideMerge(agentQualityTraceLayer),
     );
     const checkpointReactorLayer = CheckpointReactorLive.pipe(
       Layer.provideMerge(runtimeServicesLayer),
@@ -367,6 +376,7 @@ export const makeOrchestrationIntegrationHarness = (
       drain: Effect.void,
     });
     const orchestrationReactorLayer = OrchestrationReactorLive.pipe(
+      Layer.provideMerge(agentQualityTraceLayer),
       Layer.provideMerge(runtimeIngestionLayer),
       Layer.provideMerge(providerCommandReactorLayer),
       Layer.provideMerge(checkpointReactorLayer),

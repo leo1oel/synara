@@ -49,6 +49,7 @@ import {
   type SynaraHarnessPolicyDeliveryState,
   takeSynaraHarnessPolicyForProviderSession,
 } from "../../agentGateway/harnessPolicy.ts";
+import { ACTIVE_AGENT_HOST_PROFILE } from "../../agentGateway/hostProfile.ts";
 import {
   callAgentGatewayMcpTool,
   listAgentGatewayMcpTools,
@@ -578,7 +579,7 @@ function piGatewayToolResult(result: unknown): AgentToolResult<unknown> {
           )
           .join("\n")
       : "";
-    throw new Error(message || "Synara gateway tool failed.");
+    throw new Error(message || `${ACTIVE_AGENT_HOST_PROFILE.displayName} gateway tool failed.`);
   }
   const content =
     isRecord(result) && Array.isArray(result.content)
@@ -635,7 +636,7 @@ export async function buildPiAgentGatewayCustomTools(input: {
     ...(input.fetch === undefined ? {} : { fetch: input.fetch }),
   });
   if (tools.length === 0) {
-    throw new Error("Synara MCP returned an empty tool catalog.");
+    throw new Error(`${ACTIVE_AGENT_HOST_PROFILE.displayName} MCP returned an empty tool catalog.`);
   }
   const catalog = new Map(tools.map((tool) => [tool.name, tool]));
   if (input.enableComputerControl === true) {
@@ -965,12 +966,16 @@ function makeSessionSnapshot(context: PiSessionContext): ProviderSession {
   };
 }
 
-function normalizeTokenUsage(
+export function normalizePiTokenUsage(
   stats: ReturnType<PiAgentSession["getSessionStats"]>,
   contextWindow?: number | null,
 ): ThreadTokenUsageSnapshot | undefined {
   const inputTokens = stats.tokens.input;
-  const cachedInputTokens = stats.tokens.cacheRead;
+  const cacheReadInputTokens = stats.tokens.cacheRead;
+  const cacheWriteInputTokens = stats.tokens.cacheWrite;
+  // Preserve the existing UI-facing cached-input meaning (cache reads).
+  // Cache writes are exposed separately for quality telemetry.
+  const cachedInputTokens = cacheReadInputTokens;
   const outputTokens = stats.tokens.output;
   const totalProcessedTokens = stats.tokens.total;
   const contextUsage = stats.contextUsage;
@@ -1013,11 +1018,15 @@ function normalizeTokenUsage(
     ...(totalProcessedTokens > usedTokens ? { totalProcessedTokens } : {}),
     inputTokens,
     cachedInputTokens,
+    cacheReadInputTokens,
+    cacheWriteInputTokens,
     outputTokens,
     ...(maxTokens !== undefined ? { maxTokens } : {}),
     lastUsedTokens: usedTokens,
     lastInputTokens: inputTokens,
     lastCachedInputTokens: cachedInputTokens,
+    lastCacheReadInputTokens: cacheReadInputTokens,
+    lastCacheWriteInputTokens: cacheWriteInputTokens,
     lastOutputTokens: outputTokens,
   };
 }
@@ -2510,7 +2519,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         payload: cause ?? {},
       };
       const stats = context.runtime.session.getSessionStats();
-      const usage = normalizeTokenUsage(stats, context.runtime.session.model?.contextWindow);
+      const usage = normalizePiTokenUsage(stats, context.runtime.session.model?.contextWindow);
       context.lastKnownTokenUsage = usage;
       const failure = errorMessage ? classifyPiTurnFailure(errorMessage) : undefined;
       const leafId = context.runtime.session.sessionManager.getLeafId();
@@ -3587,7 +3596,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           type: "thread.started",
           payload: { providerThreadId: runtime.session.sessionId },
         } satisfies ProviderRuntimeEvent);
-        const initialUsage = normalizeTokenUsage(
+        const initialUsage = normalizePiTokenUsage(
           runtime.session.getSessionStats(),
           runtime.session.model?.contextWindow,
         );

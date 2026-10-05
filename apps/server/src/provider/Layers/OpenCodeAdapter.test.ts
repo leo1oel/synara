@@ -554,6 +554,40 @@ function assistantMessageUpdated(input?: {
 }
 
 describe("normalizeOpenCodeTokenUsage", () => {
+  it("converts OpenCode assistant tokens into a context usage snapshot", () => {
+    expect(
+      normalizeOpenCodeTokenUsage(
+        {
+          input: 100,
+          output: 50,
+          reasoning: 25,
+          cache: {
+            read: 10,
+            write: 5,
+          },
+        },
+        200_000,
+      ),
+    ).toEqual({
+      usedTokens: 190,
+      totalProcessedTokens: 190,
+      maxTokens: 200_000,
+      inputTokens: 100,
+      cachedInputTokens: 15,
+      cacheReadInputTokens: 10,
+      cacheWriteInputTokens: 5,
+      outputTokens: 50,
+      reasoningOutputTokens: 25,
+      lastUsedTokens: 190,
+      lastInputTokens: 100,
+      lastCachedInputTokens: 15,
+      lastCacheReadInputTokens: 10,
+      lastCacheWriteInputTokens: 5,
+      lastOutputTokens: 50,
+      lastReasoningOutputTokens: 25,
+    });
+  });
+
   it("returns undefined for missing, malformed, negative, infinite, or all-zero usage", () => {
     const validBase = {
       input: 1,
@@ -3505,12 +3539,16 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           totalProcessedTokens: 245,
           inputTokens: 120,
           cachedInputTokens: 15,
+          cacheReadInputTokens: 10,
+          cacheWriteInputTokens: 5,
           outputTokens: 80,
           reasoningOutputTokens: 30,
           maxTokens: 200_000,
           lastUsedTokens: 245,
           lastInputTokens: 120,
           lastCachedInputTokens: 15,
+          lastCacheReadInputTokens: 10,
+          lastCacheWriteInputTokens: 5,
           lastOutputTokens: 80,
           lastReasoningOutputTokens: 30,
         },

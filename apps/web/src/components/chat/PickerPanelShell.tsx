@@ -4,21 +4,13 @@
 // Depends on: shared input styling plus caller-provided content slots.
 
 import { useEffect, useRef, type ReactNode } from "react";
-import { SearchIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
-import { Input } from "../ui/input";
+import { SearchInput } from "../ui/search-input";
 import {
   COMPOSER_PICKER_MODEL_LIST_SCROLL_CLASS_NAME,
   COMPOSER_PICKER_RADIUS_CLASS_NAME,
   COMPOSER_PICKER_SEARCH_HEADER_CLASS_NAME,
-  COMPOSER_PICKER_SEARCH_INPUT_CLASS_NAME,
 } from "./composerPickerStyles";
-import {
-  PICKER_PANEL_PLAIN_BODY_CLASS_NAME,
-  PICKER_PANEL_PLAIN_SEARCH_HEADER_CLASS_NAME,
-  PICKER_PANEL_PLAIN_SEARCH_ICON_CLASS_NAME,
-  PICKER_PANEL_PLAIN_SEARCH_INPUT_CLASS_NAME,
-} from "./pickerPanelStyles";
 
 /** Keys a search field inside a menu must let through so list navigation keeps working. */
 export const MENU_NAVIGATION_KEYS = new Set([
@@ -33,10 +25,11 @@ export const MENU_NAVIGATION_KEYS = new Set([
 ]);
 
 export function PickerPanelShell(props: {
+  variant?: "default" | "plain";
+  searchInput?: ReactNode;
   searchPlaceholder?: string;
   query?: string;
   onQueryChange?: (query: string) => void;
-  searchInput?: ReactNode;
   stopSearchKeyPropagation?: boolean;
   autoFocusSearch?: boolean;
   children: ReactNode;
@@ -44,19 +37,13 @@ export function PickerPanelShell(props: {
   widthClassName?: string;
   bleedParentPadding?: boolean;
   listMaxHeightClassName?: string;
-  /**
-   * `"plain"` is the dense picker panel: the search area drops all field chrome (no border,
-   * fill, ring, or shadow) down to a magnifier + placeholder over a single hairline divider,
-   * and the body loses its extra padding so the list chrome owns the 4px gutter on its own.
-   * `"default"` keeps the bordered search field used by the composer submenus.
-   */
-  variant?: "default" | "plain";
 }) {
   const {
+    variant: variantProp,
+    searchInput,
     searchPlaceholder: searchPlaceholderProp,
     query: queryProp,
     onQueryChange,
-    searchInput,
     stopSearchKeyPropagation: stopSearchKeyPropagationProp,
     autoFocusSearch: autoFocusSearchProp,
     children,
@@ -64,15 +51,14 @@ export function PickerPanelShell(props: {
     widthClassName: widthClassNameProp,
     bleedParentPadding: bleedParentPaddingProp,
     listMaxHeightClassName,
-    variant: variantProp,
   } = props;
+  const variant = variantProp ?? "default";
   const searchPlaceholder = searchPlaceholderProp ?? "Search";
   const query = queryProp ?? "";
   const stopSearchKeyPropagation = stopSearchKeyPropagationProp ?? false;
   const autoFocusSearch = autoFocusSearchProp ?? false;
   const widthClassName = widthClassNameProp ?? "w-72";
   const bleedParentPadding = bleedParentPaddingProp ?? false;
-  const isPlain = (variantProp ?? "default") === "plain";
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -97,36 +83,21 @@ export function PickerPanelShell(props: {
         bleedParentPadding ? cn("-m-1 overflow-clip", COMPOSER_PICKER_RADIUS_CLASS_NAME) : null,
       )}
     >
-      {onQueryChange || searchInput ? (
+      {searchInput || onQueryChange ? (
         <div
           className={cn(
-            isPlain
-              ? PICKER_PANEL_PLAIN_SEARCH_HEADER_CLASS_NAME
+            variant === "plain"
+              ? "shrink-0 border-b border-border"
               : bleedParentPadding
                 ? cn(COMPOSER_PICKER_SEARCH_HEADER_CLASS_NAME, "-top-1 pt-2")
                 : "sticky top-0 z-20 shrink-0 border-b border-border bg-[var(--composer-surface)] p-1",
           )}
         >
-          {isPlain ? (
-            <SearchIcon aria-hidden="true" className={PICKER_PANEL_PLAIN_SEARCH_ICON_CLASS_NAME} />
-          ) : null}
           {searchInput ?? (
-            <Input
-              className={
-                isPlain
-                  ? PICKER_PANEL_PLAIN_SEARCH_INPUT_CLASS_NAME
-                  : cn(
-                      "rounded-md border-border/60 shadow-none before:hidden has-focus-visible:border-neutral-500/15 has-focus-visible:ring-0 [&_input]:font-sans",
-                      bleedParentPadding
-                        ? COMPOSER_PICKER_SEARCH_INPUT_CLASS_NAME
-                        : "bg-background",
-                    )
-              }
+            <SearchInput
+              className="before:hidden [&_input]:font-sans"
               nativeInput
               ref={searchInputRef}
-              size="sm"
-              type="search"
-              unstyled={isPlain}
               placeholder={searchPlaceholder}
               value={query}
               onChange={(event) => onQueryChange?.(event.target.value)}
@@ -145,14 +116,15 @@ export function PickerPanelShell(props: {
       ) : null}
       <div
         className={cn(
-          "min-h-0 flex-1 overflow-y-auto overscroll-contain",
-          isPlain ? PICKER_PANEL_PLAIN_BODY_CLASS_NAME : "py-0.5",
+          "min-h-0 flex-1 overflow-y-auto overscroll-contain py-0.5",
           bleedParentPadding ? COMPOSER_PICKER_MODEL_LIST_SCROLL_CLASS_NAME : null,
         )}
       >
         {children}
       </div>
-      {footer ? <div className="border-t p-1">{footer}</div> : null}
+      {footer ? (
+        <div className={cn("border-t", variant === "plain" ? "p-1" : "p-1")}>{footer}</div>
+      ) : null}
     </div>
   );
 }

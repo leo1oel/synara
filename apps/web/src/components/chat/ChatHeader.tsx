@@ -27,6 +27,7 @@ import {
   PlusIcon,
   TerminalIcon,
   WorkflowIcon,
+  Trash2,
   XIcon,
   GitBranchIcon,
 } from "~/lib/icons";
@@ -69,6 +70,8 @@ import { ProviderUsageMenuControl } from "../ProviderUsageMenuControl";
 import { EnvironmentToggle, type EnvironmentToggleState } from "./environment/EnvironmentToggle";
 import { SurfacePanelToggle, type SurfacePanelToggleState } from "./chatHeaderControls";
 import type { ThreadHandoffTarget } from "~/lib/threadHandoff";
+import { Trans } from "@lingui/react/macro";
+import { useLingui } from "@lingui/react";
 
 /**
  * Width (px) below which collapsible header controls drop their text labels and
@@ -93,6 +96,11 @@ interface ChatHeaderProps {
   threadTabs?: React.ReactNode;
   hideSidebarControls?: boolean;
   hideHandoffControls?: boolean;
+  hideWorkspaceControls?: boolean;
+  forceHandoffLabel?: boolean;
+  historyProjectId?: ProjectId;
+  onNewChat?: () => void;
+  onDeleteChat?: (threadId: ThreadId, threadTitle: string) => void;
   // Empty-draft landings hide all thread-scoped chrome (title, Hand off, project
   // scripts, git/open-in) — the chat hasn't started yet — keeping only the sidebar
   // cluster plus the Environment and right-panel toggles.
@@ -163,7 +171,11 @@ function EditorChatHistoryMenu(props: {
   projectId: ProjectId;
   activeThreadId: ThreadId;
   onNavigateToThread: (threadId: ThreadId) => void;
+  triggerTitle?: string;
+  onNewChat?: () => void;
+  onDeleteChat?: (threadId: ThreadId, threadTitle: string) => void;
 }) {
+  const { i18n } = useLingui();
   const { settings } = useAppSettings();
   const selectDisplayThreads = createSidebarDisplayThreadsSelector({
     hideAutomationRunThreads: !settings.showAutomationRunThreads,
@@ -178,24 +190,54 @@ function EditorChatHistoryMenu(props: {
     <Menu modal={false}>
       <MenuTrigger
         render={
-          <IconButton
-            variant="ghost"
-            size="icon-xs"
-            label="Chat history"
-            title="Chat history"
-            className="size-5 shrink-0 text-muted-foreground hover:text-foreground"
-          >
-            <HistoryIcon className="size-3.5" />
-          </IconButton>
+          props.triggerTitle ? (
+            <button
+              type="button"
+              className="flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-left text-ui leading-[var(--app-line-height-ui,1.5)] font-normal text-foreground transition-colors hover:bg-secondary"
+              aria-label={`${props.triggerTitle}, open chat history`}
+              data-chat-history-menu-trigger="true"
+            >
+              <span className="max-w-[min(10rem,calc(100vw-5.5rem))] truncate">
+                {props.triggerTitle}
+              </span>
+              <HistoryIcon className="size-3 shrink-0 text-muted-foreground" />
+            </button>
+          ) : (
+            <IconButton
+              variant="ghost"
+              size="icon-xs"
+              label="Chat history"
+              title="Chat history"
+              className="size-5 shrink-0 text-muted-foreground hover:text-foreground"
+            >
+              <HistoryIcon className="size-3.5" />
+            </IconButton>
+          )
         }
       />
-      <ComposerPickerMenuPopup align="start" side="bottom" sideOffset={6} className="w-72 min-w-72">
+      <ComposerPickerMenuPopup
+        align="start"
+        side="bottom"
+        sideOffset={6}
+        className="w-[18rem] min-w-0"
+      >
+        {props.onNewChat ? (
+          <MenuItem onClick={props.onNewChat}>
+            <PlusIcon className="size-3.5 shrink-0 text-muted-foreground" />
+            <span>
+              <Trans>New chat</Trans>
+            </span>
+          </MenuItem>
+        ) : null}
         {historyThreads.length === 0 ? (
-          <MenuItem disabled>No chats in this project yet</MenuItem>
+          <MenuItem disabled>
+            <Trans>No chats in this project yet</Trans>
+          </MenuItem>
         ) : (
           historyThreads.map((thread) => (
             <MenuItem
               key={thread.id}
+              className="group"
               onClick={() => {
                 if (thread.id !== props.activeThreadId) {
                   props.onNavigateToThread(thread.id);
@@ -207,7 +249,9 @@ function EditorChatHistoryMenu(props: {
                 tone="header"
                 className="size-3.5 shrink-0"
               />
-              <span className="min-w-0 flex-1 truncate">{thread.title}</span>
+              <span className="min-w-0 flex-1 truncate">
+                {isGenericChatThreadTitle(thread.title) ? i18n._("New thread") : thread.title}
+              </span>
               {thread.id === props.activeThreadId ? (
                 <CheckIcon className="size-3.5 shrink-0 text-muted-foreground" />
               ) : (
@@ -215,6 +259,25 @@ function EditorChatHistoryMenu(props: {
                   {formatRelativeTime(thread.updatedAt ?? thread.createdAt)}
                 </span>
               )}
+              {props.onDeleteChat ? (
+                <button
+                  type="button"
+                  className="ml-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-60 transition-[color,background-color,opacity] hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
+                  aria-label={`Delete thread "${thread.title}"`}
+                  title="Delete thread"
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    props.onDeleteChat?.(thread.id, thread.title);
+                  }}
+                >
+                  <Trash2 className="size-3.25" />
+                </button>
+              ) : null}
             </MenuItem>
           ))
         )}
@@ -340,7 +403,9 @@ function EditorRailTabs(props: {
           >
             <MenuItem onClick={props.onNewChat}>
               <MessageCircleIcon className="size-3.5 shrink-0 text-muted-foreground" />
-              <span>New chat</span>
+              <span>
+                <Trans>New chat</Trans>
+              </span>
             </MenuItem>
             <MenuItem onClick={newTerminalTab}>
               <TerminalIcon className="size-3.5 shrink-0 text-muted-foreground" />
@@ -424,6 +489,11 @@ export function ChatHeader({
   threadTabs,
   hideSidebarControls: hideSidebarControlsProp,
   hideHandoffControls: hideHandoffControlsProp,
+  hideWorkspaceControls: hideWorkspaceControlsProp,
+  forceHandoffLabel: forceHandoffLabelProp,
+  historyProjectId,
+  onNewChat,
+  onDeleteChat,
   minimalChrome: minimalChromeProp,
   isGitRepo,
   openInTarget,
@@ -463,9 +533,12 @@ export function ChatHeader({
   onRenameThread,
   onCloseThreadPane,
 }: ChatHeaderProps) {
+  const { i18n } = useLingui();
   const hideSidebarControls = hideSidebarControlsProp ?? false;
   const hideHandoffControls = hideHandoffControlsProp ?? false;
   const showHandoffAction = showHandoffActionProp ?? true;
+  const hideWorkspaceControls = hideWorkspaceControlsProp ?? false;
+  const forceHandoffLabel = forceHandoffLabelProp ?? false;
   const minimalChrome = minimalChromeProp ?? false;
   const showGitActions = showGitActionsProp ?? true;
   const showDiffToggle = showDiffToggleProp ?? true;
@@ -661,6 +734,16 @@ export function ChatHeader({
                       )}
                     </span>
                   )}
+                  {historyProjectId ? (
+                    <EditorChatHistoryMenu
+                      projectId={historyProjectId}
+                      activeThreadId={activeThreadId}
+                      onNavigateToThread={onNavigateToThread}
+                      triggerTitle={activeThreadTitle}
+                      {...(onNewChat ? { onNewChat } : {})}
+                      {...(onDeleteChat ? { onDeleteChat } : {})}
+                    />
+                  ) : (
                   <h2
                     className="max-w-[clamp(12rem,42vw,36rem)] truncate font-system-ui text-ui font-normal text-foreground"
                     title={activeThreadTitle}
@@ -668,6 +751,7 @@ export function ChatHeader({
                   >
                     {activeThreadTitle}
                   </h2>
+                  )}
                   {showSidechatTitleChip && !isSplitPane && onCloseThreadPane ? (
                     <IconButton
                       variant="chrome"
@@ -718,12 +802,25 @@ export function ChatHeader({
                       <ChatHeaderIconButton
                         type="button"
                         tone="surface"
+                        className={cn(
+                          compact && !forceHandoffLabel ? "gap-1" : "gap-1.5",
+                          forceHandoffLabel &&
+                            "text-[length:var(--lattice-type-label-size,12px)] sm:text-[length:var(--lattice-type-label-size,12px)]",
+                        )}
                         label={handoffActionLabel}
                         disabled={handoffDisabled || handoffActionTargets.length === 0}
                       />
                     }
                   >
-                    <HandoffIcon className="size-4 shrink-0" />
+                    <HandoffIcon
+                      className={cn(
+                        "shrink-0 opacity-80",
+                        forceHandoffLabel ? "size-3" : "size-[1em]",
+                      )}
+                    />
+                    {!compact || forceHandoffLabel ? (
+                      <span className="truncate font-normal">{i18n._("Hand off")}</span>
+                    ) : null}
                   </MenuTrigger>
                 }
               />
@@ -733,7 +830,7 @@ export function ChatHeader({
               {continueHandoffActionTargets.length > 0 ? (
                 <>
                   <MenuGroup>
-                    <MenuGroupLabel>Continue in this thread</MenuGroupLabel>
+                    <MenuGroupLabel>{i18n._("Continue in this thread")}</MenuGroupLabel>
                     {continueHandoffActionTargets.map((target) => (
                       <MenuItem
                         key={target.instanceId}
@@ -750,7 +847,7 @@ export function ChatHeader({
                 </>
               ) : null}
               <MenuGroup>
-                <MenuGroupLabel>Continue in a new thread</MenuGroupLabel>
+                <MenuGroupLabel>{i18n._("Continue in a new thread")}</MenuGroupLabel>
                 {handoffActionTargets.map((target) => (
                   <MenuItem
                     key={target.instanceId}
@@ -765,7 +862,7 @@ export function ChatHeader({
             </ComposerPickerMenuPopup>
           </Menu>
         ) : null}
-        {!minimalChrome && activeProjectScripts ? (
+        {!minimalChrome && !hideWorkspaceControls && activeProjectScripts ? (
           <ProjectScriptsControl
             scripts={activeProjectScripts}
             keybindings={keybindings}
@@ -791,7 +888,7 @@ export function ChatHeader({
             branch is behind. The right-side panel control stays beside it, acting as the
             multi-pane dock toggle on single chats and the legacy diff toggle in split hosts.
             Falls back to the legacy controls when no environment is resolved. */}
-        {environment ? (
+        {hideWorkspaceControls ? null : environment ? (
           <>
             {/* Actions on the left, panel toggles on the right. */}
             {hasActionControls ? <ChatHeaderGroupDivider /> : null}

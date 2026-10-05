@@ -98,6 +98,10 @@ export const DEFAULT_TERMINAL_FONT_SIZE_PX = 12;
 export const DEFAULT_TERMINAL_FONT_FAMILY = "";
 
 export const TERMINAL_FONT_FAMILY_SUGGESTIONS: ReadonlyArray<string> = [
+  "TX-02 Variable",
+  "TX-02",
+  "Berkeley Mono Variable",
+  "Berkeley Mono",
   "JetBrains Mono",
   "Fira Code",
   "Cascadia Code",
@@ -547,15 +551,14 @@ export const AppSettingsSchema = Schema.Struct({
   textGenerationProvider: PersistedProviderKind.pipe(withDefaults(() => "codex" as const)),
   textGenerationProviderInstanceId: Schema.optional(ProviderInstanceId),
   textGenerationModel: Schema.optional(TrimmedNonEmptyString),
+  compileRepairProvider: PersistedProviderKind.pipe(withDefaults(() => "codex" as const)),
+  compileRepairModel: Schema.optional(TrimmedNonEmptyString),
   uiFontFamily: Schema.String.check(Schema.isMaxLength(256)).pipe(withDefaults(() => "")),
   defaultProvider: PersistedProviderKind.pipe(withDefaults(() => "codex" as const)),
   // Local-only UI preference: providers explicitly hidden from the composer picker.
   // The active/locked provider for a thread is always shown regardless, so users
   // never get stuck on a thread whose provider they later chose to hide.
   hiddenProviders: PersistedProviderKindList.pipe(withDefaults(() => [])),
-  // Server-backed provider shutdown policy. Unlike `hiddenProviders`, entries here
-  // cannot run discovery, health checks, updates, or new turns until re-enabled.
-  disabledProviders: PersistedProviderKindList.pipe(withDefaults(() => [])),
   // Local-only UI preference: top-level provider order in Settings and the composer picker.
   providerOrder: PersistedProviderKindList.pipe(withDefaults(() => [...DEFAULT_PROVIDER_ORDER])),
   // Deprecated local-only preference kept for backward-compatible decoding.
@@ -1457,7 +1460,6 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     customPiModels: normalizeCustomModelSlugs(settings.customPiModels, "pi"),
     customOmpModels: normalizeCustomModelSlugs(settings.customOmpModels, "omp"),
     hiddenProviders: normalizeHiddenProviders(settings.hiddenProviders),
-    disabledProviders: normalizeHiddenProviders(settings.disabledProviders),
     providerOrder: normalizeProviderOrder(settings.providerOrder),
     railItemOrder: normalizeRailItemOrder(settings.railItemOrder),
     hiddenRailItems: normalizeHiddenRailItems(settings.hiddenRailItems),
@@ -1465,25 +1467,6 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
   };
 }
 
-export function getServerDisabledProviders(
-  settings: Pick<ServerSettingsView, "providers">,
-): ProviderKind[] {
-  return DEFAULT_PROVIDER_ORDER.filter((provider) => !settings.providers[provider].enabled);
-}
-
-export function didProviderEnablementChange(
-  previous: Pick<ServerSettingsView, "providers"> | undefined,
-  next: Pick<ServerSettingsView, "providers">,
-): boolean {
-  return (
-    previous === undefined ||
-    DEFAULT_PROVIDER_ORDER.some(
-      (provider) => previous.providers[provider].enabled !== next.providers[provider].enabled,
-    )
-  );
-}
-
-/** Server settings that change which native commands a provider reports. */
 export function didProviderCommandDiscoverySettingsChange(
   previous: Pick<ServerSettingsView, "providers"> | undefined,
   next: Pick<ServerSettingsView, "providers">,
@@ -1532,11 +1515,12 @@ function serverSettingsToAppSettings(settings: ServerSettingsView): Partial<AppS
     customOpenCodeModels: settings.providers.opencode.customModels,
     customPiModels: settings.providers.pi.customModels,
     customOmpModels: settings.providers.omp.customModels,
-    disabledProviders: getServerDisabledProviders(settings),
     providerInstances: settings.providerInstances,
     textGenerationProvider: settings.textGenerationModelSelection.provider,
     textGenerationProviderInstanceId: settings.textGenerationModelSelection.instanceId,
     textGenerationModel: settings.textGenerationModelSelection.model,
+    compileRepairProvider: settings.compileRepairModelSelection.provider,
+    compileRepairModel: settings.compileRepairModelSelection.model,
     onboardingCompletedAt: settings.onboardingCompletedAt ?? null,
   };
 }
@@ -1572,8 +1556,7 @@ function touchesProviderDiscoverySettings(patch: Partial<AppSettings>): boolean 
     hasOwn(patch, "openCodeServerUrl") ||
     hasOwn(patch, "piAgentDir") ||
     hasOwn(patch, "ompBinaryPath") ||
-    hasOwn(patch, "ompAgentDir") ||
-    hasOwn(patch, "disabledProviders")
+    hasOwn(patch, "ompAgentDir")
   );
 }
 
@@ -1676,6 +1659,18 @@ export function appSettingsPatchToServerSettingsPatch(
     serverPatch.textGenerationModelSelection = {
       provider,
       instanceId,
+      model,
+    };
+  }
+  if (hasOwn(patch, "compileRepairModel") || hasOwn(patch, "compileRepairProvider")) {
+    const model = patch.compileRepairModel ?? DEFAULT_GIT_TEXT_GENERATION_MODEL;
+    serverPatch.compileRepairModelSelection = {
+      provider: resolveTextGenerationProvider({
+        ...(patch.compileRepairProvider !== undefined
+          ? { provider: patch.compileRepairProvider }
+          : {}),
+        model,
+      }),
       model,
     };
   }
@@ -1800,20 +1795,6 @@ export function appSettingsPatchToServerSettingsPatch(
       ...(hasOwn(patch, "customPiModels") ? { customModels: patch.customPiModels ?? [] } : {}),
     };
   }
-  if (hasOwn(patch, "disabledProviders")) {
-    const disabledProviders = new Set(normalizeHiddenProviders(patch.disabledProviders ?? []));
-    for (const provider of DEFAULT_PROVIDER_ORDER) {
-      const enabled = !disabledProviders.has(provider);
-      if (currentSettings?.providers[provider].enabled === enabled) {
-        continue;
-      }
-      providers[provider] = {
-        ...providers[provider],
-        enabled,
-      };
-    }
-  }
-
   if (currentSettings) {
     pruneProviderPatchAgainstCurrentSettings(providers, currentSettings);
   }
@@ -1956,22 +1937,16 @@ function redactAppSettingsSecretsForClient(settings: AppSettings): AppSettings {
 }
 
 export function normalizeStoredAppSettings(settings: AppSettings): AppSettings {
-  return redactAppSettingsSecretsForClient({
-    ...normalizeAppSettings(settings),
-    // Provider enablement belongs to the connected server. Scrub legacy values
-    // so a browser profile cannot project one server's shutdown state onto another.
-    disabledProviders: [],
-  });
+  return redactAppSettingsSecretsForClient(normalizeAppSettings(settings));
 }
 
 export function applyLocalAppSettingsPatch(
   settings: AppSettings,
   patch: Partial<AppSettings>,
 ): AppSettings {
-  const { disabledProviders: _disabledProviders, ...localPatch } = patch;
   return normalizeStoredAppSettings({
     ...settings,
-    ...localPatch,
+    ...patch,
     ...(hasOwn(patch, "openCodeServerPassword")
       ? {
           openCodeServerPasswordConfigured: Boolean(patch.openCodeServerPassword?.trim()),
@@ -2748,9 +2723,7 @@ export function useAppSettings() {
             .invalidateQueries({ queryKey: githubInboxQueryKeys.all })
             .catch(() => undefined);
         }
-        if (hasOwn(patch, "disabledProviders")) {
-          await refreshProvidersAfterEnablementChange();
-        } else if (touchesProviderDiscoverySettings(patch)) {
+        if (touchesProviderDiscoverySettings(patch)) {
           await queryClient
             .invalidateQueries({ queryKey: providerDiscoveryQueryKeys.all })
             .catch(() => undefined);

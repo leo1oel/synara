@@ -192,6 +192,32 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           ('latest-a', NULL, 'pending', '2026-09-10T00:00:10.000Z', NULL, '[]'),
           ('latest-b', 'turn-old', 'completed', '2026-09-10T00:00:03.000Z', NULL, '[]')
       `;
+        yield* sql`
+          UPDATE projection_turns SET pending_message_id = 'message-z'
+          WHERE thread_id = 'latest-a' AND turn_id = 'turn-z'
+        `;
+        const shells = yield* query.getThreadShellsByIds([
+          asThreadId("latest-b"),
+          asThreadId("latest-a"),
+          asThreadId("latest-a"),
+          asThreadId("missing"),
+        ]);
+        assert.equal(shells.length, 2);
+        assert.equal(
+          shells.find((thread) => thread.id === "latest-a")?.latestTurn?.turnId,
+          "turn-z",
+        );
+        assert.equal(
+          shells.find((thread) => thread.id === "latest-a")?.latestTurn?.pendingMessageId,
+          "message-z",
+        );
+        assert.equal(
+          shells.find((thread) => thread.id === "latest-b")?.latestTurn?.turnId,
+          "turn-old",
+        );
+        assert.isNull(
+          shells.find((thread) => thread.id === "latest-b")?.latestTurn?.pendingMessageId,
+        );
         for (const snapshot of [
           yield* query.getSnapshot(),
           yield* query.getShellSnapshot(),
@@ -508,7 +534,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           (
             'thread-1',
             'turn-1',
-            NULL,
+            'message-0',
             'thread-1',
             'plan-1',
             'message-1',
@@ -632,6 +658,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           hasActionableProposedPlan: true,
           latestTurn: {
             turnId: asTurnId("turn-1"),
+            pendingMessageId: asMessageId("message-0"),
             state: "completed",
             requestedAt: "2026-02-24T00:00:08.000Z",
             startedAt: "2026-02-24T00:00:08.000Z",
@@ -2085,6 +2112,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           goalPausedAt: null,
           latestTurn: {
             turnId: asTurnId("turn-shell"),
+            pendingMessageId: null,
             state: "completed",
             requestedAt: "2026-03-03T00:00:05.000Z",
             startedAt: "2026-03-03T00:00:05.000Z",

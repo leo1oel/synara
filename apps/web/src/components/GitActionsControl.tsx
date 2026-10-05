@@ -9,11 +9,12 @@ import type {
   GitActionProgressPhase,
   GitRunStackedActionResult,
   GitStackedAction,
-  GitStatusResult,
+  GitStatusWithPullRequest,
   ModelSelection,
   ThreadId,
 } from "@synara/contracts";
 import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLingui } from "@lingui/react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { ChevronDownIcon, InfoIcon } from "~/lib/icons";
 import { Input } from "~/components/ui/input";
@@ -53,6 +54,7 @@ import { getProviderStartOptions, useAppSettings } from "~/appSettings";
 import { formatClockDuration } from "~/session-logic";
 import { Button } from "~/components/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "~/components/ui/button-group";
+import { Skeleton } from "~/components/ui/skeleton";
 import {
   ChatHeaderButton,
   ChatHeaderIconButton,
@@ -72,6 +74,7 @@ import {
   EnvironmentRowChevron,
 } from "./chat/environment/EnvironmentRow";
 import {
+  dialogFieldLabelClassName,
   Dialog,
   DialogDescription,
   DialogFooter,
@@ -93,18 +96,21 @@ import { Popover, PopoverPopup, PopoverTrigger } from "~/components/ui/popover";
 import { toastManager } from "~/components/ui/toast";
 import { openInPreferredEditor } from "~/editorPreferences";
 import {
+  gitBranchPullRequestQueryOptions,
   gitBranchesQueryOptions,
   gitInitMutationOptions,
   gitMutationKeys,
   gitPullMutationOptions,
   gitRunStackedActionMutationOptions,
   gitStatusQueryOptions,
+  withBranchPullRequest,
   invalidateGitQueries,
   isGitExpensiveReadCapacityError,
   refreshGitActionAvailability,
 } from "~/lib/gitReactQuery";
 import { cn, newCommandId, randomUUID } from "~/lib/utils";
 import { resolvePathLinkTarget } from "~/terminal-links";
+import { localizeGitText } from "~/lib/gitLocalization";
 import { readNativeApi } from "~/nativeApi";
 import { createThreadGitActionsMetadataSelector } from "~/storeSelectors";
 import { useStore } from "~/store";
@@ -116,6 +122,8 @@ interface GitActionsControlProps {
   // `header` renders the split quick-action button; `panel` collapses git actions into
   // an Environment row + dropdown, promoting Pull as the primary row when behind upstream.
   variant?: "header" | "panel";
+  /** Applies Lattice's embedded Source Control field/menu visual contract. */
+  latticeSourceControl?: boolean;
   // `always` (default) keeps the control mounted. `pull-available` hides the header
   // control unless Pull is the current action or a pull is already running — used
   // next to Hand off / Add action while Environment owns the rest of git actions.
@@ -157,7 +165,7 @@ interface RunGitActionWithToastInput {
   forcePushOnlyProgress?: boolean;
   onConfirmed?: () => void;
   skipDefaultBranchPrompt?: boolean;
-  statusOverride?: GitStatusResult | null;
+  statusOverride?: GitStatusWithPullRequest | null;
   featureBranch?: boolean;
   isDefaultBranchOverride?: boolean;
   progressToastId?: GitActionToastId;
@@ -173,8 +181,8 @@ interface RunGitActionWithToastInput {
 // pre-resolved git status (e.g. the post-push toast CTA); null means "open
 // against the live status".
 interface CreatePrDialogState {
-  statusOverride: GitStatusResult | null;
-  statusOverrideSource: GitStatusResult | null;
+  statusOverride: GitStatusWithPullRequest | null;
+  statusOverrideSource: GitStatusWithPullRequest | null;
   isDefaultBranchOverride: boolean | null;
 }
 
@@ -236,6 +244,13 @@ function findRunnableCommitPushMenuItem(items: GitActionMenuItem[]): GitActionMe
   );
 }
 
+function localizeOptionalGitText(
+  localize: (text: string) => string,
+  text: string | null,
+): string | null {
+  return text ? localize(text) : null;
+}
+
 function GitPickerMenuRow({ item }: { item: GitPickerMenuItem }) {
   return (
     <MenuItem disabled={item.disabled} onClick={item.onSelect}>
@@ -252,10 +267,14 @@ export default function GitActionsControl({
   activeThreadId,
   hideQuickActionLabel: hideQuickActionLabelProp,
   variant: variantProp,
+  latticeSourceControl: latticeSourceControlProp,
   visibleWhen: visibleWhenProp,
   onRegisterCommitAndPushTrigger,
 }: GitActionsControlProps) {
+  const { i18n } = useLingui();
+  const localizeGit = useCallback((text: string) => localizeGitText(i18n, text), [i18n]);
   const hideQuickActionLabel = hideQuickActionLabelProp ?? false;
+  const latticeSourceControl = latticeSourceControlProp ?? false;
   const variant = variantProp ?? "header";
   const visibleWhen = visibleWhenProp ?? "always";
   const isPanel = variant === "panel";
@@ -299,7 +318,9 @@ export default function GitActionsControl({
     useState<PendingDefaultBranchAction | null>(null);
   const [isCreateBranchDialogOpen, setIsCreateBranchDialogOpen] = useState(false);
   const [createBranchName, setCreateBranchName] = useState("");
+  const [isPanelGitMenuOpen, setIsPanelGitMenuOpen] = useState(false);
   const [createPrDialog, setCreatePrDialog] = useState<CreatePrDialogState | null>(null);
+  const panelGitActionsAnchorRef = useRef<HTMLDivElement>(null);
   const activeGitActionProgressRef = useRef<ActiveGitActionProgress | null>(null);
 
   const updateActiveProgressToast = useCallback(() => {
@@ -326,12 +347,22 @@ export default function GitActionsControl({
   const currentBranch = branchList?.branches.find((branch) => branch.current)?.name ?? null;
   // Only poll status after branch discovery confirms a repo — avoids non-repo
   // cwds feeding a permanent "Refreshing git status..." invalidation loop.
+  const gitStatusEnabled = branchListReady && branchList?.isRepo === true;
   const {
     data: gitStatusData,
     error: gitStatusError,
     isFetching: isGitStatusFetching,
-  } = useQuery(gitStatusQueryOptions(gitCwd, branchListReady && branchList?.isRepo === true));
-  const gitStatus = gitStatusData ?? null;
+    isPending: isGitStatusPending,
+  } = useQuery(gitStatusQueryOptions(gitCwd, gitStatusEnabled));
+  // Fetched alongside status, never ahead of it: actions render from local git state at
+  // once and the PR-dependent ones (View PR) settle when GitHub answers.
+  const { data: branchPullRequestData } = useQuery(
+    gitBranchPullRequestQueryOptions(gitCwd, gitStatusEnabled),
+  );
+  const gitStatus = useMemo(
+    () => (gitStatusData ? withBranchPullRequest(gitStatusData, branchPullRequestData) : null),
+    [branchPullRequestData, gitStatusData],
+  );
   const isGitStatusRefreshDelayed = isGitExpensiveReadCapacityError(gitStatusError);
   const requestGitActionAvailabilityRefresh = useCallback(() => {
     if (!gitCwd) return;
@@ -474,7 +505,7 @@ export default function GitActionsControl({
     [defaultBranchName, gitStatusForActions, hasOriginRemote, isDefaultBranch, isGitActionRunning],
   );
   const quickActionDisabledReason = quickAction.disabled
-    ? (quickAction.hint ?? "This action is currently unavailable.")
+    ? localizeGit(quickAction.hint ?? "This action is currently unavailable.")
     : null;
   const pendingDefaultBranchActionCopy = pendingDefaultBranchAction
     ? resolveDefaultBranchActionDialogCopy({
@@ -511,15 +542,15 @@ export default function GitActionsControl({
           break;
         case "phase_started":
           progress.phase = event.phase;
-          progress.title = event.label;
-          progress.currentPhaseLabel = event.label;
+          progress.title = localizeGit(event.label);
+          progress.currentPhaseLabel = localizeGit(event.label);
           progress.phaseStartedAtMs = now;
           progress.hookStartedAtMs = null;
           progress.hookName = null;
           progress.lastOutputLine = null;
           break;
         case "hook_started":
-          progress.title = `Running ${event.hookName}...`;
+          progress.title = i18n._("Running {hook}...", { hook: event.hookName });
           progress.hookName = event.hookName;
           progress.hookStartedAtMs = now;
           progress.lastOutputLine = null;
@@ -528,7 +559,7 @@ export default function GitActionsControl({
           progress.lastOutputLine = event.text;
           break;
         case "hook_finished":
-          progress.title = progress.currentPhaseLabel ?? "Committing...";
+          progress.title = progress.currentPhaseLabel ?? i18n._("Committing...");
           progress.hookName = null;
           progress.hookStartedAtMs = null;
           progress.lastOutputLine = null;
@@ -546,7 +577,7 @@ export default function GitActionsControl({
     };
 
     return api.git.onActionProgress(applyProgressEvent);
-  }, [gitCwd, updateActiveProgressToast]);
+  }, [gitCwd, i18n, localizeGit, updateActiveProgressToast]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -566,7 +597,7 @@ export default function GitActionsControl({
     if (!api) {
       toastManager.add({
         type: "error",
-        title: "Link opening is unavailable.",
+        title: i18n._("Link opening is unavailable."),
         data: threadToastData,
       });
       return;
@@ -575,7 +606,7 @@ export default function GitActionsControl({
     if (!prUrl) {
       toastManager.add({
         type: "error",
-        title: "No open PR found.",
+        title: i18n._("No open PR found."),
         data: threadToastData,
       });
       return;
@@ -583,20 +614,20 @@ export default function GitActionsControl({
     void api.shell.openExternal(prUrl).catch((err) => {
       toastManager.add({
         type: "error",
-        title: "Unable to open PR link",
-        description: err instanceof Error ? err.message : "An error occurred.",
+        title: i18n._("Unable to open PR link"),
+        description: err instanceof Error ? err.message : i18n._("An error occurred."),
         data: threadToastData,
       });
     });
-  }, [gitStatusForActions, threadToastData]);
+  }, [gitStatusForActions, i18n, threadToastData]);
 
   // Single entry point for every "Create PR" surface: opens the PR dialog when a
   // PR can be created, opens the existing PR when one is already open, and
   // explains unavailability otherwise.
   const openCreatePrDialog = useCallback(
     (input?: {
-      statusOverride?: GitStatusResult | null;
-      statusOverrideSource?: GitStatusResult | null;
+      statusOverride?: GitStatusWithPullRequest | null;
+      statusOverrideSource?: GitStatusWithPullRequest | null;
       isDefaultBranchOverride?: boolean;
     }) => {
       const execution = resolveCreatePrExecution({
@@ -613,8 +644,8 @@ export default function GitActionsControl({
       if (execution.kind === "unavailable") {
         toastManager.add({
           type: "info",
-          title: "Create PR unavailable",
-          description: execution.hint,
+          title: i18n._("Create PR unavailable"),
+          description: localizeGit(execution.hint),
           data: threadToastData,
         });
         return;
@@ -629,8 +660,10 @@ export default function GitActionsControl({
       defaultBranchName,
       gitStatusForActions,
       hasOriginRemote,
+      i18n,
       isDefaultBranch,
       isGitActionRunning,
+      localizeGit,
       openExistingPr,
       threadToastData,
     ],
@@ -642,7 +675,7 @@ export default function GitActionsControl({
       if (!api || !gitCwd || !headBranch) {
         toastManager.add({
           type: "error",
-          title: "Unable to open compare page.",
+          title: i18n._("Unable to open compare page."),
           data: threadToastData,
         });
         return;
@@ -653,8 +686,8 @@ export default function GitActionsControl({
         if (!repoUrl) {
           toastManager.add({
             type: "error",
-            title: "Unable to open compare page",
-            description: "No GitHub repository detected for this project.",
+            title: i18n._("Unable to open compare page"),
+            description: i18n._("No GitHub repository detected for this project."),
             data: threadToastData,
           });
           return;
@@ -665,35 +698,38 @@ export default function GitActionsControl({
       } catch (error) {
         toastManager.add({
           type: "error",
-          title: "Unable to open compare page",
-          description: error instanceof Error ? error.message : "An error occurred.",
+          title: i18n._("Unable to open compare page"),
+          description: error instanceof Error ? error.message : i18n._("An error occurred."),
           data: threadToastData,
         });
       }
     },
-    [gitCwd, threadToastData],
+    [gitCwd, i18n, threadToastData],
   );
 
   const runSyncWithRemote = useCallback(() => {
     const promise = pullMutation.mutateAsync();
     toastManager.promise(promise, {
-      loading: { title: "Syncing with remote...", data: threadToastData },
+      loading: { title: i18n._("Syncing with remote..."), data: threadToastData },
       success: (result) => ({
-        title: result.status === "pulled" ? "Remote synced" : "Already up to date",
+        title: result.status === "pulled" ? i18n._("Remote synced") : i18n._("Already up to date"),
         description:
           result.status === "pulled"
-            ? `Updated ${result.branch} from ${result.upstreamBranch ?? "upstream"}`
-            : `${result.branch} is already synchronized.`,
+            ? i18n._("Updated {branch} from {upstream}", {
+                branch: result.branch,
+                upstream: result.upstreamBranch ?? i18n._("upstream"),
+              })
+            : i18n._("{branch} is already synchronized.", { branch: result.branch }),
         data: threadToastData,
       }),
       error: (err) => ({
-        title: "Sync failed",
-        description: err instanceof Error ? err.message : "An error occurred.",
+        title: i18n._("Sync failed"),
+        description: err instanceof Error ? err.message : i18n._("An error occurred."),
         data: threadToastData,
       }),
     });
     void promise.catch(() => undefined);
-  }, [pullMutation, threadToastData]);
+  }, [i18n, pullMutation, threadToastData]);
 
   const runGitActionWithToast = useCallback(
     async function runGitActionWithToast({
@@ -754,8 +790,10 @@ export default function GitActionsControl({
         if (!createPrAvailability.canRun) {
           toastManager.add({
             type: "info",
-            title: "Create PR unavailable",
-            description: createPrAvailability.hint ?? "No branch changes to include in a PR.",
+            title: i18n._("Create PR unavailable"),
+            description: localizeGit(
+              createPrAvailability.hint ?? "No branch changes to include in a PR.",
+            ),
             data: threadToastData,
           });
           return;
@@ -770,14 +808,14 @@ export default function GitActionsControl({
         forcePushOnly: forcePushOnlyProgress,
         featureBranch,
         shouldPushBeforePr,
-      });
+      }).map(localizeGit);
       const actionId = randomUUID();
       const resolvedProgressToastId =
         progressToastId ??
         toastManager.add({
           type: "loading",
-          title: progressStages[0] ?? "Running git action...",
-          description: "Waiting for Git...",
+          title: progressStages[0] ?? i18n._("Running git action..."),
+          description: i18n._("Waiting for Git..."),
           timeout: 0,
           data: threadToastData,
         });
@@ -785,12 +823,12 @@ export default function GitActionsControl({
       const actionProgress: ActiveGitActionProgress = {
         toastId: resolvedProgressToastId,
         actionId,
-        title: progressStages[0] ?? "Running git action...",
+        title: progressStages[0] ?? i18n._("Running git action..."),
         phaseStartedAtMs: null,
         hookStartedAtMs: null,
         hookName: null,
         lastOutputLine: null,
-        currentPhaseLabel: progressStages[0] ?? "Running git action...",
+        currentPhaseLabel: progressStages[0] ?? i18n._("Running git action..."),
         phase: null,
       };
       activeGitActionProgressRef.current = actionProgress;
@@ -798,8 +836,8 @@ export default function GitActionsControl({
       if (progressToastId) {
         toastManager.update(progressToastId, {
           type: "loading",
-          title: progressStages[0] ?? "Running git action...",
-          description: "Waiting for Git...",
+          title: progressStages[0] ?? i18n._("Running git action..."),
+          description: i18n._("Waiting for Git..."),
           timeout: 0,
           data: threadToastData,
         });
@@ -887,7 +925,7 @@ export default function GitActionsControl({
 
         toastManager.update(resolvedProgressToastId, {
           type: "success",
-          title: resultToast.title,
+          title: localizeGit(resultToast.title),
           description: resultToast.description,
           timeout: 0,
           data: {
@@ -897,7 +935,7 @@ export default function GitActionsControl({
           ...(shouldOfferPushCta
             ? {
                 actionProps: {
-                  children: "Push",
+                  children: i18n._("Push"),
                   onClick: () => {
                     void runGitActionWithToast({
                       action: "push",
@@ -911,7 +949,7 @@ export default function GitActionsControl({
             : shouldOfferOpenPrCta
               ? {
                   actionProps: {
-                    children: "View PR",
+                    children: i18n._("View PR"),
                     onClick: () => {
                       const api = readNativeApi();
                       if (!api) return;
@@ -923,7 +961,7 @@ export default function GitActionsControl({
               : shouldOfferCreatePrCta
                 ? {
                     actionProps: {
-                      children: "Create PR",
+                      children: i18n._("Create PR"),
                       onClick: () => {
                         closeResultToast();
                         openCreatePrDialog({
@@ -946,7 +984,7 @@ export default function GitActionsControl({
           buildGitActionFailureToast({
             message:
               actionProgress.failure?.message ??
-              (err instanceof Error ? err.message : "An error occurred."),
+              (err instanceof Error ? err.message : i18n._("An error occurred.")),
             phase: actionProgress.failure?.phase ?? actionProgress.phase,
             threadId: activeThreadId,
           }),
@@ -958,7 +996,9 @@ export default function GitActionsControl({
       defaultBranchName,
       gitStatusForActions,
       hasOriginRemote,
+      i18n,
       isDefaultBranch,
+      localizeGit,
       openCreatePrDialog,
       persistThreadPr,
       runImmediateGitActionMutation,
@@ -1015,8 +1055,8 @@ export default function GitActionsControl({
       if (preparation.kind === "unavailable") {
         toastManager.add({
           type: "info",
-          title: "Create PR unavailable",
-          description: preparation.hint,
+          title: i18n._("Create PR unavailable"),
+          description: localizeGit(preparation.hint),
           data: threadToastData,
         });
         return;
@@ -1050,6 +1090,8 @@ export default function GitActionsControl({
     [
       createPrDialogRuntimeStatus,
       defaultBranchName,
+      i18n,
+      localizeGit,
       openComparePage,
       openExistingPr,
       runGitActionWithToast,
@@ -1153,8 +1195,8 @@ export default function GitActionsControl({
     if (quickAction.kind === "show_hint") {
       toastManager.add({
         type: "info",
-        title: quickAction.label,
-        description: quickAction.hint,
+        title: localizeGit(quickAction.label),
+        description: quickAction.hint ? localizeGit(quickAction.hint) : undefined,
         data: threadToastData,
       });
       return;
@@ -1172,6 +1214,7 @@ export default function GitActionsControl({
     openCreateBranchDialog,
     openCreatePrDialog,
     openExistingPr,
+    localizeGit,
     quickAction,
     runGitActionWithToast,
     runSyncWithRemote,
@@ -1220,8 +1263,8 @@ export default function GitActionsControl({
         }
         toastManager.add({
           type: "success",
-          title: `Keeping ${trimmedName}`,
-          description: "Branch name confirmed.",
+          title: i18n._("Keeping {branch}", { branch: trimmedName }),
+          description: i18n._("Branch name confirmed."),
           data: threadToastData,
         });
         return;
@@ -1229,7 +1272,7 @@ export default function GitActionsControl({
 
       const toastId = toastManager.add({
         type: "loading",
-        title: "Creating branch...",
+        title: i18n._("Creating branch..."),
         timeout: 0,
         data: threadToastData,
       });
@@ -1265,15 +1308,15 @@ export default function GitActionsControl({
 
         toastManager.update(toastId, {
           type: "success",
-          title: `Switched to ${trimmedName}`,
-          description: "Branch created and checked out.",
+          title: i18n._("Switched to {branch}", { branch: trimmedName }),
+          description: i18n._("Branch created and checked out."),
           data: threadToastData,
         });
       } catch (error) {
         toastManager.update(toastId, {
           type: "error",
-          title: "Failed to create branch",
-          description: error instanceof Error ? error.message : "An error occurred.",
+          title: i18n._("Failed to create branch"),
+          description: error instanceof Error ? error.message : i18n._("An error occurred."),
           data: threadToastData,
         });
       }
@@ -1283,6 +1326,7 @@ export default function GitActionsControl({
       activeThreadId,
       gitCwd,
       hasOriginRemote,
+      i18n,
       normalizedCurrentBranchName,
       queryClient,
       setThreadWorkspaceAction,
@@ -1343,16 +1387,19 @@ export default function GitActionsControl({
     if (commitMenuItem) {
       items.push({
         id: "commit",
-        label: commitMenuItem.label,
+        label: localizeGit(commitMenuItem.label),
         disabled: commitMenuItem.disabled,
-        disabledReason: resolveGitMenuActionDisabledReason({
-          item: commitMenuItem,
-          gitStatus: gitStatusForActions,
-          isBusy: isGitActionRunning,
-          hasOriginRemote,
-          isDefaultBranch,
-          defaultBranchName,
-        }),
+        disabledReason: localizeOptionalGitText(
+          localizeGit,
+          resolveGitMenuActionDisabledReason({
+            item: commitMenuItem,
+            gitStatus: gitStatusForActions,
+            isBusy: isGitActionRunning,
+            hasOriginRemote,
+            isDefaultBranch,
+            defaultBranchName,
+          }),
+        ),
         icon: "commit",
         onSelect: () => openDialogForMenuItem(commitMenuItem),
       });
@@ -1361,16 +1408,19 @@ export default function GitActionsControl({
     if (commitPushMenuItem) {
       items.push({
         id: "commit_push",
-        label: commitPushMenuItem.label,
+        label: localizeGit(commitPushMenuItem.label),
         disabled: commitPushMenuItem.disabled,
-        disabledReason: resolveGitMenuActionDisabledReason({
-          item: commitPushMenuItem,
-          gitStatus: gitStatusForActions,
-          isBusy: isGitActionRunning,
-          hasOriginRemote,
-          isDefaultBranch,
-          defaultBranchName,
-        }),
+        disabledReason: localizeOptionalGitText(
+          localizeGit,
+          resolveGitMenuActionDisabledReason({
+            item: commitPushMenuItem,
+            gitStatus: gitStatusForActions,
+            isBusy: isGitActionRunning,
+            hasOriginRemote,
+            isDefaultBranch,
+            defaultBranchName,
+          }),
+        ),
         icon: "push",
         onSelect: () => openDialogForMenuItem(commitPushMenuItem),
       });
@@ -1378,9 +1428,9 @@ export default function GitActionsControl({
 
     items.push({
       id: "sync",
-      label: "Pull",
+      label: i18n._("Pull"),
       disabled: !pullAvailability.canRun,
-      disabledReason: pullAvailability.hint,
+      disabledReason: localizeOptionalGitText(localizeGit, pullAvailability.hint),
       icon: "sync",
       onSelect: runSyncWithRemote,
     });
@@ -1388,16 +1438,19 @@ export default function GitActionsControl({
     if (pushMenuItem) {
       items.push({
         id: "push",
-        label: pushMenuItem.label,
+        label: localizeGit(pushMenuItem.label),
         disabled: pushMenuItem.disabled,
-        disabledReason: resolveGitMenuActionDisabledReason({
-          item: pushMenuItem,
-          gitStatus: gitStatusForActions,
-          isBusy: isGitActionRunning,
-          hasOriginRemote,
-          isDefaultBranch,
-          defaultBranchName,
-        }),
+        disabledReason: localizeOptionalGitText(
+          localizeGit,
+          resolveGitMenuActionDisabledReason({
+            item: pushMenuItem,
+            gitStatus: gitStatusForActions,
+            isBusy: isGitActionRunning,
+            hasOriginRemote,
+            isDefaultBranch,
+            defaultBranchName,
+          }),
+        ),
         icon: "push",
         onSelect: () => openDialogForMenuItem(pushMenuItem),
       });
@@ -1406,16 +1459,19 @@ export default function GitActionsControl({
     if (prMenuItem) {
       items.push({
         id: "pr",
-        label: prMenuItem.label,
+        label: localizeGit(prMenuItem.label),
         disabled: prMenuItem.disabled,
-        disabledReason: resolveGitMenuActionDisabledReason({
-          item: prMenuItem,
-          gitStatus: gitStatusForActions,
-          isBusy: isGitActionRunning,
-          hasOriginRemote,
-          isDefaultBranch,
-          defaultBranchName,
-        }),
+        disabledReason: localizeOptionalGitText(
+          localizeGit,
+          resolveGitMenuActionDisabledReason({
+            item: prMenuItem,
+            gitStatus: gitStatusForActions,
+            isBusy: isGitActionRunning,
+            hasOriginRemote,
+            isDefaultBranch,
+            defaultBranchName,
+          }),
+        ),
         icon: prMenuItem.kind === "open_pr" ? "view_pr" : "pr",
         onSelect: () => openDialogForMenuItem(prMenuItem),
       });
@@ -1423,12 +1479,12 @@ export default function GitActionsControl({
 
     items.push({
       id: "create_branch",
-      label: "Create Branch",
+      label: i18n._("Create Branch"),
       disabled: createBranchDisabled,
       disabledReason: createBranchDisabled
         ? isGitActionRunning
-          ? "Git action in progress."
-          : "Git status is unavailable."
+          ? i18n._("Git action in progress.")
+          : i18n._("Git status is unavailable.")
         : null,
       icon: "branch",
       onSelect: openCreateBranchDialog,
@@ -1440,8 +1496,10 @@ export default function GitActionsControl({
     gitActionMenuItems,
     gitStatusForActions,
     hasOriginRemote,
+    i18n,
     isDefaultBranch,
     isGitActionRunning,
+    localizeGit,
     openCreateBranchDialog,
     openDialogForMenuItem,
     runSyncWithRemote,
@@ -1453,7 +1511,7 @@ export default function GitActionsControl({
       if (!api || !gitCwd) {
         toastManager.add({
           type: "error",
-          title: "Editor opening is unavailable.",
+          title: i18n._("Editor opening is unavailable."),
           data: threadToastData,
         });
         return;
@@ -1462,13 +1520,13 @@ export default function GitActionsControl({
       void openInPreferredEditor(api, target).catch((error) => {
         toastManager.add({
           type: "error",
-          title: "Unable to open file",
-          description: error instanceof Error ? error.message : "An error occurred.",
+          title: i18n._("Unable to open file"),
+          description: error instanceof Error ? error.message : i18n._("An error occurred."),
           data: threadToastData,
         });
       });
     },
-    [gitCwd, threadToastData],
+    [gitCwd, i18n, threadToastData],
   );
 
   if (!gitCwd) return null;
@@ -1501,14 +1559,14 @@ export default function GitActionsControl({
         type="button"
         tone="outline"
         className={hideQuickActionLabel ? "gap-1" : "gap-1.5"}
-        aria-label={promotedPull.label}
-        title={promotedPull.label}
+        aria-label={localizeGit(promotedPull.label)}
+        title={localizeGit(promotedPull.label)}
         disabled={isGitActionRunning}
         onClick={runSyncWithRemote}
       >
         <GitActionGlyph name="sync" />
         {!hideQuickActionLabel ? (
-          <span className="truncate font-normal">{promotedPull.label}</span>
+          <span className="truncate font-normal">{localizeGit(promotedPull.label)}</span>
         ) : null}
       </ChatHeaderButton>
     );
@@ -1521,7 +1579,7 @@ export default function GitActionsControl({
   const gitMenuContent = (
     <>
       <MenuGroup>
-        <MenuGroupLabel>Git actions</MenuGroupLabel>
+        <MenuGroupLabel>{i18n._("Git actions")}</MenuGroupLabel>
         {gitPickerMenuItems.map((item) => {
           const menuRow = <GitPickerMenuRow item={item} />;
           if (item.disabled && item.disabledReason) {
@@ -1552,8 +1610,8 @@ export default function GitActionsControl({
         isGitStatusOutOfSync ||
         gitStatusError) && <MenuSeparator className="mx-3 mt-2" />}
       {gitStatusForActions?.branch === null && (
-        <p className="px-3 py-1.5 text-ui leading-snug text-warning">
-          Detached HEAD: create and checkout a branch to enable push and PR actions.
+        <p className="px-3 py-1.5 text-ui-xs text-warning">
+          {i18n._("Detached HEAD: create and checkout a branch to enable push and PR actions.")}
         </p>
       )}
       {gitStatusForActions &&
@@ -1561,23 +1619,27 @@ export default function GitActionsControl({
         !gitStatusForActions.hasWorkingTreeChanges &&
         gitStatusForActions.behindCount > 0 &&
         gitStatusForActions.aheadCount === 0 && (
-          <p className="px-3 py-1.5 text-ui leading-snug text-warning">
-            Behind upstream. Pull/rebase first.
+          <p className="px-3 py-1.5 text-ui-xs text-warning">
+            {i18n._("Behind upstream. Pull/rebase first.")}
           </p>
         )}
       {isGitStatusOutOfSync && (
-        <p className="px-3 py-1.5 text-ui leading-snug text-muted-foreground">
-          Refreshing git status...
+        <p className="px-3 py-1.5 text-ui-xs text-muted-foreground">
+          {i18n._("Refreshing git status...")}
         </p>
       )}
       {isGitStatusRefreshDelayed && !isGitStatusOutOfSync && (
-        <p className="px-3 py-1.5 text-ui leading-snug text-muted-foreground">
-          {isGitStatusFetching ? "Refreshing git status..." : "Git status refresh delayed."}
+        <p className="px-3 py-1.5 text-ui-xs text-muted-foreground">
+          {isGitStatusFetching
+            ? i18n._("Refreshing git status...")
+            : i18n._("Git status refresh delayed.")}
         </p>
       )}
       {gitStatusError && !isGitStatusRefreshDelayed && (
-        <p className="px-3 py-1.5 text-ui leading-snug text-destructive">
-          {gitStatusError instanceof Error ? gitStatusError.message : "Git status refresh failed."}
+        <p className="px-3 py-1.5 text-ui-xs text-destructive">
+          {gitStatusError instanceof Error
+            ? gitStatusError.message
+            : i18n._("Git status refresh failed.")}
         </p>
       )}
     </>
@@ -1614,41 +1676,40 @@ export default function GitActionsControl({
           }
         }}
       >
-        <DialogPopup className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle>
-              {pendingDefaultBranchActionCopy?.title ?? "Run action on default branch?"}
+        <DialogPopup className="max-w-md rounded-xl" bottomStickOnMobile={false}>
+          <DialogHeader className="gap-2 pr-12">
+            <DialogTitle className="text-ui">
+              {pendingDefaultBranchActionCopy
+                ? localizeGit(pendingDefaultBranchActionCopy.title)
+                : i18n._("Run action on default branch?")}
             </DialogTitle>
-            <DialogDescription>{pendingDefaultBranchActionCopy?.description}</DialogDescription>
+            <DialogDescription className="text-ui-xs leading-5">
+              {pendingDefaultBranchActionCopy
+                ? localizeGit(pendingDefaultBranchActionCopy.description)
+                : null}
+            </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="flex-row flex-wrap items-center justify-end">
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
-              shape="capsule"
+              className="mr-auto"
               onClick={() => setPendingDefaultBranchAction(null)}
             >
-              Abort
+              {i18n._("Abort")}
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              shape="capsule"
-              onClick={continuePendingDefaultBranchAction}
-            >
+            <Button variant="outline" size="sm" onClick={continuePendingDefaultBranchAction}>
               {pendingDefaultBranchAction &&
               requiresFeatureBranchForDefaultBranchAction(pendingDefaultBranchAction.action)
-                ? "Create feature branch & continue"
-                : (pendingDefaultBranchActionCopy?.continueLabel ?? "Continue")}
+                ? i18n._("Create feature branch & continue")
+                : pendingDefaultBranchActionCopy
+                  ? localizeGit(pendingDefaultBranchActionCopy.continueLabel)
+                  : i18n._("Continue")}
             </Button>
             {pendingDefaultBranchAction &&
             !requiresFeatureBranchForDefaultBranchAction(pendingDefaultBranchAction.action) ? (
-              <Button
-                size="sm"
-                shape="capsule"
-                onClick={checkoutFeatureBranchAndContinuePendingAction}
-              >
-                Checkout feature branch & continue
+              <Button size="sm" onClick={checkoutFeatureBranchAndContinuePendingAction}>
+                {i18n._("Checkout feature branch & continue")}
               </Button>
             ) : null}
           </DialogFooter>
@@ -1666,10 +1727,11 @@ export default function GitActionsControl({
       >
         <DialogPopup className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Create Branch</DialogTitle>
-            <DialogDescription>
-              Create and switch to a branch from the current HEAD. Future commits, pushes, and PRs
-              will use it.
+            <DialogTitle>{i18n._("Create Branch")}</DialogTitle>
+            <DialogDescription className="text-ui-xs leading-4">
+              {i18n._(
+                "Create and switch to a branch from the current HEAD. Future commits, pushes, and PRs will use it.",
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogPanel className="space-y-3">
@@ -1685,23 +1747,21 @@ export default function GitActionsControl({
               }}
             >
               <div className="space-y-1.5">
-                <label
-                  className="block font-medium text-ui leading-snug"
-                  htmlFor={createBranchNameFieldId}
-                >
-                  Branch name
+                <label className="block font-medium text-ui" htmlFor={createBranchNameFieldId}>
+                  {i18n._("Branch name")}
                 </label>
                 <Input
                   autoFocus
                   id={createBranchNameFieldId}
                   placeholder="feature/my-change"
+                  size="sm"
                   value={createBranchName}
                   onChange={(event) => setCreateBranchName(event.target.value)}
                 />
               </div>
               {createBranchNameConflicts ? (
-                <p className="text-destructive text-ui leading-snug">
-                  A branch with this name already exists.
+                <p className="text-destructive text-ui-xs">
+                  {i18n._("A branch with this name already exists.")}
                 </p>
               ) : null}
               <DialogFooter variant="bare">
@@ -1714,14 +1774,14 @@ export default function GitActionsControl({
                     setCreateBranchName("");
                   }}
                 >
-                  Cancel
+                  {i18n._("Cancel")}
                 </Button>
                 <Button
                   type="submit"
                   size="sm"
                   disabled={createBranchName.trim().length === 0 || createBranchNameConflicts}
                 >
-                  Create Branch
+                  {i18n._("Create Branch")}
                 </Button>
               </DialogFooter>
             </form>
@@ -1735,9 +1795,13 @@ export default function GitActionsControl({
     const showPanelPullRow = showPromotedPullAction;
     // The panel row runs its action on click — exactly like Pull — and the chevron
     // beside it is the only way into the git actions menu (and its dialogs).
-    const panelPrimaryLabel = showPanelPullRow
-      ? (promotedPull?.label ?? "Pull")
-      : (runnableCommitPushMenuItem?.label ?? "Commit and Push");
+    const panelPrimaryLabel = isGitStatusPending
+      ? i18n._("Refreshing git status...")
+      : showPanelPullRow
+        ? localizeGit(promotedPull?.label ?? "Pull")
+        : runnableCommitPushMenuItem
+          ? localizeGit(runnableCommitPushMenuItem.label)
+          : i18n._("Commit and Push");
     const panelPrimaryGlyph: GitGlyphName = showPanelPullRow ? "sync" : "push";
     const runPanelPrimaryAction = () => {
       if (showPanelPullRow) {
@@ -1750,7 +1814,9 @@ export default function GitActionsControl({
     };
     const panelGitActionsMenu = (
       <Menu
+        open={isPanelGitMenuOpen}
         onOpenChange={(open) => {
+          setIsPanelGitMenuOpen(open);
           if (open) requestGitActionAvailabilityRefresh();
         }}
       >
@@ -1758,15 +1824,25 @@ export default function GitActionsControl({
           render={
             <button
               type="button"
-              className={cn(ENVIRONMENT_ROW_CLASS_NAME, "w-auto shrink-0 px-1.5")}
-              aria-label="Git action options"
-              title="More Git actions"
+              className={cn(
+                ENVIRONMENT_ROW_CLASS_NAME,
+                "w-7 shrink-0 justify-center gap-0 rounded-l-none border-l border-[color:var(--color-border-light)] px-0",
+                isPanelGitMenuOpen && "bg-[var(--color-background-elevated-secondary)]",
+              )}
+              aria-label={i18n._("More Git actions")}
+              title={i18n._("Open Git actions menu")}
+              disabled={isGitStatusPending}
             />
           }
         >
-          <EnvironmentRowChevron />
+          <EnvironmentRowChevron open={isPanelGitMenuOpen} />
         </MenuTrigger>
-        <ComposerPickerMenuPopup align="start" side="bottom" className="w-60 min-w-60">
+        <ComposerPickerMenuPopup
+          anchor={panelGitActionsAnchorRef}
+          align="start"
+          side="bottom"
+          className={cn("w-60 min-w-60", latticeSourceControl && "lattice-source-control-popup")}
+        >
           {gitMenuContent}
         </ComposerPickerMenuPopup>
       </Menu>
@@ -1777,18 +1853,30 @@ export default function GitActionsControl({
         {!isRepo ? (
           <EnvironmentRow
             icon={<GitActionGlyph name="branch" className={ENVIRONMENT_ROW_ICON_CLASS_NAME} />}
-            label={initMutation.isPending ? "Initializing..." : "Initialize Git"}
+            label={initMutation.isPending ? i18n._("Initializing...") : i18n._("Initialize Git")}
             disabled={initMutation.isPending}
             onClick={() => initMutation.mutate()}
           />
         ) : (
-          <div className="flex w-full items-center">
+          <div
+            ref={panelGitActionsAnchorRef}
+            className="flex w-full items-stretch rounded-lg"
+            data-panel-git-actions-anchor=""
+            data-lattice-source-control-split={latticeSourceControl || undefined}
+          >
             <button
               type="button"
-              className={cn(ENVIRONMENT_ROW_CLASS_NAME, "min-w-0 flex-1")}
+              className={cn(
+                ENVIRONMENT_ROW_CLASS_NAME,
+                "min-w-0 flex-1 rounded-r-none disabled:opacity-100",
+              )}
               aria-label={panelPrimaryLabel}
               title={panelPrimaryLabel}
-              disabled={isGitActionRunning || (!showPanelPullRow && !runnableCommitPushMenuItem)}
+              disabled={
+                isGitStatusPending ||
+                isGitActionRunning ||
+                (!showPanelPullRow && !runnableCommitPushMenuItem)
+              }
               onClick={runPanelPrimaryAction}
             >
               <EnvironmentRowBody
@@ -1798,7 +1886,13 @@ export default function GitActionsControl({
                     className={ENVIRONMENT_ROW_ICON_CLASS_NAME}
                   />
                 }
-                label={panelPrimaryLabel}
+                label={
+                  isGitStatusPending ? (
+                    <Skeleton aria-hidden className="h-3 w-32 rounded-full" />
+                  ) : (
+                    panelPrimaryLabel
+                  )
+                }
               />
             </button>
             {panelGitActionsMenu}
@@ -1829,10 +1923,10 @@ export default function GitActionsControl({
           disabled={initMutation.isPending}
           onClick={() => initMutation.mutate()}
         >
-          {initMutation.isPending ? "Initializing..." : "Initialize Git"}
+          {initMutation.isPending ? i18n._("Initializing...") : i18n._("Initialize Git")}
         </Button>
       ) : (
-        <GitSplitGroup label="Git actions">
+        <GitSplitGroup label={i18n._("Git actions")}>
           {promotedPull ? (
             <Button
               variant={splitVariant}
@@ -1843,13 +1937,13 @@ export default function GitActionsControl({
                 splitLeadingClass,
               )}
               disabled={isGitActionRunning}
-              aria-label={promotedPull.label}
-              title={promotedPull.label}
+              aria-label={localizeGit(promotedPull.label)}
+              title={localizeGit(promotedPull.label)}
               onClick={runSyncWithRemote}
             >
               <GitActionGlyph name="sync" />
               {!hideQuickActionLabel ? (
-                <span className="font-normal">{promotedPull.label}</span>
+                <span className="font-normal">{localizeGit(promotedPull.label)}</span>
               ) : null}
             </Button>
           ) : quickActionDisabledReason ? (
@@ -1858,7 +1952,7 @@ export default function GitActionsControl({
                 openOnHover
                 render={
                   <Button
-                    aria-label={quickAction.label}
+                    aria-label={localizeGit(quickAction.label)}
                     aria-disabled="true"
                     className={cn(
                       hideQuickActionLabel ? undefined : CHAT_HEADER_CONTROL_CLASS_NAME,
@@ -1868,13 +1962,13 @@ export default function GitActionsControl({
                     )}
                     size={hideQuickActionLabel ? "icon-xs" : "xs"}
                     variant={splitVariant}
-                    title={quickAction.label}
+                    title={localizeGit(quickAction.label)}
                   />
                 }
               >
                 <GitQuickActionIcon quickAction={quickAction} />
                 {!hideQuickActionLabel ? (
-                  <span className="font-normal">{quickAction.label}</span>
+                  <span className="font-normal">{localizeGit(quickAction.label)}</span>
                 ) : null}
               </PopoverTrigger>
               <PopoverPopup tooltipStyle side="bottom" align="start">
@@ -1891,13 +1985,13 @@ export default function GitActionsControl({
                 splitLeadingClass,
               )}
               disabled={isGitActionRunning || quickAction.disabled}
-              aria-label={quickAction.label}
-              title={quickAction.label}
+              aria-label={localizeGit(quickAction.label)}
+              title={localizeGit(quickAction.label)}
               onClick={runQuickAction}
             >
               <GitQuickActionIcon quickAction={quickAction} />
               {!hideQuickActionLabel ? (
-                <span className="font-normal">{quickAction.label}</span>
+                <span className="font-normal">{localizeGit(quickAction.label)}</span>
               ) : null}
             </Button>
           )}
@@ -1910,7 +2004,7 @@ export default function GitActionsControl({
             <MenuTrigger
               render={
                 <Button
-                  aria-label="Git action options"
+                  aria-label={i18n._("Git action options")}
                   size="icon-xs"
                   variant={splitVariant}
                   className={cn(

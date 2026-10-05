@@ -9,6 +9,7 @@ import {
   type AgentGatewaySessionRegistryShape,
   type AgentGatewayWriteAuthority,
 } from "../Services/AgentGatewaySessionRegistry.ts";
+import { isDeviceControlEntitled } from "../../device/deviceEntitlement.ts";
 
 const PROVIDER_SESSION_CAPABILITIES = [
   "thread:read",
@@ -16,15 +17,23 @@ const PROVIDER_SESSION_CAPABILITIES = [
   "automation:write",
   "diagnostics:read",
   "browser:control",
-  "device:control",
+  "literature:read",
+  "literature:write",
 ] as const;
 
 export function makeAgentGatewaySessionRegistry(options?: {
   readonly now?: () => number;
   readonly randomId?: () => string;
+  readonly deviceControlEnabled?: boolean;
 }): AgentGatewaySessionRegistryShape {
   const now = options?.now ?? Date.now;
   const randomId = options?.randomId ?? randomUUID;
+  const providerSessionCapabilities = new Set<AgentGatewayCapability>(
+    PROVIDER_SESSION_CAPABILITIES,
+  );
+  if (options?.deviceControlEnabled ?? isDeviceControlEntitled()) {
+    providerSessionCapabilities.add("device:control");
+  }
   interface RegisteredSession {
     identity: AgentGatewaySessionIdentity;
     retiredWriteTurnId: string | undefined;
@@ -80,7 +89,7 @@ export function makeAgentGatewaySessionRegistry(options?: {
         provider,
         issuedAt,
         capabilities: new Set<AgentGatewayCapability>([
-          ...PROVIDER_SESSION_CAPABILITIES,
+          ...providerSessionCapabilities,
           ...(issueOptions?.additionalCapabilities ?? []).filter(
             (capability) =>
               capability !== "computer:control" || !disabledComputerThreads.has(threadId),

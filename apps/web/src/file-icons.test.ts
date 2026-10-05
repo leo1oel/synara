@@ -30,6 +30,18 @@ describe("getFileIconName", () => {
     assert.equal(getFileIconName("notes"), "code-brackets");
   });
 
+  it.each([
+    ["paper/main.tex", "page-text"],
+    ["paper/references.bib", "books"],
+    ["paper/custom.sty", "settings-gear-1"],
+    ["C:\\paper\\ARTICLE.CLS", "settings-gear-1"],
+  ])("recognizes TeX file %s with icon %s", (path, icon) => {
+    assert.equal(getFileIconName(path), icon);
+    assert.equal(getAttachmentIconName({ name: path }), icon);
+    assert.isTrue(pathLooksLikeKnownFile(path));
+    assert.equal(inferEntryKindFromPath(path), "file");
+  });
+
   it("is case insensitive on basename lookup", () => {
     assert.equal(getFileIconName("PACKAGE.JSON"), "npm");
     assert.equal(getFileIconName("Main.PY"), "phyton");

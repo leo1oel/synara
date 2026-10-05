@@ -11,6 +11,7 @@ import type { ProviderInstanceId, ProviderRuntimeEvent, ProviderSession } from "
 import { deriveProviderInstances } from "@synara/shared/providerInstances";
 import { Effect, Layer, Stream } from "effect";
 
+import { isServerBetaFeatureEnabled } from "../../betaFeatureGate.ts";
 import { ProviderUnsupportedError, type ProviderAdapterError } from "../Errors.ts";
 import {
   assertProviderAdapterConformance,
@@ -239,6 +240,12 @@ const makeProviderAdapterRegistry = (options?: ProviderAdapterRegistryLiveOption
     const untaggedSessionClaims: UntaggedSessionClaims = new Map();
 
     const getByProvider: ProviderAdapterRegistryShape["getByProvider"] = (provider) => {
+      // The registry is the authoritative server boundary. OMP remains
+      // unavailable on Stable even though its adapter is wired into the shared
+      // runtime and the old enabled-provider wrapper no longer exists.
+      if (!isServerBetaFeatureEnabled(provider)) {
+        return Effect.fail(new ProviderUnsupportedError({ provider }));
+      }
       const adapter = byProvider.get(provider);
       if (!adapter) {
         return Effect.fail(new ProviderUnsupportedError({ provider }));
@@ -247,7 +254,7 @@ const makeProviderAdapterRegistry = (options?: ProviderAdapterRegistryLiveOption
     };
 
     const listProviders: ProviderAdapterRegistryShape["listProviders"] = () =>
-      Effect.sync(() => Array.from(byProvider.keys()));
+      Effect.sync(() => Array.from(byProvider.keys()).filter(isServerBetaFeatureEnabled));
 
     const getByInstance: NonNullable<ProviderAdapterRegistryShape["getByInstance"]> = (
       instanceId,

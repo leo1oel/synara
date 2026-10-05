@@ -80,46 +80,88 @@ describe("ComposerCommandMenu empty states", () => {
   });
 });
 
-describe("ComposerCommandMenu provider command notices", () => {
+describe("ComposerCommandMenu mention groups", () => {
   afterEach(() => {
     document.body.innerHTML = "";
   });
 
-  it("explains an unavailable provider command from a warning tooltip", async () => {
-    const notice = "/design needs Claude Artifacts, which are off in Synara sessions by default.";
-    const summary = "Artifacts are off. Turn them on in Settings.";
+  it("styles the empty file hint like the other mention group labels", async () => {
     const menu = await mountMenu({
       isLoading: false,
-      triggerKind: "slash-command",
+      triggerKind: "mention",
       items: [
         {
-          id: "provider-command:claudeAgent:design",
-          type: "provider-native-command",
-          provider: "claudeAgent",
-          command: "design",
-          label: "/design",
-          description: "Make a new Design artifact from a brief",
-          notice: { summary, detail: notice },
-        },
-        {
-          id: "provider-command:claudeAgent:compact",
-          type: "provider-native-command",
-          provider: "claudeAgent",
-          command: "compact",
-          label: "/compact",
-          description: "Compact context",
+          id: "paper:.research/papers/1706.03762/paper.md",
+          type: "paper",
+          arxivId: "1706.03762",
+          view: "fulltext",
+          mention: {
+            name: "Attention Is All You Need",
+            path: ".research/papers/1706.03762/paper.md",
+          },
+          label: "Attention Is All You Need",
+          description: "Full text",
         },
       ],
     });
 
     try {
-      // Readable from the row alone, since keyboard use never focuses the icon.
-      await expect.element(page.getByText(summary, { exact: true })).toBeVisible();
-      const badge = page.getByRole("img", { name: notice });
-      await expect.element(badge).toBeVisible();
-      expect(document.querySelectorAll('[role="img"][aria-label]').length).toBe(1);
-      await badge.hover();
-      await expect.element(page.getByText(notice, { exact: true })).toBeVisible();
+      const filesLabel = [...document.querySelectorAll("p")].find(
+        (node) => node.textContent === "Files",
+      );
+      const papersLabel = document.querySelector('[data-slot="command-group-label"]');
+      expect(filesLabel).toBeInstanceOf(HTMLElement);
+      expect(papersLabel).toBeInstanceOf(HTMLElement);
+
+      const pickTypography = (element: Element) => {
+        const style = getComputedStyle(element);
+        return {
+          color: style.color,
+          fontFamily: style.fontFamily,
+          fontSize: style.fontSize,
+          fontWeight: style.fontWeight,
+        };
+      };
+      expect(pickTypography(filesLabel!)).toEqual(pickTypography(papersLabel!));
+    } finally {
+      await menu.cleanup();
+    }
+  });
+
+  it("shows project files before other mention sources", async () => {
+    const menu = await mountMenu({
+      isLoading: false,
+      triggerKind: "mention",
+      items: [
+        {
+          id: "paper:.research/papers/1706.03762/paper.md",
+          type: "paper",
+          arxivId: "1706.03762",
+          view: "fulltext",
+          mention: {
+            name: "Attention Is All You Need",
+            path: ".research/papers/1706.03762/paper.md",
+          },
+          label: "Attention Is All You Need",
+          description: "Full text",
+        },
+        {
+          id: "path:file:main.tex",
+          type: "path",
+          path: "main.tex",
+          pathKind: "file",
+          label: "main.tex",
+          description: "",
+        },
+      ],
+    });
+
+    try {
+      const labels = [...document.querySelectorAll('[data-slot="command-group-label"]')].map(
+        (node) => node.textContent?.trim(),
+      );
+      expect(labels.slice(0, 2)).toEqual(["Files · 1", "Papers · 1"]);
+      await expect.element(page.getByText("main.tex", { exact: true })).toBeVisible();
     } finally {
       await menu.cleanup();
     }

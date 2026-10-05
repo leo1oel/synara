@@ -12,7 +12,7 @@ import {
   ThreadId,
   type GitPullRequestSnapshotResult,
   type GitResolvedPullRequest,
-  type GitStatusResult,
+  type GitBranchPullRequestResult,
   type NativeApi,
   type PullRequestAutoFixState,
 } from "@synara/contracts";
@@ -30,6 +30,7 @@ import { EnvironmentPullRequestSection } from "./EnvironmentPullRequestSection";
 
 const {
   getGitStatus,
+  getBranchPullRequest,
   getPullRequestSnapshot,
   getPullRequestDetail,
   runPullRequestAction,
@@ -37,6 +38,7 @@ const {
   setAutoFix,
   getSettings,
 } = vi.hoisted(() => ({
+  getBranchPullRequest: vi.fn<NativeApi["git"]["branchPullRequest"]>(),
   getGitStatus: vi.fn<NativeApi["git"]["status"]>(),
   getPullRequestSnapshot: vi.fn<NativeApi["git"]["pullRequestSnapshot"]>(),
   getPullRequestDetail: vi.fn<NativeApi["pullRequests"]["detail"]>(),
@@ -48,7 +50,7 @@ const {
 
 vi.mock("~/nativeApi", () => ({
   ensureNativeApi: () => ({
-    git: { status: getGitStatus, pullRequestSnapshot: getPullRequestSnapshot },
+    git: { branchPullRequest: getBranchPullRequest, status: getGitStatus, pullRequestSnapshot: getPullRequestSnapshot },
     pullRequests: {
       detail: getPullRequestDetail,
       action: runPullRequestAction,
@@ -83,16 +85,10 @@ const pullRequest = {
 function createQueryClient(commentsOverride?: GitPullRequestSnapshotResult["comments"]) {
   const queryClient = new QueryClient();
   queryClients.add(queryClient);
-  const gitStatus = {
+  const branchPullRequest = {
     branch: pullRequest.headBranch,
-    hasWorkingTreeChanges: false,
-    workingTree: { files: [], insertions: 0, deletions: 0 },
-    hasUpstream: true,
-    upstreamBranch: `origin/${pullRequest.headBranch}`,
-    aheadCount: 0,
-    behindCount: 0,
     pr: pullRequest,
-  } satisfies GitStatusResult;
+  } satisfies GitBranchPullRequestResult;
   const snapshot = {
     pullRequest,
     checks: [
@@ -121,7 +117,7 @@ function createQueryClient(commentsOverride?: GitPullRequestSnapshotResult["comm
     commentsError: null,
   } satisfies GitPullRequestSnapshotResult;
 
-  queryClient.setQueryData(gitQueryKeys.status(cwd), gitStatus);
+  queryClient.setQueryData(gitQueryKeys.branchPullRequest(cwd), branchPullRequest);
   queryClient.setQueryData(
     gitPullRequestSnapshotQueryOptions({
       cwd,
@@ -216,18 +212,20 @@ describe("EnvironmentPullRequestSection", () => {
       const queryClient = createQueryClient();
       const projectId = ProjectId.makeUnsafe("project-pr-status");
       const initialPr = { ...pullRequest, isDraft: action === "ready" };
-      const statusKey = gitQueryKeys.status(cwd);
+      const branchPullRequestKey = gitQueryKeys.branchPullRequest(cwd);
       const snapshotKey = gitPullRequestSnapshotQueryOptions({
         cwd,
         reference: pullRequest.url,
       }).queryKey;
-      queryClient.setQueryData<GitStatusResult>(statusKey, (current) =>
+      queryClient.setQueryData<GitBranchPullRequestResult>(branchPullRequestKey, (current) =>
         current ? { ...current, pr: initialPr } : current,
       );
       queryClient.setQueryData<GitPullRequestSnapshotResult>(snapshotKey, (current) =>
         current ? { ...current, pullRequest: initialPr } : current,
       );
-      getGitStatus.mockResolvedValue(queryClient.getQueryData<GitStatusResult>(statusKey)!);
+      getBranchPullRequest.mockResolvedValue(
+        queryClient.getQueryData<GitBranchPullRequestResult>(branchPullRequestKey)!,
+      );
       getPullRequestSnapshot.mockResolvedValue(
         queryClient.getQueryData<GitPullRequestSnapshotResult>(snapshotKey)!,
       );
@@ -286,8 +284,9 @@ describe("EnvironmentPullRequestSection", () => {
   it("reopens a closed pull request from the Status menu", async () => {
     const queryClient = createQueryClient();
     const projectId = ProjectId.makeUnsafe("project-pr-status");
-    queryClient.setQueryData<GitStatusResult>(gitQueryKeys.status(cwd), (status) =>
-      status ? { ...status, pr: { ...pullRequest, state: "closed" } } : status,
+    queryClient.setQueryData<GitBranchPullRequestResult>(
+      gitQueryKeys.branchPullRequest(cwd),
+      (current) => (current ? { ...current, pr: { ...pullRequest, state: "closed" } } : current),
     );
     getPullRequestDetail.mockReturnValue(new Promise(() => {}));
     runPullRequestAction.mockReturnValue(new Promise(() => {}));
@@ -308,12 +307,14 @@ describe("EnvironmentPullRequestSection", () => {
 
   it("refreshes an old missing PR when the mounted panel opens", async () => {
     const queryClient = createQueryClient();
-    const status = queryClient.getQueryData<GitStatusResult>(gitQueryKeys.status(cwd))!;
-    getGitStatus.mockResolvedValue(status);
+    const branchPullRequest = queryClient.getQueryData<GitBranchPullRequestResult>(
+      gitQueryKeys.branchPullRequest(cwd),
+    )!;
+    getBranchPullRequest.mockResolvedValue(branchPullRequest);
     const view = await render(section(queryClient, vi.fn(), { enabled: false }));
     queryClient.setQueryData(
-      gitQueryKeys.status(cwd),
-      { ...status, pr: null },
+      gitQueryKeys.branchPullRequest(cwd),
+      { ...branchPullRequest, pr: null },
       { updatedAt: Date.now() - 60_000 },
     );
     await expect
@@ -325,17 +326,18 @@ describe("EnvironmentPullRequestSection", () => {
     await expect
       .element(page.getByText("#321 Keep PR context visible", { exact: true }))
       .toBeVisible();
-    expect(getGitStatus).toHaveBeenCalledExactlyOnceWith({ cwd });
+    expect(getBranchPullRequest).toHaveBeenCalledExactlyOnceWith({ cwd });
   });
 
   it.each(["merged"] as const)(
     "shows a branch's %s PR on first open without loading active PR details",
     async (state) => {
       const queryClient = createQueryClient();
-      queryClient.setQueryData<GitStatusResult>(gitQueryKeys.status(cwd), (status) =>
-        status ? { ...status, pr: { ...pullRequest, state } } : status,
+      queryClient.setQueryData<GitBranchPullRequestResult>(
+        gitQueryKeys.branchPullRequest(cwd),
+        (current) => (current ? { ...current, pr: { ...pullRequest, state } } : current),
       );
-      queryClient.removeQueries({ queryKey: gitQueryKeys.pullRequest(cwd) });
+      queryClient.removeQueries({ queryKey: [...gitQueryKeys.pullRequest(cwd), "snapshot"] });
       await renderSection(queryClient);
 
       const stateLabel = state === "merged" ? "Merged" : "Closed";
@@ -365,15 +367,16 @@ describe("EnvironmentPullRequestSection", () => {
     },
   );
 
-  it("keeps the PR visible when git status settles after an open snapshot was cached", async () => {
+  it("keeps the PR visible when the branch PR lookup settles after an open snapshot was cached", async () => {
     const queryClient = createQueryClient();
     await renderSection(queryClient);
     await expect
       .element(page.getByText("#321 Keep PR context visible", { exact: true }))
       .toBeVisible();
 
-    queryClient.setQueryData<GitStatusResult>(gitQueryKeys.status(cwd), (status) =>
-      status ? { ...status, pr: { ...pullRequest, state: "merged" } } : status,
+    queryClient.setQueryData<GitBranchPullRequestResult>(
+      gitQueryKeys.branchPullRequest(cwd),
+      (current) => (current ? { ...current, pr: { ...pullRequest, state: "merged" } } : current),
     );
 
     await expect

@@ -13,6 +13,8 @@ import babel from "@rolldown/plugin-babel";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import { defineConfig, type Plugin } from "vite";
 import pkg from "./package.json" with { type: "json" };
+import { lingui } from "@lingui/vite-plugin";
+import linguiMacro from "@lingui/babel-plugin-lingui-macro";
 import { listFiles, pruneProductionIcons } from "./scripts/production-assets";
 
 const port = Number(process.env.PORT ?? 5733);
@@ -139,6 +141,7 @@ function precompressPlugin(): Plugin {
 
 export default defineConfig({
   plugins: [
+    lingui(),
     tanstackRouter({
       target: "react",
       autoCodeSplitting: true,
@@ -150,6 +153,11 @@ export default defineConfig({
       // whereas the previous version of the plugin parsed all files with a .ts extension.
       // This is causing our packages/ directory to fail to parse, as they are not relative to the CWD.
       parserOpts: { plugins: ["typescript", "jsx"] },
+      // `@lingui/vite-plugin` only compiles the .po catalogs; the `@lingui/*/macro`
+      // imports still need a compile-time transform or they survive into the bundle
+      // and throw on first render. Plugins run before presets, so the macro is gone
+      // before the React compiler sees the file.
+      plugins: [linguiMacro],
       presets: [reactCompilerPreset()],
     }).then((plugin) => ({
       ...plugin,

@@ -44,6 +44,14 @@ type ComposerPluginSuggestion = {
   mention: ProviderMentionReference;
 };
 
+export type ComposerPaperMentionSource = {
+  readonly title: string;
+  readonly arxivId: string;
+  readonly citationKey?: string;
+  readonly path: string;
+  readonly view: "blog" | "fulltext";
+};
+
 export type SearchableModelOption = {
   provider: ProviderKind;
   instanceId: ProviderInstanceId;
@@ -176,12 +184,17 @@ function buildThreadMentionCandidates(input: {
   readonly threads: readonly ComposerThreadMentionSource[];
   readonly projects: readonly Project[];
   readonly currentThreadId: string | null;
+  readonly scopeProjectId?: string | null;
+  readonly query: string;
 }): ThreadMentionCandidate[] {
   const projectById = new Map(input.projects.map((project) => [project.id, project]));
   return withDisambiguatedMentionNames(
     input.threads
       .filter(
-        (thread) => thread.id !== input.currentThreadId && (thread.archivedAt ?? null) === null,
+        (thread) =>
+          thread.id !== input.currentThreadId &&
+          (thread.archivedAt ?? null) === null &&
+          (input.scopeProjectId === undefined || thread.projectId === input.scopeProjectId),
       )
       .map((thread) => ({
         thread,
@@ -199,7 +212,7 @@ export function resolveThreadMentionForThreadId(input: {
   readonly currentThreadId: string | null;
   readonly threadId: string;
 }): { name: string; path: string } | null {
-  const candidate = buildThreadMentionCandidates(input).find(
+  const candidate = buildThreadMentionCandidates({ ...input, query: "" }).find(
     ({ thread }) => thread.id === input.threadId,
   );
   if (!candidate) return null;
@@ -213,6 +226,7 @@ export function buildThreadMentionComposerItems(input: {
   readonly threads: readonly ComposerThreadMentionSource[];
   readonly projects: readonly Project[];
   readonly currentThreadId: string | null;
+  readonly scopeProjectId?: string | null;
   readonly query: string;
 }): ComposerCommandItem[] {
   const candidates = buildThreadMentionCandidates(input);
@@ -233,6 +247,67 @@ export function buildThreadMentionComposerItems(input: {
     mention: { name: mentionName, path: threadMentionPathForThreadId(thread.id) },
     label: title,
     description: projectName,
+  }));
+}
+
+function paperMentionNames(
+  papers: readonly ComposerPaperMentionSource[],
+): Map<ComposerPaperMentionSource, string> {
+  const titleCounts = new Map<string, number>();
+  for (const paper of papers) {
+    const key = mentionNameKey(paper.title);
+    titleCounts.set(key, (titleCounts.get(key) ?? 0) + 1);
+  }
+
+  const names = new Map<ComposerPaperMentionSource, string>();
+  const usedNames = new Set<string>();
+  for (const paper of papers) {
+    const title = paper.title.trim();
+    const duplicateTitle = (titleCounts.get(mentionNameKey(title)) ?? 0) > 1;
+    const preferredName = duplicateTitle
+      ? `${title} (${paper.citationKey?.trim() || paper.arxivId})`
+      : title;
+    let mentionName = preferredName;
+    let attempt = 0;
+    while (usedNames.has(mentionNameKey(mentionName))) {
+      const suffix = attempt === 0 ? paper.arxivId : `${paper.arxivId}:${attempt + 1}`;
+      mentionName = `${preferredName} (${suffix})`;
+      attempt += 1;
+    }
+    usedNames.add(mentionNameKey(mentionName));
+    names.set(paper, mentionName);
+  }
+  return names;
+}
+
+export function buildPaperMentionComposerItems(input: {
+  readonly papers: readonly ComposerPaperMentionSource[];
+  readonly query: string;
+}): ComposerCommandItem[] {
+  const query = normalizeProviderDiscoveryText(input.query);
+  const names = paperMentionNames(input.papers);
+  const ranked = query
+    ? rankProviderDiscoveryItems(input.papers, query, (paper) => [
+        { value: paper.title },
+        { value: paper.citationKey, weight: 50 },
+        { value: paper.arxivId, weight: 50 },
+      ])
+    : [...input.papers];
+
+  return ranked.map((paper) => ({
+    id: `paper:${paper.path}`,
+    type: "paper" as const,
+    arxivId: paper.arxivId,
+    ...(paper.citationKey ? { citationKey: paper.citationKey } : {}),
+    view: paper.view,
+    mention: {
+      name: names.get(paper) ?? paper.title,
+      path: paper.path,
+    },
+    label: paper.title,
+    description: `${paper.citationKey?.trim() || paper.arxivId} · ${
+      paper.view === "fulltext" ? "Full text" : "Overview"
+    }`,
   }));
 }
 
@@ -303,7 +378,9 @@ export function useComposerCommandMenuItems(input: {
     readonly threads: readonly ComposerThreadMentionSource[];
     readonly projects: readonly Project[];
     readonly currentThreadId: string | null;
+    readonly scopeProjectId?: string | null;
   };
+  paperMentionSources?: readonly ComposerPaperMentionSource[];
 }): ComposerCommandItem[] {
   const {
     composerTrigger,
@@ -323,6 +400,7 @@ export function useComposerCommandMenuItems(input: {
     providerArtifacts,
     dynamicAgents,
     threadMentionSources,
+    paperMentionSources,
   } = input;
 
   if (!composerTrigger) return [];
@@ -400,9 +478,22 @@ export function useComposerCommandMenuItems(input: {
           query: composerTrigger.query,
         })
       : [];
-    // Keep mention suggestions ordered by primary intent: plugins and chats
-    // first, then local context, then subagent delegation targets.
-    return [...pluginItems, ...threadItems, ...localRootItems, ...pathItems, ...agentItems];
+    const paperItems = buildPaperMentionComposerItems({
+      papers: paperMentionSources ?? [],
+      query: composerTrigger.query,
+    });
+    // Project files are the primary coding and writing workflow, so keep them
+    // first for both pointer selection and the default keyboard highlight.
+    // The menu gives large file and paper result sets their own bounded viewport
+    // so neither source can crowd the remaining mention types out of view.
+    return [
+      ...pathItems,
+      ...paperItems,
+      ...pluginItems,
+      ...threadItems,
+      ...localRootItems,
+      ...agentItems,
+    ];
   }
 
   if (composerTrigger.kind === "slash-command") {

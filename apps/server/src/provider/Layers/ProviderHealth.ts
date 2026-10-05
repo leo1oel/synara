@@ -52,6 +52,7 @@ import {
 } from "effect";
 import { ChildProcessSpawner } from "effect/unstable/process";
 import { makeEffectProcessCommand } from "../../platform/effectProcessRuntime.ts";
+import { isServerBetaFeatureEnabled } from "../../betaFeatureGate.ts";
 
 import {
   CODEX_CLI_UNPARSEABLE_VERSION_MESSAGE,
@@ -143,7 +144,6 @@ const OPENCODE_PROVIDER = "opencode" as const;
 const PI_PROVIDER = "pi" as const;
 const OMP_PROVIDER = "omp" as const;
 type ProviderStatuses = ReadonlyArray<ServerProviderStatus>;
-const DISABLED_PROVIDER_STATUS_MESSAGE = "Provider is disabled in Synara settings.";
 const MINIMUM_ANTIGRAVITY_CLI_VERSION = "1.0.12";
 
 const PROVIDERS = [
@@ -197,7 +197,6 @@ const UPDATE_OUTPUT_MAX_BYTES = 10_000;
 export const PROVIDER_HEALTH_PROBE_CONCURRENCY = 4;
 const MAX_REFRESH_REVISION_RETRIES = 1;
 const REFRESH_REVISION_RESCHEDULE_DELAY_MS = 100;
-const PROVIDER_UPDATE_ENABLEMENT_POLL_MS = 100;
 export const PROVIDER_UPDATE_TIMEOUT_MS = 2 * 60_000;
 
 export function runProviderHealthProbes<A, E, R>(
@@ -341,18 +340,6 @@ export const PACKAGE_MANAGED_PROVIDER_UPDATES: Partial<
       strategy: "always",
       excludedInstallSources: ["homebrew"],
       isCommandPath: isOpenCodeNativeCommandPath,
-    },
-  },
-  pi: {
-    provider: PI_PROVIDER,
-    binaryName: "pi",
-    npmPackageName: "@earendil-works/pi-coding-agent",
-    homebrew: null,
-    nativeUpdate: {
-      executable: "pi",
-      args: () => ["update"],
-      lockKey: "pi-native",
-      strategy: "always",
     },
   },
   omp: {
@@ -1882,77 +1869,17 @@ export const checkOpenCodeProviderStatus = makeCheckOpenCodeProviderStatus();
 
 export const checkPiProviderStatus = (
   agentDir?: string,
-  binaryPath?: string,
+  _binaryPath?: string,
   environment?: Readonly<Record<string, string>>,
   instanceId?: string,
   paths?: { readonly homeDir: string; readonly isolationRootDir: string },
-): Effect.Effect<ServerProviderStatus, never, ChildProcessSpawner.ChildProcessSpawner> =>
-  Effect.gen(function* () {
+): Effect.Effect<ServerProviderStatus> =>
+  Effect.sync(() => {
     const checkedAt = new Date().toISOString();
-    const executable = nonEmptyTrimmed(binaryPath) ?? "pi";
     const probeEnvResult = tryMakeProviderProbeEnv(PI_PROVIDER, environment, instanceId, paths);
     if (!probeEnvResult.ok) {
       return providerHomePreparationFailure(PI_PROVIDER, checkedAt, probeEnvResult.cause);
     }
-    const probeEnv = probeEnvResult.env;
-
-    const versionProbe = yield* probeProviderCliVersion(
-      runPiCommand(["--version"], executable, probeEnv),
-      DEFAULT_TIMEOUT_MS,
-    );
-
-    // Pi itself is SDK-backed in Synara. Keep this CLI probe advisory so health
-    // refreshes do not import the SDK and initialize its native clipboard module.
-    if (versionProbe.outcome === "missing" || versionProbe.outcome === "failure") {
-      const error = versionProbe.cause;
-      return {
-        provider: PI_PROVIDER,
-        instanceId: PI_PROVIDER,
-        driver: PI_PROVIDER,
-        status: "warning" as const,
-        available: true,
-        authStatus: "unknown" as const,
-        checkedAt,
-        message:
-          versionProbe.outcome === "missing"
-            ? "Pi SDK is bundled, but the Pi CLI (`pi`) is not on PATH, so Synara could not verify the installed CLI version."
-            : `Pi SDK is bundled, but the CLI health check failed: ${error instanceof Error ? error.message : String(error)}.`,
-      } satisfies ServerProviderStatus;
-    }
-
-    if (versionProbe.outcome === "timeout") {
-      return {
-        provider: PI_PROVIDER,
-        instanceId: PI_PROVIDER,
-        driver: PI_PROVIDER,
-        status: "warning" as const,
-        available: true,
-        authStatus: "unknown" as const,
-        checkedAt,
-        message:
-          "Pi SDK is bundled, but the CLI health check timed out before Synara could verify the installed version.",
-      } satisfies ServerProviderStatus;
-    }
-
-    if (versionProbe.outcome === "nonzero") {
-      const version = versionProbe.result;
-      const detail = detailFromResult(version);
-      return {
-        provider: PI_PROVIDER,
-        instanceId: PI_PROVIDER,
-        driver: PI_PROVIDER,
-        status: "warning" as const,
-        available: true,
-        authStatus: "unknown" as const,
-        checkedAt,
-        message: detail
-          ? `Pi SDK is bundled, but the CLI health check failed. ${detail}`
-          : "Pi SDK is bundled, but the CLI health check failed.",
-      } satisfies ServerProviderStatus;
-    }
-
-    const version = versionProbe.result;
-    const parsedVersion = parseGenericCliVersion(`${version.stdout}\n${version.stderr}`);
     const configuredAgentDir = nonEmptyTrimmed(agentDir);
     return {
       provider: PI_PROVIDER,
@@ -1961,11 +1888,10 @@ export const checkPiProviderStatus = (
       status: "ready" as const,
       available: true,
       authStatus: "unknown" as const,
-      version: parsedVersion,
       checkedAt,
       message: configuredAgentDir
-        ? `Pi CLI is installed. Synara will use Pi agent dir ${configuredAgentDir}.`
-        : "Pi CLI is installed. Configure provider credentials inside Pi as needed.",
+        ? `Pi SDK is included with Synara. Using Pi agent dir ${configuredAgentDir}.`
+        : "Pi SDK is included with Synara. Configure provider credentials inside Pi as needed.",
     } satisfies ServerProviderStatus;
   });
 
@@ -2729,12 +2655,9 @@ function suppressProviderVersionAdvisory(status: ServerProviderStatus): ServerPr
   };
 }
 
-// Disabled providers are a settings overlay, not a probe result. Keep the raw
-// cached/probed status intact so re-enabling a provider can reuse it immediately.
 export function projectProviderStatusesForSettings(
   statuses: ReadonlyArray<ServerProviderStatus>,
   settings: ServerSettings,
-  checkedAt = new Date().toISOString(),
 ): ProviderStatuses {
   const statusByInstance = new Map(
     statuses.map((status) => [providerStatusIdentityKey(status), status] as const),
@@ -2904,10 +2827,7 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
       ).pipe(
         Effect.map((statuses) =>
           orderProviderStatuses(
-            statuses.filter(
-              (status): status is ServerProviderStatus =>
-                status !== undefined && !isDisabledProviderStatusOverlay(status),
-            ),
+            statuses.filter((status): status is ServerProviderStatus => status !== undefined),
           ),
         ),
       );
@@ -3135,7 +3055,9 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
           return yield* Effect.forEach(
             statuses.map(suppressProviderVersionAdvisory),
             applyVolatileProviderState,
-            { concurrency: "unbounded" },
+            {
+              concurrency: "unbounded",
+            },
           );
         }
 
@@ -3335,11 +3257,7 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
           Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
           Effect.provideService(FileSystem.FileSystem, fileSystem),
           Effect.provideService(Path.Path, path),
-          Effect.map((statuses) =>
-            orderProviderStatuses(
-              statuses.flatMap((status) => (Option.isSome(status) ? [status.value] : [])),
-            ),
-          ),
+          Effect.map(orderProviderStatuses),
           Effect.flatMap(enrichStatuses),
         );
 

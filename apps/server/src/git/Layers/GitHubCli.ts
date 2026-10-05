@@ -1011,10 +1011,12 @@ ${githubInboxFragments(options)}`;
  */
 export function buildGitHubInboxInvolvementQuery(options: {
   readonly includeStacks: boolean;
+  readonly paginated?: boolean;
 }): string {
-  return `query($mineQuery: String!) {
+  return `query($mineQuery: String!${options.paginated ? ", $cursor: String" : ""}) {
   rateLimit { cost remaining resetAt }
-  mine: search(query: $mineQuery, type: ISSUE, first: ${GITHUB_INBOX_PAGE_SIZE}) {
+  mine: search(query: $mineQuery, type: ISSUE, first: ${GITHUB_INBOX_PAGE_SIZE}${options.paginated ? ", after: $cursor" : ""}) {
+    ${options.paginated ? "pageInfo { hasNextPage endCursor }" : ""}
     issueCount nodes { __typename ...InboxPullRequestFields ...InboxIssueFields }
   }
 }
@@ -1156,6 +1158,7 @@ const RawNodeList = Schema.optional(
     Schema.Struct({
       totalCount: Schema.optional(Schema.NullOr(Schema.Number)),
       issueCount: Schema.optional(Schema.NullOr(Schema.Number)),
+      pageInfo: Schema.optional(Schema.NullOr(Schema.Struct({ hasNextPage: Schema.Boolean, endCursor: Schema.NullOr(Schema.String) }))),
       nodes: Schema.optional(Schema.NullOr(Schema.Array(Schema.Unknown))),
     }),
   ),
@@ -1498,6 +1501,8 @@ export function decodeRepositoryInvolvementJson(
       return Effect.succeed({
         items,
         involvedNumbers: [...involvedNumbers],
+        totalCount: graphQlCount(data.mine.issueCount, involvedNumbers.size),
+        nextCursor: data.mine.pageInfo?.hasNextPage ? data.mine.pageInfo.endCursor : null,
         rateLimit: normalizeGraphQlRateLimit(data.rateLimit),
       } satisfies GitHubRepositoryInboxInvolvement);
     }),
@@ -2161,8 +2166,10 @@ const makeGitHubCli = Effect.gen(function* () {
           runInboxGraphQl(
             input.cwd,
             (includeStacks) => [
-              `query=${buildGitHubInboxInvolvementQuery({ includeStacks })}`,
-              ...githubInboxInvolvementQueryVariables(repository, input.state, input.sort),
+              `query=${buildGitHubInboxInvolvementQuery({ includeStacks, paginated: input.exactInvolvement !== undefined })}`,
+              ...(input.exactInvolvement
+                ? ["-f", `mineQuery=repo:${repository} is:pr is:${input.state} ${input.exactInvolvement === "authored" ? "author:@me" : "review-requested:@me"} sort:${input.sort ?? "updated"}-desc`, ...(input.cursor ? ["-f", `cursor=${input.cursor}`] : [])]
+                : githubInboxInvolvementQueryVariables(repository, input.state, input.sort)),
             ],
             decodeRepositoryInvolvementJson,
           ),

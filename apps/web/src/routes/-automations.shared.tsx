@@ -35,6 +35,7 @@ import { RUNTIME_AUTO_ICON_ACCENT_CLASS_NAME } from "~/components/chat/composerP
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogPopup, DialogTitle } from "~/components/ui/dialog";
+import { Input } from "~/components/ui/input";
 import {
   Menu,
   MenuGroup,
@@ -1282,12 +1283,14 @@ export function AutomationDialog({
                     <MenuGroup>
                       <MenuGroupLabel>Run at</MenuGroupLabel>
                       <div className="px-2 py-1">
-                        <input
+                        <Input
+                          nativeInput
+                          size="sm"
                           type="datetime-local"
                           step={1}
                           value={form.onceRunAt}
                           onChange={(event) => setField("onceRunAt", event.target.value)}
-                          className="w-full rounded-md border border-border bg-transparent px-2 py-1.5 text-ui leading-snug outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                          className="w-full text-ui-xs"
                         />
                       </div>
                     </MenuGroup>
@@ -1299,11 +1302,12 @@ export function AutomationDialog({
                     <MenuGroup>
                       <MenuGroupLabel>Cron</MenuGroupLabel>
                       <div className="px-2 py-1">
-                        <input
+                        <Input
+                          size="sm"
                           value={form.cronExpression}
                           onChange={(event) => setField("cronExpression", event.target.value)}
                           placeholder="0 9 * * *"
-                          className="w-full rounded-md border border-border bg-transparent px-2 py-1.5 text-ui leading-snug outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                          className="w-full text-ui-xs"
                         />
                       </div>
                     </MenuGroup>
@@ -1360,11 +1364,12 @@ export function AutomationDialog({
                     <MenuGroup>
                       <MenuGroupLabel>Timezone</MenuGroupLabel>
                       <div className="px-2 py-1">
-                        <input
+                        <Input
+                          size="sm"
                           value={form.timezone}
                           onChange={(event) => setField("timezone", event.target.value)}
                           placeholder="Europe/Rome"
-                          className="w-full rounded-md border border-border bg-transparent px-2 py-1.5 text-ui leading-snug outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                          className="w-full text-ui-xs"
                         />
                       </div>
                     </MenuGroup>
@@ -1429,11 +1434,12 @@ export function AutomationDialog({
                 <MenuGroup>
                   <MenuGroupLabel>Stop when</MenuGroupLabel>
                   <div className="px-2 py-1">
-                    <input
+                    <Input
+                      size="sm"
                       value={form.stopWhen}
                       onChange={(event) => setField("stopWhen", event.target.value)}
                       placeholder="PR is ready to merge"
-                      className="w-full rounded-md border border-border bg-transparent px-2 py-1.5 text-ui leading-snug outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      className="w-full text-ui-xs"
                     />
                   </div>
                 </MenuGroup>

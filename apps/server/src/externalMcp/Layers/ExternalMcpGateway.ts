@@ -194,7 +194,7 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
         return [
           provider,
           {
-            enabled: serverSettings.providers[provider].enabled,
+            enabled: true,
             ...(status
               ? {
                   available: status.available,

@@ -4,6 +4,7 @@
 // Exports: useTheme for mode, resolved variant, theme-pack import/export, and active theme metadata.
 
 import { useEffect, useSyncExternalStore } from "react";
+import { applyEmbedTheme, readEmbedMode } from "../embedMode";
 import { isElectron } from "../env";
 import { isMacNavigatorPlatform } from "../lib/utils";
 import {
@@ -203,6 +204,8 @@ function applyThemeState(state: ThemeState, suppressTransitions = false) {
     }
     root.style.setProperty(name, value);
   }
+  const embedMode = readEmbedMode();
+  if (embedMode) applyEmbedTheme(embedMode);
 
   syncDesktopTheme(state.mode);
   syncDesktopWindowMaterial(cssVariableBuild.material, translucency.blur);

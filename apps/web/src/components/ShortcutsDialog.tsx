@@ -13,7 +13,7 @@ import {
   DialogPopup,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { Input } from "~/components/ui/input";
+import { SearchInput } from "~/components/ui/search-input";
 import { cn } from "~/lib/utils";
 import { ShortcutKbd } from "./ui/kbd";
 import {
@@ -81,15 +81,13 @@ function ShortcutsDialogContent(props: {
   return (
     <>
       <DialogHeader className="pb-2">
-        <DialogTitle className="text-base">Keybindings</DialogTitle>
+        <DialogTitle className="text-ui-lg">Keybindings</DialogTitle>
         <DialogDescription className="text-ui leading-snug">
           Reflects the bindings active in your current context.
         </DialogDescription>
         <div className="pt-2">
-          <Input
+          <SearchInput
             ref={inputRef}
-            type="search"
-            size="sm"
             placeholder="Search shortcuts..."
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -100,7 +98,6 @@ function ShortcutsDialogContent(props: {
                 setQuery("");
               }
             }}
-            className="rounded-md"
             nativeInput
             aria-label="Search shortcuts"
           />

@@ -8,7 +8,7 @@ import type {
 import { pullRequestListProjectContexts } from "@synara/shared/githubRepository";
 import { Effect, Layer, Scope, Stream } from "effect";
 
-import type { GitHubCliError } from "../../git/Errors";
+import { GitHubCliError } from "../../git/Errors";
 import { GITHUB_READ_SLOTS } from "../../git/githubReadGate";
 import { GitCore } from "../../git/Services/GitCore";
 import {
@@ -16,6 +16,7 @@ import {
   type GitHubCliShape,
   type GitHubIssueDetailData,
   type GitHubRepositoryInboxLookup,
+  type GitHubRepositoryInboxInvolvement,
 } from "../../git/Services/GitHubCli";
 import { OrchestrationEngineService } from "../../orchestration/Services/OrchestrationEngine";
 import { ProjectionSnapshotQuery } from "../../orchestration/Services/ProjectionSnapshotQuery";
@@ -149,6 +150,11 @@ export const makeGitHubInboxService = (
       GitHubCliError
     >({ maxEntries: ISSUE_DETAIL_CACHE_MAX_ENTRIES, ttlMs: GITHUB_ITEM_DETAIL_CACHE_TTL_MS });
 
+    const exactInvolvementCache = yield* makeKeyedSingleFlightCache<GitHubRepositoryInboxInvolvement, GitHubCliError>({
+      maxEntries: PIN_RECOVERY_CACHE_MAX_ENTRIES,
+      ttlMs: GITHUB_INBOX_SNAPSHOT_TTL_MS,
+    });
+
     const resolveProjectRepositories = (project: OrchestrationProject) =>
       repositoryCache.get(project.workspaceRoot, dependencies.resolveRepositories(project));
     const access = makeProjectRepositoryAccess({
@@ -163,8 +169,9 @@ export const makeGitHubInboxService = (
             snapshots.invalidateRepository(repository),
             pinRecoveryCache.invalidateWhere((key) => belongsToRepository(key, repository)),
             issueDetailCache.invalidateWhere((key) => belongsToRepository(key, repository)),
+            exactInvolvementCache.invalidateWhere((key) => belongsToRepository(key, repository)),
           ],
-          { concurrency: 3, discard: true },
+          { concurrency: 4, discard: true },
         ),
       );
 
@@ -172,7 +179,10 @@ export const makeGitHubInboxService = (
       Effect.gen(function* () {
         const forceRefresh = input.forceRefresh === true;
         const includeUpstreams = yield* dependencies.includeUpstreams();
-        const projects = (yield* dependencies.listProjects()).filter(isLiveRepositoryProject);
+        const projects = (yield* dependencies.listProjects()).filter((project) =>
+          isLiveRepositoryProject(project) && (input.projectId === undefined || project.id === input.projectId),
+        );
+        if (input.projectId !== undefined) yield* access.findProject(input.projectId);
         const projectById = new Map(projects.map((project) => [project.id, project]));
         if (forceRefresh) {
           yield* Effect.forEach(
@@ -290,17 +300,62 @@ export const makeGitHubInboxService = (
           }
           if (!entry) continue;
           const { snapshot } = entry;
+          // The standalone snapshot stays unchanged. Embedded authored/reviewing filters recover
+          // their own paginated matches before client filtering, rather than trusting the capped
+          // all-involvement list. Each page acquires/releases the shared read slot independently.
+          let exact: GitHubRepositoryInboxInvolvement | null = null;
+          if (input.projectId && input.involvement && snapshot.truncatedPullRequests &&
+              (input.involvement !== "reviewRequested" || input.state === "open")) {
+            const exactInvolvement = input.involvement;
+            const key = [repository.toLowerCase(), input.state, input.sort ?? "updated", exactInvolvement, String(entry.fetchedAt)].join("\u0000");
+            if (forceRefresh) yield* exactInvolvementCache.invalidate(key);
+            exact = yield* exactInvolvementCache.get(key, Effect.gen(function* () {
+              const rows: GitHubRepositoryInboxInvolvement["items"][number][] = [];
+              const numbers = new Set<number>();
+              const cursors = new Set<string>();
+              let cursor: string | undefined;
+              let totalCount = 0;
+              let rateLimit = snapshot.rateLimit;
+              do {
+                const page = yield* withGitHubRead(dependencies.github.listRepositoryInboxInvolvement({
+                  cwd: repositoryProjects[0]!.workspaceRoot, repository, state: input.state,
+                  sort: input.sort, exactInvolvement, ...(cursor ? { cursor } : {}),
+                }));
+                totalCount = page.totalCount ?? page.items.length;
+                for (const row of page.items) {
+                  if (!numbers.has(row.item.number)) rows.push(row);
+                  numbers.add(row.item.number);
+                }
+                rateLimit = page.rateLimit ?? rateLimit;
+                cursor = page.nextCursor ?? undefined;
+                if (cursor && (cursors.has(cursor) || rows.length >= 1000)) {
+                  return yield* Effect.fail(new GitHubCliError({
+                    operation: "listRepositoryInboxInvolvement", reason: "other",
+                    detail: "GitHub could not return the complete filtered pull request list. Narrow the repository filter or view the matches on GitHub.",
+                  }));
+                }
+                if (cursor) cursors.add(cursor);
+              } while (cursor);
+              if (totalCount > rows.length) return yield* Effect.fail(new GitHubCliError({
+                operation: "listRepositoryInboxInvolvement", reason: "other",
+                detail: "GitHub returned an incomplete filtered pull request list.",
+              }));
+              return { items: rows, involvedNumbers: [...numbers], totalCount, rateLimit };
+            }));
+          }
           viewer ??= snapshot.viewer;
           const context: GitHubInboxRowContext = {
             repository,
             projects: repositoryProjects,
             viewer: snapshot.viewer,
             involvedNumbers: new Set(snapshot.involvedNumbers),
-            reviewRequestedNumbers: new Set(snapshot.reviewRequestedNumbers),
+            reviewRequestedNumbers: new Set([...snapshot.reviewRequestedNumbers, ...(input.involvement === "reviewRequested" ? exact?.involvedNumbers ?? [] : [])]),
             pinnedKeys,
           };
           rowContexts.set(repository.toLowerCase(), context);
-          for (const pullRequest of snapshot.pullRequests) {
+          const pullRequests = new Map(snapshot.pullRequests.map((pr) => [pr.number, pr]));
+          for (const row of exact?.items ?? []) if (row.kind === "pullRequest") pullRequests.set(row.item.number, row.item);
+          for (const pullRequest of pullRequests.values()) {
             items.push(buildGitHubInboxItem(context, { kind: "pullRequest", item: pullRequest }));
           }
           for (const issue of snapshot.issues) {

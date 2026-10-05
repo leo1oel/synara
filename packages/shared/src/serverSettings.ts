@@ -16,6 +16,7 @@ function defaultModelForProvider(provider: ProviderKind): string | undefined {
   if (provider === "omp") return undefined;
   return provider === "pi" ? "openai/gpt-5.5" : DEFAULT_MODEL_BY_PROVIDER[provider];
 }
+import { getDefaultModel } from "./model";
 
 function shouldReplaceTextGenerationModelSelection(
   patch: ServerSettingsPatch["textGenerationModelSelection"] | undefined,
@@ -31,14 +32,33 @@ export function applyServerSettingsPatch(
   patch: ServerSettingsPatch,
 ): ServerSettings {
   const selectionPatch = patch.textGenerationModelSelection;
+  const repairSelectionPatch = patch.compileRepairModelSelection;
   const merged = deepMerge(current, patch as DeepPartial<ServerSettings>);
-  const next: ServerSettings =
+  let next: ServerSettings =
     patch.providerInstances !== undefined
       ? { ...merged, providerInstances: patch.providerInstances }
       : merged;
-  if (!selectionPatch) {
-    return next;
+  if (repairSelectionPatch) {
+    const provider = repairSelectionPatch.provider ?? current.compileRepairModelSelection.provider;
+    const options = shouldReplaceTextGenerationModelSelection(repairSelectionPatch)
+      ? repairSelectionPatch.options
+      : (repairSelectionPatch.options ?? current.compileRepairModelSelection.options);
+    next = {
+      ...next,
+      compileRepairModelSelection: {
+        provider,
+        model:
+          repairSelectionPatch.model ??
+          (repairSelectionPatch.provider &&
+          repairSelectionPatch.provider !== "pi" &&
+          repairSelectionPatch.provider !== current.compileRepairModelSelection.provider
+            ? (getDefaultModel(provider) ?? current.compileRepairModelSelection.model)
+            : current.compileRepairModelSelection.model),
+        ...(options !== undefined ? { options } : {}),
+      } as ModelSelection,
+    };
   }
+  if (!selectionPatch) return next;
 
   const patchedInstanceId =
     selectionPatch.instanceId ??

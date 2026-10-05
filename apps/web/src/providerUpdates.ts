@@ -85,8 +85,12 @@ export function isProviderLatestVersionKnowable(provider: ServerProviderStatus):
 }
 
 export function shouldOfferProviderUpdateAction(provider: ServerProviderStatus): boolean {
+  if (provider.provider === "pi") return false;
   const advisory = provider.versionAdvisory;
   return (
+    provider.available === true &&
+    typeof provider.version === "string" &&
+    provider.version.trim().length > 0 &&
     advisory?.canUpdate === true &&
     advisory.currentVersion !== null &&
     advisory.updateCommand !== null &&
@@ -126,6 +130,7 @@ export function shouldShowProviderUpdateStatus(input: ProviderUpdateVisibilityIn
   const hiddenProviderSet = input.hiddenProviderSet ?? new Set(input.hiddenProviders ?? []);
   const driver = input.provider.driver ?? input.provider.provider;
   if (
+    input.provider.provider === "pi" ||
     !advisory ||
     input.serverSettings?.enableProviderUpdateChecks === false ||
     advisory.status !== "behind_latest" ||

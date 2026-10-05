@@ -25,6 +25,9 @@ import {
   type DeviceEvent,
   type ComputerEvent,
   type GitActionProgressEvent,
+  type GitBlameLineInput,
+  type GitListRecentCommitsInput,
+  type GitReadFileAtRevInput,
   type GitRemoveWorktreeInput,
   type GitHubProjectProvisionProgressEvent,
   type GitWorktreeSetupProgressEvent,
@@ -37,6 +40,7 @@ import {
   type OrchestrationShellStreamItem,
   type ProjectId,
   type OrchestrationThreadDetailSnapshot,
+  type PullRequestSetPinnedInput,
   type OrchestrationThreadStreamItem,
   type ServerConfigStreamEvent,
   type ServerDiagnosticsResult,
@@ -166,7 +170,16 @@ import { ProjectionStateIncompleteError } from "./persistence/Errors";
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
 import { shouldPublishThreadShellForEvent } from "./orchestration/threadShellEvents";
 import { ProviderDiscoveryService } from "./provider/Services/ProviderDiscoveryService";
-import { discoverSkillsCatalog, synaraSkillsDir } from "./provider/skillsCatalog";
+import {
+  duplicateManagedSkill,
+  discoverSkillsCatalog,
+  importSynaraSkill,
+  readManagedSkill,
+  removeManagedSkill,
+  restoreManagedSkill,
+  saveManagedSkill,
+  synaraSkillsDir,
+} from "./provider/skillsCatalog";
 import { recoverUnregisteredGitHubCheckout } from "./project/githubProjectRegistration";
 import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegistry";
 import { ProviderHealth } from "./provider/Services/ProviderHealth";
@@ -1805,7 +1818,9 @@ const makeWsRpcHandlersLayer = () =>
               // stay empty.
               const context = yield* projectionReadModelQuery.getThreadCheckpointContext(
                 input.threadId,
-                { includeFileChangeActivityPayloads: true },
+                {
+                  includeFileChangeActivityPayloads: true,
+                },
               );
               if (Option.isNone(context) || !isGroupContainerKind(context.value.projectKind)) {
                 return { entries: [] };
@@ -1847,11 +1862,16 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(resolveGitHubRepository(git, input.cwd), "Failed to resolve GitHub repository"),
         [WS_METHODS.gitStatus]: (input) =>
           rpcEffect(gitStatusBroadcaster.getStatus(input), "Failed to read git status"),
+        [WS_METHODS.gitBranchPullRequest]: (input) =>
+          rpcEffect(
+            gitStatusBroadcaster.getBranchPullRequest(input),
+            "Failed to read branch pull request",
+          ),
         [WS_METHODS.gitReadWorkingTreeDiff]: (input) =>
           rpcEffect(gitManager.readWorkingTreeDiff(input), "Failed to read working tree diff"),
-        [WS_METHODS.gitBlameLine]: (input) =>
+        [WS_METHODS.gitBlameLine]: (input: GitBlameLineInput) =>
           rpcEffect(gitManager.blameLine(input), "Failed to read git blame"),
-        [WS_METHODS.gitReadFileAtRev]: (input) =>
+        [WS_METHODS.gitReadFileAtRev]: (input: GitReadFileAtRevInput) =>
           rpcEffect(gitManager.readFileAtRev(input), "Failed to read file at revision"),
         [WS_METHODS.gitWorkingTreeDiffStats]: (input) =>
           rpcEffect(
@@ -1946,7 +1966,7 @@ const makeWsRpcHandlersLayer = () =>
           pullRequestsEffect(pullRequests.action(input), "Pull request action failed"),
         [WS_METHODS.pullRequestsComment]: (input) =>
           pullRequestsEffect(pullRequests.comment(input), "Could not post the comment"),
-        [WS_METHODS.pullRequestsSetPinned]: (input) =>
+        [WS_METHODS.pullRequestsSetPinned]: (input: PullRequestSetPinnedInput) =>
           rpcEffect(pullRequests.setPinned(input), "Failed to update pull request pin"),
         [WS_METHODS.pullRequestsGetAutoFix]: (input) =>
           rpcEffect(pullRequestAutoFix.get(input), "Failed to read Auto-fix CI"),
@@ -1954,7 +1974,7 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(pullRequestAutoFix.set(input), "Failed to update Auto-fix CI"),
         [WS_METHODS.gitListBranches]: (input) =>
           rpcEffect(git.listBranches(input), "Failed to list branches"),
-        [WS_METHODS.gitListRecentCommits]: (input) =>
+        [WS_METHODS.gitListRecentCommits]: (input: GitListRecentCommitsInput) =>
           rpcEffect(git.listRecentCommits(input), "Failed to list recent commits"),
         [WS_METHODS.gitCreateWorktree]: (input) =>
           rpcEffect(
@@ -2073,6 +2093,16 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(
             refreshGitStatusAfter(input.cwd, git.withMutation(input.cwd, git.initRepo(input))),
             "Failed to initialize repository",
+          ),
+        [WS_METHODS.gitConnectGitHubRemote]: (input) =>
+          rpcEffect(
+            refreshGitStatusAfter(input.cwd, gitManager.connectGitHubRemote(input)),
+            "Failed to connect GitHub repository",
+          ),
+        [WS_METHODS.gitCreateGitHubRepository]: (input) =>
+          rpcEffect(
+            refreshGitStatusAfter(input.cwd, gitManager.createGitHubRepository(input)),
+            "Failed to create GitHub repository",
           ),
         [WS_METHODS.gitStageFiles]: (input) =>
           rpcEffect(
@@ -2548,6 +2578,36 @@ const makeWsRpcHandlersLayer = () =>
               })),
             ),
             "Failed to list the skills catalog",
+          ),
+        [WS_METHODS.providerImportSkill]: (input) =>
+          rpcEffect(
+            Effect.tryPromise(() => importSynaraSkill(config.baseDir, input)),
+            "Failed to import the skill",
+          ),
+        [WS_METHODS.providerReadManagedSkill]: (input) =>
+          rpcEffect(
+            Effect.tryPromise(() => readManagedSkill(config.baseDir, input)),
+            "Failed to read the skill",
+          ),
+        [WS_METHODS.providerSaveManagedSkill]: (input) =>
+          rpcEffect(
+            Effect.tryPromise(() => saveManagedSkill(config.baseDir, input)),
+            "Failed to save the skill",
+          ),
+        [WS_METHODS.providerDuplicateManagedSkill]: (input) =>
+          rpcEffect(
+            Effect.tryPromise(() => duplicateManagedSkill(config.baseDir, input)),
+            "Failed to create an editable skill copy",
+          ),
+        [WS_METHODS.providerRemoveManagedSkill]: (input) =>
+          rpcEffect(
+            Effect.tryPromise(() => removeManagedSkill(config.baseDir, input)),
+            "Failed to remove the skill",
+          ),
+        [WS_METHODS.providerRestoreManagedSkill]: (input) =>
+          rpcEffect(
+            Effect.tryPromise(() => restoreManagedSkill(config.baseDir, input)),
+            "Failed to restore the skill",
           ),
         [WS_METHODS.providerListPlugins]: (input) =>
           rpcEffect(providerDiscoveryService.listPlugins(input), "Failed to list plugins"),

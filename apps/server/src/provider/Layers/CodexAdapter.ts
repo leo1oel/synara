@@ -82,7 +82,7 @@ import { resolveCodexServiceTier } from "../../codexServiceTier.ts";
 import { makeRuntimeTaskListItem } from "../runtimeTaskList.ts";
 import { extractProposedPlanMarkdown } from "../planMode.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
-import { synaraSkillsDir } from "../skillsCatalog.ts";
+import { bundledSkillsDir, synaraSkillsDir } from "../skillsCatalog.ts";
 import { makeBoundedCallbackIngress } from "../boundedCallbackIngress.ts";
 import { assignDerivedProviderRuntimeEventIds } from "../providerRuntimeEventIdentity.ts";
 import {
@@ -1098,6 +1098,11 @@ const DIAGNOSTIC_ONLY_CODEX_METHODS = new Set([
   "remoteControl/status/changed",
   "skills/changed",
   "session/threadOpenRequested",
+  "session/threadOpenResolved",
+  "thread/settings/updated",
+  "thread/goal/cleared",
+  // The checkpoint reactor emits the authoritative revert outcome separately.
+  "thread/reverted",
 ]);
 
 function mapUnmappedCodexEvent(
@@ -1945,6 +1950,7 @@ function mapToRuntimeEvents(
 const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
   Effect.gen(function* () {
     const serverConfig = yield* Effect.service(ServerConfig);
+    const packagedSkillsDir = bundledSkillsDir();
     // Optional so adapter tests can run without the gateway layer; when
     // present, every session gets the synara_* MCP tools.
     const agentGatewayCredentials = Option.getOrUndefined(
@@ -1968,6 +1974,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
           options?.makeManager?.(services) ??
           new CodexAppServerManager(services, {
             synaraSkillsDir: synaraSkillsDir(serverConfig.baseDir),
+            ...(packagedSkillsDir ? { bundledSkillsDir: packagedSkillsDir } : {}),
             ...(agentGatewayCredentials
               ? {
                   agentGatewayMcp: {

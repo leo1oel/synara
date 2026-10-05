@@ -6,7 +6,6 @@
  * and process-authoritative on the server.
  */
 import {
-  DEFAULT_DROID_GIT_TEXT_GENERATION_MODEL,
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
   DEFAULT_MODEL_BY_PROVIDER,
   DEFAULT_SERVER_SETTINGS,
@@ -495,7 +494,7 @@ function normalizeSettings(
     preserveRedactedProviderInstanceEnvironment(current, patch),
   );
   return Schema.decodeUnknownEffect(ServerSettings)(
-    applyServerSettingsPatch(current, preservedPatch),
+    forceAllProvidersEnabled(applyServerSettingsPatch(current, preservedPatch)),
   ).pipe(
     Effect.mapError(
       (cause) =>
@@ -540,8 +539,8 @@ function omitProviderPasswords(patch: ServerSettingsPatch): ServerSettingsPatch 
   };
 }
 
-// Migrate only portable Kilo state. Its model/options shape and enabled flag
-// remain meaningful, but Kilo binary paths, endpoints, and credentials are not
+// Migrate only portable Kilo state. Its model/options shape remains meaningful,
+// but Kilo binary paths, endpoints, and credentials are not
 // compatible with the OpenCode process protocol and must not be copied.
 function migrateRemovedKiloSettings(settings: unknown): unknown {
   if (settings === null || typeof settings !== "object" || Array.isArray(settings)) {
@@ -598,7 +597,6 @@ function migrateRemovedKiloSettings(settings: unknown): unknown {
           ...remainingProviders,
           opencode: {
             ...existingOpenCode,
-            ...(kiloRecord.enabled === true ? { enabled: true } : {}),
             ...(portableCustomModels.length > 0 ? { customModels: portableCustomModels } : {}),
           },
         },
@@ -606,6 +604,24 @@ function migrateRemovedKiloSettings(settings: unknown): unknown {
     }
   }
   return migrated;
+}
+
+function forceAllProvidersEnabled(settings: unknown): unknown {
+  if (settings === null || typeof settings !== "object" || Array.isArray(settings)) return settings;
+  const record = settings as Record<string, unknown>;
+  if (record.providers === null || typeof record.providers !== "object") return settings;
+  const providers = record.providers as Record<string, unknown>;
+  return {
+    ...record,
+    providers: Object.fromEntries(
+      Object.entries(providers).map(([provider, value]) => [
+        provider,
+        value !== null && typeof value === "object" && !Array.isArray(value)
+          ? { ...(value as Record<string, unknown>), enabled: true }
+          : value,
+      ]),
+    ),
+  };
 }
 
 function decodeSettingsFromJson(settingsPath: string, raw: string) {
@@ -616,7 +632,7 @@ function decodeSettingsFromJson(settingsPath: string, raw: string) {
         ? (parsed as { revision?: unknown; migrationVersion?: unknown; settings: unknown })
         : null;
     const decoded = Schema.decodeUnknownExit(ServerSettings)(
-      migrateRemovedKiloSettings(envelope?.settings ?? parsed),
+      forceAllProvidersEnabled(migrateRemovedKiloSettings(envelope?.settings ?? parsed)),
     );
     if (decoded._tag === "Failure") {
       return { _tag: "Failure" as const, error: Cause.pretty(decoded.cause) };

@@ -29,14 +29,13 @@ import {
 } from "../ui/menu";
 import { PROVIDER_ICON_COMPONENT_BY_PROVIDER } from "../ProviderIcon";
 import { cn } from "~/lib/utils";
-import { TriangleAlertIcon } from "~/lib/icons";
+import { ChevronLeftIcon, TriangleAlertIcon } from "~/lib/icons";
 import { PickerPanelShell } from "./PickerPanelShell";
 import { PickerTriggerButton } from "./PickerTriggerButton";
 import { ProviderModelOptionGroupList } from "./ProviderModelOptionGroupList";
 import { ComposerPickerMenuPopup, ComposerPickerMenuSubPopup } from "./ComposerPickerMenuPopup";
 import {
   COMPOSER_PICKER_MODEL_LIST_MAX_HEIGHT_CLASS_NAME,
-  COMPOSER_PICKER_MODEL_LIST_SCROLL_CLASS_NAME,
   COMPOSER_PICKER_MODEL_SUBMENU_HEIGHT_CLASS_NAME,
 } from "./composerPickerStyles";
 import { ShortcutKbd } from "../ui/kbd";
@@ -44,10 +43,10 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import {
   groupProviderModelOptions,
   groupProviderModelOptionsWithFavorites,
-  shouldUseCollapsibleModelGroups,
   type ProviderModelOption,
 } from "../../providerModelOptions";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
+import { useIsMobile } from "../../hooks/useMediaQuery";
 import {
   FAVORITE_MODEL_STORAGE_KEYS,
   favoriteModelSlugsForInstance,
@@ -64,6 +63,9 @@ import {
   providerAccountQualifiedLabel,
 } from "../../lib/providerInstancePresentation";
 import { ProviderAccountDot } from "../ProviderAccountMark";
+import { Trans } from "@lingui/react/macro";
+import { useLingui } from "@lingui/react";
+import { openEmbeddedProviderSettings } from "../../embedMode";
 
 function isAvailableProviderOption(option: (typeof PROVIDER_OPTIONS)[number]): option is {
   value: ProviderKind;
@@ -322,8 +324,11 @@ type ProviderModelMenuItemsProps = {
 export const ProviderModelMenuItems = function ProviderModelMenuItems(
   props: ProviderModelMenuItemsProps,
 ) {
+  const { i18n } = useLingui();
   const { onAfterSelection } = props;
   const [modelSearchQuery, setModelSearchQuery] = useState("");
+  const isNarrow = useIsMobile();
+  const [expandedProvider, setExpandedProvider] = useState<ProviderKind | null>(null);
   const [cursorFavoriteModelSlugs, setCursorFavoriteModelSlugs] = useLocalStorage(
     FAVORITE_MODEL_STORAGE_KEYS.cursor,
     EMPTY_FAVORITE_MODEL_SLUGS,
@@ -586,6 +591,10 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
           : setOpenCodeFavoriteModelSlugs;
     setFavoriteModelSlugs((current) => toggleFavoriteModelKey(current, provider, instanceId, slug));
   };
+  const openProviderSettings = () => {
+    if (openEmbeddedProviderSettings()) return;
+    appHistory.push("/settings?section=providers");
+  };
 
   // `instanceId` pins the list to one account; without it the provider's selected one.
   const renderModelRadioGroup = (
@@ -594,7 +603,7 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
   ) => {
     if (props.loadingModelProviders?.[provider]) {
       return (
-        <div className="space-y-2 px-2 py-2" aria-label="Loading models">
+        <div className="space-y-2 px-2 py-2" aria-label={i18n._("Loading models")}>
           {Array.from({ length: 6 }, (_, index) => (
             <div key={index} className="flex items-center gap-2 rounded-md px-2 py-1.5">
               <Skeleton className="size-3.5 rounded-full" />
@@ -685,25 +694,8 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
       );
 
     if (!shouldShowSearch) {
-      const needsScrollContainer =
-        filteredOptions.length >= SEARCHABLE_MODEL_PICKER_THRESHOLD ||
-        shouldUseCollapsibleModelGroups(groupedOptions.length, false);
-      if (needsScrollContainer) {
-        return (
-          <>
-            {discoveryErrorElement}
-            <div
-              className={cn(
-                "overflow-y-auto overscroll-contain py-0.5",
-                COMPOSER_PICKER_MODEL_LIST_SCROLL_CLASS_NAME,
-                COMPOSER_PICKER_MODEL_LIST_MAX_HEIGHT_CLASS_NAME,
-              )}
-            >
-              {content}
-            </div>
-          </>
-        );
-      }
+      // The popup body already scrolls. Nesting a capped list inside it creates
+      // a second scrollbar once the popup's padding exceeds the available height.
       return (
         <>
           {discoveryErrorElement}
@@ -734,6 +726,28 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
       <>
         {renderProviderInstanceRadioGroup(props.lockedProvider)}
         {renderModelRadioGroup(props.lockedProvider)}
+      </>
+    );
+  }
+
+  // Sideways hover menus overlap in the embedded panel. Drill into the same
+  // popup instead, so expanding model groups cannot expose sibling triggers.
+  if (isNarrow && expandedProvider !== null) {
+    return (
+      <>
+        <MenuItem
+          closeOnClick={false}
+          onClick={() => {
+            setExpandedProvider(null);
+            setModelSearchQuery("");
+          }}
+        >
+          <ChevronLeftIcon aria-hidden="true" className="size-3 shrink-0" />
+          <Trans>Back</Trans>
+        </MenuItem>
+        <MenuSeparator />
+        {renderProviderInstanceRadioGroup(expandedProvider)}
+        {renderModelRadioGroup(expandedProvider)}
       </>
     );
   }
@@ -809,9 +823,28 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
             </MenuItem>
           );
         }
+        if (isNarrow) {
+          return (
+            <MenuItem
+              key={option.value}
+              closeOnClick={false}
+              onClick={() => setExpandedProvider(option.value)}
+            >
+              <OptionIcon
+                aria-hidden="true"
+                className={cn(
+                  "size-3 shrink-0",
+                  providerIconClassName(option.value, "text-muted-foreground/85"),
+                )}
+              />
+              {option.label}
+            </MenuItem>
+          );
+        }
         return (
           <MenuSub key={option.value}>
-            <MenuSubTrigger>
+            {/* Allow crossing lower providers on the way up from the composer. */}
+            <MenuSubTrigger delay={450}>
               <OptionIcon
                 aria-hidden="true"
                 className={cn(
@@ -852,9 +885,11 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
       visibleUnsupportedProviderInstances.length > 0 ? (
         <MenuSeparator />
       ) : null}
-      <MenuItem onClick={() => appHistory.push("/settings?section=providers")}>
+      <MenuItem onClick={openProviderSettings}>
         <PlusIcon aria-hidden="true" className="size-3 shrink-0 text-muted-foreground/85" />
-        <span>Add Providers</span>
+        <span>
+          <Trans>Add providers</Trans>
+        </span>
       </MenuItem>
     </>
   );
@@ -1005,7 +1040,7 @@ export const ProviderModelPicker = function ProviderModelPicker(props: ProviderM
       disabled={props.disabled ?? false}
       compact={props.compact ?? false}
       hideLabel={props.hideLabel ?? false}
-      className="text-[var(--color-text-foreground)]"
+      className="!border-0 bg-transparent text-[var(--color-text-foreground)] shadow-none"
       icon={
         <span className="relative flex">
           <ProviderIcon
@@ -1046,7 +1081,9 @@ export const ProviderModelPicker = function ProviderModelPicker(props: ProviderM
           {!isMenuOpen ? (
             <TooltipPopup side="top" sideOffset={6} variant="picker">
               <span className="inline-flex items-center gap-2 px-1 py-0.5">
-                <span>Change model</span>
+                <span>
+                  <Trans>Change model</Trans>
+                </span>
                 <ShortcutKbd
                   shortcutLabel={props.shortcutLabel}
                   className="h-4 min-w-4 text-ui-2xs"

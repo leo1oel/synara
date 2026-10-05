@@ -12,11 +12,13 @@ import {
 import { getModelOptions, normalizeModelSlug } from "@synara/shared/model";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
+import { useLingui } from "@lingui/react";
 
 import {
   CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS,
   type AppSettingsBinding,
   MAX_CUSTOM_MODEL_LENGTH,
+  getAppModelOptions,
   getCustomModelsForProvider,
   getDefaultCustomModelsForProvider,
   getProviderInstanceOptions,
@@ -28,10 +30,7 @@ import { PlusIcon, XIcon } from "~/lib/icons";
 import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
-import {
-  SETTINGS_CARD_ROW_DIVIDER_CLASS_NAME,
-  SETTINGS_INSET_LIST_CLASS_NAME,
-} from "~/settingsPanelStyles";
+import { SETTINGS_INSET_LIST_CLASS_NAME } from "~/settingsPanelStyles";
 
 import { Button } from "../ui/button";
 import { DisclosureRegion } from "../ui/DisclosureRegion";
@@ -80,6 +79,7 @@ export function ModelsSettingsPanel({
   resetEpoch,
   active,
 }: AppSettingsBinding & { readonly resetEpoch: number; readonly active: boolean }) {
+  const { i18n } = useLingui();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const [selectedCustomModelProvider, setSelectedCustomModelProvider] =
     useState<ProviderKind>("codex");
@@ -104,6 +104,9 @@ export function ModelsSettingsPanel({
   const currentGitTextGenerationInstanceId =
     textGenerationProviderInstanceId ?? currentGitTextGenerationProvider;
   const currentGitTextGenerationModel = textGenerationModel ?? DEFAULT_GIT_TEXT_GENERATION_MODEL;
+  const currentCompileRepairProvider = settings.compileRepairProvider ?? "codex";
+  const currentCompileRepairModel =
+    settings.compileRepairModel ?? DEFAULT_GIT_TEXT_GENERATION_MODEL;
   const gitWritingModelHintByProvider = useMemo<Partial<Record<ProviderKind, string | null>>>(
     () => ({ [currentGitTextGenerationProvider]: currentGitTextGenerationModel }),
     [currentGitTextGenerationModel, currentGitTextGenerationProvider],
@@ -143,6 +146,33 @@ export function ModelsSettingsPanel({
     ],
   );
   const currentGitTextGenerationValue = `${currentGitTextGenerationInstanceId}:${currentGitTextGenerationProvider}:${currentGitTextGenerationModel}`;
+  const repairProviders = useMemo(
+    () => CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.map((config) => config.provider),
+    [],
+  );
+  const repairModelHintByProvider = useMemo(
+    () => ({ [currentCompileRepairProvider]: currentCompileRepairModel }),
+    [currentCompileRepairProvider, currentCompileRepairModel],
+  );
+  const { modelOptionsByProvider: repairCatalogOptionsByProvider } = useProviderModelCatalog({
+    selectedProvider: currentCompileRepairProvider,
+    discoveryEnabled: active,
+    cwd: providerModelDiscoveryCwd,
+    modelHintByProvider: repairModelHintByProvider,
+    prefetchProviders: repairProviders,
+  });
+  const compileRepairModelOptions = repairProviders.flatMap((provider) => {
+    const options = repairCatalogOptionsByProvider[provider];
+    const fallback = getAppModelOptions(
+      provider,
+      getCustomModelsForProvider(settings, provider),
+      provider === currentCompileRepairProvider ? currentCompileRepairModel : null,
+    );
+    return [
+      ...options.map((option) => ({ ...option, provider })),
+      ...fallback.filter((option) => !options.some((known) => known.slug === option.slug)),
+    ];
+  });
   const isGitTextGenerationModelDirty = isGitTextGenerationSettingsDirty(settings, defaults);
   const selectedGitTextGenerationPickerOption = gitTextGenerationPickerOptions.find(
     (entry) => entry.value === currentGitTextGenerationValue,
@@ -265,10 +295,10 @@ export function ModelsSettingsPanel({
 
   return (
     <div className="space-y-6">
-      <SettingsSection title="Generation defaults">
+      <SettingsSection title={i18n._("Generation defaults")}>
         <SettingsRow
-          title="Git writing model"
-          description="Used for generated commit messages, PR titles, and branch names."
+          title={i18n._("Git writing model")}
+          description={i18n._("Used for generated commit messages, PR titles, and branch names.")}
           resetAction={
             isGitTextGenerationModelDirty ? (
               <SettingResetButton
@@ -297,7 +327,7 @@ export function ModelsSettingsPanel({
                   textGenerationModel: model,
                 });
               }}
-              ariaLabel="Git text generation model"
+              ariaLabel={i18n._("Git text generation model")}
               triggerClassName="w-full sm:w-52"
               valueContent={selectedGitTextGenerationModelLabel}
             >
@@ -309,19 +339,72 @@ export function ModelsSettingsPanel({
             </SettingsSelectControl>
           }
         />
+        <SettingsRow
+          title={i18n._("Compile repair model")}
+          description={i18n._(
+            "Used by Lattice to repair one compile diagnostic in an independent background task.",
+          )}
+          resetAction={
+            settings.compileRepairProvider !== defaults.compileRepairProvider ||
+            settings.compileRepairModel !== defaults.compileRepairModel ? (
+              <SettingResetButton
+                label="compile repair model"
+                onClick={() =>
+                  updateSettings({
+                    compileRepairProvider: defaults.compileRepairProvider,
+                    compileRepairModel: defaults.compileRepairModel,
+                  })
+                }
+              />
+            ) : null
+          }
+          control={
+            <SettingsSelectControl
+              value={`${currentCompileRepairProvider}:${currentCompileRepairModel}`}
+              onValueChange={(value) => {
+                if (!value) return;
+                const separatorIndex = value.indexOf(":");
+                const provider = value.slice(0, separatorIndex) as ProviderKind;
+                const model = value.slice(separatorIndex + 1);
+                if (!provider || !model) return;
+                updateSettings({ compileRepairProvider: provider, compileRepairModel: model });
+              }}
+              ariaLabel={i18n._("Compile repair model")}
+              triggerClassName="w-full sm:w-52"
+              valueContent={
+                compileRepairModelOptions.find(
+                  (option) =>
+                    option.provider === currentCompileRepairProvider &&
+                    option.slug === currentCompileRepairModel,
+                )?.name ?? currentCompileRepairModel
+              }
+            >
+              {compileRepairModelOptions.map((option) => (
+                <SelectItem
+                  key={`${option.provider}:${option.slug}`}
+                  value={`${option.provider}:${option.slug}`}
+                >
+                  {PROVIDER_DISPLAY_NAMES[option.provider]} / {option.name}
+                </SelectItem>
+              ))}
+            </SettingsSelectControl>
+          }
+        />
       </SettingsSection>
 
-      <SettingsSection title="Custom models">
+      <SettingsSection title={i18n._("Custom models")}>
         <SettingsRow
-          title="Saved model slugs"
-          description="Add custom model slugs for supported providers."
+          title={i18n._("Add models manually")}
+          description={i18n._(
+            "If a model does not appear automatically, choose its provider and enter its model ID. It will then be available in model pickers.",
+          )}
           resetAction={
             savedCustomModelRows.length > 0 ? (
               <SettingResetButton label="custom models" onClick={resetCustomModels} />
             ) : null
           }
         >
-          <div className={cn("mt-4 pt-4", SETTINGS_CARD_ROW_DIVIDER_CLASS_NAME)}>
+          <div className="mt-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <Select
                 value={selectedCustomModelProvider}
@@ -334,13 +417,13 @@ export function ModelsSettingsPanel({
                 <SelectTrigger
                   size="sm"
                   className="w-full sm:w-40"
-                  aria-label="Custom model provider"
+                  aria-label={i18n._("Custom model provider")}
                 >
                   <SelectValue>{selectedCustomModelProviderSettings.title}</SelectValue>
                 </SelectTrigger>
                 <SettingsSelectPopup align="start">
                   {CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.map((config) => (
-                    <SelectItem hideIndicator key={config.provider} value={config.provider}>
+                    <SelectItem key={config.provider} value={config.provider}>
                       {config.title}
                     </SelectItem>
                   ))}
@@ -378,7 +461,7 @@ export function ModelsSettingsPanel({
                 onClick={() => addCustomModel(selectedCustomModelProvider)}
               >
                 <PlusIcon className="size-3.5" />
-                Add
+                {i18n._("Add")}
               </Button>
             </div>
 

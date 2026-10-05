@@ -48,6 +48,8 @@ export interface DroidAcpRuntimeInput extends Omit<
 > {
   readonly childProcessSpawner: ChildProcessSpawner.ChildProcessSpawner["Service"];
   readonly droidSettings: DroidAcpRuntimeSettings | null | undefined;
+  /** Background discovery must never open Factory's device-pairing login. */
+  readonly allowDevicePairing?: boolean;
 }
 
 export interface DroidAcpModelSelectionErrorContext {
@@ -149,13 +151,14 @@ export function buildDroidAcpSpawnInput(
 export const resolveDroidAcpAuthMethodId = (
   initializeResult: Acp.InitializeResponse,
   environment: NodeJS.ProcessEnv = process.env,
+  allowDevicePairing = true,
 ): Effect.Effect<string, AcpErrors.AcpError> =>
   Effect.gen(function* () {
     const authMethodIds = availableAuthMethodIds(initializeResult);
     if (hasDroidApiKeyEnv(environment) && authMethodIds.has(DROID_API_KEY_AUTH_METHOD_ID)) {
       return DROID_API_KEY_AUTH_METHOD_ID;
     }
-    if (authMethodIds.has(DROID_DEVICE_PAIRING_AUTH_METHOD_ID)) {
+    if (allowDevicePairing && authMethodIds.has(DROID_DEVICE_PAIRING_AUTH_METHOD_ID)) {
       return DROID_DEVICE_PAIRING_AUTH_METHOD_ID;
     }
     return yield* new AcpErrors.AcpRequestError({
@@ -181,7 +184,7 @@ export const makeDroidAcpRuntime = (
           resolveDroidAcpAuthMethodId(initializeResult, {
             ...process.env,
             ...(input.droidSettings?.environment ?? {}),
-          }),
+          }, input.allowDevicePairing),
         authenticateMeta: { headless: true },
       }).pipe(
         Layer.provide(

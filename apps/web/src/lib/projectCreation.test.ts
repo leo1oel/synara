@@ -82,6 +82,7 @@ describe("createOrRecoverProjectFromPath", () => {
         title: "synara",
         workspaceRoot: WORKSPACE_ROOT,
         createWorkspaceRootIfMissing: false,
+        defaultModelSelection: null,
       }),
     );
     expect(createdProjectId).not.toBeNull();
@@ -104,9 +105,15 @@ describe("createOrRecoverProjectFromPath", () => {
     const result = await createOrRecoverProjectFromPath({
       api: makeApi(dispatchCommand),
       workspaceRoot: WORKSPACE_ROOT,
+      reuseExistingWorkspaceRoot: true,
       loadSnapshot,
     });
 
+    expect(dispatchCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reuseExistingWorkspaceRoot: true,
+      }),
+    );
     expect(result).toMatchObject({
       projectId: existingProject.id,
       project: existingProject,

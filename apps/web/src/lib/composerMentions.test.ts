@@ -70,6 +70,16 @@ describe("composer mention reference filtering", () => {
     expect(resolveMentionChipKind(mention.name, { mentionReferences: [mention] })).toBe("thread");
   });
 
+  it("resolves selected Lattice paper mentions as paper chips", () => {
+    const mention = {
+      name: "Attention Is All You Need",
+      path: ".research/papers/1706.03762/paper.md",
+    };
+
+    expect(resolveMentionChipKind(mention.path)).toBe("paper");
+    expect(resolveMentionChipKind(mention.name, { mentionReferences: [mention] })).toBe("paper");
+  });
+
   it("keeps selected slash and dollar skills only when their prompt token remains", () => {
     const checkCode = { name: "check-code", path: "/skills/check-code/SKILL.md" };
     const refactorCode = { name: "refactor-code", path: "/skills/refactor-code/SKILL.md" };

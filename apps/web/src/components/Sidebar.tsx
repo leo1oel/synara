@@ -102,6 +102,8 @@ import {
   type ResolvedKeybindingsConfig,
   WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY,
 } from "@synara/contracts";
+import type { I18n } from "@lingui/core";
+import { useLingui } from "@lingui/react";
 import { isGenericChatThreadTitle } from "@synara/shared/chatThreads";
 import { parseGitHubRepositoryNameWithOwnerFromPullRequestUrl } from "@synara/shared/githubRepository";
 import { getDefaultModel } from "@synara/shared/model";
@@ -368,6 +370,7 @@ import {
   MenuTrigger,
 } from "./ui/menu";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
+import { FluidHoverSurface } from "./ui/fluid-hover-surface";
 import {
   SidebarContent,
   SidebarFooter,
@@ -411,7 +414,6 @@ import {
   resolveSettingsBackTarget,
   type SettingsBackTarget,
   resolveSidebarNewThreadEnvMode,
-  resolveSidebarProjectRowLabel,
   resolveThreadHoverCardMetadata,
   resolveThreadProjectLabel,
   resolveThreadRowAriaLabel,
@@ -732,7 +734,11 @@ type ThreadMetaChip = {
  * Priority lowest -> highest: handoff -> fork -> worktree.
  */
 function resolveThreadRowMetaChips(input: {
-  thread: Pick<Thread, "forkSourceThreadId" | "envMode" | "worktreePath" | "handoff">;
+  i18n: I18n;
+  thread: Pick<
+    Thread,
+    "forkSourceThreadId" | "sidechatSourceThreadId" | "envMode" | "worktreePath" | "handoff"
+  >;
   includeHandoffBadge: boolean;
   /**
    * When the leading provider avatar already renders the source → target handoff
@@ -1338,6 +1344,7 @@ export function SidebarSurfacePicker({
 }
 
 export default function Sidebar() {
+  const { i18n } = useLingui();
   const githubProvisioningAvailable = useSyncExternalStore(
     subscribeGitHubProvisioningCapability,
     readGitHubProvisioningCapability,
@@ -2300,9 +2307,18 @@ export default function Sidebar() {
         return true;
       }
 
-      return (await handleNewThread(projectId).catch(() => null)) !== null;
+      return (
+        (await handleNewThread(projectId, {
+          envMode: appSettings.defaultThreadEnvMode,
+        }).catch(() => null)) !== null
+      );
     },
-    [appSettings.sidebarThreadSortOrder, handleNewThread, navigate],
+    [
+      appSettings.defaultThreadEnvMode,
+      appSettings.sidebarThreadSortOrder,
+      handleNewThread,
+      navigate,
+    ],
   );
 
   const openExistingProjectFromSnapshot = useCallback(
@@ -2339,9 +2355,19 @@ export default function Sidebar() {
       }
 
       setProjectExpanded(projectId, true);
-      return (await handleNewThread(projectId).catch(() => null)) !== null;
+      return (
+        (await handleNewThread(projectId, {
+          envMode: appSettings.defaultThreadEnvMode,
+        }).catch(() => null)) !== null
+      );
     },
-    [appSettings.sidebarThreadSortOrder, handleNewThread, navigate, setProjectExpanded],
+    [
+      appSettings.defaultThreadEnvMode,
+      appSettings.sidebarThreadSortOrder,
+      handleNewThread,
+      navigate,
+      setProjectExpanded,
+    ],
   );
 
   // Poll the server read model briefly after project.create so we only recover from fresh state.
@@ -2460,9 +2486,19 @@ export default function Sidebar() {
         return;
       }
 
-      void handleNewThread(typedProjectId);
+      void handleNewThread(typedProjectId, {
+        envMode: resolveSidebarNewThreadEnvMode({
+          defaultEnvMode: appSettings.defaultThreadEnvMode,
+        }),
+      });
     },
-    [focusMostRecentThreadForProject, handleNewThread, hideAutomationRunThreads, sidebarThreads],
+    [
+      appSettings.defaultThreadEnvMode,
+      focusMostRecentThreadForProject,
+      handleNewThread,
+      hideAutomationRunThreads,
+      sidebarThreads,
+    ],
   );
 
   // Shared resolver behind resolveBackToGroupsTarget/resolveBackToThreadsTarget (and the
@@ -2714,7 +2750,9 @@ export default function Sidebar() {
         // snapshot is just slow to catch up, continue with the local new-thread flow
         // instead of surfacing a false-negative sidebar sync error.
         setProjectExpanded(creationResult.projectId, true);
-        const threadId = await handleNewThread(creationResult.projectId).catch(() => null);
+        const threadId = await handleNewThread(creationResult.projectId, {
+          envMode: appSettings.defaultThreadEnvMode,
+        }).catch(() => null);
         if (!threadId) {
           throw new Error("Project creation was superseded before its chat opened.");
         }
@@ -2724,6 +2762,7 @@ export default function Sidebar() {
     },
     [
       appSettings.defaultProvider,
+      appSettings.defaultThreadEnvMode,
       handleNewThread,
       projects,
       recoverExistingProjectFromServer,
@@ -2789,12 +2828,12 @@ export default function Sidebar() {
         projectCwd: project.cwd,
         draftWorktreePath: draftThread?.worktreePath ?? null,
         serverCwd,
-        // Match new-thread bootstrap: preserve existing drafts and apply project
-        // preferences only when creating a fresh one.
-        envMode:
-          draftThread?.envMode ??
-          useProjectEnvironmentStore.getState().envModeByProjectId[projectId] ??
-          appSettings.defaultThreadEnvMode,
+        // Hover-time warm must resolve the same envMode the click will pass so the
+        // warmed cwd keys match the thread ChatView actually mounts (local mode
+        // clears the draft worktree; worktree mode keeps it).
+        envMode: resolveSidebarNewThreadEnvMode({
+          defaultEnvMode: appSettings.defaultThreadEnvMode,
+        }),
         providerStatuses,
         statusesReconciled: hasReconciledServerProviderStatuses(queryClient),
         providerOrder: appSettings.providerOrder,
@@ -2823,7 +2862,11 @@ export default function Sidebar() {
   const handlePrimaryNewThread = useCallback(() => {
     if (primaryNewThreadTarget) {
       prefetchModelsForProjectNewThread(primaryNewThreadTarget.projectId, { includeDroid: true });
-      void handleNewThread(primaryNewThreadTarget.projectId);
+      void handleNewThread(primaryNewThreadTarget.projectId, {
+        envMode: resolveSidebarNewThreadEnvMode({
+          defaultEnvMode: appSettings.defaultThreadEnvMode,
+        }),
+      });
       return;
     }
 
@@ -2834,6 +2877,7 @@ export default function Sidebar() {
     }
     handleStartAddProject();
   }, [
+    appSettings.defaultThreadEnvMode,
     handleNewThread,
     handleStartAddProject,
     prefetchModelsForProjectNewThread,
@@ -3065,15 +3109,15 @@ export default function Sidebar() {
       } catch (error) {
         toastManager.add({
           type: "error",
-          title: "Could not create handoff thread",
+          title: i18n._("Could not create handoff thread"),
           description:
             error instanceof Error
               ? error.message
-              : "An error occurred while creating the handoff thread.",
+              : i18n._("An error occurred while creating the handoff thread."),
         });
       }
     },
-    [createThreadHandoff],
+    [createThreadHandoff, i18n],
   );
 
   const continueHandoffInThread = useCallback(
@@ -3320,12 +3364,12 @@ export default function Sidebar() {
         continueHandoffTargets.map((target) => [`handoff-here:${target.instanceId}`, target]),
       );
       const handoffItems = contextMenuGroup(
-        { id: "handoff", label: "Handoff", icon: THREAD_CONTEXT_MENU_ICONS.handoff },
+        { id: "handoff", label: i18n._("Hand off"), icon: THREAD_CONTEXT_MENU_ICONS.handoff },
         [
           ...continueHandoffTargets.map((target) => ({
             id: `handoff-here:${target.instanceId}`,
-            label: `${target.label} in this thread`,
-            standaloneLabel: `Handoff to ${target.label} in this thread`,
+            label: i18n._("{provider} in this thread", { provider: target.label }),
+            standaloneLabel: i18n._("Hand off to {provider} in this thread", { provider: target.label }),
             icon: THREAD_CONTEXT_MENU_ICONS.handoff,
           })),
           ...handoffTargets.map((target, index) => ({
@@ -3407,20 +3451,10 @@ export default function Sidebar() {
         : [];
       const clicked = await api.contextMenu.show(
         [
-          { id: "rename", label: "Rename thread", icon: THREAD_CONTEXT_MENU_ICONS.rename },
-          {
-            id: "toggle-pin",
-            label: pinActionLabel("thread", isPinned),
-            icon: THREAD_CONTEXT_MENU_ICONS.pin,
-          },
+          { id: "rename", label: "Rename thread" },
+          { id: "toggle-pin", label: pinActionLabel("thread", isPinned) },
           ...(threadStatus?.dismissible
-            ? [
-                {
-                  id: "clear-notification",
-                  label: "Clear notification",
-                  icon: THREAD_CONTEXT_MENU_ICONS.clearNotification,
-                },
-              ]
+            ? [{ id: "clear-notification", label: "Clear notification" }]
             : []),
           { id: "mark-unread", label: "Mark unread", icon: THREAD_CONTEXT_MENU_ICONS.markUnread },
           ...(canSnooze
@@ -3482,13 +3516,7 @@ export default function Sidebar() {
             ],
           ),
           ...(threadWorkspacePath
-            ? [
-                {
-                  id: "open-path-in-terminal",
-                  label: "Open Path in Terminal",
-                  icon: THREAD_CONTEXT_MENU_ICONS.openInTerminal,
-                },
-              ]
+            ? [{ id: "open-path-in-terminal", label: "Open Path in Terminal" }]
             : []),
           ...extraItems,
           ...hubItems,
@@ -3497,18 +3525,10 @@ export default function Sidebar() {
           // no sidebar or Archived-panel row to restore it from.
           ...(thread.parentThreadId
             ? []
-            : [
-                {
-                  id: "archive",
-                  label: "Archive",
-                  icon: THREAD_CONTEXT_MENU_ICONS.archive,
-                  separatorBefore: true,
-                },
-              ]),
+            : [{ id: "archive", label: "Archive", separatorBefore: true }]),
           {
             id: "delete",
             label: "Delete",
-            icon: THREAD_CONTEXT_MENU_ICONS.delete,
             destructive: true,
             ...(thread.parentThreadId ? { separatorBefore: true } : {}),
           },
@@ -3703,6 +3723,7 @@ export default function Sidebar() {
       forkThread,
       groupProjectIdSet,
       handoffThread,
+      i18n,
       markThreadUnread,
       moveThreadToGroup,
       navigate,
@@ -3732,18 +3753,9 @@ export default function Sidebar() {
 
       const clicked = await api.contextMenu.show(
         [
-          {
-            id: "mark-unread",
-            label: `Mark unread (${count})`,
-            icon: THREAD_CONTEXT_MENU_ICONS.markUnread,
-          },
-          { id: "archive", label: `Archive (${count})`, icon: THREAD_CONTEXT_MENU_ICONS.archive },
-          {
-            id: "delete",
-            label: `Delete (${count})`,
-            icon: THREAD_CONTEXT_MENU_ICONS.delete,
-            destructive: true,
-          },
+          { id: "mark-unread", label: `Mark unread (${count})` },
+          { id: "archive", label: `Archive (${count})` },
+          { id: "delete", label: `Delete (${count})`, destructive: true },
         ],
         position,
       );
@@ -3875,33 +3887,6 @@ export default function Sidebar() {
     splitViewsById,
     terminalStateByThreadId,
   });
-  // PR chip on a thread row behaves like a link: a plain click opens the PR in the thread's
-  // right dock, while cmd/ctrl/middle-click (or a non-GitHub URL) opens it on GitHub.
-  const openThreadPullRequest = useCallback(
-    (
-      event: MouseEvent<HTMLElement>,
-      thread: SidebarThreadSummary,
-      pr: OrchestrationThreadPullRequest,
-    ) => {
-      const repository = parseGitHubRepositoryNameWithOwnerFromPullRequestUrl(pr.url);
-      if (event.metaKey || event.ctrlKey || event.button === 1 || !repository) {
-        openPrLink(event, pr.url);
-        return;
-      }
-      if (event.button !== 0) return;
-      event.preventDefault();
-      event.stopPropagation();
-      activateThreadFromSidebarIntent(thread.id);
-      openRightDockPane(thread.id, {
-        kind: "pullRequest",
-        pullRequestProjectId: thread.projectId,
-        pullRequestRepository: repository,
-        pullRequestNumber: pr.number,
-        pullRequestInitialTab: "summary",
-      });
-    },
-    [activateThreadFromSidebarIntent, openPrLink, openRightDockPane],
-  );
 
   const handleCloseProjectContextMenu = useCallback(() => setProjectContextMenuState(null), []);
   const {
@@ -4905,6 +4890,31 @@ export default function Sidebar() {
     threads: visibleSidebarThreads,
     projectCwdById,
   });
+  const openThreadPullRequest = useCallback(
+    (
+      event: MouseEvent<HTMLElement>,
+      thread: SidebarThreadSummary,
+      pr: OrchestrationThreadPullRequest,
+    ) => {
+      const repository = parseGitHubRepositoryNameWithOwnerFromPullRequestUrl(pr.url);
+      if (event.metaKey || event.ctrlKey || event.button === 1 || !repository) {
+        openPrLink(event, pr.url);
+        return;
+      }
+      if (event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      activateThreadFromSidebarIntent(thread.id);
+      openRightDockPane(thread.id, {
+        kind: "pullRequest",
+        pullRequestProjectId: thread.projectId,
+        pullRequestRepository: repository,
+        pullRequestNumber: pr.number,
+        pullRequestInitialTab: "summary",
+      });
+    },
+    [activateThreadFromSidebarIntent, openPrLink, openRightDockPane],
+  );
   const isManualProjectSorting = appSettings.sidebarProjectSortOrder === "manual";
   const threadJumpCommandByThreadId = useMemo(() => {
     const mapping = new Map<ThreadId, NonNullable<ReturnType<typeof threadJumpCommandForIndex>>>();
@@ -5105,6 +5115,7 @@ export default function Sidebar() {
           <span className={SIDEBAR_SECTION_LABEL_CLASS_NAME}>Pinned</span>
         </div>
         <div className="flex flex-col gap-0.5">
+          <FluidHoverSurface selector='[data-thread-item][role="button"]' />
           {pinnedThreads.map((thread) => renderPinnedThreadRow(thread))}
         </div>
       </div>
@@ -5232,6 +5243,7 @@ export default function Sidebar() {
     const isActive = visualActiveSidebarThreadId === thread.id;
     const projectLabel = resolvePinnedThreadProjectLabel(thread.projectId);
     const rightMetaChips = resolveThreadRowMetaChips({
+      i18n,
       thread,
       includeHandoffBadge: true,
       handoffShownInAvatar:
@@ -5380,6 +5392,7 @@ export default function Sidebar() {
       ? "text-foreground/54 dark:text-foreground/64"
       : "text-muted-foreground/34";
     const rightMetaChips = resolveThreadRowMetaChips({
+      i18n,
       thread,
       includeHandoffBadge: !isTemporaryThread,
       handoffShownInAvatar:
@@ -5676,8 +5689,6 @@ export default function Sidebar() {
     // name container itself is not focusable — the row's button is.
     const projectToolbarReserveClassName =
       "group-hover/project-header:pr-[4.75rem] group-has-[:focus-visible]/project-header:pr-[4.75rem]";
-    // Configured display name only — folder identity lives in the hover card (#1000).
-    const projectRowLabel = resolveSidebarProjectRowLabel(project);
 
     return (
       <div className="group/collapsible">
@@ -5744,7 +5755,8 @@ export default function Sidebar() {
                   projectToolbarReserveClassName,
                 )}
               >
-                <span className={SIDEBAR_PROJECT_NAME_CLASS_NAME}>{projectRowLabel}</span>
+                <span className={SIDEBAR_PROJECT_NAME_CLASS_NAME}>{project.name}</span>
+                {project.localName ? <span className="shrink-0 truncate text-ui text-muted-foreground/40">{project.folderName}</span> : null}
               </div>
               {/* Closed folders surface child-chat status on the project row; open
                   folders leave that signal to their visible child thread rows. */}
@@ -7810,7 +7822,7 @@ export default function Sidebar() {
       >
         <DialogPopup className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base">
+            <DialogTitle className="flex items-center gap-2 text-ui-lg">
               <PlayIcon className="size-4 text-emerald-500" />
               Start dev
             </DialogTitle>
