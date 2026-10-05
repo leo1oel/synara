@@ -1,10 +1,12 @@
-import type { ProjectId } from "@synara/contracts";
+import { PullRequestsUnavailableError, type ProjectId } from "@synara/contracts";
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   invalidateOtherPullRequestListQueries,
   pullRequestDetailQueryOptions,
+  pullRequestDiffQueryOptions,
+  pullRequestReviewRequestCountQueryOptions,
   pullRequestQueryErrorState,
   pullRequestQueryKeys,
   prefetchPullRequestListState,
@@ -99,6 +101,80 @@ describe("pull request list query options", () => {
         supersetTruncated: true,
       }),
     ).toBe(true);
+  });
+});
+
+describe("pull request query retries", () => {
+  const detailInput = {
+    projectId: "project-a" as ProjectId,
+    repository: "acme/widgets",
+    number: 42,
+  };
+  const queries = [
+    ["list", pullRequestsListQueryOptions({ state: "open", projectId: null })],
+    [
+      "exact involvement",
+      pullRequestsExactInvolvementQueryOptions({
+        involvement: "reviewing",
+        state: "open",
+        projectId: null,
+      }),
+    ],
+    ["review request counts", pullRequestReviewRequestCountQueryOptions({ projectId: null })],
+    ["detail", pullRequestDetailQueryOptions(detailInput)],
+    ["diff", pullRequestDiffQueryOptions(detailInput)],
+  ] as const;
+
+  it.each(queries)("does not retry unavailable errors for %s", async (_name, options) => {
+    for (const error of [
+      new PullRequestsUnavailableError({
+        reason: "gh-not-authenticated",
+        message: "Sign in to GitHub CLI",
+      }),
+      new PullRequestsUnavailableError({ reason: "gh-not-installed", message: "Install gh" }),
+      { _tag: "PullRequestsUnavailableError", reason: "gh-not-authenticated", message: "Setup" },
+    ]) {
+      const client = new QueryClient();
+      const queryFn = vi.fn().mockRejectedValue(error);
+      try {
+        await expect(
+          client.fetchQuery({
+            queryKey: options.queryKey,
+            retry: options.retry,
+            queryFn,
+            retryDelay: 0,
+          }),
+        ).rejects.toBe(error);
+        expect(queryFn).toHaveBeenCalledTimes(1);
+      } finally {
+        client.clear();
+      }
+    }
+  });
+
+  it.each(queries)("preserves three retries for other errors for %s", async (_name, options) => {
+    for (const error of [
+      new Error("Transient network failure"),
+      new Error("PullRequestsUnavailableError: Sign in to GitHub CLI"),
+      { _tag: "WsRpcError", message: "Sign in to GitHub CLI" },
+    ]) {
+      const client = new QueryClient();
+      const queryFn = vi.fn().mockRejectedValue(error);
+      try {
+        await expect(
+          client.fetchQuery({
+            queryKey: options.queryKey,
+            retry: options.retry,
+            queryFn,
+            retryDelay: 0,
+          }),
+        ).rejects.toBe(error);
+        expect(queryFn).toHaveBeenCalledTimes(4);
+        expect(options).not.toHaveProperty("retryDelay");
+      } finally {
+        client.clear();
+      }
+    }
   });
 });
 
