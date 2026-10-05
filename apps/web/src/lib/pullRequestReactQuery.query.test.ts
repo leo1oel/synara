@@ -126,6 +126,8 @@ describe("pull request query retries", () => {
   ] as const;
 
   it.each(queries)("does not retry unavailable errors for %s", async (_name, options) => {
+    const { retry } = options;
+    if (retry === undefined) throw new Error("Expected a retry policy");
     for (const error of [
       new PullRequestsUnavailableError({
         reason: "gh-not-authenticated",
@@ -140,7 +142,7 @@ describe("pull request query retries", () => {
         await expect(
           client.fetchQuery({
             queryKey: options.queryKey,
-            retry: options.retry,
+            retry,
             queryFn,
             retryDelay: 0,
           }),
@@ -153,6 +155,8 @@ describe("pull request query retries", () => {
   });
 
   it.each(queries)("preserves three retries for other errors for %s", async (_name, options) => {
+    const { retry } = options;
+    if (retry === undefined) throw new Error("Expected a retry policy");
     for (const error of [
       new Error("Transient network failure"),
       new Error("PullRequestsUnavailableError: Sign in to GitHub CLI"),
@@ -164,7 +168,7 @@ describe("pull request query retries", () => {
         await expect(
           client.fetchQuery({
             queryKey: options.queryKey,
-            retry: options.retry,
+            retry,
             queryFn,
             retryDelay: 0,
           }),
