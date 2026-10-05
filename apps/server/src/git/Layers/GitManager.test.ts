@@ -15,7 +15,11 @@ import type {
 
 import { GitCommandError, GitHubCliError, TextGenerationError } from "../Errors.ts";
 import { type GitManagerShape } from "../Services/GitManager.ts";
-import { GitHubCli, PULL_REQUEST_SUMMARY_JSON_FIELDS } from "../Services/GitHubCli.ts";
+import {
+  GitHubCli,
+  type GitHubCliShape,
+  PULL_REQUEST_SUMMARY_JSON_FIELDS,
+} from "../Services/GitHubCli.ts";
 import {
   type AutomationIntentGenerationInput,
   type AutomationIntentGenerationResult,
@@ -352,8 +356,10 @@ function handoffThread(
 function makeManager(input?: {
   ghScenario?: FakeGhScenario;
   textGeneration?: Partial<FakeGitTextGeneration>;
+  wrapGitHubCli?: (service: GitHubCliShape) => GitHubCliShape;
 }) {
-  const { service: gitHubCli, ghCalls } = createGitHubCliWithFakeGh(input?.ghScenario);
+  const { service: fakeGitHubCli, ghCalls } = createGitHubCliWithFakeGh(input?.ghScenario);
+  const gitHubCli = input?.wrapGitHubCli?.(fakeGitHubCli) ?? fakeGitHubCli;
   const textGeneration = createTextGeneration(input?.textGeneration);
   const ServerConfigLayer = ServerConfig.layerTest(process.cwd(), {
     prefix: "synara-git-manager-test-",
@@ -375,6 +381,19 @@ function makeManager(input?: {
     Effect.map((manager) => ({ manager, ghCalls })),
   );
 }
+
+// Mirrors the production branch-PR path: capture the checkout's branch, then resolve its PR.
+const resolveCheckoutPullRequest = (manager: GitManagerShape, cwd: string) =>
+  Effect.gen(function* () {
+    const gitCore = yield* GitCore;
+    const context = yield* gitCore.readBranchContext(cwd);
+    if (context.branch === null) return null;
+    return yield* manager.pullRequestForBranch({
+      cwd,
+      branch: context.branch,
+      upstreamRef: context.upstreamRef,
+    });
+  });
 
 const GitManagerTestLayer = GitCoreLive.pipe(
   Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "synara-git-manager-test-" })),
@@ -436,7 +455,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
     }),
   );
 
-  it.effect("status includes PR metadata when branch already has an open PR", () =>
+  it.effect("resolves the open PR for the checked-out branch", () =>
     Effect.gen(function* () {
       const repoDir = yield* makeTempDir("synara-git-manager-");
       yield* initRepo(repoDir);
@@ -466,9 +485,8 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
         },
       });
 
-      const status = yield* manager.status({ cwd: repoDir });
-      expect(status.branch).toBe("feature/status-open-pr");
-      expect(status.pr).toEqual({
+      const pr = yield* resolveCheckoutPullRequest(manager, repoDir);
+      expect(pr).toEqual({
         number: 13,
         title: "Existing PR",
         url: "https://github.com/example-org/sample-repo/pull/13",
@@ -543,7 +561,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
   );
 
   it.effect(
-    "status detects cross-repo PRs from the upstream remote URL owner",
+    "detects cross-repo PRs from the upstream remote URL owner",
     () =>
       Effect.gen(function* () {
         const repoDir = yield* makeTempDir("synara-git-manager-");
@@ -565,10 +583,8 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
         const { manager, ghCalls } = yield* makeManager({
           ghScenario: {
-            prListSequence: [
-              JSON.stringify([]),
-              JSON.stringify([]),
-              JSON.stringify([
+            prListByHeadSelector: {
+              statemachine: JSON.stringify([
                 {
                   number: 488,
                   title: "Rebase this PR on latest main",
@@ -579,13 +595,12 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
                   updatedAt: "2026-03-10T07:00:00Z",
                 },
               ]),
-            ],
+            },
           },
         });
 
-        const status = yield* manager.status({ cwd: repoDir });
-        expect(status.branch).toBe("synara/pr-488/statemachine");
-        expect(status.pr).toEqual({
+        const pr = yield* resolveCheckoutPullRequest(manager, repoDir);
+        expect(pr).toEqual({
           number: 488,
           title: "Rebase this PR on latest main",
           url: "https://github.com/example-org/sample-repo/pull/488",
@@ -605,7 +620,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
     30_000,
   );
 
-  it.effect("status returns merged PR state when latest PR was merged", () =>
+  it.effect("resolves merged PR state when the latest PR was merged", () =>
     Effect.gen(function* () {
       const repoDir = yield* makeTempDir("synara-git-manager-");
       yield* initRepo(repoDir);
@@ -630,9 +645,8 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
         },
       });
 
-      const status = yield* manager.status({ cwd: repoDir });
-      expect(status.branch).toBe("feature/status-merged-pr");
-      expect(status.pr).toEqual({
+      const pr = yield* resolveCheckoutPullRequest(manager, repoDir);
+      expect(pr).toEqual({
         number: 22,
         title: "Merged PR",
         url: "https://github.com/example-org/sample-repo/pull/22",
@@ -648,7 +662,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
     }),
   );
 
-  it.effect("status prefers open PR when merged PR has newer updatedAt", () =>
+  it.effect("prefers the open PR when a merged PR has newer updatedAt", () =>
     Effect.gen(function* () {
       const repoDir = yield* makeTempDir("synara-git-manager-");
       yield* initRepo(repoDir);
@@ -682,9 +696,8 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
         },
       });
 
-      const status = yield* manager.status({ cwd: repoDir });
-      expect(status.branch).toBe("feature/status-open-over-merged");
-      expect(status.pr).toEqual({
+      const pr = yield* resolveCheckoutPullRequest(manager, repoDir);
+      expect(pr).toEqual({
         number: 46,
         title: "Open PR",
         url: "https://github.com/example-org/sample-repo/pull/46",
@@ -700,7 +713,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
     }),
   );
 
-  it.effect("status is resilient to gh lookup failures and returns pr null", () =>
+  it.effect("status reads local state without calling gh, so gh failures cannot block it", () =>
     Effect.gen(function* () {
       const repoDir = yield* makeTempDir("synara-git-manager-");
       yield* initRepo(repoDir);
@@ -709,7 +722,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
       yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);
       yield* runGit(repoDir, ["push", "-u", "origin", "feature/status-no-gh"]);
 
-      const { manager } = yield* makeManager({
+      const { manager, ghCalls } = yield* makeManager({
         ghScenario: {
           failWith: new GitHubCliError({
             operation: "execute",
@@ -720,7 +733,68 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
       const status = yield* manager.status({ cwd: repoDir });
       expect(status.branch).toBe("feature/status-no-gh");
-      expect(status.pr).toBeNull();
+      expect(status).not.toHaveProperty("pr");
+      expect(ghCalls).toEqual([]);
+
+      // The separate PR lookup still reports the failure as a typed error.
+      const lookup = yield* resolveCheckoutPullRequest(manager, repoDir).pipe(Effect.result);
+      expect(lookup._tag).toBe("Failure");
+    }),
+  );
+
+  it.effect("queries every head selector concurrently when resolving a branch PR", () =>
+    Effect.gen(function* () {
+      const repoDir = yield* makeTempDir("synara-git-manager-");
+      yield* initRepo(repoDir);
+      const forkDir = yield* createBareRemote();
+      yield* runGit(repoDir, ["remote", "add", "fork-seed", forkDir]);
+      yield* runGit(repoDir, ["checkout", "-b", "feature/parallel-lookup"]);
+      yield* runGit(repoDir, ["push", "-u", "fork-seed", "feature/parallel-lookup"]);
+      yield* runGit(repoDir, [
+        "config",
+        "remote.fork-seed.url",
+        "git@github.com:octo-fork/sample-repo.git",
+      ]);
+
+      let inFlight = 0;
+      let maxInFlight = 0;
+      const selectors: string[] = [];
+      const { manager } = yield* makeManager({
+        ghScenario: {
+          prListByHeadSelector: {
+            "octo-fork:feature/parallel-lookup": JSON.stringify([
+              {
+                number: 77,
+                title: "Parallel lookup",
+                url: "https://github.com/example-org/sample-repo/pull/77",
+                baseRefName: "main",
+                headRefName: "feature/parallel-lookup",
+                state: "OPEN",
+              },
+            ]),
+          },
+        },
+        // Real-time latency stands in for gh's network round trip; a serial loop would
+        // never have two lookups in flight at once.
+        wrapGitHubCli: (service) => ({
+          ...service,
+          listPullRequests: (input) =>
+            Effect.gen(function* () {
+              selectors.push(input.headSelector);
+              inFlight += 1;
+              maxInFlight = Math.max(maxInFlight, inFlight);
+              yield* Effect.promise(() => new Promise((resolve) => setTimeout(resolve, 25)));
+              inFlight -= 1;
+              return yield* service.listPullRequests(input);
+            }),
+        }),
+      });
+
+      const pr = yield* resolveCheckoutPullRequest(manager, repoDir);
+
+      expect(selectors.length).toBeGreaterThan(1);
+      expect(maxInFlight).toBe(selectors.length);
+      expect(pr).toMatchObject({ number: 77, headBranch: "feature/parallel-lookup" });
     }),
   );
 

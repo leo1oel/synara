@@ -6,11 +6,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useLingui } from "@lingui/react";
 
 import { GitPanel } from "../components/chat/GitPanel";
+import { useEmbedReadySignal } from "../hooks/useEmbedReadySignal";
 import { useEmbeddedWorkspaceProject } from "../hooks/useEmbeddedWorkspaceProject";
 
 function SourceControlRouteView() {
   const { i18n } = useLingui();
   const { embedMode, projectId, bindingError } = useEmbeddedWorkspaceProject();
+  useEmbedReadySignal(embedMode);
 
   if (!embedMode) {
     return (

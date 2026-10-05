@@ -1066,17 +1066,22 @@ export const makeGitManager = Effect.gen(function* () {
       const headContext = yield* resolveBranchHeadContext(cwd, details);
       const parsedByNumber = new Map<number, PullRequestInfo>();
 
-      for (const headSelector of headContext.headSelectors) {
+      // Each selector is an independent `gh pr list` network round trip, so query them
+      // together; results are merged in selector order to keep the outcome deterministic.
+      const pullRequestsBySelector = yield* Effect.forEach(
+        headContext.headSelectors,
+        (headSelector) =>
+          gitHubCli
+            .listPullRequests({ cwd, headSelector, limit: PR_LOOKUP_ALL_STATES_LIMIT })
+            .pipe(Effect.map((pullRequests) => ({ headSelector, pullRequests }))),
+        { concurrency: "unbounded" },
+      );
+
+      for (const { headSelector, pullRequests } of pullRequestsBySelector) {
         const inferredHeadInfo = inferPullRequestHeadRemoteInfoFromSelector(
           headSelector,
           headContext,
         );
-        const pullRequests = yield* gitHubCli.listPullRequests({
-          cwd,
-          headSelector,
-          limit: PR_LOOKUP_ALL_STATES_LIMIT,
-        });
-
         for (const pullRequest of pullRequests) {
           const candidate = withInferredHeadRemoteInfo(
             toPullRequestInfo(pullRequest),
@@ -1485,15 +1490,6 @@ export const makeGitManager = Effect.gen(function* () {
   const status: GitManagerShape["status"] = Effect.fnUntraced(function* (input) {
     const details = yield* gitCore.statusDetails(input.cwd);
 
-    const pr =
-      details.branch !== null
-        ? yield* pullRequestForBranch({
-            cwd: input.cwd,
-            branch: details.branch,
-            upstreamRef: details.upstreamRef,
-          }).pipe(Effect.catch(() => Effect.succeed(null)))
-        : null;
-
     return {
       branch: details.branch,
       hasWorkingTreeChanges: details.hasWorkingTreeChanges,
@@ -1503,7 +1499,6 @@ export const makeGitManager = Effect.gen(function* () {
       configuredPrBaseBranch: details.configuredPrBaseBranch,
       aheadCount: details.aheadCount,
       behindCount: details.behindCount,
-      pr,
     };
   });
 

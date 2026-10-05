@@ -1,9 +1,12 @@
 import { DEFAULT_GIT_RECENT_COMMIT_LIMIT } from "@synara/contracts";
 import type {
+  GitBranchPullRequestResult,
   GitHandoffThreadInput,
   GitReadWorkingTreeDiffInput,
   GitRemoveWorktreeInput,
   GitStackedAction,
+  GitStatusResult,
+  GitStatusWithPullRequest,
   ModelSelection,
   NativeApi,
   ProviderStartOptions,
@@ -44,6 +47,8 @@ export const gitQueryKeys = {
   recentCommits: (cwd: string | null, limit: number) =>
     ["git", "recent-commits", cwd, limit] as const,
   pullRequest: (cwd: string | null) => ["git", "pull-request", cwd] as const,
+  // Nested under the pull-request prefix so every existing PR invalidation refreshes it.
+  branchPullRequest: (cwd: string | null) => ["git", "pull-request", cwd, "branch"] as const,
   workingTreeDiffs: (cwd: string | null) => ["git", "working-tree-diff", cwd] as const,
   workingTreeDiff: (
     cwd: string | null,
@@ -430,15 +435,10 @@ export function refreshGitQueriesScoped(
 export function gitStatusQueryOptions(cwd: string | null, enabled = true) {
   return queryOptions({
     queryKey: gitQueryKeys.status(cwd),
-    queryFn: async ({ client }) => {
-      const readFence = capturePullRequestActionReadFence(client);
+    queryFn: async () => {
       const api = ensureNativeApi();
       if (!cwd) throw new Error("Git status is unavailable.");
-      return preserveActivePullRequestActionGitFields(
-        client,
-        await api.git.status({ cwd }),
-        readFence,
-      );
+      return api.git.status({ cwd });
     },
     enabled: enabled && cwd !== null,
     staleTime: GIT_STATUS_STALE_TIME_MS,
@@ -447,6 +447,39 @@ export function gitStatusQueryOptions(cwd: string | null, enabled = true) {
     refetchInterval: GIT_STATUS_REFETCH_INTERVAL_MS,
     ...GIT_EXPENSIVE_READ_RETRY_OPTIONS,
   });
+}
+
+/**
+ * The checkout's current-branch pull request. Separate from status because resolving it takes
+ * GitHub round trips: status, diffs and file lists render first and the PR fills in after.
+ */
+export function gitBranchPullRequestQueryOptions(cwd: string | null, enabled = true) {
+  return queryOptions({
+    queryKey: gitQueryKeys.branchPullRequest(cwd),
+    queryFn: async ({ client }) => {
+      const readFence = capturePullRequestActionReadFence(client);
+      const api = ensureNativeApi();
+      if (!cwd) throw new Error("Branch pull request is unavailable.");
+      return preserveActivePullRequestActionGitFields(
+        client,
+        await api.git.branchPullRequest({ cwd }),
+        readFence,
+      );
+    },
+    enabled: enabled && cwd !== null,
+    staleTime: GIT_STATUS_STALE_TIME_MS,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: "always",
+    refetchInterval: GIT_STATUS_REFETCH_INTERVAL_MS,
+  });
+}
+
+/** Joins local status with the branch PR; the PR reads as `null` until its lookup lands. */
+export function withBranchPullRequest(
+  status: GitStatusResult,
+  pullRequest: GitBranchPullRequestResult | null | undefined,
+): GitStatusWithPullRequest {
+  return { ...status, pr: pullRequest?.branch === status.branch ? pullRequest.pr : null };
 }
 
 export function gitGithubRepositoryQueryOptions(cwd: string | null, enabled = true) {

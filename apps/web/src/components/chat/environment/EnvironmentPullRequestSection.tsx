@@ -5,7 +5,7 @@
 //          conflicts to the composer as context cards), Merge, Status (draft / ready /
 //          close / reopen), and Add to chat. Copy link and Open in GitHub ride on the View PR row.
 // Layer: Environment panel section
-// Depends on: git status/PR-snapshot React Query helpers, the pull request action mutation,
+// Depends on: branch-PR/PR-snapshot React Query helpers, the pull request action mutation,
 //             and the shared Environment row skin.
 
 import type {
@@ -53,7 +53,10 @@ import {
   pullRequestMergeBlocker,
 } from "../../pullRequest/pullRequestStack.logic";
 import { addChatPullRequestContext } from "~/lib/chatReferences";
-import { gitPullRequestSnapshotQueryOptions, gitStatusQueryOptions } from "~/lib/gitReactQuery";
+import {
+  gitBranchPullRequestQueryOptions,
+  gitPullRequestSnapshotQueryOptions,
+} from "~/lib/gitReactQuery";
 import {
   ChatBubbleIcon,
   ChatBubblePlusIcon,
@@ -310,10 +313,10 @@ export function EnvironmentPullRequestSection({
   const queryClient = useQueryClient();
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<PullRequestConfirmAction | null>(null);
-  // Share the git block's cache, but revalidate stale status when this always-mounted
+  // Share the git block's cache, but revalidate a stale lookup when this always-mounted
   // panel opens so an earlier missing PR does not linger until the next polling tick.
-  const { data: gitStatus } = useQuery(gitStatusQueryOptions(gitCwd, enabled));
-  const pr = gitStatus?.pr ?? null;
+  const { data: branchPullRequest } = useQuery(gitBranchPullRequestQueryOptions(gitCwd, enabled));
+  const pr = branchPullRequest?.pr ?? null;
 
   const snapshotQuery = useQuery(
     gitPullRequestSnapshotQueryOptions({
@@ -323,8 +326,8 @@ export function EnvironmentPullRequestSection({
     }),
   );
 
-  // The snapshot can report a merge/close before git status catches up. Once git status
-  // also settles, prefer it over a cached open snapshot whose polling is now disabled.
+  // The snapshot can report a merge/close before the branch lookup catches up. Once that
+  // lookup also settles, prefer it over a cached open snapshot whose polling is now disabled.
   const livePr = snapshotQuery.data?.pullRequest ?? null;
   const displayPr = pr?.state === "open" ? (livePr ?? pr) : pr;
 

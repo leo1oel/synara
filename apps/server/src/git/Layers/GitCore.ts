@@ -1775,7 +1775,6 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
           upstreamBranch: details.upstreamBranch,
           aheadCount: details.aheadCount,
           behindCount: details.behindCount,
-          pr: null,
         };
       });
 

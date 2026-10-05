@@ -152,6 +152,8 @@ import {
   GitStashInfoResult,
   GitStatusInput,
   GitStatusResult,
+  GitBranchPullRequestInput,
+  GitBranchPullRequestResult,
   GitSummarizeDiffInput,
   GitSummarizeDiffResult,
   GitUnstageFilesInput,
@@ -956,6 +958,12 @@ export const WsGitStatusRpc = Rpc.make(WS_METHODS.gitStatus, {
   error: WsRpcError,
 });
 
+export const WsGitBranchPullRequestRpc = Rpc.make(WS_METHODS.gitBranchPullRequest, {
+  payload: GitBranchPullRequestInput,
+  success: GitBranchPullRequestResult,
+  error: WsRpcError,
+});
+
 export const WsGitGithubRepositoryRpc = Rpc.make(WS_METHODS.gitGithubRepository, {
   payload: GitHubRepositoryInput,
   success: GitHubRepositoryResult,
@@ -1636,6 +1644,7 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsShellOpenInEditorRpc,
   WsGitGithubRepositoryRpc,
   WsGitStatusRpc,
+  WsGitBranchPullRequestRpc,
   WsGitReadWorkingTreeDiffRpc,
   WsGitBlameLineRpc,
   WsGitReadFileAtRevRpc,

@@ -1,8 +1,8 @@
 // Synchronizes Git-backed PR badges and Environment snapshots with PR actions.
 // Remote identity reaches every cached worktree without touching unrelated repositories.
 import type {
+  GitBranchPullRequestResult,
   GitPullRequestSnapshotResult,
-  GitStatusResult,
   PullRequestDetailInput,
 } from "@synara/contracts";
 import { parseGitHubRepositoryNameWithOwnerFromPullRequestUrl } from "@synara/shared/githubRepository";
@@ -15,8 +15,8 @@ import {
   type PullRequestActionReadFence,
 } from "./pullRequestMutationCoordinator";
 
-type GitPullRequestCache = GitStatusResult | GitPullRequestSnapshotResult;
-type GitPullRequest = NonNullable<GitStatusResult["pr"]>;
+type GitPullRequestCache = GitBranchPullRequestResult | GitPullRequestSnapshotResult;
+type GitPullRequest = NonNullable<GitBranchPullRequestResult["pr"]>;
 type PullRequestIdentity = Pick<PullRequestDetailInput, "repository" | "number">;
 
 export type GitPullRequestActionRollback = {
@@ -61,9 +61,9 @@ export function pullRequestGitQueryFilters(
       if (workspaceRoot !== undefined && key[1] === "pull-request" && key[2] === workspaceRoot) {
         return true;
       }
-      const isStatus = key[1] === "status";
+      const isBranchPullRequest = key[1] === "pull-request" && key[3] === "branch";
       const isSnapshot = key[1] === "pull-request" && key[3] === "snapshot";
-      if (!isStatus && !isSnapshot) return false;
+      if (!isBranchPullRequest && !isSnapshot) return false;
 
       return (
         matchesPullRequest(

@@ -67,7 +67,8 @@ export interface GitManagerShape {
   ) => Effect.Effect<GitCreateGitHubRepositoryResult, GitManagerServiceError>;
 
   /**
-   * Read current repository Git status plus open PR metadata when available.
+   * Read current repository Git status. Local only: the branch's pull request is
+   * resolved separately so status never waits on GitHub.
    */
   readonly status: (
     input: GitStatusInput,

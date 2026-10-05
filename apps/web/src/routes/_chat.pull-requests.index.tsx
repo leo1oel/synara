@@ -62,6 +62,7 @@ import {
   useDesktopTopBarTrafficLightGutterClassName,
   useDesktopTopBarWindowControlsGutterClassName,
 } from "~/hooks/useDesktopTopBarGutter";
+import { useEmbedReadySignal } from "~/hooks/useEmbedReadySignal";
 import { useEmbeddedWorkspaceProject } from "~/hooks/useEmbeddedWorkspaceProject";
 import { RefreshCwIcon } from "~/lib/icons";
 import {
@@ -156,6 +157,7 @@ function PullRequestsRouteView() {
   const { settings } = useAppSettings();
   const search = Route.useSearch();
   const { embedMode, projectId: embeddedProjectId, bindingError } = useEmbeddedWorkspaceProject();
+  useEmbedReadySignal(embedMode);
   const scopedProjectId = embedMode ? (embeddedProjectId ?? undefined) : search.projectId;
   const workspaceBindingPending = Boolean(embedMode && !embeddedProjectId && !bindingError);
   const navigate = useNavigate({ from: Route.fullPath });

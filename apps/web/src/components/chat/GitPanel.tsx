@@ -39,6 +39,7 @@ import { Alert } from "../ui/alert";
 import { Button } from "../ui/button";
 import { IconButton } from "../ui/icon-button";
 import { ScrollArea } from "../ui/scroll-area";
+import { Skeleton } from "../ui/skeleton";
 import {
   CHAT_SURFACE_HEADER_ACTION_ICON_CLASS_NAME,
   DOCK_HEADER_ICON_BUTTON_CLASS,
@@ -49,6 +50,7 @@ import { DockPaneHeader } from "./DockPaneHeader";
 import { FileDiffHeader } from "./FileDiffHeader";
 import { SingleFileDiffBody } from "./FileDiffView";
 import { FileEntryIcon } from "./FileEntryIcon";
+import { FileRowsSkeleton } from "./FileRowsSkeleton";
 import GitActionsControl from "../GitActionsControl";
 import { GitHubRemoteSetupCard, GitInitializationState } from "./GitRepositorySetup";
 import { PanelStateMessage } from "./PanelStateMessage";
@@ -194,6 +196,29 @@ function GitFileSection(props: {
   );
 }
 
+// Mirrors GitFileSection's header and rows so the loaded list replaces it in place.
+function GitFileSectionSkeleton(props: { label: string }) {
+  return (
+    <section className="flex min-w-0 flex-col gap-1">
+      <div className="flex items-center gap-2 px-1.5 py-1" aria-hidden>
+        <Skeleton className="h-3 w-16 rounded-full" />
+        <Skeleton className="h-3.5 w-5 rounded-full" />
+      </div>
+      <FileRowsSkeleton label={props.label} showStats className="px-1.5" />
+    </section>
+  );
+}
+
+// Holds the branch picker and Commit & push rows while the repository probe is pending.
+function GitPanelActionsSkeleton() {
+  return (
+    <div className="flex flex-col gap-2 border-b border-border/70 px-2 py-2" aria-hidden>
+      <Skeleton className="h-7 w-full rounded-md" />
+      <Skeleton className="h-7 w-full rounded-md" />
+    </div>
+  );
+}
+
 function SelectedFileDiff(props: { fileDiff: FileDiffMetadata; theme: "light" | "dark" }) {
   return (
     <div className="h-full min-h-0 p-2">
@@ -239,16 +264,21 @@ export function GitPanel(props: {
   const [selected, setSelected] = useState<SelectedFile | null>(null);
   const branchQuery = useQuery(gitBranchesQueryOptions(cwd));
   const repositoryReady = branchQuery.isSuccess && branchQuery.data.isRepo;
-  const statusQuery = useQuery(gitStatusQueryOptions(cwd, repositoryReady));
+  const repositoryMissing = branchQuery.isSuccess && !branchQuery.data.isRepo;
+  const repositoryPending = !branchQuery.isSuccess;
+  // Status and both diffs start alongside the branch probe rather than after it, so the
+  // file lists can land in the same round trip; only a confirmed non-repository stops them.
+  const gitReadsEnabled = !repositoryMissing;
+  const statusQuery = useQuery(gitStatusQueryOptions(cwd, gitReadsEnabled));
 
   // No fixed polling: turn-driven file changes already push-invalidate the
   // working-tree-diff cache (see __root.tsx), and focus + the Refresh button +
   // post-mutation invalidation cover the rest. This keeps the pane cheap.
   const stagedQuery = useQuery(
-    gitWorkingTreeDiffQueryOptions({ cwd, scope: "staged", enabled: repositoryReady }),
+    gitWorkingTreeDiffQueryOptions({ cwd, scope: "staged", enabled: gitReadsEnabled }),
   );
   const unstagedQuery = useQuery(
-    gitWorkingTreeDiffQueryOptions({ cwd, scope: "unstaged", enabled: repositoryReady }),
+    gitWorkingTreeDiffQueryOptions({ cwd, scope: "unstaged", enabled: gitReadsEnabled }),
   );
   const refreshMutation = useMutation({
     mutationFn: async () => {
@@ -257,6 +287,7 @@ export function GitPanel(props: {
       if (repositoryReady) {
         refreshes.push(
           queryClient.invalidateQueries({ queryKey: gitQueryKeys.status(cwd) }),
+          queryClient.invalidateQueries({ queryKey: gitQueryKeys.branchPullRequest(cwd) }),
           queryClient.invalidateQueries({
             queryKey: gitQueryKeys.workingTreeDiff(cwd, "staged"),
           }),
@@ -324,12 +355,16 @@ export function GitPanel(props: {
     : null;
   const selectedPath = selected?.path ?? null;
 
-  // Diffs can finish before status (upstream/ahead counts). Do not present a
-  // clean repository until all initial reads have resolved.
-  const isLoading = stagedQuery.isPending || unstagedQuery.isPending || statusQuery.isPending;
+  // Diffs can finish before status (upstream/ahead counts) or the repository probe. Do
+  // not present a clean repository until all initial reads have resolved.
+  const isLoading =
+    repositoryPending || stagedQuery.isPending || unstagedQuery.isPending || statusQuery.isPending;
   const branchError = branchQuery.error instanceof Error ? branchQuery.error.message : null;
-  const error =
-    stagedQuery.error instanceof Error
+  // Read errors wait for the repository probe: a folder that is not a repository fails
+  // these reads too, and it gets the initialization state rather than an error flash.
+  const error = !repositoryReady
+    ? null
+    : stagedQuery.error instanceof Error
       ? stagedQuery.error.message
       : unstagedQuery.error instanceof Error
         ? unstagedQuery.error.message
@@ -386,13 +421,12 @@ export function GitPanel(props: {
             {branchError}
           </Alert>
         </div>
-      ) : !branchQuery.isSuccess ? (
-        <PanelStateMessage>{i18n._("Checking repository…")}</PanelStateMessage>
-      ) : !branchQuery.data.isRepo ? (
+      ) : repositoryMissing ? (
         <GitInitializationState cwd={cwd} />
       ) : (
         <>
-          {props.showActions ? (
+          {props.showActions && repositoryPending ? <GitPanelActionsSkeleton /> : null}
+          {props.showActions && repositoryReady ? (
             <div
               data-lattice-source-control-actions=""
               className="flex flex-col gap-2 border-b border-border/70 px-2 py-2"
@@ -419,7 +453,9 @@ export function GitPanel(props: {
             </div>
           ) : null}
 
-          {!branchQuery.data.hasOriginRemote ? <GitHubRemoteSetupCard cwd={cwd} /> : null}
+          {repositoryReady && !branchQuery.data.hasOriginRemote ? (
+            <GitHubRemoteSetupCard cwd={cwd} />
+          ) : null}
 
           {showCleanState ? (
             <PanelStateMessage density="compact" fill="flex" className="flex-col gap-1 py-6">
@@ -449,9 +485,7 @@ export function GitPanel(props: {
                       </Alert>
                     ) : null}
                     {!error && isLoading && !hasChanges ? (
-                      <p className="px-1.5 py-1 text-ui-sm text-muted-foreground/70">
-                        {i18n._("Loading changes...")}
-                      </p>
+                      <GitFileSectionSkeleton label={i18n._("Loading changes...")} />
                     ) : null}
                     {hasChanges ? (
                       <>

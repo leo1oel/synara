@@ -8,7 +8,7 @@ import type {
   GitActionProgressEvent,
   GitRunStackedActionResult,
   GitStackedAction,
-  GitStatusResult,
+  GitStatusWithPullRequest,
   ModelSelection,
   ThreadId,
 } from "@synara/contracts";
@@ -51,6 +51,7 @@ import {
 import { getProviderStartOptions, useAppSettings } from "~/appSettings";
 import { formatClockDuration } from "~/session-logic";
 import { Button } from "~/components/ui/button";
+import { Skeleton } from "~/components/ui/skeleton";
 import {
   ChatHeaderButton,
   ChatHeaderSplitDivider,
@@ -91,12 +92,14 @@ import { Popover, PopoverPopup, PopoverTrigger } from "~/components/ui/popover";
 import { toastManager } from "~/components/ui/toast";
 import { openInPreferredEditor } from "~/editorPreferences";
 import {
+  gitBranchPullRequestQueryOptions,
   gitBranchesQueryOptions,
   gitInitMutationOptions,
   gitMutationKeys,
   gitPullMutationOptions,
   gitRunStackedActionMutationOptions,
   gitStatusQueryOptions,
+  withBranchPullRequest,
   invalidateGitQueries,
   isGitExpensiveReadCapacityError,
   refreshGitActionAvailability,
@@ -156,7 +159,7 @@ interface RunGitActionWithToastInput {
   forcePushOnlyProgress?: boolean;
   onConfirmed?: () => void;
   skipDefaultBranchPrompt?: boolean;
-  statusOverride?: GitStatusResult | null;
+  statusOverride?: GitStatusWithPullRequest | null;
   featureBranch?: boolean;
   isDefaultBranchOverride?: boolean;
   progressToastId?: GitActionToastId;
@@ -172,8 +175,8 @@ interface RunGitActionWithToastInput {
 // pre-resolved git status (e.g. the post-push toast CTA); null means "open
 // against the live status".
 interface CreatePrDialogState {
-  statusOverride: GitStatusResult | null;
-  statusOverrideSource: GitStatusResult | null;
+  statusOverride: GitStatusWithPullRequest | null;
+  statusOverrideSource: GitStatusWithPullRequest | null;
   isDefaultBranchOverride: boolean | null;
 }
 
@@ -325,13 +328,22 @@ export default function GitActionsControl({
   const currentBranch = branchList?.branches.find((branch) => branch.current)?.name ?? null;
   // Only poll status after branch discovery confirms a repo — avoids non-repo
   // cwds feeding a permanent "Refreshing git status..." invalidation loop.
+  const gitStatusEnabled = branchListReady && branchList?.isRepo === true;
   const {
     data: gitStatusData,
     error: gitStatusError,
     isFetching: isGitStatusFetching,
     isPending: isGitStatusPending,
-  } = useQuery(gitStatusQueryOptions(gitCwd, branchListReady && branchList?.isRepo === true));
-  const gitStatus = gitStatusData ?? null;
+  } = useQuery(gitStatusQueryOptions(gitCwd, gitStatusEnabled));
+  // Fetched alongside status, never ahead of it: actions render from local git state at
+  // once and the PR-dependent ones (View PR) settle when GitHub answers.
+  const { data: branchPullRequestData } = useQuery(
+    gitBranchPullRequestQueryOptions(gitCwd, gitStatusEnabled),
+  );
+  const gitStatus = useMemo(
+    () => (gitStatusData ? withBranchPullRequest(gitStatusData, branchPullRequestData) : null),
+    [branchPullRequestData, gitStatusData],
+  );
   const isGitStatusRefreshDelayed = isGitExpensiveReadCapacityError(gitStatusError);
   const requestGitActionAvailabilityRefresh = useCallback(() => {
     if (!gitCwd) return;
@@ -595,8 +607,8 @@ export default function GitActionsControl({
   // explains unavailability otherwise.
   const openCreatePrDialog = useCallback(
     (input?: {
-      statusOverride?: GitStatusResult | null;
-      statusOverrideSource?: GitStatusResult | null;
+      statusOverride?: GitStatusWithPullRequest | null;
+      statusOverrideSource?: GitStatusWithPullRequest | null;
       isDefaultBranchOverride?: boolean;
     }) => {
       const execution = resolveCreatePrExecution({
@@ -1830,7 +1842,13 @@ export default function GitActionsControl({
                     className={ENVIRONMENT_ROW_ICON_CLASS_NAME}
                   />
                 }
-                label={panelPrimaryLabel}
+                label={
+                  isGitStatusPending ? (
+                    <Skeleton aria-hidden className="h-3 w-32 rounded-full" />
+                  ) : (
+                    panelPrimaryLabel
+                  )
+                }
               />
             </button>
             {panelGitActionsMenu}

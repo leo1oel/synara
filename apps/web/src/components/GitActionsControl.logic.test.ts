@@ -1,4 +1,4 @@
-import type { GitStatusResult } from "@synara/contracts";
+import type { GitStatusWithPullRequest } from "@synara/contracts";
 import { assert, describe, it } from "vitest";
 import {
   buildGitActionProgressStages,
@@ -25,8 +25,8 @@ import {
 } from "./GitActionsControl.logic";
 
 function statusPr(
-  overrides: Partial<NonNullable<GitStatusResult["pr"]>> = {},
-): NonNullable<GitStatusResult["pr"]> {
+  overrides: Partial<NonNullable<GitStatusWithPullRequest["pr"]>> = {},
+): NonNullable<GitStatusWithPullRequest["pr"]> {
   return {
     number: 10,
     title: "Open PR",
@@ -43,7 +43,7 @@ function statusPr(
   };
 }
 
-function status(overrides: Partial<GitStatusResult> = {}): GitStatusResult {
+function status(overrides: Partial<GitStatusWithPullRequest> = {}): GitStatusWithPullRequest {
   return {
     branch: "feature/test",
     hasWorkingTreeChanges: false,
