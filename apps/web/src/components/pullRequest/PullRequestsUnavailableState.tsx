@@ -3,7 +3,7 @@
 //          unauthenticated, or a request otherwise failed — each case gets a short explanation
 //          and a copyable terminal command instead of a dead end.
 // Layer: Pull request presentation
-// Exports: PullRequestsUnavailableState, isPullRequestsUnavailableError
+// Exports: PullRequestsUnavailableState
 
 import { useEffect, useRef, useState } from "react";
 
@@ -19,20 +19,10 @@ import {
 } from "~/components/ui/empty";
 import { copyTextToClipboard } from "~/hooks/useCopyToClipboard";
 import { CheckIcon, CopyIcon, GitPullRequestIcon, TriangleAlertIcon } from "~/lib/icons";
+import { isPullRequestsUnavailableError } from "~/lib/pullRequestErrors";
 import { cn } from "~/lib/utils";
 import { ensureNativeApi } from "~/nativeApi";
 import { PR_FINE_TEXT_CLASS_NAME, PR_META_TEXT_CLASS_NAME } from "./pullRequestText";
-
-export function isPullRequestsUnavailableError(
-  error: unknown,
-): error is { _tag: "PullRequestsUnavailableError"; reason: string; message: string } {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "_tag" in error &&
-    error._tag === "PullRequestsUnavailableError"
-  );
-}
 
 function githubCliInstallCommand(platform: string): string | null {
   if (/mac/i.test(platform)) return "brew install gh";

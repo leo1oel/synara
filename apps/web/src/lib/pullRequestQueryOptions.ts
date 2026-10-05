@@ -8,6 +8,14 @@ import { queryOptions, type QueryClient } from "@tanstack/react-query";
 
 import { ensureNativeApi } from "~/nativeApi";
 
+import { isPullRequestsUnavailableError } from "./pullRequestErrors";
+
+function shouldRetryPullRequestQuery(failureCount: number, error: unknown): boolean {
+  // Missing CLI/authentication cannot recover during retry backoff. All other
+  // errors retain React Query's browser default of three retries and its default delay.
+  return !isPullRequestsUnavailableError(error) && failureCount < 3;
+}
+
 export const pullRequestQueryKeys = {
   all: ["pull-requests"] as const,
   list: (input: { state: PullRequestState; projectId: ProjectId | null }) =>
@@ -79,6 +87,7 @@ export function pullRequestsListQueryOptions(input: {
   projectId: ProjectId | null;
 }) {
   return queryOptions({
+    retry: shouldRetryPullRequestQuery,
     queryKey: pullRequestQueryKeys.list(input),
     queryFn: () =>
       ensureNativeApi().pullRequests.list({
@@ -101,6 +110,7 @@ export function pullRequestsExactInvolvementQueryOptions(input: {
   projectId: ProjectId | null;
 }) {
   return queryOptions({
+    retry: shouldRetryPullRequestQuery,
     queryKey: pullRequestQueryKeys.exactList(input),
     queryFn: () => ensureNativeApi().pullRequests.list(input),
     staleTime: 60_000,
@@ -113,6 +123,7 @@ export function pullRequestsExactInvolvementQueryOptions(input: {
 
 export function pullRequestReviewRequestCountQueryOptions(input: { projectId: ProjectId | null }) {
   return queryOptions({
+    retry: shouldRetryPullRequestQuery,
     queryKey: pullRequestQueryKeys.reviewRequestCount(input.projectId),
     queryFn: () => ensureNativeApi().pullRequests.reviewRequestCount(input),
     staleTime: 5 * 60_000,
@@ -136,6 +147,7 @@ export function pullRequestDetailQueryOptions(
 ) {
   const pollingEnabled = behavior.pollingEnabled ?? true;
   return queryOptions({
+    retry: shouldRetryPullRequestQuery,
     queryKey: pullRequestQueryKeys.detail(input),
     queryFn: () => {
       if (!input) throw new Error("Pull request detail is unavailable.");
@@ -151,6 +163,7 @@ export function pullRequestDetailQueryOptions(
 
 export function pullRequestDiffQueryOptions(input: PullRequestDetailInput | null) {
   return queryOptions({
+    retry: shouldRetryPullRequestQuery,
     queryKey: pullRequestQueryKeys.diff(input),
     queryFn: () => {
       if (!input) throw new Error("Pull request diff is unavailable.");
