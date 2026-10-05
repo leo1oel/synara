@@ -1115,7 +1115,7 @@ export function SingleChatSurface(props: {
             <DeferredChatView
               threadId={props.threadId}
               paneScopeId={SINGLE_CHAT_PANE_SCOPE_ID}
-              deferMount={isDraftThread}
+              deferMount={isDraftThread && !props.embedMode}
               surfaceMode="single"
               {...(props.embedMode ? { presentationMode: "embed" as const } : {})}
               isFocusedPane

@@ -140,8 +140,6 @@ function ChatThreadRouteContent() {
     threadId,
   ]);
 
-
-
   useEffect(() => {
     return () => {
       mountedRef.current = false;
