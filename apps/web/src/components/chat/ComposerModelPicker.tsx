@@ -95,6 +95,7 @@ export type ComposerModelSelectionOptions = {
 };
 
 type ComposerModelPickerProps = {
+  dense?: boolean;
   provider: ProviderKind;
   model: ModelSlug;
   lockedProvider: ProviderKind | null;
@@ -519,6 +520,7 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
       onOpenChange={(nextOpen) => setMenuOpen(props.disabled ? false : nextOpen)}
     >
       <ComposerModelMenuTrigger
+        dense={props.dense}
         provider={activeProvider}
         accountLabel={activeProviderTab?.name ? activeProviderTab.label : null}
         // The default account is implied; only another one is worth the room.

@@ -136,8 +136,7 @@ export function githubIssueCommentMutationOptions(queryClient: QueryClient) {
     onSettled: (_result, _error, input) =>
       Promise.all([
         queryClient.invalidateQueries({
-          retry: shouldRetryGitHubInboxQuery,
-    queryKey: githubInboxQueryKeys.issueDetail(input),
+          queryKey: githubInboxQueryKeys.issueDetail(input),
           exact: true,
         }),
         ...GITHUB_INBOX_STATES.map((state) =>

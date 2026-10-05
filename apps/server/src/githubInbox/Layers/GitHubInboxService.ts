@@ -319,7 +319,7 @@ export const makeGitHubInboxService = (
               do {
                 const page = yield* withGitHubRead(dependencies.github.listRepositoryInboxInvolvement({
                   cwd: repositoryProjects[0]!.workspaceRoot, repository, state: input.state,
-                  sort: input.sort, exactInvolvement, ...(cursor ? { cursor } : {}),
+                  ...(input.sort ? { sort: input.sort } : {}), exactInvolvement, ...(cursor ? { cursor } : {}),
                 }));
                 totalCount = page.totalCount ?? page.items.length;
                 for (const row of page.items) {

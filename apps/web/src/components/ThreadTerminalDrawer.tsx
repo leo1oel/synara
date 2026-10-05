@@ -1,3 +1,4 @@
+import { buildTerminalRuntimeKey, terminalRuntimeRegistry } from "./terminal/terminalRuntimeRegistry";
 // FILE: ThreadTerminalDrawer.tsx
 // Purpose: Hosts terminal workspace chrome, reusing the shared xterm viewport.
 // Layer: Chat terminal workspace UI

@@ -108,7 +108,7 @@ import { useTheme } from "../hooks/useTheme";
 import { isUiDensity } from "../lib/appDensity";
 import { isChatWidthMode, type ChatWidthMode } from "../lib/chatWidth";
 import { isElectron } from "../env";
-import { RotateCcwIcon } from "../lib/icons";
+import { ResetIcon, RotateCcwIcon } from "../lib/icons";
 import {
   cn,
   getNavigatorPlatform,
@@ -1806,7 +1806,7 @@ activeSection === "shortcuts" ? (
                 <WorktreesSettingsPanel active={activeSection === "worktrees"} />
                 <ArchivedSettingsPanel active={activeSection === "archived"} />
                 <ModelsSettingsPanel
-                  active={activeSection === "models" || (isEmbed && activeSection === "providers")}
+                  active={isEmbed && activeSection === "providers"}
                   settings={settings}
                   defaults={defaults}
                   updateSettings={updateSettings}

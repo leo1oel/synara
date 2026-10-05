@@ -1,3 +1,4 @@
+import { ComposerEnvironmentPicker } from "./chat/ComposerEnvironmentPicker";
 import { requestCurrentAppSnap } from "../appSnap.logic";
 // FILE: BranchToolbar.tsx
 // Purpose: Renders the chat thread's compact workspace controls, including the

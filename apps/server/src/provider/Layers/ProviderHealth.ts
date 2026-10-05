@@ -144,6 +144,7 @@ const OPENCODE_PROVIDER = "opencode" as const;
 const PI_PROVIDER = "pi" as const;
 const OMP_PROVIDER = "omp" as const;
 type ProviderStatuses = ReadonlyArray<ServerProviderStatus>;
+const DISABLED_PROVIDER_STATUS_MESSAGE = "Provider is disabled in Synara settings.";
 const MINIMUM_ANTIGRAVITY_CLI_VERSION = "1.0.12";
 
 const PROVIDERS = [
@@ -197,6 +198,7 @@ const UPDATE_OUTPUT_MAX_BYTES = 10_000;
 export const PROVIDER_HEALTH_PROBE_CONCURRENCY = 4;
 const MAX_REFRESH_REVISION_RETRIES = 1;
 const REFRESH_REVISION_RESCHEDULE_DELAY_MS = 100;
+const PROVIDER_UPDATE_ENABLEMENT_POLL_MS = 100;
 export const PROVIDER_UPDATE_TIMEOUT_MS = 2 * 60_000;
 
 export function runProviderHealthProbes<A, E, R>(
@@ -2658,6 +2660,7 @@ function suppressProviderVersionAdvisory(status: ServerProviderStatus): ServerPr
 export function projectProviderStatusesForSettings(
   statuses: ReadonlyArray<ServerProviderStatus>,
   settings: ServerSettings,
+  checkedAt = new Date().toISOString(),
 ): ProviderStatuses {
   const statusByInstance = new Map(
     statuses.map((status) => [providerStatusIdentityKey(status), status] as const),
@@ -3257,7 +3260,11 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
           Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
           Effect.provideService(FileSystem.FileSystem, fileSystem),
           Effect.provideService(Path.Path, path),
-          Effect.map(orderProviderStatuses),
+          Effect.map((statuses) =>
+            orderProviderStatuses(
+              statuses.flatMap((status) => (Option.isSome(status) ? [status.value] : [])),
+            ),
+          ),
           Effect.flatMap(enrichStatuses),
         );
 

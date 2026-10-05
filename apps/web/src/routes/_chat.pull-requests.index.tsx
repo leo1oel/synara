@@ -36,7 +36,9 @@ function GitHubInboxRouteView() {
   const search = Route.useSearch();
   const { embedMode, projectId: embeddedProjectId, bindingError } = useEmbeddedWorkspaceProject();
   useEmbedReadySignal(embedMode);
-  const scopedSearch = embedMode ? { ...search, projectId: embeddedProjectId ?? undefined } : search;
+  const scopedSearch: GitHubInboxSearch = embedMode
+    ? { ...search, ...(embeddedProjectId ? { projectId: embeddedProjectId } : {}) }
+    : search;
   const navigate = useNavigate({ from: Route.fullPath });
   const updateSearch = (patch: GitHubInboxSearchPatch) =>
     void navigate({

@@ -24,6 +24,7 @@ import { getProviderIconClassName } from "./ProviderModelPicker";
 // Must render inside a `Menu`. `hideModelLabel` / `hideStatusLabel` are the narrow-composer
 // degradation steps: the text moves to title/sr-only so assistive tech keeps it.
 export function ComposerModelMenuTrigger(props: {
+  dense?: boolean | undefined;
   provider: ProviderKind;
   /** Set while the provider has several accounts, to tell which one the composer runs in. */
   accountLabel?: string | null | undefined;
@@ -81,6 +82,7 @@ export function ComposerModelMenuTrigger(props: {
       className={cn(
         "min-w-0 shrink-0 justify-start gap-1.5 whitespace-nowrap px-2 sm:px-2.5 [&_svg]:mx-0",
         COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME,
+        props.dense ? "!h-8 shrink-0" : "shrink-0",
       )}
       aria-label="Change model and reasoning"
       {...(hiddenTriggerTitle.length > 0 ? { title: hiddenTriggerTitle } : {})}

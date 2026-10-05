@@ -1886,6 +1886,7 @@ function ProviderToolRow(props: {
 }
 
 export type ProvidersSettingsPanelProps = AppSettingsBinding & {
+  readonly updateSettingsAndWait: (patch: Partial<AppSettings>) => Promise<void>;
   readonly active: boolean;
   readonly providerTarget?: ProviderKind | null;
   readonly resetEpoch: number;
@@ -1895,6 +1896,7 @@ export function ProvidersSettingsPanel({
   settings,
   defaults,
   updateSettings,
+  updateSettingsAndWait,
   active,
   providerTarget = null,
   resetEpoch,

@@ -15,6 +15,7 @@ import { mutationOptions, queryOptions, type QueryClient } from "@tanstack/react
 import { ensureNativeApi } from "../nativeApi";
 import { EXPENSIVE_READ_RETRY_OPTIONS, isRpcCapacityExceededError } from "./expensiveReadRetry";
 import { preserveActivePullRequestActionGitFields } from "./pullRequestGitCache";
+import { isPullRequestsUnavailableError } from "./pullRequestErrors";
 import { capturePullRequestActionReadFence } from "./pullRequestMutationCoordinator";
 
 const GIT_STATUS_STALE_TIME_MS = 30_000;
@@ -456,6 +457,7 @@ export function gitStatusQueryOptions(cwd: string | null, enabled = true) {
 export function gitBranchPullRequestQueryOptions(cwd: string | null, enabled = true) {
   return queryOptions({
     queryKey: gitQueryKeys.branchPullRequest(cwd),
+    retry: (count, error) => !isPullRequestsUnavailableError(error) && count < 3,
     queryFn: async ({ client }) => {
       const readFence = capturePullRequestActionReadFence(client);
       const api = ensureNativeApi();

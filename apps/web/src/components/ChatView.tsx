@@ -1,3 +1,4 @@
+import { PULL_REQUEST_AUTO_FIX_ON } from "../betaFeatures";
 import { type LegendListRef } from "@legendapp/list/react";
 import {
   parseComputerInvocation,
@@ -67,6 +68,7 @@ import {
   gitCreateDetachedWorktreeMutationOptions,
   gitGithubRepositoryQueryOptions,
   gitStatusQueryOptions,
+  gitBranchPullRequestQueryOptions,
 } from "~/lib/gitReactQuery";
 import {
   CheckboxCheckedIcon,
@@ -329,7 +331,6 @@ import {
   type ComposerModelSelectionOptions,
 } from "./chat/ComposerModelPicker";
 import { ProviderInstancePicker } from "./chat/ProviderInstancePicker";
-import { ComposerModelEffortPicker } from "./chat/ComposerModelEffortPicker";
 import { ComposerPendingApprovalPanel } from "./chat/ComposerPendingApprovalPanel";
 import { ComposerPendingBackgroundWorkRow } from "./chat/ComposerPendingBackgroundWorkRow";
 import {
@@ -2190,6 +2191,9 @@ export default function ChatView({
 
   const branchesQuery = useQuery(gitBranchesQueryOptions(gitBranchSourceCwd));
   const gitStatusQuery = useQuery(gitStatusQueryOptions(gitBranchSourceCwd));
+  const branchPullRequestQuery = useQuery(
+    gitBranchPullRequestQueryOptions(gitBranchSourceCwd, PULL_REQUEST_AUTO_FIX_ON && isServerThread),
+  );
   const localFolderBrowseRootPath = getLocalFolderBrowseRootPath(
     serverConfigQuery.data?.homeDir ?? null,
     isMacNavigatorPlatform(),
@@ -4798,7 +4802,6 @@ export default function ChatView({
     composerFooterTier,
     isComposerApprovalState,
     isEmbed,
-    secondaryChromeReady,
     shouldRenderChatPaneContent,
     showComposerModelBootstrapSkeleton,
   ]);
@@ -4835,9 +4838,9 @@ export default function ChatView({
       <ComposerControlSkeleton widthClassName={composerModelEffortPickerWidthClassName} />
     )
   ) : (
-    <ComposerModelEffortPicker
-      compact={isComposerFooterCompact}
+    <ComposerModelPicker
       dense={isEmbed}
+      contextWindowLabel={composerContextWindowLabel}
       hideModelLabel={!composerFooterControlsPlan.showModelLabel}
       hideStatusLabel={!composerFooterControlsPlan.showTraitsLabel}
       effortControl={settings.composerEffortSlider ? "slider" : "menu"}
@@ -4861,7 +4864,7 @@ export default function ChatView({
       selectedProviderInstanceId={selectedProviderInstanceId}
       threadId={threadId}
       runtimeModel={selectedRuntimeModel}
-      runtimeModels={runtimeModelsByProvider[selectedProvider]}
+      runtimeModelsByProvider={runtimeModelsByProvider}
       runtimeAgents={dynamicAgents}
       modelOptions={selectedProviderModelOptions}
       prompt={prompt}
@@ -6111,7 +6114,11 @@ export default function ChatView({
             <ComposerPullRequestAutoFixHint
               threadId={threadId}
               isServerThread={isServerThread}
-              pullRequest={gitStatusQuery.data?.pr ?? null}
+              pullRequest={
+                branchPullRequestQuery.data?.branch === gitStatusQuery.data?.branch
+                  ? (branchPullRequestQuery.data?.pr ?? null)
+                  : null
+              }
               isWorking={isWorking}
               attachedToPrevious={
                 showComposerLiveChangesHeader ||

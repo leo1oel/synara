@@ -1,3 +1,4 @@
+import { useProjectEnvironmentStore } from "../projectEnvironmentStore";
 import { type ProjectId, type ProviderInstanceId, ThreadId } from "@synara/contracts";
 import { getDefaultModel } from "@synara/shared/model";
 import { useNavigate, useRouter } from "@tanstack/react-router";
@@ -103,6 +104,11 @@ export function useHandleNewThread() {
     }
 
     const entryPoint = options?.entryPoint ?? "chat";
+    const defaultEnvMode = isSynaraEmbedMode()
+      ? "local"
+      : ((entryPoint === "chat"
+          ? useProjectEnvironmentStore.getState().envModeByProjectId[projectId]
+          : undefined) ?? settings.defaultThreadEnvMode);
     const storeState = useStore.getState();
     const project = storeState.projects.find((candidate) => candidate.id === projectId);
     const projectDefaultModelSelection = isSynaraEmbedMode()
@@ -135,7 +141,7 @@ export function useHandleNewThread() {
         worktreePath: options?.worktreePath ?? null,
         hasExplicitWorktreePath: options?.worktreePath !== undefined,
         fresh: options?.fresh === true,
-        envMode: options?.envMode ?? null,
+        envMode: options?.envMode ?? draftThread?.envMode ?? defaultEnvMode,
         serverCwd,
         providerStatuses,
         statusesReconciled: providerStatusesReconciled,
