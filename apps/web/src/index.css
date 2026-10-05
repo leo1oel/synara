@@ -752,9 +752,16 @@ html[data-synara-embed="true"] #root {
 }
 
 html[data-synara-embed="true"] .chat-content-card {
+  margin: 0;
+  border: 0;
+  height: 100%;
   border-radius: 0 !important;
   box-shadow: none !important;
   background-color: var(--color-background-surface);
+}
+
+html[data-synara-embed="true"] .chat-content-card.h-dvh {
+  height: 100dvh;
 }
 
 /* The embedded Agent is a resizable sidebar, not a reading-width page. Keep the
@@ -1614,6 +1621,7 @@ html[data-synara-embed="true"] .app-settings-surface .rounded-lg {
 }
 
 html[data-synara-embed="true"] .chat-content-card::before,
+html[data-synara-embed="true"] .chat-content-card::after,
 html[data-synara-embed="true"] .chat-content-card-backing::after {
   display: none !important;
 }

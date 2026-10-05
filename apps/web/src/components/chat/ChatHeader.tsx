@@ -97,7 +97,7 @@ interface ChatHeaderProps {
   hideSidebarControls?: boolean;
   hideHandoffControls?: boolean;
   hideWorkspaceControls?: boolean;
-  forceHandoffLabel?: boolean;
+  handoffIconOnly?: boolean;
   historyProjectId?: ProjectId;
   onNewChat?: () => void;
   onDeleteChat?: (threadId: ThreadId, threadTitle: string) => void;
@@ -490,7 +490,7 @@ export function ChatHeader({
   hideSidebarControls: hideSidebarControlsProp,
   hideHandoffControls: hideHandoffControlsProp,
   hideWorkspaceControls: hideWorkspaceControlsProp,
-  forceHandoffLabel: forceHandoffLabelProp,
+  handoffIconOnly: handoffIconOnlyProp,
   historyProjectId,
   onNewChat,
   onDeleteChat,
@@ -538,7 +538,7 @@ export function ChatHeader({
   const hideHandoffControls = hideHandoffControlsProp ?? false;
   const showHandoffAction = showHandoffActionProp ?? true;
   const hideWorkspaceControls = hideWorkspaceControlsProp ?? false;
-  const forceHandoffLabel = forceHandoffLabelProp ?? false;
+  const handoffIconOnly = handoffIconOnlyProp ?? false;
   const minimalChrome = minimalChromeProp ?? false;
   const showGitActions = showGitActionsProp ?? true;
   const showDiffToggle = showDiffToggleProp ?? true;
@@ -803,8 +803,8 @@ export function ChatHeader({
                         type="button"
                         tone="surface"
                         className={cn(
-                          compact && !forceHandoffLabel ? "gap-1" : "gap-1.5",
-                          forceHandoffLabel &&
+                          compact || handoffIconOnly ? "gap-1" : "gap-1.5",
+                          handoffIconOnly &&
                             "text-[length:var(--lattice-type-label-size,12px)] sm:text-[length:var(--lattice-type-label-size,12px)]",
                         )}
                         label={handoffActionLabel}
@@ -815,10 +815,10 @@ export function ChatHeader({
                     <HandoffIcon
                       className={cn(
                         "shrink-0 opacity-80",
-                        forceHandoffLabel ? "size-3" : "size-[1em]",
+                        handoffIconOnly ? "size-3" : "size-[1em]",
                       )}
                     />
-                    {!compact || forceHandoffLabel ? (
+                    {!compact && !handoffIconOnly ? (
                       <span className="truncate font-normal">{i18n._("Hand off")}</span>
                     ) : null}
                   </MenuTrigger>

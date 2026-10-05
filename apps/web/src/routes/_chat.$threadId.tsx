@@ -18,7 +18,6 @@ import {
 } from "../chatRouteRecovery";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { parseDiffRouteSearch, stripDiffSearchParams } from "../diffRouteSearch";
-import { postEmbedReadyToLattice } from "../embedMode";
 import { useEmbeddedWorkspaceProject } from "../hooks/useEmbeddedWorkspaceProject";
 import { useHandleNewThread } from "../hooks/useHandleNewThread";
 import { readNativeApi } from "../nativeApi";
@@ -141,16 +140,7 @@ function ChatThreadRouteContent() {
     threadId,
   ]);
 
-  useEffect(() => {
-    if (
-      embedMode &&
-      routeThreadExists &&
-      activeProjectCwd &&
-      workspaceRootsEqual(activeProjectCwd, embedMode.workspaceRoot)
-    ) {
-      postEmbedReadyToLattice(embedMode);
-    }
-  }, [activeProjectCwd, embedMode, routeThreadExists]);
+
 
   useEffect(() => {
     return () => {
