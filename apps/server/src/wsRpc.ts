@@ -1571,6 +1571,11 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(resolveGitHubRepository(git, input.cwd), "Failed to resolve GitHub repository"),
         [WS_METHODS.gitStatus]: (input) =>
           rpcEffect(gitStatusBroadcaster.getStatus(input), "Failed to read git status"),
+        [WS_METHODS.gitBranchPullRequest]: (input) =>
+          rpcEffect(
+            gitStatusBroadcaster.getBranchPullRequest(input),
+            "Failed to read branch pull request",
+          ),
         [WS_METHODS.gitReadWorkingTreeDiff]: (input) =>
           rpcEffect(gitManager.readWorkingTreeDiff(input), "Failed to read working tree diff"),
         [WS_METHODS.gitBlameLine]: (input: GitBlameLineInput) =>

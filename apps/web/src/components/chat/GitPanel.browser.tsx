@@ -5,7 +5,7 @@
 import "../../index.css";
 
 import { I18nProvider } from "@lingui/react";
-import type { GitStatusResult, NativeApi } from "@synara/contracts";
+import type { GitBranchPullRequest, GitStatusResult, NativeApi } from "@synara/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -14,6 +14,7 @@ import { render } from "vitest-browser-react";
 
 import { i18n } from "../../i18n";
 import { GitPanel } from "./GitPanel";
+import { useAppTypography } from "../../hooks/useAppTypography";
 
 const TEST_CWD = "/tmp/research-writer";
 i18n.loadAndActivate({ locale: "en", messages: {} });
@@ -52,7 +53,6 @@ function gitStatus(branch: string, hasWorkingTreeChanges = true, aheadCount = 0)
     upstreamBranch: branch,
     aheadCount,
     behindCount: 0,
-    pr: null,
   };
 }
 
@@ -63,6 +63,9 @@ function installGitApi(
     aheadCount?: number;
     refreshGate?: Promise<void>;
     statusGate?: Promise<void>;
+    branchesGate?: Promise<void>;
+    pullRequestGate?: Promise<void>;
+    pullRequest?: GitBranchPullRequest;
   } = {},
 ) {
   const hasWorkingTreeChanges = options.hasWorkingTreeChanges ?? true;
@@ -71,12 +74,19 @@ function installGitApi(
   let branchReadCount = 0;
   const checkoutCalls: string[] = [];
   const actionCalls: Array<{ action: string; filePaths?: string[] }> = [];
+  const readCalls: string[] = [];
+  const openedUrls: string[] = [];
+  let resolvedPullRequests = 0;
   const patch = hasWorkingTreeChanges ? buildLongPatch() : "";
 
   window.nativeApi = {
     git: {
       listBranches: async () => {
+        readCalls.push("listBranches");
         branchReadCount += 1;
+        if (branchReadCount === 1) {
+          await options.branchesGate;
+        }
         if (branchReadCount > 1 && options.refreshGate) {
           await options.refreshGate;
         }
@@ -100,12 +110,20 @@ function installGitApi(
         };
       },
       status: async () => {
+        readCalls.push("status");
         await options.statusGate;
         return gitStatus(currentBranch, hasWorkingTreeChanges, aheadCount);
       },
-      readWorkingTreeDiff: async ({ scope }: { scope?: string }) => ({
-        patch: scope === "staged" ? "" : patch,
-      }),
+      branchPullRequest: async () => {
+        readCalls.push("branchPullRequest");
+        await options.pullRequestGate;
+        resolvedPullRequests += 1;
+        return { branch: currentBranch, pr: options.pullRequest ?? null };
+      },
+      readWorkingTreeDiff: async ({ scope }: { scope?: string }) => {
+        readCalls.push(`readWorkingTreeDiff:${scope ?? "workingTree"}`);
+        return { patch: scope === "staged" ? "" : patch };
+      },
       checkout: async ({ branch }: { branch: string }) => {
         checkoutCalls.push(branch);
         currentBranch = branch;
@@ -130,12 +148,30 @@ function installGitApi(
       },
       onActionProgress: () => () => undefined,
     },
+    shell: {
+      openExternal: async (url: string) => {
+        openedUrls.push(url);
+      },
+    },
     server: {
       getSettings: () => new Promise(() => undefined),
     },
   } as unknown as NativeApi;
 
-  return { actionCalls, checkoutCalls };
+  return {
+    actionCalls,
+    checkoutCalls,
+    readCalls,
+    openedUrls,
+    get resolvedPullRequests() {
+      return resolvedPullRequests;
+    },
+  };
+}
+
+function Typography() {
+  useAppTypography();
+  return null;
 }
 
 function renderWithQueryClient(element: ReactNode) {
@@ -148,6 +184,7 @@ function renderWithQueryClient(element: ReactNode) {
   return render(
     <I18nProvider i18n={i18n}>
       <QueryClientProvider client={queryClient}>
+        <Typography />
         <div className="h-[420px] w-[360px] bg-background text-foreground">{element}</div>
       </QueryClientProvider>
     </I18nProvider>,
@@ -327,7 +364,9 @@ describe("GitPanel", () => {
       await expect.element(page.getByRole("dialog")).toBeVisible();
       const popup = document.querySelector<HTMLElement>('[data-slot="dialog-popup"]')!;
       const description = popup.querySelector<HTMLElement>('[data-slot="dialog-description"]')!;
-      expect(getComputedStyle(description).fontSize).toBe("12px");
+      expect(getComputedStyle(description).fontSize).toBe(
+        getComputedStyle(document.documentElement).getPropertyValue("--app-font-size-ui-xs").trim(),
+      );
       expect(popup.getBoundingClientRect().width).toBeLessThanOrEqual(448);
       expect(popup.getBoundingClientRect().height).toBeLessThan(260);
       await new Promise((resolve) => window.setTimeout(resolve, 250));
@@ -417,7 +456,9 @@ describe("GitPanel", () => {
     );
     expect(description).not.toBeNull();
     expect(branchNameInput).not.toBeNull();
-    expect(getComputedStyle(description!).fontSize).toBe("12px");
+    expect(getComputedStyle(description!).fontSize).toBe(
+      getComputedStyle(document.documentElement).getPropertyValue("--app-font-size-ui-xs").trim(),
+    );
     expect(getComputedStyle(description!).lineHeight).toBe("16px");
     expect(getComputedStyle(branchNameInput!).height).toBe("28px");
   });
@@ -482,7 +523,7 @@ describe("GitPanel", () => {
       <GitPanel projectId={null} cwdOverride={TEST_CWD} showActions title="Changes" />,
     );
     try {
-      await expect.element(page.getByText("Loading changes...", { exact: true })).toBeVisible();
+      await expect.element(page.getByRole("status", { name: "Loading changes..." })).toBeVisible();
       await expect
         .element(page.getByText("No uncommitted changes.", { exact: true }))
         .not.toBeInTheDocument();
@@ -499,6 +540,96 @@ describe("GitPanel", () => {
       .toBeVisible();
     await expect.element(page.getByRole("button", { name: "More Git actions" })).toBeEnabled();
     await page.screenshot();
+  });
+
+  it("starts status and diff reads alongside the repository probe", async () => {
+    let releaseBranches!: () => void;
+    const branchesGate = new Promise<void>((resolve) => {
+      releaseBranches = resolve;
+    });
+    const { readCalls } = installGitApi({ branchesGate });
+    await renderWithQueryClient(
+      <GitPanel projectId={null} cwdOverride={TEST_CWD} showActions title="Changes" />,
+    );
+    try {
+      await expect
+        .poll(() => [...readCalls].toSorted())
+        .toEqual([
+          "listBranches",
+          "readWorkingTreeDiff:staged",
+          "readWorkingTreeDiff:unstaged",
+          "status",
+        ]);
+      // The changed files render before the branch list answers; only the action
+      // row is still a placeholder.
+      await expect.element(page.getByRole("button", { name: /src\/long\.ts/ })).toBeVisible();
+      await expect
+        .element(page.getByRole("button", { name: "Commit & push", exact: true }))
+        .not.toBeInTheDocument();
+      await page.screenshot();
+    } finally {
+      releaseBranches();
+    }
+    await expect
+      .element(page.getByRole("button", { name: "Commit & push", exact: true }))
+      .toBeVisible();
+  });
+
+  it("shows changes and Git actions without waiting for the branch pull request", async () => {
+    const { readCalls } = installGitApi({ pullRequestGate: new Promise<void>(() => undefined) });
+    await renderWithQueryClient(
+      <GitPanel projectId={null} cwdOverride={TEST_CWD} showActions title="Changes" />,
+    );
+
+    await expect.element(page.getByRole("button", { name: /src\/long\.ts/ })).toBeVisible();
+    await expect
+      .element(page.getByRole("button", { name: "Commit & push", exact: true }))
+      .toBeEnabled();
+    expect(readCalls).toContain("branchPullRequest");
+  });
+
+  it("renders the clean state while the PR is pending, then surfaces the PR", async () => {
+    let releasePullRequest!: () => void;
+    const pullRequestGate = new Promise<void>((resolve) => {
+      releasePullRequest = resolve;
+    });
+    const api = installGitApi({
+      hasWorkingTreeChanges: false,
+      pullRequestGate,
+      pullRequest: {
+        number: 42,
+        title: "Fixture PR",
+        url: "https://github.com/example/repo/pull/42",
+        baseBranch: "main",
+        headBranch: "feature/source-control",
+        state: "open",
+        isDraft: false,
+        mergeability: "mergeable",
+        additions: 1,
+        deletions: 0,
+        changedFiles: 1,
+      },
+    });
+    await renderWithQueryClient(
+      <GitPanel projectId={null} cwdOverride={TEST_CWD} showActions title="Changes" />,
+    );
+    try {
+      await expect
+        .element(page.getByText("No uncommitted changes.", { exact: true }))
+        .toBeVisible();
+      await page.getByRole("button", { name: "More Git actions" }).click();
+      // A clean published feature branch can still create a PR. Once an existing PR
+      // arrives the fork preserves the Create PR label and changes the action to open it.
+      const prAction = page.getByRole("menuitem", { name: "Create PR", exact: true });
+      await expect.element(prAction).toBeVisible();
+      expect(api.resolvedPullRequests).toBe(0);
+      releasePullRequest();
+      await expect.poll(() => api.resolvedPullRequests).toBeGreaterThan(0);
+      await prAction.click();
+      await expect.poll(() => api.openedUrls).toEqual(["https://github.com/example/repo/pull/42"]);
+    } finally {
+      releasePullRequest();
+    }
   });
 
   it("uses one consistent clean state and reports committed work waiting to push", async () => {

@@ -1,9 +1,13 @@
-import type { GitStatusResult, GitStatusStreamEvent } from "@synara/contracts";
-import { Deferred, Effect, Layer, Scope, Stream } from "effect";
+import type {
+  GitBranchPullRequest,
+  GitStatusResult,
+  GitStatusStreamEvent,
+} from "@synara/contracts";
+import { Deferred, Effect, Fiber, Layer, Scope, Stream } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { GitManagerServiceError } from "../Errors";
-import { GitCore, type GitCoreShape, type GitStatusDetails } from "../Services/GitCore";
+import { GitHubCliError, type GitManagerServiceError } from "../Errors";
+import { GitCore, type GitBranchContext, type GitCoreShape } from "../Services/GitCore";
 import { GitManager, type GitManagerShape } from "../Services/GitManager";
 import { GitStatusBroadcaster } from "../Services/GitStatusBroadcaster";
 import { GIT_STATUS_CACHE_MAX_ENTRIES } from "../gitStatusCache";
@@ -17,35 +21,52 @@ const baseStatus: GitStatusResult = {
   upstreamBranch: "feature/status-broadcast",
   aheadCount: 0,
   behindCount: 0,
-  pr: null,
 };
 
-const baseDetails: GitStatusDetails = {
+const baseBranchContext: GitBranchContext = {
   isRepo: true,
-  hasOriginRemote: true,
-  isDefaultBranch: false,
   branch: baseStatus.branch,
   upstreamRef: "origin/feature/status-broadcast",
-  upstreamBranch: baseStatus.upstreamBranch,
-  hasWorkingTreeChanges: baseStatus.hasWorkingTreeChanges,
-  workingTree: baseStatus.workingTree,
-  hasUpstream: baseStatus.hasUpstream,
-  aheadCount: baseStatus.aheadCount,
-  behindCount: baseStatus.behindCount,
 };
 
-function makeTestLayer(state: {
-  currentDetails: GitStatusDetails;
+function makePullRequest(number: number): GitBranchPullRequest {
+  return {
+    number,
+    title: `PR ${number}`,
+    url: `https://github.com/acme/repo/pull/${number}`,
+    state: "open",
+    baseBranch: "main",
+    headBranch: "feature/status-broadcast",
+    isDraft: false,
+    mergeability: "unknown",
+    additions: null,
+    deletions: null,
+    changedFiles: null,
+  };
+}
+
+interface TestState {
   currentStatus: GitStatusResult;
-  detailsCalls: number;
+  currentBranchContext: GitBranchContext;
   statusCalls: number;
-}) {
+  pullRequestLookups: Array<{ branch: string; upstreamRef: string | null }>;
+  lookupPullRequest: Effect.Effect<GitBranchPullRequest | null, GitManagerServiceError>;
+}
+
+function makeState(overrides?: Partial<TestState>): TestState {
+  return {
+    currentStatus: baseStatus,
+    currentBranchContext: baseBranchContext,
+    statusCalls: 0,
+    pullRequestLookups: [],
+    lookupPullRequest: Effect.succeed(null),
+    ...overrides,
+  };
+}
+
+function makeTestLayer(state: TestState) {
   const gitCore = {
-    statusDetails: () =>
-      Effect.sync(() => {
-        state.detailsCalls += 1;
-        return state.currentDetails;
-      }),
+    readBranchContext: () => Effect.sync(() => state.currentBranchContext),
   } as unknown as GitCoreShape;
   const gitManager: GitManagerShape = {
     connectGitHubRemote: () => Effect.die("connectGitHubRemote should not be called in this test"),
@@ -56,8 +77,11 @@ function makeTestLayer(state: {
         state.statusCalls += 1;
         return state.currentStatus;
       }),
-    pullRequestForBranch: () =>
-      Effect.die("pullRequestForBranch should not be called in this test"),
+    pullRequestForBranch: (input) =>
+      Effect.suspend(() => {
+        state.pullRequestLookups.push({ branch: input.branch, upstreamRef: input.upstreamRef });
+        return state.lookupPullRequest;
+      }),
     readWorkingTreeDiff: () => Effect.die("readWorkingTreeDiff should not be called in this test"),
     readWorkingTreeDiffStats: () =>
       Effect.die("readWorkingTreeDiffStats should not be called in this test"),
@@ -80,12 +104,7 @@ function makeTestLayer(state: {
 }
 
 const runBroadcasterTest = (
-  state: {
-    currentDetails: GitStatusDetails;
-    currentStatus: GitStatusResult;
-    detailsCalls: number;
-    statusCalls: number;
-  },
+  state: TestState,
   effect: Effect.Effect<void, GitManagerServiceError, GitStatusBroadcaster | Scope.Scope>,
 ) => effect.pipe(Effect.provide(makeTestLayer(state)), Effect.scoped, Effect.runPromise);
 
@@ -94,13 +113,9 @@ afterEach(() => {
 });
 
 describe("GitStatusBroadcasterLive", () => {
-  it("refreshes local git status on repeated reads without repeating PR lookup", async () => {
-    const state = {
-      currentDetails: baseDetails,
-      currentStatus: baseStatus,
-      detailsCalls: 0,
-      statusCalls: 0,
-    };
+  it("serves status without looking up the branch pull request", async () => {
+    // A lookup that never finishes stands in for a slow or hung GitHub round trip.
+    const state = makeState({ lookupPullRequest: Effect.never });
 
     await runBroadcasterTest(
       state,
@@ -108,8 +123,8 @@ describe("GitStatusBroadcasterLive", () => {
         const broadcaster = yield* GitStatusBroadcaster;
 
         const first = yield* broadcaster.getStatus({ cwd: "/repo" });
-        state.currentDetails = {
-          ...baseDetails,
+        state.currentStatus = {
+          ...baseStatus,
           hasWorkingTreeChanges: true,
           workingTree: {
             files: [{ path: "src/app.ts", insertions: 5, deletions: 1 }],
@@ -120,215 +135,165 @@ describe("GitStatusBroadcasterLive", () => {
         const second = yield* broadcaster.getStatus({ cwd: "/repo" });
 
         expect(first).toEqual(baseStatus);
-        expect(second).toEqual({
-          ...baseStatus,
-          hasWorkingTreeChanges: true,
-          workingTree: state.currentDetails.workingTree,
-        });
-        expect(state.statusCalls).toBe(1);
-        expect(state.detailsCalls).toBe(1);
-      }),
-    );
-  });
-
-  it("refreshes the configured PR base while reusing cached remote metadata", async () => {
-    const initialStatus = {
-      ...baseStatus,
-      configuredPrBaseBranch: "main",
-    };
-    const state = {
-      currentDetails: {
-        ...baseDetails,
-        configuredPrBaseBranch: "main",
-      },
-      currentStatus: initialStatus,
-      detailsCalls: 0,
-      statusCalls: 0,
-    };
-
-    await runBroadcasterTest(
-      state,
-      Effect.gen(function* () {
-        const broadcaster = yield* GitStatusBroadcaster;
-
-        const first = yield* broadcaster.getStatus({ cwd: "/repo" });
-        state.currentDetails = {
-          ...baseDetails,
-          configuredPrBaseBranch: "release",
-        };
-        const second = yield* broadcaster.getStatus({ cwd: "/repo" });
-
-        expect(first.configuredPrBaseBranch).toBe("main");
-        expect(second.configuredPrBaseBranch).toBe("release");
-        expect(state.statusCalls).toBe(1);
-        expect(state.detailsCalls).toBe(1);
-      }),
-    );
-  });
-
-  it("refreshes full status when cached remote metadata expires", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(0);
-    const state = {
-      currentDetails: baseDetails,
-      currentStatus: baseStatus,
-      detailsCalls: 0,
-      statusCalls: 0,
-    };
-
-    await runBroadcasterTest(
-      state,
-      Effect.gen(function* () {
-        const broadcaster = yield* GitStatusBroadcaster;
-
-        const first = yield* broadcaster.getStatus({ cwd: "/repo" });
-        vi.setSystemTime(31_000);
-        state.currentStatus = {
-          ...baseStatus,
-          pr: {
-            number: 42,
-            title: "Open PR",
-            url: "https://github.com/acme/repo/pull/42",
-            state: "open",
-            baseBranch: "main",
-            headBranch: "feature/status-refresh",
-            isDraft: false,
-            mergeability: "unknown",
-            additions: null,
-            deletions: null,
-            changedFiles: null,
-          },
-        };
-        const second = yield* broadcaster.getStatus({ cwd: "/repo" });
-
-        expect(first.pr).toBeNull();
-        expect(second.pr?.number).toBe(42);
+        expect(second).toEqual(state.currentStatus);
         expect(state.statusCalls).toBe(2);
-        // Expired remote metadata can never be reused, so the details probe is
-        // skipped instead of being fetched and thrown away by the full reload.
-        expect(state.detailsCalls).toBe(0);
+        expect(state.pullRequestLookups).toEqual([]);
       }),
     );
   });
 
-  it("does not extend the remote metadata TTL when reusing cached remote status", async () => {
+  it("resolves the branch pull request separately and reuses it within the TTL", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
-    const state = {
-      currentDetails: baseDetails,
-      currentStatus: baseStatus,
-      detailsCalls: 0,
-      statusCalls: 0,
-    };
+    const state = makeState({ lookupPullRequest: Effect.succeed(makePullRequest(42)) });
 
     await runBroadcasterTest(
       state,
       Effect.gen(function* () {
         const broadcaster = yield* GitStatusBroadcaster;
 
-        yield* broadcaster.getStatus({ cwd: "/repo" });
+        const first = yield* broadcaster.getBranchPullRequest({ cwd: "/repo" });
         vi.setSystemTime(20_000);
-        yield* broadcaster.getStatus({ cwd: "/repo" });
+        const second = yield* broadcaster.getBranchPullRequest({ cwd: "/repo" });
+
+        expect(first.pr?.number).toBe(42);
+        expect(second.pr?.number).toBe(42);
+        expect(state.pullRequestLookups).toEqual([
+          { branch: baseBranchContext.branch, upstreamRef: baseBranchContext.upstreamRef },
+        ]);
+        expect(state.statusCalls).toBe(0);
 
         vi.setSystemTime(31_000);
-        state.currentStatus = {
-          ...baseStatus,
-          pr: {
-            number: 43,
-            title: "Fresh PR",
-            url: "https://github.com/acme/repo/pull/43",
-            state: "open",
-            baseBranch: "main",
-            headBranch: "feature/status-refresh",
-            isDraft: false,
-            mergeability: "unknown",
-            additions: null,
-            deletions: null,
-            changedFiles: null,
-          },
-        };
-        const third = yield* broadcaster.getStatus({ cwd: "/repo" });
-
-        expect(third.pr?.number).toBe(43);
-        expect(state.statusCalls).toBe(2);
-        expect(state.detailsCalls).toBe(1);
+        state.lookupPullRequest = Effect.succeed(makePullRequest(43));
+        const expired = yield* broadcaster.getBranchPullRequest({ cwd: "/repo" });
+        expect(expired.pr?.number).toBe(43);
+        expect(state.pullRequestLookups).toHaveLength(2);
       }),
     );
   });
 
-  it("refreshes the cached snapshot after explicit invalidation", async () => {
-    const state = {
-      currentDetails: baseDetails,
-      currentStatus: baseStatus,
-      detailsCalls: 0,
-      statusCalls: 0,
-    };
-
-    await runBroadcasterTest(
-      state,
-      Effect.gen(function* () {
-        const broadcaster = yield* GitStatusBroadcaster;
-        const initial = yield* broadcaster.getStatus({ cwd: "/repo" });
-
-        state.currentStatus = {
-          ...baseStatus,
-          branch: "feature/updated-status",
-          aheadCount: 2,
-        };
-        state.currentDetails = {
-          ...baseDetails,
-          branch: "feature/updated-status",
-          aheadCount: 2,
-        };
-        const refreshed = yield* broadcaster.refreshStatus("/repo");
-        const cached = yield* broadcaster.getStatus({ cwd: "/repo" });
-
-        expect(initial).toEqual(baseStatus);
-        expect(refreshed).toEqual(state.currentStatus);
-        expect(cached).toEqual(state.currentStatus);
-        expect(state.statusCalls).toBe(2);
-        expect(state.detailsCalls).toBe(1);
-      }),
-    );
-  });
-
-  it("reads git status once per poll when the cache has expired", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(0);
-    const state = {
-      currentDetails: baseDetails,
-      currentStatus: baseStatus,
-      detailsCalls: 0,
-      statusCalls: 0,
-    };
+  it("looks the pull request up again when the branch changes", async () => {
+    const state = makeState({ lookupPullRequest: Effect.succeed(makePullRequest(42)) });
 
     await runBroadcasterTest(
       state,
       Effect.gen(function* () {
         const broadcaster = yield* GitStatusBroadcaster;
 
-        // The sidebar polls on a 60s timer against a 30s remote TTL, so every poll
-        // after the first misses the cache. Each miss must cost exactly one status
-        // read, not a discarded details probe plus a full reload.
-        yield* broadcaster.getStatus({ cwd: "/repo" });
-        vi.setSystemTime(60_000);
-        yield* broadcaster.getStatus({ cwd: "/repo" });
-        vi.setSystemTime(120_000);
-        yield* broadcaster.getStatus({ cwd: "/repo" });
+        yield* broadcaster.getBranchPullRequest({ cwd: "/repo" });
+        state.currentBranchContext = { ...baseBranchContext, branch: "feature/other" };
+        state.lookupPullRequest = Effect.succeed(null);
+        const switched = yield* broadcaster.getBranchPullRequest({ cwd: "/repo" });
 
-        expect(state.statusCalls).toBe(3);
-        expect(state.detailsCalls).toBe(0);
+        expect(switched.pr).toBeNull();
+        expect(state.pullRequestLookups.map((lookup) => lookup.branch)).toEqual([
+          baseBranchContext.branch,
+          "feature/other",
+        ]);
       }),
     );
   });
 
-  it("evicts the coldest working directory once the cache is full", async () => {
-    const state = {
-      currentDetails: baseDetails,
-      currentStatus: baseStatus,
-      detailsCalls: 0,
-      statusCalls: 0,
-    };
+  it("skips GitHub for detached HEADs and non-repositories", async () => {
+    const state = makeState({
+      currentBranchContext: { isRepo: true, branch: null, upstreamRef: null },
+    });
+
+    await runBroadcasterTest(
+      state,
+      Effect.gen(function* () {
+        const broadcaster = yield* GitStatusBroadcaster;
+
+        expect(yield* broadcaster.getBranchPullRequest({ cwd: "/repo" })).toEqual({
+          branch: null,
+          pr: null,
+        });
+        state.currentBranchContext = { isRepo: false, branch: null, upstreamRef: null };
+        expect(yield* broadcaster.getBranchPullRequest({ cwd: "/repo" })).toEqual({
+          branch: null,
+          pr: null,
+        });
+        expect(state.pullRequestLookups).toEqual([]);
+      }),
+    );
+  });
+
+  it("reports gh failures as no pull request without caching them", async () => {
+    const state = makeState({
+      lookupPullRequest: Effect.fail(
+        new GitHubCliError({ operation: "execute", detail: "gh auth login required" }),
+      ),
+    });
+
+    await runBroadcasterTest(
+      state,
+      Effect.gen(function* () {
+        const broadcaster = yield* GitStatusBroadcaster;
+
+        const failed = yield* broadcaster.getBranchPullRequest({ cwd: "/repo" });
+        state.lookupPullRequest = Effect.succeed(makePullRequest(7));
+        const recovered = yield* broadcaster.getBranchPullRequest({ cwd: "/repo" });
+
+        expect(failed).toEqual({ branch: baseBranchContext.branch, pr: null });
+        expect(recovered.pr?.number).toBe(7);
+        expect(state.pullRequestLookups).toHaveLength(2);
+      }),
+    );
+  });
+
+  it("drops the cached pull request when status is refreshed after a mutation", async () => {
+    const state = makeState({ lookupPullRequest: Effect.succeed(null) });
+
+    await runBroadcasterTest(
+      state,
+      Effect.gen(function* () {
+        const broadcaster = yield* GitStatusBroadcaster;
+
+        expect((yield* broadcaster.getBranchPullRequest({ cwd: "/repo" })).pr).toBeNull();
+        state.lookupPullRequest = Effect.succeed(makePullRequest(101));
+        yield* broadcaster.refreshStatus("/repo");
+        const afterRefresh = yield* broadcaster.getBranchPullRequest({ cwd: "/repo" });
+
+        expect(afterRefresh.pr?.number).toBe(101);
+        expect(state.pullRequestLookups).toHaveLength(2);
+      }),
+    );
+  });
+
+  it("does not cache a lookup that was in flight across a refresh", async () => {
+    const state = makeState();
+
+    await runBroadcasterTest(
+      state,
+      Effect.gen(function* () {
+        const broadcaster = yield* GitStatusBroadcaster;
+        const lookupStarted = yield* Deferred.make<void>();
+        const releaseLookup = yield* Deferred.make<void>();
+        state.lookupPullRequest = Deferred.succeed(lookupStarted, undefined).pipe(
+          Effect.andThen(Deferred.await(releaseLookup)),
+          Effect.as(null),
+        );
+
+        const staleLookup = yield* broadcaster
+          .getBranchPullRequest({ cwd: "/repo" })
+          .pipe(Effect.forkScoped);
+        yield* Deferred.await(lookupStarted);
+        // e.g. "Commit, push & create PR" finishes while the old lookup is still running.
+        yield* broadcaster.refreshStatus("/repo");
+        yield* Deferred.succeed(releaseLookup, undefined);
+        yield* Fiber.join(staleLookup);
+
+        state.lookupPullRequest = Effect.succeed(makePullRequest(55));
+        const fresh = yield* broadcaster.getBranchPullRequest({ cwd: "/repo" });
+
+        expect(fresh.pr?.number).toBe(55);
+        expect(state.pullRequestLookups).toHaveLength(2);
+      }),
+    );
+  });
+
+  it("evicts the coldest working directory once the pull request cache is full", async () => {
+    const state = makeState();
 
     await runBroadcasterTest(
       state,
@@ -336,33 +301,25 @@ describe("GitStatusBroadcasterLive", () => {
         const broadcaster = yield* GitStatusBroadcaster;
 
         // Every thread worktree is a distinct cwd, so an unbounded cache would pin
-        // status details for every directory the server ever saw.
+        // pull request lookups for every directory the server ever saw.
         for (let index = 0; index <= GIT_STATUS_CACHE_MAX_ENTRIES; index += 1) {
-          yield* broadcaster.getStatus({ cwd: `/worktrees/repo-${index}` });
+          yield* broadcaster.getBranchPullRequest({ cwd: `/worktrees/repo-${index}` });
         }
-        expect(state.statusCalls).toBe(GIT_STATUS_CACHE_MAX_ENTRIES + 1);
+        expect(state.pullRequestLookups).toHaveLength(GIT_STATUS_CACHE_MAX_ENTRIES + 1);
 
-        // The most recent directories are still cached (details reuse, no reload).
-        yield* broadcaster.getStatus({
+        yield* broadcaster.getBranchPullRequest({
           cwd: `/worktrees/repo-${GIT_STATUS_CACHE_MAX_ENTRIES}`,
         });
-        expect(state.statusCalls).toBe(GIT_STATUS_CACHE_MAX_ENTRIES + 1);
-        expect(state.detailsCalls).toBe(1);
+        expect(state.pullRequestLookups).toHaveLength(GIT_STATUS_CACHE_MAX_ENTRIES + 1);
 
-        // The coldest one was evicted, so it reloads from git.
-        yield* broadcaster.getStatus({ cwd: "/worktrees/repo-0" });
-        expect(state.statusCalls).toBe(GIT_STATUS_CACHE_MAX_ENTRIES + 2);
+        yield* broadcaster.getBranchPullRequest({ cwd: "/worktrees/repo-0" });
+        expect(state.pullRequestLookups).toHaveLength(GIT_STATUS_CACHE_MAX_ENTRIES + 2);
       }),
     );
   });
 
   it("streams a status snapshot first and later refresh updates", async () => {
-    const state = {
-      currentDetails: baseDetails,
-      currentStatus: baseStatus,
-      detailsCalls: 0,
-      statusCalls: 0,
-    };
+    const state = makeState();
 
     await runBroadcasterTest(
       state,
@@ -401,7 +358,6 @@ describe("GitStatusBroadcasterLive", () => {
             upstreamBranch: baseStatus.upstreamBranch,
             aheadCount: baseStatus.aheadCount,
             behindCount: baseStatus.behindCount,
-            pr: baseStatus.pr,
           },
         });
         expect(localUpdated).toEqual({

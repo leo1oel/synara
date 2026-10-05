@@ -1,3 +1,4 @@
+import type { GitBranchPullRequest, GitStatusResult } from "@synara/contracts";
 import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 
@@ -11,6 +12,7 @@ vi.mock("../nativeApi", () => ({ ensureNativeApi: () => ({ git: { readWorkingTre
 import {
   gitQueryKeys,
   gitStatusQueryOptions,
+  withBranchPullRequest,
   gitWorkingTreeDiffQueryOptions,
   invalidateGitQueries,
   invalidateGitQueriesForCwds,
@@ -458,5 +460,42 @@ describe("git expensive-read capacity retry", () => {
     expect(options.retry(0, new Error("network"))).toBe(true);
     expect(options.retry(3, new Error("network"))).toBe(false);
     expect(options.retryDelay(0, capacityError as never)).toBe(375);
+  });
+});
+
+describe("joining local status and branch PR reads", () => {
+  const status: GitStatusResult = {
+    branch: "feature/new",
+    hasWorkingTreeChanges: false,
+    workingTree: { files: [], insertions: 0, deletions: 0 },
+    hasUpstream: false,
+    upstreamBranch: null,
+    aheadCount: 0,
+    behindCount: 0,
+  };
+  const pr: GitBranchPullRequest = {
+    number: 42,
+    title: "Imported PR",
+    url: "https://github.com/example/repo/pull/42",
+    baseBranch: "main",
+    headBranch: "remote/head",
+    state: "open",
+    isDraft: false,
+    mergeability: "unknown",
+    additions: null,
+    deletions: null,
+    changedFiles: null,
+  };
+
+  it("keeps stale PR actions absent when the checkout changes before the PR read", () => {
+    expect(withBranchPullRequest(status, { branch: "feature/old", pr })).toEqual({
+      ...status,
+      pr: null,
+    });
+    expect(withBranchPullRequest(status, undefined)).toEqual({ ...status, pr: null });
+  });
+
+  it("surfaces matching checkout PRs even when the remote head has a different name", () => {
+    expect(withBranchPullRequest(status, { branch: status.branch, pr })).toEqual({ ...status, pr });
   });
 });

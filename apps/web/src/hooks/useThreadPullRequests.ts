@@ -1,12 +1,13 @@
 // FILE: useThreadPullRequests.ts
 // Purpose: Shared PR-badge source for thread rows (sidebar tree, activity view, kanban
-//          cards). Polls live git status per checkout plus the stored PR reference per
+//          cards). Polls live git status and branch PR per checkout plus the stored PR per
 //          thread, then resolves which PR each thread row should surface.
 // Layer: UI state hook (resolution rules live in Sidebar.logic.ts)
 // Exports: useThreadPullRequests, resolveThreadPullRequestFallback, toThreadPullRequest
 
 import type {
-  GitStatusResult,
+  GitBranchPullRequestResult,
+  GitStatusWithPullRequest,
   OrchestrationThreadPullRequest,
   ProjectId,
   ThreadId,
@@ -16,10 +17,15 @@ import { useQueries } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { resolveSidebarThreadPullRequest } from "../components/Sidebar.logic";
-import { gitResolvePullRequestQueryOptions, gitStatusQueryOptions } from "../lib/gitReactQuery";
+import {
+  gitBranchPullRequestQueryOptions,
+  gitResolvePullRequestQueryOptions,
+  gitStatusQueryOptions,
+  withBranchPullRequest,
+} from "../lib/gitReactQuery";
 import type { SidebarThreadSummary } from "../types";
 
-export type ThreadPullRequest = GitStatusResult["pr"];
+export type ThreadPullRequest = GitBranchPullRequestResult["pr"];
 
 export type ThreadPullRequestSource = Pick<
   SidebarThreadSummary,
@@ -130,6 +136,13 @@ export function useThreadPullRequests(input: {
       refetchInterval: THREAD_PR_REFETCH_INTERVAL_MS,
     })),
   });
+  const threadBranchPullRequestQueries = useQueries({
+    queries: threadGitStatusCwds.map((cwd) => ({
+      ...gitBranchPullRequestQueryOptions(cwd),
+      staleTime: THREAD_PR_STALE_TIME_MS,
+      refetchInterval: THREAD_PR_REFETCH_INTERVAL_MS,
+    })),
+  });
   const threadStoredPrTargets = useMemo(
     () =>
       threadGitTargets.flatMap((target) =>
@@ -152,15 +165,18 @@ export function useThreadPullRequests(input: {
     })),
   });
   return useMemo(() => {
-    const statusByCwd = new Map<string, GitStatusResult>();
+    const statusByCwd = new Map<string, GitStatusWithPullRequest>();
     for (let index = 0; index < threadGitStatusCwds.length; index += 1) {
       const cwd = threadGitStatusCwds[index];
       if (!cwd) continue;
       // Keep the last successful snapshot during a failed background refetch. React Query
       // retains that data, and it is still a better branch authority than stale thread metadata.
+      // Live status counts only once the branch PR lookup has answered too; until then the
+      // persisted PR stays authoritative instead of flashing the badge away.
       const status = threadGitStatusQueries[index]?.data;
-      if (status) {
-        statusByCwd.set(cwd, status);
+      const branchPullRequest = threadBranchPullRequestQueries[index]?.data;
+      if (status && branchPullRequest) {
+        statusByCwd.set(cwd, withBranchPullRequest(status, branchPullRequest));
       }
     }
 
@@ -198,6 +214,7 @@ export function useThreadPullRequests(input: {
     }
     return map;
   }, [
+    threadBranchPullRequestQueries,
     threadGitStatusCwds,
     threadGitStatusQueries,
     threadGitTargets,

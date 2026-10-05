@@ -1,7 +1,7 @@
 import type {
   GitRunStackedActionResult,
   GitStackedAction,
-  GitStatusResult,
+  GitStatusWithPullRequest,
 } from "@synara/contracts";
 import { isTemporaryWorktreeBranch, resolveUniqueSynaraBranchName } from "@synara/shared/git";
 
@@ -124,7 +124,7 @@ export type CreatePrExecution =
  * dialog (handled by the caller) before switching to a feature branch.
  */
 export function resolveCreatePrExecution(input: {
-  gitStatus: GitStatusResult | null;
+  gitStatus: GitStatusWithPullRequest | null;
   isBusy: boolean;
   isDefaultBranch: boolean;
   hasOriginRemote: boolean;
@@ -174,7 +174,7 @@ function extractTrackedBranchName(upstreamBranch: string | null | undefined): st
 }
 
 export function resolveCreatePrBaseBranch(
-  gitStatus: GitStatusResult | null,
+  gitStatus: GitStatusWithPullRequest | null,
   defaultBranchName?: string | null,
 ): string {
   if (gitStatus?.configuredPrBaseBranch) {
@@ -188,7 +188,7 @@ export function resolveCreatePrBaseBranch(
 }
 
 function tracksDefaultUpstream(
-  gitStatus: GitStatusResult,
+  gitStatus: GitStatusWithPullRequest,
   defaultBranchName?: string | null,
 ): boolean {
   const trackedBranchName = extractTrackedBranchName(gitStatus.upstreamBranch);
@@ -199,7 +199,7 @@ function tracksDefaultUpstream(
 
 /** Git state a dialog resolves its available actions from — shared by Create PR and Commit. */
 export interface GitDialogContext {
-  gitStatus: GitStatusResult | null;
+  gitStatus: GitStatusWithPullRequest | null;
   isBusy: boolean;
   isDefaultBranch: boolean;
   hasOriginRemote: boolean;
@@ -207,9 +207,9 @@ export interface GitDialogContext {
 }
 
 export interface CreatePrDialogRuntimeStatus {
-  gitStatus: GitStatusResult | null;
+  gitStatus: GitStatusWithPullRequest | null;
   isDefaultBranch: boolean;
-  statusOverride: GitStatusResult | null;
+  statusOverride: GitStatusWithPullRequest | null;
 }
 
 /**
@@ -220,9 +220,9 @@ export interface CreatePrDialogRuntimeStatus {
  * working-tree or branch changes are reflected by the dialog.
  */
 export function resolveCreatePrDialogRuntimeStatus(input: {
-  liveGitStatus: GitStatusResult | null;
-  statusOverride: GitStatusResult | null;
-  statusOverrideSource: GitStatusResult | null;
+  liveGitStatus: GitStatusWithPullRequest | null;
+  statusOverride: GitStatusWithPullRequest | null;
+  statusOverrideSource: GitStatusWithPullRequest | null;
   isDefaultBranch: boolean;
   isDefaultBranchOverride: boolean | null;
 }): CreatePrDialogRuntimeStatus {
@@ -345,7 +345,7 @@ export function summarizeGitResult(result: GitRunStackedActionResult): {
 }
 
 export function buildMenuItems(
-  gitStatus: GitStatusResult | null,
+  gitStatus: GitStatusWithPullRequest | null,
   isBusy: boolean,
   hasOriginRemote = true,
   isDefaultBranch = false,
@@ -436,7 +436,7 @@ export function buildMenuItems(
  */
 export function resolveGitMenuActionDisabledReason(input: {
   item: GitActionMenuItem;
-  gitStatus: GitStatusResult | null;
+  gitStatus: GitStatusWithPullRequest | null;
   isBusy: boolean;
   hasOriginRemote: boolean;
   isDefaultBranch: boolean;
@@ -627,7 +627,7 @@ export function resolveCommitDialogActions(input: {
 }
 
 export function resolveQuickAction(
-  gitStatus: GitStatusResult | null,
+  gitStatus: GitStatusWithPullRequest | null,
   isBusy: boolean,
   isDefaultBranch = false,
   hasOriginRemote = true,
@@ -792,7 +792,7 @@ export function resolveQuickAction(
  * via resolveCreatePrExecution instead.
  */
 export function resolveCreatePrActionAvailability(input: {
-  gitStatus: GitStatusResult | null;
+  gitStatus: GitStatusWithPullRequest | null;
   isDefaultBranch?: boolean;
   hasOriginRemote?: boolean;
   defaultBranchName?: string | null | undefined;
@@ -824,7 +824,7 @@ export function resolveCreatePrActionAvailability(input: {
 }
 
 export function resolvePullActionAvailability(input: {
-  gitStatus: GitStatusResult | null;
+  gitStatus: GitStatusWithPullRequest | null;
   isBusy: boolean;
 }): { canRun: boolean; hint: string | null } {
   const { gitStatus, isBusy } = input;
@@ -874,7 +874,7 @@ export function resolvePromotedPullPresentation(input: {
 
 export function shouldOfferCreateBranchPrompt(input: {
   activeWorktreePath: string | null;
-  gitStatus: Pick<GitStatusResult, "branch" | "hasUpstream"> | null;
+  gitStatus: Pick<GitStatusWithPullRequest, "branch" | "hasUpstream"> | null;
   createBranchFlowCompleted?: boolean;
 }): boolean {
   if (!input.activeWorktreePath) return false;
@@ -936,7 +936,7 @@ export function resolveDefaultBranchActionDialogCopy(input: {
 
 export function resolveLiveThreadBranchUpdate(input: {
   threadBranch: string | null;
-  gitStatus: GitStatusResult | null;
+  gitStatus: GitStatusWithPullRequest | null;
 }): { branch: string | null } | null {
   if (!input.gitStatus) {
     return null;
