@@ -13,9 +13,6 @@ import {
 } from "../components/RestoreOrCreateChatRoute";
 import { readSidebarUiState } from "../components/Sidebar.uiState";
 import { useComposerDraftStore } from "../composerDraftStore";
-import { useEmbeddedWorkspaceProject } from "../hooks/useEmbeddedWorkspaceProject";
-import { useHandleNewThread } from "../hooks/useHandleNewThread";
-import { SplashScreen } from "../components/SplashScreen";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
 import { VOID_SPACE_KEY } from "../lib/spaceGrouping";
 import { collectGroupProjectIds } from "../lib/groupProjects";
@@ -37,8 +34,6 @@ export interface ChatIndexSearch extends LatticeEmbedSearch {
 
 function ChatIndexRouteView() {
   const { handleNewChat } = useHandleNewChat();
-  const { handleNewThread } = useHandleNewThread();
-  const { embedMode, projectId: embeddedProjectId, bindingError } = useEmbeddedWorkspaceProject();
   const landingSpaceKey = Route.useSearch({ select: (search) => search.space });
   const threadIds = useStore((state) => state.threadIds ?? EMPTY_THREAD_IDS);
   const projects = useStore((state) => state.projects);
@@ -51,17 +46,8 @@ function ChatIndexRouteView() {
   // A Space landing reuses the stored home-chat draft instead of minting one (same reasoning as
   // the /groups landing): a fresh draft per visit would litter the Chats container every time
   // someone clicked through their empty Spaces.
-  const createFreshChat = async () => {
-    if (embedMode && embeddedProjectId) {
-      const threadId = await handleNewThread(embeddedProjectId, { fresh: true, envMode: "local" });
-      return { ok: true as const, threadId };
-    }
-    return landingSpaceKey === undefined ? handleNewChat({ fresh: true }) : handleNewChat();
-  };
-
-  if (embedMode && !embeddedProjectId) {
-    return <SplashScreen errorMessage={bindingError} />;
-  }
+  const createFreshChat = () =>
+    landingSpaceKey === undefined ? handleNewChat({ fresh: true }) : handleNewChat();
 
   const workspacePaths = { homeDir, chatWorkspaceRoot, studioWorkspaceRoot, groupsWorkspaceRoot };
   // Home chats restore the last visited route, except group threads — those belong to the

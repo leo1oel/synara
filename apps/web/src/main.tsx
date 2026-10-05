@@ -9,9 +9,8 @@ import "./index.css";
 
 import { appHistory } from "./appNavigation";
 import { getRouter } from "./router";
-import { preloadThreadRoute } from "./hooks/usePreloadRouteChunks";
 import { APP_DISPLAY_NAME } from "./branding";
-import { initializeEmbedMode, readEmbedMode } from "./embedMode";
+import { initializeEmbedMode } from "./embedMode";
 import { startLatticeAgentQualityRelay } from "./latticeAgentQualityRelay";
 import { startLatticeBibliographyRelay } from "./latticeBibliographyRelay";
 import { startLatticeCanvasRelay } from "./latticeCanvasRelay";
@@ -28,10 +27,6 @@ if (import.meta.hot) import.meta.hot.dispose(() => disposeRendererDiagnostics?.(
 import { activateInitialLocale, i18n } from "./i18n";
 
 initializeEmbedMode();
-const router = getRouter(appHistory);
-// The embed immediately opens a thread. Fetch its route in parallel with the
-// locale and bootstrap, rather than waiting for the root effect to commit.
-if (readEmbedMode()) preloadThreadRoute(router);
 await activateInitialLocale();
 startLatticeAgentQualityRelay();
 startLatticeBibliographyRelay();
@@ -39,6 +34,7 @@ startLatticeCanvasRelay();
 startLatticeSpreadsheetRelay();
 startLatticeProjectDocumentRelay();
 startLatticeEditorCommentsRelay();
+const router = getRouter(appHistory);
 const rootElement = document.getElementById("root") as HTMLElement;
 
 document.title = APP_DISPLAY_NAME;

@@ -1,11 +1,5 @@
 import { useEffect } from "react";
-import { useRouter, type AnyRouter } from "@tanstack/react-router";
-
-export function preloadThreadRoute(router: AnyRouter): void {
-  router.preloadRoute({ to: "/$threadId", params: { threadId: "chunk-preload" } }).catch(() => {
-    // Preloading is best-effort; navigation loads on demand if it fails.
-  });
-}
+import { useRouter } from "@tanstack/react-router";
 
 /** Warms code-split route chunks once the browser is idle.
  *
@@ -23,7 +17,9 @@ export function usePreloadRouteChunks() {
     // New-task navigation is a primary startup action. Warm that route as soon
     // as the root commits so an immediate click never waits for the browser's
     // idle callback (which can be delayed for several seconds during hydration).
-    preloadThreadRoute(router);
+    router.preloadRoute({ to: "/$threadId", params: { threadId: "chunk-preload" } }).catch(() => {
+      // Preloading is best-effort; navigation falls back to loading on demand.
+    });
 
     const preloadSettings = () => {
       router.preloadRoute({ to: "/settings" }).catch(() => {

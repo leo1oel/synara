@@ -2062,16 +2062,9 @@ export default function ChatView({
     if (!isEmbed || !activeThread?.id || !activeProject?.cwd || !composerFormRef.current) return;
     const config = readEmbedMode();
     if (!config || !embedWorkspaceMatches(config, activeProject.cwd)) return;
-    // The route can mount before this deferred view has loaded. Only drop the
-    // host's loading surface after the real composer has committed and painted.
-    let paintedFrame = 0;
-    const frame = requestAnimationFrame(() => {
-      paintedFrame = requestAnimationFrame(() => postEmbedReadyToLattice(config));
-    });
-    return () => {
-      cancelAnimationFrame(frame);
-      cancelAnimationFrame(paintedFrame);
-    };
+    // The route can mount before this deferred view. Signal from its committed
+    // composer, without waiting for paints in an iframe the host still covers.
+    postEmbedReadyToLattice(config);
   }, [activeProject?.cwd, activeThread?.id, isEmbed]);
 
   useEffect(() => {
