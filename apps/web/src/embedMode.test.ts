@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { LATTICE_HOST_THEME, parseLatticeHostTheme } from "./latticeHostTheme";
 import {
+  applyEmbedHostTheme,
   buildLatticeProjectHistoryCheckpoints,
   embedWorkspaceMatches,
   initializeEmbedMode,
@@ -67,6 +69,7 @@ function installBrowserStubs(
   const replaceState = vi.fn();
   const postMessage = vi.fn();
   const setProperty = vi.fn();
+  const removeProperty = vi.fn();
   Object.defineProperty(globalThis, "sessionStorage", {
     configurable: true,
     value: storage,
@@ -93,11 +96,11 @@ function installBrowserStubs(
       documentElement: {
         dataset: {},
         classList: { toggle: vi.fn() },
-        style: { setProperty },
+        style: { setProperty, removeProperty },
       },
     },
   });
-  return { frame, postMessage, replaceState, setProperty, values };
+  return { frame, postMessage, replaceState, setProperty, removeProperty, values };
 }
 
 afterEach(() => {
@@ -598,6 +601,104 @@ describe("Lattice embed mode", () => {
     expect(setProperty).toHaveBeenCalledWith("--app-shell-background", "#1b1b1d");
     expect(setProperty).toHaveBeenCalledWith("--color-background-panel", "#1b1b1d");
     expect(setProperty).toHaveBeenCalledWith("--sidebar", "#1b1b1d");
+  });
+
+  // The contract's own examples (Lattice's `readAgentHostTheme` output).
+  const paperBlueDark = {
+    type: LATTICE_HOST_THEME,
+    version: 1,
+    theme: "dark",
+    tint: "paper",
+    accent: "blue",
+    translucency: "subtle",
+    translucent: true,
+    colors: {
+      chrome: "rgb(23, 20, 16)",
+      drawer: "rgb(29, 27, 24)",
+      elevated: "rgb(34, 32, 29)",
+      foreground: "rgb(233, 233, 231)",
+      muted: "rgb(164, 164, 170)",
+      faint: "rgb(136, 136, 143)",
+      border: "rgba(255, 255, 255, 0.075)",
+      strongBorder: "rgba(255, 255, 255, 0.12)",
+      accent: "rgb(73, 139, 220)",
+      accentSoft: "color(srgb 0.286275 0.545098 0.862745 / 0.14)",
+      accentContrast: "rgb(23, 23, 24)",
+      focusRing: "rgb(73, 139, 220)",
+      controlHover: "color(srgb 0.913725 0.913725 0.905882 / 0.07)",
+    },
+  };
+  const graphiteLight = {
+    ...paperBlueDark,
+    theme: "light",
+    tint: "graphite",
+    accent: "graphite",
+    translucent: false,
+    colors: {
+      chrome: "rgb(239, 239, 240)",
+      drawer: "rgb(249, 249, 250)",
+      elevated: "rgb(249, 249, 250)",
+      foreground: "rgb(36, 36, 38)",
+      muted: "rgb(96, 96, 102)",
+      faint: "rgb(108, 108, 114)",
+      border: "rgba(28, 28, 31, 0.09)",
+      strongBorder: "rgba(28, 28, 31, 0.14)",
+      accent: "rgb(48, 48, 51)",
+      accentSoft: "rgba(48, 48, 51, 0.08)",
+      accentContrast: "rgb(255, 255, 255)",
+      focusRing: "color(srgb 0.141176 0.141176 0.14902 / 0.55)",
+      controlHover: "color(srgb 0.141176 0.141176 0.14902 / 0.07)",
+    },
+  };
+
+  it("accepts only version-1 host palettes for the frame's own light/dark theme", () => {
+    expect(parseLatticeHostTheme(paperBlueDark, "dark")?.colors.chrome).toBe("rgb(23, 20, 16)");
+    expect(parseLatticeHostTheme({ ...paperBlueDark, accent: "#ff2d55" }, "dark")).not.toBeNull();
+    // A stale palette racing a light/dark reload, and unknown versions, are ignored.
+    expect(parseLatticeHostTheme(paperBlueDark, "light")).toBeNull();
+    expect(parseLatticeHostTheme({ ...paperBlueDark, version: 2 }, "dark")).toBeNull();
+    expect(
+      parseLatticeHostTheme(
+        { ...paperBlueDark, colors: { ...paperBlueDark.colors, accentContrast: undefined } },
+        "dark",
+      ),
+    ).toBeNull();
+  });
+
+  it("paints Lattice's host palette and keeps it across a nested reload", () => {
+    const stubs = installBrowserStubs("dark");
+    initializeEmbedMode();
+    const config = readEmbedMode()!;
+    applyEmbedHostTheme(config, parseLatticeHostTheme(paperBlueDark, "dark")!);
+
+    expect(stubs.setProperty).toHaveBeenCalledWith("--app-shell-background", "rgb(23, 20, 16)");
+    expect(stubs.setProperty).toHaveBeenCalledWith("--popover", "rgb(34, 32, 29)");
+    expect(stubs.setProperty).toHaveBeenCalledWith("--composer-surface", "rgb(34, 32, 29)");
+    expect(stubs.setProperty).toHaveBeenCalledWith(
+      "--lattice-settings-accent",
+      "rgb(73, 139, 220)",
+    );
+    expect(stubs.setProperty).toHaveBeenCalledWith("--primary", "rgb(73, 139, 220)");
+    expect(stubs.setProperty).toHaveBeenCalledWith("--primary-foreground", "rgb(23, 23, 24)");
+
+    // A route that stripped the handshake re-runs the theme from storage, not Graphite.
+    const reloaded = installBrowserStubs("dark", "chrome", undefined, stubs.values);
+    reloaded.frame.name = stubs.frame.name;
+    reloaded.frame.location.search = "";
+    initializeEmbedMode();
+    expect(reloaded.setProperty).toHaveBeenCalledWith("--app-shell-background", "rgb(23, 20, 16)");
+    expect(reloaded.setProperty).not.toHaveBeenCalledWith("--app-shell-background", "#141416");
+  });
+
+  it("keeps Synara's neutral primary for a Graphite host palette", () => {
+    const { setProperty, removeProperty } = installBrowserStubs("light");
+    initializeEmbedMode();
+    applyEmbedHostTheme(readEmbedMode()!, parseLatticeHostTheme(graphiteLight, "light")!);
+
+    expect(setProperty).toHaveBeenCalledWith("--app-shell-background", "rgb(239, 239, 240)");
+    expect(setProperty).toHaveBeenCalledWith("--composer-surface", "rgb(249, 249, 250)");
+    expect(setProperty).not.toHaveBeenCalledWith("--primary", expect.anything());
+    expect(removeProperty).toHaveBeenCalledWith("--primary");
   });
 
   it("matches the embedded workspace without crashing on partially hydrated projects", () => {

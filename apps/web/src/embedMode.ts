@@ -1,8 +1,10 @@
 import type { RuntimeMode } from "@synara/contracts";
 import { workspaceRootsEqual } from "@synara/shared/threadWorkspace";
+import { parseLatticeHostTheme, type LatticeHostTheme } from "./latticeHostTheme";
 
 const EMBED_MODE_STORAGE_KEY = "synara.poc.embed-mode";
 const EMBED_AUTH_TOKEN_STORAGE_KEY = "synara.poc.embed-auth-token";
+const EMBED_HOST_THEME_STORAGE_KEY = "synara.poc.embed-host-theme";
 const EMBED_FRAME_NAME_PREFIX = "synara-embed-";
 export const EMBED_UI_FONT_STACK = '"Inter Variable", Inter, "Avenir Next", "Segoe UI", sans-serif';
 
@@ -1035,12 +1037,15 @@ export function readEmbeddedHostWsUrl(): string | null {
   return url.toString();
 }
 
-export function applyEmbedTheme(config: EmbedModeConfig): void {
+export function applyEmbedTheme(
+  config: EmbedModeConfig,
+  hostTheme: LatticeHostTheme | null = readEmbedHostTheme(config),
+): void {
   const root = document.documentElement;
   root.dataset.synaraEmbed = "true";
   root.classList.toggle("dark", config.theme === "dark");
   const usesDrawerSurface = config.surface === "drawer";
-  const colors =
+  const graphite =
     config.theme === "dark"
       ? {
           background: usesDrawerSurface ? "#1b1b1d" : "#141416",
@@ -1072,6 +1077,36 @@ export function applyEmbedTheme(config: EmbedModeConfig): void {
           accent: "#303033",
           accentSoft: "rgba(48, 48, 51, 0.08)",
         };
+  // Lattice's host palette replaces the Graphite table once it arrives; until
+  // then (and from a Lattice that never sends one) the table above stands.
+  const hostColors = hostTheme?.colors;
+  const colors = hostColors
+    ? {
+        background: usesDrawerSurface ? hostColors.drawer : hostColors.chrome,
+        surface: usesDrawerSurface ? hostColors.drawer : hostColors.chrome,
+        elevated: hostColors.elevated,
+        settingsField: hostColors.drawer,
+        settingsPanel: hostColors.elevated,
+        settingsSoftPanel: hostColors.drawer,
+        foreground: hostColors.foreground,
+        muted: hostColors.muted,
+        faint: hostColors.faint,
+        border: hostColors.border,
+        strongBorder: hostColors.strongBorder,
+        accent: hostColors.accent,
+        accentSoft: hostColors.accentSoft,
+      }
+    : graphite;
+  const controlHover =
+    hostColors?.controlHover ??
+    (config.theme === "dark" ? "rgba(255, 255, 255, 0.07)" : "rgba(36, 36, 38, 0.07)");
+  const composerSurface = hostColors
+    ? config.theme === "dark"
+      ? hostColors.elevated
+      : hostColors.drawer
+    : config.theme === "dark"
+      ? colors.elevated
+      : "#f9f9fa";
   const variables: Record<string, string> = {
     "--app-shell-background": colors.background,
     // Synara 1.0 route shells, detail panes, and sidechat docks use these
@@ -1124,8 +1159,7 @@ export function applyEmbedTheme(config: EmbedModeConfig): void {
     "--lattice-settings-line-strong": colors.strongBorder,
     "--lattice-settings-accent": colors.accent,
     "--lattice-settings-accent-soft": colors.accentSoft,
-    "--lattice-control-hover-surface":
-      config.theme === "dark" ? "rgba(255, 255, 255, 0.07)" : "rgba(36, 36, 38, 0.07)",
+    "--lattice-control-hover-surface": controlHover,
     "--lattice-floating-surface-shadow":
       config.theme === "dark"
         ? "0 1px 2px rgba(0, 0, 0, 0.18), 0 16px 36px -18px rgba(0, 0, 0, 0.8)"
@@ -1144,11 +1178,56 @@ export function applyEmbedTheme(config: EmbedModeConfig): void {
     // The composer lives inside this iframe. Set its surface at the embed
     // boundary so a dark Lattice host cannot leave it on the web app's light
     // default while the rest of the chrome has already switched themes.
-    "--composer-surface": config.theme === "dark" ? colors.elevated : "#f9f9fa",
-    "--lattice-agent-composer-surface": config.theme === "dark" ? colors.elevated : "#f9f9fa",
+    "--composer-surface": composerSurface,
+    "--lattice-agent-composer-surface": composerSurface,
     ...embedTypography(usesDrawerSurface),
   };
+  // A Graphite accent keeps Synara's neutral primary, so a Graphite palette
+  // paints exactly what the table does. Any other accent themes the primary
+  // fill, its text, and focus rings; dropping back to Graphite clears them.
+  const accentVariables: Record<string, string | null> =
+    hostTheme && hostTheme.accent !== "graphite"
+      ? {
+          "--primary": hostTheme.colors.accent,
+          "--primary-foreground": hostTheme.colors.accentContrast,
+          "--ring": hostTheme.colors.focusRing,
+        }
+      : { "--primary": null, "--primary-foreground": null, "--ring": null };
   for (const [name, value] of Object.entries(variables)) root.style.setProperty(name, value);
+  for (const [name, value] of Object.entries(accentVariables)) {
+    if (value === null) root.style.removeProperty(name);
+    else root.style.setProperty(name, value);
+  }
+}
+
+/**
+ * The last host palette for this frame's surface. It lives beside the embed
+ * handshake so a route change that re-runs `applyThemeState` repaints it rather
+ * than Graphite. A palette for the other light/dark theme is stale: the frame
+ * reloaded for a theme switch and Lattice sends the matching one after ready.
+ */
+function readEmbedHostTheme(config: EmbedModeConfig): LatticeHostTheme | null {
+  try {
+    const stored = JSON.parse(
+      sessionStorage.getItem(embedStorageKey(EMBED_HOST_THEME_STORAGE_KEY)) ?? "null",
+    ) as unknown;
+    return parseLatticeHostTheme(stored, config.theme);
+  } catch {
+    return null;
+  }
+}
+
+/** Store a validated `lattice:host-theme` message and repaint this frame with it. */
+export function applyEmbedHostTheme(config: EmbedModeConfig, hostTheme: LatticeHostTheme): void {
+  try {
+    sessionStorage.setItem(
+      embedStorageKey(EMBED_HOST_THEME_STORAGE_KEY),
+      JSON.stringify(hostTheme),
+    );
+  } catch {
+    // Storage can be unavailable; the palette still applies until the next repaint.
+  }
+  applyEmbedTheme(config, hostTheme);
 }
 
 /**
@@ -1232,6 +1311,7 @@ export function initializeEmbedMode(): void {
 
   sessionStorage.removeItem(embedStorageKey(EMBED_MODE_STORAGE_KEY));
   sessionStorage.removeItem(embedStorageKey(EMBED_AUTH_TOKEN_STORAGE_KEY));
+  sessionStorage.removeItem(embedStorageKey(EMBED_HOST_THEME_STORAGE_KEY));
 }
 
 export function readEmbedMode(): EmbedModeConfig | null {
