@@ -166,6 +166,7 @@ describe("providerMaintenance", () => {
     function runWithVirtualFileSystem(
       presentPaths: ReadonlySet<string>,
       options: Parameters<typeof resolveProviderMaintenanceCapabilitiesEffect>[1],
+      definition: PackageManagedProviderMaintenanceDefinition = CODEX_DEFINITION,
     ) {
       const probed: string[] = [];
       const layer = FileSystem.layerNoop({
@@ -177,7 +178,7 @@ describe("providerMaintenance", () => {
         realPath: (probedPath: string) => Effect.succeed(probedPath),
       });
       return Effect.runPromise(
-        resolveProviderMaintenanceCapabilitiesEffect(CODEX_DEFINITION, options).pipe(
+        resolveProviderMaintenanceCapabilitiesEffect(definition, options).pipe(
           Effect.provide(layer),
           Effect.map((capabilities) => ({ capabilities, probed })),
         ),

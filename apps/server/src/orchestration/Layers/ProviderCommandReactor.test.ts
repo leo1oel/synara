@@ -62,6 +62,7 @@ import {
   AgentGatewaySessionRegistry,
   type AgentGatewaySessionRegistryShape,
 } from "../../agentGateway/Services/AgentGatewaySessionRegistry.ts";
+import { AgentQualityTrace } from "../../agentGateway/Services/AgentQualityTrace.ts";
 import { ComputerManager } from "../../computer/ComputerManager.ts";
 import { FakeComputerBackend } from "../../computer/FakeComputerBackend.ts";
 import {
@@ -645,6 +646,9 @@ describe("ProviderCommandReactor", () => {
     const cancelPendingStudioOutputBaseline = vi.fn<
       StudioOutputReactorShape["cancelPendingTurnBaseline"]
     >(input?.studioOutputReactor?.cancelPendingTurnBaseline ?? (() => Effect.void));
+    const prepareTurnContext = vi.fn(() => Effect.void);
+    const bindTurnContext = vi.fn(() => Effect.void);
+    const failTurnContext = vi.fn(() => Effect.void);
     const studioOutputReactor: StudioOutputReactorShape = {
       captureBaselineBeforeTurn: captureStudioOutputBaseline,
       cancelPendingTurnBaseline: cancelPendingStudioOutputBaseline,
@@ -749,6 +753,15 @@ describe("ProviderCommandReactor", () => {
         input?.gatewaySessions
           ? Layer.succeed(AgentGatewaySessionRegistry, input.gatewaySessions)
           : Layer.empty,
+      ),
+      Layer.provideMerge(
+        Layer.succeed(AgentQualityTrace, {
+          start: Effect.void,
+          prepareTurnContext,
+          bindTurnContext,
+          failTurnContext,
+          recordCompile: () => Effect.void,
+        }),
       ),
       Layer.provideMerge(
         Layer.succeed(ProviderHealth, {
@@ -909,6 +922,9 @@ describe("ProviderCommandReactor", () => {
       pendingPriorTranscriptBootstraps,
       listSessions,
       sendTurn,
+      prepareTurnContext,
+      bindTurnContext,
+      failTurnContext,
       steerTurn,
       startReview,
       forkThread,
@@ -6967,6 +6983,16 @@ describe("ProviderCommandReactor", () => {
 
     await harness.startReactor();
     await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    expect(harness.prepareTurnContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        threadId,
+        messageId,
+        messageText: "recover queued promotion",
+      }),
+    );
+    expect(harness.prepareTurnContext.mock.invocationCallOrder[0]).toBeLessThan(
+      harness.sendTurn.mock.invocationCallOrder[0]!,
+    );
     expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
       threadId,
       input: "recover queued promotion",
@@ -8499,6 +8525,18 @@ describe("ProviderCommandReactor", () => {
       async () =>
         (await readHarnessThread(harness, ThreadId.makeUnsafe("thread-retry-droid-fork")))?.session
           ?.status === "error",
+    );
+    expect(harness.prepareTurnContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        threadId: "thread-retry-droid-fork",
+        messageId: "retry-droid-fork-failed-user",
+      }),
+    );
+    expect(harness.failTurnContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        threadId: "thread-retry-droid-fork",
+        dispatchId: expect.any(String),
+      }),
     );
 
     await Effect.runPromise(
@@ -10929,67 +10967,6 @@ describe("ProviderCommandReactor", () => {
     // One scan rechecks the provider's live-turn race before dispatch; the
     // session ensure then performs the only full lookup needed for startup.
     expect(harness.listSessions).toHaveBeenCalledTimes(2);
-  });
-
-  it("preserves existing threads while a provider is disabled and resumes after re-enabling", async () => {
-    const harness = await createHarness({
-      threadModelSelection: { provider: "opencode", model: "openai/gpt-5" },
-      serverSettings: { providers: { opencode: { enabled: false } } },
-    });
-    const now = new Date().toISOString();
-
-    await Effect.runPromise(
-      harness.engine.dispatch({
-        type: "thread.turn.start",
-        commandId: CommandId.makeUnsafe("cmd-turn-start-opencode-disabled"),
-        threadId: ThreadId.makeUnsafe("thread-1"),
-        message: {
-          messageId: asMessageId("user-message-opencode-disabled"),
-          role: "user",
-          text: "try while disabled",
-          attachments: [],
-        },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
-        runtimeMode: "approval-required",
-        createdAt: now,
-      }),
-    );
-
-    await waitFor(async () => (await readHarnessThread(harness))?.session?.status === "error");
-    const disabledThread = await readHarnessThread(harness);
-    expect(disabledThread).toBeDefined();
-    expect(disabledThread?.session?.lastError).toContain(
-      "OpenCode is disabled in Settings > Providers",
-    );
-    expect(harness.startSession).not.toHaveBeenCalled();
-    expect(harness.sendTurn).not.toHaveBeenCalled();
-
-    await Effect.runPromise(
-      harness.serverSettings.updateSettings({ providers: { opencode: { enabled: true } } }),
-    );
-    await Effect.runPromise(
-      harness.engine.dispatch({
-        type: "thread.turn.start",
-        commandId: CommandId.makeUnsafe("cmd-turn-start-opencode-reenabled"),
-        threadId: ThreadId.makeUnsafe("thread-1"),
-        message: {
-          messageId: asMessageId("user-message-opencode-reenabled"),
-          role: "user",
-          text: "continue after re-enable",
-          attachments: [],
-        },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
-        runtimeMode: "approval-required",
-        createdAt: now,
-      }),
-    );
-
-    await waitFor(() => harness.startSession.mock.calls.length === 1);
-    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
-    expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
-      threadId: ThreadId.makeUnsafe("thread-1"),
-    });
-    expect(harness.sendTurn.mock.calls[0]?.[0].input).toContain("continue after re-enable");
   });
 
   it("routes subagent-thread turn starts to the parent session as steers", async () => {

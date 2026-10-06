@@ -29,11 +29,7 @@ import { claudeIsolatedHomePath } from "../claudeEnvironment";
 import { ServerConfig } from "../../config";
 import { ServerSettingsService } from "../../serverSettings";
 import { ProviderHealth } from "../Services/ProviderHealth";
-import {
-  readProviderStatusCache,
-  resolveProviderStatusCachePath,
-  writeProviderStatusCache,
-} from "../providerStatusCache";
+import { resolveProviderStatusCachePath, writeProviderStatusCache } from "../providerStatusCache";
 import {
   checkClaudeProviderStatus,
   checkAntigravityProviderStatus,
@@ -50,7 +46,6 @@ import {
   makeCheckGrokProviderStatus,
   makeClaudeProbeEnv,
   makeCheckOpenCodeProviderStatus,
-  makeDisabledProviderStatus,
   makeProviderHealthLive,
   parseAuthStatusFromOutput,
   parseClaudeAuthStatusFromOutput,
@@ -590,12 +585,11 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           },
         });
         const settings = {
-          ...allProvidersDisabledServerSettings,
+          ...DEFAULT_SERVER_SETTINGS,
           providers: {
-            ...allProvidersDisabledServerSettings.providers,
+            ...DEFAULT_SERVER_SETTINGS.providers,
             codex: {
               ...DEFAULT_SERVER_SETTINGS.providers.codex,
-              enabled: true,
               binaryPath:
                 "/Users/test/.nvm/versions/node/v24.13.0/lib/node_modules/@openai/codex/bin/codex",
             },
@@ -795,7 +789,6 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           },
         ],
         { ...DEFAULT_SERVER_SETTINGS, enableProviderUpdateChecks: false },
-        "2026-06-16T12:05:00.000Z",
       );
       const codex = statuses.find((status) => status.provider === "codex");
 
@@ -2636,81 +2629,35 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
   });
 
   describe("checkPiProviderStatus", () => {
-    it.effect("returns ready using only the Pi CLI version probe", () =>
+    it.effect("returns ready for the bundled Pi SDK without probing a CLI", () =>
       Effect.gen(function* () {
         const status = yield* checkPiProviderStatus();
         assert.strictEqual(status.provider, "pi");
         assert.strictEqual(status.status, "ready");
         assert.strictEqual(status.available, true);
         assert.strictEqual(status.authStatus, "unknown");
+        assert.strictEqual(status.version, undefined);
         assert.strictEqual(
           status.message,
-          "Pi CLI is installed. Configure provider credentials inside Pi as needed.",
+          "Pi SDK is included with Synara. Configure provider credentials inside Pi as needed.",
         );
-      }).pipe(
-        Effect.provide(
-          mockSpawnerLayer((args, command) => {
-            assert.strictEqual(command, "pi");
-            const joined = args.join(" ");
-            if (joined === "--version") return { stdout: "pi 0.74.0\n", stderr: "", code: 0 };
-            throw new Error(`Unexpected args: ${joined}`);
-          }),
-        ),
-      ),
+      }),
     );
 
-    it.effect("uses configured Pi binary and agent dir without SDK registry reads", () =>
+    it.effect("reports the configured Pi agent directory", () =>
       Effect.gen(function* () {
-        const status = yield* checkPiProviderStatus("/tmp/pi-agent", "/custom/bin/pi");
+        const status = yield* checkPiProviderStatus("/tmp/pi-agent");
         assert.strictEqual(status.status, "ready");
         assert.strictEqual(
           status.message,
-          "Pi CLI is installed. Synara will use Pi agent dir /tmp/pi-agent.",
+          "Pi SDK is included with Synara. Using Pi agent dir /tmp/pi-agent.",
         );
-      }).pipe(
-        Effect.provide(
-          mockSpawnerLayer((args, command) => {
-            assert.strictEqual(command, "/custom/bin/pi");
-            const joined = args.join(" ");
-            if (joined === "--version") return { stdout: "pi 0.74.0\n", stderr: "", code: 0 };
-            throw new Error(`Unexpected args: ${joined}`);
-          }),
-        ),
-      ),
+      }),
     );
 
-    it.effect("passes configured instance environment to the Pi version probe", () =>
-      Effect.gen(function* () {
-        const status = yield* checkPiProviderStatus("/tmp/pi-agent", "/custom/bin/pi", {
-          PROVIDER_TEST_INSTANCE: "pi-work",
-        });
-        assert.strictEqual(status.status, "ready");
-      }).pipe(
-        Effect.provide(
-          mockSpawnerLayer((args, command, env) => {
-            assert.strictEqual(command, "/custom/bin/pi");
-            assertProviderInstanceEnv(env, "PROVIDER_TEST_INSTANCE", "pi-work");
-            const joined = args.join(" ");
-            if (joined === "--version") return { stdout: "pi 0.74.0\n", stderr: "", code: 0 };
-            throw new Error(`Unexpected args: ${joined}`);
-          }),
-        ),
-      ),
-    );
-
-    it.effect("keeps Pi usable when the advisory CLI probe is missing", () =>
-      Effect.gen(function* () {
-        const status = yield* checkPiProviderStatus();
-        assert.strictEqual(status.provider, "pi");
-        assert.strictEqual(status.status, "warning");
-        assert.strictEqual(status.available, true);
-        assert.strictEqual(status.authStatus, "unknown");
-        assert.strictEqual(
-          status.message,
-          "Pi SDK is bundled, but the Pi CLI (`pi`) is not on PATH, so Synara could not verify the installed CLI version.",
-        );
-      }).pipe(Effect.provide(failingSpawnerLayer("spawn pi ENOENT"))),
-    );
+    it("does not register Pi as a separately updatable CLI", () => {
+      assert.strictEqual(PACKAGE_MANAGED_PROVIDER_UPDATES.pi, undefined);
+    });
   });
 
   describe("checkAntigravityProviderStatus", () => {

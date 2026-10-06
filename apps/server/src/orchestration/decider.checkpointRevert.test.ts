@@ -28,6 +28,7 @@ const REVERT_IN_PROGRESS_ERROR =
 function makeReadModel(input: {
   readonly session?: OrchestrationSession | null;
   readonly latestTurn?: OrchestrationLatestTurn | null;
+  readonly messages?: OrchestrationReadModel["threads"][number]["messages"];
 }): OrchestrationReadModel {
   return {
     snapshotSequence: 1,
@@ -51,7 +52,7 @@ function makeReadModel(input: {
         updatedAt: NOW,
         latestTurn: input.latestTurn ?? null,
         handoff: null,
-        messages: [],
+        messages: input.messages ?? [],
         session: input.session === undefined ? null : input.session,
         activities: [],
         proposedPlans: [],
@@ -417,6 +418,56 @@ describe("checkpoint revert decider", () => {
       _tag: "OrchestrationCommandInvariantError",
       commandType: "thread.checkpoint.revert",
       detail: ACTIVE_TURN_ERROR,
+    });
+  });
+
+  it("admits edit-and-resend after an answer-less turn is interrupted", async () => {
+    const messageId = MessageId.makeUnsafe("message-interrupted-before-answer");
+    const latestTurn = {
+      ...makeLatestTurn("interrupted"),
+      pendingMessageId: messageId,
+    };
+    const readModel = makeReadModel({
+      session: makeSession({ status: "interrupted" }),
+      latestTurn,
+      messages: [
+        {
+          id: messageId,
+          role: "user",
+          text: "original prompt",
+          turnId: null,
+          streaming: false,
+          source: "native",
+          createdAt: NOW,
+          updatedAt: NOW,
+        },
+      ],
+    });
+
+    const decided = await Effect.runPromise(
+      decideOrchestrationCommand({
+        command: {
+          type: "thread.message.edit-and-resend",
+          commandId: CommandId.makeUnsafe("cmd-edit-interrupted-before-answer"),
+          threadId: THREAD_ID,
+          messageId,
+          text: "edited prompt",
+          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          runtimeMode: "full-access",
+          createdAt: NOW,
+        },
+        readModel,
+      }),
+    );
+
+    const events = Array.isArray(decided) ? decided : [decided];
+    expect(
+      events.find((event) => event.type === "thread.message-edit-resend-requested"),
+    ).toMatchObject({
+      payload: {
+        rollbackTurnCount: 1,
+        removedTurnIds: [latestTurn.turnId],
+      },
     });
   });
 

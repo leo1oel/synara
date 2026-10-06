@@ -20,14 +20,17 @@ import {
   useState,
   useSyncExternalStore,
   type FocusEvent as ReactFocusEvent,
-  type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { cn } from "~/lib/utils";
 import { DISCLOSURE_CONTENT_MOTION_CLASS } from "~/lib/disclosureMotion";
-import { APP_TOOLTIP_SURFACE_CLASS_NAME } from "./composerPickerStyles";
+import {
+  APP_TOOLTIP_SURFACE_CLASS_NAME,
+  CHAT_COLUMN_FRAME_CLASS_NAME,
+  CHAT_COLUMN_GUTTER_CLASS_NAME,
+} from "./composerPickerStyles";
 import {
   clampNumber,
   clampTooltipTop,
@@ -51,14 +54,13 @@ interface MessageTrailProps {
   /** Stable holder for current + visible highlights; only this component re-renders on change. */
   activeStore: ActiveTrailStore;
   onSelect: (messageId: MessageId) => void;
-  contentInsetRightPx?: number | undefined;
   /** Source of audio levels (0..1); omitted, the rail ignores sound. */
   subscribeAudioLevel?: ((listener: (level: number) => void) => () => void) | undefined;
+  contentInsetRightPx?: number | undefined;
 }
 
-// Leave breathing room between the rail and the selected chat column, including
-// the space reserved by the transcript scrollbar.
-const RAIL_CONTENT_CLEARANCE_PX = 16;
+// Require breathing room beyond the entire hit target, not just the resting ticks.
+const RAIL_CLEARANCE_PX = 8;
 // Fixed rail box. Ticks grow rightward inside it (left-aligned, like the Dock).
 const RAIL_WIDTH_PX = 56;
 // Cap the scrollable tick viewport a bit below the full pane height so the rail
@@ -97,10 +99,11 @@ export function MessageTrail({
   items,
   activeStore,
   onSelect,
-  contentInsetRightPx = 0,
   subscribeAudioLevel,
+  contentInsetRightPx,
 }: MessageTrailProps) {
   const rootRef = useRef<HTMLElement | null>(null);
+  const columnRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
@@ -422,17 +425,22 @@ export function MessageTrail({
   };
 
   // --- Gutter visibility: rail only shows when the pane is wide enough --------
-  // Width-only ResizeObserver; the tick layout is count-driven (see `geometry`),
-  // so observing size never feeds back into the layout.
+  // Measure a zero-height copy of the transcript frame. A fixed pane breakpoint
+  // assumes standard width and overlaps wide/full transcripts. Observing the
+  // frame also catches preference/font changes without a pane resize, and does
+  // not depend on virtualized message rows being mounted.
   useEffect(() => {
     const root = rootRef.current;
-    if (!root || typeof ResizeObserver === "undefined") {
+    const pane = root?.parentElement;
+    const column = columnRef.current;
+    if (!pane || !column || typeof ResizeObserver === "undefined") {
       return;
     }
     let pendingRaf: number | null = null;
     const measure = () => {
       pendingRaf = null;
-      setHasGutter(root.clientWidth >= RAIL_WIDTH_PX);
+      const gutter = column.getBoundingClientRect().left - pane.getBoundingClientRect().left;
+      setHasGutter(gutter >= RAIL_WIDTH_PX + RAIL_CLEARANCE_PX);
     };
     const schedule = () => {
       if (pendingRaf === null) {
@@ -441,14 +449,16 @@ export function MessageTrail({
     };
     schedule();
     const observer = new ResizeObserver(schedule);
-    observer.observe(root);
+    observer.observe(pane);
+    observer.observe(column);
+    observer.observe(column.parentElement!);
     return () => {
       if (pendingRaf !== null) {
         cancelAnimationFrame(pendingRaf);
       }
       observer.disconnect();
     };
-  }, []);
+  }, [contentInsetRightPx]);
 
   // Reposition the ticks whenever the layout changes (count → new centres).
   useEffect(() => {
@@ -647,101 +657,108 @@ export function MessageTrail({
   const tabStop = clampNumber(rovingIndex, 0, Math.max(0, items.length - 1));
 
   return (
-    <nav
-      ref={rootRef}
-      aria-label="Message navigation"
-      aria-hidden={!visible}
-      onKeyDown={handleKeyDown}
-      onBlur={handleRailBlur}
-      className={cn(
-        "absolute inset-y-0 left-0 z-20 hidden flex-col justify-center sm:flex",
-        DISCLOSURE_CONTENT_MOTION_CLASS,
-        "transition-[opacity,translate,--message-trail-content-inset]",
-        visible ? "opacity-100" : "pointer-events-none opacity-0",
-      )}
-      style={
-        {
-          "--message-trail-content-inset": `${contentInsetRightPx}px`,
-          width: RAIL_WIDTH_PX,
-          // CSS resolves rem, percentage/full-width, and live preference changes.
-          // Observe this constrained box, rather than assuming a fixed 46rem column.
-          maxWidth: `max(0px, calc((100% - var(--app-chat-max-width, 46rem) - var(--message-trail-content-inset)) / 2 - ${RAIL_CONTENT_CLEARANCE_PX}px))`,
-        } as CSSProperties
-      }
-    >
-      {/* Capped, centered, scrollable viewport. `scroll-fade-y` masks the top/bottom
+    <>
+      <div
+        aria-hidden="true"
+        className={cn(
+          "pointer-events-none invisible absolute inset-x-0 top-0",
+          CHAT_COLUMN_GUTTER_CLASS_NAME,
+        )}
+        style={contentInsetRightPx ? { paddingRight: contentInsetRightPx } : undefined}
+      >
+        <div ref={columnRef} className={CHAT_COLUMN_FRAME_CLASS_NAME} />
+      </div>
+      <nav
+        ref={rootRef}
+        aria-label="Message navigation"
+        aria-hidden={!visible}
+        onKeyDown={handleKeyDown}
+        onBlur={handleRailBlur}
+        className={cn(
+          "absolute inset-y-0 left-0 z-20 hidden flex-col justify-center sm:flex",
+          DISCLOSURE_CONTENT_MOTION_CLASS,
+          visible ? "opacity-100" : "pointer-events-none opacity-0",
+        )}
+        style={{ width: RAIL_WIDTH_PX }}
+      >
+        {/* Capped, centered, scrollable viewport. `scroll-fade-y` masks the top/bottom
           edges only while there is overflow to scroll (auto-off when it all fits). */}
-      <div
-        ref={viewportRef}
-        onPointerEnter={handlePointerEnter}
-        onPointerMove={handlePointerMove}
-        onPointerLeave={handlePointerLeave}
-        onScroll={handleScroll}
-        onClick={handleClick}
-        className={cn(
-          "scroll-fade-y relative w-full overflow-y-auto overscroll-contain [contain:layout] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-          visible ? "pointer-events-auto" : "pointer-events-none",
-        )}
-        style={{ maxHeight: `${RAIL_MAX_HEIGHT_RATIO * 100}%` }}
-      >
-        <div ref={trackRef} className="relative w-full" style={{ height: geometry?.contentHeight }}>
-          {items.map((item, index) => (
-            <button
-              key={item.id}
-              ref={(el) => {
-                tickRefs.current[index] = el;
-              }}
-              type="button"
-              tabIndex={visible && index === tabStop ? 0 : -1}
-              aria-label={`Message ${item.ordinal}: ${item.preview.slice(0, 60)}`}
-              aria-describedby={tooltipId}
-              aria-current={index === anchorIndex ? "location" : undefined}
-              onFocus={() => handleTickFocus(index)}
-              className="absolute rounded-full transition-[width,opacity] duration-[90ms] ease-out outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-border)] motion-reduce:transition-none"
-              style={{
-                left: TICK_LEFT_PAD_PX,
-                height: TICK_HEIGHT_PX,
-                width: TICK_BASE_W,
-                opacity:
-                  index === anchorIndex
-                    ? TICK_ANCHOR_OPACITY
-                    : visibleIndexSet.has(index)
-                      ? TICK_VISIBLE_OPACITY
-                      : TICK_REST_OPACITY,
-                backgroundColor: "var(--color-text-foreground)",
-                willChange: "width, opacity",
-              }}
-            />
-          ))}
+        <div
+          ref={viewportRef}
+          onPointerEnter={handlePointerEnter}
+          onPointerMove={handlePointerMove}
+          onPointerLeave={handlePointerLeave}
+          onScroll={handleScroll}
+          onClick={handleClick}
+          className={cn(
+            "scroll-fade-y relative w-full overflow-y-auto overscroll-contain [contain:layout] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+            visible ? "pointer-events-auto" : "pointer-events-none",
+          )}
+          style={{ maxHeight: `${RAIL_MAX_HEIGHT_RATIO * 100}%` }}
+        >
+          <div
+            ref={trackRef}
+            className="relative w-full"
+            style={{ height: geometry?.contentHeight }}
+          >
+            {items.map((item, index) => (
+              <button
+                key={item.id}
+                ref={(el) => {
+                  tickRefs.current[index] = el;
+                }}
+                type="button"
+                tabIndex={visible && index === tabStop ? 0 : -1}
+                aria-label={`Message ${item.ordinal}: ${item.preview.slice(0, 60)}`}
+                aria-describedby={tooltipId}
+                aria-current={index === anchorIndex ? "location" : undefined}
+                onFocus={() => handleTickFocus(index)}
+                className="absolute rounded-full transition-[width,opacity] duration-[90ms] ease-out outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-border)] motion-reduce:transition-none"
+                style={{
+                  left: TICK_LEFT_PAD_PX,
+                  height: TICK_HEIGHT_PX,
+                  width: TICK_BASE_W,
+                  opacity:
+                    index === anchorIndex
+                      ? TICK_ANCHOR_OPACITY
+                      : visibleIndexSet.has(index)
+                        ? TICK_VISIBLE_OPACITY
+                        : TICK_REST_OPACITY,
+                  backgroundColor: "var(--color-text-foreground)",
+                  willChange: "width, opacity",
+                }}
+              />
+            ))}
+          </div>
         </div>
-      </div>
-      <div
-        ref={tooltipRef}
-        role="tooltip"
-        id={tooltipId}
-        className={cn(
-          APP_TOOLTIP_SURFACE_CLASS_NAME,
-          "pointer-events-none invisible absolute z-30 w-64 -translate-y-1/2 rounded-xl p-2",
-        )}
-        style={{
-          left: RAIL_WIDTH_PX + TOOLTIP_OFFSET_X_PX,
-          top: 0,
-          // This inline preview sits inside the transcript's compositing layer;
-          // backdrop blur alone cannot reliably obscure the message beneath it.
-          backgroundColor: "var(--popover)",
-        }}
-      >
-        {/* The sent message: dark, max two lines (matches the projects/threads card title). */}
         <div
-          ref={tooltipMessageRef}
-          className="line-clamp-2 text-ui leading-snug font-medium text-foreground"
-        />
-        {/* The turn's first reply: muted gray, max three lines. */}
-        <div
-          ref={tooltipResponseRef}
-          className="mt-1 line-clamp-3 text-ui leading-snug text-muted-foreground"
-        />
-      </div>
-    </nav>
+          ref={tooltipRef}
+          role="tooltip"
+          id={tooltipId}
+          className={cn(
+            APP_TOOLTIP_SURFACE_CLASS_NAME,
+            "pointer-events-none invisible absolute z-30 w-64 -translate-y-1/2 rounded-xl p-2",
+          )}
+          style={{
+            left: RAIL_WIDTH_PX + TOOLTIP_OFFSET_X_PX,
+            top: 0,
+            // This inline preview sits inside the transcript's compositing layer;
+            // backdrop blur alone cannot reliably obscure the message beneath it.
+            backgroundColor: "var(--popover)",
+          }}
+        >
+          {/* The sent message: dark, max two lines (matches the projects/threads card title). */}
+          <div
+            ref={tooltipMessageRef}
+            className="line-clamp-2 text-ui leading-snug font-medium text-foreground"
+          />
+          {/* The turn's first reply: muted gray, max three lines. */}
+          <div
+            ref={tooltipResponseRef}
+            className="mt-1 line-clamp-3 text-ui leading-snug text-muted-foreground"
+          />
+        </div>
+      </nav>
+    </>
   );
 }

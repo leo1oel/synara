@@ -6913,6 +6913,10 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
             usedTokens: 24542,
             lastUsedTokens: 24542,
             inputTokens: 23863,
+            cacheReadInputTokens: 21144,
+            lastCacheReadInputTokens: 21144,
+            cacheWriteInputTokens: 2715,
+            lastCacheWriteInputTokens: 2715,
             outputTokens: 679,
             maxTokens: 1_000_000,
             totalProcessedTokens: 24542,
@@ -10073,6 +10077,8 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         totalProcessedTokens: 370_000,
         maxTokens: 1_000_000,
         inputTokens: 20_000,
+        cacheReadInputTokens: 19_999,
+        lastCacheReadInputTokens: 19_999,
       });
       assertTokenUsageEvent(usageEvents[1]);
       assert.equal(usageEvents[1].payload.usage.totalProcessedTokens, 400_000);

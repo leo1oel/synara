@@ -9,9 +9,13 @@
 import {
   GitActionProgressEvent,
   GitBlameLineInput,
+  GitBlameLineResult,
+  GitConnectGitHubRemoteInput,
+  GitConnectGitHubRemoteResult,
+  GitCreateGitHubRepositoryInput,
+  GitCreateGitHubRepositoryResult,
   GitReadFileAtRevInput,
   GitReadFileAtRevResult,
-  GitBlameLineResult,
   GitHandoffThreadInput,
   GitHandoffThreadResult,
   GitPreparePullRequestThreadInput,
@@ -49,7 +53,22 @@ export interface GitRunStackedActionOptions {
  */
 export interface GitManagerShape {
   /**
-   * Read current repository Git status plus open PR metadata when available.
+   * Attach an existing GitHub repository as the local repository's origin.
+   */
+  readonly connectGitHubRemote: (
+    input: GitConnectGitHubRemoteInput,
+  ) => Effect.Effect<GitConnectGitHubRemoteResult, GitManagerServiceError>;
+
+  /**
+   * Create a GitHub repository for the current local repository without pushing files.
+   */
+  readonly createGitHubRepository: (
+    input: GitCreateGitHubRepositoryInput,
+  ) => Effect.Effect<GitCreateGitHubRepositoryResult, GitManagerServiceError>;
+
+  /**
+   * Read current repository Git status. Local only: the branch's pull request is
+   * resolved separately so status never waits on GitHub.
    */
   readonly status: (
     input: GitStatusInput,

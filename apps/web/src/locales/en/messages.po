@@ -1,0 +1,2879 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Revert this thread to checkpoint {turnCount}?"
+msgstr "Revert this thread to checkpoint {turnCount}?"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "This will discard newer messages and turn diffs in this thread."
+msgstr "This will discard newer messages and turn diffs in this thread."
+
+#. js-lingui-explicit-id
+#: src/routes/_chat.pull-requests.index.tsx
+msgid "Search pull requests"
+msgstr "Search pull requests"
+
+#. js-lingui-explicit-id
+#: src/routes/_chat.pull-requests.index.tsx
+msgid "No pull requests found"
+msgstr "No pull requests found"
+
+#. js-lingui-explicit-id
+#: src/routes/_chat.pull-requests.index.tsx
+msgid "Try another involvement, state, project, or search filter."
+msgstr "Try another involvement, state, project, or search filter."
+
+#. js-lingui-explicit-id
+#: src/routes/_chat.source-control.tsx
+msgid "Source control embed mode requires a Lattice workspace."
+msgstr "Source control embed mode requires a Lattice workspace."
+
+#. js-lingui-explicit-id
+#: src/routes/_chat.source-control.tsx
+msgid "Project binding failed: {error}"
+msgstr "Project binding failed: {error}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+#: src/routes/_chat.source-control.tsx
+msgid "Changes"
+msgstr "Changes"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Add an \"origin\" remote before committing and pushing."
+msgstr "Add an \"origin\" remote before committing and pushing."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Add an \"origin\" remote before creating a PR."
+msgstr "Add an \"origin\" remote before creating a PR."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Add an \"origin\" remote before pushing."
+msgstr "Add an \"origin\" remote before pushing."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Add an \"origin\" remote before pushing or creating a PR."
+msgstr "Add an \"origin\" remote before pushing or creating a PR."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "A pull request is already open for this branch."
+msgstr "A pull request is already open for this branch."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Branch has diverged from upstream. Rebase/merge first."
+msgstr "Branch has diverged from upstream. Rebase/merge first."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Branch is already up to date."
+msgstr "Branch is already up to date."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Branch is behind upstream. Pull before creating a PR."
+msgstr "Branch is behind upstream. Pull before creating a PR."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Branch is behind upstream. Pull/rebase before committing and pushing."
+msgstr "Branch is behind upstream. Pull/rebase before committing and pushing."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Branch is behind upstream. Pull/rebase before pushing."
+msgstr "Branch is behind upstream. Pull/rebase before pushing."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Branch is up to date. No action needed."
+msgstr "Branch is up to date. No action needed."
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+#: src/lib/gitLocalization.ts
+msgid "Commit"
+msgstr "Commit"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.browser.tsx
+#: src/lib/gitLocalization.ts
+msgid "Commit & push"
+msgstr "Commit & push"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit & push is currently unavailable."
+msgstr "Commit & push is currently unavailable."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit & push to default branch?"
+msgstr "Commit & push to default branch?"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit is currently unavailable."
+msgstr "Commit is currently unavailable."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit local changes before creating a PR."
+msgstr "Commit local changes before creating a PR."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit on new branch"
+msgstr "Commit on new branch"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit or stash local changes before pushing."
+msgstr "Commit or stash local changes before pushing."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit, push & PR"
+msgstr "Commit, push & PR"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Committed changes"
+msgstr "Committed changes"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Committing..."
+msgstr "Committing..."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Create and checkout a branch before pushing or opening a PR."
+msgstr "Create and checkout a branch before pushing or opening a PR."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Create and checkout new branch..."
+msgstr "Create and checkout new branch..."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Create Branch"
+msgstr "Create Branch"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Create feature branch & continue"
+msgstr "Create feature branch & continue"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Create feature branch & PR?"
+msgstr "Create feature branch & PR?"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Create feature branch, commit & PR?"
+msgstr "Create feature branch, commit & PR?"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/components/GitCreatePrDialog.tsx
+#: src/lib/gitLocalization.ts
+msgid "Create PR"
+msgstr "Create PR"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Create PR is currently unavailable."
+msgstr "Create PR is currently unavailable."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Created PR"
+msgstr "Created PR"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Creating PR..."
+msgstr "Creating PR..."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Current branch has no upstream to pull from."
+msgstr "Current branch has no upstream to pull from."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/lib/gitLocalization.ts
+msgid "Detached HEAD"
+msgstr "Detached HEAD"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Detached HEAD: checkout a branch before committing and pushing."
+msgstr "Detached HEAD: checkout a branch before committing and pushing."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Detached HEAD: checkout a branch before creating a PR."
+msgstr "Detached HEAD: checkout a branch before creating a PR."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Detached HEAD: checkout a branch before pulling."
+msgstr "Detached HEAD: checkout a branch before pulling."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Detached HEAD: checkout a branch before pushing."
+msgstr "Detached HEAD: checkout a branch before pushing."
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+#: src/lib/gitLocalization.ts
+msgid "Done"
+msgstr "Done"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Generating commit message..."
+msgstr "Generating commit message..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Git action in progress."
+msgstr "Git action in progress."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Git status is unavailable."
+msgstr "Git status is unavailable."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "No branch changes to include in a PR."
+msgstr "No branch changes to include in a PR."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "No local changes or commits to push."
+msgstr "No local changes or commits to push."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "No local commits to push."
+msgstr "No local commits to push."
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+#: src/lib/gitLocalization.ts
+msgid "Open PR in browser"
+msgstr "Open PR in browser"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Opened PR"
+msgstr "Opened PR"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Preparing feature branch..."
+msgstr "Preparing feature branch..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Pull"
+msgstr "Pull"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pulling..."
+msgstr "Pulling..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Push"
+msgstr "Push"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Push & create PR"
+msgstr "Push & create PR"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Push is currently unavailable."
+msgstr "Push is currently unavailable."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Push to default branch?"
+msgstr "Push to default branch?"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pushing..."
+msgstr "Pushing..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "Refreshing git status..."
+msgstr "Refreshing git status..."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Select at least one file to commit."
+msgstr "Select at least one file to commit."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Select branch"
+msgstr "Select branch"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Sync branch"
+msgstr "Sync branch"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "This action is currently unavailable."
+msgstr "This action is currently unavailable."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+#: src/lib/gitLocalization.ts
+msgid "View PR"
+msgstr "View PR"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "View PR is currently unavailable."
+msgstr "View PR is currently unavailable."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Worktree is clean. Make changes before committing."
+msgstr "Worktree is clean. Make changes before committing."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "From {branch}"
+msgstr "From {branch}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Create and checkout \"{branch}\""
+msgstr "Create and checkout \"{branch}\""
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pushing to {branch}..."
+msgstr "Pushing to {branch}..."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Commit & push to {branch}"
+msgstr "Commit & push to {branch}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Push to {branch}"
+msgstr "Push to {branch}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "This action will commit and push changes on \"{branch}\". You can continue on this branch or create a feature branch and run the same action there."
+msgstr "This action will commit and push changes on \"{branch}\". You can continue on this branch or create a feature branch and run the same action there."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "This action will push local commits on \"{branch}\". You can continue on this branch or create a feature branch and run the same action there."
+msgstr "This action will push local commits on \"{branch}\". You can continue on this branch or create a feature branch and run the same action there."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pull requests can't be opened from \"{branch}\" into itself. This action will create a feature branch, commit your changes there, push it, and create the PR."
+msgstr "Pull requests can't be opened from \"{branch}\" into itself. This action will create a feature branch, commit your changes there, push it, and create the PR."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pull requests can't be opened from \"{branch}\" into itself. This action will create a feature branch from your current commits, push it, and create the PR."
+msgstr "Pull requests can't be opened from \"{branch}\" into itself. This action will create a feature branch from your current commits, push it, and create the PR."
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Committed {revision}"
+msgstr "Committed {revision}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Created PR{number}"
+msgstr "Created PR{number}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Opened PR{number}"
+msgstr "Opened PR{number}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pushed {revision} to {branch}"
+msgstr "Pushed {revision} to {branch}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pushed {revision}"
+msgstr "Pushed {revision}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pushed to {branch}"
+msgstr "Pushed to {branch}"
+
+#. js-lingui-explicit-id
+#: src/lib/gitLocalization.ts
+msgid "Pushed"
+msgstr "Pushed"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "5h"
+msgstr "5h"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Weekly"
+msgstr "Weekly"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Weekly (overage)"
+msgstr "Weekly (overage)"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Current"
+msgstr "Current"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "<1m"
+msgstr "<1m"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "{count}d"
+msgstr "{count}d"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "{count}h"
+msgstr "{count}h"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "{count}m"
+msgstr "{count}m"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Resets soon"
+msgstr "Resets soon"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Resets in {duration}"
+msgstr "Resets in {duration}"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "{percent}% in reserve"
+msgstr "{percent}% in reserve"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "{percent}% in deficit"
+msgstr "{percent}% in deficit"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Lasts until reset"
+msgstr "Lasts until reset"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Limit reached"
+msgstr "Limit reached"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Runs out in {duration}"
+msgstr "Runs out in {duration}"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "ahead"
+msgstr "ahead"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "on track"
+msgstr "on track"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "behind"
+msgstr "behind"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "{remaining} left"
+msgstr "{remaining} left"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "{window} remaining"
+msgstr "{window} remaining"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Usage pace: {status}"
+msgstr "Usage pace: {status}"
+
+#. js-lingui-explicit-id
+#: src/lib/providerUsageDisplay.ts
+msgid "Anthropic is rate-limiting usage checks — showing your last values, retrying in ~{minutes}m. Manual refreshes only extend the limit."
+msgstr "Anthropic is rate-limiting usage checks — showing your last values, retrying in ~{minutes}m. Manual refreshes only extend the limit."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+#: src/lib/threadHandoff.ts
+msgid "Hand off from {provider}"
+msgstr "Hand off from {provider}"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbar.tsx
+msgid "Hand off to new worktree"
+msgstr "Hand off to new worktree"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbar.tsx
+msgid "Hand off to local"
+msgstr "Hand off to local"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "{files} {count, plural, one {has} other {have}} uncommitted changes. Commit or stash before switching."
+msgstr "{files} {count, plural, one {has} other {have}} uncommitted changes. Commit or stash before switching."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "{files} and {count, plural, one {# other file} other {# other files}} have uncommitted changes. Commit or stash before switching."
+msgstr "{files} and {count, plural, one {# other file} other {# other files}} have uncommitted changes. Commit or stash before switching."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/GitActionsControl.tsx
+msgid "An error occurred."
+msgstr "An error occurred."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Git index is locked."
+msgstr "Git index is locked."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "{lockFile} already exists. Close any running Git operation, remove the stale lock file if none is running, then retry."
+msgstr "{lockFile} already exists. Close any running Git operation, remove the stale lock file if none is running, then retry."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Remove lock & retry"
+msgstr "Remove lock & retry"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Git index could not be written."
+msgstr "Git index could not be written."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Git could not update the repository index. Retry after any current Git operation finishes."
+msgstr "Git could not update the repository index. Retry after any current Git operation finishes."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Retry stash & switch"
+msgstr "Retry stash & switch"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Uncommitted changes block checkout."
+msgstr "Uncommitted changes block checkout."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Stash & Switch"
+msgstr "Stash & Switch"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Changes saved, but not reapplied."
+msgstr "Changes saved, but not reapplied."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Synara switched branches and kept your changes in a stash because they could not be restored onto this branch cleanly."
+msgstr "Synara switched branches and kept your changes in a stash because they could not be restored onto this branch cleanly."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Discard stash"
+msgstr "Discard stash"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Cannot switch branches."
+msgstr "Cannot switch branches."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Some conflicting files are not covered by git stash, such as ignored files. Move or remove them before switching."
+msgstr "Some conflicting files are not covered by git stash, such as ignored files. Move or remove them before switching."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Failed to stash and switch."
+msgstr "Failed to stash and switch."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Unresolved conflicts in the repository."
+msgstr "Unresolved conflicts in the repository."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Native API is unavailable."
+msgstr "Native API is unavailable."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Failed to checkout branch."
+msgstr "Failed to checkout branch."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Failed to create branch."
+msgstr "Failed to create branch."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Checkout Pull Request"
+msgstr "Checkout Pull Request"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "current"
+msgstr "current"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "worktree"
+msgstr "worktree"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "remote"
+msgstr "remote"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "default"
+msgstr "default"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Uncommitted: {count, plural, one {# file} other {# files}}"
+msgstr "Uncommitted: {count, plural, one {# file} other {# files}}"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Search branches..."
+msgstr "Search branches..."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "No branches found."
+msgstr "No branches found."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Create and switch to a new branch from {branch}."
+msgstr "Create and switch to a new branch from {branch}."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "the current HEAD"
+msgstr "the current HEAD"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/GitActionsControl.tsx
+msgid "Branch name"
+msgstr "Branch name"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/GitActionsControl.tsx
+msgid "A branch with this name already exists."
+msgstr "A branch with this name already exists."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/chat/GitRepositorySetup.tsx
+#: src/components/GitActionsControl.tsx
+#: src/components/settings/ManagedSkillEditorView.tsx
+#: src/components/ThreadWorktreeHandoffDialog.tsx
+msgid "Cancel"
+msgstr "Cancel"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Create and switch"
+msgstr "Create and switch"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Discard saved stash?"
+msgstr "Discard saved stash?"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "This will permanently drop the stash entry that preserved your uncommitted changes."
+msgstr "This will permanently drop the stash entry that preserved your uncommitted changes."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Loading stash details..."
+msgstr "Loading stash details..."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/GitCreatePrDialog.tsx
+msgid "Branch"
+msgstr "Branch"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Worktree"
+msgstr "Worktree"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Stash"
+msgstr "Stash"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Name"
+msgstr "Name"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Changed files ({count})"
+msgstr "Changed files ({count})"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Git did not report changed file names for this stash."
+msgstr "Git did not report changed file names for this stash."
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Keep stash"
+msgstr "Keep stash"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+msgid "Discarding..."
+msgstr "Discarding..."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Hand off thread"
+msgstr "Hand off thread"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Create handoff thread"
+msgstr "Create handoff thread"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+#: src/components/Sidebar.tsx
+msgid "Could not create handoff thread"
+msgstr "Could not create handoff thread"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+#: src/components/Sidebar.tsx
+msgid "An error occurred while creating the handoff thread."
+msgstr "An error occurred while creating the handoff thread."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Delete \"{targetThreadTitle}\"?"
+msgstr "Delete \"{targetThreadTitle}\"?"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "This permanently clears this conversation history."
+msgstr "This permanently clears this conversation history."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "This action cannot be undone."
+msgstr "This action cannot be undone."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "New Chat"
+msgstr "New Chat"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+#: src/components/ChatView.tsx
+msgid "New thread"
+msgstr "New thread"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Running {hook}..."
+msgstr "Running {hook}..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Link opening is unavailable."
+msgstr "Link opening is unavailable."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "No open PR found."
+msgstr "No open PR found."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Unable to open PR link"
+msgstr "Unable to open PR link"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Create PR unavailable"
+msgstr "Create PR unavailable"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Unable to open compare page."
+msgstr "Unable to open compare page."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Unable to open compare page"
+msgstr "Unable to open compare page"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "No GitHub repository detected for this project."
+msgstr "No GitHub repository detected for this project."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Syncing with remote..."
+msgstr "Syncing with remote..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Remote synced"
+msgstr "Remote synced"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Already up to date"
+msgstr "Already up to date"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Updated {branch} from {upstream}"
+msgstr "Updated {branch} from {upstream}"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "upstream"
+msgstr "upstream"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "{branch} is already synchronized."
+msgstr "{branch} is already synchronized."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Sync failed"
+msgstr "Sync failed"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Running git action..."
+msgstr "Running git action..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Waiting for Git..."
+msgstr "Waiting for Git..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Action failed"
+msgstr "Action failed"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Keeping {branch}"
+msgstr "Keeping {branch}"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Branch name confirmed."
+msgstr "Branch name confirmed."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Creating branch..."
+msgstr "Creating branch..."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Switched to {branch}"
+msgstr "Switched to {branch}"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Branch created and checked out."
+msgstr "Branch created and checked out."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Failed to create branch"
+msgstr "Failed to create branch"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Editor opening is unavailable."
+msgstr "Editor opening is unavailable."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Unable to open file"
+msgstr "Unable to open file"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Git actions"
+msgstr "Git actions"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Detached HEAD: create and checkout a branch to enable push and PR actions."
+msgstr "Detached HEAD: create and checkout a branch to enable push and PR actions."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Behind upstream. Pull/rebase first."
+msgstr "Behind upstream. Pull/rebase first."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Git status refresh delayed."
+msgstr "Git status refresh delayed."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Git status refresh failed."
+msgstr "Git status refresh failed."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Run action on default branch?"
+msgstr "Run action on default branch?"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.browser.tsx
+#: src/components/GitActionsControl.tsx
+msgid "Abort"
+msgstr "Abort"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Continue"
+msgstr "Continue"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Checkout feature branch & continue"
+msgstr "Checkout feature branch & continue"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Create and switch to a branch from the current HEAD. Future commits, pushes, and PRs will use it."
+msgstr "Create and switch to a branch from the current HEAD. Future commits, pushes, and PRs will use it."
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Commit and Push"
+msgstr "Commit and Push"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "More Git actions"
+msgstr "More Git actions"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Open Git actions menu"
+msgstr "Open Git actions menu"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Initializing..."
+msgstr "Initializing..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+#: src/components/GitActionsControl.tsx
+msgid "Initialize Git"
+msgstr "Initialize Git"
+
+#. js-lingui-explicit-id
+#: src/components/GitActionsControl.tsx
+msgid "Git action options"
+msgstr "Git action options"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+msgid "Default branch"
+msgstr "Default branch"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+#: src/components/GitCreatePrDialog.tsx
+msgid "(detached HEAD)"
+msgstr "(detached HEAD)"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+msgid "Commit message"
+msgstr "Commit message"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+msgid "Message (leave empty to generate)"
+msgstr "Message (leave empty to generate)"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+#: src/components/settings/ManagedSkillDetailView.tsx
+msgid "Edit"
+msgstr "Edit"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+msgid "No local changes"
+msgstr "No local changes"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+msgid "{count, plural, one {# file} other {# files}}"
+msgstr "{count, plural, one {# file} other {# files}}"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+msgid "{selected} of {total} files"
+msgstr "{selected} of {total} files"
+
+#. js-lingui-explicit-id
+#: src/components/GitCommitDialog.tsx
+msgid "Excluded"
+msgstr "Excluded"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "{kind} → {branch}"
+msgstr "{kind} → {branch}"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "New branch"
+msgstr "New branch"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "Auto-named feature branch"
+msgstr "Auto-named feature branch"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "Pull request title"
+msgstr "Pull request title"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "Title (leave empty to generate)"
+msgstr "Title (leave empty to generate)"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "Pull request description"
+msgstr "Pull request description"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "Description (leave empty to generate)"
+msgstr "Description (leave empty to generate)"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "Commit and push local changes"
+msgstr "Commit and push local changes"
+
+#. js-lingui-explicit-id
+#: src/components/GitCreatePrDialog.tsx
+msgid "Create draft PR"
+msgstr "Create draft PR"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "24h"
+msgstr "24h"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "7d"
+msgstr "7d"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "30d"
+msgstr "30d"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "Credits"
+msgstr "Credits"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "On-demand"
+msgstr "On-demand"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "Extra usage"
+msgstr "Extra usage"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "{count} tokens"
+msgstr "{count} tokens"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "{remaining} of {total} remaining"
+msgstr "{remaining} of {total} remaining"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "{remaining} remaining"
+msgstr "{remaining} remaining"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "{amount} spent"
+msgstr "{amount} spent"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "{amount} limit"
+msgstr "{amount} limit"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "{used} of {limit}"
+msgstr "{used} of {limit}"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
+msgid "{count} recent sessions"
+msgstr "{count} recent sessions"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageMenuControl.tsx
+#: src/components/ProviderUsagePanelContent.tsx
+msgid "{provider} usage"
+msgstr "{provider} usage"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsagePanelContent.tsx
+msgid "Scanning local usage data for the selected provider."
+msgstr "Scanning local usage data for the selected provider."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsagePanelContent.tsx
+msgid "No local usage data was found yet for the selected provider."
+msgstr "No local usage data was found yet for the selected provider."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsagePanelContent.tsx
+msgid "No local usage data was found yet."
+msgstr "No local usage data was found yet."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsagePanelContent.tsx
+msgid "Learn more"
+msgstr "Learn more"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+#: src/components/Sidebar.tsx
+msgid "Hand off to {provider}"
+msgstr "Hand off to {provider}"
+
+#. js-lingui-explicit-id
+#: src/components/ThreadWorktreeHandoffDialog.tsx
+msgid "Hand off to worktree"
+msgstr "Hand off to worktree"
+
+#. js-lingui-explicit-id
+#: src/components/ThreadWorktreeHandoffDialog.tsx
+msgid "Create a detached worktree from the current branch to continue working in parallel."
+msgstr "Create a detached worktree from the current branch to continue working in parallel."
+
+#. js-lingui-explicit-id
+#: src/components/ThreadWorktreeHandoffDialog.tsx
+msgid "Worktree name"
+msgstr "Worktree name"
+
+#. js-lingui-explicit-id
+#: src/components/ThreadWorktreeHandoffDialog.tsx
+msgid "Handing off..."
+msgstr "Handing off..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+#: src/components/ThreadWorktreeHandoffDialog.tsx
+msgid "Hand off"
+msgstr "Hand off"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Coding agent"
+msgstr "Coding agent"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Never"
+msgstr "Never"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Could not copy"
+msgstr "Could not copy"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Clipboard access failed."
+msgstr "Clipboard access failed."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connection ready"
+msgstr "Connection ready"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Give your agent the setup prompt before the one-time code expires."
+msgstr "Give your agent the setup prompt before the one-time code expires."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Could not create connection"
+msgstr "Could not create connection"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "External MCP setup failed."
+msgstr "External MCP setup failed."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connection revoked"
+msgstr "Connection revoked"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Its credential stops working immediately."
+msgstr "Its credential stops working immediately."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Could not revoke connection"
+msgstr "Could not revoke connection"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Revocation failed."
+msgstr "Revocation failed."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "New pairing code ready"
+msgstr "New pairing code ready"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Copy the refreshed setup prompt. The new one-time code lasts 10 minutes."
+msgstr "Copy the refreshed setup prompt. The new one-time code lasts 10 minutes."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Could not resume pairing"
+msgstr "Could not resume pairing"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Pairing refresh failed."
+msgstr "Pairing refresh failed."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Pairing already completed"
+msgstr "Pairing already completed"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Revoked"
+msgstr "Revoked"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Expired"
+msgstr "Expired"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connected"
+msgstr "Connected"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Paired — waiting for first use"
+msgstr "Paired — waiting for first use"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Pairing code expired"
+msgstr "Pairing code expired"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Waiting for pairing"
+msgstr "Waiting for pairing"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Paired — not used yet"
+msgstr "Paired — not used yet"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Projects: {projects}"
+msgstr "Projects: {projects}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Permissions: {permissions}"
+msgstr "Permissions: {permissions}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Created {created} · Last used {lastUsed} · Expires {expires}"
+msgstr "Created {created} · Last used {lastUsed} · Expires {expires}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Continue setup"
+msgstr "Continue setup"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Resume pairing"
+msgstr "Resume pairing"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Revoke"
+msgstr "Revoke"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connect a coding agent"
+msgstr "Connect a coding agent"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "How this connection appears in Lattice. Works with Codex, Claude, and any other MCP-capable agent."
+msgstr "How this connection appears in Lattice. Works with Codex, Claude, and any other MCP-capable agent."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Access all Lattice projects"
+msgstr "Access all Lattice projects"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "The agent can discover and work in every project, including ones you add later. Turn off to pick specific projects."
+msgstr "The agent can discover and work in every project, including ones you add later. Turn off to pick specific projects."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "No projects are available."
+msgstr "No projects are available."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Advanced permissions"
+msgstr "Advanced permissions"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Optional access for existing tasks, shared checkouts, or execution without approvals. The safe defaults are recommended."
+msgstr "Optional access for existing tasks, shared checkouts, or execution without approvals. The safe defaults are recommended."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Review"
+msgstr "Review"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Read other project tasks"
+msgstr "Read other project tasks"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Without this permission, the agent can read only tasks it creates."
+msgstr "Without this permission, the agent can read only tasks it creates."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Use the shared local checkout"
+msgstr "Use the shared local checkout"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "High impact. Tasks may modify the checkout you are actively using instead of an isolated worktree."
+msgstr "High impact. Tasks may modify the checkout you are actively using instead of an isolated worktree."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Run without approval prompts"
+msgstr "Run without approval prompts"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "High impact. The external agent may start full-access execution without asking you to approve tool actions."
+msgstr "High impact. The external agent may start full-access execution without asking you to approve tool actions."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Create connection"
+msgstr "Create connection"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "The connection lasts 30 days and can be revoked at any time. The next screen gives you one prompt to paste into your agent."
+msgstr "The connection lasts 30 days and can be revoked at any time. The next screen gives you one prompt to paste into your agent."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Creating..."
+msgstr "Creating..."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connect {name}"
+msgstr "Connect {name}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "This connection has been revoked and can no longer access Lattice."
+msgstr "This connection has been revoked and can no longer access Lattice."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "This connection has expired and can no longer access Lattice."
+msgstr "This connection has expired and can no longer access Lattice."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Lattice received a request from this agent. Setup is complete."
+msgstr "Lattice received a request from this agent. Setup is complete."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "The private credential is stored locally. If the agent has not registered Lattice yet, give it the setup prompt below."
+msgstr "The private credential is stored locally. If the agent has not registered Lattice yet, give it the setup prompt below."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "The one-time pairing code was not used in time. Resume pairing to issue a fresh code without replacing this connection."
+msgstr "The one-time pairing code was not used in time. Resume pairing to issue a fresh code without replacing this connection."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Paste the setup prompt into your agent. This page updates automatically when pairing succeeds."
+msgstr "Paste the setup prompt into your agent. This page updates automatically when pairing succeeds."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Last connected {date}."
+msgstr "Last connected {date}."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connection expires {date}."
+msgstr "Connection expires {date}."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Revoke and start over"
+msgstr "Revoke and start over"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Resuming..."
+msgstr "Resuming..."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Back"
+msgstr "Back"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "1. Give your agent this prompt"
+msgstr "1. Give your agent this prompt"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Copy the prompt and paste it into the agent you want to connect (Codex, Claude Code, or any MCP-capable app). The agent pairs this computer, registers Lattice in its own configuration, and verifies the connection by itself."
+msgstr "Copy the prompt and paste it into the agent you want to connect (Codex, Claude Code, or any MCP-capable app). The agent pairs this computer, registers Lattice in its own configuration, and verifies the connection by itself."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Paired. The prompt now covers only registration and verification."
+msgstr "Paired. The prompt now covers only registration and verification."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Pairing code expires {date}."
+msgstr "Pairing code expires {date}."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Setup prompt copied"
+msgstr "Setup prompt copied"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Copy setup prompt"
+msgstr "Copy setup prompt"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Set up by hand instead"
+msgstr "Set up by hand instead"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "For apps without a terminal or chat, like Claude Desktop: run the pairing command in Terminal, then add the JSON below to the app's MCP configuration."
+msgstr "For apps without a terminal or chat, like Claude Desktop: run the pairing command in Terminal, then add the JSON below to the app's MCP configuration."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Show"
+msgstr "Show"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Pairing command (run in Terminal)"
+msgstr "Pairing command (run in Terminal)"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Pairing command copied"
+msgstr "Pairing command copied"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Copy"
+msgstr "Copy"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "MCP configuration (JSON)"
+msgstr "MCP configuration (JSON)"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Configuration copied"
+msgstr "Configuration copied"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "2. Try it"
+msgstr "2. Try it"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Open a new chat in the agent you just connected and send this editable example. You never need to copy project IDs, model IDs, or request IDs yourself."
+msgstr "Open a new chat in the agent you just connected and send this editable example. You never need to copy project IDs, model IDs, or request IDs yourself."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connection verified by Lattice."
+msgstr "Connection verified by Lattice."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Lattice will show Connected after the agent makes its first request."
+msgstr "Lattice will show Connected after the agent makes its first request."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Example prompt copied"
+msgstr "Example prompt copied"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Copy example prompt"
+msgstr "Copy example prompt"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connected agents"
+msgstr "Connected agents"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Loading connections..."
+msgstr "Loading connections..."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "No connected agents"
+msgstr "No connected agents"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Connect Codex, Claude, or another local MCP agent to create and follow Lattice tasks."
+msgstr "Connect Codex, Claude, or another local MCP agent to create and follow Lattice tasks."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Revoked connections ({count})"
+msgstr "Revoked connections ({count})"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Revoked connections are hidden by default. Their credentials no longer work."
+msgstr "Revoked connections are hidden by default. Their credentials no longer work."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Hide"
+msgstr "Hide"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+msgid "This skill is not managed by Lattice."
+msgstr "This skill is not managed by Lattice."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+msgid "No description is provided for this skill."
+msgstr "No description is provided for this skill."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "All skills"
+msgstr "All skills"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Included with Lattice"
+msgstr "Included with Lattice"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Installed by you"
+msgstr "Installed by you"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Enabled"
+msgstr "Enabled"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Disabled"
+msgstr "Disabled"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+msgid "{fileCount, plural, one {# file} other {# files}}"
+msgstr "{fileCount, plural, one {# file} other {# files}}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+msgid "Creating copy…"
+msgstr "Creating copy…"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+msgid "Customize a copy…"
+msgstr "Customize a copy…"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+msgid "Remove…"
+msgstr "Remove…"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+msgid "This protected skill ships inside Lattice, so it is not stored in your user skills folder. Customize a copy to edit it without changing the original."
+msgstr "This protected skill ships inside Lattice, so it is not stored in your user skills folder. Customize a copy to edit it without changing the original."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Instructions"
+msgstr "Instructions"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+msgid "Loading skill…"
+msgstr "Loading skill…"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+msgid "The skill could not be loaded."
+msgstr "The skill could not be loaded."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "This skill does not have an editable identifier."
+msgstr "This skill does not have an editable identifier."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "The skill could not be saved."
+msgstr "The skill could not be saved."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Skill details"
+msgstr "Skill details"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Create a skill"
+msgstr "Create a skill"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Edit skill"
+msgstr "Edit skill"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Skill name"
+msgstr "Skill name"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Literature Review"
+msgstr "Literature Review"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Lattice will save this as “{generatedId}”."
+msgstr "Lattice will save this as “{generatedId}”."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Internal name: {internalName}"
+msgstr "Internal name: {internalName}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "What should this skill do?"
+msgstr "What should this skill do?"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Explain what the skill does and when Lattice should use it."
+msgstr "Explain what the skill does and when Lattice should use it."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Include the kinds of requests that should activate this skill."
+msgstr "Include the kinds of requests that should activate this skill."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Write the workflow, rules, examples, or guidance Lattice should follow."
+msgstr "Write the workflow, rules, examples, or guidance Lattice should follow."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Plain text works. Markdown formatting is optional, and everything wraps inside the editor."
+msgstr "Plain text works. Markdown formatting is optional, and everything wraps inside the editor."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Saving…"
+msgstr "Saving…"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Create skill"
+msgstr "Create skill"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillEditorView.tsx
+msgid "Save changes"
+msgstr "Save changes"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Generation defaults"
+msgstr "Generation defaults"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Git writing model"
+msgstr "Git writing model"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Used for generated commit messages, PR titles, and branch names."
+msgstr "Used for generated commit messages, PR titles, and branch names."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Git text generation model"
+msgstr "Git text generation model"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Compile repair model"
+msgstr "Compile repair model"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Used by Lattice to repair one compile diagnostic in an independent background task."
+msgstr "Used by Lattice to repair one compile diagnostic in an independent background task."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Custom models"
+msgstr "Custom models"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Add models manually"
+msgstr "Add models manually"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "If a model does not appear automatically, choose its provider and enter its model ID. It will then be available in model pickers."
+msgstr "If a model does not appear automatically, choose its provider and enter its model ID. It will then be available in model pickers."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Custom model provider"
+msgstr "Custom model provider"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Add"
+msgstr "Add"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProfileSettingsPanel.tsx
+msgid "Model usage"
+msgstr "Model usage"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProfileSettingsPanel.tsx
+msgid "No model activity yet."
+msgstr "No model activity yet."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Not signed in"
+msgstr "Not signed in"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Unsupported"
+msgstr "Unsupported"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Unavailable"
+msgstr "Unavailable"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Sign in with {command} to see usage."
+msgstr "Sign in with {command} to see usage."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Sign in with the provider CLI to see usage."
+msgstr "Sign in with the provider CLI to see usage."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Codex API-key auth has no usage endpoint. Sign in with ChatGPT to see usage."
+msgstr "Codex API-key auth has no usage endpoint. Sign in with ChatGPT to see usage."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Usage is currently unavailable."
+msgstr "Usage is currently unavailable."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "{provider} usage request failed ({status})."
+msgstr "{provider} usage request failed ({status})."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Could not reach the {destination}."
+msgstr "Could not reach the {destination}."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "No usage data reported yet."
+msgstr "No usage data reported yet."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Provider usage"
+msgstr "Provider usage"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Refresh"
+msgstr "Refresh"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Loading provider usage…"
+msgstr "Loading provider usage…"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+msgid "Usage is read locally from each provider CLI's stored credentials and fetched directly from the provider. The list follows whatever you are signed into; unsigned providers stay visible until any account is connected, then drop away. Short-lived tokens are refreshed through the provider's own CLI or official token endpoint."
+msgstr "Usage is read locally from each provider CLI's stored credentials and fetched directly from the provider. The list follows whatever you are signed into; unsigned providers stay visible until any account is connected, then drop away. Short-lived tokens are refreshed through the provider's own CLI or official token endpoint."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.browser.tsx
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Manual update"
+msgstr "Manual update"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.browser.tsx
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Updating"
+msgstr "Updating"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Checking"
+msgstr "Checking"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Installed"
+msgstr "Installed"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "CLI not installed"
+msgstr "CLI not installed"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Update"
+msgstr "Update"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Provider picker"
+msgstr "Provider picker"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Available CLIs"
+msgstr "Available CLIs"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Show or hide installed providers in the picker and drag them into your preferred order. Hiding a provider here does not disable its server activity."
+msgstr "Show or hide installed providers in the picker and drag them into your preferred order. Hiding a provider here does not disable its server activity."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Checking installed CLIs"
+msgstr "Checking installed CLIs"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "No CLIs detected"
+msgstr "No CLIs detected"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "{visibleAvailableProviderCount} of {availableProviderCount} installed shown"
+msgstr "{visibleAvailableProviderCount} of {availableProviderCount} installed shown"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "{availableProviderCount} installed · custom order"
+msgstr "{availableProviderCount} installed · custom order"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "{availableProviderCount} installed"
+msgstr "{availableProviderCount} installed"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Updates"
+msgstr "Updates"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Automatic CLI update checks"
+msgstr "Automatic CLI update checks"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Check Codex, Claude, and other provider CLIs for newer versions in the background."
+msgstr "Check Codex, Claude, and other provider CLIs for newer versions in the background."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Provider updates"
+msgstr "Provider updates"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Review installed provider tools that Lattice can safely update."
+msgstr "Review installed provider tools that Lattice can safely update."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Automatic checks off"
+msgstr "Automatic checks off"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "{outdatedProviderCount, plural, one {# update available} other {# updates available}}"
+msgstr "{outdatedProviderCount, plural, one {# update available} other {# updates available}}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "No provider updates detected"
+msgstr "No provider updates detected"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Provider tools"
+msgstr "Provider tools"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Provider runtimes"
+msgstr "Provider runtimes"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Review external provider CLIs and the Pi SDK included with Lattice. Pi does not require a separate CLI installation or update."
+msgstr "Review external provider CLIs and the Pi SDK included with Lattice. Pi does not require a separate CLI installation or update."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Skill updated"
+msgstr "Skill updated"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Skill added"
+msgstr "Skill added"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "{skillName} is ready to use in Lattice."
+msgstr "{skillName} is ready to use in Lattice."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "A skill named “{folderName}” is already installed. Replace it?"
+msgstr "A skill named “{folderName}” is already installed. Replace it?"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "The existing skill changed before it could be replaced. Try again."
+msgstr "The existing skill changed before it could be replaced. Try again."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Could not add skill"
+msgstr "Could not add skill"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "The selected folder is not valid."
+msgstr "The selected folder is not valid."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Skill restored"
+msgstr "Skill restored"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "{skillName} is available again."
+msgstr "{skillName} is available again."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Could not restore skill"
+msgstr "Could not restore skill"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "The skill could not be restored."
+msgstr "The skill could not be restored."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Remove “{displayName}” from Lattice? You can undo this immediately afterward."
+msgstr "Remove “{displayName}” from Lattice? You can undo this immediately afterward."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Skill removed"
+msgstr "Skill removed"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "{displayName} was removed from Lattice."
+msgstr "{displayName} was removed from Lattice."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Undo"
+msgstr "Undo"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Could not remove skill"
+msgstr "Could not remove skill"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "The skill could not be removed."
+msgstr "The skill could not be removed."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Skill created"
+msgstr "Skill created"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "{displayName} is ready to use."
+msgstr "{displayName} is ready to use."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Editable copy created"
+msgstr "Editable copy created"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "The copy is in your user skills folder. Your original is unchanged."
+msgstr "The copy is in your user skills folder. Your original is unchanged."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Could not create a copy"
+msgstr "Could not create a copy"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "The skill could not be copied."
+msgstr "The skill could not be copied."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Included"
+msgstr "Included"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Local"
+msgstr "Local"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Detected"
+msgstr "Detected"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Enable the {displayName} skill"
+msgstr "Enable the {displayName} skill"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Remove the {displayName} skill"
+msgstr "Remove the {displayName} skill"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Remove skill"
+msgstr "Remove skill"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Open {displayName} details"
+msgstr "Open {displayName} details"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Open skill details"
+msgstr "Open skill details"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Skills Manager"
+msgstr "Skills Manager"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Your skill library"
+msgstr "Your skill library"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Manage Skills included with Lattice, imported by you, or detected from other tools."
+msgstr "Manage Skills included with Lattice, imported by you, or detected from other tools."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Choose a skill folder"
+msgstr "Choose a skill folder"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Importing…"
+msgstr "Importing…"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "New skill"
+msgstr "New skill"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Import skill"
+msgstr "Import skill"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Search skills..."
+msgstr "Search skills..."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Search skills"
+msgstr "Search skills"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Skills"
+msgstr "Skills"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Lattice could not scan the skill library. Check that the local service is running, then reopen Settings."
+msgstr "Lattice could not scan the skill library. Check that the local service is running, then reopen Settings."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Search results"
+msgstr "Search results"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "No skills match “{query}”."
+msgstr "No skills match “{query}”."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "No skills found. Create one here or import a folder containing SKILL.md."
+msgstr "No skills found. Create one here or import a folder containing SKILL.md."
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "Detected from your environment"
+msgstr "Detected from your environment"
+
+#. js-lingui-explicit-id
+#: src/components/settings/SkillsSettingsPanel.tsx
+msgid "{skillCount, plural, one {# skill} other {# skills}}"
+msgstr "{skillCount, plural, one {# skill} other {# skills}}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatEmptyStateHero.tsx
+msgid "Synara logo"
+msgstr "Synara logo"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasMenu.tsx
+msgid "Add files"
+msgstr "Add files"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Requested permission profile"
+msgstr "Requested permission profile"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerPendingUserInputPanel.tsx
+msgid "Previous question"
+msgstr "Previous question"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerPendingUserInputPanel.tsx
+msgid "Next question"
+msgstr "Next question"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Source control is unavailable for this thread."
+msgstr "Source control is unavailable for this thread."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Source control"
+msgstr "Source control"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Close source control"
+msgstr "Close source control"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Refresh changes"
+msgstr "Refresh changes"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Checking repository…"
+msgstr "Checking repository…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "No uncommitted changes."
+msgstr "No uncommitted changes."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "{count, plural, one {# local commit has not been pushed.} other {# local commits have not been pushed.}}"
+msgstr "{count, plural, one {# local commit has not been pushed.} other {# local commits have not been pushed.}}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Loading changes..."
+msgstr "Loading changes..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Staged"
+msgstr "Staged"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "No staged changes."
+msgstr "No staged changes."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Unstage file"
+msgstr "Unstage file"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Unstage all"
+msgstr "Unstage all"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "No unstaged changes."
+msgstr "No unstaged changes."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Stage file"
+msgstr "Stage file"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Stage all"
+msgstr "Stage all"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Select a file to view its diff."
+msgstr "Select a file to view its diff."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Version control enabled"
+msgstr "Version control enabled"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "This folder is now a local Git repository."
+msgstr "This folder is now a local Git repository."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Start version control"
+msgstr "Start version control"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Track changes locally, review diffs, and restore earlier work. Nothing is uploaded."
+msgstr "Track changes locally, review diffs, and restore earlier work. Nothing is uploaded."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Initializing…"
+msgstr "Initializing…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Git could not be initialized."
+msgstr "Git could not be initialized."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Connect to GitHub"
+msgstr "Connect to GitHub"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Publish a new private repository or attach one you already have."
+msgstr "Publish a new private repository or attach one you already have."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Publish"
+msgstr "Publish"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Connect existing"
+msgstr "Connect existing"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Publish to GitHub"
+msgstr "Publish to GitHub"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Connect GitHub repository"
+msgstr "Connect GitHub repository"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Create a GitHub repository for this folder. Your files stay local until you commit and push them."
+msgstr "Create a GitHub repository for this folder. Your files stay local until you commit and push them."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Attach an existing GitHub repository as origin. This does not fetch, pull, or upload files."
+msgstr "Attach an existing GitHub repository as origin. This does not fetch, pull, or upload files."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "GitHub repository created"
+msgstr "GitHub repository created"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "GitHub repository connected"
+msgstr "GitHub repository connected"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "{repository} is ready. Files stay local until your first push."
+msgstr "{repository} is ready. Files stay local until your first push."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "{repository} is now connected as {remoteName}."
+msgstr "{repository} is now connected as {remoteName}."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Repository name"
+msgstr "Repository name"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Use letters, numbers, periods, hyphens, or underscores."
+msgstr "Use letters, numbers, periods, hyphens, or underscores."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "You can also use owner/repository to publish to an organization."
+msgstr "You can also use owner/repository to publish to an organization."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Description"
+msgstr "Description"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Optional"
+msgstr "Optional"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "What is this project about?"
+msgstr "What is this project about?"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Visibility"
+msgstr "Visibility"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Repository visibility"
+msgstr "Repository visibility"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Private"
+msgstr "Private"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Only you and invited collaborators"
+msgstr "Only you and invited collaborators"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Public"
+msgstr "Public"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Visible to everyone"
+msgstr "Visible to everyone"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Repository URL"
+msgstr "Repository URL"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Enter a GitHub HTTPS or SSH repository URL."
+msgstr "Enter a GitHub HTTPS or SSH repository URL."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "HTTPS and git@github.com SSH URLs are supported."
+msgstr "HTTPS and git@github.com SSH URLs are supported."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Publishing creates the empty remote only. Review your files and .gitignore before the first push."
+msgstr "Publishing creates the empty remote only. Review your files and .gitignore before the first push."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Connecting changes repository configuration only. Your working files are not modified."
+msgstr "Connecting changes repository configuration only. Your working files are not modified."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "The GitHub setup could not be completed."
+msgstr "The GitHub setup could not be completed."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Creating…"
+msgstr "Creating…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Connecting…"
+msgstr "Connecting…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Create repository"
+msgstr "Create repository"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Connect repository"
+msgstr "Connect repository"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProviderModelPicker.tsx
+msgid "Loading models"
+msgstr "Loading models"
+
+#. placeholder {0}: progress.questionIndex + 1
+#: src/components/chat/ComposerPendingUserInputPanel.tsx
+msgid "{0} of {questionCount}"
+msgstr "{0} of {questionCount}"
+
+#: src/components/chat/ProviderModelPicker.tsx
+msgid "Add providers"
+msgstr "Add providers"
+
+#: src/settingsNavigation.ts
+msgid "Agent providers"
+msgstr "Agent providers"
+
+#: src/settingsNavigation.ts
+msgid "Agent skills"
+msgstr "Agent skills"
+
+#: src/settingsNavigation.ts
+msgid "Appearance"
+msgstr "Appearance"
+
+#: src/settingsNavigation.ts
+msgid "AppSnap"
+msgstr "AppSnap"
+
+#: src/settingsNavigation.ts
+msgid "Archived"
+msgstr "Archived"
+
+#: src/settingsNavigation.ts
+msgid "Archived threads"
+msgstr "Archived threads"
+
+#: src/components/chat/ComposerPendingUserInputPanel.tsx
+msgid "Cancel"
+msgstr "Cancel"
+
+#: src/settingsNavigation.ts
+msgid "Capture another app's frontmost window directly into a task."
+msgstr "Capture another app's frontmost window directly into a task."
+
+#: src/settingsNavigation.ts
+msgid "Capture, customize, and add shortcuts for every Lattice command."
+msgstr "Capture, customize, and add shortcuts for every Lattice command."
+
+#: src/components/chat/ProviderModelPicker.tsx
+msgid "Change model"
+msgstr "Change model"
+
+#: src/settingsNavigation.ts
+msgid "Chat behavior"
+msgstr "Chat behavior"
+
+#: src/settingsNavigation.ts
+msgid "Choose coding agents, their installed tools, and model defaults for Git writing."
+msgstr "Choose coding agents, their installed tools, and model defaults for Git writing."
+
+#: src/settingsNavigation.ts
+msgid "Choose defaults for new chats, navigation, and the Environment panel."
+msgstr "Choose defaults for new chats, navigation, and the Environment panel."
+
+#: src/settingsNavigation.ts
+msgid "Choose how Lattice tells you when work finishes or needs attention."
+msgstr "Choose how Lattice tells you when work finishes or needs attention."
+
+#: src/settingsNavigation.ts
+msgid "Coding"
+msgstr "Coding"
+
+#: src/settingsNavigation.ts
+msgid "Control live responses, follow-ups, review defaults, and safety confirmations."
+msgstr "Control live responses, follow-ups, review defaults, and safety confirmations."
+
+#: src/settingsNavigation.ts
+msgid "Create, import, and manage the Skills Lattice uses."
+msgstr "Create, import, and manage the Skills Lattice uses."
+
+#: src/settingsNavigation.ts
+msgid "Customize the theme, typography, density, and time format."
+msgstr "Customize the theme, typography, density, and time format."
+
+#: src/settingsNavigation.ts
+msgid "Find and restore threads you previously archived."
+msgstr "Find and restore threads you previously archived."
+
+#: src/settingsNavigation.ts
+msgid "General"
+msgstr "General"
+
+#: src/settingsNavigation.ts
+msgid "Give Codex, Claude, and other local agents scoped access to Lattice tasks."
+msgstr "Give Codex, Claude, and other local agents scoped access to Lattice tasks."
+
+#: src/settingsNavigation.ts
+msgid "Integrations"
+msgstr "Integrations"
+
+#: src/settingsNavigation.ts
+msgid "Keybindings"
+msgstr "Keybindings"
+
+#: src/components/chat/ChatEmptyStateHero.tsx
+msgid "Let's build"
+msgstr "Let's build"
+
+#: src/settingsNavigation.ts
+msgid "Manage sessions, recovery tools, low-level keybindings, and version details."
+msgstr "Manage sessions, recovery tools, low-level keybindings, and version details."
+
+#: src/settingsNavigation.ts
+msgid "Managed worktrees"
+msgstr "Managed worktrees"
+
+#: src/settingsNavigation.ts
+msgid "MCP connections"
+msgstr "MCP connections"
+
+#: src/components/chat/ChatHeader.tsx
+msgid "New chat"
+msgstr "New chat"
+
+#: src/components/chat/ChatHeader.tsx
+msgid "No chats in this project yet"
+msgstr "No chats in this project yet"
+
+#: src/settingsNavigation.ts
+msgid "Notifications"
+msgstr "Notifications"
+
+#: src/settingsNavigation.ts
+msgid "Personal"
+msgstr "Personal"
+
+#: src/settingsNavigation.ts
+msgid "Profile"
+msgstr "Profile"
+
+#: src/settingsNavigation.ts
+msgid "Review and clean up isolated workspaces created by Lattice."
+msgstr "Review and clean up isolated workspaces created by Lattice."
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Review the request to continue."
+msgstr "Review the request to continue."
+
+#: src/settingsNavigation.ts
+msgid "See remaining quota and credits for every signed-in provider."
+msgstr "See remaining quota and credits for every signed-in provider."
+
+#: src/components/chat/ComposerPendingUserInputPanel.tsx
+msgid "Select one or more."
+msgstr "Select one or more."
+
+#: src/settingsNavigation.ts
+msgid "System"
+msgstr "System"
+
+#: src/settingsNavigation.ts
+msgid "System tools"
+msgstr "System tools"
+
+#: src/settingsNavigation.ts
+msgid "Usage & limits"
+msgstr "Usage & limits"
+
+#: src/settingsNavigation.ts
+msgid "Your local activity, streaks, and a shareable stats card."
+msgstr "Your local activity, streaks, and a shareable stats card."

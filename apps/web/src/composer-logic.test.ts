@@ -8,6 +8,7 @@ import {
   isCollapsedCursorAdjacentToInlineToken,
   parseStandaloneComposerSlashCommand,
   replaceTextRange,
+  resolveComposerTriggerAfterEditorChange,
   stripComposerTriggerText,
 } from "./composer-logic";
 import { INLINE_TERMINAL_CONTEXT_PLACEHOLDER } from "./lib/terminalContext";
@@ -166,6 +167,50 @@ describe("detectComposerTrigger", () => {
     const trigger = detectComposerTrigger(text, text.length);
 
     expect(trigger).toBeNull();
+  });
+
+  it("reopens a completed quoted mention when Backspace removes its trailing delimiter", () => {
+    const text = 'Compare @"Attention Is All You Need"';
+    const trigger = detectComposerTrigger(text, text.length);
+
+    expect(trigger).toEqual({
+      kind: "mention",
+      query: "Attention Is All You Need",
+      rangeStart: "Compare ".length,
+      rangeEnd: text.length,
+    });
+  });
+
+  it("reopens a completed mention after Backspace removes its delimiter beside the chip", () => {
+    const previousText = 'Compare @"Attention Is All You Need" ';
+    const nextText = previousText.slice(0, -1);
+
+    expect(
+      resolveComposerTriggerAfterEditorChange({
+        previousText,
+        nextText,
+        expandedCursor: nextText.length,
+        cursorAdjacentToInlineToken: true,
+      }),
+    ).toEqual({
+      kind: "mention",
+      query: "Attention Is All You Need",
+      rangeStart: "Compare ".length,
+      rangeEnd: nextText.length,
+    });
+  });
+
+  it("does not reopen a mention picker when only the caret moves beside a chip", () => {
+    const text = 'Compare @"Attention Is All You Need"';
+
+    expect(
+      resolveComposerTriggerAfterEditorChange({
+        previousText: text,
+        nextText: text,
+        expandedCursor: text.length,
+        cursorAdjacentToInlineToken: true,
+      }),
+    ).toBeNull();
   });
 
   it("prefers a later unquoted mention over an earlier closed quoted mention", () => {

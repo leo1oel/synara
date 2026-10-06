@@ -225,7 +225,28 @@ describe("collectProviderUsageSnapshots caching", () => {
     expect(polled[0]?.source).toBe("recovered");
   });
 
-  it("omits disabled providers and invalidates their cached snapshots", async () => {
+  it("does not retain stale snapshots in the outer cache", async () => {
+    fetchMock.mockImplementation(async (ctx) => ({ ...okSnapshot(ctx.nowMs), stale: true }));
+
+    await collectProviderUsageSnapshots(makeCtx(NOW_MS));
+    await collectProviderUsageSnapshots(makeCtx(NOW_MS + 1_000));
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("expires needs-auth snapshots on the degraded TTL", async () => {
+    fetchMock.mockImplementation(async (ctx) => ({
+      ...okSnapshot(ctx.nowMs),
+      status: "needs-auth",
+    }));
+
+    await collectProviderUsageSnapshots(makeCtx(NOW_MS));
+    await collectProviderUsageSnapshots(makeCtx(NOW_MS + 90_000));
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("refreshes provider usage on demand", async () => {
     fetchMock.mockImplementation(async (ctx) => okSnapshot(ctx.nowMs));
     const configLayer = ServerConfig.layerTest(process.cwd(), process.cwd()).pipe(
       Layer.provide(NodeServices.layer),
@@ -238,21 +259,14 @@ describe("collectProviderUsageSnapshots caching", () => {
 
     const result = await Effect.runPromise(
       Effect.gen(function* () {
-        const serverSettings = yield* ServerSettingsService;
         const first = yield* listProviderUsage({});
-
-        yield* serverSettings.updateSettings({ providers: { codex: { enabled: false } } });
-        const disabled = yield* listProviderUsage({ forceRefresh: true });
-
-        yield* serverSettings.updateSettings({ providers: { codex: { enabled: true } } });
-        const reenabled = yield* listProviderUsage({});
-        return { first, disabled, reenabled };
+        const refreshed = yield* listProviderUsage({ forceRefresh: true });
+        return { first, refreshed };
       }).pipe(Effect.provide(layer), Effect.scoped),
     );
 
     expect(result.first).toHaveLength(1);
-    expect(result.disabled).toEqual([]);
-    expect(result.reenabled).toHaveLength(1);
+    expect(result.refreshed).toHaveLength(1);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

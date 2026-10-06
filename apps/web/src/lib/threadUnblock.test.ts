@@ -46,10 +46,13 @@ function conflictError() {
 
 describe("unblockThreadFromClient", () => {
   it("abandons every blocker oldest-first", async () => {
-    const listProviderDeliveryBlockers = vi.fn(async () => [
-      blocker({ eventSequence: 42, state: "dead" }),
-      blocker({ eventSequence: 17, state: "uncertain" }),
-    ]);
+    const listProviderDeliveryBlockers = vi
+      .fn()
+      .mockResolvedValueOnce([
+        blocker({ eventSequence: 42, state: "dead" }),
+        blocker({ eventSequence: 17, state: "uncertain" }),
+      ])
+      .mockResolvedValue([]);
     const reconcileProviderDelivery = vi.fn(async (input: { eventSequence: number }) => ({
       eventSequence: input.eventSequence,
       threadId,
@@ -68,6 +71,7 @@ describe("unblockThreadFromClient", () => {
 
     expect(result).toEqual({ kind: "unblocked", reconciledCount: 2 });
     expect(listProviderDeliveryBlockers).toHaveBeenCalledWith({ threadId });
+    expect(listProviderDeliveryBlockers).toHaveBeenCalledTimes(2);
     expect(
       reconcileProviderDelivery.mock.calls.map(
         ([input]) => (input as never as { eventSequence: number }).eventSequence,
@@ -99,9 +103,10 @@ describe("unblockThreadFromClient", () => {
   it("treats a reconciliation conflict as settled elsewhere", async () => {
     const result = await unblockThreadFromClient(
       {
-        listProviderDeliveryBlockers: vi.fn(async () => [
-          blocker({ eventSequence: 17, state: "uncertain" }),
-        ]),
+        listProviderDeliveryBlockers: vi
+          .fn()
+          .mockResolvedValueOnce([blocker({ eventSequence: 17, state: "uncertain" })])
+          .mockResolvedValue([]),
         reconcileProviderDelivery: vi.fn(async () => {
           throw conflictError();
         }),
@@ -116,10 +121,13 @@ describe("unblockThreadFromClient", () => {
     let call = 0;
     const result = await unblockThreadFromClient(
       {
-        listProviderDeliveryBlockers: vi.fn(async () => [
-          blocker({ eventSequence: 17, state: "uncertain" }),
-          blocker({ eventSequence: 42, state: "uncertain" }),
-        ]),
+        listProviderDeliveryBlockers: vi
+          .fn()
+          .mockResolvedValueOnce([
+            blocker({ eventSequence: 17, state: "uncertain" }),
+            blocker({ eventSequence: 42, state: "uncertain" }),
+          ])
+          .mockResolvedValue([]),
         reconcileProviderDelivery: vi.fn(async () => {
           call += 1;
           if (call === 2) throw conflictError();
@@ -136,6 +144,39 @@ describe("unblockThreadFromClient", () => {
     );
 
     expect(result).toEqual({ kind: "unblocked", reconciledCount: 1 });
+  });
+
+  it("does not report success when replay creates a new provider blocker", async () => {
+    const remaining = {
+      ...blocker({ eventSequence: 43, state: "uncertain" }),
+      lastError: "Failed to prove Codex app-server process-tree exit",
+    };
+    await expect(
+      unblockThreadFromClient(
+        {
+          listProviderDeliveryBlockers: vi
+            .fn()
+            .mockResolvedValueOnce([blocker({ eventSequence: 17, state: "uncertain" })])
+            .mockResolvedValueOnce([remaining]),
+          reconcileProviderDelivery: vi.fn().mockResolvedValue({ state: "succeeded" }),
+        } as never,
+        threadId,
+      ),
+    ).rejects.toThrow("The provider is still blocking this thread. " + remaining.lastError);
+  });
+
+  it("does not treat a reconciliation conflict as recovery while blockers remain", async () => {
+    await expect(
+      unblockThreadFromClient(
+        {
+          listProviderDeliveryBlockers: vi.fn(async () => [
+            blocker({ eventSequence: 17, state: "uncertain" }),
+          ]),
+          reconcileProviderDelivery: vi.fn().mockRejectedValue(conflictError()),
+        } as never,
+        threadId,
+      ),
+    ).rejects.toThrow("The provider is still blocking this thread");
   });
 
   it("propagates unexpected reconciliation failures", async () => {

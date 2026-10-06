@@ -10,6 +10,9 @@ import type {
 } from "@synara/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { COMPUTER_PERMISSION_KINDS } from "@synara/shared/computerGrants";
+import { isSynaraEmbedMode } from "~/embedMode";
+
+vi.mock("~/embedMode", () => ({ isSynaraEmbedMode: vi.fn(() => false) }));
 
 import {
   computerProvisionErrorToast,
@@ -38,9 +41,27 @@ function grantState(overrides: Partial<DesktopAppSnapState> = {}): DesktopAppSna
   };
 }
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.mocked(isSynaraEmbedMode).mockReturnValue(false);
+});
 
 describe("prepareComputerPermissionGuide", () => {
+  it("keeps an embedded Lattice request unsent without pretending native setup exists", async () => {
+    vi.mocked(isSynaraEmbedMode).mockReturnValue(true);
+    const getPermissionState = vi.fn(async () => grantState());
+    const startPermissionSetup = vi.fn();
+    await expect(
+      prepareComputerPermissionGuide({
+        getPermissionState,
+        startPermissionSetup,
+        isCurrent: () => true,
+      }),
+    ).rejects.toThrow("Computer Use is not available in Lattice yet");
+    expect(getPermissionState).not.toHaveBeenCalled();
+    expect(startPermissionSetup).not.toHaveBeenCalled();
+  });
+
   it("does not probe without a native setup bridge", async () => {
     const getPermissionState = vi.fn();
     await expect(

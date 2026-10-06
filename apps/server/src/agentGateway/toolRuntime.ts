@@ -1,4 +1,4 @@
-import type { ProviderKind } from "@synara/contracts";
+import type { ProviderKind, RuntimeMode } from "@synara/contracts";
 import type { Effect } from "effect";
 
 import type { AgentGatewayTargetError } from "./targetResolver.ts";
@@ -52,6 +52,7 @@ export interface ToolContext {
   readonly callerThreadLabel: string | null;
   readonly callerSessionKey: string;
   readonly callerProvider: ProviderKind;
+  readonly callerRuntimeMode?: RuntimeMode;
   readonly callerCapabilities: ReadonlySet<AgentGatewayCapability>;
   readonly callerTurnId: string | null;
   readonly assertCallerTurnActive: () => Effect.Effect<void, GatewayToolError>;

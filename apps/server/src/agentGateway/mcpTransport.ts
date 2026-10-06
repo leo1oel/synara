@@ -27,6 +27,7 @@ import {
   type ToolEntry,
 } from "./toolRuntime.ts";
 import { errorText } from "./toolInput.ts";
+import { ACTIVE_AGENT_HOST_PROFILE } from "./hostProfile.ts";
 
 const MCP_MAX_BATCH_MESSAGES = 50;
 
@@ -150,9 +151,14 @@ export function makeAgentGatewayMcpTransport(input: {
           return jsonRpcResult(request.id, {});
         case "tools/list":
           return jsonRpcResult(request.id, {
-            tools: filterToolsByCapability(input.tools, context.callerCapabilities)
-              // Discovery-only tools stay callable by exact name — toolsByName
-              // is built from the unfiltered catalog — but do not advertise.
+            // The catalog itself is an authority boundary. In particular, an
+            // embedding host that did not grant device control must not teach
+            // the model that device_* tools exist and then rely only on a
+            // later tools/call refusal.
+            tools: input.tools
+              .filter((tool) => context.callerCapabilities.has(tool.requiredCapability))
+              // Keep exact-name dispatch available without advertising large
+              // specialist families in every provider prompt.
               .filter((tool) => tool.discoveryOnly !== true)
               .map(
                 (tool) =>
@@ -302,7 +308,7 @@ export function makeAgentGatewayMcpTransport(input: {
             return yield* Effect.fail(
               new GatewayToolError(
                 "caller_turn_inactive",
-                "This Synara write was rejected because this credential had no write authority for the exact active turn when the MCP request arrived.",
+                `This ${ACTIVE_AGENT_HOST_PROFILE.displayName} write was rejected because this credential had no write authority for the exact active turn when the MCP request arrived.`,
                 {
                   callerThreadId,
                   latestTurnId: callerThread.value.latestTurn?.turnId ?? null,
@@ -314,7 +320,7 @@ export function makeAgentGatewayMcpTransport(input: {
             return yield* Effect.fail(
               new GatewayToolError(
                 "caller_session_inactive",
-                "This Synara write was rejected because its provider-session authority is no longer active.",
+                `This ${ACTIVE_AGENT_HOST_PROFILE.displayName} write was rejected because its provider-session authority is no longer active.`,
                 { callerThreadId },
               ),
             );
@@ -326,7 +332,7 @@ export function makeAgentGatewayMcpTransport(input: {
                 (error) =>
                   new GatewayToolError(
                     "caller_turn_inactive",
-                    "This Synara write was rejected because the caller thread could no longer be verified.",
+                    `This ${ACTIVE_AGENT_HOST_PROFILE.displayName} write was rejected because the caller thread could no longer be verified.`,
                     { callerThreadId, error: errorText(error) },
                   ),
               ),
@@ -338,7 +344,7 @@ export function makeAgentGatewayMcpTransport(input: {
             return yield* Effect.fail(
               new GatewayToolError(
                 "caller_turn_inactive",
-                "This Synara write was rejected because the turn that received this MCP request is no longer active. In-flight requests cannot inherit authority from a later turn.",
+                `This ${ACTIVE_AGENT_HOST_PROFILE.displayName} write was rejected because the turn that received this MCP request is no longer active. In-flight requests cannot inherit authority from a later turn.`,
                 {
                   callerThreadId,
                   authorizedTurnId: callerWriteAuthority.turnId,
@@ -363,6 +369,8 @@ export function makeAgentGatewayMcpTransport(input: {
         callerThreadLabel: callerThread.value.subagentNickname ?? callerThread.value.title ?? null,
         callerSessionKey: callerSession.sessionKey,
         callerProvider: callerSession.provider,
+        callerRuntimeMode:
+          callerThread.value.session?.runtimeMode ?? callerThread.value.runtimeMode,
         callerCapabilities: callerSession.capabilities,
         callerTurnId: callerWriteAuthority?.turnId ?? null,
         assertCallerTurnActive,

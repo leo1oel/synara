@@ -73,6 +73,8 @@ export function ComposerExtrasPanel(props: {
   onInsertGoal: () => void;
   onClose: () => void;
   panelId: string;
+  /** Embedded hosts own modes and window capture; expose file attachments only. */
+  attachmentsOnly?: boolean;
 }) {
   const inputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -196,7 +198,10 @@ export function ComposerExtrasPanel(props: {
           },
         ];
 
-  const selectableRowIds = groups.flatMap((group) =>
+  const visibleGroups = props.attachmentsOnly
+    ? groups.map((group) => ({ ...group, rows: group.rows.filter((row) => row.id === ROW_FILES) }))
+    : groups;
+  const selectableRowIds = visibleGroups.flatMap((group) =>
     group.rows.filter((row) => !row.disabled).map((row) => row.id),
   );
   // Keep the highlight on a row that still exists after navigating between views.
@@ -347,7 +352,7 @@ export function ComposerExtrasPanel(props: {
         onChange={handleFileInputChange}
       />
       <ComposerMenuPanel
-        groups={groups}
+        groups={visibleGroups}
         activeRowId={highlightedRowId}
         onHighlightRow={setActiveRowId}
         onSelectRow={selectRow}

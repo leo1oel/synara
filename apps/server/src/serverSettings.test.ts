@@ -1,11 +1,11 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { dirname } from "node:path";
 import {
-  DEFAULT_DROID_GIT_TEXT_GENERATION_MODEL,
+  DEFAULT_SERVER_SETTINGS,
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
   DEFAULT_MODEL_BY_PROVIDER,
-  DEFAULT_SERVER_SETTINGS,
   type ServerSettings,
+  ServerSettingsPatch,
 } from "@synara/contracts";
 import {
   deriveProviderInstances,
@@ -14,7 +14,6 @@ import {
 import { Effect, FileSystem, Layer, Schema } from "effect";
 import { isBetaFeatureEnabled } from "@synara/shared/betaFeatures";
 import { describe, expect, it } from "vitest";
-import { providerDisabledSettingsMessage } from "./provider/enabledProviderAdapter";
 import { ServerConfig } from "./config";
 import {
   gateBetaOnlyProviders,
@@ -86,55 +85,119 @@ describe("ServerSettingsService", () => {
       sourceControlCustomInstructions: "Use short bullets.\nKeep titles concise.",
     });
   });
-  it("persists updates and reloads them", async () => {
+
+  it("persists an independent compile repair model across restart", async () => {
     const result = await runWithSettings(
       Effect.gen(function* () {
         const service = yield* ServerSettingsService;
-        const { settingsPath } = yield* ServerConfig;
-        const fs = yield* FileSystem.FileSystem;
+        const config = yield* ServerConfig;
         yield* service.start;
-
-        const updated = yield* service.updateSettings({
-          enableAssistantStreaming: true,
-          enableProviderUpdateChecks: false,
-          providers: {
-            codex: {
-              enabled: false,
-              binaryPath: "/usr/local/bin/codex",
-              customModels: ["gpt-custom"],
-            },
-          },
+        const before = yield* service.getSettings;
+        yield* service.updateSettings({
+          compileRepairModelSelection: { provider: "claudeAgent", model: "claude-sonnet-4-6" },
         });
-        const raw = yield* fs.readFileString(settingsPath);
-        return { updated, parsed: JSON.parse(raw) as unknown };
+        const restarted = yield* Effect.gen(function* () {
+          const next = yield* ServerSettingsService;
+          yield* next.start;
+          return yield* next.getSettings;
+        }).pipe(
+          Effect.provide(
+            ServerSettingsLive.pipe(
+              Layer.provide(Layer.merge(NodeServices.layer, Layer.succeed(ServerConfig, config))),
+            ),
+          ),
+        );
+        return { before, restarted };
+      }),
+    );
+    expect(result.restarted.compileRepairModelSelection).toEqual({
+      provider: "claudeAgent",
+      model: "claude-sonnet-4-6",
+    });
+    expect(result.restarted.textGenerationModelSelection).toEqual(
+      result.before.textGenerationModelSelection,
+    );
+  });
+
+  it("loads defaults when settings file does not exist", async () => {
+    const settings = await runWithSettings(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        yield* service.start;
+        return yield* service.getSettings;
       }),
     );
 
-    expect(result.updated.enableAssistantStreaming).toBe(true);
+    expect(settings.providers.codex.binaryPath).toBe("codex");
+    expect(settings.providers.grok.binaryPath).toBe("grok");
+    expect(settings.defaultThreadEnvMode).toBe("local");
+    expect(settings.enableProviderUpdateChecks).toBe(true);
+  });
+
+  it("ignores legacy disabled providers while retaining their custom configuration", async () => {
+    const result = await runWithSettings(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        const config = yield* ServerConfig;
+        const { settingsPath } = config;
+        const fs = yield* FileSystem.FileSystem;
+        yield* fs.makeDirectory(dirname(settingsPath), { recursive: true });
+        yield* fs.writeFileString(
+          settingsPath,
+          JSON.stringify({
+            revision: 4,
+            migrationVersion: 2,
+            settings: {
+              enableProviderUpdateChecks: false,
+              providers: {
+                codex: {
+                  enabled: false,
+                  binaryPath: "/usr/local/bin/codex",
+                  customModels: ["gpt-custom"],
+                },
+              },
+            },
+          }),
+        );
+        yield* service.start;
+        const updated = yield* service.getSettings;
+        const legacyPatch = Schema.decodeUnknownSync(ServerSettingsPatch)({
+          providers: { codex: { enabled: false, customModels: ["gpt-custom"] } },
+        });
+        yield* service.updateSettings(legacyPatch);
+        const raw = yield* fs.readFileString(settingsPath);
+        const restarted = yield* Effect.gen(function* () {
+          const next = yield* ServerSettingsService;
+          yield* next.start;
+          return yield* next.getSettings;
+        }).pipe(
+          Effect.provide(
+            ServerSettingsLive.pipe(
+              Layer.provide(Layer.merge(NodeServices.layer, Layer.succeed(ServerConfig, config))),
+            ),
+          ),
+        );
+        return { updated, restarted, legacyPatch, parsed: JSON.parse(raw) as unknown };
+      }),
+    );
+
     expect(result.updated.enableProviderUpdateChecks).toBe(false);
-    expect(result.updated.providers.codex.enabled).toBe(false);
+    expect(result.updated.providers.codex.enabled).toBe(true);
     expect(result.updated.providers.codex.binaryPath).toBe("/usr/local/bin/codex");
-    expect(result.parsed).toMatchObject({
-      revision: 1,
-      migrationVersion: 3,
-      settings: {
-        enableAssistantStreaming: true,
-        enableProviderUpdateChecks: false,
-        providers: {
-          codex: {
-            enabled: false,
-            binaryPath: "/usr/local/bin/codex",
-            customModels: ["gpt-custom"],
-          },
-        },
-      },
-    });
+    expect(result.updated.providers.codex.customModels).toEqual(["gpt-custom"]);
+    expect(result.legacyPatch.providers?.codex).not.toHaveProperty("enabled");
+    expect(result.restarted.providers.codex).toEqual(result.updated.providers.codex);
+    expect(result.parsed).toHaveProperty("migrationVersion", 3);
+    expect(result.parsed).toHaveProperty("settings.providers.codex.enabled", true);
   });
 
   it.each([
     [1, "gpt-5.4-mini", DEFAULT_GIT_TEXT_GENERATION_MODEL],
     [2, "gpt-5.6-luna", DEFAULT_GIT_TEXT_GENERATION_MODEL],
     [2, "gpt-5.5", "gpt-5.5"],
+    // Lattice already persisted version 3 before 0.9.1; keep those selections.
+    [3, "gpt-5.6-luna", "gpt-5.6-luna"],
+    [3, "gpt-5.4-mini", "gpt-5.4-mini"],
   ])("updates saved Git writing selection %s/%s", async (migrationVersion, model, expected) => {
     const result = await runWithSettings(
       Effect.gen(function* () {
@@ -221,7 +284,6 @@ describe("ServerSettingsService", () => {
       model: "kilo/kilo-auto/free",
     });
     expect(result.settings.providers.opencode).toMatchObject({
-      enabled: true,
       binaryPath: "/opt/opencode",
       customModels: ["provider/opencode-model", "provider/shared-model"],
     });
@@ -319,9 +381,7 @@ describe("ServerSettingsService", () => {
 
     expect(settings.textGenerationModelSelection.provider).toBe(expectedProvider);
     expect(settings.textGenerationModelSelection.model).toBe(
-      expectedProvider === "droid"
-        ? DEFAULT_DROID_GIT_TEXT_GENERATION_MODEL
-        : DEFAULT_MODEL_BY_PROVIDER[expectedProvider],
+      DEFAULT_MODEL_BY_PROVIDER[expectedProvider],
     );
   });
 
@@ -857,16 +917,5 @@ describe("gateBetaOnlyProviders", () => {
     };
     const projected = resolveTextGenerationProvider(gateBetaOnlyProviders(settings, ompGatedOff));
     expect(projected.textGenerationModelSelection.provider).not.toBe("omp");
-  });
-});
-
-describe("providerDisabledSettingsMessage", () => {
-  it("points Beta-only providers at Synara Beta instead of Settings", () => {
-    expect(providerDisabledSettingsMessage("omp", () => false)).toBe(
-      "Oh My Pi is available in Synara Beta.",
-    );
-    expect(providerDisabledSettingsMessage("codex", (f) => f !== "omp")).toBe(
-      "Codex is disabled in Settings > Providers.",
-    );
   });
 });

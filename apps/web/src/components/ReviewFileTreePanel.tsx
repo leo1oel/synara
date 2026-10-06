@@ -23,13 +23,13 @@ import { cn } from "~/lib/utils";
 
 import { filterRenderableFilesForSearch } from "./DiffPanel.logic";
 import { FileEntryIcon } from "./chat/FileEntryIcon";
+import { FileRowsSkeleton } from "./chat/FileRowsSkeleton";
 import { fileRowClassName, fileRowIndentStyle } from "./chat/fileRowStyles";
 import { PanelStateMessage } from "./chat/PanelStateMessage";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "./ui/collapsible";
 import { DisclosureChevron } from "./ui/DisclosureChevron";
 import { IconButton } from "./ui/icon-button";
 import { SearchInput } from "./ui/search-input";
-import { Skeleton } from "./ui/skeleton";
 
 // Forwards its ref and spreads incoming props so directory rows can act as the
 // Collapsible trigger (Base UI injects onClick/aria/data + ref onto this element).
@@ -132,25 +132,6 @@ const ReviewFileTreeNodes = memo(function ReviewFileTreeNodes(props: {
   );
 });
 
-const REVIEW_TREE_SKELETON_ROW_WIDTHS = ["w-9/12", "w-6/12", "w-8/12", "w-5/12", "w-7/12"];
-
-function ReviewFileTreeLoadingRows() {
-  return (
-    <div className="space-y-1.5 px-1 py-1.5" role="status" aria-label="Loading changed files...">
-      {REVIEW_TREE_SKELETON_ROW_WIDTHS.map((width, index) => (
-        <div
-          key={width}
-          className="flex h-5 items-center gap-1.5"
-          style={fileRowIndentStyle(index % 2)}
-        >
-          <Skeleton className="size-3.5 shrink-0 rounded-sm" />
-          <Skeleton className={cn("h-3 rounded-full", width)} />
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export const ReviewFileTreePanel = function ReviewFileTreePanel(props: {
   files: ReadonlyArray<FileDiffMetadata>;
   selectedFilePath: string | null;
@@ -237,7 +218,7 @@ export const ReviewFileTreePanel = function ReviewFileTreePanel(props: {
         )}
       >
         {showLoadingRows ? (
-          <ReviewFileTreeLoadingRows />
+          <FileRowsSkeleton label="Loading changed files..." nested className="px-1 py-1.5" />
         ) : !hasFiles ? (
           <PanelStateMessage density="compact" fill="flex">
             <p>No files in this diff.</p>

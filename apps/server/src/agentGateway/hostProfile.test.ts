@@ -1,0 +1,242 @@
+import { Effect } from "effect";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.resetModules();
+});
+
+describe("agent host profile", () => {
+  it("keeps the upstream profile as the default", async () => {
+    vi.stubEnv("AGENT_HOST_PROFILE", "");
+    const { resolveAgentHostProfile } = await import("./hostProfile.ts");
+    expect(resolveAgentHostProfile()).toMatchObject({
+      id: "synara",
+      mcpServerName: "synara",
+    });
+  });
+
+  it("presents Lattice research and task tools without upstream branding", async () => {
+    vi.stubEnv("AGENT_HOST_PROFILE", "lattice");
+    const { adaptToolsForActiveHost, resolveAgentHostProfile } = await import("./hostProfile.ts");
+    const tools = adaptToolsForActiveHost([
+      {
+        requiredCapability: "thread:read",
+        definition: {
+          name: "synara_context",
+          description: "Inspect the current Synara harness.",
+          inputSchema: { type: "object" },
+          annotations: { title: "Synara context" },
+        },
+        handler: () =>
+          Effect.succeed({
+            content: [
+              {
+                type: "text" as const,
+                text: '{"harness":"Synara","legacyEnv":"SYNARA_INTERNAL"}',
+              },
+            ],
+          }),
+      },
+      {
+        requiredCapability: "thread:write",
+        definition: {
+          name: "synara_create_thread",
+          description: "Create a Synara thread.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              model: {
+                type: "string",
+                description: "Use an exact value from synara_capabilities.",
+              },
+            },
+          },
+        },
+        handler: () =>
+          Effect.succeed({
+            content: [
+              {
+                type: "text" as const,
+                text: '{"nextTool":"synara_wait_for_threads"}',
+              },
+            ],
+          }),
+      },
+      {
+        requiredCapability: "literature:write",
+        definition: {
+          name: "cite",
+          description: "Add a citation.",
+          inputSchema: { type: "object" },
+        },
+        handler: () => Effect.succeed({ content: [] }),
+      },
+      {
+        requiredCapability: "thread:read",
+        definition: {
+          name: "spreadsheet_read",
+          description: "Read an A1 range.",
+          inputSchema: { type: "object" },
+        },
+        handler: () => Effect.succeed({ content: [] }),
+      },
+      {
+        requiredCapability: "thread:write",
+        definition: {
+          name: "spreadsheet_batch_update",
+          description: "Update A1 ranges.",
+          inputSchema: { type: "object" },
+        },
+        handler: () => Effect.succeed({ content: [] }),
+      },
+      {
+        requiredCapability: "thread:write",
+        definition: {
+          name: "create_project_document",
+          description: "Create a native board or spreadsheet.",
+          inputSchema: { type: "object" },
+        },
+        handler: () => Effect.succeed({ content: [] }),
+      },
+      {
+        requiredCapability: "thread:write",
+        definition: {
+          name: "synara_set_thread_goal",
+          description: "Mark a Synara goal achieved.",
+          inputSchema: { type: "object" },
+        },
+        handler: () => Effect.succeed({ content: [] }),
+      },
+      {
+        requiredCapability: "automation:write",
+        definition: {
+          name: "synara_create_automation",
+          description: "Create a Synara automation.",
+          inputSchema: { type: "object" },
+        },
+        handler: () => Effect.succeed({ content: [] }),
+      },
+      {
+        requiredCapability: "automation:write",
+        definition: {
+          name: "synara_update_automation_memory",
+          description: "Update Synara automation memory.",
+          inputSchema: { type: "object" },
+        },
+        handler: () => Effect.succeed({ content: [] }),
+      },
+      {
+        requiredCapability: "device:control",
+        definition: {
+          name: "device_list",
+          description: "List devices Synara can drive.",
+          inputSchema: { type: "object" },
+        },
+        handler: () => Effect.succeed({ content: [] }),
+      },
+      {
+        requiredCapability: "browser:control",
+        definition: {
+          name: "browser_open",
+          description: "Open the Synara browser.",
+          inputSchema: { type: "object" },
+        },
+        handler: () => Effect.succeed({ content: [] }),
+      },
+    ]);
+
+    expect(resolveAgentHostProfile()).toMatchObject({
+      id: "lattice",
+      displayName: "Lattice",
+      mcpServerName: "lattice",
+    });
+    expect(tools.map((tool) => tool.definition.name)).toEqual([
+      "context",
+      "create_task",
+      "cite",
+      "spreadsheet_read",
+      "spreadsheet_batch_update",
+      "create_project_document",
+      "set_task_goal",
+      "create_automation",
+      "update_automation_memory",
+      "device_list",
+    ]);
+    expect(JSON.stringify(tools.map((tool) => tool.definition))).not.toMatch(/synara/i);
+
+    const contextResult = await Effect.runPromise(
+      tools[0]!.handler(
+        {},
+        {
+          principal: {
+            kind: "provider-session",
+            sessionKey: "session",
+            threadId: "thread",
+            provider: "codex",
+            turnId: "turn",
+          },
+          callerThreadId: "thread",
+          callerThreadLabel: "thread",
+          callerSessionKey: "session",
+          callerProvider: "codex",
+          callerCapabilities: new Set(["thread:read"]),
+          callerTurnId: "turn",
+          assertCallerTurnActive: () => Effect.void,
+          jsonRpcRequestId: "request",
+        },
+      ),
+    );
+    expect(JSON.stringify(contextResult)).not.toMatch(/synara/i);
+    expect(JSON.stringify(contextResult)).toContain("Lattice");
+
+    const createResult = await Effect.runPromise(
+      tools[1]!.handler(
+        {},
+        {
+          principal: {
+            kind: "provider-session",
+            sessionKey: "session",
+            threadId: "thread",
+            provider: "codex",
+            turnId: "turn",
+          },
+          callerThreadId: "thread",
+          callerThreadLabel: "thread",
+          callerSessionKey: "session",
+          callerProvider: "codex",
+          callerCapabilities: new Set(["thread:write"]),
+          callerTurnId: "turn",
+          assertCallerTurnActive: () => Effect.void,
+          jsonRpcRequestId: "request",
+        },
+      ),
+    );
+    expect(JSON.stringify(createResult)).toContain("wait_for_tasks");
+    expect(JSON.stringify(createResult)).not.toMatch(/synara/i);
+  });
+
+  it("describes bounded parallel task coordination without upstream identity", async () => {
+    vi.stubEnv("AGENT_HOST_PROFILE", "lattice");
+    vi.stubEnv("LATTICE_DEVICE_CONTROL_ENABLED", "false");
+    const { renderSynaraHarnessPolicy } = await import("./harnessPolicy.ts");
+    const policy = renderSynaraHarnessPolicy({ gatewayControlAvailable: true });
+    expect(policy).toContain("one exact create_tasks batch");
+    expect(policy).toContain("wait_for_tasks");
+    expect(policy).toContain("Provider-native subagents");
+    expect(policy).toContain("create_project_document");
+    expect(policy).not.toContain("device_");
+    expect(policy).toContain("Simulator control is unavailable");
+    expect(policy).not.toMatch(/synara/i);
+  });
+
+  it("advertises device tools only when the Lattice host grants that entitlement", async () => {
+    vi.stubEnv("AGENT_HOST_PROFILE", "lattice");
+    vi.stubEnv("LATTICE_DEVICE_CONTROL_ENABLED", "true");
+    const { renderSynaraHarnessPolicy } = await import("./harnessPolicy.ts");
+    const policy = renderSynaraHarnessPolicy({ gatewayControlAvailable: true });
+
+    expect(policy).toContain("device_list first");
+    expect(policy).not.toContain("Simulator control is unavailable");
+  });
+});

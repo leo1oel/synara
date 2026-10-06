@@ -1,4 +1,5 @@
 // Purpose: Shared Local/Worktree chip and menu for the full and floating composers.
+import { useLingui } from "@lingui/react";
 import type { ThreadEnvironmentMode } from "@synara/contracts";
 import type { ReactNode } from "react";
 import { CheckIcon, ChevronDownIcon, HandoffIcon, WorktreeIcon } from "~/lib/icons";
@@ -77,6 +78,7 @@ export function ComposerEnvironmentPicker({
   onOpenChange,
   children,
 }: ComposerEnvironmentPickerProps) {
+  const { i18n } = useLingui();
   const envGlyph = (className: string) =>
     environmentPresentation.mode === "local" ? (
       <CentralIcon name="macbook-air" className={className} />
@@ -135,7 +137,7 @@ export function ComposerEnvironmentPicker({
           {canSwitchToWorktree ? (
             <WorkInMenuItem
               icon={<WorktreeIcon className={ENV_MENU_ICON_CLASS_NAME} />}
-              label="New worktree"
+              label={i18n._("New worktree")}
               onSelect={() => onEnvModeChange("worktree")}
             />
           ) : null}
@@ -149,7 +151,7 @@ export function ComposerEnvironmentPicker({
           {canHandoffToWorktree && onHandoffToWorktree ? (
             <WorkInMenuItem
               icon={<WorktreeIcon className={ENV_MENU_ICON_CLASS_NAME} />}
-              label="Hand off to new worktree"
+              label={i18n._("Hand off to new worktree")}
               disabled={handoffBusy}
               onSelect={() => onHandoffToWorktree()}
             />
@@ -157,7 +159,7 @@ export function ComposerEnvironmentPicker({
           {canHandoffToLocal && onHandoffToLocal ? (
             <WorkInMenuItem
               icon={<HandoffIcon className={ENV_MENU_ICON_CLASS_NAME} strokeWidth={1.75} />}
-              label="Hand off to local"
+              label={i18n._("Hand off to local")}
               disabled={handoffBusy}
               onSelect={() => onHandoffToLocal()}
             />

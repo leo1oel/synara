@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import type { ComposerThreadMentionSource, Project } from "../types";
 import {
+  buildPaperMentionComposerItems,
   buildThreadMentionComposerItems,
-  resolveThreadMentionForThreadId,
 } from "./useComposerCommandMenuItems";
 
 function project(id: string, kind: Project["kind"], name: string): Project {
@@ -81,6 +81,34 @@ describe("buildThreadMentionComposerItems", () => {
       provider: "claudeAgent",
       mention: { name: "Release artwork", path: "thread://studio-thread" },
     });
+  });
+
+  it("can restrict suggestions to the current project", () => {
+    const items = buildThreadMentionComposerItems({
+      projects,
+      currentThreadId: "current",
+      scopeProjectId: "project",
+      query: "history",
+      threads: [
+        thread({ id: "current", projectId: "project", title: "Current history" }),
+        thread({ id: "same-project", projectId: "project", title: "Project history" }),
+        thread({ id: "other-project", projectId: "chats", title: "Other history" }),
+      ],
+    });
+
+    expect(items.map((item) => item.id)).toEqual(["thread:same-project"]);
+  });
+
+  it("returns no chat suggestions while a scoped project is unresolved", () => {
+    const items = buildThreadMentionComposerItems({
+      projects,
+      currentThreadId: null,
+      scopeProjectId: null,
+      query: "",
+      threads: [thread({ id: "thread", projectId: "project", title: "History" })],
+    });
+
+    expect(items).toEqual([]);
   });
 
   it("caps the unfiltered list to the 20 most recent active threads", () => {
@@ -194,44 +222,61 @@ describe("buildThreadMentionComposerItems", () => {
   });
 });
 
-describe("resolveThreadMentionForThreadId", () => {
-  const projects = [project("project", "project", "Synara"), project("other", "project", "Other")];
-  const threads = [
-    thread({ id: "current", projectId: "project", title: "Current" }),
-    thread({ id: "dup-a", projectId: "project", title: "Release" }),
-    thread({ id: "dup-b", projectId: "other", title: "Release" }),
-    thread({ id: "archived", projectId: "project", title: "Old", archivedAt: "2026-01-02" }),
-  ];
+describe("buildPaperMentionComposerItems", () => {
+  const papers = Array.from({ length: 12 }, (_, index) => ({
+    title: index === 7 ? "Attention Is All You Need" : `Research Paper ${index}`,
+    arxivId: index === 7 ? "1706.03762" : `2401.${String(index).padStart(5, "0")}`,
+    citationKey: index === 7 ? "vaswani2017attention" : `author2026paper${index}`,
+    path:
+      index === 7
+        ? ".research/papers/1706.03762/paper.md"
+        : `.research/papers/2401.${String(index).padStart(5, "0")}/paper.md`,
+    view: "fulltext" as const,
+  }));
 
-  it("resolves the same disambiguated mention the @ menu inserts", () => {
-    const menuItem = buildThreadMentionComposerItems({
-      projects,
-      threads,
-      currentThreadId: "current",
-      query: "",
-    }).find((item) => item.id === "thread:dup-b");
+  it("returns the full library so the fixed-height Papers viewport can scroll it", () => {
+    const items = buildPaperMentionComposerItems({ papers, query: "" });
 
-    expect(
-      resolveThreadMentionForThreadId({
-        projects,
-        threads,
-        currentThreadId: "current",
-        threadId: "dup-b",
-      }),
-    ).toEqual({ name: "Release (Other)", path: "thread://dup-b" });
-    expect(menuItem?.type === "thread" ? menuItem.mention.name : null).toBe("Release (Other)");
+    expect(items).toHaveLength(12);
+    expect(items.every((item) => item.type === "paper")).toBe(true);
   });
 
-  it("returns null for the current, archived, or unknown chat", () => {
-    for (const threadId of ["current", "archived", "missing"]) {
-      expect(
-        resolveThreadMentionForThreadId({
-          projects,
-          threads,
-          currentThreadId: "current",
-          threadId,
-        }),
-      ).toBeNull();
-    }
+  it("searches the full library by title, citation key, or paper id", () => {
+    expect(
+      buildPaperMentionComposerItems({ papers, query: "attention" }).map((item) => item.label),
+    ).toEqual(["Attention Is All You Need"]);
+    expect(
+      buildPaperMentionComposerItems({ papers, query: "vaswani2017" }).map((item) => item.label),
+    ).toEqual(["Attention Is All You Need"]);
+    expect(
+      buildPaperMentionComposerItems({ papers, query: "1706.03762" }).map((item) => item.label),
+    ).toEqual(["Attention Is All You Need"]);
+  });
+
+  it("keeps every title-search result and gives duplicate titles distinct mention names", () => {
+    const duplicatePapers = [
+      ...papers,
+      {
+        title: "Attention Is All You Need",
+        arxivId: "9999.00001",
+        citationKey: "anotherAttention",
+        path: ".research/papers/9999.00001/blog.md",
+        view: "blog" as const,
+      },
+    ];
+    const attentionItems = buildPaperMentionComposerItems({
+      papers: duplicatePapers,
+      query: "attention",
+    });
+    const broadItems = buildPaperMentionComposerItems({
+      papers: duplicatePapers,
+      query: "paper",
+    });
+
+    expect(attentionItems.map((item) => (item.type === "paper" ? item.mention.name : ""))).toEqual([
+      "Attention Is All You Need (vaswani2017attention)",
+      "Attention Is All You Need (anotherAttention)",
+    ]);
+    expect(broadItems).toHaveLength(11);
   });
 });

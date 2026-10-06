@@ -7,6 +7,12 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Layer } from "effect";
 
 import { AgentGatewayLive } from "./agentGateway/Layers/AgentGateway";
+import { AgentQualityTraceLayer } from "./agentGateway/Layers/AgentQualityTrace";
+import { LatticeCanvasBrokerLive } from "./agentGateway/Layers/LatticeCanvasBroker";
+import { LatticeBibliographyBrokerLive } from "./agentGateway/Layers/LatticeBibliographyBroker";
+import { LatticeSpreadsheetBrokerLive } from "./agentGateway/Layers/LatticeSpreadsheetBroker";
+import { LatticeProjectDocumentBrokerLive } from "./agentGateway/Layers/LatticeProjectDocumentBroker";
+import { LatticeEditorCommentsBrokerLive } from "./agentGateway/Layers/LatticeEditorCommentsBroker";
 import { AgentGatewayOperationRepositoryLive } from "./agentGateway/Layers/AgentGatewayOperationRepository";
 import { AgentGatewayCredentialsWithSecretsLive } from "./agentGateway/Layers/AgentGatewayCredentials";
 import { BrowserAutomationHostLive } from "./browserAutomation/Layers/BrowserAutomationHost";
@@ -121,6 +127,9 @@ export function makeServerRuntimeServicesLayer(
   const studioOutputReactorLayer = StudioOutputReactorLive.pipe(
     Layer.provideMerge(runtimeServicesLayer),
   );
+  const agentQualityTraceLayer = AgentQualityTraceLayer.pipe(
+    Layer.provideMerge(runtimeServicesLayer),
+  );
   const threadGitMetadataReactorLayer = ThreadGitMetadataReactorLive.pipe(
     Layer.provideMerge(runtimeServicesLayer),
     Layer.provideMerge(GitLayerLive),
@@ -157,6 +166,7 @@ export function makeServerRuntimeServicesLayer(
     // pre-approve Synara group tools — the same first lookup the project agent
     // service's principal resolver performs, without going through the service.
     Layer.provideMerge(ProjectAgentRepositoryLive),
+    Layer.provideMerge(agentQualityTraceLayer),
   );
   const checkpointReactorLayer = CheckpointReactorLive.pipe(
     Layer.provideMerge(runtimeServicesLayer),
@@ -171,6 +181,7 @@ export function makeServerRuntimeServicesLayer(
     Layer.provideMerge(checkpointStoreLayer),
   );
   const orchestrationReactorLayer = OrchestrationReactorLive.pipe(
+    Layer.provideMerge(agentQualityTraceLayer),
     Layer.provideMerge(runtimeIngestionLayer),
     Layer.provideMerge(providerCommandReactorLayer),
     Layer.provideMerge(checkpointReactorLayer),
@@ -247,6 +258,11 @@ export function makeServerRuntimeServicesLayer(
     Layer.provideMerge(HubWorkRepositoryLive),
     Layer.provideMerge(ProjectAgentRepositoryLive),
     Layer.provideMerge(ManagedAttachmentRepositoryLive),
+    Layer.provideMerge(LatticeCanvasBrokerLive),
+    Layer.provideMerge(LatticeBibliographyBrokerLive),
+    Layer.provideMerge(LatticeSpreadsheetBrokerLive),
+    Layer.provideMerge(LatticeProjectDocumentBrokerLive),
+    Layer.provideMerge(LatticeEditorCommentsBrokerLive),
     Layer.provideMerge(agentGatewayCredentialsLayer),
     Layer.provideMerge(automationServiceLayer),
     Layer.provideMerge(projectAgentServiceLayer),
@@ -284,7 +300,13 @@ export function makeServerRuntimeServicesLayer(
 
   return Layer.mergeAll(
     agentGatewayCredentialsLayer,
+    LatticeCanvasBrokerLive,
+    LatticeBibliographyBrokerLive,
+    LatticeSpreadsheetBrokerLive,
+    LatticeProjectDocumentBrokerLive,
+    LatticeEditorCommentsBrokerLive,
     agentGatewayLayer,
+    agentQualityTraceLayer,
     BrowserAutomationHostLive,
     automationServiceLayer,
     automationSchedulerLayer,

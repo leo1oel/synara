@@ -72,6 +72,7 @@ import {
   SYNARA_GATEWAY_HARNESS_POLICY,
   renderSynaraHarnessPolicy,
 } from "./agentGateway/harnessPolicy.ts";
+import { ACTIVE_AGENT_HOST_PROFILE } from "./agentGateway/hostProfile.ts";
 import {
   AGENT_GATEWAY_TURN_AUTHORITY_RETIRED,
   type AgentGatewayCapabilityInput,
@@ -667,7 +668,9 @@ plan content should be human and agent digestible. The final plan must be plan-o
 Do not ask "should I proceed?" in the final output. The user can easily switch out of Plan mode and request implementation if you have included a \`<proposed_plan>\` block in your response. Alternatively, they can decide to stay in Plan mode and continue refining the plan.
 
 Only produce at most one \`<proposed_plan>\` block per turn, and only when you are presenting a complete spec.
-</collaboration_mode>${CODEX_BROWSER_TOOL_ROUTING_INSTRUCTIONS}\n\n${SYNARA_GATEWAY_HARNESS_POLICY}`;
+</collaboration_mode>${
+  ACTIVE_AGENT_HOST_PROFILE.browserToolsEnabled ? CODEX_BROWSER_TOOL_ROUTING_INSTRUCTIONS : ""
+}\n\n${SYNARA_GATEWAY_HARNESS_POLICY}`;
 
 export const CODEX_DEFAULT_MODE_DEVELOPER_INSTRUCTIONS = `<collaboration_mode># Collaboration Mode: Default
 
@@ -680,7 +683,9 @@ Your active mode changes only when new developer instructions with a different \
 The \`request_user_input\` tool is unavailable in Default mode. If you call it while in Default mode, it will return an error.
 
 In Default mode, strongly prefer making reasonable assumptions and executing the user's request rather than stopping to ask questions. If you absolutely must ask a question because the answer cannot be discovered from local context and a reasonable assumption would be risky, ask the user directly with a concise plain-text question. Never write a multiple choice question as a textual assistant message.
-</collaboration_mode>${CODEX_BROWSER_TOOL_ROUTING_INSTRUCTIONS}\n\n${SYNARA_GATEWAY_HARNESS_POLICY}`;
+</collaboration_mode>${
+  ACTIVE_AGENT_HOST_PROFILE.browserToolsEnabled ? CODEX_BROWSER_TOOL_ROUTING_INSTRUCTIONS : ""
+}\n\n${SYNARA_GATEWAY_HARNESS_POLICY}`;
 
 // Maps Synara's simple runtime toggle to Codex thread-level permission overrides.
 function mapCodexRuntimeMode(runtimeMode: RuntimeMode): {
@@ -855,7 +860,20 @@ function spawnCodexAppServer(input: {
   if (!sourceHomePath) {
     throw new Error("Codex app-server requires a verified shared continuation home.");
   }
-  return spawnProcess(input.binaryPath, buildCodexAppServerArgs(sourceHomePath), {
+  const latticeBibGuard =
+    ACTIVE_AGENT_HOST_PROFILE.id === "lattice" && process.platform === "darwin";
+  const command = latticeBibGuard ? "/usr/bin/sandbox-exec" : input.binaryPath;
+  const args = latticeBibGuard
+    ? [
+        "-p",
+        ["(version 1)", "(allow default)", '(deny file-write* (regex #".*[.][bB][iI][bB]$"))'].join(
+          "\n",
+        ),
+        input.binaryPath,
+        ...buildCodexAppServerArgs(sourceHomePath),
+      ]
+    : buildCodexAppServerArgs(sourceHomePath);
+  return spawnProcess(command, args, {
     requireExecutable: true,
     cwd: input.cwd,
     env: input.env,
@@ -879,11 +897,11 @@ export function normalizeCodexModelSlug(
   return normalized;
 }
 
-function buildCodexInitializeParams() {
+export function buildCodexInitializeParams() {
   return {
     clientInfo: {
-      name: "synara_desktop",
-      title: "Synara Desktop",
+      name: `${ACTIVE_AGENT_HOST_PROFILE.id}_desktop`,
+      title: `${ACTIVE_AGENT_HOST_PROFILE.displayName} Desktop`,
       version: "0.1.0",
     },
     capabilities: {
@@ -1208,7 +1226,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   private readonly pluginDetailCache = new Map<string, ProviderReadPluginResult>();
 
   private runPromise: (effect: Effect.Effect<unknown, never>) => Promise<unknown>;
-  private readonly synaraSkillsDir: string | undefined;
+  private readonly skillRootDirs: readonly string[];
   private readonly agentGatewayMcp:
     | {
         readonly endpointUrl: () => string;
@@ -1226,6 +1244,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     services?: ServiceMap.ServiceMap<never>,
     options?: {
       readonly synaraSkillsDir?: string;
+      readonly bundledSkillsDir?: string;
       readonly agentGatewayMcp?: {
         readonly endpointUrl: () => string;
         readonly acquireSessionLease: (
@@ -1241,7 +1260,9 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   ) {
     super();
     this.runPromise = services ? Effect.runPromiseWith(services) : Effect.runPromise;
-    this.synaraSkillsDir = options?.synaraSkillsDir;
+    this.skillRootDirs = [options?.bundledSkillsDir, options?.synaraSkillsDir].filter(
+      (root): root is string => Boolean(root),
+    );
     this.agentGatewayMcp = options?.agentGatewayMcp;
     this.spawnAppServer = options?.spawnAppServer ?? spawnCodexAppServer;
     this.teardownProcessTree = options?.teardownProcessTree ?? teardownProviderProcessTree;
@@ -1281,17 +1302,15 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     };
   }
 
-  // Registers `~/.synara/skills` as a codex skill root so portable skills are
-  // first-class: skills/list returns them and turn/start `skill` items inject
-  // their instructions. Verified live: skill items with paths outside known
-  // roots are silently ignored by codex app-server, so this call is required.
+  // Registers Lattice's bundled skills and `~/.synara/skills` as codex skill
+  // roots so both included and user-installed skills are first-class.
   private async registerSynaraSkillsRoot(context: CodexSessionContext): Promise<void> {
-    if (!this.synaraSkillsDir) {
+    if (this.skillRootDirs.length === 0) {
       return;
     }
     try {
       await this.sendRequest(context, "skills/extraRoots/set", {
-        extraRoots: [this.synaraSkillsDir],
+        extraRoots: this.skillRootDirs,
       });
     } catch (error) {
       if (!this.isContextRoutable(context)) throw error;
@@ -2585,11 +2604,13 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     }
 
     const response = await this.revertProviderThread(context, providerThreadId, numTurns);
-    this.updateSession(context, {
-      status: "ready",
-      activeTurnId: undefined,
-    });
-    return this.parseThreadSnapshot("thread/revert", response);
+    const snapshot = this.parseThreadSnapshot("thread/revert", response);
+    const metadata = this.readObject(this.readObject(response), "thread");
+    const restored = this.readString(metadata, "historyMode") === "paginated"
+      ? await this.readPaginatedThreadSnapshot(context, response)
+      : snapshot;
+    this.updateSession(context, { status: "ready", activeTurnId: undefined });
+    return restored;
   }
 
   /**
@@ -2661,7 +2682,47 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       if (seenCursors.has(cursor)) throw new Error("Codex repeated a conversation history cursor.");
       seenCursors.add(cursor);
     }
+    if (remaining > 0 && beforeTurnId !== undefined) throw new Error("Cannot revert more turns than the provider thread contains.");
     return beforeTurnId;
+  }
+
+  private async readPaginatedThreadSnapshot(
+    context: CodexSessionContext,
+    metadata: unknown,
+  ): Promise<CodexThreadSnapshot> {
+    const snapshot = this.parseThreadSnapshot("thread/read", metadata);
+    const turns: CodexThreadTurnSnapshot[] = [];
+    const seenCursors = new Set<string>();
+    let cursor: string | undefined;
+    do {
+      const response = this.readObject(
+        await this.sendRequest(context, "thread/turns/list", {
+          threadId: snapshot.threadId,
+          sortDirection: "asc",
+          itemsView: "full",
+          ...(cursor ? { cursor } : {}),
+        }),
+      );
+      const data = this.readArray(response, "data");
+      if (!data) {
+        throw new Error("thread/turns/list response did not include turns.");
+      }
+      for (const value of data) {
+        const turn = this.readObject(value);
+        const id = this.readString(turn, "id");
+        // Synthetic display IDs are never safe as destructive API boundaries.
+        if (!id) {
+          throw new Error("thread/turns/list response did not include a turn id.");
+        }
+        turns.push({ id: TurnId.makeUnsafe(id), items: this.readArray(turn, "items") ?? [] });
+      }
+      cursor = this.readString(response, "nextCursor");
+      if (cursor && seenCursors.has(cursor)) {
+        throw new Error("thread/turns/list returned a repeated cursor.");
+      }
+      if (cursor) seenCursors.add(cursor);
+    } while (cursor);
+    return { ...snapshot, turns };
   }
 
   async compactThread(threadId: ThreadId): Promise<void> {

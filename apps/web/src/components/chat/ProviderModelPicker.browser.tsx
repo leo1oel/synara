@@ -1,3 +1,4 @@
+import "../../index.css";
 import {
   type ModelSlug,
   type ProviderInstanceId,
@@ -5,9 +6,10 @@ import {
   type ServerProviderStatus,
 } from "@synara/contracts";
 import { useState } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
+import { I18nProvider } from "@lingui/react";
 
 import {
   ProviderModelPicker,
@@ -16,6 +18,10 @@ import {
 } from "./ProviderModelPicker";
 import { mergeDynamicModelOptions, type ProviderModelOption } from "../../providerModelOptions";
 import { FAVORITE_MODEL_STORAGE_KEYS } from "../../lib/modelFavorites";
+import { SYNARA_OPEN_SETTINGS } from "../../embedMode";
+import { i18n } from "../../i18n";
+
+i18n.loadAndActivate({ locale: "en", messages: {} });
 
 const MODEL_OPTIONS_BY_PROVIDER = {
   claudeAgent: [
@@ -43,6 +49,7 @@ const MODEL_OPTIONS_BY_PROVIDER = {
     },
     { slug: "custom:GPT-5.6-Luna-0", name: "Custom GPT-5.6 Luna" },
   ],
+  omp: [],
   opencode: [
     {
       slug: "opencode/nemotron-3-super-free",
@@ -73,7 +80,6 @@ const MODEL_OPTIONS_BY_PROVIDER = {
       upstreamProviderName: "Anthropic",
     },
   ],
-  omp: [],
   antigravity: [
     {
       slug: "Gemini 3.5 Flash",
@@ -116,6 +122,43 @@ const OPENCODE_DUPLICATE_NAME_MODELS = [
     name: "DeepSeek V4 Flash",
     upstreamProviderId: "opencode-go",
     upstreamProviderName: "OpenCode Go",
+  },
+] satisfies ReadonlyArray<ProviderModelOption & { slug: ModelSlug }>;
+
+const MANY_CURSOR_MODELS = Array.from({ length: 16 }, (_, index) => ({
+  slug: `cursor-model-${index + 1}` as ModelSlug,
+  name: `${index % 2 === 0 ? "GPT" : "Claude"} Cursor ${index + 1}`,
+  upstreamProviderId: index % 2 === 0 ? "openai" : "anthropic",
+  upstreamProviderName: index % 2 === 0 ? "OpenAI" : "Anthropic",
+})) satisfies ReadonlyArray<ProviderModelOption & { slug: ModelSlug }>;
+
+const CURSOR_FAVORITE_SORT_MODELS = [
+  {
+    slug: "cursor-claude-favorite-sort" as ModelSlug,
+    name: "Claude Cursor Favorite Sort",
+    upstreamProviderId: "anthropic",
+    upstreamProviderName: "Anthropic",
+  },
+  {
+    slug: "cursor-gpt-favorite-sort" as ModelSlug,
+    name: "GPT Cursor Favorite Sort",
+    upstreamProviderId: "openai",
+    upstreamProviderName: "OpenAI",
+  },
+] satisfies ReadonlyArray<ProviderModelOption & { slug: ModelSlug }>;
+
+const PI_FAVORITE_SORT_MODELS = [
+  {
+    slug: "anthropic/claude-pi-favorite-sort" as ModelSlug,
+    name: "Claude Pi Favorite Sort",
+    upstreamProviderId: "anthropic",
+    upstreamProviderName: "Anthropic",
+  },
+  {
+    slug: "openai/gpt-pi-favorite-sort" as ModelSlug,
+    name: "GPT Pi Favorite Sort",
+    upstreamProviderId: "openai",
+    upstreamProviderName: "OpenAI",
   },
 ] satisfies ReadonlyArray<ProviderModelOption & { slug: ModelSlug }>;
 
@@ -165,7 +208,6 @@ async function mountPicker(props: {
   modelOptionsByProviderInstance?: ProviderModelOptionsByProviderInstance;
   loadingModelProviders?: Partial<Record<ProviderKind, boolean>>;
   onSelectionCommitted?: () => void;
-  withRoleSelect?: boolean;
   modelOptionsByProvider?: Record<
     ProviderKind,
     ReadonlyArray<ProviderModelOption & { slug: ModelSlug }>
@@ -174,8 +216,8 @@ async function mountPicker(props: {
   const host = document.createElement("div");
   document.body.append(host);
   const onProviderModelChange = vi.fn();
-  const onProviderModelRoleSelect = vi.fn();
   const screen = await render(
+    <I18nProvider i18n={i18n}>
     <ProviderModelPicker
       provider={props.provider}
       model={props.model}
@@ -198,13 +240,13 @@ async function mountPicker(props: {
       {...(props.onSelectionCommitted ? { onSelectionCommitted: props.onSelectionCommitted } : {})}
       {...(props.withRoleSelect ? { onProviderModelRoleSelect } : undefined)}
       onProviderModelChange={onProviderModelChange}
-    />,
+    />
+    </I18nProvider>,
     { container: host },
   );
 
   return {
     onProviderModelChange,
-    onProviderModelRoleSelect,
     cleanup: async () => {
       await screen.unmount();
       host.remove();
@@ -213,9 +255,151 @@ async function mountPicker(props: {
 }
 
 describe("ProviderModelPicker", () => {
+  beforeEach(async () => {
+    await page.viewport(1000, 700);
+  });
+
   afterEach(() => {
     document.body.innerHTML = "";
     localStorage.clear();
+    sessionStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  it("keeps Cursor groups reachable after expanding in a narrow bottom-docked picker", async () => {
+    const viewport = { width: window.innerWidth, height: window.innerHeight };
+    await page.viewport(380, 600);
+    const models = ["Cursor", "xAI", "Anthropic", "OpenAI", "Google", "Moonshot AI"].flatMap(
+      (provider, group) =>
+        Array.from({ length: 8 }, (_, index) => ({
+          slug: `group-${group}-model-${index}` as ModelSlug,
+          name: `${provider} model ${index}`,
+          upstreamProviderId: provider.toLowerCase(),
+          upstreamProviderName: provider,
+        })),
+    );
+    const mounted = await mountPicker({
+      provider: "codex",
+      model: "gpt-5-codex",
+      lockedProvider: null,
+      providers: (["codex", "claudeAgent", "cursor", "droid", "pi"] as const).map((provider) => ({
+        provider,
+        status: "ready",
+        available: true,
+        authStatus: "authenticated",
+        checkedAt: "2026-04-10T10:00:00.000Z",
+      })),
+      modelOptionsByProvider: { ...MODEL_OPTIONS_BY_PROVIDER, cursor: models },
+    });
+    try {
+      const trigger = page.getByRole("button").element() as HTMLElement;
+      trigger.parentElement!.style.cssText = "position:fixed;bottom:16px;left:16px";
+      await page.getByRole("button").click();
+      await page.getByRole("menuitem", { name: "Cursor", exact: true }).click();
+      await expect
+        .element(page.getByRole("menuitem", { name: "Droid", exact: true }))
+        .not.toBeInTheDocument();
+      const group = page.getByRole("button", { name: "Anthropic 8", exact: true });
+      await expect.element(group).toBeVisible();
+      await group.click();
+      await page.screenshot();
+      await page.getByRole("menuitemradio", { name: /^Anthropic model 3/ }).hover();
+      await new Promise((resolve) => window.setTimeout(resolve, 600));
+      await page.getByRole("menuitemradio", { name: /^Anthropic model 3/ }).click();
+      expect(mounted.onProviderModelChange).toHaveBeenCalledWith("cursor", "group-2-model-3");
+      await expect.element(page.getByRole("menu")).not.toBeInTheDocument();
+      await page.getByRole("button").click();
+      await page.getByRole("menuitem", { name: "Cursor", exact: true }).click();
+      await page.getByPlaceholder("Search models or providers").fill("Anthropic");
+      await page.getByRole("menuitem", { name: "Back", exact: true }).click();
+      await page.getByRole("menuitem", { name: "Droid", exact: true }).click();
+      await page.getByRole("menuitemradio", { name: "Custom GPT-5.6 Luna" }).click();
+      expect(mounted.onProviderModelChange).toHaveBeenLastCalledWith(
+        "droid",
+        "custom:GPT-5.6-Luna-0",
+      );
+    } finally {
+      await mounted.cleanup();
+      await page.viewport(viewport.width, viewport.height);
+    }
+  });
+
+  it("waits for hover intent and cancels providers crossed on the way to Codex", async () => {
+    const mounted = await mountPicker({
+      provider: "codex",
+      model: "gpt-5-codex",
+      lockedProvider: null,
+      providers: (["codex", "droid", "pi"] as const).map((provider) => ({
+        provider,
+        status: "ready",
+        available: true,
+        authStatus: "authenticated",
+        checkedAt: "2026-04-10T10:00:00.000Z",
+      })),
+    });
+    try {
+      await page.getByRole("button").click();
+      for (const name of ["Pi", "Droid"]) {
+        await page.getByRole("menuitem", { name, exact: true }).hover();
+        await new Promise((resolve) => window.setTimeout(resolve, 200));
+        expect(document.querySelector('[data-slot="menu-sub-content"]')).toBeNull();
+      }
+      await page.getByRole("menuitem", { name: "Codex", exact: true }).hover();
+      await expect
+        .element(page.getByRole("menuitemradio", { name: "GPT-5.3 Codex" }))
+        .toBeVisible();
+      expect(document.body.textContent).not.toContain("GPT-5.6 Luna");
+      expect(document.body.textContent).not.toContain("Claude Sonnet 4.5");
+      await page.getByRole("menuitemradio", { name: "GPT-5.3 Codex" }).click();
+      expect(mounted.onProviderModelChange).toHaveBeenCalledWith("codex", "gpt-5.3-codex");
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("uses one scroll container for a long Droid submenu", async () => {
+    const models = Array.from({ length: 40 }, (_, index) => ({
+      slug: `droid-model-${index}` as ModelSlug,
+      name: `Droid Model ${index}`,
+    }));
+    const mounted = await mountPicker({
+      provider: "droid",
+      model: models[0]!.slug,
+      lockedProvider: null,
+      providers: [
+        {
+          provider: "droid",
+          status: "ready",
+          available: true,
+          authStatus: "authenticated",
+          checkedAt: "2026-04-10T10:00:00.000Z",
+        },
+      ],
+      modelOptionsByProvider: { ...MODEL_OPTIONS_BY_PROVIDER, droid: models },
+    });
+    try {
+      await page.getByRole("button").click();
+      await page.getByRole("menuitem", { name: "Droid", exact: true }).click();
+      await expect
+        .element(page.getByRole("menuitemradio", { name: "Droid Model 0", exact: true }))
+        .toBeVisible();
+      const popup = document.querySelector<HTMLElement>('[data-slot="menu-sub-content"]')!;
+      const scrollers = Array.from(popup.querySelectorAll<HTMLElement>("*")).filter(
+        (element) =>
+          /auto|scroll/.test(getComputedStyle(element).overflowY) &&
+          element.scrollHeight > element.clientHeight,
+      );
+      expect(scrollers).toHaveLength(1);
+      const viewport = { width: window.innerWidth, height: window.innerHeight };
+      await page.viewport(900, 700);
+      await page.screenshot();
+      await page.viewport(viewport.width, viewport.height);
+      scrollers[0]!.scrollTop = scrollers[0]!.scrollHeight;
+      await page.getByRole("menuitemradio", { name: "Droid Model 39", exact: true }).click();
+      expect(mounted.onProviderModelChange).toHaveBeenCalledWith("droid", "droid-model-39");
+    } finally {
+      await mounted.cleanup();
+    }
   });
 
   it("shows provider submenus when provider switching is allowed", async () => {
@@ -760,6 +944,48 @@ describe("ProviderModelPicker", () => {
     }
   });
 
+  it("groups upstream OpenCode models by provider label", async () => {
+    const mounted = await mountPicker({
+      provider: "opencode",
+      model: "openai/gpt-5",
+      lockedProvider: "opencode",
+    });
+
+    try {
+      await page.getByRole("button").click();
+
+      await vi.waitFor(() => {
+        const text = document.body.textContent ?? "";
+        expect(text).toContain("OpenCode");
+        expect(text).toContain("Nemotron 3 Super Free");
+        expect(text).toContain("OpenAI");
+        expect(text).toContain("GPT-5");
+      });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("shows OpenCode search when the provider has at least fifteen models", async () => {
+    const mounted = await mountPicker({
+      provider: "opencode",
+      model: MANY_OPENCODE_MODELS[0]!.slug,
+      lockedProvider: "opencode",
+      modelOptionsByProvider: {
+        ...MODEL_OPTIONS_BY_PROVIDER,
+        opencode: MANY_OPENCODE_MODELS,
+      },
+    });
+
+    try {
+      await page.getByRole("button").click();
+
+      await expect.element(page.getByPlaceholder("Search models or providers")).toBeInTheDocument();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it("filters OpenCode models by upstream provider name", async () => {
     const mounted = await mountPicker({
       provider: "opencode",
@@ -878,6 +1104,120 @@ describe("ProviderModelPicker", () => {
     }
   });
 
+  it("filters Cursor models by upstream provider name", async () => {
+    const mounted = await mountPicker({
+      provider: "cursor",
+      model: MANY_CURSOR_MODELS[0]!.slug,
+      lockedProvider: "cursor",
+      modelOptionsByProvider: {
+        ...MODEL_OPTIONS_BY_PROVIDER,
+        cursor: MANY_CURSOR_MODELS,
+      },
+    });
+
+    try {
+      await page.getByRole("button").click();
+      await page.getByPlaceholder("Search models or providers").fill("Anthropic");
+
+      await vi.waitFor(() => {
+        expect(document.body.textContent ?? "").toContain("Claude Cursor 2");
+      });
+
+      await expect
+        .element(page.getByRole("menuitemradio", { name: "Claude Cursor 2" }))
+        .toBeInTheDocument();
+      await expect
+        .element(page.getByRole("menuitemradio", { name: "GPT Cursor 1" }))
+        .not.toBeInTheDocument();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("shows favourited Cursor models in their own top category", async () => {
+    const mounted = await mountPicker({
+      provider: "cursor",
+      model: "cursor-claude-favorite-sort",
+      lockedProvider: "cursor",
+      modelOptionsByProvider: {
+        ...MODEL_OPTIONS_BY_PROVIDER,
+        cursor: CURSOR_FAVORITE_SORT_MODELS,
+      },
+    });
+
+    try {
+      await page.getByRole("button").click();
+
+      await vi.waitFor(() => {
+        const text = document.body.textContent ?? "";
+        expect(text.indexOf("Anthropic")).toBeLessThan(text.indexOf("OpenAI"));
+      });
+
+      await page
+        .getByRole("button", { name: "Add GPT Cursor Favorite Sort to favourites" })
+        .click();
+
+      await vi.waitFor(() => {
+        const text = document.body.textContent ?? "";
+        expect(text.indexOf("Favourites")).toBeLessThan(text.indexOf("Anthropic"));
+        expect(text.indexOf("GPT Cursor Favorite Sort")).toBeGreaterThan(
+          text.indexOf("Favourites"),
+        );
+        expect(text.indexOf("GPT Cursor Favorite Sort")).toBeLessThan(text.indexOf("Anthropic"));
+      });
+      await expect
+        .element(page.getByRole("menuitemradio", { name: "GPT Cursor Favorite Sort — OpenAI" }))
+        .toBeInTheDocument();
+      expect(
+        Array.from(document.querySelectorAll('[role="menuitemradio"]')).filter((element) =>
+          element.textContent?.includes("GPT Cursor Favorite Sort"),
+        ),
+      ).toHaveLength(1);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("shows favourited Pi models in their own top category", async () => {
+    const mounted = await mountPicker({
+      provider: "pi",
+      model: "anthropic/claude-pi-favorite-sort",
+      lockedProvider: "pi",
+      modelOptionsByProvider: {
+        ...MODEL_OPTIONS_BY_PROVIDER,
+        pi: PI_FAVORITE_SORT_MODELS,
+      },
+    });
+
+    try {
+      await page.getByRole("button").click();
+
+      await vi.waitFor(() => {
+        const text = document.body.textContent ?? "";
+        expect(text.indexOf("Anthropic")).toBeLessThan(text.indexOf("OpenAI"));
+      });
+
+      await page.getByRole("button", { name: "Add GPT Pi Favorite Sort to favourites" }).click();
+
+      await vi.waitFor(() => {
+        const text = document.body.textContent ?? "";
+        expect(text.indexOf("Favourites")).toBeLessThan(text.indexOf("Anthropic"));
+        expect(text.indexOf("GPT Pi Favorite Sort")).toBeGreaterThan(text.indexOf("Favourites"));
+        expect(text.indexOf("GPT Pi Favorite Sort")).toBeLessThan(text.indexOf("Anthropic"));
+      });
+      await expect
+        .element(page.getByRole("menuitemradio", { name: "GPT Pi Favorite Sort — OpenAI" }))
+        .toBeInTheDocument();
+      expect(
+        Array.from(document.querySelectorAll('[role="menuitemradio"]')).filter((element) =>
+          element.textContent?.includes("GPT Pi Favorite Sort"),
+        ),
+      ).toHaveLength(1);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it("shows a loading skeleton instead of fallback models for loading providers", async () => {
     const mounted = await mountPicker({
       provider: "cursor",
@@ -948,6 +1288,90 @@ describe("ProviderModelPicker", () => {
         expect(text).not.toContain("Checking");
       });
       await expect.element(page.getByRole("menuitem", { name: "Add Providers" })).toBeVisible();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("asks the Lattice host to open provider settings from the embedded picker", async () => {
+    sessionStorage.setItem(
+      "synara.poc.embed-mode",
+      JSON.stringify({
+        workspaceRoot: "/repo/project",
+        theme: "dark",
+        surface: "chrome",
+        hostOrigin: window.location.origin,
+        locale: "zh-CN",
+      }),
+    );
+    const postMessage = vi.spyOn(window.parent, "postMessage");
+    const mounted = await mountPicker({
+      provider: "codex",
+      model: "gpt-5-codex",
+      lockedProvider: null,
+      providers: [
+        {
+          provider: "codex",
+          status: "ready",
+          available: true,
+          authStatus: "authenticated",
+          checkedAt: "2026-04-10T10:00:00.000Z",
+        },
+      ],
+    });
+
+    try {
+      await page.getByRole("button").click();
+      await page.getByRole("menuitem", { name: "Add Providers" }).click();
+
+      await vi.waitFor(() => {
+        expect(postMessage).toHaveBeenCalledWith(
+          { type: SYNARA_OPEN_SETTINGS, section: "providers" },
+          window.location.origin,
+        );
+      });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("asks the Lattice host even when embed hostOrigin was not stored", async () => {
+    sessionStorage.setItem(
+      "synara.poc.embed-mode",
+      JSON.stringify({
+        workspaceRoot: "/repo/project",
+        theme: "dark",
+        surface: "chrome",
+        hostOrigin: null,
+        locale: "zh-CN",
+      }),
+    );
+    const postMessage = vi.spyOn(window.parent, "postMessage");
+    const mounted = await mountPicker({
+      provider: "codex",
+      model: "gpt-5-codex",
+      lockedProvider: null,
+      providers: [
+        {
+          provider: "codex",
+          status: "ready",
+          available: true,
+          authStatus: "authenticated",
+          checkedAt: "2026-04-10T10:00:00.000Z",
+        },
+      ],
+    });
+
+    try {
+      await page.getByRole("button").click();
+      await page.getByRole("menuitem", { name: "Add Providers" }).click();
+
+      await vi.waitFor(() => {
+        expect(postMessage).toHaveBeenCalledWith(
+          { type: SYNARA_OPEN_SETTINGS, section: "providers" },
+          "*",
+        );
+      });
     } finally {
       await mounted.cleanup();
     }

@@ -38,6 +38,7 @@ import {
   buildProviderChildEnvironment,
   registerProviderCredentialKey,
 } from "./providerChildEnvironment.ts";
+import { SYNARA_MCP_SERVER_NAME } from "./agentGateway/mcpInjection.ts";
 
 const CODEX_PROCESS_SHELL_ENV_NAMES = ["PATH", "SSH_AUTH_SOCK"] as const;
 const CODEX_SQLITE_HOME_ENV_NAME = "CODEX_SQLITE_HOME";
@@ -65,7 +66,7 @@ const SYNARA_SHARED_CONTINUATION_LOCK_POLL_MS = 25;
 const SYNARA_SHARED_CONTINUATION_ORPHAN_LOCK_GRACE_MS = 2_000;
 const REQUIRED_SHARED_CONTINUATION_DIRECTORIES = ["sessions", "archived_sessions"] as const;
 const REQUIRED_SHARED_CONTINUATION_FILES = ["history.jsonl", "session_index.jsonl"] as const;
-const SYNARA_MANAGED_MCP_TABLE_HEADER = "[mcp_servers.synara]";
+const SYNARA_MANAGED_MCP_TABLE_HEADER = `[mcp_servers.${SYNARA_MCP_SERVER_NAME}]`;
 export const SYNARA_COMPETING_BROWSER_PLUGIN_SECTION_HEADERS = [
   '[plugins."browser@openai-bundled"]',
   '[plugins."chrome@openai-bundled"]',

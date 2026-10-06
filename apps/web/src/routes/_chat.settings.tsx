@@ -13,8 +13,8 @@ import { GROUPS_ON, VISIBLE_PROVIDER_DESCRIPTORS } from "../betaFeatures";
 import { sameAppSnapShortcut } from "@synara/shared/appSnapShortcut";
 import { desktopFlavorFromProtocol } from "@synara/shared/betaFeatures";
 import { SafariAccessSetupButton } from "../components/SafariAccessOnboarding";
-import { createFileRoute, useSearch } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {
   type AppSettings,
@@ -61,6 +61,7 @@ import {
   KeyboardShortcutsResetButton,
   KeyboardShortcutsSettingsPanel,
 } from "../components/settings/KeyboardShortcutsSettingsPanel";
+import { useOnboardingDialogStore } from "../onboarding/onboardingDialogStore";
 import { ProfileSettingsPanel } from "../components/settings/ProfileSettingsPanel";
 import { ProviderUsageSettingsPanel } from "../components/settings/ProviderUsageSettingsPanel";
 import { ExternalMcpSettingsPanel } from "../components/settings/ExternalMcpSettingsPanel";
@@ -95,7 +96,6 @@ import {
 } from "../components/ui/autocomplete";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { useOnboardingDialogStore } from "../onboarding/onboardingDialogStore";
 import { Input } from "../components/ui/input";
 import { SelectItem } from "../components/ui/select";
 import { Switch } from "../components/ui/switch";
@@ -108,7 +108,7 @@ import { useTheme } from "../hooks/useTheme";
 import { isUiDensity } from "../lib/appDensity";
 import { isChatWidthMode, type ChatWidthMode } from "../lib/chatWidth";
 import { isElectron } from "../env";
-import { ResetIcon } from "../lib/icons";
+import { ResetIcon, RotateCcwIcon } from "../lib/icons";
 import {
   cn,
   getNavigatorPlatform,
@@ -117,6 +117,15 @@ import {
   isWindowsPlatform,
 } from "../lib/utils";
 import { ensureNativeApi, readNativeApi } from "../nativeApi";
+import {
+  isSynaraEmbedMode,
+  postEmbedReadyToLattice,
+  postSettingsContentHeightToLattice,
+  postSettingsWheelToLattice,
+  readEmbedMode,
+  readLatticeSettingsSectionMessage,
+} from "../embedMode";
+import { useLingui } from "@lingui/react";
 import { isProviderKind, sameProviderOrder } from "../providerOrdering";
 import {
   normalizeSettingsSection,
@@ -126,6 +135,10 @@ import {
 } from "../settingsNavigation";
 import { SETTINGS_PAGE_BACKGROUND_CLASS_NAME } from "../settingsPanelStyles";
 import { isAudioLevelAvailable } from "../lib/audioLevel";
+import {
+  createEmbeddedSettingsHeightReporter,
+  measureEmbeddedSettingsHeight,
+} from "../embeddedSettingsHeight";
 
 // ── Settings taxonomy ──────────────────────────────────────────────────────
 
@@ -326,14 +339,22 @@ type BooleanSettingKey = {
 // ── Route screen ───────────────────────────────────────────────────────────
 
 function SettingsRouteView() {
+  const isEmbed = isSynaraEmbedMode();
+  const navigate = useNavigate();
   const routeSearch = useSearch({ strict: false }) as Record<string, unknown>;
   const activeSection = normalizeSettingsSection(routeSearch.section);
+  const [embedUiReady, setEmbedUiReady] = useState(!isEmbed);
+  const embeddedSettingsHeightReporterRef = useRef<{
+    flush: () => number | null;
+    schedule: () => void;
+  } | null>(null);
   const settingsTarget = typeof routeSearch.target === "string" ? routeSearch.target : null;
   const settingsProviderTarget =
     typeof routeSearch.provider === "string" && isProviderKind(routeSearch.provider)
       ? routeSearch.provider
       : null;
   const activeSectionItem = SETTINGS_NAV_ITEMS.find((item) => item.id === activeSection)!;
+  const { i18n } = useLingui();
 
   const {
     isDefaultActiveTheme,
@@ -430,11 +451,116 @@ function SettingsRouteView() {
   const isInstallSettingsDirty = isProviderInstallSettingsDirty(settings, defaults);
   const hiddenProviderCount = new Set(settings.hiddenProviders).size;
   const isProviderOrderDirty = !sameProviderOrder(settings.providerOrder, defaults.providerOrder);
-  const isProviderActivityDirty =
-    settings.disabledProviders.length !== defaults.disabledProviders.length ||
-    settings.disabledProviders.some(
-      (provider, index) => provider !== defaults.disabledProviders[index],
-    );
+
+  useEffect(() => {
+    if (!isEmbed) return;
+    const embedConfig = readEmbedMode();
+    if (!embedConfig?.hostOrigin) return;
+    const receiveHostMessage = (event: MessageEvent) => {
+      const message = readLatticeSettingsSectionMessage(event, embedConfig);
+      if (!message || !SETTINGS_NAV_ITEMS.some((item) => item.id === message.section)) return;
+      void navigate({
+        to: "/settings",
+        search: { section: message.section },
+        replace: true,
+      });
+    };
+    window.addEventListener("message", receiveHostMessage);
+    return () => window.removeEventListener("message", receiveHostMessage);
+  }, [isEmbed, navigate]);
+
+  useEffect(() => {
+    if (!isEmbed) return;
+    const embedConfig = readEmbedMode();
+    if (!embedConfig?.hostOrigin) return;
+    let cancelled = false;
+    const settleEmbeddedUi = async () => {
+      const fonts = (document as Document & { fonts?: FontFaceSet }).fonts;
+      if (fonts && typeof fonts.load === "function") {
+        try {
+          await Promise.all([
+            fonts.load('400 12px "Inter Variable"'),
+            fonts.load('600 18px "Inter Variable"'),
+          ]);
+        } catch {
+          // A missing FontFaceSet or failed font request must not strand Settings.
+        }
+      }
+      if (cancelled) return;
+      document.documentElement.dataset.synaraSettingsReady = "true";
+      setEmbedUiReady(true);
+      postEmbedReadyToLattice(embedConfig);
+    };
+    document.documentElement.dataset.synaraSettingsReady = "false";
+    void settleEmbeddedUi();
+    return () => {
+      cancelled = true;
+      delete document.documentElement.dataset.synaraSettingsReady;
+    };
+  }, [isEmbed]);
+
+  useLayoutEffect(() => {
+    if (!isEmbed || !embedUiReady) return;
+    const embedConfig = readEmbedMode();
+    const content = document.querySelector<HTMLElement>(".synara-settings-content");
+    if (!embedConfig?.hostOrigin || !content) return;
+    const reporter = createEmbeddedSettingsHeightReporter({
+      measure: () => measureEmbeddedSettingsHeight(content),
+      publish: (height) => postSettingsContentHeightToLattice(embedConfig, height, activeSection),
+    });
+    embeddedSettingsHeightReporterRef.current = reporter;
+    reporter.flush();
+
+    const resizeObserver = new ResizeObserver(reporter.schedule);
+    resizeObserver.observe(content);
+    const mutationObserver = new MutationObserver(reporter.schedule);
+    mutationObserver.observe(content, {
+      attributes: true,
+      attributeFilter: ["aria-expanded", "class", "data-state", "hidden", "style"],
+      characterData: true,
+      childList: true,
+      subtree: true,
+    });
+    const fontSet = (document as Document & { fonts?: FontFaceSet }).fonts;
+    const reportAfterFonts = () => reporter.schedule();
+    void fontSet?.ready.then(reportAfterFonts);
+    fontSet?.addEventListener?.("loadingdone", reportAfterFonts);
+    content.addEventListener("load", reporter.schedule, true);
+    content.addEventListener("transitionend", reporter.schedule, true);
+    window.addEventListener("resize", reporter.schedule);
+    return () => {
+      if (embeddedSettingsHeightReporterRef.current === reporter) {
+        embeddedSettingsHeightReporterRef.current = null;
+      }
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
+      fontSet?.removeEventListener?.("loadingdone", reportAfterFonts);
+      content.removeEventListener("load", reporter.schedule, true);
+      content.removeEventListener("transitionend", reporter.schedule, true);
+      window.removeEventListener("resize", reporter.schedule);
+      reporter.dispose();
+    };
+  }, [activeSection, embedUiReady, isEmbed]);
+
+  useEffect(() => {
+    if (!isEmbed) return;
+    const embedConfig = readEmbedMode();
+    if (!embedConfig) return;
+    const forwardWheel = (event: WheelEvent) => {
+      // Include the current height in the wheel message itself. Sending height
+      // and wheel as separate postMessage tasks let the host clamp the first
+      // gesture against the previous section's stale scroll range.
+      const height = embeddedSettingsHeightReporterRef.current?.flush();
+      postSettingsWheelToLattice(
+        embedConfig,
+        event,
+        height === null || height === undefined ? undefined : { height, section: activeSection },
+      );
+      event.preventDefault();
+    };
+    window.addEventListener("wheel", forwardWheel, { capture: true, passive: false });
+    return () => window.removeEventListener("wheel", forwardWheel, { capture: true });
+  }, [activeSection, isEmbed]);
 
   // Deep links and sidebar search targets all resolve to stable DOM ids in the active panel.
   useEffect(() => {
@@ -555,6 +681,10 @@ function SettingsRouteView() {
     settings.sourceControlCustomInstructions !== defaults.sourceControlCustomInstructions
       ? ["Source control writing style"]
       : []),
+    ...(settings.compileRepairProvider !== defaults.compileRepairProvider ||
+    settings.compileRepairModel !== defaults.compileRepairModel
+      ? ["Compile repair model"]
+      : []),
     ...(settings.customCodexModels.length > 0 ||
     settings.customClaudeModels.length > 0 ||
     settings.customCursorModels.length > 0 ||
@@ -566,7 +696,6 @@ function SettingsRouteView() {
       ? ["Custom models"]
       : []),
     ...(isInstallSettingsDirty ? ["Provider installs"] : []),
-    ...(isProviderActivityDirty ? ["Provider activity"] : []),
     ...(hiddenProviderCount > 0 ? ["Provider visibility"] : []),
     ...(isProviderOrderDirty ? ["Provider order"] : []),
   ];
@@ -637,7 +766,7 @@ function SettingsRouteView() {
   const renderGeneralPanel = () => (
     <div className="space-y-6">
       <SafariAccessSetupButton />
-      <BetaChannelSettingsPanel active={true} />
+      {!isEmbed && <BetaChannelSettingsPanel active={true} />}
       <SettingsSection title="Core defaults">
         <SettingsRow
           title="Default provider"
@@ -666,7 +795,7 @@ function SettingsRouteView() {
               }
             >
               {PROVIDER_SELECT_OPTIONS.map((provider) => (
-                <SelectItem hideIndicator key={provider} value={provider}>
+                <SelectItem key={provider} value={provider}>
                   <ProviderOptionLabel
                     provider={provider}
                     label={PROVIDER_DISPLAY_NAMES[provider]}
@@ -704,16 +833,11 @@ function SettingsRouteView() {
               ariaLabel="Default thread mode"
               valueContent={settings.defaultThreadEnvMode === "worktree" ? "New worktree" : "Local"}
             >
-              <SelectItem hideIndicator value="local">
-                Local
-              </SelectItem>
-              <SelectItem hideIndicator value="worktree">
-                New worktree
-              </SelectItem>
+              <SelectItem value="local">Local</SelectItem>
+              <SelectItem value="worktree">New worktree</SelectItem>
             </SettingsSelectControl>
           }
         />
-
         {renderBooleanSettingRow({
           settingKey: "archiveDeletesOrphanedWorktree",
           title: "Delete worktree on archive",
@@ -774,15 +898,13 @@ function SettingsRouteView() {
               ariaLabel="Project sort order"
               valueContent={SIDEBAR_PROJECT_SORT_ORDER_LABELS[settings.sidebarProjectSortOrder]}
             >
-              <SelectItem hideIndicator value="updated_at">
+              <SelectItem value="updated_at">
                 {SIDEBAR_PROJECT_SORT_ORDER_LABELS.updated_at}
               </SelectItem>
-              <SelectItem hideIndicator value="created_at">
+              <SelectItem value="created_at">
                 {SIDEBAR_PROJECT_SORT_ORDER_LABELS.created_at}
               </SelectItem>
-              <SelectItem hideIndicator value="manual">
-                {SIDEBAR_PROJECT_SORT_ORDER_LABELS.manual}
-              </SelectItem>
+              <SelectItem value="manual">{SIDEBAR_PROJECT_SORT_ORDER_LABELS.manual}</SelectItem>
             </SettingsSelectControl>
           }
         />
@@ -814,10 +936,10 @@ function SettingsRouteView() {
               ariaLabel="Thread sort order"
               valueContent={SIDEBAR_THREAD_SORT_ORDER_LABELS[settings.sidebarThreadSortOrder]}
             >
-              <SelectItem hideIndicator value="updated_at">
+              <SelectItem value="updated_at">
                 {SIDEBAR_THREAD_SORT_ORDER_LABELS.updated_at}
               </SelectItem>
-              <SelectItem hideIndicator value="created_at">
+              <SelectItem value="created_at">
                 {SIDEBAR_THREAD_SORT_ORDER_LABELS.created_at}
               </SelectItem>
             </SettingsSelectControl>
@@ -978,7 +1100,7 @@ function SettingsRouteView() {
         <SettingsSection title="App">
           <SettingsRow
             title="App icon"
-            description="Choose the icon Synara uses in the dock or taskbar."
+            description="Choose the icon Lattice uses in the dock or taskbar."
             resetAction={
               settings.desktopAppIcon !== defaultDesktopAppIcon ? (
                 <SettingResetButton
@@ -1242,7 +1364,7 @@ function SettingsRouteView() {
                   showClear={settings.terminalFontFamily.length > 0}
                   spellCheck={false}
                   autoComplete="off"
-                  placeholder="Default (JetBrains Mono)"
+                  placeholder="Default (TX-02 / JetBrains Mono)"
                   className="w-full sm:w-56"
                   aria-label="Terminal font family"
                 />
@@ -1313,15 +1435,9 @@ function SettingsRouteView() {
               triggerClassName="w-full sm:w-40"
               valueContent={TIMESTAMP_FORMAT_LABELS[settings.timestampFormat]}
             >
-              <SelectItem hideIndicator value="locale">
-                {TIMESTAMP_FORMAT_LABELS.locale}
-              </SelectItem>
-              <SelectItem hideIndicator value="12-hour">
-                {TIMESTAMP_FORMAT_LABELS["12-hour"]}
-              </SelectItem>
-              <SelectItem hideIndicator value="24-hour">
-                {TIMESTAMP_FORMAT_LABELS["24-hour"]}
-              </SelectItem>
+              <SelectItem value="locale">{TIMESTAMP_FORMAT_LABELS.locale}</SelectItem>
+              <SelectItem value="12-hour">{TIMESTAMP_FORMAT_LABELS["12-hour"]}</SelectItem>
+              <SelectItem value="24-hour">{TIMESTAMP_FORMAT_LABELS["24-hour"]}</SelectItem>
             </SettingsSelectControl>
           }
         />
@@ -1617,45 +1733,41 @@ function SettingsRouteView() {
           content (hence absolute, not a layout-occupying header row). The strip stays a
           drag-region so the Windows frameless window can be moved by its top edge; the
           caption buttons themselves are a separate fixed cluster (see root route). */}
-        <div
-          className={cn(
-            "drag-region absolute inset-x-0 top-0 z-10 flex items-center",
-            CHAT_SURFACE_HEADER_PADDING_X_CLASS,
-            CHAT_SURFACE_HEADER_HEIGHT_CLASS,
-            desktopTopBarTrafficLightGutterClassName,
-          )}
-        >
-          <div className="pointer-events-auto">
-            <SidebarHeaderNavigationControls />
+        {!isEmbed ? (
+          <div
+            className={cn(
+              "drag-region absolute inset-x-0 top-0 z-10 flex items-center",
+              CHAT_SURFACE_HEADER_PADDING_X_CLASS,
+              CHAT_SURFACE_HEADER_HEIGHT_CLASS,
+              desktopTopBarTrafficLightGutterClassName,
+            )}
+          >
+            <div className="pointer-events-auto">
+              <SidebarHeaderNavigationControls />
+            </div>
           </div>
-        </div>
-        <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
-          <div className="flex-1 overflow-y-auto">
+        ) : null}
+        <div className="synara-settings-shell flex h-full min-h-0 min-w-0 flex-1 flex-col">
+          <div className="synara-settings-scroll flex-1 overflow-y-auto">
             <div
               className={cn(
+                "synara-settings-content",
                 "mx-auto w-full px-6 py-8",
                 activeSection === "profile" ? "max-w-3xl" : "max-w-2xl",
               )}
             >
               {activeSection !== "profile" ? (
-                <div className="mb-8 flex items-start justify-between gap-4">
+                <div className="synara-settings-heading mb-8 flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <h1 className="flex items-center gap-2 text-xl font-medium tracking-tight text-foreground">
-                      {activeSectionItem.label}
-                      {activeSectionItem.badge ? (
-                        <Badge
-                          variant="outline"
-                          className="rounded-full px-2 font-normal tracking-normal text-muted-foreground"
-                        >
-                          {activeSectionItem.badge}
-                        </Badge>
-                      ) : null}
+                    <h1 className="text-xl font-medium tracking-tight text-foreground">
+                      {i18n._(activeSectionItem.label)}
                     </h1>
                     <p className="mt-1.5 text-ui leading-relaxed text-muted-foreground">
-                      {activeSectionItem.description}
+                      {i18n._(activeSectionItem.description)}
                     </p>
                   </div>
-                  {activeSection === "shortcuts" ? (
+                  {!isEmbed ? (
+activeSection === "shortcuts" ? (
                     <KeyboardShortcutsResetButton />
                   ) : (
                     <Button
@@ -1668,7 +1780,8 @@ function SettingsRouteView() {
                       <ResetIcon className="size-3.5" />
                       Restore defaults
                     </Button>
-                  )}
+                  )
+                  ) : null}
                 </div>
               ) : null}
 
@@ -1697,7 +1810,7 @@ function SettingsRouteView() {
                 <WorktreesSettingsPanel active={activeSection === "worktrees"} />
                 <ArchivedSettingsPanel active={activeSection === "archived"} />
                 <ModelsSettingsPanel
-                  active={activeSection === "models"}
+                  active={isEmbed && activeSection === "providers"}
                   settings={settings}
                   defaults={defaults}
                   updateSettings={updateSettings}

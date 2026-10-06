@@ -48,6 +48,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useLingui } from "@lingui/react";
 
 import {
   buildProviderInstanceSettingsPatch,
@@ -61,6 +62,7 @@ import {
   type ProviderInstanceOption,
   type ProviderInstancePatch,
 } from "~/appSettings";
+import { postExternalLinkToLattice, readEmbedMode } from "~/embedMode";
 import { useProviderStatusesForLocalConfig } from "~/hooks/useProviderStatusesForLocalConfig";
 import { useRefreshProviderStatusesNow } from "~/hooks/useProviderStatusRefresh";
 import { CentralIcon } from "~/lib/central-icons";
@@ -82,6 +84,7 @@ import {
   providerAccountStatusSummary,
   providerSetupStatusLabel,
 } from "~/lib/providerSetupStatus";
+import { openExternalLink } from "~/lib/linkChips";
 import {
   hasReconciledServerProviderStatuses,
   serverConfigQueryOptions,
@@ -421,23 +424,8 @@ const PROVIDER_INSTALL_SETTINGS: readonly ProviderInstallSettings[] = [
   },
   {
     provider: "pi",
-    docs: [
-      { label: "Install", href: "https://pi.dev/docs/latest" },
-      { label: "Update", href: "https://pi.dev/docs/latest/settings" },
-      { label: "Config", href: "https://pi.dev/docs/latest/settings" },
-    ],
+    docs: [{ label: "Config", href: "https://pi.dev/docs/latest/settings" }],
     fields: [
-      {
-        kind: "text",
-        settingsKey: "piBinaryPath",
-        label: "Pi binary path",
-        placeholder: "Pi binary path",
-        description: (
-          <>
-            Leave blank to use <code>pi</code> from your PATH.
-          </>
-        ),
-      },
       {
         kind: "text",
         settingsKey: "piAgentDir",
@@ -590,11 +578,10 @@ function isProviderPickerProviderEnabled(
 function SortableProviderVisibilityRow(props: {
   option: { provider: ProviderKind; title: string };
   providerStatus: ServerProviderStatus | undefined;
-  statusReconciled: boolean;
-  isDisabled: boolean;
   isHidden: boolean;
   onHiddenChange: (hidden: boolean) => void;
 }) {
+  const { i18n } = useLingui();
   const {
     attributes,
     listeners,
@@ -604,7 +591,7 @@ function SortableProviderVisibilityRow(props: {
     transition,
     isDragging,
   } = useSortable({ id: props.option.provider });
-  const isChecking = !props.statusReconciled || props.providerStatus === undefined;
+  const isChecking = props.providerStatus === undefined;
   const isAvailable = props.providerStatus?.available === true;
   const isEnabled = isProviderPickerProviderEnabled(props.providerStatus, props.isHidden);
 
@@ -635,15 +622,13 @@ function SortableProviderVisibilityRow(props: {
         </button>
         <ProviderIcon provider={props.option.provider} className="size-4 shrink-0" />
         <span className="min-w-0">
-          <span className="block truncate text-ui-lg leading-snug text-foreground">
-            {props.option.title}
-          </span>
+          <span className="block truncate text-ui text-foreground">{props.option.title}</span>
           <span className="block text-ui-sm text-muted-foreground">
-            {providerSetupStatusLabel({
-              status: props.providerStatus,
-              reconciled: props.statusReconciled,
-              disabled: props.isDisabled,
-            })}
+            {isChecking
+              ? i18n._("Checking")
+              : isAvailable
+                ? i18n._("Installed")
+                : i18n._("CLI not installed")}
           </span>
         </span>
       </div>
@@ -674,7 +659,21 @@ function ProviderDocsLinks({ docs }: { docs: ProviderInstallSettings["docs"] }) 
               key={`${doc.label}:${doc.href}`}
               variant="outline"
               size="sm"
-              render={<a href={doc.href} target="_blank" rel="noreferrer" />}
+              render={
+                <a
+                  href={doc.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const embedConfig = readEmbedMode();
+                    if (!embedConfig || !postExternalLinkToLattice(embedConfig, doc.href)) {
+                      openExternalLink(doc.href);
+                    }
+                  }}
+                />
+              }
             >
               <span>{doc.label}</span>
               <ExternalLinkIcon className="size-3" />
@@ -692,7 +691,7 @@ function formatProviderVersion(value: string | null | undefined): string | null 
   return trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
 }
 
-function providerUpdateStatusLabel(provider: ServerProviderStatus): string | null {
+export function providerUpdateStatusLabel(provider: ServerProviderStatus): string | null {
   const state = provider.updateState?.status;
   if (state === "queued") return "Update queued";
   if (state === "running") return "Updating";
@@ -706,7 +705,8 @@ function providerUpdateStatusLabel(provider: ServerProviderStatus): string | nul
     return currentVersion ? `${currentVersion} -> ${latestVersion}` : `Latest ${latestVersion}`;
   }
   const currentVersion = formatProviderVersion(provider.version);
-  return currentVersion ? `Current ${currentVersion}` : null;
+  if (currentVersion) return `Current ${currentVersion}`;
+  return provider.provider === "pi" && provider.available ? "Included with Lattice" : null;
 }
 
 function providerUpdateFailureMessage(provider: ServerProviderStatus | undefined): string | null {
@@ -721,12 +721,13 @@ function providerStatusDisplayName(status: ServerProviderStatus): string {
   return isProviderKind(driver) ? PROVIDER_DISPLAY_NAMES[driver] : driver;
 }
 
-function ProviderUpdateAction(props: {
+export function ProviderUpdateAction(props: {
   providerStatus: ServerProviderStatus;
   active: boolean;
   disabled: boolean;
   onUpdate: (provider: ProviderKind, instanceId?: ProviderInstanceId) => void;
 }) {
+  const { i18n } = useLingui();
   const advisory = props.providerStatus.versionAdvisory;
   return (
     <Button
@@ -747,8 +748,27 @@ function ProviderUpdateAction(props: {
       ) : (
         <DownloadIcon className="size-3.5" />
       )}
-      {props.active ? "Updating" : "Update"}
+      {props.active ? i18n._("Updating") : i18n._("Update")}
     </Button>
+  );
+}
+
+export function ProviderUpdateRow(props: {
+  provider: ReactNode;
+  status: ReactNode;
+  action: ReactNode;
+}) {
+  return (
+    <div
+      data-slot="provider-update-row"
+      className="flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2"
+    >
+      <div className="min-w-0 flex-1 text-ui font-medium text-foreground">{props.provider}</div>
+      <div className="ml-auto flex shrink-0 items-center justify-end gap-2">
+        <span className="text-right text-ui-sm text-muted-foreground">{props.status}</span>
+        {props.action}
+      </div>
+    </div>
   );
 }
 
@@ -1832,14 +1852,14 @@ function ProviderToolRow(props: {
                       <code className="font-mono">{updateAdvisory.updateCommand}</code>
                     </>
                   ) : (
-                    "A newer version is available, but Synara could not identify a safe one-click update command for this installation."
+                    "A newer version is available, but Lattice could not identify a safe one-click update command for this installation."
                   )}
                 </div>
               ) : null}
               {showSelfManagedUpdate && props.providerStatus ? (
                 <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0 text-ui leading-snug text-muted-foreground">
-                    {title} manages its own releases, so Synara cannot tell whether a newer version
+                  <div className="min-w-0 text-ui-xs text-muted-foreground">
+                    {title} manages its own releases, so Lattice cannot tell whether a newer version
                     exists. Run the update to be sure.
                   </div>
                   <ProviderUpdateAction
@@ -1866,10 +1886,10 @@ function ProviderToolRow(props: {
 }
 
 export type ProvidersSettingsPanelProps = AppSettingsBinding & {
+  readonly updateSettingsAndWait: (patch: Partial<AppSettings>) => Promise<void>;
   readonly active: boolean;
   readonly providerTarget?: ProviderKind | null;
   readonly resetEpoch: number;
-  readonly updateSettingsAndWait: (patch: Partial<AppSettings>) => Promise<void>;
 };
 
 export function ProvidersSettingsPanel({
@@ -1881,6 +1901,7 @@ export function ProvidersSettingsPanel({
   providerTarget = null,
   resetEpoch,
 }: ProvidersSettingsPanelProps) {
+  const { i18n } = useLingui();
   const queryClient = useQueryClient();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const localProviderStatuses = useProviderStatusesForLocalConfig();
@@ -1898,18 +1919,11 @@ export function ProvidersSettingsPanel({
   const [updatingProviders, setUpdatingProviders] = useState<ReadonlySet<ProviderInstanceId>>(
     () => new Set(),
   );
-  const providerEnablementMutationInFlightRef = useRef(false);
-  const [providerEnablementMutationPending, setProviderEnablementMutationPending] = useState(false);
   const hiddenProviderSet = useMemo(
     () => new Set<ProviderKind>(settings.hiddenProviders),
     [settings.hiddenProviders],
   );
   const hiddenProviderCount = hiddenProviderSet.size;
-  const disabledProviderSet = useMemo(
-    () => new Set<ProviderKind>(settings.disabledProviders),
-    [settings.disabledProviders],
-  );
-  const enabledProviderCount = PROVIDER_VISIBILITY_OPTIONS.length - disabledProviderSet.size;
   const providerVisibilityOptionsByProvider = useMemo(
     () => new Map(PROVIDER_VISIBILITY_OPTIONS.map((option) => [option.provider, option])),
     [],
@@ -1979,21 +1993,6 @@ export function ProvidersSettingsPanel({
   );
   const outdatedProviderCount = outdatedProviderStatuses.length;
   const installSettingsDirty = isProviderInstallSettingsDirty(settings, defaults);
-
-  const updateProviderEnablement = useCallback(
-    async (disabledProviders: ProviderKind[]) => {
-      if (providerEnablementMutationInFlightRef.current) return;
-      providerEnablementMutationInFlightRef.current = true;
-      setProviderEnablementMutationPending(true);
-      try {
-        await updateSettingsAndWait({ disabledProviders });
-      } finally {
-        providerEnablementMutationInFlightRef.current = false;
-        setProviderEnablementMutationPending(false);
-      }
-    },
-    [updateSettingsAndWait],
-  );
 
   useSettingsRestoreSignal(resetEpoch, () => {
     setOpenInstallProviders(createClosedProviderInstallDisclosureState());
@@ -2090,120 +2089,29 @@ export function ProvidersSettingsPanel({
 
   return (
     <div className="space-y-6">
-      <SettingsSection title="Provider activity">
+      <SettingsSection title={i18n._("Provider picker")}>
         <SettingsRow
-          title="Enabled providers"
-          description="Allow background checks and new turns. Enabling a provider does not install it or sign it in. Disabling keeps existing threads and does not interrupt a running turn."
-          control={
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={refreshingProviders}
-              onClick={() => void refreshProviders()}
-            >
-              {refreshingProviders ? <Loader2Icon className="size-3.5 animate-spin" /> : null}
-              {refreshingProviders ? "Checking setup" : "Refresh status"}
-            </Button>
-          }
-          status={
-            providerEnablementMutationPending
-              ? "Saving provider activity"
-              : `${enabledProviderCount} of ${PROVIDER_VISIBILITY_OPTIONS.length} enabled`
-          }
-          resetAction={
-            disabledProviderSet.size > 0 && !providerEnablementMutationPending ? (
-              <SettingResetButton
-                label="enabled providers"
-                onClick={() => void updateProviderEnablement([...defaults.disabledProviders])}
-              />
-            ) : null
-          }
-        >
-          <div
-            className={cn(
-              "mt-4",
-              SETTINGS_INSET_LIST_CLASS_NAME,
-              SETTINGS_STACKED_ROWS_DIVIDER_CLASS_NAME,
-            )}
-          >
-            {orderedProviderVisibilityOptions.map((option) => {
-              const enabled = !disabledProviderSet.has(option.provider);
-              const providerStatus = providerStatusByProvider.get(option.provider);
-              return (
-                <SettingsListRow
-                  key={option.provider}
-                  title={
-                    <span className="flex items-center gap-2">
-                      <ProviderIcon provider={option.provider} className="size-4 shrink-0" />
-                      <span>{option.title}</span>
-                    </span>
-                  }
-                  description={
-                    <>
-                      <span className="block">
-                        {providerSetupStatusLabel({
-                          status: providerStatus,
-                          reconciled: providerStatusesReconciled,
-                          disabled: !enabled,
-                        })}
-                      </span>
-                      {enabled &&
-                      providerStatusesReconciled &&
-                      providerStatus?.message &&
-                      (providerStatus.status !== "ready" ||
-                        providerStatus.authStatus !== "authenticated") ? (
-                        <span className="mt-1 block">{providerStatus.message}</span>
-                      ) : null}
-                    </>
-                  }
-                  actions={
-                    <>
-                      <Button
-                        variant="outline"
-                        size="xs"
-                        render={<a href={option.setupDocsHref} target="_blank" rel="noreferrer" />}
-                        aria-label={`${option.title} setup guide`}
-                      >
-                        Setup guide
-                        <ExternalLinkIcon className="size-3" />
-                      </Button>
-                      <Switch
-                        checked={enabled}
-                        disabled={!serverSettingsQuery.data || providerEnablementMutationPending}
-                        onCheckedChange={(checked) =>
-                          void updateProviderEnablement(
-                            setProviderListMembership(
-                              settings.disabledProviders,
-                              option.provider,
-                              !Boolean(checked),
-                            ),
-                          )
-                        }
-                        aria-label={`${enabled ? "Disable" : "Enable"} ${option.title}`}
-                      />
-                    </>
-                  }
-                />
-              );
-            })}
-          </div>
-        </SettingsRow>
-      </SettingsSection>
-
-      <SettingsSection title="Provider picker">
-        <SettingsRow
-          title="Available CLIs"
-          description="Show or hide installed providers in the picker and drag them into your preferred order. Hiding a provider here does not disable its server activity."
+          title={i18n._("Available CLIs")}
+          description={i18n._(
+            "Show or hide installed providers in the picker and drag them into your preferred order. Hiding a provider here does not disable its server activity.",
+          )}
           status={
             serverConfigQuery.isPending || hasPendingProviderStatuses
-              ? "Checking installed CLIs"
+              ? i18n._("Checking installed CLIs")
               : availableProviderCount === 0
-                ? "No CLIs detected"
+                ? i18n._("No CLIs detected")
                 : visibleAvailableProviderCount < availableProviderCount
-                  ? `${visibleAvailableProviderCount} of ${availableProviderCount} installed shown`
+                  ? i18n._(
+                      "{visibleAvailableProviderCount} of {availableProviderCount} installed shown",
+                      { visibleAvailableProviderCount, availableProviderCount },
+                    )
                   : isProviderOrderDirty
-                    ? `${availableProviderCount} installed · custom order`
-                    : `${availableProviderCount} installed`
+                    ? i18n._("{availableProviderCount} installed · custom order", {
+                        availableProviderCount,
+                      })
+                    : i18n._("{availableProviderCount} installed", {
+                        availableProviderCount,
+                      })
           }
           resetAction={
             hiddenProviderCount > 0 || isProviderOrderDirty ? (
@@ -2235,8 +2143,6 @@ export function ProvidersSettingsPanel({
                     key={option.provider}
                     option={option}
                     providerStatus={providerStatusByProvider.get(option.provider)}
-                    statusReconciled={providerStatusesReconciled}
-                    isDisabled={disabledProviderSet.has(option.provider)}
                     isHidden={hiddenProviderSet.has(option.provider)}
                     onHiddenChange={(hidden) =>
                       updateSettings({
@@ -2256,10 +2162,12 @@ export function ProvidersSettingsPanel({
       </SettingsSection>
 
       <div id={SETTINGS_TARGETS.providerUpdates}>
-        <SettingsSection title="Updates">
+        <SettingsSection title={i18n._("Updates")}>
           <SettingsRow
-            title="Automatic CLI update checks"
-            description="Check Codex, Claude, and other provider CLIs for newer versions in the background."
+            title={i18n._("Automatic CLI update checks")}
+            description={i18n._(
+              "Check Codex, Claude, and other provider CLIs for newer versions in the background.",
+            )}
             resetAction={
               settings.enableProviderUpdateChecks !== defaults.enableProviderUpdateChecks ? (
                 <SettingResetButton
@@ -2284,14 +2192,17 @@ export function ProvidersSettingsPanel({
           />
 
           <SettingsRow
-            title="Provider updates"
-            description="Review installed provider tools that Synara can safely update."
+            title={i18n._("Provider updates")}
+            description={i18n._("Review installed provider tools that Lattice can safely update.")}
             status={
               !settings.enableProviderUpdateChecks
-                ? "Automatic checks off"
+                ? i18n._("Automatic checks off")
                 : outdatedProviderCount > 0
-                  ? `${outdatedProviderCount} ${pluralize(outdatedProviderCount, "update")} available`
-                  : "No provider updates detected"
+                  ? i18n._(
+                      "{outdatedProviderCount, plural, one {# update available} other {# updates available}}",
+                      { outdatedProviderCount },
+                    )
+                  : i18n._("No provider updates detected")
             }
           >
             {settings.enableProviderUpdateChecks && outdatedProviderStatuses.length > 0 ? (
@@ -2321,7 +2232,9 @@ export function ProvidersSettingsPanel({
                             onUpdate={(provider) => void runProviderUpdate(provider)}
                           />
                         ) : (
-                          <span className="text-ui-sm text-muted-foreground">Manual update</span>
+                          <span className="text-ui-sm text-muted-foreground">
+                            {i18n._("Manual update")}
+                          </span>
                         )
                       }
                     />
@@ -2334,16 +2247,21 @@ export function ProvidersSettingsPanel({
       </div>
 
       <div id={SETTINGS_TARGETS.providerInstalls}>
-        <SettingsSection title="Provider tools">
+        <SettingsSection title={i18n._("Provider tools")}>
           <SettingsRow
-            title="Installed CLIs"
-            description="Review provider versions and update tools. Open a row only when you need binary overrides."
+            title={i18n._("Provider runtimes")}
+            description={i18n._(
+              "Review external provider CLIs and the Pi SDK included with Lattice. Pi does not require a separate CLI installation or update.",
+            )}
             status={
               !settings.enableProviderUpdateChecks
-                ? "Automatic checks off"
+                ? i18n._("Automatic checks off")
                 : outdatedProviderCount > 0
-                  ? `${outdatedProviderCount} ${pluralize(outdatedProviderCount, "update")} available`
-                  : "No provider updates detected"
+                  ? i18n._(
+                      "{outdatedProviderCount, plural, one {# update available} other {# updates available}}",
+                      { outdatedProviderCount },
+                    )
+                  : i18n._("No provider updates detected")
             }
             resetAction={
               installSettingsDirty ? (

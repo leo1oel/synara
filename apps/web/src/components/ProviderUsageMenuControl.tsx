@@ -9,6 +9,7 @@ import {
   type ServerGetProviderUsageSnapshotResult,
 } from "@synara/contracts";
 import { providerUsageNeedsAuthDetail } from "@synara/shared/providerUsage";
+import { useLingui } from "@lingui/react";
 import { type ReactNode } from "react";
 
 import { useAppSettings } from "~/appSettings";
@@ -92,6 +93,7 @@ export function useProviderUsageMenuModel(
     providerSnapshot?: ServerGetProviderUsageSnapshotResult | undefined;
   } = {},
 ): ProviderUsageMenuModel {
+  const { i18n } = useLingui();
   const { settings } = useAppSettings();
   const threads = useStore(selectAccountRateLimitThreads);
   const usageSummary = useProviderUsageSummary({
@@ -103,11 +105,15 @@ export function useProviderUsageMenuModel(
     fetchOpenUsageData: false,
   });
 
-  return buildProviderUsageMenuModel({
+  const model = buildProviderUsageMenuModel({
     provider,
     providerSnapshot: input.providerSnapshot,
     usageSummary,
   });
+  return {
+    ...model,
+    menuTitle: i18n._("{provider} usage", { provider: PROVIDER_DISPLAY_NAMES[provider] }),
+  };
 }
 
 export function ProviderUsageMenuPopup({

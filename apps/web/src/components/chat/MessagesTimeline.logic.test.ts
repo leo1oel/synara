@@ -16,6 +16,7 @@ import {
   resolveAssistantMessageCopyState,
   resolveAssistantMessageDisplayText,
   resolveThreadFindJumpTarget,
+  userMessageEditRejectionCopy,
   type CollapsedTurnItem,
   type MessagesTimelineRow,
   type StableMessagesTimelineRowsState,
@@ -28,6 +29,28 @@ describe("canSubmitUserMessageEdit", () => {
     expect(canSubmitUserMessageEdit({ draft: "", allowEmpty: true, disabled: false })).toBe(true);
     expect(canSubmitUserMessageEdit({ draft: "", allowEmpty: false, disabled: false })).toBe(false);
     expect(canSubmitUserMessageEdit({ draft: "", allowEmpty: true, disabled: true })).toBe(false);
+  });
+});
+
+describe("userMessageEditRejectionCopy", () => {
+  it("names the cause for every edit-target refusal", () => {
+    const reasons = [
+      "missing-message",
+      "not-user-message",
+      "non-native-message",
+      "not-latest-native-user-message",
+      "missing-turn-metadata",
+      "spans-multiple-turns",
+    ] as const;
+    const sentences = reasons.map((reason) => userMessageEditRejectionCopy(reason));
+    for (const sentence of sentences) {
+      expect(sentence).toMatch(/edited/);
+    }
+    // The stale-composer races surface distinct explanations rather than the
+    // old catch-all "latest rollbackable" line.
+    expect(userMessageEditRejectionCopy("not-latest-native-user-message")).not.toBe(
+      userMessageEditRejectionCopy("spans-multiple-turns"),
+    );
   });
 });
 

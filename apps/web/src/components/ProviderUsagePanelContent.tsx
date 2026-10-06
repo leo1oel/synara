@@ -5,7 +5,8 @@
 // sit behind a "Details" toggle whose state persists in app settings.
 
 import type { ProviderKind, ServerCodexResetCredits } from "@synara/contracts";
-import { providerUsageLabel } from "@synara/shared/providerUsage";
+import { providerUsageDisplayName, providerUsageLabel } from "@synara/shared/providerUsage";
+import { useLingui } from "@lingui/react";
 
 import { useAppSettings } from "~/appSettings";
 import { ExternalLinkIcon, TriangleAlertIcon } from "~/lib/icons";
@@ -15,7 +16,10 @@ import {
   deriveRateLimitLearnMoreHref,
   type ProviderRateLimit,
 } from "~/lib/rateLimits";
-import { deriveProviderUsageDisplayRows } from "~/lib/providerUsageDisplay";
+import {
+  deriveProviderUsageDisplayRows,
+  localizeProviderUsageNotice,
+} from "~/lib/providerUsageDisplay";
 import { cn } from "~/lib/utils";
 
 import { ProviderUsageLimitRows } from "./ProviderUsageLimitRows";
@@ -42,6 +46,7 @@ export function ProviderUsagePanelContent(props: {
   className?: string | undefined;
 }) {
   const { settings, updateSettings } = useAppSettings();
+  const { i18n } = useLingui();
   const visibleRows = deriveProviderUsageDisplayRows(props.rateLimits);
   const learnMoreHref =
     props.learnMoreHref ??
@@ -73,13 +78,15 @@ export function ProviderUsagePanelContent(props: {
     <div className={cn("space-y-2", props.className)}>
       {props.showTitle !== false ? (
         <div className="text-chat-meta font-medium text-muted-foreground">
-          {providerUsageLabel(props.provider)}
+          {i18n._("{provider} usage", {
+            provider: providerUsageDisplayName(props.provider),
+          })}
         </div>
       ) : null}
       {props.notice ? (
         <p className="flex items-start gap-1.5 text-chat-meta leading-relaxed text-amber-600 dark:text-amber-300/90">
           <TriangleAlertIcon className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
-          <span>{props.notice}</span>
+          <span>{localizeProviderUsageNotice(i18n, props.notice)}</span>
         </p>
       ) : null}
       <ProviderUsageLimitRows rows={visibleRows} surface="popover" />
@@ -93,7 +100,7 @@ export function ProviderUsagePanelContent(props: {
               className="flex items-center gap-1 text-chat-meta text-muted-foreground transition-colors hover:text-foreground"
             >
               <DisclosureChevron open={detailsOpen} className="size-3" />
-              Details
+              {i18n._("Details")}
             </button>
             <DisclosureRegion open={detailsOpen} contentClassName="space-y-2 pt-2">
               {resetCredits}
@@ -107,14 +114,14 @@ export function ProviderUsagePanelContent(props: {
           {usageLines ??
             (props.isLoading ? (
               <p className="text-chat-meta leading-relaxed text-muted-foreground">
-                Scanning local usage data for the selected provider.
+                {i18n._("Scanning local usage data for the selected provider.")}
               </p>
             ) : (
               <p className="text-chat-meta leading-relaxed text-muted-foreground">
                 {props.emptyMessage ??
                   (props.provider
-                    ? "No local usage data was found yet for the selected provider."
-                    : "No local usage data was found yet.")}
+                    ? i18n._("No local usage data was found yet for the selected provider.")
+                    : i18n._("No local usage data was found yet."))}
               </p>
             ))}
         </>
@@ -126,7 +133,7 @@ export function ProviderUsagePanelContent(props: {
           rel="noopener noreferrer"
           className="flex items-center gap-1 pt-0.5 text-chat-meta text-muted-foreground transition-colors hover:text-foreground"
         >
-          Learn more
+          {i18n._("Learn more")}
           <ExternalLinkIcon className="size-3" />
         </a>
       ) : null}

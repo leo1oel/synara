@@ -4,6 +4,7 @@
 
 import { RouteInsetSurface } from "~/components/RouteInsetSurface";
 import { SynaraLogo } from "~/components/SynaraLogo";
+import { isSynaraEmbedMode } from "~/embedMode";
 
 export function SplashScreen({
   errorMessage,
@@ -13,6 +14,7 @@ export function SplashScreen({
   onRetry?: (() => void) | null;
 }) {
   const showRetry = Boolean(errorMessage && onRetry);
+  const hideBrandDuringEmbedStartup = isSynaraEmbedMode() && !errorMessage;
 
   return (
     // The shared route surface, so the splash sits in the same block as every other route
@@ -20,7 +22,9 @@ export function SplashScreen({
     <RouteInsetSurface>
       <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center">
         <div className="flex flex-col items-center gap-5 select-none">
-          <SynaraLogo aria-label="Synara" className="size-24" />
+          {hideBrandDuringEmbedStartup ? null : (
+            <SynaraLogo aria-label="Synara" className="size-24" />
+          )}
 
           {errorMessage ? (
             <div className="flex max-w-sm flex-col items-center gap-3 px-6 text-center">

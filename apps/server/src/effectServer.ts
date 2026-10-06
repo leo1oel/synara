@@ -7,16 +7,20 @@ import { HttpRouter } from "effect/unstable/http";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 
 import { agentGatewayRouteLayer } from "./agentGateway/httpRoute";
+import { latticeAgentQualityRouteLayer } from "./agentGateway/latticeAgentQualityHttpRoute";
+import { latticeCompileRepairRouteLayer } from "./agentGateway/latticeCompileRepairHttpRoute";
+import { latticeBibliographyRouteLayer } from "./agentGateway/latticeBibliographyHttpRoute";
+import { latticeCanvasRouteLayer } from "./agentGateway/latticeCanvasHttpRoute";
+import { latticeSpreadsheetRouteLayer } from "./agentGateway/latticeSpreadsheetHttpRoute";
+import { latticeProjectDocumentRouteLayer } from "./agentGateway/latticeProjectDocumentHttpRoute";
+import { latticeEditorCommentsRouteLayer } from "./agentGateway/latticeEditorCommentsHttpRoute";
+import { AgentQualityTrace } from "./agentGateway/Services/AgentQualityTrace";
 import { AgentGatewayCredentials } from "./agentGateway/Services/AgentGatewayCredentials";
 import { AutomationRunReactor } from "./automation/Services/AutomationRunReactor";
 import { AutomationScheduler } from "./automation/Services/AutomationScheduler";
 import { AutomationService } from "./automation/Services/AutomationService";
 import { TodoService } from "./todo/Services/TodoService";
-import {
-  clearPersistedServerRuntimeState,
-  makePersistedServerRuntimeState,
-  persistServerRuntimeState,
-} from "./serverRuntimeState";
+import { makePersistedServerRuntimeState, persistServerRuntimeState } from "./serverRuntimeState";
 import { remoteAccessPolicyError, ServerConfig } from "./config";
 import { resolveListeningPort } from "./startupAccess";
 import { patchBunWebSocketCloseEventCompatibility } from "./bunWebSocketCompatibility";
@@ -63,6 +67,7 @@ export interface ServerShape {
     http.Server,
     ServerLifecycleError | ServerSettingsError,
     | Scope.Scope
+    | AgentQualityTrace
     | ServerConfig
     | AgentGatewayCredentials
     | ExternalMcpGateway
@@ -217,6 +222,13 @@ export const createEffectServer = Effect.fn(function* (
     makeEffectHttpRouteLayer(readiness, shutdownController),
     websocketRpcRouteLayer,
     agentGatewayRouteLayer,
+    latticeAgentQualityRouteLayer,
+    latticeCompileRepairRouteLayer,
+    latticeBibliographyRouteLayer,
+    latticeCanvasRouteLayer,
+    latticeSpreadsheetRouteLayer,
+    latticeProjectDocumentRouteLayer,
+    latticeEditorCommentsRouteLayer,
     externalMcpRouteLayer,
   );
   const httpApp = yield* HttpRouter.toHttpEffect(routesLayer);
@@ -242,7 +254,10 @@ export const createEffectServer = Effect.fn(function* (
       (cause) => new ServerLifecycleError({ operation: "persistServerRuntimeState", cause }),
     ),
   );
-  yield* Effect.addFinalizer(() => clearPersistedServerRuntimeState(config.serverRuntimeStatePath));
+  // Leave the private runtime record in place when this process exits. Readers
+  // already reject records whose PID is no longer alive, and the next server
+  // atomically replaces it. Removing it from an old process finalizer can race
+  // with a fast restart and accidentally unlink the new process's record.
   yield* readiness.markHttpListening;
 
   const subscriptionsScope = yield* Scope.make("sequential");

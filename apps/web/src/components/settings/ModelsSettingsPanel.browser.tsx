@@ -1,6 +1,8 @@
 import "../../index.css";
 
 import { useState } from "react";
+import { I18nProvider } from "@lingui/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { page, userEvent } from "vitest/browser";
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
@@ -9,11 +11,27 @@ vi.mock("@tanstack/react-query", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-query")>()),
   useQuery: () => ({ data: { cwd: "/tmp" } }),
 }));
+// The panel reads the instance-keyed catalog for Git writing and the
+// provider-keyed catalog for Lattice's compile repair model.
 vi.mock("~/hooks/useProviderModelCatalog", () => ({
-  useProviderModelCatalog: () => ({ modelOptionsByProviderInstance: {} }),
+  useProviderModelCatalog: () => ({
+    modelOptionsByProviderInstance: {},
+    modelOptionsByProvider: {
+      codex: [{ slug: "discovered-model", name: "Discovered model" }],
+      claudeAgent: [],
+      cursor: [],
+      devin: [],
+      antigravity: [],
+      grok: [],
+      droid: [],
+      opencode: [],
+      pi: [],
+    },
+  }),
 }));
 
 import { AppSettingsSchema, type AppSettings } from "~/appSettings";
+import { i18n } from "~/i18n";
 import { ModelsSettingsPanel } from "./ModelsSettingsPanel";
 
 const defaults = AppSettingsSchema.makeUnsafe({});
@@ -21,17 +39,19 @@ const defaults = AppSettingsSchema.makeUnsafe({});
 function Harness() {
   const [settings, setSettings] = useState(defaults);
   return (
-    <div className="p-4">
-      <ModelsSettingsPanel
-        settings={settings}
-        defaults={defaults}
-        updateSettings={(patch: Partial<AppSettings>) =>
-          setSettings((current) => ({ ...current, ...patch }))
-        }
-        resetEpoch={0}
-        active
-      />
-    </div>
+    <I18nProvider i18n={i18n}>
+      <div className="p-4">
+        <ModelsSettingsPanel
+          settings={settings}
+          defaults={defaults}
+          updateSettings={(patch: Partial<AppSettings>) =>
+            setSettings((current) => ({ ...current, ...patch }))
+          }
+          resetEpoch={0}
+          active
+        />
+      </div>
+    </I18nProvider>
   );
 }
 
@@ -39,6 +59,7 @@ afterEach(cleanup);
 
 it("switches descriptions, saves custom text, preserves it across styles, and resets the row", async () => {
   await page.viewport(1280, 800);
+  i18n.loadAndActivate({ locale: "en", messages: {} });
   await render(<Harness />);
   const picker = page.getByRole("combobox", { name: "Source control writing style" });
   expect(document.body.textContent).toContain(
@@ -70,6 +91,7 @@ it("switches descriptions, saves custom text, preserves it across styles, and re
 
 it("supports keyboard selection and keeps the custom editor within a narrow viewport", async () => {
   await page.viewport(360, 800);
+  i18n.loadAndActivate({ locale: "en", messages: {} });
   await render(<Harness />);
   const picker = page.getByRole("combobox", { name: "Source control writing style" });
   (picker.element() as HTMLElement).focus();
@@ -82,4 +104,57 @@ it("supports keyboard selection and keeps the custom editor within a narrow view
   expect(row.getBoundingClientRect().right).toBeLessThanOrEqual(360);
   expect(field.element().getBoundingClientRect().right).toBeLessThanOrEqual(360);
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(360);
+});
+
+it("selects discovered, custom and transient repair models independently and resets the row", async () => {
+  await page.viewport(900, 800);
+  i18n.loadAndActivate({ locale: "en", messages: {} });
+  const settings = {
+    ...defaults,
+    compileRepairProvider: "codex" as const,
+    compileRepairModel: "transient-model",
+    customCodexModels: ["custom-model"],
+  };
+  const updateSettings = vi.fn();
+  const client = new QueryClient({ defaultOptions: { queries: { enabled: false, retry: false } } });
+  const host = document.createElement("div");
+  host.className = "app-settings-surface p-6";
+  document.body.append(host);
+  const mounted = await render(
+    <I18nProvider i18n={i18n}>
+      <QueryClientProvider client={client}>
+        <ModelsSettingsPanel
+          active
+          resetEpoch={0}
+          settings={settings}
+          defaults={defaults}
+          updateSettings={updateSettings}
+        />
+      </QueryClientProvider>
+    </I18nProvider>,
+    { container: host },
+  );
+  try {
+    expect(host.textContent).toContain("Compile repair model");
+    const picker = page.getByRole("combobox", { name: "Compile repair model", exact: true });
+    expect(picker.element()).toBeDefined();
+    await picker.click();
+    await expect.element(page.getByRole("option", { name: /Transient Model/ })).toBeVisible();
+    await expect.element(page.getByRole("option", { name: /Custom Model/ })).toBeInTheDocument();
+    await page.getByRole("option", { name: /Discovered model/ }).click();
+    expect(updateSettings).toHaveBeenLastCalledWith({
+      compileRepairProvider: "codex",
+      compileRepairModel: "discovered-model",
+    });
+    await page.getByRole("button", { name: "Reset compile repair model to default" }).click();
+    expect(updateSettings).toHaveBeenLastCalledWith({
+      compileRepairProvider: defaults.compileRepairProvider,
+      compileRepairModel: defaults.compileRepairModel,
+    });
+    await page.screenshot();
+  } finally {
+    await mounted.unmount();
+    client.clear();
+    host.remove();
+  }
 });

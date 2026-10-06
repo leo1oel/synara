@@ -8,7 +8,6 @@
 import { forwardRef, type ReactNode } from "react";
 import type { ProfileStats, ProfileTokenStats } from "@synara/contracts";
 import { ProviderIcon } from "~/components/ProviderIcon";
-import { SynaraLogo } from "~/components/SynaraLogo";
 import { ActivityHeatmap, CARD_HEATMAP_INTENSITY_CLASSES } from "./ActivityHeatmap";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { ProfileUsageCoverage } from "./ProfileUsageCoverage";
@@ -102,7 +101,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(function Sha
     <div
       ref={ref}
       style={{ width: `${SHARE_CARD_WIDTH}px`, height: `${SHARE_CARD_HEIGHT}px` }}
-      className="flex flex-col justify-center gap-7 overflow-hidden bg-white px-12 font-sans text-slate-900"
+      className="flex flex-col justify-center gap-7 overflow-hidden bg-[#F9F9FA] px-12 font-sans text-slate-900"
     >
       {/* Header: user-edited identity truncates before it can collide with the fixed brand. */}
       <div className="flex min-w-0 items-center justify-between gap-6">
@@ -122,8 +121,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(function Sha
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2 text-slate-600">
-          <SynaraLogo className="size-6 text-slate-700" />
-          <span className="text-xl font-normal tracking-tight">Synara</span>
+          <span className="text-xl font-normal tracking-tight">Lattice</span>
         </div>
       </div>
 

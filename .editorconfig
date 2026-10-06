@@ -1,0 +1,20 @@
+# Stops EditorConfig resolution here. Without this, a user-level
+# ~/.editorconfig leaks into oxfmt (which reads max_line_length as its print
+# width) and silently reformats the tree to a different width than upstream,
+# turning every upstream sync into a wall of spurious formatting conflicts.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,jsonc,css}]
+indent_style = space
+indent_size = 2
+# oxfmt's default print width, which is what upstream's tree is formatted to.
+max_line_length = 100
+
+[*.md]
+trim_trailing_whitespace = false

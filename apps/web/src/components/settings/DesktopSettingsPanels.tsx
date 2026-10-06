@@ -4,6 +4,7 @@
 // Exports: NotificationsSettingsPanel, AppSnapSettingsPanel, BetaChannelSettingsPanel
 
 import {
+  type DesktopAppSnapPermission,
   type DesktopAppSnapSettingsPane,
   type DesktopAppSnapState,
   type DesktopBetaActionResult,
@@ -56,8 +57,10 @@ import { toastManager } from "~/components/ui/toast";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 
 function appSnapStatusText(state: DesktopAppSnapState | null): string {
-  if (!state) return "Available in the Synara desktop app";
-  if (!state.supported) return state.message ?? "Available on macOS only";
+  if (!state) return "Available in the Lattice desktop app";
+  if (!state.supported) {
+    return state.message?.replaceAll("Synara", "Lattice") ?? "Available on macOS only";
+  }
   if (state.status === "ready") {
     const shortcut = state.shortcut;
     const label = shortcut ? appSnapShortcutLabels(shortcut).join(" + ") : "the shortcut";
@@ -65,10 +68,37 @@ function appSnapStatusText(state: DesktopAppSnapState | null): string {
   }
   if (state.status === "disabled") return "Off";
   if (state.status === "starting") return "Starting the capture listener…";
-  return state.message ?? "Permission setup required";
+  return state.message?.replaceAll("Synara", "Lattice") ?? "Permission setup required";
 }
 
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
+
+const APPSNAP_PERMISSION_LABELS: Record<DesktopAppSnapPermission, string> = {
+  granted: "Granted",
+  denied: "Denied",
+  "not-determined": "Not requested yet",
+  restricted: "Restricted",
+  unknown: "Unknown",
+};
+
+function AppSnapPermissionBadge({ permission }: { permission: DesktopAppSnapPermission }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-ui-xs font-medium text-muted-foreground">
+      <span
+        aria-hidden
+        className={cn(
+          "size-1.5 rounded-full",
+          permission === "granted"
+            ? "bg-emerald-500"
+            : permission === "denied" || permission === "restricted"
+              ? "bg-red-500"
+              : "bg-[color:var(--color-border)]",
+        )}
+      />
+      {APPSNAP_PERMISSION_LABELS[permission]}
+    </span>
+  );
+}
 
 export function NotificationsSettingsPanel({
   settings,
@@ -298,7 +328,7 @@ export function AppSnapSettingsPanel({
       toastManager.add({
         type: "warning",
         title: "AppSnap unavailable",
-        description: "AppSnap requires the Synara desktop app on macOS.",
+        description: "AppSnap requires the Lattice desktop app on macOS.",
       });
       return;
     }
@@ -338,6 +368,26 @@ export function AppSnapSettingsPanel({
     }
   }
 
+  async function recheckAppSnapPermissions() {
+    const bridge = window.desktopBridge?.appSnap;
+    if (!bridge) return;
+    const requestGuard = appSnapRequestGuardRef.current;
+    const requestId = requestGuard.begin();
+    try {
+      await bridge.requestPermissions();
+      const state = await bridge.setEnabled(settings.enableAppSnap);
+      if (!requestGuard.isCurrent(requestId)) return;
+      setAppSnapState(state);
+    } catch (error) {
+      if (!requestGuard.isCurrent(requestId)) return;
+      toastManager.add({
+        type: "error",
+        title: "Could not check AppSnap permissions",
+        description: error instanceof Error ? error.message : "Permission check failed.",
+      });
+    }
+  }
+
   const supported = appSnapState?.supported === true;
   const enabled = supported && settings.enableAppSnap;
 
@@ -354,15 +404,16 @@ export function AppSnapSettingsPanel({
             Take an AppSnap to show your agent another app's window
           </p>
           <p className={SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME}>
-            Press your two-key shortcut while any app is frontmost. Synara captures that window as
+            Press your two-key shortcut while any app is frontmost. Lattice captures that window as
             an image, brings itself forward, and attaches the snap to a task composer — the capture
             stays on this device until you send the message.
           </p>
           {!supported ? (
             <p className={cn(SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME, "pt-0.5")}>
               {appSnapState
-                ? (appSnapState.message ?? "AppSnap is available only in the macOS desktop app.")
-                : "AppSnap requires the Synara desktop app on macOS."}
+                ? (appSnapState.message?.replaceAll("Synara", "Lattice") ??
+                  "AppSnap is available only in the macOS desktop app.")
+                : "AppSnap requires the Lattice desktop app on macOS."}
             </p>
           ) : null}
         </div>
@@ -371,7 +422,7 @@ export function AppSnapSettingsPanel({
       <SettingsSection title="Capture">
         <SettingsRow
           title="Enable AppSnap"
-          description="Run the capture listener in the background while Synara is open."
+          description="Run the capture listener in the background while Lattice is open."
           status={appSnapStatusText(appSnapState)}
           resetAction={
             settings.enableAppSnap !== defaults.enableAppSnap ? (
@@ -393,7 +444,7 @@ export function AppSnapSettingsPanel({
 
         <SettingsRow
           title="Shortcut"
-          description="Choose exactly two keys: one modifier and one other key. Synara checks its own bindings and asks macOS whether another app already owns the shortcut before saving it."
+          description="Choose exactly two keys: one modifier and one other key. Lattice checks its own bindings and asks macOS whether another app already owns the shortcut before saving it."
           control={
             <AppSnapShortcutControl
               key={
@@ -415,12 +466,8 @@ export function AppSnapSettingsPanel({
 
         <SettingsRow
           title="Destination"
-          description="Snaps join the task you interacted with in the last minute, and consecutive snaps stay together. Otherwise Synara opens a fresh task with the capture attached."
-          control={
-            <span className="text-ui leading-snug font-medium text-muted-foreground">
-              Automatic
-            </span>
-          }
+          description="Snaps join the task you interacted with in the last minute, and consecutive snaps stay together. Otherwise Lattice opens a fresh task with the capture attached."
+          control={<span className="text-ui-xs font-medium text-muted-foreground">Automatic</span>}
         />
 
         <SettingsRow
@@ -451,15 +498,33 @@ export function AppSnapSettingsPanel({
         />
       </SettingsSection>
 
-      {supported && appSnapState ? (
-        <AppSnapPermissionSection
-          panes={APP_SNAP_PERMISSION_PANES}
-          feature="AppSnap"
-          state={appSnapState}
-          onStateChange={setAppSnapState}
-          guidePane={openGuidePane}
-          onGuidePaneChange={setOpenGuidePane}
-        />
+      {supported ? (
+        <SettingsSection title="macOS permissions">
+          <SettingsRow
+            title="Input Monitoring"
+            description="Lets Lattice notice the double-Option chord while another app owns the keyboard. Nothing you type is recorded."
+            control={<AppSnapPermissionBadge permission={appSnapState.inputMonitoringPermission} />}
+          />
+          <SettingsRow
+            title="Screen Recording"
+            description="Lets Lattice capture an image of the frontmost window. Only the single window you snap is captured, only at the moment you press the chord."
+            control={<AppSnapPermissionBadge permission={appSnapState.screenRecordingPermission} />}
+          />
+          <SettingsRow
+            title="Permission status"
+            description="Grant both permissions to Lattice under System Settings → Privacy & Security, then recheck here. macOS may require relaunching the app after a change."
+            control={
+              <Button
+                type="button"
+                size="xs"
+                variant="outline"
+                onClick={() => void recheckAppSnapPermissions()}
+              >
+                Recheck permissions
+              </Button>
+            }
+          />
+        </SettingsSection>
       ) : null}
     </div>
   );

@@ -9,16 +9,21 @@
 // relative path never reaches the server. We mirror the WS host and forward the legacy token
 // query param so authenticated GET routes (attachments, local-image, …) can authorize the
 // request without touching cookies.
+import { readEmbeddedHostWsUrl } from "../embedMode";
+
 export function resolveWsHttpUrl(rawPath: string): string {
   if (typeof window === "undefined") return rawPath;
   const bridgeWsUrl = window.desktopBridge?.getWsUrl?.();
+  const embeddedHostWsUrl = readEmbeddedHostWsUrl();
   const envWsUrl = import.meta.env.VITE_WS_URL as string | undefined;
   const wsCandidate =
     typeof bridgeWsUrl === "string" && bridgeWsUrl.length > 0
       ? bridgeWsUrl
-      : typeof envWsUrl === "string" && envWsUrl.length > 0
-        ? envWsUrl
-        : null;
+      : embeddedHostWsUrl
+        ? embeddedHostWsUrl
+        : typeof envWsUrl === "string" && envWsUrl.length > 0
+          ? envWsUrl
+          : null;
   if (!wsCandidate) return new URL(rawPath, window.location.origin).toString();
   try {
     const wsUrl = new URL(wsCandidate);

@@ -43,7 +43,6 @@ import type { ServerConfigShape } from "../config";
 import { loadClaudeAgentSdk } from "../provider/claudeAgentSdk.ts";
 import { selectClaudeHistoryPage, type ClaudeHistoryPage } from "../provider/claudeHistoryPage.ts";
 import { buildClaudeInstanceProcessEnv } from "../provider/claudeEnvironment.ts";
-import { ensureProviderEnabled } from "../provider/enabledProviderAdapter";
 import type { OrchestrationEngineShape } from "./Services/OrchestrationEngine";
 import type { ProjectionSnapshotQueryShape } from "./Services/ProjectionSnapshotQuery";
 import type { ProviderThreadSnapshot } from "../provider/Services/ProviderAdapter";
@@ -629,8 +628,6 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
         importMessagesError(`Thread '${body.threadId}' already has an active provider session.`),
       );
     }
-
-    yield* ensureProviderEnabled(thread.modelSelection.provider, options.serverSettings);
 
     const projectOption = yield* options.projectionSnapshotQuery.getProjectShellById(
       thread.projectId,

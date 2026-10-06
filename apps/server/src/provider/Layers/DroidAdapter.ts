@@ -45,6 +45,7 @@ import {
   type SynaraHarnessPolicyDeliveryState,
   takeSynaraHarnessPolicyTextPartForProviderSession,
 } from "../../agentGateway/harnessPolicy.ts";
+import { ACTIVE_AGENT_HOST_PROFILE } from "../../agentGateway/hostProfile.ts";
 import { AgentGatewayCredentials } from "../../agentGateway/Services/AgentGatewayCredentials.ts";
 import { PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY } from "../Services/ProviderAdapter.ts";
 import {
@@ -164,7 +165,7 @@ const DROID_DISCOVERY_CACHE_MAX_ENTRIES = 16;
 const DROID_RESOURCE_DISCIPLINE_PROMPT =
   "Keep CPU-intensive validation work serial: never overlap builds, typechecks, linters, tests, package audits, or package-manager commands, including across background agents. Wait for one CPU-intensive command to finish before starting the next. Read-only code inspection may still run in parallel.";
 const DROID_PLAN_MODE_PROMPT_PREFIX = [
-  "Synara Droid plan mode is active.",
+  `${ACTIVE_AGENT_HOST_PROFILE.displayName} Droid plan mode is active.`,
   "Do not implement or mutate files in this turn.",
   "Do not ask follow-up questions or wait for confirmation; if scope is ambiguous, choose a reasonable default and state the assumption in the plan.",
   "When ready, create the final implementation plan.",
@@ -484,6 +485,7 @@ export function makeDroidAdapter(
         childProcessSpawner,
         cwd: input.cwd,
         clientInfo: { name: input.clientName, version: "0.0.0" },
+        allowDevicePairing: false,
       });
 
     const logNative = (threadId: ThreadId, method: string, payload: unknown) =>
@@ -855,7 +857,7 @@ export function makeDroidAdapter(
             cwd,
             ...(resumeSessionId ? { resumeSessionId } : {}),
             clientCapabilities: { elicitation: { form: {} } },
-            clientInfo: { name: "Synara", version: "0.0.0" },
+            clientInfo: { name: ACTIVE_AGENT_HOST_PROFILE.displayName, version: "0.0.0" },
             ...(agentGatewayCredentials
               ? {
                   buildMcpServers: (initializeResult: Acp.InitializeResponse) =>
@@ -1969,7 +1971,10 @@ export function makeDroidAdapter(
                 childProcessSpawner,
                 cwd: sourceCwd,
                 resumeSessionId: sourceSessionId,
-                clientInfo: { name: "Synara Fork", version: "0.0.0" },
+                clientInfo: {
+                  name: `${ACTIVE_AGENT_HOST_PROFILE.displayName} Fork`,
+                  version: "0.0.0",
+                },
               });
               yield* runtime.start().pipe(
                 Effect.timeoutOption(DROID_ACP_REQUEST_TIMEOUT_MS),
@@ -2072,7 +2077,7 @@ export function makeDroidAdapter(
             ...(input.binaryPath ? { binaryPath: input.binaryPath } : {}),
             ...(input.environment ? { environment: input.environment } : {}),
             cwd,
-            clientName: "Synara Model Discovery",
+            clientName: `${ACTIVE_AGENT_HOST_PROFILE.displayName} Model Discovery`,
           });
           yield* runtime.start();
           const result = yield* discoverDroidAcpModels(runtime);
@@ -2199,7 +2204,7 @@ export function makeDroidAdapter(
             ...(input.binaryPath ? { binaryPath: input.binaryPath } : {}),
             ...(input.environment ? { environment: input.environment } : {}),
             cwd,
-            clientName: "Synara Command Discovery",
+            clientName: `${ACTIVE_AGENT_HOST_PROFILE.displayName} Command Discovery`,
           });
           yield* runtime.start();
           let commands = yield* runtime.getAvailableCommands;

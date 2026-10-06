@@ -30,6 +30,48 @@ const READY_STATUS: ServerProviderStatus = {
   authStatus: "authenticated",
 };
 
+describe("findFirstUsableDefaultProvider", () => {
+  it("uses the first installed and authenticated provider in the preferred order", () => {
+    expect(
+      findFirstUsableDefaultProvider(
+        [
+          { ...BASE_STATUS, provider: "codex" },
+          { ...READY_STATUS, provider: "claudeAgent" },
+        ],
+        ["codex", "claudeAgent"],
+      ),
+    ).toBe("claudeAgent");
+  });
+
+  it("returns null when every checked provider requires setup", () => {
+    expect(
+      findFirstUsableDefaultProvider(
+        [
+          { ...BASE_STATUS, provider: "codex" },
+          {
+            ...BASE_STATUS,
+            provider: "claudeAgent",
+            authStatus: "unauthenticated",
+          },
+        ],
+        ["codex", "claudeAgent"],
+      ),
+    ).toBeNull();
+  });
+
+  it("does not treat Pi as a selectable fallback without a default model", () => {
+    expect(
+      findFirstUsableDefaultProvider(
+        [
+          { ...BASE_STATUS, provider: "codex" },
+          { ...READY_STATUS, provider: "pi", authStatus: "unknown" },
+        ],
+        ["codex", "pi"],
+      ),
+    ).toBeNull();
+  });
+});
+
 describe("normalizeProviderStatusForLocalConfig", () => {
   it("keeps Antigravity interactive when a custom binary path is configured locally", () => {
     expect(
@@ -47,10 +89,10 @@ describe("normalizeProviderStatusForLocalConfig", () => {
     });
   });
 
-  it("makes a disabled provider unavailable before its health status refreshes", () => {
+  it("applies the same custom-path fallback to Claude", () => {
     expect(
       normalizeProviderStatusForLocalConfig({
-        provider: "opencode",
+        provider: "claudeAgent",
         status: {
           ...READY_STATUS,
           provider: "opencode",
@@ -58,18 +100,15 @@ describe("normalizeProviderStatusForLocalConfig", () => {
           driver: "opencode",
           message: "OpenCode is ready.",
         },
-        customBinaryPath: "/custom/bin/opencode",
-        disabled: true,
+        customBinaryPath: "/opt/homebrew/bin/claude",
       }),
     ).toEqual({
       provider: "opencode",
       instanceId: "opencode",
       driver: "opencode",
       status: "warning",
-      available: false,
-      authStatus: "unknown",
-      checkedAt: BASE_STATUS.checkedAt,
-      message: "Provider is disabled in Synara settings.",
+      message:
+        "Claude uses a custom local binary path in this app. Availability will be confirmed when you start a session.",
     });
   });
 

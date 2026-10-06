@@ -186,7 +186,6 @@ export function useChatProviderStatus({
             customBinaryPath,
             confirmedCustomBinaryPath:
               confirmedCustomBinaryPathsByProviderInstance[providerInstanceId],
-            disabled: settings.disabledProviders.includes(provider),
           });
         })
         .flatMap((status) => (status ? [status] : [])),

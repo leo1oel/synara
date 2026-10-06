@@ -73,6 +73,7 @@ import {
   WorkingIcon,
   WorktreeIcon,
 } from "~/lib/icons";
+import { createImeKeyGuard } from "~/lib/imeComposition";
 import { pinActionLabel } from "~/lib/pin";
 import { syncAnimationsToTimelineOrigin } from "~/lib/animationTimelineSync";
 import { Button } from "../ui/button";
@@ -198,9 +199,9 @@ const EMPTY_AVAILABLE_EDITORS: ReadonlyArray<EditorId> = [];
 // Changed-files list in the per-turn card is capped so large turns stay compact;
 // the rest are revealed via an inline "Show more" row.
 const MAX_VISIBLE_CHANGED_FILES = 5;
-// The composer overlaps the transcript by design, so the list needs extra tail
-// space beyond the overlap to keep final cards from sitting flush against it.
-const BOTTOM_CONTENT_INSET_PX = 64;
+// The measured composer inset already clears its height minus the 20px tuck.
+// This leaves about 24px between the final row and the composer at rest.
+const BOTTOM_CONTENT_INSET_PX = 44;
 const MESSAGE_HOVER_REVEAL_CLASS_NAME =
   "opacity-0 transition-opacity pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto";
 // How long a jumped-to message keeps its highlight tint before fading back out.
@@ -329,12 +330,9 @@ function WorktreeSetupCard({
   onResolve,
 }: {
   steps: ReadonlyArray<WorktreeSetupStep>;
-  pendingAction?: WorktreeSetupResolutionAction | null | undefined;
-  onResolve?: ((action: WorktreeSetupResolutionAction) => void) | undefined;
+  pendingAction?: WorktreeSetupResolutionAction | null;
+  onResolve?: (action: WorktreeSetupResolutionAction) => void;
 }) {
-  // The send pipeline only honors a resolution at checkpoints before the turn
-  // dispatch, so hide the actions once "Starting session" is underway (or the
-  // setup already failed) rather than offering a cancel that can no longer win.
   const canResolve =
     onResolve !== undefined &&
     steps.every((step) => step.status !== "error") &&
@@ -422,9 +420,7 @@ interface MessagesTimelineProps {
   activeTurnStartedAt: string | null;
   /** Transient "New worktree" setup progress; rendered as an ephemeral step card at the tail. */
   worktreeSetup?: WorktreeSetupSnapshot | null;
-  /** Action already chosen from the worktree setup card; disables its buttons while it applies. */
   worktreeSetupPendingAction?: WorktreeSetupResolutionAction | null;
-  /** Resolve the in-flight worktree preparation (cancel the send or fall back to the local checkout). */
   onResolveWorktreeSetup?: (action: WorktreeSetupResolutionAction) => void;
   followLiveOutput?: boolean;
   emptyStateContent?: ReactNode;
@@ -782,6 +778,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     contentChangeSignal: timelineEntries,
     messageChangeSignal: messageChangeSignalProp ?? timelineEntries,
     animateAnchorSlide: !followLiveOutput,
+    holdWhileTurnInProgress: activeTurnInProgress,
   });
 
   const presentedWorktreeSetup = useWorktreeSetupPresentation(worktreeSetup);
@@ -884,16 +881,14 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       return;
     }
     const style = getComputedStyle(node);
-    // Only the *class-based* padding belongs here. The composer inset is applied through
-    // `style.paddingBottom`, which the list already reads and reserves for itself —
-    // counting it twice would push the anchored message a composer-height off the top.
-    const bottomPadding = Math.max(
-      0,
-      (Number.parseFloat(style.paddingBottom) || 0) - (contentInsetBottomPx ?? 0),
-    );
-    const inset = (Number.parseFloat(style.paddingTop) || 0) + bottomPadding;
+    // LegendList already subtracts the inline composer inset from its reserve.
+    // Its DOM can still carry the previous inset in this layout pass, so don't
+    // derive CSS padding by subtracting the new prop from that stale measurement.
+    const inset =
+      (Number.parseFloat(style.paddingTop) || 0) +
+      (contentInsetBottomPx ? 0 : Number.parseFloat(style.paddingBottom) || 0);
     setAnchorVerticalInsetPx((current) => (Math.abs(current - inset) > 0.5 ? inset : current));
-  }, [contentInsetBottomPx, resolvedListRef, tailAnchorMessageId]);
+  }, [resolvedListRef, tailAnchorMessageId, contentInsetBottomPx]);
   const anchoredEndSpace = useMemo(
     () =>
       tailAnchorRowIndex < 0
@@ -904,16 +899,12 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           },
     [anchorVerticalInsetPx, tailAnchorRowIndex],
   );
-  // `anchoredEndSpaceSize` is an internal LegendList signal used only to make
-  // the native reserve observable to the browser regression harness. Its
-  // public listener union deliberately omits it, so narrow the internal hook
-  // locally rather than weakening the ref type throughout the transcript.
+  // Surface the live reserve for tests/diagnostics without re-rendering. The
+  // signal (unlike `onSizeChanged`) also reports the collapse to zero after the
+  // anchor is cleared, when no config object exists to receive a callback.
   useEffect(() => {
     const state = resolvedListRef.current?.getState?.();
-    const listenForAnchoredEndSpace = state?.listen as
-      | ((listenerType: "anchoredEndSpaceSize", callback: (size: number) => void) => () => void)
-      | undefined;
-    return listenForAnchoredEndSpace?.("anchoredEndSpaceSize", (size) => {
+    return state?.listen?.("anchoredEndSpaceSize", (size) => {
       timelineRootRef.current?.setAttribute("data-anchored-end-space", String(Math.round(size)));
     });
   }, [resolvedListRef]);
@@ -1195,6 +1186,15 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   useLayoutEffect(() => {
     userMessageAnchorsRef.current = userMessageAnchors;
   }, [userMessageAnchors]);
+  const scrollbarIdleTimerRef = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (scrollbarIdleTimerRef.current !== null) {
+        window.clearTimeout(scrollbarIdleTimerRef.current);
+      }
+    },
+    [],
+  );
   const emitTrailHighlightsForViewport = useCallback(
     (topRowIndex: number, bottomRowIndex: number) => {
       if (!onTrailHighlightsChange || !Number.isFinite(topRowIndex)) {
@@ -1222,6 +1222,18 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   }, []);
   const handleListScroll = useCallback<NonNullable<MessagesTimelineProps["onMessagesScroll"]>>(
     (event) => {
+      const scrollElement = (event as unknown as { currentTarget?: EventTarget | null })
+        .currentTarget;
+      if (scrollElement instanceof HTMLElement) {
+        scrollElement.dataset.scrolling = "true";
+        if (scrollbarIdleTimerRef.current !== null) {
+          window.clearTimeout(scrollbarIdleTimerRef.current);
+        }
+        scrollbarIdleTimerRef.current = window.setTimeout(() => {
+          delete scrollElement.dataset.scrolling;
+          scrollbarIdleTimerRef.current = null;
+        }, 180);
+      }
       onMessagesScroll?.(event);
       const state = readLegendListState(resolvedListRef);
       if (!state) {
@@ -1643,6 +1655,15 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           const canRevertAgentWork = typeof row.revertTurnCount === "number";
           const isEditingThisMessage = editingUserMessageId === row.message.id;
           const isSubmittingThisEdit = submittingEditedUserMessageId === row.message.id;
+          // The edit affordance can go stale while the composer is open (a newer
+          // message lands, the turn's rollback metadata disappears). Keep the
+          // draft on screen but block a send that would only bounce off the
+          // validators; skip during submit, when the rollback itself reshuffles
+          // the thread and would flash the hint.
+          const editSubmitBlocked =
+            isEditingThisMessage &&
+            !isSubmittingThisEdit &&
+            row.message.id !== latestEditableUserMessageId;
           const showEditUserMessage =
             Boolean(onEditUserMessage) &&
             row.message.id === latestEditableUserMessageId &&
@@ -1761,6 +1782,11 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                       key={row.message.id}
                       initialValue={displayedUserMessage.copyText}
                       disabled={isSubmittingThisEdit || isRevertingCheckpoint}
+                      submitBlockedHint={
+                        editSubmitBlocked
+                          ? "The conversation has moved on, so this message can no longer be edited and resent."
+                          : null
+                      }
                       allowEmpty={renderedBrowserAnnotations.length > 0}
                       chatTypographyStyle={userMessageTypographyStyle}
                       borderClassName={userMessageBubbleBorderClass}
@@ -2703,7 +2729,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             <WorktreeSetupCard
               steps={row.steps}
               pendingAction={worktreeSetupPendingAction}
-              onResolve={onResolveWorktreeSetup}
+              {...(onResolveWorktreeSetup ? { onResolve: onResolveWorktreeSetup } : {})}
             />
           </div>
         </DisclosureRegion>
@@ -2784,8 +2810,9 @@ export const MessagesTimeline = memo(function MessagesTimeline({
         // feeding back into auto-follow or list measurement. With the floating composer,
         // `listScrollStyle` moves the bottom fade up to the composer's top edge and
         // intersects the footer-controls dissolve.
+        // Native scrollbars are hidden; ChatTranscriptPane draws the host overlay.
         className={cn(
-          "scroll-edge-fade h-full overscroll-y-contain py-3 [scrollbar-gutter:stable] sm:py-4",
+          "scroll-edge-fade h-full overflow-x-hidden overscroll-y-contain py-3 [-ms-overflow-style:none] [scrollbar-width:none] sm:py-4 [&::-webkit-scrollbar]:hidden",
           ENVIRONMENT_CONTENT_INSET_MOTION_CLASS,
           CHAT_COLUMN_GUTTER_CLASS_NAME,
         )}
@@ -3406,6 +3433,8 @@ function hasOnlyInlineSkillChips(
 const UserMessageEditForm = memo(function UserMessageEditForm(props: {
   initialValue: string;
   disabled: boolean;
+  /** Non-null blocks Send (with this explanation) while keeping the draft and Cancel usable. */
+  submitBlockedHint: string | null;
   allowEmpty: boolean;
   chatTypographyStyle: CSSProperties;
   borderClassName: string;
@@ -3414,11 +3443,13 @@ const UserMessageEditForm = memo(function UserMessageEditForm(props: {
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [draft, setDraft] = useState(props.initialValue);
-  const canSubmit = canSubmitUserMessageEdit({
-    draft,
-    allowEmpty: props.allowEmpty,
-    disabled: props.disabled,
-  });
+  const [imeKeyGuard] = useState(createImeKeyGuard);
+  const canSubmit =
+    canSubmitUserMessageEdit({
+      draft,
+      allowEmpty: props.allowEmpty,
+      disabled: props.disabled,
+    }) && props.submitBlockedHint === null;
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -3439,6 +3470,16 @@ const UserMessageEditForm = memo(function UserMessageEditForm(props: {
   }, [draft]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Keys the IME consumed must not act on the form: Escape dismissing the
+    // candidate list would close the whole editor and drop the draft, and the
+    // Enter that commits a candidate (delivered after compositionend on
+    // WebKit) would land a stray newline in the edited text.
+    if (imeKeyGuard.shouldIgnoreKeyDown(event.nativeEvent)) {
+      if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+        event.preventDefault();
+      }
+      return;
+    }
     if (event.key === "Escape") {
       event.preventDefault();
       props.onCancel();
@@ -3476,9 +3517,17 @@ const UserMessageEditForm = memo(function UserMessageEditForm(props: {
         className="max-h-60 min-h-0 w-full resize-none overflow-y-auto border-0 bg-transparent p-0 font-system-ui text-foreground outline-none placeholder:text-muted-foreground/45 disabled:opacity-70"
         style={props.chatTypographyStyle}
         onChange={(event) => setDraft(event.target.value)}
+        onCompositionStart={imeKeyGuard.onCompositionStart}
+        onCompositionEnd={imeKeyGuard.onCompositionEnd}
         onKeyDown={handleKeyDown}
+        onKeyUp={imeKeyGuard.onKeyUp}
       />
-      <div className="mt-2 flex justify-end gap-2">
+      <div className="mt-2 flex items-center justify-end gap-2">
+        {props.submitBlockedHint !== null ? (
+          <p className="mr-auto font-system-ui text-ui-xs text-destructive/80">
+            {props.submitBlockedHint}
+          </p>
+        ) : null}
         <Button
           type="button"
           size="xs"

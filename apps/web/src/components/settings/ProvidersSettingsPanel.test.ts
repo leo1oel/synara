@@ -1,16 +1,43 @@
 import { describe, expect, it } from "vitest";
+import { setupI18n } from "@lingui/core";
 
-import { AppSettingsSchema } from "~/appSettings";
+import { type AppSettings, AppSettingsSchema } from "~/appSettings";
 
 import {
   createProviderInstallResetPatch,
   isProviderInstallSettingsDirty,
   providerInstanceLaunchConfigFor,
+  providerUpdateStatusLabel,
 } from "./ProvidersSettingsPanel";
 
 const defaults = AppSettingsSchema.makeUnsafe({});
 
 describe("isProviderInstallSettingsDirty", () => {
+  it("covers every provider install text and boolean field", () => {
+    const dirtyPatches = [
+      { codexBinaryPath: "/opt/codex" },
+      { codexHomePath: "/tmp/codex-home" },
+      { claudeBinaryPath: "/opt/claude" },
+      { cursorBinaryPath: "/opt/cursor" },
+      { cursorApiEndpoint: "https://cursor.example" },
+      { devinBinaryPath: "/opt/devin" },
+      { antigravityBinaryPath: "/opt/agy" },
+      { grokBinaryPath: "/opt/grok" },
+      { droidBinaryPath: "/opt/droid" },
+      { openCodeBinaryPath: "/opt/opencode" },
+      { openCodeServerUrl: "http://127.0.0.1:5001" },
+      { openCodeExperimentalWebSockets: true },
+      { piAgentDir: "/tmp/pi-agent" },
+      { ompBinaryPath: "/opt/omp" },
+      { ompAgentDir: "/tmp/omp-agent" },
+    ] satisfies ReadonlyArray<Partial<AppSettings>>;
+
+    expect(isProviderInstallSettingsDirty(defaults, defaults)).toBe(false);
+    for (const patch of dirtyPatches) {
+      expect(isProviderInstallSettingsDirty({ ...defaults, ...patch }, defaults)).toBe(true);
+    }
+  });
+
   it("uses configured flags instead of unreadable password values", () => {
     expect(
       isProviderInstallSettingsDirty({ ...defaults, openCodeServerPassword: "secret" }, defaults),
@@ -58,6 +85,39 @@ describe("createProviderInstallResetPatch", () => {
       ].sort(),
     );
     expect(patch.openCodeServerPassword).toBe("");
+  });
+});
+
+describe("providerUpdateStatusLabel", () => {
+  it("identifies Pi as included when no external CLI version exists", () => {
+    expect(
+      providerUpdateStatusLabel({
+        provider: "pi",
+        status: "ready",
+        available: true,
+        authStatus: "unknown",
+        checkedAt: "2026-07-30T12:00:00.000Z",
+        message: "Pi SDK is included with Synara.",
+      }),
+    ).toBe("Included with Lattice");
+  });
+});
+
+describe("provider picker localization", () => {
+  it("removes provider activity controls while retaining the picker explanation", async () => {
+    const { messages } = await import("../../locales/zh-CN/messages.po");
+    const catalog = setupI18n();
+    catalog.loadAndActivate({ locale: "zh-CN", messages });
+
+    expect(messages).not.toHaveProperty("Provider activity");
+    expect(messages).not.toHaveProperty("Enabled providers");
+    expect(
+      catalog._(
+        "Show or hide installed providers in the picker and drag them into your preferred order. Hiding a provider here does not disable its server activity.",
+      ),
+    ).toBe(
+      "在选择器中显示或隐藏已安装的提供商，并拖动调整顺序。在此隐藏提供商不会停用其服务端活动。",
+    );
   });
 });
 

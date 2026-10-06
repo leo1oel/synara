@@ -8,7 +8,6 @@ import {
   type OrchestrationThread,
   type ServerConfig,
   type ServerProviderStatus,
-  type ServerSettingsView,
   type WsCompatibilityError,
 } from "@synara/contracts";
 import { defaultTerminalTitleForCliKind } from "@synara/shared/terminalThreads";
@@ -35,6 +34,7 @@ import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Throttler } from "@tanstack/react-pacer";
 
 import { APP_DISPLAY_NAME, APP_VERSION } from "../branding";
+import { isSynaraEmbedMode } from "../embedMode";
 import { isBetaFeatureOn } from "../betaFeatures";
 import { DesktopWindowControls } from "../components/DesktopWindowControls";
 import { RunningChatsQuitCoordinator } from "../components/RunningChatsQuitCoordinator";
@@ -64,7 +64,6 @@ import { useFeedbackDialogStore } from "../feedbackDialogStore";
 import type { FeedbackThreadContext } from "../feedback";
 import { isTerminalFocused } from "../lib/terminalFocus";
 import {
-  invalidateProviderUsageQueries,
   reconcileServerProviderStatuses,
   refreshServerConfigAfterTransportOpen,
   serverConfigQueryOptions,
@@ -164,12 +163,7 @@ import {
   providerDiscoveryQueryKeys,
   providerModelsQueryOptions,
 } from "../lib/providerDiscoveryReactQuery";
-import {
-  didProviderCommandDiscoverySettingsChange,
-  didProviderEnablementChange,
-  useAppSettings,
-} from "../appSettings";
-
+import { useAppSettings } from "../appSettings";
 import { getNavigatorPlatform } from "../lib/utils";
 import {
   getNotifiableProviderUpdateStatuses,
@@ -280,6 +274,7 @@ function RootRouteView() {
   useNativeFontSmoothing();
   useSyncDesktopTopBarTrafficLightGutterZoom();
   useTheme();
+  const embedded = isSynaraEmbedMode();
   const [compatibilityIssue, setCompatibilityIssue] = useState<WsCompatibilityError | null>(() =>
     readLatestWsCompatibilityIssue(),
   );
@@ -350,14 +345,14 @@ function RootRouteView() {
           <GlobalShortcutsDialog />
           <BrowserVaultDialog />
           <GlobalFeedbackDialog />
-          <GlobalWhatsNewSurface />
+          {!embedded && <GlobalWhatsNewSurface />}
           <TaskCompletionNotifications />
           <QueuedComposerDrainCoordinator />
           <SafariAccessOnboarding>
-            <AppSnapWelcomeDialog>
+            {!embedded && <AppSnapWelcomeDialog>
               <FeatureTourDialog />
-            </AppSnapWelcomeDialog>
-            <BetaWelcomeDialog />
+            </AppSnapWelcomeDialog>}
+            {!embedded && <BetaWelcomeDialog />}
           </SafariAccessOnboarding>
           <GlobalOnboardingDialog />
           <ProjectImportAnnouncementDialog />
@@ -690,6 +685,7 @@ function ProviderUpdateNotifications({
 }: {
   readonly liveVersionCheckCompleted: boolean;
 }) {
+  const isEmbed = isSynaraEmbedMode();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { settings } = useAppSettings();
@@ -734,6 +730,7 @@ function ProviderUpdateNotifications({
     }
 
     if (
+      isEmbed ||
       outdatedProviders.length === 0 ||
       oneClickProviders.length === 0 ||
       !notificationKey ||
@@ -796,7 +793,15 @@ function ProviderUpdateNotifications({
       },
     });
     activeToastRef.current = { kind: "prompt", key: notificationKey, toastId };
-  }, [isUpdatingAll, navigate, notificationKey, oneClickProviders, outdatedProviders, updateAll]);
+  }, [
+    isEmbed,
+    isUpdatingAll,
+    navigate,
+    notificationKey,
+    oneClickProviders,
+    outdatedProviders,
+    updateAll,
+  ]);
 
   return null;
 }
@@ -1005,7 +1010,7 @@ function RootRouteErrorView({ error, reset }: ErrorComponentProps) {
             <span className="group-open:hidden">Show error details</span>
             <span className="hidden group-open:inline">Hide error details</span>
           </summary>
-          <pre className="max-h-56 overflow-auto border-t border-border/70 bg-background/80 px-3 py-2 text-xs text-foreground/85">
+          <pre className="max-h-56 overflow-auto border-t border-border/70 bg-background/80 px-3 py-2 text-ui-xs text-foreground/85">
             {details}
           </pre>
         </details>
@@ -2441,6 +2446,19 @@ function EventRouter() {
         },
       });
     });
+    // Both subscriptions can replay synchronously on mount. Register the transport
+    // boundary first so the authoritative provider replay is the final projection;
+    // reversing them marks an already-delivered snapshot unreconciled and strands
+    // provider controls in "Checking" until another status event happens.
+    const unsubWsTransportState = addWsTransportStateListener(
+      (state) => {
+        if (state !== "open") return;
+        // Reopening the socket is a projection boundary. React Query otherwise
+        // keeps the previous infinite-stale config and can strand "Checking".
+        void refreshServerConfigAfterTransportOpen(queryClient).catch(() => undefined);
+      },
+      { replayCurrent: true },
+    );
     const unsubProviderStatusesUpdated = onServerProviderStatusesUpdated((payload) => {
       const nextProviderDiscoveryFingerprint = providerModelDiscoveryInvalidationFingerprint(
         payload.providers,
@@ -2474,27 +2492,8 @@ function EventRouter() {
         });
       }
     });
-    const unsubWsTransportState = addWsTransportStateListener(
-      (state) => {
-        if (state !== "open") return;
-        // Reopening the socket is a projection boundary. React Query otherwise
-        // keeps the previous infinite-stale config and can strand "Checking".
-        void refreshServerConfigAfterTransportOpen(queryClient).catch(() => undefined);
-      },
-      { replayCurrent: true },
-    );
     const unsubServerSettingsUpdated = onServerSettingsUpdated((payload) => {
-      const previousSettings = queryClient.getQueryData<ServerSettingsView>(
-        serverQueryKeys.settings(),
-      );
       queryClient.setQueryData(serverQueryKeys.settings(), payload.settings);
-      if (didProviderEnablementChange(previousSettings, payload.settings)) {
-        void queryClient.invalidateQueries({ queryKey: providerDiscoveryQueryKeys.all });
-        void invalidateProviderUsageQueries(queryClient);
-      } else if (didProviderCommandDiscoverySettingsChange(previousSettings, payload.settings)) {
-        // Another window toggled it; the local patch path already invalidates its own.
-        void queryClient.invalidateQueries({ queryKey: providerDiscoveryQueryKeys.all });
-      }
       void queryClient.invalidateQueries({
         queryKey: serverSettingsQueryOptions().queryKey,
       });

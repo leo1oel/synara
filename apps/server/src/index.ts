@@ -10,9 +10,7 @@ import { version } from "../package.json" with { type: "json" };
 import { ServerLive } from "./effectServer";
 import { NetService } from "@synara/shared/Net";
 import { FetchHttpClient } from "effect/unstable/http";
-import { consumeDesktopParentInput, withDesktopParentLifetime } from "./desktopParentLifetime";
-
-const desktopParentInput = consumeDesktopParentInput(process.env, () => process.stdin);
+import { startDesktopParentMonitor } from "./desktopParentMonitor";
 
 const RuntimeLayer = Layer.empty.pipe(
   Layer.provideMerge(CliConfig.layer),
@@ -23,7 +21,8 @@ const RuntimeLayer = Layer.empty.pipe(
   Layer.provideMerge(FetchHttpClient.layer),
 );
 
+startDesktopParentMonitor();
+
 Command.run(synaraCli, { version })
   .pipe(Effect.provide(RuntimeLayer))
-  .pipe((program) => withDesktopParentLifetime(program, desktopParentInput))
   .pipe((program) => NodeRuntime.runMain(program as Effect.Effect<void, unknown, never>));

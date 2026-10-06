@@ -60,6 +60,7 @@ import { Schema } from "effect";
 import { showConfirmDialogFallback } from "./confirmDialogFallback";
 import { TASKS_OFFERED_BY_BUILD } from "./tasksSurface";
 import { showContextMenuFallback } from "./contextMenuFallback";
+import { postShowInFolderToLattice, readEmbedMode } from "./embedMode";
 import { requireHttpExternalUrl } from "./lib/externalUrl";
 import { withNativeMenuIcons } from "./lib/nativeMenuIcons";
 import { isMacNavigatorPlatform } from "./lib/utils";
@@ -272,7 +273,11 @@ async function requestVoiceTranscriptionUpload(
   }
   const response = await fetch(
     resolveWsHttpUrl(`${VOICE_TRANSCRIPTION_UPLOAD_ROUTE_PATH}?${params.toString()}`),
-    { method: "POST", credentials: "include", body: bytes },
+    {
+      method: "POST",
+      credentials: "include",
+      body: bytes,
+    },
   );
   if (response.status === 404 || response.status === 405) {
     void response.body?.cancel().catch(() => undefined);
@@ -611,14 +616,20 @@ export function createWsNativeApi(): NativeApi {
       showInFolder: async (path) => {
         if (window.desktopBridge) {
           await window.desktopBridge.showInFolder(path);
+          return;
         }
-        // No-op in browser - this is a desktop-only feature
+        const embedMode = readEmbedMode();
+        if (embedMode && postShowInFolderToLattice(embedMode, path)) {
+          return;
+        }
+        throw new Error("Opening folders is available in the desktop app.");
       },
     },
     git: {
       githubRepository: (input) => transport.request(WS_METHODS.gitGithubRepository, input),
       pull: (input) => transport.request(WS_METHODS.gitPull, input),
       status: (input) => transport.request(WS_METHODS.gitStatus, input),
+      branchPullRequest: (input) => transport.request(WS_METHODS.gitBranchPullRequest, input),
       readWorkingTreeDiff: (input) => transport.request(WS_METHODS.gitReadWorkingTreeDiff, input),
       readFileAtRev: (input) => transport.request(WS_METHODS.gitReadFileAtRev, input),
       workingTreeDiffStats: (input) => transport.request(WS_METHODS.gitWorkingTreeDiffStats, input),
@@ -648,6 +659,11 @@ export function createWsNativeApi(): NativeApi {
       stashInfo: (input) => transport.request(WS_METHODS.gitStashInfo, input),
       removeIndexLock: (input) => transport.request(WS_METHODS.gitRemoveIndexLock, input),
       init: (input) => transport.request(WS_METHODS.gitInit, input),
+      connectGitHubRemote: (input) => transport.request(WS_METHODS.gitConnectGitHubRemote, input),
+      createGitHubRepository: (input) =>
+        transport.request(WS_METHODS.gitCreateGitHubRepository, input, {
+          timeoutMs: null,
+        }),
       stageFiles: (input) => transport.request(WS_METHODS.gitStageFiles, input),
       unstageFiles: (input) => transport.request(WS_METHODS.gitUnstageFiles, input),
       handoffThread: (input) => transport.request(WS_METHODS.gitHandoffThread, input),
@@ -799,6 +815,15 @@ export function createWsNativeApi(): NativeApi {
       listCommands: (input) => transport.request(WS_METHODS.providerListCommands, input),
       listSkills: (input) => transport.request(WS_METHODS.providerListSkills, input),
       listSkillsCatalog: (input) => transport.request(WS_METHODS.providerListSkillsCatalog, input),
+      importSkill: (input) => transport.request(WS_METHODS.providerImportSkill, input),
+      readManagedSkill: (input) => transport.request(WS_METHODS.providerReadManagedSkill, input),
+      saveManagedSkill: (input) => transport.request(WS_METHODS.providerSaveManagedSkill, input),
+      duplicateManagedSkill: (input) =>
+        transport.request(WS_METHODS.providerDuplicateManagedSkill, input),
+      removeManagedSkill: (input) =>
+        transport.request(WS_METHODS.providerRemoveManagedSkill, input),
+      restoreManagedSkill: (input) =>
+        transport.request(WS_METHODS.providerRestoreManagedSkill, input),
       listPlugins: (input) => transport.request(WS_METHODS.providerListPlugins, input),
       readPlugin: (input) => transport.request(WS_METHODS.providerReadPlugin, input),
       listModels: (input) => transport.request(WS_METHODS.providerListModels, input),

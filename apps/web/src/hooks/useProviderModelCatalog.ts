@@ -255,15 +255,6 @@ export function useProviderModelCatalog(input: {
     provider: ProviderKind,
     prefetchRequested = discoveryEnabled,
   ): boolean => {
-    // The enabled flag is a short-circuit, not a precondition. `serverSettings` is
-    // undefined while the settings query is in flight and stays undefined if it
-    // fails — and it never refetches on its own (`staleTime: Infinity`). Treating
-    // that as "disabled" would silence discovery for every provider, including the
-    // selected one, which is precisely the "my model disappeared" symptom. Mirrors
-    // the server-side fallback in ProviderDiscoveryService.listModels.
-    if (serverSettings?.providers[provider]?.enabled === false) {
-      return false;
-    }
     if (provider === selectedProvider) {
       return true;
     }

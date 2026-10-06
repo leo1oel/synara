@@ -7,6 +7,11 @@ import {
 import { useCallback, useLayoutEffect, useRef } from "react";
 import { hasActiveComposerSend } from "~/lib/composerSendOwnership";
 import {
+  appendLatticeHostContextToPrompt,
+  consumeDispatchedLatticeHostSelection,
+  refreshLatticeHostContextForSend,
+} from "../../lib/latticeHostContext";
+import {
   filterPromptProviderMentionReferences,
   filterPromptSkillReferences,
 } from "~/lib/composerMentions";
@@ -787,12 +792,16 @@ export function useChatTurnSubmission({
       const outgoingTextSeed =
         messageTextForSend ||
         (composerImagesSnapshot.length > 0 ? IMAGE_ONLY_BOOTSTRAP_PROMPT : "");
-      const outgoingMessageText = formatOutgoingComposerPrompt({
-        provider: selectedProviderForSend,
-        model: selectedModelForSend,
-        effort: selectedPromptEffortForSend,
-        text: outgoingTextSeed,
-      });
+      const refreshedHostContext = await refreshLatticeHostContextForSend();
+      const outgoingMessageText = appendLatticeHostContextToPrompt(
+        formatOutgoingComposerPrompt({
+          provider: selectedProviderForSend,
+          model: selectedModelForSend,
+          effort: selectedPromptEffortForSend,
+          text: outgoingTextSeed,
+        }),
+        refreshedHostContext,
+      );
       const mentionedSkillsForSend = filterPromptSkillReferences(
         outgoingMessageText,
         selectedComposerSkillsForSend,
@@ -897,7 +906,7 @@ export function useChatTurnSubmission({
         scheduleComposerFocus();
       }
 
-      return executePreparedTurn({
+      const dispatched = await executePreparedTurn({
         nextThreadEnvMode,
         nextThreadBranch,
         nextThreadWorktreePath,
@@ -948,6 +957,8 @@ export function useChatTurnSubmission({
         composerSkillsSnapshot,
         composerMentionsSnapshot,
       });
+      if (dispatched) consumeDispatchedLatticeHostSelection(outgoingMessageText);
+      return dispatched;
     },
     [
       threadId,

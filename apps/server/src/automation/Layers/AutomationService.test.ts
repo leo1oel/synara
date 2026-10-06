@@ -4140,13 +4140,12 @@ layer("AutomationService", (it) => {
       }),
   );
 
-  it.effect("defers stop evaluation until the router's fallback provider is re-enabled", () =>
+  it.effect("does not auto-stop a heartbeat automation without a completion policy", () =>
     Effect.gen(function* () {
       resetHarness();
       const service = yield* AutomationService;
-      const serverSettings = yield* ServerSettingsService;
-      const targetThreadId = ThreadId.makeUnsafe("heartbeat-stop-provider-disabled");
-      const automationTurnId = TurnId.makeUnsafe("turn-stop-provider-disabled");
+      const targetThreadId = ThreadId.makeUnsafe("heartbeat-no-stop-policy");
+      const automationTurnId = TurnId.makeUnsafe("turn-no-stop-policy");
       threadShell = Option.some(makeThreadShell({ id: targetThreadId }));
 
       yield* serverSettings.updateSettings({
@@ -4186,11 +4185,14 @@ layer("AutomationService", (it) => {
         threadId: targetThreadId,
         turnId: automationTurnId,
       });
-      yield* service.reconcileThread({ threadId: targetThreadId });
-      yield* realDelay(25);
 
-      const deferredRun = (yield* service.list({ projectId })).runs.find(
-        (entry) => entry.id === run.id,
+      yield* service.reconcileThread({ threadId: targetThreadId });
+
+      const listed = yield* service.list({ projectId });
+      const updatedRun = listed.runs.find((entry) => entry.id === run.id);
+      assert.strictEqual(
+        listed.definitions.find((entry) => entry.id === created.id)?.enabled,
+        true,
       );
       assert.isUndefined(deferredRun?.result?.completionEvaluation);
       assert.strictEqual(completionEvaluationInputs.length, 0);

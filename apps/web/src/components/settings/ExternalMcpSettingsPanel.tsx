@@ -5,6 +5,7 @@ import {
 } from "@synara/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { useLingui } from "@lingui/react";
 
 import { Button } from "~/components/ui/button";
 import { DisclosureChevron } from "~/components/ui/DisclosureChevron";
@@ -27,7 +28,6 @@ import { SettingsListRow, SettingsRow, SettingsSection } from "./SettingsPanelPr
 
 const INTEGRATIONS_QUERY_KEY = ["server", "externalMcpIntegrations"] as const;
 const PROJECTS_QUERY_KEY = ["orchestration", "externalMcpProjects"] as const;
-const DEFAULT_NAME = "Coding agent";
 const CORE_CAPABILITIES: ReadonlyArray<ExternalMcpCapability> = [
   "projects:read",
   "tasks:create",
@@ -39,37 +39,41 @@ function dateMillis(value: string): number {
   return Date.parse(value);
 }
 
-function formatDate(value: string | null): string {
-  if (!value) return "Never";
+function formatDate(value: string | null, locale: string, neverLabel: string): string {
+  if (!value) return neverLabel;
   const milliseconds = dateMillis(value);
-  return Number.isNaN(milliseconds) ? String(value) : new Date(milliseconds).toLocaleString();
-}
-
-function copyWithToast(value: string, title: string): void {
-  void copyTextToClipboard(value).then(
-    () => toastManager.add({ type: "success", title }),
-    (error: unknown) =>
-      toastManager.add({
-        type: "error",
-        title: "Could not copy",
-        description: error instanceof Error ? error.message : "Clipboard access failed.",
-      }),
-  );
+  return Number.isNaN(milliseconds) ? String(value) : new Date(milliseconds).toLocaleString(locale);
 }
 
 export function ExternalMcpSettingsPanel(props: { active: boolean }) {
+  const { i18n } = useLingui();
   const queryClient = useQueryClient();
-  const [name, setName] = useState<string>(DEFAULT_NAME);
+  const [name, setName] = useState<string>(() => i18n._("Coding agent"));
   const [allProjects, setAllProjects] = useState(true);
   const [selectedProjects, setSelectedProjects] = useState<ReadonlySet<string>>(new Set());
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
+  const [revokedOpen, setRevokedOpen] = useState(false);
   const [allowProjectRead, setAllowProjectRead] = useState(false);
   const [allowLocal, setAllowLocal] = useState(false);
   const [allowFullAccess, setAllowFullAccess] = useState(false);
   const [allowComputerControl, setAllowComputerControl] = useState(false);
   const [setup, setSetup] = useState<ExternalMcpCreateIntegrationResult | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const displayLocale = i18n.locale === "zh-CN" ? "zh-CN" : "en";
+  const neverLabel = i18n._("Never");
+
+  const copyWithToast = (value: string, title: string): void => {
+    void copyTextToClipboard(value).then(
+      () => toastManager.add({ type: "success", title }),
+      (error: unknown) =>
+        toastManager.add({
+          type: "error",
+          title: i18n._("Could not copy"),
+          description: error instanceof Error ? error.message : i18n._("Clipboard access failed."),
+        }),
+    );
+  };
 
   useEffect(() => {
     if (!props.active) return;
@@ -119,15 +123,15 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
       void queryClient.invalidateQueries({ queryKey: INTEGRATIONS_QUERY_KEY });
       toastManager.add({
         type: "success",
-        title: "Connection ready",
-        description: "Give your agent the setup prompt before the one-time code expires.",
+        title: i18n._("Connection ready"),
+        description: i18n._("Give your agent the setup prompt before the one-time code expires."),
       });
     },
     onError: (error: unknown) =>
       toastManager.add({
         type: "error",
-        title: "Could not create connection",
-        description: error instanceof Error ? error.message : "External MCP setup failed.",
+        title: i18n._("Could not create connection"),
+        description: error instanceof Error ? error.message : i18n._("External MCP setup failed."),
       }),
   });
 
@@ -136,21 +140,22 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
       ensureNativeApi().server.revokeExternalMcpIntegration({ integrationId }),
     onSuccess: (_result, integrationId) => {
       setManualOpen(false);
+      setRevokedOpen(false);
       setSetup((current) =>
         current?.integration.integrationId === integrationId ? null : current,
       );
       void queryClient.invalidateQueries({ queryKey: INTEGRATIONS_QUERY_KEY });
       toastManager.add({
         type: "success",
-        title: "Connection revoked",
-        description: "Its credential stops working immediately.",
+        title: i18n._("Connection revoked"),
+        description: i18n._("Its credential stops working immediately."),
       });
     },
     onError: (error: unknown) =>
       toastManager.add({
         type: "error",
-        title: "Could not revoke connection",
-        description: error instanceof Error ? error.message : "Revocation failed.",
+        title: i18n._("Could not revoke connection"),
+        description: error instanceof Error ? error.message : i18n._("Revocation failed."),
       }),
   });
 
@@ -162,15 +167,17 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
       void queryClient.invalidateQueries({ queryKey: INTEGRATIONS_QUERY_KEY });
       toastManager.add({
         type: "success",
-        title: "New pairing code ready",
-        description: "Copy the refreshed setup prompt. The new one-time code lasts 10 minutes.",
+        title: i18n._("New pairing code ready"),
+        description: i18n._(
+          "Copy the refreshed setup prompt. The new one-time code lasts 10 minutes.",
+        ),
       });
     },
     onError: (error: unknown) =>
       toastManager.add({
         type: "error",
-        title: "Could not resume pairing",
-        description: error instanceof Error ? error.message : "Pairing refresh failed.",
+        title: i18n._("Could not resume pairing"),
+        description: error instanceof Error ? error.message : i18n._("Pairing refresh failed."),
       }),
   });
 
@@ -180,7 +187,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
       integration,
       pairingCode: "already-paired",
       pairingExpiresAt: integration.createdAt,
-      setupCommand: "Pairing already completed",
+      setupCommand: i18n._("Pairing already completed"),
       stdio: integration.stdio,
     });
   };
@@ -218,55 +225,134 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
     pairingExpired,
   });
   const setupStatus = revoked
-    ? "Revoked"
+    ? i18n._("Revoked")
     : integrationExpired
-      ? "Expired"
+      ? i18n._("Expired")
       : connected
-        ? "Connected"
+        ? i18n._("Connected")
         : paired
-          ? "Paired — waiting for first use"
+          ? i18n._("Paired — waiting for first use")
           : pairingExpired
-            ? "Pairing code expired"
-            : "Waiting for pairing";
+            ? i18n._("Pairing code expired")
+            : i18n._("Waiting for pairing");
   const platform = getNavigatorPlatform();
   const setupPrompt = setup
     ? buildExternalMcpSetupPrompt({
         setupCommand: paired ? null : setup.setupCommand,
         stdio: setup.stdio,
         platform,
+        locale: displayLocale,
       })
     : null;
   const manualConfiguration = setup
-    ? buildExternalMcpClientConfiguration("other", setup.stdio, platform)
+    ? buildExternalMcpClientConfiguration("other", setup.stdio, platform, displayLocale)
     : null;
   const examplePrompt = setup
     ? buildExternalMcpExamplePrompt(
         setup.integration.projectScope === "all"
           ? null
           : (setup.integration.allowedProjects[0]?.title ?? null),
+        displayLocale,
       )
     : null;
+  const integrations = integrationsQuery.data ?? [];
+  const currentIntegrations = integrations.filter((integration) => integration.revokedAt === null);
+  const revokedIntegrations = integrations.filter((integration) => integration.revokedAt !== null);
+  const renderIntegrationRows = (items: typeof integrations) =>
+    items.map((integration) => {
+      const active = integration.revokedAt === null && dateMillis(integration.expiresAt) > nowMs;
+      const status = active
+        ? integration.lastUsedAt
+          ? i18n._("Connected")
+          : integration.pairedAt
+            ? i18n._("Paired — not used yet")
+            : i18n._("Waiting for pairing")
+        : integration.revokedAt
+          ? i18n._("Revoked")
+          : i18n._("Expired");
+      return (
+        <SettingsListRow
+          key={integration.integrationId}
+          align="start"
+          title={integration.name}
+          description={
+            <div className="space-y-1">
+              <div>{status}</div>
+              <div>
+                {i18n._("Projects: {projects}", {
+                  projects: describeExternalMcpProjects(integration, displayLocale),
+                })}
+              </div>
+              <div>
+                {i18n._("Permissions: {permissions}", {
+                  permissions: describeExternalMcpPermissions(
+                    integration.capabilities,
+                    displayLocale,
+                  ),
+                })}
+              </div>
+              <div>
+                {i18n._("Created {created} · Last used {lastUsed} · Expires {expires}", {
+                  created: formatDate(integration.createdAt, i18n.locale, neverLabel),
+                  lastUsed: formatDate(integration.lastUsedAt, i18n.locale, neverLabel),
+                  expires: formatDate(integration.expiresAt, i18n.locale, neverLabel),
+                })}
+              </div>
+            </div>
+          }
+          actions={
+            active ? (
+              <div className="flex items-center gap-2">
+                <Button
+                  size="xs"
+                  variant="outline"
+                  disabled={refreshPairingMutation.isPending}
+                  onClick={() => {
+                    if (integration.pairedAt) continuePairedSetup(integration);
+                    else refreshPairingMutation.mutate(integration.integrationId);
+                  }}
+                >
+                  {integration.pairedAt ? i18n._("Continue setup") : i18n._("Resume pairing")}
+                </Button>
+                <Button
+                  size="xs"
+                  variant="destructive-outline"
+                  disabled={revokeMutation.isPending}
+                  onClick={() => revokeMutation.mutate(integration.integrationId)}
+                >
+                  {i18n._("Revoke")}
+                </Button>
+              </div>
+            ) : null
+          }
+        />
+      );
+    });
 
   return (
     <div className="space-y-6">
       {!setup ? (
-        <SettingsSection title="Connect a coding agent">
+        <SettingsSection title={i18n._("Connect a coding agent")}>
           <SettingsRow
-            title="Name"
-            description="How this connection appears in Synara. Works with Codex, Claude, and any other MCP-capable agent."
+            title={i18n._("Name")}
+            description={i18n._(
+              "How this connection appears in Lattice. Works with Codex, Claude, and any other MCP-capable agent.",
+            )}
             control={
               <Input
                 className="w-full sm:w-64"
                 value={name}
                 maxLength={120}
-                placeholder={DEFAULT_NAME}
+                placeholder={i18n._("Coding agent")}
                 onChange={(event) => setName(event.target.value)}
               />
             }
           />
           <SettingsRow
-            title="Access all of Synara"
-            description="The agent can discover and work in every project, including ones you add later. Turn off to pick specific projects."
+            title={i18n._("Access all Lattice projects")}
+            description={i18n._(
+              "The agent can discover and work in every project, including ones you add later. Turn off to pick specific projects.",
+            )}
             control={<Switch checked={allProjects} onCheckedChange={setAllProjects} />}
           >
             <DisclosureRegion open={!allProjects} contentClassName="mt-3">
@@ -298,16 +384,18 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                   );
                 })}
                 {projects.length === 0 ? (
-                  <span className="text-ui leading-snug text-muted-foreground">
-                    No projects are available.
+                  <span className="text-ui-xs text-muted-foreground">
+                    {i18n._("No projects are available.")}
                   </span>
                 ) : null}
               </div>
             </DisclosureRegion>
           </SettingsRow>
           <SettingsRow
-            title="Advanced permissions"
-            description="Optional access for existing tasks, shared checkouts, or execution without approvals. The safe defaults are recommended."
+            title={i18n._("Advanced permissions")}
+            description={i18n._(
+              "Optional access for existing tasks, shared checkouts, or execution without approvals. The safe defaults are recommended.",
+            )}
             control={
               <Button
                 size="xs"
@@ -315,52 +403,67 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                 aria-expanded={advancedOpen}
                 onClick={() => setAdvancedOpen((current) => !current)}
               >
-                Review
+                {i18n._("Review")}
                 <DisclosureChevron open={advancedOpen} className="ml-1 size-3.5" />
               </Button>
             }
           >
             <DisclosureRegion
               open={advancedOpen}
-              contentClassName="mt-3 space-y-4 border-t border-border/70 pt-3"
+              className="[overflow-anchor:none]"
+              contentClassName="mt-3 space-y-4 border-t border-border/70 pt-4"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-ui leading-snug font-medium">Read other project tasks</div>
+                  <div className="text-ui-xs font-medium">{i18n._("Read other project tasks")}</div>
                   <div className="mt-0.5 text-ui-sm leading-relaxed text-muted-foreground">
-                    Without this permission, the agent can read only tasks it creates.
+                    {i18n._("Without this permission, the agent can read only tasks it creates.")}
                   </div>
                 </div>
-                <Switch checked={allowProjectRead} onCheckedChange={setAllowProjectRead} />
+                <Switch
+                  checked={allowProjectRead}
+                  onCheckedChange={setAllowProjectRead}
+                  aria-label={i18n._("Read other project tasks")}
+                />
               </div>
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-ui leading-snug font-medium">
-                    Use the shared local checkout
+                  <div className="text-ui-xs font-medium">
+                    {i18n._("Use the shared local checkout")}
                   </div>
                   <div className="mt-0.5 text-ui-sm leading-relaxed text-muted-foreground">
-                    High impact. Tasks may modify the checkout you are actively using instead of an
-                    isolated worktree.
+                    {i18n._(
+                      "High impact. Tasks may modify the checkout you are actively using instead of an isolated worktree.",
+                    )}
                   </div>
                 </div>
-                <Switch checked={allowLocal} onCheckedChange={setAllowLocal} />
+                <Switch
+                  checked={allowLocal}
+                  onCheckedChange={setAllowLocal}
+                  aria-label={i18n._("Use the shared local checkout")}
+                />
               </div>
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-ui leading-snug font-medium">
-                    Run without approval prompts
+                  <div className="text-ui-xs font-medium">
+                    {i18n._("Run without approval prompts")}
                   </div>
                   <div className="mt-0.5 text-ui-sm leading-relaxed text-muted-foreground">
-                    High impact. The external agent may start full-access execution without asking
-                    you to approve tool actions.
+                    {i18n._(
+                      "High impact. The external agent may start full-access execution without asking you to approve tool actions.",
+                    )}
                   </div>
                 </div>
-                <Switch checked={allowFullAccess} onCheckedChange={setAllowFullAccess} />
+                <Switch
+                  checked={allowFullAccess}
+                  onCheckedChange={setAllowFullAccess}
+                  aria-label={i18n._("Run without approval prompts")}
+                />
               </div>
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-xs font-medium">Computer control</div>
-                  <div className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+                  <div className="text-ui-xs font-medium">Computer control</div>
+                  <div className="mt-0.5 text-ui-sm leading-relaxed text-muted-foreground">
                     High impact. Tasks may drive this Mac&apos;s screen — observe, click, type,
                     menus, clipboard. Every computer action still asks for your approval.
                   </div>
@@ -370,11 +473,13 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
             </DisclosureRegion>
           </SettingsRow>
           <SettingsRow
-            title="Create connection"
-            description="The connection lasts 30 days and can be revoked at any time. The next screen gives you one prompt to paste into your agent."
+            title={i18n._("Create connection")}
+            description={i18n._(
+              "The connection lasts 30 days and can be revoked at any time. The next screen gives you one prompt to paste into your agent.",
+            )}
             control={
               <Button size="sm" disabled={!canCreate} onClick={() => createMutation.mutate()}>
-                {createMutation.isPending ? "Creating..." : "Create connection"}
+                {createMutation.isPending ? i18n._("Creating...") : i18n._("Create connection")}
               </Button>
             }
           />
@@ -382,7 +487,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
       ) : null}
 
       {setup && setupIntegration && setupPrompt && manualConfiguration && examplePrompt ? (
-        <SettingsSection title={`Connect ${setupIntegration.name}`}>
+        <SettingsSection title={i18n._("Connect {name}", { name: setupIntegration.name })}>
           <SettingsRow
             title={
               <span className="flex items-center gap-2">
@@ -402,21 +507,31 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
             }
             description={
               revoked
-                ? "This connection has been revoked and can no longer access Synara."
+                ? i18n._("This connection has been revoked and can no longer access Lattice.")
                 : integrationExpired
-                  ? "This connection has expired and can no longer access Synara."
+                  ? i18n._("This connection has expired and can no longer access Lattice.")
                   : connected
-                    ? "Synara received a request from this agent. Setup is complete."
+                    ? i18n._("Lattice received a request from this agent. Setup is complete.")
                     : paired
-                      ? "The private credential is stored locally. If the agent has not registered Synara yet, give it the setup prompt below."
+                      ? i18n._(
+                          "The private credential is stored locally. If the agent has not registered Lattice yet, give it the setup prompt below.",
+                        )
                       : pairingExpired
-                        ? "The one-time pairing code was not used in time. Resume pairing to issue a fresh code without replacing this connection."
-                        : "Paste the setup prompt into your agent. This page updates automatically when pairing succeeds."
+                        ? i18n._(
+                            "The one-time pairing code was not used in time. Resume pairing to issue a fresh code without replacing this connection.",
+                          )
+                        : i18n._(
+                            "Paste the setup prompt into your agent. This page updates automatically when pairing succeeds.",
+                          )
             }
             status={
               connected
-                ? `Last connected ${formatDate(setupIntegration.lastUsedAt)}.`
-                : `Connection expires ${formatDate(setupIntegration.expiresAt)}.`
+                ? i18n._("Last connected {date}.", {
+                    date: formatDate(setupIntegration.lastUsedAt, i18n.locale, neverLabel),
+                  })
+                : i18n._("Connection expires {date}.", {
+                    date: formatDate(setupIntegration.expiresAt, i18n.locale, neverLabel),
+                  })
             }
             control={
               setupAction === "revoke" ? (
@@ -426,7 +541,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                   disabled={revokeMutation.isPending}
                   onClick={() => revokeMutation.mutate(setupIntegration.integrationId)}
                 >
-                  Revoke and start over
+                  {i18n._("Revoke and start over")}
                 </Button>
               ) : setupAction === "resume-pairing" ? (
                 <div className="flex items-center gap-2">
@@ -436,35 +551,41 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                     disabled={refreshPairingMutation.isPending}
                     onClick={() => refreshPairingMutation.mutate(setupIntegration.integrationId)}
                   >
-                    {refreshPairingMutation.isPending ? "Resuming..." : "Resume pairing"}
+                    {refreshPairingMutation.isPending
+                      ? i18n._("Resuming...")
+                      : i18n._("Resume pairing")}
                   </Button>
                   <Button size="xs" variant="ghost" onClick={closeSetup}>
-                    Back
+                    {i18n._("Back")}
                   </Button>
                 </div>
               ) : setupAction === "done" ? (
                 <Button size="xs" variant="ghost" onClick={closeSetup}>
-                  Done
+                  {i18n._("Done")}
                 </Button>
               ) : null
             }
           />
           <SettingsRow
-            title="1. Give your agent this prompt"
-            description="Copy the prompt and paste it into the agent you want to connect (Codex, Claude Code, or any MCP-capable app). The agent pairs this computer, registers Synara in its own configuration, and verifies the connection by itself."
+            title={i18n._("1. Give your agent this prompt")}
+            description={i18n._(
+              "Copy the prompt and paste it into the agent you want to connect (Codex, Claude Code, or any MCP-capable app). The agent pairs this computer, registers Lattice in its own configuration, and verifies the connection by itself.",
+            )}
             status={
               paired
-                ? "Paired. The prompt now covers only registration and verification."
-                : `Pairing code expires ${formatDate(setup.pairingExpiresAt)}.`
+                ? i18n._("Paired. The prompt now covers only registration and verification.")
+                : i18n._("Pairing code expires {date}.", {
+                    date: formatDate(setup.pairingExpiresAt, i18n.locale, neverLabel),
+                  })
             }
             control={
               <Button
                 size="xs"
                 variant="outline"
                 disabled={setupUnavailable}
-                onClick={() => copyWithToast(setupPrompt, "Setup prompt copied")}
+                onClick={() => copyWithToast(setupPrompt, i18n._("Setup prompt copied"))}
               >
-                Copy setup prompt
+                {i18n._("Copy setup prompt")}
               </Button>
             }
           >
@@ -473,8 +594,10 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
             </pre>
           </SettingsRow>
           <SettingsRow
-            title="Set up by hand instead"
-            description="For apps without a terminal or chat, like Claude Desktop: run the pairing command in Terminal, then add the JSON below to the app's MCP configuration."
+            title={i18n._("Set up by hand instead")}
+            description={i18n._(
+              "For apps without a terminal or chat, like Claude Desktop: run the pairing command in Terminal, then add the JSON below to the app's MCP configuration.",
+            )}
             control={
               <Button
                 size="xs"
@@ -482,7 +605,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                 aria-expanded={manualOpen}
                 onClick={() => setManualOpen((current) => !current)}
               >
-                Show
+                {i18n._("Show")}
                 <DisclosureChevron open={manualOpen} className="ml-1 size-3.5" />
               </Button>
             }
@@ -494,16 +617,18 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
               {!paired ? (
                 <div>
                   <div className="mb-2 flex items-center justify-between gap-3">
-                    <span className="text-ui leading-snug font-medium">
-                      Pairing command (run in Terminal)
+                    <span className="text-ui-xs font-medium">
+                      {i18n._("Pairing command (run in Terminal)")}
                     </span>
                     <Button
                       size="xs"
                       variant="outline"
                       disabled={setupUnavailable}
-                      onClick={() => copyWithToast(setup.setupCommand, "Pairing command copied")}
+                      onClick={() =>
+                        copyWithToast(setup.setupCommand, i18n._("Pairing command copied"))
+                      }
                     >
-                      Copy
+                      {i18n._("Copy")}
                     </Button>
                   </div>
                   <pre className="overflow-x-auto rounded-lg border border-border/70 bg-muted/30 p-3 text-ui-sm leading-relaxed">
@@ -513,14 +638,18 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
               ) : null}
               <div>
                 <div className="mb-2 flex items-center justify-between gap-3">
-                  <span className="text-ui leading-snug font-medium">MCP configuration (JSON)</span>
+                  <span className="text-ui-xs font-medium">
+                    {i18n._("MCP configuration (JSON)")}
+                  </span>
                   <Button
                     size="xs"
                     variant="outline"
                     disabled={revoked || integrationExpired}
-                    onClick={() => copyWithToast(manualConfiguration.value, "Configuration copied")}
+                    onClick={() =>
+                      copyWithToast(manualConfiguration.value, i18n._("Configuration copied"))
+                    }
                   >
-                    Copy
+                    {i18n._("Copy")}
                   </Button>
                 </div>
                 <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-border/70 bg-muted/30 p-3 text-ui-sm leading-relaxed">
@@ -530,21 +659,23 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
             </DisclosureRegion>
           </SettingsRow>
           <SettingsRow
-            title="2. Try it"
-            description="Open a new chat in the agent you just connected and send this editable example. You never need to copy project IDs, model IDs, or request IDs yourself."
+            title={i18n._("2. Try it")}
+            description={i18n._(
+              "Open a new chat in the agent you just connected and send this editable example. You never need to copy project IDs, model IDs, or request IDs yourself.",
+            )}
             status={
               connected
-                ? "Connection verified by Synara."
-                : "Synara will show Connected after the agent makes its first request."
+                ? i18n._("Connection verified by Lattice.")
+                : i18n._("Lattice will show Connected after the agent makes its first request.")
             }
             control={
               <Button
                 size="xs"
                 variant="outline"
                 disabled={!paired || revoked || integrationExpired}
-                onClick={() => copyWithToast(examplePrompt, "Example prompt copied")}
+                onClick={() => copyWithToast(examplePrompt, i18n._("Example prompt copied"))}
               >
-                Copy example prompt
+                {i18n._("Copy example prompt")}
               </Button>
             }
           >
@@ -557,75 +688,45 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
         </SettingsSection>
       ) : null}
 
-      <SettingsSection title="Connected agents">
+      <SettingsSection title={i18n._("Connected agents")}>
         {integrationsQuery.isLoading ? (
-          <SettingsListRow title="Loading connections..." />
-        ) : integrationsQuery.data?.length ? (
-          integrationsQuery.data.map((integration) => {
-            const active =
-              integration.revokedAt === null && dateMillis(integration.expiresAt) > nowMs;
-            const status = active
-              ? integration.lastUsedAt
-                ? "Connected"
-                : integration.pairedAt
-                  ? "Paired — not used yet"
-                  : "Waiting for pairing"
-              : integration.revokedAt
-                ? "Revoked"
-                : "Expired";
-            return (
-              <SettingsListRow
-                key={integration.integrationId}
-                align="start"
-                title={integration.name}
-                description={
-                  <div className="space-y-1">
-                    <div>{status}</div>
-                    <div>Projects: {describeExternalMcpProjects(integration)}</div>
-                    <div>
-                      Permissions: {describeExternalMcpPermissions(integration.capabilities)}
-                    </div>
-                    <div>
-                      Created {formatDate(integration.createdAt)} · Last used{" "}
-                      {formatDate(integration.lastUsedAt)} · Expires{" "}
-                      {formatDate(integration.expiresAt)}
-                    </div>
-                  </div>
-                }
-                actions={
-                  active ? (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="xs"
-                        variant="outline"
-                        disabled={refreshPairingMutation.isPending}
-                        onClick={() => {
-                          if (integration.pairedAt) continuePairedSetup(integration);
-                          else refreshPairingMutation.mutate(integration.integrationId);
-                        }}
-                      >
-                        {integration.pairedAt ? "Continue setup" : "Resume pairing"}
-                      </Button>
-                      <Button
-                        size="xs"
-                        variant="destructive-outline"
-                        disabled={revokeMutation.isPending}
-                        onClick={() => revokeMutation.mutate(integration.integrationId)}
-                      >
-                        Revoke
-                      </Button>
-                    </div>
-                  ) : null
-                }
-              />
-            );
-          })
+          <SettingsListRow title={i18n._("Loading connections...")} />
+        ) : currentIntegrations.length ? (
+          renderIntegrationRows(currentIntegrations)
         ) : (
           <SettingsListRow
-            title="No connected agents"
-            description="Connect Codex, Claude, or another local MCP agent to create and follow Synara tasks."
+            title={i18n._("No connected agents")}
+            description={i18n._(
+              "Connect Codex, Claude, or another local MCP agent to create and follow Lattice tasks.",
+            )}
           />
         )}
+        {revokedIntegrations.length > 0 ? (
+          <>
+            <SettingsListRow
+              title={i18n._("Revoked connections ({count})", {
+                count: revokedIntegrations.length,
+              })}
+              description={i18n._(
+                "Revoked connections are hidden by default. Their credentials no longer work.",
+              )}
+              actions={
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  aria-expanded={revokedOpen}
+                  onClick={() => setRevokedOpen((current) => !current)}
+                >
+                  {revokedOpen ? i18n._("Hide") : i18n._("Show")}
+                  <DisclosureChevron open={revokedOpen} className="ml-1 size-3.5" />
+                </Button>
+              }
+            />
+            <DisclosureRegion open={revokedOpen} contentClassName="divide-y divide-border/70">
+              {renderIntegrationRows(revokedIntegrations)}
+            </DisclosureRegion>
+          </>
+        ) : null}
       </SettingsSection>
     </div>
   );

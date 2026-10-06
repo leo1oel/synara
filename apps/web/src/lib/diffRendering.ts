@@ -35,11 +35,21 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
   }
   const css = `
 :host {
+  /* Pierre's default is "light dark", which follows the OS instead of the
+     theme selected by the embedding Lattice window. Keep its fallback text
+     and light-dark branch on the iframe's explicit theme. */
+  color-scheme: ${theme};
+  --diffs-fg: var(--foreground) !important;
+  --diffs-light: var(--foreground) !important;
+  --diffs-dark: var(--foreground) !important;
   /* Route diff hunks through the chat code font; keep file headers on the UI stack. */
   --diffs-font-family: var(--font-chat-code-family);
   --diffs-header-font-family: var(--font-ui-family);
+  /* Keep horizontal scrolling available for long lines without painting an
+     empty scrollbar track when every line already fits the viewport. */
+  --diffs-overflow-override: auto;
   /* Honor the user-chosen chat code font size from settings instead of the library default (13px). */
-  --diffs-font-size: var(--app-font-size-chat-code, 11px);
+  --diffs-font-size: var(--app-font-size-diff-code, var(--app-font-size-chat-code, 11px));
   /* Match the app chrome — set on :host so hunk rows/gutters/separators inherit. The fill
      is the theme background unless the host surface clears it (--app-code-viewer-surface,
      whole-window glass in the right dock; see index.css). */
@@ -49,6 +59,7 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
   --diffs-bg: var(--synara-code-surface) !important;
   --diffs-light-bg: var(--synara-code-surface) !important;
   --diffs-dark-bg: var(--synara-code-surface) !important;
+  --diffs-line-height: var(--app-line-height-diff-code, 20px);
   --diffs-token-light-bg: transparent;
   --diffs-token-dark-bg: transparent;
 
@@ -90,7 +101,7 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
   --diffs-bg-deletion-emphasis: color-mix(in srgb, var(--background) 80%, var(--destructive)) !important;
 
   font-family: var(--font-chat-code-family) !important;
-  font-size: var(--app-font-size-chat-code, 11px) !important;
+  font-size: var(--app-font-size-diff-code, var(--app-font-size-chat-code, 11px)) !important;
   background-color: var(--synara-code-surface) !important;
 }
 
@@ -103,6 +114,7 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
 
 [data-line-type="change-deletion"] {
   --diffs-bg: var(--app-code-viewer-deletion-row, var(--background)) !important;
+  line-height: var(--app-line-height-diff-code, 20px) !important;
 }
 
 [data-diffs-header],
@@ -110,13 +122,14 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
 [data-file],
 [data-error-wrapper],
 [data-virtualizer-buffer] {
-  --diffs-font-size: var(--app-font-size-chat-code, 11px) !important;
+  --diffs-font-size: var(--app-font-size-diff-code, var(--app-font-size-chat-code, 11px)) !important;
   --diffs-bg: var(--synara-code-surface) !important;
   --diffs-light-bg: var(--synara-code-surface) !important;
   --diffs-dark-bg: var(--synara-code-surface) !important;
   --diffs-bg-context: var(--synara-code-surface) !important;
   --diffs-bg-context-number: var(--synara-code-surface) !important;
   background-color: var(--synara-code-surface) !important;
+  --diffs-line-height: var(--app-line-height-diff-code, 20px);
 }
 
 /* Unmodified hunk chrome — pin to theme background without wiping +/- tints. */
@@ -138,12 +151,13 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
   /* Re-assert the code font inside diff hunks because these nodes live in shadow-rooted markup. */
   --diffs-font-family: var(--font-chat-code-family) !important;
   font-family: var(--font-chat-code-family) !important;
-  font-size: var(--app-font-size-chat-code, 11px) !important;
+  font-size: var(--app-font-size-diff-code, var(--app-font-size-chat-code, 11px)) !important;
+  line-height: var(--app-line-height-diff-code, 20px) !important;
 }
 
 [data-file-info] {
   font-family: var(--font-ui-family) !important;
-  font-size: var(--app-font-size-ui, 12px) !important;
+  font-size: var(--app-font-size-diff-header, var(--app-font-size-ui, 12px)) !important;
   background-color: var(--synara-code-surface) !important;
   border-block-color: var(--border) !important;
   color: var(--foreground) !important;
@@ -154,7 +168,7 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
 [data-diffs-header] {
   --diffs-header-font-family: var(--font-ui-family) !important;
   font-family: var(--font-ui-family) !important;
-  font-size: var(--app-font-size-ui, 12px) !important;
+  font-size: var(--app-font-size-diff-header, var(--app-font-size-ui, 12px)) !important;
   position: sticky !important;
   top: 0;
   z-index: 4;
@@ -211,7 +225,70 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
 [data-column-number],
 [data-unmodified-lines] {
   font-family: var(--font-ui-family) !important;
+  font-size: var(--app-font-size-diff-meta, var(--app-font-size-ui-xs, 11px)) !important;
+  line-height: var(--app-line-height-diff-code, 20px) !important;
+  font-weight: var(--app-font-weight-diff-meta, 400) !important;
   font-variant-numeric: tabular-nums !important;
+}
+
+/* Pierre renders its overflow viewport inside shadow DOM, beyond the reach of
+   the embed document's scrollbar selectors. Mirror Lattice's inset scrollbar
+   here so both axes look and align like the host's editor and paper panes. */
+@media (pointer: fine) {
+  /* Standard properties only where webkit pseudo-elements don't exist: WebKit
+     and Blink drop every \`::-webkit-scrollbar-*\` rule on a scroller that also
+     sets \`scrollbar-width\` or \`scrollbar-color\`. */
+  @supports not selector(::-webkit-scrollbar) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: color-mix(in srgb, var(--foreground) 8%, transparent) transparent;
+    }
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--foreground) 8%, transparent);
+    background-clip: content-box;
+  }
+
+  *::-webkit-scrollbar-thumb:vertical {
+    border-right-width: 5px;
+    border-left-width: 1px;
+  }
+
+  *::-webkit-scrollbar-thumb:horizontal {
+    border-top-width: 1px;
+    border-bottom-width: 5px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in srgb, var(--foreground) 12%, transparent);
+  }
+
+  *::-webkit-scrollbar-thumb:vertical:hover {
+    border-right-width: 4px;
+    border-left-width: 0;
+  }
+
+  *::-webkit-scrollbar-thumb:horizontal:hover {
+    border-top-width: 0;
+    border-bottom-width: 4px;
+  }
+
+  *::-webkit-scrollbar-thumb:active {
+    background-color: color-mix(in srgb, var(--foreground) 16%, transparent);
+  }
 }
 `;
   diffPanelUnsafeCssCache.set(theme, css);
@@ -247,21 +324,15 @@ export function buildPatchCacheKey(patch: string, scope = "diff-panel"): string 
   return `${scope}:${normalizedPatch.length}:${primary}:${secondary}`;
 }
 
-export const PARTIAL_DIFF_COPY_NOTICE =
-  "[Synara: partial diff. Output was truncated at the size limit; some files or changes may be missing.]";
-
 // Returns copyable source text for diff surfaces without depending on virtualized DOM rows.
-// A truncation notice travels with partial clipboard content so it cannot be mistaken for a
-// complete patch after it leaves Synara.
 export function resolveDiffCopyText(patch: string | undefined, truncated = false): string | null {
   if (typeof patch !== "string") {
     return null;
   }
-  if (patch.trim().length === 0) {
-    return null;
-  }
-  const noticeSeparator = patch.endsWith("\n") ? "\n" : "\n\n";
-  return truncated ? `${patch}${noticeSeparator}${PARTIAL_DIFF_COPY_NOTICE}\n` : patch;
+  if (patch.trim().length === 0) return null;
+  return truncated
+    ? `${patch}${patch.endsWith("\n") ? "\n" : "\n\n"}[Synara: partial diff. Output was truncated at the size limit; some files or changes may be missing.]\n`
+    : patch;
 }
 
 export type RenderablePatch =
@@ -275,24 +346,25 @@ export type RenderablePatch =
       reason: string;
     };
 
-const PATCH_FILE_BOUNDARY_PATTERN = /^diff --git /gm;
+// Rich rendering parses every file and hands it to the highlighter pool. That
+// is the right cost for a diff someone wrote and a bad trade for one a program
+// emitted: a turn that recompiled a paper carried its .log and .fls along, and
+// the panel sat on skeleton rows rather than showing the edit the turn made.
+// Both bounds sit far above anything hand-written, so this only ever trips on
+// generated content — a safety net, not a policy about diff size.
+export const MAX_RENDERABLE_PATCH_BYTES = 512 * 1024;
+export const MAX_RENDERABLE_LINE_LENGTH = 10_000;
 
-export function splitPatchIntoFileSegments(patch: string): string[] {
-  const boundaries: number[] = [];
-  for (const match of patch.matchAll(PATCH_FILE_BOUNDARY_PATTERN)) {
-    boundaries.push(match.index);
+function exceedsRenderableBudget(patch: string): boolean {
+  if (patch.length > MAX_RENDERABLE_PATCH_BYTES) return true;
+  let lineStart = 0;
+  for (;;) {
+    const lineEnd = patch.indexOf("\n", lineStart);
+    const length = (lineEnd === -1 ? patch.length : lineEnd) - lineStart;
+    if (length > MAX_RENDERABLE_LINE_LENGTH) return true;
+    if (lineEnd === -1) return false;
+    lineStart = lineEnd + 1;
   }
-  if (boundaries.length <= 1) {
-    return [patch];
-  }
-  const segments: string[] = [];
-  let start = 0;
-  for (const boundary of boundaries.slice(1)) {
-    segments.push(patch.slice(start, boundary));
-    start = boundary;
-  }
-  segments.push(patch.slice(start));
-  return segments;
 }
 
 export function getRenderablePatch(
@@ -303,12 +375,20 @@ export function getRenderablePatch(
   const normalizedPatch = patch.trim();
   if (normalizedPatch.length === 0) return null;
 
+  if (exceedsRenderableBudget(normalizedPatch)) {
+    return {
+      kind: "raw",
+      text: normalizedPatch,
+      reason: "This diff is too large to render file by file. Showing raw patch.",
+    };
+  }
+
   try {
-    const files = splitPatchIntoFileSegments(normalizedPatch).flatMap((segment) =>
-      parsePatchFiles(segment, buildPatchCacheKey(segment, cacheScope)).flatMap(
-        (parsedPatch) => parsedPatch.files,
-      ),
+    const parsedPatches = parsePatchFiles(
+      normalizedPatch,
+      buildPatchCacheKey(normalizedPatch, cacheScope),
     );
+    const files = parsedPatches.flatMap((parsedPatch) => parsedPatch.files);
     if (files.length > 0) {
       return { kind: "files", files };
     }
@@ -337,10 +417,6 @@ export function resolveFileDiffPath(fileDiff: FileDiffMetadata): string {
   return raw;
 }
 
-// Resolve the pre-change path for a parsed file diff (the old side of a
-// rename/move), stripping the conventional `a/` patch prefix. Returns null for
-// files that were not renamed or moved: the parser also fills `prevName` for
-// added files, where it is `/dev/null` or a copy of the new name.
 export function resolveFileDiffPrevPath(fileDiff: FileDiffMetadata): string | null {
   if (
     fileDiff.prevName === undefined ||
@@ -349,15 +425,9 @@ export function resolveFileDiffPrevPath(fileDiff: FileDiffMetadata): string | nu
     return null;
   }
   const raw = fileDiff.prevName;
-  if (raw.startsWith("a/") || raw.startsWith("b/")) {
-    return raw.slice(2);
-  }
-  return raw;
+  return raw.startsWith("a/") || raw.startsWith("b/") ? raw.slice(2) : raw;
 }
 
-// Symlinks (120000) show their target path but the workspace read/write path
-// follows the link, and gitlinks (160000, submodules) are directories in the
-// working tree: neither can be edited in place as the text the diff shows.
 const UNEDITABLE_GIT_MODES = new Set(["120000", "160000"]);
 
 export function hasUneditableGitMode(fileDiff: FileDiffMetadata): boolean {
@@ -474,10 +544,7 @@ export function resolveDiffEntryByPath<T>(
   changedFilePath: string,
 ): T | undefined {
   const direct = entriesByPath.get(changedFilePath);
-  if (direct) {
-    return direct;
-  }
-
+  if (direct) return direct;
   const matches = Array.from(entriesByPath.entries())
     .filter(([path]) => diffStatPathsReferToSameFile(path, changedFilePath))
     .map(([, entry]) => entry);
@@ -495,9 +562,17 @@ export function resolveFileDiffStatByChangedPath(
     return undefined;
   }
 
-  const match = resolveDiffEntryByPath(statsByPath, changedFilePath);
-  if (match) {
-    return match;
+  const direct = statsByPath.get(changedFilePath);
+  if (direct) {
+    return direct;
+  }
+
+  const matchingStats = Array.from(statsByPath.entries())
+    .filter(([path]) => diffStatPathsReferToSameFile(path, changedFilePath))
+    .map(([, stat]) => stat);
+  const uniqueMatch = matchingStats.length === 1 ? matchingStats.at(0) : undefined;
+  if (uniqueMatch) {
+    return uniqueMatch;
   }
 
   if (statsByPath.size === 1 && changedFileCount === 1) {

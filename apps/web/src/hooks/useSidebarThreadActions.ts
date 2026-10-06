@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { AppSettings } from "../appSettings";
 import { useComposerDraftStore } from "../composerDraftStore";
-import { showConfirmDialogFallback } from "../confirmDialogFallback";
+import { showConfirmDialog } from "../confirmDialogFallback";
 import {
   getFallbackThreadIdAfterDelete,
   getFallbackThreadIdAfterSnooze,
@@ -735,7 +735,7 @@ export function useSidebarThreadActions(input: {
         ].join("\n");
         const confirmed = api
           ? await api.dialogs.confirm(confirmationMessage)
-          : await showConfirmDialogFallback(confirmationMessage);
+          : await showConfirmDialog(confirmationMessage);
         if (!confirmed) return;
       }
       await deleteThread(threadId);
@@ -917,7 +917,7 @@ export function useSidebarThreadActions(input: {
         ].join("\n");
         const confirmed = api
           ? await api.dialogs.confirm(confirmationMessage)
-          : await showConfirmDialogFallback(confirmationMessage);
+          : await showConfirmDialog(confirmationMessage);
         if (!confirmed) return;
       }
       await archiveThreadWithUndo(threadId);
@@ -950,7 +950,7 @@ export function useSidebarThreadActions(input: {
       ];
       const confirmed = api
         ? await api.dialogs.confirm(archiveLines.join("\n"))
-        : await showConfirmDialogFallback(archiveLines.join("\n"));
+        : await showConfirmDialog(archiveLines.join("\n"));
       if (!confirmed) return;
 
       let archivedCount = 0;

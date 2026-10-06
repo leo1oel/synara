@@ -899,7 +899,7 @@ function DeviceVideoOverlay(props: {
     return (
       <p className="text-balance text-center text-ui-xs text-white/70 leading-snug">
         This browser cannot decode the simulator stream. Chrome, Edge, or Safari 17+ support the
-        WebCodecs video decoder Synara uses.
+        required WebCodecs video decoder.
       </p>
     );
   }
@@ -944,9 +944,9 @@ function DeviceBootLimitDialog(props: {
             and one of them is about to lose whatever is on it.
           */}
           <DialogDescription>
-            Synara keeps at most {state?.limit ?? 0} simulators running at once, because each one
-            holds a few gigabytes of memory. Pick one to shut down — anything running on it closes —
-            and {props.deviceName} starts in its place.
+            At most {state?.limit ?? 0} simulators can run at once, because each one holds a few
+            gigabytes of memory. Pick one to shut down — anything running on it closes — and
+            {props.deviceName} starts in its place.
           </DialogDescription>
         </DialogHeader>
         <ul className="space-y-1">

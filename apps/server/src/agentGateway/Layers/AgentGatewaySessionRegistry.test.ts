@@ -102,14 +102,18 @@ describe("AgentGatewaySessionRegistry", () => {
     assert.notInclude(JSON.stringify(verified), issued.token);
   });
 
-  it("keeps computer control opt-in instead of adding it to provider defaults", () => {
-    const registry = makeAgentGatewaySessionRegistry({ randomId: () => "computer" });
-    const ordinary = registry.issue(ThreadId.makeUnsafe("thread-1"), "codex");
-    const optedIn = registry.issue(ThreadId.makeUnsafe("thread-2"), "codex", {
-      additionalCapabilities: ["computer:control"],
-    });
+  it("issues device control only when the host explicitly enables it", () => {
+    const disabled = makeAgentGatewaySessionRegistry({
+      randomId: () => "disabled",
+      deviceControlEnabled: false,
+    }).issue(ThreadId.makeUnsafe("thread-disabled"), "codex");
+    const enabled = makeAgentGatewaySessionRegistry({
+      randomId: () => "enabled",
+      deviceControlEnabled: true,
+    }).issue(ThreadId.makeUnsafe("thread-enabled"), "codex");
 
-    assert.isFalse(ordinary.capabilities.has("computer:control"));
-    assert.isTrue(optedIn.capabilities.has("computer:control"));
+    assert.isFalse(disabled.capabilities.has("device:control"));
+    assert.isTrue(enabled.capabilities.has("device:control"));
+    assert.isTrue(disabled.capabilities.has("thread:write"));
   });
 });

@@ -1,8 +1,8 @@
 # Thread runtime and ChatView performance audit
 
-Date: 2026-08-08/09  
-Machine: MacBook Pro (Mac17,2), Apple M5 (4 performance + 6 efficiency cores), 32 GB RAM  
-OS: macOS 26.6 (25G72)  
+Date: 2026-08-08/09<br>
+Machine: MacBook Pro (Mac17,2), Apple M5 (4 performance + 6 efficiency cores), 32 GB RAM<br>
+OS: macOS 26.6 (25G72)<br>
 Runtime: Bun 1.3.12, Node 24.13.0, Electron 40.10.6, React 19, Vite 8.1.5
 
 Temperature was observed only as context. CPU, RSS/physical footprint, JavaScript

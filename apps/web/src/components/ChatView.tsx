@@ -1,3 +1,4 @@
+import { PULL_REQUEST_AUTO_FIX_ON } from "../betaFeatures";
 import { type LegendListRef } from "@legendapp/list/react";
 import {
   parseComputerInvocation,
@@ -36,6 +37,7 @@ import { pendingRequestInstanceKey } from "@synara/shared/threadSummary";
 import { deriveAssociatedWorktreeMetadata } from "@synara/shared/threadWorkspace";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { useLingui } from "@lingui/react";
 import {
   Suspense,
   lazy,
@@ -66,6 +68,7 @@ import {
   gitCreateDetachedWorktreeMutationOptions,
   gitGithubRepositoryQueryOptions,
   gitStatusQueryOptions,
+  gitBranchPullRequestQueryOptions,
 } from "~/lib/gitReactQuery";
 import {
   CheckboxCheckedIcon,
@@ -122,6 +125,26 @@ import {
 } from "../composerSlashCommands";
 import { stripDiffSearchParams } from "../diffRouteSearch";
 import { isElectron } from "../env";
+import {
+  LATTICE_AGENT_PERMISSION_MODE_REQUEST,
+  LATTICE_AGENT_PERMISSION_MODE_SET,
+  buildLatticeProjectHistoryCheckpoints,
+  embedWorkspaceMatches,
+  postAgentPermissionModeToLattice,
+  postEmbedReadyToLattice,
+  postHostContextRequestToLattice,
+  postHostContextSelectionClearToLattice,
+  postPaperLibraryRequestToLattice,
+  postProjectHistoryToLattice,
+  readEmbedMode,
+  readLatticeAgentPanelOpenedMessage,
+  readLatticeAgentPermissionModeMessage,
+  readLatticeCheckpointRestoreMessage,
+  readLatticeComposerFilesMessage,
+  readLatticeHostContextMessage,
+  readLatticePaperLibraryMessage,
+  type LatticePaperLibrarySnapshot,
+} from "../embedMode";
 import { useFeatureFlags } from "../featureFlags";
 import {
   resolveThreadMentionForThreadId,
@@ -150,6 +173,8 @@ import { formatShortcutLabel, shortcutLabelForCommand } from "../keybindings";
 import { isHomeChatContainerProject } from "../lib/chatProjects";
 import { isGroupContainerProject } from "../lib/groupProjects";
 import { appendComposerPromptText } from "../lib/chatReferences";
+import { deleteActiveThreadFromClient } from "../lib/activeThreadDelete";
+import { getLiveLatticeHostContext, setLiveLatticeHostContext } from "../lib/latticeHostContext";
 import { createPastedTextDraft } from "../lib/composerPastedText";
 import {
   buildComposerFileAttachmentsFromFiles,
@@ -257,6 +282,7 @@ import {
   resolveEnvironmentPanelOpen,
   resolveEnvironmentPanelPreferenceUpdate,
   resolveEnvironmentPanelVisible,
+  resolveEmbeddedProjectModelPreference,
   resolveGitRepoUiState,
   resolveSettledThreadBranchMismatch,
   resolveThreadArtifactWorkspaceRoot,
@@ -295,6 +321,8 @@ import { ComposerExtrasPanel } from "./chat/ComposerExtrasPanel";
 import { ComposerExtrasTrigger } from "./chat/ComposerExtrasTrigger";
 import { ComposerGoalHeader } from "./chat/ComposerGoalHeader";
 import { ComposerInputBanners } from "./chat/ComposerInputBanners";
+import { ComposerLatticeContextBar } from "./chat/ComposerLatticeContextBar";
+import { clearLatticeContextSelection } from "./chat/ComposerLatticeContextBar.logic";
 import { ComposerLiveChangesHeader } from "./chat/ComposerLiveChangesHeader";
 import {
   ComposerLocalDirectoryMenu,
@@ -438,6 +466,7 @@ import { useComposerReferences } from "./chat/useComposerReferences";
 import { useComposerVoiceController } from "./chat/useComposerVoiceController";
 import { useThreadErrorToast } from "./chat/useThreadErrorToast";
 import { useTranscriptAssistantSelectionAction } from "./chat/useTranscriptAssistantSelectionAction";
+import { observeLatticeComposerLayout } from "./chat/latticeComposerLayout";
 import {
   composerFooterPlanForTier,
   resolveNextComposerFooterTier,
@@ -501,6 +530,9 @@ function getRateLimitBannerDismissalKey(
 }
 
 const VOICE_RECORDER_ACTION_ARM_DELAY_MS = 250;
+const EMPTY_LATTICE_PAPER_MENTIONS: NonNullable<
+  Parameters<typeof useComposerCommandMenuItems>[0]["paperMentionSources"]
+> = [];
 
 function warnVoiceGuard(event: string, details?: Record<string, unknown>) {
   if (!import.meta.env.DEV) {
@@ -527,17 +559,18 @@ function ComposerControlSkeleton(props: { widthClassName: string }) {
   );
 }
 
-function ComposerModelLoadingControl(props: { widthClassName: string }) {
+function ComposerModelLoadingControl(props: { widthClassName?: string; compact?: boolean }) {
   return (
     <div
       aria-label="Loading models"
       className={cn(
         "flex h-8 shrink-0 items-center gap-2 rounded-md border border-border/50 px-2 text-muted-foreground",
+        props.compact && "w-8 justify-center px-0",
         props.widthClassName,
       )}
     >
       <RefreshCwIcon aria-hidden="true" className="size-3.5 animate-spin" />
-      <span className="truncate text-ui-xs">Loading models</span>
+      <span className={cn("truncate text-ui-xs", props.compact && "sr-only")}>Loading models</span>
     </div>
   );
 }
@@ -547,7 +580,7 @@ interface ChatViewProps {
   hideHeader?: boolean;
   paneScopeId?: string;
   surfaceMode?: "single" | "split";
-  presentationMode?: "default" | "editor";
+  presentationMode?: "default" | "editor" | "embed";
   isFocusedPane?: boolean;
   panelState?: SplitViewPanePanelState;
   onToggleDiffPanel?: () => void;
@@ -593,6 +626,7 @@ export default function ChatView({
   viewModeAction: viewModeActionProp,
   onCloseThreadPane,
 }: ChatViewProps) {
+  const { i18n } = useLingui();
   // Prop defaults are resolved here instead of in the destructuring pattern: an
   // AssignmentPattern in the parameter list makes React Compiler bail out (silently —
   // `panicThreshold` is unset) on this entire component, the hottest one in the app.
@@ -639,6 +673,9 @@ export default function ChatView({
     gitCreateDetachedWorktreeMutationOptions({ queryClient }),
   );
   const isEditorRail = presentationMode === "editor";
+  const isEmbed = presentationMode === "embed";
+  const [latticePaperLibrary, setLatticePaperLibrary] =
+    useState<LatticePaperLibrarySnapshot | null>(null);
   const isInactiveSplitPane = surfaceMode === "split" && !isFocusedPane;
   const {
     composerDraft,
@@ -776,13 +813,17 @@ export default function ChatView({
   const fallbackDraftProject = useStore(
     useMemo(() => createProjectSelector(fallbackDraftProjectId), [fallbackDraftProjectId]),
   );
+  const fallbackDraftProjectModelPreference = resolveEmbeddedProjectModelPreference({
+    embedded: isEmbed,
+    selection: fallbackDraftProject?.defaultModelSelection,
+  });
   const draftFallbackModelSelection = useMemo<ModelSelection>(
     () =>
       resolveDraftFallbackModelSelection({
-        projectDefault: fallbackDraftProject?.defaultModelSelection,
+        projectDefault: fallbackDraftProjectModelPreference,
         settingsDefaultProvider: settings.defaultProvider,
       }),
-    [fallbackDraftProject?.defaultModelSelection, settings.defaultProvider],
+    [fallbackDraftProjectModelPreference, settings.defaultProvider],
   );
 
   const [isDragOverComposer, setIsDragOverComposer] = useState(false);
@@ -1672,6 +1713,7 @@ export default function ChatView({
         activeThread.session?.orchestrationStatus === "running"
           ? (activeThread.session.activeTurnId ?? null)
           : null,
+      latestTurn: activeThread.latestTurn,
     });
     return editTarget.editable ? (editTarget.messageId as MessageId) : null;
   }, [activeThread, isServerThread]);
@@ -1984,7 +2026,7 @@ export default function ChatView({
   // Stable identity: this element is forwarded to the memoized MessagesTimeline, so
   // building it inline in JSX would defeat its `memo()` on every keystroke.
   const transcriptEmptyStateContent = useMemo((): ReactNode => {
-    if (isEditorRail) {
+    if (isEditorRail || isEmbed) {
       return <span aria-hidden="true" />;
     }
     if (threadDetailHydration !== "ready") {
@@ -2001,6 +2043,7 @@ export default function ChatView({
     handleRetryThreadDetailSync,
     hasPendingThreadWork,
     isEditorRail,
+    isEmbed,
     threadDetailHydration,
   ]);
   // Empty top-level threads render the centered landing composer instead of the transcript pane.
@@ -2012,6 +2055,7 @@ export default function ChatView({
     !activeThread?.parentThreadId &&
     !activeThreadIsSidechat &&
     !isEditorRail &&
+    !isEmbed &&
     threadDetailHydration === "ready";
   const isEmptyChatLanding =
     isCenteredEmptyLanding && Boolean(homeDir) && isContainerLandingProject;
@@ -2022,6 +2066,70 @@ export default function ChatView({
     standaloneSidechatContext?.itemKind === "issue" ? "issue" : "pull request";
   const { turnDiffSummaries, inferredCheckpointTurnCountByTurnId } =
     useTurnDiffSummaries(activeThread);
+
+  useEffect(() => {
+    if (!isEmbed || !activeThread?.id || !activeProject?.cwd || !composerFormRef.current) return;
+    const config = readEmbedMode();
+    if (!config || !embedWorkspaceMatches(config, activeProject.cwd)) return;
+    // The route can mount before this deferred view. Signal from its committed
+    // composer, without waiting for paints in an iframe the host still covers.
+    postEmbedReadyToLattice(config);
+  }, [activeProject?.cwd, activeThread?.id, isEmbed]);
+
+  useEffect(() => {
+    if (!isEmbed) return;
+    const config = readEmbedMode();
+    if (!config?.hostOrigin) return;
+    const onHostMessage = (event: MessageEvent) => {
+      const context = readLatticeHostContextMessage(event, config);
+      if (context) setLiveLatticeHostContext(context);
+      const papers = readLatticePaperLibraryMessage(event, config);
+      if (papers) setLatticePaperLibrary(papers);
+      // Parsing this message here preserves the host handshake even though the
+      // upstream quote surface no longer needs a remount side effect.
+      readLatticeAgentPanelOpenedMessage(event, config);
+    };
+    postHostContextRequestToLattice(config);
+    postPaperLibraryRequestToLattice(config);
+    window.addEventListener("message", onHostMessage);
+    return () => {
+      window.removeEventListener("message", onHostMessage);
+      setLiveLatticeHostContext(null);
+      setLatticePaperLibrary(null);
+    };
+  }, [isEmbed]);
+
+  const clearLiveLatticeHostSelection = useCallback(() => {
+    if (!isEmbed) return;
+    const context = getLiveLatticeHostContext();
+    const config = readEmbedMode();
+    if (!context || !config?.hostOrigin) return;
+    setLiveLatticeHostContext(clearLatticeContextSelection(context));
+    postHostContextSelectionClearToLattice(config);
+  }, [isEmbed]);
+
+  useEffect(() => {
+    if (!isEmbed || !activeThread || !activeProject) return;
+    const config = readEmbedMode();
+    if (!config?.hostOrigin || !embedWorkspaceMatches(config, activeProject.cwd)) return;
+    postProjectHistoryToLattice(
+      config,
+      activeThread.id,
+      buildLatticeProjectHistoryCheckpoints({
+        threadId: activeThread.id,
+        threadTitle: activeThread.title,
+        messages: activeThread.messages,
+        summaries: turnDiffSummaries,
+        inferredCheckpointTurnCountByTurnId,
+      }),
+    );
+  }, [
+    activeProject,
+    activeThread,
+    inferredCheckpointTurnCountByTurnId,
+    isEmbed,
+    turnDiffSummaries,
+  ]);
   const turnDiffSummaryByAssistantMessageId = useMemo(() => {
     const messagesForDiffAnchoring: {
       id: MessageId;
@@ -2102,6 +2210,9 @@ export default function ChatView({
 
   const branchesQuery = useQuery(gitBranchesQueryOptions(gitBranchSourceCwd));
   const gitStatusQuery = useQuery(gitStatusQueryOptions(gitBranchSourceCwd));
+  const branchPullRequestQuery = useQuery(
+    gitBranchPullRequestQueryOptions(gitBranchSourceCwd, PULL_REQUEST_AUTO_FIX_ON && isServerThread),
+  );
   const localFolderBrowseRootPath = getLocalFolderBrowseRootPath(
     serverConfigQuery.data?.homeDir ?? null,
     isMacNavigatorPlatform(),
@@ -2316,7 +2427,9 @@ export default function ChatView({
       threads: composerThreadSummaries,
       projects: composerThreadProjects,
       currentThreadId: threadId,
+      ...(isEmbed ? { scopeProjectId: activeProjectId } : {}),
     },
+    paperMentionSources: latticePaperLibrary?.papers ?? EMPTY_LATTICE_PAPER_MENTIONS,
   });
   const composerMenuItems = useMemo(() => {
     if (composerCommandPicker === "fork-target") {
@@ -2438,7 +2551,7 @@ export default function ChatView({
     [handoffTargets],
   );
 
-  const handoffActionLabel = activeThread ? "Hand off thread" : "Create handoff thread";
+  const handoffActionLabel = activeThread ? i18n._("Hand off thread") : i18n._("Create handoff thread");
   const activeProviderStatus = useMemo(
     () => findProviderStatus(providerStatuses, selectedProvider, selectedProviderInstanceId),
     [selectedProvider, selectedProviderInstanceId, providerStatuses],
@@ -2449,7 +2562,9 @@ export default function ChatView({
   );
   const visibleActiveProviderStatus =
     activeProviderHealthBannerDismissalKey &&
-    dismissedProviderHealthBannerKeys.includes(activeProviderHealthBannerDismissalKey)
+    (dismissedProviderHealthBannerKeys ?? EMPTY_DISMISSED_PROVIDER_HEALTH_BANNERS).includes(
+      activeProviderHealthBannerDismissalKey,
+    )
       ? null
       : activeProviderStatus;
   const voiceProviderTarget = useMemo(
@@ -3936,6 +4051,60 @@ export default function ChatView({
     [addComposerFiles, addComposerImages],
   );
 
+  // Native drops are intercepted by Tauri and relayed as files, not DOM drops.
+  useEffect(() => {
+    if (!isEmbed) return;
+    const config = readEmbedMode();
+    if (!config?.hostOrigin) return;
+    const receive = (event: MessageEvent) => {
+      const files = readLatticeComposerFilesMessage(event, config);
+      if (!files) return;
+      addComposerAttachments(files);
+      focusComposer();
+    };
+    window.addEventListener("message", receive);
+    return () => window.removeEventListener("message", receive);
+  }, [addComposerAttachments, focusComposer, isEmbed]);
+
+  useEffect(() => {
+    if (!isEmbed) return;
+    const config = readEmbedMode();
+    if (!config?.hostOrigin) return;
+    const autoModeAvailable = providerModelSupportsAutoRuntimeMode(
+      selectedProvider,
+      selectedRuntimeModel,
+      activeProviderStatus,
+    );
+    const publish = () => postAgentPermissionModeToLattice(config, runtimeMode, autoModeAvailable);
+    const receive = (event: MessageEvent) => {
+      const message = readLatticeAgentPermissionModeMessage(event, config);
+      if (!message) return;
+      if (message.type === LATTICE_AGENT_PERMISSION_MODE_REQUEST) {
+        publish();
+        return;
+      }
+      if (
+        message.type === LATTICE_AGENT_PERMISSION_MODE_SET &&
+        message.mode !== runtimeMode &&
+        (message.mode !== "auto" || autoModeAvailable)
+      ) {
+        handleRuntimeModeChange(message.mode);
+        return;
+      }
+      publish();
+    };
+    publish();
+    window.addEventListener("message", receive);
+    return () => window.removeEventListener("message", receive);
+  }, [
+    activeProviderStatus,
+    handleRuntimeModeChange,
+    isEmbed,
+    runtimeMode,
+    selectedProvider,
+    selectedRuntimeModel,
+  ]);
+
   const removeComposerFile = (fileId: string) => {
     discardPromptHistoryNavigationForComposerMutation();
     removeComposerDraftFile(threadId, fileId);
@@ -4005,9 +4174,9 @@ export default function ChatView({
       }
       const confirmed = await api.dialogs.confirm(
         [
-          `Revert this thread to checkpoint ${turnCount}?`,
-          "This will discard newer messages and turn diffs in this thread.",
-          "This action cannot be undone.",
+          i18n._("Revert this thread to checkpoint {turnCount}?", { turnCount }),
+          i18n._("This will discard newer messages and turn diffs in this thread."),
+          i18n._("This action cannot be undone."),
         ].join("\n"),
       );
       if (!confirmed) {
@@ -4034,6 +4203,7 @@ export default function ChatView({
       setIsRevertingCheckpoint(false);
     },
     [
+      i18n,
       setIsRevertingCheckpoint,
       activeThread,
       hasLiveTurn,
@@ -4109,6 +4279,19 @@ export default function ChatView({
       setThreadError,
     ],
   );
+
+  useEffect(() => {
+    if (!isEmbed || !activeThread) return;
+    const config = readEmbedMode();
+    if (!config?.hostOrigin) return;
+    const receive = (event: MessageEvent) => {
+      const request = readLatticeCheckpointRestoreMessage(event, config);
+      if (!request || request.threadId !== activeThread.id) return;
+      void onUndoTurnFiles([request.turnCount]);
+    };
+    window.addEventListener("message", receive);
+    return () => window.removeEventListener("message", receive);
+  }, [activeThread, isEmbed, onUndoTurnFiles]);
 
   // Stable: it reads the whole thread, which changes with every streamed token.
   const onCreateHandoffThread = useStableCallback(async (target: ThreadHandoffTarget) => {
@@ -4544,6 +4727,7 @@ export default function ChatView({
     composerContextWindowLabel,
     Boolean(runtimeUsageContextWindow),
   ].join(":");
+  const useSplitComposerPickerControls = isLocalDraftThread && !hasThreadStarted;
   useLayoutEffect(() => {
     composerFooterDemotionWidthsRef.current = [];
     composerFooterTierRef.current = 0;
@@ -4561,6 +4745,24 @@ export default function ChatView({
   useLayoutEffect(() => {
     composerFooterLayoutSyncRef.current?.();
   }, [composerFooterLayoutSyncRef, composerFooterTier]);
+  useLayoutEffect(() => {
+    if (!isEmbed) return;
+    return observeLatticeComposerLayout(
+      composerFormRef.current,
+      showComposerModelBootstrapSkeleton,
+    );
+  }, [
+    composerFormRef,
+    activeThread?.id,
+    composerFooterPlanInputsKey,
+    composerFooterTier,
+    isComposerApprovalState,
+    isEmbed,
+    shouldRenderChatPaneContent,
+    showComposerModelBootstrapSkeleton,
+  ]);
+  const composerModelPickerWidthClassName = isComposerFooterCompact ? "w-32" : "w-36 sm:w-44";
+  const composerOptionsPickerWidthClassName = isComposerFooterCompact ? "w-28" : "w-32";
   const composerModelEffortPickerWidthClassName = isComposerFooterCompact ? "w-40" : "w-44 sm:w-52";
   const handleComposerModelEffortPickerOpenChange = useCallback(
     (open: boolean) => {
@@ -4584,16 +4786,19 @@ export default function ChatView({
   // keeps those children from re-rendering (and re-registering editor commands) for it.
   const handleProviderModelChange = useStableCallback(onProviderModelSelect);
   const composerModelAndTraitsControls = showComposerModelBootstrapSkeleton ? (
-    selectedProviderRuntimeModelDiscoveryPending ? (
+    isEmbed ? (
+      <ComposerModelLoadingControl compact />
+    ) : selectedProviderRuntimeModelDiscoveryPending ? (
       <ComposerModelLoadingControl widthClassName={composerModelEffortPickerWidthClassName} />
     ) : (
       <ComposerControlSkeleton widthClassName={composerModelEffortPickerWidthClassName} />
     )
   ) : (
     <ComposerModelPicker
+      dense={isEmbed}
+      contextWindowLabel={composerContextWindowLabel}
       hideModelLabel={!composerFooterControlsPlan.showModelLabel}
       hideStatusLabel={!composerFooterControlsPlan.showTraitsLabel}
-      contextWindowLabel={composerContextWindowLabel}
       effortControl={settings.composerEffortSlider ? "slider" : "menu"}
       provider={selectedProvider}
       model={selectedModelForPickerWithCustomFallback}
@@ -5022,6 +5227,64 @@ export default function ChatView({
       search: (previous) => ({ ...stripDiffSearchParams(previous), view: "editor" }),
     });
   }, [activeProjectIdForNewChat, handleNewThread]);
+  const onNewEmbedChat = useCallback(() => {
+    if (!activeProjectIdForNewChat) return;
+    void handleNewThread(
+      activeProjectIdForNewChat,
+      { fresh: true },
+      {
+        search: (previous) => stripDiffSearchParams(previous),
+      },
+    );
+  }, [activeProjectIdForNewChat, handleNewThread]);
+  const onDeleteEmbedChat = useCallback(
+    async (targetThreadId: ThreadId, targetThreadTitle: string) => {
+      if (!isEmbed) return;
+      const api = readNativeApi();
+      if (!api) return;
+      const confirmed = await api.dialogs.confirm(
+        [
+          i18n._('Delete "{targetThreadTitle}"?', { targetThreadTitle }),
+          i18n._("This permanently clears this conversation history."),
+          i18n._("This action cannot be undone."),
+        ].join("\n"),
+      );
+      if (!confirmed) return;
+      try {
+        await deleteActiveThreadFromClient({
+          threadId: targetThreadId,
+          onDeleted: ({ thread }) => {
+            const draftStore = useComposerDraftStore.getState();
+            draftStore.clearDraftThread(thread.id);
+            draftStore.clearProjectDraftThreadById(thread.projectId, thread.id);
+            useTerminalStateStore.getState().clearTerminalState(thread.id);
+            removeThreadFromSplitViews(thread.id);
+            clearTemporaryThread(thread.id);
+            if (thread.id === activeThread?.id) onNewEmbedChat();
+          },
+          removeWorktree: (worktree) => api.git.removeWorktree(worktree),
+          unknownWorktreeErrorMessage: i18n._("Unknown error."),
+        });
+      } catch (error) {
+        toastManager.add({
+          type: "error",
+          title: i18n._("Could not delete thread"),
+          description:
+            error instanceof Error
+              ? error.message
+              : i18n._("The conversation could not be deleted."),
+        });
+      }
+    },
+    [
+      activeThread?.id,
+      clearTemporaryThread,
+      i18n,
+      isEmbed,
+      onNewEmbedChat,
+      removeThreadFromSplitViews,
+    ],
+  );
   const onOpenEditorChat = useCallback(
     (nextThreadId: ThreadId) => {
       storeOpenChatThreadPage(nextThreadId);
@@ -5249,6 +5512,8 @@ export default function ChatView({
       : null,
     isHomeChat: isChatProject,
     isEmpty: timelineEntries.length === 0,
+    genericChatTitle: i18n._("New Chat"),
+    genericThreadTitle: i18n._("New thread"),
   });
 
   const handleRenameActiveThread = async (newTitle: string) => {
@@ -5308,7 +5573,7 @@ export default function ChatView({
           scheduleComposerFocus();
         }}
       />
-      {!isVoiceRecording && !isVoiceTranscribing ? (
+      {!isEmbed && !isVoiceRecording && !isVoiceTranscribing ? (
         <RuntimeUsageControls
           {...runtimeUsageControlsProps}
           className="shrink-0"
@@ -5566,14 +5831,9 @@ export default function ChatView({
   const environmentPanelVisibleEffective =
     environmentPanelVisible && auxiliarySurface !== "project" && auxiliarySurface !== "library";
   const environmentAppliesContentInset =
-    (environmentPanelVisibleEffective || projectPanelVisible || libraryPanelVisible) &&
+    !isEmbed && (environmentPanelVisibleEffective || projectPanelVisible || libraryPanelVisible) &&
     !environmentUsesFloatingOverlay;
   const environmentOverlayVariant = environmentUsesFloatingOverlay ? "floating" : "docked";
-
-  // Ambient preview rail: the live card sits below the Environment card and
-  // the chat frees its gutter, so it never covers the transcript. Space is
-  // reserved only for a card that actually has content (live phase + a landed
-  // frame), at its fitted width — never for an armed or waiting session.
   const environmentInsetPx = environmentAppliesContentInset
     ? ENVIRONMENT_DOCKED_CONTENT_INSET_PX
     : 0;
@@ -5582,10 +5842,11 @@ export default function ChatView({
   );
   const previewBudgetPx = computerPreviewBudgetPx({
     mainContentWidthPx: mainContentWidth,
-    environmentInsetPx: environmentInsetPx,
+    environmentInsetPx,
     caps: previewCaps,
   });
   const previewReservesInset =
+    !isEmbed &&
     environmentOverlayVariant === "docked" &&
     settings.autoOpenComputerPane &&
     previewSession?.phase === "live" &&
@@ -5596,13 +5857,13 @@ export default function ChatView({
     : 0;
   const contentInsetRightPx =
     environmentInsetPx + previewInsetPx > 0 ? environmentInsetPx + previewInsetPx : undefined;
-  const environmentHeaderState = environmentEnabled
+  const environmentHeaderState = environmentEnabled && !isEmbed
     ? {
         open: environmentPanelVisibleEffective,
         onOpenChange: setEnvironmentFromAuxiliary,
       }
     : null;
-  const projectHeaderState = projectPanelEnabled
+  const projectHeaderState = projectPanelEnabled && !isEmbed
     ? {
         open: projectPanelVisible,
         onOpenChange: setProjectFromAuxiliary,
@@ -5610,7 +5871,7 @@ export default function ChatView({
           activeProject === undefined ? false : projectPanelNeedsAttention.has(activeProject.id),
       }
     : null;
-  const libraryHeaderState = projectPanelEnabled
+  const libraryHeaderState = projectPanelEnabled && !isEmbed
     ? {
         open: libraryPanelVisible,
         onOpenChange: setLibraryFromAuxiliary,
@@ -5701,6 +5962,9 @@ export default function ChatView({
           {/* A bare wrapper keeps the normal-flow panels' -mb-px seam onto the input shell
                 via margin collapse. */}
           <div>
+            {isEmbed ? (
+              <ComposerLatticeContextBar onClearSelection={clearLiveLatticeHostSelection} />
+            ) : null}
             {isSidechatExpired ? (
               <ExpiredSidechatNotice onStartNew={startReplacementSidechat} />
             ) : null}
@@ -5806,7 +6070,11 @@ export default function ChatView({
             <ComposerPullRequestAutoFixHint
               threadId={threadId}
               isServerThread={isServerThread}
-              pullRequest={gitStatusQuery.data?.pr ?? null}
+              pullRequest={
+                branchPullRequestQuery.data?.branch === gitStatusQuery.data?.branch
+                  ? (branchPullRequestQuery.data?.pr ?? null)
+                  : null
+              }
               isWorking={isWorking}
               attachedToPrevious={
                 showComposerLiveChangesHeader ||
@@ -5948,6 +6216,7 @@ export default function ChatView({
                   <div className={COMPOSER_COMMAND_MENU_FLOATING_WRAPPER_CLASS_NAME}>
                     {composerExtrasPanelOpen ? (
                       <ComposerExtrasPanel
+                          attachmentsOnly={isEmbed}
                         panelId={COMPOSER_EXTRAS_PANEL_ID}
                         interactionMode={interactionMode}
                         supportsFastMode={composerTraitSelection.caps.supportsFastMode}
@@ -6240,8 +6509,13 @@ export default function ChatView({
               }
             : {})}
           isSidechat={isSidechatThread(activeThread)}
-          hideSidebarControls={isEditorRail}
+          hideSidebarControls={isEditorRail || isEmbed}
           hideHandoffControls={terminalWorkspaceTerminalTabActive || isEditorRail}
+          hideWorkspaceControls={isEmbed}
+          handoffIconOnly={isEmbed}
+          {...(isEmbed && activeProject ? { historyProjectId: activeProject.id } : {})}
+          {...(isEmbed ? { onNewChat: onNewEmbedChat } : {})}
+          {...(isEmbed ? { onDeleteChat: onDeleteEmbedChat } : {})}
           minimalChrome={isCenteredEmptyLanding}
           isGitRepo={isGitRepo}
           openInTarget={threadWorkspaceCwd}
@@ -6259,8 +6533,8 @@ export default function ChatView({
           showHandoffAction={handoffAvailability.providerHandoff}
           gitCwd={threadWorkspaceCwd}
           diffTotals={repoDiffTotals}
-          showGitActions={showGitActions && !isEditorRail}
-          showDiffToggle={!isEditorRail}
+          showGitActions={showGitActions && !isEditorRail && !isEmbed}
+          showDiffToggle={!isEditorRail && !isEmbed}
           diffOpen={resolvedDiffOpen}
           diffDisabledReason={diffDisabledReason}
           rightDockOpen={rightDockOpen}
@@ -6670,7 +6944,7 @@ export default function ChatView({
           ) : null}
 
           {/* Environment overlay — always mounted so open/close can transition in lockstep with inset. */}
-          {environmentEnabled ? (
+          {environmentEnabled && !isEmbed ? (
             <EnvironmentPanel
               {...environmentPanelProps}
               open={environmentPanelVisibleEffective}

@@ -494,6 +494,44 @@ layer("reconcileMigrationLineage", (it) => {
   );
 });
 
+const forkMigration090Layer = it.layer(Layer.mergeAll(NodeSqliteClient.layerMemory()));
+
+forkMigration090Layer("fork migration 090 upgrade", (it) => {
+  it.effect("applies all later migrations without replaying 090 or rewriting valid lineage", () =>
+    Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      yield* runMigrations({ toMigrationInclusive: 90 });
+      const lineageThrough090 = yield* trackerRows(sql);
+
+      const executed = yield* runMigrations();
+      assert.deepStrictEqual(executed, [
+        [91, "AutomationFailureTolerance"],
+        [92, "BackfillAutomationRunThreadSource"],
+        [93, "BackfillMaxIterationsDisabledReason"],
+        [94, "ProjectionThreadsGoal"],
+        [95, "ProjectionThreadsGoalTiming"],
+        [96, "ProjectionThreadsGoalAchievements"],
+        [97, "ProjectionThreadsSidechatLifecycle"],
+        [98, "MigrateKiloToOpenCode"],
+        [99, "InvalidateProjectionThreadsCursor"],
+        [100, "MessageTextChunks"],
+        [101, "RemoveTranscriptMarkers"],
+        [102, "ProjectionThreadMessagesTurnBoundary"],
+        [103, "ClaudeTokenAccounting"],
+        [104, "ProjectionThreadsClaudeCacheReview"],
+        [105, "AsyncUserInput"],
+        [106, "ProjectImportOrigins"],
+        [107, "ProjectionThreadsHumanMessage"],
+        [108, "GatewayCompletions"],
+      ]);
+
+      const upgradedLineage = yield* trackerRows(sql);
+      assert.deepStrictEqual(upgradedLineage.slice(0, lineageThrough090.length), lineageThrough090);
+      assert.strictEqual(upgradedLineage.filter((row) => row.migration_id === 90).length, 1);
+    }),
+  );
+});
+
 const providerDeliveryCutoverLayer = it.layer(Layer.mergeAll(NodeSqliteClient.layerMemory()));
 
 providerDeliveryCutoverLayer(

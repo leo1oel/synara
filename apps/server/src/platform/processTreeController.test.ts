@@ -1,7 +1,8 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-
-import { describe, expect, it, vi } from "vitest";
+import * as processRuntime from "@synara/shared/processRuntime";
+import { teardownChildProcessTree } from "./supervisedProcessTeardown";
 
 import {
   captureProcessTree,
@@ -25,6 +26,154 @@ function windowsTree(): ProcessChildrenMap {
     ],
   ]);
 }
+
+function snapshotResult(stdout: string, status = 0, stderr = "") {
+  return { pid: 1, output: [null, stdout, stderr], stdout, stderr, status, signal: null };
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  delete process.env.SYNARA_PROCESS_PS_PATH;
+});
+
+describe("POSIX process-tree controller", () => {
+  it.skipIf(process.platform === "win32")(
+    "captures, inspects and stops a real owned process",
+    async () => {
+      // Self-roots now fail closed. Exercise a separately owned shell and its
+      // descendant instead, so the test also verifies real subtree teardown.
+      const child = spawn("/bin/sh", ["-c", "sleep 60 & wait"], { stdio: "ignore" });
+      try {
+        await once(child, "spawn");
+        const tree = await vi.waitFor(async () => {
+          const snapshot = await captureProcessTree(child.pid!);
+          expect(snapshot.descendants.some((entry) => entry.command === "sleep 60")).toBe(true);
+          return snapshot;
+        });
+        expect(tree.captureComplete).toBe(true);
+        const owned = tree.descendants.find((entry) => entry.command === "sleep 60");
+        expect(owned).toBeDefined();
+        const killer = createProcessTreeKiller();
+        expect(
+          killer.capture(child.pid!).descendants.some((entry) => entry.pid === owned!.pid),
+        ).toBe(true);
+        const captured = { descendants: [owned!], captureComplete: true };
+        expect(await inspectProcessTree(captured)).toEqual({ verified: true, survivors: [owned] });
+        await teardownChildProcessTree(child);
+        expect(child.exitCode !== null || child.signalCode !== null).toBe(true);
+        expect(await inspectProcessTree(captured)).toEqual({ verified: true, survivors: [] });
+      } finally {
+        if (child.exitCode === null && child.signalCode === null) {
+          await teardownChildProcessTree(child);
+        }
+      }
+    },
+  );
+
+  it("retries a transient asynchronous snapshot failure", async () => {
+    let attempts = 0;
+    const childrenByParentPid: ProcessChildrenMap = new Map([
+      [100, [{ pid: 101, command: "provider-child --serve" }]],
+      [101, [{ pid: 102, command: "provider-worker" }]],
+    ]);
+
+    const captured = await captureProcessTree(100, {
+      platform: "darwin",
+      capturePosixChildren: async () => {
+        attempts += 1;
+        return attempts === 1 ? null : childrenByParentPid;
+      },
+    });
+
+    expect(attempts).toBe(2);
+    expect(captured).toEqual({
+      captureComplete: true,
+      descendants: [
+        { pid: 101, command: "provider-child --serve" },
+        { pid: 102, command: "provider-worker" },
+      ],
+    });
+  });
+
+  it("reports an incomplete tree when every asynchronous snapshot fails", async () => {
+    let attempts = 0;
+
+    const captured = await captureProcessTree(100, {
+      platform: "linux",
+      capturePosixChildren: async () => {
+        attempts += 1;
+        return null;
+      },
+    });
+
+    expect(attempts).toBe(2);
+    expect(captured).toEqual({ descendants: [], captureComplete: false });
+  });
+
+  it("uses the host snapshot contract and captures parent relationships without parsing identity tokens", () => {
+    process.env.SYNARA_PROCESS_PS_PATH = "/signed/lattice-process-snapshot";
+    const spawnSync = vi
+      .spyOn(processRuntime, "spawnProcessSync")
+      .mockImplementation(() => snapshotResult("101 100 lattice-process:1700000000:42\n") as never);
+
+    expect(createProcessTreeKiller().capture(100)).toEqual({
+      captureComplete: true,
+      descendants: [{ pid: 101, command: "lattice-process:1700000000:42" }],
+    });
+    expect(spawnSync).toHaveBeenCalledExactlyOnceWith(
+      "/signed/lattice-process-snapshot",
+      ["-eo", "pid=,ppid=,command="],
+      expect.objectContaining({ encoding: "utf8" }),
+    );
+  });
+
+  it("uses opaque host identities for inspection and rejects PID reuse", () => {
+    process.env.SYNARA_PROCESS_PS_PATH = "/signed/lattice-process-snapshot";
+    const spawnSync = vi
+      .spyOn(processRuntime, "spawnProcessSync")
+      .mockImplementation(() => snapshotResult("101 lattice-process:1700000001:7\n") as never);
+    const captured = { pid: 101, command: "lattice-process:1700000000:42" };
+
+    expect(createProcessTreeKiller().inspect?.({ descendants: [captured] })).toEqual({
+      verified: true,
+      survivors: [],
+    });
+    expect(spawnSync).toHaveBeenCalledExactlyOnceWith(
+      "/signed/lattice-process-snapshot",
+      ["-p", "101", "-o", "pid=,command="],
+      expect.objectContaining({ encoding: "utf8" }),
+    );
+  });
+
+  it("treats every nonzero host snapshot exit as unknown", () => {
+    process.env.SYNARA_PROCESS_PS_PATH = "/signed/lattice-process-snapshot";
+    vi.spyOn(processRuntime, "spawnProcessSync").mockImplementation(
+      () => snapshotResult("", 1) as never,
+    );
+    const captured = { pid: 101, command: "lattice-process:1700000000:42" };
+
+    expect(createProcessTreeKiller().inspect?.({ descendants: [captured] })).toEqual({
+      verified: false,
+      survivors: [captured],
+    });
+  });
+
+  it("keeps standard ps status 1 with empty stderr as a proven absence", () => {
+    vi.spyOn(processRuntime, "spawnProcessSync").mockImplementation(
+      () => snapshotResult("", 1) as never,
+    );
+    const captured = {
+      pid: 101,
+      command: "worker",
+      startedAt: "Fri Sep 18 10:00:00 2026",
+    };
+
+    expect(createProcessTreeKiller().inspect?.({ descendants: [captured] })).toEqual({
+      verified: true,
+      survivors: [],
+    });
+  });
+});
 
 describe("Windows process-tree controller", () => {
   it("captures child and grandchild identities from one platform snapshot", async () => {

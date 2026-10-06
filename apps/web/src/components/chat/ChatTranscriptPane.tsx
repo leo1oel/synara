@@ -6,9 +6,10 @@
 import { type MessageId, type ThreadId, type TurnId } from "@synara/contracts";
 import { type LegendListRef } from "@legendapp/list/react";
 import {
+  useCallback,
   useEffect,
   useMemo,
-  useCallback,
+  useRef,
   useState,
   useSyncExternalStore,
   type ComponentProps,
@@ -28,8 +29,8 @@ import { getAudioLevelSubscriber, isAudioLevelAvailable } from "~/lib/audioLevel
 import { DISCLOSURE_CONTENT_MOTION_CLASS } from "~/lib/disclosureMotion";
 import { type ExpandedImagePreview } from "./ExpandedImagePreview";
 import { ChatEmptyStateHero } from "./ChatEmptyStateHero";
+import { ExternalScrollbar } from "../ui/external-scrollbar";
 import { MessagesTimeline, type MessagesTimelineController } from "./MessagesTimeline";
-import { composerOverlayAffordanceBottomPx } from "./composerOverlay";
 import { MessageTrail } from "./MessageTrail";
 import { createActiveTrailStore, deriveMessageTrailItems } from "./messageTrail.logic";
 import { createThreadFindHighlightStore, type ThreadFindHighlightStore } from "./threadFind.logic";
@@ -37,6 +38,7 @@ import { AgentActivityDetailView } from "./AgentActivityDetailView";
 import type { AgentActivityDetail } from "./agentActivity.logic";
 import { ThreadErrorBanner } from "./ThreadErrorBanner";
 import { ImportedHistoryButton, useImportedHistory } from "~/projectImport/ImportedHistoryButton";
+import { COMPOSER_OVERLAY_TUCK_PX, composerOverlayAffordanceBottomPx } from "./composerOverlay";
 
 interface ChatTranscriptPaneProps {
   activeThreadId: string;
@@ -223,17 +225,15 @@ export function ChatTranscriptPane({
   onResolveWorktreeSetup,
   findHighlightStore: findHighlightStoreProp,
 }: ChatTranscriptPaneProps) {
-  // The composer floats over the transcript's bottom edge, so the scroll-to-bottom
-  // affordance rides above it on the same inset the transcript content uses.
-  const scrollButtonFrameStyle: CSSProperties | undefined =
-    contentInsetRightPx || contentInsetBottomPx
-      ? {
-          ...(contentInsetRightPx ? { paddingRight: contentInsetRightPx } : {}),
-          ...(contentInsetBottomPx
-            ? { bottom: composerOverlayAffordanceBottomPx(contentInsetBottomPx) }
-            : {}),
-        }
-      : undefined;
+  const composerHeightPx = contentInsetBottomPx
+    ? contentInsetBottomPx + COMPOSER_OVERLAY_TUCK_PX
+    : 0;
+  const scrollButtonFrameStyle: CSSProperties = {
+    ...(contentInsetRightPx ? { paddingRight: contentInsetRightPx } : {}),
+    ...(composerHeightPx
+      ? { bottom: composerOverlayAffordanceBottomPx(contentInsetBottomPx ?? 0) }
+      : {}),
+  };
 
   // Left-edge navigation trail: one tick per sent message. Current + visible
   // highlights are pushed up from MessagesTimeline as the viewport scrolls. They
@@ -294,6 +294,14 @@ export function ChatTranscriptPane({
   };
 
   const agentDetailOpen = Boolean(agentActivityDetail && onCloseAgentActivityDetail);
+  // The timeline hides its native scrollbar and this pane draws the product
+  // overlay next to it instead (LegendList must stay the scroll owner).
+  const surfaceRef = useRef<HTMLDivElement>(null);
+  const getTimelineViewport = useCallback(
+    () =>
+      surfaceRef.current?.querySelector<HTMLElement>('[data-chat-scroll-container="true"]') ?? null,
+    [],
+  );
 
   return (
     <div
@@ -317,7 +325,7 @@ export function ChatTranscriptPane({
         </div>
       ) : null}
 
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div ref={surfaceRef} className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         {/* The timeline stays mounted under the agent detail: unmounting it would rebuild
             every row and lose the scroll position on Back. The wrapper has no box of its own
             (`contents`), so the timeline's layout and measurement are the same either way. */}
@@ -424,6 +432,20 @@ export function ChatTranscriptPane({
               timestampFormat={timestampFormat}
             />
           </div>
+        ) : null}
+
+        {!agentActivityDetail ? (
+          // Keyed per thread: a switch recreates the scroller element and the
+          // overlay must re-attach to the new one. The prefix keeps this key
+          // distinct from the sibling MessagesTimeline's bare activeThreadId —
+          // duplicate keys in one children list corrupt reconciliation and
+          // left the previous thread's empty-state DOM mounted beside the
+          // list, squeezing the transcript into the bottom half of the pane.
+          <ExternalScrollbar
+            key={`external-scrollbar:${activeThreadId}`}
+            getViewport={getTimelineViewport}
+            bottomInsetPx={composerHeightPx}
+          />
         ) : null}
 
         {!agentActivityDetail ? (

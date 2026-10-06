@@ -4202,6 +4202,32 @@ describe("thread checkpoint control", () => {
     });
   });
 
+  it.each([1, 2, 3])("returns complete retained paginated history after reverting %i turns", async (numTurns) => {
+    const { manager, context, sendRequest, updateSession } = createThreadControlHarness();
+    const original = [
+      { id: "native-a", items: [{ type: "userMessage", text: "keep first" }] },
+      { id: "native-b", items: [{ type: "userMessage", text: "edit middle" }] },
+      { id: "native-c", items: [{ type: "userMessage", text: "discard last" }] },
+    ];
+    const retained = original.slice(0, 3 - numTurns);
+    sendRequest.mockImplementation(async (_context: unknown, method: unknown, params: unknown) => {
+      if (method === "thread/turns/list") {
+        const page = params as { itemsView: string; cursor?: string };
+        if (page.itemsView === "notLoaded") return { data: original.toReversed() };
+        return page.cursor
+          ? { data: retained.slice(1), nextCursor: null }
+          : { data: retained.slice(0, 1), nextCursor: retained.length > 1 ? "page-2" : null };
+      }
+      return { thread: { id: "thread_1", historyMode: "paginated", turns: [] } };
+    });
+    const result = await manager.rollbackThread(asThreadId("thread_1"), numTurns);
+    expect(sendRequest).toHaveBeenCalledWith(context, "thread/revert", {
+      threadId: "thread_1", beforeTurnId: original[3 - numTurns]!.id,
+    });
+    expect(result.turns).toEqual(retained);
+    expect(updateSession).toHaveBeenCalledWith(context, { status: "ready", activeTurnId: undefined });
+  });
+
   it("pages history to find the revert boundary", async () => {
     const { manager, context, sendRequest } = createThreadControlHarness();
     sendRequest.mockImplementation(async (_context: unknown, method: unknown, params: unknown) => {

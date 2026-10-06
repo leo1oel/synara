@@ -5,6 +5,7 @@
 // Exports: entry type, the index, section label lookup, and the ranking helper
 
 import { rankProviderDiscoveryItems } from "~/lib/providerDiscovery";
+import { i18n } from "./i18n";
 import {
   settingRowAnchorId,
   SETTINGS_NAV_ITEMS,
@@ -472,23 +473,29 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     target: null,
   },
 
-  // ── Models ────────────────────────────────────────────────────────────────────
+  // ── Models (owned by Agent providers) ─────────────────────────────────────────
+  {
+    id: "models:compile-repair-model",
+    section: "providers",
+    title: "Compile repair model",
+    keywords: "Lattice LaTeX diagnostic fix independent background task provider model",
+  },
   {
     id: "models:source-control-writing-style",
-    section: "models",
+    section: "providers",
     title: "Source control writing style",
     keywords:
       "Repository conventions Conventional Commits custom instructions commit messages PR titles descriptions",
   },
   {
     id: "models:git-writing-model",
-    section: "models",
+    section: "providers",
     title: "Git writing model",
     keywords: "Used for generated commit messages, PR titles, and branch names.",
   },
   {
     id: "models:saved-model-slugs",
-    section: "models",
+    section: "providers",
     title: "Saved model slugs",
     keywords: "Add custom model slugs for supported providers. custom model",
   },
@@ -598,12 +605,13 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   },
 ] as const;
 
-const SETTINGS_SECTION_LABEL_BY_ID = new Map<SettingsSectionId, string>(
-  SETTINGS_NAV_ITEMS.map((item) => [item.id, item.label]),
-);
+const SETTINGS_SECTION_ITEM_BY_ID = new Map(SETTINGS_NAV_ITEMS.map((item) => [item.id, item]));
 
 export function settingsSectionLabel(section: SettingsSectionId): string {
-  return SETTINGS_SECTION_LABEL_BY_ID.get(section) ?? section;
+  const item = SETTINGS_SECTION_ITEM_BY_ID.get(section);
+  // Resolved per call rather than cached in a Map: the label is what a query
+  // like "外观" has to match, so it must follow the active catalog.
+  return item ? i18n._(item.label) : section;
 }
 
 /**

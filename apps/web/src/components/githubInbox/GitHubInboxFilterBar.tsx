@@ -160,23 +160,25 @@ function ActiveFilterChip({
   label,
   icon,
   onRemove,
+  locked = false,
 }: {
   label: string;
   icon?: ReactNode;
   onRemove: () => void;
+  locked?: boolean;
 }) {
   return (
     <Badge variant="info" className="max-w-full min-w-0 rounded-full pr-0.5 pl-1.5 font-normal">
       {icon}
       <span className="min-w-0 truncate">{label}</span>
-      <button
+      {!locked ? <button
         type="button"
         aria-label={`Remove filter: ${label}`}
         className="flex size-4 shrink-0 items-center justify-center rounded-full hover:bg-info/16 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         onClick={onRemove}
       >
         <XIcon aria-hidden className="size-2.5" />
-      </button>
+      </button> : null}
     </Badge>
   );
 }
@@ -188,6 +190,7 @@ export function GitHubInboxFilterBar({
   query,
   kindCounts,
   projectOptions,
+  projectLocked = false,
   labelOptions,
   refreshing,
   refreshBlockedReason,
@@ -207,6 +210,7 @@ export function GitHubInboxFilterBar({
   query: string;
   /** Rows each kind would show under the other filters; null while the list loads. */
   kindCounts: GitHubInboxKindCounts | null;
+  projectLocked?: boolean;
   projectOptions: ReadonlyArray<ProjectMenuPickerOption>;
   labelOptions: ReadonlyArray<GitHubInboxLabelOption>;
   refreshing: boolean;
@@ -228,7 +232,7 @@ export function GitHubInboxFilterBar({
     INVOLVEMENT_OPTIONS.find((option) => option.value === filters.involvement) ??
     INVOLVEMENT_OPTIONS[0]!;
   const toggleProject = (projectId: ProjectId) =>
-    onProjectIdsChange(
+    !projectLocked && onProjectIdsChange(
       filters.projectIds.includes(projectId)
         ? filters.projectIds.filter((id) => id !== projectId)
         : [...filters.projectIds, projectId],
@@ -327,7 +331,7 @@ export function GitHubInboxFilterBar({
             </MenuGroup>
             <MenuSeparator />
             <MenuSub>
-              <MenuSubTrigger>
+              <MenuSubTrigger disabled={projectLocked}>
                 <FoldersIcon aria-hidden className={MENU_ICON_CLASS_NAME} />
                 Projects
                 {filters.projectIds.length > 0 ? (
@@ -454,6 +458,7 @@ export function GitHubInboxFilterBar({
             {filters.projectIds.map((projectId) => (
               <ActiveFilterChip
                 key={projectId}
+                locked={projectLocked}
                 label={projectOptions.find((option) => option.id === projectId)?.name ?? "Project"}
                 onRemove={() => toggleProject(projectId)}
               />

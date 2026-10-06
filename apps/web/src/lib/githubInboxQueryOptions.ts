@@ -2,12 +2,21 @@
 // applied to on the client), the sidebar review badge that shares it, and issue detail.
 import type {
   GitHubInboxListResult,
+  GitHubInboxListInput,
   GitHubInboxState,
   GitHubInboxSort,
   GitHubIssueCommentInput,
   GitHubIssueDetailInput,
 } from "@synara/contracts";
 import { mutationOptions, queryOptions, type QueryClient } from "@tanstack/react-query";
+
+import { isPullRequestsUnavailableError } from "./pullRequestErrors";
+
+export type GitHubInboxListScope = Pick<GitHubInboxListInput, "projectId" | "involvement">;
+
+export function shouldRetryGitHubInboxQuery(count: number, error: unknown): boolean {
+  return !isPullRequestsUnavailableError(error) && count < 3;
+}
 
 import { ensureNativeApi } from "~/nativeApi";
 
@@ -16,8 +25,10 @@ export const GITHUB_INBOX_STATES: readonly GitHubInboxState[] = ["open", "closed
 export const githubInboxQueryKeys = {
   all: ["github-inbox"] as const,
   lists: (state: GitHubInboxState) => ["github-inbox", "list", state] as const,
-  list: (state: GitHubInboxState, sort: GitHubInboxSort = "created") =>
-    ["github-inbox", "list", state, sort] as const,
+  list: (state: GitHubInboxState, sort: GitHubInboxSort = "created", scope?: GitHubInboxListScope) =>
+    scope?.projectId
+      ? (["github-inbox", "list", state, sort, scope.projectId, scope.involvement ?? "all"] as const)
+      : (["github-inbox", "list", state, sort] as const),
   issueDetail: (
     input: Pick<GitHubIssueDetailInput, "projectId" | "repository" | "number"> | null,
   ) =>
@@ -38,17 +49,19 @@ export const GITHUB_INBOX_BADGE_POLL_INTERVAL_MS = 15 * 60_000;
 export const GITHUB_ITEM_DETAIL_POLL_INTERVAL_MS = 2 * 60_000;
 export const GITHUB_ITEM_DETAIL_STALE_TIME_MS = 60_000;
 
-function fetchGitHubInboxList(state: GitHubInboxState, sort: GitHubInboxSort) {
-  return ensureNativeApi().githubInbox.list({ state, sort });
+function fetchGitHubInboxList(state: GitHubInboxState, sort: GitHubInboxSort, scope?: GitHubInboxListScope) {
+  return ensureNativeApi().githubInbox.list({ state, sort, ...scope });
 }
 
 export function githubInboxListQueryOptions(
   state: GitHubInboxState,
   sort: GitHubInboxSort = "created",
+  scope?: GitHubInboxListScope,
 ) {
   return queryOptions({
-    queryKey: githubInboxQueryKeys.list(state, sort),
-    queryFn: () => fetchGitHubInboxList(state, sort),
+    retry: shouldRetryGitHubInboxQuery,
+    queryKey: githubInboxQueryKeys.list(state, sort, scope),
+    queryFn: () => fetchGitHubInboxList(state, sort, scope),
     staleTime: 60_000,
     gcTime: 30 * 60_000,
     refetchInterval: GITHUB_INBOX_POLL_INTERVAL_MS,
@@ -75,6 +88,7 @@ export function selectGitHubReviewRequestBadgeCount(
  */
 export function githubInboxReviewBadgeQueryOptions(sort: GitHubInboxSort = "created") {
   return queryOptions({
+    retry: shouldRetryGitHubInboxQuery,
     queryKey: githubInboxQueryKeys.list("open", sort),
     queryFn: () => fetchGitHubInboxList("open", sort),
     staleTime: GITHUB_INBOX_BADGE_POLL_INTERVAL_MS,
@@ -93,6 +107,7 @@ export function githubIssueDetailQueryOptions(
 ) {
   const pollingEnabled = behavior.pollingEnabled ?? true;
   return queryOptions({
+    retry: shouldRetryGitHubInboxQuery,
     queryKey: githubInboxQueryKeys.issueDetail(input),
     queryFn: () => {
       if (!input) throw new Error("Issue detail is unavailable.");

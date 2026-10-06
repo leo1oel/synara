@@ -38,6 +38,7 @@ export async function createOrRecoverProjectFromPath(input: {
   api: NativeApi;
   workspaceRoot: string;
   createIfMissing?: boolean;
+  reuseExistingWorkspaceRoot?: boolean;
   /** Overrides the active-space default; `null` files the project in Void. */
   spaceId?: SpaceId | null;
   /** Persisted default provider (settings.defaultProvider) that seeds the new
@@ -66,7 +67,7 @@ export async function createOrRecoverProjectFromPath(input: {
   const seedProvider =
     input.defaultProvider === "pi" || input.defaultProvider === "omp"
       ? "codex"
-      : (input.defaultProvider ?? "codex");
+      : input.defaultProvider;
 
   try {
     await input.api.orchestration.dispatchCommand({
@@ -77,10 +78,15 @@ export async function createOrRecoverProjectFromPath(input: {
       title,
       workspaceRoot,
       createWorkspaceRootIfMissing: input.createIfMissing === true,
-      defaultModelSelection: {
-        provider: seedProvider,
-        model: getDefaultModel(seedProvider),
-      },
+      reuseExistingWorkspaceRoot: input.reuseExistingWorkspaceRoot === true,
+      // Embedded project creation omits a provider so runtime discovery chooses
+      // the model. Regular UI entry points pass the persisted default provider.
+      defaultModelSelection: seedProvider
+        ? {
+            provider: seedProvider,
+            model: getDefaultModel(seedProvider),
+          }
+        : null,
       // A project created while a space is active belongs to that space — filing it
       // afterwards would bounce the sidebar back to Void to follow the new project.
       // Callers with an explicit destination (the Create Project dialog) override it.

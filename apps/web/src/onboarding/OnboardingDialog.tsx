@@ -8,8 +8,8 @@
 
 import { VISIBLE_PROVIDER_DESCRIPTORS } from "../betaFeatures";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
-import { useAppSettings } from "~/appSettings";
 import { APP_BASE_NAME } from "~/branding";
 import { SynaraLogo } from "~/components/SynaraLogo";
 import {
@@ -23,6 +23,7 @@ import { useProviderStatusesForLocalConfig } from "~/hooks/useProviderStatusesFo
 import { useTheme } from "~/hooks/useTheme";
 import { CheckIcon } from "~/lib/icons";
 import { findProviderStatus } from "~/lib/providerAvailability";
+import { serverSettingsQueryOptions } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
 import { CODE_THEME_OPTIONS } from "~/theme/theme.logic";
 import { ONBOARDING_INSET_CLASS_NAME } from "./layout";
@@ -79,8 +80,8 @@ function OnboardingFlow(props: {
 }) {
   const [step, setStep] = useState<OnboardingStep>("welcome");
   const [projectResults, setProjectResults] = useState<ReadonlyArray<OnboardingProjectResult>>([]);
-  const { settings } = useAppSettings();
   const statuses = useProviderStatusesForLocalConfig();
+  const serverSettings = useQuery(serverSettingsQueryOptions()).data;
   const providerDetection = useProviderDetection();
   const { activeTheme } = useTheme();
 
@@ -98,7 +99,7 @@ function OnboardingFlow(props: {
       provider: descriptor.kind,
       state: classifyProviderSetup({
         status: findProviderStatus(statuses, descriptor.kind),
-        disabled: settings.disabledProviders.includes(descriptor.kind),
+        disabled: serverSettings?.providers[descriptor.kind].enabled === false,
         detecting: providerDetection.detecting,
         detectionFailed: providerDetection.failed,
       }),

@@ -401,7 +401,7 @@ export class IosSimulatorBackend implements DeviceBackend {
     const helperBuilt = runtimeInstalled ? await this.cachedHelperPath().then(Boolean) : false;
     steps.push({
       id: "build-device-helper",
-      label: "Build the Synara device helper",
+      label: "Build the device helper",
       done: helperBuilt,
       detail: helperBuilt ? undefined : "Built automatically the first time you attach a device.",
     });

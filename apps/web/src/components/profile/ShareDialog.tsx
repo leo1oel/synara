@@ -130,7 +130,7 @@ export function ShareDialog({
     return renderNodeToPngBlob(node, CARD_EXPORT_SIZE)
       .then((blob) => {
         if (blob) {
-          downloadBlob(blob, `synara-stats-${stats.timezone.today}.png`);
+          downloadBlob(blob, `lattice-stats-${stats.timezone.today}.png`);
           setStatus("Saved PNG to your downloads.");
         } else {
           setStatus("Could not render the image.");
@@ -151,7 +151,7 @@ export function ShareDialog({
         <div className="mt-5 flex flex-col items-center gap-7 px-2 pb-3">
           <div
             ref={previewRef}
-            className="w-full max-w-[480px] overflow-hidden rounded-2xl border bg-white shadow-sm"
+            className="w-full max-w-[480px] overflow-hidden rounded-2xl border bg-[#F9F9FA] shadow-sm"
             style={{ aspectRatio: `${SHARE_CARD_WIDTH} / ${SHARE_CARD_HEIGHT}` }}
           >
             <div

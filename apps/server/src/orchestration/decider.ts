@@ -820,6 +820,13 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           readModel,
           command.workspaceRoot,
         );
+        if (command.reuseExistingWorkspaceRoot && existingProjects[0]) {
+          const existingProject = existingProjects[0];
+          return yield* new OrchestrationCommandInvariantError({
+            commandType: command.type,
+            detail: `Project '${existingProject.id}' already uses workspace root '${existingProject.workspaceRoot}'.`,
+          });
+        }
         for (const existingProject of existingProjects) {
           const remainingThreads = listThreadsByProjectId(readModel, existingProject.id).filter(
             (thread) => thread.deletedAt === null,
@@ -858,7 +865,9 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         const existingOwningProject = listActiveProjectsByWorkspaceRoot(
           readModel,
           command.workspaceRoot,
-          { kinds: WORKSPACE_OWNING_PROJECT_KIND_SET },
+          {
+            kinds: WORKSPACE_OWNING_PROJECT_KIND_SET,
+          },
         )[0];
         if (existingOwningProject) {
           return yield* new OrchestrationCommandInvariantError({
@@ -2544,6 +2553,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         messageId: command.messageId,
         activeTurnId:
           thread.session?.status === "running" ? (thread.session.activeTurnId ?? null) : null,
+        latestTurn: thread.latestTurn,
       });
       if (!editTarget.editable) {
         return yield* new OrchestrationCommandInvariantError({

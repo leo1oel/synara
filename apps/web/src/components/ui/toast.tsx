@@ -1,7 +1,7 @@
 "use client";
 
 import { Toast, type ToastObject } from "@base-ui/react/toast";
-import { useMemo, useEffect, useState, type CSSProperties } from "react";
+import { useMemo, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useParams } from "@tanstack/react-router";
 import { ThreadId, type DesktopDiagnosticIssue } from "@synara/contracts";
 import { reportHandledIssue } from "~/lib/rendererErrorDiagnostics";
@@ -37,11 +37,17 @@ import {
 } from "./notificationSurface";
 import { useDiffRouteSearch } from "../../hooks/useDiffRouteSearch";
 import { selectSplitView, useSplitViewStore } from "../../splitViewStore";
-import { selectRightDockState, useRightDockStore } from "../../rightDockStore";
 import {
   resolveVisibleToastThreadIds,
   shouldRenderToastForVisibleThreads,
 } from "./toastRouteVisibility";
+import { readEmbedMode } from "../../embedMode";
+import { selectRightDockState, useRightDockStore } from "../../rightDockStore";
+import {
+  embeddedNotificationDismiss,
+  embeddedNotificationUpsert,
+  isEmbeddedNotificationActionMessage,
+} from "./embeddedToastBridge";
 
 type ThreadToastData = {
   allowCrossThreadVisibility?: boolean;
@@ -137,6 +143,77 @@ type ToastPosition =
 
 interface ToastProviderProps extends Toast.Provider.Props {
   position?: ToastPosition;
+}
+
+function EmbeddedToastBridge({ hostOrigin }: { hostOrigin: string }) {
+  const { close, toasts } = Toast.useToastManager<ThreadToastData>();
+  const previousIdsRef = useRef(new Set<string>());
+  const semanticSignaturesRef = useRef(new Map<string, string>());
+  const toastsByIdRef = useRef(new Map<string, ToastObject<ThreadToastData>>());
+  toastsByIdRef.current = new Map(toasts.map((toast) => [toast.id, toast]));
+
+  useEffect(() => {
+    const liveIds = new Set<string>();
+    for (const toast of toasts) {
+      if (toast.transitionStatus === "ending") {
+        window.parent.postMessage(embeddedNotificationDismiss(toast.id), hostOrigin);
+        semanticSignaturesRef.current.delete(toast.id);
+        continue;
+      }
+      liveIds.add(toast.id);
+      const message = embeddedNotificationUpsert(toast);
+      const signature = JSON.stringify(message);
+      if (semanticSignaturesRef.current.get(toast.id) !== signature) {
+        semanticSignaturesRef.current.set(toast.id, signature);
+        window.parent.postMessage(message, hostOrigin);
+      }
+    }
+    for (const previousId of previousIdsRef.current) {
+      if (!liveIds.has(previousId)) {
+        window.parent.postMessage(embeddedNotificationDismiss(previousId), hostOrigin);
+        semanticSignaturesRef.current.delete(previousId);
+      }
+    }
+    previousIdsRef.current = liveIds;
+  }, [hostOrigin, toasts]);
+
+  useEffect(() => {
+    const receiveHostAction = (event: MessageEvent) => {
+      if (
+        event.source !== window.parent ||
+        event.origin !== hostOrigin ||
+        !isEmbeddedNotificationActionMessage(event.data)
+      ) {
+        return;
+      }
+      const toast = toastsByIdRef.current.get(event.data.id);
+      if (!toast) return;
+      if (event.data.action === "dismiss") {
+        toast.data?.onClose?.();
+        close(toast.id);
+        return;
+      }
+      if (toast.data?.archiveUndo) {
+        if (event.data.action === "primary") {
+          void Promise.resolve(toast.data.archiveUndo.onUndo()).then((restored) => {
+            if (restored) close(toast.id);
+          });
+        } else {
+          void Promise.resolve(toast.data.archiveUndo.onViewArchived()).finally(() => {
+            close(toast.id);
+          });
+        }
+        return;
+      }
+      const action =
+        event.data.action === "primary" ? toast.actionProps : toast.data?.secondaryActionProps;
+      action?.onClick?.(new MouseEvent("click") as never);
+    };
+    window.addEventListener("message", receiveHostAction);
+    return () => window.removeEventListener("message", receiveHostAction);
+  }, [close, hostOrigin]);
+
+  return null;
 }
 
 function shouldRenderForActiveThread(
@@ -595,10 +672,15 @@ function ToastProvider({
   ...props
 }: ToastProviderProps) {
   const position = positionProp ?? "top-center";
+  const hostOrigin = readEmbedMode()?.hostOrigin ?? null;
   return (
     <Toast.Provider timeout={timeout} toastManager={toastManager} {...props}>
       {children}
-      <Toasts position={position} />
+      {hostOrigin ? (
+        <EmbeddedToastBridge hostOrigin={hostOrigin} />
+      ) : (
+        <Toasts position={position} />
+      )}
     </Toast.Provider>
   );
 }

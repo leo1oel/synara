@@ -4,6 +4,7 @@ import { AUTOMATION_AUTHORING_GUIDANCE } from "./automationAuthoringGuidance.ts"
 import {
   renderSynaraHarnessPolicy,
   SYNARA_HARNESS_POLICY_MARKER,
+  SYNARA_IDENTITY_ONLY_HARNESS_POLICY,
   takeSynaraHarnessPolicyForProviderSession,
   takeSynaraHarnessPolicyTextPartForProviderSession,
   takeSynaraHarnessPolicyForSession,
@@ -143,6 +144,7 @@ describe("Synara harness policy", () => {
 
   it("withholds device guidance from sessions with no gateway control", () => {
     const policy = renderSynaraHarnessPolicy({ gatewayControlAvailable: false });
+    assert.strictEqual(SYNARA_IDENTITY_ONLY_HARNESS_POLICY, policy);
 
     // Promising tools this session cannot reach would be a lie.
     assert.notInclude(policy, "device_list");

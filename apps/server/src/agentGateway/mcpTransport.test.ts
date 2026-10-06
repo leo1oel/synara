@@ -109,8 +109,10 @@ export interface McpTransportTestDenial {
 }
 
 function makeTransport(input: {
-  readonly tools: ReadonlyArray<ToolEntry>;
+  readonly tools?: ReadonlyArray<ToolEntry>;
+  readonly tool?: ToolEntry;
   readonly threads: ReadonlyArray<OrchestrationThreadShell>;
+  readonly deviceControlEnabled?: boolean;
   readonly leaseCapabilities?: AgentGatewayCapabilityInput;
   /** Thread ids that hold a session lease but no longer exist in the snapshot. */
   readonly ghostThreads?: ReadonlyArray<string>;
@@ -122,6 +124,9 @@ function makeTransport(input: {
   let nextSession = 0;
   let nextRandomPartIsSession = true;
   const sessionRegistry = makeAgentGatewaySessionRegistry({
+    ...(input.deviceControlEnabled === undefined
+      ? {}
+      : { deviceControlEnabled: input.deviceControlEnabled }),
     randomId: () => {
       if (nextRandomPartIsSession) {
         nextSession += 1;
@@ -200,7 +205,7 @@ function makeTransport(input: {
   const transport = makeAgentGatewayMcpTransport({
     credentials,
     snapshotQuery,
-    tools: input.tools,
+    tools: input.tools ?? (input.tool ? [input.tool] : []),
     instructions: "test",
     requireThreadShell: (threadId) => {
       const thread = threads.get(threadId);
@@ -262,6 +267,85 @@ function makeTransport(input: {
 
 const post = (transport: ReturnType<typeof makeTransport>, token: string, body: unknown) =>
   transport({ authorizationHeader: `Bearer ${transport.resolveToken(token)}`, body });
+
+describe("makeAgentGatewayMcpTransport capabilities", () => {
+  it.effect("omits tools from tools/list when the caller lacks their capability", () =>
+    Effect.gen(function* () {
+      let handlerCalls = 0;
+      const transport = makeTransport({
+        threads: [makeThread("thread-unentitled")],
+        deviceControlEnabled: false,
+        tool: {
+          definition: {
+            name: "device_open_url",
+            description: "Open a URL on a device.",
+            inputSchema: { type: "object" },
+          },
+          requiredCapability: "device:control",
+          requiresActiveTurn: true,
+          handler: () => {
+            handlerCalls += 1;
+            return Effect.succeed({ content: [{ type: "text" as const, text: "ok" }] });
+          },
+        },
+      });
+
+      const catalog = yield* post(transport, "token-1", {
+        jsonrpc: "2.0",
+        id: "list",
+        method: "tools/list",
+      });
+      assert.deepEqual(
+        (catalog.body as { result: { tools: ReadonlyArray<unknown> } }).result.tools,
+        [],
+      );
+
+      const call = yield* post(transport, "token-1", {
+        jsonrpc: "2.0",
+        id: "call",
+        method: "tools/call",
+        params: { name: "device_open_url", arguments: {} },
+      });
+      assert.include(JSON.stringify(call.body), "capability_denied");
+      assert.equal(handlerCalls, 0);
+    }),
+  );
+
+  it.effect("lists an entitled tool without weakening the active-turn gate", () =>
+    Effect.gen(function* () {
+      const transport = makeTransport({
+        threads: [makeThread("thread-entitled")],
+        deviceControlEnabled: true,
+        tool: {
+          definition: {
+            name: "device_list",
+            description: "List devices.",
+            inputSchema: { type: "object" },
+          },
+          requiredCapability: "device:control",
+          requiresActiveTurn: true,
+          handler: () => Effect.succeed({ content: [{ type: "text" as const, text: "listed" }] }),
+        },
+      });
+
+      const catalog = yield* post(transport, "token-1", {
+        jsonrpc: "2.0",
+        id: "list",
+        method: "tools/list",
+      });
+      assert.include(JSON.stringify(catalog.body), "device_list");
+
+      transport.setThreadTurnState("thread-entitled", "completed");
+      const call = yield* post(transport, "token-1", {
+        jsonrpc: "2.0",
+        id: "call",
+        method: "tools/call",
+        params: { name: "device_list", arguments: {} },
+      });
+      assert.include(JSON.stringify(call.body), "caller_turn_inactive");
+    }),
+  );
+});
 
 describe("makeAgentGatewayMcpTransport cancellation", () => {
   it.effect(

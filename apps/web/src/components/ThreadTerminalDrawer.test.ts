@@ -4,8 +4,8 @@ import {
   resolveTerminalSelectionActionPosition,
   resolveTerminalSelectionContextMenuItems,
   shouldHandleTerminalSelectionMouseUp,
-  terminalSelectionActionDelayForClickCount,
 } from "./terminal/terminalSelectionActions";
+import { selectionActionDelayForClickCount } from "~/lib/selectionActions";
 
 describe("resolveTerminalSelectionActionPosition", () => {
   it("only offers Add to chat when a composer target exists", () => {
@@ -70,9 +70,9 @@ describe("resolveTerminalSelectionActionPosition", () => {
   });
 
   it("delays multi-click selection actions so triple-click selection can complete", () => {
-    expect(terminalSelectionActionDelayForClickCount(1)).toBe(0);
-    expect(terminalSelectionActionDelayForClickCount(2)).toBe(260);
-    expect(terminalSelectionActionDelayForClickCount(3)).toBe(260);
+    expect(selectionActionDelayForClickCount(1)).toBe(0);
+    expect(selectionActionDelayForClickCount(2)).toBe(260);
+    expect(selectionActionDelayForClickCount(3)).toBe(260);
   });
 
   it("only handles mouseup when the selection gesture started in the terminal", () => {

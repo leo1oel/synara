@@ -138,7 +138,8 @@ function commandMenuSecondaryText(item: ComposerCommandItem): string | null {
     item.type === "plugin" ||
     item.type === "skill" ||
     item.type === "local-root" ||
-    item.type === "thread"
+    item.type === "thread" ||
+    item.type === "paper"
   ) {
     return item.description;
   }
@@ -221,6 +222,16 @@ export type ComposerCommandItem =
     }
   | {
       id: string;
+      type: "paper";
+      arxivId: string;
+      citationKey?: string;
+      view: "blog" | "fulltext";
+      mention: ProviderMentionReference;
+      label: string;
+      description: string;
+    }
+  | {
+      id: string;
       type: "skill";
       skill: ProviderSkillDescriptor;
       label: string;
@@ -248,9 +259,11 @@ export function groupCommandItems(
   groupSlashCommandSections: boolean,
 ): ComposerCommandGroupModel[] {
   if (triggerKind === "mention") {
+    const fileItems = items.filter((item) => item.type === "path");
+    const paperItems = items.filter((item) => item.type === "paper");
     const pluginItems = items.filter((item) => item.type === "plugin");
     const threadItems = items.filter((item) => item.type === "thread");
-    const localItems = items.filter((item) => item.type === "local-root" || item.type === "path");
+    const localItems = items.filter((item) => item.type === "local-root");
     const agentItems = items.filter((item) => item.type === "agent");
     const otherItems = items.filter(
       (item) =>
@@ -258,10 +271,17 @@ export function groupCommandItems(
         item.type !== "thread" &&
         item.type !== "local-root" &&
         item.type !== "path" &&
+        item.type !== "paper" &&
         item.type !== "agent",
     );
 
     const groups: ComposerCommandGroupModel[] = [];
+    if (fileItems.length > 0) {
+      groups.push({ id: "files", label: "Files", items: fileItems });
+    }
+    if (paperItems.length > 0) {
+      groups.push({ id: "papers", label: "Papers", items: paperItems });
+    }
     if (pluginItems.length > 0) {
       groups.push({ id: "plugins", label: "Plugins", items: pluginItems });
     }
@@ -329,6 +349,10 @@ function CommandNoticeBadge(props: { notice: string }) {
   );
 }
 
+/** Mention groups whose result count is unbounded enough to need its own viewport. */
+const BROWSABLE_MENTION_GROUP_IDS = new Set(["files", "papers"]);
+const BROWSABLE_MENTION_GROUP_ROW_CAP = 4;
+
 export function ComposerCommandMenu(props: {
   items: ComposerCommandItem[];
   resolvedTheme: "light" | "dark";
@@ -347,7 +371,16 @@ export function ComposerCommandMenu(props: {
   );
   const panelGroups: ComposerMenuPanelGroup[] = groups.map((group) => ({
     id: group.id,
-    label: group.label,
+    // Files and papers can each return dozens of rows; count them and cap
+    // their height so Plugins, Chats, Local, and Subagents stay in view.
+    label:
+      group.label && BROWSABLE_MENTION_GROUP_IDS.has(group.id)
+        ? `${group.label} · ${group.items.length}`
+        : group.label,
+    ...(BROWSABLE_MENTION_GROUP_IDS.has(group.id) &&
+    group.items.length > BROWSABLE_MENTION_GROUP_ROW_CAP
+      ? { boundedViewport: true, labelTrailing: "Scroll to browse" }
+      : {}),
     rows: group.items.map((item) => ({
       id: item.id,
       icon: commandMenuItemGlyph(item, props.resolvedTheme),
@@ -368,6 +401,10 @@ export function ComposerCommandMenu(props: {
     })),
   }));
   const itemsById = new Map(props.items.map((item) => [item.id, item]));
+  // A bare `@` already lists project files, so the "type to search" hint is
+  // only an invitation while there is no Files group to read instead.
+  const showFileSearchHint =
+    props.triggerKind === "mention" && !groups.some((group) => group.id === "files");
 
   return (
     <ComposerMenuPanel
@@ -379,17 +416,10 @@ export function ComposerCommandMenu(props: {
         if (item) props.onSelect(item);
       }}
       footer={
-        props.triggerKind === "mention" ? (
+        showFileSearchHint ? (
           /* This footer is informational copy, not a selectable result group. */
           <div className="pt-0.5 pb-2">
-            <p
-              className={cn(
-                COMPOSER_MENU_PANEL_GROUP_LABEL_CLASS_NAME,
-                "px-2 py-0 font-medium text-muted-foreground text-ui leading-snug",
-              )}
-            >
-              Files
-            </p>
+            <p className={cn(COMPOSER_MENU_PANEL_GROUP_LABEL_CLASS_NAME, "px-2 py-0")}>Files</p>
             <p className="px-2 pt-0.5 text-ui-sm text-muted-foreground/55">
               Type to search for files
             </p>
@@ -481,6 +511,8 @@ function commandMenuItemGlyph(item: ComposerCommandItem, theme: "light" | "dark"
       return <PluginIcon className={cls} />;
     case "thread":
       return <ProviderIcon provider={item.provider} className={cls} />;
+    case "paper":
+      return <SkillCubeIcon className={cls} />;
     case "skill":
       return <SkillCubeIcon className={cls} />;
     default:

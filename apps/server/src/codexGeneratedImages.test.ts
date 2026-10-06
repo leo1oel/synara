@@ -9,6 +9,7 @@ import {
   codexConfiguredHomePathsFromSettings,
   enabledCodexProviderInstanceIdsFromSettings,
   generatedImagePathFromRuntimeEvent,
+  isCodexGeneratedImageItemType,
   resolveCodexGeneratedImagesRoot,
   resolveCodexGeneratedImagesRoots,
 } from "./codexGeneratedImages.ts";
@@ -70,6 +71,15 @@ describe("generatedImagePathFromRuntimeEvent", () => {
       payload: { ...event.payload, itemType: "assistant_message" },
     } as ProviderRuntimeEvent;
     assert.equal(generatedImagePathFromRuntimeEvent(otherItem), undefined);
+  });
+});
+
+describe("isCodexGeneratedImageItemType", () => {
+  it("distinguishes generated image artifacts from images opened for inspection", () => {
+    assert.equal(isCodexGeneratedImageItemType("imageGeneration"), true);
+    assert.equal(isCodexGeneratedImageItemType("image_generation_call"), true);
+    assert.equal(isCodexGeneratedImageItemType("image_generation_end"), true);
+    assert.equal(isCodexGeneratedImageItemType("imageView"), false);
   });
 });
 
