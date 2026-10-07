@@ -177,6 +177,41 @@ describe("ClaudeTextGenerationServiceLive", () => {
     ),
   );
 
+  it.effect("answers a host text task in a tool-less, settings-free Claude run", () =>
+    Effect.gen(function* () {
+      const textGeneration = yield* ClaudeTextGeneration;
+      const generated = yield* textGeneration.generateTextTask({
+        cwd: "/paper",
+        prompt: "Proofread and also edit main.tex.",
+        modelSelection: { provider: "claudeAgent", model: "claude-sonnet-4-5" },
+      });
+      assert.deepEqual(generated, { text: "<proofread>Fixed.</proofread>" });
+    }).pipe(
+      Effect.provide(ClaudeTextGenerationServiceLive),
+      Effect.provide(
+        mockSpawnerLayer((args, _command, _env, cwd) => {
+          // Read-only by construction: no tools, settings, or MCP servers, in
+          // an empty directory rather than the paper's workspace.
+          assert.strictEqual(args[args.indexOf("--tools") + 1], "");
+          assert.strictEqual(args[args.indexOf("--setting-sources") + 1], "");
+          assert.include(args, "--strict-mcp-config");
+          assert.notStrictEqual(cwd, "/paper");
+          const schema = JSON.parse(args[args.indexOf("--json-schema") + 1] ?? "{}");
+          assert.deepEqual(schema.required, ["text"]);
+          return {
+            stdout: JSON.stringify({
+              structured_output: { text: "\n<proofread>Fixed.</proofread>\n" },
+            }),
+            stderr: "",
+            code: 0,
+          };
+        }),
+      ),
+      Effect.provide(ServerConfig.layerTest(process.cwd(), { prefix: "claude-text-task-test-" })),
+      Effect.provide(NodeServices.layer),
+    ),
+  );
+
   it.effect("uses the server home as the default Claude process home", () =>
     Effect.gen(function* () {
       const textGeneration = yield* ClaudeTextGeneration;

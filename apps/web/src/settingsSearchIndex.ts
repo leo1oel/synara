@@ -491,7 +491,8 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     id: "models:git-writing-model",
     section: "providers",
     title: "Git writing model",
-    keywords: "Used for generated commit messages, PR titles, and branch names.",
+    keywords:
+      "Used for generated commit messages, PR titles, branch names, and Lattice proofreading.",
   },
   {
     id: "models:saved-model-slugs",

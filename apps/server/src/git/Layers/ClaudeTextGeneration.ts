@@ -24,6 +24,7 @@ import {
   buildDiffSummaryPrompt,
   buildPrContentPrompt,
   buildProjectDigestPrompt,
+  buildTextTaskPrompt,
   buildThreadRecapPrompt,
   buildThreadTitlePrompt,
   sanitizeCommitSubject,
@@ -537,6 +538,25 @@ const makeClaudeTextGeneration = Effect.gen(function* () {
       });
     });
 
+  const generateTextTask: TextGenerationShape["generateTextTask"] = Effect.fn(
+    "ClaudeTextGeneration.generateTextTask",
+  )(function* (input) {
+    const modelSelection = yield* requireClaudeModelSelection(
+      "generateTextTask",
+      input.modelSelection,
+    );
+    const { prompt, outputSchemaJson } = buildTextTaskPrompt({ prompt: input.prompt });
+    const generated = yield* runClaudeJson({
+      operation: "generateTextTask",
+      cwd: input.cwd,
+      prompt,
+      outputSchemaJson,
+      modelSelection,
+      ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+    });
+    return { text: generated.text.trim() };
+  });
+
   return {
     generateCommitMessage,
     generatePrContent,
@@ -547,6 +567,7 @@ const makeClaudeTextGeneration = Effect.gen(function* () {
     generateProjectDigest,
     generateAutomationIntent,
     evaluateAutomationCompletion,
+    generateTextTask,
   } satisfies TextGenerationShape;
 });
 

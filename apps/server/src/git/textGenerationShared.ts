@@ -81,6 +81,8 @@ export function extractJsonObject(raw: string): string {
 export interface RawTextFallback {
   readonly key: string;
   readonly maxWords?: number;
+  /** Keep code fences: in a free-form answer a fenced block can be part of the answer. */
+  readonly verbatim?: boolean;
 }
 
 function stripCodeFences(raw: string): string {
@@ -115,7 +117,7 @@ function pickFallbackString(parsed: Record<string, unknown>, key: string): strin
 }
 
 function coerceRawTextToFallback(raw: string, fallback: RawTextFallback): string | null {
-  const cleaned = stripCodeFences(raw);
+  const cleaned = fallback.verbatim ? raw.trim() : stripCodeFences(raw);
   if (cleaned.length === 0) {
     return null;
   }
@@ -703,5 +705,27 @@ export function buildThreadTitlePrompt(input: {
       key: "title",
       maxWords: MAX_CHAT_THREAD_TITLE_WORDS + 4,
     } satisfies RawTextFallback,
+  };
+}
+
+/**
+ * A host-owned request (Lattice proofreading) answered as plain text. The
+ * request carries its own instructions and reply contract; this wrapper only
+ * asks for the answer inside the structured envelope every provider shares.
+ */
+export function buildTextTaskPrompt(input: { readonly prompt: string }) {
+  return {
+    prompt: [
+      "Answer the request below in a single reply. You have no tools and no files: answer from the request text alone.",
+      "Return a JSON object with key: text, whose value is your complete answer exactly as you would otherwise write it.",
+      "Respond with only the JSON object, no prose and no code fences.",
+      "",
+      "Request:",
+      input.prompt,
+    ].join("\n"),
+    outputSchemaJson: Schema.Struct({
+      text: Schema.String,
+    }),
+    rawTextFallback: { key: "text", verbatim: true } satisfies RawTextFallback,
   };
 }

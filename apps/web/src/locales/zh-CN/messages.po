@@ -1914,8 +1914,8 @@ msgstr "Git 写作模型"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ModelsSettingsPanel.tsx
-msgid "Used for generated commit messages, PR titles, and branch names."
-msgstr "用于生成提交消息、PR 标题和分支名称。"
+msgid "Used for generated commit messages, PR titles, branch names, and Lattice proofreading."
+msgstr "用于生成提交消息、PR 标题、分支名称和 Lattice 校对。"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ModelsSettingsPanel.tsx

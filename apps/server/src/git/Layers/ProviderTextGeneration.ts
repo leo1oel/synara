@@ -262,6 +262,10 @@ const makeProviderTextGeneration = Effect.gen(function* () {
       dispatch("evaluateAutomationCompletion", input, (service, routedInput) =>
         service.evaluateAutomationCompletion(routedInput),
       ),
+    generateTextTask: (input) =>
+      dispatch("generateTextTask", input, (service, routedInput) =>
+        service.generateTextTask(routedInput),
+      ),
   } satisfies TextGen.TextGenerationShape;
 });
 

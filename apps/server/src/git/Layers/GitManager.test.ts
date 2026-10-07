@@ -321,6 +321,8 @@ function createTextGeneration(overrides: Partial<FakeGitTextGeneration> = {}): T
             }),
         ),
       ),
+    // Git actions never run host text tasks.
+    generateTextTask: () => Effect.succeed({ text: "" }),
   };
 }
 

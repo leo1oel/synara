@@ -54,6 +54,7 @@ import {
   buildAutomationCompletionEvaluationPrompt,
   buildCommitMessagePrompt,
   buildDiffSummaryPrompt,
+  buildTextTaskPrompt,
   buildPrContentPrompt,
   buildThreadRecapPrompt,
   buildProjectDigestPrompt,
@@ -998,6 +999,21 @@ const makeCodexTextGeneration = Effect.gen(function* () {
     });
   };
 
+  const generateTextTask: TextGenerationShape["generateTextTask"] = (input) => {
+    const { prompt, outputSchemaJson } = buildTextTaskPrompt({ prompt: input.prompt });
+
+    return runCodexJson({
+      operation: "generateTextTask",
+      cwd: input.cwd,
+      prompt,
+      outputSchemaJson,
+      ...(input.codexHomePath ? { codexHomePath: input.codexHomePath } : {}),
+      ...(input.model ? { model: input.model } : {}),
+      ...(input.modelSelection ? { modelSelection: input.modelSelection } : {}),
+      ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+    }).pipe(Effect.map((generated) => ({ text: generated.text.trim() })));
+  };
+
   return {
     generateCommitMessage,
     generatePrContent,
@@ -1008,6 +1024,7 @@ const makeCodexTextGeneration = Effect.gen(function* () {
     generateProjectDigest,
     generateAutomationIntent,
     evaluateAutomationCompletion,
+    generateTextTask,
   } satisfies TextGenerationShape;
 });
 

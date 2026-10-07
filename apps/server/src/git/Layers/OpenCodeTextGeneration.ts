@@ -43,6 +43,7 @@ import {
   buildBranchNamePrompt,
   buildCommitMessagePrompt,
   buildDiffSummaryPrompt,
+  buildTextTaskPrompt,
   buildPrContentPrompt,
   buildThreadRecapPrompt,
   buildProjectDigestPrompt,
@@ -813,6 +814,32 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
         });
       });
 
+    const generateTextTask: TextGenerationShape["generateTextTask"] = Effect.fn(
+      `${config.serviceName}.generateTextTask`,
+    )(function* (input) {
+      const modelSelection = resolveOpenCodeCompatibleModelSelection(config, input);
+      if (!modelSelection) {
+        return yield* new TextGenerationError({
+          operation: "generateTextTask",
+          detail: `Invalid ${config.displayName} model selection.`,
+        });
+      }
+
+      const { prompt, outputSchemaJson, rawTextFallback } = buildTextTaskPrompt({
+        prompt: input.prompt,
+      });
+      const generated = yield* runOpenCodeJson({
+        operation: "generateTextTask",
+        cwd: input.cwd,
+        prompt,
+        outputSchemaJson,
+        rawTextFallback,
+        modelSelection,
+        ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+      });
+      return { text: generated.text.trim() };
+    });
+
     return {
       generateCommitMessage,
       generatePrContent,
@@ -823,6 +850,7 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
       generateProjectDigest,
       generateAutomationIntent,
       evaluateAutomationCompletion,
+      generateTextTask,
     } satisfies TextGenerationShape;
   });
 

@@ -159,6 +159,25 @@ export interface AutomationIntentGenerationInput {
 
 export type AutomationIntentGenerationResult = ServerGenerateAutomationIntentResult;
 
+/** A host-owned request answered in one tool-less turn (Lattice proofreading). */
+export interface TextTaskGenerationInput {
+  cwd: string;
+  /** The complete request; the host owns its instructions and reply contract. */
+  prompt: string;
+  codexHomePath?: string;
+  /** Model to use for generation. Uses the Git writing default if not specified. */
+  model?: string;
+  /** Optional provider-aware selection for providers that need more than a raw model slug. */
+  modelSelection?: ModelSelection;
+  /** Optional provider startup overrides, such as custom binary paths or server URLs. */
+  providerOptions?: ProviderStartOptions;
+}
+
+export interface TextTaskGenerationResult {
+  /** The model's complete answer, unmodified apart from surrounding whitespace. */
+  text: string;
+}
+
 export interface AutomationCompletionEvaluationInput {
   cwd: string;
   automationName: string;
@@ -212,7 +231,8 @@ export type TextGenerationOperation =
   | "generateThreadRecap"
   | "generateProjectDigest"
   | "generateAutomationIntent"
-  | "evaluateAutomationCompletion";
+  | "evaluateAutomationCompletion"
+  | "generateTextTask";
 
 /**
  * TextGenerationShape - Service API for AI-generated Git and thread text.
@@ -276,6 +296,14 @@ export interface TextGenerationShape {
   readonly evaluateAutomationCompletion: (
     input: AutomationCompletionEvaluationInput,
   ) => Effect.Effect<AutomationCompletionEvaluationResult, TextGenerationError>;
+
+  /**
+   * Answer a host-owned request as plain text, with no tools and no workspace
+   * access, so the request cannot read or edit files whatever it asks.
+   */
+  readonly generateTextTask: (
+    input: TextTaskGenerationInput,
+  ) => Effect.Effect<TextTaskGenerationResult, TextGenerationError>;
 }
 
 /**

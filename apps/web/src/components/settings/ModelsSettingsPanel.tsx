@@ -380,7 +380,9 @@ export function ModelsSettingsPanel({
         </SettingsRow>
         <SettingsRow
           title={i18n._("Git writing model")}
-          description={i18n._("Used for generated commit messages, PR titles, and branch names.")}
+          description={i18n._(
+            "Used for generated commit messages, PR titles, branch names, and Lattice proofreading.",
+          )}
           resetAction={
             isGitTextGenerationModelDirty ? (
               <SettingResetButton

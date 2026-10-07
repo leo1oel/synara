@@ -78,6 +78,9 @@ function createTextGenerationDouble(label: string) {
         reason: `${label} completion`,
       }),
   );
+  const generateTextTask = vi.fn<TextGenerationShape["generateTextTask"]>(() =>
+    Effect.succeed({ text: `${label} text` }),
+  );
 
   return {
     service: {
@@ -90,6 +93,7 @@ function createTextGenerationDouble(label: string) {
       generateProjectDigest,
       generateAutomationIntent,
       evaluateAutomationCompletion,
+      generateTextTask,
     } satisfies TextGenerationShape,
     generateCommitMessage,
     generatePrContent,
@@ -99,6 +103,7 @@ function createTextGenerationDouble(label: string) {
     generateThreadRecap,
     generateAutomationIntent,
     evaluateAutomationCompletion,
+    generateTextTask,
   };
 }
 
@@ -554,6 +559,27 @@ describe("ProviderTextGenerationLive", () => {
     );
     expect(codex.evaluateAutomationCompletion).not.toHaveBeenCalled();
     expect(opencode.evaluateAutomationCompletion).not.toHaveBeenCalled();
+  });
+
+  it("routes host text tasks through the selected provider unchanged", async () => {
+    const { layer, claude, codex } = makeProviderTextGenerationTestLayer();
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const textGeneration = yield* TextGeneration;
+        return yield* textGeneration.generateTextTask({
+          cwd: "/paper",
+          prompt: "Proofread this.",
+          modelSelection: { provider: "claudeAgent", model: "claude-sonnet-4-6" },
+        });
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result.text).toBe("claude text");
+    expect(claude.generateTextTask).toHaveBeenCalledWith(
+      expect.objectContaining({ cwd: "/paper", prompt: "Proofread this." }),
+    );
+    expect(codex.generateTextTask).not.toHaveBeenCalled();
   });
 
   it("routes text generation by exact provider instance and merges its provider options", async () => {
