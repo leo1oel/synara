@@ -1973,6 +1973,36 @@ msgid "Add"
 msgstr "添加"
 
 #. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Remove {model}"
+msgstr "移除 {model}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Source control writing style"
+msgstr "源代码管理写作风格"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Custom source control writing instructions"
+msgstr "自定义源代码管理写作说明"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Keep titles concise. Use short bullet points in descriptions."
+msgstr "标题保持简洁。描述中使用简短的要点列表。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Show less"
+msgstr "收起"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Show more ({count})"
+msgstr "显示更多（{count}）"
+
+#. js-lingui-explicit-id
 #: src/components/settings/ProfileSettingsPanel.tsx
 msgid "Model usage"
 msgstr "模型用量"
@@ -2797,13 +2827,25 @@ msgstr "编程"
 msgid "Control live responses, follow-ups, review defaults, and safety confirmations."
 msgstr "控制实时回复、追问、审阅默认设置和安全确认。"
 
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Conventional Commits"
+msgstr "约定式提交"
+
 #: src/settingsNavigation.ts
 msgid "Create, import, and manage the Skills Lattice uses."
 msgstr "创建、导入并管理 Lattice 使用的 Skills。"
 
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Custom instructions"
+msgstr "自定义说明"
+
 #: src/settingsNavigation.ts
 msgid "Customize the theme, typography, density, and time format."
 msgstr "自定义主题、排版、密度和时间格式。"
+
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Enter a model slug."
+msgstr "请输入模型 ID。"
 
 #: src/settingsNavigation.ts
 msgid "Find and restore threads you previously archived."
@@ -2816,6 +2858,10 @@ msgstr "通用"
 #: src/settingsNavigation.ts
 msgid "Give Codex, Claude, and other local agents scoped access to Lattice tasks."
 msgstr "授予 Codex、Claude 等本地智能体对 Lattice 任务的受限访问权限。"
+
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "In each project, matches recent change descriptions and change request titles."
+msgstr "在每个项目中，沿用近期提交说明和拉取请求标题的写法。"
 
 #: src/settingsNavigation.ts
 msgid "Integrations"
@@ -2841,6 +2887,10 @@ msgstr "托管工作树"
 msgid "MCP connections"
 msgstr "MCP 连接"
 
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Model slugs must be {max} characters or less."
+msgstr "模型 ID 不能超过 {max} 个字符。"
+
 #: src/components/chat/ChatHeader.tsx
 msgid "New chat"
 msgstr "新聊天"
@@ -2860,6 +2910,10 @@ msgstr "个人"
 #: src/settingsNavigation.ts
 msgid "Profile"
 msgstr "个人资料"
+
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Repository conventions"
+msgstr "沿用仓库惯例"
 
 #: src/settingsNavigation.ts
 msgid "Review and clean up isolated workspaces created by Lattice."
@@ -2885,9 +2939,25 @@ msgstr "系统"
 msgid "System tools"
 msgstr "系统工具"
 
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "That custom model is already saved."
+msgstr "该自定义模型已保存。"
+
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "That model is already built in."
+msgstr "该模型已内置。"
+
 #: src/settingsNavigation.ts
 msgid "Usage & limits"
 msgstr "用量与限额"
+
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Use Conventional Commit prefixes and keep change request text concise."
+msgstr "使用约定式提交（Conventional Commits）前缀，并保持拉取请求文字简洁。"
+
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Use your instructions for change descriptions and change requests in every project."
+msgstr "在每个项目中按你的说明撰写提交说明和拉取请求。"
 
 #: src/settingsNavigation.ts
 msgid "Your local activity, streaks, and a shareable stats card."

@@ -1973,6 +1973,36 @@ msgid "Add"
 msgstr "Add"
 
 #. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Remove {model}"
+msgstr "Remove {model}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Source control writing style"
+msgstr "Source control writing style"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Custom source control writing instructions"
+msgstr "Custom source control writing instructions"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Keep titles concise. Use short bullet points in descriptions."
+msgstr "Keep titles concise. Use short bullet points in descriptions."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Show less"
+msgstr "Show less"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Show more ({count})"
+msgstr "Show more ({count})"
+
+#. js-lingui-explicit-id
 #: src/components/settings/ProfileSettingsPanel.tsx
 msgid "Model usage"
 msgstr "Model usage"
@@ -2797,13 +2827,25 @@ msgstr "Coding"
 msgid "Control live responses, follow-ups, review defaults, and safety confirmations."
 msgstr "Control live responses, follow-ups, review defaults, and safety confirmations."
 
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Conventional Commits"
+msgstr "Conventional Commits"
+
 #: src/settingsNavigation.ts
 msgid "Create, import, and manage the Skills Lattice uses."
 msgstr "Create, import, and manage the Skills Lattice uses."
 
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Custom instructions"
+msgstr "Custom instructions"
+
 #: src/settingsNavigation.ts
 msgid "Customize the theme, typography, density, and time format."
 msgstr "Customize the theme, typography, density, and time format."
+
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Enter a model slug."
+msgstr "Enter a model slug."
 
 #: src/settingsNavigation.ts
 msgid "Find and restore threads you previously archived."
@@ -2816,6 +2858,10 @@ msgstr "General"
 #: src/settingsNavigation.ts
 msgid "Give Codex, Claude, and other local agents scoped access to Lattice tasks."
 msgstr "Give Codex, Claude, and other local agents scoped access to Lattice tasks."
+
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "In each project, matches recent change descriptions and change request titles."
+msgstr "In each project, matches recent change descriptions and change request titles."
 
 #: src/settingsNavigation.ts
 msgid "Integrations"
@@ -2841,6 +2887,10 @@ msgstr "Managed worktrees"
 msgid "MCP connections"
 msgstr "MCP connections"
 
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Model slugs must be {max} characters or less."
+msgstr "Model slugs must be {max} characters or less."
+
 #: src/components/chat/ChatHeader.tsx
 msgid "New chat"
 msgstr "New chat"
@@ -2860,6 +2910,10 @@ msgstr "Personal"
 #: src/settingsNavigation.ts
 msgid "Profile"
 msgstr "Profile"
+
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Repository conventions"
+msgstr "Repository conventions"
 
 #: src/settingsNavigation.ts
 msgid "Review and clean up isolated workspaces created by Lattice."
@@ -2885,9 +2939,25 @@ msgstr "System"
 msgid "System tools"
 msgstr "System tools"
 
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "That custom model is already saved."
+msgstr "That custom model is already saved."
+
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "That model is already built in."
+msgstr "That model is already built in."
+
 #: src/settingsNavigation.ts
 msgid "Usage & limits"
 msgstr "Usage & limits"
+
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Use Conventional Commit prefixes and keep change request text concise."
+msgstr "Use Conventional Commit prefixes and keep change request text concise."
+
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Use your instructions for change descriptions and change requests in every project."
+msgstr "Use your instructions for change descriptions and change requests in every project."
 
 #: src/settingsNavigation.ts
 msgid "Your local activity, streaks, and a shareable stats card."

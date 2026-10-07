@@ -15,6 +15,8 @@ import { getModelOptions, normalizeModelSlug } from "@synara/shared/model";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 import { useLingui } from "@lingui/react";
+import { msg } from "@lingui/core/macro";
+import type { I18n, MessageDescriptor } from "@lingui/core";
 
 import {
   CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS,
@@ -48,24 +50,23 @@ import { DebouncedSettingTextarea } from "./DebouncedSettingTextInput";
 
 const SOURCE_CONTROL_WRITING_OPTIONS: readonly {
   value: SourceControlWritingStyle;
-  label: string;
-  description: string;
+  label: MessageDescriptor;
+  description: MessageDescriptor;
 }[] = [
   {
     value: "repository",
-    label: "Repository conventions",
-    description: "In each project, matches recent change descriptions and change request titles.",
+    label: msg`Repository conventions`,
+    description: msg`In each project, matches recent change descriptions and change request titles.`,
   },
   {
     value: "conventional",
-    label: "Conventional Commits",
-    description: "Use Conventional Commit prefixes and keep change request text concise.",
+    label: msg`Conventional Commits`,
+    description: msg`Use Conventional Commit prefixes and keep change request text concise.`,
   },
   {
     value: "custom",
-    label: "Custom instructions",
-    description:
-      "Use your instructions for change descriptions and change requests in every project.",
+    label: msg`Custom instructions`,
+    description: msg`Use your instructions for change descriptions and change requests in every project.`,
   },
 ];
 
@@ -77,23 +78,27 @@ type CustomModelValidationResult =
   | { readonly model: string; readonly error?: never }
   | { readonly model?: never; readonly error: string };
 
-export function validateCustomModelInput(input: {
-  readonly provider: ProviderKind;
-  readonly value: string;
-  readonly savedModels: readonly string[];
-}): CustomModelValidationResult {
+export function validateCustomModelInput(
+  input: {
+    readonly provider: ProviderKind;
+    readonly value: string;
+    readonly savedModels: readonly string[];
+  },
+  i18n: I18n,
+): CustomModelValidationResult {
   const normalized = normalizeModelSlug(input.value, input.provider);
   if (!normalized) {
-    return { error: "Enter a model slug." };
+    return { error: i18n._(msg`Enter a model slug.`) };
   }
   if (getModelOptions(input.provider).some((option) => option.slug === normalized)) {
-    return { error: "That model is already built in." };
+    return { error: i18n._(msg`That model is already built in.`) };
   }
   if (normalized.length > MAX_CUSTOM_MODEL_LENGTH) {
-    return { error: `Model slugs must be ${MAX_CUSTOM_MODEL_LENGTH} characters or less.` };
+    const max = MAX_CUSTOM_MODEL_LENGTH;
+    return { error: i18n._(msg`Model slugs must be ${max} characters or less.`) };
   }
   if (input.savedModels.includes(normalized)) {
-    return { error: "That custom model is already saved." };
+    return { error: i18n._(msg`That custom model is already saved.`) };
   }
   return { model: normalized };
 }
@@ -263,11 +268,14 @@ export function ModelsSettingsPanel({
   const addCustomModel = useCallback(
     (provider: ProviderKind) => {
       const customModels = getCustomModelsForProvider(settings, provider);
-      const result = validateCustomModelInput({
-        provider,
-        value: customModelInputByProvider[provider] ?? "",
-        savedModels: customModels,
-      });
+      const result = validateCustomModelInput(
+        {
+          provider,
+          value: customModelInputByProvider[provider] ?? "",
+          savedModels: customModels,
+        },
+        i18n,
+      );
       if ("error" in result) {
         setCustomModelErrorByProvider((existing) => ({
           ...existing,
@@ -280,7 +288,7 @@ export function ModelsSettingsPanel({
       setCustomModelInputByProvider((existing) => ({ ...existing, [provider]: "" }));
       setCustomModelErrorByProvider((existing) => ({ ...existing, [provider]: null }));
     },
-    [customModelInputByProvider, settings, updateSettings],
+    [customModelInputByProvider, i18n, settings, updateSettings],
   );
 
   const removeCustomModel = useCallback(
@@ -329,7 +337,7 @@ export function ModelsSettingsPanel({
       <button
         type="button"
         className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100 hover:opacity-100"
-        aria-label={`Remove ${row.slug}`}
+        aria-label={i18n._("Remove {model}", { model: row.slug })}
         onClick={() => removeCustomModel(row.provider, row.slug)}
       >
         <XIcon className="size-3.5 text-muted-foreground hover:text-foreground" />
@@ -350,8 +358,8 @@ export function ModelsSettingsPanel({
     <div className="space-y-6">
       <SettingsSection title={i18n._("Generation defaults")}>
         <SettingsRow
-          title="Source control writing style"
-          description={writingOption.description}
+          title={i18n._("Source control writing style")}
+          description={i18n._(writingOption.description)}
           resetAction={
             isWritingStyleDirty ? (
               <SettingResetButton
@@ -374,13 +382,13 @@ export function ModelsSettingsPanel({
                 );
                 if (option) updateSettings({ sourceControlWritingStyle: option.value });
               }}
-              ariaLabel="Source control writing style"
+              ariaLabel={i18n._("Source control writing style")}
               triggerClassName="w-full sm:w-60"
-              valueContent={writingOption.label}
+              valueContent={i18n._(writingOption.label)}
             >
               {SOURCE_CONTROL_WRITING_OPTIONS.map((option) => (
                 <SelectItem hideIndicator key={option.value} value={option.value}>
-                  {option.label}
+                  {i18n._(option.label)}
                 </SelectItem>
               ))}
             </SettingsSelectControl>
@@ -390,8 +398,8 @@ export function ModelsSettingsPanel({
             <DebouncedSettingTextarea
               key={resetEpoch}
               className="mt-3 [&_textarea]:min-h-28 [&_textarea]:resize-y"
-              aria-label="Custom source control writing instructions"
-              placeholder="Keep titles concise. Use short bullet points in descriptions."
+              aria-label={i18n._("Custom source control writing instructions")}
+              placeholder={i18n._("Keep titles concise. Use short bullet points in descriptions.")}
               maxLength={MAX_SOURCE_CONTROL_CUSTOM_INSTRUCTIONS_LENGTH}
               value={settings.sourceControlCustomInstructions}
               onCommit={(value) => updateSettings({ sourceControlCustomInstructions: value })}
@@ -648,8 +656,10 @@ export function ModelsSettingsPanel({
                       onClick={() => setShowAllCustomModels((value) => !value)}
                     >
                       {showAllCustomModels
-                        ? "Show less"
-                        : `Show more (${overflowCustomModelRows.length})`}
+                        ? i18n._("Show less")
+                        : i18n._("Show more ({count})", {
+                            count: overflowCustomModelRows.length,
+                          })}
                     </button>
                   </>
                 ) : null}
