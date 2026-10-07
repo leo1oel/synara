@@ -188,9 +188,19 @@ export function SettingsListRow({
         )}
       >
         <div className="min-w-0 flex-1 space-y-0.5">
-          <div className={cn(SETTINGS_CARD_ROW_TITLE_CLASS_NAME, "truncate")}>{title}</div>
+          <div
+            data-slot="settings-row-title"
+            className={cn(SETTINGS_CARD_ROW_TITLE_CLASS_NAME, "truncate")}
+          >
+            {title}
+          </div>
           {description != null ? (
-            <div className={SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME}>{description}</div>
+            <div
+              data-slot="settings-row-description"
+              className={SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME}
+            >
+              {description}
+            </div>
           ) : null}
         </div>
         {actions != null ? (
@@ -251,7 +261,12 @@ export function SettingsRow({
             </span>
           </div>
           {description ? (
-            <p className={SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME}>{description}</p>
+            <p
+              data-slot="settings-row-description"
+              className={SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME}
+            >
+              {description}
+            </p>
           ) : null}
           {status ? <div className="pt-1 text-ui-sm text-muted-foreground">{status}</div> : null}
         </div>

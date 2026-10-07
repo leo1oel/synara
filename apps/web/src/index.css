@@ -931,6 +931,16 @@ html[data-synara-embed="true"] .app-settings-surface .synara-settings-heading h1
   letter-spacing: normal;
 }
 
+/* The rail layout reserves its top strip above Settings because the standalone
+   page floats its top bar there. The embed renders no top bar (Lattice's dialog
+   owns that chrome), so the reserve would only push every page 44px below
+   Lattice's native pages. */
+html[data-synara-embed="true"]
+  [data-sidebar-layout="rail"]
+  [data-slot="sidebar-inset-surface"].app-settings-surface {
+  padding-top: 0;
+}
+
 html[data-synara-embed="true"] .synara-settings-content {
   max-width: var(--lattice-settings-content-max-width);
   margin-inline: 0;
@@ -1017,10 +1027,15 @@ html[data-synara-embed="true"] .app-settings-surface section.flex.flex-col {
 
 /* Mirror Lattice's native SettingsGroup/SettingsRow geometry. The group rule
    sits 4px above a 40px row whose content has 4px block padding, so left copy
-   and trailing controls keep the same divider rhythm on every Agent page. */
+   and trailing controls keep the same divider rhythm on every Agent page. The
+   native row centers its content in that box, so a row without a description
+   puts its label and control where Lattice's do. */
 html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] {
   min-height: 40px;
   padding-block: 4px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row-title-line"] {
@@ -1076,7 +1091,8 @@ html[data-synara-embed="true"]
 }
 
 html[data-synara-embed="true"] .app-settings-surface h3,
-html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] h3 {
+html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] h3,
+html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row-title"] {
   font-family: var(--font-ui-family);
   font-size: var(--lattice-type-label-size);
   line-height: var(--lattice-type-label-line-height);
@@ -1113,6 +1129,12 @@ html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] 
   font-weight: var(--lattice-type-caption-weight);
 }
 
+/* Lattice's row descriptions use its tertiary text role; the page description
+   under the heading keeps the secondary (muted) one. */
+html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row-description"] {
+  color: var(--lattice-settings-faint);
+}
+
 html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] > div:first-child {
   min-width: 0;
 }
@@ -1123,10 +1145,13 @@ html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] 
    column. Keep embedded rows horizontal at the narrower usable threshold;
    genuinely small hosts retain the base stacked layout. */
 @media (width >= 30rem) {
+  /* Lattice keeps 16px between a row's copy and its control, so descriptions
+     wrap at the same width as on the native pages. */
   html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row-layout"] {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
+    column-gap: 16px;
   }
 
   html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-actions"] {
@@ -1135,12 +1160,22 @@ html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] 
   }
 }
 
+/* Centered against the copy, like Lattice's SettingsRow control, so a switch
+   beside a one- or two-line description sits where the native pages put it. */
 html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-control"] {
   width: var(--lattice-settings-control-width);
   flex: none;
-  align-self: flex-start;
+  align-self: center;
   justify-content: flex-end;
-  margin-top: 4px;
+}
+
+/* A row whose copy runs past its description (a Skill's status and path) keeps
+   its control on the title line, where it reads as that row's own. */
+html[data-synara-embed="true"]
+  .app-settings-surface
+  [data-slot="settings-row-layout"]:has(> div:first-child > :nth-child(3))
+  > [data-slot="settings-control"] {
+  align-self: flex-start;
 }
 
 /* Keep the standalone 208px Skills action inside Lattice's 170px trailing

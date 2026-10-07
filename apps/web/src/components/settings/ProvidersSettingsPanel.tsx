@@ -109,6 +109,7 @@ import {
   SETTINGS_INSET_LIST_CLASS_NAME,
   SETTINGS_INSET_RADIUS_CLASS_NAME,
   SETTINGS_OUTLINED_SURFACE_CLASS_NAME,
+  SETTINGS_PANEL_SECTION_GAP_CLASS_NAME,
   SETTINGS_STACKED_ROWS_DIVIDER_CLASS_NAME,
 } from "~/settingsPanelStyles";
 import { ELEVATED_HOVER_SURFACE_RAISED_TEXT_CLASS_NAME } from "~/surfaceStyles";
@@ -2088,7 +2089,8 @@ export function ProvidersSettingsPanel({
   };
 
   return (
-    <div className="space-y-6">
+    // Embedded Lattice stacks this panel under ModelsSettingsPanel on one page.
+    <div className={cn("space-y-6", SETTINGS_PANEL_SECTION_GAP_CLASS_NAME)}>
       <SettingsSection title={i18n._("Provider picker")}>
         <SettingsRow
           title={i18n._("Available CLIs")}
@@ -2161,7 +2163,7 @@ export function ProvidersSettingsPanel({
         </SettingsRow>
       </SettingsSection>
 
-      <div id={SETTINGS_TARGETS.providerUpdates}>
+      <div id={SETTINGS_TARGETS.providerUpdates} className={SETTINGS_PANEL_SECTION_GAP_CLASS_NAME}>
         <SettingsSection title={i18n._("Updates")}>
           <SettingsRow
             title={i18n._("Automatic CLI update checks")}
@@ -2219,8 +2221,12 @@ export function ProvidersSettingsPanel({
                     isProviderUpdateActive(providerStatus) || updatingProviders.has(instanceId);
                   const updateLabel = providerUpdateStatusLabel(providerStatus);
                   return (
+                    // Inside the outlined list, inset the row from the border and
+                    // separate rows the way the Provider tools list below does;
+                    // the page-level row has no inline padding of its own.
                     <SettingsListRow
                       key={instanceId}
+                      className="border-t border-border/70 px-3 first:border-t-0"
                       title={providerStatusDisplayName(providerStatus)}
                       description={updateLabel || undefined}
                       actions={
@@ -2246,7 +2252,7 @@ export function ProvidersSettingsPanel({
         </SettingsSection>
       </div>
 
-      <div id={SETTINGS_TARGETS.providerInstalls}>
+      <div id={SETTINGS_TARGETS.providerInstalls} className={SETTINGS_PANEL_SECTION_GAP_CLASS_NAME}>
         <SettingsSection title={i18n._("Provider tools")}>
           <SettingsRow
             title={i18n._("Provider runtimes")}

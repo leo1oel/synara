@@ -25,9 +25,13 @@ export const SETTINGS_PAGE_BACKGROUND_CLASS_NAME = "app-settings-surface";
 /** Group heading above a settings block. The embedded host adds the divider and type scale. */
 export const SETTINGS_SECTION_LABEL_CLASS_NAME = "settings-group-heading";
 
+/** The gap above every settings group but a page's first. Also set on anything that wraps a
+ *  group (an anchor `div`) or stacks a second panel's groups on the same page, where the
+ *  group itself is a first child and would otherwise lose it. */
+export const SETTINGS_PANEL_SECTION_GAP_CLASS_NAME = "not-first:mt-7";
+
 /** Vertical rhythm between stacked settings groups in the content panel. */
-export const SETTINGS_PANEL_SECTION_CLASS_NAME =
-  "settings-group flex flex-col gap-1.5 not-first:mt-7";
+export const SETTINGS_PANEL_SECTION_CLASS_NAME = `settings-group flex flex-col gap-1.5 ${SETTINGS_PANEL_SECTION_GAP_CLASS_NAME}`;
 
 /** Unframed settings group. Rows sit directly on the page surface. */
 export const SETTINGS_CARD_CLASS_NAME = "settings-group-rows";

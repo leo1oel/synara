@@ -7,10 +7,11 @@ import {
   type TerminalOpenInput,
 } from "@synara/contracts";
 import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
+import { I18nProvider } from "@lingui/react";
 import { page, userEvent } from "vitest/browser";
 import { beforeEach, expect, it, vi } from "vitest";
-import { render } from "vitest-browser-react";
-import { StrictMode } from "react";
+import { render as renderInBrowser } from "vitest-browser-react";
+import { StrictMode, type ReactNode } from "react";
 
 const harness = vi.hoisted(() => ({
   statuses: [] as ServerProviderStatus[],
@@ -36,7 +37,12 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
   return {
     ...(await importOriginal<typeof import("@tanstack/react-query")>()),
     useQueryClient: () => queryClient,
-    useQuery: () => ({ data: { providers: harness.statuses, cwd: "/tmp" }, isPending: false }),
+    // One payload answers both the server config and the server settings query;
+    // `providerInstances` lets the settings read find no per-instance overrides.
+    useQuery: () => ({
+      data: { providers: harness.statuses, providerInstances: {}, cwd: "/tmp" },
+      isPending: false,
+    }),
   };
 });
 vi.mock("~/lib/serverReactQuery", async (importOriginal) => ({
@@ -59,6 +65,7 @@ vi.mock("~/nativeApi", () => ({
 }));
 
 import { AppSettingsSchema } from "~/appSettings";
+import { i18n } from "~/i18n";
 import { ProvidersSettingsPanel } from "./ProvidersSettingsPanel";
 import TerminalViewport from "../terminal/TerminalViewport";
 import { terminalRuntimeRegistry } from "../terminal/terminalRuntimeRegistry";
@@ -73,7 +80,13 @@ const props = {
   resetEpoch: 0,
 };
 
+// The panel reads its copy through Lingui, so every render needs the provider.
+function render(ui: ReactNode) {
+  return renderInBrowser(<I18nProvider i18n={i18n}>{ui}</I18nProvider>);
+}
+
 beforeEach(() => {
+  i18n.loadAndActivate({ locale: "en", messages: {} });
   harness.reconciled = true;
   harness.refresh.mockReset();
   harness.api.terminal.open.mockReset().mockImplementation(async (input: TerminalOpenInput) => ({
@@ -524,3 +537,39 @@ it.each(["ready", "error", "exited"] as const)(
     }
   },
 );
+
+it("insets each Provider updates row from its outlined list and divides the rows", async () => {
+  const behindLatest = {
+    status: "behind_latest" as const,
+    currentVersion: "1.0.0",
+    latestVersion: "1.1.0",
+    updateCommand: "npm install -g provider@latest",
+    canUpdate: true,
+    checkedAt: "2026-09-16T21:46:18.000Z",
+    message: "Update available.",
+  };
+  harness.statuses = harness.statuses.map((status) =>
+    status.provider === "codex" || status.provider === "claudeAgent"
+      ? { ...status, version: "1.0.0", versionAdvisory: behindLatest }
+      : status,
+  );
+  await render(<ProvidersSettingsPanel {...props} />);
+
+  const updatesRow = page
+    .getByRole("heading", { name: "Provider updates", exact: true })
+    .element()
+    .closest('[data-slot="settings-row"]')!;
+  const list = updatesRow.querySelector<HTMLElement>(":scope > div:last-child")!;
+  const rows = [...list.querySelectorAll<HTMLElement>(':scope > [data-slot="settings-row"]')];
+  expect(rows).toHaveLength(2);
+
+  const listBox = list.getBoundingClientRect();
+  for (const row of rows) {
+    const title = row.querySelector('[data-slot="settings-row-title"]')!.getBoundingClientRect();
+    expect(title.left - listBox.left).toBeGreaterThanOrEqual(12);
+    const action = row.querySelector('[data-slot="settings-actions"]')!.getBoundingClientRect();
+    expect(listBox.right - action.right).toBeGreaterThanOrEqual(12);
+  }
+  expect(getComputedStyle(rows[0]!).borderTopWidth).toBe("0px");
+  expect(getComputedStyle(rows[1]!).borderTopWidth).toBe("1px");
+});

@@ -565,6 +565,7 @@ describe("Lattice embed mode", () => {
 
     expect(drawer.setProperty).toHaveBeenCalledWith("--lattice-type-heading-size", "20px");
     expect(drawer.setProperty).toHaveBeenCalledWith("--lattice-type-group-size", "14px");
+    expect(drawer.setProperty).toHaveBeenCalledWith("--lattice-type-group-line-height", "20px");
     expect(drawer.setProperty).toHaveBeenCalledWith("--lattice-type-label-size", "13px");
     expect(drawer.setProperty).toHaveBeenCalledWith("--lattice-type-caption-size", "12px");
     expect(drawer.setProperty).toHaveBeenCalledWith("--lattice-settings-control-font-size", "13px");

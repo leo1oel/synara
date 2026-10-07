@@ -1243,7 +1243,7 @@ function embedTypography(usesDrawerSurface: boolean): Record<string, string> {
   const scale = usesDrawerSurface
     ? {
         heading: ["20px", "24px"],
-        group: ["14px", "18px"],
+        group: ["14px", "20px"],
         label: ["13px", "18px"],
         caption: ["12px", "18px"],
       }
