@@ -118,6 +118,31 @@ describe("compile repair model persistence patch", () => {
   });
 });
 
+describe("proofreading model persistence patch", () => {
+  it("sends a chosen model as an override and an unset one as inheriting", () => {
+    expect(
+      appSettingsPatchToServerSettingsPatch({
+        proofreadProvider: "claudeAgent",
+        proofreadProviderInstanceId: "claudeAgent",
+        proofreadModel: "claude-sonnet-4-6",
+      }),
+    ).toEqual({
+      proofreadModelSelection: {
+        provider: "claudeAgent",
+        instanceId: "claudeAgent",
+        model: "claude-sonnet-4-6",
+      },
+    });
+    expect(
+      appSettingsPatchToServerSettingsPatch({
+        proofreadProvider: undefined,
+        proofreadProviderInstanceId: undefined,
+        proofreadModel: undefined,
+      }),
+    ).toEqual({ proofreadModelSelection: null });
+  });
+});
+
 describe("removed provider enablement preference", () => {
   it("drops a legacy local disabled list while retaining picker visibility", () => {
     const decoded = Schema.decodeUnknownSync(AppSettingsSchema)({

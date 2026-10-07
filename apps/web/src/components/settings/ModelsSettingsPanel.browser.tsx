@@ -11,11 +11,16 @@ vi.mock("@tanstack/react-query", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-query")>()),
   useQuery: () => ({ data: { cwd: "/tmp" } }),
 }));
-// The panel reads the instance-keyed catalog for Git writing and the
-// provider-keyed catalog for Lattice's compile repair model.
+// The panel reads the instance-keyed catalog for Git writing and proofreading,
+// and the provider-keyed catalog for Lattice's compile repair model.
 vi.mock("~/hooks/useProviderModelCatalog", () => ({
   useProviderModelCatalog: () => ({
-    modelOptionsByProviderInstance: {},
+    modelOptionsByProviderInstance: {
+      codex: [
+        { slug: "gpt-5.4", name: "GPT-5.4" },
+        { slug: "gpt-5.4-mini", name: "GPT-5.4 Mini" },
+      ],
+    },
     modelOptionsByProvider: {
       codex: [{ slug: "discovered-model", name: "Discovered model" }],
       claudeAgent: [],
@@ -26,6 +31,7 @@ vi.mock("~/hooks/useProviderModelCatalog", () => ({
       droid: [],
       opencode: [],
       pi: [],
+      omp: [],
     },
   }),
 }));
@@ -157,4 +163,27 @@ it("selects discovered, custom and transient repair models independently and res
     client.clear();
     host.remove();
   }
+});
+
+it("inherits the Git writing model for proofreading until a model is chosen, then resets", async () => {
+  await page.viewport(900, 800);
+  i18n.loadAndActivate({ locale: "en", messages: {} });
+  await render(<Harness />);
+  const picker = page.getByRole("combobox", { name: "Proofreading model", exact: true });
+  const inherited = "Same as Git writing (";
+  expect(picker.element().textContent).toContain(inherited);
+  expect(document.querySelector('[aria-label="Reset proofreading model to default"]')).toBeNull();
+
+  await picker.click();
+  await page.getByRole("option", { name: "Codex / GPT-5.4 Mini", exact: true }).click();
+  expect(picker.element().textContent).toBe("Codex / GPT-5.4 Mini");
+
+  await page.getByRole("button", { name: "Reset proofreading model to default" }).click();
+  expect(picker.element().textContent).toContain(inherited);
+
+  await picker.click();
+  await page.getByRole("option", { name: "Codex / GPT-5.4", exact: true }).click();
+  await picker.click();
+  await page.getByRole("option", { name: new RegExp(`^${inherited.replace("(", "\\(")}`) }).click();
+  expect(picker.element().textContent).toContain(inherited);
 });

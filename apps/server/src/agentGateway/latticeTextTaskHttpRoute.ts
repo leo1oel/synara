@@ -1,14 +1,24 @@
 import { realpath, stat } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 
-import { PROVIDER_SEND_TURN_MAX_INPUT_CHARS } from "@synara/contracts";
+import {
+  PROVIDER_DISPLAY_NAMES,
+  PROVIDER_SEND_TURN_MAX_INPUT_CHARS,
+  type ModelSelection,
+  type ServerSettings,
+} from "@synara/contracts";
+import { getModelOptions } from "@synara/shared/model";
+import {
+  deriveProviderInstances,
+  resolveModelSelectionInstanceId,
+} from "@synara/shared/providerInstances";
 import { Cause, Effect, Fiber, Layer } from "effect";
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 
 import { authErrorResponse } from "../auth/effectHttp.ts";
 import { TextGenerationError } from "../git/Errors.ts";
 import { TextGeneration } from "../git/Services/TextGeneration.ts";
-import { ServerSettingsService } from "../serverSettings.ts";
+import { resolveProofreadModelSelection, ServerSettingsService } from "../serverSettings.ts";
 import { readMcpJsonBody } from "./httpRoute.ts";
 import { authenticateLatticeRelayRequest } from "./latticeRelayAuthentication.ts";
 
@@ -23,6 +33,10 @@ import { authenticateLatticeRelayRequest } from "./latticeRelayAuthentication.ts
  * so it cannot edit files or raise an approval whatever the prompt asks. That
  * is also why a text task never creates a thread: there is nothing to approve
  * or review, and proofreading must not fill the task list.
+ *
+ * The task runs on Settings -> Models -> Proofreading model, which inherits the
+ * Git writing model until the writer picks one, and every answer names that
+ * model so Lattice can show the writer what is proofreading.
  */
 export const LATTICE_TEXT_TASK_PATH = "/api/lattice/text-task";
 const MAX_BODY_BYTES = 1024 * 1024;
@@ -39,8 +53,46 @@ export type TextTaskStatus =
   | { readonly status: "completed"; readonly text: string }
   | { readonly status: "failed"; readonly message: string };
 
+/**
+ * The model a task runs on, fixed when it starts: `source` says whether it is
+ * the proofreading override or the inherited Git writing model, and `label` is
+ * the "Provider / Model" name Settings shows.
+ */
+export type TextTaskModel = {
+  readonly provider: ModelSelection["provider"];
+  readonly instanceId: string;
+  readonly slug: string;
+  readonly label: string;
+  readonly source: "proofreading" | "git-writing";
+};
+
+export function textTaskModel(settings: ServerSettings): {
+  readonly selection: ModelSelection;
+  readonly model: TextTaskModel;
+} {
+  const { selection, source } = resolveProofreadModelSelection(settings);
+  const instanceId = resolveModelSelectionInstanceId(selection);
+  const providerName =
+    deriveProviderInstances(settings).find((instance) => instance.instanceId === instanceId)
+      ?.displayName ?? PROVIDER_DISPLAY_NAMES[selection.provider];
+  const modelName =
+    getModelOptions(selection.provider).find((option) => option.slug === selection.model)?.name ??
+    selection.model;
+  return {
+    selection,
+    model: {
+      provider: selection.provider,
+      instanceId,
+      slug: selection.model,
+      label: `${providerName} / ${modelName}`,
+      source,
+    },
+  };
+}
+
 type TextTask = {
   status: TextTaskStatus;
+  model: TextTaskModel;
   fiber: Fiber.Fiber<void> | null;
   settledAt: number | null;
 };
@@ -95,6 +147,8 @@ const unknownTask = () =>
 
 const noStore = { "Cache-Control": "no-store" };
 
+const taskAnswer = (task: TextTask) => ({ ...task.status, model: task.model });
+
 export const latticeTextTaskRouteLayer = Effect.gen(function* () {
   // Running tasks belong to the server, not to the request that started them:
   // closing the server interrupts them, which kills their provider processes.
@@ -148,9 +202,9 @@ export const latticeTextTaskRouteLayer = Effect.gen(function* () {
       const settings = yield* ServerSettingsService;
       const textGeneration = yield* TextGeneration;
       return yield* Effect.gen(function* () {
-        const modelSelection = (yield* settings.getSettings).textGenerationModelSelection;
+        const { selection: modelSelection, model } = textTaskModel(yield* settings.getSettings);
         const id = randomUUID();
-        tasks.set(id, { status: { status: "running" }, fiber: null, settledAt: null });
+        tasks.set(id, { status: { status: "running" }, model, fiber: null, settledAt: null });
         const fiber = yield* textGeneration
           .generateTextTask({ cwd: canonicalRoot, prompt: input.prompt, modelSelection })
           .pipe(
@@ -169,7 +223,10 @@ export const latticeTextTaskRouteLayer = Effect.gen(function* () {
           );
         const task = tasks.get(id);
         if (task && task.settledAt === null) task.fiber = fiber;
-        return HttpServerResponse.jsonUnsafe({ taskId: id }, { status: 202, headers: noStore });
+        return HttpServerResponse.jsonUnsafe(
+          { taskId: id, model },
+          { status: 202, headers: noStore },
+        );
       }).pipe(
         Effect.catch(() =>
           Effect.succeed(
@@ -192,7 +249,7 @@ export const latticeTextTaskRouteLayer = Effect.gen(function* () {
       const id = taskIdFromRequest(request);
       const task = id ? tasks.get(id) : undefined;
       if (!task) return unknownTask();
-      return HttpServerResponse.jsonUnsafe(task.status, { headers: noStore });
+      return HttpServerResponse.jsonUnsafe(taskAnswer(task), { headers: noStore });
     }).pipe(Effect.catchTag("AuthError", (error) => Effect.succeed(authErrorResponse(error)))),
   );
 
@@ -211,7 +268,7 @@ export const latticeTextTaskRouteLayer = Effect.gen(function* () {
         yield* Fiber.interrupt(task.fiber);
         settle(id, { status: "failed", message: "The text task was cancelled." });
       }
-      return HttpServerResponse.jsonUnsafe(task.status, { headers: noStore });
+      return HttpServerResponse.jsonUnsafe(taskAnswer(task), { headers: noStore });
     }).pipe(Effect.catchTag("AuthError", (error) => Effect.succeed(authErrorResponse(error)))),
   );
 

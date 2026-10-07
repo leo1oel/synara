@@ -58,6 +58,11 @@ export function applyServerSettingsPatch(
       } as ModelSelection,
     };
   }
+  if (patch.proofreadModelSelection !== undefined) {
+    // Replace rather than merge so a new override never keeps the previous
+    // model's options.
+    next = { ...next, proofreadModelSelection: patch.proofreadModelSelection };
+  }
   if (!selectionPatch) return next;
 
   const patchedInstanceId =

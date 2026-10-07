@@ -481,6 +481,13 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     keywords: "Lattice LaTeX diagnostic fix independent background task provider model",
   },
   {
+    id: "models:proofreading-model",
+    section: "providers",
+    title: "Proofreading model",
+    keywords:
+      "Lattice proofread grammar spelling selection provider model inherit Git writing model",
+  },
+  {
     id: "models:source-control-writing-style",
     section: "providers",
     title: "Source control writing style",
@@ -492,7 +499,7 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     section: "providers",
     title: "Git writing model",
     keywords:
-      "Used for generated commit messages, PR titles, branch names, and Lattice proofreading.",
+      "Used for generated commit messages, PR titles, and branch names. Lattice proofreading follows it unless a proofreading model is chosen.",
   },
   {
     id: "models:saved-model-slugs",

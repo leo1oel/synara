@@ -159,6 +159,11 @@ export const ServerSettings = Schema.Struct({
       model: DEFAULT_GIT_TEXT_GENERATION_MODEL,
     })),
   ),
+  // Lattice proofreading. Null inherits textGenerationModelSelection, so an
+  // install that never chose a proofreading model follows its Git writing model.
+  proofreadModelSelection: Schema.NullOr(ModelSelection).pipe(
+    Schema.withDecodingDefault(() => null),
+  ),
   providers: Schema.Struct({
     codex: CodexServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     claudeAgent: ClaudeServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
@@ -213,6 +218,8 @@ export const ServerSettingsPatch = Schema.Struct({
   sourceControlCustomInstructions: Schema.optionalKey(SourceControlCustomInstructions),
   textGenerationModelSelection: Schema.optionalKey(ModelSelectionPatch),
   compileRepairModelSelection: Schema.optionalKey(ModelSelectionPatch),
+  // A whole selection replaces the override; null returns to inheriting.
+  proofreadModelSelection: Schema.optionalKey(Schema.NullOr(ModelSelection)),
   providers: Schema.optionalKey(
     Schema.Struct({
       codex: Schema.optionalKey(

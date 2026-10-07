@@ -280,6 +280,36 @@ export function resolveTextGenerationProvider(settings: ServerSettings): ServerS
   };
 }
 
+/**
+ * The model Lattice proofreading runs on. The proofreading override applies
+ * while its provider instance is enabled and has a text-generation path;
+ * otherwise, including when no override was chosen, proofreading inherits the
+ * already-resolved Git writing model, so it never runs on a provider the
+ * writer turned off.
+ */
+export function resolveProofreadModelSelection(settings: ServerSettings): {
+  readonly selection: ModelSelection;
+  readonly source: "proofreading" | "git-writing";
+} {
+  const override = settings.proofreadModelSelection;
+  const instance = override ? findTextGenerationSelectionInstance(settings, override) : undefined;
+  if (override && instance?.enabled && hasDedicatedTextGenerationProvider(instance.driver)) {
+    return {
+      selection:
+        instance.driver === override.provider &&
+        instance.instanceId === resolveModelSelectionInstanceId(override)
+          ? override
+          : ({
+              provider: instance.driver,
+              instanceId: instance.instanceId,
+              model: override.model,
+            } as ModelSelection),
+      source: "proofreading",
+    };
+  }
+  return { selection: settings.textGenerationModelSelection, source: "git-writing" };
+}
+
 function findTextGenerationSelectionInstance(
   settings: ServerSettings,
   selection: ModelSelection,

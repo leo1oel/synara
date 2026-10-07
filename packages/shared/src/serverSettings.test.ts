@@ -39,6 +39,35 @@ describe("compile repair selection patches", () => {
   });
 });
 
+describe("proofreading selection patches", () => {
+  it("inherits by default, replaces the override whole, and clears it with null", () => {
+    expect(DEFAULT_SERVER_SETTINGS.proofreadModelSelection).toBeNull();
+    const current = {
+      ...DEFAULT_SERVER_SETTINGS,
+      proofreadModelSelection: {
+        provider: "codex" as const,
+        model: "gpt-5.4",
+        options: { reasoningEffort: "high" as const },
+      },
+    };
+    expect(applyServerSettingsPatch(current, {}).proofreadModelSelection).toEqual(
+      current.proofreadModelSelection,
+    );
+    expect(
+      applyServerSettingsPatch(current, {
+        proofreadModelSelection: { provider: "claudeAgent", model: "claude-sonnet-4-6" },
+      }).proofreadModelSelection,
+    ).toEqual({ provider: "claudeAgent", model: "claude-sonnet-4-6" });
+    expect(
+      applyServerSettingsPatch(current, { proofreadModelSelection: null }).proofreadModelSelection,
+    ).toBeNull();
+    expect(
+      applyServerSettingsPatch(current, { textGenerationModelSelection: { model: "gpt-other" } })
+        .proofreadModelSelection,
+    ).toEqual(current.proofreadModelSelection);
+  });
+});
+
 describe("providerStartOptionsFromServerSettings", () => {
   it("omits blank launch settings from provider session input", () => {
     const settings = {

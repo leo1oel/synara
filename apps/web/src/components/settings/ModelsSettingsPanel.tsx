@@ -69,6 +69,10 @@ const SOURCE_CONTROL_WRITING_OPTIONS: readonly {
   },
 ];
 
+// Picker values are "instance:provider:model"; this one has no colon, so it
+// never collides with a model choice.
+const PROOFREAD_INHERIT_VALUE = "inherit";
+
 type CustomModelValidationResult =
   | { readonly model: string; readonly error?: never }
   | { readonly model?: never; readonly error: string };
@@ -220,6 +224,22 @@ export function ModelsSettingsPanel({
       PROVIDER_DISPLAY_NAMES[currentGitTextGenerationProvider]
       ? `${selectedGitTextGenerationInstanceLabel} · ${selectedGitTextGenerationModelName}`
       : selectedGitTextGenerationModelName;
+  // Proofreading offers the Git writing choices, since both run on the same
+  // tool-free text-generation path, plus inheriting whatever Git writing uses.
+  const proofreadOverrideValue = settings.proofreadModel
+    ? `${settings.proofreadProviderInstanceId ?? settings.proofreadProvider ?? "codex"}:${settings.proofreadProvider ?? "codex"}:${settings.proofreadModel}`
+    : null;
+  const selectedProofreadPickerOption = proofreadOverrideValue
+    ? gitTextGenerationPickerOptions.find((entry) => entry.value === proofreadOverrideValue)
+    : undefined;
+  const inheritedProofreadLabel = i18n._("Same as Git writing ({model})", {
+    model: selectedGitTextGenerationModelLabel,
+  });
+  const selectedProofreadModelLabel = !proofreadOverrideValue
+    ? inheritedProofreadLabel
+    : selectedProofreadPickerOption
+      ? `${selectedProofreadPickerOption.instance.label} / ${selectedProofreadPickerOption.option.name}`
+      : (settings.proofreadModel ?? "");
   const selectedCustomModelProviderSettings = CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.find(
     (config) => config.provider === selectedCustomModelProvider,
   )!;
@@ -381,7 +401,7 @@ export function ModelsSettingsPanel({
         <SettingsRow
           title={i18n._("Git writing model")}
           description={i18n._(
-            "Used for generated commit messages, PR titles, branch names, and Lattice proofreading.",
+            "Used for generated commit messages, PR titles, and branch names. Lattice proofreading follows it unless a proofreading model is chosen.",
           )}
           resetAction={
             isGitTextGenerationModelDirty ? (
@@ -415,6 +435,62 @@ export function ModelsSettingsPanel({
               triggerClassName="w-full sm:w-52"
               valueContent={selectedGitTextGenerationModelLabel}
             >
+              {gitTextGenerationPickerOptions.map(({ instance, key, option, value }) => (
+                <SelectItem hideIndicator key={key} value={value}>
+                  {instance.label} / {option.name}
+                </SelectItem>
+              ))}
+            </SettingsSelectControl>
+          }
+        />
+        <SettingsRow
+          title={i18n._("Proofreading model")}
+          description={i18n._(
+            "Used by Lattice to proofread a selection, without tools or file access. Follows the Git writing model until you choose one.",
+          )}
+          resetAction={
+            proofreadOverrideValue ? (
+              <SettingResetButton
+                label="proofreading model"
+                onClick={() =>
+                  updateSettings({
+                    proofreadProvider: undefined,
+                    proofreadProviderInstanceId: undefined,
+                    proofreadModel: undefined,
+                  })
+                }
+              />
+            ) : null
+          }
+          control={
+            <SettingsSelectControl
+              value={proofreadOverrideValue ?? PROOFREAD_INHERIT_VALUE}
+              onValueChange={(value) => {
+                if (!value) return;
+                if (value === PROOFREAD_INHERIT_VALUE) {
+                  updateSettings({
+                    proofreadProvider: undefined,
+                    proofreadProviderInstanceId: undefined,
+                    proofreadModel: undefined,
+                  });
+                  return;
+                }
+                const [instanceId, provider, ...modelParts] = value.split(":");
+                const model = modelParts.join(":");
+                if (!instanceId || !provider || !model) return;
+                updateSettings({
+                  proofreadProvider: provider as ProviderKind,
+                  proofreadProviderInstanceId: instanceId,
+                  proofreadModel: model,
+                });
+              }}
+              ariaLabel={i18n._("Proofreading model")}
+              triggerClassName="w-full sm:w-52"
+              valueContent={selectedProofreadModelLabel}
+            >
+              <SelectItem hideIndicator value={PROOFREAD_INHERIT_VALUE}>
+                {inheritedProofreadLabel}
+              </SelectItem>
               {gitTextGenerationPickerOptions.map(({ instance, key, option, value }) => (
                 <SelectItem hideIndicator key={key} value={value}>
                   {instance.label} / {option.name}

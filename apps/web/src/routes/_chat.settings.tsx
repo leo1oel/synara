@@ -681,6 +681,7 @@ function SettingsRouteView() {
     settings.sourceControlCustomInstructions !== defaults.sourceControlCustomInstructions
       ? ["Source control writing style"]
       : []),
+    ...(settings.proofreadModel !== undefined ? ["Proofreading model"] : []),
     ...(settings.compileRepairProvider !== defaults.compileRepairProvider ||
     settings.compileRepairModel !== defaults.compileRepairModel
       ? ["Compile repair model"]

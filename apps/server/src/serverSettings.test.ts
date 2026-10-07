@@ -17,6 +17,7 @@ import { describe, expect, it } from "vitest";
 import { ServerConfig } from "./config";
 import {
   gateBetaOnlyProviders,
+  resolveProofreadModelSelection,
   resolveTextGenerationProvider,
   redactServerSettingsForClient,
   ServerSettingsLive,
@@ -117,6 +118,54 @@ describe("ServerSettingsService", () => {
     expect(result.restarted.textGenerationModelSelection).toEqual(
       result.before.textGenerationModelSelection,
     );
+  });
+
+  it("persists a proofreading override across restart and clears it back to inheriting", async () => {
+    const result = await runWithSettings(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        const config = yield* ServerConfig;
+        yield* service.start;
+        const before = yield* service.getSettings;
+        yield* service.updateSettings({
+          proofreadModelSelection: { provider: "claudeAgent", model: "claude-sonnet-4-6" },
+        });
+        const restart = Effect.gen(function* () {
+          const next = yield* ServerSettingsService;
+          yield* next.start;
+          return yield* next.getSettings;
+        }).pipe(
+          Effect.provide(
+            ServerSettingsLive.pipe(
+              Layer.provide(Layer.merge(NodeServices.layer, Layer.succeed(ServerConfig, config))),
+            ),
+          ),
+        );
+        const restarted = yield* restart;
+        yield* service.updateSettings({ proofreadModelSelection: null });
+        const cleared = yield* restart;
+        return { before, restarted, cleared };
+      }),
+    );
+    expect(result.before.proofreadModelSelection).toBeNull();
+    expect(resolveProofreadModelSelection(result.before)).toEqual({
+      selection: result.before.textGenerationModelSelection,
+      source: "git-writing",
+    });
+    const override = {
+      provider: "claudeAgent",
+      instanceId: "claudeAgent",
+      model: "claude-sonnet-4-6",
+    };
+    expect(result.restarted.proofreadModelSelection).toEqual(override);
+    expect(resolveProofreadModelSelection(result.restarted)).toEqual({
+      selection: override,
+      source: "proofreading",
+    });
+    expect(result.restarted.textGenerationModelSelection).toEqual(
+      result.before.textGenerationModelSelection,
+    );
+    expect(result.cleared.proofreadModelSelection).toBeNull();
   });
 
   it("loads defaults when settings file does not exist", async () => {

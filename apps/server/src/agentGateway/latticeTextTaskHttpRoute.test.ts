@@ -4,7 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as NodeHttpServer from "@effect/platform-node/NodeHttpServer";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { DEFAULT_SERVER_SETTINGS, PROVIDER_SEND_TURN_MAX_INPUT_CHARS } from "@synara/contracts";
+import {
+  DEFAULT_SERVER_SETTINGS,
+  PROVIDER_SEND_TURN_MAX_INPUT_CHARS,
+  type ServerSettings,
+} from "@synara/contracts";
 import { Deferred, Effect, Exit, Layer, Scope } from "effect";
 import { HttpRouter } from "effect/unstable/http";
 import { describe, expect, it } from "vitest";
@@ -36,6 +40,7 @@ async function withTextTaskServer(
     settle: (outcome: Outcome) => Promise<void>;
     interrupted: () => number;
   }) => Promise<void>,
+  settingsOverrides: Partial<ServerSettings> = {},
 ) {
   const scope = await Effect.runPromise(Scope.make("sequential"));
   const root = await realpath(await mkdtemp(join(tmpdir(), "text-task-")));
@@ -88,6 +93,7 @@ async function withTextTaskServer(
                 getSettings: Effect.succeed({
                   ...DEFAULT_SERVER_SETTINGS,
                   textGenerationModelSelection: modelSelection,
+                  ...settingsOverrides,
                 }),
               } as unknown as ServerSettingsShape),
             ),
@@ -125,6 +131,14 @@ async function withTextTaskServer(
   }
 }
 
+const gitWritingModel = {
+  provider: "claudeAgent",
+  instanceId: "claudeAgent",
+  slug: "claude-sonnet-4-6",
+  label: "Claude / Claude Sonnet 4.6",
+  source: "git-writing",
+};
+
 async function start(request: (path?: string) => Promise<Response>): Promise<string> {
   const response = await request();
   expect(response.status).toBe(202);
@@ -146,10 +160,16 @@ async function settled(request: (path?: string, method?: string) => Promise<Resp
 }
 
 describe("Lattice text task HTTP lifecycle", () => {
-  it("runs one task with the writing model and answers its final text", async () => {
+  it("runs one task with the inherited writing model and answers its final text", async () => {
     await withTextTaskServer(async ({ request, calls, settle, root }) => {
-      const id = await start(request);
-      expect(await (await request(`/${id}`, "GET")).json()).toEqual({ status: "running" });
+      const started = await request();
+      expect(started.status).toBe(202);
+      const { taskId: id, model } = (await started.json()) as { taskId: string; model: unknown };
+      expect(model).toEqual(gitWritingModel);
+      expect(await (await request(`/${id}`, "GET")).json()).toEqual({
+        status: "running",
+        model: gitWritingModel,
+      });
       expect(calls).toEqual([
         {
           cwd: root,
@@ -162,8 +182,54 @@ describe("Lattice text task HTTP lifecycle", () => {
       expect(await settled(request, id)).toEqual({
         status: "completed",
         text: "<proofread>Fixed.</proofread>",
+        model: gitWritingModel,
       });
     });
+  });
+
+  it("runs on the proofreading model when one is chosen and reports it", async () => {
+    await withTextTaskServer(
+      async ({ request, calls }) => {
+        const id = await start(request);
+        expect(calls.map((call) => call.modelSelection)).toEqual([
+          { provider: "codex", instanceId: "codex", model: "gpt-5.4" },
+        ]);
+        expect(await (await request(`/${id}`, "GET")).json()).toEqual({
+          status: "running",
+          model: {
+            provider: "codex",
+            instanceId: "codex",
+            slug: "gpt-5.4",
+            label: "Codex / GPT-5.4",
+            source: "proofreading",
+          },
+        });
+      },
+      {
+        proofreadModelSelection: { provider: "codex", instanceId: "codex", model: "gpt-5.4" },
+      } as Partial<ServerSettings>,
+    );
+  });
+
+  it("falls back to the writing model while the proofreading provider is disabled", async () => {
+    await withTextTaskServer(
+      async ({ request, calls }) => {
+        const id = await start(request);
+        expect(calls.map((call) => call.modelSelection)).toEqual([
+          { provider: "claudeAgent", model: "claude-sonnet-4-6" },
+        ]);
+        expect(await (await request(`/${id}`, "GET")).json()).toMatchObject({
+          model: { source: "git-writing" },
+        });
+      },
+      {
+        proofreadModelSelection: { provider: "codex", model: "gpt-5.4" },
+        providers: {
+          ...DEFAULT_SERVER_SETTINGS.providers,
+          codex: { ...DEFAULT_SERVER_SETTINGS.providers.codex, enabled: false },
+        },
+      } as Partial<ServerSettings>,
+    );
   });
 
   it("reports a provider failure as a failed task with its detail", async () => {
@@ -173,6 +239,7 @@ describe("Lattice text task HTTP lifecycle", () => {
       expect(await settled(request, id)).toEqual({
         status: "failed",
         message: "Claude CLI command failed: not logged in",
+        model: gitWritingModel,
       });
     });
   });
@@ -185,6 +252,7 @@ describe("Lattice text task HTTP lifecycle", () => {
       expect(await response.json()).toEqual({
         status: "failed",
         message: "The text task was cancelled.",
+        model: gitWritingModel,
       });
       expect(interrupted()).toBe(1);
       expect(await (await request(`/${id}`, "GET")).json()).toMatchObject({ status: "failed" });

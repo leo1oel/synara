@@ -1914,13 +1914,28 @@ msgstr "Git writing model"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ModelsSettingsPanel.tsx
-msgid "Used for generated commit messages, PR titles, branch names, and Lattice proofreading."
-msgstr "Used for generated commit messages, PR titles, branch names, and Lattice proofreading."
+msgid "Used for generated commit messages, PR titles, and branch names. Lattice proofreading follows it unless a proofreading model is chosen."
+msgstr "Used for generated commit messages, PR titles, and branch names. Lattice proofreading follows it unless a proofreading model is chosen."
 
 #. js-lingui-explicit-id
 #: src/components/settings/ModelsSettingsPanel.tsx
 msgid "Git text generation model"
 msgstr "Git text generation model"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Same as Git writing ({model})"
+msgstr "Same as Git writing ({model})"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Proofreading model"
+msgstr "Proofreading model"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Used by Lattice to proofread a selection, without tools or file access. Follows the Git writing model until you choose one."
+msgstr "Used by Lattice to proofread a selection, without tools or file access. Follows the Git writing model until you choose one."
 
 #. js-lingui-explicit-id
 #: src/components/settings/ModelsSettingsPanel.tsx

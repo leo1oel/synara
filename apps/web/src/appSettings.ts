@@ -9,6 +9,7 @@ import { Option, Schema, SchemaTransformation } from "effect";
 import {
   type AssistantDeliveryMode,
   CodexAccountConfig,
+  type ModelSelection,
   DesktopAppIcon,
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
   DEFAULT_CODEX_ACCOUNT_ID,
@@ -559,6 +560,10 @@ export const AppSettingsSchema = Schema.Struct({
   sourceControlCustomInstructions: SourceControlCustomInstructions.pipe(withDefaults(() => "")),
   compileRepairProvider: PersistedProviderKind.pipe(withDefaults(() => "codex" as const)),
   compileRepairModel: Schema.optional(TrimmedNonEmptyString),
+  // Lattice proofreading override; no model inherits the Git writing model.
+  proofreadProvider: Schema.optional(PersistedProviderKind),
+  proofreadProviderInstanceId: Schema.optional(ProviderInstanceId),
+  proofreadModel: Schema.optional(TrimmedNonEmptyString),
   uiFontFamily: Schema.String.check(Schema.isMaxLength(256)).pipe(withDefaults(() => "")),
   defaultProvider: PersistedProviderKind.pipe(withDefaults(() => "codex" as const)),
   // Local-only UI preference: providers explicitly hidden from the composer picker.
@@ -1529,6 +1534,9 @@ function serverSettingsToAppSettings(settings: ServerSettingsView): Partial<AppS
     sourceControlCustomInstructions: settings.sourceControlCustomInstructions,
     compileRepairProvider: settings.compileRepairModelSelection.provider,
     compileRepairModel: settings.compileRepairModelSelection.model,
+    proofreadProvider: settings.proofreadModelSelection?.provider,
+    proofreadProviderInstanceId: settings.proofreadModelSelection?.instanceId,
+    proofreadModel: settings.proofreadModelSelection?.model,
     onboardingCompletedAt: settings.onboardingCompletedAt ?? null,
   };
 }
@@ -1687,6 +1695,27 @@ export function appSettingsPatchToServerSettingsPatch(
       }),
       model,
     };
+  }
+  if (
+    hasOwn(patch, "proofreadModel") ||
+    hasOwn(patch, "proofreadProvider") ||
+    hasOwn(patch, "proofreadProviderInstanceId")
+  ) {
+    // A patch without a model returns proofreading to the Git writing model.
+    const model = patch.proofreadModel;
+    if (model) {
+      const provider = resolveTextGenerationProvider({
+        ...(patch.proofreadProvider !== undefined ? { provider: patch.proofreadProvider } : {}),
+        model,
+      });
+      serverPatch.proofreadModelSelection = {
+        provider,
+        instanceId: patch.proofreadProviderInstanceId?.trim() || provider,
+        model,
+      } as ModelSelection;
+    } else {
+      serverPatch.proofreadModelSelection = null;
+    }
   }
   if (
     hasOwn(patch, "codexBinaryPath") ||
