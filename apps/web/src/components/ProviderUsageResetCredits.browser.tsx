@@ -5,16 +5,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import type { ServerCodexResetCredits } from "@synara/contracts";
 
-const harness = vi.hoisted(() => ({ confirm: vi.fn(), consume: vi.fn(), toast: vi.fn() }));
-vi.mock("~/nativeApi", () => ({
-  readNativeApi: () => ({ dialogs: { confirm: harness.confirm } }),
-}));
+import { i18n } from "~/i18n";
+import { messages } from "../locales/en/messages.po";
+
+const harness = vi.hoisted(() => ({ consume: vi.fn(), toast: vi.fn() }));
 vi.mock("~/lib/serverReactQuery", () => ({
   consumeCodexResetCredit: harness.consume,
   serverQueryKeys: { allProviderUsage: () => ["usage"] },
 }));
 vi.mock("~/components/ui/toast", () => ({ toastManager: { add: harness.toast } }));
 import { ProviderUsageResetCredits } from "./ProviderUsageResetCredits";
+
+i18n.loadAndActivate({ locale: "en", messages });
 
 const credits: ServerCodexResetCredits = {
   accountId: "browser-account",
@@ -30,26 +32,31 @@ const mount = (value = credits) =>
       <ProviderUsageResetCredits resetCredits={value} />
     </QueryClientProvider>,
   );
+const confirmDialog = () => page.getByRole("alertdialog");
+const openAndConfirm = async (rowButton = "Use reset") => {
+  await page.getByRole("button", { name: rowButton }).first().click();
+  await confirmDialog().getByRole("button", { name: rowButton }).click();
+};
 beforeEach(() => {
   localStorage.removeItem("synara:codex-reset-attempt:browser-account");
-  harness.confirm.mockReset().mockResolvedValue(true);
   harness.consume.mockReset().mockResolvedValue({ outcome: "reset" });
   harness.toast.mockReset();
 });
 
 describe("Codex banked reset confirmation", () => {
   it("does not consume or allocate an attempt after a declined confirmation", async () => {
-    harness.confirm.mockResolvedValue(false);
     await mount();
     await page.getByRole("button", { name: "Use reset" }).click();
-    await expect.element(page.getByRole("button", { name: "Use reset" })).toBeEnabled();
-    expect(harness.confirm).toHaveBeenCalledTimes(1);
+    // Cancel holds the initial focus, so Enter on the opened dialog never spends a reset.
+    await expect.element(confirmDialog().getByRole("button", { name: "Cancel" })).toHaveFocus();
+    await confirmDialog().getByRole("button", { name: "Cancel" }).click();
+    await expect.element(confirmDialog()).not.toBeInTheDocument();
     expect(harness.consume).not.toHaveBeenCalled();
     expect(localStorage.getItem("synara:codex-reset-attempt:browser-account")).toBeNull();
   });
   it("confirms, consumes once and refreshes the successful state", async () => {
     await mount();
-    await page.getByRole("button", { name: "Use reset" }).click();
+    await openAndConfirm();
     await expect.poll(() => harness.consume.mock.calls.length).toBe(1);
     expect(harness.consume.mock.calls[0]?.[0]).toMatchObject({
       accountId: "browser-account",
@@ -64,22 +71,22 @@ describe("Codex banked reset confirmation", () => {
   it("reuses the same attempt after a lost response and popover remount", async () => {
     harness.consume.mockRejectedValueOnce(new Error("connection lost"));
     const first = await mount();
-    await page.getByRole("button", { name: "Use reset" }).click();
+    await openAndConfirm();
     await expect.element(page.getByRole("button", { name: "Retry reset" })).toBeEnabled();
     const original = harness.consume.mock.calls[0]?.[0];
     await first.unmount();
     await mount({ ...credits, canUse: false, availableCount: 0, credits: [] });
-    await page.getByRole("button", { name: "Retry reset" }).click();
+    await openAndConfirm("Retry reset");
     await expect.poll(() => harness.consume.mock.calls.length).toBe(2);
     expect(harness.consume.mock.calls[1]?.[0]).toEqual(original);
   });
   it("supports aggregate-only credit counts", async () => {
     await mount({ accountId: "browser-account", availableCount: 2, canUse: true });
-    await page.getByRole("button", { name: "Use reset" }).click();
+    await openAndConfirm();
     await expect.poll(() => harness.consume.mock.calls.length).toBe(1);
     expect(harness.consume.mock.calls[0]?.[0]).not.toHaveProperty("creditId");
   });
-  it("disables new redemptions for unavailable account/usage and omits used or expired rows", async () => {
+  it("disables new redemptions without an account and omits used or expired rows", async () => {
     await mount({
       availableCount: 3,
       credits: [
