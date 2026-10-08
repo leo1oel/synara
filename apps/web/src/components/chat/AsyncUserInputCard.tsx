@@ -1,3 +1,4 @@
+import { useLingui } from "@lingui/react";
 import type { AsyncUserInput, MessageId, UserInputQuestion } from "@synara/contracts";
 import { useMemo, useRef, useState } from "react";
 import { CircleQuestionIcon, CheckIcon } from "~/lib/icons";
@@ -22,17 +23,18 @@ export function AsyncUserInputCard({
   input: AsyncUserInput;
   onRespond?: ((messageId: MessageId, answers: readonly string[]) => Promise<void>) | undefined;
 }) {
+  const { i18n } = useLingui();
   // Native questions have no IDs. Their positions are stable within this message.
   const questions = useMemo<ReadonlyArray<UserInputQuestion>>(
     () =>
       input.questions.map((question, index) => ({
         id: `question-${index}`,
-        header: "Question",
+        header: i18n._("Question"),
         question: question.title,
         options: (question.options ?? []).map((label) => ({ label, description: label })),
         multiSelect: false,
       })),
-    [input.questions],
+    [i18n, input.questions],
   );
   const [answers, setAnswers] = useState<Record<string, PendingUserInputDraftAnswer>>(() =>
     Object.fromEntries(
@@ -81,7 +83,9 @@ export function AsyncUserInputCard({
       setSubmission({ answers: response, responseSequence: input.responseSequence ?? 0 });
     } catch (cause) {
       setError(
-        cause instanceof Error ? cause.message : "The answer could not be submitted. Try again.",
+        cause instanceof Error
+          ? cause.message
+          : i18n._("The answer could not be submitted. Try again."),
       );
     } finally {
       inFlight.current = false;
@@ -93,11 +97,13 @@ export function AsyncUserInputCard({
     <Collapsible open={open} onOpenChange={setOpen} className="my-2">
       <CollapsibleTrigger className="inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-ui leading-snug text-muted-foreground hover:bg-muted/50 hover:text-foreground">
         <CircleQuestionIcon className="size-3.5" aria-hidden="true" />
-        {questions.length} {questions.length === 1 ? "question" : "questions"}
+        {questions.length === 1
+          ? i18n._("1 question")
+          : i18n._("{count} questions", { count: questions.length })}
         {answered && (
           <>
             <CheckIcon className="size-3" aria-hidden="true" />
-            <span>Answered</span>
+            <span>{i18n._("Answered")}</span>
           </>
         )}
       </CollapsibleTrigger>
@@ -116,7 +122,7 @@ export function AsyncUserInputCard({
             </dl>
           ) : activeQuestion ? (
             <form
-              aria-label="Questions from Codex"
+              aria-label={i18n._("Questions from Codex")}
               onSubmit={(event) => {
                 event.preventDefault();
                 void advance();
@@ -144,14 +150,14 @@ export function AsyncUserInputCard({
               >
                 <div className="mt-3 space-y-2">
                   <Textarea
-                    aria-label={`Answer: ${activeQuestion.question}`}
+                    aria-label={i18n._("Answer: {question}", { question: activeQuestion.question })}
                     value={progress.customAnswer}
                     disabled={disabled}
                     rows={2}
                     placeholder={
                       activeQuestion.options.length > 0
-                        ? "Or type your own answer…"
-                        : "Type your answer…"
+                        ? i18n._("Or type your own answer…")
+                        : i18n._("Type your answer…")
                     }
                     onChange={(event) => {
                       const draft = setPendingUserInputCustomAnswer(
@@ -168,7 +174,7 @@ export function AsyncUserInputCard({
                   )}
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-ui leading-snug text-muted-foreground">
-                      Codex can keep working
+                      {i18n._("Codex can keep working")}
                     </span>
                     <Button
                       type="submit"
@@ -180,10 +186,10 @@ export function AsyncUserInputCard({
                       }
                     >
                       {submitting
-                        ? "Submitting…"
+                        ? i18n._("Submitting…")
                         : progress.isLastQuestion
-                          ? "Send answer"
-                          : "Next"}
+                          ? i18n._("Send answer")
+                          : i18n._("Next")}
                     </Button>
                   </div>
                 </div>

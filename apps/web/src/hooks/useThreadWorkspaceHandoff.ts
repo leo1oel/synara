@@ -1,3 +1,4 @@
+import { i18n } from "~/i18n";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   resolveWorktreeHandoffIntent,
@@ -24,7 +25,9 @@ function reportThreadHandoffSuccess(
   toastManager.add({
     type: result.conflictsDetected ? "warning" : "success",
     title:
-      targetMode === "worktree" ? "Thread handed off to worktree" : "Thread handed off to local",
+      targetMode === "worktree"
+        ? i18n._("Thread handed off to worktree")
+        : i18n._("Thread handed off to local"),
     ...(result.message ? { description: result.message } : {}),
   });
 }
@@ -117,10 +120,12 @@ export function useThreadWorkspaceHandoff(input: {
           type: "error",
           title:
             targetMode === "worktree"
-              ? "Could not hand off to worktree"
-              : "Could not hand off to local",
+              ? i18n._("Could not hand off to worktree")
+              : i18n._("Could not hand off to local"),
           description:
-            error instanceof Error ? error.message : "An error occurred during the handoff.",
+            error instanceof Error
+              ? error.message
+              : i18n._("An error occurred during the handoff."),
         });
         return false;
       }

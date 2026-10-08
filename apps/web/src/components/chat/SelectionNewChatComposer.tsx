@@ -1,5 +1,6 @@
 // Purpose: Floating composer that retains a transcript quote while the user writes a new prompt.
 
+import { i18n } from "~/i18n";
 import type { ThreadEnvironmentMode } from "@synara/contracts";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
@@ -116,7 +117,9 @@ export function SelectionNewChatComposer({
       await (intent === "send" ? onSend : onOpenInChat)(nextPrompt, envMode);
       onClose();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not start the chat. Try again.");
+      setError(
+        cause instanceof Error ? cause.message : i18n._("Could not start the chat. Try again."),
+      );
     } finally {
       submittingRef.current = false;
       setBusy(false);
@@ -128,7 +131,7 @@ export function SelectionNewChatComposer({
       ref={surfaceRef}
       data-transcript-selection-action="true"
       role="dialog"
-      aria-label="New chat from selection"
+      aria-label={i18n._("New chat from selection")}
       className="fixed z-50 w-[320px] max-w-[calc(100vw-16px)] text-foreground"
       // No overflow on this wrapper: a scroll box is square and would clip the rounded
       // surface's shadow into hard corners. The editor caps and scrolls its own height.
@@ -157,14 +160,14 @@ export function SelectionNewChatComposer({
                         void submit("compose");
                       }}
                     >
-                      Open in chat
+                      {i18n._("Open in chat")}
                       <ArrowUpRightIcon className="size-3" />
                     </Button>
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon-xs"
-                      aria-label="Close new chat composer"
+                      aria-label={i18n._("Close new chat composer")}
                       disabled={busy}
                       onClick={onClose}
                     >
@@ -178,9 +181,9 @@ export function SelectionNewChatComposer({
                   cursor={cursor}
                   terminalContexts={[]}
                   disabled={busy}
-                  ariaLabel="Message for new chat"
+                  ariaLabel={i18n._("Message for new chat")}
                   className="min-h-[1lh]"
-                  placeholder="Ask about this selection…"
+                  placeholder={i18n._("Ask about this selection…")}
                   onRemoveTerminalContext={() => {}}
                   onPaste={() => {}}
                   onChange={(value, nextCursor) => {
@@ -214,7 +217,7 @@ export function SelectionNewChatComposer({
                   variant="prominent"
                   size="icon-xs"
                   className="size-7 rounded-full sm:size-7"
-                  aria-label="Send to new chat"
+                  aria-label={i18n._("Send to new chat")}
                   disabled={busy || !prompt.trim()}
                 >
                   {busy ? (

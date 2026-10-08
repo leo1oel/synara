@@ -6,6 +6,7 @@
 // Layer: Chat composer UI
 // Exports: ComposerGoalHeader, goalElapsedMs
 
+import { i18n } from "~/i18n";
 import { useState } from "react";
 
 import { useNowMs } from "~/hooks/useNowMs";
@@ -86,7 +87,7 @@ export function ComposerGoalHeader({
         <ComposerStackedPanelRowMain>
           <GoalIcon className={COMPOSER_STACKED_PANEL_ICON_CLASS_NAME} />
           <ComposerStackedPanelRowLabel className="shrink-0">
-            {canPause ? (paused ? "Goal paused" : "Pursuing goal") : "Goal"}
+            {canPause ? (paused ? i18n._("Goal paused") : i18n._("Pursuing goal")) : i18n._("Goal")}
           </ComposerStackedPanelRowLabel>
           {open ? null : (
             <span
@@ -105,14 +106,14 @@ export function ComposerGoalHeader({
           ) : null}
         </ComposerStackedPanelRowMain>
         <div className="flex shrink-0 items-center gap-0">
-          <IconButton variant="ghost" size="icon-chip" label="Edit goal" onClick={onEdit}>
+          <IconButton variant="ghost" size="icon-chip" label={i18n._("Edit goal")} onClick={onEdit}>
             <PencilIcon />
           </IconButton>
           {canPause ? (
             <IconButton
               variant="ghost"
               size="icon-chip"
-              label={paused ? "Resume goal" : "Pause goal"}
+              label={paused ? i18n._("Resume goal") : i18n._("Pause goal")}
               onClick={() => void onSetPaused(!paused)}
             >
               {paused ? <PlayOutlineIcon /> : <PauseOutlineIcon />}
@@ -121,7 +122,7 @@ export function ComposerGoalHeader({
           <IconButton
             variant="ghost"
             size="icon-chip"
-            label="Delete goal"
+            label={i18n._("Delete goal")}
             onClick={() => void onClear()}
           >
             <TrashCanIcon />
@@ -129,7 +130,7 @@ export function ComposerGoalHeader({
           <IconButton
             variant="ghost"
             size="icon-chip"
-            label={open ? "Collapse goal" : "Expand goal"}
+            label={open ? i18n._("Collapse goal") : i18n._("Expand goal")}
             aria-expanded={open}
             onClick={() => setOpen((current) => !current)}
           >

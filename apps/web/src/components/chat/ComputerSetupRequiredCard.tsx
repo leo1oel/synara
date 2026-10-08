@@ -2,6 +2,7 @@
 // Purpose: Shows the current desktop permission state and an explicit setup action.
 // Layer: Chat transcript UI
 
+import { i18n } from "~/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { useProvisionComputer } from "~/hooks/useProvisionComputer";
 import { useRefreshOnWindowReturn } from "~/hooks/useRefreshOnWindowReturn";
@@ -88,18 +89,20 @@ export function ComputerSetupRequiredCard({
     ? resolveComputerAvailabilityView(status.availability, status.health)
     : undefined;
   const title = statusError
-    ? "Computer status is unavailable"
+    ? i18n._("Computer status is unavailable")
     : ready
-      ? "Computer control is ready"
+      ? i18n._("Computer control is ready")
       : missingLabels
         ? `Computer control needs ${missingLabels}`
-        : (availabilityView?.title ?? "Computer control needs setup");
+        : (availabilityView?.title ?? i18n._("Computer control needs setup"));
   const description = statusError
     ? statusError
     : ready
-      ? "Send a message and the agent will pick up where it left off."
+      ? i18n._("Send a message and the agent will pick up where it left off.")
       : missingLabels
-        ? "Choose Set up to request missing permissions or open System Settings. Allow access for this Synara app, then return here to recheck."
+        ? i18n._(
+            "Choose Set up to request missing permissions or open System Settings. Allow access for this Synara app, then return here to recheck.",
+          )
         : (availabilityView?.description ??
           "Choose Set up to check permissions and prepare computer control.");
   const canSetUp =
@@ -122,9 +125,13 @@ export function ComputerSetupRequiredCard({
       metaFontSizePx={metaFontSizePx}
       action={
         onSetUp && canSetUp
-          ? { label: isPending ? "Setting up…" : "Set up", disabled: isPending, onClick: onSetUp }
+          ? {
+              label: isPending ? i18n._("Setting up…") : i18n._("Set up"),
+              disabled: isPending,
+              onClick: onSetUp,
+            }
           : statusError && onRecheck
-            ? { label: "Recheck", onClick: onRecheck }
+            ? { label: i18n._("Recheck"), onClick: onRecheck }
             : undefined
       }
     >
@@ -163,7 +170,7 @@ export function ConnectedComputerSetupRequiredCard(
               statusError:
                 statusQuery.error instanceof Error && statusQuery.error.message
                   ? statusQuery.error.message
-                  : "Could not check computer access. Try again.",
+                  : i18n._("Could not check computer access. Try again."),
             }
           : {})}
         isPending={setup.isPending}

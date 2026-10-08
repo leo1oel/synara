@@ -1,3 +1,4 @@
+import { useLingui } from "@lingui/react";
 import type { UserInputQuestion } from "@synara/contracts";
 import { useEffect, useEffectEvent, useRef, type ReactNode } from "react";
 import {
@@ -117,6 +118,7 @@ export function UserInputQuestionForm({
     return null;
   }
 
+  const { i18n } = useLingui();
   const questionCount = questions.length;
   const showNavigation = questionCount > 1;
   const canGoBack = progress.questionIndex > 0;
@@ -138,19 +140,22 @@ export function UserInputQuestionForm({
               disabled={!canGoBack || isResponding}
               onClick={onPrevious}
               className={NAV_BUTTON_CLASS_NAME}
-              aria-label="Previous question"
+              aria-label={i18n._("Previous question")}
             >
               <ChevronLeftIcon className="size-3.5" />
             </button>
             <span className="px-0.5 text-ui-sm tabular-nums">
-              {progress.questionIndex + 1} of {questionCount}
+              {i18n._("{current} of {total}", {
+                current: progress.questionIndex + 1,
+                total: questionCount,
+              })}
             </span>
             <button
               type="button"
               disabled={!canGoForward || isResponding}
               onClick={() => onAdvance()}
               className={NAV_BUTTON_CLASS_NAME}
-              aria-label="Next question"
+              aria-label={i18n._("Next question")}
             >
               <ChevronRightIcon className="size-3.5" />
             </button>
@@ -158,7 +163,7 @@ export function UserInputQuestionForm({
         ) : null}
       </div>
       {activeQuestion.multiSelect ? (
-        <p className="mt-1 text-ui-sm text-muted-foreground/55">Select one or more.</p>
+        <p className="mt-1 text-ui-sm text-muted-foreground/55">{i18n._("Select one or more.")}</p>
       ) : null}
       {activeQuestion.options.length > 0 ? (
         <div className="mt-2.5 space-y-0.5">
@@ -195,7 +200,7 @@ export function UserInputQuestionForm({
               isResponding && "cursor-not-allowed opacity-50",
             )}
           >
-            Cancel
+            {i18n._("Cancel")}
           </button>
         </div>
       ) : null}

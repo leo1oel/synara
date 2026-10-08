@@ -1,3 +1,4 @@
+import { i18n } from "~/i18n";
 import { ProjectId, ThreadId } from "@synara/contracts";
 import { useState } from "react";
 import type { WorkLogEntry, WorkLogSynaraWorkerNotice } from "../../workLog";
@@ -97,7 +98,7 @@ export function WorkerMonitorNoticePill({
                       rel="noreferrer"
                       className="inline p-0 text-inherit underline decoration-foreground/30 underline-offset-2 hover:decoration-foreground/70"
                     >
-                      PR
+                      {i18n._("PR")}
                     </a>
                   </>
                 ) : null}
@@ -126,7 +127,7 @@ export function WorkerMonitorNoticePill({
                   rel="noreferrer"
                   className="inline p-0 text-inherit underline decoration-foreground/30 underline-offset-2 hover:decoration-foreground/70"
                 >
-                  PR
+                  {i18n._("PR")}
                 </a>
               ) : null}
             </span>
@@ -144,7 +145,7 @@ export function WorkerMonitorNoticePill({
               disabled={pendingAction !== null}
               onClick={() => resolveWorker("retry")}
             >
-              Retry
+              {i18n._("Retry")}
             </Button>
           ) : null}
           {(notice.actions ?? []).includes("stop") ? (
@@ -155,7 +156,7 @@ export function WorkerMonitorNoticePill({
               disabled={pendingAction !== null}
               onClick={() => resolveWorker("stop")}
             >
-              Stop worker
+              {i18n._("Stop worker")}
             </Button>
           ) : null}
           {(notice.actions ?? []).includes("open") ? (
@@ -165,7 +166,7 @@ export function WorkerMonitorNoticePill({
               variant="ghost"
               onClick={() => onOpenThread?.(ThreadId.makeUnsafe(needsYouThread.threadId))}
             >
-              Open thread
+              {i18n._("Open thread")}
             </Button>
           ) : null}
         </span>

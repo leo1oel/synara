@@ -3,6 +3,7 @@
 // Layer: Web orchestration helper
 // Exports: unblockThreadFromClient, describeThreadUnblockResult, isProviderDeliveryReconciliationConflict, resolveThreadUnblockTarget, type ThreadUnblockResult
 
+import { i18n } from "~/i18n";
 import type { NativeApi, ThreadId } from "@synara/contracts";
 
 /** Code the server returns when a blocker no longer matches the requested state. */
@@ -79,7 +80,7 @@ export async function unblockThreadFromClient(
   if (remaining.length > 0) {
     throw new Error(
       "The provider is still blocking this thread. " +
-        (remaining[0]?.lastError ?? "Resolve the provider error before retrying."),
+        (remaining[0]?.lastError ?? i18n._("Resolve the provider error before retrying.")),
     );
   }
 
@@ -114,20 +115,22 @@ export function describeThreadUnblockResult(result: ThreadUnblockResult): Thread
     case "unblocked":
       return {
         type: "success",
-        title: "Delivery blockers cleared",
+        title: i18n._("Delivery blockers cleared"),
         description:
           "Skipped messages were retried. Resend your last message if idle; clearing a delivery blocker does not repair a provider runtime error.",
       };
     case "resolved-elsewhere":
       return {
         type: "info",
-        title: "Blocker already cleared",
-        description: "Another session settled the failure. Resend your last message to continue.",
+        title: i18n._("Blocker already cleared"),
+        description: i18n._(
+          "Another session settled the failure. Resend your last message to continue.",
+        ),
       };
     case "already-clear":
       return {
         type: "info",
-        title: "No delivery blockers",
+        title: i18n._("No delivery blockers"),
         description:
           "No delivery is blocking this thread. If the provider still reports an error, resolve it before you resend your message.",
       };

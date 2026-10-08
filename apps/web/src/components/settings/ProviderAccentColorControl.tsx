@@ -3,6 +3,7 @@
 // Layer: Settings UI components
 // Depends on: account presentation helpers.
 
+import { i18n } from "~/i18n";
 import {
   normalizeProviderAccentColor,
   PROVIDER_ACCENT_COLOR_SWATCHES,
@@ -43,7 +44,7 @@ export function ProviderAccentColorControl(props: {
           className="ms-1 cursor-pointer text-ui-sm text-muted-foreground hover:text-foreground"
           onClick={() => props.onChange(undefined)}
         >
-          Clear
+          {i18n._("Clear")}
         </button>
       ) : null}
     </div>

@@ -12,29 +12,25 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
-#: src/components/ChatView.tsx
-msgid "Revert this thread to checkpoint {turnCount}?"
-msgstr "Revert this thread to checkpoint {turnCount}?"
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/chat/ComposerAutomationSetupBanner.tsx
+#: src/components/chat/FileLineCommentBox.tsx
+#: src/components/chat/GitRepositorySetup.tsx
+#: src/components/chat/MessagesTimeline.tsx
+#: src/components/chat/UserInputQuestionForm.tsx
+#: src/components/GitActionsControl.tsx
+#: src/components/ProviderUsageResetCredits.tsx
+#: src/components/settings/AddProviderAccountDialog.tsx
+#: src/components/settings/ManagedSkillEditorView.tsx
+#: src/components/ThreadWorktreeHandoffDialog.tsx
+#: src/confirmDialogFallback.ts
+msgid "Cancel"
+msgstr "Cancel"
 
 #. js-lingui-explicit-id
-#: src/components/ChatView.tsx
-msgid "This will discard newer messages and turn diffs in this thread."
-msgstr "This will discard newer messages and turn diffs in this thread."
-
-#. js-lingui-explicit-id
-#: src/routes/_chat.pull-requests.index.tsx
-msgid "Search pull requests"
-msgstr "Search pull requests"
-
-#. js-lingui-explicit-id
-#: src/routes/_chat.pull-requests.index.tsx
-msgid "No pull requests found"
-msgstr "No pull requests found"
-
-#. js-lingui-explicit-id
-#: src/routes/_chat.pull-requests.index.tsx
-msgid "Try another involvement, state, project, or search filter."
-msgstr "Try another involvement, state, project, or search filter."
+#: src/confirmDialogFallback.ts
+msgid "Confirm"
+msgstr "Confirm"
 
 #. js-lingui-explicit-id
 #: src/routes/_chat.source-control.tsx
@@ -461,9 +457,247 @@ msgid "Pushed to {branch}"
 msgstr "Pushed to {branch}"
 
 #. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
 #: src/lib/gitLocalization.ts
 msgid "Pushed"
 msgstr "Pushed"
+
+#. js-lingui-explicit-id
+#: src/lib/liveActivityPresentation.ts
+msgid "Starting"
+msgstr "Starting"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+#: src/lib/liveActivityPresentation.ts
+msgid "Thinking"
+msgstr "Thinking"
+
+#. js-lingui-explicit-id
+#: src/lib/liveActivityPresentation.ts
+msgid "Running tool"
+msgstr "Running tool"
+
+#. js-lingui-explicit-id
+#: src/lib/liveActivityPresentation.ts
+msgid "Waiting"
+msgstr "Waiting"
+
+#. js-lingui-explicit-id
+#: src/lib/liveActivityPresentation.ts
+msgid "Streaming"
+msgstr "Streaming"
+
+#. js-lingui-explicit-id
+#: src/lib/liveActivityPresentation.ts
+#: src/lib/subagentPresentation.ts
+msgid "Completed"
+msgstr "Completed"
+
+#. js-lingui-explicit-id
+#: src/lib/liveActivityPresentation.ts
+#: src/lib/subagentPresentation.ts
+msgid "Failed"
+msgstr "Failed"
+
+#. js-lingui-explicit-id
+#: src/lib/liveActivityPresentation.ts
+msgid "Cancelled"
+msgstr "Cancelled"
+
+#. js-lingui-explicit-id
+#: src/lib/liveActivityPresentation.ts
+msgid "Subagent working"
+msgstr "Subagent working"
+
+#. js-lingui-explicit-id
+#: src/lib/liveActivityPresentation.ts
+msgid "No activity for {duration}"
+msgstr "No activity for {duration}"
+
+#. js-lingui-explicit-id
+#: src/lib/liveActivityPresentation.ts
+msgid "Active now"
+msgstr "Active now"
+
+#. js-lingui-explicit-id
+#: src/lib/liveActivityPresentation.ts
+msgid "Active {duration} ago"
+msgstr "Active {duration} ago"
+
+#. js-lingui-explicit-id
+#: src/lib/liveActivityPresentation.ts
+msgid "{duration} elapsed"
+msgstr "{duration} elapsed"
+
+#. js-lingui-explicit-id
+#: src/lib/providerSetupStatus.ts
+msgid "Disabled · enable to check setup"
+msgstr "Disabled · enable to check setup"
+
+#. js-lingui-explicit-id
+#: src/lib/providerSetupStatus.ts
+msgid "Checking setup"
+msgstr "Checking setup"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ClaudeCacheDetails.tsx
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+#: src/lib/providerSetupStatus.ts
+msgid "Unavailable"
+msgstr "Unavailable"
+
+#. js-lingui-explicit-id
+#: src/lib/providerSetupStatus.ts
+msgid "Needs sign-in"
+msgstr "Needs sign-in"
+
+#. js-lingui-explicit-id
+#: src/lib/providerSetupStatus.ts
+msgid "Needs attention"
+msgstr "Needs attention"
+
+#. js-lingui-explicit-id
+#: src/lib/providerSetupStatus.ts
+msgid "Installed · sign-in not verified"
+msgstr "Installed · sign-in not verified"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+#: src/lib/providerSetupStatus.ts
+msgid "Connected"
+msgstr "Connected"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ManagedSkillDetailView.tsx
+#: src/components/settings/SkillsSettingsPanel.tsx
+#: src/lib/providerSetupStatus.ts
+msgid "Disabled"
+msgstr "Disabled"
+
+#. js-lingui-explicit-id
+#: src/lib/providerSetupStatus.ts
+msgid "Checking account status"
+msgstr "Checking account status"
+
+#. js-lingui-explicit-id
+#: src/lib/providerSetupStatus.ts
+msgid "Not authenticated"
+msgstr "Not authenticated"
+
+#. js-lingui-explicit-id
+#: src/lib/providerSetupStatus.ts
+msgid "Authenticated · {account}"
+msgstr "Authenticated · {account}"
+
+#. js-lingui-explicit-id
+#: src/lib/providerSetupStatus.ts
+msgid "Authenticated"
+msgstr "Authenticated"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+#: src/lib/providerSetupStatus.ts
+msgid "Available"
+msgstr "Available"
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "Codex CLI is not authenticated. Run `codex login` and try again."
+msgstr "Codex CLI is not authenticated. Run `codex login` and try again."
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "Codex CLI (`codex`) is not installed or not on PATH."
+msgstr "Codex CLI (`codex`) is not installed or not on PATH."
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "Codex CLI authentication status command is unavailable in this Codex version."
+msgstr "Codex CLI authentication status command is unavailable in this Codex version."
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "Codex CLI is installed but failed to run. Timed out while running command."
+msgstr "Codex CLI is installed but failed to run. Timed out while running command."
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "Could not verify Codex authentication status."
+msgstr "Could not verify Codex authentication status."
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "Could not verify Codex authentication status. Timed out while running command."
+msgstr "Could not verify Codex authentication status. Timed out while running command."
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "Using a custom Codex model provider; OpenAI login check skipped."
+msgstr "Using a custom Codex model provider; OpenAI login check skipped."
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "Claude is not authenticated. Run `claude auth login` and try again."
+msgstr "Claude is not authenticated. Run `claude auth login` and try again."
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "Claude Agent CLI (`claude`) is not installed or not on PATH."
+msgstr "Claude Agent CLI (`claude`) is not installed or not on PATH."
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "Claude Agent CLI is installed but failed to run. Timed out while running command."
+msgstr "Claude Agent CLI is installed but failed to run. Timed out while running command."
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "Could not verify Claude authentication status. Timed out while running command."
+msgstr "Could not verify Claude authentication status. Timed out while running command."
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "Cursor Agent is not authenticated. Run `cursor-agent login` and try again."
+msgstr "Cursor Agent is not authenticated. Run `cursor-agent login` and try again."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+#: src/lib/providerStatusMessages.ts
+msgid "Sign in with the provider CLI to see usage."
+msgstr "Sign in with the provider CLI to see usage."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+#: src/lib/providerStatusMessages.ts
+msgid "Codex API-key auth has no usage endpoint. Sign in with ChatGPT to see usage."
+msgstr "Codex API-key auth has no usage endpoint. Sign in with ChatGPT to see usage."
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "Could not reach the Codex usage endpoint."
+msgstr "Could not reach the Codex usage endpoint."
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "Live usage is not available for this provider configuration."
+msgstr "Live usage is not available for this provider configuration."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderUsageSettingsPanel.tsx
+#: src/lib/providerStatusMessages.ts
+msgid "Usage is currently unavailable."
+msgstr "Usage is currently unavailable."
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "Sign in with `{command}` to see usage."
+msgstr "Sign in with `{command}` to see usage."
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "Codex usage request failed ({status})."
+msgstr "Codex usage request failed ({status})."
 
 #. js-lingui-explicit-id
 #: src/lib/providerUsageDisplay.ts
@@ -492,16 +726,19 @@ msgstr "<1m"
 
 #. js-lingui-explicit-id
 #: src/lib/providerUsageDisplay.ts
+#: src/lib/relativeTime.ts
 msgid "{count}d"
 msgstr "{count}d"
 
 #. js-lingui-explicit-id
 #: src/lib/providerUsageDisplay.ts
+#: src/lib/relativeTime.ts
 msgid "{count}h"
 msgstr "{count}h"
 
 #. js-lingui-explicit-id
 #: src/lib/providerUsageDisplay.ts
+#: src/lib/relativeTime.ts
 msgid "{count}m"
 msgstr "{count}m"
 
@@ -576,20 +813,640 @@ msgid "Anthropic is rate-limiting usage checks — showing your last values, ret
 msgstr "Anthropic is rate-limiting usage checks — showing your last values, retrying in ~{minutes}m. Manual refreshes only extend the limit."
 
 #. js-lingui-explicit-id
+#: src/lib/relativeTime.ts
+msgid "now"
+msgstr "now"
+
+#. js-lingui-explicit-id
+#: src/lib/relativeTime.ts
+msgid "{count}w"
+msgstr "{count}w"
+
+#. js-lingui-explicit-id
+#: src/lib/relativeTime.ts
+msgid "{count}mo"
+msgstr "{count}mo"
+
+#. js-lingui-explicit-id
+#: src/lib/relativeTime.ts
+msgid "{count}y"
+msgstr "{count}y"
+
+#. js-lingui-explicit-id
+#: src/lib/subagentPresentation.ts
+msgid "Subagent"
+msgstr "Subagent"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+#: src/lib/subagentPresentation.ts
+msgid "Running"
+msgstr "Running"
+
+#. js-lingui-explicit-id
+#: src/lib/subagentPresentation.ts
+msgid "Stopped"
+msgstr "Stopped"
+
+#. js-lingui-explicit-id
+#: src/lib/subagentPresentation.ts
+msgid "Queued"
+msgstr "Queued"
+
+#. js-lingui-explicit-id
+#: src/lib/subagentPresentation.ts
+msgid "Idle"
+msgstr "Idle"
+
+#. js-lingui-explicit-id
+#: src/lib/threadUnblock.ts
+msgid "Resolve the provider error before retrying."
+msgstr "Resolve the provider error before retrying."
+
+#. js-lingui-explicit-id
+#: src/lib/threadUnblock.ts
+msgid "Delivery blockers cleared"
+msgstr "Delivery blockers cleared"
+
+#. js-lingui-explicit-id
+#: src/lib/threadUnblock.ts
+msgid "Blocker already cleared"
+msgstr "Blocker already cleared"
+
+#. js-lingui-explicit-id
+#: src/lib/threadUnblock.ts
+msgid "Another session settled the failure. Resend your last message to continue."
+msgstr "Another session settled the failure. Resend your last message to continue."
+
+#. js-lingui-explicit-id
+#: src/lib/threadUnblock.ts
+msgid "No delivery blockers"
+msgstr "No delivery blockers"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerCommandMenuItems.ts
+msgid "Browse folders on this computer"
+msgstr "Browse folders on this computer"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Compact is unavailable"
+msgstr "Compact is unavailable"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Open an active supported server thread before compacting context."
+msgstr "Open an active supported server thread before compacting context."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Could not compact thread"
+msgstr "Could not compact thread"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "An error occurred while compacting context."
+msgstr "An error occurred while compacting context."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Fast mode is unavailable"
+msgstr "Fast mode is unavailable"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "The selected model does not support Fast mode."
+msgstr "The selected model does not support Fast mode."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Invalid /fast command"
+msgstr "Invalid /fast command"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Use /fast, /fast on, /fast off, or /fast status."
+msgstr "Use /fast, /fast on, /fast off, or /fast status."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Fast mode is on"
+msgstr "Fast mode is on"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Fast mode is off"
+msgstr "Fast mode is off"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Fast mode enabled"
+msgstr "Fast mode enabled"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Fast mode disabled"
+msgstr "Fast mode disabled"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Thread goal is unavailable"
+msgstr "Thread goal is unavailable"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Open a thread before setting a goal."
+msgstr "Open a thread before setting a goal."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Could not update thread goal"
+msgstr "Could not update thread goal"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "An error occurred while updating the goal."
+msgstr "An error occurred while updating the goal."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Thread goal cleared"
+msgstr "Thread goal cleared"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Could not pause the thread goal"
+msgstr "Could not pause the thread goal"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Could not resume the thread goal"
+msgstr "Could not resume the thread goal"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Thread goal"
+msgstr "Thread goal"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "No thread goal is set"
+msgstr "No thread goal is set"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Thread goal is too long"
+msgstr "Thread goal is too long"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Keep the goal within {count} characters."
+msgstr "Keep the goal within {count} characters."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Thread goal paused"
+msgstr "Thread goal paused"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Thread goal resumed"
+msgstr "Thread goal resumed"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Thread goal updated"
+msgstr "Thread goal updated"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Rename is unavailable"
+msgstr "Rename is unavailable"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Open a thread before renaming it."
+msgstr "Open a thread before renaming it."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Thread renamed"
+msgstr "Thread renamed"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Thread title is unchanged"
+msgstr "Thread title is unchanged"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Nothing to rename yet"
+msgstr "Nothing to rename yet"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Send a message before generating a thread title."
+msgstr "Send a message before generating a thread title."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Newer thread title kept"
+msgstr "Newer thread title kept"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "The generated title was discarded because the title changed."
+msgstr "The generated title was discarded because the title changed."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Fork is unavailable"
+msgstr "Fork is unavailable"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Only existing server-backed threads can be forked right now."
+msgstr "Only existing server-backed threads can be forked right now."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Side is unavailable"
+msgstr "Side is unavailable"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Open a server-backed main thread before starting Side."
+msgstr "Open a server-backed main thread before starting Side."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Side chat started without the prompt"
+msgstr "Side chat started without the prompt"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "The side chat is open. Send the prompt again when it finishes loading."
+msgstr "The side chat is open. Send the prompt again when it finishes loading."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Side chat is still syncing"
+msgstr "Side chat is still syncing"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Side chat prompt was not sent"
+msgstr "Side chat prompt was not sent"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Review is unavailable"
+msgstr "Review is unavailable"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Open a project thread before starting a native review."
+msgstr "Open a project thread before starting a native review."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Base branch unavailable"
+msgstr "Base branch unavailable"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Select or detect a base branch before starting this review."
+msgstr "Select or detect a base branch before starting this review."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Could not start review"
+msgstr "Could not start review"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "An error occurred while starting review."
+msgstr "An error occurred while starting review."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Could not fork thread"
+msgstr "Could not fork thread"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "An error occurred while creating the forked thread."
+msgstr "An error occurred while creating the forked thread."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Fast mode could not be checked"
+msgstr "Fast mode could not be checked"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Claude command discovery is unavailable right now."
+msgstr "Claude command discovery is unavailable right now."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Claude command discovery failed. Please try again."
+msgstr "Claude command discovery failed. Please try again."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Claude did not expose /fast for this account or environment."
+msgstr "Claude did not expose /fast for this account or environment."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProposedPlanActions.tsx
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Export is unavailable"
+msgstr "Export is unavailable"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Could not export thread"
+msgstr "Could not export thread"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "An error occurred while exporting the thread."
+msgstr "An error occurred while exporting the thread."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Add a task after /computer-use"
+msgstr "Add a task after /computer-use"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "For example: /computer-use open Calculator and calculate 123 × 45."
+msgstr "For example: /computer-use open Calculator and calculate 123 × 45."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Could not rename thread"
+msgstr "Could not rename thread"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "An error occurred while renaming the thread."
+msgstr "An error occurred while renaming the thread."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Invalid /review command"
+msgstr "Invalid /review command"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Use /review and then choose a review target."
+msgstr "Use /review and then choose a review target."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Invalid /fork command"
+msgstr "Invalid /fork command"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Use /fork and then choose Local or New Worktree."
+msgstr "Use /fork and then choose Local or New Worktree."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Remove composer attachments or context before using /side."
+msgstr "Remove composer attachments or context before using /side."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Enable and sign in to that provider, then run /side again."
+msgstr "Enable and sign in to that provider, then run /side again."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Could not start Side"
+msgstr "Could not start Side"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "An error occurred while creating Side."
+msgstr "An error occurred while creating Side."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComputerControlModeChange.ts
+msgid "Computer control was reset"
+msgstr "Computer control was reset"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComputerControlModeChange.ts
+msgid "Control was reset — invoke /computer-use again for a new task."
+msgstr "Control was reset — invoke /computer-use again for a new task."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComputerControlModeChange.ts
+msgid "Computer permission setup could not start"
+msgstr "Computer permission setup could not start"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComputerControlModeChange.ts
+msgid "Computer control could not be changed"
+msgstr "Computer control could not be changed"
+
+#. js-lingui-explicit-id
+#: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/chat/ProposedPlanActions.tsx
 #: src/components/ChatView.tsx
-#: src/lib/threadHandoff.ts
-msgid "Hand off from {provider}"
-msgstr "Hand off from {provider}"
+#: src/components/GitActionsControl.tsx
+#: src/hooks/useCopyToClipboard.ts
+msgid "An error occurred."
+msgstr "An error occurred."
+
+#. js-lingui-explicit-id
+#: src/hooks/useCopyToClipboard.ts
+msgid "Path copied"
+msgstr "Path copied"
+
+#. js-lingui-explicit-id
+#: src/hooks/useCopyToClipboard.ts
+msgid "Failed to copy path"
+msgstr "Failed to copy path"
+
+#. js-lingui-explicit-id
+#: src/hooks/useCopyToClipboard.ts
+msgid "Nothing to copy"
+msgstr "Nothing to copy"
+
+#. js-lingui-explicit-id
+#: src/hooks/useCopyToClipboard.ts
+msgid "File is empty"
+msgstr "File is empty"
+
+#. js-lingui-explicit-id
+#: src/hooks/useCopyToClipboard.ts
+msgid "Partial contents copied"
+msgstr "Partial contents copied"
+
+#. js-lingui-explicit-id
+#: src/hooks/useCopyToClipboard.ts
+msgid "Large file — only the loaded part was copied"
+msgstr "Large file — only the loaded part was copied"
+
+#. js-lingui-explicit-id
+#: src/hooks/useCopyToClipboard.ts
+msgid "Failed to copy contents"
+msgstr "Failed to copy contents"
+
+#. js-lingui-explicit-id
+#: src/hooks/useCopyToClipboard.ts
+msgid "Contents copied"
+msgstr "Contents copied"
+
+#. js-lingui-explicit-id
+#: src/hooks/useCopyToClipboard.ts
+msgid "Thread ID copied"
+msgstr "Thread ID copied"
+
+#. js-lingui-explicit-id
+#: src/hooks/useCopyToClipboard.ts
+msgid "Failed to copy thread ID"
+msgstr "Failed to copy thread ID"
+
+#. js-lingui-explicit-id
+#: src/hooks/useSidebarThreadActions.ts
+msgid "Unable to unpin thread"
+msgstr "Unable to unpin thread"
+
+#. js-lingui-explicit-id
+#: src/hooks/useSidebarThreadActions.ts
+msgid "Unable to pin thread"
+msgstr "Unable to pin thread"
+
+#. js-lingui-explicit-id
+#: src/hooks/useSidebarThreadActions.ts
+msgid "Unable to mark thread as done"
+msgstr "Unable to mark thread as done"
+
+#. js-lingui-explicit-id
+#: src/hooks/useSidebarThreadActions.ts
+msgid "Unable to undo done"
+msgstr "Unable to undo done"
+
+#. js-lingui-explicit-id
+#: src/hooks/useSidebarThreadActions.ts
+msgid "Delete thread \"{title}\"?"
+msgstr "Delete thread \"{title}\"?"
+
+#. js-lingui-explicit-id
+#: src/hooks/useSidebarThreadActions.ts
+msgid "This permanently clears conversation history for this thread."
+msgstr "This permanently clears conversation history for this thread."
+
+#. js-lingui-explicit-id
+#: src/hooks/useSidebarThreadActions.ts
+msgid "Could not restore thread"
+msgstr "Could not restore thread"
+
+#. js-lingui-explicit-id
+#: src/hooks/useSidebarThreadActions.ts
+msgid "The thread no longer exists."
+msgstr "The thread no longer exists."
+
+#. js-lingui-explicit-id
+#: src/hooks/useSidebarThreadActions.ts
+msgid "Unable to restore the thread."
+msgstr "Unable to restore the thread."
+
+#. js-lingui-explicit-id
+#: src/hooks/useSidebarThreadActions.ts
+msgid "Could not archive thread"
+msgstr "Could not archive thread"
+
+#. js-lingui-explicit-id
+#: src/hooks/useSidebarThreadActions.ts
+msgid "Unable to archive the thread."
+msgstr "Unable to archive the thread."
+
+#. js-lingui-explicit-id
+#: src/hooks/useSidebarThreadActions.ts
+msgid "Archive thread \"{title}\"?"
+msgstr "Archive thread \"{title}\"?"
+
+#. js-lingui-explicit-id
+#: src/hooks/useSidebarThreadActions.ts
+msgid "Archived threads are hidden from the sidebar but can be restored later."
+msgstr "Archived threads are hidden from the sidebar but can be restored later."
+
+#. js-lingui-explicit-id
+#: src/hooks/useSidebarThreadActions.ts
+msgid "Nothing to archive"
+msgstr "Nothing to archive"
+
+#. js-lingui-explicit-id
+#: src/hooks/useSidebarThreadActions.ts
+msgid "Thread archived"
+msgstr "Thread archived"
+
+#. js-lingui-explicit-id
+#: src/hooks/useSidebarThreadActions.ts
+msgid "Archived {count} threads"
+msgstr "Archived {count} threads"
+
+#. js-lingui-explicit-id
+#: src/hooks/useSidebarThreadActions.ts
+msgid "Failed to archive threads"
+msgstr "Failed to archive threads"
+
+#. js-lingui-explicit-id
+#: src/hooks/useSidebarThreadActions.ts
+msgid "Nothing to delete"
+msgstr "Nothing to delete"
+
+#. js-lingui-explicit-id
+#: src/hooks/useSidebarThreadActions.ts
+msgid "Thread deleted"
+msgstr "Thread deleted"
+
+#. js-lingui-explicit-id
+#: src/hooks/useSidebarThreadActions.ts
+msgid "Deleted {count} threads"
+msgstr "Deleted {count} threads"
+
+#. js-lingui-explicit-id
+#: src/hooks/useSidebarThreadActions.ts
+msgid "Failed to delete threads"
+msgstr "Failed to delete threads"
+
+#. js-lingui-explicit-id
+#: src/hooks/useThreadWorkspaceHandoff.ts
+msgid "Thread handed off to worktree"
+msgstr "Thread handed off to worktree"
+
+#. js-lingui-explicit-id
+#: src/hooks/useThreadWorkspaceHandoff.ts
+msgid "Thread handed off to local"
+msgstr "Thread handed off to local"
+
+#. js-lingui-explicit-id
+#: src/hooks/useThreadWorkspaceHandoff.ts
+msgid "Could not hand off to worktree"
+msgstr "Could not hand off to worktree"
+
+#. js-lingui-explicit-id
+#: src/hooks/useThreadWorkspaceHandoff.ts
+msgid "Could not hand off to local"
+msgstr "Could not hand off to local"
+
+#. js-lingui-explicit-id
+#: src/hooks/useThreadWorkspaceHandoff.ts
+msgid "An error occurred during the handoff."
+msgstr "An error occurred during the handoff."
 
 #. js-lingui-explicit-id
 #: src/components/BranchToolbar.tsx
-msgid "Hand off to new worktree"
-msgstr "Hand off to new worktree"
-
-#. js-lingui-explicit-id
-#: src/components/BranchToolbar.tsx
-msgid "Hand off to local"
-msgstr "Hand off to local"
+msgid "Rate limits remaining"
+msgstr "Rate limits remaining"
 
 #. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
@@ -600,12 +1457,6 @@ msgstr "{files} {count, plural, one {has} other {have}} uncommitted changes. Com
 #: src/components/BranchToolbarBranchSelector.tsx
 msgid "{files} and {count, plural, one {# other file} other {# other files}} have uncommitted changes. Commit or stash before switching."
 msgstr "{files} and {count, plural, one {# other file} other {# other files}} have uncommitted changes. Commit or stash before switching."
-
-#. js-lingui-explicit-id
-#: src/components/BranchToolbarBranchSelector.tsx
-#: src/components/GitActionsControl.tsx
-msgid "An error occurred."
-msgstr "An error occurred."
 
 #. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
@@ -761,15 +1612,6 @@ msgstr "A branch with this name already exists."
 
 #. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
-#: src/components/chat/GitRepositorySetup.tsx
-#: src/components/GitActionsControl.tsx
-#: src/components/settings/ManagedSkillEditorView.tsx
-#: src/components/ThreadWorktreeHandoffDialog.tsx
-msgid "Cancel"
-msgstr "Cancel"
-
-#. js-lingui-explicit-id
-#: src/components/BranchToolbarBranchSelector.tsx
 msgid "Create and switch"
 msgstr "Create and switch"
 
@@ -796,6 +1638,8 @@ msgstr "Branch"
 
 #. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+#: src/components/chat/SynaraThreadCreationCard.tsx
 msgid "Worktree"
 msgstr "Worktree"
 
@@ -832,6 +1676,126 @@ msgstr "Discarding..."
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
+msgid "No active project is available for this pull request."
+msgstr "No active project is available for this pull request."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Plan details"
+msgstr "Plan details"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Tasks"
+msgstr "Tasks"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Hide plan details"
+msgstr "Hide plan details"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Hide tasks"
+msgstr "Hide tasks"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Hide plan details sidebar"
+msgstr "Hide plan details sidebar"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Show plan details sidebar"
+msgstr "Show plan details sidebar"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Hide tasks sidebar"
+msgstr "Hide tasks sidebar"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Show tasks sidebar"
+msgstr "Show tasks sidebar"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Project instructions added to notepad."
+msgstr "Project instructions added to notepad."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Checking Claude's available commands..."
+msgstr "Checking Claude's available commands..."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Compaction is unavailable for this Claude session."
+msgstr "Compaction is unavailable for this Claude session."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Wait for Claude and its background tasks to finish."
+msgstr "Wait for Claude and its background tasks to finish."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Resolve the pending request before compacting."
+msgstr "Resolve the pending request before compacting."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Choose how to resume the held message above."
+msgstr "Choose how to resume the held message above."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Wait for Claude to finish before compacting."
+msgstr "Wait for Claude to finish before compacting."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Reconnect before choosing how to resume."
+msgstr "Reconnect before choosing how to resume."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Continue in a new worktree"
+msgstr "Continue in a new worktree"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Continue in this local worktree"
+msgstr "Continue in this local worktree"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Continue in the current local thread"
+msgstr "Continue in the current local thread"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Review uncommitted changes"
+msgstr "Review uncommitted changes"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Review local uncommitted changes"
+msgstr "Review local uncommitted changes"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Review against base branch"
+msgstr "Review against base branch"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Review the current branch diff against its base"
+msgstr "Review the current branch diff against its base"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
 msgid "Hand off thread"
 msgstr "Hand off thread"
 
@@ -839,6 +1803,61 @@ msgstr "Hand off thread"
 #: src/components/ChatView.tsx
 msgid "Create handoff thread"
 msgstr "Create handoff thread"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Could not open repository"
+msgstr "Could not open repository"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "The in-app browser could not open GitHub."
+msgstr "The in-app browser could not open GitHub."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Could not stop the current response"
+msgstr "Could not stop the current response"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "The interrupt request failed. Try again in a moment."
+msgstr "The interrupt request failed. Try again in a moment."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Attach images after answering plan questions."
+msgstr "Attach images after answering plan questions."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Attach files after answering plan questions."
+msgstr "Attach files after answering plan questions."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Could not reference this chat"
+msgstr "Could not reference this chat"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "This chat is unavailable or cannot be mentioned here."
+msgstr "This chat is unavailable or cannot be mentioned here."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Revert this thread to checkpoint {turnCount}?"
+msgstr "Revert this thread to checkpoint {turnCount}?"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "This will discard newer messages and turn diffs in this thread."
+msgstr "This will discard newer messages and turn diffs in this thread."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "This action cannot be undone."
+msgstr "This action cannot be undone."
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
@@ -854,6 +1873,36 @@ msgstr "An error occurred while creating the handoff thread."
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
+msgid "Could not hand off this thread"
+msgstr "Could not hand off this thread"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "An error occurred while handing off the thread."
+msgstr "An error occurred while handing off the thread."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Cannot switch to {provider} yet"
+msgstr "Cannot switch to {provider} yet"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Wait for the current turn to finish and answer any pending request, then send again."
+msgstr "Wait for the current turn to finish and answer any pending request, then send again."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Clear is unavailable"
+msgstr "Clear is unavailable"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Open a project before starting a fresh thread."
+msgstr "Open a project before starting a fresh thread."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
 msgid "Delete \"{targetThreadTitle}\"?"
 msgstr "Delete \"{targetThreadTitle}\"?"
 
@@ -864,8 +1913,18 @@ msgstr "This permanently clears this conversation history."
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
-msgid "This action cannot be undone."
-msgstr "This action cannot be undone."
+msgid "Unknown error."
+msgstr "Unknown error."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Could not delete thread"
+msgstr "Could not delete thread"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "The conversation could not be deleted."
+msgstr "The conversation could not be deleted."
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
@@ -877,6 +1936,112 @@ msgstr "New Chat"
 #: src/components/ChatView.tsx
 msgid "New thread"
 msgstr "New thread"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Failed to rename thread"
+msgstr "Failed to rename thread"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Thread title cannot be empty"
+msgstr "Thread title cannot be empty"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Temporary chat — deleted when you leave. Click to keep it."
+msgstr "Temporary chat — deleted when you leave. Click to keep it."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Make this a temporary chat (deleted when you leave)"
+msgstr "Make this a temporary chat (deleted when you leave)"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Temporary chat"
+msgstr "Temporary chat"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Temporary"
+msgstr "Temporary"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Local folders unavailable"
+msgstr "Local folders unavailable"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Optimizing image…"
+msgstr "Optimizing image…"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Optimizing images…"
+msgstr "Optimizing images…"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Resolve this approval request to continue"
+msgstr "Resolve this approval request to continue"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Type your answer to continue"
+msgstr "Type your answer to continue"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Type your own answer, or leave this blank to use the selected option"
+msgstr "Type your own answer, or leave this blank to use the selected option"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Add feedback to refine the plan, or leave this blank to implement it"
+msgstr "Add feedback to refine the plan, or leave this blank to implement it"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Message this subagent while it works"
+msgstr "Message this subagent while it works"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Ask for follow-up changes"
+msgstr "Ask for follow-up changes"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Ask about this issue"
+msgstr "Ask about this issue"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Ask about this pull request"
+msgstr "Ask about this pull request"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Ask for follow-up changes or attach images"
+msgstr "Ask for follow-up changes or attach images"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Ask anything, @tag files/folders, or use / to show available commands"
+msgstr "Ask anything, @tag files/folders, or use / to show available commands"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatEmptyStateHero.tsx
+#: src/components/ChatView.tsx
+msgid "Synara logo"
+msgstr "Synara logo"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "What should we work on?"
+msgstr "What should we work on?"
 
 #. js-lingui-explicit-id
 #: src/components/GitActionsControl.tsx
@@ -962,11 +2127,6 @@ msgstr "Running git action..."
 #: src/components/GitActionsControl.tsx
 msgid "Waiting for Git..."
 msgstr "Waiting for Git..."
-
-#. js-lingui-explicit-id
-#: src/components/GitActionsControl.tsx
-msgid "Action failed"
-msgstr "Action failed"
 
 #. js-lingui-explicit-id
 #: src/components/GitActionsControl.tsx
@@ -1224,6 +2384,11 @@ msgstr "{remaining} of {total} remaining"
 
 #. js-lingui-explicit-id
 #: src/components/ProviderUsageLineList.tsx
+msgid "{remaining} remaining (≈ {estimate})"
+msgstr "{remaining} remaining (≈ {estimate})"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageLineList.tsx
 msgid "{remaining} remaining"
 msgstr "{remaining} remaining"
 
@@ -1254,6 +2419,12 @@ msgid "{provider} usage"
 msgstr "{provider} usage"
 
 #. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+#: src/components/ProviderUsagePanelContent.tsx
+msgid "Details"
+msgstr "Details"
+
+#. js-lingui-explicit-id
 #: src/components/ProviderUsagePanelContent.tsx
 msgid "Scanning local usage data for the selected provider."
 msgstr "Scanning local usage data for the selected provider."
@@ -1274,10 +2445,172 @@ msgid "Learn more"
 msgstr "Learn more"
 
 #. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "No expiry date"
+msgstr "No expiry date"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Expired"
+msgstr "Expired"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Expires in {count}m"
+msgstr "Expires in {count}m"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Expires in {hours}h {minutes}m"
+msgstr "Expires in {hours}h {minutes}m"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Expires in {days}d {hours}h"
+msgstr "Expires in {days}d {hours}h"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Codex usage limits were reset."
+msgstr "Codex usage limits were reset."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Codex usage limits don't need a reset right now. No reset was used."
+msgstr "Codex usage limits don't need a reset right now. No reset was used."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "No saved resets left."
+msgstr "No saved resets left."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "That reset was already used."
+msgstr "That reset was already used."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Couldn't confirm whether the reset was used"
+msgstr "Couldn't confirm whether the reset was used"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Choose Retry reset to check the same attempt again."
+msgstr "Choose Retry reset to check the same attempt again."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Saved resets"
+msgstr "Saved resets"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "{count} left"
+msgstr "{count} left"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "A previous reset wasn't confirmed. Retry checks the same attempt."
+msgstr "A previous reset wasn't confirmed. Retry checks the same attempt."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Your 5-hour or weekly limit is nearly used up, so a reset can be used now."
+msgstr "Your 5-hour or weekly limit is nearly used up, so a reset can be used now."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Can be used once your 5-hour or weekly limit has 10% or less left."
+msgstr "Can be used once your 5-hour or weekly limit has 10% or less left."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Reset {number}"
+msgstr "Reset {number}"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Next available reset"
+msgstr "Next available reset"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Applying…"
+msgstr "Applying…"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Retry reset"
+msgstr "Retry reset"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Use reset"
+msgstr "Use reset"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Check the previous reset?"
+msgstr "Check the previous reset?"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Use 1 reset now?"
+msgstr "Use 1 reset now?"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "This asks Codex again whether your previous reset went through. If it didn't, that same reset is used now. A used reset can't be undone or given back."
+msgstr "This asks Codex again whether your previous reset went through. If it didn't, that same reset is used now. A used reset can't be undone or given back."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "This uses 1 of your {count} saved resets to restore your Codex usage limits right away. A used reset can't be undone or given back."
+msgstr "This uses 1 of your {count} saved resets to restore your Codex usage limits right away. A used reset can't be undone or given back."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "You can't use a reset yet"
+msgstr "You can't use a reset yet"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Current usage isn't available"
+msgstr "Current usage isn't available"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "A reset can only be used once your 5-hour or weekly limit has 10% or less left. You still have more than that, so nothing was used."
+msgstr "A reset can only be used once your 5-hour or weekly limit has 10% or less left. You still have more than that, so nothing was used."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Your current Codex usage couldn't be read, so there's no way to tell whether a reset would help. Nothing was used. Try again in a moment."
+msgstr "Your current Codex usage couldn't be read, so there's no way to tell whether a reset would help. Nothing was used. Try again in a moment."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Got it"
+msgstr "Got it"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ChatHeader.tsx
 #: src/components/Sidebar.tsx
-msgid "Hand off to {provider}"
-msgstr "Hand off to {provider}"
+#: src/components/ThreadWorktreeHandoffDialog.tsx
+msgid "Hand off"
+msgstr "Hand off"
+
+#. js-lingui-explicit-id
+#: src/components/Sidebar.tsx
+msgid "{provider} in this thread"
+msgstr "{provider} in this thread"
+
+#. js-lingui-explicit-id
+#: src/components/Sidebar.tsx
+msgid "Hand off to {provider} in this thread"
+msgstr "Hand off to {provider} in this thread"
 
 #. js-lingui-explicit-id
 #: src/components/ThreadWorktreeHandoffDialog.tsx
@@ -1300,10 +2633,106 @@ msgid "Handing off..."
 msgstr "Handing off..."
 
 #. js-lingui-explicit-id
-#: src/components/chat/ChatHeader.tsx
-#: src/components/ThreadWorktreeHandoffDialog.tsx
-msgid "Hand off"
-msgstr "Hand off"
+#: src/components/settings/ProvidersSettingsPanel.tsx
+#: src/components/ui/combobox.tsx
+msgid "Remove"
+msgstr "Remove"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+#: src/components/settings/ProviderSignInDialog.tsx
+#: src/components/ui/dialog.tsx
+#: src/components/ui/sheet.tsx
+msgid "Close"
+msgstr "Close"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+#: src/components/ui/spinner.tsx
+msgid "Loading"
+msgstr "Loading"
+
+#. js-lingui-explicit-id
+#: src/components/ui/toast.tsx
+msgid "Copied error message"
+msgstr "Copied error message"
+
+#. js-lingui-explicit-id
+#: src/components/ui/toast.tsx
+msgid "Copy error message"
+msgstr "Copy error message"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProposedPlanActions.tsx
+#: src/components/ui/toast.tsx
+msgid "Copied"
+msgstr "Copied"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+#: src/components/ui/toast.tsx
+msgid "Copy"
+msgstr "Copy"
+
+#. js-lingui-explicit-id
+#: src/components/ui/toast.tsx
+msgid "Dismiss toast"
+msgstr "Dismiss toast"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+#: src/components/settings/SkillsSettingsPanel.tsx
+#: src/components/ui/toast.tsx
+msgid "Undo"
+msgstr "Undo"
+
+#. js-lingui-explicit-id
+#: src/components/ui/toast.tsx
+msgid "Settings"
+msgstr "Settings"
+
+#. js-lingui-explicit-id
+#: src/components/settings/AddProviderAccountDialog.tsx
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Add account"
+msgstr "Add account"
+
+#. js-lingui-explicit-id
+#: src/components/settings/AddProviderAccountDialog.tsx
+msgid "Each account signs in on its own and gets its own tab in the model picker."
+msgstr "Each account signs in on its own and gets its own tab in the model picker."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/chat/TimelineWorkEntryRow.tsx
+#: src/components/settings/AddProviderAccountDialog.tsx
+msgid "Provider"
+msgstr "Provider"
+
+#. js-lingui-explicit-id
+#: src/components/settings/AddProviderAccountDialog.tsx
+msgid "Label"
+msgstr "Label"
+
+#. js-lingui-explicit-id
+#: src/components/settings/AddProviderAccountDialog.tsx
+msgid "Shown in the account list and the model picker. Optional."
+msgstr "Shown in the account list and the model picker. Optional."
+
+#. js-lingui-explicit-id
+#: src/components/settings/AddProviderAccountDialog.tsx
+msgid "Account ID"
+msgstr "Account ID"
+
+#. js-lingui-explicit-id
+#: src/components/settings/AddProviderAccountDialog.tsx
+msgid "Routing key used by threads and sessions. Letters, digits, '-', or '_'."
+msgstr "Routing key used by threads and sessions. Letters, digits, '-', or '_'."
+
+#. js-lingui-explicit-id
+#: src/components/settings/AddProviderAccountDialog.tsx
+msgid "Accent color"
+msgstr "Accent color"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
@@ -1394,16 +2823,6 @@ msgstr "Pairing already completed"
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
 msgid "Revoked"
 msgstr "Revoked"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ExternalMcpSettingsPanel.tsx
-msgid "Expired"
-msgstr "Expired"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ExternalMcpSettingsPanel.tsx
-msgid "Connected"
-msgstr "Connected"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
@@ -1596,6 +3015,8 @@ msgid "Resuming..."
 msgstr "Resuming..."
 
 #. js-lingui-explicit-id
+#: src/components/chat/AgentActivityDetailView.tsx
+#: src/components/chat/ComposerExtrasPanel.tsx
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
 msgid "Back"
 msgstr "Back"
@@ -1654,11 +3075,6 @@ msgstr "Pairing command (run in Terminal)"
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
 msgid "Pairing command copied"
 msgstr "Pairing command copied"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ExternalMcpSettingsPanel.tsx
-msgid "Copy"
-msgstr "Copy"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
@@ -1753,12 +3169,15 @@ msgstr "All skills"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ManagedSkillDetailView.tsx
+#: src/components/settings/ProvidersSettingsPanel.tsx
+#: src/components/settings/skillsSettingsModel.ts
 #: src/components/settings/SkillsSettingsPanel.tsx
 msgid "Included with Lattice"
 msgstr "Included with Lattice"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ManagedSkillDetailView.tsx
+#: src/components/settings/skillsSettingsModel.ts
 #: src/components/settings/SkillsSettingsPanel.tsx
 msgid "Installed by you"
 msgstr "Installed by you"
@@ -1768,12 +3187,6 @@ msgstr "Installed by you"
 #: src/components/settings/SkillsSettingsPanel.tsx
 msgid "Enabled"
 msgstr "Enabled"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ManagedSkillDetailView.tsx
-#: src/components/settings/SkillsSettingsPanel.tsx
-msgid "Disabled"
-msgstr "Disabled"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ManagedSkillDetailView.tsx
@@ -1904,8 +3317,33 @@ msgstr "Save changes"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Same as Git writing ({model})"
+msgstr "Same as Git writing ({model})"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Remove {model}"
+msgstr "Remove {model}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
 msgid "Generation defaults"
 msgstr "Generation defaults"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Source control writing style"
+msgstr "Source control writing style"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Custom source control writing instructions"
+msgstr "Custom source control writing instructions"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Keep titles concise. Use short bullet points in descriptions."
+msgstr "Keep titles concise. Use short bullet points in descriptions."
 
 #. js-lingui-explicit-id
 #: src/components/settings/ModelsSettingsPanel.tsx
@@ -1921,11 +3359,6 @@ msgstr "Used for generated commit messages, PR titles, and branch names. Lattice
 #: src/components/settings/ModelsSettingsPanel.tsx
 msgid "Git text generation model"
 msgstr "Git text generation model"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ModelsSettingsPanel.tsx
-msgid "Same as Git writing ({model})"
-msgstr "Same as Git writing ({model})"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ModelsSettingsPanel.tsx
@@ -1968,31 +3401,14 @@ msgid "Custom model provider"
 msgstr "Custom model provider"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasPanel.tsx
 #: src/components/settings/ModelsSettingsPanel.tsx
+#: src/components/settings/ProviderInstanceEnvironmentEditor.tsx
 msgid "Add"
 msgstr "Add"
 
 #. js-lingui-explicit-id
-#: src/components/settings/ModelsSettingsPanel.tsx
-msgid "Remove {model}"
-msgstr "Remove {model}"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ModelsSettingsPanel.tsx
-msgid "Source control writing style"
-msgstr "Source control writing style"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ModelsSettingsPanel.tsx
-msgid "Custom source control writing instructions"
-msgstr "Custom source control writing instructions"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ModelsSettingsPanel.tsx
-msgid "Keep titles concise. Use short bullet points in descriptions."
-msgstr "Keep titles concise. Use short bullet points in descriptions."
-
-#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
 #: src/components/settings/ModelsSettingsPanel.tsx
 msgid "Show less"
 msgstr "Show less"
@@ -2013,6 +3429,100 @@ msgid "No model activity yet."
 msgstr "No model activity yet."
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/settings/ProviderAccentColorControl.tsx
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Clear"
+msgstr "Clear"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderInstanceEnvironmentEditor.tsx
+msgid "Replace or remove the saved secret before renaming it."
+msgstr "Replace or remove the saved secret before renaming it."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderInstanceEnvironmentEditor.tsx
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Secret saved — type to replace"
+msgstr "Secret saved — type to replace"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderInstanceEnvironmentEditor.tsx
+msgid "Store new variable as a secret"
+msgstr "Store new variable as a secret"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderSignInDialog.tsx
+msgid "Authenticated. You can close this window."
+msgstr "Authenticated. You can close this window."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderSignInDialog.tsx
+msgid "This account is not authenticated yet. Complete the sign-in steps and check again."
+msgstr "This account is not authenticated yet. Complete the sign-in steps and check again."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderSignInDialog.tsx
+msgid "Authentication could not be verified. Complete the provider's steps and check again; some providers do not expose a login status."
+msgstr "Authentication could not be verified. Complete the provider's steps and check again; some providers do not expose a login status."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderSignInDialog.tsx
+msgid "Unable to stop sign-in. Retry closing this window."
+msgstr "Unable to stop sign-in. Retry closing this window."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderSignInDialog.tsx
+msgid "Unable to open sign-in options."
+msgstr "Unable to open sign-in options."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderSignInDialog.tsx
+msgid "Unable to connect to the Synara server."
+msgstr "Unable to connect to the Synara server."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+#: src/components/settings/ProviderSignInDialog.tsx
+msgid "Connecting…"
+msgstr "Connecting…"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderSignInDialog.tsx
+msgid "Sign-in could not start. Check the terminal error, close this window and retry."
+msgstr "Sign-in could not start. Check the terminal error, close this window and retry."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderSignInDialog.tsx
+msgid "Follow the provider's prompts. Opening the browser does not confirm authentication."
+msgstr "Follow the provider's prompts. Opening the browser does not confirm authentication."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderSignInDialog.tsx
+msgid "Sign-in options"
+msgstr "Sign-in options"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderSignInDialog.tsx
+msgid "Checking…"
+msgstr "Checking…"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderSignInDialog.tsx
+msgid "Check authentication"
+msgstr "Check authentication"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderSignInDialog.tsx
+msgid "Closing…"
+msgstr "Closing…"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderSignInDialog.tsx
+msgid "Cancel / close"
+msgstr "Cancel / close"
+
+#. js-lingui-explicit-id
 #: src/components/settings/ProviderUsageSettingsPanel.tsx
 msgid "Not signed in"
 msgstr "Not signed in"
@@ -2024,28 +3534,8 @@ msgstr "Unsupported"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProviderUsageSettingsPanel.tsx
-msgid "Unavailable"
-msgstr "Unavailable"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProviderUsageSettingsPanel.tsx
 msgid "Sign in with {command} to see usage."
 msgstr "Sign in with {command} to see usage."
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProviderUsageSettingsPanel.tsx
-msgid "Sign in with the provider CLI to see usage."
-msgstr "Sign in with the provider CLI to see usage."
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProviderUsageSettingsPanel.tsx
-msgid "Codex API-key auth has no usage endpoint. Sign in with ChatGPT to see usage."
-msgstr "Codex API-key auth has no usage endpoint. Sign in with ChatGPT to see usage."
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProviderUsageSettingsPanel.tsx
-msgid "Usage is currently unavailable."
-msgstr "Usage is currently unavailable."
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProviderUsageSettingsPanel.tsx
@@ -2064,37 +3554,16 @@ msgstr "No usage data reported yet."
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProviderUsageSettingsPanel.tsx
-msgid "Provider usage"
-msgstr "Provider usage"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProviderUsageSettingsPanel.tsx
-msgid "Refresh"
-msgstr "Refresh"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProviderUsageSettingsPanel.tsx
-msgid "Loading provider usage…"
-msgstr "Loading provider usage…"
-
-#. js-lingui-explicit-id
-#: src/components/settings/ProviderUsageSettingsPanel.tsx
 msgid "Usage is read locally from each provider CLI's stored credentials and fetched directly from the provider. The list follows whatever you are signed into; unsigned providers stay visible until any account is connected, then drop away. Short-lived tokens are refreshed through the provider's own CLI or official token endpoint."
 msgstr "Usage is read locally from each provider CLI's stored credentials and fetched directly from the provider. The list follows whatever you are signed into; unsigned providers stay visible until any account is connected, then drop away. Short-lived tokens are refreshed through the provider's own CLI or official token endpoint."
 
 #. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.browser.tsx
 #: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Manual update"
-msgstr "Manual update"
+msgid "Reorder {provider}"
+msgstr "Reorder {provider}"
 
 #. js-lingui-explicit-id
-#: src/components/settings/ProvidersSettingsPanel.browser.tsx
-#: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Updating"
-msgstr "Updating"
-
-#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Checking"
 msgstr "Checking"
@@ -2111,8 +3580,320 @@ msgstr "CLI not installed"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Checking {provider} CLI availability"
+msgstr "Checking {provider} CLI availability"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Show {provider} in the provider picker"
+msgstr "Show {provider} in the provider picker"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "{provider} is unavailable in the provider picker"
+msgstr "{provider} is unavailable in the provider picker"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Update queued"
+msgstr "Update queued"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Updating"
+msgstr "Updating"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Updated"
+msgstr "Updated"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Update failed"
+msgstr "Update failed"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Still outdated"
+msgstr "Still outdated"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Latest {version}"
+msgstr "Latest {version}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Current {version}"
+msgstr "Current {version}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "The provider update did not complete."
+msgstr "The provider update did not complete."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Run {command}"
+msgstr "Run {command}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Update"
 msgstr "Update"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Configured — enter a replacement or leave blank"
+msgstr "Configured — enter a replacement or leave blank"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Codex account for new threads"
+msgstr "Codex account for new threads"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Used until you pick another account in the model picker."
+msgstr "Used until you pick another account in the model picker."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "CODEX_HOME path"
+msgstr "CODEX_HOME path"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Leave blank and Synara keeps this account's sign-in in its own folder."
+msgstr "Leave blank and Synara keeps this account's sign-in in its own folder."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Claude config directory"
+msgstr "Claude config directory"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Leave blank and Synara keeps this account's sign-in in its own folder. Set a directory to use a Claude config folder you already signed in to."
+msgstr "Leave blank and Synara keeps this account's sign-in in its own folder. Set a directory to use a Claude config folder you already signed in to."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Profile directory"
+msgstr "Profile directory"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Provider account directory"
+msgstr "Provider account directory"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Used as this account's provider config root without changing your shell files."
+msgstr "Used as this account's provider config root without changing your shell files."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Unable to start sign-in"
+msgstr "Unable to start sign-in"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Unable to save provider settings."
+msgstr "Unable to save provider settings."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Account added"
+msgstr "Account added"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "{provider} account '{account}' was added."
+msgstr "{provider} account '{account}' was added."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "{provider} imported"
+msgstr "{provider} imported"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "{provider} account imported"
+msgstr "{provider} account imported"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Synara references the selected directory; no files were moved or copied."
+msgstr "Synara references the selected directory; no files were moved or copied."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "{setting} for {account}"
+msgstr "{setting} for {account}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Clear saved {setting} for {account}"
+msgstr "Clear saved {setting} for {account}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Copy {command}"
+msgstr "Copy {command}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Leave both paths blank and Synara keeps this account's sign-in in its own folder. Set a shadow auth home to keep only the sign-in elsewhere while sharing settings and history with the default account, or a CODEX_HOME to keep everything separate."
+msgstr "Leave both paths blank and Synara keeps this account's sign-in in its own folder. Set a shadow auth home to keep only the sign-in elsewhere while sharing settings and history with the default account, or a CODEX_HOME to keep everything separate."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Use 1–64 letters, numbers, dashes, or underscores; bare provider commands are reserved."
+msgstr "Use 1–64 letters, numbers, dashes, or underscores; bare provider commands are reserved."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "This command is already assigned to another account. Choose a unique override."
+msgstr "This command is already assigned to another account. Choose a unique override."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Available in Synara terminals for zsh, bash, fish, and scripts."
+msgstr "Available in Synara terminals for zsh, bash, fish, and scripts."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Claude credential directory"
+msgstr "Claude credential directory"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Optional shared credential directory"
+msgstr "Optional shared credential directory"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Leave blank unless your setup already uses a separate secure-storage directory."
+msgstr "Leave blank unless your setup already uses a separate secure-storage directory."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasMenu.tsx
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Default"
+msgstr "Default"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Sign in to {account}"
+msgstr "Sign in to {account}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Use Sign in to authenticate this account, then complete the provider's prompts."
+msgstr "Use Sign in to authenticate this account, then complete the provider's prompts."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Identity"
+msgstr "Identity"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Display name"
+msgstr "Display name"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Work"
+msgstr "Work"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Runtime"
+msgstr "Runtime"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Environment"
+msgstr "Environment"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "{provider} accounts"
+msgstr "{provider} accounts"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Each account signs in on its own and gets its own tab in the model picker. A thread stays on the account it started with."
+msgstr "Each account signs in on its own and gets its own tab in the model picker. A thread stays on the account it started with."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Directory import is available in the Synara desktop app."
+msgstr "Directory import is available in the Synara desktop app."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Use an existing {provider} directory as a new account, without moving it."
+msgstr "Use an existing {provider} directory as a new account, without moving it."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Import directory"
+msgstr "Import directory"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Select {account}"
+msgstr "Select {account}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Enable {account}"
+msgstr "Enable {account}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Advanced"
+msgstr "Advanced"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Command:"
+msgstr "Command:"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "A newer version is available, but Lattice could not identify a safe one-click update command for this installation."
+msgstr "A newer version is available, but Lattice could not identify a safe one-click update command for this installation."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "{provider} manages its own releases, so Lattice cannot tell whether a newer version exists. Run the update to be sure."
+msgstr "{provider} manages its own releases, so Lattice cannot tell whether a newer version exists. Run the update to be sure."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Could not update {provider}"
+msgstr "Could not update {provider}"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Copy the command below to update manually in a terminal."
+msgstr "Copy the command below to update manually in a terminal."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "New sessions will use the refreshed provider."
+msgstr "New sessions will use the refreshed provider."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "The provider update failed."
+msgstr "The provider update failed."
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
@@ -2171,6 +3952,11 @@ msgstr "Check Codex, Claude, and other provider CLIs for newer versions in the b
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "CLI update checks"
+msgstr "CLI update checks"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Provider updates"
 msgstr "Provider updates"
 
@@ -2193,6 +3979,11 @@ msgstr "{outdatedProviderCount, plural, one {# update available} other {# update
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "No provider updates detected"
 msgstr "No provider updates detected"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Manual update"
+msgstr "Manual update"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
@@ -2281,11 +4072,6 @@ msgstr "{displayName} was removed from Lattice."
 
 #. js-lingui-explicit-id
 #: src/components/settings/SkillsSettingsPanel.tsx
-msgid "Undo"
-msgstr "Undo"
-
-#. js-lingui-explicit-id
-#: src/components/settings/SkillsSettingsPanel.tsx
 msgid "Could not remove skill"
 msgstr "Could not remove skill"
 
@@ -2325,11 +4111,15 @@ msgid "The skill could not be copied."
 msgstr "The skill could not be copied."
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.tsx
 #: src/components/settings/SkillsSettingsPanel.tsx
 msgid "Included"
 msgstr "Included"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+#: src/components/chat/SynaraThreadCreationCard.tsx
 #: src/components/settings/SkillsSettingsPanel.tsx
 msgid "Local"
 msgstr "Local"
@@ -2410,6 +4200,7 @@ msgid "Search skills"
 msgstr "Search skills"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
 #: src/components/settings/SkillsSettingsPanel.tsx
 msgid "Skills"
 msgstr "Skills"
@@ -2445,14 +4236,1145 @@ msgid "{skillCount, plural, one {# skill} other {# skills}}"
 msgstr "{skillCount, plural, one {# skill} other {# skills}}"
 
 #. js-lingui-explicit-id
-#: src/components/chat/ChatEmptyStateHero.tsx
-msgid "Synara logo"
-msgstr "Synara logo"
+#: src/components/settings/skillsSettingsModel.ts
+msgid "Shared across agents"
+msgstr "Shared across agents"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ActiveTaskListCard.tsx
+msgid "{completed} out of {total} tasks completed"
+msgstr "{completed} out of {total} tasks completed"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ActiveTaskListCard.tsx
+msgid "Open tasks sidebar"
+msgstr "Open tasks sidebar"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ActiveTaskListCard.tsx
+msgid "Expand task banner"
+msgstr "Expand task banner"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ActiveTaskListCard.tsx
+msgid "Collapse task banner"
+msgstr "Collapse task banner"
+
+#. js-lingui-explicit-id
+#: src/components/chat/AgentActivityDetailView.tsx
+msgid "Prompt"
+msgstr "Prompt"
+
+#. js-lingui-explicit-id
+#: src/components/chat/AgentActivityDetailView.tsx
+msgid "Result"
+msgstr "Result"
+
+#. js-lingui-explicit-id
+#: src/components/chat/AgentActivityDetailView.tsx
+#: src/components/chat/ToolCallDetailsDialog.tsx
+msgid "Activity"
+msgstr "Activity"
+
+#. js-lingui-explicit-id
+#: src/components/chat/AsyncUserInputCard.tsx
+msgid "Question"
+msgstr "Question"
+
+#. js-lingui-explicit-id
+#: src/components/chat/AsyncUserInputCard.tsx
+msgid "The answer could not be submitted. Try again."
+msgstr "The answer could not be submitted. Try again."
+
+#. js-lingui-explicit-id
+#: src/components/chat/AsyncUserInputCard.tsx
+msgid "1 question"
+msgstr "1 question"
+
+#. js-lingui-explicit-id
+#: src/components/chat/AsyncUserInputCard.tsx
+msgid "{count} questions"
+msgstr "{count} questions"
+
+#. js-lingui-explicit-id
+#: src/components/chat/AsyncUserInputCard.tsx
+msgid "Answered"
+msgstr "Answered"
+
+#. js-lingui-explicit-id
+#: src/components/chat/AsyncUserInputCard.tsx
+msgid "Questions from Codex"
+msgstr "Questions from Codex"
+
+#. js-lingui-explicit-id
+#: src/components/chat/AsyncUserInputCard.tsx
+msgid "Answer: {question}"
+msgstr "Answer: {question}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/AsyncUserInputCard.tsx
+msgid "Or type your own answer…"
+msgstr "Or type your own answer…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/AsyncUserInputCard.tsx
+msgid "Type your answer…"
+msgstr "Type your answer…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/AsyncUserInputCard.tsx
+msgid "Codex can keep working"
+msgstr "Codex can keep working"
+
+#. js-lingui-explicit-id
+#: src/components/chat/AsyncUserInputCard.tsx
+msgid "Submitting…"
+msgstr "Submitting…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/AsyncUserInputCard.tsx
+msgid "Send answer"
+msgstr "Send answer"
+
+#. js-lingui-explicit-id
+#: src/components/chat/AsyncUserInputCard.tsx
+msgid "Next"
+msgstr "Next"
+
+#. js-lingui-explicit-id
+#: src/components/chat/AutomationCreatedCard.tsx
+msgid "Suggested · "
+msgstr "Suggested · "
+
+#. js-lingui-explicit-id
+#: src/components/chat/AutomationCreatedCard.tsx
+#: src/components/chat/SynaraThreadCreationCard.tsx
+msgid "Open"
+msgstr "Open"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatComposerFooter.tsx
+msgid "Plan mode — click to return to normal build mode"
+msgstr "Plan mode — click to return to normal build mode"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatComposerFooter.tsx
+msgid "Debug mode — click to return to normal build mode"
+msgstr "Debug mode — click to return to normal build mode"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatComposerFooter.tsx
+#: src/components/chat/ComposerExtrasMenu.tsx
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+#: src/components/chat/ProposedPlanCard.tsx
+msgid "Plan"
+msgstr "Plan"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatComposerFooter.tsx
+#: src/components/chat/ComposerExtrasMenu.tsx
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+msgid "Debug"
+msgstr "Debug"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatComposerFooter.tsx
+msgid "Submitting..."
+msgstr "Submitting..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatComposerFooter.tsx
+msgid "Submit answers"
+msgstr "Submit answers"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatComposerFooter.tsx
+#: src/components/chat/ComposerPendingUserInputPanel.tsx
+#: src/components/chat/UserInputQuestionForm.tsx
+msgid "Next question"
+msgstr "Next question"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatComposerFooter.tsx
+msgid "Stop generation"
+msgstr "Stop generation"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatComposerFooter.tsx
+msgid "Stop the current response. On Mac, press Ctrl+C to interrupt."
+msgstr "Stop the current response. On Mac, press Ctrl+C to interrupt."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatComposerFooter.tsx
+msgid "Sending..."
+msgstr "Sending..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatComposerFooter.tsx
+msgid "Refine"
+msgstr "Refine"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatComposerFooter.tsx
+msgid "Implement"
+msgstr "Implement"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatComposerFooter.tsx
+msgid "Implementation actions"
+msgstr "Implementation actions"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatComposerFooter.tsx
+msgid "Implement in a new thread"
+msgstr "Implement in a new thread"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatComposerFooter.tsx
+msgid "Connecting"
+msgstr "Connecting"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatComposerFooter.tsx
+#: src/components/chat/ComposerVoiceButton.tsx
+#: src/components/chat/ComposerVoiceRecorderBar.tsx
+msgid "Transcribing voice note"
+msgstr "Transcribing voice note"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatComposerFooter.tsx
+msgid "Optimizing image"
+msgstr "Optimizing image"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatComposerFooter.tsx
+msgid "Preparing worktree"
+msgstr "Preparing worktree"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatComposerFooter.tsx
+msgid "Sending"
+msgstr "Sending"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatComposerFooter.tsx
+msgid "Send message"
+msgstr "Send message"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatComposerFooter.tsx
+msgid "Choose how to resume the held message above"
+msgstr "Choose how to resume the held message above"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+msgid "Chat history"
+msgstr "Chat history"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+msgid "Delete thread"
+msgstr "Delete thread"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+msgid "New editor rail item"
+msgstr "New editor rail item"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+msgid "New"
+msgstr "New"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+msgid "New terminal"
+msgstr "New terminal"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+msgid "Terminal"
+msgstr "Terminal"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+msgid "Toggle right sidebar"
+msgstr "Toggle right sidebar"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+msgid "Toggle diff panel"
+msgstr "Toggle diff panel"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+msgid "Close right sidebar"
+msgstr "Close right sidebar"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+msgid "Open right sidebar"
+msgstr "Open right sidebar"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+msgid "Diff panel is unavailable because this project is not a git repository."
+msgstr "Diff panel is unavailable because this project is not a git repository."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+msgid "Close selected Side"
+msgstr "Close selected Side"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+msgid "Continue in this thread"
+msgstr "Continue in this thread"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+msgid "Continue in a new thread"
+msgstr "Continue in a new thread"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+msgid "Toggle hub panel"
+msgstr "Toggle hub panel"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+msgid "Hub"
+msgstr "Hub"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+msgid "Toggle library panel"
+msgstr "Toggle library panel"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+msgid "Library"
+msgstr "Library"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+msgid "Close chat"
+msgstr "Close chat"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ClaudeCacheDetails.tsx
+msgid "Likely warm"
+msgstr "Likely warm"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ClaudeCacheDetails.tsx
+msgid "Likely expired"
+msgstr "Likely expired"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ClaudeCacheDetails.tsx
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+#: src/components/chat/ContextWindowMeter.tsx
+msgid "Unknown"
+msgstr "Unknown"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ClaudeCacheDetails.tsx
+msgid "Cache lifetime is unavailable."
+msgstr "Cache lifetime is unavailable."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ClaudeCacheDetails.tsx
+msgid "Last request · cache read"
+msgstr "Last request · cache read"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ClaudeCacheDetails.tsx
+msgid "Cache written"
+msgstr "Cache written"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ClaudeCacheDetails.tsx
+msgid "Input outside cache"
+msgstr "Input outside cache"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ClaudeCacheDetails.tsx
+msgid "Cache state is estimated. It does not measure your plan's remaining usage."
+msgstr "Cache state is estimated. It does not measure your plan's remaining usage."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerAutomationSetupBanner.tsx
+msgid "Setting up automation"
+msgstr "Setting up automation"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerAutomationSetupBanner.tsx
+msgid "Cancel automation setup"
+msgstr "Cancel automation setup"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Request status is uncertain"
+msgstr "Request status is uncertain"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Compaction will read the expired context"
+msgstr "Compaction will read the expired context"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Claude's prompt cache likely expired"
+msgstr "Claude's prompt cache likely expired"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Could not submit this choice. Try again."
+msgstr "Could not submit this choice. Try again."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Claude cache review"
+msgstr "Claude cache review"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Claude may have accepted the request. Sending is paused until its status can be confirmed."
+msgstr "Claude may have accepted the request. Sending is paused until its status can be confirmed."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Compacting also processes the full history once. Later requests use its summary."
+msgstr "Compacting also processes the full history once. Later requests use its summary."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Compact this conversation"
+msgstr "Compact this conversation"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Continue with full context"
+msgstr "Continue with full context"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Process the existing history and save its summary"
+msgstr "Process the existing history and save its summary"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Send the saved message with the existing history"
+msgstr "Send the saved message with the existing history"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Compact, then send"
+msgstr "Compact, then send"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Cancel this send"
+msgstr "Cancel this send"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Keep this conversation without sending the held message"
+msgstr "Keep this conversation without sending the held message"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Compact Context"
+msgstr "Compact Context"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Model"
+msgstr "Model"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Fast Mode"
+msgstr "Fast Mode"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Plan Mode"
+msgstr "Plan Mode"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Debug Mode"
+msgstr "Debug Mode"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Default Mode"
+msgstr "Default Mode"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Code Review"
+msgstr "Code Review"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Fork"
+msgstr "Fork"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Sidechat"
+msgstr "Sidechat"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/chat/ToolCallDetailsDialog.tsx
+msgid "Status"
+msgstr "Status"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Subagents"
+msgstr "Subagents"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Feedback Synara"
+msgstr "Feedback Synara"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Personal"
+msgstr "Personal"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Project"
+msgstr "Project"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "User"
+msgstr "User"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "System"
+msgstr "System"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Plugin"
+msgstr "Plugin"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "delegate task to subagent"
+msgstr "delegate task to subagent"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Start a fresh thread and clear the current conversation context"
+msgstr "Start a fresh thread and clear the current conversation context"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Compact the current thread context to free space"
+msgstr "Compact the current thread context to free space"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Switch response model for this thread"
+msgstr "Switch response model for this thread"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Switch this thread into plan mode"
+msgstr "Switch this thread into plan mode"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Switch this thread into evidence-first debug mode"
+msgstr "Switch this thread into evidence-first debug mode"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Switch this thread back to normal chat mode"
+msgstr "Switch this thread back to normal chat mode"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Start a code review for current changes"
+msgstr "Start a code review for current changes"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Fork this thread into local or a new worktree"
+msgstr "Fork this thread into local or a new worktree"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Open a guarded Side from this thread, optionally on another provider"
+msgstr "Open a guarded Side from this thread, optionally on another provider"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Show context usage and rate-limit status"
+msgstr "Show context usage and rate-limit status"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Insert a prompt that asks the assistant to delegate work"
+msgstr "Insert a prompt that asks the assistant to delegate work"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Use Synara Computer for this request only"
+msgstr "Use Synara Computer for this request only"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Turn fast mode on or off for this thread"
+msgstr "Turn fast mode on or off for this thread"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Download this thread as a ZIP archive (thread.json + transcript.md)"
+msgstr "Download this thread as a ZIP archive (thread.json + transcript.md)"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Set, edit, pause, resume, or clear this thread's persistent goal"
+msgstr "Set, edit, pause, resume, or clear this thread's persistent goal"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Regenerate this thread title, or set an exact title"
+msgstr "Regenerate this thread title, or set an exact title"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Send feedback to the Synara team"
+msgstr "Send feedback to the Synara team"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Create a scheduled automation from this prompt"
+msgstr "Create a scheduled automation from this prompt"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/chat/ToolCallDetailsDialog.tsx
+msgid "Files"
+msgstr "Files"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Papers"
+msgstr "Papers"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Plugins"
+msgstr "Plugins"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Chats"
+msgstr "Chats"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Built-in"
+msgstr "Built-in"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Scroll to browse"
+msgstr "Scroll to browse"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Type to search for files"
+msgstr "Type to search for files"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Searching mentions..."
+msgstr "Searching mentions..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Loading skills..."
+msgstr "Loading skills..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Loading commands..."
+msgstr "Loading commands..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "No matching plugin, chat, or file."
+msgstr "No matching plugin, chat, or file."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "No matching skill."
+msgstr "No matching skill."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "No matching command."
+msgstr "No matching command."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerEnvironmentPicker.tsx
+msgid "New worktree"
+msgstr "New worktree"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerEnvironmentPicker.tsx
+msgid "Hand off to new worktree"
+msgstr "Hand off to new worktree"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerEnvironmentPicker.tsx
+msgid "Hand off to local"
+msgstr "Hand off to local"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExpiredUserInputNotice.tsx
+msgid "These questions have expired. Restore your answers to review and send as a new message."
+msgstr "These questions have expired. Restore your answers to review and send as a new message."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExpiredUserInputNotice.tsx
+msgid "Restore answers"
+msgstr "Restore answers"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExpiredUserInputNotice.tsx
+msgid "Dismiss"
+msgstr "Dismiss"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasMenu.tsx
+msgid "Composer extras"
+msgstr "Composer extras"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerExtrasMenu.tsx
 msgid "Add files"
 msgstr "Add files"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasMenu.tsx
+msgid "Mode"
+msgstr "Mode"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasMenu.tsx
+msgid "Fast"
+msgstr "Fast"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasPanel.tsx
+msgid "Attach window"
+msgstr "Attach window"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasPanel.tsx
+msgid "Files and folders"
+msgstr "Files and folders"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasPanel.tsx
+msgid "Attach {app}"
+msgstr "Attach {app}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasPanel.tsx
+msgid "Choose another window"
+msgstr "Choose another window"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasPanel.tsx
+msgid "Capture an open app window"
+msgstr "Capture an open app window"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasPanel.tsx
+#: src/components/chat/ComposerGoalHeader.tsx
+msgid "Goal"
+msgstr "Goal"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasPanel.tsx
+msgid "Set a goal to keep pursuing"
+msgstr "Set a goal to keep pursuing"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasPanel.tsx
+msgid "Plan mode"
+msgstr "Plan mode"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasPanel.tsx
+msgid "Turn plan mode off"
+msgstr "Turn plan mode off"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasPanel.tsx
+msgid "Turn plan mode on"
+msgstr "Turn plan mode on"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasPanel.tsx
+msgid "Debug mode"
+msgstr "Debug mode"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasPanel.tsx
+msgid "Turn debug mode off"
+msgstr "Turn debug mode off"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasPanel.tsx
+msgid "Turn debug mode on"
+msgstr "Turn debug mode on"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasPanel.tsx
+msgid "Fast mode"
+msgstr "Fast mode"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasPanel.tsx
+msgid "Turn fast mode off"
+msgstr "Turn fast mode off"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasPanel.tsx
+msgid "Turn fast mode on"
+msgstr "Turn fast mode on"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasPanel.tsx
+msgid "Loading windows…"
+msgstr "Loading windows…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasPanel.tsx
+msgid "No other app windows are visible."
+msgstr "No other app windows are visible."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerExtrasPanel.tsx
+#: src/components/chat/ComposerImageAttachmentChip.tsx
+msgid "Captured app"
+msgstr "Captured app"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerGoalHeader.tsx
+msgid "Goal paused"
+msgstr "Goal paused"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerGoalHeader.tsx
+msgid "Pursuing goal"
+msgstr "Pursuing goal"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerGoalHeader.tsx
+msgid "Edit goal"
+msgstr "Edit goal"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerGoalHeader.tsx
+msgid "Resume goal"
+msgstr "Resume goal"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerGoalHeader.tsx
+msgid "Pause goal"
+msgstr "Pause goal"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerGoalHeader.tsx
+msgid "Delete goal"
+msgstr "Delete goal"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerGoalHeader.tsx
+msgid "Collapse goal"
+msgstr "Collapse goal"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerGoalHeader.tsx
+msgid "Expand goal"
+msgstr "Expand goal"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerImageAttachmentChip.tsx
+msgid "Preview AppSnap from {app}"
+msgstr "Preview AppSnap from {app}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerImageAttachmentChip.tsx
+msgid "Remove AppSnap from {app}"
+msgstr "Remove AppSnap from {app}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerImageAttachmentChip.tsx
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Preview {name}"
+msgstr "Preview {name}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerImageAttachmentChip.tsx
+#: src/components/chat/FileAttachmentChip.tsx
+msgid "Remove {name}"
+msgstr "Remove {name}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Page {page} of {pageCount}"
+msgstr "Page {page} of {pageCount}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Page {page}"
+msgstr "Page {page}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Slides"
+msgstr "Slides"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Paper"
+msgstr "Paper"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Line {line}"
+msgstr "Line {line}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Active project"
+msgstr "Active project"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Slide element"
+msgstr "Slide element"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Paper selection"
+msgstr "Paper selection"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "PDF selection"
+msgstr "PDF selection"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Editor selection"
+msgstr "Editor selection"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Active view"
+msgstr "Active view"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Editor"
+msgstr "Editor"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Workspace"
+msgstr "Workspace"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Presentation"
+msgstr "Presentation"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Slide"
+msgstr "Slide"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Selected element"
+msgstr "Selected element"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Line {line}, column {column}"
+msgstr "Line {line}, column {column}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Second editor"
+msgstr "Second editor"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Paper source"
+msgstr "Paper source"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Reading view"
+msgstr "Reading view"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Blog"
+msgstr "Blog"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Full text"
+msgstr "Full text"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Citation key"
+msgstr "Citation key"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.tsx
+msgid "Hide included context details"
+msgstr "Hide included context details"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.tsx
+msgid "Show included context details"
+msgstr "Show included context details"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.tsx
+msgid "{summary}. Included with your next message."
+msgstr "{summary}. Included with your next message."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.tsx
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Context"
+msgstr "Context"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.tsx
+msgid "{count} chars"
+msgstr "{count} chars"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.tsx
+msgid "Exclude selected text from context"
+msgstr "Exclude selected text from context"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.tsx
+msgid "Exclude selected text from the next message"
+msgstr "Exclude selected text from the next message"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.tsx
+msgid "Included automatically with your next message"
+msgstr "Included automatically with your next message"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.tsx
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "{count} characters"
+msgstr "{count} characters"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.tsx
+msgid "Exclude selection"
+msgstr "Exclude selection"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLocalDirectoryMenu.tsx
+msgid "Folder not found."
+msgstr "Folder not found."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLocalDirectoryMenu.tsx
+msgid "Permission denied."
+msgstr "Permission denied."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLocalDirectoryMenu.tsx
+msgid "Not a folder."
+msgstr "Not a folder."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLocalDirectoryMenu.tsx
+msgid "Unable to load folders."
+msgstr "Unable to load folders."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLocalDirectoryMenu.tsx
+msgid "App is still connecting. Try again in a moment."
+msgstr "App is still connecting. Try again in a moment."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLocalDirectoryMenu.tsx
+msgid "Go up one directory"
+msgstr "Go up one directory"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLocalDirectoryMenu.tsx
+msgid "Use this folder"
+msgstr "Use this folder"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLocalDirectoryMenu.tsx
+msgid "Matches deeper"
+msgstr "Matches deeper"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLocalDirectoryMenu.tsx
+msgid "Waiting for home directory from server…"
+msgstr "Waiting for home directory from server…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLocalDirectoryMenu.tsx
+msgid "Loading local files…"
+msgstr "Loading local files…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLocalDirectoryMenu.tsx
+msgid "Searching nested files…"
+msgstr "Searching nested files…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLocalDirectoryMenu.tsx
+msgid "No matches."
+msgstr "No matches."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLocalDirectoryMenu.tsx
+msgid "No files or folders here."
+msgstr "No files or folders here."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLocalDirectoryMenu.tsx
+msgid "Showing top matches. Keep typing to narrow."
+msgstr "Showing top matches. Keep typing to narrow."
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerPendingApprovalPanel.tsx
@@ -2461,13 +5383,410 @@ msgstr "Requested permission profile"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerPendingUserInputPanel.tsx
+#: src/components/chat/UserInputQuestionForm.tsx
 msgid "Previous question"
 msgstr "Previous question"
 
 #. js-lingui-explicit-id
-#: src/components/chat/ComposerPendingUserInputPanel.tsx
-msgid "Next question"
-msgstr "Next question"
+#: src/components/chat/ComposerQueuedHeader.tsx
+msgid "Queued follow-up"
+msgstr "Queued follow-up"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerQueuedHeader.tsx
+msgid "Code block"
+msgstr "Code block"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+msgid "New worktree (pending)"
+msgstr "New worktree (pending)"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+msgid "Session Status"
+msgstr "Session Status"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+msgid "Runtime controls and local thread state for the active composer."
+msgstr "Runtime controls and local thread state for the active composer."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+msgid "Latest usage reported by the active thread."
+msgstr "Latest usage reported by the active thread."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+msgid "Not available"
+msgstr "Not available"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+msgid "No active rate-limit warning for this thread."
+msgstr "No active rate-limit warning for this thread."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSnoozeNotice.tsx
+msgid "Return now"
+msgstr "Return now"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSnoozeNotice.tsx
+msgid "Change time"
+msgstr "Change time"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSnoozeNotice.tsx
+msgid "Pick date & time…"
+msgstr "Pick date & time…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSubagentStrip.tsx
+msgid "Stop all subagents"
+msgstr "Stop all subagents"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSubagentStrip.tsx
+msgid "Stop all running subagents"
+msgstr "Stop all running subagents"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSubagentStrip.tsx
+msgid "Expand subagent strip"
+msgstr "Expand subagent strip"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSubagentStrip.tsx
+msgid "Collapse subagent strip"
+msgstr "Collapse subagent strip"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSubagentStrip.tsx
+msgid "Run in background (ctrl+b)"
+msgstr "Run in background (ctrl+b)"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSubagentStrip.tsx
+msgid "Stop subagent"
+msgstr "Stop subagent"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerVoiceButton.tsx
+msgid "Starting microphone"
+msgstr "Starting microphone"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerVoiceButton.tsx
+msgid "Record voice note"
+msgstr "Record voice note"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerVoiceRecorderBar.tsx
+msgid "Waiting for microphone…"
+msgstr "Waiting for microphone…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerVoiceRecorderBar.tsx
+msgid "Cancel voice recording"
+msgstr "Cancel voice recording"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerVoiceRecorderBar.tsx
+msgid "Stop voice recording"
+msgstr "Stop voice recording"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComputerControlDeniedCard.tsx
+msgid "Computer control is on for this chat"
+msgstr "Computer control is on for this chat"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComputerControlDeniedCard.tsx
+msgid "Computer control is off"
+msgstr "Computer control is off"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComputerControlDeniedCard.tsx
+msgid "Enable"
+msgstr "Enable"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComputerControlDeniedCard.tsx
+msgid "Queued desktop turns stay cancelled — send a fresh message to continue."
+msgstr "Queued desktop turns stay cancelled — send a fresh message to continue."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComputerControlDeniedCard.tsx
+msgid "Turn it on in Settings to let the agent use the desktop."
+msgstr "Turn it on in Settings to let the agent use the desktop."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComputerSetupRequiredCard.tsx
+msgid "Computer status is unavailable"
+msgstr "Computer status is unavailable"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComputerSetupRequiredCard.tsx
+msgid "Computer control is ready"
+msgstr "Computer control is ready"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComputerSetupRequiredCard.tsx
+msgid "Computer control needs setup"
+msgstr "Computer control needs setup"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComputerSetupRequiredCard.tsx
+msgid "Send a message and the agent will pick up where it left off."
+msgstr "Send a message and the agent will pick up where it left off."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComputerSetupRequiredCard.tsx
+msgid "Choose Set up to request missing permissions or open System Settings. Allow access for this Synara app, then return here to recheck."
+msgstr "Choose Set up to request missing permissions or open System Settings. Allow access for this Synara app, then return here to recheck."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComputerSetupRequiredCard.tsx
+msgid "Setting up…"
+msgstr "Setting up…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComputerSetupRequiredCard.tsx
+msgid "Set up"
+msgstr "Set up"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComputerSetupRequiredCard.tsx
+msgid "Recheck"
+msgstr "Recheck"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComputerSetupRequiredCard.tsx
+msgid "Could not check computer access. Try again."
+msgstr "Could not check computer access. Try again."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ContextWindowMeter.tsx
+msgid "Context window {percent} used"
+msgstr "Context window {percent} used"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ContextWindowMeter.tsx
+msgid "Context window {tokens} tokens used"
+msgstr "Context window {tokens} tokens used"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ContextWindowMeter.tsx
+msgid "Context window"
+msgstr "Context window"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ContextWindowMeter.tsx
+msgid "Current session: {window}"
+msgstr "Current session: {window}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ContextWindowMeter.tsx
+msgid "{tokens} context used"
+msgstr "{tokens} context used"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ContextWindowMeter.tsx
+msgid "context used"
+msgstr "context used"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ContextWindowMeter.tsx
+msgid "{tokens} tokens used so far"
+msgstr "{tokens} tokens used so far"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ContextWindowMeter.tsx
+msgid "Active context limit: {tokens} tokens"
+msgstr "Active context limit: {tokens} tokens"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ContextWindowMeter.tsx
+msgid "Auto-compact target: {window}"
+msgstr "Auto-compact target: {window}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ContextWindowMeter.tsx
+msgid "The session's auto-compact target can be lower than the model's supported window."
+msgstr "The session's auto-compact target can be lower than the model's supported window."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ContextWindowMeter.tsx
+msgid "Next turn: {window}"
+msgstr "Next turn: {window}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ContextWindowMeter.tsx
+msgid "Estimated total processed: {tokens} tokens"
+msgstr "Estimated total processed: {tokens} tokens"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ContextWindowMeter.tsx
+msgid "Total processed: {tokens} tokens"
+msgstr "Total processed: {tokens} tokens"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ContextWindowMeter.tsx
+msgid "Automatically compacts its context when needed."
+msgstr "Automatically compacts its context when needed."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ContextWindowMeter.tsx
+msgid "Session cost: {cost}"
+msgstr "Session cost: {cost}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ContextWindowMeter.tsx
+msgid "Starting compaction..."
+msgstr "Starting compaction..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ContextWindowMeter.tsx
+msgid "Compact now"
+msgstr "Compact now"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ContextWindowMeter.tsx
+msgid "Compaction processes this conversation and consumes usage. Later turns use its summary."
+msgstr "Compaction processes this conversation and consumes usage. Later turns use its summary."
+
+#. js-lingui-explicit-id
+#: src/components/chat/CrossTaskOriginLabel.tsx
+msgid "Sent by Synara from another thread"
+msgstr "Sent by Synara from another thread"
+
+#. js-lingui-explicit-id
+#: src/components/chat/CrossTaskOriginLabel.tsx
+#: src/components/chat/SynaraThreadCreationCard.tsx
+msgid "Synara"
+msgstr "Synara"
+
+#. js-lingui-explicit-id
+#: src/components/chat/CrossTaskOriginLabel.tsx
+msgid "Open coordinator"
+msgstr "Open coordinator"
+
+#. js-lingui-explicit-id
+#: src/components/chat/CrossTaskOriginLabel.tsx
+msgid "Open source thread"
+msgstr "Open source thread"
+
+#. js-lingui-explicit-id
+#: src/components/chat/EditedFileRow.tsx
+msgid "Review changes to {path}"
+msgstr "Review changes to {path}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/EditedFileRow.tsx
+msgid "Open {path}"
+msgstr "Open {path}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/EditedFileRow.tsx
+msgid "Open {path} options"
+msgstr "Open {path} options"
+
+#. js-lingui-explicit-id
+#: src/components/chat/EditedFileRow.tsx
+msgid "Copy absolute path"
+msgstr "Copy absolute path"
+
+#. js-lingui-explicit-id
+#: src/components/chat/EditedFileRow.tsx
+msgid "Copy relative path"
+msgstr "Copy relative path"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ExpandedImageOverlay.tsx
+msgid "Expanded image preview"
+msgstr "Expanded image preview"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ExpandedImageOverlay.tsx
+msgid "Close image preview"
+msgstr "Close image preview"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ExpandedImageOverlay.tsx
+msgid "Previous image"
+msgstr "Previous image"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ExpandedImageOverlay.tsx
+msgid "Next image"
+msgstr "Next image"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ExpiredSidechatNotice.tsx
+msgid "This side chat expired after a period of inactivity. Start a new side chat."
+msgstr "This side chat expired after a period of inactivity. Start a new side chat."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ExpiredSidechatNotice.tsx
+msgid "Start new"
+msgstr "Start new"
+
+#. js-lingui-explicit-id
+#: src/components/chat/FileAttachmentChip.tsx
+msgid "Unknown type"
+msgstr "Unknown type"
+
+#. js-lingui-explicit-id
+#: src/components/chat/FileLineCommentBox.tsx
+msgid "Local comment"
+msgstr "Local comment"
+
+#. js-lingui-explicit-id
+#: src/components/chat/FileLineCommentBox.tsx
+msgid "Request change"
+msgstr "Request change"
+
+#. js-lingui-explicit-id
+#: src/components/chat/FileLineCommentBox.tsx
+msgid "Comment"
+msgstr "Comment"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GeneratedMarkdownImage.tsx
+msgid "Could not download generated image"
+msgstr "Could not download generated image"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GeneratedMarkdownImage.tsx
+msgid "Could not open generated image"
+msgstr "Could not open generated image"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GeneratedMarkdownImage.tsx
+msgid "The file may be unavailable."
+msgstr "The file may be unavailable."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GeneratedMarkdownImage.tsx
+msgid "Expand generated image"
+msgstr "Expand generated image"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GeneratedMarkdownImage.tsx
+msgid "Expand"
+msgstr "Expand"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GeneratedMarkdownImage.tsx
+msgid "Download generated image"
+msgstr "Download generated image"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GeneratedMarkdownImage.tsx
+msgid "Download"
+msgstr "Download"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
@@ -2491,11 +5810,6 @@ msgstr "Refresh changes"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
-msgid "Checking repository…"
-msgstr "Checking repository…"
-
-#. js-lingui-explicit-id
-#: src/components/chat/GitPanel.tsx
 msgid "No uncommitted changes."
 msgstr "No uncommitted changes."
 
@@ -2511,6 +5825,7 @@ msgstr "Loading changes..."
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
+#: src/components/chat/TimelineWorkEntryRow.tsx
 msgid "Staged"
 msgstr "Staged"
 
@@ -2736,11 +6051,6 @@ msgstr "Creating…"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitRepositorySetup.tsx
-msgid "Connecting…"
-msgstr "Connecting…"
-
-#. js-lingui-explicit-id
-#: src/components/chat/GitRepositorySetup.tsx
 msgid "Create repository"
 msgstr "Create repository"
 
@@ -2750,9 +6060,1091 @@ msgid "Connect repository"
 msgstr "Connect repository"
 
 #. js-lingui-explicit-id
+#: src/components/chat/MessageCopyButton.tsx
+msgid "Copy message"
+msgstr "Copy message"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessageCopyButton.tsx
+msgid "Copy to clipboard"
+msgstr "Copy to clipboard"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "This message is no longer part of the conversation, so it can't be edited."
+msgstr "This message is no longer part of the conversation, so it can't be edited."
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "A newer message has been sent since, and only the latest user message can be edited."
+msgstr "A newer message has been sent since, and only the latest user message can be edited."
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "The conversation has moved on across newer turns, so this message can no longer be edited and resent."
+msgstr "The conversation has moved on across newer turns, so this message can no longer be edited and resent."
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "This message's turn can no longer be rolled back, so it can't be edited."
+msgstr "This message's turn can no longer be rolled back, so it can't be edited."
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "Only your own chat messages can be edited."
+msgstr "Only your own chat messages can be edited."
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "Structured answers can't be edited and resent."
+msgstr "Structured answers can't be edited and resent."
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Checking message delivery…"
+msgstr "Checking message delivery…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Starting {provider}…"
+msgstr "Starting {provider}…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Preparing worktree..."
+msgstr "Preparing worktree..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "failed"
+msgstr "failed"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Switching to local..."
+msgstr "Switching to local..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Work locally"
+msgstr "Work locally"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Cancelling..."
+msgstr "Cancelling..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Show {count} more"
+msgstr "Show {count} more"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "The conversation has moved on, so this message can no longer be edited and resent."
+msgstr "The conversation has moved on, so this message can no longer be edited and resent."
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Edit message"
+msgstr "Edit message"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Edit and resend"
+msgstr "Edit and resend"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Revert to this message"
+msgstr "Revert to this message"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "+{count} more tool calls"
+msgstr "+{count} more tool calls"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Worked for {elapsed}"
+msgstr "Worked for {elapsed}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "Edited 1 file"
+msgstr "Edited 1 file"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "Edited {count} files"
+msgstr "Edited {count} files"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Collapse changed files list"
+msgstr "Collapse changed files list"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Expand changed files list"
+msgstr "Expand changed files list"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Show 1 more file"
+msgstr "Show 1 more file"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Show {count} more files"
+msgstr "Show {count} more files"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Fork thread from this turn"
+msgstr "Fork thread from this turn"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Fork from here"
+msgstr "Fork from here"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Unpin from panel"
+msgstr "Unpin from panel"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Pin to panel"
+msgstr "Pin to panel"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Goal achieved in {duration}"
+msgstr "Goal achieved in {duration}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Goal achieved"
+msgstr "Goal achieved"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Working for"
+msgstr "Working for"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Send a message to start the conversation."
+msgstr "Send a message to start the conversation."
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Send"
+msgstr "Send"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Show more"
+msgstr "Show more"
+
+#. js-lingui-explicit-id
+#: src/components/chat/PastedTextChip.tsx
+msgid "Show in text field"
+msgstr "Show in text field"
+
+#. js-lingui-explicit-id
+#: src/components/chat/PastedTextChip.tsx
+msgid "Hide text"
+msgstr "Hide text"
+
+#. js-lingui-explicit-id
+#: src/components/chat/PastedTextChip.tsx
+msgid "Show text"
+msgstr "Show text"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProposedPlanActions.tsx
+msgid "Plan copied as markdown"
+msgstr "Plan copied as markdown"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProposedPlanActions.tsx
+msgid "Could not copy plan"
+msgstr "Could not copy plan"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProposedPlanActions.tsx
+msgid "Workspace path is unavailable"
+msgstr "Workspace path is unavailable"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProposedPlanActions.tsx
+msgid "This thread does not have a workspace path to download into."
+msgstr "This thread does not have a workspace path to download into."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProposedPlanActions.tsx
+msgid "Plan downloaded"
+msgstr "Plan downloaded"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProposedPlanActions.tsx
+msgid "Could not download plan"
+msgstr "Could not download plan"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProposedPlanActions.tsx
+msgid "Exporting plans requires the desktop app."
+msgstr "Exporting plans requires the desktop app."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProposedPlanActions.tsx
+msgid "Plan exported"
+msgstr "Plan exported"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProposedPlanActions.tsx
+msgid "Could not export plan"
+msgstr "Could not export plan"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProposedPlanActions.tsx
+msgid "Download to .plan folder"
+msgstr "Download to .plan folder"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProposedPlanActions.tsx
+msgid "Export markdown file"
+msgstr "Export markdown file"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProposedPlanActions.tsx
+msgid "Copy as markdown"
+msgstr "Copy as markdown"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProposedPlanCard.tsx
+msgid "Proposed plan"
+msgstr "Proposed plan"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProposedPlanCard.tsx
+msgid "Collapse plan"
+msgstr "Collapse plan"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProposedPlanCard.tsx
+msgid "Expand plan"
+msgstr "Expand plan"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProviderHealthBanner.tsx
+msgid "Install or sign in to at least one provider before starting an agent chat."
+msgstr "Install or sign in to at least one provider before starting an agent chat."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProviderHealthBanner.tsx
+msgid "{provider} provider is unavailable."
+msgstr "{provider} provider is unavailable."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProviderHealthBanner.tsx
+msgid "{provider} provider has limited availability."
+msgstr "{provider} provider has limited availability."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProviderHealthBanner.tsx
+msgid "Set up an agent provider"
+msgstr "Set up an agent provider"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProviderHealthBanner.tsx
+msgid "{provider} provider status"
+msgstr "{provider} provider status"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProviderHealthBanner.tsx
+msgid "Provider settings"
+msgstr "Provider settings"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProviderHealthBanner.tsx
+msgid "Dismiss provider status"
+msgstr "Dismiss provider status"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ProviderModelPicker.tsx
 msgid "Loading models"
 msgstr "Loading models"
+
+#. js-lingui-explicit-id
+#: src/components/chat/QueuedComposerActions.tsx
+msgid "Steer"
+msgstr "Steer"
+
+#. js-lingui-explicit-id
+#: src/components/chat/QueuedComposerActions.tsx
+msgid "Delete queued follow-up"
+msgstr "Delete queued follow-up"
+
+#. js-lingui-explicit-id
+#: src/components/chat/QueuedComposerActions.tsx
+msgid "Queued follow-up actions"
+msgstr "Queued follow-up actions"
+
+#. js-lingui-explicit-id
+#: src/components/chat/QueuedComposerActions.tsx
+msgid "Edit queued prompt"
+msgstr "Edit queued prompt"
+
+#. js-lingui-explicit-id
+#: src/components/chat/QueuedComposerActions.tsx
+msgid "Delete queued prompt"
+msgstr "Delete queued prompt"
+
+#. js-lingui-explicit-id
+#: src/components/chat/RateLimitBanner.tsx
+msgid "Dismiss rate limit status"
+msgstr "Dismiss rate limit status"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SelectionNewChatComposer.tsx
+msgid "Could not start the chat. Try again."
+msgstr "Could not start the chat. Try again."
+
+#. js-lingui-explicit-id
+#: src/components/chat/SelectionNewChatComposer.tsx
+msgid "New chat from selection"
+msgstr "New chat from selection"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SelectionNewChatComposer.tsx
+msgid "Open in chat"
+msgstr "Open in chat"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SelectionNewChatComposer.tsx
+msgid "Close new chat composer"
+msgstr "Close new chat composer"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SelectionNewChatComposer.tsx
+msgid "Message for new chat"
+msgstr "Message for new chat"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SelectionNewChatComposer.tsx
+msgid "Ask about this selection…"
+msgstr "Ask about this selection…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SelectionNewChatComposer.tsx
+msgid "Send to new chat"
+msgstr "Send to new chat"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SidechatDockPane.tsx
+msgid "Loading side chat..."
+msgstr "Loading side chat..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/SingleChatSurface.tsx
+msgid "Unable to open project"
+msgstr "Unable to open project"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SingleChatSurface.tsx
+msgid "The project could not be opened."
+msgstr "The project could not be opened."
+
+#. js-lingui-explicit-id
+#: src/components/chat/SingleChatSurface.tsx
+msgid "Side chat is unavailable"
+msgstr "Side chat is unavailable"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SingleChatSurface.tsx
+msgid "Open a server-backed main thread before starting a Side chat."
+msgstr "Open a server-backed main thread before starting a Side chat."
+
+#. js-lingui-explicit-id
+#: src/components/chat/SingleChatSurface.tsx
+msgid "Could not start Side chat"
+msgstr "Could not start Side chat"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SingleChatSurface.tsx
+msgid "An error occurred while creating Side chat."
+msgstr "An error occurred while creating Side chat."
+
+#. js-lingui-explicit-id
+#: src/components/chat/SingleChatSurface.tsx
+msgid "Loading browser..."
+msgstr "Loading browser..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/SingleChatSurface.tsx
+msgid "Loading simulator..."
+msgstr "Loading simulator..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/SingleChatSurface.tsx
+msgid "Loading pull request..."
+msgstr "Loading pull request..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/SingleChatSurface.tsx
+msgid "Terminal is sleeping. Restoring shortly."
+msgstr "Terminal is sleeping. Restoring shortly."
+
+#. js-lingui-explicit-id
+#: src/components/chat/SingleChatSurface.tsx
+msgid "Loading terminal..."
+msgstr "Loading terminal..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/SingleChatSurface.tsx
+msgid "Loading Git..."
+msgstr "Loading Git..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/SingleChatSurface.tsx
+msgid "Loading explorer..."
+msgstr "Loading explorer..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/SingleChatSurface.tsx
+msgid "Loading file..."
+msgstr "Loading file..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/SingleChatSurface.tsx
+msgid "Editor view"
+msgstr "Editor view"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SingleChatSurface.tsx
+msgid "Unable to close terminal"
+msgstr "Unable to close terminal"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SingleChatSurface.tsx
+msgid "Please try again."
+msgstr "Please try again."
+
+#. js-lingui-explicit-id
+#: src/components/chat/SynaraThreadCreationCard.tsx
+msgid "Lattice tasks"
+msgstr "Lattice tasks"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadDetailHydrationState.tsx
+msgid "Loading conversation"
+msgstr "Loading conversation"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadDetailHydrationState.tsx
+msgid "This conversation didn't load."
+msgstr "This conversation didn't load."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadDetailHydrationState.tsx
+msgid "Try again"
+msgstr "Try again"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadErrorBanner.tsx
+msgid "Unblocking…"
+msgstr "Unblocking…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadErrorBanner.tsx
+msgid "Unblock thread"
+msgstr "Unblock thread"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadErrorBanner.tsx
+msgid "Dismiss error"
+msgstr "Dismiss error"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadFindBar.tsx
+msgid "Search chat..."
+msgstr "Search chat..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadFindBar.tsx
+msgid "Find in thread"
+msgstr "Find in thread"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadFindBar.tsx
+msgid "Close find (Esc)"
+msgstr "Close find (Esc)"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadFindBar.tsx
+msgid "Previous match (Shift+Enter)"
+msgstr "Previous match (Shift+Enter)"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadFindBar.tsx
+msgid "Next match (Enter)"
+msgstr "Next match (Enter)"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadFindBar.tsx
+msgid "No results"
+msgstr "No results"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Read"
+msgstr "Read"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Reading"
+msgstr "Reading"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Edited"
+msgstr "Edited"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Searched"
+msgstr "Searched"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Searching"
+msgstr "Searching"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Search"
+msgstr "Search"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Searched the web"
+msgstr "Searched the web"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Listed"
+msgstr "Listed"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Listing"
+msgstr "Listing"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Ran"
+msgstr "Ran"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Ran command"
+msgstr "Ran command"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Checked"
+msgstr "Checked"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Created"
+msgstr "Created"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Creating"
+msgstr "Creating"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Found"
+msgstr "Found"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Finding"
+msgstr "Finding"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Inspected"
+msgstr "Inspected"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Inspecting"
+msgstr "Inspecting"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Compared"
+msgstr "Compared"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Comparing"
+msgstr "Comparing"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Removed"
+msgstr "Removed"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Removing"
+msgstr "Removing"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Reviewed"
+msgstr "Reviewed"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Reviewing"
+msgstr "Reviewing"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Staging"
+msgstr "Staging"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Committed"
+msgstr "Committed"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Committing"
+msgstr "Committing"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Pulled"
+msgstr "Pulled"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Pulling"
+msgstr "Pulling"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Pushing"
+msgstr "Pushing"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Switched to"
+msgstr "Switched to"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Switching to"
+msgstr "Switching to"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Agent task"
+msgstr "Agent task"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Generated image"
+msgstr "Generated image"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Viewed image"
+msgstr "Viewed image"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Tool"
+msgstr "Tool"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Searching for {query} in {path}"
+msgstr "Searching for {query} in {path}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Searched for {query} in {path}"
+msgstr "Searched for {query} in {path}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Searching for {query}"
+msgstr "Searching for {query}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Searched for {query}"
+msgstr "Searched for {query}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Searching in {path}"
+msgstr "Searching in {path}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Searched in {path}"
+msgstr "Searched in {path}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "current directory"
+msgstr "current directory"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Summary"
+msgstr "Summary"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Raw call"
+msgstr "Raw call"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Conversation rebuilt from a summary"
+msgstr "Conversation rebuilt from a summary"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "New session started"
+msgstr "New session started"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Turn stop escalated to a session restart"
+msgstr "Turn stop escalated to a session restart"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Previous history unavailable"
+msgstr "Previous history unavailable"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Could not resume the previous session"
+msgstr "Could not resume the previous session"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Previous history"
+msgstr "Previous history"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Lost"
+msgstr "Lost"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Session restarted"
+msgstr "Session restarted"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Yes"
+msgstr "Yes"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "No"
+msgstr "No"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Why"
+msgstr "Why"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Summary included"
+msgstr "Summary included"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Summary preview"
+msgstr "Summary preview"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Showing a short preview of the summary sent with your message."
+msgstr "Showing a short preview of the summary sent with your message."
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "From"
+msgstr "From"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "To"
+msgstr "To"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Error"
+msgstr "Error"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "The session did not start."
+msgstr "The session did not start."
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "None"
+msgstr "None"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Transferred context"
+msgstr "Transferred context"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Sent ahead of your next message so the new model can continue this thread."
+msgstr "Sent ahead of your next message so the new model can continue this thread."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ToolCallDetailsDialog.tsx
+msgid "No detailed payload was available for this tool call."
+msgstr "No detailed payload was available for this tool call."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ToolCallDetailsDialog.tsx
+msgid "Diff"
+msgstr "Diff"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ToolCallDetailsDialog.tsx
+msgid "Edits"
+msgstr "Edits"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ToolCallDetailsDialog.tsx
+msgid "Before"
+msgstr "Before"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ToolCallDetailsDialog.tsx
+msgid "After"
+msgstr "After"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ToolCallDetailsDialog.tsx
+msgid "Written Content"
+msgstr "Written Content"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ToolCallDetailsDialog.tsx
+msgid "Started"
+msgstr "Started"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ToolCallDetailsDialog.tsx
+msgid "Last activity"
+msgstr "Last activity"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ToolCallDetailsDialog.tsx
+msgid "Elapsed"
+msgstr "Elapsed"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ToolCallDetailsDialog.tsx
+msgid "Progress"
+msgstr "Progress"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ToolCallDetailsDialog.tsx
+msgid "Detail"
+msgstr "Detail"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ToolCallDetailsDialog.tsx
+msgid "Exit code {code}"
+msgstr "Exit code {code}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ToolCallDetailsDialog.tsx
+msgid "Truncated"
+msgstr "Truncated"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ToolCallDetailsDialog.tsx
+msgid "Output"
+msgstr "Output"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ToolCallDetailsDialog.tsx
+msgid "Stdout"
+msgstr "Stdout"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ToolCallDetailsDialog.tsx
+msgid "Stderr"
+msgstr "Stderr"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TranscriptSelectionAction.tsx
+msgid "Selection actions"
+msgstr "Selection actions"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TranscriptSelectionAction.tsx
+msgid "Add to Chat"
+msgstr "Add to Chat"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TranscriptSelectionAction.tsx
+msgid "Add to Side"
+msgstr "Add to Side"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TranscriptSelectionAction.tsx
+msgid "Add to new Chat"
+msgstr "Add to new Chat"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TranscriptSelectionActionLayer.tsx
+msgid "Could not add selection to Side"
+msgstr "Could not add selection to Side"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TranscriptSelectionActionLayer.tsx
+msgid "Try again."
+msgstr "Try again."
+
+#. js-lingui-explicit-id
+#: src/components/chat/UserInputQuestionForm.tsx
+msgid "{current} of {total}"
+msgstr "{current} of {total}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/UserInputQuestionForm.tsx
+msgid "Select one or more."
+msgstr "Select one or more."
+
+#. js-lingui-explicit-id
+#: src/components/chat/WorkerMonitorNoticePill.tsx
+msgid "PR"
+msgstr "PR"
+
+#. js-lingui-explicit-id
+#: src/components/chat/WorkerMonitorNoticePill.tsx
+msgid "Retry"
+msgstr "Retry"
+
+#. js-lingui-explicit-id
+#: src/components/chat/WorkerMonitorNoticePill.tsx
+msgid "Stop worker"
+msgstr "Stop worker"
+
+#. js-lingui-explicit-id
+#: src/components/chat/WorkerMonitorNoticePill.tsx
+msgid "Open thread"
+msgstr "Open thread"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "Ran 1 command"
+msgstr "Ran 1 command"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "Ran {count} commands"
+msgstr "Ran {count} commands"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "Read 1 file"
+msgstr "Read 1 file"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "Read {count} files"
+msgstr "Read {count} files"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "Searched 1 file"
+msgstr "Searched 1 file"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "Searched {count} files"
+msgstr "Searched {count} files"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "Ran 1 agent task"
+msgstr "Ran 1 agent task"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "Ran {count} agent tasks"
+msgstr "Ran {count} agent tasks"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "Used 1 tool"
+msgstr "Used 1 tool"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "Used {count} tools"
+msgstr "Used {count} tools"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "Ran 1 tool call"
+msgstr "Ran 1 tool call"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "Ran {count} tool calls"
+msgstr "Ran {count} tool calls"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "1 other tool call"
+msgstr "1 other tool call"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "{count} other tool calls"
+msgstr "{count} other tool calls"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid ", "
+msgstr ", "
 
 #. placeholder {0}: progress.questionIndex + 1
 #: src/components/chat/ComposerPendingUserInputPanel.tsx
@@ -2771,9 +7163,61 @@ msgstr "Agent providers"
 msgid "Agent skills"
 msgstr "Agent skills"
 
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Allow Computer for this task"
+msgstr "Allow Computer for this task"
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Allow Computer for this task?"
+msgstr "Allow Computer for this task?"
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Allow Device for this task"
+msgstr "Allow Device for this task"
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Allow Device for this task?"
+msgstr "Allow Device for this task?"
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Allow just this request"
+msgstr "Allow just this request"
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Always allow this session"
+msgstr "Always allow this session"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Antigravity binary path"
+msgstr "Antigravity binary path"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Antigravity CLI binary path"
+msgstr "Antigravity CLI binary path"
+
 #: src/settingsNavigation.ts
 msgid "Appearance"
 msgstr "Appearance"
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Approve once"
+msgstr "Approve once"
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Approve reading this file?"
+msgstr "Approve reading this file?"
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Approve this command?"
+msgstr "Approve this command?"
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Approve this file change?"
+msgstr "Approve this file change?"
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Approve this tool call?"
+msgstr "Approve this tool call?"
 
 #: src/settingsNavigation.ts
 msgid "AppSnap"
@@ -2787,9 +7231,25 @@ msgstr "Archived"
 msgid "Archived threads"
 msgstr "Archived threads"
 
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Artifacts, /design and /slides"
+msgstr "Artifacts, /design and /slides"
+
+#: src/components/chat/ProviderModelPicker.tsx
+msgid "Back"
+msgstr "Back"
+
 #: src/components/chat/ComposerPendingUserInputPanel.tsx
 msgid "Cancel"
 msgstr "Cancel"
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Cancel this request"
+msgstr "Cancel this request"
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Cancel turn"
+msgstr "Cancel turn"
 
 #: src/settingsNavigation.ts
 msgid "Capture another app's frontmost window directly into a task."
@@ -2819,9 +7279,61 @@ msgstr "Choose defaults for new chats, navigation, and the Environment panel."
 msgid "Choose how Lattice tells you when work finishes or needs attention."
 msgstr "Choose how Lattice tells you when work finishes or needs attention."
 
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Claude binary path"
+msgstr "Claude binary path"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Claude Code keeps Artifacts off in embedded sessions. Turn this on so <0>/design</0> and <1>/slides</1> publish to claude.ai. Needs a claude.ai login on a Pro, Max, Team or Enterprise plan, and applies to new sessions."
+msgstr "Claude Code keeps Artifacts off in embedded sessions. Turn this on so <0>/design</0> and <1>/slides</1> publish to claude.ai. Needs a claude.ai login on a Pro, Max, Team or Enterprise plan, and applies to new sessions."
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Claude HOME"
+msgstr "Claude HOME"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Claude HOME path"
+msgstr "Claude HOME path"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Codex binary path"
+msgstr "Codex binary path"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "CODEX_HOME"
+msgstr "CODEX_HOME"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "CODEX_HOME path"
+msgstr "CODEX_HOME path"
+
 #: src/settingsNavigation.ts
 msgid "Coding"
 msgstr "Coding"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Commands"
+msgstr "Commands"
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Computer may bring windows to the front until this response ends."
+msgstr "Computer may bring windows to the front until this response ends."
+
+#: src/settingsNavigation.ts
+msgid "Computer use"
+msgstr "Computer use"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Config"
+msgstr "Config"
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Continue routine desktop actions until this response ends. Stop cancels access. Clipboard reads still ask separately."
+msgstr "Continue routine desktop actions until this response ends. Stop cancels access. Clipboard reads still ask separately."
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Continue routine device actions until this response ends. Stop cancels access."
+msgstr "Continue routine device actions until this response ends. Stop cancels access."
 
 #: src/settingsNavigation.ts
 msgid "Control live responses, follow-ups, review defaults, and safety confirmations."
@@ -2835,6 +7347,18 @@ msgstr "Conventional Commits"
 msgid "Create, import, and manage the Skills Lattice uses."
 msgstr "Create, import, and manage the Skills Lattice uses."
 
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Cursor Agent or Cursor CLI path"
+msgstr "Cursor Agent or Cursor CLI path"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Cursor API endpoint"
+msgstr "Cursor API endpoint"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Cursor binary path"
+msgstr "Cursor binary path"
+
 #: src/components/settings/ModelsSettingsPanel.tsx
 msgid "Custom instructions"
 msgstr "Custom instructions"
@@ -2842,6 +7366,46 @@ msgstr "Custom instructions"
 #: src/settingsNavigation.ts
 msgid "Customize the theme, typography, density, and time format."
 msgstr "Customize the theme, typography, density, and time format."
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Decline"
+msgstr "Decline"
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Deny this request; use Stop to end the agent turn."
+msgstr "Deny this request; use Stop to end the agent turn."
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "devin"
+msgstr "devin"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Devin binary path"
+msgstr "Devin binary path"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Docs"
+msgstr "Docs"
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Don't ask again this session"
+msgstr "Don't ask again this session"
+
+#: src/components/chat/DraftAttachmentWarning.tsx
+msgid "Draft attachment is kept in memory and may be lost on navigation."
+msgstr "Draft attachment is kept in memory and may be lost on navigation."
+
+#: src/components/chat/DraftAttachmentWarning.tsx
+msgid "Draft attachment may not persist"
+msgstr "Draft attachment may not persist"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "droid"
+msgstr "droid"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Droid binary path"
+msgstr "Droid binary path"
 
 #: src/components/settings/ModelsSettingsPanel.tsx
 msgid "Enter a model slug."
@@ -2859,17 +7423,89 @@ msgstr "General"
 msgid "Give Codex, Claude, and other local agents scoped access to Lattice tasks."
 msgstr "Give Codex, Claude, and other local agents scoped access to Lattice tasks."
 
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Grant these permissions?"
+msgstr "Grant these permissions?"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Grok binary path"
+msgstr "Grok binary path"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Headless"
+msgstr "Headless"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Hooks"
+msgstr "Hooks"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "http://127.0.0.1:4096"
+msgstr "http://127.0.0.1:4096"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "https://api2.cursor.sh"
+msgstr "https://api2.cursor.sh"
+
 #: src/components/settings/ModelsSettingsPanel.tsx
 msgid "In each project, matches recent change descriptions and change request titles."
 msgstr "In each project, matches recent change descriptions and change request titles."
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Install"
+msgstr "Install"
 
 #: src/settingsNavigation.ts
 msgid "Integrations"
 msgstr "Integrations"
 
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Keep it in the background"
+msgstr "Keep it in the background"
+
 #: src/settingsNavigation.ts
 msgid "Keybindings"
 msgstr "Keybindings"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Leave blank to use <0>agy</0> from your PATH."
+msgstr "Leave blank to use <0>agy</0> from your PATH."
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Leave blank to use <0>claude</0> from your PATH."
+msgstr "Leave blank to use <0>claude</0> from your PATH."
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Leave blank to use <0>codex</0> from your PATH."
+msgstr "Leave blank to use <0>codex</0> from your PATH."
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Leave blank to use <0>cursor-agent</0> from your PATH. Cursor editor CLI paths are accepted too."
+msgstr "Leave blank to use <0>cursor-agent</0> from your PATH. Cursor editor CLI paths are accepted too."
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Leave blank to use <0>devin</0> from your PATH. Authenticate with <1>devin auth login</1> or set WINDSURF_API_KEY."
+msgstr "Leave blank to use <0>devin</0> from your PATH. Authenticate with <1>devin auth login</1> or set WINDSURF_API_KEY."
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Leave blank to use <0>droid</0> from your PATH."
+msgstr "Leave blank to use <0>droid</0> from your PATH."
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Leave blank to use <0>grok</0> from your PATH."
+msgstr "Leave blank to use <0>grok</0> from your PATH."
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Leave blank to use <0>omp</0> from your PATH."
+msgstr "Leave blank to use <0>omp</0> from your PATH."
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Leave blank to use <0>opencode</0> from your PATH."
+msgstr "Leave blank to use <0>opencode</0> from your PATH."
+
+#: src/settingsNavigation.ts
+msgid "Let agents see and control this computer's desktop, and check backend status."
+msgstr "Let agents see and control this computer's desktop, and check backend status."
 
 #: src/components/chat/ChatEmptyStateHero.tsx
 msgid "Let's build"
@@ -2899,17 +7535,89 @@ msgstr "New chat"
 msgid "No chats in this project yet"
 msgstr "No chats in this project yet"
 
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "No window is raised; the agent continues in the background"
+msgstr "No window is raised; the agent continues in the background"
+
 #: src/settingsNavigation.ts
 msgid "Notifications"
 msgstr "Notifications"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Oh My Pi agent directory"
+msgstr "Oh My Pi agent directory"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Oh My Pi binary path"
+msgstr "Oh My Pi binary path"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "OpenAI response WebSockets"
+msgstr "OpenAI response WebSockets"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "OpenCode binary path"
+msgstr "OpenCode binary path"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "OpenCode server password"
+msgstr "OpenCode server password"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "OpenCode server URL"
+msgstr "OpenCode server URL"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Optional Cursor API endpoint override passed to `cursor-agent -e`."
+msgstr "Optional Cursor API endpoint override passed to `cursor-agent -e`."
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Optional custom Codex home and config directory."
+msgstr "Optional custom Codex home and config directory."
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Optional custom Oh My Pi agent directory for auth, models, skills, and commands."
+msgstr "Optional custom Oh My Pi agent directory for auth, models, skills, and commands."
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Optional custom Pi agent directory for auth, models, skills, and commands."
+msgstr "Optional custom Pi agent directory for auth, models, skills, and commands."
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Optional existing OpenCode server URL. Leave blank to spawn a local server."
+msgstr "Optional existing OpenCode server URL. Leave blank to spawn a local server."
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Optional HOME directory for this Claude account."
+msgstr "Optional HOME directory for this Claude account."
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Optional password for an externally managed OpenCode server."
+msgstr "Optional password for an externally managed OpenCode server."
 
 #: src/settingsNavigation.ts
 msgid "Personal"
 msgstr "Personal"
 
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Pi agent directory"
+msgstr "Pi agent directory"
+
 #: src/settingsNavigation.ts
 msgid "Profile"
 msgstr "Profile"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Quickstart"
+msgstr "Quickstart"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Reference"
+msgstr "Reference"
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Reject and let the agent continue"
+msgstr "Reject and let the agent continue"
 
 #: src/components/settings/ModelsSettingsPanel.tsx
 msgid "Repository conventions"
@@ -2931,6 +7639,42 @@ msgstr "See remaining quota and credits for every signed-in provider."
 msgid "Select one or more."
 msgstr "Select one or more."
 
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Sent by agent"
+msgstr "Sent by agent"
+
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Sent via Automation"
+msgstr "Sent via Automation"
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Show on screen for this task"
+msgstr "Show on screen for this task"
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Show this on your screen?"
+msgstr "Show this on your screen?"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Source"
+msgstr "Source"
+
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Steering conversation"
+msgstr "Steering conversation"
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Stop desktop for this turn, agent continues without tools"
+msgstr "Stop desktop for this turn, agent continues without tools"
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Stop device control for this turn, agent continues without tools"
+msgstr "Stop device control for this turn, agent continues without tools"
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Stop the current turn"
+msgstr "Stop the current turn"
+
 #: src/settingsNavigation.ts
 msgid "System"
 msgstr "System"
@@ -2947,6 +7691,10 @@ msgstr "That custom model is already saved."
 msgid "That model is already built in."
 msgstr "That model is already built in."
 
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Update"
+msgstr "Update"
+
 #: src/settingsNavigation.ts
 msgid "Usage & limits"
 msgstr "Usage & limits"
@@ -2954,6 +7702,14 @@ msgstr "Usage & limits"
 #: src/components/settings/ModelsSettingsPanel.tsx
 msgid "Use Conventional Commit prefixes and keep change request text concise."
 msgstr "Use Conventional Commit prefixes and keep change request text concise."
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Use Opencode's experimental OpenAI response WebSocket transport for managed local servers."
+msgstr "Use Opencode's experimental OpenAI response WebSocket transport for managed local servers."
+
+#: src/components/chat/ComposerPendingApprovalPanel.tsx
+msgid "Use Stop to end the agent turn."
+msgstr "Use Stop to end the agent turn."
 
 #: src/components/settings/ModelsSettingsPanel.tsx
 msgid "Use your instructions for change descriptions and change requests in every project."

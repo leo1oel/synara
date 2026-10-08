@@ -1,3 +1,4 @@
+import { i18n } from "~/i18n";
 import { useState, type CSSProperties } from "react";
 import {
   buildCollapsedProposedPlanPreviewMarkdown,
@@ -22,7 +23,7 @@ export const ProposedPlanCard = function ProposedPlanCard({
   chatTypographyStyle?: CSSProperties;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const title = proposedPlanTitle(planMarkdown) ?? "Proposed plan";
+  const title = proposedPlanTitle(planMarkdown) ?? i18n._("Proposed plan");
   const lineCount = planMarkdown.split("\n").length;
   const canCollapse = planMarkdown.length > 900 || lineCount > 20;
   const displayedPlanMarkdown = stripDisplayedPlanMarkdown(planMarkdown);
@@ -33,7 +34,7 @@ export const ProposedPlanCard = function ProposedPlanCard({
     <div className="rounded-[24px] border border-border/80 bg-card/70 p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          <Badge variant="secondary">Plan</Badge>
+          <Badge variant="secondary">{i18n._("Plan")}</Badge>
           <p className="truncate text-ui-lg font-medium text-foreground">{title}</p>
         </div>
         <ProposedPlanActions planMarkdown={planMarkdown} workspaceRoot={workspaceRoot} />
@@ -67,7 +68,7 @@ export const ProposedPlanCard = function ProposedPlanCard({
               data-scroll-anchor-ignore
               onClick={() => setExpanded((value) => !value)}
             >
-              {expanded ? "Collapse plan" : "Expand plan"}
+              {expanded ? i18n._("Collapse plan") : i18n._("Expand plan")}
             </Button>
           </div>
         ) : null}

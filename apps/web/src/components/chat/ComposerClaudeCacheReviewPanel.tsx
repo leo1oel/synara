@@ -1,3 +1,4 @@
+import { i18n } from "~/i18n";
 import type { PendingClaudeCacheReview } from "@synara/contracts";
 import { useEffect, useRef, useState } from "react";
 import { DiagnosticReportAction } from "../DiagnosticReportAction";
@@ -54,10 +55,10 @@ export function ComposerClaudeCacheReviewPanel({
   const contextTokens = review.assessment.contextTokens;
   const title =
     review.status === "uncertain"
-      ? "Request status is uncertain"
+      ? i18n._("Request status is uncertain")
       : isCompactionRequest
-        ? "Compaction will read the expired context"
-        : "Claude's prompt cache likely expired";
+        ? i18n._("Compaction will read the expired context")
+        : i18n._("Claude's prompt cache likely expired");
 
   const respondOnce = (decision: ClaudeCacheReviewDecision) => {
     if (disabled || submittedReviewRef.current === review) return;
@@ -73,7 +74,7 @@ export function ComposerClaudeCacheReviewPanel({
       submittedReviewRef.current = null;
       setSubmittedReview(null);
       setDispatchError(
-        error instanceof Error ? error.message : "Could not submit this choice. Try again.",
+        error instanceof Error ? error.message : i18n._("Could not submit this choice. Try again."),
       );
       void reportHandledIssue({
         code: "claude.cache.request-failed",
@@ -90,19 +91,23 @@ export function ComposerClaudeCacheReviewPanel({
 
   return (
     <section
-      aria-label="Claude cache review"
+      aria-label={i18n._("Claude cache review")}
       aria-busy={submittedReview === review}
       className={cn(COMPOSER_INPUT_SURFACE_CLASS_NAME, "overflow-hidden px-3.5 py-3")}
     >
       <p className="text-ui-lg font-medium leading-snug text-foreground/90">{title}</p>
       <p className="mt-1.5 text-ui leading-relaxed text-muted-foreground">
         {review.status === "uncertain"
-          ? "Claude may have accepted the request. Sending is paused until its status can be confirmed."
+          ? i18n._(
+              "Claude may have accepted the request. Sending is paused until its status can be confirmed.",
+            )
           : `Your message is saved and on hold. Continuing may reprocess ${contextTokens === undefined ? "the conversation's context" : `about ${formatContextWindowTokens(contextTokens)} tokens`}.`}
       </p>
       {actionable ? (
         <p className="mt-1.5 text-ui leading-relaxed text-muted-foreground">
-          Compacting also processes the full history once. Later requests use its summary.
+          {i18n._(
+            "Compacting also processes the full history once. Later requests use its summary.",
+          )}
         </p>
       ) : null}
       {review.error || dispatchError ? (
@@ -117,11 +122,15 @@ export function ComposerClaudeCacheReviewPanel({
       <div className="mt-2.5 space-y-0.5">
         <ComposerChoiceRow
           shortcut={null}
-          label={isCompactionRequest ? "Compact this conversation" : "Continue with full context"}
+          label={
+            isCompactionRequest
+              ? i18n._("Compact this conversation")
+              : i18n._("Continue with full context")
+          }
           description={
             isCompactionRequest
-              ? "Process the existing history and save its summary"
-              : "Send the saved message with the existing history"
+              ? i18n._("Process the existing history and save its summary")
+              : i18n._("Send the saved message with the existing history")
           }
           disabled={disabled}
           onSelect={() => respondOnce("continue")}
@@ -129,7 +138,7 @@ export function ComposerClaudeCacheReviewPanel({
         {!isCompactionRequest ? (
           <ComposerChoiceRow
             shortcut={null}
-            label="Compact, then send"
+            label={i18n._("Compact, then send")}
             description={
               compactDisabledReason ??
               "Summarize this conversation before sending the saved message"
@@ -140,8 +149,8 @@ export function ComposerClaudeCacheReviewPanel({
         ) : null}
         <ComposerChoiceRow
           shortcut={null}
-          label="Cancel this send"
-          description="Keep this conversation without sending the held message"
+          label={i18n._("Cancel this send")}
+          description={i18n._("Keep this conversation without sending the held message")}
           disabled={disabled}
           onSelect={() => respondOnce("cancel")}
         />

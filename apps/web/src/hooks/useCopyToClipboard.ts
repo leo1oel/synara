@@ -1,3 +1,4 @@
+import { i18n } from "~/i18n";
 import * as React from "react";
 
 import { toastManager } from "../components/ui/toast";
@@ -162,7 +163,7 @@ function useCopyWithToasts(): (value: string, labels: CopyToastLabels) => void {
       toastManager.add({
         type: "error",
         title: labels.errorTitle,
-        description: error instanceof Error ? error.message : "An error occurred.",
+        description: error instanceof Error ? error.message : i18n._("An error occurred."),
       }),
   });
   return copyToClipboard;
@@ -176,9 +177,9 @@ export function useCopyPathToClipboard(): (path: string) => void {
   const copy = useCopyWithToasts();
   return (path: string) =>
     copy(path, {
-      successTitle: "Path copied",
+      successTitle: i18n._("Path copied"),
       successDescription: path,
-      errorTitle: "Failed to copy path",
+      errorTitle: i18n._("Failed to copy path"),
     });
 }
 
@@ -198,21 +199,25 @@ export function useCopyFileContentsToClipboard(): (
   const copy = useCopyWithToasts();
   return (contents: string, fileName: string, options?: { partial?: boolean }) => {
     if (contents.length === 0) {
-      toastManager.add({ type: "info", title: "Nothing to copy", description: "File is empty" });
+      toastManager.add({
+        type: "info",
+        title: i18n._("Nothing to copy"),
+        description: i18n._("File is empty"),
+      });
       return;
     }
     copy(
       contents,
       options?.partial
         ? {
-            successTitle: "Partial contents copied",
-            successDescription: "Large file — only the loaded part was copied",
-            errorTitle: "Failed to copy contents",
+            successTitle: i18n._("Partial contents copied"),
+            successDescription: i18n._("Large file — only the loaded part was copied"),
+            errorTitle: i18n._("Failed to copy contents"),
           }
         : {
-            successTitle: "Contents copied",
+            successTitle: i18n._("Contents copied"),
             successDescription: fileName,
-            errorTitle: "Failed to copy contents",
+            errorTitle: i18n._("Failed to copy contents"),
           },
     );
   };
@@ -223,8 +228,8 @@ export function useCopyThreadIdToClipboard(): (threadId: string) => void {
   const copy = useCopyWithToasts();
   return (threadId: string) =>
     copy(threadId, {
-      successTitle: "Thread ID copied",
+      successTitle: i18n._("Thread ID copied"),
       successDescription: threadId,
-      errorTitle: "Failed to copy thread ID",
+      errorTitle: i18n._("Failed to copy thread ID"),
     });
 }

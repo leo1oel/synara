@@ -3,6 +3,8 @@
 // Layer: Web chat presentation helpers
 // Exports: row derivation, structural sharing, copy/timer helpers
 
+import type { I18n } from "@lingui/core";
+import { i18n as appI18n } from "../../i18n";
 import { type MessageId, type TurnId } from "@synara/contracts";
 import { type TailUserMessageEditTarget } from "@synara/shared/conversationEdit";
 import { type TimelineEntry, type WorkLogEntry, formatElapsed } from "../../session-logic";
@@ -39,21 +41,26 @@ export function canSubmitUserMessageEdit(input: {
 // phrasing hid which of these actually happened.
 export function userMessageEditRejectionCopy(
   reason: Extract<TailUserMessageEditTarget, { editable: false }>["reason"],
+  i18n: I18n = appI18n,
 ): string {
   switch (reason) {
     case "missing-message":
-      return "This message is no longer part of the conversation, so it can't be edited.";
+      return i18n._("This message is no longer part of the conversation, so it can't be edited.");
     case "not-latest-native-user-message":
-      return "A newer message has been sent since, and only the latest user message can be edited.";
+      return i18n._(
+        "A newer message has been sent since, and only the latest user message can be edited.",
+      );
     case "spans-multiple-turns":
-      return "The conversation has moved on across newer turns, so this message can no longer be edited and resent.";
+      return i18n._(
+        "The conversation has moved on across newer turns, so this message can no longer be edited and resent.",
+      );
     case "missing-turn-metadata":
-      return "This message's turn can no longer be rolled back, so it can't be edited.";
+      return i18n._("This message's turn can no longer be rolled back, so it can't be edited.");
     case "not-user-message":
     case "non-native-message":
-      return "Only your own chat messages can be edited.";
+      return i18n._("Only your own chat messages can be edited.");
     case "structured-answer":
-      return "Structured answers can't be edited and resent.";
+      return i18n._("Structured answers can't be edited and resent.");
   }
 }
 

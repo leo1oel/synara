@@ -3,6 +3,7 @@
 // Layer: Chat presentation component
 // Depends on: agentActivity.logic and ChatMarkdown
 
+import { i18n } from "~/i18n";
 import { pluralize } from "@synara/shared/text";
 import { type CSSProperties, type ReactNode } from "react";
 import { BotIcon, ChevronLeftIcon } from "~/lib/icons";
@@ -75,7 +76,7 @@ export function AgentActivityDetailView({
           onClick={onBack}
         >
           <ChevronLeftIcon className="size-3.5" />
-          <span>Back</span>
+          <span>{i18n._("Back")}</span>
         </button>
 
         <div className="mt-3 border-b border-border/55 pb-4">
@@ -102,7 +103,7 @@ export function AgentActivityDetailView({
         </div>
 
         {prompt ? (
-          <AgentActivitySection title="Prompt">
+          <AgentActivitySection title={i18n._("Prompt")}>
             <ChatMarkdown
               text={prompt}
               cwd={markdownCwd}
@@ -114,7 +115,7 @@ export function AgentActivityDetailView({
         ) : null}
 
         {result ? (
-          <AgentActivitySection title="Result">
+          <AgentActivitySection title={i18n._("Result")}>
             <ChatMarkdown
               text={result}
               cwd={markdownCwd}
@@ -125,7 +126,7 @@ export function AgentActivityDetailView({
           </AgentActivitySection>
         ) : null}
 
-        <AgentActivitySection title="Activity">
+        <AgentActivitySection title={i18n._("Activity")}>
           <div className="divide-y divide-border/45">
             {detail.entries.map((entry) => (
               <AgentActivityEventRow

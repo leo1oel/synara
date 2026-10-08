@@ -4,6 +4,7 @@
 //   (click-to-expand echo of a sent paste).
 // Layer: Chat composer/transcript presentation
 
+import { i18n } from "~/i18n";
 import { type ButtonHTMLAttributes, type ReactNode, useState } from "react";
 
 import { ChevronRightIcon, FileIcon } from "~/lib/icons";
@@ -80,7 +81,7 @@ export function ComposerPastedTextCard({
           onMouseDown={(event) => event.preventDefault()}
           onClick={onShowInTextField}
         >
-          Show in text field
+          {i18n._("Show in text field")}
           <ChevronRightIcon className="size-2.5" />
         </PastedTextCardAction>
       }
@@ -108,7 +109,7 @@ export function UserMessagePastedTextCard({ text, metrics }: UserMessagePastedTe
             aria-expanded={expanded}
             onClick={() => setExpanded((value) => !value)}
           >
-            {expanded ? "Hide text" : "Show text"}
+            {expanded ? i18n._("Hide text") : i18n._("Show text")}
             <span className="opacity-65">· {formatPastedTextCountLabel(metrics)}</span>
           </PastedTextCardAction>
         }

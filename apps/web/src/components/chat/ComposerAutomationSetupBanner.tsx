@@ -6,6 +6,8 @@
 // Layer: Chat composer UI
 // Exports: ComposerAutomationSetupBanner
 
+import { i18n } from "~/i18n";
+
 export const ComposerAutomationSetupBanner = function ComposerAutomationSetupBanner({
   onCancel,
 }: {
@@ -14,15 +16,15 @@ export const ComposerAutomationSetupBanner = function ComposerAutomationSetupBan
   return (
     <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-4 sm:px-6 sm:pt-4.5 sm:pb-5">
       <span className="text-ui-sm font-semibold text-muted-foreground/50">
-        Setting up automation
+        {i18n._("Setting up automation")}
       </span>
       <button
         type="button"
-        aria-label="Cancel automation setup"
+        aria-label={i18n._("Cancel automation setup")}
         onClick={onCancel}
         className="rounded-full border border-[color:var(--color-border-light)] px-3 py-1.5 text-ui leading-snug font-medium text-[var(--color-text-foreground-secondary)] transition-colors duration-150 hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-border)]"
       >
-        Cancel
+        {i18n._("Cancel")}
       </button>
     </div>
   );

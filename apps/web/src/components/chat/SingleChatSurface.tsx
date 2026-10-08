@@ -1,3 +1,4 @@
+import { i18n } from "~/i18n";
 import { flushWorkspaceEditors } from "~/lib/workspaceEditorSession";
 import type { FileDiffMetadata } from "@pierre/diffs/react";
 import { isWorkspaceRelativePathSafe } from "@synara/shared/path";
@@ -748,8 +749,9 @@ export function SingleChatSurface(props: {
     void openEditorProject(projectId).catch((error: unknown) => {
       toastManager.add({
         type: "error",
-        title: "Unable to open project",
-        description: error instanceof Error ? error.message : "The project could not be opened.",
+        title: i18n._("Unable to open project"),
+        description:
+          error instanceof Error ? error.message : i18n._("The project could not be opened."),
       });
     });
   };
@@ -778,8 +780,8 @@ export function SingleChatSurface(props: {
       if (!createSidechat) {
         toastManager.add({
           type: "warning",
-          title: "Side chat is unavailable",
-          description: "Open a server-backed main thread before starting a Side chat.",
+          title: i18n._("Side chat is unavailable"),
+          description: i18n._("Open a server-backed main thread before starting a Side chat."),
         });
         return;
       }
@@ -787,9 +789,11 @@ export function SingleChatSurface(props: {
     } catch (error) {
       toastManager.add({
         type: "error",
-        title: "Could not start Side chat",
+        title: i18n._("Could not start Side chat"),
         description:
-          error instanceof Error ? error.message : "An error occurred while creating Side chat.",
+          error instanceof Error
+            ? error.message
+            : i18n._("An error occurred while creating Side chat."),
       });
     }
   };
@@ -823,7 +827,9 @@ export function SingleChatSurface(props: {
     switch (pane.kind) {
       case "browser":
         return (
-          <Suspense fallback={<PanelStateMessage>Loading browser...</PanelStateMessage>}>
+          <Suspense
+            fallback={<PanelStateMessage>{i18n._("Loading browser...")}</PanelStateMessage>}
+          >
             <LazyBrowserPanel
               mode="sidebar"
               threadId={props.threadId}
@@ -835,7 +841,9 @@ export function SingleChatSurface(props: {
         );
       case "device":
         return (
-          <Suspense fallback={<PanelStateMessage>Loading simulator...</PanelStateMessage>}>
+          <Suspense
+            fallback={<PanelStateMessage>{i18n._("Loading simulator...")}</PanelStateMessage>}
+          >
             <LazyDevicePanel
               mode="sidebar"
               threadId={props.threadId}
@@ -848,7 +856,9 @@ export function SingleChatSurface(props: {
         );
       case "pullRequest":
         return (
-          <Suspense fallback={<PanelStateMessage>Loading pull request...</PanelStateMessage>}>
+          <Suspense
+            fallback={<PanelStateMessage>{i18n._("Loading pull request...")}</PanelStateMessage>}
+          >
             <PullRequestDockPane
               pane={pane}
               hostThreadId={props.threadId}
@@ -886,7 +896,11 @@ export function SingleChatSurface(props: {
         );
       case "terminal":
         if (context.runtimeMode === "preview") {
-          return <PanelStateMessage>Terminal is sleeping. Restoring shortly.</PanelStateMessage>;
+          return (
+            <PanelStateMessage>
+              {i18n._("Terminal is sleeping. Restoring shortly.")}
+            </PanelStateMessage>
+          );
         }
         // Kept mounted across tab switches; visibility toggles the xterm runtime
         // instead of detaching/reattaching it (avoids the open-lag + fit flicker).
@@ -894,7 +908,9 @@ export function SingleChatSurface(props: {
         // mounted (offcanvas is CSS-only), so without this the off-screen terminal
         // would keep WebGL + resize observers alive for nothing.
         return (
-          <Suspense fallback={<PanelStateMessage>Loading terminal...</PanelStateMessage>}>
+          <Suspense
+            fallback={<PanelStateMessage>{i18n._("Loading terminal...")}</PanelStateMessage>}
+          >
             <DockTerminalPane
               hostThreadId={props.threadId}
               projectId={props.projectId}
@@ -905,7 +921,7 @@ export function SingleChatSurface(props: {
         );
       case "git":
         return (
-          <Suspense fallback={<PanelStateMessage>Loading Git...</PanelStateMessage>}>
+          <Suspense fallback={<PanelStateMessage>{i18n._("Loading Git...")}</PanelStateMessage>}>
             <GitPanel
               hostThreadId={props.threadId}
               projectId={props.projectId}
@@ -915,7 +931,9 @@ export function SingleChatSurface(props: {
         );
       case "explorer":
         return (
-          <Suspense fallback={<PanelStateMessage>Loading explorer...</PanelStateMessage>}>
+          <Suspense
+            fallback={<PanelStateMessage>{i18n._("Loading explorer...")}</PanelStateMessage>}
+          >
             <DockExplorerPane
               threadId={props.threadId}
               workspaceRoot={workspaceRoot}
@@ -928,7 +946,7 @@ export function SingleChatSurface(props: {
         );
       case "file":
         return (
-          <Suspense fallback={<PanelStateMessage>Loading file...</PanelStateMessage>}>
+          <Suspense fallback={<PanelStateMessage>{i18n._("Loading file...")}</PanelStateMessage>}>
             <DockFilePane
               workspaceRoot={workspaceRoot}
               filePath={pane.filePath}
@@ -1130,7 +1148,7 @@ export function SingleChatSurface(props: {
               {...(hasDeviceSupport ? { onToggleDevice: handleToggleDevice } : {})}
               onSplitSurface={handleSplitSurface}
               viewModeAction={{
-                label: "Editor view",
+                label: i18n._("Editor view"),
                 active: false,
                 onClick: handleOpenEditorView,
               }}
@@ -1150,55 +1168,56 @@ export function SingleChatSurface(props: {
           </ChatPaneBody>
         </KeptChatPane>
         {props.embedMode && !hasDeviceSupport ? null : (
-        <RightDock
-          state={presentedDockState}
-          minWidth={SINGLE_PANEL_MIN_WIDTH}
-          defaultWidth={DIFF_INLINE_DEFAULT_WIDTH}
-          shouldAcceptWidth={shouldAcceptDockWidth}
-          addMenuKinds={availableDockPaneKinds}
-          launcherItems={dockLauncherItems}
-          motionKey={props.threadId}
-          activePaneRuntimeMode={
-            floatingBrowserVisible && activePane?.kind === "browser"
-              ? "preview"
-              : activePaneRuntimeMode
-          }
-          browserRuntimeMode={floatingBrowserVisible ? "preview" : "live"}
-          {...(paneLabelOverrides ? { paneLabelOverrides } : {})}
-          {...(paneIconOverrides ? { paneIconOverrides } : {})}
-          onSelectPane={handleSelectDockPane}
-          onClosePane={(paneId) => {
-            if (dockState.panes.find((pane) => pane.id === paneId)?.kind === "terminal") {
-              void closeTerminalSurface(
-                dockTerminalThreadId(props.threadId),
-                appSettings.confirmTerminalTabClose,
-              )
-                .then((closed) => {
-                  if (closed) closePane(props.threadId, paneId);
-                })
-                .catch((error: unknown) => {
-                  toastManager.add({
-                    type: "error",
-                    title: "Unable to close terminal",
-                    description: error instanceof Error ? error.message : "Please try again.",
+          <RightDock
+            state={presentedDockState}
+            minWidth={SINGLE_PANEL_MIN_WIDTH}
+            defaultWidth={DIFF_INLINE_DEFAULT_WIDTH}
+            shouldAcceptWidth={shouldAcceptDockWidth}
+            addMenuKinds={availableDockPaneKinds}
+            launcherItems={dockLauncherItems}
+            motionKey={props.threadId}
+            activePaneRuntimeMode={
+              floatingBrowserVisible && activePane?.kind === "browser"
+                ? "preview"
+                : activePaneRuntimeMode
+            }
+            browserRuntimeMode={floatingBrowserVisible ? "preview" : "live"}
+            {...(paneLabelOverrides ? { paneLabelOverrides } : {})}
+            {...(paneIconOverrides ? { paneIconOverrides } : {})}
+            onSelectPane={handleSelectDockPane}
+            onClosePane={(paneId) => {
+              if (dockState.panes.find((pane) => pane.id === paneId)?.kind === "terminal") {
+                void closeTerminalSurface(
+                  dockTerminalThreadId(props.threadId),
+                  appSettings.confirmTerminalTabClose,
+                )
+                  .then((closed) => {
+                    if (closed) closePane(props.threadId, paneId);
+                  })
+                  .catch((error: unknown) => {
+                    toastManager.add({
+                      type: "error",
+                      title: i18n._("Unable to close terminal"),
+                      description:
+                        error instanceof Error ? error.message : i18n._("Please try again."),
+                    });
                   });
-                });
-              return;
-            }
-            if (dockState.panes.find((pane) => pane.id === paneId)?.kind !== "explorer") {
-              closePane(props.threadId, paneId);
-              return;
-            }
-            void flushWorkspaceEditors(queryClient, workspaceRoot).then((saved) => {
-              if (saved) closePane(props.threadId, paneId);
-            });
-          }}
-          onMovePane={(paneId, overPaneId) => movePane(props.threadId, paneId, overPaneId)}
-          onCollapse={() => setDockOpen(props.threadId, false)}
-          onOpenChange={(open) => setDockOpen(props.threadId, open)}
-          onAddPane={handleAddDockPane}
-          renderPane={renderDockPane}
-        />
+                return;
+              }
+              if (dockState.panes.find((pane) => pane.id === paneId)?.kind !== "explorer") {
+                closePane(props.threadId, paneId);
+                return;
+              }
+              void flushWorkspaceEditors(queryClient, workspaceRoot).then((saved) => {
+                if (saved) closePane(props.threadId, paneId);
+              });
+            }}
+            onMovePane={(paneId, overPaneId) => movePane(props.threadId, paneId, overPaneId)}
+            onCollapse={() => setDockOpen(props.threadId, false)}
+            onOpenChange={(open) => setDockOpen(props.threadId, open)}
+            onAddPane={handleAddDockPane}
+            renderPane={renderDockPane}
+          />
         )}
         <WorkspaceSearchPalette
           open={searchPaletteOpen}

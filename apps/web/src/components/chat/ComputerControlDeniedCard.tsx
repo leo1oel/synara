@@ -4,6 +4,7 @@
 //          with a one-click way to switch control on and retry.
 // Layer: Chat transcript UI
 
+import { i18n } from "~/i18n";
 import { ComputerActionCard } from "./ComputerActionCard";
 
 export function ComputerControlDeniedCard({
@@ -23,15 +24,17 @@ export function ComputerControlDeniedCard({
   return (
     <ComputerActionCard
       tone={enabled ? "success" : "warning"}
-      title={enabled ? "Computer control is on for this chat" : "Computer control is off"}
+      title={
+        enabled ? i18n._("Computer control is on for this chat") : i18n._("Computer control is off")
+      }
       textFontSizePx={textFontSizePx}
       metaFontSizePx={metaFontSizePx}
-      action={onEnable && !enabled ? { label: "Enable", onClick: onEnable } : undefined}
+      action={onEnable && !enabled ? { label: i18n._("Enable"), onClick: onEnable } : undefined}
     >
       <p>
         {enabled
-          ? "Queued desktop turns stay cancelled — send a fresh message to continue."
-          : "Turn it on in Settings to let the agent use the desktop."}
+          ? i18n._("Queued desktop turns stay cancelled — send a fresh message to continue.")
+          : i18n._("Turn it on in Settings to let the agent use the desktop.")}
       </p>
     </ComputerActionCard>
   );

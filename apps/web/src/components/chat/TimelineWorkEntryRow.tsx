@@ -3,6 +3,7 @@
 // Layer: Web chat presentation component
 // Exports: TimelineWorkEntryRow, EditedFileRowContent, prefersCompactWorkEntryRow
 
+import { i18n } from "~/i18n";
 import type { ModelSelection, TurnId } from "@synara/contracts";
 import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
 import {
@@ -420,13 +421,129 @@ function toolWorkEntryHeading(workEntry: TimelineWorkEntry): string {
   return capitalizePhrase(normalizeCompactToolLabel(workEntry.toolTitle));
 }
 
-function combineWorkEntryDisplayText(heading: string, preview: string | null): string {
-  if (!preview) {
-    return heading;
+// The app's own tool verbs ("Read", "Searched", "Ran command") are display copy; provider
+// titles and the object half of the sentence (paths, commands) stay as reported.
+// Comparisons keep using the English heading, so only the shown text is translated.
+function localizeToolHeading(heading: string): string {
+  switch (heading) {
+    case "Read":
+      return i18n._("Read");
+    case "Reading":
+      return i18n._("Reading");
+    case "Edited":
+      return i18n._("Edited");
+    case "Searched":
+      return i18n._("Searched");
+    case "Searching":
+      return i18n._("Searching");
+    case "Search":
+      return i18n._("Search");
+    case "Searched the web":
+      return i18n._("Searched the web");
+    case "Listed":
+      return i18n._("Listed");
+    case "Listing":
+      return i18n._("Listing");
+    case "Ran":
+      return i18n._("Ran");
+    case "Running":
+      return i18n._("Running");
+    case "Ran command":
+      return i18n._("Ran command");
+    case "Checked":
+      return i18n._("Checked");
+    case "Checking":
+      return i18n._("Checking");
+    case "Created":
+      return i18n._("Created");
+    case "Creating":
+      return i18n._("Creating");
+    case "Found":
+      return i18n._("Found");
+    case "Finding":
+      return i18n._("Finding");
+    case "Inspected":
+      return i18n._("Inspected");
+    case "Inspecting":
+      return i18n._("Inspecting");
+    case "Compared":
+      return i18n._("Compared");
+    case "Comparing":
+      return i18n._("Comparing");
+    case "Removed":
+      return i18n._("Removed");
+    case "Removing":
+      return i18n._("Removing");
+    case "Reviewed":
+      return i18n._("Reviewed");
+    case "Reviewing":
+      return i18n._("Reviewing");
+    case "Staged":
+      return i18n._("Staged");
+    case "Staging":
+      return i18n._("Staging");
+    case "Committed":
+      return i18n._("Committed");
+    case "Committing":
+      return i18n._("Committing");
+    case "Pulled":
+      return i18n._("Pulled");
+    case "Pulling":
+      return i18n._("Pulling");
+    case "Pushed":
+      return i18n._("Pushed");
+    case "Pushing":
+      return i18n._("Pushing");
+    case "Switched to":
+      return i18n._("Switched to");
+    case "Switching to":
+      return i18n._("Switching to");
+    case "Agent task":
+      return i18n._("Agent task");
+    case "Generated image":
+      return i18n._("Generated image");
+    case "Viewed image":
+      return i18n._("Viewed image");
+    case "Tool":
+      return i18n._("Tool");
+    default:
+      return heading;
   }
-  return normalizeToolTextForComparison(heading) === normalizeToolTextForComparison(preview)
-    ? heading
-    : `${heading} ${preview}`;
+}
+
+function combineWorkEntryDisplayText(heading: string, preview: string | null): string {
+  const shownHeading = localizeToolHeading(heading);
+  if (!preview) {
+    return shownHeading;
+  }
+  if (normalizeToolTextForComparison(heading) === normalizeToolTextForComparison(preview)) {
+    return shownHeading;
+  }
+  // Search rows read "Searched for <query> in <path>"; translate the whole sentence so the
+  // English prepositions don't stay behind in other languages.
+  if (heading === "Searched" || heading === "Searching") {
+    const running = heading === "Searching";
+    const both = /^for (.+) in (.+)$/su.exec(preview);
+    if (both) {
+      const values = { query: both[1]!, path: both[2]! };
+      return running
+        ? i18n._("Searching for {query} in {path}", values)
+        : i18n._("Searched for {query} in {path}", values);
+    }
+    const queryOnly = /^for (.+)$/su.exec(preview);
+    if (queryOnly) {
+      const values = { query: queryOnly[1]! };
+      return running
+        ? i18n._("Searching for {query}", values)
+        : i18n._("Searched for {query}", values);
+    }
+    const pathOnly = /^in (.+)$/su.exec(preview);
+    if (pathOnly) {
+      const values = { path: pathOnly[1]! };
+      return running ? i18n._("Searching in {path}", values) : i18n._("Searched in {path}", values);
+    }
+  }
+  return `${shownHeading} ${preview === "current directory" ? i18n._("current directory") : preview}`;
 }
 
 // One sentence per row, live or settled: the tool's own verb plus what it acted
@@ -472,11 +589,11 @@ function commandTooltipContent(command: string, displayText: string) {
     <div className="max-w-96 whitespace-pre-wrap leading-tight">
       <div className="space-y-2">
         <div className="space-y-0.5">
-          <div className="text-muted-foreground/70">Summary</div>
+          <div className="text-muted-foreground/70">{i18n._("Summary")}</div>
           <div>{displayText}</div>
         </div>
         <div className="space-y-0.5">
-          <div className="text-muted-foreground/70">Raw call</div>
+          <div className="text-muted-foreground/70">{i18n._("Raw call")}</div>
           <code className="block whitespace-pre-wrap break-words font-chat-code text-chat-code text-foreground/92">
             {command}
           </code>
@@ -915,7 +1032,7 @@ export function EditedFileRowContent(props: {
         className={cn("font-system-ui shrink-0", WORK_ROW_MUTED_HOVER_TONE["file-row"])}
         style={{ fontSize: `${fontSizePx}px` }}
       >
-        Edited
+        {i18n._("Edited")}
       </span>
       <span
         className={cn(
@@ -985,15 +1102,15 @@ function providerContextLifecycleReasonLabel(
 ): string {
   switch (reason) {
     case "conversation-rebuilt":
-      return "Conversation rebuilt from a summary";
+      return i18n._("Conversation rebuilt from a summary");
     case "fresh-session":
-      return "New session started";
+      return i18n._("New session started");
     case "interrupt-escalation":
-      return "Turn stop escalated to a session restart";
+      return i18n._("Turn stop escalated to a session restart");
     case "native-history-unavailable":
-      return "Previous history unavailable";
+      return i18n._("Previous history unavailable");
     case "native-resume-failed":
-      return "Could not resume the previous session";
+      return i18n._("Could not resume the previous session");
   }
 }
 
@@ -1007,26 +1124,32 @@ function ProviderContextLifecycleDetails(props: {
   return (
     <div className="space-y-3" data-provider-context-lifecycle-details="true">
       <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1.5 rounded-lg border border-border/45 bg-background/60 px-3 py-2.5 text-ui-sm">
-        <dt className="text-muted-foreground/56">Provider</dt>
+        <dt className="text-muted-foreground/56">{i18n._("Provider")}</dt>
         <dd className="text-foreground/84">{provider}</dd>
-        <dt className="text-muted-foreground/56">Previous history</dt>
+        <dt className="text-muted-foreground/56">{i18n._("Previous history")}</dt>
         <dd className="text-foreground/84">
-          {info.nativeHistory === "available" ? "Available" : "Lost"}
+          {info.nativeHistory === "available" ? i18n._("Available") : i18n._("Lost")}
         </dd>
-        <dt className="text-muted-foreground/56">Session restarted</dt>
-        <dd className="text-foreground/84">{info.sessionRestarted ? "Yes" : "No"}</dd>
-        <dt className="text-muted-foreground/56">Why</dt>
+        <dt className="text-muted-foreground/56">{i18n._("Session restarted")}</dt>
+        <dd className="text-foreground/84">
+          {info.sessionRestarted ? i18n._("Yes") : i18n._("No")}
+        </dd>
+        <dt className="text-muted-foreground/56">{i18n._("Why")}</dt>
         <dd className="text-foreground/84">
           {providerContextLifecycleReasonLabel(info.restartReason)}
         </dd>
-        <dt className="text-muted-foreground/56">Summary included</dt>
+        <dt className="text-muted-foreground/56">{i18n._("Summary included")}</dt>
         <dd className="text-foreground/84">
-          {info.recapInjected ? `${info.recapCharacters.toLocaleString()} characters` : "No"}
+          {info.recapInjected
+            ? i18n._("{count} characters", { count: info.recapCharacters.toLocaleString() })
+            : i18n._("No")}
         </dd>
       </dl>
       {info.recapPreview ? (
         <section className="space-y-2">
-          <h3 className="text-ui-sm font-medium text-muted-foreground/56">Summary preview</h3>
+          <h3 className="text-ui-sm font-medium text-muted-foreground/56">
+            {i18n._("Summary preview")}
+          </h3>
           <pre
             className="max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-border/45 bg-background/60 px-3 py-2.5 font-chat-code text-chat-code leading-relaxed text-foreground/84"
             data-session-context-recap-preview="true"
@@ -1035,7 +1158,7 @@ function ProviderContextLifecycleDetails(props: {
           </pre>
           {info.recapPreviewTruncated ? (
             <p className="text-ui-xs text-muted-foreground/56">
-              Showing a short preview of the summary sent with your message.
+              {i18n._("Showing a short preview of the summary sent with your message.")}
             </p>
           ) : null}
         </section>
@@ -1062,29 +1185,35 @@ export function ProviderHandoffDetails(props: {
   return (
     <div className="space-y-3" data-provider-handoff-details="true">
       <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1.5 rounded-lg border border-border/45 bg-background/60 px-3 py-2.5 text-ui-sm">
-        <dt className="text-muted-foreground/56">From</dt>
+        <dt className="text-muted-foreground/56">{i18n._("From")}</dt>
         <dd className="text-foreground/84">{providerModelLabel(info.sourceModelSelection)}</dd>
-        <dt className="text-muted-foreground/56">To</dt>
+        <dt className="text-muted-foreground/56">{i18n._("To")}</dt>
         <dd className="text-foreground/84">{providerModelLabel(info.targetModelSelection)}</dd>
         {info.status === "failed" ? (
           <>
-            <dt className="text-muted-foreground/56">Error</dt>
+            <dt className="text-muted-foreground/56">{i18n._("Error")}</dt>
             <dd className="text-foreground/84">
-              {info.failureDetail ?? "The session did not start."}
+              {info.failureDetail ?? i18n._("The session did not start.")}
             </dd>
           </>
         ) : (
           <>
-            <dt className="text-muted-foreground/56">Context</dt>
+            <dt className="text-muted-foreground/56">{i18n._("Context")}</dt>
             <dd className="text-foreground/84">
-              {info.contextText ? `${info.contextText.length.toLocaleString()} characters` : "None"}
+              {info.contextText
+                ? i18n._("{count} characters", {
+                    count: info.contextText.length.toLocaleString(),
+                  })
+                : i18n._("None")}
             </dd>
           </>
         )}
       </dl>
       {info.status === "completed" && info.contextText ? (
         <section className="space-y-2">
-          <h3 className="text-ui-sm font-medium text-muted-foreground/56">Transferred context</h3>
+          <h3 className="text-ui-sm font-medium text-muted-foreground/56">
+            {i18n._("Transferred context")}
+          </h3>
           <pre
             className="max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-border/45 bg-background/60 px-3 py-2.5 font-chat-code text-chat-code leading-relaxed text-foreground/84"
             data-provider-handoff-context="true"
@@ -1092,7 +1221,7 @@ export function ProviderHandoffDetails(props: {
             {info.contextText}
           </pre>
           <p className="text-ui-xs text-muted-foreground/56">
-            Sent ahead of your next message so the new model can continue this thread.
+            {i18n._("Sent ahead of your next message so the new model can continue this thread.")}
           </p>
         </section>
       ) : null}

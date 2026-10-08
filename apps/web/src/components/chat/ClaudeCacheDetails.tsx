@@ -1,3 +1,4 @@
+import { i18n } from "~/i18n";
 import type { ClaudeCacheObservation } from "@synara/contracts";
 import { assessClaudeCache } from "@synara/shared/claudeCache";
 import { formatContextWindowTokens } from "~/lib/contextWindow";
@@ -12,10 +13,10 @@ export function ClaudeCacheDetails({
   const assessment = assessClaudeCache(observation, nowMs);
   const label =
     assessment.state === "likely-warm"
-      ? "Likely warm"
+      ? i18n._("Likely warm")
       : assessment.state === "likely-expired"
-        ? "Likely expired"
-        : "Unknown";
+        ? i18n._("Likely expired")
+        : i18n._("Unknown");
   const usage = observation?.lastRequest;
 
   return (
@@ -30,7 +31,7 @@ export function ClaudeCacheDetails({
           {formatCacheDuration(observation.ttlSeconds)}
         </div>
       ) : (
-        <div>Cache lifetime is unavailable.</div>
+        <div>{i18n._("Cache lifetime is unavailable.")}</div>
       )}
       {assessment.idleSeconds !== undefined ? (
         <div>Last response: {formatCacheDuration(assessment.idleSeconds)} ago</div>
@@ -43,27 +44,27 @@ export function ClaudeCacheDetails({
       ) : null}
       {usage ? (
         <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1">
-          <dt>Last request · cache read</dt>
+          <dt>{i18n._("Last request · cache read")}</dt>
           <dd className="text-right tabular-nums">
             {formatCacheTokens(usage.cacheReadInputTokens)}
           </dd>
-          <dt>Cache written</dt>
+          <dt>{i18n._("Cache written")}</dt>
           <dd className="text-right tabular-nums">
             {formatCacheTokens(usage.cacheCreationInputTokens)}
           </dd>
-          <dt>Input outside cache</dt>
+          <dt>{i18n._("Input outside cache")}</dt>
           <dd className="text-right tabular-nums">{formatCacheTokens(usage.inputTokens)}</dd>
         </dl>
       ) : null}
       <p className="max-w-72 leading-relaxed">
-        Cache state is estimated. It does not measure your plan's remaining usage.
+        {i18n._("Cache state is estimated. It does not measure your plan's remaining usage.")}
       </p>
     </div>
   );
 }
 
 function formatCacheTokens(value: number | undefined): string {
-  return value === undefined ? "Unavailable" : `${formatContextWindowTokens(value)} tokens`;
+  return value === undefined ? i18n._("Unavailable") : `${formatContextWindowTokens(value)} tokens`;
 }
 
 export function formatCacheDuration(seconds: number): string {

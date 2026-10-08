@@ -1,3 +1,4 @@
+import { i18n } from "~/i18n";
 import type { ThreadId } from "@synara/contracts";
 import { useComposerDraftStore } from "../../composerDraftStore";
 import {
@@ -38,13 +39,17 @@ export function ComposerExpiredUserInputNotice({
       className="mb-2 rounded-xl border border-border px-4 py-3 text-ui leading-snug"
       role="status"
     >
-      <p>These questions have expired. Restore your answers to review and send as a new message.</p>
+      <p>
+        {i18n._(
+          "These questions have expired. Restore your answers to review and send as a new message.",
+        )}
+      </p>
       <div className="mt-2 flex gap-3">
         <button type="button" className="font-medium underline" onClick={restore}>
-          Restore answers
+          {i18n._("Restore answers")}
         </button>
         <button type="button" className="text-muted-foreground" onClick={dismiss}>
-          Dismiss
+          {i18n._("Dismiss")}
         </button>
       </div>
     </div>

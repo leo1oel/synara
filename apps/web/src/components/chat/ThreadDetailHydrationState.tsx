@@ -3,6 +3,7 @@
 // Layer: Chat presentation
 // Depends on: shared Spinner and Button primitives, DelayedLoaderFade.
 
+import { i18n } from "~/i18n";
 import { Button } from "~/components/ui/button";
 import { Spinner } from "~/components/ui/spinner";
 
@@ -21,9 +22,12 @@ export const ThreadDetailHydrationState = function ThreadDetailHydrationState({
       // (a warm reconnect, a short thread) swaps in without flashing the spinner first.
       <DelayedLoaderFade>
         <div className="flex flex-col items-center gap-3 select-none">
-          <Spinner aria-label="Loading conversation" className="size-5 text-muted-foreground/50" />
+          <Spinner
+            aria-label={i18n._("Loading conversation")}
+            className="size-5 text-muted-foreground/50"
+          />
           <span className="text-ui leading-snug text-muted-foreground/50">
-            Loading conversation
+            {i18n._("Loading conversation")}
           </span>
         </div>
       </DelayedLoaderFade>
@@ -32,10 +36,10 @@ export const ThreadDetailHydrationState = function ThreadDetailHydrationState({
   return (
     <div className="flex flex-col items-center gap-3 select-none">
       <span className="text-ui leading-snug text-muted-foreground">
-        This conversation didn't load.
+        {i18n._("This conversation didn't load.")}
       </span>
       <Button onClick={onRetry} size="sm" variant="outline">
-        Try again
+        {i18n._("Try again")}
       </Button>
     </div>
   );

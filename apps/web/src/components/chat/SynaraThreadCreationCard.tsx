@@ -2,6 +2,7 @@
 // Purpose: End-of-turn recap for threads created through the Synara MCP harness.
 // Layer: Chat transcript UI
 
+import { i18n } from "~/i18n";
 import { PROVIDER_DISPLAY_NAMES } from "@synara/contracts";
 import { formatModelDisplayName } from "@synara/shared/model";
 import { memo } from "react";
@@ -15,7 +16,7 @@ import { Button } from "../ui/button";
 
 function threadMeta(thread: WorkLogSynaraThreadCreation["threads"][number]): string {
   const model = formatModelDisplayName(thread.model) ?? thread.model;
-  const environment = thread.environment === "worktree" ? "Worktree" : "Local";
+  const environment = thread.environment === "worktree" ? i18n._("Worktree") : i18n._("Local");
   return `${PROVIDER_DISPLAY_NAMES[thread.provider]} · ${model} · ${environment}`;
 }
 
@@ -44,9 +45,9 @@ export const SynaraThreadCreationCard = memo(function SynaraThreadCreationCard({
       <div className="flex min-w-0 items-center gap-3 px-3 py-2.5">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[var(--color-background-elevated-secondary)] text-foreground">
           {latticeMode ? (
-            <GoTasklist className="size-5" aria-label="Lattice tasks" />
+            <GoTasklist className="size-5" aria-label={i18n._("Lattice tasks")} />
           ) : (
-            <SynaraLogo className="h-[22px] w-auto" aria-label="Synara" />
+            <SynaraLogo className="h-[22px] w-auto" aria-label={i18n._("Synara")} />
           )}
         </span>
         <div className="min-w-0 flex-1">
@@ -98,7 +99,7 @@ export const SynaraThreadCreationCard = memo(function SynaraThreadCreationCard({
                   className="shrink-0"
                   onClick={() => onOpenThread(thread.threadId)}
                 >
-                  Open
+                  {i18n._("Open")}
                 </Button>
               ) : null}
             </div>

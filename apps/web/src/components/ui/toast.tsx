@@ -1,5 +1,6 @@
 "use client";
 
+import { i18n } from "~/i18n";
 import { Toast, type ToastObject } from "@base-ui/react/toast";
 import { useMemo, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useParams } from "@tanstack/react-router";
@@ -394,17 +395,17 @@ function ToastActions({
       {diagnosticId ? <DiagnosticReportAction id={diagnosticId} /> : null}
       {copyText && (
         <Button
-          aria-label={isCopied ? "Copied error message" : "Copy error message"}
+          aria-label={isCopied ? i18n._("Copied error message") : i18n._("Copy error message")}
           className={TOAST_ACTION_BUTTON_CLASS_NAME}
           onClick={() => {
             copyToClipboard(copyText, undefined);
           }}
           size={TOAST_ACTION_BUTTON_SIZE}
-          title={isCopied ? "Copied error message" : "Copy error message"}
+          title={isCopied ? i18n._("Copied error message") : i18n._("Copy error message")}
           variant={TOAST_ACTION_BUTTON_VARIANT}
         >
           {isCopied ? <CheckIcon className="size-3" /> : <CopyIcon className="size-3" />}
-          <span>{isCopied ? "Copied" : "Copy"}</span>
+          <span>{isCopied ? i18n._("Copied") : i18n._("Copy")}</span>
         </Button>
       )}
       {copyItems?.map((item) => (
@@ -449,7 +450,7 @@ function ToastCloseButton({
   const compact = compactProp ?? false;
   return (
     <Toast.Close
-      aria-label="Dismiss toast"
+      aria-label={i18n._("Dismiss toast")}
       className={cn(
         // pointer-events-auto keeps the X clickable even when a stacked/collapsed
         // toast still gates its content with pointer-events-none.
@@ -461,7 +462,7 @@ function ToastCloseButton({
       onClick={() => {
         onClose?.();
       }}
-      title="Dismiss toast"
+      title={i18n._("Dismiss toast")}
     >
       <XIcon className={compact ? "size-3" : "size-3.5"} />
     </Toast.Close>
@@ -550,7 +551,7 @@ function ArchiveUndoToastSurface({
             disabled={actionsDisabled}
             onClick={handleUndoClick}
           >
-            Undo
+            {i18n._("Undo")}
           </button>
           {archiveUndo.onViewArchived ? (
             <>
@@ -562,7 +563,7 @@ function ArchiveUndoToastSurface({
                 disabled={actionsDisabled}
                 onClick={handleViewArchivedClick}
               >
-                Settings
+                {i18n._("Settings")}
               </Toast.Close>
             </>
           ) : null}

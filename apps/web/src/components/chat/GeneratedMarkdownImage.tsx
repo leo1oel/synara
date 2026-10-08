@@ -8,6 +8,7 @@
 //        <button> because it wires into class-based stylesheet selectors
 //        (`chat-generated-image__*`) rather than shadcn Button.
 
+import { i18n } from "~/i18n";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type MouseEvent, useEffect, useRef, useState } from "react";
 
@@ -113,7 +114,7 @@ function GeneratedMarkdownImageContent(props: GeneratedMarkdownImageProps) {
   const downloadImage = useLocalImageDownloadClick({
     downloadUrl,
     downloadName,
-    errorTitle: "Could not download generated image",
+    errorTitle: i18n._("Could not download generated image"),
     resolveDownloadUrl: () => resolveGrantedUrl(true),
   });
 
@@ -137,8 +138,9 @@ function GeneratedMarkdownImageContent(props: GeneratedMarkdownImageProps) {
         if (mounted.current) {
           toastManager.add({
             type: "error",
-            title: "Could not open generated image",
-            description: error instanceof Error ? error.message : "The file may be unavailable.",
+            title: i18n._("Could not open generated image"),
+            description:
+              error instanceof Error ? error.message : i18n._("The file may be unavailable."),
           });
         }
       });
@@ -172,7 +174,7 @@ function GeneratedMarkdownImageContent(props: GeneratedMarkdownImageProps) {
         type="button"
         className="chat-generated-image__frame"
         onClick={expandImage}
-        aria-label="Expand generated image"
+        aria-label={i18n._("Expand generated image")}
       >
         {status === "loading" || resolvingGrant ? (
           <span className="chat-generated-image__skeleton" aria-hidden="true">
@@ -183,7 +185,7 @@ function GeneratedMarkdownImageContent(props: GeneratedMarkdownImageProps) {
         <span className="chat-generated-image__overlay" aria-hidden="true">
           <span className="chat-generated-image__overlay-pill chat-generated-image__overlay-pill--expand">
             <Maximize2 className="size-3.5" />
-            <span>Expand</span>
+            <span>{i18n._("Expand")}</span>
           </span>
         </span>
       </button>
@@ -193,11 +195,11 @@ function GeneratedMarkdownImageContent(props: GeneratedMarkdownImageProps) {
         onClick={downloadImage}
         onMouseDown={stopPropagation}
         className="chat-generated-image__overlay-pill chat-generated-image__overlay-pill--download"
-        aria-label="Download generated image"
-        title="Download"
+        aria-label={i18n._("Download generated image")}
+        title={i18n._("Download")}
       >
         <DownloadIcon className="size-3.5" aria-hidden="true" />
-        <span>Download</span>
+        <span>{i18n._("Download")}</span>
       </a>
     </span>
   );

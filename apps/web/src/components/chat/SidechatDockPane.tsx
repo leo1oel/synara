@@ -6,6 +6,7 @@
 // Layer: Chat right-dock UI
 // Exports: SidechatDockPane, useSidechatDockPanePruning
 
+import { i18n } from "~/i18n";
 import type { ThreadId } from "@synara/contracts";
 import { useEffect, useSyncExternalStore } from "react";
 
@@ -56,7 +57,7 @@ export function SidechatDockPane({
     );
   }
   if (!threadExists) {
-    return <PanelStateMessage>Loading side chat...</PanelStateMessage>;
+    return <PanelStateMessage>{i18n._("Loading side chat...")}</PanelStateMessage>;
   }
   if (runtimeMode === "preview") {
     return null;

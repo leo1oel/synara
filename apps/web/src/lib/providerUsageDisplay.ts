@@ -2,6 +2,7 @@
 // Purpose: Single source of truth for provider usage rows shown in Settings,
 // the chat header usage chip, and compact environment/Local popovers.
 
+import { localizeProviderStatusMessage } from "./providerStatusMessages";
 import type { I18n } from "@lingui/core";
 import {
   deriveVisibleRateLimitRows,
@@ -229,7 +230,7 @@ export function localizeProviderUsageNotice(i18n: I18n, notice: string): string 
     /^Anthropic is rate-limiting usage checks — showing your last values, retrying in ~(\d+)m\. Manual refreshes only extend the limit\.$/u.exec(
       notice,
     );
-  if (!anthropicThrottleMatch) return notice;
+  if (!anthropicThrottleMatch) return localizeProviderStatusMessage(i18n, notice);
   return i18n._(
     "Anthropic is rate-limiting usage checks — showing your last values, retrying in ~{minutes}m. Manual refreshes only extend the limit.",
     { minutes: anthropicThrottleMatch[1]! },

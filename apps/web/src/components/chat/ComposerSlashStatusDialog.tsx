@@ -1,3 +1,4 @@
+import { i18n } from "~/i18n";
 import type { ResolvedThreadWorkspaceState } from "@synara/shared/threadEnvironment";
 import type { ProviderInteractionMode } from "@synara/contracts";
 import type { DraftThreadEnvMode } from "../../composerDraftStore";
@@ -38,9 +39,9 @@ function formatEnvironmentLabel(
   envState: ResolvedThreadWorkspaceState,
 ): string {
   if (envMode === "local") {
-    return "Local";
+    return i18n._("Local");
   }
-  return envState === "worktree-pending" ? "New worktree (pending)" : "Worktree";
+  return envState === "worktree-pending" ? i18n._("New worktree (pending)") : i18n._("Worktree");
 }
 
 export function ComposerSlashStatusDialog(props: {
@@ -80,9 +81,9 @@ export function ComposerSlashStatusDialog(props: {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPopup className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Session Status</DialogTitle>
+          <DialogTitle>{i18n._("Session Status")}</DialogTitle>
           <DialogDescription>
-            Runtime controls and local thread state for the active composer.
+            {i18n._("Runtime controls and local thread state for the active composer.")}
           </DialogDescription>
         </DialogHeader>
         <DialogPanel className="space-y-4">
@@ -103,10 +104,10 @@ export function ComposerSlashStatusDialog(props: {
               <p className="text-ui leading-snug text-muted-foreground">Mode</p>
               <p className="font-medium text-foreground">
                 {interactionMode === "plan"
-                  ? "Plan"
+                  ? i18n._("Plan")
                   : interactionMode === "debug"
-                    ? "Debug"
-                    : "Default"}
+                    ? i18n._("Debug")
+                    : i18n._("Default")}
               </p>
             </div>
             <div className="space-y-1">
@@ -126,11 +127,11 @@ export function ComposerSlashStatusDialog(props: {
               <div>
                 <p className="text-ui leading-snug text-muted-foreground">Context Window</p>
                 <p className="text-ui leading-snug text-muted-foreground">
-                  Latest usage reported by the active thread.
+                  {i18n._("Latest usage reported by the active thread.")}
                 </p>
                 {pendingContextWindowLabel ? (
                   <p className="text-ui leading-snug text-muted-foreground">
-                    Current session: {activeContextWindowLabel ?? "Unknown"}. Next turn:{" "}
+                    Current session: {activeContextWindowLabel ?? i18n._("Unknown")}. Next turn:{" "}
                     {pendingContextWindowLabel}.
                   </p>
                 ) : null}
@@ -175,7 +176,9 @@ export function ComposerSlashStatusDialog(props: {
               <div>
                 <p className="text-muted-foreground">Cost</p>
                 <p className="font-medium text-foreground">
-                  {cumulativeCostUsd !== null ? formatCostUsd(cumulativeCostUsd) : "Not available"}
+                  {cumulativeCostUsd !== null
+                    ? formatCostUsd(cumulativeCostUsd)
+                    : i18n._("Not available")}
                 </p>
               </div>
             </div>
@@ -189,14 +192,14 @@ export function ComposerSlashStatusDialog(props: {
               </p>
             ) : (
               <p className="text-ui leading-snug text-muted-foreground">
-                No active rate-limit warning for this thread.
+                {i18n._("No active rate-limit warning for this thread.")}
               </p>
             )}
           </div>
         </DialogPanel>
         <DialogFooter variant="bare">
           <Button type="button" size="sm" onClick={() => onOpenChange(false)}>
-            Close
+            {i18n._("Close")}
           </Button>
         </DialogFooter>
       </DialogPopup>

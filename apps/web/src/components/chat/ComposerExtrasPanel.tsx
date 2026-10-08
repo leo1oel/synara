@@ -11,6 +11,8 @@ import type {
   ProviderInteractionMode,
   ThreadId,
 } from "@synara/contracts";
+import type { I18n } from "@lingui/core";
+import { useLingui } from "@lingui/react";
 import { useEffect, useId, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 
 import {
@@ -49,10 +51,6 @@ const WINDOW_ROW_PREFIX = "extras:window:";
 
 const CHECK = <CheckIcon className="size-3.5 text-foreground/70" />;
 
-function toggleSecondary(label: string, enabled: boolean): string {
-  return `Turn ${label} ${enabled ? "off" : "on"}`;
-}
-
 function windowGlyph(entry: DesktopAppSnapWindowEntry): ReactNode {
   return entry.appIconDataUrl ? (
     <img src={entry.appIconDataUrl} alt="" className="size-4 shrink-0 rounded-[4px]" />
@@ -76,6 +74,7 @@ export function ComposerExtrasPanel(props: {
   /** Embedded hosts own modes and window capture; expose file attachments only. */
   attachmentsOnly?: boolean;
 }) {
+  const { i18n } = useLingui();
   const inputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -112,22 +111,22 @@ export function ComposerExtrasPanel(props: {
       ? [
           {
             id: "windows",
-            label: "Attach window",
+            label: i18n._("Attach window"),
             rows: [
-              { id: ROW_BACK, icon: <ArrowLeftIcon className={GLYPH} />, title: "Back" },
-              ...appSnapWindowRows(appSnap),
+              { id: ROW_BACK, icon: <ArrowLeftIcon className={GLYPH} />, title: i18n._("Back") },
+              ...appSnapWindowRows(i18n, appSnap),
             ],
           },
         ]
       : [
           {
             id: "add",
-            label: "Add",
+            label: i18n._("Add"),
             rows: [
               {
                 id: ROW_FILES,
                 icon: <PaperclipIcon className={GLYPH} />,
-                title: "Files and folders",
+                title: i18n._("Files and folders"),
               },
               ...(appSnap.available
                 ? [
@@ -135,12 +134,14 @@ export function ComposerExtrasPanel(props: {
                       ? {
                           id: ROW_WINDOW,
                           icon: windowGlyph(frontmostWindow),
-                          title: `Attach ${frontmostWindow.appName?.trim() || "window"}`,
+                          title: frontmostWindow.appName?.trim()
+                            ? i18n._("Attach {app}", { app: frontmostWindow.appName.trim() })
+                            : i18n._("Attach window"),
                           disabled: appSnap.busy,
                           trailing: (
                             <button
                               type="button"
-                              aria-label="Choose another window"
+                              aria-label={i18n._("Choose another window")}
                               className={cn(
                                 "-mr-1 flex size-5 items-center justify-center rounded-md text-muted-foreground/60 transition-colors",
                                 "hover:bg-[var(--color-background-button-secondary)] hover:text-foreground/80",
@@ -157,8 +158,8 @@ export function ComposerExtrasPanel(props: {
                       : {
                           id: ROW_WINDOW,
                           icon: <WindowIcon className={GLYPH} />,
-                          title: "Attach window",
-                          secondary: "Capture an open app window",
+                          title: i18n._("Attach window"),
+                          secondary: i18n._("Capture an open app window"),
                           trailing: <ChevronRightIcon className="size-3.5" />,
                         },
                   ]
@@ -166,21 +167,27 @@ export function ComposerExtrasPanel(props: {
               {
                 id: ROW_GOAL,
                 icon: <GoalIcon className={GLYPH} />,
-                title: "Goal",
-                secondary: "Set a goal to keep pursuing",
+                title: i18n._("Goal"),
+                secondary: i18n._("Set a goal to keep pursuing"),
               },
               {
                 id: ROW_PLAN,
                 icon: <ListTodoIcon className={GLYPH} />,
-                title: "Plan mode",
-                secondary: toggleSecondary("plan mode", props.interactionMode === "plan"),
+                title: i18n._("Plan mode"),
+                secondary:
+                  props.interactionMode === "plan"
+                    ? i18n._("Turn plan mode off")
+                    : i18n._("Turn plan mode on"),
                 trailing: props.interactionMode === "plan" ? CHECK : null,
               },
               {
                 id: ROW_DEBUG,
                 icon: <BugIcon className={GLYPH} />,
-                title: "Debug mode",
-                secondary: toggleSecondary("debug mode", props.interactionMode === "debug"),
+                title: i18n._("Debug mode"),
+                secondary:
+                  props.interactionMode === "debug"
+                    ? i18n._("Turn debug mode off")
+                    : i18n._("Turn debug mode on"),
                 trailing: props.interactionMode === "debug" ? CHECK : null,
               },
               ...(props.supportsFastMode
@@ -188,8 +195,10 @@ export function ComposerExtrasPanel(props: {
                     {
                       id: ROW_FAST,
                       icon: <FastModeIcon className={GLYPH} />,
-                      title: "Fast mode",
-                      secondary: toggleSecondary("fast mode", props.fastModeEnabled),
+                      title: i18n._("Fast mode"),
+                      secondary: props.fastModeEnabled
+                        ? i18n._("Turn fast mode off")
+                        : i18n._("Turn fast mode on"),
                       trailing: props.fastModeEnabled ? CHECK : null,
                     },
                   ]
@@ -361,18 +370,21 @@ export function ComposerExtrasPanel(props: {
   );
 }
 
-function appSnapWindowRows(appSnap: ReturnType<typeof useAppSnapWindows>): ComposerMenuPanelRow[] {
+function appSnapWindowRows(
+  i18n: I18n,
+  appSnap: ReturnType<typeof useAppSnapWindows>,
+): ComposerMenuPanelRow[] {
   if (appSnap.unavailableMessage) {
     return [{ id: "extras:window-status", title: appSnap.unavailableMessage, disabled: true }];
   }
   if (appSnap.windows === null) {
-    return [{ id: "extras:window-status", title: "Loading windows…", disabled: true }];
+    return [{ id: "extras:window-status", title: i18n._("Loading windows…"), disabled: true }];
   }
   if (appSnap.windows.length === 0) {
     return [
       {
         id: "extras:window-status",
-        title: "No other app windows are visible.",
+        title: i18n._("No other app windows are visible."),
         disabled: true,
       },
     ];
@@ -381,7 +393,7 @@ function appSnapWindowRows(appSnap: ReturnType<typeof useAppSnapWindows>): Compo
   return appSnap.windows.map((entry) => ({
     id: `${WINDOW_ROW_PREFIX}${entry.windowId}`,
     icon: windowGlyph(entry),
-    title: entry.appName?.trim() || "Captured app",
+    title: entry.appName?.trim() || i18n._("Captured app"),
     secondary: entry.windowTitle?.trim() || null,
     disabled: appSnap.busy,
   }));

@@ -5,6 +5,7 @@
 //          Cancel/Comment actions (Comment stays disabled until non-empty text).
 // Layer: Chat file-preview interaction UI
 
+import { i18n } from "~/i18n";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
 import { FILE_COMMENT_TEXT_MAX_CHARS, normalizeFileCommentText } from "~/lib/fileComments";
@@ -75,7 +76,7 @@ export function FileLineCommentBox(props: FileLineCommentBoxProps) {
           <span className="editor-file-viewer__comment-badge">
             <SynaraLogo className="size-3 text-[var(--color-text-foreground-secondary)]" />
           </span>
-          Local comment
+          {i18n._("Local comment")}
         </span>
         <span className="text-ui text-muted-foreground">Comment on {props.lineLabel}</span>
       </div>
@@ -84,7 +85,7 @@ export function FileLineCommentBox(props: FileLineCommentBoxProps) {
         value={value}
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Request change"
+        placeholder={i18n._("Request change")}
         rows={2}
         maxLength={FILE_COMMENT_TEXT_MAX_CHARS}
         className={cn(
@@ -95,7 +96,7 @@ export function FileLineCommentBox(props: FileLineCommentBoxProps) {
       />
       <div className="flex items-center justify-end gap-1">
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          Cancel
+          {i18n._("Cancel")}
         </Button>
         <Button
           type="button"
@@ -105,7 +106,7 @@ export function FileLineCommentBox(props: FileLineCommentBoxProps) {
           disabled={!canSubmit}
           onClick={submit}
         >
-          Comment
+          {i18n._("Comment")}
         </Button>
       </div>
     </div>

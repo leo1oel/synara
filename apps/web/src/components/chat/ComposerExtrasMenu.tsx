@@ -63,7 +63,7 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
               size="icon-sm"
               variant="chrome"
               className={cn("shrink-0 rounded-md", props.triggerClassName)}
-              aria-label="Composer extras"
+              aria-label={i18n._("Composer extras")}
             />
           }
         >
@@ -82,7 +82,7 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
           {!props.attachmentsOnly ? <MenuSeparator /> : null}
           {!props.attachmentsOnly ? (
             <MenuSub>
-              <MenuSubTrigger>Mode</MenuSubTrigger>
+              <MenuSubTrigger>{i18n._("Mode")}</MenuSubTrigger>
               <ComposerPickerMenuSubPopup>
                 <MenuRadioGroup
                   value={props.interactionMode}
@@ -95,19 +95,19 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
                   <MenuRadioItem value="default">
                     <span className="inline-flex items-center gap-2">
                       <MessageCircleIcon className="size-4 shrink-0" />
-                      Default
+                      {i18n._("Default")}
                     </span>
                   </MenuRadioItem>
                   <MenuRadioItem value="plan">
                     <span className="inline-flex items-center gap-2">
                       <ListTodoIcon className="size-4 shrink-0" />
-                      Plan
+                      {i18n._("Plan")}
                     </span>
                   </MenuRadioItem>
                   <MenuRadioItem value="debug">
                     <span className="inline-flex items-center gap-2">
                       <BugIcon className="size-4 shrink-0" />
-                      Debug
+                      {i18n._("Debug")}
                     </span>
                   </MenuRadioItem>
                 </MenuRadioGroup>
@@ -119,7 +119,7 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
             <>
               <MenuSeparator />
               <MenuSub>
-                <MenuSubTrigger>Fast</MenuSubTrigger>
+                <MenuSubTrigger>{i18n._("Fast")}</MenuSubTrigger>
                 <ComposerPickerMenuSubPopup>
                   <MenuRadioGroup
                     value={props.fastModeEnabled ? "fast" : "normal"}
@@ -129,8 +129,8 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
                       props.onToggleFastMode();
                     }}
                   >
-                    <MenuRadioItem value="normal">Default</MenuRadioItem>
-                    <MenuRadioItem value="fast">Fast</MenuRadioItem>
+                    <MenuRadioItem value="normal">{i18n._("Default")}</MenuRadioItem>
+                    <MenuRadioItem value="fast">{i18n._("Fast")}</MenuRadioItem>
                   </MenuRadioGroup>
                 </ComposerPickerMenuSubPopup>
               </MenuSub>

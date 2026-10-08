@@ -2,6 +2,7 @@
 // Purpose: Provider-agnostic labels and live timing for normalized transcript activity.
 // Layer: Web presentation helper
 
+import { i18n } from "~/i18n";
 import { useSyncExternalStore } from "react";
 
 import type { WorkLogLiveActivity } from "../workLog";
@@ -103,21 +104,21 @@ export function formatLiveActivityProgress(progress: number): string {
 export function formatLiveActivityStateLabel(state: WorkLogLiveActivity["state"]): string {
   switch (state) {
     case "starting":
-      return "Starting";
+      return i18n._("Starting");
     case "thinking":
-      return "Thinking";
+      return i18n._("Thinking");
     case "running_tool":
-      return "Running tool";
+      return i18n._("Running tool");
     case "waiting":
-      return "Waiting";
+      return i18n._("Waiting");
     case "streaming":
-      return "Streaming";
+      return i18n._("Streaming");
     case "completed":
-      return "Completed";
+      return i18n._("Completed");
     case "failed":
-      return "Failed";
+      return i18n._("Failed");
     case "cancelled":
-      return "Cancelled";
+      return i18n._("Cancelled");
   }
 }
 
@@ -154,15 +155,15 @@ export function formatLiveActivityMeta(
 
   if (isLiveActivityInProgress(activity)) {
     if (options?.subagent) {
-      parts.push("Subagent working");
+      parts.push(i18n._("Subagent working"));
     } else if (lastActivityAtMs !== null) {
       const idleMs = Math.max(0, nowMs - lastActivityAtMs);
       parts.push(
         idleMs >= NO_ACTIVITY_THRESHOLD_MS
-          ? `No activity for ${formatClockDuration(idleMs)}`
+          ? i18n._("No activity for {duration}", { duration: formatClockDuration(idleMs) })
           : idleMs < 1_000
-            ? "Active now"
-            : `Active ${formatClockDuration(idleMs)} ago`,
+            ? i18n._("Active now")
+            : i18n._("Active {duration} ago", { duration: formatClockDuration(idleMs) }),
       );
     }
   } else {
@@ -170,7 +171,7 @@ export function formatLiveActivityMeta(
   }
 
   if (elapsed !== null) {
-    parts.push(`${elapsed} elapsed`);
+    parts.push(i18n._("{duration} elapsed", { duration: elapsed }));
   }
   if (activity.progress !== undefined) {
     parts.push(formatLiveActivityProgress(activity.progress));

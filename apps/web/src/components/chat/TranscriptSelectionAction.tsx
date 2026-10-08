@@ -2,6 +2,7 @@
 // Purpose: Renders the floating toolbar for assistant transcript selections.
 // Layer: Chat transcript interaction UI
 
+import { i18n } from "~/i18n";
 import { cn } from "~/lib/utils";
 import { ELEVATED_HOVER_SURFACE_CLASS_NAME } from "~/surfaceStyles";
 
@@ -57,7 +58,7 @@ export function TranscriptSelectionAction(props: TranscriptSelectionActionProps)
       className="pointer-events-none fixed z-50"
       style={{ left: props.left, top: props.top }}
       role="toolbar"
-      aria-label="Selection actions"
+      aria-label={i18n._("Selection actions")}
     >
       <div
         className={cn(
@@ -66,20 +67,20 @@ export function TranscriptSelectionAction(props: TranscriptSelectionActionProps)
         )}
       >
         <TranscriptSelectionToolbarButton
-          label="Add to Chat"
+          label={i18n._("Add to Chat")}
           onClick={props.onAddToChat}
           disabled={props.disabled}
         />
         {props.onAddToSide ? (
           <TranscriptSelectionToolbarButton
-            label="Add to Side"
+            label={i18n._("Add to Side")}
             onClick={props.onAddToSide}
             disabled={props.disabled || props.sideDisabled}
           />
         ) : null}
         {props.onAddToNewChat ? (
           <TranscriptSelectionToolbarButton
-            label="Add to new Chat"
+            label={i18n._("Add to new Chat")}
             onClick={props.onAddToNewChat}
             disabled={props.disabled}
           />

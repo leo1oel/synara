@@ -4,6 +4,7 @@
 //          the automations view: clock glyph, automation name, cadence, and an Open action.
 // Layer: Chat transcript UI
 
+import { i18n } from "~/i18n";
 import {
   AutomationProposalActions,
   automationProposalListQueryKey,
@@ -69,7 +70,7 @@ export function AutomationCreatedCard({
             className="truncate text-[var(--color-text-foreground-secondary)]"
             style={metaFontSizePx ? { fontSize: `${metaFontSizePx}px` } : undefined}
           >
-            {currentProposalState === "pending" ? "Suggested · " : ""}
+            {currentProposalState === "pending" ? i18n._("Suggested · ") : ""}
             {cadenceLabel}
             {currentProposalState === "accepted" ? " · Accepted" : ""}
             {currentProposalState === "dismissed" ? " · Dismissed" : ""}
@@ -84,7 +85,7 @@ export function AutomationCreatedCard({
       ) : null}
       {onOpen && currentProposalState !== "pending" ? (
         <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={onOpen}>
-          Open
+          {i18n._("Open")}
         </Button>
       ) : null}
     </div>

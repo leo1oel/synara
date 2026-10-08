@@ -3,6 +3,7 @@
 // Layer: Chat composer presentation
 // Depends on: composer draft image metadata, shared chip styles, and expanded image preview helpers.
 
+import { useLingui } from "@lingui/react";
 import { WindowIcon } from "~/lib/icons";
 import { type ComposerImageAttachment } from "../../composerDraftStore";
 import { normalizeComposerImageSource } from "../../lib/composerImageSource";
@@ -29,6 +30,7 @@ export function ComposerImageAttachmentChip({
   onExpandImage,
   onRemoveImage,
 }: ComposerImageAttachmentChipProps) {
+  const { i18n } = useLingui();
   // Normalize here so a legacy "appshot" provenance still renders as an AppSnap.
   const appSnapSource = normalizeComposerImageSource(image.source) ?? null;
   const previewImage = () => {
@@ -38,7 +40,7 @@ export function ComposerImageAttachmentChip({
   };
 
   if (appSnapSource) {
-    const appName = appSnapSource.appName?.trim() || "Captured app";
+    const appName = appSnapSource.appName?.trim() || i18n._("Captured app");
     const windowTitle = appSnapSource.windowTitle?.trim() || null;
     // Lead with the captured window title, but avoid repeating an app whose title
     // merely echoes its name (e.g. "ChatGPT / ChatGPT").
@@ -53,7 +55,7 @@ export function ComposerImageAttachmentChip({
         <button
           type="button"
           className="relative flex size-full items-center justify-center overflow-hidden bg-[var(--color-background-secondary)] p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-          aria-label={`Preview AppSnap from ${appName}`}
+          aria-label={i18n._("Preview AppSnap from {app}", { app: appName })}
           title={provenance}
           onClick={previewImage}
         >
@@ -98,14 +100,14 @@ export function ComposerImageAttachmentChip({
               }
             />
             <TooltipPopup side="top" className="max-w-64 whitespace-normal leading-tight">
-              {DRAFT_ATTACHMENT_WARNING_DESCRIPTION}
+              {i18n._(DRAFT_ATTACHMENT_WARNING_DESCRIPTION)}
             </TooltipPopup>
           </Tooltip>
         )}
 
         <AttachmentRemoveButton
           size="sm"
-          label={`Remove AppSnap from ${appName}`}
+          label={i18n._("Remove AppSnap from {app}", { app: appName })}
           className="opacity-70 transition-opacity duration-150 hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100"
           onRemove={() => onRemoveImage(image.id)}
         />
@@ -118,7 +120,7 @@ export function ComposerImageAttachmentChip({
       <button
         type="button"
         className="block size-16 overflow-hidden rounded-xl border border-[color:var(--color-border-light)] bg-[var(--color-background-elevated-secondary)] transition-colors hover:border-[color:var(--color-border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label={`Preview ${image.name}`}
+        aria-label={i18n._("Preview {name}", { name: image.name })}
         title={image.name}
         onClick={previewImage}
       >
@@ -139,14 +141,14 @@ export function ComposerImageAttachmentChip({
             }
           />
           <TooltipPopup side="top" className="max-w-64 whitespace-normal leading-tight">
-            {DRAFT_ATTACHMENT_WARNING_DESCRIPTION}
+            {i18n._(DRAFT_ATTACHMENT_WARNING_DESCRIPTION)}
           </TooltipPopup>
         </Tooltip>
       )}
 
       <AttachmentRemoveButton
         size="md"
-        label={`Remove ${image.name}`}
+        label={i18n._("Remove {name}", { name: image.name })}
         onRemove={() => onRemoveImage(image.id)}
       />
     </div>

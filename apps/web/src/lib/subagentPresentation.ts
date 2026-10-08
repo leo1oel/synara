@@ -2,6 +2,7 @@
 // Purpose: Normalizes subagent identity, nickname colors, and status labels for sidebar/chat UI.
 // Exports: Shared presentation helpers consumed by sidebar rows, chat cards, and thread hydration.
 
+import { i18n } from "~/i18n";
 import {
   buildSubagentIdentityDirectory,
   extractSubagentIdentityHints as extractParsedSubagentIdentityHints,
@@ -238,7 +239,7 @@ export function resolveSubagentPresentation(input: {
   const role = explicitRole ?? parsedTitleRole;
   const resolvedTitle = parsedTitleNickname ? null : titleLabel;
   const normalizedFallbackId = normalizeWhitespace(input.fallbackId);
-  const fallbackLabel = fallbackSubagentLabel(normalizedFallbackId) ?? "Subagent";
+  const fallbackLabel = fallbackSubagentLabel(normalizedFallbackId) ?? i18n._("Subagent");
   const primaryLabel = nickname ?? resolvedTitle ?? capitalizeRoleLabel(role) ?? fallbackLabel;
   const fullLabel = role && nickname ? `${nickname} [${role}]` : primaryLabel;
 
@@ -349,17 +350,17 @@ export function humanizeSubagentStatus(
 
   switch (normalized) {
     case "running":
-      return "Running";
+      return i18n._("Running");
     case "completed":
-      return "Completed";
+      return i18n._("Completed");
     case "failed":
-      return "Failed";
+      return i18n._("Failed");
     case "stopped":
-      return "Stopped";
+      return i18n._("Stopped");
     case "queued":
-      return "Queued";
+      return i18n._("Queued");
     case "idle":
-      return "Idle";
+      return i18n._("Idle");
   }
 }
 

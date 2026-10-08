@@ -2,6 +2,7 @@
 // Purpose: Edit process-scoped environment variables for an individual provider instance.
 // Layer: Settings UI components
 
+import { i18n } from "~/i18n";
 import { Schema } from "effect";
 import { useState } from "react";
 
@@ -136,7 +137,7 @@ export function ProviderInstanceEnvironmentEditor({
                 replaceEntry(index, { ...entry, name: trimmed });
               }}
               {...(redacted
-                ? { title: "Replace or remove the saved secret before renaming it." }
+                ? { title: i18n._("Replace or remove the saved secret before renaming it.") }
                 : {})}
             />
             <DebouncedSettingTextInput
@@ -154,7 +155,7 @@ export function ProviderInstanceEnvironmentEditor({
                 const { valueRedacted: _valueRedacted, ...rest } = entry;
                 replaceEntry(index, { ...rest, value: nextValue });
               }}
-              placeholder={redacted ? "Secret saved — type to replace" : "value"}
+              placeholder={redacted ? i18n._("Secret saved — type to replace") : "value"}
               spellCheck={false}
             />
             <Switch
@@ -201,7 +202,7 @@ export function ProviderInstanceEnvironmentEditor({
         <Switch
           checked={draftSensitive}
           onCheckedChange={setDraftSensitive}
-          aria-label="Store new variable as a secret"
+          aria-label={i18n._("Store new variable as a secret")}
         />
         <Button
           type="button"
@@ -211,7 +212,7 @@ export function ProviderInstanceEnvironmentEditor({
           onClick={addDraft}
         >
           <PlusIcon className="size-3.5" />
-          Add
+          {i18n._("Add")}
         </Button>
       </div>
     </div>

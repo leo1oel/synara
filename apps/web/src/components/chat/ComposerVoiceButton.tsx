@@ -3,6 +3,7 @@
 // Layer: Chat composer presentation
 // Depends on: shared button styling and caller-owned voice recording state callbacks.
 
+import { i18n } from "~/i18n";
 import { Loader2Icon, MicIcon } from "~/lib/icons";
 import { Button } from "../ui/button";
 
@@ -16,12 +17,12 @@ export const ComposerVoiceButton = function ComposerVoiceButton(props: {
 }) {
   const isBusy = props.isTranscribing || props.isStarting === true;
   const label = props.isTranscribing
-    ? "Transcribing voice note"
+    ? i18n._("Transcribing voice note")
     : props.isStarting
-      ? "Starting microphone"
+      ? i18n._("Starting microphone")
       : props.isRecording
         ? `Stop voice note (${props.durationLabel})`
-        : "Record voice note";
+        : i18n._("Record voice note");
 
   return (
     <Button

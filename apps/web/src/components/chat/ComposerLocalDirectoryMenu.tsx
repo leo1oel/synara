@@ -4,6 +4,8 @@
 // Depends on: the same Command primitives used by ComposerCommandMenu so both pickers share chrome.
 
 import type { ProjectFileSystemEntry, ProjectLocalSearchEntry } from "@synara/contracts";
+import type { I18n } from "@lingui/core";
+import { useLingui } from "@lingui/react";
 import type { Ref } from "react";
 import { useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -127,18 +129,18 @@ function isRootDirectory(directoryPath: string): boolean {
 
 // Effect/fs errors come through with deep stack traces and absolute internal paths.
 // Surface a short, user-friendly reason so the popover stays tidy on missing/denied paths.
-function summarizeDirectoryLoadError(error: unknown): string {
+function summarizeDirectoryLoadError(i18n: I18n, error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error ?? "");
   if (/ENOENT|no such file or directory/i.test(raw)) {
-    return "Folder not found.";
+    return i18n._("Folder not found.");
   }
   if (/EACCES|permission denied/i.test(raw)) {
-    return "Permission denied.";
+    return i18n._("Permission denied.");
   }
   if (/ENOTDIR|not a directory/i.test(raw)) {
-    return "Not a folder.";
+    return i18n._("Not a folder.");
   }
-  return "Unable to load folders.";
+  return i18n._("Unable to load folders.");
 }
 
 export function ComposerLocalDirectoryMenu(props: {
@@ -150,6 +152,7 @@ export function ComposerLocalDirectoryMenu(props: {
   handleRef?: Ref<ComposerLocalDirectoryMenuHandle>;
 }) {
   const { mentionQuery, rootLabel, homeDir, onSelectEntry, onNavigateFolder, handleRef } = props;
+  const { i18n } = useLingui();
   const [entriesByPath, setEntriesByPath] = useState<EntriesByPath>({});
   const [loadingPaths, setLoadingPaths] = useState<ReadonlySet<string>>(() => new Set());
   // Error keyed to the directory it was produced for: navigating away derives
@@ -190,7 +193,7 @@ export function ComposerLocalDirectoryMenu(props: {
       if (cancelled) return;
       const api = readNativeApi();
       if (!api) {
-        setErrorMessage("App is still connecting. Try again in a moment.");
+        setErrorMessage(i18n._("App is still connecting. Try again in a moment."));
         return;
       }
 
@@ -205,7 +208,7 @@ export function ComposerLocalDirectoryMenu(props: {
         })
         .catch((error) => {
           setEntriesByPath((current) => ({ ...current, [expandedDirectory]: [] }));
-          setErrorMessage(summarizeDirectoryLoadError(error));
+          setErrorMessage(summarizeDirectoryLoadError(i18n, error));
         })
         .finally(() => {
           setLoadingPaths((current) => {
@@ -219,7 +222,7 @@ export function ComposerLocalDirectoryMenu(props: {
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [entriesByPath, expandedDirectory, isAwaitingHomeDir, loadingPaths]);
+  }, [entriesByPath, expandedDirectory, i18n, isAwaitingHomeDir, loadingPaths]);
 
   const rawEntries = entriesByPath[expandedDirectory];
   const isLoading = loadingPaths.has(expandedDirectory);
@@ -398,7 +401,7 @@ export function ComposerLocalDirectoryMenu(props: {
           {parent ? (
             <button
               type="button"
-              aria-label="Go up one directory"
+              aria-label={i18n._("Go up one directory")}
               onMouseDown={(event) => event.preventDefault()}
               onClick={handleGoUp}
               className={cn(
@@ -421,7 +424,7 @@ export function ComposerLocalDirectoryMenu(props: {
               onClick={handleSelectCurrentDirectory}
               className={cn(DIRECTORY_MENU_HEADER_ACTION_CLASS_NAME, "px-1.5 py-0.5 text-ui-xs")}
             >
-              Use this folder
+              {i18n._("Use this folder")}
             </button>
           ) : null}
         </div>
@@ -489,7 +492,7 @@ export function ComposerLocalDirectoryMenu(props: {
                 ) : null}
                 <CommandGroup>
                   <CommandGroupLabel className="px-2 pt-1.5 pb-1 text-ui-xs font-semibold text-muted-foreground/55">
-                    Matches deeper
+                    {i18n._("Matches deeper")}
                   </CommandGroupLabel>
                   {searchRows.map((entry, searchIndex) => {
                     const absoluteIndex = searchRowStartIndex + searchIndex;
@@ -512,21 +515,25 @@ export function ComposerLocalDirectoryMenu(props: {
         </div>
         {isAwaitingHomeDir ? (
           <p className="px-2 py-1.5 text-muted-foreground/50 text-ui-sm">
-            Waiting for home directory from server…
+            {i18n._("Waiting for home directory from server…")}
           </p>
         ) : isLoading && visibleCount === 0 ? (
-          <p className="px-2 py-1.5 text-muted-foreground/50 text-ui-sm">Loading local files…</p>
+          <p className="px-2 py-1.5 text-muted-foreground/50 text-ui-sm">
+            {i18n._("Loading local files…")}
+          </p>
         ) : errorMessage ? (
           <p className="px-2 py-1.5 text-destructive/80 text-ui-sm">{errorMessage}</p>
         ) : isSearchPending ? (
-          <p className="px-2 py-1.5 text-muted-foreground/50 text-ui-sm">Searching nested files…</p>
+          <p className="px-2 py-1.5 text-muted-foreground/50 text-ui-sm">
+            {i18n._("Searching nested files…")}
+          </p>
         ) : visibleCount === 0 ? (
           <p className="px-2 py-1.5 text-muted-foreground/50 text-ui-sm">
-            {filter.trim().length > 0 ? "No matches." : "No files or folders here."}
+            {filter.trim().length > 0 ? i18n._("No matches.") : i18n._("No files or folders here.")}
           </p>
         ) : searchQuery.data?.truncated ? (
           <p className="px-2 py-1 text-muted-foreground/40 text-ui-xs">
-            Showing top matches. Keep typing to narrow.
+            {i18n._("Showing top matches. Keep typing to narrow.")}
           </p>
         ) : null}
       </div>
@@ -542,6 +549,7 @@ function UseCurrentFolderRow(props: {
   onActivate: () => void;
 }) {
   const { directoryLabel, index, isHighlighted, onHighlight, onActivate } = props;
+  const { i18n } = useLingui();
   return (
     <CommandItem
       data-highlight-index={index}
@@ -557,7 +565,9 @@ function UseCurrentFolderRow(props: {
     >
       <FolderIcon className="size-3.5 text-muted-foreground/60" />
       <div className="min-w-0 flex flex-1 items-center gap-1.5 overflow-hidden">
-        <span className="shrink-0 text-ui-sm font-medium text-foreground/80">Use this folder</span>
+        <span className="shrink-0 text-ui-sm font-medium text-foreground/80">
+          {i18n._("Use this folder")}
+        </span>
         <span className="truncate text-ui-sm text-muted-foreground/55">{directoryLabel}</span>
       </div>
     </CommandItem>

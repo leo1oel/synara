@@ -1,3 +1,4 @@
+import { i18n } from "~/i18n";
 import type { ThreadEnvironmentMode } from "@synara/contracts";
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -74,8 +75,8 @@ export function TranscriptSelectionActionLayer(props: TranscriptSelectionActionL
                 .catch((error: unknown) =>
                   toastManager.add({
                     type: "error",
-                    title: "Could not add selection to Side",
-                    description: error instanceof Error ? error.message : "Try again.",
+                    title: i18n._("Could not add selection to Side"),
+                    description: error instanceof Error ? error.message : i18n._("Try again."),
                   }),
                 )
                 .finally(() => {

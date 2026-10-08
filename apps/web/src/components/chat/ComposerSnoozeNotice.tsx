@@ -4,6 +4,7 @@
 // Layer: Chat composer UI
 // Exports: ComposerSnoozeNotice
 
+import { i18n } from "~/i18n";
 import { useState } from "react";
 
 import { ClockIcon } from "~/lib/icons";
@@ -42,11 +43,11 @@ export function ComposerSnoozeNotice({
         <span className="block">Sending a message cancels the reminder.</span>
       </span>
       <button type="button" className={ACTION_CLASS_NAME} onClick={onReturnNow}>
-        Return now
+        {i18n._("Return now")}
       </button>
       <Menu modal={false}>
         <MenuTrigger render={<button type="button" className={ACTION_CLASS_NAME} />}>
-          Change time
+          {i18n._("Change time")}
         </MenuTrigger>
         <ComposerPickerMenuPopup align="end" side="top" sideOffset={6}>
           {SNOOZE_PRESETS.map((preset) => (
@@ -55,7 +56,7 @@ export function ComposerSnoozeNotice({
             </MenuItem>
           ))}
           <MenuSeparator />
-          <MenuItem onClick={() => setDialogOpen(true)}>Pick date & time…</MenuItem>
+          <MenuItem onClick={() => setDialogOpen(true)}>{i18n._("Pick date & time…")}</MenuItem>
         </ComposerPickerMenuPopup>
       </Menu>
       <SnoozeUntilDialog

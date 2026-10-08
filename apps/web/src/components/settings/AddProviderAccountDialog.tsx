@@ -4,6 +4,7 @@
 // Layer: Settings UI components
 // Depends on: dialog primitives, settings select control, account presentation helpers.
 
+import { i18n } from "~/i18n";
 import type { ProviderKind } from "@synara/contracts";
 import { type FormEvent, useId, useState } from "react";
 
@@ -108,19 +109,19 @@ export function AddProviderAccountDialog(props: {
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogPopup className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add account</DialogTitle>
+          <DialogTitle>{i18n._("Add account")}</DialogTitle>
           <DialogDescription>
-            Each account signs in on its own and gets its own tab in the model picker.
+            {i18n._("Each account signs in on its own and gets its own tab in the model picker.")}
           </DialogDescription>
         </DialogHeader>
         <DialogPanel>
           <form id={formId} className="space-y-3" onSubmit={submit} noValidate>
             <div className="space-y-1">
-              <span className={dialogFieldLabelClassName}>Provider</span>
+              <span className={dialogFieldLabelClassName}>{i18n._("Provider")}</span>
               <SettingsSelectControl
                 value={provider}
                 onValueChange={(next) => setProvider(next as ProviderKind)}
-                ariaLabel="Provider"
+                ariaLabel={i18n._("Provider")}
                 triggerClassName="w-full"
                 valueContent={
                   <span className="flex items-center gap-2">
@@ -140,7 +141,7 @@ export function AddProviderAccountDialog(props: {
               </SettingsSelectControl>
             </div>
             <label className="block space-y-1">
-              <span className={dialogFieldLabelClassName}>Label</span>
+              <span className={dialogFieldLabelClassName}>{i18n._("Label")}</span>
               <Input
                 size="sm"
                 value={label}
@@ -150,11 +151,11 @@ export function AddProviderAccountDialog(props: {
                 autoFocus
               />
               <span className="block text-ui-sm text-muted-foreground">
-                Shown in the account list and the model picker. Optional.
+                {i18n._("Shown in the account list and the model picker. Optional.")}
               </span>
             </label>
             <label className="block space-y-1">
-              <span className={dialogFieldLabelClassName}>Account ID</span>
+              <span className={dialogFieldLabelClassName}>{i18n._("Account ID")}</span>
               <Input
                 size="sm"
                 className="font-mono"
@@ -173,11 +174,13 @@ export function AddProviderAccountDialog(props: {
               >
                 {submitAttempted && idError !== null
                   ? idError
-                  : "Routing key used by threads and sessions. Letters, digits, '-', or '_'."}
+                  : i18n._(
+                      "Routing key used by threads and sessions. Letters, digits, '-', or '_'.",
+                    )}
               </span>
             </label>
             <div className="space-y-1">
-              <span className={dialogFieldLabelClassName}>Accent color</span>
+              <span className={dialogFieldLabelClassName}>{i18n._("Accent color")}</span>
               <ProviderAccentColorControl
                 value={accentColor}
                 onChange={setAccentColor}
@@ -210,10 +213,10 @@ export function AddProviderAccountDialog(props: {
         </DialogPanel>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => props.onOpenChange(false)}>
-            Cancel
+            {i18n._("Cancel")}
           </Button>
           <Button type="submit" form={formId}>
-            Add account
+            {i18n._("Add account")}
           </Button>
         </DialogFooter>
       </DialogPopup>

@@ -1,3 +1,4 @@
+import { i18n } from "~/i18n";
 import type {
   ProjectEntry,
   ProviderAgentDescriptor,
@@ -460,7 +461,7 @@ export function useComposerCommandMenuItems(input: {
               id: "local-root",
               type: "local-root" as const,
               label: `@${LOCAL_FOLDER_MENTION_NAME}`,
-              description: "Browse folders on this computer",
+              description: i18n._("Browse folders on this computer"),
             },
           ]
         : [];

@@ -3,6 +3,7 @@
 // visible and inspectable immediately above the embedded chat composer.
 // Layer: Chat composer UI
 
+import { useLingui } from "@lingui/react";
 import { useState, useSyncExternalStore } from "react";
 
 import { EyeIcon, PanelCollapseIcon, PanelExpandIcon, XIcon } from "~/lib/icons";
@@ -40,6 +41,7 @@ export function ComposerLatticeContextBar({
   attachedToPrevious: attachedToPreviousProp,
 }: ComposerLatticeContextBarProps) {
   const [expanded, setExpanded] = useState(false);
+  const { i18n } = useLingui();
   const context = useSyncExternalStore(
     subscribeLiveLatticeHostContext,
     getLiveLatticeHostContext,
@@ -47,13 +49,13 @@ export function ComposerLatticeContextBar({
   );
   if (!context) return null;
   const attachedToPrevious = attachedToPreviousProp ?? false;
-  const summary = latticeContextSummary(context);
-  const details = latticeContextDetails(context);
-  const selection = latticeContextSelection(context);
+  const summary = latticeContextSummary(context, i18n);
+  const details = latticeContextDetails(context, i18n);
+  const selection = latticeContextSelection(context, i18n);
   if (!selection) return null;
   const disclosureLabel = expanded
-    ? "Hide included context details"
-    : "Show included context details";
+    ? i18n._("Hide included context details")
+    : i18n._("Show included context details");
 
   return (
     // Keep live editor selections out of the measured composer height: changing
@@ -70,20 +72,24 @@ export function ComposerLatticeContextBar({
               className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
               aria-expanded={expanded}
               aria-label={disclosureLabel}
-              title={`${summary}. Included with your next message.`}
+              title={i18n._("{summary}. Included with your next message.", { summary })}
               onClick={() => setExpanded((current) => !current)}
             >
               <EyeIcon className={COMPOSER_STACKED_PANEL_ICON_CLASS_NAME} />
-              <span className="shrink-0 text-ui font-medium text-foreground/90">Context</span>
+              <span className="shrink-0 text-ui font-medium text-foreground/90">
+                {i18n._("Context")}
+              </span>
               <span className="min-w-0 flex-1 truncate text-ui-sm text-muted-foreground/75">
                 {summary}
               </span>
               {selection ? (
                 <span className="shrink-0 rounded-full bg-[var(--color-background-button-secondary)] px-1.5 py-0.5 text-ui-xs text-[var(--color-text-foreground-secondary)]">
-                  {selection.length.toLocaleString()} chars
+                  {i18n._("{count} chars", { count: selection.length.toLocaleString() })}
                 </span>
               ) : (
-                <span className="shrink-0 text-ui-xs text-muted-foreground/55">Included</span>
+                <span className="shrink-0 text-ui-xs text-muted-foreground/55">
+                  {i18n._("Included")}
+                </span>
               )}
               {expanded ? (
                 <PanelCollapseIcon className="size-3 shrink-0 text-muted-foreground/65" />
@@ -98,8 +104,8 @@ export function ComposerLatticeContextBar({
                 size="icon-xs"
                 className={cn("shrink-0", COMPOSER_STACKED_PANEL_ICON_BUTTON_CLASS_NAME)}
                 onClick={onClearSelection}
-                aria-label="Exclude selected text from context"
-                title="Exclude selected text from the next message"
+                aria-label={i18n._("Exclude selected text from context")}
+                title={i18n._("Exclude selected text from the next message")}
               >
                 <XIcon className="size-3" />
               </Button>
@@ -117,10 +123,10 @@ export function ComposerLatticeContextBar({
             >
               <div className="mb-2 flex items-center justify-between gap-2">
                 <p className="text-ui-sm text-muted-foreground/75">
-                  Included automatically with your next message
+                  {i18n._("Included automatically with your next message")}
                 </p>
                 <span className="shrink-0 rounded-full bg-[var(--color-background-button-secondary)] px-1.5 py-0.5 text-ui-xs font-medium text-[var(--color-text-foreground-secondary)]">
-                  Included
+                  {i18n._("Included")}
                 </span>
               </div>
               <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-ui-sm">
@@ -139,7 +145,9 @@ export function ComposerLatticeContextBar({
                         {selection.label}
                       </p>
                       <p className="text-ui-xs text-muted-foreground/55">
-                        {selection.length.toLocaleString()} characters
+                        {i18n._("{count} characters", {
+                          count: selection.length.toLocaleString(),
+                        })}
                       </p>
                     </div>
                     {onClearSelection ? (
@@ -150,7 +158,7 @@ export function ComposerLatticeContextBar({
                         className="h-6 shrink-0 px-2 text-ui-xs font-normal text-muted-foreground"
                         onClick={onClearSelection}
                       >
-                        Exclude selection
+                        {i18n._("Exclude selection")}
                       </Button>
                     ) : null}
                   </div>

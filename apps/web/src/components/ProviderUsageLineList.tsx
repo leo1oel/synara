@@ -66,6 +66,13 @@ function localizeUsageLineValue(i18n: I18n, value: string): string {
       total: remainingOfMatch[2]!,
     });
   }
+  const remainingEstimateMatch = /^(.+) remaining \(≈ (.+)\)$/u.exec(value);
+  if (remainingEstimateMatch) {
+    return i18n._("{remaining} remaining (≈ {estimate})", {
+      remaining: remainingEstimateMatch[1]!,
+      estimate: remainingEstimateMatch[2]!,
+    });
+  }
   const remainingMatch = /^(.+) remaining$/u.exec(value);
   if (remainingMatch) {
     return i18n._("{remaining} remaining", { remaining: remainingMatch[1]! });

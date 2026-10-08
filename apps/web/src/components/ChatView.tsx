@@ -1286,7 +1286,7 @@ export default function ChatView({
       lastKnownPr?: Thread["lastKnownPr"];
     }) => {
       if (!activeProject) {
-        throw new Error("No active project is available for this pull request.");
+        throw new Error(i18n._("No active project is available for this pull request."));
       }
       const draftThreadContext = {
         branch: input.branch,
@@ -1336,6 +1336,7 @@ export default function ChatView({
       clearProjectDraftThreadId,
       getDraftThread,
       getDraftThreadByProjectId,
+      i18n,
       isServerThread,
       navigate,
       setDraftThreadContext,
@@ -1605,9 +1606,19 @@ export default function ChatView({
       sidebarPlanSourceThreadProposedPlans,
     ],
   );
-  const planSidebarLabel = sidebarProposedPlan ? "Plan details" : "Tasks";
-  const planSidebarToggleLabel = planSidebarOpen ? `Hide ${planSidebarLabel}` : planSidebarLabel;
-  const planSidebarToggleTitle = `${planSidebarOpen ? "Hide" : "Show"} ${planSidebarLabel.toLowerCase()} sidebar`;
+  const planSidebarLabel = sidebarProposedPlan ? i18n._("Plan details") : i18n._("Tasks");
+  const planSidebarToggleLabel = planSidebarOpen
+    ? sidebarProposedPlan
+      ? i18n._("Hide plan details")
+      : i18n._("Hide tasks")
+    : planSidebarLabel;
+  const planSidebarToggleTitle = sidebarProposedPlan
+    ? planSidebarOpen
+      ? i18n._("Hide plan details sidebar")
+      : i18n._("Show plan details sidebar")
+    : planSidebarOpen
+      ? i18n._("Hide tasks sidebar")
+      : i18n._("Show tasks sidebar");
   const activeTaskList = useMemo((): ActiveTaskListState | null => {
     if (showDebugTaskBanner) {
       return {
@@ -1988,13 +1999,13 @@ export default function ChatView({
       .then(() => {
         toastManager.add({
           type: "success",
-          title: "Project instructions added to notepad.",
+          title: i18n._("Project instructions added to notepad."),
         });
       })
       .catch(() => {
         // `handleNotesChange` already surfaces the save failure through the shared notes toast.
       });
-  }, [activeThreadId, handleNotesChange, projectInstructions, threadNotes]);
+  }, [activeThreadId, handleNotesChange, i18n, projectInstructions, threadNotes]);
   const handleJumpToPinnedMessage = useCallback(
     (messageId: MessageId) => {
       timelineControllerRef.current?.scrollToMessage(messageId);
@@ -2211,7 +2222,10 @@ export default function ChatView({
   const branchesQuery = useQuery(gitBranchesQueryOptions(gitBranchSourceCwd));
   const gitStatusQuery = useQuery(gitStatusQueryOptions(gitBranchSourceCwd));
   const branchPullRequestQuery = useQuery(
-    gitBranchPullRequestQueryOptions(gitBranchSourceCwd, PULL_REQUEST_AUTO_FIX_ON && isServerThread),
+    gitBranchPullRequestQueryOptions(
+      gitBranchSourceCwd,
+      PULL_REQUEST_AUTO_FIX_ON && isServerThread,
+    ),
   );
   const localFolderBrowseRootPath = getLocalFolderBrowseRootPath(
     serverConfigQuery.data?.homeDir ?? null,
@@ -2256,18 +2270,18 @@ export default function ChatView({
     );
   const claudeCompactDisabledReason = !canRequestNativeClaudeCompaction
     ? isNativeCommandDiscoveryPending
-      ? "Checking Claude's available commands..."
-      : "Compaction is unavailable for this Claude session."
+      ? i18n._("Checking Claude's available commands...")
+      : i18n._("Compaction is unavailable for this Claude session.")
     : hasLiveTurn || isConnecting || (activeBackgroundTasks?.activeCount ?? 0) > 0
-      ? "Wait for Claude and its background tasks to finish."
+      ? i18n._("Wait for Claude and its background tasks to finish.")
       : activePendingApproval || pendingUserInputs.length > 0
-        ? "Resolve the pending request before compacting."
+        ? i18n._("Resolve the pending request before compacting.")
         : null;
   const standaloneClaudeCompactDisabledReason =
     activeThread?.claudeCacheReview != null
-      ? "Choose how to resume the held message above."
+      ? i18n._("Choose how to resume the held message above.")
       : isWorking
-        ? "Wait for Claude to finish before compacting."
+        ? i18n._("Wait for Claude to finish before compacting.")
         : claudeCompactDisabledReason;
   const { compact: onCompactClaudeContext, isSubmitting: isRequestingClaudeCompaction } =
     useClaudeContextCompaction({
@@ -2287,7 +2301,7 @@ export default function ChatView({
   const onRespondToClaudeCacheReview = useCallback(
     async (review: PendingClaudeCacheReview, decision: ClaudeCacheReviewDecision) => {
       const api = readNativeApi();
-      if (!api) throw new Error("Reconnect before choosing how to resume.");
+      if (!api) throw new Error(i18n._("Reconnect before choosing how to resume."));
       await api.orchestration.dispatchCommand({
         type: "thread.claude-cache.respond",
         commandId: newCommandId(),
@@ -2298,7 +2312,7 @@ export default function ChatView({
         createdAt: new Date().toISOString(),
       });
     },
-    [threadId],
+    [i18n, threadId],
   );
   const activeRootBranch = useMemo(
     () =>
@@ -2439,7 +2453,7 @@ export default function ChatView({
           type: "fork-target" as const,
           target: "worktree" as const,
           label: FORK_THREAD_TARGET_LABELS.worktree,
-          description: "Continue in a new worktree",
+          description: i18n._("Continue in a new worktree"),
         },
         {
           id: "fork-target:local",
@@ -2448,8 +2462,8 @@ export default function ChatView({
           label: FORK_THREAD_TARGET_LABELS.local,
           description:
             activeThread?.worktreePath || activeThread?.envMode === "worktree"
-              ? "Continue in this local worktree"
-              : "Continue in the current local thread",
+              ? i18n._("Continue in this local worktree")
+              : i18n._("Continue in the current local thread"),
         },
       ];
     }
@@ -2459,15 +2473,15 @@ export default function ChatView({
           id: "review-target:changes",
           type: "review-target" as const,
           target: "changes" as const,
-          label: "Review Uncommitted Changes",
-          description: "Review local uncommitted changes",
+          label: i18n._("Review uncommitted changes"),
+          description: i18n._("Review local uncommitted changes"),
         },
         {
           id: "review-target:base-branch",
           type: "review-target" as const,
           target: "base-branch" as const,
-          label: "Review Against Base Branch",
-          description: "Review the current branch diff against its base",
+          label: i18n._("Review against base branch"),
+          description: i18n._("Review the current branch diff against its base"),
         },
       ];
     }
@@ -2477,6 +2491,7 @@ export default function ChatView({
     activeThread?.envMode,
     activeThread?.worktreePath,
     composerCommandPicker,
+    i18n,
     normalComposerMenuItems,
   ]);
   const composerMenuOpen = Boolean(composerTrigger || composerCommandPicker);
@@ -2551,7 +2566,9 @@ export default function ChatView({
     [handoffTargets],
   );
 
-  const handoffActionLabel = activeThread ? i18n._("Hand off thread") : i18n._("Create handoff thread");
+  const handoffActionLabel = activeThread
+    ? i18n._("Hand off thread")
+    : i18n._("Create handoff thread");
   const activeProviderStatus = useMemo(
     () => findProviderStatus(providerStatuses, selectedProvider, selectedProviderInstanceId),
     [selectedProvider, selectedProviderInstanceId, providerStatuses],
@@ -2690,9 +2707,11 @@ export default function ChatView({
       void api?.browser.open({ threadId, initialUrl: url }).catch((error) => {
         toastManager.add({
           type: "error",
-          title: "Could not open repository",
+          title: i18n._("Could not open repository"),
           description:
-            error instanceof Error ? error.message : "The in-app browser could not open GitHub.",
+            error instanceof Error
+              ? error.message
+              : i18n._("The in-app browser could not open GitHub."),
         });
       });
       if (onOpenBrowserUrl) {
@@ -2709,7 +2728,7 @@ export default function ChatView({
         }),
       });
     },
-    [navigate, onOpenBrowserUrl, threadId],
+    [i18n, navigate, onOpenBrowserUrl, threadId],
   );
   // Chat links offer the built-in review view only for repositories this project owns,
   // matching the Environment panel; any other pull request or issue falls back to the in-app
@@ -3687,14 +3706,14 @@ export default function ChatView({
     void onInterrupt().catch((error: unknown) => {
       toastManager.add({
         type: "error",
-        title: "Could not stop the current response",
+        title: i18n._("Could not stop the current response"),
         description:
           error instanceof Error
             ? error.message
-            : "The interrupt request failed. Try again in a moment.",
+            : i18n._("The interrupt request failed. Try again in a moment."),
       });
     });
-  }, [onInterrupt]);
+  }, [i18n, onInterrupt]);
 
   const onStopWorkflowRun = useCallback(async () => {
     const api = readNativeApi();
@@ -3988,14 +4007,14 @@ export default function ChatView({
       if (pendingUserInputs.length > 0) {
         toastManager.add({
           type: "error",
-          title: "Attach images after answering plan questions.",
+          title: i18n._("Attach images after answering plan questions."),
         });
         return;
       }
 
       enqueueComposerImages(files);
     },
-    [activeThreadId, enqueueComposerImages, isSidechatExpired, pendingUserInputs.length],
+    [activeThreadId, enqueueComposerImages, i18n, isSidechatExpired, pendingUserInputs.length],
   );
 
   const removeComposerImage = (imageId: string) => {
@@ -4009,7 +4028,7 @@ export default function ChatView({
       if (pendingUserInputs.length > 0) {
         toastManager.add({
           type: "error",
-          title: "Attach files after answering plan questions.",
+          title: i18n._("Attach files after answering plan questions."),
         });
         return;
       }
@@ -4032,6 +4051,7 @@ export default function ChatView({
     [
       activeThreadId,
       addComposerFilesToDraft,
+      i18n,
       isSidechatExpired,
       pendingUserInputs.length,
       setThreadError,
@@ -4149,8 +4169,8 @@ export default function ChatView({
       if (!mention) {
         toastManager.add({
           type: "error",
-          title: "Could not reference this chat",
-          description: "This chat is unavailable or cannot be mentioned here.",
+          title: i18n._("Could not reference this chat"),
+          description: i18n._("This chat is unavailable or cannot be mentioned here."),
         });
         return;
       }
@@ -4304,11 +4324,11 @@ export default function ChatView({
     } catch (error) {
       toastManager.add({
         type: "error",
-        title: "Could not create handoff thread",
+        title: i18n._("Could not create handoff thread"),
         description:
           error instanceof Error
             ? error.message
-            : "An error occurred while creating the handoff thread.",
+            : i18n._("An error occurred while creating the handoff thread."),
       });
     }
   });
@@ -4323,11 +4343,11 @@ export default function ChatView({
     } catch (error) {
       toastManager.add({
         type: "error",
-        title: "Could not hand off this thread",
+        title: i18n._("Could not hand off this thread"),
         description:
           error instanceof Error
             ? error.message
-            : "An error occurred while handing off the thread.",
+            : i18n._("An error occurred while handing off the thread."),
       });
     }
   });
@@ -4445,9 +4465,10 @@ export default function ChatView({
     const targetName = PROVIDER_DISPLAY_NAMES[selectedProvider] ?? selectedProvider;
     toastManager.add({
       type: "error",
-      title: `Cannot switch to ${targetName} yet`,
-      description:
+      title: i18n._("Cannot switch to {provider} yet", { provider: targetName }),
+      description: i18n._(
         "Wait for the current turn to finish and answer any pending request, then send again.",
+      ),
     });
     return false;
   });
@@ -5004,8 +5025,8 @@ export default function ChatView({
       if (!activeProject) {
         toastManager.add({
           type: "warning",
-          title: "Clear is unavailable",
-          description: "Open a project before starting a fresh thread.",
+          title: i18n._("Clear is unavailable"),
+          description: i18n._("Open a project before starting a fresh thread."),
         });
         return;
       }
@@ -5527,8 +5548,8 @@ export default function ChatView({
     }).catch((error) => {
       toastManager.add({
         type: "error",
-        title: "Failed to rename thread",
-        description: error instanceof Error ? error.message : "An error occurred.",
+        title: i18n._("Failed to rename thread"),
+        description: error instanceof Error ? error.message : i18n._("An error occurred."),
       });
       throw error;
     });
@@ -5536,7 +5557,7 @@ export default function ChatView({
     if (outcome === "empty") {
       toastManager.add({
         type: "warning",
-        title: "Thread title cannot be empty",
+        title: i18n._("Thread title cannot be empty"),
       });
       return;
     }
@@ -5724,10 +5745,10 @@ export default function ChatView({
           onClick={toggleDraftTemporary}
           title={
             isThreadTemporary
-              ? "Temporary chat — deleted when you leave. Click to keep it."
-              : "Make this a temporary chat (deleted when you leave)"
+              ? i18n._("Temporary chat — deleted when you leave. Click to keep it.")
+              : i18n._("Make this a temporary chat (deleted when you leave)")
           }
-          aria-label="Temporary chat"
+          aria-label={i18n._("Temporary chat")}
           className={cn(
             "ml-auto shrink-0 gap-1.5 whitespace-nowrap px-2 sm:px-2.5",
             COMPOSER_TOOLBAR_CAPSULE_HOVER_CLASS_NAME,
@@ -5736,7 +5757,7 @@ export default function ChatView({
           )}
         >
           <TemporaryThreadIcon className="size-3.5" />
-          <span className="sr-only sm:not-sr-only">Temporary</span>
+          <span className="sr-only sm:not-sr-only">{i18n._("Temporary")}</span>
         </Button>
       ) : null}
       {showEmptyLandingBranchToolbar && (isGitRepo || envMode === "worktree") ? (
@@ -5831,7 +5852,8 @@ export default function ChatView({
   const environmentPanelVisibleEffective =
     environmentPanelVisible && auxiliarySurface !== "project" && auxiliarySurface !== "library";
   const environmentAppliesContentInset =
-    !isEmbed && (environmentPanelVisibleEffective || projectPanelVisible || libraryPanelVisible) &&
+    !isEmbed &&
+    (environmentPanelVisibleEffective || projectPanelVisible || libraryPanelVisible) &&
     !environmentUsesFloatingOverlay;
   const environmentOverlayVariant = environmentUsesFloatingOverlay ? "floating" : "docked";
   const environmentInsetPx = environmentAppliesContentInset
@@ -5857,26 +5879,29 @@ export default function ChatView({
     : 0;
   const contentInsetRightPx =
     environmentInsetPx + previewInsetPx > 0 ? environmentInsetPx + previewInsetPx : undefined;
-  const environmentHeaderState = environmentEnabled && !isEmbed
-    ? {
-        open: environmentPanelVisibleEffective,
-        onOpenChange: setEnvironmentFromAuxiliary,
-      }
-    : null;
-  const projectHeaderState = projectPanelEnabled && !isEmbed
-    ? {
-        open: projectPanelVisible,
-        onOpenChange: setProjectFromAuxiliary,
-        attention:
-          activeProject === undefined ? false : projectPanelNeedsAttention.has(activeProject.id),
-      }
-    : null;
-  const libraryHeaderState = projectPanelEnabled && !isEmbed
-    ? {
-        open: libraryPanelVisible,
-        onOpenChange: setLibraryFromAuxiliary,
-      }
-    : null;
+  const environmentHeaderState =
+    environmentEnabled && !isEmbed
+      ? {
+          open: environmentPanelVisibleEffective,
+          onOpenChange: setEnvironmentFromAuxiliary,
+        }
+      : null;
+  const projectHeaderState =
+    projectPanelEnabled && !isEmbed
+      ? {
+          open: projectPanelVisible,
+          onOpenChange: setProjectFromAuxiliary,
+          attention:
+            activeProject === undefined ? false : projectPanelNeedsAttention.has(activeProject.id),
+        }
+      : null;
+  const libraryHeaderState =
+    projectPanelEnabled && !isEmbed
+      ? {
+          open: libraryPanelVisible,
+          onOpenChange: setLibraryFromAuxiliary,
+        }
+      : null;
   const showComposerLiveChangesHeader = latestTurnLive && activeTurnLiveDiffState.hasChanges;
   const showComposerActiveTaskListCard = Boolean(activeTaskList && !planSidebarOpen);
   const showComposerWorkflowRunCard = workflowRunState !== null;
@@ -6216,7 +6241,7 @@ export default function ChatView({
                   <div className={COMPOSER_COMMAND_MENU_FLOATING_WRAPPER_CLASS_NAME}>
                     {composerExtrasPanelOpen ? (
                       <ComposerExtrasPanel
-                          attachmentsOnly={isEmbed}
+                        attachmentsOnly={isEmbed}
                         panelId={COMPOSER_EXTRAS_PANEL_ID}
                         interactionMode={interactionMode}
                         supportsFastMode={composerTraitSelection.caps.supportsFastMode}
@@ -6234,7 +6259,7 @@ export default function ChatView({
                     ) : isLocalFolderBrowserOpen ? (
                       <ComposerLocalDirectoryMenu
                         mentionQuery={mentionTriggerQuery}
-                        rootLabel={localFolderBrowseRootPath ?? "Local folders unavailable"}
+                        rootLabel={localFolderBrowseRootPath ?? i18n._("Local folders unavailable")}
                         homeDir={serverConfigQuery.data?.homeDir ?? null}
                         onSelectEntry={(absolutePath) =>
                           handleSelectLocalDirectoryMention(absolutePath)
@@ -6267,7 +6292,9 @@ export default function ChatView({
                       role="status"
                     >
                       <LoaderCircleIcon className="size-3.5 animate-spin" />
-                      Optimizing {pendingComposerImageCount === 1 ? "image" : "images"}…
+                      {pendingComposerImageCount === 1
+                        ? i18n._("Optimizing image…")
+                        : i18n._("Optimizing images…")}
                     </div>
                   )}
                 {!isComposerApprovalState &&
@@ -6326,22 +6353,30 @@ export default function ChatView({
                     : {})}
                   placeholder={
                     isComposerApprovalState
-                      ? "Resolve this approval request to continue"
+                      ? i18n._("Resolve this approval request to continue")
                       : activePendingProgress
                         ? activePendingProgress.activeQuestion?.options.length === 0
-                          ? "Type your answer to continue"
-                          : "Type your own answer, or leave this blank to use the selected option"
+                          ? i18n._("Type your answer to continue")
+                          : i18n._(
+                              "Type your own answer, or leave this blank to use the selected option",
+                            )
                         : showPlanFollowUpPrompt && activeProposedPlan
-                          ? "Add feedback to refine the plan, or leave this blank to implement it"
+                          ? i18n._(
+                              "Add feedback to refine the plan, or leave this blank to implement it",
+                            )
                           : activeThread?.parentThreadId
-                            ? "Message this subagent while it works"
+                            ? i18n._("Message this subagent while it works")
                             : hasLiveTurn
-                              ? "Ask for follow-up changes"
+                              ? i18n._("Ask for follow-up changes")
                               : standaloneSidechatContext
-                                ? `Ask about this ${standaloneSidechatItemNoun}`
+                                ? standaloneSidechatItemNoun === "issue"
+                                  ? i18n._("Ask about this issue")
+                                  : i18n._("Ask about this pull request")
                                 : phase === "disconnected"
-                                  ? "Ask for follow-up changes or attach images"
-                                  : "Ask anything, @tag files/folders, or use / to show available commands"
+                                  ? i18n._("Ask for follow-up changes or attach images")
+                                  : i18n._(
+                                      "Ask anything, @tag files/folders, or use / to show available commands",
+                                    )
                   }
                   disabled={isComposerEditorDisabled}
                 />
@@ -6669,13 +6704,13 @@ export default function ChatView({
                       CHAT_COLUMN_FRAME_CLASS_NAME,
                     )}
                   >
-                    <SynaraLogo aria-label="Synara logo" className="size-10" />
+                    <SynaraLogo aria-label={i18n._("Synara logo")} className="size-10" />
                     <h2
                       data-testid="empty-landing-heading"
                       className="text-[26px] font-normal leading-[1.15] tracking-[-0.015em] text-foreground/95 sm:text-[30px]"
                     >
                       {isEmptyChatLanding ? (
-                        "What should we work on?"
+                        i18n._("What should we work on?")
                       ) : (
                         <>
                           What should we do in{" "}

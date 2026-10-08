@@ -3,6 +3,8 @@
 // Layer: Chat status presentation
 // Exports: ProviderHealthBanner
 
+import { useLingui } from "@lingui/react";
+import { localizeProviderStatusMessage } from "~/lib/providerStatusMessages";
 import { PROVIDER_DISPLAY_NAMES, type ServerProviderStatus } from "@synara/contracts";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "../ui/alert";
 import { Button } from "../ui/button";
@@ -27,24 +29,29 @@ export const ProviderHealthBanner = function ProviderHealthBanner({
   onDismiss?: () => void;
   status: ServerProviderStatus | null;
 }) {
+  const { i18n } = useLingui();
   if (!needsProviderSetup && (!status || status.status === "ready")) {
     return null;
   }
 
-  const providerLabelFallback = status && isProviderKind(status.provider)
-    ? PROVIDER_DISPLAY_NAMES[status.provider]
-    : status?.provider;
+  const providerLabelFallback =
+    status && isProviderKind(status.provider)
+      ? PROVIDER_DISPLAY_NAMES[status.provider]
+      : status?.provider;
   const providerLabel = status?.displayName?.trim() || providerLabelFallback || status?.provider;
-  const defaultMessage =
-    needsProviderSetup
-      ? "Install or sign in to at least one provider before starting an agent chat."
-      : status?.status === "error"
-      ? `${providerLabel} provider is unavailable.`
-      : `${providerLabel} provider has limited availability.`;
-  const message = needsProviderSetup ? defaultMessage : (status?.message ?? defaultMessage);
+  const defaultMessage = needsProviderSetup
+    ? i18n._("Install or sign in to at least one provider before starting an agent chat.")
+    : status?.status === "error"
+      ? i18n._("{provider} provider is unavailable.", { provider: providerLabel })
+      : i18n._("{provider} provider has limited availability.", { provider: providerLabel });
+  const message = needsProviderSetup
+    ? defaultMessage
+    : status?.message
+      ? localizeProviderStatusMessage(i18n, status.message)
+      : defaultMessage;
   const title = needsProviderSetup
-    ? "Set up an agent provider"
-    : `${providerLabel} provider status`;
+    ? i18n._("Set up an agent provider")
+    : i18n._("{provider} provider status", { provider: providerLabel });
   const isError = status?.status === "error";
   const Icon = isError ? CircleAlertIcon : TriangleAlertIcon;
 
@@ -66,14 +73,14 @@ export const ProviderHealthBanner = function ProviderHealthBanner({
           <AlertAction className={cn("items-center", !onConfigure && "absolute top-2 right-2")}>
             {onConfigure ? (
               <Button size="xs" variant="outline" onClick={onConfigure}>
-                Provider settings
+                {i18n._("Provider settings")}
               </Button>
             ) : null}
             {onDismiss ? (
               <IconButton
                 className="size-6 rounded-full text-[var(--notification-fg)]/65 hover:bg-[var(--notification-fg)]/10 hover:text-[var(--notification-fg)] focus-visible:ring-[var(--notification-fg)]/35 sm:size-6"
-                label="Dismiss provider status"
-                title="Dismiss provider status"
+                label={i18n._("Dismiss provider status")}
+                title={i18n._("Dismiss provider status")}
                 onClick={onDismiss}
               >
                 <XIcon className="size-3.5" />

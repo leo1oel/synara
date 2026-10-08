@@ -14,6 +14,8 @@ import { type PendingApproval } from "../../session-logic";
 import { cn } from "~/lib/utils";
 import { ComposerChoiceRow, type ComposerChoiceTone } from "./ComposerChoiceRow";
 import { COMPOSER_INPUT_SURFACE_CLASS_NAME } from "./composerPickerStyles";
+import type { MessageDescriptor } from "@lingui/core";
+import { msg } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";
 import { useLingui } from "@lingui/react";
 
@@ -39,8 +41,8 @@ type ParsedApproval = {
 
 type ApprovalAction = {
   decision: ProviderApprovalDecision;
-  label: string;
-  description: string;
+  label: MessageDescriptor;
+  description: MessageDescriptor;
   tone: ComposerChoiceTone;
 };
 
@@ -58,26 +60,26 @@ function formatToolParameterValue(value: unknown): string {
 const APPROVAL_ACTIONS: ReadonlyArray<ApprovalAction> = [
   {
     decision: "accept",
-    label: "Approve once",
-    description: "Allow just this request",
+    label: msg`Approve once`,
+    description: msg`Allow just this request`,
     tone: "primary",
   },
   {
     decision: "acceptForSession",
-    label: "Always allow this session",
-    description: "Don't ask again this session",
+    label: msg`Always allow this session`,
+    description: msg`Don't ask again this session`,
     tone: "neutral",
   },
   {
     decision: "decline",
-    label: "Decline",
-    description: "Reject and let the agent continue",
+    label: msg`Decline`,
+    description: msg`Reject and let the agent continue`,
     tone: "destructive",
   },
   {
     decision: "cancel",
-    label: "Cancel turn",
-    description: "Stop the current turn",
+    label: msg`Cancel turn`,
+    description: msg`Stop the current turn`,
     tone: "neutral",
   },
 ];
@@ -91,79 +93,80 @@ const WITHOUT_SESSION_APPROVAL = APPROVAL_ACTIONS.filter(
 // actions never covers taking the user's screen.
 const COMPUTER_SCOPES: Record<
   NonNullable<PendingApproval["approvalScope"]>,
-  { readonly prompt: string; readonly actions: ReadonlyArray<ApprovalAction> }
+  { readonly prompt: MessageDescriptor; readonly actions: ReadonlyArray<ApprovalAction> }
 > = {
   "computer-task": {
-    prompt: "Allow Computer for this task?",
+    prompt: msg`Allow Computer for this task?`,
     actions: WITHOUT_SESSION_APPROVAL.map((action) =>
       action.decision === "accept"
         ? {
             ...action,
-            label: "Allow Computer for this task",
-            description:
-              "Continue routine desktop actions until this response ends. Stop cancels access. Clipboard reads still ask separately.",
+            label: msg`Allow Computer for this task`,
+            description: msg`Continue routine desktop actions until this response ends. Stop cancels access. Clipboard reads still ask separately.`,
           }
         : action.decision === "decline"
-          ? { ...action, description: "Stop desktop for this turn, agent continues without tools" }
+          ? {
+              ...action,
+              description: msg`Stop desktop for this turn, agent continues without tools`,
+            }
           : {
               ...action,
-              label: "Cancel this request",
-              description: "Deny this request; use Stop to end the agent turn.",
+              label: msg`Cancel this request`,
+              description: msg`Deny this request; use Stop to end the agent turn.`,
             },
     ),
   },
   "computer-foreground": {
-    prompt: "Show this on your screen?",
+    prompt: msg`Show this on your screen?`,
     actions: WITHOUT_SESSION_APPROVAL.map((action) =>
       action.decision === "accept"
         ? {
             ...action,
-            label: "Show on screen for this task",
-            description: "Computer may bring windows to the front until this response ends.",
+            label: msg`Show on screen for this task`,
+            description: msg`Computer may bring windows to the front until this response ends.`,
           }
         : action.decision === "decline"
           ? {
               ...action,
-              label: "Keep it in the background",
-              description: "No window is raised; the agent continues in the background",
+              label: msg`Keep it in the background`,
+              description: msg`No window is raised; the agent continues in the background`,
             }
           : {
               ...action,
-              label: "Cancel this request",
-              description: "Use Stop to end the agent turn.",
+              label: msg`Cancel this request`,
+              description: msg`Use Stop to end the agent turn.`,
             },
     ),
   },
   "device-task": {
-    prompt: "Allow Device for this task?",
+    prompt: msg`Allow Device for this task?`,
     actions: WITHOUT_SESSION_APPROVAL.map((action) =>
       action.decision === "accept"
         ? {
             ...action,
-            label: "Allow Device for this task",
-            description:
-              "Continue routine device actions until this response ends. Stop cancels access.",
+            label: msg`Allow Device for this task`,
+            description: msg`Continue routine device actions until this response ends. Stop cancels access.`,
           }
         : action.decision === "decline"
           ? {
               ...action,
-              description: "Stop device control for this turn, agent continues without tools",
+              description: msg`Stop device control for this turn, agent continues without tools`,
             }
           : {
               ...action,
-              label: "Cancel this request",
-              description: "Use Stop to end the agent turn.",
+              label: msg`Cancel this request`,
+              description: msg`Use Stop to end the agent turn.`,
             },
     ),
   },
 };
 
-const KIND_PROMPT: Record<PendingApproval["requestKind"], string> = {
-  command: "Approve this command?",
-  "file-read": "Approve reading this file?",
-  "file-change": "Approve this file change?",
-  permissions: "Grant these permissions?",
-  tool: "Approve this tool call?",
+const KIND_PROMPT: Record<PendingApproval["requestKind"], MessageDescriptor> = {
+  command: msg`Approve this command?`,
+  "file-read": msg`Approve reading this file?`,
+  "file-change": msg`Approve this file change?`,
+  permissions: msg`Grant these permissions?`,
+  tool: msg`Approve this tool call?`,
 };
 
 export const ComposerPendingApprovalPanel = function ComposerPendingApprovalPanel({
@@ -172,6 +175,7 @@ export const ComposerPendingApprovalPanel = function ComposerPendingApprovalPane
   isResponding,
   onRespond,
 }: ComposerPendingApprovalPanelProps) {
+  const { i18n } = useLingui();
   const parsed = parseApprovalDetail(approval.detail);
   const requestId = approval.requestId;
   const requestKey = pendingRequestInstanceKey(requestId, approval.lifecycleGeneration);
@@ -229,7 +233,7 @@ export const ComposerPendingApprovalPanel = function ComposerPendingApprovalPane
     >
       <div className="flex items-start justify-between gap-3">
         <p className="min-w-0 text-ui-lg font-medium leading-snug text-foreground/90">
-          {computerScope?.prompt ?? KIND_PROMPT[approval.requestKind]}
+          {i18n._(computerScope?.prompt ?? KIND_PROMPT[approval.requestKind])}
           {!computerScope && (approval.toolName ?? parsed.tool) ? (
             <span className="ml-1.5 text-ui-sm font-normal text-muted-foreground/50">
               {approval.toolName ?? parsed.tool}
@@ -253,8 +257,8 @@ export const ComposerPendingApprovalPanel = function ComposerPendingApprovalPane
           <ComposerChoiceRow
             key={action.decision}
             shortcut={index + 1}
-            label={action.label}
-            description={action.description}
+            label={i18n._(action.label)}
+            description={i18n._(action.description)}
             tone={action.tone}
             disabled={isResponding}
             onSelect={() => respondOnce(action)}

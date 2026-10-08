@@ -10,6 +10,7 @@ import {
   readEmbedMode,
   readLatticeConfirmationMessage,
 } from "./embedMode";
+import { i18n } from "./i18n";
 import { notifyNativeSurfaceOcclusionChange } from "./lib/nativeSurfaceOcclusion";
 import { ELEVATED_HOVER_SURFACE_CLASS_NAME } from "./surfaceStyles";
 
@@ -136,7 +137,7 @@ export function showConfirmDialogFallback(message: string): Promise<boolean> {
     // Cancel button (outline style)
     const cancelBtn = document.createElement("button");
     cancelBtn.type = "button";
-    cancelBtn.textContent = "Cancel";
+    cancelBtn.textContent = i18n._("Cancel");
     cancelBtn.className =
       "inline-flex h-8 min-w-20 cursor-pointer items-center justify-center whitespace-nowrap rounded-md border border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] px-3 text-ui-lg font-medium text-[var(--color-text-foreground)] outline-none focus-visible:ring-1 focus-visible:ring-ring/60 " +
       ELEVATED_HOVER_SURFACE_CLASS_NAME;
@@ -145,7 +146,7 @@ export function showConfirmDialogFallback(message: string): Promise<boolean> {
     // Confirm button mirrors the chat send action's foreground-on-background treatment.
     const confirmBtn = document.createElement("button");
     confirmBtn.type = "button";
-    confirmBtn.textContent = "Confirm";
+    confirmBtn.textContent = i18n._("Confirm");
     confirmBtn.className =
       "inline-flex h-8 min-w-20 cursor-pointer items-center justify-center whitespace-nowrap rounded-md border border-foreground bg-foreground px-3 text-ui-lg font-medium text-background outline-none transition-all duration-150 hover:scale-[1.02] hover:bg-foreground/92 focus-visible:ring-1 focus-visible:ring-ring/60";
 

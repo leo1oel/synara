@@ -7,16 +7,17 @@
 // Exports: DraftAttachmentWarningIcon, DRAFT_ATTACHMENT_WARNING_LABEL,
 //   DRAFT_ATTACHMENT_WARNING_DESCRIPTION
 
+import { msg } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react";
 import { forwardRef, type ComponentPropsWithoutRef } from "react";
 
 import { CircleAlertIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 
 /** Accessible label on the warning glyph. */
-export const DRAFT_ATTACHMENT_WARNING_LABEL = "Draft attachment may not persist";
-/** Explanatory copy shown in the hover tooltip / detail row. */
-export const DRAFT_ATTACHMENT_WARNING_DESCRIPTION =
-  "Draft attachment is kept in memory and may be lost on navigation.";
+export const DRAFT_ATTACHMENT_WARNING_LABEL = msg`Draft attachment may not persist`;
+/** Explanatory copy shown in the hover tooltip / detail row (render with `i18n._`). */
+export const DRAFT_ATTACHMENT_WARNING_DESCRIPTION = msg`Draft attachment is kept in memory and may be lost on navigation.`;
 
 // `inline` sits in a card's detail row; `badge` floats over an image thumbnail
 // (opaque surface + shadow so it stays legible on any preview).
@@ -32,12 +33,13 @@ export const DraftAttachmentWarningIcon = forwardRef<
   DraftAttachmentWarningIconProps
 >(function DraftAttachmentWarningIcon({ variant: variantProp, className, ...rest }, ref) {
   const variant = variantProp ?? "inline";
+  const { i18n } = useLingui();
   return (
     <span
       ref={ref}
       {...rest}
       role="img"
-      aria-label={DRAFT_ATTACHMENT_WARNING_LABEL}
+      aria-label={i18n._(DRAFT_ATTACHMENT_WARNING_LABEL)}
       className={cn(
         "inline-flex shrink-0 items-center justify-center rounded-full text-amber-600",
         variant === "badge" ? "size-5 bg-[var(--composer-surface)] shadow-sm" : "size-4",

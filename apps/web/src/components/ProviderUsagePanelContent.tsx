@@ -4,6 +4,7 @@
 // The limit rows are the point of the popover, so reset credits and usage lines
 // sit behind a "Details" toggle whose state persists in app settings.
 
+import { localizeProviderStatusMessage } from "~/lib/providerStatusMessages";
 import type { ProviderKind, ServerCodexResetCredits } from "@synara/contracts";
 import { providerUsageDisplayName, providerUsageLabel } from "@synara/shared/providerUsage";
 import { useLingui } from "@lingui/react";
@@ -118,7 +119,9 @@ export function ProviderUsagePanelContent(props: {
               </p>
             ) : (
               <p className="text-chat-meta leading-relaxed text-muted-foreground">
-                {props.emptyMessage ??
+                {(props.emptyMessage
+                  ? localizeProviderStatusMessage(i18n, props.emptyMessage)
+                  : null) ??
                   (props.provider
                     ? i18n._("No local usage data was found yet for the selected provider.")
                     : i18n._("No local usage data was found yet."))}

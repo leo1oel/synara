@@ -1,3 +1,4 @@
+import { useLingui } from "@lingui/react";
 import {
   type ContextWindowSnapshot,
   deriveContextWindowMeterDisplay,
@@ -27,6 +28,7 @@ export function ContextWindowMeter(props: {
   const [open, setOpen] = useState(false);
   const nowMs = useNowMs(open && usage.claudeCache != null, 10_000);
   const display = deriveContextWindowMeterDisplay(usage);
+  const { i18n } = useLingui();
   const radius = 6;
   const circumference = 2 * Math.PI * radius;
   const dashOffset = circumference - (display.normalizedPercentage / 100) * circumference;
@@ -47,7 +49,15 @@ export function ContextWindowMeter(props: {
           <button
             type="button"
             className="group inline-flex shrink-0 items-center justify-center rounded-full p-0.5 transition-opacity hover:opacity-80"
-            aria-label={display.ariaLabel}
+            aria-label={
+              display.usedPercentageLabel
+                ? i18n._("Context window {percent} used", {
+                    percent: display.usedPercentageLabel,
+                  })
+                : i18n._("Context window {tokens} tokens used", {
+                    tokens: display.tokenUsageLabel,
+                  })
+            }
           >
             <span className="relative flex h-4 w-4 items-center justify-center">
               <svg
@@ -83,10 +93,14 @@ export function ContextWindowMeter(props: {
       />
       <PopoverPopup tooltipStyle side="top" align="end" className="w-max max-w-none px-3 py-2">
         <div className="space-y-1.5 leading-tight">
-          <div className="text-ui-sm font-medium text-muted-foreground">Context window</div>
+          <div className="text-ui-sm font-medium text-muted-foreground">
+            {i18n._("Context window")}
+          </div>
           {pendingWindowLabel ? (
             <div className="text-ui leading-snug text-muted-foreground">
-              Current session: {activeWindowLabel ?? "Unknown"}
+              {i18n._("Current session: {window}", {
+                window: activeWindowLabel ?? i18n._("Unknown"),
+              })}
             </div>
           ) : null}
           {display.usedPercentageLabel ? (
@@ -97,50 +111,63 @@ export function ContextWindowMeter(props: {
                   <span className="mx-1">⋅</span>
                   <span>{display.tokenUsageLabel}</span>
                   <span>/</span>
-                  <span>{formatContextWindowTokens(usage.maxTokens)} context used</span>
+                  <span>
+                    {i18n._("{tokens} context used", {
+                      tokens: formatContextWindowTokens(usage.maxTokens),
+                    })}
+                  </span>
                 </>
               ) : (
-                <span className="ml-1">context used</span>
+                <span className="ml-1">{i18n._("context used")}</span>
               )}
             </div>
           ) : (
             <div className="text-ui leading-snug text-foreground">
-              {display.tokenUsageLabel} tokens used so far
+              {i18n._("{tokens} tokens used so far", { tokens: display.tokenUsageLabel })}
             </div>
           )}
           {usage.maxTokens !== null ? (
             <div className="text-ui leading-snug text-muted-foreground">
-              Active context limit: {formatContextWindowTokens(usage.maxTokens)} tokens
+              {i18n._("Active context limit: {tokens} tokens", {
+                tokens: formatContextWindowTokens(usage.maxTokens),
+              })}
             </div>
           ) : null}
           {props.showClaudeCache && activeWindowLabel ? (
             <div className="max-w-72 space-y-1 text-ui leading-snug text-muted-foreground">
-              <div>Auto-compact target: {activeWindowLabel}</div>
+              <div>{i18n._("Auto-compact target: {window}", { window: activeWindowLabel })}</div>
               <p className="leading-relaxed">
-                The session's auto-compact target can be lower than the model's supported window.
+                {i18n._(
+                  "The session's auto-compact target can be lower than the model's supported window.",
+                )}
               </p>
             </div>
           ) : null}
           {pendingWindowLabel ? (
             <div className="text-ui leading-snug text-muted-foreground">
-              Next turn: {pendingWindowLabel}
+              {i18n._("Next turn: {window}", { window: pendingWindowLabel })}
             </div>
           ) : null}
           {(usage.totalProcessedTokens ?? null) !== null &&
           (usage.totalProcessedTokens ?? 0) > usage.usedTokens ? (
             <div className="text-ui leading-snug text-muted-foreground">
-              {usage.tokenAccountingVersion === 1 ? "Estimated total processed" : "Total processed"}
-              : {formatContextWindowTokens(usage.totalProcessedTokens ?? null)} tokens
+              {usage.tokenAccountingVersion === 1
+                ? i18n._("Estimated total processed: {tokens} tokens", {
+                    tokens: formatContextWindowTokens(usage.totalProcessedTokens ?? null),
+                  })
+                : i18n._("Total processed: {tokens} tokens", {
+                    tokens: formatContextWindowTokens(usage.totalProcessedTokens ?? null),
+                  })}
             </div>
           ) : null}
           {usage.compactsAutomatically ? (
             <div className="text-ui leading-snug text-muted-foreground">
-              Automatically compacts its context when needed.
+              {i18n._("Automatically compacts its context when needed.")}
             </div>
           ) : null}
           {cumulativeCostUsd !== null && cumulativeCostUsd !== undefined ? (
             <div className="text-ui leading-snug text-muted-foreground">
-              Session cost: {formatCostUsd(cumulativeCostUsd)}
+              {i18n._("Session cost: {cost}", { cost: formatCostUsd(cumulativeCostUsd) })}
             </div>
           ) : null}
           {usage.claudeCache || props.showClaudeCache ? (
@@ -159,11 +186,15 @@ export function ContextWindowMeter(props: {
                   void props.compactAction?.onCompact();
                 }}
               >
-                {props.compactAction.isSubmitting ? "Starting compaction..." : "Compact now"}
+                {props.compactAction.isSubmitting
+                  ? i18n._("Starting compaction...")
+                  : i18n._("Compact now")}
               </Button>
               <p className="text-ui leading-relaxed text-muted-foreground">
                 {props.compactAction.disabledReason ??
-                  "Compaction processes this conversation and consumes usage. Later turns use its summary."}
+                  i18n._(
+                    "Compaction processes this conversation and consumes usage. Later turns use its summary.",
+                  )}
               </p>
             </div>
           ) : null}

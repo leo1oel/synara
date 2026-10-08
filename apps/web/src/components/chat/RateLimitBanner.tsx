@@ -3,6 +3,7 @@
 // Layer: Chat status presentation
 // Exports: RateLimitBanner and rate-limit derivation helpers.
 
+import { i18n } from "~/i18n";
 import type { OrchestrationThreadActivity } from "@synara/contracts";
 import { Alert, AlertAction, AlertDescription } from "../ui/alert";
 import { IconButton } from "../ui/icon-button";
@@ -77,8 +78,8 @@ export const RateLimitBanner = function RateLimitBanner({
         {onDismiss ? (
           <AlertAction>
             <IconButton
-              label="Dismiss rate limit status"
-              title="Dismiss rate limit status"
+              label={i18n._("Dismiss rate limit status")}
+              title={i18n._("Dismiss rate limit status")}
               onClick={onDismiss}
             >
               <XIcon className="size-3.5" />

@@ -8,6 +8,8 @@ import {
   type ProviderPluginDescriptor,
   type ProviderSkillDescriptor,
 } from "@synara/contracts";
+import type { I18n } from "@lingui/core";
+import { useLingui } from "@lingui/react";
 import { type ReactNode } from "react";
 import { type ComposerTriggerKind } from "../../composer-logic";
 import { type ComposerSlashCommand } from "../../composerSlashCommands";
@@ -47,47 +49,66 @@ function humanizeProviderCommandName(command: string): string {
 }
 
 function commandMenuTitle(
+  i18n: I18n,
   item: Extract<ComposerCommandItem, { type: "slash-command" | "provider-native-command" }>,
 ): string {
   switch (item.command) {
     case "clear":
-      return "Clear";
+      return i18n._("Clear");
     case "compact":
-      return "Compact Context";
+      return i18n._("Compact Context");
     case "model":
-      return "Model";
+      return i18n._("Model");
     case "fast":
-      return "Fast Mode";
+      return i18n._("Fast Mode");
     case "plan":
-      return "Plan Mode";
+      return i18n._("Plan Mode");
     case "debug":
-      return "Debug Mode";
+      return i18n._("Debug Mode");
     case "default":
-      return "Default Mode";
+      return i18n._("Default Mode");
     case "review":
-      return "Code Review";
+      return i18n._("Code Review");
     case "fork":
-      return "Fork";
+      return i18n._("Fork");
     case "side":
-      return "Sidechat";
+      return i18n._("Sidechat");
     case "status":
-      return "Status";
+      return i18n._("Status");
     case "subagents":
-      return "Subagents";
+      return i18n._("Subagents");
     case "feedback":
-      return "Feedback Synara";
+      return i18n._("Feedback Synara");
     default:
       return humanizeProviderCommandName(item.command);
   }
 }
 
-function commandMenuTrailingMeta(item: ComposerCommandItem): string | null {
+function localizeSkillScope(i18n: I18n, scope: string | undefined): string {
+  switch (scope?.trim().toLowerCase() ?? "") {
+    case "":
+    case "personal":
+      return i18n._("Personal");
+    case "project":
+      return i18n._("Project");
+    case "user":
+      return i18n._("User");
+    case "system":
+      return i18n._("System");
+    case "plugin":
+      return i18n._("Plugin");
+    default:
+      return formatSkillScope(scope);
+  }
+}
+
+function commandMenuTrailingMeta(i18n: I18n, item: ComposerCommandItem): string | null {
   if (item.type === "agent") {
-    return "delegate task to subagent";
+    return i18n._("delegate task to subagent");
   }
 
   if (item.type === "plugin") {
-    return "Plugin";
+    return i18n._("Plugin");
   }
 
   if (item.type === "thread") {
@@ -95,15 +116,15 @@ function commandMenuTrailingMeta(item: ComposerCommandItem): string | null {
   }
 
   if (item.type === "local-root") {
-    return "Local";
+    return i18n._("Local");
   }
 
   if (item.type === "skill") {
-    return formatSkillScope(item.skill.scope);
+    return localizeSkillScope(i18n, item.skill.scope);
   }
 
   if (item.type === "model") {
-    return "Model";
+    return i18n._("Model");
   }
 
   if (item.type === "slash-command" || item.type === "provider-native-command") {
@@ -119,14 +140,62 @@ function commandMenuTrailingMeta(item: ComposerCommandItem): string | null {
   return null;
 }
 
-function commandMenuSecondaryText(item: ComposerCommandItem): string | null {
+/** Built-in command descriptions, translated here so the shared definitions stay plain data. */
+function localizedSlashCommandDescription(i18n: I18n, command: string): string | null {
+  switch (command) {
+    case "clear":
+      return i18n._("Start a fresh thread and clear the current conversation context");
+    case "compact":
+      return i18n._("Compact the current thread context to free space");
+    case "model":
+      return i18n._("Switch response model for this thread");
+    case "plan":
+      return i18n._("Switch this thread into plan mode");
+    case "debug":
+      return i18n._("Switch this thread into evidence-first debug mode");
+    case "default":
+      return i18n._("Switch this thread back to normal chat mode");
+    case "review":
+      return i18n._("Start a code review for current changes");
+    case "fork":
+      return i18n._("Fork this thread into local or a new worktree");
+    case "side":
+      return i18n._("Open a guarded Side from this thread, optionally on another provider");
+    case "status":
+      return i18n._("Show context usage and rate-limit status");
+    case "subagents":
+      return i18n._("Insert a prompt that asks the assistant to delegate work");
+    case "computer-use":
+      return i18n._("Use Synara Computer for this request only");
+    case "fast":
+      return i18n._("Turn fast mode on or off for this thread");
+    case "export":
+      return i18n._("Download this thread as a ZIP archive (thread.json + transcript.md)");
+    case "goal":
+      return i18n._("Set, edit, pause, resume, or clear this thread's persistent goal");
+    case "rename":
+      return i18n._("Regenerate this thread title, or set an exact title");
+    case "feedback":
+      return i18n._("Send feedback to the Synara team");
+    case "automation":
+      return i18n._("Create a scheduled automation from this prompt");
+    default:
+      return null;
+  }
+}
+
+function commandMenuSecondaryText(i18n: I18n, item: ComposerCommandItem): string | null {
   // The menu is driven from the composer, so focus never reaches the warning icon:
   // the row itself has to say why the command will not work.
   if (item.type === "provider-native-command" && item.notice) {
     return item.notice.summary;
   }
 
-  if (item.type === "slash-command" || item.type === "provider-native-command") {
+  if (item.type === "slash-command") {
+    return localizedSlashCommandDescription(i18n, item.command) ?? item.description;
+  }
+
+  if (item.type === "provider-native-command") {
     return item.description;
   }
 
@@ -353,6 +422,31 @@ function CommandNoticeBadge(props: { notice: string }) {
 const BROWSABLE_MENTION_GROUP_IDS = new Set(["files", "papers"]);
 const BROWSABLE_MENTION_GROUP_ROW_CAP = 4;
 
+function localizeGroupLabel(i18n: I18n, group: ComposerCommandGroupModel): string | null {
+  switch (group.id) {
+    case "files":
+      return i18n._("Files");
+    case "papers":
+      return i18n._("Papers");
+    case "plugins":
+      return i18n._("Plugins");
+    case "chats":
+      return i18n._("Chats");
+    case "local":
+      return i18n._("Local");
+    case "subagents":
+      return i18n._("Subagents");
+    case "built-in":
+      return i18n._("Built-in");
+    case "provider":
+      return i18n._("Provider");
+    case "skills":
+      return i18n._("Skills");
+    default:
+      return group.label;
+  }
+}
+
 export function ComposerCommandMenu(props: {
   items: ComposerCommandItem[];
   resolvedTheme: "light" | "dark";
@@ -364,6 +458,7 @@ export function ComposerCommandMenu(props: {
   onHighlightedItemChange: (itemId: string | null) => void;
   onSelect: (item: ComposerCommandItem) => void;
 }) {
+  const { i18n } = useLingui();
   const groups = groupCommandItems(
     props.items,
     props.triggerKind,
@@ -375,28 +470,28 @@ export function ComposerCommandMenu(props: {
     // their height so Plugins, Chats, Local, and Subagents stay in view.
     label:
       group.label && BROWSABLE_MENTION_GROUP_IDS.has(group.id)
-        ? `${group.label} · ${group.items.length}`
-        : group.label,
+        ? `${localizeGroupLabel(i18n, group)} · ${group.items.length}`
+        : localizeGroupLabel(i18n, group),
     ...(BROWSABLE_MENTION_GROUP_IDS.has(group.id) &&
     group.items.length > BROWSABLE_MENTION_GROUP_ROW_CAP
-      ? { boundedViewport: true, labelTrailing: "Scroll to browse" }
+      ? { boundedViewport: true, labelTrailing: i18n._("Scroll to browse") }
       : {}),
     rows: group.items.map((item) => ({
       id: item.id,
       icon: commandMenuItemGlyph(item, props.resolvedTheme),
       title:
         item.type === "slash-command" || item.type === "provider-native-command"
-          ? commandMenuTitle(item)
+          ? commandMenuTitle(i18n, item)
           : item.label,
-      secondary: commandMenuSecondaryText(item),
+      secondary: commandMenuSecondaryText(i18n, item),
       trailing:
         item.type === "provider-native-command" && item.notice ? (
           <span className="inline-flex items-center gap-1.5">
-            {commandMenuTrailingMeta(item)}
+            {commandMenuTrailingMeta(i18n, item)}
             <CommandNoticeBadge notice={item.notice.detail} />
           </span>
         ) : (
-          commandMenuTrailingMeta(item)
+          commandMenuTrailingMeta(i18n, item)
         ),
     })),
   }));
@@ -419,9 +514,11 @@ export function ComposerCommandMenu(props: {
         showFileSearchHint ? (
           /* This footer is informational copy, not a selectable result group. */
           <div className="pt-0.5 pb-2">
-            <p className={cn(COMPOSER_MENU_PANEL_GROUP_LABEL_CLASS_NAME, "px-2 py-0")}>Files</p>
+            <p className={cn(COMPOSER_MENU_PANEL_GROUP_LABEL_CLASS_NAME, "px-2 py-0")}>
+              {i18n._("Files")}
+            </p>
             <p className="px-2 pt-0.5 text-ui-sm text-muted-foreground/55">
-              Type to search for files
+              {i18n._("Type to search for files")}
             </p>
           </div>
         ) : null
@@ -438,16 +535,16 @@ export function ComposerCommandMenu(props: {
           >
             {props.isLoading
               ? props.triggerKind === "mention"
-                ? "Searching mentions..."
+                ? i18n._("Searching mentions...")
                 : props.triggerKind === "skill"
-                  ? "Loading skills..."
-                  : "Loading commands..."
+                  ? i18n._("Loading skills...")
+                  : i18n._("Loading commands...")
               : (props.emptyStateText ??
                 (props.triggerKind === "mention"
-                  ? "No matching plugin, chat, or file."
+                  ? i18n._("No matching plugin, chat, or file.")
                   : props.triggerKind === "skill"
-                    ? "No matching skill."
-                    : "No matching command."))}
+                    ? i18n._("No matching skill.")
+                    : i18n._("No matching command.")))}
           </p>
         ) : null
       }

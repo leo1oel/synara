@@ -3,6 +3,7 @@
 // Layer: Chat composer presentation
 // Depends on: live waveform samples and caller-owned record/cancel/send actions.
 
+import { i18n } from "~/i18n";
 import { useEffect, useRef, useState } from "react";
 
 import { Loader2Icon, XIcon } from "~/lib/icons";
@@ -96,7 +97,7 @@ export function ComposerVoiceRecorderBar(props: ComposerVoiceRecorderBarProps) {
           className="flex shrink-0 items-center gap-1.5 text-ui-sm leading-snug text-zinc-500 dark:text-zinc-400"
         >
           <Loader2Icon aria-hidden="true" className="size-3 animate-spin" />
-          Waiting for microphone…
+          {i18n._("Waiting for microphone…")}
         </span>
       ) : (
         <span className="shrink-0 text-ui leading-snug font-medium tabular-nums tracking-[0.02em] text-zinc-500 dark:text-zinc-400">
@@ -107,7 +108,11 @@ export function ComposerVoiceRecorderBar(props: ComposerVoiceRecorderBarProps) {
       <button
         type="button"
         className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-zinc-200/80 text-zinc-700 transition-colors hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/10 dark:text-zinc-100 dark:hover:bg-white/15 sm:h-7 sm:w-7"
-        aria-label={props.isTranscribing ? "Transcribing voice note" : "Cancel voice recording"}
+        aria-label={
+          props.isTranscribing
+            ? i18n._("Transcribing voice note")
+            : i18n._("Cancel voice recording")
+        }
         disabled={props.disabled || props.isTranscribing}
         onClick={props.onDiscard}
       >
@@ -123,7 +128,9 @@ export function ComposerVoiceRecorderBar(props: ComposerVoiceRecorderBarProps) {
         variant="prominent"
         size="icon-xs"
         className="size-7 rounded-full sm:size-7"
-        aria-label={props.isTranscribing ? "Transcribing voice note" : "Stop voice recording"}
+        aria-label={
+          props.isTranscribing ? i18n._("Transcribing voice note") : i18n._("Stop voice recording")
+        }
         disabled={props.disabled || props.isTranscribing}
         onClick={props.onStop}
       >

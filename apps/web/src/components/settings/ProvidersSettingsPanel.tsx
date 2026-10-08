@@ -2,6 +2,10 @@
 // Purpose: Own provider picker, update, and CLI installation settings workflows.
 // Layer: Settings panel
 
+import type { MessageDescriptor } from "@lingui/core";
+import { msg } from "@lingui/core/macro";
+import { Trans } from "@lingui/react/macro";
+import { i18n } from "~/i18n";
 import {
   DEFAULT_CODEX_ACCOUNT_ID,
   PROVIDER_DISPLAY_NAMES,
@@ -162,22 +166,22 @@ type ProviderInstallBooleanKey = "claudeEnableArtifacts" | "openCodeExperimental
 type ProviderInstallTextField = {
   readonly kind: "text";
   readonly settingsKey: ProviderInstallTextKey;
-  readonly label: string;
-  readonly placeholder: string;
+  readonly label: MessageDescriptor;
+  readonly placeholder: MessageDescriptor;
   readonly description: ReactNode;
 };
 type ProviderInstallPasswordField = {
   readonly kind: "password";
   readonly settingsKey: ProviderInstallPasswordKey;
   readonly configuredKey: ProviderInstallPasswordConfiguredKey;
-  readonly label: string;
-  readonly placeholder: string;
+  readonly label: MessageDescriptor;
+  readonly placeholder: MessageDescriptor;
   readonly description: ReactNode;
 };
 type ProviderInstallBooleanField = {
   readonly kind: "boolean";
   readonly settingsKey: ProviderInstallBooleanKey;
-  readonly label: string;
+  readonly label: MessageDescriptor;
   readonly description: ReactNode;
 };
 type ProviderInstallField =
@@ -186,7 +190,7 @@ type ProviderInstallField =
   | ProviderInstallBooleanField;
 type ProviderInstallSettings = {
   readonly provider: ProviderKind;
-  readonly docs: ReadonlyArray<{ readonly label: string; readonly href: string }>;
+  readonly docs: ReadonlyArray<{ readonly label: MessageDescriptor; readonly href: string }>;
   readonly fields: readonly ProviderInstallField[];
 };
 
@@ -200,67 +204,70 @@ const PROVIDER_INSTALL_SETTINGS: readonly ProviderInstallSettings[] = [
   {
     provider: "codex",
     docs: [
-      { label: "Install", href: "https://help.openai.com/en/articles/11096431" },
-      { label: "Update", href: "https://help.openai.com/en/articles/11096431" },
-      { label: "Config", href: "https://github.com/openai/codex/blob/main/docs/config.md" },
+      { label: msg`Install`, href: "https://help.openai.com/en/articles/11096431" },
+      { label: msg`Update`, href: "https://help.openai.com/en/articles/11096431" },
+      { label: msg`Config`, href: "https://github.com/openai/codex/blob/main/docs/config.md" },
     ],
     fields: [
       {
         kind: "text",
         settingsKey: "codexBinaryPath",
-        label: "Codex binary path",
-        placeholder: "Codex binary path",
+        label: msg`Codex binary path`,
+        placeholder: msg`Codex binary path`,
         description: (
-          <>
+          <Trans>
             Leave blank to use <code>codex</code> from your PATH.
-          </>
+          </Trans>
         ),
       },
       {
         kind: "text",
         settingsKey: "codexHomePath",
-        label: "CODEX_HOME path",
-        placeholder: "CODEX_HOME",
-        description: "Optional custom Codex home and config directory.",
+        label: msg`CODEX_HOME path`,
+        placeholder: msg`CODEX_HOME`,
+        description: <Trans>Optional custom Codex home and config directory.</Trans>,
       },
     ],
   },
   {
     provider: "claudeAgent",
     docs: [
-      { label: "Install", href: "https://code.claude.com/docs/en/installation" },
-      { label: "Update", href: "https://code.claude.com/docs/en/installation#update-claude-code" },
-      { label: "Config", href: "https://code.claude.com/docs/en/settings" },
+      { label: msg`Install`, href: "https://code.claude.com/docs/en/installation" },
+      {
+        label: msg`Update`,
+        href: "https://code.claude.com/docs/en/installation#update-claude-code",
+      },
+      { label: msg`Config`, href: "https://code.claude.com/docs/en/settings" },
     ],
     fields: [
       {
         kind: "text",
         settingsKey: "claudeBinaryPath",
-        label: "Claude binary path",
-        placeholder: "Claude binary path",
+        label: msg`Claude binary path`,
+        placeholder: msg`Claude binary path`,
         description: (
-          <>
+          <Trans>
             Leave blank to use <code>claude</code> from your PATH.
-          </>
+          </Trans>
         ),
       },
       {
         kind: "text",
         settingsKey: "claudeHomePath",
-        label: "Claude HOME path",
-        placeholder: "Claude HOME",
-        description: "Optional HOME directory for this Claude account.",
+        label: msg`Claude HOME path`,
+        placeholder: msg`Claude HOME`,
+        description: <Trans>Optional HOME directory for this Claude account.</Trans>,
       },
       {
         kind: "boolean",
         settingsKey: "claudeEnableArtifacts",
-        label: "Artifacts, /design and /slides",
+        label: msg`Artifacts, /design and /slides`,
         description: (
-          <>
+          <Trans>
             Claude Code keeps Artifacts off in embedded sessions. Turn this on so{" "}
             <code>/design</code> and <code>/slides</code> publish to claude.ai. Needs a claude.ai
             login on a Pro, Max, Team or Enterprise plan, and applies to new sessions.
-          </>
+          </Trans>
         ),
       },
     ],
@@ -268,49 +275,51 @@ const PROVIDER_INSTALL_SETTINGS: readonly ProviderInstallSettings[] = [
   {
     provider: "cursor",
     docs: [
-      { label: "Install", href: "https://docs.cursor.com/en/cli/installation" },
-      { label: "Update", href: "https://docs.cursor.com/en/cli/installation#updates" },
-      { label: "Config", href: "https://docs.cursor.com/en/cli/overview" },
+      { label: msg`Install`, href: "https://docs.cursor.com/en/cli/installation" },
+      { label: msg`Update`, href: "https://docs.cursor.com/en/cli/installation#updates" },
+      { label: msg`Config`, href: "https://docs.cursor.com/en/cli/overview" },
     ],
     fields: [
       {
         kind: "text",
         settingsKey: "cursorBinaryPath",
-        label: "Cursor binary path",
-        placeholder: "Cursor Agent or Cursor CLI path",
+        label: msg`Cursor binary path`,
+        placeholder: msg`Cursor Agent or Cursor CLI path`,
         description: (
-          <>
+          <Trans>
             Leave blank to use <code>cursor-agent</code> from your PATH. Cursor editor CLI paths are
             accepted too.
-          </>
+          </Trans>
         ),
       },
       {
         kind: "text",
         settingsKey: "cursorApiEndpoint",
-        label: "Cursor API endpoint",
-        placeholder: "https://api2.cursor.sh",
-        description: "Optional Cursor API endpoint override passed to `cursor-agent -e`.",
+        label: msg`Cursor API endpoint`,
+        placeholder: msg`https://api2.cursor.sh`,
+        description: (
+          <Trans>Optional Cursor API endpoint override passed to `cursor-agent -e`.</Trans>
+        ),
       },
     ],
   },
   {
     provider: "antigravity",
     docs: [
-      { label: "Install", href: "https://antigravity.google/docs/cli-using" },
-      { label: "Reference", href: "https://antigravity.google/docs/cli-reference" },
-      { label: "Hooks", href: "https://antigravity.google/docs/hooks" },
+      { label: msg`Install`, href: "https://antigravity.google/docs/cli-using" },
+      { label: msg`Reference`, href: "https://antigravity.google/docs/cli-reference" },
+      { label: msg`Hooks`, href: "https://antigravity.google/docs/hooks" },
     ],
     fields: [
       {
         kind: "text",
         settingsKey: "antigravityBinaryPath",
-        label: "Antigravity binary path",
-        placeholder: "Antigravity CLI binary path",
+        label: msg`Antigravity binary path`,
+        placeholder: msg`Antigravity CLI binary path`,
         description: (
-          <>
+          <Trans>
             Leave blank to use <code>agy</code> from your PATH.
-          </>
+          </Trans>
         ),
       },
     ],
@@ -318,20 +327,20 @@ const PROVIDER_INSTALL_SETTINGS: readonly ProviderInstallSettings[] = [
   {
     provider: "grok",
     docs: [
-      { label: "Install", href: "https://docs.x.ai/build/overview" },
-      { label: "Headless", href: "https://docs.x.ai/build/cli/headless-scripting" },
-      { label: "Config", href: "https://docs.x.ai/build/overview" },
+      { label: msg`Install`, href: "https://docs.x.ai/build/overview" },
+      { label: msg`Headless`, href: "https://docs.x.ai/build/cli/headless-scripting" },
+      { label: msg`Config`, href: "https://docs.x.ai/build/overview" },
     ],
     fields: [
       {
         kind: "text",
         settingsKey: "grokBinaryPath",
-        label: "Grok binary path",
-        placeholder: "Grok binary path",
+        label: msg`Grok binary path`,
+        placeholder: msg`Grok binary path`,
         description: (
-          <>
+          <Trans>
             Leave blank to use <code>grok</code> from your PATH.
-          </>
+          </Trans>
         ),
       },
     ],
@@ -340,7 +349,7 @@ const PROVIDER_INSTALL_SETTINGS: readonly ProviderInstallSettings[] = [
     provider: "droid",
     docs: [
       {
-        label: "Quickstart",
+        label: msg`Quickstart`,
         href: "https://docs.factory.ai/cli/getting-started/quickstart.md",
       },
     ],
@@ -348,12 +357,12 @@ const PROVIDER_INSTALL_SETTINGS: readonly ProviderInstallSettings[] = [
       {
         kind: "text",
         settingsKey: "droidBinaryPath",
-        label: "Droid binary path",
-        placeholder: "droid",
+        label: msg`Droid binary path`,
+        placeholder: msg`droid`,
         description: (
-          <>
+          <Trans>
             Leave blank to use <code>droid</code> from your PATH.
-          </>
+          </Trans>
         ),
       },
     ],
@@ -361,21 +370,21 @@ const PROVIDER_INSTALL_SETTINGS: readonly ProviderInstallSettings[] = [
   {
     provider: "devin",
     docs: [
-      { label: "Install", href: "https://docs.devin.ai/cli" },
-      { label: "Commands", href: "https://docs.devin.ai/cli/reference/commands" },
-      { label: "Config", href: "https://docs.devin.ai/cli/reference/configuration/config-file" },
+      { label: msg`Install`, href: "https://docs.devin.ai/cli" },
+      { label: msg`Commands`, href: "https://docs.devin.ai/cli/reference/commands" },
+      { label: msg`Config`, href: "https://docs.devin.ai/cli/reference/configuration/config-file" },
     ],
     fields: [
       {
         kind: "text",
         settingsKey: "devinBinaryPath",
-        label: "Devin binary path",
-        placeholder: "devin",
+        label: msg`Devin binary path`,
+        placeholder: msg`devin`,
         description: (
-          <>
+          <Trans>
             Leave blank to use <code>devin</code> from your PATH. Authenticate with{" "}
             <code>devin auth login</code> or set WINDSURF_API_KEY.
-          </>
+          </Trans>
         ),
       },
     ],
@@ -383,85 +392,96 @@ const PROVIDER_INSTALL_SETTINGS: readonly ProviderInstallSettings[] = [
   {
     provider: "opencode",
     docs: [
-      { label: "Install", href: "https://opencode.ai/docs/" },
-      { label: "Update", href: "https://opencode.ai/docs/cli/" },
-      { label: "Config", href: "https://opencode.ai/docs/config/" },
+      { label: msg`Install`, href: "https://opencode.ai/docs/" },
+      { label: msg`Update`, href: "https://opencode.ai/docs/cli/" },
+      { label: msg`Config`, href: "https://opencode.ai/docs/config/" },
     ],
     fields: [
       {
         kind: "text",
         settingsKey: "openCodeBinaryPath",
-        label: "OpenCode binary path",
-        placeholder: "OpenCode binary path",
+        label: msg`OpenCode binary path`,
+        placeholder: msg`OpenCode binary path`,
         description: (
-          <>
+          <Trans>
             Leave blank to use <code>opencode</code> from your PATH.
-          </>
+          </Trans>
         ),
       },
       {
         kind: "text",
         settingsKey: "openCodeServerUrl",
-        label: "OpenCode server URL",
-        placeholder: "http://127.0.0.1:4096",
-        description: "Optional existing OpenCode server URL. Leave blank to spawn a local server.",
+        label: msg`OpenCode server URL`,
+        placeholder: msg`http://127.0.0.1:4096`,
+        description: (
+          <Trans>Optional existing OpenCode server URL. Leave blank to spawn a local server.</Trans>
+        ),
       },
       {
         kind: "password",
         settingsKey: "openCodeServerPassword",
         configuredKey: "openCodeServerPasswordConfigured",
-        label: "OpenCode server password",
-        placeholder: "OpenCode server password",
-        description: "Optional password for an externally managed OpenCode server.",
+        label: msg`OpenCode server password`,
+        placeholder: msg`OpenCode server password`,
+        description: <Trans>Optional password for an externally managed OpenCode server.</Trans>,
       },
       {
         kind: "boolean",
         settingsKey: "openCodeExperimentalWebSockets",
-        label: "OpenAI response WebSockets",
-        description:
-          "Use Opencode's experimental OpenAI response WebSocket transport for managed local servers.",
+        label: msg`OpenAI response WebSockets`,
+        description: (
+          <Trans>
+            Use Opencode's experimental OpenAI response WebSocket transport for managed local
+            servers.
+          </Trans>
+        ),
       },
     ],
   },
   {
     provider: "pi",
-    docs: [{ label: "Config", href: "https://pi.dev/docs/latest/settings" }],
+    docs: [{ label: msg`Config`, href: "https://pi.dev/docs/latest/settings" }],
     fields: [
       {
         kind: "text",
         settingsKey: "piAgentDir",
-        label: "Pi agent directory",
-        placeholder: "Pi agent directory",
-        description: "Optional custom Pi agent directory for auth, models, skills, and commands.",
+        label: msg`Pi agent directory`,
+        placeholder: msg`Pi agent directory`,
+        description: (
+          <Trans>Optional custom Pi agent directory for auth, models, skills, and commands.</Trans>
+        ),
       },
     ],
   },
   {
     provider: "omp",
     docs: [
-      { label: "Docs", href: "https://omp.sh/docs" },
-      { label: "Install", href: "https://omp.sh/docs/quickstart" },
-      { label: "Source", href: "https://github.com/can1357/oh-my-pi" },
+      { label: msg`Docs`, href: "https://omp.sh/docs" },
+      { label: msg`Install`, href: "https://omp.sh/docs/quickstart" },
+      { label: msg`Source`, href: "https://github.com/can1357/oh-my-pi" },
     ],
     fields: [
       {
         kind: "text",
         settingsKey: "ompBinaryPath",
-        label: "Oh My Pi binary path",
-        placeholder: "Oh My Pi binary path",
+        label: msg`Oh My Pi binary path`,
+        placeholder: msg`Oh My Pi binary path`,
         description: (
-          <>
+          <Trans>
             Leave blank to use <code>omp</code> from your PATH.
-          </>
+          </Trans>
         ),
       },
       {
         kind: "text",
         settingsKey: "ompAgentDir",
-        label: "Oh My Pi agent directory",
-        placeholder: "Oh My Pi agent directory",
-        description:
-          "Optional custom Oh My Pi agent directory for auth, models, skills, and commands.",
+        label: msg`Oh My Pi agent directory`,
+        placeholder: msg`Oh My Pi agent directory`,
+        description: (
+          <Trans>
+            Optional custom Oh My Pi agent directory for auth, models, skills, and commands.
+          </Trans>
+        ),
       },
     ],
   },
@@ -615,7 +635,7 @@ function SortableProviderVisibilityRow(props: {
             ELEVATED_HOVER_SURFACE_RAISED_TEXT_CLASS_NAME,
             SETTINGS_INSET_RADIUS_CLASS_NAME,
           )}
-          aria-label={`Reorder ${props.option.title}`}
+          aria-label={i18n._("Reorder {provider}", { provider: props.option.title })}
           {...attributes}
           {...listeners}
         >
@@ -639,10 +659,14 @@ function SortableProviderVisibilityRow(props: {
         onCheckedChange={(checked) => props.onHiddenChange(!Boolean(checked))}
         aria-label={
           isChecking
-            ? `Checking ${props.option.title} CLI availability`
+            ? i18n._("Checking {provider} CLI availability", { provider: props.option.title })
             : isAvailable
-              ? `Show ${props.option.title} in the provider picker`
-              : `${props.option.title} is unavailable in the provider picker`
+              ? i18n._("Show {provider} in the provider picker", {
+                  provider: props.option.title,
+                })
+              : i18n._("{provider} is unavailable in the provider picker", {
+                  provider: props.option.title,
+                })
         }
       />
     </div>
@@ -657,7 +681,7 @@ function ProviderDocsLinks({ docs }: { docs: ProviderInstallSettings["docs"] }) 
         <div className="flex flex-wrap gap-2">
           {docs.map((doc) => (
             <Button
-              key={`${doc.label}:${doc.href}`}
+              key={doc.href}
               variant="outline"
               size="sm"
               render={
@@ -676,7 +700,7 @@ function ProviderDocsLinks({ docs }: { docs: ProviderInstallSettings["docs"] }) 
                 />
               }
             >
-              <span>{doc.label}</span>
+              <span>{i18n._(doc.label)}</span>
               <ExternalLinkIcon className="size-3" />
             </Button>
           ))}
@@ -694,26 +718,28 @@ function formatProviderVersion(value: string | null | undefined): string | null 
 
 export function providerUpdateStatusLabel(provider: ServerProviderStatus): string | null {
   const state = provider.updateState?.status;
-  if (state === "queued") return "Update queued";
-  if (state === "running") return "Updating";
-  if (state === "succeeded") return "Updated";
-  if (state === "failed") return "Update failed";
-  if (state === "unchanged") return "Still outdated";
+  if (state === "queued") return i18n._("Update queued");
+  if (state === "running") return i18n._("Updating");
+  if (state === "succeeded") return i18n._("Updated");
+  if (state === "failed") return i18n._("Update failed");
+  if (state === "unchanged") return i18n._("Still outdated");
   const advisory = provider.versionAdvisory;
   if (advisory?.status === "behind_latest" && advisory.latestVersion) {
     const currentVersion = formatProviderVersion(advisory.currentVersion);
     const latestVersion = formatProviderVersion(advisory.latestVersion);
-    return currentVersion ? `${currentVersion} -> ${latestVersion}` : `Latest ${latestVersion}`;
+    return currentVersion
+      ? `${currentVersion} -> ${latestVersion}`
+      : i18n._("Latest {version}", { version: latestVersion });
   }
   const currentVersion = formatProviderVersion(provider.version);
-  if (currentVersion) return `Current ${currentVersion}`;
-  return provider.provider === "pi" && provider.available ? "Included with Lattice" : null;
+  if (currentVersion) return i18n._("Current {version}", { version: currentVersion });
+  return provider.provider === "pi" && provider.available ? i18n._("Included with Lattice") : null;
 }
 
 function providerUpdateFailureMessage(provider: ServerProviderStatus | undefined): string | null {
   const state = provider?.updateState;
   if (!state || (state.status !== "failed" && state.status !== "unchanged")) return null;
-  return state.output?.trim() || state.message || "The provider update did not complete.";
+  return state.output?.trim() || state.message || i18n._("The provider update did not complete.");
 }
 
 function providerStatusDisplayName(status: ServerProviderStatus): string {
@@ -736,7 +762,11 @@ export function ProviderUpdateAction(props: {
       size="xs"
       variant="outline"
       disabled={props.disabled}
-      title={advisory?.updateCommand ? `Run ${advisory.updateCommand}` : undefined}
+      title={
+        advisory?.updateCommand
+          ? i18n._("Run {command}", { command: advisory.updateCommand })
+          : undefined
+      }
       onClick={(event: MouseEvent<HTMLButtonElement>) => {
         event.stopPropagation();
         const driver = props.providerStatus.driver ?? props.providerStatus.provider;
@@ -787,7 +817,7 @@ function ProviderInstallFieldControl(props: {
       >
         <span className="min-w-0">
           <span className="block text-ui leading-snug font-medium text-foreground">
-            {props.field.label}
+            {i18n._(props.field.label)}
           </span>
           <span className="mt-1 block text-ui leading-snug text-muted-foreground">
             {props.field.description}
@@ -810,7 +840,7 @@ function ProviderInstallFieldControl(props: {
   return (
     <label htmlFor={id} className="block">
       <span className="block text-ui leading-snug font-medium text-foreground">
-        {props.field.label}
+        {i18n._(props.field.label)}
       </span>
       <DebouncedSettingTextInput
         id={id}
@@ -823,8 +853,8 @@ function ProviderInstallFieldControl(props: {
         }
         placeholder={
           isPassword && configured
-            ? "Configured — enter a replacement or leave blank"
-            : props.field.placeholder
+            ? i18n._("Configured — enter a replacement or leave blank")
+            : i18n._(props.field.placeholder)
         }
         type={isPassword ? "password" : undefined}
         autoComplete={isPassword ? "new-password" : undefined}
@@ -854,12 +884,12 @@ function CodexDefaultAccountControl(props: {
   return (
     <div className="space-y-1">
       <span className="block text-ui-sm font-medium text-foreground">
-        Codex account for new threads
+        {i18n._("Codex account for new threads")}
       </span>
       <SettingsSelectControl
         value={props.settings.selectedCodexAccountId}
         onValueChange={(selectedCodexAccountId) => props.updateSettings({ selectedCodexAccountId })}
-        ariaLabel="Codex account for new threads"
+        ariaLabel={i18n._("Codex account for new threads")}
         triggerClassName="w-full"
         valueContent={<span className="truncate">{selectedAccountLabel}</span>}
       >
@@ -870,7 +900,7 @@ function CodexDefaultAccountControl(props: {
         ))}
       </SettingsSelectControl>
       <span className="block text-ui-sm text-muted-foreground">
-        Used until you pick another account in the model picker.
+        {i18n._("Used until you pick another account in the model picker.")}
       </span>
     </div>
   );
@@ -942,9 +972,11 @@ function providerAccountIdentityFields(
     return [
       {
         key: "homePath",
-        label: "CODEX_HOME path",
+        label: i18n._("CODEX_HOME path"),
         placeholder: "~/.codex-work",
-        description: "Leave blank and Synara keeps this account's sign-in in its own folder.",
+        description: i18n._(
+          "Leave blank and Synara keeps this account's sign-in in its own folder.",
+        ),
       },
     ];
   }
@@ -952,11 +984,11 @@ function providerAccountIdentityFields(
     return [
       {
         key: "configDir",
-        label: "Claude config directory",
+        label: i18n._("Claude config directory"),
         placeholder: "~/.claude-work",
-        description:
-          "Leave blank and Synara keeps this account's sign-in in its own folder. " +
-          "Set a directory to use a Claude config folder you already signed in to.",
+        description: i18n._(
+          "Leave blank and Synara keeps this account's sign-in in its own folder. Set a directory to use a Claude config folder you already signed in to.",
+        ),
       },
     ];
   }
@@ -964,9 +996,11 @@ function providerAccountIdentityFields(
   return [
     {
       key: "profileDir",
-      label: "Profile directory",
-      placeholder: "Provider account directory",
-      description: "Used as this account's provider config root without changing your shell files.",
+      label: i18n._("Profile directory"),
+      placeholder: i18n._("Provider account directory"),
+      description: i18n._(
+        "Used as this account's provider config root without changing your shell files.",
+      ),
     },
   ];
 }
@@ -1029,8 +1063,9 @@ function ProviderAccountsControl(props: {
     } catch (error) {
       toastManager.add({
         type: "error",
-        title: "Unable to start sign-in",
-        description: error instanceof Error ? error.message : "Unable to save provider settings.",
+        title: i18n._("Unable to start sign-in"),
+        description:
+          error instanceof Error ? error.message : i18n._("Unable to save provider settings."),
       });
     } finally {
       signInPendingRef.current = false;
@@ -1078,10 +1113,11 @@ function ProviderAccountsControl(props: {
     if (input.provider === provider) setSelectedAccountId(input.instanceId);
     toastManager.add({
       type: "success",
-      title: "Account added",
-      description: `${PROVIDER_DISPLAY_NAMES[input.provider]} account '${
-        input.displayName || input.instanceId
-      }' was added.`,
+      title: i18n._("Account added"),
+      description: i18n._("{provider} account '{account}' was added.", {
+        provider: PROVIDER_DISPLAY_NAMES[input.provider],
+        account: input.displayName || input.instanceId,
+      }),
     });
   };
   const nextImportedInstanceId = () => {
@@ -1102,7 +1138,7 @@ function ProviderAccountsControl(props: {
       ...props.settings.providerInstances,
       [instanceId]: {
         driver: provider,
-        displayName: directoryName || `${providerLabel} imported`,
+        displayName: directoryName || i18n._("{provider} imported", { provider: providerLabel }),
         enabled: true,
         config: {
           ...providerInstanceLaunchConfig(props.config, props.settings),
@@ -1113,8 +1149,10 @@ function ProviderAccountsControl(props: {
     setSelectedAccountId(instanceId);
     toastManager.add({
       type: "success",
-      title: `${providerLabel} account imported`,
-      description: "Synara references the selected directory; no files were moved or copied.",
+      title: i18n._("{provider} account imported", { provider: providerLabel }),
+      description: i18n._(
+        "Synara references the selected directory; no files were moved or copied.",
+      ),
     });
   };
   const updateInstance = (
@@ -1177,13 +1215,16 @@ function ProviderAccountsControl(props: {
           key={field.settingsKey}
           className="flex items-center justify-between gap-3 sm:col-span-2"
         >
-          <span className="text-ui-sm font-medium text-foreground">{field.label}</span>
+          <span className="text-ui-sm font-medium text-foreground">{i18n._(field.label)}</span>
           <Switch
             checked={readConfigBoolean(instance.config, configKey)}
             onCheckedChange={(checked) =>
               updateInstance(instanceId, { config: { [configKey]: checked } })
             }
-            aria-label={`${field.label} for ${instance.displayName || instanceId}`}
+            aria-label={i18n._("{setting} for {account}", {
+              setting: i18n._(field.label),
+              account: instance.displayName || instanceId,
+            })}
           />
         </label>
       );
@@ -1198,7 +1239,7 @@ function ProviderAccountsControl(props: {
     return (
       <div className="block" key={field.settingsKey}>
         <label htmlFor={inputId} className="block text-ui-sm font-medium text-foreground">
-          {field.label}
+          {i18n._(field.label)}
         </label>
         <div className="mt-1 flex items-center gap-2">
           <DebouncedSettingTextInput
@@ -1212,7 +1253,9 @@ function ProviderAccountsControl(props: {
               if (redacted && value.length === 0) return;
               updateInstance(instanceId, { config: { [configKey]: value } }, legacyCodexAccountId);
             }}
-            placeholder={redacted ? "Secret saved — type to replace" : field.placeholder}
+            placeholder={
+              redacted ? i18n._("Secret saved — type to replace") : i18n._(field.placeholder)
+            }
             spellCheck={false}
           />
           {redacted ? (
@@ -1221,11 +1264,12 @@ function ProviderAccountsControl(props: {
               size="xs"
               variant="ghost"
               onClick={() => updateInstance(instanceId, { config: { [configKey]: "" } })}
-              aria-label={`Clear saved ${field.label.toLowerCase()} for ${
-                instance.displayName || instanceId
-              }`}
+              aria-label={i18n._("Clear saved {setting} for {account}", {
+                setting: i18n._(field.label),
+                account: instance.displayName || instanceId,
+              })}
             >
-              Clear
+              {i18n._("Clear")}
             </Button>
           ) : null}
         </div>
@@ -1252,7 +1296,7 @@ function ProviderAccountsControl(props: {
                 type="button"
                 size="xs"
                 variant="ghost"
-                aria-label={`Copy ${cliCommand}`}
+                aria-label={i18n._("Copy {command}", { command: cliCommand })}
                 onClick={() => void copyTextToClipboard(cliCommand)}
               >
                 <CopyIcon className="size-3.5" />
@@ -1282,7 +1326,7 @@ function ProviderAccountsControl(props: {
           {provider === "claudeAgent" ? (
             <label className="block sm:col-span-2">
               <span className="block text-ui-sm font-medium text-foreground">
-                Claude config directory
+                {i18n._("Claude config directory")}
               </span>
               <DebouncedSettingTextInput
                 id={`provider-instance-${instanceId}-config-dir`}
@@ -1299,18 +1343,18 @@ function ProviderAccountsControl(props: {
           {isAccountProvider ? (
             <span className="block text-ui-sm text-muted-foreground sm:col-span-2">
               {provider === "codex"
-                ? "Leave both paths blank and Synara keeps this account's sign-in in its " +
-                  "own folder. Set a shadow auth home to keep only the sign-in elsewhere " +
-                  "while sharing settings and history with the default account, or a " +
-                  "CODEX_HOME to keep everything separate."
-                : "Leave blank and Synara keeps this account's sign-in in its own folder. " +
-                  "Set a directory to use a Claude config folder you already signed in to."}
+                ? i18n._(
+                    "Leave both paths blank and Synara keeps this account's sign-in in its own folder. Set a shadow auth home to keep only the sign-in elsewhere while sharing settings and history with the default account, or a CODEX_HOME to keep everything separate.",
+                  )
+                : i18n._(
+                    "Leave blank and Synara keeps this account's sign-in in its own folder. Set a directory to use a Claude config folder you already signed in to.",
+                  )}
             </span>
           ) : null}
           {!isAccountProvider && provider !== "pi" && provider !== "omp" ? (
             <label className="block sm:col-span-2">
               <span className="block text-ui-sm font-medium text-foreground">
-                Profile directory
+                {i18n._("Profile directory")}
               </span>
               <DebouncedSettingTextInput
                 id={`provider-instance-${instanceId}-profile-dir`}
@@ -1319,7 +1363,7 @@ function ProviderAccountsControl(props: {
                 className="mt-1"
                 value={readConfigString(instance.config, "profileDir")}
                 onCommit={(profileDir) => updateInstance(instanceId, { config: { profileDir } })}
-                placeholder="Provider account directory"
+                placeholder={i18n._("Provider account directory")}
                 spellCheck={false}
               />
               <span className="mt-1 block text-ui-sm text-muted-foreground">
@@ -1350,17 +1394,21 @@ function ProviderAccountsControl(props: {
               )}
             >
               {cliAliasInvalid
-                ? "Use 1–64 letters, numbers, dashes, or underscores; bare provider commands are reserved."
+                ? i18n._(
+                    "Use 1–64 letters, numbers, dashes, or underscores; bare provider commands are reserved.",
+                  )
                 : cliCommandConflicts
-                  ? "This command is already assigned to another account. Choose a unique override."
-                  : "Available in Synara terminals for zsh, bash, fish, and scripts."}
+                  ? i18n._(
+                      "This command is already assigned to another account. Choose a unique override.",
+                    )
+                  : i18n._("Available in Synara terminals for zsh, bash, fish, and scripts.")}
             </span>
           </label>
           {props.config.fields.filter(isAdvancedField).map((field) => renderField(field, entry))}
           {provider === "claudeAgent" ? (
             <label className="block">
               <span className="block text-ui-sm font-medium text-foreground">
-                Claude credential directory
+                {i18n._("Claude credential directory")}
               </span>
               <DebouncedSettingTextInput
                 id={`provider-instance-${instanceId}-secure-storage-dir`}
@@ -1371,11 +1419,13 @@ function ProviderAccountsControl(props: {
                 onCommit={(secureStorageDir) =>
                   updateInstance(instanceId, { config: { secureStorageDir } })
                 }
-                placeholder="Optional shared credential directory"
+                placeholder={i18n._("Optional shared credential directory")}
                 spellCheck={false}
               />
               <span className="mt-1 block text-ui-sm text-muted-foreground">
-                Leave blank unless your setup already uses a separate secure-storage directory.
+                {i18n._(
+                  "Leave blank unless your setup already uses a separate secure-storage directory.",
+                )}
               </span>
             </label>
           ) : null}
@@ -1432,7 +1482,7 @@ function ProviderAccountsControl(props: {
               </span>
               {account.isDefault ? (
                 <span className="shrink-0 rounded-full border border-border/70 px-1.5 py-px text-ui-2xs font-medium text-muted-foreground">
-                  Default
+                  {i18n._("Default")}
                 </span>
               ) : null}
             </div>
@@ -1449,7 +1499,7 @@ function ProviderAccountsControl(props: {
             size="xs"
             variant="outline"
             disabled={!account.enabled || liveStatus?.available === false || startingSignIn}
-            aria-label={`Sign in to ${account.label}`}
+            aria-label={i18n._("Sign in to {account}", { account: account.label })}
             onClick={() => void startSignIn(account)}
           >
             {startingSignIn ? (
@@ -1477,7 +1527,7 @@ function ProviderAccountsControl(props: {
               }}
             >
               <XIcon className="size-3.5" />
-              Remove
+              {i18n._("Remove")}
             </Button>
           )}
         </div>
@@ -1485,19 +1535,21 @@ function ProviderAccountsControl(props: {
         {status.detail && status.tone !== "ready" && status.tone !== "idle" ? (
           <div className="border-b border-border/70 px-3 py-2 text-ui-sm text-muted-foreground">
             {liveStatus?.authStatus === "unauthenticated"
-              ? "Use Sign in to authenticate this account, then complete the provider's prompts."
+              ? i18n._(
+                  "Use Sign in to authenticate this account, then complete the provider's prompts.",
+                )
               : status.detail}
           </div>
         ) : null}
 
-        <ProviderAccountEditorSection title="Identity">
+        <ProviderAccountEditorSection title={i18n._("Identity")}>
           <div className="space-y-3">
             <div className="space-y-1">
               <label
                 htmlFor={`provider-instance-${instanceId}-label`}
                 className="block text-ui-sm font-medium text-foreground"
               >
-                Display name
+                {i18n._("Display name")}
               </label>
               <DebouncedSettingTextInput
                 id={`provider-instance-${instanceId}-label`}
@@ -1511,7 +1563,7 @@ function ProviderAccountsControl(props: {
                 onCommit={(displayName) =>
                   updateInstance(instanceId, { displayName }, legacyCodexAccountId)
                 }
-                placeholder={account.isDefault ? providerLabel : "Work"}
+                placeholder={account.isDefault ? providerLabel : i18n._("Work")}
                 spellCheck={false}
               />
             </div>
@@ -1530,7 +1582,7 @@ function ProviderAccountsControl(props: {
           </div>
         </ProviderAccountEditorSection>
 
-        <ProviderAccountEditorSection title="Runtime">
+        <ProviderAccountEditorSection title={i18n._("Runtime")}>
           {account.isDefault ? (
             <div className="space-y-3">
               {props.config.fields.map((field) => (
@@ -1556,7 +1608,7 @@ function ProviderAccountsControl(props: {
         {/* A migrated Codex account is routed by its saved identity; an environment of
             its own would make the server drop that route, so none is offered. */}
         {legacyCodexAccountId === null ? (
-          <ProviderAccountEditorSection title="Environment">
+          <ProviderAccountEditorSection title={i18n._("Environment")}>
             <ProviderInstanceEnvironmentEditor
               instanceId={instanceId}
               environment={
@@ -1575,11 +1627,12 @@ function ProviderAccountsControl(props: {
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 sm:flex-nowrap">
         <div className="min-w-0">
           <span className="block text-ui-sm font-medium text-foreground">
-            {providerLabel} accounts
+            {i18n._("{provider} accounts", { provider: providerLabel })}
           </span>
           <span className="mt-1 block text-ui-sm text-muted-foreground">
-            Each account signs in on its own and gets its own tab in the model picker. A thread
-            stays on the account it started with.
+            {i18n._(
+              "Each account signs in on its own and gets its own tab in the model picker. A thread stays on the account it started with.",
+            )}
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -1591,16 +1644,19 @@ function ProviderAccountsControl(props: {
             disabled={typeof window === "undefined" || !window.desktopBridge}
             title={
               typeof window === "undefined" || !window.desktopBridge
-                ? "Directory import is available in the Synara desktop app."
-                : `Use an existing ${providerLabel} directory as a new account, without moving it.`
+                ? i18n._("Directory import is available in the Synara desktop app.")
+                : i18n._(
+                    "Use an existing {provider} directory as a new account, without moving it.",
+                    { provider: providerLabel },
+                  )
             }
           >
             <FolderOpenIcon className="size-3.5" />
-            Import directory
+            {i18n._("Import directory")}
           </Button>
           <Button type="button" size="xs" variant="outline" onClick={() => setAddDialogOpen(true)}>
             <PlusIcon className="size-3.5" />
-            Add account
+            {i18n._("Add account")}
           </Button>
         </div>
       </div>
@@ -1643,7 +1699,7 @@ function ProviderAccountsControl(props: {
               >
                 <button
                   type="button"
-                  aria-label={`Select ${account.label}`}
+                  aria-label={i18n._("Select {account}", { account: account.label })}
                   aria-current={selected ? "true" : undefined}
                   className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-left outline-none focus-visible:ring-1 focus-visible:ring-ring/60"
                   onClick={() => setSelectedAccountId(account.instanceId)}
@@ -1661,7 +1717,7 @@ function ProviderAccountsControl(props: {
                   onCheckedChange={(enabled) =>
                     updateInstance(account.instanceId, { enabled: Boolean(enabled) })
                   }
-                  aria-label={`Enable ${account.label}`}
+                  aria-label={i18n._("Enable {account}", { account: account.label })}
                 />
               </div>
             );
@@ -1733,7 +1789,7 @@ function ProviderInstanceAdvancedSection(props: { children: ReactNode }) {
         type="button"
         className="mt-3 flex items-center gap-1 text-ui-sm text-muted-foreground"
       >
-        Advanced
+        {i18n._("Advanced")}
         <DisclosureChevron open={open} className="size-3.5 shrink-0" />
       </CollapsibleTrigger>
       <CollapsiblePanel>
@@ -1777,7 +1833,7 @@ function ProviderToolRow(props: {
   const providerUpdateLabel = props.providerStatus
     ? !props.settings.enableProviderUpdateChecks
       ? currentProviderVersion
-        ? `Current ${currentProviderVersion}`
+        ? i18n._("Current {version}", { version: currentProviderVersion })
         : null
       : providerUpdateSuppressed
         ? null
@@ -1849,19 +1905,23 @@ function ProviderToolRow(props: {
                 <div className="text-ui leading-snug text-muted-foreground">
                   {updateAdvisory.canUpdate && updateAdvisory.updateCommand ? (
                     <>
-                      <span>Command: </span>
+                      <span>{i18n._("Command:")} </span>
                       <code className="font-mono">{updateAdvisory.updateCommand}</code>
                     </>
                   ) : (
-                    "A newer version is available, but Lattice could not identify a safe one-click update command for this installation."
+                    i18n._(
+                      "A newer version is available, but Lattice could not identify a safe one-click update command for this installation.",
+                    )
                   )}
                 </div>
               ) : null}
               {showSelfManagedUpdate && props.providerStatus ? (
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0 text-ui-xs text-muted-foreground">
-                    {title} manages its own releases, so Lattice cannot tell whether a newer version
-                    exists. Run the update to be sure.
+                    {i18n._(
+                      "{provider} manages its own releases, so Lattice cannot tell whether a newer version exists. Run the update to be sure.",
+                      { provider: title },
+                    )}
                   </div>
                   <ProviderUpdateAction
                     providerStatus={props.providerStatus}
@@ -2039,9 +2099,13 @@ export function ProvidersSettingsPanel({
             const manualCommand = refreshedProvider?.versionAdvisory?.updateCommand?.trim();
             toastManager.add({
               type: "error",
-              title: `Could not update ${refreshedProvider ? providerStatusDisplayName(refreshedProvider) : PROVIDER_DISPLAY_NAMES[provider]}`,
+              title: i18n._("Could not update {provider}", {
+                provider: refreshedProvider
+                  ? providerStatusDisplayName(refreshedProvider)
+                  : PROVIDER_DISPLAY_NAMES[provider],
+              }),
               description: manualCommand
-                ? `${failureMessage}\n\nCopy the command below to update manually in a terminal.`
+                ? `${failureMessage}\n\n${i18n._("Copy the command below to update manually in a terminal.")}`
                 : failureMessage,
               ...(manualCommand ? { data: { copyText: manualCommand } } : {}),
             });
@@ -2050,14 +2114,15 @@ export function ProvidersSettingsPanel({
           toastManager.add({
             type: "success",
             title: `${refreshedProvider ? providerStatusDisplayName(refreshedProvider) : PROVIDER_DISPLAY_NAMES[provider]} update finished`,
-            description: "New sessions will use the refreshed provider.",
+            description: i18n._("New sessions will use the refreshed provider."),
           });
         })
         .catch((error: unknown) => {
           toastManager.add({
             type: "error",
             title: `Could not update ${PROVIDER_DISPLAY_NAMES[provider]}`,
-            description: error instanceof Error ? error.message : "The provider update failed.",
+            description:
+              error instanceof Error ? error.message : i18n._("The provider update failed."),
           });
         })
         .finally(async () => {
@@ -2071,7 +2136,7 @@ export function ProvidersSettingsPanel({
           });
         });
     },
-    [queryClient, updatingProviders],
+    [i18n, queryClient, updatingProviders],
   );
 
   if (!active) return null;
@@ -2173,7 +2238,7 @@ export function ProvidersSettingsPanel({
             resetAction={
               settings.enableProviderUpdateChecks !== defaults.enableProviderUpdateChecks ? (
                 <SettingResetButton
-                  label="CLI update checks"
+                  label={i18n._("CLI update checks")}
                   onClick={() =>
                     updateSettings({
                       enableProviderUpdateChecks: defaults.enableProviderUpdateChecks,
@@ -2188,7 +2253,7 @@ export function ProvidersSettingsPanel({
                 onCheckedChange={(checked) =>
                   updateSettings({ enableProviderUpdateChecks: Boolean(checked) })
                 }
-                aria-label="Automatic CLI update checks"
+                aria-label={i18n._("Automatic CLI update checks")}
               />
             }
           />

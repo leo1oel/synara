@@ -2,6 +2,7 @@
 // Purpose: Human-in-the-loop provider authentication in the shared isolated terminal.
 // Layer: Settings UI
 
+import { i18n } from "~/i18n";
 import { ThreadId, type ProviderKind } from "@synara/contracts";
 import { PROVIDER_AUTHENTICATION } from "@synara/shared/providerCliProfiles";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -63,10 +64,14 @@ export default function ProviderSignInDialog(props: {
     );
     setResult(
       status?.authStatus === "authenticated"
-        ? "Authenticated. You can close this window."
+        ? i18n._("Authenticated. You can close this window.")
         : status?.authStatus === "unauthenticated"
-          ? "This account is not authenticated yet. Complete the sign-in steps and check again."
-          : "Authentication could not be verified. Complete the provider's steps and check again; some providers do not expose a login status.",
+          ? i18n._(
+              "This account is not authenticated yet. Complete the sign-in steps and check again.",
+            )
+          : i18n._(
+              "Authentication could not be verified. Complete the provider's steps and check again; some providers do not expose a login status.",
+            ),
     );
     // Native account preparation can save its isolated roots server-side.
     void queryClient.invalidateQueries({ queryKey: serverQueryKeys.settings() });
@@ -111,7 +116,7 @@ export default function ProviderSignInDialog(props: {
         setResult(
           error instanceof Error
             ? error.message
-            : "Unable to stop sign-in. Retry closing this window.",
+            : i18n._("Unable to stop sign-in. Retry closing this window."),
         );
     } finally {
       closingRef.current = false;
@@ -127,7 +132,7 @@ export default function ProviderSignInDialog(props: {
     } catch (error) {
       if (!alive.current) return;
       setOptionsSent(false);
-      setResult(error instanceof Error ? error.message : "Unable to open sign-in options.");
+      setResult(error instanceof Error ? error.message : i18n._("Unable to open sign-in options."));
     }
   };
 
@@ -162,15 +167,21 @@ export default function ProviderSignInDialog(props: {
             />
           ) : (
             <p className="p-3 text-ui-sm">
-              {config.isError ? "Unable to connect to the Synara server." : "Connecting…"}
+              {config.isError
+                ? i18n._("Unable to connect to the Synara server.")
+                : i18n._("Connecting…")}
             </p>
           )}
         </div>
         <p className="mx-5 mt-3 text-ui-sm text-muted-foreground" role="status">
           {result ??
             (runtimeStatus === "error"
-              ? "Sign-in could not start. Check the terminal error, close this window and retry."
-              : "Follow the provider's prompts. Opening the browser does not confirm authentication.")}
+              ? i18n._(
+                  "Sign-in could not start. Check the terminal error, close this window and retry.",
+                )
+              : i18n._(
+                  "Follow the provider's prompts. Opening the browser does not confirm authentication.",
+                ))}
         </p>
         <DialogFooter>
           {interactiveCommand ? (
@@ -179,7 +190,7 @@ export default function ProviderSignInDialog(props: {
               disabled={runtimeStatus !== "ready" || optionsSent || closing}
               onClick={() => void showSignInOptions()}
             >
-              Sign-in options
+              {i18n._("Sign-in options")}
             </Button>
           ) : null}
           <Button
@@ -187,10 +198,14 @@ export default function ProviderSignInDialog(props: {
             disabled={closing || checking || runtimeStatus === "connecting"}
             onClick={() => void checkStatus()}
           >
-            {checking ? "Checking…" : "Check authentication"}
+            {checking ? i18n._("Checking…") : i18n._("Check authentication")}
           </Button>
           <Button disabled={closing} onClick={() => void close()}>
-            {closing ? "Closing…" : runtimeStatus === "exited" ? "Close" : "Cancel / close"}
+            {closing
+              ? i18n._("Closing…")
+              : runtimeStatus === "exited"
+                ? i18n._("Close")
+                : i18n._("Cancel / close")}
           </Button>
         </DialogFooter>
       </DialogPopup>

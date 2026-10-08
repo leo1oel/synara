@@ -5,6 +5,7 @@
 // Layer: Chat composer UI
 // Exports: ComposerSubagentStrip
 
+import { i18n } from "~/i18n";
 import type { ThreadId } from "@synara/contracts";
 import { pluralize } from "@synara/shared/text";
 
@@ -95,8 +96,8 @@ export const ComposerSubagentStrip = function ComposerSubagentStrip({
             size="icon-xs"
             className={cn("shrink-0", COMPOSER_STACKED_PANEL_ICON_BUTTON_CLASS_NAME)}
             onClick={onStopAll}
-            aria-label="Stop all subagents"
-            title="Stop all running subagents"
+            aria-label={i18n._("Stop all subagents")}
+            title={i18n._("Stop all running subagents")}
           >
             <StopIcon className="size-3" />
           </Button>
@@ -107,8 +108,8 @@ export const ComposerSubagentStrip = function ComposerSubagentStrip({
           size="icon-xs"
           className={cn("shrink-0", COMPOSER_STACKED_PANEL_ICON_BUTTON_CLASS_NAME)}
           onClick={() => onCompactChange(!compact)}
-          aria-label={compact ? "Expand subagent strip" : "Collapse subagent strip"}
-          title={compact ? "Expand subagent strip" : "Collapse subagent strip"}
+          aria-label={compact ? i18n._("Expand subagent strip") : i18n._("Collapse subagent strip")}
+          title={compact ? i18n._("Expand subagent strip") : i18n._("Collapse subagent strip")}
         >
           {compact ? (
             <PanelExpandIcon className="size-3" strokeWidth={2} />
@@ -201,8 +202,8 @@ export const ComposerSubagentStrip = function ComposerSubagentStrip({
                       COMPOSER_STACKED_PANEL_ICON_BUTTON_CLASS_NAME,
                     )}
                     onClick={() => onBackgroundItem(item)}
-                    aria-label="Run in background (ctrl+b)"
-                    title="Run in background (ctrl+b)"
+                    aria-label={i18n._("Run in background (ctrl+b)")}
+                    title={i18n._("Run in background (ctrl+b)")}
                   >
                     <BackgroundTrayIcon className="size-3" />
                   </Button>
@@ -217,8 +218,8 @@ export const ComposerSubagentStrip = function ComposerSubagentStrip({
                       COMPOSER_STACKED_PANEL_ICON_BUTTON_CLASS_NAME,
                     )}
                     onClick={() => onStopItem(item)}
-                    aria-label="Stop subagent"
-                    title="Stop subagent"
+                    aria-label={i18n._("Stop subagent")}
+                    title={i18n._("Stop subagent")}
                   >
                     <StopIcon className="size-3" />
                   </Button>

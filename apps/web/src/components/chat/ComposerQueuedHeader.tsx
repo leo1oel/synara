@@ -6,6 +6,7 @@
 // Layer: Chat composer UI
 // Exports: ComposerQueuedHeader
 
+import { i18n } from "~/i18n";
 import type { QueuedComposerTurn } from "../../composerDraftStore";
 import { SteerIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
@@ -40,10 +41,10 @@ function firstNonEmptyLine(value: string): string {
 export function compactQueuedComposerPreviewMarkdown(value: string): string {
   const firstLine = firstNonEmptyLine(value);
   if (firstLine.length === 0) {
-    return "Queued follow-up";
+    return i18n._("Queued follow-up");
   }
   if (/^(?:`{3,}|~{3,})/.test(firstLine)) {
-    return "Code block";
+    return i18n._("Code block");
   }
   const normalized = firstLine
     .replace(/^#{1,6}\s+/, "")
@@ -52,7 +53,7 @@ export function compactQueuedComposerPreviewMarkdown(value: string): string {
     .replace(/^[-*+]\s+/, "")
     .replace(/^\d+[.)]\s+/, "")
     .trim();
-  return normalized.length > 0 ? normalized : "Queued follow-up";
+  return normalized.length > 0 ? normalized : i18n._("Queued follow-up");
 }
 
 interface ComposerQueuedHeaderProps {

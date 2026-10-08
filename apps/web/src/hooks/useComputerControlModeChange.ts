@@ -1,3 +1,4 @@
+import { i18n } from "~/i18n";
 import { useCallback, useEffect, useRef } from "react";
 import type { ThreadId } from "@synara/contracts";
 import type { ComposerComputerControlMode } from "~/computerControlMode";
@@ -47,8 +48,8 @@ export function useComputerControlModeChange({
         // queued intent it would have armed is stale, so say so plainly.
         if (mode !== "off" && !result.enabled && current()) {
           toastManager.add({
-            title: "Computer control was reset",
-            description: "Control was reset — invoke /computer-use again for a new task.",
+            title: i18n._("Computer control was reset"),
+            description: i18n._("Control was reset — invoke /computer-use again for a new task."),
             type: "error",
           });
         }
@@ -67,8 +68,8 @@ export function useComputerControlModeChange({
         if (!current()) return;
         toastManager.add({
           title: settingUp
-            ? "Computer permission setup could not start"
-            : "Computer control could not be changed",
+            ? i18n._("Computer permission setup could not start")
+            : i18n._("Computer control could not be changed"),
           description: String(error),
           type: "error",
         });

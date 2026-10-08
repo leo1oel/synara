@@ -8,7 +8,9 @@
 //          ToolCallGroupSummary, isSummarizableToolCallEntry,
 //          classifyToolCallSummaryCategory, summarizeToolCallGroup
 
-import { pluralize } from "@synara/shared/text";
+import type { I18n } from "@lingui/core";
+
+import { i18n as appI18n } from "../../i18n";
 import { isFileChangeWorkLogEntry, type WorkLogEntry } from "../../session-logic";
 import { deriveReadableCommandDisplay } from "../../lib/toolCallLabel";
 import { isReasoningUpdateWorkEntry } from "./agentActivity.logic";
@@ -26,7 +28,7 @@ export function workEntryRowCount(entry: WorkLogEntry): number {
 // One-line label for a call that would list several edited-file rows.
 export function multiFileEditLabel(entry: WorkLogEntry): string | null {
   const rowCount = workEntryRowCount(entry);
-  return rowCount > 1 ? summaryPartLabel("edit", rowCount, true) : null;
+  return rowCount > 1 ? summaryPartLabel(appI18n, "edit", rowCount, true) : null;
 }
 
 export type ToolCallSummaryCategory =
@@ -147,32 +149,39 @@ const CATEGORY_ORDER: ReadonlyArray<ToolCallSummaryCategory> = [
 ];
 
 function summaryPartLabel(
+  i18n: I18n,
   category: ToolCallSummaryCategory,
   count: number,
   isSolePart: boolean,
 ): string {
+  const one = count === 1;
   switch (category) {
     case "command":
-      return `Ran ${count} ${pluralize(count, "command")}`;
+      return one ? i18n._("Ran 1 command") : i18n._("Ran {count} commands", { count });
     case "edit":
-      return `Edited ${count} ${pluralize(count, "file")}`;
+      return one ? i18n._("Edited 1 file") : i18n._("Edited {count} files", { count });
     case "read":
-      return `Read ${count} ${pluralize(count, "file")}`;
+      return one ? i18n._("Read 1 file") : i18n._("Read {count} files", { count });
     case "search":
-      return `Searched ${count} ${pluralize(count, "file")}`;
+      return one ? i18n._("Searched 1 file") : i18n._("Searched {count} files", { count });
     case "agent":
-      return `Ran ${count} agent ${pluralize(count, "task")}`;
+      return one ? i18n._("Ran 1 agent task") : i18n._("Ran {count} agent tasks", { count });
     case "tool":
-      return `Used ${count} ${pluralize(count, "tool")}`;
+      return one ? i18n._("Used 1 tool") : i18n._("Used {count} tools", { count });
     case "other":
       return isSolePart
-        ? `Ran ${count} tool ${pluralize(count, "call")}`
-        : `${count} other tool ${pluralize(count, "call")}`;
+        ? one
+          ? i18n._("Ran 1 tool call")
+          : i18n._("Ran {count} tool calls", { count })
+        : one
+          ? i18n._("1 other tool call")
+          : i18n._("{count} other tool calls", { count });
   }
 }
 
 export function summarizeToolCallGroup(
   entries: ReadonlyArray<WorkLogEntry>,
+  i18n: I18n = appI18n,
 ): ToolCallGroupSummary | null {
   const summarizable = entries.filter(isSummarizableToolCallEntry);
   const rowCount = summarizable.reduce((total, entry) => total + workEntryRowCount(entry), 0);
@@ -216,12 +225,12 @@ export function summarizeToolCallGroup(
     return {
       category,
       count,
-      label: summaryPartLabel(category, count, populated.length === 1),
+      label: summaryPartLabel(i18n, category, count, populated.length === 1),
     };
   });
 
   return {
-    label: parts.map((part) => part.label).join(", "),
+    label: parts.map((part) => part.label).join(i18n._(", ")),
     parts,
     entryCount: summarizable.length,
     hasRunningEntry,

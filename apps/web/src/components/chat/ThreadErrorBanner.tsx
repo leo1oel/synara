@@ -8,6 +8,7 @@
 // is the home for the visible thread's live error; threads off screen still
 // toast via useThreadErrorToast.
 
+import { i18n } from "~/i18n";
 import { isProviderDeliveryBlockDetail } from "@synara/shared/providerDeliveryBlock";
 
 import { Alert, AlertAction, AlertDescription } from "../ui/alert";
@@ -47,12 +48,12 @@ export function ThreadErrorBanner({
               disabled={unblocking}
               onClick={() => onUnblock?.()}
             >
-              {unblocking ? "Unblocking…" : "Unblock thread"}
+              {unblocking ? i18n._("Unblocking…") : i18n._("Unblock thread")}
             </Button>
           ) : null}
           {onDismiss ? (
             <IconButton
-              label="Dismiss error"
+              label={i18n._("Dismiss error")}
               className="size-6 text-destructive/60 hover:text-destructive sm:size-6"
               onClick={onDismiss}
             >

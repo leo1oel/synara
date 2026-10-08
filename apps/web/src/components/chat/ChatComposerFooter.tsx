@@ -1,4 +1,5 @@
 import { ProviderInteractionMode } from "@synara/contracts";
+import { useLingui } from "@lingui/react";
 import { type ReactNode } from "react";
 import { GoTasklist } from "react-icons/go";
 import { BugIcon, ChevronDownIcon, ComposerSendArrowIcon, LayoutSidebarIcon } from "~/lib/icons";
@@ -65,6 +66,7 @@ export function ChatComposerFooter({
   pendingInput,
   submission,
 }: ChatComposerFooterProps) {
+  const { i18n } = useLingui();
   return (
     <div
       data-chat-composer-footer="true"
@@ -96,7 +98,11 @@ export function ChatComposerFooter({
                 size="sm"
                 type="button"
                 onClick={resetInteractionMode}
-                title={`${interactionMode === "plan" ? "Plan" : "Debug"} mode — click to return to normal build mode`}
+                title={
+                  interactionMode === "plan"
+                    ? i18n._("Plan mode — click to return to normal build mode")
+                    : i18n._("Debug mode — click to return to normal build mode")
+                }
               >
                 {interactionMode === "plan" ? (
                   <GoTasklist className="size-3.5" />
@@ -104,7 +110,7 @@ export function ChatComposerFooter({
                   <BugIcon className="size-3.5" />
                 )}
                 <span className="sr-only sm:not-sr-only">
-                  {interactionMode === "plan" ? "Plan" : "Debug"}
+                  {interactionMode === "plan" ? i18n._("Plan") : i18n._("Debug")}
                 </span>
               </Button>
             ) : null}
@@ -163,10 +169,10 @@ export function ChatComposerFooter({
             }
           >
             {pendingInput.responding
-              ? "Submitting..."
+              ? i18n._("Submitting...")
               : pendingInput.progress.isLastQuestion
-                ? "Submit answers"
-                : "Next question"}
+                ? i18n._("Submit answers")
+                : i18n._("Next question")}
           </Button>
         ) : submission.phase === "running" || submission.connecting ? (
           <>
@@ -196,8 +202,8 @@ export function ChatComposerFooter({
                 size="icon-xs"
                 className="sm:size-[26px]"
                 onClick={submission.onInterrupt}
-                aria-label="Stop generation"
-                title="Stop the current response. On Mac, press Ctrl+C to interrupt."
+                aria-label={i18n._("Stop generation")}
+                title={i18n._("Stop the current response. On Mac, press Ctrl+C to interrupt.")}
               >
                 <span aria-hidden="true" className="block size-2 rounded-[1px] bg-current" />
               </Button>
@@ -217,7 +223,7 @@ export function ChatComposerFooter({
                   submission.hasPendingCacheReview
                 }
               >
-                {submission.connecting || submission.busy ? "Sending..." : "Refine"}
+                {submission.connecting || submission.busy ? i18n._("Sending...") : i18n._("Refine")}
               </Button>
             ) : (
               <div className="flex items-center">
@@ -232,7 +238,9 @@ export function ChatComposerFooter({
                     submission.hasPendingCacheReview
                   }
                 >
-                  {submission.connecting || submission.busy ? "Sending..." : "Implement"}
+                  {submission.connecting || submission.busy
+                    ? i18n._("Sending...")
+                    : i18n._("Implement")}
                 </Button>
                 <Menu>
                   <MenuTrigger
@@ -241,7 +249,7 @@ export function ChatComposerFooter({
                         size="sm"
                         variant="default"
                         className="h-9 rounded-l-none rounded-r-full border-l-white/12 px-2 sm:h-8"
-                        aria-label="Implementation actions"
+                        aria-label={i18n._("Implementation actions")}
                         disabled={
                           submission.busy ||
                           submission.connecting ||
@@ -263,7 +271,7 @@ export function ChatComposerFooter({
                       }
                       onClick={() => void submission.onImplementInNewThread()}
                     >
-                      Implement in a new thread
+                      {i18n._("Implement in a new thread")}
                     </MenuItem>
                   </ComposerPickerMenuPopup>
                 </Menu>
@@ -297,20 +305,20 @@ export function ChatComposerFooter({
                 }
                 aria-label={
                   submission.connecting
-                    ? "Connecting"
+                    ? i18n._("Connecting")
                     : voice.transcribing
-                      ? "Transcribing voice note"
+                      ? i18n._("Transcribing voice note")
                       : submission.preparingImages
-                        ? "Optimizing image"
+                        ? i18n._("Optimizing image")
                         : submission.preparingWorktree
-                          ? "Preparing worktree"
+                          ? i18n._("Preparing worktree")
                           : submission.busy
-                            ? "Sending"
-                            : "Send message"
+                            ? i18n._("Sending")
+                            : i18n._("Send message")
                 }
                 title={
                   submission.hasPendingCacheReview
-                    ? "Choose how to resume the held message above"
+                    ? i18n._("Choose how to resume the held message above")
                     : undefined
                 }
               >

@@ -3,6 +3,7 @@
 // Layer: Chat composer UI
 // Exports: ActiveTaskListCard
 
+import { i18n } from "~/i18n";
 import { pluralize } from "@synara/shared/text";
 import {
   PiArrowsInSimple,
@@ -62,7 +63,10 @@ export function ActiveTaskListCard({
             <PiSlidersHorizontal className={COMPOSER_STACKED_PANEL_ICON_CLASS_NAME} />
           )}
           <ComposerStackedPanelRowLabel tone="meta">
-            {completedCount} out of {totalCount} tasks completed
+            {i18n._("{completed} out of {total} tasks completed", {
+              completed: completedCount,
+              total: totalCount,
+            })}
           </ComposerStackedPanelRowLabel>
         </ComposerStackedPanelRowMain>
         <div className="flex shrink-0 items-center gap-0.5">
@@ -72,8 +76,8 @@ export function ActiveTaskListCard({
             size="icon-xs"
             className={COMPOSER_STACKED_PANEL_ICON_BUTTON_CLASS_NAME}
             onClick={onOpenSidebar}
-            aria-label="Open tasks sidebar"
-            title="Open tasks sidebar"
+            aria-label={i18n._("Open tasks sidebar")}
+            title={i18n._("Open tasks sidebar")}
           >
             <PiSidebarSimple className="size-3" />
           </Button>
@@ -83,8 +87,8 @@ export function ActiveTaskListCard({
             size="icon-xs"
             className={COMPOSER_STACKED_PANEL_ICON_BUTTON_CLASS_NAME}
             onClick={() => onCompactChange(!compact)}
-            aria-label={compact ? "Expand task banner" : "Collapse task banner"}
-            title={compact ? "Expand task banner" : "Collapse task banner"}
+            aria-label={compact ? i18n._("Expand task banner") : i18n._("Collapse task banner")}
+            title={compact ? i18n._("Expand task banner") : i18n._("Collapse task banner")}
           >
             {compact ? (
               <PiArrowsOutSimple className="size-3" />

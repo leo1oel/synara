@@ -1,3 +1,4 @@
+import { i18n } from "~/i18n";
 import {
   PROVIDER_DISPLAY_NAMES,
   THREAD_GOAL_MAX_CHARS,
@@ -178,8 +179,8 @@ export function useComposerSlashCommands(input: {
     ) {
       toastManager.add({
         type: "warning",
-        title: "Compact is unavailable",
-        description: "Open an active supported server thread before compacting context.",
+        title: i18n._("Compact is unavailable"),
+        description: i18n._("Open an active supported server thread before compacting context."),
       });
       return false;
     }
@@ -192,20 +193,22 @@ export function useComposerSlashCommands(input: {
         .catch((error) => {
           toastManager.add({
             type: "error",
-            title: "Could not compact thread",
+            title: i18n._("Could not compact thread"),
             description:
               error instanceof Error
                 ? error.message
-                : "An error occurred while compacting context.",
+                : i18n._("An error occurred while compacting context."),
           });
         });
       return true;
     } catch (error) {
       toastManager.add({
         type: "error",
-        title: "Could not compact thread",
+        title: i18n._("Could not compact thread"),
         description:
-          error instanceof Error ? error.message : "An error occurred while compacting context.",
+          error instanceof Error
+            ? error.message
+            : i18n._("An error occurred while compacting context."),
       });
       return false;
     }
@@ -236,23 +239,23 @@ export function useComposerSlashCommands(input: {
       if (!supportsFastSlashCommand) {
         toastManager.add({
           type: "warning",
-          title: "Fast mode is unavailable",
-          description: "The selected model does not support Fast mode.",
+          title: i18n._("Fast mode is unavailable"),
+          description: i18n._("The selected model does not support Fast mode."),
         });
         return true;
       }
       if (action === "invalid") {
         toastManager.add({
           type: "warning",
-          title: "Invalid /fast command",
-          description: "Use /fast, /fast on, /fast off, or /fast status.",
+          title: i18n._("Invalid /fast command"),
+          description: i18n._("Use /fast, /fast on, /fast off, or /fast status."),
         });
         return true;
       }
       if (action === "status") {
         toastManager.add({
           type: "info",
-          title: `Fast mode is ${fastModeEnabled ? "on" : "off"}`,
+          title: fastModeEnabled ? i18n._("Fast mode is on") : i18n._("Fast mode is off"),
         });
         return true;
       }
@@ -260,7 +263,7 @@ export function useComposerSlashCommands(input: {
       setFastModeFromSlashCommand(nextEnabled);
       toastManager.add({
         type: "success",
-        title: `Fast mode ${nextEnabled ? "enabled" : "disabled"}`,
+        title: nextEnabled ? i18n._("Fast mode enabled") : i18n._("Fast mode disabled"),
       });
       return true;
     },
@@ -282,8 +285,8 @@ export function useComposerSlashCommands(input: {
       if (!isServerThread || !activeThread) {
         toastManager.add({
           type: "warning",
-          title: "Thread goal is unavailable",
-          description: "Open a thread before setting a goal.",
+          title: i18n._("Thread goal is unavailable"),
+          description: i18n._("Open a thread before setting a goal."),
         });
         return false;
       }
@@ -294,9 +297,11 @@ export function useComposerSlashCommands(input: {
       } catch (error) {
         toastManager.add({
           type: "error",
-          title: "Could not update thread goal",
+          title: i18n._("Could not update thread goal"),
           description:
-            error instanceof Error ? error.message : "An error occurred while updating the goal.",
+            error instanceof Error
+              ? error.message
+              : i18n._("An error occurred while updating the goal."),
         });
         return false;
       }
@@ -306,7 +311,7 @@ export function useComposerSlashCommands(input: {
 
   const clearThreadGoal = useCallback(async () => {
     if (await persistThreadGoal("")) {
-      toastManager.add({ type: "success", title: "Thread goal cleared" });
+      toastManager.add({ type: "success", title: i18n._("Thread goal cleared") });
     }
   }, [persistThreadGoal]);
 
@@ -321,9 +326,13 @@ export function useComposerSlashCommands(input: {
       } catch (error) {
         toastManager.add({
           type: "error",
-          title: paused ? "Could not pause the thread goal" : "Could not resume the thread goal",
+          title: paused
+            ? i18n._("Could not pause the thread goal")
+            : i18n._("Could not resume the thread goal"),
           description:
-            error instanceof Error ? error.message : "An error occurred while updating the goal.",
+            error instanceof Error
+              ? error.message
+              : i18n._("An error occurred while updating the goal."),
         });
         return false;
       }
@@ -338,16 +347,18 @@ export function useComposerSlashCommands(input: {
         const currentGoal = activeThread?.goal?.trim();
         toastManager.add(
           currentGoal
-            ? { type: "info", title: "Thread goal", description: currentGoal }
-            : { type: "info", title: "No thread goal is set" },
+            ? { type: "info", title: i18n._("Thread goal"), description: currentGoal }
+            : { type: "info", title: i18n._("No thread goal is set") },
         );
         return;
       }
       if (action.action === "too-long") {
         toastManager.add({
           type: "warning",
-          title: "Thread goal is too long",
-          description: `Keep the goal within ${THREAD_GOAL_MAX_CHARS.toLocaleString()} characters.`,
+          title: i18n._("Thread goal is too long"),
+          description: i18n._("Keep the goal within {count} characters.", {
+            count: THREAD_GOAL_MAX_CHARS.toLocaleString(),
+          }),
         });
         return;
       }
@@ -360,7 +371,7 @@ export function useComposerSlashCommands(input: {
         if (await setThreadGoalPaused(paused)) {
           toastManager.add({
             type: "success",
-            title: `Thread goal ${paused ? "paused" : "resumed"}`,
+            title: paused ? i18n._("Thread goal paused") : i18n._("Thread goal resumed"),
           });
         }
         return;
@@ -372,7 +383,7 @@ export function useComposerSlashCommands(input: {
         return;
       }
       if (await persistThreadGoal(action.goal)) {
-        toastManager.add({ type: "success", title: "Thread goal updated" });
+        toastManager.add({ type: "success", title: i18n._("Thread goal updated") });
       }
     },
     [activeThread?.goal, clearThreadGoal, editorActions, persistThreadGoal, setThreadGoalPaused],
@@ -383,14 +394,14 @@ export function useComposerSlashCommands(input: {
       if (!activeThread) {
         toastManager.add({
           type: "warning",
-          title: "Rename is unavailable",
-          description: "Open a thread before renaming it.",
+          title: i18n._("Rename is unavailable"),
+          description: i18n._("Open a thread before renaming it."),
         });
         return;
       }
       if (args.length > 0) {
         if (!isServerThread && !isLocalDraftThread) {
-          toastManager.add({ type: "warning", title: "Rename is unavailable" });
+          toastManager.add({ type: "warning", title: i18n._("Rename is unavailable") });
           return;
         }
         const outcome = await dispatchThreadRename({
@@ -402,11 +413,11 @@ export function useComposerSlashCommands(input: {
             : undefined,
         });
         if (outcome === "renamed") {
-          toastManager.add({ type: "success", title: "Thread renamed" });
+          toastManager.add({ type: "success", title: i18n._("Thread renamed") });
         } else if (outcome === "unavailable") {
-          toastManager.add({ type: "warning", title: "Rename is unavailable" });
+          toastManager.add({ type: "warning", title: i18n._("Rename is unavailable") });
         } else {
-          toastManager.add({ type: "info", title: "Thread title is unchanged" });
+          toastManager.add({ type: "info", title: i18n._("Thread title is unchanged") });
         }
         return;
       }
@@ -414,8 +425,8 @@ export function useComposerSlashCommands(input: {
       if (!isServerThread) {
         toastManager.add({
           type: "warning",
-          title: "Nothing to rename yet",
-          description: "Send a message before generating a thread title.",
+          title: i18n._("Nothing to rename yet"),
+          description: i18n._("Send a message before generating a thread title."),
         });
         return;
       }
@@ -424,25 +435,25 @@ export function useComposerSlashCommands(input: {
       if (outcome.status === "renamed") {
         toastManager.add({
           type: "success",
-          title: "Thread renamed",
+          title: i18n._("Thread renamed"),
           description: outcome.title,
         });
       } else if (outcome.status === "no-context") {
         toastManager.add({
           type: "warning",
-          title: "Nothing to rename yet",
-          description: "Send a message before generating a thread title.",
+          title: i18n._("Nothing to rename yet"),
+          description: i18n._("Send a message before generating a thread title."),
         });
       } else if (outcome.status === "stale") {
         toastManager.add({
           type: "info",
-          title: "Newer thread title kept",
-          description: "The generated title was discarded because the title changed.",
+          title: i18n._("Newer thread title kept"),
+          description: i18n._("The generated title was discarded because the title changed."),
         });
       } else if (outcome.status === "unavailable") {
-        toastManager.add({ type: "warning", title: "Rename is unavailable" });
+        toastManager.add({ type: "warning", title: i18n._("Rename is unavailable") });
       } else {
-        toastManager.add({ type: "info", title: "Thread title is unchanged" });
+        toastManager.add({ type: "info", title: i18n._("Thread title is unchanged") });
       }
     },
     [activeThread, isLocalDraftThread, isServerThread],
@@ -458,8 +469,8 @@ export function useComposerSlashCommands(input: {
       if (!api || !activeProject || !activeThread || !isServerThread) {
         toastManager.add({
           type: "warning",
-          title: "Fork is unavailable",
-          description: "Only existing server-backed threads can be forked right now.",
+          title: i18n._("Fork is unavailable"),
+          description: i18n._("Only existing server-backed threads can be forked right now."),
         });
         return true;
       }
@@ -506,8 +517,8 @@ export function useComposerSlashCommands(input: {
       ) {
         toastManager.add({
           type: "warning",
-          title: "Side is unavailable",
-          description: "Open a server-backed main thread before starting Side.",
+          title: i18n._("Side is unavailable"),
+          description: i18n._("Open a server-backed main thread before starting Side."),
         });
         return Promise.resolve(true);
       }
@@ -559,13 +570,15 @@ export function useComposerSlashCommands(input: {
           if (result.promptError) {
             toastManager.add({
               type: "warning",
-              title: "Side chat started without the prompt",
-              description: "The side chat is open. Send the prompt again when it finishes loading.",
+              title: i18n._("Side chat started without the prompt"),
+              description: i18n._(
+                "The side chat is open. Send the prompt again when it finishes loading.",
+              ),
             });
           } else if (result.snapshotError) {
             toastManager.add({
               type: "warning",
-              title: "Side chat is still syncing",
+              title: i18n._("Side chat is still syncing"),
               description:
                 "The fork succeeded and will appear as soon as the thread list refreshes.",
             });
@@ -574,8 +587,10 @@ export function useComposerSlashCommands(input: {
         onQueuedPromptError: () => {
           toastManager.add({
             type: "warning",
-            title: "Side chat prompt was not sent",
-            description: "The side chat is open. Send the prompt again when it finishes loading.",
+            title: i18n._("Side chat prompt was not sent"),
+            description: i18n._(
+              "The side chat is open. Send the prompt again when it finishes loading.",
+            ),
           });
         },
       });
@@ -605,8 +620,8 @@ export function useComposerSlashCommands(input: {
       if (!api || !activeThread || !activeProject) {
         toastManager.add({
           type: "warning",
-          title: "Review is unavailable",
-          description: "Open a project thread before starting a native review.",
+          title: i18n._("Review is unavailable"),
+          description: i18n._("Open a project thread before starting a native review."),
         });
         return false;
       }
@@ -614,8 +629,8 @@ export function useComposerSlashCommands(input: {
       if (target === "base-branch" && !activeRootBranch) {
         toastManager.add({
           type: "warning",
-          title: "Base branch unavailable",
-          description: "Select or detect a base branch before starting this review.",
+          title: i18n._("Base branch unavailable"),
+          description: i18n._("Select or detect a base branch before starting this review."),
         });
         return false;
       }
@@ -690,9 +705,11 @@ export function useComposerSlashCommands(input: {
       } catch (error) {
         toastManager.add({
           type: "error",
-          title: "Could not start review",
+          title: i18n._("Could not start review"),
           description:
-            error instanceof Error ? error.message : "An error occurred while starting review.",
+            error instanceof Error
+              ? error.message
+              : i18n._("An error occurred while starting review."),
         });
         return false;
       }
@@ -731,11 +748,11 @@ export function useComposerSlashCommands(input: {
       } catch (error) {
         toastManager.add({
           type: "error",
-          title: "Could not fork thread",
+          title: i18n._("Could not fork thread"),
           description:
             error instanceof Error
               ? error.message
-              : "An error occurred while creating the forked thread.",
+              : i18n._("An error occurred while creating the forked thread."),
         });
       }
     },
@@ -764,8 +781,8 @@ export function useComposerSlashCommands(input: {
       editorActions.clearComposerSlashDraft();
       toastManager.add({
         type: "warning",
-        title: "Fast mode could not be checked",
-        description: "Claude command discovery is unavailable right now.",
+        title: i18n._("Fast mode could not be checked"),
+        description: i18n._("Claude command discovery is unavailable right now."),
       });
       return false;
     }
@@ -790,8 +807,8 @@ export function useComposerSlashCommands(input: {
       editorActions.clearComposerSlashDraft();
       toastManager.add({
         type: "warning",
-        title: "Fast mode could not be checked",
-        description: "Claude command discovery failed. Please try again.",
+        title: i18n._("Fast mode could not be checked"),
+        description: i18n._("Claude command discovery failed. Please try again."),
       });
       return false;
     }
@@ -799,8 +816,8 @@ export function useComposerSlashCommands(input: {
     editorActions.clearComposerSlashDraft();
     toastManager.add({
       type: "info",
-      title: "Fast mode is unavailable",
-      description: "Claude did not expose /fast for this account or environment.",
+      title: i18n._("Fast mode is unavailable"),
+      description: i18n._("Claude did not expose /fast for this account or environment."),
     });
     return false;
   }, [editorActions, providerCommandDiscoveryCwd, threadId]);
@@ -811,7 +828,7 @@ export function useComposerSlashCommands(input: {
     if (!canOfferExportCommand) {
       toastManager.add({
         type: "warning",
-        title: "Export is unavailable",
+        title: i18n._("Export is unavailable"),
         description:
           "Open a server-backed thread and wait for the current turn to finish before exporting.",
       });
@@ -824,9 +841,11 @@ export function useComposerSlashCommands(input: {
     }).catch((error: unknown) => {
       toastManager.add({
         type: "error",
-        title: "Could not export thread",
+        title: i18n._("Could not export thread"),
         description:
-          error instanceof Error ? error.message : "An error occurred while exporting the thread.",
+          error instanceof Error
+            ? error.message
+            : i18n._("An error occurred while exporting the thread."),
       });
     });
   }, [canOfferExportCommand, threadId]);
@@ -879,8 +898,8 @@ export function useComposerSlashCommands(input: {
         if (slashInvocation.args) return false; // The normal send freezes one-turn activation.
         toastManager.add({
           type: "info",
-          title: "Add a task after /computer-use",
-          description: "For example: /computer-use open Calculator and calculate 123 × 45.",
+          title: i18n._("Add a task after /computer-use"),
+          description: i18n._("For example: /computer-use open Calculator and calculate 123 × 45."),
         });
         editorActions.scheduleComposerFocus();
         return true;
@@ -919,11 +938,11 @@ export function useComposerSlashCommands(input: {
         void runRenameSlashCommand(slashInvocation.args).catch((error) => {
           toastManager.add({
             type: "error",
-            title: "Could not rename thread",
+            title: i18n._("Could not rename thread"),
             description:
               error instanceof Error
                 ? error.message
-                : "An error occurred while renaming the thread.",
+                : i18n._("An error occurred while renaming the thread."),
           });
         });
         return true;
@@ -955,8 +974,8 @@ export function useComposerSlashCommands(input: {
           if (!target) {
             toastManager.add({
               type: "warning",
-              title: "Invalid /review command",
-              description: "Use /review and then choose a review target.",
+              title: i18n._("Invalid /review command"),
+              description: i18n._("Use /review and then choose a review target."),
             });
             return true;
           }
@@ -985,8 +1004,8 @@ export function useComposerSlashCommands(input: {
         if (invalid) {
           toastManager.add({
             type: "warning",
-            title: "Invalid /fork command",
-            description: "Use /fork and then choose Local or New Worktree.",
+            title: i18n._("Invalid /fork command"),
+            description: i18n._("Use /fork and then choose Local or New Worktree."),
           });
           return true;
         }
@@ -1003,11 +1022,11 @@ export function useComposerSlashCommands(input: {
         } catch (error) {
           toastManager.add({
             type: "error",
-            title: "Could not fork thread",
+            title: i18n._("Could not fork thread"),
             description:
               error instanceof Error
                 ? error.message
-                : "An error occurred while creating the forked thread.",
+                : i18n._("An error occurred while creating the forked thread."),
           });
         }
         return true;
@@ -1018,8 +1037,8 @@ export function useComposerSlashCommands(input: {
         if (!canExecuteSideCommand) {
           toastManager.add({
             type: "warning",
-            title: "Side is unavailable",
-            description: "Remove composer attachments or context before using /side.",
+            title: i18n._("Side is unavailable"),
+            description: i18n._("Remove composer attachments or context before using /side."),
           });
           return true;
         }
@@ -1034,7 +1053,7 @@ export function useComposerSlashCommands(input: {
           toastManager.add({
             type: "warning",
             title: `${PROVIDER_DISPLAY_NAMES[unavailableProvider]} is unavailable for Side`,
-            description: "Enable and sign in to that provider, then run /side again.",
+            description: i18n._("Enable and sign in to that provider, then run /side again."),
           });
           return true;
         }
@@ -1049,9 +1068,11 @@ export function useComposerSlashCommands(input: {
         } catch (error) {
           toastManager.add({
             type: "error",
-            title: "Could not start Side",
+            title: i18n._("Could not start Side"),
             description:
-              error instanceof Error ? error.message : "An error occurred while creating Side.",
+              error instanceof Error
+                ? error.message
+                : i18n._("An error occurred while creating Side."),
           });
         }
         return true;
@@ -1281,9 +1302,11 @@ export function useComposerSlashCommands(input: {
         void createSidechatFromSlashCommand().catch((error) => {
           toastManager.add({
             type: "error",
-            title: "Could not start Side",
+            title: i18n._("Could not start Side"),
             description:
-              error instanceof Error ? error.message : "An error occurred while creating Side.",
+              error instanceof Error
+                ? error.message
+                : i18n._("An error occurred while creating Side."),
           });
         });
       }

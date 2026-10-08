@@ -3,6 +3,7 @@
 // Layer: Chat shell header
 // Depends on: project action controls, git actions, and panel toggle callbacks
 
+import { i18n } from "~/i18n";
 import {
   type EditorId,
   type ProjectId,
@@ -206,8 +207,8 @@ function EditorChatHistoryMenu(props: {
             <IconButton
               variant="ghost"
               size="icon-xs"
-              label="Chat history"
-              title="Chat history"
+              label={i18n._("Chat history")}
+              title={i18n._("Chat history")}
               className="size-5 shrink-0 text-muted-foreground hover:text-foreground"
             >
               <HistoryIcon className="size-3.5" />
@@ -264,7 +265,7 @@ function EditorChatHistoryMenu(props: {
                   type="button"
                   className="ml-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-60 transition-[color,background-color,opacity] hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
                   aria-label={`Delete thread "${thread.title}"`}
-                  title="Delete thread"
+                  title={i18n._("Delete thread")}
                   onMouseDown={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
@@ -387,8 +388,8 @@ function EditorRailTabs(props: {
               <IconButton
                 variant="ghost"
                 size="icon-xs"
-                label="New editor rail item"
-                title="New"
+                label={i18n._("New editor rail item")}
+                title={i18n._("New")}
                 className="size-5 shrink-0 text-muted-foreground hover:text-foreground"
               >
                 <PlusIcon className="size-3.5" />
@@ -409,7 +410,7 @@ function EditorRailTabs(props: {
             </MenuItem>
             <MenuItem onClick={newTerminalTab}>
               <TerminalIcon className="size-3.5 shrink-0 text-muted-foreground" />
-              <span>New terminal</span>
+              <span>{i18n._("New terminal")}</span>
             </MenuItem>
           </ComposerPickerMenuPopup>
         </Menu>
@@ -446,8 +447,8 @@ function EditorRailTabs(props: {
           {terminalTabVisible ? (
             <SurfaceTabChip
               active={shownTabKey === "terminal"}
-              title="Terminal"
-              label="Terminal"
+              title={i18n._("Terminal")}
+              label={i18n._("Terminal")}
               labelClassName="max-w-24"
               icon={<TerminalIcon className="size-3 shrink-0 text-[var(--color-text-accent)]" />}
               trailing={
@@ -607,7 +608,9 @@ export function ChatHeader({
             )}
             pressed={togglesRightDock ? rightDockOpen : diffOpen}
             onPressedChange={togglesRightDock ? onToggleRightDock : onToggleDiff}
-            aria-label={togglesRightDock ? "Toggle right sidebar" : "Toggle diff panel"}
+            aria-label={
+              togglesRightDock ? i18n._("Toggle right sidebar") : i18n._("Toggle diff panel")
+            }
             variant="default"
             size="xs"
             disabled={
@@ -635,15 +638,15 @@ export function ChatHeader({
       <TooltipPopup side="bottom">
         {togglesRightDock
           ? rightDockOpen
-            ? "Close right sidebar"
-            : "Open right sidebar"
+            ? i18n._("Close right sidebar")
+            : i18n._("Open right sidebar")
           : !isGitRepo
-            ? "Diff panel is unavailable because this project is not a git repository."
+            ? i18n._("Diff panel is unavailable because this project is not a git repository.")
             : diffDisabledReason && !diffOpen
               ? diffDisabledReason
               : diffToggleShortcutLabel
                 ? `Toggle diff panel (${diffToggleShortcutLabel})`
-                : "Toggle diff panel"}
+                : i18n._("Toggle diff panel")}
       </TooltipPopup>
     </Tooltip>
   ) : null;
@@ -723,7 +726,7 @@ export function ChatHeader({
                       className="inline-flex size-3.5 shrink-0 items-center justify-center"
                       title={
                         threadIconKind === "terminal"
-                          ? "Terminal"
+                          ? i18n._("Terminal")
                           : PROVIDER_DISPLAY_NAMES[activeProvider]
                       }
                     >
@@ -744,20 +747,20 @@ export function ChatHeader({
                       {...(onDeleteChat ? { onDeleteChat } : {})}
                     />
                   ) : (
-                  <h2
-                    className="max-w-[clamp(12rem,42vw,36rem)] truncate font-system-ui text-ui font-normal text-foreground"
-                    title={activeThreadTitle}
-                    onDoubleClick={() => onRenameThread()}
-                  >
-                    {activeThreadTitle}
-                  </h2>
+                    <h2
+                      className="max-w-[clamp(12rem,42vw,36rem)] truncate font-system-ui text-ui font-normal text-foreground"
+                      title={activeThreadTitle}
+                      onDoubleClick={() => onRenameThread()}
+                    >
+                      {activeThreadTitle}
+                    </h2>
                   )}
                   {showSidechatTitleChip && !isSplitPane && onCloseThreadPane ? (
                     <IconButton
                       variant="chrome"
                       size="icon-xs"
-                      label="Close selected Side"
-                      tooltip="Close selected Side"
+                      label={i18n._("Close selected Side")}
+                      tooltip={i18n._("Close selected Side")}
                       tooltipSide="bottom"
                       className="size-5 rounded-lg [-webkit-app-region:no-drag] [&_svg]:size-3"
                       onClick={(event) => {
@@ -897,16 +900,16 @@ export function ChatHeader({
               <SurfacePanelToggle
                 state={projectPanel}
                 icon={WorkflowIcon}
-                ariaLabel="Toggle hub panel"
-                tooltip="Hub"
+                ariaLabel={i18n._("Toggle hub panel")}
+                tooltip={i18n._("Hub")}
               />
             ) : null}
             {libraryPanel ? (
               <SurfacePanelToggle
                 state={libraryPanel}
                 icon={FoldersIcon}
-                ariaLabel="Toggle library panel"
-                tooltip="Library"
+                ariaLabel={i18n._("Toggle library panel")}
+                tooltip={i18n._("Library")}
               />
             ) : null}
             {rightPanelToggleControl}
@@ -941,7 +944,7 @@ export function ChatHeader({
                 <ChatHeaderIconButton
                   type="button"
                   tone="surface"
-                  label="Close chat"
+                  label={i18n._("Close chat")}
                   onMouseDown={(event) => event.stopPropagation()}
                   onClick={(event) => {
                     event.stopPropagation();
@@ -952,7 +955,7 @@ export function ChatHeader({
                 </ChatHeaderIconButton>
               }
             />
-            <TooltipPopup side="bottom">Close chat</TooltipPopup>
+            <TooltipPopup side="bottom">{i18n._("Close chat")}</TooltipPopup>
           </Tooltip>
         ) : null}
       </div>
