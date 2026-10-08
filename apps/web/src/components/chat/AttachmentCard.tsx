@@ -8,6 +8,7 @@
 // Layer: Chat composer/transcript presentation
 // Exports: AttachmentCard
 
+import { i18n } from "~/i18n";
 import { forwardRef, type ComponentPropsWithoutRef, type ReactNode } from "react";
 
 import { cn } from "~/lib/utils";
@@ -101,7 +102,7 @@ export const AttachmentCard = forwardRef<HTMLSpanElement, AttachmentCardProps>(
         {onRemove ? (
           <AttachmentRemoveButton
             size={styles.remove}
-            label={removeLabel ?? "Remove attachment"}
+            label={removeLabel ?? i18n._("Remove attachment")}
             onRemove={onRemove}
           />
         ) : null}

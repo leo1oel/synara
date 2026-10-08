@@ -1,3 +1,4 @@
+import { i18n } from "~/i18n";
 import type { FileDiffMetadata } from "@pierre/diffs/react";
 import type { ThreadId, TurnId } from "@synara/contracts";
 import { lazy, type ReactNode, Suspense, useEffect, useState } from "react";
@@ -30,7 +31,7 @@ function DiffLoadingFallback(props: { mode: DiffPanelMode; hideHeader?: boolean 
       mode={props.mode}
       header={props.hideHeader ? null : <DiffPanelHeaderSkeleton />}
     >
-      <DiffPanelLoadingState label="Loading diff viewer..." />
+      <DiffPanelLoadingState label={i18n._("Loading diff viewer...")} />
     </DiffPanelShell>
   );
 }

@@ -89,19 +89,23 @@ export function ComposerSlashStatusDialog(props: {
         <DialogPanel className="space-y-4">
           <div className="grid gap-3 rounded-lg border border-border/60 bg-muted/20 p-4 text-ui-lg leading-snug sm:grid-cols-2">
             <div className="space-y-1">
-              <p className="text-ui leading-snug text-muted-foreground">Model</p>
+              <p className="text-ui leading-snug text-muted-foreground">{i18n._("Model")}</p>
               <p className="font-medium text-foreground">{selectedModel}</p>
             </div>
             <div className="space-y-1">
-              <p className="text-ui leading-snug text-muted-foreground">Fast Mode</p>
-              <p className="font-medium text-foreground">{fastModeEnabled ? "On" : "Off"}</p>
+              <p className="text-ui leading-snug text-muted-foreground">{i18n._("Fast Mode")}</p>
+              <p className="font-medium text-foreground">
+                {fastModeEnabled ? i18n._("On") : i18n._("Off")}
+              </p>
             </div>
             <div className="space-y-1">
-              <p className="text-ui leading-snug text-muted-foreground">Reasoning</p>
-              <p className="font-medium text-foreground">{selectedPromptEffort ?? "Default"}</p>
+              <p className="text-ui leading-snug text-muted-foreground">{i18n._("Reasoning")}</p>
+              <p className="font-medium text-foreground">
+                {selectedPromptEffort ?? i18n._("Default")}
+              </p>
             </div>
             <div className="space-y-1">
-              <p className="text-ui leading-snug text-muted-foreground">Mode</p>
+              <p className="text-ui leading-snug text-muted-foreground">{i18n._("Mode")}</p>
               <p className="font-medium text-foreground">
                 {interactionMode === "plan"
                   ? i18n._("Plan")
@@ -111,21 +115,23 @@ export function ComposerSlashStatusDialog(props: {
               </p>
             </div>
             <div className="space-y-1">
-              <p className="text-ui leading-snug text-muted-foreground">Environment</p>
+              <p className="text-ui leading-snug text-muted-foreground">{i18n._("Environment")}</p>
               <p className="font-medium text-foreground">
                 {formatEnvironmentLabel(envMode, envState)}
               </p>
             </div>
             <div className="space-y-1">
-              <p className="text-ui leading-snug text-muted-foreground">Branch</p>
-              <p className="font-medium text-foreground">{branch ?? "Unknown"}</p>
+              <p className="text-ui leading-snug text-muted-foreground">{i18n._("Branch")}</p>
+              <p className="font-medium text-foreground">{branch ?? i18n._("Unknown")}</p>
             </div>
           </div>
 
           <div className="space-y-3 rounded-lg border border-border/60 bg-card p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-ui leading-snug text-muted-foreground">Context Window</p>
+                <p className="text-ui leading-snug text-muted-foreground">
+                  {i18n._("Context Window")}
+                </p>
                 <p className="text-ui leading-snug text-muted-foreground">
                   {i18n._("Latest usage reported by the active thread.")}
                 </p>
@@ -149,19 +155,19 @@ export function ComposerSlashStatusDialog(props: {
               {contextWindow ? (
                 <>
                   <div>
-                    <p className="text-muted-foreground">Used</p>
+                    <p className="text-muted-foreground">{i18n._("Used")}</p>
                     <p className="font-medium text-foreground">
                       {formatContextWindowTokens(contextWindow.usedTokens)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Remaining</p>
+                    <p className="text-muted-foreground">{i18n._("Remaining")}</p>
                     <p className="font-medium text-foreground">
                       {formatContextWindowTokens(contextWindow.remainingTokens)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Window</p>
+                    <p className="text-muted-foreground">{i18n._("Window")}</p>
                     <p className="font-medium text-foreground">
                       {formatContextWindowTokens(contextWindow.maxTokens)}
                     </p>
@@ -169,12 +175,12 @@ export function ComposerSlashStatusDialog(props: {
                 </>
               ) : (
                 <div>
-                  <p className="text-muted-foreground">Context usage</p>
-                  <p className="font-medium text-foreground">Not reported yet</p>
+                  <p className="text-muted-foreground">{i18n._("Context usage")}</p>
+                  <p className="font-medium text-foreground">{i18n._("Not reported yet")}</p>
                 </div>
               )}
               <div>
-                <p className="text-muted-foreground">Cost</p>
+                <p className="text-muted-foreground">{i18n._("Cost")}</p>
                 <p className="font-medium text-foreground">
                   {cumulativeCostUsd !== null
                     ? formatCostUsd(cumulativeCostUsd)
@@ -185,7 +191,7 @@ export function ComposerSlashStatusDialog(props: {
           </div>
 
           <div className="space-y-2 rounded-lg border border-border/60 bg-card p-4">
-            <p className="text-ui leading-snug text-muted-foreground">Rate Limits</p>
+            <p className="text-ui leading-snug text-muted-foreground">{i18n._("Rate Limits")}</p>
             {rateLimitStatus ? (
               <p className="text-ui leading-snug text-foreground">
                 {formatRateLimitMessage(rateLimitStatus)}

@@ -60,6 +60,32 @@ function outcomeMessage(i18n: I18n, outcome: CodexResetCreditOutcome): string {
   }
 }
 
+// Fixed reset errors from the server and the attempt store; anything else passes through.
+function localizeResetError(message: string): string {
+  switch (message) {
+    case "Codex rejected the reset-credit request.":
+      return i18n._("Codex rejected the reset request.");
+    case "Codex reset-credit request timed out. Retry the same attempt.":
+      return i18n._("Codex didn't answer in time. Retry to check the same attempt.");
+    case "Codex app-server exited during the reset-credit request.":
+      return i18n._("Codex stopped during the reset request. Retry to check the same attempt.");
+    case "The Codex account changed. Refresh usage before using a reset.":
+      return i18n._("The Codex account changed. Refresh usage before using a reset.");
+    case "Current Codex usage is unavailable. Retry the same attempt when it returns.":
+      return i18n._("Current Codex usage can't be read. Retry the same attempt later.");
+    case "Codex returned an unknown reset result. Retry the same attempt.":
+      return i18n._("Codex returned an unexpected result. Retry to check the same attempt.");
+    case "A reset is already in progress for this Codex account.":
+      return i18n._("A reset is already in progress for this Codex account.");
+    case "Retry the previous reset before choosing another one.":
+      return i18n._("Retry the previous reset before choosing another one.");
+    case "The previous Codex reset attempt could not be read. No new reset was requested.":
+      return i18n._("The previous reset attempt couldn't be read. No new reset was requested.");
+    default:
+      return message;
+  }
+}
+
 type ResetDialog =
   | { kind: "confirm"; creditId: string | undefined; isRetry: boolean }
   | { kind: "notYet" }
@@ -117,7 +143,7 @@ export function ProviderUsageResetCredits({
         title: i18n._("Couldn't confirm whether the reset was used"),
         description:
           error instanceof Error
-            ? error.message
+            ? localizeResetError(error.message)
             : i18n._("Choose Retry reset to check the same attempt again."),
       });
     } finally {

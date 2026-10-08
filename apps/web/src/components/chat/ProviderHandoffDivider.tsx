@@ -5,6 +5,7 @@
 //      transcript boundary (like ForkSourceDivider) rather than a work row
 //      folded into the previous turn. Clicking it reveals the transferred context.
 
+import { i18n } from "~/i18n";
 import { memo, useState } from "react";
 
 import { ArrowRightIcon, CircleAlertIcon, FastModeIcon, HandoffIcon } from "~/lib/icons";
@@ -27,7 +28,7 @@ function HandoffEndpoint(props: {
       <ProviderIcon provider={props.selection.provider} className="size-3.5 shrink-0" />
       <span className="truncate">{summary?.modelLabel ?? props.selection.model}</span>
       {summary?.fastMode ? (
-        <FastModeIcon aria-label="Fast mode" className="size-3 shrink-0 opacity-75" />
+        <FastModeIcon aria-label={i18n._("Fast mode")} className="size-3 shrink-0 opacity-75" />
       ) : null}
       {summary?.statusLabel ? (
         <span className="shrink-0 opacity-70">{summary.statusLabel}</span>
@@ -62,7 +63,9 @@ export const ProviderHandoffDivider = memo(function ProviderHandoffDivider({
           ) : (
             <HandoffIcon className="size-3.5 shrink-0" aria-hidden />
           )}
-          <span className="shrink-0">{failed ? "Handoff failed" : "Context handoff"}</span>
+          <span className="shrink-0">
+            {failed ? i18n._("Handoff failed") : i18n._("Context handoff")}
+          </span>
           <HandoffEndpoint selection={info.sourceModelSelection} />
           <ArrowRightIcon className="size-3 shrink-0 opacity-70" aria-hidden />
           <HandoffEndpoint

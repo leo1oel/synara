@@ -120,7 +120,7 @@ export function ComposerEnvironmentPicker({
         className="w-60 min-w-60"
       >
         <MenuGroup>
-          <MenuGroupLabel>Work in</MenuGroupLabel>
+          <MenuGroupLabel>{i18n._("Work in")}</MenuGroupLabel>
           {environmentPresentation.mode === "local" ? (
             <WorkInMenuItem
               icon={<CentralIcon name="macbook-air" className={ENV_MENU_ICON_CLASS_NAME} />}

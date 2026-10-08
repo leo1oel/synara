@@ -5,6 +5,7 @@
 //   file and pasted-text attachments beside them.
 // Layer: Chat composer/transcript presentation
 
+import { i18n } from "~/i18n";
 import { useState, type ComponentType } from "react";
 
 import {
@@ -99,7 +100,11 @@ export function UserMessagePullRequestContextCard({
       <button
         type="button"
         aria-expanded={expanded}
-        title={expanded ? "Hide the prompt this card sent" : "Show the prompt this card sent"}
+        title={
+          expanded
+            ? i18n._("Hide the prompt this card sent")
+            : i18n._("Show the prompt this card sent")
+        }
         className="cursor-pointer rounded-xl text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         onClick={() => setExpanded((value) => !value)}
       >

@@ -4,6 +4,7 @@
 // Layer: Chat composer presentation
 // Depends on: shared button primitive and caller-owned open state.
 
+import { i18n } from "~/i18n";
 import { PlusIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { Button } from "../ui/button";
@@ -22,7 +23,7 @@ export function ComposerExtrasTrigger(props: {
         "shrink-0 rounded-md",
         props.open && "bg-[var(--color-background-button-secondary)]",
       )}
-      aria-label="Composer extras"
+      aria-label={i18n._("Composer extras")}
       aria-expanded={props.open}
       aria-controls={props.open ? props.panelId : undefined}
       {...{ [COMPOSER_EXTRAS_TRIGGER_ATTRIBUTE]: "" }}

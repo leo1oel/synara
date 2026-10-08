@@ -677,7 +677,9 @@ function ProviderDocsLinks({ docs }: { docs: ProviderInstallSettings["docs"] }) 
   return (
     <div className={cn(SETTINGS_OUTLINED_SURFACE_CLASS_NAME, "px-3 py-2.5")}>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <span className="text-ui leading-snug font-medium text-foreground">CLI docs</span>
+        <span className="text-ui leading-snug font-medium text-foreground">
+          {i18n._("CLI docs")}
+        </span>
         <div className="flex flex-wrap gap-2">
           {docs.map((doc) => (
             <Button
@@ -1287,7 +1289,9 @@ function ProviderAccountsControl(props: {
       <>
         <div className="grid gap-2 sm:grid-cols-2">
           <label className="block sm:col-span-2">
-            <span className="block text-ui-sm font-medium text-foreground">Terminal command</span>
+            <span className="block text-ui-sm font-medium text-foreground">
+              {i18n._("Terminal command")}
+            </span>
             <div className="mt-1 flex items-center gap-2">
               <code className="min-w-0 flex-1 truncate rounded-md border border-border/70 bg-background/60 px-2.5 py-1.5 text-ui-sm">
                 {cliCommand}
@@ -1308,7 +1312,9 @@ function ProviderAccountsControl(props: {
             .map((field) => renderField(field, entry))}
           {provider === "codex" ? (
             <label className="block">
-              <span className="block text-ui-sm font-medium text-foreground">Shadow auth home</span>
+              <span className="block text-ui-sm font-medium text-foreground">
+                {i18n._("Shadow auth home")}
+              </span>
               <DebouncedSettingTextInput
                 id={`provider-instance-${instanceId}-shadow-home`}
                 size="sm"
@@ -1374,7 +1380,9 @@ function ProviderAccountsControl(props: {
         </div>
         <ProviderInstanceAdvancedSection>
           <label className="block sm:col-span-2">
-            <span className="block text-ui-sm font-medium text-foreground">Command override</span>
+            <span className="block text-ui-sm font-medium text-foreground">
+              {i18n._("Command override")}
+            </span>
             <DebouncedSettingTextInput
               id={`provider-instance-${instanceId}-cli-alias`}
               size="sm"
@@ -1507,7 +1515,7 @@ function ProviderAccountsControl(props: {
             ) : (
               <PlayIcon className="size-3.5" />
             )}
-            Sign in
+            {i18n._("Sign in")}
           </Button>
           {account.isDefault ? (
             defaultIsCustomized ? (
@@ -1568,7 +1576,9 @@ function ProviderAccountsControl(props: {
               />
             </div>
             <div className="space-y-1">
-              <span className="block text-ui-sm font-medium text-foreground">Accent color</span>
+              <span className="block text-ui-sm font-medium text-foreground">
+                {i18n._("Accent color")}
+              </span>
               <div className="flex min-h-7 items-center">
                 <ProviderAccentColorControl
                   value={account.accentColor}
@@ -1727,7 +1737,11 @@ function ProviderAccountsControl(props: {
       </div>
 
       {signInAccount ? (
-        <Suspense fallback={<p className="text-ui-sm text-muted-foreground">Opening sign-in…</p>}>
+        <Suspense
+          fallback={
+            <p className="text-ui-sm text-muted-foreground">{i18n._("Opening sign-in…")}</p>
+          }
+        >
           <ProviderSignInDialog
             provider={provider}
             instanceId={String(signInAccount.instanceId)}
@@ -1868,7 +1882,7 @@ function ProviderToolRow(props: {
           >
             <span className="min-w-0 flex-1 text-ui-lg font-medium text-foreground">{title}</span>
             {isDirty ? (
-              <span className="shrink-0 text-ui-sm text-muted-foreground">Custom</span>
+              <span className="shrink-0 text-ui-sm text-muted-foreground">{i18n._("Custom")}</span>
             ) : null}
             {providerUpdateLabel ? (
               <span

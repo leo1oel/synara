@@ -195,7 +195,7 @@ function EditorChatHistoryMenu(props: {
             <button
               type="button"
               className="flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-left text-ui leading-[var(--app-line-height-ui,1.5)] font-normal text-foreground transition-colors hover:bg-secondary"
-              aria-label={`${props.triggerTitle}, open chat history`}
+              aria-label={i18n._("{title}, open chat history", { title: props.triggerTitle })}
               data-chat-history-menu-trigger="true"
             >
               <span className="max-w-[min(10rem,calc(100vw-5.5rem))] truncate">

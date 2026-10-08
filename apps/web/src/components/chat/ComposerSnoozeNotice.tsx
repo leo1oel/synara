@@ -40,7 +40,7 @@ export function ComposerSnoozeNotice({
         <span className="font-medium text-foreground">
           <SnoozeCountdown snoozedUntil={snoozedUntil} />
         </span>
-        <span className="block">Sending a message cancels the reminder.</span>
+        <span className="block">{i18n._("Sending a message cancels the reminder.")}</span>
       </span>
       <button type="button" className={ACTION_CLASS_NAME} onClick={onReturnNow}>
         {i18n._("Return now")}

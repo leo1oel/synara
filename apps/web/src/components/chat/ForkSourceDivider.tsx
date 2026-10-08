@@ -2,6 +2,7 @@
 // Purpose: Link a forked transcript back to the immediate source chat.
 // Layer: Chat transcript UI
 
+import { i18n } from "~/i18n";
 import { type ThreadId } from "@synara/contracts";
 import { memo, type MouseEvent } from "react";
 
@@ -45,7 +46,7 @@ export const ForkSourceDivider = memo(function ForkSourceDivider({
         }}
       >
         <GitForkIcon className="size-4 shrink-0 text-muted-foreground/70" aria-hidden />
-        <span className="truncate">Continued from chat</span>
+        <span className="truncate">{i18n._("Continued from chat")}</span>
       </a>
       <span aria-hidden className="h-px min-w-0 flex-1 bg-[color:var(--color-border-light)]" />
     </div>

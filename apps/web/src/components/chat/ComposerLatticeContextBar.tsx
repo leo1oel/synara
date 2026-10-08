@@ -3,7 +3,8 @@
 // visible and inspectable immediately above the embedded chat composer.
 // Layer: Chat composer UI
 
-import { useLingui } from "@lingui/react";
+import { msg } from "@lingui/core/macro";
+import { i18n } from "~/i18n";
 import { useState, useSyncExternalStore } from "react";
 
 import { EyeIcon, PanelCollapseIcon, PanelExpandIcon, XIcon } from "~/lib/icons";
@@ -31,6 +32,9 @@ import {
   COMPOSER_STACKED_PANEL_ICON_CLASS_NAME,
 } from "./composerStackedPanelStyles";
 
+// "Included" alone also labels bundled skills (内置); the context keeps the two translations apart.
+const INCLUDED_WITH_MESSAGE = msg({ message: "Included", context: "Sent with the next message" });
+
 interface ComposerLatticeContextBarProps {
   onClearSelection?: () => void;
   attachedToPrevious?: boolean;
@@ -41,7 +45,6 @@ export function ComposerLatticeContextBar({
   attachedToPrevious: attachedToPreviousProp,
 }: ComposerLatticeContextBarProps) {
   const [expanded, setExpanded] = useState(false);
-  const { i18n } = useLingui();
   const context = useSyncExternalStore(
     subscribeLiveLatticeHostContext,
     getLiveLatticeHostContext,
@@ -88,7 +91,7 @@ export function ComposerLatticeContextBar({
                 </span>
               ) : (
                 <span className="shrink-0 text-ui-xs text-muted-foreground/55">
-                  {i18n._("Included")}
+                  {i18n._(INCLUDED_WITH_MESSAGE)}
                 </span>
               )}
               {expanded ? (
@@ -126,7 +129,7 @@ export function ComposerLatticeContextBar({
                   {i18n._("Included automatically with your next message")}
                 </p>
                 <span className="shrink-0 rounded-full bg-[var(--color-background-button-secondary)] px-1.5 py-0.5 text-ui-xs font-medium text-[var(--color-text-foreground-secondary)]">
-                  {i18n._("Included")}
+                  {i18n._(INCLUDED_WITH_MESSAGE)}
                 </span>
               </div>
               <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-ui-sm">

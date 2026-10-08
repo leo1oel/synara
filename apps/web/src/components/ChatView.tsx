@@ -1,3 +1,4 @@
+import { i18n } from "~/i18n";
 import { PULL_REQUEST_AUTO_FIX_ON } from "../betaFeatures";
 import { type LegendListRef } from "@legendapp/list/react";
 import {
@@ -562,7 +563,7 @@ function ComposerControlSkeleton(props: { widthClassName: string }) {
 function ComposerModelLoadingControl(props: { widthClassName?: string; compact?: boolean }) {
   return (
     <div
-      aria-label="Loading models"
+      aria-label={i18n._("Loading models")}
       className={cn(
         "flex h-8 shrink-0 items-center gap-2 rounded-md border border-border/50 px-2 text-muted-foreground",
         props.compact && "w-8 justify-center px-0",
@@ -570,7 +571,9 @@ function ComposerModelLoadingControl(props: { widthClassName?: string; compact?:
       )}
     >
       <RefreshCwIcon aria-hidden="true" className="size-3.5 animate-spin" />
-      <span className={cn("truncate text-ui-xs", props.compact && "sr-only")}>Loading models</span>
+      <span className={cn("truncate text-ui-xs", props.compact && "sr-only")}>
+        {i18n._("Loading models")}
+      </span>
     </div>
   );
 }
@@ -2978,7 +2981,7 @@ export default function ChatView({
     refreshVoiceStatus: refreshProviderStatuses,
     actionArmDelayMs: VOICE_RECORDER_ACTION_ARM_DELAY_MS,
     failureCopy: {
-      transcriptionFailedTitle: "Couldn't transcribe voice note",
+      transcriptionFailedTitle: i18n._("Couldn't transcribe voice note"),
     },
     onGuardWarning: warnVoiceGuard,
   });
@@ -4217,7 +4220,7 @@ export default function ChatView({
       } catch (err) {
         setThreadError(
           activeThread.id,
-          err instanceof Error ? err.message : "Failed to revert thread state.",
+          err instanceof Error ? err.message : i18n._("Failed to revert thread state."),
         );
       }
       setIsRevertingCheckpoint(false);
@@ -4284,11 +4287,12 @@ export default function ChatView({
         setIsRevertingCheckpoint(false);
         setThreadError(
           activeThread.id,
-          err instanceof Error ? err.message : "Failed to undo file changes.",
+          err instanceof Error ? err.message : i18n._("Failed to undo file changes."),
         );
       });
     },
     [
+      i18n,
       setIsRevertingCheckpoint,
       setPendingFileUndo,
       activeThread,
@@ -5483,7 +5487,7 @@ export default function ChatView({
             <div className="flex items-center gap-2">
               <SidebarHeaderTrigger className="size-7 shrink-0" />
               <span className="text-ui-lg font-medium text-[var(--color-text-foreground)]">
-                Threads
+                {i18n._("Threads")}
               </span>
             </div>
           </header>
@@ -5498,13 +5502,15 @@ export default function ChatView({
             )}
           >
             <SidebarHeaderNavigationControls />
-            <span className="text-ui leading-snug text-muted-foreground/50">No active thread</span>
+            <span className="text-ui leading-snug text-muted-foreground/50">
+              {i18n._("No active thread")}
+            </span>
           </div>
         )}
         <div className="flex flex-1 items-center justify-center">
           <div className="text-center">
             <p className="text-ui leading-snug">
-              Select a thread or create a new one to get started.
+              {i18n._("Select a thread or create a new one to get started.")}
             </p>
           </div>
         </div>
@@ -5775,7 +5781,7 @@ export default function ChatView({
             COMPOSER_TOOLBAR_TRIGGER_TEXT_CLASS_NAME,
           )}
         >
-          Worktree
+          {i18n._("Worktree")}
           {envMode === "worktree" ? (
             <CheckboxCheckedIcon className="size-4" />
           ) : (
@@ -5927,10 +5933,10 @@ export default function ChatView({
         if (!createSidechat) {
           toastManager.add({
             type: "warning",
-            title: "Side chat is unavailable",
+            title: i18n._("Side chat is unavailable"),
             description: standalone
-              ? "Open the item in Code review before starting a new side chat."
-              : "Open the parent chat before starting a replacement side chat.",
+              ? i18n._("Open the item in Code review before starting a new side chat.")
+              : i18n._("Open the parent chat before starting a replacement side chat."),
           });
           return;
         }
@@ -5939,11 +5945,11 @@ export default function ChatView({
       .catch((error) => {
         toastManager.add({
           type: "error",
-          title: "Could not start side chat",
+          title: i18n._("Could not start side chat"),
           description:
             error instanceof Error
               ? error.message
-              : "An error occurred while creating the side chat.",
+              : i18n._("An error occurred while creating the side chat."),
         });
       });
   };
@@ -7003,7 +7009,7 @@ export default function ChatView({
               open={projectPanelVisible}
               variant={environmentOverlayVariant}
               projectId={activeProjectId}
-              projectName={activeProjectDisplayName ?? activeProject?.name ?? "Project"}
+              projectName={activeProjectDisplayName ?? activeProject?.name ?? i18n._("Project")}
               workspacePath={activeProject?.cwd ?? ""}
               // "Use default" must mean the app's default model, not whatever the
               // active thread happens to run (W14).

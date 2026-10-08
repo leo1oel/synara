@@ -12,6 +12,7 @@
 // Layer: Chat transcript shell (presentation)
 // Depends on: pure magnification math in messageTrail.logic.ts (unit-tested).
 
+import { i18n } from "~/i18n";
 import { type MessageId } from "@synara/contracts";
 import {
   useEffect,
@@ -670,7 +671,7 @@ export function MessageTrail({
       </div>
       <nav
         ref={rootRef}
-        aria-label="Message navigation"
+        aria-label={i18n._("Message navigation")}
         aria-hidden={!visible}
         onKeyDown={handleKeyDown}
         onBlur={handleRailBlur}

@@ -1632,6 +1632,7 @@ msgstr "正在加载暂存详情..."
 
 #. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/chat/ComposerSlashStatusDialog.tsx
 #: src/components/GitCreatePrDialog.tsx
 msgid "Branch"
 msgstr "分支"
@@ -1640,6 +1641,7 @@ msgstr "分支"
 #: src/components/BranchToolbarBranchSelector.tsx
 #: src/components/chat/ComposerSlashStatusDialog.tsx
 #: src/components/chat/SynaraThreadCreationCard.tsx
+#: src/components/ChatView.tsx
 msgid "Worktree"
 msgstr "工作树"
 
@@ -1673,6 +1675,12 @@ msgstr "保留暂存"
 #: src/components/BranchToolbarBranchSelector.tsx
 msgid "Discarding..."
 msgstr "正在丢弃..."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProviderModelPicker.tsx
+#: src/components/ChatView.tsx
+msgid "Loading models"
+msgstr "正在加载模型"
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
@@ -1816,6 +1824,11 @@ msgstr "内置浏览器打不开 GitHub。"
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
+msgid "Couldn't transcribe voice note"
+msgstr "语音没能转成文字"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
 msgid "Could not stop the current response"
 msgstr "无法停止当前回复"
 
@@ -1858,6 +1871,16 @@ msgstr "这会丢弃此对话中该检查点之后的消息和轮次差异记录
 #: src/components/ChatView.tsx
 msgid "This action cannot be undone."
 msgstr "此操作无法撤销。"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Failed to revert thread state."
+msgstr "回退对话失败。"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Failed to undo file changes."
+msgstr "撤销文件改动失败。"
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
@@ -1928,6 +1951,21 @@ msgstr "这个对话没能删除。"
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
+msgid "Threads"
+msgstr "对话"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "No active thread"
+msgstr "没有打开的对话"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Select a thread or create a new one to get started."
+msgstr "选择一个对话，或新建一个开始吧。"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
 msgid "New Chat"
 msgstr "新聊天"
 
@@ -1966,6 +2004,32 @@ msgstr "临时对话"
 #: src/components/ChatView.tsx
 msgid "Temporary"
 msgstr "临时"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SingleChatSurface.tsx
+#: src/components/ChatView.tsx
+msgid "Side chat is unavailable"
+msgstr "无法使用旁聊"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Open the item in Code review before starting a new side chat."
+msgstr "请先在代码检查中打开这一项，再开始新的旁聊。"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Open the parent chat before starting a replacement side chat."
+msgstr "请先打开上级对话，再重新开始旁聊。"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Could not start side chat"
+msgstr "无法开始旁聊"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "An error occurred while creating the side chat."
+msgstr "创建旁聊时出错了。"
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
@@ -2042,6 +2106,12 @@ msgstr "Synara 标志"
 #: src/components/ChatView.tsx
 msgid "What should we work on?"
 msgstr "我们来做点什么？"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/ChatView.tsx
+msgid "Project"
+msgstr "项目"
 
 #. js-lingui-explicit-id
 #: src/components/GitActionsControl.tsx
@@ -2492,6 +2562,51 @@ msgstr "这次重置已经用过了。"
 
 #. js-lingui-explicit-id
 #: src/components/ProviderUsageResetCredits.tsx
+msgid "Codex rejected the reset request."
+msgstr "Codex 拒绝了这次重置请求。"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Codex didn't answer in time. Retry to check the same attempt."
+msgstr "Codex 没有及时回应。点重试会核对同一次操作。"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Codex stopped during the reset request. Retry to check the same attempt."
+msgstr "重置过程中 Codex 停止了。点重试会核对同一次操作。"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "The Codex account changed. Refresh usage before using a reset."
+msgstr "Codex 账号变了。请先刷新用量，再使用重置。"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Current Codex usage can't be read. Retry the same attempt later."
+msgstr "暂时读不到当前的 Codex 用量，请稍后重试同一次操作。"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Codex returned an unexpected result. Retry to check the same attempt."
+msgstr "Codex 返回了意外的结果。点重试会核对同一次操作。"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "A reset is already in progress for this Codex account."
+msgstr "这个 Codex 账号已经有一次重置正在进行。"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "Retry the previous reset before choosing another one."
+msgstr "请先重试上一次重置，再选择其他的。"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
+msgid "The previous reset attempt couldn't be read. No new reset was requested."
+msgstr "读不到上一次重置的记录，没有发起新的重置。"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderUsageResetCredits.tsx
 msgid "Couldn't confirm whether the reset was used"
 msgstr "无法确认这次重置是否已用掉"
 
@@ -2731,6 +2846,7 @@ msgstr "对话和会话用来识别账号的标识，只能用字母、数字、
 
 #. js-lingui-explicit-id
 #: src/components/settings/AddProviderAccountDialog.tsx
+#: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Accent color"
 msgstr "强调色"
 
@@ -2910,6 +3026,7 @@ msgid "Optional access for existing tasks, shared checkouts, or execution withou
 msgstr "可选择授予读取现有任务、使用共享检出或无需批准即可执行的权限。建议保留安全的默认设置。"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ReviewChangesButton.tsx
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
 msgid "Review"
 msgstr "查看"
@@ -2943,6 +3060,11 @@ msgstr "无需批准即可运行"
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
 msgid "High impact. The external agent may start full-access execution without asking you to approve tool actions."
 msgstr "高风险。外部智能体可以启动完全访问模式的执行，而无需请求你批准工具操作。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ExternalMcpSettingsPanel.tsx
+msgid "Computer control"
+msgstr "电脑控制"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
@@ -3437,6 +3559,16 @@ msgstr "清空"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProviderInstanceEnvironmentEditor.tsx
+msgid "Environment variables"
+msgstr "环境变量"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderInstanceEnvironmentEditor.tsx
+msgid "Applied only to this instance's processes. Mark credentials as secret to store them redacted on the server."
+msgstr "只对这个账号的进程生效。把凭据标记为密钥后，服务器上只保存打码后的值。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderInstanceEnvironmentEditor.tsx
 msgid "Replace or remove the saved secret before renaming it."
 msgstr "重命名前，请先替换或删除已保存的密钥。"
 
@@ -3595,6 +3727,11 @@ msgstr "{provider} 在提供商选择器中不可用"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "CLI docs"
+msgstr "CLI 文档"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Update queued"
 msgstr "等待更新"
 
@@ -3740,13 +3877,28 @@ msgstr "清除 {account} 已保存的{setting}"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Terminal command"
+msgstr "终端命令"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Copy {command}"
 msgstr "复制 {command}"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Shadow auth home"
+msgstr "影子登录目录"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Leave both paths blank and Synara keeps this account's sign-in in its own folder. Set a shadow auth home to keep only the sign-in elsewhere while sharing settings and history with the default account, or a CODEX_HOME to keep everything separate."
 msgstr "两个路径都留空的话，Synara 会把这个账号的登录信息存在单独的文件夹里。填写影子登录目录，只把登录信息放到别处，设置和历史仍与默认账号共用；填写 CODEX_HOME，则一切都分开存放。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Command override"
+msgstr "自定义命令名"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
@@ -3792,6 +3944,11 @@ msgstr "登录 {account}"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Sign in"
+msgstr "登录"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Use Sign in to authenticate this account, then complete the provider's prompts."
 msgstr "点“登录”验证这个账号，然后按提供商的提示完成。"
 
@@ -3816,6 +3973,7 @@ msgid "Runtime"
 msgstr "运行设置"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerSlashStatusDialog.tsx
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Environment"
 msgstr "环境变量"
@@ -3857,8 +4015,18 @@ msgstr "启用 {account}"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Opening sign-in…"
+msgstr "正在打开登录…"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Advanced"
 msgstr "高级"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Custom"
+msgstr "自定义"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
@@ -4111,7 +4279,6 @@ msgid "The skill could not be copied."
 msgstr "无法复制此 Skill。"
 
 #. js-lingui-explicit-id
-#: src/components/chat/ComposerLatticeContextBar.tsx
 #: src/components/settings/SkillsSettingsPanel.tsx
 msgid "Included"
 msgstr "内置"
@@ -4342,6 +4509,11 @@ msgid "Next"
 msgstr "下一个"
 
 #. js-lingui-explicit-id
+#: src/components/chat/AttachmentCard.tsx
+msgid "Remove attachment"
+msgstr "移除附件"
+
+#. js-lingui-explicit-id
 #: src/components/chat/AutomationCreatedCard.tsx
 msgid "Suggested · "
 msgstr "建议 · "
@@ -4468,6 +4640,11 @@ msgstr "请先在上方选择如何继续那条暂存的消息"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ChatHeader.tsx
+msgid "{title}, open chat history"
+msgstr "{title}，打开对话历史"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
 msgid "Chat history"
 msgstr "对话历史"
 
@@ -4562,6 +4739,16 @@ msgid "Close chat"
 msgstr "关闭对话"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ChatThreadSurfacePrimitives.tsx
+msgid "Loading diff viewer..."
+msgstr "正在加载改动查看器…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatTranscriptPane.tsx
+msgid "Scroll to bottom"
+msgstr "滚动到底部"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ClaudeCacheDetails.tsx
 msgid "Likely warm"
 msgstr "可能仍有效"
@@ -4612,6 +4799,11 @@ msgstr "正在设置自动化"
 #: src/components/chat/ComposerAutomationSetupBanner.tsx
 msgid "Cancel automation setup"
 msgstr "取消设置自动化"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerBranchMismatchBanner.tsx
+msgid "Sending a message will move this thread to the current branch"
+msgstr "发送消息会把这个对话移到当前分支"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
@@ -4690,11 +4882,13 @@ msgstr "压缩上下文"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/chat/ComposerSlashStatusDialog.tsx
 msgid "Model"
 msgstr "模型"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/chat/ComposerSlashStatusDialog.tsx
 msgid "Fast Mode"
 msgstr "快速模式"
 
@@ -4746,13 +4940,35 @@ msgstr "反馈给 Synara"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
-msgid "Personal"
-msgstr "个人"
+msgid "Computer use"
+msgstr "电脑控制"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
-msgid "Project"
-msgstr "项目"
+msgid "Export"
+msgstr "导出"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/chat/ComposerExtrasPanel.tsx
+#: src/components/chat/ComposerGoalHeader.tsx
+msgid "Goal"
+msgstr "目标"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Rename"
+msgstr "重命名"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Automation"
+msgstr "自动化"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Personal"
+msgstr "个人"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
@@ -4932,6 +5148,11 @@ msgstr "没有匹配的命令。"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerEnvironmentPicker.tsx
+msgid "Work in"
+msgstr "工作位置"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerEnvironmentPicker.tsx
 msgid "New worktree"
 msgstr "新工作树"
 
@@ -4962,6 +5183,7 @@ msgstr "关闭"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerExtrasMenu.tsx
+#: src/components/chat/ComposerExtrasTrigger.tsx
 msgid "Composer extras"
 msgstr "更多输入选项"
 
@@ -4972,6 +5194,7 @@ msgstr "添加文件"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerExtrasMenu.tsx
+#: src/components/chat/ComposerSlashStatusDialog.tsx
 msgid "Mode"
 msgstr "模式"
 
@@ -5004,12 +5227,6 @@ msgstr "选择其他窗口"
 #: src/components/chat/ComposerExtrasPanel.tsx
 msgid "Capture an open app window"
 msgstr "截取一个打开的应用窗口"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerExtrasPanel.tsx
-#: src/components/chat/ComposerGoalHeader.tsx
-msgid "Goal"
-msgstr "目标"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerExtrasPanel.tsx
@@ -5048,6 +5265,7 @@ msgstr "开启调试模式"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerExtrasPanel.tsx
+#: src/components/chat/ProviderHandoffDivider.tsx
 msgid "Fast mode"
 msgstr "快速模式"
 
@@ -5307,6 +5525,21 @@ msgid "Exclude selection"
 msgstr "不附带选中内容"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerLiveChangesHeader.tsx
+msgid "Files changed"
+msgstr "改动的文件"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLiveChangesHeader.tsx
+msgid "1 file changed"
+msgstr "改动了 1 个文件"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLiveChangesHeader.tsx
+msgid "{count} files changed"
+msgstr "改动了 {count} 个文件"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ComposerLocalDirectoryMenu.tsx
 msgid "Folder not found."
 msgstr "找不到文件夹。"
@@ -5388,6 +5621,16 @@ msgid "Previous question"
 msgstr "上一个问题"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerPlanFollowUpBanner.tsx
+msgid "Plan ready"
+msgstr "计划已就绪"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerPullRequestAutoFixHint.tsx
+msgid "Couldn't turn on Auto-fix CI"
+msgstr "无法开启 CI 自动修复"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ComposerQueuedHeader.tsx
 msgid "Queued follow-up"
 msgstr "排队的追问"
@@ -5414,8 +5657,58 @@ msgstr "当前输入框的运行设置和本地对话状态。"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerSlashStatusDialog.tsx
+msgid "On"
+msgstr "开"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+msgid "Off"
+msgstr "关"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+msgid "Reasoning"
+msgstr "推理强度"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+msgid "Context Window"
+msgstr "上下文"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSlashStatusDialog.tsx
 msgid "Latest usage reported by the active thread."
 msgstr "当前对话最近报告的用量。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+msgid "Used"
+msgstr "已用"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+msgid "Remaining"
+msgstr "剩余"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+msgid "Window"
+msgstr "上限"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+msgid "Context usage"
+msgstr "上下文用量"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+msgid "Not reported yet"
+msgstr "尚未报告"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+msgid "Cost"
+msgstr "费用"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerSlashStatusDialog.tsx
@@ -5424,8 +5717,18 @@ msgstr "暂无"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerSlashStatusDialog.tsx
+msgid "Rate Limits"
+msgstr "额度"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSlashStatusDialog.tsx
 msgid "No active rate-limit warning for this thread."
 msgstr "这个对话目前没有额度警告。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSnoozeNotice.tsx
+msgid "Sending a message cancels the reminder."
+msgstr "发送消息会取消提醒。"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerSnoozeNotice.tsx
@@ -5471,6 +5774,11 @@ msgstr "转到后台运行（ctrl+b）"
 #: src/components/chat/ComposerSubagentStrip.tsx
 msgid "Stop subagent"
 msgstr "停止子助手"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerTipRow.tsx
+msgid "Dismiss tip"
+msgstr "关闭提示"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerVoiceButton.tsx
@@ -5752,6 +6060,11 @@ msgstr "要求修改"
 #: src/components/chat/FileLineCommentBox.tsx
 msgid "Comment"
 msgstr "批注"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ForkSourceDivider.tsx
+msgid "Continued from chat"
+msgstr "接续自对话"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GeneratedMarkdownImage.tsx
@@ -6070,6 +6383,11 @@ msgid "Copy to clipboard"
 msgstr "复制到剪贴板"
 
 #. js-lingui-explicit-id
+#: src/components/chat/MessageTrail.tsx
+msgid "Message navigation"
+msgstr "消息导航"
+
+#. js-lingui-explicit-id
 #: src/components/chat/MessagesTimeline.logic.ts
 msgid "This message is no longer part of the conversation, so it can't be edited."
 msgstr "这条消息已经不在对话中，无法编辑。"
@@ -6267,6 +6585,12 @@ msgid "Show text"
 msgstr "显示文字"
 
 #. js-lingui-explicit-id
+#: src/components/chat/PickerPanelShell.tsx
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Search"
+msgstr "搜索"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ProposedPlanActions.tsx
 msgid "Plan copied as markdown"
 msgstr "计划已复制为 Markdown"
@@ -6342,6 +6666,16 @@ msgid "Expand plan"
 msgstr "展开计划"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ProviderHandoffDivider.tsx
+msgid "Handoff failed"
+msgstr "移交失败"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProviderHandoffDivider.tsx
+msgid "Context handoff"
+msgstr "上下文移交"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ProviderHealthBanner.tsx
 msgid "Install or sign in to at least one provider before starting an agent chat."
 msgstr "开始和 AI 对话前，请至少安装或登录一个提供商。"
@@ -6377,9 +6711,14 @@ msgid "Dismiss provider status"
 msgstr "关闭提供商状态提示"
 
 #. js-lingui-explicit-id
-#: src/components/chat/ProviderModelPicker.tsx
-msgid "Loading models"
-msgstr "正在加载模型"
+#: src/components/chat/PullRequestContextCard.tsx
+msgid "Hide the prompt this card sent"
+msgstr "隐藏这张卡片发送的提示"
+
+#. js-lingui-explicit-id
+#: src/components/chat/PullRequestContextCard.tsx
+msgid "Show the prompt this card sent"
+msgstr "显示这张卡片发送的提示"
 
 #. js-lingui-explicit-id
 #: src/components/chat/QueuedComposerActions.tsx
@@ -6460,11 +6799,6 @@ msgstr "无法打开项目"
 #: src/components/chat/SingleChatSurface.tsx
 msgid "The project could not be opened."
 msgstr "项目没能打开。"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SingleChatSurface.tsx
-msgid "Side chat is unavailable"
-msgstr "无法使用旁聊"
 
 #. js-lingui-explicit-id
 #: src/components/chat/SingleChatSurface.tsx
@@ -6625,11 +6959,6 @@ msgstr "搜索了"
 #: src/components/chat/TimelineWorkEntryRow.tsx
 msgid "Searching"
 msgstr "正在搜索"
-
-#. js-lingui-explicit-id
-#: src/components/chat/TimelineWorkEntryRow.tsx
-msgid "Search"
-msgstr "搜索"
 
 #. js-lingui-explicit-id
 #: src/components/chat/TimelineWorkEntryRow.tsx
@@ -7450,6 +7779,11 @@ msgstr "https://api2.cursor.sh"
 #: src/components/settings/ModelsSettingsPanel.tsx
 msgid "In each project, matches recent change descriptions and change request titles."
 msgstr "在每个项目中，沿用近期提交说明和拉取请求标题的写法。"
+
+#: src/components/chat/ComposerLatticeContextBar.tsx
+msgctxt "Sent with the next message"
+msgid "Included"
+msgstr "已附带"
 
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Install"

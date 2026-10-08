@@ -79,6 +79,16 @@ function commandMenuTitle(
       return i18n._("Subagents");
     case "feedback":
       return i18n._("Feedback Synara");
+    case "computer-use":
+      return i18n._("Computer use");
+    case "export":
+      return i18n._("Export");
+    case "goal":
+      return i18n._("Goal");
+    case "rename":
+      return i18n._("Rename");
+    case "automation":
+      return i18n._("Automation");
     default:
       return humanizeProviderCommandName(item.command);
   }

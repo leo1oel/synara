@@ -5,6 +5,7 @@
 // Layer: Chat changed-files UI
 // Exports: ReviewChangesButton
 
+import { i18n } from "~/i18n";
 import type { CSSProperties } from "react";
 
 import { cn } from "~/lib/utils";
@@ -23,7 +24,7 @@ export const ReviewChangesButton = function ReviewChangesButton({
   style,
   label: labelProp,
 }: ReviewChangesButtonProps) {
-  const label = labelProp ?? "Review";
+  const label = labelProp ?? i18n._("Review");
   return (
     <button
       type="button"

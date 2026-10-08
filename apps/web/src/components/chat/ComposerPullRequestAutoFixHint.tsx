@@ -4,6 +4,7 @@
 // Layer: Chat composer UI
 // Exports: ComposerPullRequestAutoFixHint
 
+import { i18n } from "~/i18n";
 import type { ThreadId } from "@synara/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -58,7 +59,7 @@ export function ComposerPullRequestAutoFixHint({
           toastManager.add({
             type: "error",
             timeout: DEFAULT_TOAST_TIMEOUT_MS,
-            title: "Couldn't turn on Auto-fix CI",
+            title: i18n._("Couldn't turn on Auto-fix CI"),
             description: error instanceof Error ? error.message : undefined,
           });
         },

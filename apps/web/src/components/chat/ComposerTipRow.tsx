@@ -5,6 +5,7 @@
 // Layer: Chat composer UI
 // Exports: ComposerTipRow
 
+import { i18n } from "~/i18n";
 import type { ReactNode } from "react";
 
 import { XIcon } from "~/lib/icons";
@@ -54,7 +55,12 @@ export function ComposerTipRow({
           >
             {actionLabel}
           </button>
-          <IconButton variant="ghost" size="icon-chip" label="Dismiss tip" onClick={onDismiss}>
+          <IconButton
+            variant="ghost"
+            size="icon-chip"
+            label={i18n._("Dismiss tip")}
+            onClick={onDismiss}
+          >
             <XIcon />
           </IconButton>
         </div>
