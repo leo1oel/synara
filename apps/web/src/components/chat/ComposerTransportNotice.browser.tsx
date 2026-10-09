@@ -7,6 +7,9 @@ import { render } from "vitest-browser-react";
 import { emitWsTransportState } from "../../wsTransportEvents";
 import { ComposerColumnFrame } from "./ComposerColumnFrame";
 import { ComposerTransportNotice } from "./ComposerTransportNotice";
+import { i18n } from "~/i18n";
+
+i18n.loadAndActivate({ locale: "en", messages: {} });
 
 describe("composer transport notice", () => {
   afterEach(() => emitWsTransportState("open"));

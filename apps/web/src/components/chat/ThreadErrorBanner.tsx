@@ -90,10 +90,10 @@ function ThreadErrorBannerContent({
               onClick={() => setExpanded((value) => !value)}
             >
               <DisclosureChevron open={expanded} />
-              {expanded ? "Hide details" : "Show details"}
+              {expanded ? i18n._("Hide details") : i18n._("Show details")}
             </Button>
           ) : null}
-          <CopyTextButton text={error} label="error" />
+          <CopyTextButton text={error} label={i18n._("error")} />
           {onContinue ? (
             <Button
               size="xs"
@@ -101,12 +101,12 @@ function ThreadErrorBannerContent({
               disabled={recoveryDisabled}
               onClick={onContinue}
             >
-              Continue task
+              {i18n._("Continue task")}
             </Button>
           ) : null}
           {onContinue && onChangeModel ? (
             <Button size="xs" variant="outline" disabled={recoveryDisabled} onClick={onChangeModel}>
-              Change model
+              {i18n._("Change model")}
             </Button>
           ) : null}
           {canUnblock ? (

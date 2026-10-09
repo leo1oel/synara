@@ -507,6 +507,8 @@ function localizeToolHeading(heading: string): string {
       return i18n._("Viewed image");
     case "Tool":
       return i18n._("Tool");
+    case "Provider retrying":
+      return i18n._("Provider retrying");
     default:
       return heading;
   }

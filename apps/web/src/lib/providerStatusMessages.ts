@@ -51,6 +51,18 @@ export function localizeProviderStatusMessage(i18n: I18n, message: string): stri
       return i18n._("Live usage is not available for this provider configuration.");
     case "Usage is currently unavailable.":
       return i18n._("Usage is currently unavailable.");
+    case "Live usage is unavailable for environment-token authentication. Tokens from `claude setup-token` support chats but do not include the user:profile scope needed for usage.":
+      return i18n._(
+        "Live usage is unavailable for environment-token authentication. Tokens from `claude setup-token` support chats but do not include the user:profile scope needed for usage.",
+      );
+    case "No Claude usage credentials were found. A token supplied by a wrapper may support chats without access to usage. Sign in with `claude auth login` for this account to enable usage.":
+      return i18n._(
+        "No Claude usage credentials were found. A token supplied by a wrapper may support chats without access to usage. Sign in with `claude auth login` for this account to enable usage.",
+      );
+    case "This Claude login cannot report usage: its token lacks the user:profile scope. Tokens from `claude setup-token` can still be used for chats.":
+      return i18n._(
+        "This Claude login cannot report usage: its token lacks the user:profile scope. Tokens from `claude setup-token` can still be used for chats.",
+      );
     default: {
       const signIn = /^Sign in with `([^`]+)` to see usage\.$/u.exec(message);
       if (signIn) return i18n._("Sign in with `{command}` to see usage.", { command: signIn[1]! });

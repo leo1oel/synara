@@ -6148,8 +6148,8 @@ export default function ChatView({
                 }
                 message={
                   selectedProvider === "claudeAgent"
-                    ? "Next reply may use more Claude allowance."
-                    : "Chat context uses the new provider’s allowance."
+                    ? i18n._("Next reply may use more Claude allowance.")
+                    : i18n._("Chat context uses the new provider’s allowance.")
                 }
                 onDismiss={() => setDismissedClaudeSwitchKey(claudeSwitchKey)}
                 attachedToPrevious={

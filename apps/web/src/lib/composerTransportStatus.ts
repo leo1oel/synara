@@ -1,3 +1,4 @@
+import { i18n } from "~/i18n";
 import { addWsTransportStateListener } from "../wsTransportEvents";
 
 /** Delay outage notices, but clear them immediately on recovery. Only owns UI timers. */
@@ -15,10 +16,10 @@ export function subscribeComposerTransportStatus(listener: (message: string | nu
         state === "open"
           ? null
           : state === "incompatible"
-            ? "Synara connection is incompatible."
+            ? i18n._("Synara connection is incompatible.")
             : state === "disposed"
-              ? "Disconnected from Synara."
-              : "Reconnecting to Synara…";
+              ? i18n._("Disconnected from Synara.")
+              : i18n._("Reconnecting to Synara…");
       if (message === null) {
         cancelTimer();
         if (visible) listener(null);

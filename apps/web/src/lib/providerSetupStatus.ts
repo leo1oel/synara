@@ -1,4 +1,5 @@
 import { i18n } from "~/i18n";
+import { localizeProviderUsageNotice } from "~/lib/providerUsageDisplay";
 import type { ServerProviderStatus, ServerProviderUsageSnapshot } from "@synara/contracts";
 
 /** Installation/auth health is independent of permission to run background work. */
@@ -63,9 +64,9 @@ export function providerAccountStatusSummary(input: {
       return {
         tone: "warning",
         headline: i18n._("Usage needs attention"),
-        detail:
-          usage.detail ??
-          i18n._("Claude usage could not be verified. The CLI reports a local sign-in."),
+        detail: usage.detail
+          ? localizeProviderUsageNotice(i18n, usage.detail)
+          : i18n._("Claude usage could not be verified. The CLI reports a local sign-in."),
       };
     }
     const authLabel = status.authLabel?.trim() || status.authType?.trim();

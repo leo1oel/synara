@@ -1307,6 +1307,9 @@ describe("ProviderModelPicker", () => {
         }),
       ],
     });
+    // The browser runner's frame has a parent, so the picker hands Settings to the host
+    // the way the Lattice embed does instead of routing in-frame.
+    const postMessage = vi.spyOn(window.parent, "postMessage");
     const pushSpy = vi.spyOn(appHistory, "push").mockImplementation(() => undefined);
 
     try {
@@ -1317,9 +1320,16 @@ describe("ProviderModelPicker", () => {
       expect(signIn.element().textContent).toContain("Sign in");
 
       await signIn.click();
-      expect(pushSpy).toHaveBeenCalledWith("/settings?section=providers");
+      await vi.waitFor(() => {
+        expect(postMessage).toHaveBeenCalledWith(
+          { type: SYNARA_OPEN_SETTINGS, section: "providers" },
+          "*",
+        );
+      });
+      expect(pushSpy).not.toHaveBeenCalled();
     } finally {
       pushSpy.mockRestore();
+      postMessage.mockRestore();
       await mounted.cleanup();
     }
   });

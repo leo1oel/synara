@@ -1460,7 +1460,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           entry.turnFailure ? (
             <div key={entry.id} data-turn-failure={entry.turnId ?? entry.id}>
               <ThreadErrorBanner
-                title="Task interrupted"
+                title={i18n._("Task interrupted")}
                 error={entry.turnFailure.message}
                 {...(entry.turnId && entry.turnId === recoverableTurnId && onContinueFailedTurn
                   ? {
@@ -3798,6 +3798,7 @@ function UserInputExchange(props: {
   answerTypographyStyle: CSSProperties;
   labelStyle: CSSProperties;
 }) {
+  const { i18n } = useLingui();
   return (
     <div className="flex min-w-0 flex-col gap-2 py-0.5">
       {props.items.map((item) => (
@@ -3817,10 +3818,10 @@ function UserInputExchange(props: {
           </div>
           <div className={cn(USER_INPUT_EXCHANGE_BUBBLE_CLASS_NAME, "self-end")}>
             <p className={MUTED_LABEL_TEXT_CLASS_NAME} style={props.labelStyle}>
-              Answer
+              {i18n._("Answer")}
             </p>
             <p className="whitespace-pre-wrap break-words" style={props.answerTypographyStyle}>
-              {item.answer ?? "No answer"}
+              {item.answer ?? i18n._("No answer")}
             </p>
           </div>
         </div>

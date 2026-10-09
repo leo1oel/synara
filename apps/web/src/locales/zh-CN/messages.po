@@ -33,6 +33,61 @@ msgid "Confirm"
 msgstr "确认"
 
 #. js-lingui-explicit-id
+#: src/workLog.ts
+msgid "The task was interrupted because the model is at capacity. Work remains incomplete."
+msgstr "模型当前满载，任务被中断了。工作还没有完成。"
+
+#. js-lingui-explicit-id
+#: src/workLog.ts
+msgid "The task was interrupted by a provider error. Work remains incomplete. {cause}"
+msgstr "提供商出错，任务被中断了。工作还没有完成。{cause}"
+
+#. js-lingui-explicit-id
+#: src/routes/__root.tsx
+msgid "Unable to resume thread updates"
+msgstr "无法恢复对话更新"
+
+#. js-lingui-explicit-id
+#: src/routes/__root.tsx
+msgid "Try again when the server responds."
+msgstr "请等服务有响应后再试。"
+
+#. js-lingui-explicit-id
+#: src/routes/__root.tsx
+msgid "Workspace updates paused"
+msgstr "工作区更新已暂停"
+
+#. js-lingui-explicit-id
+#: src/routes/__root.tsx
+msgid "The update stream could not keep up after repeated retries. Retry to resume workspace updates."
+msgstr "多次重试后，更新流仍然跟不上。请重试以恢复工作区更新。"
+
+#. js-lingui-explicit-id
+#: src/routes/__root.tsx
+msgid "Retry updates"
+msgstr "重试更新"
+
+#. js-lingui-explicit-id
+#: src/routes/__root.tsx
+msgid "Unable to resume workspace updates"
+msgstr "无法恢复工作区更新"
+
+#. js-lingui-explicit-id
+#: src/routes/__root.tsx
+msgid "this thread"
+msgstr "此对话"
+
+#. js-lingui-explicit-id
+#: src/routes/__root.tsx
+msgid "Thread updates paused"
+msgstr "对话更新已暂停"
+
+#. js-lingui-explicit-id
+#: src/routes/__root.tsx
+msgid "The update stream for {threadLabel} could not keep up after repeated retries. Retry to resume updates."
+msgstr "多次重试后，{threadLabel}的更新流仍然跟不上。请重试以恢复更新。"
+
+#. js-lingui-explicit-id
 #: src/routes/_chat.source-control.tsx
 msgid "Source control embed mode requires a Lattice workspace."
 msgstr "源代码管理嵌入模式需要绑定 Lattice 工作区。"
@@ -47,6 +102,21 @@ msgstr "项目绑定失败：{error}"
 #: src/routes/_chat.source-control.tsx
 msgid "Changes"
 msgstr "更改"
+
+#. js-lingui-explicit-id
+#: src/lib/composerTransportStatus.ts
+msgid "Synara connection is incompatible."
+msgstr "Synara 连接不兼容。"
+
+#. js-lingui-explicit-id
+#: src/lib/composerTransportStatus.ts
+msgid "Disconnected from Synara."
+msgstr "已与 Synara 断开连接。"
+
+#. js-lingui-explicit-id
+#: src/lib/composerTransportStatus.ts
+msgid "Reconnecting to Synara…"
+msgstr "正在重新连接 Synara…"
 
 #. js-lingui-explicit-id
 #: src/lib/gitLocalization.ts
@@ -587,13 +657,28 @@ msgstr "未登录"
 
 #. js-lingui-explicit-id
 #: src/lib/providerSetupStatus.ts
-msgid "Authenticated · {account}"
-msgstr "已登录 · {account}"
+msgid "Usage needs attention"
+msgstr "用量需要处理"
+
+#. js-lingui-explicit-id
+#: src/lib/providerSetupStatus.ts
+msgid "Claude usage could not be verified. The CLI reports a local sign-in."
+msgstr "无法核实 Claude 的用量。CLI 显示本机已登录。"
+
+#. js-lingui-explicit-id
+#: src/lib/providerSetupStatus.ts
+msgid "Signed in locally"
+msgstr "已在本机登录"
 
 #. js-lingui-explicit-id
 #: src/lib/providerSetupStatus.ts
 msgid "Authenticated"
 msgstr "已登录"
+
+#. js-lingui-explicit-id
+#: src/lib/providerSetupStatus.ts
+msgid "{headline} · {account}"
+msgstr "{headline} · {account}"
 
 #. js-lingui-explicit-id
 #: src/components/chat/TimelineWorkEntryRow.tsx
@@ -688,6 +773,21 @@ msgstr "当前的提供商设置无法显示实时用量。"
 #: src/lib/providerStatusMessages.ts
 msgid "Usage is currently unavailable."
 msgstr "当前无法获取用量。"
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "Live usage is unavailable for environment-token authentication. Tokens from `claude setup-token` support chats but do not include the user:profile scope needed for usage."
+msgstr "用环境变量里的令牌登录时，无法获取实时用量。`claude setup-token` 生成的令牌可以用来对话，但没有查看用量所需的 user:profile 权限。"
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "No Claude usage credentials were found. A token supplied by a wrapper may support chats without access to usage. Sign in with `claude auth login` for this account to enable usage."
+msgstr "没有找到 Claude 的用量凭据。由包装程序提供的令牌可能只能对话，不能查看用量。请为这个账号运行 `claude auth login` 登录，以开启用量查看。"
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "This Claude login cannot report usage: its token lacks the user:profile scope. Tokens from `claude setup-token` can still be used for chats."
+msgstr "这个 Claude 登录无法提供用量：它的令牌缺少 user:profile 权限。`claude setup-token` 生成的令牌仍可用于对话。"
 
 #. js-lingui-explicit-id
 #: src/lib/providerStatusMessages.ts
@@ -1332,6 +1432,11 @@ msgstr "无法标记为已完成"
 #: src/hooks/useSidebarThreadActions.ts
 msgid "Unable to undo done"
 msgstr "无法撤销完成标记"
+
+#. js-lingui-explicit-id
+#: src/hooks/useSidebarThreadActions.ts
+msgid "Marked as done"
+msgstr "已标记为完成"
 
 #. js-lingui-explicit-id
 #: src/hooks/useSidebarThreadActions.ts
@@ -2033,6 +2138,16 @@ msgstr "创建旁聊时出错了。"
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
+msgid "Next reply may use more Claude allowance."
+msgstr "下一条回复可能会消耗更多 Claude 额度。"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Chat context uses the new provider’s allowance."
+msgstr "对话上下文会消耗新提供商的额度。"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
 msgid "Local folders unavailable"
 msgstr "无法使用本地文件夹"
 
@@ -2085,11 +2200,6 @@ msgstr "就这个问题提问"
 #: src/components/ChatView.tsx
 msgid "Ask about this pull request"
 msgstr "就这个拉取请求提问"
-
-#. js-lingui-explicit-id
-#: src/components/ChatView.tsx
-msgid "Ask for follow-up changes or attach images"
-msgstr "继续提出修改要求，或添加图片"
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
@@ -2711,6 +2821,66 @@ msgid "Got it"
 msgstr "知道了"
 
 #. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "Reconnecting to Synara server"
+msgstr "正在重新连接 Synara 服务"
+
+#. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "Synara server recovered"
+msgstr "Synara 服务已恢复"
+
+#. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "Synara server is busy"
+msgstr "Synara 服务正忙"
+
+#. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "1 request is still waiting."
+msgstr "还有 1 个请求在等待。"
+
+#. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "{pendingRequests} requests are still waiting."
+msgstr "还有 {pendingRequests} 个请求在等待。"
+
+#. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "The connection was interrupted. Thread updates will resume automatically when it recovers. {waiting}"
+msgstr "连接中断了。恢复后，对话更新会自动继续。{waiting}"
+
+#. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "The connection was interrupted. Thread updates will resume automatically when it recovers."
+msgstr "连接中断了。恢复后，对话更新会自动继续。"
+
+#. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "The server is not answering. Heavy load or a connection delay may be the cause. {waiting}"
+msgstr "服务没有响应，可能是负载过高或连接延迟。{waiting}"
+
+#. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "The server is not answering. Heavy load or a connection delay may be the cause. Updates will resume when it responds."
+msgstr "服务没有响应，可能是负载过高或连接延迟。服务响应后，更新会继续。"
+
+#. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "The server paused for {seconds} s and is responding again. {waiting}"
+msgstr "服务停顿了 {seconds} 秒，现在已恢复响应。{waiting}"
+
+#. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "The server paused for {seconds} s and is responding again."
+msgstr "服务停顿了 {seconds} 秒，现在已恢复响应。"
+
+#. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "{waiting} You can keep working while it completes."
+msgstr "{waiting}在它完成前，你可以继续工作。"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ChatHeader.tsx
 #: src/components/Sidebar.tsx
 #: src/components/ThreadWorktreeHandoffDialog.tsx
@@ -2754,6 +2924,23 @@ msgid "Remove"
 msgstr "移除"
 
 #. js-lingui-explicit-id
+#: src/components/ui/copyTextButton.tsx
+msgid "Copied {label}"
+msgstr "已复制{label}"
+
+#. js-lingui-explicit-id
+#: src/components/ui/copyTextButton.tsx
+msgid "Copy {label}"
+msgstr "复制{label}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProposedPlanActions.tsx
+#: src/components/ui/copyTextButton.tsx
+#: src/components/ui/toast.tsx
+msgid "Copied"
+msgstr "已复制"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ComposerSlashStatusDialog.tsx
 #: src/components/settings/ProviderSignInDialog.tsx
 #: src/components/ui/dialog.tsx
@@ -2776,12 +2963,6 @@ msgstr "已复制错误信息"
 #: src/components/ui/toast.tsx
 msgid "Copy error message"
 msgstr "复制错误信息"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ProposedPlanActions.tsx
-#: src/components/ui/toast.tsx
-msgid "Copied"
-msgstr "已复制"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
@@ -3530,6 +3711,11 @@ msgid "Add"
 msgstr "添加"
 
 #. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Enable a provider in Settings → Providers to add custom models."
+msgstr "请先在“设置 → 提供商”中启用一个提供商，再添加自定义模型。"
+
+#. js-lingui-explicit-id
 #: src/components/chat/MessagesTimeline.tsx
 #: src/components/settings/ModelsSettingsPanel.tsx
 msgid "Show less"
@@ -3582,6 +3768,11 @@ msgstr "密钥已保存，输入新值可替换"
 #: src/components/settings/ProviderInstanceEnvironmentEditor.tsx
 msgid "Store new variable as a secret"
 msgstr "把新变量存为密钥"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderSignInDialog.tsx
+msgid "Signed in locally. You can close this window; usage is checked separately."
+msgstr "已在本机登录。你可以关闭此窗口；用量会单独检查。"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProviderSignInDialog.tsx
@@ -4102,6 +4293,26 @@ msgstr "已安装 {availableProviderCount} 个 · 自定义顺序"
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "{availableProviderCount} installed"
 msgstr "已安装 {availableProviderCount} 个"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Performance"
+msgstr "性能"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Keep Synara responsive"
+msgstr "保持 Synara 流畅"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Give agent processes and their commands a moderately lower CPU priority when the machine is busy."
+msgstr "电脑繁忙时，适当降低 AI 助手进程及其命令的 CPU 优先级。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Applies to newly launched agent processes. Restart existing sessions to apply consistently."
+msgstr "只对新启动的 AI 助手进程生效。重启现有会话后才会统一生效。"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
@@ -6454,6 +6665,11 @@ msgstr "正在取消…"
 
 #. js-lingui-explicit-id
 #: src/components/chat/MessagesTimeline.tsx
+msgid "Task interrupted"
+msgstr "任务已中断"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
 msgid "Show {count} more"
 msgstr "再显示 {count} 条"
 
@@ -6568,6 +6784,16 @@ msgstr "发送"
 #: src/components/chat/MessagesTimeline.tsx
 msgid "Show more"
 msgstr "显示更多"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Answer"
+msgstr "回答"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "No answer"
+msgstr "未回答"
 
 #. js-lingui-explicit-id
 #: src/components/chat/PastedTextChip.tsx
@@ -6711,6 +6937,11 @@ msgid "Dismiss provider status"
 msgstr "关闭提供商状态提示"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ProviderModelPicker.tsx
+msgid "Enable a provider in Settings"
+msgstr "在设置中启用一个提供商"
+
+#. js-lingui-explicit-id
 #: src/components/chat/PullRequestContextCard.tsx
 msgid "Hide the prompt this card sent"
 msgstr "隐藏这张卡片发送的提示"
@@ -6727,6 +6958,11 @@ msgstr "立即插入"
 
 #. js-lingui-explicit-id
 #: src/components/chat/QueuedComposerActions.tsx
+msgid "Send this follow-up now to redirect the current work. If native steering is unavailable, stop the current turn and start a new one."
+msgstr "立即发送这条追问，改变当前工作的方向。如果不支持直接插入，就停止这一轮并开始新的一轮。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/QueuedComposerActions.tsx
 msgid "Delete queued follow-up"
 msgstr "删除排队的追问"
 
@@ -6737,13 +6973,8 @@ msgstr "排队追问的操作"
 
 #. js-lingui-explicit-id
 #: src/components/chat/QueuedComposerActions.tsx
-msgid "Edit queued prompt"
-msgstr "编辑排队的消息"
-
-#. js-lingui-explicit-id
-#: src/components/chat/QueuedComposerActions.tsx
-msgid "Delete queued prompt"
-msgstr "删除排队的消息"
+msgid "Edit queued follow-up"
+msgstr "编辑排队的追问"
 
 #. js-lingui-explicit-id
 #: src/components/chat/RateLimitBanner.tsx
@@ -6889,6 +7120,31 @@ msgstr "这个对话没能加载出来。"
 #: src/components/chat/ThreadDetailHydrationState.tsx
 msgid "Try again"
 msgstr "重试"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadErrorBanner.tsx
+msgid "Hide details"
+msgstr "隐藏详情"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadErrorBanner.tsx
+msgid "Show details"
+msgstr "显示详情"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadErrorBanner.tsx
+msgid "error"
+msgstr "错误"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadErrorBanner.tsx
+msgid "Continue task"
+msgstr "继续任务"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadErrorBanner.tsx
+msgid "Change model"
+msgstr "更换模型"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ThreadErrorBanner.tsx
@@ -7109,6 +7365,11 @@ msgstr "查看了图片"
 #: src/components/chat/TimelineWorkEntryRow.tsx
 msgid "Tool"
 msgstr "工具"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Provider retrying"
+msgstr "提供商正在重试"
 
 #. js-lingui-explicit-id
 #: src/components/chat/TimelineWorkEntryRow.tsx

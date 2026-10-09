@@ -147,11 +147,13 @@ it("saves provider CPU priority opt-out and exposes reset to the default", async
   await control.click();
   expect(updateSettings).toHaveBeenCalledWith({ lowerProviderProcessPriority: false });
   await result.rerender(
-    <ProvidersSettingsPanel
-      {...props}
-      settings={{ ...props.settings, lowerProviderProcessPriority: false }}
-      updateSettings={updateSettings}
-    />,
+    <I18nProvider i18n={i18n}>
+      <ProvidersSettingsPanel
+        {...props}
+        settings={{ ...props.settings, lowerProviderProcessPriority: false }}
+        updateSettings={updateSettings}
+      />
+    </I18nProvider>,
   );
   await page.getByRole("button", { name: "Reset Keep Synara responsive to default" }).click();
   expect(updateSettings).toHaveBeenLastCalledWith({ lowerProviderProcessPriority: true });

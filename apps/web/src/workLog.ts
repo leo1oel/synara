@@ -1,3 +1,4 @@
+import { i18n } from "~/i18n";
 import {
   type ComputerPermission,
   type ComputerBuildSignature,
@@ -507,9 +508,14 @@ function deriveTurnFailureEntries(
     const errorCode = asTrimmedString(payload?.errorCode) ?? previous?.turnFailure?.errorCode;
     const overloaded =
       errorCode === "server_overloaded" || /selected model is at capacity/i.test(cause);
+    // Rendered as the failure banner's body; the provider's cause stays verbatim.
     const message = overloaded
-      ? "The task was interrupted because the model is at capacity. Work remains incomplete."
-      : `The task was interrupted by a provider error. Work remains incomplete. ${cause}`;
+      ? i18n._(
+          "The task was interrupted because the model is at capacity. Work remains incomplete.",
+        )
+      : i18n._("The task was interrupted by a provider error. Work remains incomplete. {cause}", {
+          cause,
+        });
     failures.set(id, {
       id,
       createdAt: previous?.createdAt ?? activity.createdAt,

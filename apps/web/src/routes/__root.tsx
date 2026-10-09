@@ -1,3 +1,4 @@
+import { i18n } from "~/i18n";
 import { ServerBusyIndicator } from "../components/ServerBusyIndicator";
 import { EditorDirtyRouteGuard } from "../components/EditorDirtyRouteGuard";
 import {
@@ -1649,8 +1650,8 @@ function EventRouter() {
           toastManager.add({
             id: `stream-overflow:retry-failed:${threadId}`,
             type: "error",
-            title: "Unable to resume thread updates",
-            description: "Try again when the server responds.",
+            title: i18n._("Unable to resume thread updates"),
+            description: i18n._("Try again when the server responds."),
             data: { threadId },
           });
         }
@@ -2372,12 +2373,13 @@ function EventRouter() {
       toastManager.add({
         id: toastId,
         type: "error",
-        title: "Workspace updates paused",
-        description:
+        title: i18n._("Workspace updates paused"),
+        description: i18n._(
           "The update stream could not keep up after repeated retries. Retry to resume workspace updates.",
+        ),
         timeout: 0,
         actionProps: {
-          children: "Retry updates",
+          children: i18n._("Retry updates"),
           onClick: () => {
             toastManager.close(toastId);
             if (disposed) return;
@@ -2391,8 +2393,8 @@ function EventRouter() {
               toastManager.add({
                 id: "stream-overflow:shell:retry-failed",
                 type: "error",
-                title: "Unable to resume workspace updates",
-                description: "Try again when the server responds.",
+                title: i18n._("Unable to resume workspace updates"),
+                description: i18n._("Try again when the server responds."),
               });
             });
           },
@@ -2416,16 +2418,19 @@ function EventRouter() {
       if (failure.code === ORCHESTRATION_STREAM_OVERFLOW_CODE) {
         const toastId = threadOverflowToastId(threadId);
         const threadTitle = getThreadFromState(useStore.getState(), threadId)?.title;
-        const threadLabel = threadTitle ? `“${threadTitle}”` : "this thread";
+        const threadLabel = threadTitle ? `“${threadTitle}”` : i18n._("this thread");
         toastManager.add({
           id: toastId,
           type: "error",
-          title: "Thread updates paused",
-          description: `The update stream for ${threadLabel} could not keep up after repeated retries. Retry to resume updates.`,
+          title: i18n._("Thread updates paused"),
+          description: i18n._(
+            "The update stream for {threadLabel} could not keep up after repeated retries. Retry to resume updates.",
+            { threadLabel },
+          ),
           timeout: 0,
           data: { threadId },
           actionProps: {
-            children: "Retry updates",
+            children: i18n._("Retry updates"),
             onClick: () => {
               toastManager.close(toastId);
               if (disposed || !subscribedThreadIds.has(threadId)) return;

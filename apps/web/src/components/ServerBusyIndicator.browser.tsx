@@ -4,6 +4,9 @@ import { render } from "vitest-browser-react";
 import { ServerBusyIndicator, ServerBusyNotice } from "./ServerBusyIndicator";
 import { emitWsTransportState } from "../wsTransportEvents";
 import { publishServerBusySnapshot } from "../serverBusyState";
+import { i18n } from "../i18n";
+
+i18n.loadAndActivate({ locale: "en", messages: {} });
 
 it("explains waiting during an unresponsive server without a blocking dialog", async () => {
   const screen = await render(

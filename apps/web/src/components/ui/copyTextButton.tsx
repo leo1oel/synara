@@ -1,3 +1,4 @@
+import { i18n } from "~/i18n";
 import { CheckIcon, CopyIcon } from "~/lib/icons";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
 import { Button } from "./button";
@@ -13,7 +14,8 @@ export function CopyTextButton({
   className?: string;
 }) {
   const { copyToClipboard, isCopied } = useCopyToClipboard();
-  const title = isCopied ? `Copied ${label}` : `Copy ${label}`;
+  // Callers pass an already localized noun; only the verb is translated here.
+  const title = isCopied ? i18n._("Copied {label}", { label }) : i18n._("Copy {label}", { label });
   return (
     <Button
       aria-label={title}
@@ -24,7 +26,7 @@ export function CopyTextButton({
       onClick={() => copyToClipboard(text, undefined)}
     >
       {isCopied ? <CheckIcon className="size-3" /> : <CopyIcon className="size-3" />}
-      <span>{isCopied ? "Copied" : `Copy ${label}`}</span>
+      <span>{isCopied ? i18n._("Copied") : title}</span>
     </Button>
   );
 }

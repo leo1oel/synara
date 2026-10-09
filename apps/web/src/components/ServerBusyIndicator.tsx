@@ -1,4 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { i18n } from "~/i18n";
 import {
   getServerBusySnapshot,
   subscribeServerBusy,
@@ -17,21 +18,42 @@ export function ServerBusyNotice({
 }) {
   if (!reconnecting && !snapshot.reason && snapshot.slowRequests === 0) return null;
   const title = reconnecting
-    ? "Reconnecting to Synara server"
+    ? i18n._("Reconnecting to Synara server")
     : snapshot.reason === "recent-stall"
-      ? "Synara server recovered"
-      : "Synara server is busy";
+      ? i18n._("Synara server recovered")
+      : i18n._("Synara server is busy");
+  const pendingRequests = snapshot.pendingRequests;
   const waiting =
-    snapshot.pendingRequests === 1
-      ? "1 request is still waiting."
-      : `${snapshot.pendingRequests} requests are still waiting.`;
+    pendingRequests === 1
+      ? i18n._("1 request is still waiting.")
+      : i18n._("{pendingRequests} requests are still waiting.", { pendingRequests });
+  const seconds = ((snapshot.lastStallMs ?? 0) / 1000).toFixed(1);
   const detail = reconnecting
-    ? `The connection was interrupted. Thread updates will resume automatically when it recovers.${snapshot.pendingRequests ? ` ${waiting}` : ""}`
+    ? pendingRequests
+      ? i18n._(
+          "The connection was interrupted. Thread updates will resume automatically when it recovers. {waiting}",
+          { waiting },
+        )
+      : i18n._(
+          "The connection was interrupted. Thread updates will resume automatically when it recovers.",
+        )
     : snapshot.reason === "unresponsive"
-      ? `The server is not answering. Heavy load or a connection delay may be the cause.${snapshot.pendingRequests ? ` ${waiting}` : " Updates will resume when it responds."}`
+      ? pendingRequests
+        ? i18n._(
+            "The server is not answering. Heavy load or a connection delay may be the cause. {waiting}",
+            { waiting },
+          )
+        : i18n._(
+            "The server is not answering. Heavy load or a connection delay may be the cause. Updates will resume when it responds.",
+          )
       : snapshot.reason === "recent-stall"
-        ? `The server paused for ${((snapshot.lastStallMs ?? 0) / 1000).toFixed(1)} s and is responding again.${snapshot.pendingRequests ? ` ${waiting}` : ""}`
-        : `${waiting} You can keep working while it completes.`;
+        ? pendingRequests
+          ? i18n._("The server paused for {seconds} s and is responding again. {waiting}", {
+              seconds,
+              waiting,
+            })
+          : i18n._("The server paused for {seconds} s and is responding again.", { seconds })
+        : i18n._("{waiting} You can keep working while it completes.", { waiting });
   return (
     <div
       role="status"

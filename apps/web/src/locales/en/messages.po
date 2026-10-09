@@ -33,6 +33,61 @@ msgid "Confirm"
 msgstr "Confirm"
 
 #. js-lingui-explicit-id
+#: src/workLog.ts
+msgid "The task was interrupted because the model is at capacity. Work remains incomplete."
+msgstr "The task was interrupted because the model is at capacity. Work remains incomplete."
+
+#. js-lingui-explicit-id
+#: src/workLog.ts
+msgid "The task was interrupted by a provider error. Work remains incomplete. {cause}"
+msgstr "The task was interrupted by a provider error. Work remains incomplete. {cause}"
+
+#. js-lingui-explicit-id
+#: src/routes/__root.tsx
+msgid "Unable to resume thread updates"
+msgstr "Unable to resume thread updates"
+
+#. js-lingui-explicit-id
+#: src/routes/__root.tsx
+msgid "Try again when the server responds."
+msgstr "Try again when the server responds."
+
+#. js-lingui-explicit-id
+#: src/routes/__root.tsx
+msgid "Workspace updates paused"
+msgstr "Workspace updates paused"
+
+#. js-lingui-explicit-id
+#: src/routes/__root.tsx
+msgid "The update stream could not keep up after repeated retries. Retry to resume workspace updates."
+msgstr "The update stream could not keep up after repeated retries. Retry to resume workspace updates."
+
+#. js-lingui-explicit-id
+#: src/routes/__root.tsx
+msgid "Retry updates"
+msgstr "Retry updates"
+
+#. js-lingui-explicit-id
+#: src/routes/__root.tsx
+msgid "Unable to resume workspace updates"
+msgstr "Unable to resume workspace updates"
+
+#. js-lingui-explicit-id
+#: src/routes/__root.tsx
+msgid "this thread"
+msgstr "this thread"
+
+#. js-lingui-explicit-id
+#: src/routes/__root.tsx
+msgid "Thread updates paused"
+msgstr "Thread updates paused"
+
+#. js-lingui-explicit-id
+#: src/routes/__root.tsx
+msgid "The update stream for {threadLabel} could not keep up after repeated retries. Retry to resume updates."
+msgstr "The update stream for {threadLabel} could not keep up after repeated retries. Retry to resume updates."
+
+#. js-lingui-explicit-id
 #: src/routes/_chat.source-control.tsx
 msgid "Source control embed mode requires a Lattice workspace."
 msgstr "Source control embed mode requires a Lattice workspace."
@@ -47,6 +102,21 @@ msgstr "Project binding failed: {error}"
 #: src/routes/_chat.source-control.tsx
 msgid "Changes"
 msgstr "Changes"
+
+#. js-lingui-explicit-id
+#: src/lib/composerTransportStatus.ts
+msgid "Synara connection is incompatible."
+msgstr "Synara connection is incompatible."
+
+#. js-lingui-explicit-id
+#: src/lib/composerTransportStatus.ts
+msgid "Disconnected from Synara."
+msgstr "Disconnected from Synara."
+
+#. js-lingui-explicit-id
+#: src/lib/composerTransportStatus.ts
+msgid "Reconnecting to Synara…"
+msgstr "Reconnecting to Synara…"
 
 #. js-lingui-explicit-id
 #: src/lib/gitLocalization.ts
@@ -587,13 +657,28 @@ msgstr "Not authenticated"
 
 #. js-lingui-explicit-id
 #: src/lib/providerSetupStatus.ts
-msgid "Authenticated · {account}"
-msgstr "Authenticated · {account}"
+msgid "Usage needs attention"
+msgstr "Usage needs attention"
+
+#. js-lingui-explicit-id
+#: src/lib/providerSetupStatus.ts
+msgid "Claude usage could not be verified. The CLI reports a local sign-in."
+msgstr "Claude usage could not be verified. The CLI reports a local sign-in."
+
+#. js-lingui-explicit-id
+#: src/lib/providerSetupStatus.ts
+msgid "Signed in locally"
+msgstr "Signed in locally"
 
 #. js-lingui-explicit-id
 #: src/lib/providerSetupStatus.ts
 msgid "Authenticated"
 msgstr "Authenticated"
+
+#. js-lingui-explicit-id
+#: src/lib/providerSetupStatus.ts
+msgid "{headline} · {account}"
+msgstr "{headline} · {account}"
 
 #. js-lingui-explicit-id
 #: src/components/chat/TimelineWorkEntryRow.tsx
@@ -688,6 +773,21 @@ msgstr "Live usage is not available for this provider configuration."
 #: src/lib/providerStatusMessages.ts
 msgid "Usage is currently unavailable."
 msgstr "Usage is currently unavailable."
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "Live usage is unavailable for environment-token authentication. Tokens from `claude setup-token` support chats but do not include the user:profile scope needed for usage."
+msgstr "Live usage is unavailable for environment-token authentication. Tokens from `claude setup-token` support chats but do not include the user:profile scope needed for usage."
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "No Claude usage credentials were found. A token supplied by a wrapper may support chats without access to usage. Sign in with `claude auth login` for this account to enable usage."
+msgstr "No Claude usage credentials were found. A token supplied by a wrapper may support chats without access to usage. Sign in with `claude auth login` for this account to enable usage."
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "This Claude login cannot report usage: its token lacks the user:profile scope. Tokens from `claude setup-token` can still be used for chats."
+msgstr "This Claude login cannot report usage: its token lacks the user:profile scope. Tokens from `claude setup-token` can still be used for chats."
 
 #. js-lingui-explicit-id
 #: src/lib/providerStatusMessages.ts
@@ -1332,6 +1432,11 @@ msgstr "Unable to mark thread as done"
 #: src/hooks/useSidebarThreadActions.ts
 msgid "Unable to undo done"
 msgstr "Unable to undo done"
+
+#. js-lingui-explicit-id
+#: src/hooks/useSidebarThreadActions.ts
+msgid "Marked as done"
+msgstr "Marked as done"
 
 #. js-lingui-explicit-id
 #: src/hooks/useSidebarThreadActions.ts
@@ -2033,6 +2138,16 @@ msgstr "An error occurred while creating the side chat."
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
+msgid "Next reply may use more Claude allowance."
+msgstr "Next reply may use more Claude allowance."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Chat context uses the new provider’s allowance."
+msgstr "Chat context uses the new provider’s allowance."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
 msgid "Local folders unavailable"
 msgstr "Local folders unavailable"
 
@@ -2085,11 +2200,6 @@ msgstr "Ask about this issue"
 #: src/components/ChatView.tsx
 msgid "Ask about this pull request"
 msgstr "Ask about this pull request"
-
-#. js-lingui-explicit-id
-#: src/components/ChatView.tsx
-msgid "Ask for follow-up changes or attach images"
-msgstr "Ask for follow-up changes or attach images"
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
@@ -2711,6 +2821,66 @@ msgid "Got it"
 msgstr "Got it"
 
 #. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "Reconnecting to Synara server"
+msgstr "Reconnecting to Synara server"
+
+#. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "Synara server recovered"
+msgstr "Synara server recovered"
+
+#. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "Synara server is busy"
+msgstr "Synara server is busy"
+
+#. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "1 request is still waiting."
+msgstr "1 request is still waiting."
+
+#. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "{pendingRequests} requests are still waiting."
+msgstr "{pendingRequests} requests are still waiting."
+
+#. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "The connection was interrupted. Thread updates will resume automatically when it recovers. {waiting}"
+msgstr "The connection was interrupted. Thread updates will resume automatically when it recovers. {waiting}"
+
+#. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "The connection was interrupted. Thread updates will resume automatically when it recovers."
+msgstr "The connection was interrupted. Thread updates will resume automatically when it recovers."
+
+#. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "The server is not answering. Heavy load or a connection delay may be the cause. {waiting}"
+msgstr "The server is not answering. Heavy load or a connection delay may be the cause. {waiting}"
+
+#. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "The server is not answering. Heavy load or a connection delay may be the cause. Updates will resume when it responds."
+msgstr "The server is not answering. Heavy load or a connection delay may be the cause. Updates will resume when it responds."
+
+#. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "The server paused for {seconds} s and is responding again. {waiting}"
+msgstr "The server paused for {seconds} s and is responding again. {waiting}"
+
+#. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "The server paused for {seconds} s and is responding again."
+msgstr "The server paused for {seconds} s and is responding again."
+
+#. js-lingui-explicit-id
+#: src/components/ServerBusyIndicator.tsx
+msgid "{waiting} You can keep working while it completes."
+msgstr "{waiting} You can keep working while it completes."
+
+#. js-lingui-explicit-id
 #: src/components/chat/ChatHeader.tsx
 #: src/components/Sidebar.tsx
 #: src/components/ThreadWorktreeHandoffDialog.tsx
@@ -2754,6 +2924,23 @@ msgid "Remove"
 msgstr "Remove"
 
 #. js-lingui-explicit-id
+#: src/components/ui/copyTextButton.tsx
+msgid "Copied {label}"
+msgstr "Copied {label}"
+
+#. js-lingui-explicit-id
+#: src/components/ui/copyTextButton.tsx
+msgid "Copy {label}"
+msgstr "Copy {label}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProposedPlanActions.tsx
+#: src/components/ui/copyTextButton.tsx
+#: src/components/ui/toast.tsx
+msgid "Copied"
+msgstr "Copied"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ComposerSlashStatusDialog.tsx
 #: src/components/settings/ProviderSignInDialog.tsx
 #: src/components/ui/dialog.tsx
@@ -2776,12 +2963,6 @@ msgstr "Copied error message"
 #: src/components/ui/toast.tsx
 msgid "Copy error message"
 msgstr "Copy error message"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ProposedPlanActions.tsx
-#: src/components/ui/toast.tsx
-msgid "Copied"
-msgstr "Copied"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
@@ -3530,6 +3711,11 @@ msgid "Add"
 msgstr "Add"
 
 #. js-lingui-explicit-id
+#: src/components/settings/ModelsSettingsPanel.tsx
+msgid "Enable a provider in Settings → Providers to add custom models."
+msgstr "Enable a provider in Settings → Providers to add custom models."
+
+#. js-lingui-explicit-id
 #: src/components/chat/MessagesTimeline.tsx
 #: src/components/settings/ModelsSettingsPanel.tsx
 msgid "Show less"
@@ -3582,6 +3768,11 @@ msgstr "Secret saved — type to replace"
 #: src/components/settings/ProviderInstanceEnvironmentEditor.tsx
 msgid "Store new variable as a secret"
 msgstr "Store new variable as a secret"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProviderSignInDialog.tsx
+msgid "Signed in locally. You can close this window; usage is checked separately."
+msgstr "Signed in locally. You can close this window; usage is checked separately."
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProviderSignInDialog.tsx
@@ -4102,6 +4293,26 @@ msgstr "{availableProviderCount} installed · custom order"
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "{availableProviderCount} installed"
 msgstr "{availableProviderCount} installed"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Performance"
+msgstr "Performance"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Keep Synara responsive"
+msgstr "Keep Synara responsive"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Give agent processes and their commands a moderately lower CPU priority when the machine is busy."
+msgstr "Give agent processes and their commands a moderately lower CPU priority when the machine is busy."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Applies to newly launched agent processes. Restart existing sessions to apply consistently."
+msgstr "Applies to newly launched agent processes. Restart existing sessions to apply consistently."
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
@@ -6454,6 +6665,11 @@ msgstr "Cancelling..."
 
 #. js-lingui-explicit-id
 #: src/components/chat/MessagesTimeline.tsx
+msgid "Task interrupted"
+msgstr "Task interrupted"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
 msgid "Show {count} more"
 msgstr "Show {count} more"
 
@@ -6568,6 +6784,16 @@ msgstr "Send"
 #: src/components/chat/MessagesTimeline.tsx
 msgid "Show more"
 msgstr "Show more"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "Answer"
+msgstr "Answer"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+msgid "No answer"
+msgstr "No answer"
 
 #. js-lingui-explicit-id
 #: src/components/chat/PastedTextChip.tsx
@@ -6711,6 +6937,11 @@ msgid "Dismiss provider status"
 msgstr "Dismiss provider status"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ProviderModelPicker.tsx
+msgid "Enable a provider in Settings"
+msgstr "Enable a provider in Settings"
+
+#. js-lingui-explicit-id
 #: src/components/chat/PullRequestContextCard.tsx
 msgid "Hide the prompt this card sent"
 msgstr "Hide the prompt this card sent"
@@ -6727,6 +6958,11 @@ msgstr "Steer"
 
 #. js-lingui-explicit-id
 #: src/components/chat/QueuedComposerActions.tsx
+msgid "Send this follow-up now to redirect the current work. If native steering is unavailable, stop the current turn and start a new one."
+msgstr "Send this follow-up now to redirect the current work. If native steering is unavailable, stop the current turn and start a new one."
+
+#. js-lingui-explicit-id
+#: src/components/chat/QueuedComposerActions.tsx
 msgid "Delete queued follow-up"
 msgstr "Delete queued follow-up"
 
@@ -6737,13 +6973,8 @@ msgstr "Queued follow-up actions"
 
 #. js-lingui-explicit-id
 #: src/components/chat/QueuedComposerActions.tsx
-msgid "Edit queued prompt"
-msgstr "Edit queued prompt"
-
-#. js-lingui-explicit-id
-#: src/components/chat/QueuedComposerActions.tsx
-msgid "Delete queued prompt"
-msgstr "Delete queued prompt"
+msgid "Edit queued follow-up"
+msgstr "Edit queued follow-up"
 
 #. js-lingui-explicit-id
 #: src/components/chat/RateLimitBanner.tsx
@@ -6889,6 +7120,31 @@ msgstr "This conversation didn't load."
 #: src/components/chat/ThreadDetailHydrationState.tsx
 msgid "Try again"
 msgstr "Try again"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadErrorBanner.tsx
+msgid "Hide details"
+msgstr "Hide details"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadErrorBanner.tsx
+msgid "Show details"
+msgstr "Show details"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadErrorBanner.tsx
+msgid "error"
+msgstr "error"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadErrorBanner.tsx
+msgid "Continue task"
+msgstr "Continue task"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadErrorBanner.tsx
+msgid "Change model"
+msgstr "Change model"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ThreadErrorBanner.tsx
@@ -7109,6 +7365,11 @@ msgstr "Viewed image"
 #: src/components/chat/TimelineWorkEntryRow.tsx
 msgid "Tool"
 msgstr "Tool"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Provider retrying"
+msgstr "Provider retrying"
 
 #. js-lingui-explicit-id
 #: src/components/chat/TimelineWorkEntryRow.tsx
