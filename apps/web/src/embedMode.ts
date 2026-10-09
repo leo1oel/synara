@@ -381,6 +381,9 @@ export function latticeEmbedSearchFromConfig(config: EmbedModeConfig | null): La
   };
 }
 
+// Lattice truncates a selected slide element's text to this many characters.
+const MAX_PRESENTATION_SELECTION_TEXT = 12_000;
+
 function boundedString(value: unknown, maximum: number): value is string {
   return typeof value === "string" && value.length <= maximum;
 }
@@ -531,6 +534,8 @@ export function readLatticeHostContextMessage(
   }
 
   const presentation = value.presentation;
+  let presentationSelection: NonNullable<LatticeHostContextSnapshot["presentation"]>["selection"] =
+    null;
   if (presentation !== undefined) {
     if (!presentation || typeof presentation !== "object") return null;
     const candidate = presentation as Record<string, unknown>;
@@ -548,19 +553,26 @@ export function readLatticeHostContextMessage(
     ) {
       return null;
     }
-    const selection = candidate.selection;
-    if (selection !== null) {
-      if (!selection || typeof selection !== "object") return null;
-      const selected = selection as Record<string, unknown>;
-      if (
-        !positiveInteger(selected.line) ||
-        !nonNegativeInteger(selected.column) ||
-        !nonEmptyBoundedString(selected.tagName, 32) ||
-        !boundedString(selected.text, 120)
-      ) {
-        return null;
-      }
-    }
+    // The selected element is an optional detail of the slide context: a
+    // malformed one is dropped and oversized text is cut to Lattice's own
+    // 12,000-character bound, so one field never freezes the whole snapshot.
+    const selection = candidate.selection as Record<string, unknown> | null;
+    presentationSelection =
+      selection &&
+      typeof selection === "object" &&
+      positiveInteger(selection.line) &&
+      nonNegativeInteger(selection.column) &&
+      nonEmptyBoundedString(selection.tagName, 32)
+        ? {
+            line: selection.line,
+            column: selection.column,
+            tagName: selection.tagName,
+            text:
+              typeof selection.text === "string"
+                ? selection.text.slice(0, MAX_PRESENTATION_SELECTION_TEXT)
+                : "",
+          }
+        : null;
   }
 
   if (
@@ -569,7 +581,10 @@ export function readLatticeHostContextMessage(
   ) {
     return null;
   }
-  return value as unknown as LatticeHostContextSnapshot;
+  const snapshot = value as unknown as LatticeHostContextSnapshot;
+  return snapshot.presentation
+    ? { ...snapshot, presentation: { ...snapshot.presentation, selection: presentationSelection } }
+    : snapshot;
 }
 
 export function readLatticePaperLibraryMessage(
