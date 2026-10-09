@@ -5,10 +5,9 @@
 
 import type { I18n } from "@lingui/core";
 import { useLingui } from "@lingui/react";
-import type { ServerProviderUsageSnapshot } from "@synara/contracts";
+import { DEFAULT_SERVER_SETTINGS_VIEW, type ServerProviderUsageSnapshot } from "@synara/contracts";
 import { deriveProviderInstances } from "@synara/shared/providerInstances";
 import {
-  PROVIDER_USAGE_PROVIDERS,
   providerUsageDisplayName,
   selectVisibleProviderUsageSnapshots,
 } from "@synara/shared/providerUsage";
@@ -17,10 +16,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAppSettings, type RailUsageWindow } from "~/appSettings";
 import {
-  MAX_RAIL_USAGE_PROVIDERS,
-  resolveRailUsageProviders,
-  toggleRailUsageProvider,
+  MAX_RAIL_USAGE_ACCOUNTS,
+  getRailUsageAccounts,
+  resolveRailUsageAccounts,
+  toggleRailUsageAccount,
 } from "~/components/AppRailUsage.logic";
+import { ProviderAccountAvatar } from "~/components/ProviderAccountMark";
 import { ProviderIcon } from "~/components/ProviderIcon";
 import { ProviderUsageLimitRows } from "~/components/ProviderUsageLimitRows";
 import { ProviderUsageLineList } from "~/components/ProviderUsageLineList";
@@ -207,18 +208,26 @@ export function ProviderUsageSettingsPanel() {
   const { i18n } = useLingui();
   const queryClient = useQueryClient();
   const { settings, updateSettings } = useAppSettings();
-  const railUsageProviders = resolveRailUsageProviders(settings.railUsageProviders);
-  const railUsageFull = railUsageProviders.length >= MAX_RAIL_USAGE_PROVIDERS;
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
   const providerInstances = useMemo(
     () =>
       new Map(
-        (serverSettingsQuery.data ? deriveProviderInstances(serverSettingsQuery.data) : []).map(
+        deriveProviderInstances(serverSettingsQuery.data ?? DEFAULT_SERVER_SETTINGS_VIEW).map(
           (instance) => [instance.instanceId, instance],
         ),
       ),
     [serverSettingsQuery.data],
   );
+  const railUsageAccounts = getRailUsageAccounts([...providerInstances.values()]);
+  // Disabled accounts keep their saved choice; only deleted accounts are discarded.
+  const savedRailUsageInstanceIds = (
+    settings.railUsageInstanceIds ?? settings.railUsageProviders
+  ).filter((instanceId) => providerInstances.has(instanceId));
+  const railUsageInstanceIds = resolveRailUsageAccounts(
+    settings.railUsageInstanceIds ?? settings.railUsageProviders,
+    railUsageAccounts,
+  ).map((account) => account.instance.instanceId);
+  const railUsageFull = railUsageInstanceIds.length >= MAX_RAIL_USAGE_ACCOUNTS;
   const usageQuery = useQuery(serverAllProviderUsageQueryOptions());
   const refreshMutation = useMutation({
     mutationFn: () => fetchAllProviderUsage({ forceRefresh: true }),
@@ -250,33 +259,37 @@ export function ProviderUsageSettingsPanel() {
 
   return (
     <>
-      <SettingsSection title={`Sidebar · up to ${MAX_RAIL_USAGE_PROVIDERS}`}>
-        {PROVIDER_USAGE_PROVIDERS.map((provider) => {
-          const checked = railUsageProviders.includes(provider);
-          const name = providerUsageDisplayName(provider);
+      <SettingsSection title={`Sidebar · up to ${MAX_RAIL_USAGE_ACCOUNTS} accounts`}>
+        {railUsageAccounts.map(({ instance, label }) => {
+          const checked = railUsageInstanceIds.includes(instance.instanceId);
           return (
             <SettingsListRow
-              key={provider}
+              key={instance.instanceId}
               title={
                 <span className="flex items-center gap-2">
-                  <ProviderIcon provider={provider} className="size-4 shrink-0" />
-                  <span className="truncate">{name}</span>
+                  <ProviderAccountAvatar
+                    provider={instance.driver}
+                    accentColor={instance.raw.accentColor}
+                    className="size-6"
+                  />
+                  <span className="truncate">{label}</span>
                 </span>
               }
               actions={
                 <Switch
                   checked={checked}
-                  disabled={!checked && railUsageFull}
+                  disabled={serverSettingsQuery.isPending || (!checked && railUsageFull)}
                   onCheckedChange={(next) =>
                     updateSettings({
-                      railUsageProviders: toggleRailUsageProvider(
-                        railUsageProviders,
-                        provider,
+                      railUsageInstanceIds: toggleRailUsageAccount(
+                        savedRailUsageInstanceIds,
+                        instance.instanceId,
                         Boolean(next),
+                        railUsageAccounts,
                       ),
                     })
                   }
-                  aria-label={`Show ${name} usage at the bottom of the sidebar`}
+                  aria-label={`Show ${label} usage at the bottom of the sidebar`}
                 />
               }
             />
@@ -377,7 +390,9 @@ export function ProviderUsageSettingsPanel() {
         )}
 
         <p className="px-2 text-ui-sm leading-relaxed text-muted-foreground">
-          {i18n._("Usage is read locally from each provider CLI's stored credentials and fetched directly from the provider. The list follows whatever you are signed into; unsigned providers stay visible until any account is connected, then drop away. Short-lived tokens are refreshed through the provider's own CLI or official token endpoint.")}
+          {i18n._(
+            "Usage is read locally from each provider CLI's stored credentials and fetched directly from the provider. The list follows whatever you are signed into; unsigned providers stay visible until any account is connected, then drop away. Short-lived tokens are refreshed through the provider's own CLI or official token endpoint.",
+          )}
         </p>
       </SettingsSectionShell>
     </>

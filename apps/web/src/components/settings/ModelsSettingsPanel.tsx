@@ -125,6 +125,8 @@ export function ModelsSettingsPanel({
     Partial<Record<ProviderKind, string | null>>
   >({});
   const [showAllCustomModels, setShowAllCustomModels] = useState(false);
+  // Lattice has no provider enablement gate, so every custom-model provider stays editable.
+  const enabledCustomModelProviderSettings = CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS;
 
   useSettingsRestoreSignal(resetEpoch, () => {
     setSelectedCustomModelProvider("codex");
@@ -245,14 +247,17 @@ export function ModelsSettingsPanel({
     : selectedProofreadPickerOption
       ? `${selectedProofreadPickerOption.instance.label} / ${selectedProofreadPickerOption.option.name}`
       : (settings.proofreadModel ?? "");
-  const selectedCustomModelProviderSettings = CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.find(
-    (config) => config.provider === selectedCustomModelProvider,
-  )!;
-  const selectedCustomModelInput = customModelInputByProvider[selectedCustomModelProvider] ?? "";
-  const selectedCustomModelError = customModelErrorByProvider[selectedCustomModelProvider] ?? null;
+  const selectedCustomModelProviderSettings =
+    enabledCustomModelProviderSettings.find(
+      (config) => config.provider === selectedCustomModelProvider,
+    ) ?? enabledCustomModelProviderSettings[0];
+  const activeCustomModelProvider =
+    selectedCustomModelProviderSettings?.provider ?? selectedCustomModelProvider;
+  const selectedCustomModelInput = customModelInputByProvider[activeCustomModelProvider] ?? "";
+  const selectedCustomModelError = customModelErrorByProvider[activeCustomModelProvider] ?? null;
   const savedCustomModelRows = useMemo(
     () =>
-      CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.flatMap((config) =>
+      enabledCustomModelProviderSettings.flatMap((config) =>
         getCustomModelsForProvider(settings, config.provider).map((slug) => ({
           key: `${config.provider}:${slug}`,
           provider: config.provider,
@@ -260,7 +265,7 @@ export function ModelsSettingsPanel({
           slug,
         })),
       ),
-    [settings],
+    [enabledCustomModelProviderSettings, settings],
   );
   const visibleCustomModelRows = savedCustomModelRows.slice(0, 5);
   const overflowCustomModelRows = savedCustomModelRows.slice(5);
@@ -308,7 +313,7 @@ export function ModelsSettingsPanel({
   const resetCustomModels = useCallback(() => {
     const patch = Object.assign(
       {},
-      ...CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.map((config) =>
+      ...enabledCustomModelProviderSettings.map((config) =>
         patchCustomModels(config.provider, [
           ...getDefaultCustomModelsForProvider(defaults, config.provider),
         ]),
@@ -317,7 +322,7 @@ export function ModelsSettingsPanel({
     updateSettings(patch);
     setCustomModelErrorByProvider({});
     setShowAllCustomModels(false);
-  }, [defaults, updateSettings]);
+  }, [defaults, enabledCustomModelProviderSettings, updateSettings]);
 
   const renderCustomModelRow = (
     row: (typeof savedCustomModelRows)[number],
@@ -573,65 +578,71 @@ export function ModelsSettingsPanel({
           }
         >
           <div className="mt-4">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Select
-                value={selectedCustomModelProvider}
-                onValueChange={(value) => {
-                  if (isCustomModelEditorProvider(value)) {
-                    setSelectedCustomModelProvider(value);
-                  }
-                }}
-              >
-                <SelectTrigger
-                  size="sm"
-                  className="w-full sm:w-40"
-                  aria-label={i18n._("Custom model provider")}
+            {selectedCustomModelProviderSettings ? (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Select
+                  value={activeCustomModelProvider}
+                  onValueChange={(value) => {
+                    if (isCustomModelEditorProvider(value)) {
+                      setSelectedCustomModelProvider(value);
+                    }
+                  }}
                 >
-                  <SelectValue>{selectedCustomModelProviderSettings.title}</SelectValue>
-                </SelectTrigger>
-                <SettingsSelectPopup align="start">
-                  {CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.map((config) => (
-                    <SelectItem key={config.provider} value={config.provider}>
-                      {config.title}
-                    </SelectItem>
-                  ))}
-                </SettingsSelectPopup>
-              </Select>
-              <Input
-                id="custom-model-slug"
-                size="sm"
-                variant="soft"
-                value={selectedCustomModelInput}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setCustomModelInputByProvider((existing) => ({
-                    ...existing,
-                    [selectedCustomModelProvider]: value,
-                  }));
-                  if (selectedCustomModelError) {
-                    setCustomModelErrorByProvider((existing) => ({
+                  <SelectTrigger
+                    size="sm"
+                    className="w-full sm:w-40"
+                    aria-label={i18n._("Custom model provider")}
+                  >
+                    <SelectValue>{selectedCustomModelProviderSettings.title}</SelectValue>
+                  </SelectTrigger>
+                  <SettingsSelectPopup align="start">
+                    {enabledCustomModelProviderSettings.map((config) => (
+                      <SelectItem key={config.provider} value={config.provider}>
+                        {config.title}
+                      </SelectItem>
+                    ))}
+                  </SettingsSelectPopup>
+                </Select>
+                <Input
+                  id="custom-model-slug"
+                  size="sm"
+                  variant="soft"
+                  value={selectedCustomModelInput}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setCustomModelInputByProvider((existing) => ({
                       ...existing,
-                      [selectedCustomModelProvider]: null,
+                      [activeCustomModelProvider]: value,
                     }));
-                  }
-                }}
-                onKeyDown={(event) => {
-                  if (event.key !== "Enter") return;
-                  event.preventDefault();
-                  addCustomModel(selectedCustomModelProvider);
-                }}
-                placeholder={selectedCustomModelProviderSettings.example}
-                spellCheck={false}
-              />
-              <Button
-                className="shrink-0"
-                variant="outline"
-                onClick={() => addCustomModel(selectedCustomModelProvider)}
-              >
-                <PlusIcon className="size-3.5" />
-                {i18n._("Add")}
-              </Button>
-            </div>
+                    if (selectedCustomModelError) {
+                      setCustomModelErrorByProvider((existing) => ({
+                        ...existing,
+                        [activeCustomModelProvider]: null,
+                      }));
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter") return;
+                    event.preventDefault();
+                    addCustomModel(activeCustomModelProvider);
+                  }}
+                  placeholder={selectedCustomModelProviderSettings.example}
+                  spellCheck={false}
+                />
+                <Button
+                  className="shrink-0"
+                  variant="outline"
+                  onClick={() => addCustomModel(activeCustomModelProvider)}
+                >
+                  <PlusIcon className="size-3.5" />
+                  {i18n._("Add")}
+                </Button>
+              </div>
+            ) : (
+              <p className="text-ui text-muted-foreground">
+                {i18n._("Enable a provider in Settings → Providers to add custom models.")}
+              </p>
+            )}
 
             {selectedCustomModelError ? (
               <p className="mt-2 text-ui leading-snug text-destructive">

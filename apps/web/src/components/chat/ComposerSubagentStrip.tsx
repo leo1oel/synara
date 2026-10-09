@@ -13,7 +13,6 @@ import {
   BackgroundTrayIcon,
   BackToParentIcon,
   BotIcon,
-  LoaderIcon,
   PanelCollapseIcon,
   PanelExpandIcon,
   StopIcon,
@@ -25,6 +24,7 @@ import {
 import { StatusDot } from "~/components/ui/status-chip";
 import { cn } from "~/lib/utils";
 import { Button } from "../ui/button";
+import { LiveStatusSpinner } from "../ui/spinner";
 import { DisclosureRegion } from "../ui/DisclosureRegion";
 import type {
   ComposerSubagentStripItem,
@@ -79,7 +79,7 @@ export const ComposerSubagentStrip = function ComposerSubagentStrip({
       <ComposerStackedPanelHeaderRow>
         <ComposerStackedPanelRowMain>
           {compact && runningCount > 0 ? (
-            <LoaderIcon className={cn(COMPOSER_STACKED_PANEL_ICON_CLASS_NAME, "animate-spin")} />
+            <LiveStatusSpinner className={COMPOSER_STACKED_PANEL_ICON_CLASS_NAME} />
           ) : (
             <BotIcon className={COMPOSER_STACKED_PANEL_ICON_CLASS_NAME} />
           )}

@@ -104,6 +104,8 @@ import { RouteInsetSurface } from "../components/RouteInsetSurface";
 import { SidebarHeaderNavigationControls } from "../components/SidebarHeaderNavigationControls";
 import { useDesktopCustomTitleBarState } from "../hooks/useDesktopCustomTitleBar";
 import { useDesktopTopBarTrafficLightGutterClassName } from "../hooks/useDesktopTopBarGutter";
+import { useKeepAwakeState } from "../hooks/useKeepAwakeState";
+import { KeepAwakeSettingsSection } from "../components/KeepAwakeControls";
 import { useTheme } from "../hooks/useTheme";
 import { isUiDensity } from "../lib/appDensity";
 import { isChatWidthMode, type ChatWidthMode } from "../lib/chatWidth";
@@ -367,6 +369,7 @@ function SettingsRouteView() {
   } = useTheme();
   const { settings, defaults, updateSettings, updateSettingsAndWait, resetSettings } =
     useAppSettings();
+  const keepAwake = useKeepAwakeState();
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const [releaseHistoryOpen, setReleaseHistoryOpen] = useState(false);
   const [resetEpoch, setResetEpoch] = useState(0);
@@ -656,6 +659,9 @@ function SettingsRouteView() {
       : []),
     ...(settings.enableProviderUpdateChecks !== defaults.enableProviderUpdateChecks
       ? ["Provider update checks"]
+      : []),
+    ...(settings.lowerProviderProcessPriority !== defaults.lowerProviderProcessPriority
+      ? ["Keep Synara responsive"]
       : []),
     ...(settings.diffWordWrap !== defaults.diffWordWrap ? ["Diff line wrapping"] : []),
     ...(settings.githubLinkOpenTarget !== defaults.githubLinkOpenTarget
@@ -1595,6 +1601,13 @@ function SettingsRouteView() {
         })}
       </SettingsSection>
 
+      <KeepAwakeSettingsSection
+        state={keepAwake}
+        mode={settings.keepAwakeMode}
+        defaultMode={defaults.keepAwakeMode}
+        onSelectMode={(keepAwakeMode) => updateSettings({ keepAwakeMode })}
+      />
+
       <SettingsSection title="Review">
         <SettingsRow
           title="Open pull requests and issues"
@@ -1768,20 +1781,20 @@ function SettingsRouteView() {
                     </p>
                   </div>
                   {!isEmbed ? (
-activeSection === "shortcuts" ? (
-                    <KeyboardShortcutsResetButton />
-                  ) : (
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      className="shrink-0"
-                      disabled={changedSettingLabels.length === 0}
-                      onClick={() => void restoreDefaults()}
-                    >
-                      <ResetIcon className="size-3.5" />
-                      Restore defaults
-                    </Button>
-                  )
+                    activeSection === "shortcuts" ? (
+                      <KeyboardShortcutsResetButton />
+                    ) : (
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        className="shrink-0"
+                        disabled={changedSettingLabels.length === 0}
+                        onClick={() => void restoreDefaults()}
+                      >
+                        <ResetIcon className="size-3.5" />
+                        Restore defaults
+                      </Button>
+                    )
                   ) : null}
                 </div>
               ) : null}

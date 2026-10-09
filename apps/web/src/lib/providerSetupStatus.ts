@@ -1,5 +1,5 @@
 import { i18n } from "~/i18n";
-import type { ServerProviderStatus } from "@synara/contracts";
+import type { ServerProviderStatus, ServerProviderUsageSnapshot } from "@synara/contracts";
 
 /** Installation/auth health is independent of permission to run background work. */
 export function providerSetupStatusLabel(input: {
@@ -34,6 +34,7 @@ export interface ProviderAccountStatusSummary {
 export function providerAccountStatusSummary(input: {
   readonly status: ServerProviderStatus | undefined;
   readonly enabled: boolean;
+  readonly usageSnapshot?: ServerProviderUsageSnapshot | undefined;
 }): ProviderAccountStatusSummary {
   if (!input.enabled) {
     return { tone: "idle", headline: i18n._("Disabled"), detail: null };
@@ -56,12 +57,24 @@ export function providerAccountStatusSummary(input: {
     return { tone: "warning", headline: i18n._("Needs attention"), detail };
   }
   if (status.authStatus === "authenticated") {
+    const claude = (status.driver ?? status.provider) === "claudeAgent";
+    const usage = input.usageSnapshot;
+    if (claude && usage && (usage.status === "needs-auth" || usage.status === "error")) {
+      return {
+        tone: "warning",
+        headline: i18n._("Usage needs attention"),
+        detail:
+          usage.detail ??
+          i18n._("Claude usage could not be verified. The CLI reports a local sign-in."),
+      };
+    }
     const authLabel = status.authLabel?.trim() || status.authType?.trim();
+    const headline = claude ? i18n._("Signed in locally") : i18n._("Authenticated");
     return {
       tone: "ready",
       headline: authLabel
-        ? i18n._("Authenticated · {account}", { account: authLabel })
-        : i18n._("Authenticated"),
+        ? i18n._("{headline} · {account}", { headline, account: authLabel })
+        : headline,
       detail,
     };
   }

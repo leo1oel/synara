@@ -10,7 +10,7 @@ import { useLingui } from "@lingui/react";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { DiffStat } from "~/components/ui/diff-stat";
-import { SubmitShortcutKbd } from "~/components/ui/kbd";
+import { getSubmitShortcutKeyShortcuts, SubmitShortcutKbd } from "~/components/ui/kbd";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import {
   type GitCommitDialogAction,
@@ -196,7 +196,12 @@ export function GitCommitDialog({
             }
             icon={<GitActionGlyph name={action.icon} className="size-4" />}
             label={localizeGitText(i18n, action.label)}
-            {...(action.id === "commit" ? { trailing: <SubmitShortcutKbd /> } : {})}
+            {...(action.id === "commit"
+              ? {
+                  trailing: <SubmitShortcutKbd />,
+                  "aria-keyshortcuts": getSubmitShortcutKeyShortcuts(),
+                }
+              : {})}
             onClick={() => submit(action)}
           />
         ))}

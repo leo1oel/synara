@@ -106,6 +106,7 @@ describe("normalizeProviderStatusForLocalConfig", () => {
       provider: "opencode",
       instanceId: "opencode",
       driver: "opencode",
+      enabled: false,
       status: "warning",
       message:
         "Claude uses a custom local binary path in this app. Availability will be confirmed when you start a session.",

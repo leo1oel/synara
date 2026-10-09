@@ -119,6 +119,7 @@ import {
   parseCodexSharedContinuationIdentity,
   prepareProviderContinuationIdentity,
   prepareProviderContinuationIdentityForExplicitResume,
+  prepareProviderContinuationIdentityForImport,
   providerContinuationIdentity,
 } from "../continuationIdentity.ts";
 
@@ -293,6 +294,8 @@ function toRuntimePayloadFromSession(
     readonly providerOptions?: unknown;
     readonly enableComputerControl?: boolean;
     readonly autoApproveSynaraTools?: boolean;
+    /** Extra folders of a multi-folder project, so recovery restarts with the same grant. */
+    readonly additionalDirectories?: ReadonlyArray<string>;
     readonly providerInstanceId?: string;
     readonly lastRuntimeEvent?: string;
     readonly lastRuntimeEventAt?: string;
@@ -361,6 +364,11 @@ function toRuntimePayloadFromSession(
     ...(extra?.autoApproveSynaraTools !== undefined
       ? { autoApproveSynaraTools: extra.autoApproveSynaraTools }
       : {}),
+    ...(extra?.additionalDirectories !== undefined
+      ? { additionalDirectories: [...extra.additionalDirectories] }
+      : extra?.launchOptionsAuthoritative
+        ? { additionalDirectories: null }
+        : {}),
     ...(extra?.lastRuntimeEvent !== undefined ? { lastRuntimeEvent: extra.lastRuntimeEvent } : {}),
     ...(extra?.lastRuntimeEventAt !== undefined
       ? { lastRuntimeEventAt: extra.lastRuntimeEventAt }
@@ -432,6 +440,15 @@ function readPersistedAutoApproveSynaraTools(
   runtimePayload: ProviderRuntimeBinding["runtimePayload"],
 ): boolean {
   return runtimePayloadRecord(runtimePayload).autoApproveSynaraTools === true;
+}
+
+function readPersistedAdditionalDirectories(
+  runtimePayload: ProviderRuntimeBinding["runtimePayload"],
+): ReadonlyArray<string> {
+  const raw = runtimePayloadRecord(runtimePayload).additionalDirectories;
+  return Array.isArray(raw)
+    ? raw.filter((entry): entry is string => typeof entry === "string" && entry.length > 0)
+    : [];
 }
 
 // Fingerprints the credential inputs that persistence strips (environment,
@@ -1418,6 +1435,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
         readonly providerOptions?: unknown;
         readonly enableComputerControl?: boolean;
         readonly autoApproveSynaraTools?: boolean;
+        readonly additionalDirectories?: ReadonlyArray<string>;
         readonly providerInstanceId?: string;
         readonly lastRuntimeEvent?: string;
         readonly lastRuntimeEventAt?: string;
@@ -2153,10 +2171,11 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           );
 
         // Keep the retiring runtime's generation current until all of its
-        // background work has settled and the process is stopped. Otherwise
-        // its terminal task event would be rejected as stale and this drain
+        // background work has settled and authority is renewed or the process
+        // is stopped. Otherwise its terminal task event would be rejected as
+        // stale and this drain
         // could wait forever.
-        yield* lifecycle.runCurrent(threadId, () =>
+        const renewedAdapter = yield* lifecycle.runCurrent(threadId, () =>
           Effect.gen(function* () {
             let binding = yield* getCurrentBinding();
             const requiresCredentialRotation =
@@ -2203,9 +2222,26 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                 }),
               );
             }
+            if (
+              adapter.renewAgentGatewayCredential &&
+              (yield* adapter.renewAgentGatewayCredential(threadId))
+            ) {
+              yield* withBindingWriteLock(
+                threadId,
+                directory.upsert({
+                  threadId,
+                  provider: binding.provider,
+                  providerInstanceId: binding.providerInstanceId,
+                  runtimePayload: { [AGENT_GATEWAY_CREDENTIAL_ROTATION_REQUIRED]: false },
+                }),
+              );
+              return adapter;
+            }
             yield* adapter.stopSession(threadId);
           }),
         );
+
+        if (renewedAdapter) return renewedAdapter;
 
         return yield* lifecycle.run(threadId, (lease) =>
           Effect.gen(function* () {
@@ -2343,6 +2379,9 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
             const persistedAutoApproveSynaraTools = readPersistedAutoApproveSynaraTools(
               binding.runtimePayload,
             );
+            const persistedAdditionalDirectories = readPersistedAdditionalDirectories(
+              binding.runtimePayload,
+            );
             yield* validateAutoRuntimeMode(
               input.operation,
               resolved.instance.driver,
@@ -2358,6 +2397,9 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
               ...(resolved.providerOptions ? { providerOptions: resolved.providerOptions } : {}),
               ...(persistedComputerControl ? { enableComputerControl: true } : {}),
               ...(persistedAutoApproveSynaraTools ? { autoApproveSynaraTools: true } : {}),
+              ...(persistedAdditionalDirectories.length > 0
+                ? { additionalDirectories: persistedAdditionalDirectories }
+                : {}),
               ...(canReusePersistedResumeCursor ? { resumeCursor: binding.resumeCursor } : {}),
               ...(expectedCodexContinuationGeneration
                 ? { expectedCodexContinuationGeneration }
@@ -2386,6 +2428,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                 ...(resolved.providerOptions ? { providerOptions: resolved.providerOptions } : {}),
                 ...(persistedComputerControl ? { enableComputerControl: true } : {}),
                 ...(persistedAutoApproveSynaraTools ? { autoApproveSynaraTools: true } : {}),
+                additionalDirectories: persistedAdditionalDirectories,
                 launchOptionsAuthoritative: true,
               }).pipe(
                 Effect.andThen(
@@ -3084,6 +3127,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                     providerInstanceId: resolved.instance.instanceId,
                     enableComputerControl: effectiveComputerControl,
                     autoApproveSynaraTools: effectiveAutoApproveSynaraTools,
+                    additionalDirectories: input.additionalDirectories ?? [],
                     lifecycleGeneration: lease.generation,
                     launchOptionsAuthoritative: true,
                     runtimePayload: {
@@ -3142,6 +3186,9 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
               const previousAutoApproveSynaraTools = readPersistedAutoApproveSynaraTools(
                 persistedBinding.runtimePayload,
               );
+              const previousAdditionalDirectories = readPersistedAdditionalDirectories(
+                persistedBinding.runtimePayload,
+              );
               // The recycled flag is a (value, generation) pair with the restored
               // lifecycle generation, not the old bool alone: when the failed
               // replacement turn carried an explicit computer-control value, that
@@ -3185,6 +3232,9 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                           ...(restoredAutoApproveSynaraTools
                             ? { autoApproveSynaraTools: true }
                             : {}),
+                          ...(previousAdditionalDirectories.length > 0
+                            ? { additionalDirectories: previousAdditionalDirectories }
+                            : {}),
                           ...(persistedBinding.resumeCursor !== undefined
                             ? { resumeCursor: persistedBinding.resumeCursor }
                             : {}),
@@ -3209,6 +3259,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                             providerOptions: previousProviderOptions,
                             enableComputerControl: restoredComputerControl,
                             autoApproveSynaraTools: restoredAutoApproveSynaraTools,
+                            additionalDirectories: previousAdditionalDirectories,
                             runtimePayload: {
                               providerOptionsCredentialsFingerprint:
                                 previousProviderCredentialsFingerprint ?? null,
@@ -3497,6 +3548,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                 // must land here or resumeSession re-leases without it.
                 ...(input.enableComputerControl ? { enableComputerControl: true } : {}),
                 ...(input.autoApproveSynaraTools ? { autoApproveSynaraTools: true } : {}),
+                additionalDirectories: input.additionalDirectories ?? [],
                 lastRuntimeEvent: "provider.thread.forked",
                 lastRuntimeEventAt: new Date().toISOString(),
                 launchOptionsAuthoritative: true,
@@ -3602,6 +3654,30 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
             // An earlier interrupted import may still own a subprocess even when
             // it never managed to persist a directory binding.
             yield* adapter.stopSession(input.threadId);
+            // A first external import may establish the account's shared
+            // continuation generation; persisted resume paths keep the stricter
+            // prepared-source requirement.
+            const importContinuationIdentity = yield* Effect.tryPromise({
+              try: () =>
+                prepareProviderContinuationIdentityForImport(input.provider, importProviderOptions),
+              catch: (cause) =>
+                toValidationError(
+                  operation,
+                  cause instanceof Error
+                    ? cause.message
+                    : "Provider continuation storage could not be prepared safely.",
+                  cause,
+                ),
+            });
+            const expectedCodexContinuationGeneration = codexSharedContinuationGeneration(
+              importContinuationIdentity,
+            );
+            if (input.provider === "codex" && expectedCodexContinuationGeneration === undefined) {
+              return yield* toValidationError(
+                operation,
+                "The Codex import source has no verified continuation generation.",
+              );
+            }
             return yield* Effect.gen(function* () {
               const forkedOption = yield* adapter.forkThread!({
                 threadId: input.threadId,
@@ -3619,6 +3695,9 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                   : {}),
                 providerInstanceId: resolved.instance.instanceId,
                 lifecycleGeneration: lease.generation,
+                ...(expectedCodexContinuationGeneration
+                  ? { expectedCodexContinuationGeneration }
+                  : {}),
                 requireCompletedSource: true,
               }).pipe(Effect.timeoutOption(PROVIDER_START_SESSION_TIMEOUT));
               if (Option.isNone(forkedOption)) {
@@ -3670,8 +3749,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                     importProviderOptions,
                     credentialsFingerprintKey,
                   ) ?? null,
-                continuationIdentity:
-                  providerContinuationIdentity(input.provider, importProviderOptions) ?? null,
+                continuationIdentity: importContinuationIdentity ?? null,
                 activeTurnId: null,
                 lastError: null,
                 lastRuntimeEvent: "provider.thread.imported",

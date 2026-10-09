@@ -64,7 +64,9 @@ export default function ProviderSignInDialog(props: {
     );
     setResult(
       status?.authStatus === "authenticated"
-        ? i18n._("Authenticated. You can close this window.")
+        ? props.provider === "claudeAgent"
+          ? i18n._("Signed in locally. You can close this window; usage is checked separately.")
+          : i18n._("Authenticated. You can close this window.")
         : status?.authStatus === "unauthenticated"
           ? i18n._(
               "This account is not authenticated yet. Complete the sign-in steps and check again.",
@@ -75,7 +77,8 @@ export default function ProviderSignInDialog(props: {
     );
     // Native account preparation can save its isolated roots server-side.
     void queryClient.invalidateQueries({ queryKey: serverQueryKeys.settings() });
-  }, [props.instanceId, queryClient]);
+    void queryClient.invalidateQueries({ queryKey: serverQueryKeys.allProviderUsage() });
+  }, [props.instanceId, props.provider, queryClient]);
 
   useEffect(() => {
     alive.current = true;
@@ -93,6 +96,7 @@ export default function ProviderSignInDialog(props: {
           .catch(() => undefined)
           .then(() => {
             void queryClient.invalidateQueries({ queryKey: serverQueryKeys.settings() });
+            void queryClient.invalidateQueries({ queryKey: serverQueryKeys.allProviderUsage() });
             void refreshRef.current({ silent: true });
           });
       });

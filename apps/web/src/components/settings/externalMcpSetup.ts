@@ -5,6 +5,12 @@ import type {
   ExternalMcpStdioConfiguration,
 } from "@synara/contracts";
 
+// `lattice` (Synara's `synara` under the Lattice host profile) is reserved by the
+// Codex provider for the managed, in-process HTTP gateway. External clients run a
+// separate stdio server, so they must use a different entry name or Codex merges
+// the two transports when it layers the user's config over the provider overlay.
+export const EXTERNAL_MCP_SERVER_NAME = "lattice-external" as const;
+
 export interface ExternalMcpClientConfiguration {
   readonly format: "command" | "json";
   readonly value: string;
@@ -42,7 +48,7 @@ function jsonConfiguration(stdio: ExternalMcpStdioConfiguration): string {
   return JSON.stringify(
     {
       mcpServers: {
-        lattice: {
+        [EXTERNAL_MCP_SERVER_NAME]: {
           command: stdio.command,
           args: stdio.args,
           ...(stdio.env ? { env: stdio.env } : {}),
@@ -69,7 +75,16 @@ export function buildExternalMcpClientConfiguration(
     return {
       format: "command",
       value: shellCommand(
-        ["codex", "mcp", "add", "lattice", ...environment, "--", stdio.command, ...stdio.args],
+        [
+          "codex",
+          "mcp",
+          "add",
+          EXTERNAL_MCP_SERVER_NAME,
+          ...environment,
+          "--",
+          stdio.command,
+          ...stdio.args,
+        ],
         platform,
       ),
       copyLabel: zh ? "复制 Codex 命令" : "Copy Codex command",
@@ -97,7 +112,7 @@ export function buildExternalMcpClientConfiguration(
           "add",
           "--scope",
           "user",
-          "lattice",
+          EXTERNAL_MCP_SERVER_NAME,
           ...environment,
           "--",
           stdio.command,
@@ -188,7 +203,7 @@ export function buildExternalMcpSetupPrompt(input: {
     }
     sections.push(
       [
-        '第 2 步——在你自己的配置中将 Lattice 注册为名为 "lattice" 的 stdio MCP 服务器，并使用你的应用支持的方式完成配置：',
+        `第 2 步——在你自己的配置中将 Lattice 注册为名为 "${EXTERNAL_MCP_SERVER_NAME}" 的 stdio MCP 服务器，并使用你的应用支持的方式完成配置：`,
         "",
         `如果你使用 Codex，请运行：${codex.value}`,
         `如果你使用 Claude Code，请运行：${claude.value}`,
@@ -215,7 +230,7 @@ export function buildExternalMcpSetupPrompt(input: {
   }
   sections.push(
     [
-      'Step 2 — Register Lattice as a stdio MCP server named "lattice" in your own configuration, using whichever mechanism your app supports:',
+      `Step 2 — Register Lattice as a stdio MCP server named "${EXTERNAL_MCP_SERVER_NAME}" in your own configuration, using whichever mechanism your app supports:`,
       "",
       `If you are Codex, run: ${codex.value}`,
       `If you are Claude Code, run: ${claude.value}`,

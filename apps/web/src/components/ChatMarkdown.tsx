@@ -19,6 +19,7 @@ import { isLocalAbsolutePath } from "@synara/shared/path";
 import "katex/dist/katex.min.css";
 import { remarkWikiLinks } from "../lib/remarkWikiLinks";
 import { remarkGithubAlerts, type GithubAlertKind } from "../lib/remarkGithubAlerts";
+import { remarkHtmlBreaks } from "../lib/remarkHtmlBreaks";
 import React, {
   Children,
   createContext,
@@ -41,6 +42,8 @@ import type { Components } from "react-markdown";
 import ReactMarkdown from "react-markdown";
 import { defaultUrlTransform } from "react-markdown";
 import rehypeKatex from "rehype-katex";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -159,6 +162,12 @@ interface ChatMarkdownProps {
   variant?: "assistant" | "user";
   /** Mention metadata for chip icon resolution; only used by the user variant. */
   mentionReferences?: ReadonlyArray<ProviderMentionReference> | undefined;
+  /**
+   * Parses and sanitizes authored HTML embedded in the markdown. Keep this
+   * disabled for provider/user content, which must continue to render HTML as
+   * text.
+   */
+  parseHtml?: boolean | undefined;
   onOpenThread?: ((threadId: ThreadId) => void) | undefined;
   /** Terminal selections rendered as inline chips inside user-message markdown. */
   terminalContexts?: ReadonlyArray<ParsedTerminalContextEntry> | undefined;
@@ -230,7 +239,7 @@ const MARKDOWN_REMARK_PLUGINS: MarkdownRemarkPlugins = [
   remarkGfm,
   remarkGithubAlerts,
   [remarkMath, { singleDollarTextMath: true }],
-  remarkConvertHtmlBreaks,
+  remarkHtmlBreaks,
   remarkRestoreLatexMathPlaceholders,
 ];
 // User prompts are casual typing, not authored markdown: hard-break single
@@ -378,30 +387,24 @@ type TextRangeFragmentContinuity = {
   readonly continuesAfter: boolean;
 };
 
-function convertHtmlBreaks(node: MarkdownNode): void {
-  if (!("children" in node) || !Array.isArray(node.children)) {
-    return;
-  }
-  node.children = node.children.map((child) => {
-    if (
-      "type" in child &&
-      child.type === "html" &&
-      "value" in child &&
-      typeof child.value === "string" &&
-      /^<br\s*\/?\s*>$/i.test(child.value)
-    ) {
-      return { type: "break", position: child.position };
-    }
-    convertHtmlBreaks(child);
-    return child;
-  });
-}
-
-function remarkConvertHtmlBreaks() {
-  return (tree: unknown) => {
-    convertHtmlBreaks(tree as MarkdownNode);
-  };
-}
+// Keep the renderer's generated metadata through the authored-HTML sanitizer.
+// KaTeX runs afterward so its generated MathML/styles do not widen this allowlist.
+const AUTHORED_HTML_SCHEMA = {
+  ...defaultSchema,
+  tagNames: [...(defaultSchema.tagNames ?? []), CHAT_FIND_TEXT_TAG_NAME],
+  attributes: {
+    ...defaultSchema.attributes,
+    [CHAT_FIND_TEXT_TAG_NAME]: ["dataChatFindTextStart"],
+    blockquote: [
+      ...(defaultSchema.attributes?.blockquote ?? []),
+      ["dataGithubAlert", "note", "tip", "important", "warning", "caution"],
+    ],
+  },
+  protocols: {
+    ...defaultSchema.protocols,
+    href: [...(defaultSchema.protocols?.href ?? []), "file", "thread", "synara"],
+  },
+};
 
 type MarkdownRangeDecoration = {
   startOffset: number;
@@ -1744,13 +1747,15 @@ function ChatMarkdown({
   mentionReferences,
   terminalContexts,
   onOpenThread,
+  parseHtml: parseHtmlProp,
 }: ChatMarkdownProps) {
   // Defaults applied with ?? in the body, not in the destructuring: default
   // values in parameter destructuring make React Compiler 1.0.0 bail on the
   // whole component (BuildHIR AssignmentPattern), losing its auto-memoization.
   const isStreaming = isStreamingProp ?? false;
-  const className = classNameProp ?? "text-ui leading-relaxed";
+  const className = classNameProp ?? "text-chat leading-relaxed";
   const variant = variantProp ?? "assistant";
+  const parseHtml = parseHtmlProp ?? false;
   const findQuery = findQueryProp ?? "";
   const findActiveRange = findActiveRangeProp ?? null;
   const { resolvedTheme } = useTheme();
@@ -1819,7 +1824,18 @@ function ChatMarkdown({
       remarkFindableText,
     ];
   }, [codexFileCitationsRemarkPlugin, composerChipsRemarkPlugin, cwd, wikiLinkRoot]);
-  const rehypePlugins = isUserVariant ? USER_MARKDOWN_REHYPE_PLUGINS : MARKDOWN_REHYPE_PLUGINS;
+  const rehypePlugins = useMemo<MarkdownRehypePlugins>(() => {
+    if (isUserVariant) {
+      return USER_MARKDOWN_REHYPE_PLUGINS;
+    }
+    if (parseHtml) {
+      // Raw HTML is only enabled for authored local-file previews. Sanitize
+      // immediately after parsing so scripts, event handlers, and unsafe URL
+      // schemes never reach React's renderer.
+      return [rehypeRaw, [rehypeSanitize, AUTHORED_HTML_SCHEMA], ...MARKDOWN_REHYPE_PLUGINS];
+    }
+    return MARKDOWN_REHYPE_PLUGINS;
+  }, [isUserVariant, parseHtml]);
   const rootRef = useRef<HTMLDivElement | null>(null);
   useLayoutEffect(() => {
     applyActiveChatFindMatch(rootRef.current, findActiveRange);

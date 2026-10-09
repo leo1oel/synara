@@ -18,7 +18,7 @@ import {
   resolveTerminalSelectionActionPosition,
   resolveTerminalSelectionContextMenuItems,
   shouldHandleTerminalSelectionMouseUp,
-  } from "./terminalSelectionActions";
+} from "./terminalSelectionActions";
 import { buildTerminalRuntimeKey, terminalRuntimeRegistry } from "./terminalRuntimeRegistry";
 import type {
   TerminalRuntimeConfig,
@@ -278,7 +278,11 @@ export default function TerminalViewport({
     if (!mount) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (matchesFixedShortcut(event, "terminal.search")) {
+      if (
+        matchesFixedShortcut(event, "terminal.search", navigator.platform, {
+          terminalFocus: true,
+        })
+      ) {
         event.preventDefault();
         event.stopPropagation();
         setSearchOpen(true);

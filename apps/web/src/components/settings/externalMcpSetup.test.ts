@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  EXTERNAL_MCP_SERVER_NAME,
   buildExternalMcpClientConfiguration,
   buildExternalMcpExamplePrompt,
   buildExternalMcpSetupPrompt,
@@ -29,28 +30,31 @@ describe("external MCP guided setup", () => {
     const claude = buildExternalMcpClientConfiguration("claudeCode", stdio);
 
     expect(codex.value).toBe(
-      "codex mcp add lattice --env ELECTRON_RUN_AS_NODE=1 -- /Applications/Lattice.app/Contents/MacOS/Lattice server.js mcp serve --integration mcp_int_example --home-dir '/tmp/Lattice home'",
+      `codex mcp add ${EXTERNAL_MCP_SERVER_NAME} --env ELECTRON_RUN_AS_NODE=1 -- /Applications/Lattice.app/Contents/MacOS/Lattice server.js mcp serve --integration mcp_int_example --home-dir '/tmp/Lattice home'`,
     );
     expect(claude.value).toBe(
-      "claude mcp add --scope user lattice -e ELECTRON_RUN_AS_NODE=1 -- /Applications/Lattice.app/Contents/MacOS/Lattice server.js mcp serve --integration mcp_int_example --home-dir '/tmp/Lattice home'",
+      `claude mcp add --scope user ${EXTERNAL_MCP_SERVER_NAME} -e ELECTRON_RUN_AS_NODE=1 -- /Applications/Lattice.app/Contents/MacOS/Lattice server.js mcp serve --integration mcp_int_example --home-dir '/tmp/Lattice home'`,
     );
+    expect(codex.value).not.toContain("mcp add lattice ");
+    expect(claude.value).not.toContain(" user lattice ");
     expect(`${codex.value}${claude.value}`).not.toContain("syn_mcp_v1_");
   });
 
   it("builds standard JSON configuration for desktop and other clients", () => {
     const desktop = buildExternalMcpClientConfiguration("claudeDesktop", stdio);
     const parsed = JSON.parse(desktop.value) as {
-      mcpServers: { lattice: { command: string; args: ReadonlyArray<string> } };
+      mcpServers: Record<string, { command: string; args: ReadonlyArray<string> }>;
     };
 
     expect(desktop.format).toBe("json");
-    expect(parsed.mcpServers.lattice).toEqual(stdio);
+    expect(parsed.mcpServers[EXTERNAL_MCP_SERVER_NAME]).toEqual(stdio);
+    expect(parsed.mcpServers.lattice).toBeUndefined();
   });
 
   it("builds terminal commands for PowerShell on Windows", () => {
     const codex = buildExternalMcpClientConfiguration("codex", stdio, "Win32");
     expect(codex.value).toBe(
-      "& 'codex' 'mcp' 'add' 'lattice' '--env' 'ELECTRON_RUN_AS_NODE=1' '--' '/Applications/Lattice.app/Contents/MacOS/Lattice' 'server.js' 'mcp' 'serve' '--integration' 'mcp_int_example' '--home-dir' '/tmp/Lattice home'",
+      `& 'codex' 'mcp' 'add' '${EXTERNAL_MCP_SERVER_NAME}' '--env' 'ELECTRON_RUN_AS_NODE=1' '--' '/Applications/Lattice.app/Contents/MacOS/Lattice' 'server.js' 'mcp' 'serve' '--integration' 'mcp_int_example' '--home-dir' '/tmp/Lattice home'`,
     );
     expect(codex.instruction).toContain("PowerShell");
   });
@@ -73,8 +77,8 @@ describe("external MCP guided setup", () => {
     });
 
     expect(prompt).toContain("syn_pair_v1_example");
-    expect(prompt).toContain("codex mcp add lattice");
-    expect(prompt).toContain("claude mcp add --scope user lattice");
+    expect(prompt).toContain(`codex mcp add ${EXTERNAL_MCP_SERVER_NAME}`);
+    expect(prompt).toContain(`claude mcp add --scope user ${EXTERNAL_MCP_SERVER_NAME}`);
     expect(prompt).toContain('"mcpServers"');
     expect(prompt).toContain("overview tool");
     expect(prompt).not.toContain("Synara");

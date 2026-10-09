@@ -382,6 +382,8 @@ export function PluginLibrary(props?: {
   const providerThreadId = focusedThreadId;
 
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
+  // Lattice has no provider enablement gate, so every provider stays eligible.
+  const enabledProviderOrder = DEFAULT_PROVIDER_ORDER;
   const codexCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("codex"));
   const claudeCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("claudeAgent"));
   const cursorCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("cursor"));
@@ -448,15 +450,17 @@ export function PluginLibrary(props?: {
       : providerCapabilities[selectedProvider].skills;
   const providerFallbackOrder =
     selectedTab === "plugins"
-      ? DEFAULT_PROVIDER_ORDER
-      : [preferredProvider, ...DEFAULT_PROVIDER_ORDER.filter((p) => p !== preferredProvider)];
+      ? enabledProviderOrder
+      : [preferredProvider, ...enabledProviderOrder.filter((p) => p !== preferredProvider)];
   const effectiveProvider = supportsSelectedTab
     ? selectedProvider
     : (providerFallbackOrder.find((provider) =>
         selectedTab === "plugins"
           ? providerCapabilities[provider].plugins
           : providerCapabilities[provider].skills,
-      ) ?? selectedProvider);
+      ) ??
+      providerFallbackOrder[0] ??
+      selectedProvider);
 
   const discoveryCwd = embedded
     ? (props?.cwd?.trim() ?? "") || null
@@ -466,7 +470,9 @@ export function PluginLibrary(props?: {
         serverCwd: serverConfigQuery.data?.cwd ?? null,
       });
 
-  const providerLabel = PROVIDER_DISPLAY_NAMES[effectiveProvider];
+  const providerLabel = enabledProviderOrder.includes(effectiveProvider)
+    ? PROVIDER_DISPLAY_NAMES[effectiveProvider]
+    : null;
   const canListPlugins = providerCapabilities[effectiveProvider].plugins;
   const canListSkills = providerCapabilities[effectiveProvider].skills;
 
@@ -552,7 +558,7 @@ export function PluginLibrary(props?: {
       </div>
       <div className="flex-1" />
       <div className="inline-flex rounded-full border border-border/60 bg-background/60 p-0.5">
-        {DEFAULT_PROVIDER_ORDER.map((provider) => {
+        {enabledProviderOrder.map((provider) => {
           const capabilities = providerCapabilities[provider];
           const label = PROVIDER_DISPLAY_NAMES[provider];
           return (
@@ -584,22 +590,23 @@ export function PluginLibrary(props?: {
       {!embedded ? (
         <div className="px-6 py-10 text-center">
           <h1 className="text-[28px] font-semibold text-foreground">
-            Make {providerLabel} work your way
+            {providerLabel ? `Make ${providerLabel} work your way` : "Plugins and skills"}
           </h1>
         </div>
       ) : null}
 
       {/* Search */}
       <div className="mx-auto max-w-2xl px-6 pb-6">
-          <SearchInput
-            value={selectedTab === "plugins" ? pluginSearch : skillSearch}
-            onChange={(e) => {
-              if (selectedTab === "plugins") setPluginSearch(e.target.value);
-              else setSkillSearch(e.target.value);
-            }}
-            placeholder={selectedTab === "plugins" ? "Search plugins" : "Search skills"}
-            aria-label={selectedTab === "plugins" ? "Search plugins" : "Search skills"}
-          />
+        <SearchInput
+          disabled={enabledProviderOrder.length === 0}
+          value={selectedTab === "plugins" ? pluginSearch : skillSearch}
+          onChange={(e) => {
+            if (selectedTab === "plugins") setPluginSearch(e.target.value);
+            else setSkillSearch(e.target.value);
+          }}
+          placeholder={selectedTab === "plugins" ? "Search plugins" : "Search skills"}
+          aria-label={selectedTab === "plugins" ? "Search plugins" : "Search skills"}
+        />
       </div>
 
       {/* Warnings */}
@@ -634,8 +641,16 @@ export function PluginLibrary(props?: {
             {!canListPlugins ? (
               <div className="mx-auto max-w-2xl">
                 <EmptyPanel
-                  title={`Plugins unavailable for ${providerLabel}`}
-                  description="This provider does not expose plugin discovery."
+                  title={
+                    providerLabel
+                      ? `Plugins unavailable for ${providerLabel}`
+                      : "No enabled providers"
+                  }
+                  description={
+                    providerLabel
+                      ? "This provider does not expose plugin discovery."
+                      : "Enable a provider in Settings → Providers to browse plugins and skills."
+                  }
                 />
               </div>
             ) : pluginsQuery.isLoading && pluginEntries.length === 0 ? (
@@ -669,8 +684,16 @@ export function PluginLibrary(props?: {
             {!canListSkills ? (
               <div className="mx-auto max-w-2xl">
                 <EmptyPanel
-                  title={`Skills unavailable for ${providerLabel}`}
-                  description="This provider does not expose skill discovery."
+                  title={
+                    providerLabel
+                      ? `Skills unavailable for ${providerLabel}`
+                      : "No enabled providers"
+                  }
+                  description={
+                    providerLabel
+                      ? "This provider does not expose skill discovery."
+                      : "Enable a provider in Settings → Providers to browse plugins and skills."
+                  }
                 />
               </div>
             ) : skillsQuery.isLoading && discoveredSkills.length === 0 ? (

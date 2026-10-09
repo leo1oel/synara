@@ -3,6 +3,7 @@ import "../../index.css";
 import {
   ThreadId,
   type ServerProviderStatus,
+  type ServerProviderUsageSnapshot,
   type TerminalEvent,
   type TerminalOpenInput,
 } from "@synara/contracts";
@@ -11,10 +12,11 @@ import { I18nProvider } from "@lingui/react";
 import { page, userEvent } from "vitest/browser";
 import { beforeEach, expect, it, vi } from "vitest";
 import { render as renderInBrowser } from "vitest-browser-react";
-import { StrictMode, type ReactNode } from "react";
+import { StrictMode, type ReactNode, useState } from "react";
 
 const harness = vi.hoisted(() => ({
   statuses: [] as ServerProviderStatus[],
+  usage: [] as ServerProviderUsageSnapshot[],
   reconciled: true,
   refresh: vi.fn(),
   invalidate: vi.fn(async () => {}),
@@ -39,8 +41,11 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
     useQueryClient: () => queryClient,
     // One payload answers both the server config and the server settings query;
     // `providerInstances` lets the settings read find no per-instance overrides.
-    useQuery: () => ({
-      data: { providers: harness.statuses, providerInstances: {}, cwd: "/tmp" },
+    useQuery: (options: { queryKey?: readonly string[] }) => ({
+      data:
+        options.queryKey?.[1] === "allProviderUsage"
+          ? harness.usage
+          : { providers: harness.statuses, providerInstances: {}, cwd: "/tmp" },
       isPending: false,
     }),
   };
@@ -50,7 +55,11 @@ vi.mock("~/lib/serverReactQuery", async (importOriginal) => ({
   serverConfigQueryOptions: () => ({}),
   serverSettingsQueryOptions: () => ({}),
   hasReconciledServerProviderStatuses: () => harness.reconciled,
-  serverQueryKeys: { config: () => ["config"], settings: () => ["settings"] },
+  serverQueryKeys: {
+    config: () => ["config"],
+    settings: () => ["settings"],
+    allProviderUsage: () => ["server", "allProviderUsage"],
+  },
 }));
 vi.mock("~/hooks/useProviderStatusesForLocalConfig", () => ({
   useProviderStatusesForLocalConfig: () => harness.statuses,
@@ -64,7 +73,7 @@ vi.mock("~/nativeApi", () => ({
   ensureNativeApi: () => harness.api,
 }));
 
-import { AppSettingsSchema } from "~/appSettings";
+import { AppSettingsSchema, type AppSettings } from "~/appSettings";
 import { i18n } from "~/i18n";
 import { ProvidersSettingsPanel } from "./ProvidersSettingsPanel";
 import TerminalViewport from "../terminal/TerminalViewport";
@@ -73,7 +82,7 @@ import { terminalRuntimeRegistry } from "../terminal/terminalRuntimeRegistry";
 const defaults = AppSettingsSchema.makeUnsafe({});
 const props = {
   defaults,
-  settings: { ...defaults, disabledProviders: ["grok" as const] },
+  settings: defaults,
   updateSettings: vi.fn(),
   updateSettingsAndWait: vi.fn(async () => {}),
   active: true,
@@ -87,6 +96,7 @@ function render(ui: ReactNode) {
 
 beforeEach(() => {
   i18n.loadAndActivate({ locale: "en", messages: {} });
+  harness.usage = [];
   harness.reconciled = true;
   harness.refresh.mockReset();
   harness.api.terminal.open.mockReset().mockImplementation(async (input: TerminalOpenInput) => ({
@@ -127,12 +137,36 @@ function activityRow(provider: string) {
     .closest('[data-slot="settings-row"]')!;
 }
 
+it("saves provider CPU priority opt-out and exposes reset to the default", async () => {
+  const updateSettings = vi.fn();
+  const result = await render(
+    <ProvidersSettingsPanel {...props} updateSettings={updateSettings} />,
+  );
+  const control = page.getByRole("switch", { name: "Keep Synara responsive" });
+  await expect.element(control).toBeChecked();
+  await control.click();
+  expect(updateSettings).toHaveBeenCalledWith({ lowerProviderProcessPriority: false });
+  await result.rerender(
+    <ProvidersSettingsPanel
+      {...props}
+      settings={{ ...props.settings, lowerProviderProcessPriority: false }}
+      updateSettings={updateSettings}
+    />,
+  );
+  await page.getByRole("button", { name: "Reset Keep Synara responsive to default" }).click();
+  expect(updateSettings).toHaveBeenLastCalledWith({ lowerProviderProcessPriority: true });
+  expect(control.element().closest('[data-slot="settings-row"]')?.textContent).toContain(
+    "Restart existing sessions",
+  );
+});
+
 it("shows installation and auth beside activity switches with visible setup guides", async () => {
   await render(<ProvidersSettingsPanel {...props} />);
   expect(activityRow("OpenCode").textContent).toContain("Unavailable");
   expect(activityRow("OpenCode").textContent).toContain("not installed or not on PATH");
   expect(activityRow("Claude").textContent).toContain("Needs sign-in");
   expect(activityRow("Codex").textContent).toContain("Connected");
+  await page.getByRole("button", { name: /Disabled providers/u }).click();
   expect(
     page
       .getByRole("switch", { name: "Enable Grok", exact: true })
@@ -226,6 +260,64 @@ function codexAccountRow(name: string) {
     .element()
     .closest<HTMLElement>('[role="listitem"]')!;
 }
+
+it("keeps the default account name when restoring its account defaults", async () => {
+  const { props: panelProps, updateSettings } = accountProps({
+    providerInstances: {
+      codex: { driver: "codex", displayName: "Personal", accentColor: "#16a34a", enabled: false },
+    },
+  });
+  await render(<ProvidersSettingsPanel {...panelProps} />);
+  await page.getByRole("button", { name: /Reset Personal account/ }).click();
+  expect(updateSettings).toHaveBeenLastCalledWith({
+    providerInstances: {
+      codex: { driver: "codex", displayName: "Personal" },
+    },
+  });
+});
+
+it("shows a Claude usage authentication failure beside a locally signed-in account", async () => {
+  harness.statuses = harness.statuses.map((status) =>
+    status.provider === "claudeAgent" ? { ...status, authStatus: "authenticated" } : status,
+  );
+  harness.statuses.push({
+    ...WORK_STATUS,
+    provider: "claudeAgent",
+    driver: "claudeAgent",
+    instanceId: "claude_work",
+    authStatus: "authenticated",
+    status: "ready",
+  });
+  harness.usage = [
+    {
+      provider: "claudeAgent",
+      instanceId: "claudeAgent",
+      status: "needs-auth",
+      source: "claude-oauth-usage",
+      updatedAt: new Date().toISOString(),
+      limits: [],
+      usageLines: [],
+      detail: "Claude usage credentials were rejected. Sign in again.",
+    },
+  ];
+  const { props: panelProps } = accountProps({
+    providerInstances: { claude_work: { driver: "claudeAgent", displayName: "Work", config: {} } },
+  });
+  await render(<ProvidersSettingsPanel {...panelProps} providerTarget="claudeAgent" />);
+  const editor = page.getByRole("group", { name: "Claude account", exact: true });
+  await expect.element(editor.getByText("Usage needs attention", { exact: true })).toBeVisible();
+  await expect
+    .element(editor.getByText("Claude usage credentials were rejected. Sign in again."))
+    .toBeVisible();
+  await page.getByRole("button", { name: "Select Work", exact: true }).click();
+  await expect
+    .element(
+      page
+        .getByRole("group", { name: "Work account", exact: true })
+        .getByText("Signed in locally", { exact: true }),
+    )
+    .toBeVisible();
+});
 
 it("lists every account of a provider, default included, with a status title and a switch", async () => {
   harness.statuses = [...harness.statuses, WORK_STATUS];

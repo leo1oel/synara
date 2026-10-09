@@ -8,6 +8,7 @@ import { i18n as appI18n } from "../../i18n";
 import { type MessageId, type TurnId } from "@synara/contracts";
 import { type TailUserMessageEditTarget } from "@synara/shared/conversationEdit";
 import { type TimelineEntry, type WorkLogEntry, formatElapsed } from "../../session-logic";
+import type { WorkLogUserInputExchangeItem } from "../../workLog";
 import { normalizeCompactToolLabel as normalizeCompactToolLabelValue } from "../../lib/toolCallLabel";
 import { isCodexActivityStatusWorkEntry } from "./agentActivity.logic";
 import {
@@ -337,6 +338,14 @@ export type MessagesTimelineRow =
       createdAt: string;
       proposedPlan: ProposedPlan;
     }
+  | {
+      // An answered agent question shown as a question/answer exchange. Like
+      // the plan card it stays visible when the turn folds into "Worked for".
+      kind: "user-input";
+      id: string;
+      createdAt: string;
+      entry: WorkLogEntry & { userInputExchange: ReadonlyArray<WorkLogUserInputExchangeItem> };
+    }
   | { kind: "working"; id: string; createdAt: string | null }
   | {
       // Live-turn header that mirrors the settled "Worked for Xs" disclosure
@@ -633,9 +642,9 @@ export function deriveTerminalAssistantMessageIds(
 // Server-posted coordinator notices and provider handoff boundaries keep their own
 // row: they are not turn work, so they never merge into or fold with a turn.
 export function isStandaloneWorkEntry(
-  entry: Pick<WorkLogEntry, "synaraWorkerNotice" | "providerHandoff">,
+  entry: Pick<WorkLogEntry, "synaraWorkerNotice" | "providerHandoff" | "turnFailure">,
 ): boolean {
-  return Boolean(entry.synaraWorkerNotice || entry.providerHandoff);
+  return Boolean(entry.synaraWorkerNotice || entry.providerHandoff || entry.turnFailure);
 }
 
 // Derives transcript rows from timeline entries while keeping live narration and
@@ -737,7 +746,19 @@ export function deriveMessagesTimelineRows(input: {
       // conversation-only surfaces, so they must never join a mergeable group.
       // Background task completions do too: they separate two responses.
       for (const runEntry of run) {
-        if (isStandaloneWorkEntry(runEntry.entry) || runEntry.entry.backgroundTaskCompletion) {
+        const userInputExchange = runEntry.entry.userInputExchange;
+        if (userInputExchange) {
+          flushPendingWorkGroup({ attachToPreviousAssistant: false });
+          nextRows.push({
+            kind: "user-input",
+            id: runEntry.id,
+            createdAt: runEntry.createdAt,
+            entry: { ...runEntry.entry, userInputExchange },
+          });
+        } else if (
+          isStandaloneWorkEntry(runEntry.entry) ||
+          runEntry.entry.backgroundTaskCompletion
+        ) {
           flushPendingWorkGroup();
           nextRows.push({
             kind: "work",
@@ -997,8 +1018,8 @@ function collapseSettledTurns(
         foldIndices.push(scan);
         continue;
       }
-      if (prev.kind === "proposed-plan") {
-        // The plan card stays visible, but it should not strand earlier
+      if (prev.kind === "proposed-plan" || prev.kind === "user-input") {
+        // The plan card and answered questions stay visible, but they should not strand earlier
         // narration/work outside the final "Worked for..." disclosure.
         continue;
       }
@@ -1270,7 +1291,8 @@ function workLogEntryContentEqual(a: WorkLogEntry, b: WorkLogEntry): boolean {
     workLogAutomationsEqual(a.automation, b.automation) &&
     workLogSynaraThreadCreationsEqual(a.synaraThreadCreation, b.synaraThreadCreation) &&
     workLogLiveActivitiesEqual(a.liveActivity, b.liveActivity) &&
-    workLogToolDetailsEqual(a.toolDetails, b.toolDetails)
+    workLogToolDetailsEqual(a.toolDetails, b.toolDetails) &&
+    a.userInputExchange === b.userInputExchange
   );
 }
 
@@ -1328,6 +1350,9 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
 
     case "proposed-plan":
       return a.proposedPlan === (b as typeof a).proposedPlan;
+
+    case "user-input":
+      return a.entry.userInputExchange === (b as typeof a).entry.userInputExchange;
 
     case "work":
       return (
