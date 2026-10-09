@@ -128,6 +128,7 @@ import {
 } from "../hostProfile.ts";
 import { makeLatticeLiteratureTools } from "../latticeLiteratureTools.ts";
 import { makeLatticeCanvasTools } from "../latticeCanvasTools.ts";
+import { makeLatticePresentationTools } from "../latticePresentationTools.ts";
 import { makeLatticeSpreadsheetTools } from "../latticeSpreadsheetTools.ts";
 import { makeLatticeProjectDocumentTools } from "../latticeProjectDocumentTools.ts";
 import { makeLatticeEditorCommentsTools } from "../latticeEditorCommentsTools.ts";
@@ -1428,6 +1429,10 @@ export const makeAgentGateway = Effect.gen(function* () {
     ACTIVE_AGENT_HOST_PROFILE.id === "lattice"
       ? yield* makeLatticeEditorCommentsTools({ resolveWorkspaceRoot: resolveLatticeWorkspaceRoot })
       : [];
+  const latticePresentationTools =
+    ACTIVE_AGENT_HOST_PROFILE.id === "lattice"
+      ? yield* makeLatticePresentationTools({ resolveWorkspaceRoot: resolveLatticeWorkspaceRoot })
+      : [];
 
   const kanbanTools = makeAgentGatewayKanbanTools({
     snapshotQuery,
@@ -1560,6 +1565,7 @@ export const makeAgentGateway = Effect.gen(function* () {
     ...latticeSpreadsheetTools,
     ...latticeProjectDocumentTools,
     ...latticeEditorCommentsTools,
+    ...latticePresentationTools,
     ...(deviceService?.supported === true && isDeviceControlEntitled()
       ? makeAgentGatewayDeviceTools({
           manager: deviceService.manager,
