@@ -25,6 +25,7 @@ import {
 } from "react";
 
 import { appHistory } from "../../appNavigation";
+import { openEmbeddedProviderSettings } from "../../embedMode";
 import { useComposerDraftStore } from "../../composerDraftStore";
 import { useStarredModels } from "../../hooks/useStarredModels";
 import type { ProviderModelCatalog } from "../../hooks/useProviderModelCatalog";
@@ -355,6 +356,8 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
   const setupMessage = tab === STARRED_TAB ? null : (tabAccount?.setupMessage ?? null);
   const openProviderSettings = () => {
     setMenuOpen(false);
+    // Inside Lattice, in-frame `/settings` would replace the Agent panel; the host opens it.
+    if (openEmbeddedProviderSettings()) return;
     appHistory.push("/settings?section=providers");
   };
 
