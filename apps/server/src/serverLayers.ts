@@ -14,6 +14,7 @@ import { LatticeSpreadsheetBrokerLive } from "./agentGateway/Layers/LatticeSprea
 import { LatticeProjectDocumentBrokerLive } from "./agentGateway/Layers/LatticeProjectDocumentBroker";
 import { LatticeEditorCommentsBrokerLive } from "./agentGateway/Layers/LatticeEditorCommentsBroker";
 import { LatticePresentationBrokerLive } from "./agentGateway/Layers/LatticePresentationBroker";
+import { LatticeHostToolQueueLive } from "./agentGateway/Layers/LatticeHostToolQueue";
 import { AgentGatewayOperationRepositoryLive } from "./agentGateway/Layers/AgentGatewayOperationRepository";
 import { AgentGatewayCredentialsWithSecretsLive } from "./agentGateway/Layers/AgentGatewayCredentials";
 import { BrowserAutomationHostLive } from "./browserAutomation/Layers/BrowserAutomationHost";
@@ -313,6 +314,8 @@ export function makeServerRuntimeServicesLayer(
     LatticeProjectDocumentBrokerLive,
     LatticeEditorCommentsBrokerLive,
     LatticePresentationBrokerLive,
+    // The brokers' shared queue, which the host-tools poll route reads.
+    LatticeHostToolQueueLive,
     agentGatewayLayer,
     agentQualityTraceLayer,
     BrowserAutomationHostLive,

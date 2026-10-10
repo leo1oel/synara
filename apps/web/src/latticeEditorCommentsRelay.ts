@@ -1,4 +1,4 @@
-import { readEmbeddedHostAuthToken, readEmbedMode } from "./embedMode";
+import type { LatticeHostToolContext } from "./latticeHostToolRelay";
 export const SYNARA_EDITOR_COMMENTS_TOOL_REQUEST = "synara:editor-comments-tool-request";
 export const LATTICE_EDITOR_COMMENTS_TOOL_RESULT = "lattice:editor-comments-tool-result";
 type Request = {
@@ -210,48 +210,27 @@ export function awaitEditorCommentsHostResult(
     );
   });
 }
-export function startLatticeEditorCommentsRelay(): () => void {
-  const config = readEmbedMode();
-  const auth = readEmbeddedHostAuthToken();
-  if (!config?.hostOrigin || config.surface !== "chrome" || !auth || window.parent === window)
-    return () => undefined;
-  const hostOrigin = config.hostOrigin;
-  const controller = new AbortController();
-  void (async () => {
-    while (!controller.signal.aborted) {
-      try {
-        const query = new URLSearchParams({ workspaceRoot: config.workspaceRoot });
-        const response = await fetch(`/api/lattice/editor-comments-tools/poll?${query}`, {
-          headers: { Authorization: `Bearer ${auth}` },
-          cache: "no-store",
-          signal: controller.signal,
-        });
-        if (response.status === 204) {
-          await new Promise((resolve) => window.setTimeout(resolve, 250));
-          continue;
-        }
-        if (!response.ok) throw new Error("poll failed");
-        const request: unknown = await response.json();
-        if (!valid(request, config.workspaceRoot)) throw new Error("invalid request");
-        const result = await awaitEditorCommentsHostResult(request, hostOrigin, controller.signal);
-        if (controller.signal.aborted) break;
-        await fetch(`/api/lattice/editor-comments-tools/result?${query}`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${auth}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: request.id,
-            result: {
-              ok: result.ok,
-              ...(result.result === undefined ? {} : { result: result.result }),
-              ...(result.error === undefined ? {} : { error: result.error }),
-            },
-          }),
-          signal: controller.signal,
-        });
-      } catch {
-        if (!controller.signal.aborted) await new Promise((resolve) => setTimeout(resolve, 250));
-      }
-    }
-  })();
-  return () => controller.abort();
+export async function answerLatticeEditorCommentsRequest(
+  request: unknown,
+  { hostOrigin, workspaceRoot, token, signal }: LatticeHostToolContext,
+): Promise<void> {
+  if (!valid(request, workspaceRoot)) throw new Error("invalid request");
+  const result = await awaitEditorCommentsHostResult(request, hostOrigin, signal);
+  if (signal.aborted) return;
+  await fetch(
+    `/api/lattice/editor-comments-tools/result?${new URLSearchParams({ workspaceRoot })}`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: request.id,
+        result: {
+          ok: result.ok,
+          ...(result.result === undefined ? {} : { result: result.result }),
+          ...(result.error === undefined ? {} : { error: result.error }),
+        },
+      }),
+      signal,
+    },
+  );
 }

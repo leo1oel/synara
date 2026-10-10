@@ -30,7 +30,6 @@ describe("Lattice editor comments tool", () => {
     const calls: unknown[] = [];
     const broker: LatticeEditorCommentsBrokerShape = {
       invoke: (_root, args) => Effect.sync(() => (calls.push(args), { ok: true })),
-      poll: () => Effect.succeed(null),
       complete: () => Effect.succeed(false),
     };
     const [tool] = await Effect.runPromise(

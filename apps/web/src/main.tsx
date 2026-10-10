@@ -12,12 +12,13 @@ import { getRouter } from "./router";
 import { APP_DISPLAY_NAME } from "./branding";
 import { initializeEmbedMode } from "./embedMode";
 import { startLatticeAgentQualityRelay } from "./latticeAgentQualityRelay";
-import { startLatticeBibliographyRelay } from "./latticeBibliographyRelay";
-import { startLatticeCanvasRelay } from "./latticeCanvasRelay";
-import { startLatticeSpreadsheetRelay } from "./latticeSpreadsheetRelay";
-import { startLatticeProjectDocumentRelay } from "./latticeProjectDocumentRelay";
-import { startLatticeEditorCommentsRelay } from "./latticeEditorCommentsRelay";
-import { startLatticePresentationRelay } from "./latticePresentationRelay";
+import { answerLatticeBibliographyRequest } from "./latticeBibliographyRelay";
+import { answerLatticeCanvasRequest } from "./latticeCanvasRelay";
+import { answerLatticeSpreadsheetRequest } from "./latticeSpreadsheetRelay";
+import { answerLatticeProjectDocumentRequest } from "./latticeProjectDocumentRelay";
+import { answerLatticeEditorCommentsRequest } from "./latticeEditorCommentsRelay";
+import { answerLatticePresentationRequest } from "./latticePresentationRelay";
+import { startLatticeHostToolRelay } from "./latticeHostToolRelay";
 import { startLatticeHostThemeRelay } from "./latticeHostThemeRelay";
 import { isElectron } from "./env";
 import { isMacPlatform } from "./lib/utils";
@@ -31,12 +32,14 @@ import { activateInitialLocale, i18n } from "./i18n";
 initializeEmbedMode();
 await activateInitialLocale();
 startLatticeAgentQualityRelay();
-startLatticeBibliographyRelay();
-startLatticeCanvasRelay();
-startLatticeSpreadsheetRelay();
-startLatticeProjectDocumentRelay();
-startLatticeEditorCommentsRelay();
-startLatticePresentationRelay();
+startLatticeHostToolRelay({
+  bibliography: answerLatticeBibliographyRequest,
+  canvas: answerLatticeCanvasRequest,
+  spreadsheet: answerLatticeSpreadsheetRequest,
+  projectDocument: answerLatticeProjectDocumentRequest,
+  editorComments: answerLatticeEditorCommentsRequest,
+  presentation: answerLatticePresentationRequest,
+});
 startLatticeHostThemeRelay();
 const router = getRouter(appHistory);
 const rootElement = document.getElementById("root") as HTMLElement;

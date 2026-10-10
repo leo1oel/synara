@@ -20,7 +20,6 @@ import {
 } from "./Services/LatticeSpreadsheetBroker.ts";
 import {
   LATTICE_SPREADSHEET_MAX_BODY_BYTES,
-  LATTICE_SPREADSHEET_POLL_PATH,
   LATTICE_SPREADSHEET_RESULT_PATH,
   latticeSpreadsheetRouteLayer,
 } from "./latticeSpreadsheetHttpRoute.ts";
@@ -70,17 +69,6 @@ async function withSpreadsheetServer(
   } as unknown as ServerAuthShape;
   const broker: LatticeSpreadsheetBrokerShape = {
     invoke: () => Effect.die("invoke is not used by relay route tests"),
-    poll: (workspaceRoot) =>
-      Effect.succeed(
-        workspaceRoot === "/workspace/project"
-          ? {
-              id: "spreadsheet-request",
-              action: "read",
-              args: { path: "data.lattice-sheet", range: "A1" },
-              expiresAt: Date.now() + 1_000,
-            }
-          : null,
-      ),
     complete: (workspaceRoot, id, result) =>
       Effect.sync(() => {
         completed.push({ workspaceRoot, id, result });
@@ -126,49 +114,27 @@ function routeUrl(origin: string, path: string, workspaceRoot = "/workspace/proj
 }
 
 describe("latticeSpreadsheetRouteLayer", () => {
-  it("requires bearer authentication and returns only the requested workspace queue", async () => {
+  it("requires bearer authentication for host results", async () => {
     await withSpreadsheetServer(async ({ origin }) => {
-      const pollUrl = routeUrl(origin, LATTICE_SPREADSHEET_POLL_PATH);
-      expect((await fetch(pollUrl)).status).toBe(401);
+      const resultUrl = routeUrl(origin, LATTICE_SPREADSHEET_RESULT_PATH);
+      const post = (headers: Record<string, string>, url?: string) =>
+        fetch(url ?? resultUrl, {
+          method: "POST",
+          headers: { ...headers, "Content-Type": "application/json" },
+          body: JSON.stringify({ id: "spreadsheet-request", result: { ok: true } }),
+        });
+      expect((await post({})).status).toBe(401);
+      expect((await post({ Cookie: "synara_session=cookie-token" })).status).toBe(403);
       expect(
         (
-          await fetch(pollUrl, {
-            headers: { Cookie: "synara_session=cookie-token" },
-          })
-        ).status,
-      ).toBe(403);
-      expect(
-        (
-          await fetch(`${origin}${LATTICE_SPREADSHEET_POLL_PATH}`, {
-            headers: { Authorization: "Bearer bearer-token" },
-          })
+          await post(
+            { Authorization: "Bearer bearer-token" },
+            `${origin}${LATTICE_SPREADSHEET_RESULT_PATH}`,
+          )
         ).status,
       ).toBe(400);
-
-      const poll = await fetch(pollUrl, {
-        headers: { Authorization: "Bearer bearer-token" },
-      });
-      expect(poll.status).toBe(200);
-      expect(poll.headers.get("cache-control")).toBe("no-store");
-      expect(await poll.json()).toMatchObject({
-        id: "spreadsheet-request",
-        action: "read",
-        args: { path: "data.lattice-sheet", range: "A1" },
-      });
-
-      expect(
-        (
-          await fetch(pollUrl, {
-            headers: { Authorization: "Bearer desktop-token" },
-          })
-        ).status,
-      ).toBe(200);
-
-      const otherWorkspace = await fetch(
-        routeUrl(origin, LATTICE_SPREADSHEET_POLL_PATH, "/workspace/other"),
-        { headers: { Authorization: "Bearer bearer-token" } },
-      );
-      expect(otherWorkspace.status).toBe(204);
+      expect((await post({ Authorization: "Bearer bearer-token" })).status).toBe(200);
+      expect((await post({ Authorization: "Bearer desktop-token" })).status).toBe(200);
     });
   });
 

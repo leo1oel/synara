@@ -1,8 +1,7 @@
-import { readEmbeddedHostAuthToken, readEmbedMode } from "./embedMode";
+import type { LatticeHostToolContext } from "./latticeHostToolRelay";
 
 export const SYNARA_CANVAS_TOOL_REQUEST = "synara:canvas-tool-request";
 export const LATTICE_CANVAS_TOOL_RESULT = "lattice:canvas-tool-result";
-const POLL_PATH = "/api/lattice/canvas-tools/poll";
 const RESULT_PATH = "/api/lattice/canvas-tools/result";
 const HOST_TIMEOUT_MS = 30_000;
 
@@ -115,46 +114,23 @@ async function submitResult(
   }
 }
 
-export function startLatticeCanvasRelay(): () => void {
-  const config = readEmbedMode();
-  const token = readEmbeddedHostAuthToken();
-  if (!config?.hostOrigin || config.surface !== "chrome" || !token || window.parent === window)
-    return () => undefined;
-  const controller = new AbortController();
-  const run = async () => {
-    while (!controller.signal.aborted) {
-      try {
-        const response = await fetch(
-          `${POLL_PATH}?${new URLSearchParams({ workspaceRoot: config.workspaceRoot })}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-            cache: "no-store",
-            signal: controller.signal,
+export async function answerLatticeCanvasRequest(
+  value: unknown,
+  { hostOrigin, workspaceRoot, token, signal }: LatticeHostToolContext,
+): Promise<void> {
+  const request = value as CanvasRequest;
+  const result: CanvasResult =
+    request.expiresAt <= Date.now()
+      ? {
+          type: LATTICE_CANVAS_TOOL_RESULT,
+          version: 1 as const,
+          id: request.id,
+          ok: false,
+          error: {
+            code: "canvas_tool_expired",
+            message: "The canvas request expired before execution.",
           },
-        );
-        if (response.status === 204) continue;
-        if (!response.ok) throw new Error(`Canvas poll failed (${response.status}).`);
-        const request = (await response.json()) as CanvasRequest;
-        const result: CanvasResult =
-          request.expiresAt <= Date.now()
-            ? {
-                type: LATTICE_CANVAS_TOOL_RESULT,
-                version: 1 as const,
-                id: request.id,
-                ok: false,
-                error: {
-                  code: "canvas_tool_expired",
-                  message: "The canvas request expired before execution.",
-                },
-              }
-            : await awaitCanvasHostResult(request, config.hostOrigin!);
-        await submitResult(request.id, result, token, config.workspaceRoot, controller.signal);
-      } catch {
-        if (!controller.signal.aborted)
-          await new Promise((resolve) => window.setTimeout(resolve, 500));
-      }
-    }
-  };
-  void run();
-  return () => controller.abort();
+        }
+      : await awaitCanvasHostResult(request, hostOrigin);
+  await submitResult(request.id, result, token, workspaceRoot, signal);
 }

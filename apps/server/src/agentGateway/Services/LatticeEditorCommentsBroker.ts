@@ -30,7 +30,6 @@ export interface LatticeEditorCommentsBrokerShape {
     workspaceRoot: string,
     args: LatticeEditorCommentsArgs,
   ) => Effect.Effect<unknown, LatticeEditorCommentsBrokerError>;
-  readonly poll: (workspaceRoot: string) => Effect.Effect<LatticeEditorCommentsRequest | null>;
   readonly complete: (
     workspaceRoot: string,
     id: string,

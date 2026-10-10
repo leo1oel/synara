@@ -31,7 +31,6 @@ export interface LatticeSpreadsheetBrokerShape {
     action: LatticeSpreadsheetAction,
     args: Record<string, unknown>,
   ) => Effect.Effect<unknown, LatticeSpreadsheetBrokerError>;
-  readonly poll: (workspaceRoot: string) => Effect.Effect<LatticeSpreadsheetRequest | null>;
   readonly complete: (
     workspaceRoot: string,
     id: string,

@@ -31,7 +31,6 @@ export interface LatticeBibliographyBrokerShape {
     action: LatticeBibliographyAction,
     params: Record<string, unknown>,
   ) => Effect.Effect<Record<string, unknown>, LatticeBibliographyBrokerError>;
-  readonly poll: (workspaceRoot: string) => Effect.Effect<LatticeBibliographyRequest | null>;
   readonly complete: (
     workspaceRoot: string,
     id: string,

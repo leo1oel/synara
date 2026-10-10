@@ -37,7 +37,6 @@ async function makeHarness() {
         calls.push({ workspaceRoot, args });
         return { path: args.path, documentType: args.documentType, opened: true };
       }),
-    poll: () => Effect.succeed(null),
     complete: () => Effect.succeed(false),
   };
   const tools = await Effect.runPromise(

@@ -1,8 +1,7 @@
-import { readEmbeddedHostAuthToken, readEmbedMode } from "./embedMode";
+import type { LatticeHostToolContext } from "./latticeHostToolRelay";
 
 export const SYNARA_PRESENTATION_TOOL_REQUEST = "synara:presentation-tool-request";
 export const LATTICE_PRESENTATION_TOOL_RESULT = "lattice:presentation-tool-result";
-const POLL_PATH = "/api/lattice/presentation-tools/poll";
 const RESULT_PATH = "/api/lattice/presentation-tools/result";
 
 interface PresentationRequest {
@@ -122,50 +121,18 @@ async function submitResult(
   }
 }
 
-export function startLatticePresentationRelay(): () => void {
-  const config = readEmbedMode();
-  const token = readEmbeddedHostAuthToken();
-  if (!config?.hostOrigin || config.surface !== "chrome" || !token || window.parent === window)
-    return () => undefined;
-  const hostOrigin = config.hostOrigin;
-  const controller = new AbortController();
-  const run = async () => {
-    while (!controller.signal.aborted) {
-      try {
-        const response = await fetch(
-          `${POLL_PATH}?${new URLSearchParams({ workspaceRoot: config.workspaceRoot })}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-            cache: "no-store",
-            signal: controller.signal,
-          },
-        );
-        if (response.status === 204) continue;
-        if (!response.ok) throw new Error(`Presentation poll failed (${response.status}).`);
-        const request = (await response.json()) as PresentationRequest;
-        // Each request waits on its own, so a slow page render does not hold
-        // back the next poll.
-        void (
-          request.expiresAt <= Date.now()
-            ? Promise.resolve(
-                failure(
-                  request.id,
-                  "presentation_tool_expired",
-                  "The presentation request expired before execution.",
-                ),
-              )
-            : awaitPresentationHostResult(request, hostOrigin)
+export async function answerLatticePresentationRequest(
+  value: unknown,
+  { hostOrigin, workspaceRoot, token, signal }: LatticeHostToolContext,
+): Promise<void> {
+  const request = value as PresentationRequest;
+  const result =
+    request.expiresAt <= Date.now()
+      ? failure(
+          request.id,
+          "presentation_tool_expired",
+          "The presentation request expired before execution.",
         )
-          .then((result) =>
-            submitResult(request.id, result, token, config.workspaceRoot, controller.signal),
-          )
-          .catch(() => undefined);
-      } catch {
-        if (!controller.signal.aborted)
-          await new Promise((resolve) => window.setTimeout(resolve, 500));
-      }
-    }
-  };
-  void run();
-  return () => controller.abort();
+      : await awaitPresentationHostResult(request, hostOrigin);
+  await submitResult(request.id, result, token, workspaceRoot, signal);
 }

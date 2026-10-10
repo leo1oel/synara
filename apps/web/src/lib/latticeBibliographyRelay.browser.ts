@@ -2,10 +2,14 @@ import { expect, it, vi } from "vitest";
 
 import { initializeEmbedMode } from "../embedMode";
 import {
+  answerLatticeBibliographyRequest,
   LATTICE_BIBLIOGRAPHY_TOOL_RESULT,
-  startLatticeBibliographyRelay,
   SYNARA_BIBLIOGRAPHY_TOOL_REQUEST,
 } from "../latticeBibliographyRelay";
+import { startLatticeHostToolRelay } from "../latticeHostToolRelay";
+
+// The other host tools never receive a request here.
+const answerNothing = async () => undefined;
 
 it("relays cite from a fresh named embed through the host and submits the citation key", async () => {
   // Vitest runs browser tests in a real iframe. Exercise the handshake and
@@ -63,7 +67,7 @@ it("relays cite from a fresh named embed through the host and submits the citati
     }
     if (!polled) {
       polled = true;
-      return Response.json(request);
+      return Response.json({ tool: "bibliography", request });
     }
     return new Promise<Response>((_resolve, reject) => {
       init?.signal?.addEventListener(
@@ -86,7 +90,14 @@ it("relays cite from a fresh named embed through the host and submits the citati
     initializeEmbedMode();
     expect(window.name).toBe("synara-embed-chrome");
     expect(window.location.hash).toBe("");
-    stop = startLatticeBibliographyRelay();
+    stop = startLatticeHostToolRelay({
+      bibliography: answerLatticeBibliographyRequest,
+      canvas: answerNothing,
+      spreadsheet: answerNothing,
+      projectDocument: answerNothing,
+      editorComments: answerNothing,
+      presentation: answerNothing,
+    });
     await vi.waitFor(() => expect(submissions).toHaveLength(1), { timeout: 2_000 });
     expect(hostRequests).toEqual([
       {

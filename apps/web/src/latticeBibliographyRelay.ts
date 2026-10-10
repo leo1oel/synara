@@ -1,8 +1,7 @@
-import { readEmbeddedHostAuthToken, readEmbedMode } from "./embedMode";
+import type { LatticeHostToolContext } from "./latticeHostToolRelay";
 
 export const SYNARA_BIBLIOGRAPHY_TOOL_REQUEST = "synara:bibliography-tool-request";
 export const LATTICE_BIBLIOGRAPHY_TOOL_RESULT = "lattice:bibliography-tool-result";
-const POLL_PATH = "/api/lattice/bibliography-tools/poll";
 const RESULT_PATH = "/api/lattice/bibliography-tools/result";
 const HOST_TIMEOUT_MS = 30_000;
 const MAX_RESULT_BYTES = 384 * 1024;
@@ -229,50 +228,24 @@ async function submitResult(
   }
 }
 
-export function startLatticeBibliographyRelay(): () => void {
-  const config = readEmbedMode();
-  const token = readEmbeddedHostAuthToken();
-  if (!config?.hostOrigin || config.surface !== "chrome" || !token || window.parent === window) {
-    return () => undefined;
-  }
-  const hostOrigin = config.hostOrigin;
-  const controller = new AbortController();
-  const run = async () => {
-    while (!controller.signal.aborted) {
-      try {
-        const response = await fetch(
-          `${POLL_PATH}?${new URLSearchParams({ workspaceRoot: config.workspaceRoot })}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-            cache: "no-store",
-            signal: controller.signal,
-          },
+export async function answerLatticeBibliographyRequest(
+  value: unknown,
+  { hostOrigin, workspaceRoot, token, signal }: LatticeHostToolContext,
+): Promise<void> {
+  const request = parseBibliographyRequest(value);
+  if (!request) throw new Error("Bibliography poll returned an invalid request.");
+  const result =
+    request.expiresAt <= Date.now()
+      ? invalidHostResult(
+          request.id,
+          "bibliography_tool_expired",
+          "The bibliography request expired before execution.",
+        )
+      : await awaitBibliographyHostResult(
+          request,
+          hostOrigin,
+          workspaceRoot,
+          Math.min(HOST_TIMEOUT_MS, request.expiresAt - Date.now()),
         );
-        if (response.status === 204) continue;
-        if (!response.ok) throw new Error(`Bibliography poll failed (${String(response.status)}).`);
-        const request = parseBibliographyRequest(await response.json());
-        if (!request) throw new Error("Bibliography poll returned an invalid request.");
-        const result =
-          request.expiresAt <= Date.now()
-            ? invalidHostResult(
-                request.id,
-                "bibliography_tool_expired",
-                "The bibliography request expired before execution.",
-              )
-            : await awaitBibliographyHostResult(
-                request,
-                hostOrigin,
-                config.workspaceRoot,
-                Math.min(HOST_TIMEOUT_MS, request.expiresAt - Date.now()),
-              );
-        await submitResult(request.id, result, token, config.workspaceRoot, controller.signal);
-      } catch {
-        if (!controller.signal.aborted) {
-          await new Promise((resolve) => window.setTimeout(resolve, 500));
-        }
-      }
-    }
-  };
-  void run();
-  return () => controller.abort();
+  await submitResult(request.id, result, token, workspaceRoot, signal);
 }

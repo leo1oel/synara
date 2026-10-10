@@ -31,7 +31,6 @@ export interface LatticePresentationBrokerShape {
     action: LatticePresentationAction,
     args: Record<string, unknown>,
   ) => Effect.Effect<unknown, LatticePresentationBrokerError>;
-  readonly poll: (workspaceRoot: string) => Effect.Effect<LatticePresentationRequest | null>;
   readonly complete: (
     workspaceRoot: string,
     id: string,

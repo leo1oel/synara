@@ -1,4 +1,4 @@
-import { Effect, Layer } from "effect";
+import { Effect } from "effect";
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 import { authErrorResponse } from "../auth/effectHttp.ts";
 import { readMcpJsonBody } from "./httpRoute.ts";
@@ -7,7 +7,6 @@ import {
   LatticeEditorCommentsBroker,
   type LatticeEditorCommentsResult,
 } from "./Services/LatticeEditorCommentsBroker.ts";
-export const LATTICE_EDITOR_COMMENTS_POLL_PATH = "/api/lattice/editor-comments-tools/poll";
 export const LATTICE_EDITOR_COMMENTS_RESULT_PATH = "/api/lattice/editor-comments-tools/result";
 const root = (request: HttpServerRequest.HttpServerRequest) => {
   const value = HttpServerRequest.toURL(request)?.searchParams.get("workspaceRoot")?.trim();
@@ -123,20 +122,7 @@ export function isLatticeEditorCommentsResultBody(
     bounded(value.result.error.message, 2_000, true)
   );
 }
-const poll = HttpRouter.add(
-  "GET",
-  LATTICE_EDITOR_COMMENTS_POLL_PATH,
-  Effect.gen(function* () {
-    yield* authenticateLatticeRelayRequest;
-    const workspaceRoot = root(yield* HttpServerRequest.HttpServerRequest);
-    if (!workspaceRoot) return HttpServerResponse.text("Missing workspaceRoot", { status: 400 });
-    const request = yield* (yield* LatticeEditorCommentsBroker).poll(workspaceRoot);
-    return request
-      ? HttpServerResponse.jsonUnsafe(request, { headers: { "Cache-Control": "no-store" } })
-      : HttpServerResponse.empty({ status: 204, headers: { "Cache-Control": "no-store" } });
-  }).pipe(Effect.catchTag("AuthError", (error) => Effect.succeed(authErrorResponse(error)))),
-);
-const result = HttpRouter.add(
+export const latticeEditorCommentsRouteLayer = HttpRouter.add(
   "POST",
   LATTICE_EDITOR_COMMENTS_RESULT_PATH,
   Effect.gen(function* () {
@@ -157,4 +143,3 @@ const result = HttpRouter.add(
     return HttpServerResponse.jsonUnsafe({ accepted }, { status: accepted ? 200 : 409 });
   }).pipe(Effect.catchTag("AuthError", (error) => Effect.succeed(authErrorResponse(error)))),
 );
-export const latticeEditorCommentsRouteLayer = Layer.mergeAll(poll, result);

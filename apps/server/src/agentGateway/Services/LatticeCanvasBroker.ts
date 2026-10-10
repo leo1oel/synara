@@ -31,7 +31,6 @@ export interface LatticeCanvasBrokerShape {
     action: LatticeCanvasAction,
     args: Record<string, unknown>,
   ) => Effect.Effect<unknown, LatticeCanvasBrokerError>;
-  readonly poll: (workspaceRoot: string) => Effect.Effect<LatticeCanvasRequest | null>;
   readonly complete: (
     workspaceRoot: string,
     id: string,

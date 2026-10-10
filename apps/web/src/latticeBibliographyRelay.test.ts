@@ -1,12 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  answerLatticeBibliographyRequest,
   awaitBibliographyHostResult,
   LATTICE_BIBLIOGRAPHY_TOOL_RESULT,
   parseBibliographyRequest,
-  startLatticeBibliographyRelay,
   SYNARA_BIBLIOGRAPHY_TOOL_REQUEST,
 } from "./latticeBibliographyRelay";
+import { startLatticeHostToolRelay } from "./latticeHostToolRelay";
+
+// The other host tools never receive a request here.
+const answerNothing = async () => undefined;
 
 const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
 
@@ -55,10 +59,17 @@ describe("Lattice bibliography relay protocol", () => {
     vi.stubGlobal("sessionStorage", { getItem: (key: string) => storage.get(key) ?? null });
     const fetchMock = vi.fn(() => new Promise<Response>(() => {}));
     vi.stubGlobal("fetch", fetchMock);
-    const stop = startLatticeBibliographyRelay();
+    const stop = startLatticeHostToolRelay({
+      bibliography: answerLatticeBibliographyRequest,
+      canvas: answerNothing,
+      spreadsheet: answerNothing,
+      projectDocument: answerNothing,
+      editorComments: answerNothing,
+      presentation: answerNothing,
+    });
     try {
       expect(fetchMock).toHaveBeenCalledWith(
-        "/api/lattice/bibliography-tools/poll?workspaceRoot=%2Fworkspace%2FNative+VLM",
+        "/api/lattice/host-tools/poll?workspaceRoot=%2Fworkspace%2FNative+VLM",
         expect.objectContaining({ headers: { Authorization: "Bearer chrome-token" } }),
       );
     } finally {

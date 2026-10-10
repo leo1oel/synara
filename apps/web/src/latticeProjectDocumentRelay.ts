@@ -1,8 +1,7 @@
-import { readEmbeddedHostAuthToken, readEmbedMode } from "./embedMode";
+import type { LatticeHostToolContext } from "./latticeHostToolRelay";
 
 export const SYNARA_PROJECT_DOCUMENT_TOOL_REQUEST = "synara:project-document-tool-request";
 export const LATTICE_PROJECT_DOCUMENT_TOOL_RESULT = "lattice:project-document-tool-result";
-const POLL_PATH = "/api/lattice/project-document-tools/poll";
 const RESULT_PATH = "/api/lattice/project-document-tools/result";
 const HOST_TIMEOUT_MS = 30_000;
 
@@ -225,51 +224,23 @@ async function submitResult(
   }
 }
 
-export function startLatticeProjectDocumentRelay(): () => void {
-  const config = readEmbedMode();
-  const token = readEmbeddedHostAuthToken();
-  if (!config?.hostOrigin || config.surface !== "chrome" || !token || window.parent === window) {
-    return () => undefined;
-  }
-  const hostOrigin = config.hostOrigin;
-  const controller = new AbortController();
-  const run = async () => {
-    while (!controller.signal.aborted) {
-      try {
-        const response = await fetch(
-          `${POLL_PATH}?${new URLSearchParams({ workspaceRoot: config.workspaceRoot })}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-            cache: "no-store",
-            signal: controller.signal,
-          },
+export async function answerLatticeProjectDocumentRequest(
+  value: unknown,
+  { hostOrigin, workspaceRoot, token, signal }: LatticeHostToolContext,
+): Promise<void> {
+  const request = parseProjectDocumentRequest(value);
+  if (!request) throw new Error("Project document poll returned an invalid request.");
+  const result =
+    request.expiresAt <= Date.now()
+      ? invalidHostResult(
+          request.id,
+          "project_document_tool_expired",
+          "The project document request expired before execution.",
+        )
+      : await awaitProjectDocumentHostResult(
+          request,
+          hostOrigin,
+          Math.min(HOST_TIMEOUT_MS, request.expiresAt - Date.now()),
         );
-        if (response.status === 204) continue;
-        if (!response.ok) {
-          throw new Error(`Project document poll failed (${String(response.status)}).`);
-        }
-        const request = parseProjectDocumentRequest(await response.json());
-        if (!request) throw new Error("Project document poll returned an invalid request.");
-        const result =
-          request.expiresAt <= Date.now()
-            ? invalidHostResult(
-                request.id,
-                "project_document_tool_expired",
-                "The project document request expired before execution.",
-              )
-            : await awaitProjectDocumentHostResult(
-                request,
-                hostOrigin,
-                Math.min(HOST_TIMEOUT_MS, request.expiresAt - Date.now()),
-              );
-        await submitResult(request.id, result, token, config.workspaceRoot, controller.signal);
-      } catch {
-        if (!controller.signal.aborted) {
-          await new Promise((resolve) => window.setTimeout(resolve, 500));
-        }
-      }
-    }
-  };
-  void run();
-  return () => controller.abort();
+  await submitResult(request.id, result, token, workspaceRoot, signal);
 }

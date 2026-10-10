@@ -1,4 +1,4 @@
-import { Effect, Layer } from "effect";
+import { Effect } from "effect";
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 
 import { authErrorResponse } from "../auth/effectHttp.ts";
@@ -6,7 +6,6 @@ import { LatticeCanvasBroker, type LatticeCanvasResult } from "./Services/Lattic
 import { readMcpJsonBody } from "./httpRoute.ts";
 import { authenticateLatticeRelayRequest } from "./latticeRelayAuthentication.ts";
 
-export const LATTICE_CANVAS_POLL_PATH = "/api/lattice/canvas-tools/poll";
 export const LATTICE_CANVAS_RESULT_PATH = "/api/lattice/canvas-tools/result";
 export const LATTICE_CANVAS_MAX_BODY_BYTES = 512 * 1024;
 
@@ -31,42 +30,22 @@ function workspaceRootFromRequest(request: HttpServerRequest.HttpServerRequest):
   return value && value.length <= 4_096 ? value : null;
 }
 
-export const latticeCanvasRouteLayer = Layer.mergeAll(
-  HttpRouter.add(
-    "GET",
-    LATTICE_CANVAS_POLL_PATH,
-    Effect.gen(function* () {
-      yield* authenticateLatticeRelayRequest;
-      const httpRequest = yield* HttpServerRequest.HttpServerRequest;
-      const workspaceRoot = workspaceRootFromRequest(httpRequest);
-      if (!workspaceRoot) return HttpServerResponse.text("Missing workspaceRoot", { status: 400 });
-      const broker = yield* LatticeCanvasBroker;
-      const request = yield* broker.poll(workspaceRoot);
-      return request
-        ? HttpServerResponse.jsonUnsafe(request, {
-            status: 200,
-            headers: { "Cache-Control": "no-store" },
-          })
-        : HttpServerResponse.empty({ status: 204, headers: { "Cache-Control": "no-store" } });
-    }).pipe(Effect.catchTag("AuthError", (error) => Effect.succeed(authErrorResponse(error)))),
-  ),
-  HttpRouter.add(
-    "POST",
-    LATTICE_CANVAS_RESULT_PATH,
-    Effect.gen(function* () {
-      yield* authenticateLatticeRelayRequest;
-      const request = yield* HttpServerRequest.HttpServerRequest;
-      const workspaceRoot = workspaceRootFromRequest(request);
-      if (!workspaceRoot) return HttpServerResponse.text("Missing workspaceRoot", { status: 400 });
-      const body = yield* readMcpJsonBody(request, LATTICE_CANVAS_MAX_BODY_BYTES);
-      if (body.kind === "too-large")
-        return HttpServerResponse.text("Payload Too Large", { status: 413 });
-      if (body.kind !== "ok" || !isResultBody(body.body)) {
-        return HttpServerResponse.jsonUnsafe({ error: "Invalid canvas result." }, { status: 400 });
-      }
-      const broker = yield* LatticeCanvasBroker;
-      const accepted = yield* broker.complete(workspaceRoot, body.body.id, body.body.result);
-      return HttpServerResponse.jsonUnsafe({ accepted }, { status: accepted ? 200 : 409 });
-    }).pipe(Effect.catchTag("AuthError", (error) => Effect.succeed(authErrorResponse(error)))),
-  ),
+export const latticeCanvasRouteLayer = HttpRouter.add(
+  "POST",
+  LATTICE_CANVAS_RESULT_PATH,
+  Effect.gen(function* () {
+    yield* authenticateLatticeRelayRequest;
+    const request = yield* HttpServerRequest.HttpServerRequest;
+    const workspaceRoot = workspaceRootFromRequest(request);
+    if (!workspaceRoot) return HttpServerResponse.text("Missing workspaceRoot", { status: 400 });
+    const body = yield* readMcpJsonBody(request, LATTICE_CANVAS_MAX_BODY_BYTES);
+    if (body.kind === "too-large")
+      return HttpServerResponse.text("Payload Too Large", { status: 413 });
+    if (body.kind !== "ok" || !isResultBody(body.body)) {
+      return HttpServerResponse.jsonUnsafe({ error: "Invalid canvas result." }, { status: 400 });
+    }
+    const broker = yield* LatticeCanvasBroker;
+    const accepted = yield* broker.complete(workspaceRoot, body.body.id, body.body.result);
+    return HttpServerResponse.jsonUnsafe({ accepted }, { status: accepted ? 200 : 409 });
+  }).pipe(Effect.catchTag("AuthError", (error) => Effect.succeed(authErrorResponse(error)))),
 );

@@ -38,7 +38,6 @@ async function makeHarness() {
         calls.push({ workspaceRoot, action, args });
         return { forwarded: action };
       }),
-    poll: () => Effect.succeed(null),
     complete: () => Effect.succeed(false),
   };
   const tools = await Effect.runPromise(

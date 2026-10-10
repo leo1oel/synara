@@ -1,4 +1,4 @@
-import { Effect, Layer } from "effect";
+import { Effect } from "effect";
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 
 import { authErrorResponse } from "../auth/effectHttp.ts";
@@ -9,7 +9,6 @@ import {
   type LatticeProjectDocumentResult,
 } from "./Services/LatticeProjectDocumentBroker.ts";
 
-export const LATTICE_PROJECT_DOCUMENT_POLL_PATH = "/api/lattice/project-document-tools/poll";
 export const LATTICE_PROJECT_DOCUMENT_RESULT_PATH = "/api/lattice/project-document-tools/result";
 export const LATTICE_PROJECT_DOCUMENT_MAX_BODY_BYTES = 16 * 1024;
 
@@ -75,26 +74,7 @@ function workspaceRootFromRequest(request: HttpServerRequest.HttpServerRequest):
   return value && value.length <= 4_096 ? value : null;
 }
 
-const pollRoute = HttpRouter.add(
-  "GET",
-  LATTICE_PROJECT_DOCUMENT_POLL_PATH,
-  Effect.gen(function* () {
-    yield* authenticateLatticeRelayRequest;
-    const httpRequest = yield* HttpServerRequest.HttpServerRequest;
-    const workspaceRoot = workspaceRootFromRequest(httpRequest);
-    if (!workspaceRoot) return HttpServerResponse.text("Missing workspaceRoot", { status: 400 });
-    const broker = yield* LatticeProjectDocumentBroker;
-    const request = yield* broker.poll(workspaceRoot);
-    return request
-      ? HttpServerResponse.jsonUnsafe(request, {
-          status: 200,
-          headers: { "Cache-Control": "no-store" },
-        })
-      : HttpServerResponse.empty({ status: 204, headers: { "Cache-Control": "no-store" } });
-  }).pipe(Effect.catchTag("AuthError", (error) => Effect.succeed(authErrorResponse(error)))),
-);
-
-const resultRoute = HttpRouter.add(
+export const latticeProjectDocumentRouteLayer = HttpRouter.add(
   "POST",
   LATTICE_PROJECT_DOCUMENT_RESULT_PATH,
   Effect.gen(function* () {
@@ -117,5 +97,3 @@ const resultRoute = HttpRouter.add(
     return HttpServerResponse.jsonUnsafe({ accepted }, { status: accepted ? 200 : 409 });
   }).pipe(Effect.catchTag("AuthError", (error) => Effect.succeed(authErrorResponse(error)))),
 );
-
-export const latticeProjectDocumentRouteLayer = Layer.mergeAll(pollRoute, resultRoute);

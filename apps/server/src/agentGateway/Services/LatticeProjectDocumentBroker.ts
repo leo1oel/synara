@@ -32,7 +32,6 @@ export interface LatticeProjectDocumentBrokerShape {
     workspaceRoot: string,
     args: LatticeProjectDocumentRequest["args"],
   ) => Effect.Effect<unknown, LatticeProjectDocumentBrokerError>;
-  readonly poll: (workspaceRoot: string) => Effect.Effect<LatticeProjectDocumentRequest | null>;
   readonly complete: (
     workspaceRoot: string,
     id: string,

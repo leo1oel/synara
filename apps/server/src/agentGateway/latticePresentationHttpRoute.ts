@@ -1,4 +1,4 @@
-import { Effect, Layer } from "effect";
+import { Effect } from "effect";
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 
 import { authErrorResponse } from "../auth/effectHttp.ts";
@@ -9,7 +9,6 @@ import {
 import { readMcpJsonBody } from "./httpRoute.ts";
 import { authenticateLatticeRelayRequest } from "./latticeRelayAuthentication.ts";
 
-export const LATTICE_PRESENTATION_POLL_PATH = "/api/lattice/presentation-tools/poll";
 export const LATTICE_PRESENTATION_RESULT_PATH = "/api/lattice/presentation-tools/result";
 // A result carries one base64 page image, which Lattice bounds to 4 MiB of JPEG.
 export const LATTICE_PRESENTATION_MAX_BODY_BYTES = 8 * 1024 * 1024;
@@ -35,45 +34,25 @@ function workspaceRootFromRequest(request: HttpServerRequest.HttpServerRequest):
   return value && value.length <= 4_096 ? value : null;
 }
 
-export const latticePresentationRouteLayer = Layer.mergeAll(
-  HttpRouter.add(
-    "GET",
-    LATTICE_PRESENTATION_POLL_PATH,
-    Effect.gen(function* () {
-      yield* authenticateLatticeRelayRequest;
-      const httpRequest = yield* HttpServerRequest.HttpServerRequest;
-      const workspaceRoot = workspaceRootFromRequest(httpRequest);
-      if (!workspaceRoot) return HttpServerResponse.text("Missing workspaceRoot", { status: 400 });
-      const broker = yield* LatticePresentationBroker;
-      const request = yield* broker.poll(workspaceRoot);
-      return request
-        ? HttpServerResponse.jsonUnsafe(request, {
-            status: 200,
-            headers: { "Cache-Control": "no-store" },
-          })
-        : HttpServerResponse.empty({ status: 204, headers: { "Cache-Control": "no-store" } });
-    }).pipe(Effect.catchTag("AuthError", (error) => Effect.succeed(authErrorResponse(error)))),
-  ),
-  HttpRouter.add(
-    "POST",
-    LATTICE_PRESENTATION_RESULT_PATH,
-    Effect.gen(function* () {
-      yield* authenticateLatticeRelayRequest;
-      const request = yield* HttpServerRequest.HttpServerRequest;
-      const workspaceRoot = workspaceRootFromRequest(request);
-      if (!workspaceRoot) return HttpServerResponse.text("Missing workspaceRoot", { status: 400 });
-      const body = yield* readMcpJsonBody(request, LATTICE_PRESENTATION_MAX_BODY_BYTES);
-      if (body.kind === "too-large")
-        return HttpServerResponse.text("Payload Too Large", { status: 413 });
-      if (body.kind !== "ok" || !isResultBody(body.body)) {
-        return HttpServerResponse.jsonUnsafe(
-          { error: "Invalid presentation result." },
-          { status: 400 },
-        );
-      }
-      const broker = yield* LatticePresentationBroker;
-      const accepted = yield* broker.complete(workspaceRoot, body.body.id, body.body.result);
-      return HttpServerResponse.jsonUnsafe({ accepted }, { status: accepted ? 200 : 409 });
-    }).pipe(Effect.catchTag("AuthError", (error) => Effect.succeed(authErrorResponse(error)))),
-  ),
+export const latticePresentationRouteLayer = HttpRouter.add(
+  "POST",
+  LATTICE_PRESENTATION_RESULT_PATH,
+  Effect.gen(function* () {
+    yield* authenticateLatticeRelayRequest;
+    const request = yield* HttpServerRequest.HttpServerRequest;
+    const workspaceRoot = workspaceRootFromRequest(request);
+    if (!workspaceRoot) return HttpServerResponse.text("Missing workspaceRoot", { status: 400 });
+    const body = yield* readMcpJsonBody(request, LATTICE_PRESENTATION_MAX_BODY_BYTES);
+    if (body.kind === "too-large")
+      return HttpServerResponse.text("Payload Too Large", { status: 413 });
+    if (body.kind !== "ok" || !isResultBody(body.body)) {
+      return HttpServerResponse.jsonUnsafe(
+        { error: "Invalid presentation result." },
+        { status: 400 },
+      );
+    }
+    const broker = yield* LatticePresentationBroker;
+    const accepted = yield* broker.complete(workspaceRoot, body.body.id, body.body.result);
+    return HttpServerResponse.jsonUnsafe({ accepted }, { status: accepted ? 200 : 409 });
+  }).pipe(Effect.catchTag("AuthError", (error) => Effect.succeed(authErrorResponse(error)))),
 );

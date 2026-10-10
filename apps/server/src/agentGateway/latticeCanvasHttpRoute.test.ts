@@ -13,11 +13,7 @@ import {
   type LatticeCanvasBrokerShape,
   type LatticeCanvasResult,
 } from "./Services/LatticeCanvasBroker.ts";
-import {
-  LATTICE_CANVAS_POLL_PATH,
-  LATTICE_CANVAS_RESULT_PATH,
-  latticeCanvasRouteLayer,
-} from "./latticeCanvasHttpRoute.ts";
+import { LATTICE_CANVAS_RESULT_PATH, latticeCanvasRouteLayer } from "./latticeCanvasHttpRoute.ts";
 
 interface CompletedResult {
   readonly workspaceRoot: string;
@@ -47,17 +43,6 @@ async function withCanvasServer(
   } as unknown as ServerAuthShape;
   const broker: LatticeCanvasBrokerShape = {
     invoke: () => Effect.die("invoke is not used by relay route tests"),
-    poll: (workspaceRoot) =>
-      Effect.succeed(
-        workspaceRoot === "/workspace/project"
-          ? {
-              id: "canvas-request",
-              action: "list",
-              args: { limit: 3 },
-              expiresAt: Date.now() + 1_000,
-            }
-          : null,
-      ),
     complete: (workspaceRoot, id, result) =>
       Effect.sync(() => {
         completed.push({ workspaceRoot, id, result });
@@ -103,30 +88,28 @@ function routeUrl(origin: string, path: string) {
 }
 
 describe("latticeCanvasRouteLayer", () => {
-  it("returns auth errors and accepts the loopback desktop relay token", async () => {
-    await withCanvasServer(async ({ origin }) => {
-      const pollUrl = routeUrl(origin, LATTICE_CANVAS_POLL_PATH);
-      expect((await fetch(pollUrl)).status).toBe(401);
-
-      const poll = await fetch(pollUrl, {
-        headers: { Authorization: "Bearer desktop-token" },
+  it("returns auth errors for host results without the relay token", async () => {
+    await withCanvasServer(async ({ origin, completed }) => {
+      const response = await fetch(routeUrl(origin, LATTICE_CANVAS_RESULT_PATH), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: "canvas-request", result: { ok: true } }),
       });
-      expect(poll.status).toBe(200);
-      expect(await poll.json()).toMatchObject({
-        id: "canvas-request",
-        action: "list",
-        args: { limit: 3 },
-      });
+      expect(response.status).toBe(401);
+      expect(completed).toEqual([]);
     });
   });
 
   it("does not accept the desktop relay token for a publicly reachable server", async () => {
     await withCanvasServer(
-      async ({ origin }) => {
-        const response = await fetch(routeUrl(origin, LATTICE_CANVAS_POLL_PATH), {
-          headers: { Authorization: "Bearer desktop-token" },
+      async ({ origin, completed }) => {
+        const response = await fetch(routeUrl(origin, LATTICE_CANVAS_RESULT_PATH), {
+          method: "POST",
+          headers: { Authorization: "Bearer desktop-token", "Content-Type": "application/json" },
+          body: JSON.stringify({ id: "canvas-request", result: { ok: true } }),
         });
         expect(response.status).toBe(401);
+        expect(completed).toEqual([]);
       },
       { publicUrl: new URL("https://synara.example.test/") },
     );

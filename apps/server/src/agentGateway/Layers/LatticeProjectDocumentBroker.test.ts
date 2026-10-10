@@ -2,10 +2,12 @@ import { Effect, Fiber } from "effect";
 import { describe, expect, it } from "vitest";
 
 import { makeLatticeProjectDocumentBroker } from "./LatticeProjectDocumentBroker.ts";
+import { makeLatticeHostToolQueue } from "./LatticeHostToolQueue.ts";
 
 describe("LatticeProjectDocumentBroker", () => {
   it("correlates one host result with the waiting create call", async () => {
-    const broker = makeLatticeProjectDocumentBroker({
+    const hostTools = makeLatticeHostToolQueue();
+    const broker = makeLatticeProjectDocumentBroker(hostTools, {
       randomId: () => "document-request-1",
       toolTimeoutMs: 1_000,
     });
@@ -16,9 +18,12 @@ describe("LatticeProjectDocumentBroker", () => {
       }),
     );
 
-    await expect(Effect.runPromise(broker.poll("/workspace/a"))).resolves.toMatchObject({
-      id: "document-request-1",
-      args: { path: "boards/plan.tldr", documentType: "board" },
+    await expect(Effect.runPromise(hostTools.poll("/workspace/a"))).resolves.toMatchObject({
+      tool: "projectDocument",
+      request: {
+        id: "document-request-1",
+        args: { path: "boards/plan.tldr", documentType: "board" },
+      },
     });
     await expect(
       Effect.runPromise(
@@ -39,10 +44,10 @@ describe("LatticeProjectDocumentBroker", () => {
   });
 
   it("removes timed-out requests and isolates workspace roots", async () => {
-    const broker = makeLatticeProjectDocumentBroker({
+    const hostTools = makeLatticeHostToolQueue({ pollTimeoutMs: 5 });
+    const broker = makeLatticeProjectDocumentBroker(hostTools, {
       randomId: () => "document-request-2",
       toolTimeoutMs: 5,
-      pollTimeoutMs: 5,
     });
     const fiber = Effect.runFork(
       broker.invoke("/workspace/a", {
@@ -50,10 +55,10 @@ describe("LatticeProjectDocumentBroker", () => {
         documentType: "spreadsheet",
       }),
     );
-    await expect(Effect.runPromise(broker.poll("/workspace/b"))).resolves.toBeNull();
+    await expect(Effect.runPromise(hostTools.poll("/workspace/b"))).resolves.toBeNull();
     await expect(Effect.runPromise(Fiber.join(fiber))).rejects.toMatchObject({
       code: "project_document_tool_timeout",
     });
-    await expect(Effect.runPromise(broker.poll("/workspace/a"))).resolves.toBeNull();
+    await expect(Effect.runPromise(hostTools.poll("/workspace/a"))).resolves.toBeNull();
   });
 });
