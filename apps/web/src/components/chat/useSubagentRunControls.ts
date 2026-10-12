@@ -4,6 +4,7 @@
 // Layer: Chat hooks
 // Exports: useSubagentRunControls
 
+import { i18n } from "~/i18n";
 import type { ThreadId } from "@synara/contracts";
 import { useCallback } from "react";
 
@@ -35,9 +36,11 @@ export function useSubagentRunControls(stripSourceThreadId: ThreadId | null) {
       } catch (error) {
         toastManager.add({
           type: "error",
-          title: "Could not update the subagent",
+          title: i18n._("Could not update the subagent"),
           description:
-            error instanceof Error ? error.message : "The subagent request failed. Try again.",
+            error instanceof Error
+              ? error.message
+              : i18n._("The subagent request failed. Try again."),
         });
       }
     },
@@ -64,9 +67,11 @@ export function useSubagentRunControls(stripSourceThreadId: ThreadId | null) {
       } catch (error) {
         toastManager.add({
           type: "error",
-          title: "Could not update the subagent",
+          title: i18n._("Could not update the subagent"),
           description:
-            error instanceof Error ? error.message : "The subagent request failed. Try again.",
+            error instanceof Error
+              ? error.message
+              : i18n._("The subagent request failed. Try again."),
         });
       }
     },

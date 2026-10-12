@@ -3,6 +3,7 @@
 // Layer: Web domain helper
 // Exports: canForkThread, dispatchThreadFork, FORK_THREAD_TARGET_LABELS
 
+import { i18n } from "~/i18n";
 import type {
   MessageId,
   ModelSelection,
@@ -66,7 +67,7 @@ export async function dispatchThreadFork(input: {
     const selected = sourceThread.messages.find((message) => message.id === input.throughMessageId);
     if (!selected || !hasImportableThreadMessages({ messages: [selected] })) {
       throw new Error(
-        "Selected message is no longer available to fork. Refresh the chat and try again.",
+        i18n._("Selected message is no longer available to fork. Refresh the chat and try again."),
       );
     }
   }

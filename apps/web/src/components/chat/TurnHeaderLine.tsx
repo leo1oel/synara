@@ -2,6 +2,7 @@
 // Collapsible trigger/panel; the live clock stays isolated in its leaf component.
 import type { CSSProperties, ReactNode } from "react";
 
+import { i18n } from "~/i18n";
 import { cn } from "~/lib/utils";
 import { MUTED_LABEL_TEXT_CLASS_NAME } from "~/surfaceStyles";
 import { DisclosureChevron } from "../ui/DisclosureChevron";
@@ -41,7 +42,9 @@ export function TurnHeaderLine(
           className={cn("-ml-0.5 pb-2", MUTED_LABEL_TEXT_CLASS_NAME)}
           style={{ fontSize: props.fontSize }}
         >
-          {resumedBy ? `Resumed: ${formatTurnResumedBy(resumedBy)} · ` : "Working for "}
+          {resumedBy
+            ? `${i18n._("Resumed: {tasks}", { tasks: formatTurnResumedBy(resumedBy) })} · `
+            : `${i18n._("Working for")} `}
           <span className="tabular-nums">
             {props.nowLabel ?? <LiveElapsedTimer startedAt={props.startedAt} />}
           </span>

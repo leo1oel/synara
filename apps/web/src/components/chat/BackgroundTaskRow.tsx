@@ -8,6 +8,7 @@
 
 import { createContext, useContext } from "react";
 
+import { i18n } from "~/i18n";
 import { BackgroundTrayIcon, StopIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { MUTED_LABEL_TEXT_CLASS_NAME } from "~/surfaceStyles";
@@ -30,7 +31,7 @@ export function BackgroundTaskRow(props: { task: WorkLogBackgroundTask; fontSize
   const status = describeBackgroundTaskStatus(task, task.completedAt ?? task.startedAt);
   const running = task.status === "running";
   const command = task.command ? deriveLiteralCommand(task.command) : null;
-  const subject = command ?? task.description ?? "Background task";
+  const subject = command ?? task.description ?? i18n._("Background task");
 
   return (
     <div
@@ -38,7 +39,7 @@ export function BackgroundTaskRow(props: { task: WorkLogBackgroundTask; fontSize
       style={{ fontSize: `${fontSizePx}px` }}
       data-background-task={task.taskId}
       data-background-task-status={task.status}
-      title={task.description && command ? task.description : "Background task"}
+      title={task.description && command ? task.description : i18n._("Background task")}
     >
       <span
         className={cn(
@@ -84,10 +85,10 @@ export function BackgroundTaskRow(props: { task: WorkLogBackgroundTask; fontSize
             size="xs"
             className="shrink-0 text-foreground/80"
             onClick={() => onStop(task.taskId)}
-            aria-label={`Stop background task ${subject}`}
+            aria-label={i18n._("Stop background task {task}", { task: subject })}
           >
             <StopIcon className="size-2.5" />
-            Stop
+            {i18n._("Stop")}
           </Button>
         ) : null}
       </span>

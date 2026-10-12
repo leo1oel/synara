@@ -8,8 +8,8 @@
 // Layer: Chat transcript UI
 // Exports: SubagentRunCard, SubagentIdentityLine
 
+import { i18n } from "~/i18n";
 import { ThreadId } from "@synara/contracts";
-import { pluralize } from "@synara/shared/text";
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { useNowMs } from "~/hooks/useNowMs";
@@ -126,7 +126,7 @@ function SubagentRunRowView({
           className="flex min-w-0 flex-1 items-center gap-2 text-left outline-none after:absolute after:inset-0 after:rounded-lg after:content-[''] focus-visible:after:ring-1 focus-visible:after:ring-ring/60 disabled:cursor-default"
           disabled={!openThread}
           onClick={openThread}
-          aria-label={`Open ${row.item.primaryLabel}`}
+          aria-label={i18n._("Open {name}", { name: row.item.primaryLabel })}
         >
           <span className="flex min-w-0 flex-1 items-center gap-2">
             <SubagentIdentityLine item={row.item} />
@@ -156,7 +156,7 @@ function SubagentRunRowView({
               ) : null}
               {description.detail?.kind === "was-running" ? (
                 <span className="flex min-w-0 items-center gap-1.5">
-                  <span className="shrink-0">→ was running</span>
+                  <span className="shrink-0">→ {i18n._("was running")}</span>
                   <ActionText action={description.detail.action} />
                 </span>
               ) : null}
@@ -172,7 +172,9 @@ function SubagentRunRowView({
             aria-expanded={nestedOpen}
             onClick={() => setNestedOpen((open) => !open)}
           >
-            {`launched ${row.nested.length} ${pluralize(row.nested.length, "subagent")}`}
+            {row.nested.length === 1
+              ? i18n._("launched 1 subagent")
+              : i18n._("launched {count} subagents", { count: row.nested.length })}
             <DisclosureChevron open={nestedOpen} className="size-3" />
           </Button>
         ) : null}
@@ -186,7 +188,7 @@ function SubagentRunRowView({
             onClick={openThread}
           >
             <ChatBubbleIcon className="size-3" />
-            Message
+            {i18n._("Message")}
           </Button>
         ) : null}
         {live && depth === 0 && !row.item.isBackground && onBackground ? (
@@ -196,8 +198,8 @@ function SubagentRunRowView({
             size="icon-xs"
             className="shrink-0 opacity-0 transition-opacity group-hover/subagent-row:opacity-100 group-focus-within/subagent-row:opacity-100 focus-visible:opacity-100"
             onClick={() => void onBackground(row.item)}
-            aria-label="Run in background (ctrl+b)"
-            title="Run in background (ctrl+b)"
+            aria-label={i18n._("Run in background (ctrl+b)")}
+            title={i18n._("Run in background (ctrl+b)")}
           >
             <BackgroundTrayIcon className="size-3" />
           </Button>
@@ -209,10 +211,10 @@ function SubagentRunRowView({
             size="xs"
             className="shrink-0"
             onClick={() => void onStop(row.item)}
-            aria-label={`Stop ${row.item.primaryLabel}`}
+            aria-label={i18n._("Stop {name}", { name: row.item.primaryLabel })}
           >
             <StopIcon className="size-2.5" />
-            Stop
+            {i18n._("Stop")}
           </Button>
         ) : null}
         <ChevronRightIcon
@@ -405,7 +407,7 @@ export function SubagentRunCard({ workEntry }: { workEntry: WorkLogEntry }) {
             onClick={() => void Promise.all(liveItems.map((item) => onStop(item)))}
           >
             <StopIcon className="size-2.5" />
-            Stop all
+            {i18n._("Stop all")}
           </Button>
         ) : null}
       </div>

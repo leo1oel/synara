@@ -7,6 +7,7 @@
 // Exports: SubagentThreadIntro, SubagentBriefCard, SubagentDeliveredNote,
 // SubagentThreadPresentation
 
+import { i18n } from "~/i18n";
 import type { ProviderKind, ThreadId } from "@synara/contracts";
 import type { CSSProperties } from "react";
 
@@ -46,15 +47,15 @@ export function subagentThreadStateLabel(
   const elapsed = elapsedMs === null ? null : formatClockDuration(elapsedMs);
   switch (statusKind) {
     case "running":
-      return elapsed ? `Running · ${elapsed}` : "Running";
+      return elapsed ? i18n._("Running · {elapsed}", { elapsed }) : i18n._("Running");
     case "queued":
-      return "Starting";
+      return i18n._("Starting");
     case "completed":
-      return elapsed ? `Done in ${elapsed}` : "Done";
+      return elapsed ? i18n._("Done in {elapsed}", { elapsed }) : i18n._("Done");
     case "failed":
-      return elapsed ? `Failed after ${elapsed}` : "Failed";
+      return elapsed ? i18n._("Failed after {elapsed}", { elapsed }) : i18n._("Failed");
     case "stopped":
-      return elapsed ? `Stopped after ${elapsed}` : "Stopped";
+      return elapsed ? i18n._("Stopped after {elapsed}", { elapsed }) : i18n._("Stopped");
     default:
       return null;
   }
@@ -85,10 +86,10 @@ export function SubagentThreadIntro({
         className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-[color:var(--color-border)] px-3 py-1 text-muted-foreground transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground"
         onClick={() => onOpenThread?.(subagent.parentThreadId)}
         disabled={!onOpenThread}
-        aria-label={`Open parent thread ${subagent.parentTitle}`}
+        aria-label={i18n._("Open parent thread {title}", { title: subagent.parentTitle })}
       >
         <BackToParentIcon className="size-3 shrink-0" />
-        <span className="shrink-0">Subagent of</span>
+        <span className="shrink-0">{i18n._("Subagent of")}</span>
         <span className="min-w-0 truncate font-medium text-foreground/85">
           {subagent.parentTitle}
         </span>
@@ -140,7 +141,7 @@ export function SubagentBriefCard({
     >
       <div className="mb-1 flex min-w-0 items-center gap-1.5 font-system-ui text-ui-sm text-muted-foreground">
         <BotIcon className="size-3.5 shrink-0" />
-        <span className="shrink-0">Brief from</span>
+        <span className="shrink-0">{i18n._("Brief from")}</span>
         <span className="min-w-0 truncate font-medium text-foreground/80">{parentTitle}</span>
         {timestamp ? <span className="ml-auto shrink-0 tabular-nums">{timestamp}</span> : null}
       </div>
@@ -154,10 +155,10 @@ export function SubagentDeliveredNote({ parentTitle }: { parentTitle: string }) 
     <span
       data-testid="subagent-delivered-note"
       className="ml-auto inline-flex min-w-0 items-center gap-1.5"
-      title={`This answer went back to ${parentTitle}`}
+      title={i18n._("This answer went back to {title}", { title: parentTitle })}
     >
       <BackToParentIcon className="size-3 shrink-0" />
-      <span className="truncate">Delivered to {parentTitle}</span>
+      <span className="truncate">{i18n._("Delivered to {title}", { title: parentTitle })}</span>
     </span>
   );
 }

@@ -8,6 +8,7 @@
 // Exports: deriveComposerSubagentStripItems, toSubagentStripItem,
 // mergeSubagentSnapshots, and the row types
 
+import { i18n } from "~/i18n";
 import { ThreadId, type TurnId } from "@synara/contracts";
 
 import type { WorkLogEntry, WorkLogSubagent } from "../../session-logic";
@@ -88,9 +89,9 @@ function anonymousSubagentLabel(statusKind: SubagentStatusKind | null): string {
     case "failed":
     case "stopped":
     case "idle":
-      return "Subagent";
+      return i18n._("Subagent");
     default:
-      return "Starting subagent…";
+      return i18n._("Starting subagent…");
   }
 }
 

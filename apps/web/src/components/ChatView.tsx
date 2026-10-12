@@ -3913,12 +3913,12 @@ export default function ChatView({
         .catch((error: unknown) => {
           toastManager.add({
             type: "error",
-            title: "Could not stop the background task",
-            description: error instanceof Error ? error.message : "Try again in a moment.",
+            title: i18n._("Could not stop the background task"),
+            description: error instanceof Error ? error.message : i18n._("Try again in a moment."),
           });
         });
     },
-    [activeThread],
+    [activeThread, i18n],
   );
 
   const onStopWorkflowRun = useCallback(async () => {

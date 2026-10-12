@@ -3,6 +3,7 @@
 //          and the current draft's selected workspace. Other tasks' worktrees stay with those tasks.
 // Layer: Chat / empty-state entrypoint
 
+import { i18n } from "~/i18n";
 import {
   Fragment,
   memo,
@@ -436,7 +437,7 @@ export const ProjectPicker = memo(function ProjectPicker({
         openCreateProjectDialog(true);
         return;
       }
-      setErrorMessage("Choosing a folder needs the desktop app.");
+      setErrorMessage(i18n._("Choosing a folder needs the desktop app."));
     };
     const api = readNativeApi();
     if (!api) {

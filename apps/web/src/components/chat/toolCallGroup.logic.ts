@@ -299,7 +299,7 @@ export function summarizeToolCallGroup(
     label: joinSummaryParts(i18n, parts),
     parts,
     failedCount,
-    failedLabel: failedCount > 0 ? `${failedCount} failed` : null,
+    failedLabel: failedCount > 0 ? i18n._("{count} failed", { count: failedCount }) : null,
     entryCount: summarizable.length,
     hasRunningEntry,
     iconCategory: parts.length === 1 ? parts[0]!.category : "mixed",

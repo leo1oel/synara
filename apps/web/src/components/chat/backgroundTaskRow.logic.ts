@@ -5,7 +5,7 @@
 // Layer: Web chat presentation helpers
 // Exports: describeBackgroundTaskStatus, summarizeBackgroundTaskGroup
 
-import { pluralize } from "@synara/shared/text";
+import { i18n } from "~/i18n";
 
 import { formatClockElapsed } from "../../session-logic";
 import type { WorkLogBackgroundTask } from "../../workLog";
@@ -25,17 +25,20 @@ export function describeBackgroundTaskStatus(
   const elapsed = formatClockElapsed(task.startedAt, task.completedAt ?? nowIso);
   switch (task.status) {
     case "running":
-      return { status: task.status, label: "running", elapsed };
+      return { status: task.status, label: i18n._("running"), elapsed };
     case "finished":
-      return { status: task.status, label: "finished", elapsed };
+      return { status: task.status, label: i18n._("finished"), elapsed };
     case "failed":
       return {
         status: task.status,
-        label: task.exitCode !== null ? `failed · exit ${task.exitCode}` : "failed",
+        label:
+          task.exitCode !== null
+            ? i18n._("failed · exit {code}", { code: task.exitCode })
+            : i18n._("failed"),
         elapsed,
       };
     case "stopped":
-      return { status: task.status, label: "stopped", elapsed };
+      return { status: task.status, label: i18n._("stopped"), elapsed };
   }
 }
 
@@ -53,7 +56,25 @@ export function summarizeBackgroundTaskGroup(
   const counts = STATUS_ORDER.map(
     (status) => [status, tasks.filter((task) => task.status === status).length] as const,
   ).filter(([, count]) => count > 0);
-  const breakdown = counts.map(([status, count]) => `${count} ${status}`).join(", ");
-  const head = `${tasks.length} background ${pluralize(tasks.length, "task")}`;
+  const breakdown = counts
+    .map(([status, count]) => backgroundTaskStatusCount(status, count))
+    .join(i18n._(", "));
+  const head =
+    tasks.length === 1
+      ? i18n._("1 background task")
+      : i18n._("{count} background tasks", { count: tasks.length });
   return breakdown ? `${head} · ${breakdown}` : head;
+}
+
+function backgroundTaskStatusCount(status: WorkLogBackgroundTask["status"], count: number): string {
+  switch (status) {
+    case "running":
+      return i18n._("{count} running", { count });
+    case "finished":
+      return i18n._("{count} finished", { count });
+    case "failed":
+      return i18n._("{count} failed", { count });
+    case "stopped":
+      return i18n._("{count} stopped", { count });
+  }
 }

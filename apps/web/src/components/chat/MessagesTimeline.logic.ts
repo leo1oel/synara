@@ -521,15 +521,40 @@ export function deriveTurnTimingByTurnId(input: {
 }
 
 // "“Run delayed echo” finished", or a count when several tasks woke the turn.
-export function formatTurnResumedBy(resumedBy: ReadonlyArray<TurnResumedBy>): string {
+// Each outcome is a whole catalog message so translations can reorder it.
+export function formatTurnResumedBy(
+  resumedBy: ReadonlyArray<TurnResumedBy>,
+  i18n: I18n = appI18n,
+): string {
   if (resumedBy.length === 1) {
     const [only] = resumedBy;
-    return `“${only!.description ?? "Background task"}” ${only!.outcome}`;
+    const task = only!.description ?? i18n._("Background task");
+    switch (only!.outcome) {
+      case "finished":
+        return i18n._("“{task}” finished", { task });
+      case "failed":
+        return i18n._("“{task}” failed", { task });
+      case "stopped":
+        return i18n._("“{task}” stopped", { task });
+      case "updated":
+        return i18n._("“{task}” updated", { task });
+    }
   }
+  const count = resumedBy.length;
   const outcomes = new Set(resumedBy.map((item) => item.outcome));
-  return outcomes.size === 1
-    ? `${resumedBy.length} background tasks ${resumedBy[0]!.outcome}`
-    : `${resumedBy.length} background tasks ended`;
+  if (outcomes.size === 1) {
+    switch (resumedBy[0]!.outcome) {
+      case "finished":
+        return i18n._("{count} background tasks finished", { count });
+      case "failed":
+        return i18n._("{count} background tasks failed", { count });
+      case "stopped":
+        return i18n._("{count} background tasks stopped", { count });
+      case "updated":
+        return i18n._("{count} background tasks updated", { count });
+    }
+  }
+  return i18n._("{count} background tasks ended", { count });
 }
 
 // The text of a settled turn header, without the clock time or icon:
@@ -537,20 +562,29 @@ export function formatTurnResumedBy(resumedBy: ReadonlyArray<TurnResumedBy>): st
 // limit reached", "Resumed: “Run delayed echo” finished · 3s".
 export function formatTurnHeaderLabel(
   header: Pick<TurnHeader, "elapsed" | "outcome" | "reason" | "resumedBy">,
+  i18n: I18n = appI18n,
 ): string {
   switch (header.outcome) {
     case "stopped":
-      return header.elapsed ? `Stopped by you after ${header.elapsed}` : "Stopped by you";
+      return header.elapsed
+        ? i18n._("Stopped by you after {elapsed}", { elapsed: header.elapsed })
+        : i18n._("Stopped by you");
     case "interrupted": {
-      const base = header.elapsed ? `Interrupted after ${header.elapsed}` : "Interrupted";
+      const base = header.elapsed
+        ? i18n._("Interrupted after {elapsed}", { elapsed: header.elapsed })
+        : i18n._("Interrupted");
       return header.reason ? `${base} · ${header.reason}` : base;
     }
     case "completed":
       if (header.resumedBy && header.resumedBy.length > 0) {
-        const resumed = `Resumed: ${formatTurnResumedBy(header.resumedBy)}`;
+        const resumed = i18n._("Resumed: {tasks}", {
+          tasks: formatTurnResumedBy(header.resumedBy, i18n),
+        });
         return header.elapsed ? `${resumed} · ${header.elapsed}` : resumed;
       }
-      return header.elapsed ? `Worked for ${header.elapsed}` : "Details";
+      return header.elapsed
+        ? i18n._("Worked for {elapsed}", { elapsed: header.elapsed })
+        : i18n._("Details");
   }
 }
 

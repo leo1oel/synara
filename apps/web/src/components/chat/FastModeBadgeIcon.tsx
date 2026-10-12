@@ -1,3 +1,4 @@
+import { i18n } from "~/i18n";
 import type { FastModeNotice } from "~/lib/fastModeState";
 import { FastModeIcon, FastModeOutlineIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
@@ -19,5 +20,5 @@ export function FastModeBadgeIcon(props: {
       </span>
     );
   }
-  return <FastModeIcon aria-label="Fast mode" className={props.className} />;
+  return <FastModeIcon aria-label={i18n._("Fast mode")} className={props.className} />;
 }

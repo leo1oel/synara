@@ -847,8 +847,8 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
       : null;
   const failureMetaText = failure
     ? failure.exitCode !== null
-      ? `Failed · exit ${failure.exitCode}`
-      : "Failed"
+      ? i18n._("Failed · exit {code}", { code: failure.exitCode })
+      : i18n._("Failed")
     : null;
   // Reasoning and progress narration reads as prose: it wraps instead of
   // being cut to one line.
@@ -1343,7 +1343,7 @@ function providerModelLabel(
       ?.displayName ?? selection.provider;
   const summary = resolveThreadModelSummary(selection);
   const modelLabel = summary
-    ? `${formatThreadModelSummaryLabel(summary)}${summary.fastMode ? ` · ${fastModeNotice?.label ?? "Fast"}` : ""}`
+    ? `${formatThreadModelSummaryLabel(summary)}${summary.fastMode ? ` · ${fastModeNotice?.label ?? i18n._("Fast")}` : ""}`
     : selection.model;
   return `${displayName} · ${modelLabel}`;
 }

@@ -28,11 +28,16 @@ import {
 import { COMPOSER_INLINE_ACTION_PILL_CLASS_NAME } from "./composerPickerStyles";
 import { QueuedComposerActions } from "./QueuedComposerActions";
 
-const PAUSE_DETAIL_BY_REASON: Record<QueuedComposerPauseReason, string> = {
-  stopped: "Paused after you stopped the turn",
-  error: "Paused after an error",
-  "usage-limit": "Paused: usage limit",
-};
+function pauseDetail(reason: QueuedComposerPauseReason): string {
+  switch (reason) {
+    case "stopped":
+      return i18n._("Paused after you stopped the turn");
+    case "error":
+      return i18n._("Paused after an error");
+    case "usage-limit":
+      return i18n._("Paused: usage limit");
+  }
+}
 
 const PAUSE_ACTION_CLASS_NAME = cn(COMPOSER_INLINE_ACTION_PILL_CLASS_NAME, "text-ui-sm");
 
@@ -62,17 +67,17 @@ function QueuedComposerPausedNotice({
           }
         />
         <span className="min-w-0 truncate text-ui-sm text-muted-foreground">
-          <span className="font-medium text-foreground">Queue paused</span>
+          <span className="font-medium text-foreground">{i18n._("Queue paused")}</span>
           <span aria-hidden> · </span>
-          {PAUSE_DETAIL_BY_REASON[pause.reason]}
+          {pauseDetail(pause.reason)}
         </span>
       </ComposerStackedPanelRowMain>
       <div className="flex shrink-0 items-center gap-1.5">
         <button type="button" className={PAUSE_ACTION_CLASS_NAME} onClick={onResume}>
-          Resume
+          {i18n._("Resume")}
         </button>
         <button type="button" className={PAUSE_ACTION_CLASS_NAME} onClick={onEdit}>
-          Edit
+          {i18n._("Edit")}
         </button>
       </div>
     </ComposerStackedPanelRow>

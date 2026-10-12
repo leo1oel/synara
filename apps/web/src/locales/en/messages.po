@@ -12,6 +12,626 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
+#: src/wsTransport.ts
+msgid "Connection recovery stopped. Reload the app and check the operation's status."
+msgstr "Connection recovery stopped. Reload the app and check the operation's status."
+
+#. js-lingui-explicit-id
+#: src/wsTransport.ts
+msgid "Message delivery could not be checked. Reconnect and check the conversation before sending again."
+msgstr "Message delivery could not be checked. Reconnect and check the conversation before sending again."
+
+#. js-lingui-explicit-id
+#: src/lib/fastModeState.ts
+msgid "usage credits are turned off for this Claude account"
+msgstr "usage credits are turned off for this Claude account"
+
+#. js-lingui-explicit-id
+#: src/lib/fastModeState.ts
+msgid "this Claude plan does not include it"
+msgstr "this Claude plan does not include it"
+
+#. js-lingui-explicit-id
+#: src/lib/fastModeState.ts
+msgid "it needs a first-party Anthropic account"
+msgstr "it needs a first-party Anthropic account"
+
+#. js-lingui-explicit-id
+#: src/lib/fastModeState.ts
+msgid "it is disabled in this environment"
+msgstr "it is disabled in this environment"
+
+#. js-lingui-explicit-id
+#: src/lib/fastModeState.ts
+msgid "this model does not support it"
+msgstr "this model does not support it"
+
+#. js-lingui-explicit-id
+#: src/lib/fastModeState.ts
+msgid "Claude could not check its availability"
+msgstr "Claude could not check its availability"
+
+#. js-lingui-explicit-id
+#: src/lib/fastModeState.ts
+msgid "Fast paused"
+msgstr "Fast paused"
+
+#. js-lingui-explicit-id
+#: src/lib/fastModeState.ts
+msgid "Fast mode is paused after a rate limit. Requests run at standard speed for now."
+msgstr "Fast mode is paused after a rate limit. Requests run at standard speed for now."
+
+#. js-lingui-explicit-id
+#: src/lib/fastModeState.ts
+msgid "Claude reported it as unavailable"
+msgstr "Claude reported it as unavailable"
+
+#. js-lingui-explicit-id
+#: src/lib/fastModeState.ts
+msgid "Fast unavailable"
+msgstr "Fast unavailable"
+
+#. js-lingui-explicit-id
+#: src/lib/fastModeState.ts
+msgid "Fast mode is not active: {cause}. Requests run at standard speed."
+msgstr "Fast mode is not active: {cause}. Requests run at standard speed."
+
+#. js-lingui-explicit-id
+#: src/lib/providerSetupStatus.ts
+msgid "Installed · authentication managed by OpenCode"
+msgstr "Installed · authentication managed by OpenCode"
+
+#. js-lingui-explicit-id
+#: src/lib/rpcTransportFailure.ts
+msgid "Connection interrupted. Check the operation's status."
+msgstr "Connection interrupted. Check the operation's status."
+
+#. js-lingui-explicit-id
+#: src/lib/subagentPresentation.ts
+msgid "Subagent {number}"
+msgstr "Subagent {number}"
+
+#. js-lingui-explicit-id
+#: src/lib/threadFork.ts
+msgid "Selected message is no longer available to fork. Refresh the chat and try again."
+msgstr "Selected message is no longer available to fork. Refresh the chat and try again."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.logic.ts
+msgid "Still sending your last message"
+msgstr "Still sending your last message"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.logic.ts
+msgid "Wait for it to show in the chat before sending again."
+msgstr "Wait for it to show in the chat before sending again."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.logic.ts
+msgid "The session is still starting"
+msgstr "The session is still starting"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.logic.ts
+msgid "Send again once it is ready. Your message stays in the composer."
+msgstr "Send again once it is ready. Your message stays in the composer."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.logic.ts
+msgid "This chat has no project"
+msgstr "This chat has no project"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.logic.ts
+msgid "Choose a project for this chat, then send again."
+msgstr "Choose a project for this chat, then send again."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Could not stop the background task"
+msgstr "Could not stop the background task"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Try again in a moment."
+msgstr "Try again in a moment."
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Message this subagent"
+msgstr "Message this subagent"
+
+#. js-lingui-explicit-id
+#: src/components/chat/BackgroundTaskRow.tsx
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "Background task"
+msgstr "Background task"
+
+#. js-lingui-explicit-id
+#: src/components/chat/BackgroundTaskRow.tsx
+msgid "Stop background task {task}"
+msgstr "Stop background task {task}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/BackgroundTaskRow.tsx
+#: src/components/chat/SubagentRunCard.tsx
+msgid "Stop"
+msgstr "Stop"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "This session is {age} old and {tokens} tokens."
+msgstr "This session is {age} old and {tokens} tokens."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Your message is saved and on hold. Continuing may reprocess the conversation's context."
+msgstr "Your message is saved and on hold. Continuing may reprocess the conversation's context."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Your message is saved and on hold. Continuing may reprocess about {tokens} tokens."
+msgstr "Your message is saved and on hold. Continuing may reprocess about {tokens} tokens."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Resuming the full session will consume a substantial portion of your usage limits. We recommend resuming from a summary. Your message is saved until you choose."
+msgstr "Resuming the full session will consume a substantial portion of your usage limits. We recommend resuming from a summary. Your message is saved until you choose."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Resume from summary (recommended)"
+msgstr "Resume from summary (recommended)"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Summarize this session, then send your message"
+msgstr "Summarize this session, then send your message"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Resume full session as-is"
+msgstr "Resume full session as-is"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Send your message with the full history"
+msgstr "Send your message with the full history"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Don't ask me again"
+msgstr "Don't ask me again"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Resume as-is now and stop asking. Turn it back on in Settings → Providers"
+msgstr "Resume as-is now and stop asking. Turn it back on in Settings → Providers"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Keep your message without sending it"
+msgstr "Keep your message without sending it"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerQueuedHeader.tsx
+msgid "Paused after you stopped the turn"
+msgstr "Paused after you stopped the turn"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerQueuedHeader.tsx
+msgid "Paused after an error"
+msgstr "Paused after an error"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerQueuedHeader.tsx
+msgid "Paused: usage limit"
+msgstr "Paused: usage limit"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerQueuedHeader.tsx
+msgid "Queue paused"
+msgstr "Queue paused"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerQueuedHeader.tsx
+msgid "Resume"
+msgstr "Resume"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSubagentStrip.logic.ts
+msgid "Starting subagent…"
+msgstr "Starting subagent…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "“{task}” finished"
+msgstr "“{task}” finished"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "“{task}” failed"
+msgstr "“{task}” failed"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "“{task}” stopped"
+msgstr "“{task}” stopped"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "“{task}” updated"
+msgstr "“{task}” updated"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "{count} background tasks finished"
+msgstr "{count} background tasks finished"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "{count} background tasks failed"
+msgstr "{count} background tasks failed"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "{count} background tasks stopped"
+msgstr "{count} background tasks stopped"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "{count} background tasks updated"
+msgstr "{count} background tasks updated"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "{count} background tasks ended"
+msgstr "{count} background tasks ended"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "Stopped by you after {elapsed}"
+msgstr "Stopped by you after {elapsed}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "Stopped by you"
+msgstr "Stopped by you"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "Interrupted after {elapsed}"
+msgstr "Interrupted after {elapsed}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+#: src/components/chat/SubagentRunCard.logic.ts
+msgid "Interrupted"
+msgstr "Interrupted"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+#: src/components/chat/TurnHeaderLine.tsx
+msgid "Resumed: {tasks}"
+msgstr "Resumed: {tasks}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProjectPicker.tsx
+msgid "Choosing a folder needs the desktop app."
+msgstr "Choosing a folder needs the desktop app."
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.logic.ts
+msgid "Waiting for its subagent"
+msgstr "Waiting for its subagent"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.logic.ts
+msgid "Waiting for its subagents"
+msgstr "Waiting for its subagents"
+
+#. js-lingui-explicit-id
+#: src/components/chat/backgroundTaskRow.logic.ts
+#: src/components/chat/SubagentRunCard.logic.ts
+#: src/components/chat/SubagentRunningChip.tsx
+msgid "{count} running"
+msgstr "{count} running"
+
+#. js-lingui-explicit-id
+#: src/components/chat/backgroundTaskRow.logic.ts
+#: src/components/chat/SubagentRunCard.logic.ts
+msgid "stopped"
+msgstr "stopped"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.logic.ts
+msgid "{count} done"
+msgstr "{count} done"
+
+#. js-lingui-explicit-id
+#: src/components/chat/backgroundTaskRow.logic.ts
+#: src/components/chat/SubagentRunCard.logic.ts
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "{count} failed"
+msgstr "{count} failed"
+
+#. js-lingui-explicit-id
+#: src/components/chat/backgroundTaskRow.logic.ts
+#: src/components/chat/SubagentRunCard.logic.ts
+msgid "{count} stopped"
+msgstr "{count} stopped"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.logic.ts
+msgid "{count} interrupted"
+msgstr "{count} interrupted"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.logic.ts
+msgid "1 subagent"
+msgstr "1 subagent"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.logic.ts
+msgid "{count} subagents"
+msgstr "{count} subagents"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.logic.ts
+msgid "+{count} nested"
+msgstr "+{count} nested"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.tsx
+msgid "Open {name}"
+msgstr "Open {name}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.tsx
+msgid "was running"
+msgstr "was running"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.tsx
+msgid "launched 1 subagent"
+msgstr "launched 1 subagent"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.tsx
+msgid "launched {count} subagents"
+msgstr "launched {count} subagents"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.tsx
+msgid "Message"
+msgstr "Message"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.tsx
+msgid "Stop {name}"
+msgstr "Stop {name}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.tsx
+msgid "Stop all"
+msgstr "Stop all"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunningChip.tsx
+msgid "1 subagent running, show it"
+msgstr "1 subagent running, show it"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunningChip.tsx
+msgid "{count} subagents running, show them"
+msgstr "{count} subagents running, show them"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentThreadIntro.tsx
+msgid "Running · {elapsed}"
+msgstr "Running · {elapsed}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentThreadIntro.tsx
+msgid "Done in {elapsed}"
+msgstr "Done in {elapsed}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentThreadIntro.tsx
+msgid "Failed after {elapsed}"
+msgstr "Failed after {elapsed}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentThreadIntro.tsx
+msgid "Stopped after {elapsed}"
+msgstr "Stopped after {elapsed}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentThreadIntro.tsx
+msgid "Open parent thread {title}"
+msgstr "Open parent thread {title}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentThreadIntro.tsx
+msgid "Subagent of"
+msgstr "Subagent of"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentThreadIntro.tsx
+msgid "Brief from"
+msgstr "Brief from"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentThreadIntro.tsx
+msgid "This answer went back to {title}"
+msgstr "This answer went back to {title}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentThreadIntro.tsx
+msgid "Delivered to {title}"
+msgstr "Delivered to {title}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Failed · exit {code}"
+msgstr "Failed · exit {code}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Fork rebuilt up to the chosen turn"
+msgstr "Fork rebuilt up to the chosen turn"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TraitsPicker.tsx
+msgid "Fast mode on"
+msgstr "Fast mode on"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TraitsPicker.tsx
+msgid "Fast mode off"
+msgstr "Fast mode off"
+
+#. js-lingui-explicit-id
+#: src/components/chat/agentActivity.logic.ts
+msgid "{count} updates"
+msgstr "{count} updates"
+
+#. js-lingui-explicit-id
+#: src/components/chat/backgroundTaskRow.logic.ts
+msgid "running"
+msgstr "running"
+
+#. js-lingui-explicit-id
+#: src/components/chat/backgroundTaskRow.logic.ts
+msgid "finished"
+msgstr "finished"
+
+#. js-lingui-explicit-id
+#: src/components/chat/backgroundTaskRow.logic.ts
+msgid "failed · exit {code}"
+msgstr "failed · exit {code}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/backgroundTaskRow.logic.ts
+msgid "1 background task"
+msgstr "1 background task"
+
+#. js-lingui-explicit-id
+#: src/components/chat/backgroundTaskRow.logic.ts
+msgid "{count} background tasks"
+msgstr "{count} background tasks"
+
+#. js-lingui-explicit-id
+#: src/components/chat/backgroundTaskRow.logic.ts
+msgid "{count} finished"
+msgstr "{count} finished"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "read 1 file"
+msgstr "read 1 file"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "read {count} files"
+msgstr "read {count} files"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "edited 1 file"
+msgstr "edited 1 file"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "edited {count} files"
+msgstr "edited {count} files"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "searched once"
+msgstr "searched once"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "searched twice"
+msgstr "searched twice"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "searched {count} times"
+msgstr "searched {count} times"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "ran 1 command"
+msgstr "ran 1 command"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "ran {count} commands"
+msgstr "ran {count} commands"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "fetched 1 page"
+msgstr "fetched 1 page"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "fetched {count} pages"
+msgstr "fetched {count} pages"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "ran 1 agent task"
+msgstr "ran 1 agent task"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "ran {count} agent tasks"
+msgstr "ran {count} agent tasks"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "used 1 tool"
+msgstr "used 1 tool"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "used {count} tools"
+msgstr "used {count} tools"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "ran 1 tool call"
+msgstr "ran 1 tool call"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "ran {count} tool calls"
+msgstr "ran {count} tool calls"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "1 other action"
+msgstr "1 other action"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "{count} other actions"
+msgstr "{count} other actions"
+
+#. js-lingui-explicit-id
+#: src/components/chat/useSubagentRunControls.ts
+msgid "Could not update the subagent"
+msgstr "Could not update the subagent"
+
+#. js-lingui-explicit-id
+#: src/components/chat/useSubagentRunControls.ts
+msgid "The subagent request failed. Try again."
+msgstr "The subagent request failed. Try again."
+
+#. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
 #: src/components/chat/ComposerAutomationSetupBanner.tsx
 #: src/components/chat/FileLineCommentBox.tsx
@@ -318,6 +938,8 @@ msgid "Detached HEAD: checkout a branch before pushing."
 msgstr "Detached HEAD: checkout a branch before pushing."
 
 #. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.logic.ts
+#: src/components/chat/SubagentThreadIntro.tsx
 #: src/components/GitCommitDialog.tsx
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
 #: src/lib/gitLocalization.ts
@@ -533,6 +1155,8 @@ msgid "Pushed"
 msgstr "Pushed"
 
 #. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.logic.ts
+#: src/components/chat/SubagentThreadIntro.tsx
 #: src/lib/liveActivityPresentation.ts
 msgid "Starting"
 msgstr "Starting"
@@ -565,6 +1189,9 @@ msgid "Completed"
 msgstr "Completed"
 
 #. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.logic.ts
+#: src/components/chat/SubagentThreadIntro.tsx
+#: src/components/chat/TimelineWorkEntryRow.tsx
 #: src/lib/liveActivityPresentation.ts
 #: src/lib/subagentPresentation.ts
 msgid "Failed"
@@ -933,17 +1560,23 @@ msgid "{count}y"
 msgstr "{count}y"
 
 #. js-lingui-explicit-id
+#: src/components/chat/agentActivity.logic.ts
+#: src/components/chat/ComposerSubagentStrip.logic.ts
 #: src/lib/subagentPresentation.ts
 msgid "Subagent"
 msgstr "Subagent"
 
 #. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.logic.ts
+#: src/components/chat/SubagentThreadIntro.tsx
 #: src/components/chat/TimelineWorkEntryRow.tsx
 #: src/lib/subagentPresentation.ts
 msgid "Running"
 msgstr "Running"
 
 #. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.logic.ts
+#: src/components/chat/SubagentThreadIntro.tsx
 #: src/lib/subagentPresentation.ts
 msgid "Stopped"
 msgstr "Stopped"
@@ -2183,11 +2816,6 @@ msgstr "Add feedback to refine the plan, or leave this blank to implement it"
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
-msgid "Message this subagent while it works"
-msgstr "Message this subagent while it works"
-
-#. js-lingui-explicit-id
-#: src/components/ChatView.tsx
 msgid "Ask for follow-up changes"
 msgstr "Ask for follow-up changes"
 
@@ -2452,6 +3080,7 @@ msgid "Message (leave empty to generate)"
 msgstr "Message (leave empty to generate)"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerQueuedHeader.tsx
 #: src/components/GitCommitDialog.tsx
 #: src/components/settings/ManagedSkillDetailView.tsx
 msgid "Edit"
@@ -2599,7 +3228,7 @@ msgid "{provider} usage"
 msgstr "{provider} usage"
 
 #. js-lingui-explicit-id
-#: src/components/chat/MessagesTimeline.tsx
+#: src/components/chat/MessagesTimeline.logic.ts
 #: src/components/ProviderUsagePanelContent.tsx
 msgid "Details"
 msgstr "Details"
@@ -5048,18 +5677,8 @@ msgstr "Claude may have accepted the request. Sending is paused until its status
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
-msgid "Compacting also processes the full history once. Later requests use its summary."
-msgstr "Compacting also processes the full history once. Later requests use its summary."
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
 msgid "Compact this conversation"
 msgstr "Compact this conversation"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
-msgid "Continue with full context"
-msgstr "Continue with full context"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
@@ -5068,23 +5687,8 @@ msgstr "Process the existing history and save its summary"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
-msgid "Send the saved message with the existing history"
-msgstr "Send the saved message with the existing history"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
-msgid "Compact, then send"
-msgstr "Compact, then send"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
 msgid "Cancel this send"
 msgstr "Cancel this send"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
-msgid "Keep this conversation without sending the held message"
-msgstr "Keep this conversation without sending the held message"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
@@ -5141,6 +5745,7 @@ msgstr "Status"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/chat/SubagentRunCard.logic.ts
 msgid "Subagents"
 msgstr "Subagents"
 
@@ -5411,6 +6016,7 @@ msgstr "Mode"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerExtrasMenu.tsx
+#: src/components/chat/TimelineWorkEntryRow.tsx
 msgid "Fast"
 msgstr "Fast"
 
@@ -5476,7 +6082,7 @@ msgstr "Turn debug mode on"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerExtrasPanel.tsx
-#: src/components/chat/ProviderHandoffDivider.tsx
+#: src/components/chat/FastModeBadgeIcon.tsx
 msgid "Fast mode"
 msgstr "Fast mode"
 
@@ -5955,36 +6561,6 @@ msgstr "Change time"
 #: src/components/chat/ComposerSnoozeNotice.tsx
 msgid "Pick date & time…"
 msgstr "Pick date & time…"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerSubagentStrip.tsx
-msgid "Stop all subagents"
-msgstr "Stop all subagents"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerSubagentStrip.tsx
-msgid "Stop all running subagents"
-msgstr "Stop all running subagents"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerSubagentStrip.tsx
-msgid "Expand subagent strip"
-msgstr "Expand subagent strip"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerSubagentStrip.tsx
-msgid "Collapse subagent strip"
-msgstr "Collapse subagent strip"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerSubagentStrip.tsx
-msgid "Run in background (ctrl+b)"
-msgstr "Run in background (ctrl+b)"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerSubagentStrip.tsx
-msgid "Stop subagent"
-msgstr "Stop subagent"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerTipRow.tsx
@@ -6629,6 +7205,11 @@ msgid "Structured answers can't be edited and resent."
 msgstr "Structured answers can't be edited and resent."
 
 #. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "Worked for {elapsed}"
+msgstr "Worked for {elapsed}"
+
+#. js-lingui-explicit-id
 #: src/components/chat/MessagesTimeline.tsx
 msgid "Checking message delivery…"
 msgstr "Checking message delivery…"
@@ -6644,6 +7225,7 @@ msgid "Preparing worktree..."
 msgstr "Preparing worktree..."
 
 #. js-lingui-explicit-id
+#: src/components/chat/backgroundTaskRow.logic.ts
 #: src/components/chat/MessagesTimeline.tsx
 msgid "failed"
 msgstr "failed"
@@ -6700,18 +7282,11 @@ msgstr "+{count} more tool calls"
 
 #. js-lingui-explicit-id
 #: src/components/chat/MessagesTimeline.tsx
-msgid "Worked for {elapsed}"
-msgstr "Worked for {elapsed}"
-
-#. js-lingui-explicit-id
-#: src/components/chat/MessagesTimeline.tsx
-#: src/components/chat/toolCallGroup.logic.ts
 msgid "Edited 1 file"
 msgstr "Edited 1 file"
 
 #. js-lingui-explicit-id
 #: src/components/chat/MessagesTimeline.tsx
-#: src/components/chat/toolCallGroup.logic.ts
 msgid "Edited {count} files"
 msgstr "Edited {count} files"
 
@@ -6764,11 +7339,6 @@ msgstr "Goal achieved in {duration}"
 #: src/components/chat/MessagesTimeline.tsx
 msgid "Goal achieved"
 msgstr "Goal achieved"
-
-#. js-lingui-explicit-id
-#: src/components/chat/MessagesTimeline.tsx
-msgid "Working for"
-msgstr "Working for"
 
 #. js-lingui-explicit-id
 #: src/components/chat/MessagesTimeline.tsx
@@ -7100,6 +7670,11 @@ msgstr "Unable to close terminal"
 #: src/components/chat/SingleChatSurface.tsx
 msgid "Please try again."
 msgstr "Please try again."
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.tsx
+msgid "Run in background (ctrl+b)"
+msgstr "Run in background (ctrl+b)"
 
 #. js-lingui-explicit-id
 #: src/components/chat/SynaraThreadCreationCard.tsx
@@ -7632,6 +8207,11 @@ msgid "Try again."
 msgstr "Try again."
 
 #. js-lingui-explicit-id
+#: src/components/chat/TurnHeaderLine.tsx
+msgid "Working for"
+msgstr "Working for"
+
+#. js-lingui-explicit-id
 #: src/components/chat/UserInputQuestionForm.tsx
 msgid "{current} of {total}"
 msgstr "{current} of {total}"
@@ -7662,76 +8242,7 @@ msgid "Open thread"
 msgstr "Open thread"
 
 #. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "Ran 1 command"
-msgstr "Ran 1 command"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "Ran {count} commands"
-msgstr "Ran {count} commands"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "Read 1 file"
-msgstr "Read 1 file"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "Read {count} files"
-msgstr "Read {count} files"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "Searched 1 file"
-msgstr "Searched 1 file"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "Searched {count} files"
-msgstr "Searched {count} files"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "Ran 1 agent task"
-msgstr "Ran 1 agent task"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "Ran {count} agent tasks"
-msgstr "Ran {count} agent tasks"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "Used 1 tool"
-msgstr "Used 1 tool"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "Used {count} tools"
-msgstr "Used {count} tools"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "Ran 1 tool call"
-msgstr "Ran 1 tool call"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "Ran {count} tool calls"
-msgstr "Ran {count} tool calls"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "1 other tool call"
-msgstr "1 other tool call"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "{count} other tool calls"
-msgstr "{count} other tool calls"
-
-#. js-lingui-explicit-id
+#: src/components/chat/backgroundTaskRow.logic.ts
 #: src/components/chat/toolCallGroup.logic.ts
 msgid ", "
 msgstr ", "
@@ -7824,6 +8335,10 @@ msgstr "Archived threads"
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Artifacts, /design and /slides"
 msgstr "Artifacts, /design and /slides"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Ask before resuming a long idle session"
+msgstr "Ask before resuming a long idle session"
 
 #: src/components/chat/ProviderModelPicker.tsx
 msgid "Back"
@@ -8137,6 +8652,10 @@ msgstr "No window is raised; the agent continues in the background"
 #: src/settingsNavigation.ts
 msgid "Notifications"
 msgstr "Notifications"
+
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Off by default, like Claude Code. When on, after 70 minutes without a response in a session of 100k tokens or more, hold your message and offer to resume from a summary. Messages from agents and automations are never held."
+msgstr "Off by default, like Claude Code. When on, after 70 minutes without a response in a session of 100k tokens or more, hold your message and offer to resume from a summary. Messages from agents and automations are never held."
 
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Oh My Pi agent directory"
