@@ -5260,7 +5260,7 @@ msgstr "不再询问"
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
 msgid "Resume as-is now and stop asking. Turn it back on in Settings → Providers"
-msgstr "现在按原样恢复，以后不再询问。可在“设置 → 提供商”中重新开启"
+msgstr "现在按原样恢复，以后不再询问。可在“设置 → 模型”中重新开启"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerClaudeCacheReviewPanel.tsx

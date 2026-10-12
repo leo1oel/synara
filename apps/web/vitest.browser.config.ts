@@ -17,6 +17,9 @@ export default mergeConfig(
       },
     },
     test: {
+      // Lattice-localized components call the catalog while rendering, so browser
+      // tests need the same activated locale and useLingui binding as unit tests.
+      setupFiles: [fileURLToPath(new URL("./vitest.setup.ts", import.meta.url))],
       include: [
         "src/components/**/*.browser.tsx",
         "src/hooks/**/*.browser.ts",
