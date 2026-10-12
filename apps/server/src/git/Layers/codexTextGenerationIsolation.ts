@@ -60,8 +60,11 @@ function readMacManagedPreference(
       typeof cause === "object" && cause !== null && "stderr" in cause
         ? String((cause as { readonly stderr?: unknown }).stderr ?? "")
         : "";
+    // An absent domain holds no managed preference. macOS 27 reports it as
+    // "Domain 'com.openai.codex' not found." rather than "does not exist".
     if (
       /does not exist/i.test(stderr) ||
+      stderr.trim() === "Error: Domain 'com.openai.codex' not found." ||
       stderr.trim() === `Error: Could not find key '${key}' in domain 'com.openai.codex'.`
     ) {
       return undefined;
