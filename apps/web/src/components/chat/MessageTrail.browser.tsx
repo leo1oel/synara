@@ -6,6 +6,7 @@ import { Profiler } from "react";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
 
+import { i18n } from "~/i18n";
 import { MessageTrail } from "./MessageTrail";
 import { createActiveTrailStore, type MessageTrailItem } from "./messageTrail.logic";
 import {
@@ -32,6 +33,9 @@ function viewport() {
 function frame() {
   return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 }
+
+// MessageTrail's labels come from the Lattice catalog.
+i18n.loadAndActivate({ locale: "en", messages: {} });
 
 beforeEach(() => {
   document.documentElement.style.setProperty("--color-text-foreground", "#202020");
