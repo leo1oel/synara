@@ -124,9 +124,10 @@ function RuntimeModeMenuItem({
   return (
     <MenuRadioItem
       value={mode}
+      preserveChildLayout
+      closeOnClick
       className={cn(
-        "runtime-mode-menu-item",
-        mode === "auto" && "runtime-mode-menu-item--auto",
+        "runtime-mode-menu-item data-checked:bg-[var(--color-background-button-secondary-hover)]",
         accent &&
           "text-[var(--runtime-full-access-accent)] data-highlighted:text-[var(--runtime-full-access-accent)]",
       )}
@@ -177,6 +178,7 @@ export interface RuntimeUsageControlsProps {
   runtimeModel?: ProviderModelDescriptor | undefined;
   providerStatus?: ServerProviderStatus | null | undefined;
   runtimeMode?: RuntimeMode | undefined;
+  activeRuntimeMode?: RuntimeMode | undefined;
   onRuntimeModeChange?: ((mode: RuntimeMode) => void) | undefined;
   contextWindow?: ContextWindowSnapshot | null | undefined;
   cumulativeCostUsd?: number | null | undefined;
@@ -194,6 +196,7 @@ export function RuntimeUsageControls({
   runtimeModel,
   providerStatus,
   runtimeMode,
+  activeRuntimeMode,
   onRuntimeModeChange,
   className,
   hideLabel: hideLabelProp,
@@ -202,6 +205,10 @@ export function RuntimeUsageControls({
     provider !== undefined &&
     providerModelSupportsAutoRuntimeMode(provider, runtimeModel, providerStatus);
   const runtimePresentation = RUNTIME_MODE_PRESENTATION[runtimeMode ?? "approval-required"];
+  const runtimeModePending = activeRuntimeMode !== undefined && activeRuntimeMode !== runtimeMode;
+  const pendingDescription = runtimeModePending
+    ? ` Applies next turn. This turn still uses ${RUNTIME_MODE_PRESENTATION[activeRuntimeMode].label}.`
+    : "";
   const hideLabel = hideLabelProp ?? false;
   return (
     <div
@@ -223,7 +230,7 @@ export function RuntimeUsageControls({
                   runtimeMode === "auto" && RUNTIME_AUTO_ACCENT_CLASS_NAME,
                   runtimeMode === "full-access" && RUNTIME_FULL_ACCESS_ACCENT_CLASS_NAME,
                 )}
-                title={`${runtimePresentation.label}: ${runtimePresentation.description}. Click to change permissions.`}
+                title={`${runtimePresentation.label}: ${runtimePresentation.description}.${pendingDescription} Click to change permissions.`}
               />
             }
           >
@@ -237,6 +244,7 @@ export function RuntimeUsageControls({
               )}
               <span className={cn("truncate", hideLabel ? "sr-only" : "@max-[480px]:sr-only")}>
                 {runtimePresentation.label}
+                {runtimeModePending ? " (next turn)" : ""}
               </span>
               <ChevronDownIcon
                 className={cn(

@@ -598,6 +598,7 @@ const makeCodexTextGeneration = Effect.gen(function* () {
           try: () =>
             prepareCodexAuthTracking({
               env: instanceLaunchEnv,
+              ...(explicitProviderEnvironment ? { explicitProviderEnvironment } : {}),
               ...(resolvedCodexHomePath ? { homePath: resolvedCodexHomePath } : {}),
               ...(resolvedCodexAuthHomePath ? { shadowHomePath: resolvedCodexAuthHomePath } : {}),
               ...(resolvedCodexAccountId ? { accountId: resolvedCodexAccountId } : {}),

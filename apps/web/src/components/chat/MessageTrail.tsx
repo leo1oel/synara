@@ -17,6 +17,8 @@ import { type MessageId } from "@synara/contracts";
 import {
   useEffect,
   useId,
+  useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
@@ -41,6 +43,7 @@ import {
   computeSigma,
   computeTickStyles,
   computeTrailGeometry,
+  computeTrailWindow,
   computeAudioTickWidths,
   createAudioLevelShaper,
   stepAudioEnvelope,
@@ -110,11 +113,13 @@ export function MessageTrail({
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const tooltipMessageRef = useRef<HTMLDivElement | null>(null);
   const tooltipResponseRef = useRef<HTMLDivElement | null>(null);
-  const tickRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const tickRefs = useRef(new Map<number, HTMLButtonElement>());
+  const pendingFocusRef = useRef<number | null>(null);
   const tooltipId = useId();
 
   const [hasGutter, setHasGutter] = useState(false);
   const [rovingIndex, setRovingIndex] = useState(0);
+  const [viewportBounds, setViewportBounds] = useState({ scrollTop: 0, height: 0 });
 
   // Reading-position highlights — fed by the timeline via a stable store so only
   // this rail re-renders when they change.
@@ -123,13 +128,12 @@ export function MessageTrail({
     activeStore.get,
     activeStore.get,
   );
-  const anchorIndex = items.findIndex((item) => item.id === trailSnapshot.currentId);
-  const visibleIdSet = new Set(trailSnapshot.visibleIds);
-  const visibleIndexes: number[] = [];
-  items.forEach((item, index) => {
-    if (visibleIdSet.has(item.id)) {
-      visibleIndexes.push(index);
-    }
+  const indexById = useMemo(() => new Map(items.map((item, index) => [item.id, index])), [items]);
+  const anchorIndex =
+    trailSnapshot.currentId === null ? -1 : (indexById.get(trailSnapshot.currentId) ?? -1);
+  const visibleIndexes = trailSnapshot.visibleIds.flatMap((id) => {
+    const index = indexById.get(id);
+    return index === undefined ? [] : [index];
   });
   const visibleIndexSet = new Set(visibleIndexes);
 
@@ -138,7 +142,21 @@ export function MessageTrail({
   // Tick layout depends only on the message count (fixed spacing, natural content
   // height) — never on the measured viewport — so the capped/scrolling viewport
   // can't feed its height back into the layout (no ResizeObserver loop).
-  const geometry = computeTrailGeometry({ count: items.length, spacingPx: TICK_SPACING_PX });
+  const geometry = useMemo(
+    () => computeTrailGeometry({ count: items.length, spacingPx: TICK_SPACING_PX }),
+    [items.length],
+  );
+  const trailWindow = computeTrailWindow(geometry, viewportBounds.scrollTop, viewportBounds.height);
+  const trailWindowRef = useRef(trailWindow);
+  const tabStop = clampNumber(rovingIndex, 0, Math.max(0, items.length - 1));
+  const renderedIndexes = Array.from(
+    { length: trailWindow.end - trailWindow.start },
+    (_, index) => trailWindow.start + index,
+  );
+  // Keep exactly one tab stop mounted when the rail scrolls away from it.
+  if (items.length > 0 && (tabStop < trailWindow.start || tabStop >= trailWindow.end)) {
+    renderedIndexes.push(tabStop);
+  }
 
   // --- Hot-path refs (read inside rAF; never trigger renders) ---------------
   const rafIdRef = useRef<number | null>(null);
@@ -171,19 +189,14 @@ export function MessageTrail({
     visibleIndexesRef.current = visibleIndexes;
     onSelectRef.current = onSelect;
     visibleRef.current = visible;
-    // Keep the tick-ref array sized to the message count. Truncate only —
-    // growth happens via the JSX ref callbacks, which run before this effect,
-    // and a full refill here would wipe the elements they just attached.
-    if (tickRefs.current.length > items.length) {
-      tickRefs.current.length = items.length;
-    }
-  }, [geometry, items, anchorIndex, visibleIndexes, onSelect, visible]);
+    trailWindowRef.current = trailWindow;
+  }, [geometry, items, anchorIndex, visibleIndexes, onSelect, visible, trailWindow]);
 
   // --- Imperative writers ----------------------------------------------------
   const writeStyles = (styles: readonly TickStyle[]) => {
     const refs = tickRefs.current;
     for (let i = 0; i < styles.length; i += 1) {
-      const el = refs[i];
+      const el = refs.get(trailWindowRef.current.start + i);
       if (!el) {
         continue;
       }
@@ -235,12 +248,12 @@ export function MessageTrail({
   const applyHighlightFloors = (styles: TickStyle[]) => {
     const anchorIndexValue = anchorIndexRef.current;
     for (const index of visibleIndexesRef.current) {
-      const style = styles[index];
+      const style = styles[index - trailWindowRef.current.start];
       if (style) {
         style.opacity = Math.max(style.opacity, TICK_VISIBLE_OPACITY);
       }
     }
-    const anchorStyle = anchorIndexValue >= 0 ? styles[anchorIndexValue] : undefined;
+    const anchorStyle = styles[anchorIndexValue - trailWindowRef.current.start];
     if (anchorStyle) {
       anchorStyle.opacity = Math.max(anchorStyle.opacity, TICK_ANCHOR_OPACITY);
     }
@@ -249,8 +262,8 @@ export function MessageTrail({
   // Pointer/keyboard away: restore the resting rail (anchor tick highlighted).
   const applyRest = () => {
     const styles = computeRestStyles(
-      itemsRef.current.length,
-      anchorIndexRef.current,
+      trailWindowRef.current.end - trailWindowRef.current.start,
+      anchorIndexRef.current - trailWindowRef.current.start,
       TICK_BASE_W,
       TICK_REST_OPACITY,
       TICK_ANCHOR_OPACITY,
@@ -275,6 +288,7 @@ export function MessageTrail({
     );
     const widths = computeAudioTickWidths({
       count: styles.length,
+      startIndex: trailWindowRef.current.start,
       centerIndex,
       history,
       framesPerTick: AUDIO_FRAMES_PER_TICK,
@@ -331,9 +345,7 @@ export function MessageTrail({
     if (!geometryValue) {
       return;
     }
-    const refs = tickRefs.current;
-    for (let i = 0; i < refs.length; i += 1) {
-      const el = refs[i];
+    for (const [i, el] of tickRefs.current) {
       if (!el) {
         continue;
       }
@@ -352,7 +364,8 @@ export function MessageTrail({
     if (!geometry || !visibleRef.current) {
       return;
     }
-    const count = itemsRef.current.length;
+    const { start, end } = trailWindowRef.current;
+    const count = end - start;
     if (count === 0) {
       return;
     }
@@ -369,7 +382,7 @@ export function MessageTrail({
       applyRest();
       return;
     }
-    const anchor = anchorIndexRef.current;
+    const anchor = anchorIndexRef.current - start;
     const focusedIndex = computeFocusedIndex(activeY, geometry);
 
     let styles: TickStyle[];
@@ -383,7 +396,7 @@ export function MessageTrail({
         TICK_REST_OPACITY,
         TICK_ANCHOR_OPACITY,
       );
-      const focusedStyle = styles[focusedIndex];
+      const focusedStyle = styles[focusedIndex - start];
       if (focusedStyle) {
         focusedStyle.width = TICK_MAX_W;
       }
@@ -392,7 +405,7 @@ export function MessageTrail({
       // the focal tick reaches the full TICK_MAX_W regardless of how tight the
       // vertical spacing is — it never overlaps its neighbours.
       const sigma = computeSigma(geometry.spacing);
-      const weights = computeGaussianWeights(geometry.centerYs, activeY, sigma);
+      const weights = computeGaussianWeights(geometry.centerYs.slice(start, end), activeY, sigma);
       styles = computeTickStyles(
         weights,
         anchor,
@@ -404,7 +417,7 @@ export function MessageTrail({
     }
     applyHighlightFloors(styles);
     // Darken only the focused tick — neighbours keep their state colour.
-    const focusedStyle = styles[focusedIndex];
+    const focusedStyle = styles[focusedIndex - start];
     if (focusedStyle) {
       focusedStyle.opacity = TICK_FOCUS_OPACITY;
     }
@@ -461,10 +474,45 @@ export function MessageTrail({
     };
   }, [contentInsetRightPx]);
 
-  // Reposition the ticks whenever the layout changes (count → new centres).
+  // Only this small rail window changes when its own viewport scrolls/resizes.
+  // Fixed tick positions and the transcript scroll engine remain independent.
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const updateBounds = () => {
+      const scrollTop = viewport.scrollTop;
+      const height = viewport.clientHeight;
+      setViewportBounds((current) =>
+        current.scrollTop === scrollTop && current.height === height
+          ? current
+          : { scrollTop, height },
+      );
+    };
+    updateBounds();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(updateBounds);
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, []);
+
+  useLayoutEffect(() => {
+    const index = pendingFocusRef.current;
+    if (index === null) return;
+    const tick = tickRefs.current.get(index);
+    if (tick) {
+      pendingFocusRef.current = null;
+      tick.focus({ preventScroll: true });
+    }
+  }, [rovingIndex, trailWindow.start, trailWindow.end]);
+
+  // Reposition committed ticks, then repaint active magnification on the new window.
+  // A scroll frame can run before React mounts that window and publishes its ref.
   useEffect(() => {
     layoutTicks();
-  }, [geometry, layoutTicks]);
+    if (latestPointerClientYRef.current !== null || focusOverrideIndexRef.current !== null) {
+      scheduleFrame();
+    }
+  }, [geometry, layoutTicks, scheduleFrame, trailWindow.start, trailWindow.end]);
 
   // Refresh idle highlights when the current anchor or visible-message set changes.
   useEffect(() => {
@@ -569,6 +617,9 @@ export function MessageTrail({
   // Rail scrolling under a stationary pointer changes which tick is focused, so
   // keep the magnification + tooltip in sync while the pointer/keyboard is engaged.
   const handleScroll = () => {
+    const viewport = viewportRef.current;
+    if (viewport)
+      setViewportBounds({ scrollTop: viewport.scrollTop, height: viewport.clientHeight });
     if (latestPointerClientYRef.current !== null || focusOverrideIndexRef.current !== null) {
       scheduleFrame();
     }
@@ -591,8 +642,16 @@ export function MessageTrail({
 
   // --- Keyboard: one tab stop (roving), arrows move, Enter jumps -------------
   const focusTick = (index: number) => {
+    const viewport = viewportRef.current;
+    const centerY = geometryRef.current?.centerYs[index];
+    if (viewport && centerY !== undefined) {
+      viewport.scrollTop = Math.max(0, centerY - viewport.clientHeight / 2);
+      setViewportBounds({ scrollTop: viewport.scrollTop, height: viewport.clientHeight });
+    }
+    const mountedTick = tickRefs.current.get(index);
+    pendingFocusRef.current = mountedTick ? null : index;
     setRovingIndex(index);
-    tickRefs.current[index]?.focus();
+    mountedTick?.focus({ preventScroll: true });
   };
 
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
@@ -628,7 +687,7 @@ export function MessageTrail({
         break;
       }
       case "Escape":
-        tickRefs.current[current]?.blur();
+        tickRefs.current.get(current)?.blur();
         break;
       default:
         break;
@@ -636,6 +695,7 @@ export function MessageTrail({
   };
 
   const handleTickFocus = (index: number) => {
+    setRovingIndex(index);
     focusOverrideIndexRef.current = index;
     const geometry = geometryRef.current;
     if (geometry) {
@@ -654,8 +714,6 @@ export function MessageTrail({
       applyRest();
     }
   };
-
-  const tabStop = clampNumber(rovingIndex, 0, Math.max(0, items.length - 1));
 
   return (
     <>
@@ -702,34 +760,39 @@ export function MessageTrail({
             className="relative w-full"
             style={{ height: geometry?.contentHeight }}
           >
-            {items.map((item, index) => (
-              <button
-                key={item.id}
-                ref={(el) => {
-                  tickRefs.current[index] = el;
-                }}
-                type="button"
-                tabIndex={visible && index === tabStop ? 0 : -1}
-                aria-label={`Message ${item.ordinal}: ${item.preview.slice(0, 60)}`}
-                aria-describedby={tooltipId}
-                aria-current={index === anchorIndex ? "location" : undefined}
-                onFocus={() => handleTickFocus(index)}
-                className="absolute rounded-full transition-[width,opacity] duration-[90ms] ease-out outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-border)] motion-reduce:transition-none"
-                style={{
-                  left: TICK_LEFT_PAD_PX,
-                  height: TICK_HEIGHT_PX,
-                  width: TICK_BASE_W,
-                  opacity:
-                    index === anchorIndex
-                      ? TICK_ANCHOR_OPACITY
-                      : visibleIndexSet.has(index)
-                        ? TICK_VISIBLE_OPACITY
-                        : TICK_REST_OPACITY,
-                  backgroundColor: "var(--color-text-foreground)",
-                  willChange: "width, opacity",
-                }}
-              />
-            ))}
+            {renderedIndexes.map((index) => {
+              const item = items[index]!;
+              return (
+                <button
+                  key={item.id}
+                  ref={(el) => {
+                    if (el) tickRefs.current.set(index, el);
+                    else tickRefs.current.delete(index);
+                  }}
+                  type="button"
+                  tabIndex={visible && index === tabStop ? 0 : -1}
+                  aria-label={`Message ${item.ordinal}: ${item.preview.slice(0, 60)}`}
+                  aria-describedby={tooltipId}
+                  aria-current={index === anchorIndex ? "location" : undefined}
+                  onFocus={() => handleTickFocus(index)}
+                  className="absolute rounded-full transition-[width,opacity] duration-[90ms] ease-out outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-border)] motion-reduce:transition-none"
+                  style={{
+                    left: TICK_LEFT_PAD_PX,
+                    top: (geometry?.centerYs[index] ?? 0) - TICK_HEIGHT_PX / 2,
+                    height: TICK_HEIGHT_PX,
+                    width: TICK_BASE_W,
+                    opacity:
+                      index === anchorIndex
+                        ? TICK_ANCHOR_OPACITY
+                        : visibleIndexSet.has(index)
+                          ? TICK_VISIBLE_OPACITY
+                          : TICK_REST_OPACITY,
+                    backgroundColor: "var(--color-text-foreground)",
+                    willChange: "width, opacity",
+                  }}
+                />
+              );
+            })}
           </div>
         </div>
         <div

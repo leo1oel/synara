@@ -7,8 +7,8 @@ same instructions and memory, and files the threads deliver land in one shared L
 A hub does not need a repository. It works just as well for research, writing, planning, or any
 other non-code work.
 
-> **Synara Beta only.** Hubs ship in Synara Beta. Stable does not show them, and any hub folder
-> there appears as an ordinary project.
+> **Stable and Beta.** Hubs are available in Synara 1.0.2 Stable and Synara Beta.
+> Each app keeps its own Hubs, chats, settings, and data home; Beta data is not copied back to Stable.
 
 > **Compatibility:** Existing hubs keep their files and saved settings. The on-disk parent folder
 > remains `~/Documents/Synara/Groups/`; the stored feature key and API identifiers retain `groups`.
@@ -95,6 +95,13 @@ conversation as part of its reply, each with a link to the thread.
 Inside a thread the coordinator started, the task is labelled with the hub, for example **Sent by
 the Release Synara coordinator**.
 Click it to go back to the coordinator conversation.
+
+Pending approvals from hub threads also appear above the coordinator's composer. Each card
+names the thread (click to open it), shows the command or tool request, and offers the same
+choices as the thread: **Approve once**, **Always allow this session** when available,
+**Decline**, and **Cancel turn**. You can answer several threads from here. Answering in either
+conversation clears the request in both. These choices are human interface actions; the
+coordinator and other agents have no approval tool.
 
 Useful requests:
 

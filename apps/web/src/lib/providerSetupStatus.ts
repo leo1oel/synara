@@ -16,7 +16,11 @@ export function providerSetupStatusLabel(input: {
   if (!status.available) return i18n._("Unavailable");
   if (status.authStatus === "unauthenticated") return i18n._("Needs sign-in");
   if (status.status !== "ready") return i18n._("Needs attention");
-  if (status.authStatus === "unknown") return i18n._("Installed · sign-in not verified");
+  if (status.authStatus === "unknown") {
+    return (status.driver ?? status.provider) === "opencode"
+      ? i18n._("Installed · authentication managed by OpenCode")
+      : i18n._("Installed · sign-in not verified");
+  }
   return i18n._("Connected");
 }
 

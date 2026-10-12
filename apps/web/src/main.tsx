@@ -8,6 +8,7 @@ import "@fontsource-variable/inter";
 import "./index.css";
 
 import { appHistory } from "./appNavigation";
+import { revealHubsRailItemOnce } from "./appSettings";
 import { getRouter } from "./router";
 import { APP_DISPLAY_NAME } from "./branding";
 import { initializeEmbedMode } from "./embedMode";
@@ -41,6 +42,8 @@ startLatticeHostToolRelay({
   presentation: answerLatticePresentationRequest,
 });
 startLatticeHostThemeRelay();
+// Before the first render: settings hooks read the stored rail on mount.
+revealHubsRailItemOnce();
 const router = getRouter(appHistory);
 const rootElement = document.getElementById("root") as HTMLElement;
 

@@ -358,10 +358,11 @@ function getBranchTriggerLabel(input: {
   activeWorktreePath: string | null;
   effectiveEnvMode: EnvMode;
   resolvedActiveBranch: string | null;
+  isDetachedCheckout: boolean;
 }): string {
   const { activeWorktreePath, effectiveEnvMode, resolvedActiveBranch } = input;
   if (!resolvedActiveBranch) {
-    return "Select branch";
+    return input.isDetachedCheckout ? "Detached HEAD" : "Select branch";
   }
   if (effectiveEnvMode === "worktree" && !activeWorktreePath) {
     return `From ${resolvedActiveBranch}`;
@@ -428,12 +429,15 @@ export function BranchToolbarBranchSelector({
   );
   const hasOriginRemote = branchesQuery.data?.hasOriginRemote ?? false;
   const currentGitBranch =
-    branchStatusQuery.data?.branch ?? branches.find((branch) => branch.current)?.name ?? null;
+    branchStatusQuery.data !== undefined
+      ? branchStatusQuery.data.branch
+      : (branches.find((branch) => branch.current)?.name ?? null);
   const canonicalActiveBranch = resolveBranchToolbarValue({
     envMode: effectiveEnvMode,
     activeWorktreePath,
     activeThreadBranch,
     currentGitBranch,
+    gitStatusResolved: branchStatusQuery.data !== undefined,
   });
   const branchNames = useMemo(() => branches.map((branch) => branch.name), [branches]);
   const branchByName = useMemo(
@@ -793,6 +797,10 @@ export function BranchToolbarBranchSelector({
       activeWorktreePath,
       effectiveEnvMode,
       resolvedActiveBranch,
+      isDetachedCheckout:
+        branchesQuery.data?.isRepo === true &&
+        branchStatusQuery.data?.branch === null &&
+        (effectiveEnvMode !== "worktree" || activeWorktreePath !== null),
     }),
   );
   const panelPickerItemClassName = isPanel ? "rounded-md px-2 py-1 text-ui sm:text-ui" : undefined;

@@ -18,6 +18,7 @@ import { cn } from "~/lib/utils";
 import type { ProviderOptions } from "../../providerModelOptions";
 import { MenuSub, MenuSubTriggerBase } from "../ui/menu";
 import { Slider } from "../ui/slider";
+import type { FastModeNotice } from "~/lib/fastModeState";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import {
   getComposerTraitSelection,
@@ -40,6 +41,7 @@ type ComposerEffortSliderCardProps = {
   prompt: string;
   onPromptChange: (prompt: string) => void;
   renderModelSubmenuPopup?: (onAfterSelection: () => void) => ReactNode;
+  fastModeNotice?: FastModeNotice | null | undefined;
 };
 
 const CARD_ICON_BUTTON_CLASS_NAME =
@@ -109,6 +111,7 @@ export function ComposerEffortSliderCard(props: ComposerEffortSliderCardProps) {
           <FastModeToggle
             tone="accent"
             enabled={fastModeEnabled}
+            notice={props.fastModeNotice}
             onToggle={() => commitTrait({ fastMode: !fastModeEnabled })}
           />
         ) : (

@@ -83,6 +83,7 @@ function serverSettings(overrides: Partial<ServerSettings["providers"]> = {}): S
         homePath: "",
         launchArgs: "",
         enableArtifacts: false,
+        confirmColdCacheResume: false,
       },
       cursor: { ...provider, binaryPath: "cursor-agent", apiEndpoint: "" },
       devin: { ...provider, binaryPath: "devin" },
@@ -140,6 +141,7 @@ describe("getVisibleProviderUpdateStatuses", () => {
           homePath: "",
           launchArgs: "",
           enableArtifacts: false,
+          confirmColdCacheResume: false,
           customModels: [],
         },
       });

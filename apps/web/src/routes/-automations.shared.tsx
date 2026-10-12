@@ -950,9 +950,6 @@ export function AutomationModelPicker({
       }}
       providerInstances={providerInstances}
       selectedProviderInstanceId={selectedProviderInstanceId}
-      onProviderModelRoleSelect={(model, options, instanceId) => {
-        onChange(buildModelSelection("omp", model, options, { instanceId }));
-      }}
     />
   );
 }

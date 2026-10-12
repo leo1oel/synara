@@ -162,7 +162,10 @@ type ProviderInstallTextKey =
   | "ompAgentDir";
 type ProviderInstallPasswordKey = "openCodeServerPassword";
 type ProviderInstallPasswordConfiguredKey = "openCodeServerPasswordConfigured";
-type ProviderInstallBooleanKey = "claudeEnableArtifacts" | "openCodeExperimentalWebSockets";
+type ProviderInstallBooleanKey =
+  | "claudeEnableArtifacts"
+  | "claudeConfirmColdCacheResume"
+  | "openCodeExperimentalWebSockets";
 
 type ProviderInstallTextField = {
   readonly kind: "text";
@@ -268,6 +271,18 @@ const PROVIDER_INSTALL_SETTINGS: readonly ProviderInstallSettings[] = [
             Claude Code keeps Artifacts off in embedded sessions. Turn this on so{" "}
             <code>/design</code> and <code>/slides</code> publish to claude.ai. Needs a claude.ai
             login on a Pro, Max, Team or Enterprise plan, and applies to new sessions.
+          </Trans>
+        ),
+      },
+      {
+        kind: "boolean",
+        settingsKey: "claudeConfirmColdCacheResume",
+        label: msg`Ask before resuming a long idle session`,
+        description: (
+          <Trans>
+            Off by default, like Claude Code. When on, after 70 minutes without a response in a
+            session of 100k tokens or more, hold your message and offer to resume from a summary.
+            Messages from agents and automations are never held.
           </Trans>
         ),
       },
@@ -926,6 +941,7 @@ function providerInstanceConfigKey(field: ProviderInstallField): string | null {
     // Every Claude account's sessions read Artifacts from the Claude provider setting,
     // never from an account's config, so the switch lives on the default account only.
     case "claudeEnableArtifacts":
+    case "claudeConfirmColdCacheResume":
       return null;
     case "piAgentDir":
     case "ompAgentDir":

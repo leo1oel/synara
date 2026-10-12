@@ -974,7 +974,9 @@ export function makeDroidAdapter(
                 if (!isFormElicitationRequest(params)) {
                   return { action: "decline" as const };
                 }
-                const questions = elicitationQuestionsFromRequest(params);
+                const questions = elicitationQuestionsFromRequest(params, {
+                  otherAnswerConvention: "droid",
+                });
                 if (questions.length === 0) {
                   return { action: "decline" as const };
                 }
@@ -1007,7 +1009,9 @@ export function makeDroidAdapter(
                   requestId: runtimeRequestId,
                   payload: { answers: resolved },
                 });
-                return elicitationResponseFromAnswers(params, resolved);
+                return elicitationResponseFromAnswers(params, resolved, {
+                  otherAnswerConvention: "droid",
+                });
               }),
             );
             const startedOption = yield* acp
