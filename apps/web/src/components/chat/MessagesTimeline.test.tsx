@@ -2668,7 +2668,8 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain("$ rg -n &quot;toolDetails&quot; apps/web/src");
     expect(markup).not.toContain("apps/web/src/session-logic.ts:55: toolDetails");
     expect(markup).not.toContain("Stdout");
-    expect(markup).toContain("Searched");
+    // Upstream 1.0.2 shows the literal command rather than its search summary.
+    expect(markup).toContain('data-command-literal="true"');
   });
 
   it("renders command text even when commandActions provide a short preview", async () => {
@@ -2713,7 +2714,7 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Listed");
+    expect(markup).toContain('data-command-literal="true"');
     expect(markup).not.toContain("data-work-entry-action-word");
     expect(markup).toContain("web/src");
     expect(markup).toContain(TOOLTIP_TRIGGER_MARKER);
