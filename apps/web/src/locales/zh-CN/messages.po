@@ -5580,6 +5580,7 @@ msgstr "第 {page} 页"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerLatticeContextBar.logic.ts
+#: src/components/chat/LatticeEmptyThread.logic.ts
 msgid "Slides"
 msgstr "幻灯片"
 
@@ -6582,6 +6583,121 @@ msgstr "创建仓库"
 #: src/components/chat/GitRepositorySetup.tsx
 msgid "Connect repository"
 msgstr "连接仓库"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Polish"
+msgstr "润色"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Polish this paragraph"
+msgstr "润色这段话"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Revise"
+msgstr "修改"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Revise to address a review comment"
+msgstr "按审稿意见修改"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Proofread"
+msgstr "校对"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Proofread grammar and spelling"
+msgstr "校对语法与拼写"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Check references"
+msgstr "检查引用"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Check my references"
+msgstr "帮我检查引用"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Polish the selected text for clarity and flow. Keep its meaning, citations and LaTeX commands unchanged."
+msgstr "润色选中的文字，让表达更清晰流畅。保持原意，不要改动引用和 LaTeX 命令。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Polish the paragraph at my cursor for clarity and flow. Keep its meaning, citations and LaTeX commands unchanged."
+msgstr "润色光标所在的段落，让表达更清晰流畅。保持原意，不要改动引用和 LaTeX 命令。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Revise the selected text to address this review comment: "
+msgstr "按这条审稿意见修改选中的文字："
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Revise the paper to address this review comment: "
+msgstr "按这条审稿意见修改论文："
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Proofread the selected text and fix grammar, spelling and punctuation. Leave the wording otherwise unchanged."
+msgstr "校对选中的文字，修正语法、拼写和标点，其余措辞保持不变。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Proofread the section at my cursor and fix grammar, spelling and punctuation. Leave the wording otherwise unchanged."
+msgstr "校对光标所在的小节，修正语法、拼写和标点，其余措辞保持不变。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Check the citations in the selected text: every \\cite key should exist in the bibliography with accurate details, and each cited work should support its claim. Fix what is wrong."
+msgstr "检查选中文字里的引用：每个 \\cite 键都应在参考文献中存在且信息准确，所引文献应能支撑对应的论述。发现问题就修正。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Check the citations in this paper: every \\cite key should exist in the bibliography with accurate details, and each cited work should support its claim. Fix what is wrong."
+msgstr "检查这篇论文的引用：每个 \\cite 键都应在参考文献中存在且信息准确，所引文献应能支撑对应的论述。发现问题就修正。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "line {line}"
+msgstr "第 {line} 行"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "lines {start}–{end}"
+msgstr "第 {start}–{end} 行"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "page {page}"
+msgstr "第 {page} 页"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.tsx
+msgid "Work on this paper"
+msgstr "一起改这篇论文"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.tsx
+msgid "These act on the selected text only"
+msgstr "只作用于选中的文字"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.tsx
+msgid "Select a passage in the editor to work on just that part"
+msgstr "在编辑器里选中一段，就只改那一段"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.tsx
+msgid "Selection"
+msgstr "选区"
 
 #. js-lingui-explicit-id
 #: src/components/chat/MessageCopyButton.tsx

@@ -5580,6 +5580,7 @@ msgstr "Page {page}"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerLatticeContextBar.logic.ts
+#: src/components/chat/LatticeEmptyThread.logic.ts
 msgid "Slides"
 msgstr "Slides"
 
@@ -6582,6 +6583,121 @@ msgstr "Create repository"
 #: src/components/chat/GitRepositorySetup.tsx
 msgid "Connect repository"
 msgstr "Connect repository"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Polish"
+msgstr "Polish"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Polish this paragraph"
+msgstr "Polish this paragraph"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Revise"
+msgstr "Revise"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Revise to address a review comment"
+msgstr "Revise to address a review comment"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Proofread"
+msgstr "Proofread"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Proofread grammar and spelling"
+msgstr "Proofread grammar and spelling"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Check references"
+msgstr "Check references"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Check my references"
+msgstr "Check my references"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Polish the selected text for clarity and flow. Keep its meaning, citations and LaTeX commands unchanged."
+msgstr "Polish the selected text for clarity and flow. Keep its meaning, citations and LaTeX commands unchanged."
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Polish the paragraph at my cursor for clarity and flow. Keep its meaning, citations and LaTeX commands unchanged."
+msgstr "Polish the paragraph at my cursor for clarity and flow. Keep its meaning, citations and LaTeX commands unchanged."
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Revise the selected text to address this review comment: "
+msgstr "Revise the selected text to address this review comment: "
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Revise the paper to address this review comment: "
+msgstr "Revise the paper to address this review comment: "
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Proofread the selected text and fix grammar, spelling and punctuation. Leave the wording otherwise unchanged."
+msgstr "Proofread the selected text and fix grammar, spelling and punctuation. Leave the wording otherwise unchanged."
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Proofread the section at my cursor and fix grammar, spelling and punctuation. Leave the wording otherwise unchanged."
+msgstr "Proofread the section at my cursor and fix grammar, spelling and punctuation. Leave the wording otherwise unchanged."
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Check the citations in the selected text: every \\cite key should exist in the bibliography with accurate details, and each cited work should support its claim. Fix what is wrong."
+msgstr "Check the citations in the selected text: every \\cite key should exist in the bibliography with accurate details, and each cited work should support its claim. Fix what is wrong."
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Check the citations in this paper: every \\cite key should exist in the bibliography with accurate details, and each cited work should support its claim. Fix what is wrong."
+msgstr "Check the citations in this paper: every \\cite key should exist in the bibliography with accurate details, and each cited work should support its claim. Fix what is wrong."
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "line {line}"
+msgstr "line {line}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "lines {start}–{end}"
+msgstr "lines {start}–{end}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "page {page}"
+msgstr "page {page}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.tsx
+msgid "Work on this paper"
+msgstr "Work on this paper"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.tsx
+msgid "These act on the selected text only"
+msgstr "These act on the selected text only"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.tsx
+msgid "Select a passage in the editor to work on just that part"
+msgstr "Select a passage in the editor to work on just that part"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.tsx
+msgid "Selection"
+msgstr "Selection"
 
 #. js-lingui-explicit-id
 #: src/components/chat/MessageCopyButton.tsx

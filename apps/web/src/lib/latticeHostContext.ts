@@ -32,9 +32,12 @@ export function subscribeLiveLatticeHostContext(listener: () => void): () => voi
 export function clearLatticeContextSelection(
   context: LatticeHostContextSnapshot,
 ): LatticeHostContextSnapshot {
-  const withoutSelection = <T extends { selection?: string }>(value: T): T => {
+  const withoutSelection = <T extends { selection?: string; selectionLines?: unknown }>(
+    value: T,
+  ): T => {
     const clone = { ...value };
     delete clone.selection;
+    delete clone.selectionLines;
     return clone;
   };
   return {

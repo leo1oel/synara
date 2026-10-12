@@ -87,6 +87,8 @@ export interface LatticeHostContextSnapshot {
     secondaryPath?: string;
     selection?: string;
     selectionOmittedChars?: number;
+    /** 1-based first and last line of `selection` in `path`; absent from older Lattice builds. */
+    selectionLines?: { start: number; end: number };
   };
   pdf?: {
     page: number;
@@ -396,6 +398,12 @@ function nonNegativeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0;
 }
 
+function lineRange(value: unknown): value is { start: number; end: number } {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const { start, end } = value as Record<string, unknown>;
+  return positiveInteger(start) && positiveInteger(end) && start <= end;
+}
+
 function nonEmptyBoundedString(value: unknown, maximum: number): value is string {
   return boundedString(value, maximum) && value.trim().length > 0;
 }
@@ -443,7 +451,8 @@ export function readLatticeHostContextMessage(
       !positiveInteger(candidate.line) ||
       !nonNegativeInteger(candidate.column) ||
       (candidate.secondaryPath !== undefined && !boundedString(candidate.secondaryPath, 4_096)) ||
-      (candidate.selection !== undefined && !boundedString(candidate.selection, 12_001))
+      (candidate.selection !== undefined && !boundedString(candidate.selection, 12_001)) ||
+      (candidate.selectionLines !== undefined && !lineRange(candidate.selectionLines))
     ) {
       return null;
     }
