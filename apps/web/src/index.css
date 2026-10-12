@@ -782,6 +782,76 @@ html[data-synara-embed="true"] .lattice-agent-header {
   padding-inline-end: 8px;
 }
 
+/* The empty thread (LatticeEmptyThread). Cards sit on the host's lift (its
+   elevated surface); the four hues are Lattice's file-glyph family (style,
+   tex, image, bib), so an action reads the same colour in both apps. */
+html[data-synara-embed="true"] .lattice-empty-thread {
+  --lattice-starter-surface: var(--color-background-elevated-primary-opaque);
+  --lattice-starter-surface-hover: color-mix(
+    in srgb,
+    var(--color-text-foreground) 3.5%,
+    var(--color-background-elevated-primary-opaque)
+  );
+  --lattice-starter-chip-surface: var(--color-background-elevated-primary-opaque);
+  --lattice-starter-wash: 12%;
+  --lattice-starter-violet: #7a52c4;
+  --lattice-starter-blue: #3b5bd6;
+  --lattice-starter-green: #2e8a55;
+  --lattice-starter-amber: #b06a00;
+  /* The host's reading serif is a private face the iframe cannot load;
+     New York (ui-serif) is the system's, with Songti for Chinese. */
+  --lattice-starter-serif: ui-serif, "New York", "Iowan Old Style", Georgia, "Songti SC", serif;
+}
+
+html.dark[data-synara-embed="true"] .lattice-empty-thread {
+  --lattice-starter-wash: 18%;
+  --lattice-starter-violet: #bba3f2;
+  --lattice-starter-blue: #8fa5ff;
+  --lattice-starter-green: #72cf98;
+  --lattice-starter-amber: #f2b65e;
+}
+
+.lattice-empty-thread-title,
+.lattice-starter-example {
+  font-family: var(--lattice-starter-serif);
+}
+
+.lattice-empty-thread-title {
+  letter-spacing: -0.01em;
+}
+
+.lattice-starter-example {
+  font-style: italic;
+  text-wrap: balance;
+}
+
+/* Chinese has no true italic; a slanted Songti reads as a rendering fault. */
+.lattice-starter-example:lang(zh) {
+  font-style: normal;
+}
+
+.lattice-starter[data-starter="polish"] {
+  --lattice-starter-hue: var(--lattice-starter-violet);
+}
+.lattice-starter[data-starter="revise"] {
+  --lattice-starter-hue: var(--lattice-starter-blue);
+}
+.lattice-starter[data-starter="proofread"] {
+  --lattice-starter-hue: var(--lattice-starter-green);
+}
+.lattice-starter[data-starter="references"] {
+  --lattice-starter-hue: var(--lattice-starter-amber);
+}
+
+.lattice-starter-icon {
+  color: var(--lattice-starter-hue);
+  background: color-mix(
+    in srgb,
+    var(--lattice-starter-hue) var(--lattice-starter-wash),
+    transparent
+  );
+}
+
 html[data-synara-embed="true"] .lattice-source-control {
   --app-font-size-ui: 11px;
   /* This route lives in a resizable iframe. Keep Tailwind's `sm:` variants

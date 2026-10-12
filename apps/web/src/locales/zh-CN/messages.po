@@ -12,626 +12,6 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
-#: src/wsTransport.ts
-msgid "Connection recovery stopped. Reload the app and check the operation's status."
-msgstr "连接恢复已停止。请重新加载应用，并检查这项操作的状态。"
-
-#. js-lingui-explicit-id
-#: src/wsTransport.ts
-msgid "Message delivery could not be checked. Reconnect and check the conversation before sending again."
-msgstr "无法确认消息是否已送达。请重新连接并检查对话，然后再发送。"
-
-#. js-lingui-explicit-id
-#: src/lib/fastModeState.ts
-msgid "usage credits are turned off for this Claude account"
-msgstr "这个 Claude 账号关闭了用量额度"
-
-#. js-lingui-explicit-id
-#: src/lib/fastModeState.ts
-msgid "this Claude plan does not include it"
-msgstr "这个 Claude 套餐不包含该功能"
-
-#. js-lingui-explicit-id
-#: src/lib/fastModeState.ts
-msgid "it needs a first-party Anthropic account"
-msgstr "它需要 Anthropic 官方账号"
-
-#. js-lingui-explicit-id
-#: src/lib/fastModeState.ts
-msgid "it is disabled in this environment"
-msgstr "它在当前环境中被禁用"
-
-#. js-lingui-explicit-id
-#: src/lib/fastModeState.ts
-msgid "this model does not support it"
-msgstr "这个模型不支持它"
-
-#. js-lingui-explicit-id
-#: src/lib/fastModeState.ts
-msgid "Claude could not check its availability"
-msgstr "Claude 无法检查它是否可用"
-
-#. js-lingui-explicit-id
-#: src/lib/fastModeState.ts
-msgid "Fast paused"
-msgstr "快速已暂停"
-
-#. js-lingui-explicit-id
-#: src/lib/fastModeState.ts
-msgid "Fast mode is paused after a rate limit. Requests run at standard speed for now."
-msgstr "触发速率限制后快速模式已暂停，请求暂时以标准速度运行。"
-
-#. js-lingui-explicit-id
-#: src/lib/fastModeState.ts
-msgid "Claude reported it as unavailable"
-msgstr "Claude 报告它不可用"
-
-#. js-lingui-explicit-id
-#: src/lib/fastModeState.ts
-msgid "Fast unavailable"
-msgstr "快速不可用"
-
-#. js-lingui-explicit-id
-#: src/lib/fastModeState.ts
-msgid "Fast mode is not active: {cause}. Requests run at standard speed."
-msgstr "快速模式未生效：{cause}。请求以标准速度运行。"
-
-#. js-lingui-explicit-id
-#: src/lib/providerSetupStatus.ts
-msgid "Installed · authentication managed by OpenCode"
-msgstr "已安装 · 认证由 OpenCode 管理"
-
-#. js-lingui-explicit-id
-#: src/lib/rpcTransportFailure.ts
-msgid "Connection interrupted. Check the operation's status."
-msgstr "连接已中断。请检查这项操作的状态。"
-
-#. js-lingui-explicit-id
-#: src/lib/subagentPresentation.ts
-msgid "Subagent {number}"
-msgstr "子助手 {number}"
-
-#. js-lingui-explicit-id
-#: src/lib/threadFork.ts
-msgid "Selected message is no longer available to fork. Refresh the chat and try again."
-msgstr "所选消息已无法用于分叉。请刷新对话后重试。"
-
-#. js-lingui-explicit-id
-#: src/components/ChatView.logic.ts
-msgid "Still sending your last message"
-msgstr "上一条消息仍在发送"
-
-#. js-lingui-explicit-id
-#: src/components/ChatView.logic.ts
-msgid "Wait for it to show in the chat before sending again."
-msgstr "请等它出现在对话中再发送。"
-
-#. js-lingui-explicit-id
-#: src/components/ChatView.logic.ts
-msgid "The session is still starting"
-msgstr "会话仍在启动"
-
-#. js-lingui-explicit-id
-#: src/components/ChatView.logic.ts
-msgid "Send again once it is ready. Your message stays in the composer."
-msgstr "准备好后再发送。你的消息会保留在输入框中。"
-
-#. js-lingui-explicit-id
-#: src/components/ChatView.logic.ts
-msgid "This chat has no project"
-msgstr "这个对话没有项目"
-
-#. js-lingui-explicit-id
-#: src/components/ChatView.logic.ts
-msgid "Choose a project for this chat, then send again."
-msgstr "请为这个对话选择项目，然后再发送。"
-
-#. js-lingui-explicit-id
-#: src/components/ChatView.tsx
-msgid "Could not stop the background task"
-msgstr "无法停止后台任务"
-
-#. js-lingui-explicit-id
-#: src/components/ChatView.tsx
-msgid "Try again in a moment."
-msgstr "请稍后重试。"
-
-#. js-lingui-explicit-id
-#: src/components/ChatView.tsx
-msgid "Message this subagent"
-msgstr "给这个子助手发消息"
-
-#. js-lingui-explicit-id
-#: src/components/chat/BackgroundTaskRow.tsx
-#: src/components/chat/MessagesTimeline.logic.ts
-msgid "Background task"
-msgstr "后台任务"
-
-#. js-lingui-explicit-id
-#: src/components/chat/BackgroundTaskRow.tsx
-msgid "Stop background task {task}"
-msgstr "停止后台任务 {task}"
-
-#. js-lingui-explicit-id
-#: src/components/chat/BackgroundTaskRow.tsx
-#: src/components/chat/SubagentRunCard.tsx
-msgid "Stop"
-msgstr "停止"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
-msgid "This session is {age} old and {tokens} tokens."
-msgstr "这个会话已闲置 {age}，共 {tokens} 个 token。"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
-msgid "Your message is saved and on hold. Continuing may reprocess the conversation's context."
-msgstr "你的消息已保存并暂缓发送。继续可能会重新处理对话的上下文。"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
-msgid "Your message is saved and on hold. Continuing may reprocess about {tokens} tokens."
-msgstr "你的消息已保存并暂缓发送。继续可能会重新处理约 {tokens} 个 token。"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
-msgid "Resuming the full session will consume a substantial portion of your usage limits. We recommend resuming from a summary. Your message is saved until you choose."
-msgstr "恢复完整会话会消耗大量用量额度，建议从摘要恢复。在你做出选择前，消息会一直保存。"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
-msgid "Resume from summary (recommended)"
-msgstr "从摘要恢复（推荐）"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
-msgid "Summarize this session, then send your message"
-msgstr "先总结这个会话，再发送你的消息"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
-msgid "Resume full session as-is"
-msgstr "按原样恢复完整会话"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
-msgid "Send your message with the full history"
-msgstr "带着完整历史发送你的消息"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
-msgid "Don't ask me again"
-msgstr "不再询问"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
-msgid "Resume as-is now and stop asking. Turn it back on in Settings → Providers"
-msgstr "现在按原样恢复，以后不再询问。可在“设置 → 提供商”中重新开启"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
-msgid "Keep your message without sending it"
-msgstr "保留你的消息，暂不发送"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerQueuedHeader.tsx
-msgid "Paused after you stopped the turn"
-msgstr "你停止了这一轮，因此已暂停"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerQueuedHeader.tsx
-msgid "Paused after an error"
-msgstr "出错后已暂停"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerQueuedHeader.tsx
-msgid "Paused: usage limit"
-msgstr "已暂停：达到用量上限"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerQueuedHeader.tsx
-msgid "Queue paused"
-msgstr "队列已暂停"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerQueuedHeader.tsx
-msgid "Resume"
-msgstr "继续"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerSubagentStrip.logic.ts
-msgid "Starting subagent…"
-msgstr "正在启动子助手…"
-
-#. js-lingui-explicit-id
-#: src/components/chat/MessagesTimeline.logic.ts
-msgid "“{task}” finished"
-msgstr "“{task}”已完成"
-
-#. js-lingui-explicit-id
-#: src/components/chat/MessagesTimeline.logic.ts
-msgid "“{task}” failed"
-msgstr "“{task}”失败"
-
-#. js-lingui-explicit-id
-#: src/components/chat/MessagesTimeline.logic.ts
-msgid "“{task}” stopped"
-msgstr "“{task}”已停止"
-
-#. js-lingui-explicit-id
-#: src/components/chat/MessagesTimeline.logic.ts
-msgid "“{task}” updated"
-msgstr "“{task}”已更新"
-
-#. js-lingui-explicit-id
-#: src/components/chat/MessagesTimeline.logic.ts
-msgid "{count} background tasks finished"
-msgstr "{count} 个后台任务已完成"
-
-#. js-lingui-explicit-id
-#: src/components/chat/MessagesTimeline.logic.ts
-msgid "{count} background tasks failed"
-msgstr "{count} 个后台任务失败"
-
-#. js-lingui-explicit-id
-#: src/components/chat/MessagesTimeline.logic.ts
-msgid "{count} background tasks stopped"
-msgstr "{count} 个后台任务已停止"
-
-#. js-lingui-explicit-id
-#: src/components/chat/MessagesTimeline.logic.ts
-msgid "{count} background tasks updated"
-msgstr "{count} 个后台任务已更新"
-
-#. js-lingui-explicit-id
-#: src/components/chat/MessagesTimeline.logic.ts
-msgid "{count} background tasks ended"
-msgstr "{count} 个后台任务已结束"
-
-#. js-lingui-explicit-id
-#: src/components/chat/MessagesTimeline.logic.ts
-msgid "Stopped by you after {elapsed}"
-msgstr "你在 {elapsed} 后停止"
-
-#. js-lingui-explicit-id
-#: src/components/chat/MessagesTimeline.logic.ts
-msgid "Stopped by you"
-msgstr "已由你停止"
-
-#. js-lingui-explicit-id
-#: src/components/chat/MessagesTimeline.logic.ts
-msgid "Interrupted after {elapsed}"
-msgstr "{elapsed} 后中断"
-
-#. js-lingui-explicit-id
-#: src/components/chat/MessagesTimeline.logic.ts
-#: src/components/chat/SubagentRunCard.logic.ts
-msgid "Interrupted"
-msgstr "已中断"
-
-#. js-lingui-explicit-id
-#: src/components/chat/MessagesTimeline.logic.ts
-#: src/components/chat/TurnHeaderLine.tsx
-msgid "Resumed: {tasks}"
-msgstr "已恢复：{tasks}"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ProjectPicker.tsx
-msgid "Choosing a folder needs the desktop app."
-msgstr "选择文件夹需要桌面应用。"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentRunCard.logic.ts
-msgid "Waiting for its subagent"
-msgstr "正在等待它的子助手"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentRunCard.logic.ts
-msgid "Waiting for its subagents"
-msgstr "正在等待它的子助手们"
-
-#. js-lingui-explicit-id
-#: src/components/chat/backgroundTaskRow.logic.ts
-#: src/components/chat/SubagentRunCard.logic.ts
-#: src/components/chat/SubagentRunningChip.tsx
-msgid "{count} running"
-msgstr "{count} 个运行中"
-
-#. js-lingui-explicit-id
-#: src/components/chat/backgroundTaskRow.logic.ts
-#: src/components/chat/SubagentRunCard.logic.ts
-msgid "stopped"
-msgstr "已停止"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentRunCard.logic.ts
-msgid "{count} done"
-msgstr "{count} 个完成"
-
-#. js-lingui-explicit-id
-#: src/components/chat/backgroundTaskRow.logic.ts
-#: src/components/chat/SubagentRunCard.logic.ts
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "{count} failed"
-msgstr "{count} 个失败"
-
-#. js-lingui-explicit-id
-#: src/components/chat/backgroundTaskRow.logic.ts
-#: src/components/chat/SubagentRunCard.logic.ts
-msgid "{count} stopped"
-msgstr "{count} 个已停止"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentRunCard.logic.ts
-msgid "{count} interrupted"
-msgstr "{count} 个已中断"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentRunCard.logic.ts
-msgid "1 subagent"
-msgstr "1 个子助手"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentRunCard.logic.ts
-msgid "{count} subagents"
-msgstr "{count} 个子助手"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentRunCard.logic.ts
-msgid "+{count} nested"
-msgstr "+{count} 个嵌套"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentRunCard.tsx
-msgid "Open {name}"
-msgstr "打开 {name}"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentRunCard.tsx
-msgid "was running"
-msgstr "当时正在运行"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentRunCard.tsx
-msgid "launched 1 subagent"
-msgstr "启动了 1 个子助手"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentRunCard.tsx
-msgid "launched {count} subagents"
-msgstr "启动了 {count} 个子助手"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentRunCard.tsx
-msgid "Message"
-msgstr "发消息"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentRunCard.tsx
-msgid "Stop {name}"
-msgstr "停止 {name}"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentRunCard.tsx
-msgid "Stop all"
-msgstr "全部停止"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentRunningChip.tsx
-msgid "1 subagent running, show it"
-msgstr "1 个子助手正在运行，显示它"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentRunningChip.tsx
-msgid "{count} subagents running, show them"
-msgstr "{count} 个子助手正在运行，显示它们"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentThreadIntro.tsx
-msgid "Running · {elapsed}"
-msgstr "正在运行 · {elapsed}"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentThreadIntro.tsx
-msgid "Done in {elapsed}"
-msgstr "用时 {elapsed} 完成"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentThreadIntro.tsx
-msgid "Failed after {elapsed}"
-msgstr "{elapsed} 后失败"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentThreadIntro.tsx
-msgid "Stopped after {elapsed}"
-msgstr "{elapsed} 后停止"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentThreadIntro.tsx
-msgid "Open parent thread {title}"
-msgstr "打开上级对话 {title}"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentThreadIntro.tsx
-msgid "Subagent of"
-msgstr "所属对话"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentThreadIntro.tsx
-msgid "Brief from"
-msgstr "任务说明来自"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentThreadIntro.tsx
-msgid "This answer went back to {title}"
-msgstr "这个回答已交回 {title}"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SubagentThreadIntro.tsx
-msgid "Delivered to {title}"
-msgstr "已交给 {title}"
-
-#. js-lingui-explicit-id
-#: src/components/chat/TimelineWorkEntryRow.tsx
-msgid "Failed · exit {code}"
-msgstr "失败 · 退出码 {code}"
-
-#. js-lingui-explicit-id
-#: src/components/chat/TimelineWorkEntryRow.tsx
-msgid "Fork rebuilt up to the chosen turn"
-msgstr "已重建分叉，截至所选轮次"
-
-#. js-lingui-explicit-id
-#: src/components/chat/TraitsPicker.tsx
-msgid "Fast mode on"
-msgstr "快速模式已开启"
-
-#. js-lingui-explicit-id
-#: src/components/chat/TraitsPicker.tsx
-msgid "Fast mode off"
-msgstr "快速模式已关闭"
-
-#. js-lingui-explicit-id
-#: src/components/chat/agentActivity.logic.ts
-msgid "{count} updates"
-msgstr "{count} 条更新"
-
-#. js-lingui-explicit-id
-#: src/components/chat/backgroundTaskRow.logic.ts
-msgid "running"
-msgstr "运行中"
-
-#. js-lingui-explicit-id
-#: src/components/chat/backgroundTaskRow.logic.ts
-msgid "finished"
-msgstr "已完成"
-
-#. js-lingui-explicit-id
-#: src/components/chat/backgroundTaskRow.logic.ts
-msgid "failed · exit {code}"
-msgstr "失败 · 退出码 {code}"
-
-#. js-lingui-explicit-id
-#: src/components/chat/backgroundTaskRow.logic.ts
-msgid "1 background task"
-msgstr "1 个后台任务"
-
-#. js-lingui-explicit-id
-#: src/components/chat/backgroundTaskRow.logic.ts
-msgid "{count} background tasks"
-msgstr "{count} 个后台任务"
-
-#. js-lingui-explicit-id
-#: src/components/chat/backgroundTaskRow.logic.ts
-msgid "{count} finished"
-msgstr "{count} 个已完成"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "read 1 file"
-msgstr "读取了 1 个文件"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "read {count} files"
-msgstr "读取了 {count} 个文件"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "edited 1 file"
-msgstr "修改了 1 个文件"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "edited {count} files"
-msgstr "修改了 {count} 个文件"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "searched once"
-msgstr "搜索了 1 次"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "searched twice"
-msgstr "搜索了 2 次"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "searched {count} times"
-msgstr "搜索了 {count} 次"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "ran 1 command"
-msgstr "运行了 1 条命令"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "ran {count} commands"
-msgstr "运行了 {count} 条命令"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "fetched 1 page"
-msgstr "获取了 1 个网页"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "fetched {count} pages"
-msgstr "获取了 {count} 个网页"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "ran 1 agent task"
-msgstr "运行了 1 个助手任务"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "ran {count} agent tasks"
-msgstr "运行了 {count} 个助手任务"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "used 1 tool"
-msgstr "使用了 1 个工具"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "used {count} tools"
-msgstr "使用了 {count} 个工具"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "ran 1 tool call"
-msgstr "运行了 1 次工具调用"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "ran {count} tool calls"
-msgstr "运行了 {count} 次工具调用"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "1 other action"
-msgstr "另外 1 项操作"
-
-#. js-lingui-explicit-id
-#: src/components/chat/toolCallGroup.logic.ts
-msgid "{count} other actions"
-msgstr "另外 {count} 项操作"
-
-#. js-lingui-explicit-id
-#: src/components/chat/useSubagentRunControls.ts
-msgid "Could not update the subagent"
-msgstr "无法更新子助手"
-
-#. js-lingui-explicit-id
-#: src/components/chat/useSubagentRunControls.ts
-msgid "The subagent request failed. Try again."
-msgstr "子助手请求失败，请重试。"
-
-#. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
 #: src/components/chat/ComposerAutomationSetupBanner.tsx
 #: src/components/chat/FileLineCommentBox.tsx
@@ -661,6 +41,16 @@ msgstr "模型当前满载，任务被中断了。工作还没有完成。"
 #: src/workLog.ts
 msgid "The task was interrupted by a provider error. Work remains incomplete. {cause}"
 msgstr "提供商出错，任务被中断了。工作还没有完成。{cause}"
+
+#. js-lingui-explicit-id
+#: src/wsTransport.ts
+msgid "Connection recovery stopped. Reload the app and check the operation's status."
+msgstr "连接恢复已停止。请重新加载应用，并检查这项操作的状态。"
+
+#. js-lingui-explicit-id
+#: src/wsTransport.ts
+msgid "Message delivery could not be checked. Reconnect and check the conversation before sending again."
+msgstr "无法确认消息是否已送达。请重新连接并检查对话，然后再发送。"
 
 #. js-lingui-explicit-id
 #: src/routes/__root.tsx
@@ -737,6 +127,61 @@ msgstr "已与 Synara 断开连接。"
 #: src/lib/composerTransportStatus.ts
 msgid "Reconnecting to Synara…"
 msgstr "正在重新连接 Synara…"
+
+#. js-lingui-explicit-id
+#: src/lib/fastModeState.ts
+msgid "usage credits are turned off for this Claude account"
+msgstr "这个 Claude 账号关闭了用量额度"
+
+#. js-lingui-explicit-id
+#: src/lib/fastModeState.ts
+msgid "this Claude plan does not include it"
+msgstr "这个 Claude 套餐不包含该功能"
+
+#. js-lingui-explicit-id
+#: src/lib/fastModeState.ts
+msgid "it needs a first-party Anthropic account"
+msgstr "它需要 Anthropic 官方账号"
+
+#. js-lingui-explicit-id
+#: src/lib/fastModeState.ts
+msgid "it is disabled in this environment"
+msgstr "它在当前环境中被禁用"
+
+#. js-lingui-explicit-id
+#: src/lib/fastModeState.ts
+msgid "this model does not support it"
+msgstr "这个模型不支持它"
+
+#. js-lingui-explicit-id
+#: src/lib/fastModeState.ts
+msgid "Claude could not check its availability"
+msgstr "Claude 无法检查它是否可用"
+
+#. js-lingui-explicit-id
+#: src/lib/fastModeState.ts
+msgid "Fast paused"
+msgstr "快速已暂停"
+
+#. js-lingui-explicit-id
+#: src/lib/fastModeState.ts
+msgid "Fast mode is paused after a rate limit. Requests run at standard speed for now."
+msgstr "触发速率限制后快速模式已暂停，请求暂时以标准速度运行。"
+
+#. js-lingui-explicit-id
+#: src/lib/fastModeState.ts
+msgid "Claude reported it as unavailable"
+msgstr "Claude 报告它不可用"
+
+#. js-lingui-explicit-id
+#: src/lib/fastModeState.ts
+msgid "Fast unavailable"
+msgstr "快速不可用"
+
+#. js-lingui-explicit-id
+#: src/lib/fastModeState.ts
+msgid "Fast mode is not active: {cause}. Requests run at standard speed."
+msgstr "快速模式未生效：{cause}。请求以标准速度运行。"
 
 #. js-lingui-explicit-id
 #: src/lib/gitLocalization.ts
@@ -1256,6 +701,11 @@ msgstr "需要处理"
 
 #. js-lingui-explicit-id
 #: src/lib/providerSetupStatus.ts
+msgid "Installed · authentication managed by OpenCode"
+msgstr "已安装 · 认证由 OpenCode 管理"
+
+#. js-lingui-explicit-id
+#: src/lib/providerSetupStatus.ts
 msgid "Installed · sign-in not verified"
 msgstr "已安装 · 未确认登录"
 
@@ -1560,6 +1010,16 @@ msgid "{count}y"
 msgstr "{count} 年"
 
 #. js-lingui-explicit-id
+#: src/lib/rpcTransportFailure.ts
+msgid "Connection interrupted. Check the operation's status."
+msgstr "连接已中断。请检查这项操作的状态。"
+
+#. js-lingui-explicit-id
+#: src/lib/subagentPresentation.ts
+msgid "Subagent {number}"
+msgstr "子助手 {number}"
+
+#. js-lingui-explicit-id
 #: src/components/chat/agentActivity.logic.ts
 #: src/components/chat/ComposerSubagentStrip.logic.ts
 #: src/lib/subagentPresentation.ts
@@ -1590,6 +1050,11 @@ msgstr "排队中"
 #: src/lib/subagentPresentation.ts
 msgid "Idle"
 msgstr "空闲"
+
+#. js-lingui-explicit-id
+#: src/lib/threadFork.ts
+msgid "Selected message is no longer available to fork. Refresh the chat and try again."
+msgstr "所选消息已无法用于分叉。请刷新对话后重试。"
 
 #. js-lingui-explicit-id
 #: src/lib/threadUnblock.ts
@@ -2415,6 +1880,36 @@ msgid "Discarding..."
 msgstr "正在丢弃..."
 
 #. js-lingui-explicit-id
+#: src/components/ChatView.logic.ts
+msgid "Still sending your last message"
+msgstr "上一条消息仍在发送"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.logic.ts
+msgid "Wait for it to show in the chat before sending again."
+msgstr "请等它出现在对话中再发送。"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.logic.ts
+msgid "The session is still starting"
+msgstr "会话仍在启动"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.logic.ts
+msgid "Send again once it is ready. Your message stays in the composer."
+msgstr "准备好后再发送。你的消息会保留在输入框中。"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.logic.ts
+msgid "This chat has no project"
+msgstr "这个对话没有项目"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.logic.ts
+msgid "Choose a project for this chat, then send again."
+msgstr "请为这个对话选择项目，然后再发送。"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ProviderModelPicker.tsx
 #: src/components/ChatView.tsx
 msgid "Loading models"
@@ -2574,6 +2069,16 @@ msgstr "无法停止当前回复"
 #: src/components/ChatView.tsx
 msgid "The interrupt request failed. Try again in a moment."
 msgstr "停止请求失败，请稍后再试。"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Could not stop the background task"
+msgstr "无法停止后台任务"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Try again in a moment."
+msgstr "请稍后重试。"
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
@@ -2813,6 +2318,11 @@ msgstr "输入你自己的回答，或留空使用选中的选项"
 #: src/components/ChatView.tsx
 msgid "Add feedback to refine the plan, or leave this blank to implement it"
 msgstr "写下意见来修改计划，或留空直接执行"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Message this subagent"
+msgstr "给这个子助手发消息"
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
@@ -5365,6 +4875,23 @@ msgid "Open"
 msgstr "打开"
 
 #. js-lingui-explicit-id
+#: src/components/chat/BackgroundTaskRow.tsx
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "Background task"
+msgstr "后台任务"
+
+#. js-lingui-explicit-id
+#: src/components/chat/BackgroundTaskRow.tsx
+msgid "Stop background task {task}"
+msgstr "停止后台任务 {task}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/BackgroundTaskRow.tsx
+#: src/components/chat/SubagentRunCard.tsx
+msgid "Stop"
+msgstr "停止"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ChatComposerFooter.tsx
 msgid "Plan mode — click to return to normal build mode"
 msgstr "计划模式：点击回到普通模式"
@@ -5657,6 +5184,11 @@ msgstr "压缩会读取已过期的上下文"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "This session is {age} old and {tokens} tokens."
+msgstr "这个会话已闲置 {age}，共 {tokens} 个 token。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
 msgid "Claude's prompt cache likely expired"
 msgstr "Claude 的提示缓存可能已过期"
 
@@ -5677,6 +5209,21 @@ msgstr "Claude 可能已经收到请求。在确认状态之前，暂停发送�
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Your message is saved and on hold. Continuing may reprocess the conversation's context."
+msgstr "你的消息已保存并暂缓发送。继续可能会重新处理对话的上下文。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Your message is saved and on hold. Continuing may reprocess about {tokens} tokens."
+msgstr "你的消息已保存并暂缓发送。继续可能会重新处理约 {tokens} 个 token。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Resuming the full session will consume a substantial portion of your usage limits. We recommend resuming from a summary. Your message is saved until you choose."
+msgstr "恢复完整会话会消耗大量用量额度，建议从摘要恢复。在你做出选择前，消息会一直保存。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
 msgid "Compact this conversation"
 msgstr "压缩这个对话"
 
@@ -5687,8 +5234,43 @@ msgstr "处理现有历史并保存摘要"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Resume from summary (recommended)"
+msgstr "从摘要恢复（推荐）"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Summarize this session, then send your message"
+msgstr "先总结这个会话，再发送你的消息"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Resume full session as-is"
+msgstr "按原样恢复完整会话"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Send your message with the full history"
+msgstr "带着完整历史发送你的消息"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Don't ask me again"
+msgstr "不再询问"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Resume as-is now and stop asking. Turn it back on in Settings → Providers"
+msgstr "现在按原样恢复，以后不再询问。可在“设置 → 提供商”中重新开启"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
 msgid "Cancel this send"
 msgstr "取消这次发送"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerClaudeCacheReviewPanel.tsx
+msgid "Keep your message without sending it"
+msgstr "保留你的消息，暂不发送"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
@@ -6186,6 +5768,7 @@ msgstr "第 {page} 页"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerLatticeContextBar.logic.ts
+#: src/components/chat/LatticeEmptyThread.logic.ts
 msgid "Slides"
 msgstr "幻灯片"
 
@@ -6449,6 +6032,31 @@ msgstr "无法开启 CI 自动修复"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerQueuedHeader.tsx
+msgid "Paused after you stopped the turn"
+msgstr "你停止了这一轮，因此已暂停"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerQueuedHeader.tsx
+msgid "Paused after an error"
+msgstr "出错后已暂停"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerQueuedHeader.tsx
+msgid "Paused: usage limit"
+msgstr "已暂停：达到用量上限"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerQueuedHeader.tsx
+msgid "Queue paused"
+msgstr "队列已暂停"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerQueuedHeader.tsx
+msgid "Resume"
+msgstr "继续"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerQueuedHeader.tsx
 msgid "Queued follow-up"
 msgstr "排队的追问"
 
@@ -6561,6 +6169,11 @@ msgstr "修改时间"
 #: src/components/chat/ComposerSnoozeNotice.tsx
 msgid "Pick date & time…"
 msgstr "选择日期和时间…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerSubagentStrip.logic.ts
+msgid "Starting subagent…"
+msgstr "正在启动子助手…"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerTipRow.tsx
@@ -7160,6 +6773,121 @@ msgid "Connect repository"
 msgstr "连接仓库"
 
 #. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Polish"
+msgstr "润色"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Polish this paragraph"
+msgstr "润色这段话"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Revise"
+msgstr "修改"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Revise to address a review comment"
+msgstr "按审稿意见修改"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Proofread"
+msgstr "校对"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Proofread grammar and spelling"
+msgstr "校对语法与拼写"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Check references"
+msgstr "检查引用"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Check my references"
+msgstr "帮我检查引用"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Polish the selected text for clarity and flow. Keep its meaning, citations and LaTeX commands unchanged."
+msgstr "润色选中的文字，让表达更清晰流畅。保持原意，不要改动引用和 LaTeX 命令。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Polish the paragraph at my cursor for clarity and flow. Keep its meaning, citations and LaTeX commands unchanged."
+msgstr "润色光标所在的段落，让表达更清晰流畅。保持原意，不要改动引用和 LaTeX 命令。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Revise the selected text to address this review comment: "
+msgstr "按这条审稿意见修改选中的文字："
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Revise the paper to address this review comment: "
+msgstr "按这条审稿意见修改论文："
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Proofread the selected text and fix grammar, spelling and punctuation. Leave the wording otherwise unchanged."
+msgstr "校对选中的文字，修正语法、拼写和标点，其余措辞保持不变。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Proofread the section at my cursor and fix grammar, spelling and punctuation. Leave the wording otherwise unchanged."
+msgstr "校对光标所在的小节，修正语法、拼写和标点，其余措辞保持不变。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Check the citations in the selected text: every \\cite key should exist in the bibliography with accurate details, and each cited work should support its claim. Fix what is wrong."
+msgstr "检查选中文字里的引用：每个 \\cite 键都应在参考文献中存在且信息准确，所引文献应能支撑对应的论述。发现问题就修正。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "Check the citations in this paper: every \\cite key should exist in the bibliography with accurate details, and each cited work should support its claim. Fix what is wrong."
+msgstr "检查这篇论文的引用：每个 \\cite 键都应在参考文献中存在且信息准确，所引文献应能支撑对应的论述。发现问题就修正。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "line {line}"
+msgstr "第 {line} 行"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "lines {start}–{end}"
+msgstr "第 {start}–{end} 行"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.logic.ts
+msgid "page {page}"
+msgstr "第 {page} 页"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.tsx
+msgid "Work on this paper"
+msgstr "一起改这篇论文"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.tsx
+msgid "These act on the selected text only"
+msgstr "只作用于选中的文字"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.tsx
+msgid "Select a passage in the editor to work on just that part"
+msgstr "在编辑器里选中一段，就只改那一段"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeEmptyThread.tsx
+msgid "Selection"
+msgstr "选区"
+
+#. js-lingui-explicit-id
 #: src/components/chat/MessageCopyButton.tsx
 msgid "Copy message"
 msgstr "复制消息"
@@ -7203,6 +6931,78 @@ msgstr "只能编辑你自己发的消息。"
 #: src/components/chat/MessagesTimeline.logic.ts
 msgid "Structured answers can't be edited and resent."
 msgstr "结构化回答不能编辑重发。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "“{task}” finished"
+msgstr "“{task}”已完成"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "“{task}” failed"
+msgstr "“{task}”失败"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "“{task}” stopped"
+msgstr "“{task}”已停止"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "“{task}” updated"
+msgstr "“{task}”已更新"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "{count} background tasks finished"
+msgstr "{count} 个后台任务已完成"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "{count} background tasks failed"
+msgstr "{count} 个后台任务失败"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "{count} background tasks stopped"
+msgstr "{count} 个后台任务已停止"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "{count} background tasks updated"
+msgstr "{count} 个后台任务已更新"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "{count} background tasks ended"
+msgstr "{count} 个后台任务已结束"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "Stopped by you after {elapsed}"
+msgstr "你在 {elapsed} 后停止"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "Stopped by you"
+msgstr "已由你停止"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+msgid "Interrupted after {elapsed}"
+msgstr "{elapsed} 后中断"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+#: src/components/chat/SubagentRunCard.logic.ts
+msgid "Interrupted"
+msgstr "已中断"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.logic.ts
+#: src/components/chat/TurnHeaderLine.tsx
+msgid "Resumed: {tasks}"
+msgstr "已恢复：{tasks}"
 
 #. js-lingui-explicit-id
 #: src/components/chat/MessagesTimeline.logic.ts
@@ -7385,6 +7185,11 @@ msgstr "显示文字"
 #: src/components/chat/TimelineWorkEntryRow.tsx
 msgid "Search"
 msgstr "搜索"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ProjectPicker.tsx
+msgid "Choosing a folder needs the desktop app."
+msgstr "选择文件夹需要桌面应用。"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ProposedPlanActions.tsx
@@ -7672,9 +7477,160 @@ msgid "Please try again."
 msgstr "请再试一次。"
 
 #. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.logic.ts
+msgid "Waiting for its subagent"
+msgstr "正在等待它的子助手"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.logic.ts
+msgid "Waiting for its subagents"
+msgstr "正在等待它的子助手们"
+
+#. js-lingui-explicit-id
+#: src/components/chat/backgroundTaskRow.logic.ts
+#: src/components/chat/SubagentRunCard.logic.ts
+#: src/components/chat/SubagentRunningChip.tsx
+msgid "{count} running"
+msgstr "{count} 个运行中"
+
+#. js-lingui-explicit-id
+#: src/components/chat/backgroundTaskRow.logic.ts
+#: src/components/chat/SubagentRunCard.logic.ts
+msgid "stopped"
+msgstr "已停止"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.logic.ts
+msgid "{count} done"
+msgstr "{count} 个完成"
+
+#. js-lingui-explicit-id
+#: src/components/chat/backgroundTaskRow.logic.ts
+#: src/components/chat/SubagentRunCard.logic.ts
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "{count} failed"
+msgstr "{count} 个失败"
+
+#. js-lingui-explicit-id
+#: src/components/chat/backgroundTaskRow.logic.ts
+#: src/components/chat/SubagentRunCard.logic.ts
+msgid "{count} stopped"
+msgstr "{count} 个已停止"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.logic.ts
+msgid "{count} interrupted"
+msgstr "{count} 个已中断"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.logic.ts
+msgid "1 subagent"
+msgstr "1 个子助手"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.logic.ts
+msgid "{count} subagents"
+msgstr "{count} 个子助手"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.logic.ts
+msgid "+{count} nested"
+msgstr "+{count} 个嵌套"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.tsx
+msgid "Open {name}"
+msgstr "打开 {name}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.tsx
+msgid "was running"
+msgstr "当时正在运行"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.tsx
+msgid "launched 1 subagent"
+msgstr "启动了 1 个子助手"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.tsx
+msgid "launched {count} subagents"
+msgstr "启动了 {count} 个子助手"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.tsx
+msgid "Message"
+msgstr "发消息"
+
+#. js-lingui-explicit-id
 #: src/components/chat/SubagentRunCard.tsx
 msgid "Run in background (ctrl+b)"
 msgstr "转到后台运行（ctrl+b）"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.tsx
+msgid "Stop {name}"
+msgstr "停止 {name}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunCard.tsx
+msgid "Stop all"
+msgstr "全部停止"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunningChip.tsx
+msgid "1 subagent running, show it"
+msgstr "1 个子助手正在运行，显示它"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentRunningChip.tsx
+msgid "{count} subagents running, show them"
+msgstr "{count} 个子助手正在运行，显示它们"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentThreadIntro.tsx
+msgid "Running · {elapsed}"
+msgstr "正在运行 · {elapsed}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentThreadIntro.tsx
+msgid "Done in {elapsed}"
+msgstr "用时 {elapsed} 完成"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentThreadIntro.tsx
+msgid "Failed after {elapsed}"
+msgstr "{elapsed} 后失败"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentThreadIntro.tsx
+msgid "Stopped after {elapsed}"
+msgstr "{elapsed} 后停止"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentThreadIntro.tsx
+msgid "Open parent thread {title}"
+msgstr "打开上级对话 {title}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentThreadIntro.tsx
+msgid "Subagent of"
+msgstr "所属对话"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentThreadIntro.tsx
+msgid "Brief from"
+msgstr "任务说明来自"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentThreadIntro.tsx
+msgid "This answer went back to {title}"
+msgstr "这个回答已交回 {title}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/SubagentThreadIntro.tsx
+msgid "Delivered to {title}"
+msgstr "已交给 {title}"
 
 #. js-lingui-explicit-id
 #: src/components/chat/SynaraThreadCreationCard.tsx
@@ -7993,8 +7949,18 @@ msgstr "原始调用"
 
 #. js-lingui-explicit-id
 #: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Failed · exit {code}"
+msgstr "失败 · 退出码 {code}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
 msgid "Conversation rebuilt from a summary"
 msgstr "已根据摘要重建对话"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+msgid "Fork rebuilt up to the chosen turn"
+msgstr "已重建分叉，截至所选轮次"
 
 #. js-lingui-explicit-id
 #: src/components/chat/TimelineWorkEntryRow.tsx
@@ -8177,6 +8143,16 @@ msgid "Stderr"
 msgstr "错误输出"
 
 #. js-lingui-explicit-id
+#: src/components/chat/TraitsPicker.tsx
+msgid "Fast mode on"
+msgstr "快速模式已开启"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TraitsPicker.tsx
+msgid "Fast mode off"
+msgstr "快速模式已关闭"
+
+#. js-lingui-explicit-id
 #: src/components/chat/TranscriptSelectionAction.tsx
 msgid "Selection actions"
 msgstr "选中内容的操作"
@@ -8242,10 +8218,150 @@ msgid "Open thread"
 msgstr "打开对话"
 
 #. js-lingui-explicit-id
+#: src/components/chat/agentActivity.logic.ts
+msgid "{count} updates"
+msgstr "{count} 条更新"
+
+#. js-lingui-explicit-id
+#: src/components/chat/backgroundTaskRow.logic.ts
+msgid "running"
+msgstr "运行中"
+
+#. js-lingui-explicit-id
+#: src/components/chat/backgroundTaskRow.logic.ts
+msgid "finished"
+msgstr "已完成"
+
+#. js-lingui-explicit-id
+#: src/components/chat/backgroundTaskRow.logic.ts
+msgid "failed · exit {code}"
+msgstr "失败 · 退出码 {code}"
+
+#. js-lingui-explicit-id
 #: src/components/chat/backgroundTaskRow.logic.ts
 #: src/components/chat/toolCallGroup.logic.ts
 msgid ", "
 msgstr "，"
+
+#. js-lingui-explicit-id
+#: src/components/chat/backgroundTaskRow.logic.ts
+msgid "1 background task"
+msgstr "1 个后台任务"
+
+#. js-lingui-explicit-id
+#: src/components/chat/backgroundTaskRow.logic.ts
+msgid "{count} background tasks"
+msgstr "{count} 个后台任务"
+
+#. js-lingui-explicit-id
+#: src/components/chat/backgroundTaskRow.logic.ts
+msgid "{count} finished"
+msgstr "{count} 个已完成"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "read 1 file"
+msgstr "读取了 1 个文件"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "read {count} files"
+msgstr "读取了 {count} 个文件"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "edited 1 file"
+msgstr "修改了 1 个文件"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "edited {count} files"
+msgstr "修改了 {count} 个文件"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "searched once"
+msgstr "搜索了 1 次"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "searched twice"
+msgstr "搜索了 2 次"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "searched {count} times"
+msgstr "搜索了 {count} 次"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "ran 1 command"
+msgstr "运行了 1 条命令"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "ran {count} commands"
+msgstr "运行了 {count} 条命令"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "fetched 1 page"
+msgstr "获取了 1 个网页"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "fetched {count} pages"
+msgstr "获取了 {count} 个网页"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "ran 1 agent task"
+msgstr "运行了 1 个助手任务"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "ran {count} agent tasks"
+msgstr "运行了 {count} 个助手任务"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "used 1 tool"
+msgstr "使用了 1 个工具"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "used {count} tools"
+msgstr "使用了 {count} 个工具"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "ran 1 tool call"
+msgstr "运行了 1 次工具调用"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "ran {count} tool calls"
+msgstr "运行了 {count} 次工具调用"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "1 other action"
+msgstr "另外 1 项操作"
+
+#. js-lingui-explicit-id
+#: src/components/chat/toolCallGroup.logic.ts
+msgid "{count} other actions"
+msgstr "另外 {count} 项操作"
+
+#. js-lingui-explicit-id
+#: src/components/chat/useSubagentRunControls.ts
+msgid "Could not update the subagent"
+msgstr "无法更新子助手"
+
+#. js-lingui-explicit-id
+#: src/components/chat/useSubagentRunControls.ts
+msgid "The subagent request failed. Try again."
+msgstr "子助手请求失败，请重试。"
 
 #. placeholder {0}: progress.questionIndex + 1
 #: src/components/chat/ComposerPendingUserInputPanel.tsx

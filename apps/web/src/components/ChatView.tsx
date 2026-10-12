@@ -331,6 +331,8 @@ import { ComposerGoalHeader } from "./chat/ComposerGoalHeader";
 import { ComposerInputBanners } from "./chat/ComposerInputBanners";
 import { ComposerLatticeContextBar } from "./chat/ComposerLatticeContextBar";
 import { clearLatticeContextSelection } from "./chat/ComposerLatticeContextBar.logic";
+import { LatticeEmptyThread } from "./chat/LatticeEmptyThread";
+import { latticeStarterDraft } from "./chat/LatticeEmptyThread.logic";
 import { ComposerTransportNotice } from "./chat/ComposerTransportNotice";
 import { ComposerLiveChangesHeader } from "./chat/ComposerLiveChangesHeader";
 import {
@@ -2199,7 +2201,28 @@ export default function ChatView({
   const activeThreadIsSidechat = Boolean(activeThread && isSidechatThread(activeThread));
   // Stable identity: this element is forwarded to the memoized MessagesTimeline, so
   // building it inline in JSX would defeat its `memo()` on every keystroke.
+  // A starter fills the composer through the prompt setter declared further
+  // down; the ref keeps the empty-state element below stable across renders.
+  const latticeStarterPromptRef = useRef<((prompt: string) => void) | null>(null);
+  const handleLatticeStarter = useCallback((prompt: string) => {
+    latticeStarterPromptRef.current?.(prompt);
+  }, []);
   const transcriptEmptyStateContent = useMemo((): ReactNode => {
+    if (
+      isEmbed &&
+      !isEditorRail &&
+      threadDetailHydration === "ready" &&
+      !hasPendingThreadWork &&
+      !activeThreadIsSidechat &&
+      !activeThread?.parentThreadId
+    ) {
+      return (
+        <LatticeEmptyThread
+          bottomInsetPx={composerTranscriptInsetPx}
+          onStarter={handleLatticeStarter}
+        />
+      );
+    }
     if (isEditorRail || isEmbed) {
       return <span aria-hidden="true" />;
     }
@@ -2213,7 +2236,10 @@ export default function ChatView({
     }
     return hasPendingThreadWork || activeThreadIsSidechat ? <span aria-hidden="true" /> : undefined;
   }, [
+    activeThread?.parentThreadId,
     activeThreadIsSidechat,
+    composerTranscriptInsetPx,
+    handleLatticeStarter,
     handleRetryThreadDetailSync,
     hasPendingThreadWork,
     isEditorRail,
@@ -4855,6 +4881,10 @@ export default function ChatView({
     },
     [promptRef, setComposerCursor, setComposerTrigger, scheduleComposerFocus, setPrompt],
   );
+  useEffect(() => {
+    latticeStarterPromptRef.current = (prompt) =>
+      setPromptFromTraits(latticeStarterDraft(promptRef.current, prompt));
+  }, [promptRef, setPromptFromTraits]);
   const selectedProviderModelOptions = composerModelOptions?.[selectedProvider];
   const composerTraitSelection = getComposerTraitSelection(
     selectedProvider,
