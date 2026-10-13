@@ -341,6 +341,8 @@ const PULL_REQUEST_REVIEW_THREADS_QUERY = `query($owner: String!, $repo: String!
       reviewThreads(first: $first, after: $after) {
         nodes {
           isResolved
+          line
+          originalLine
           comments(first: 1) {
             nodes {
               id
@@ -417,6 +419,8 @@ const RawReviewThreadCommentSchema = Schema.Struct({
 
 const RawReviewThreadSchema = Schema.Struct({
   isResolved: Schema.optional(Schema.NullOr(Schema.Boolean)),
+  line: Schema.optional(Schema.NullOr(Schema.Number)),
+  originalLine: Schema.optional(Schema.NullOr(Schema.Number)),
   comments: Schema.optional(
     Schema.NullOr(
       Schema.Struct({
@@ -807,6 +811,13 @@ function normalizePullRequestDetail(
   };
 }
 
+function lineOf(thread: {
+  readonly line?: number | null | undefined;
+  readonly originalLine?: number | null | undefined;
+}): number | null {
+  return thread.line ?? thread.originalLine ?? null;
+}
+
 function normalizePullRequestReviewComments(
   raw: Schema.Schema.Type<typeof RawReviewThreadsResponseSchema>,
 ): GitPullRequestComment[] {
@@ -827,6 +838,8 @@ function normalizePullRequestReviewComments(
       path: rootComment.path?.trim() || null,
       url: rootComment.url ?? null,
       createdAt: rootComment.createdAt?.trim() || null,
+      // The line in the head version; an outdated thread keeps the line it was left on.
+      ...(lineOf(thread) !== null ? { line: lineOf(thread) } : {}),
     });
   }
   return comments;
@@ -2555,6 +2568,9 @@ const makeGitHubCli = Effect.gen(function* () {
                 break;
               case "reopen":
                 args = ["pr", "reopen", reference, ...repoArgs];
+                break;
+              case "approve":
+                args = ["pr", "review", reference, ...repoArgs, "--approve"];
                 break;
             }
             return execute({ cwd: input.cwd, args }).pipe(

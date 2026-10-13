@@ -1829,6 +1829,223 @@ html[data-synara-embed="true"] .lattice-git-empty-description > span {
   }
 }
 
+/* Lattice's "In the paper" reading of a pull request (LatticePullRequestPaper.tsx). */
+html[data-synara-embed="true"] .lattice-paper {
+  flex: 1;
+}
+html[data-synara-embed="true"] .lattice-paper-scroll {
+  gap: 16px;
+  padding-top: 8px;
+}
+html[data-synara-embed="true"] .lattice-paper-head {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  min-width: 0;
+}
+html[data-synara-embed="true"] .lattice-paper-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 9px 0 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--status-open) 13%, transparent);
+  color: var(--status-open);
+  font-size: var(--lattice-git-caption);
+  font-weight: 500;
+}
+html[data-synara-embed="true"] .lattice-paper-state[data-state="merged"] {
+  background: color-mix(in srgb, var(--status-merged) 13%, transparent);
+  color: var(--status-merged);
+}
+html[data-synara-embed="true"]
+  .lattice-paper-state:is([data-state="draft"], [data-state="closed"]) {
+  background: var(--lattice-control-hover-surface);
+  color: var(--lattice-git-muted);
+}
+html[data-synara-embed="true"] .lattice-paper-title {
+  margin: 0;
+  max-width: 100%;
+  color: var(--lattice-git-ink);
+  font-family: var(--lattice-type-title-font);
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+html[data-synara-embed="true"] .lattice-paper-number {
+  color: var(--lattice-git-muted);
+}
+html[data-synara-embed="true"] .lattice-paper-meta,
+html[data-synara-embed="true"] .lattice-paper-reviewers {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  max-width: 100%;
+  margin: 0;
+  color: var(--lattice-git-muted);
+  font-size: var(--lattice-git-caption);
+  line-height: var(--lattice-git-caption-lh);
+}
+html[data-synara-embed="true"] .lattice-paper-meta {
+  column-gap: 12px;
+}
+html[data-synara-embed="true"] .lattice-paper-meta > * {
+  min-width: 0;
+}
+html[data-synara-embed="true"] .lattice-paper-branches {
+  max-width: 100%;
+  overflow: hidden;
+  font-family: var(--font-mono-family);
+  font-size: 0.92em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+html[data-synara-embed="true"] .lattice-paper-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+html[data-synara-embed="true"] .lattice-paper-reviewers {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+html[data-synara-embed="true"] .lattice-paper-reviewers > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+html[data-synara-embed="true"] .lattice-paper-avatars {
+  display: inline-flex;
+  flex: none;
+}
+html[data-synara-embed="true"] .lattice-paper-avatars > * + * {
+  margin-inline-start: -5px;
+}
+html[data-synara-embed="true"] .lattice-paper-sections {
+  display: grid;
+  gap: 14px;
+}
+html[data-synara-embed="true"] .lattice-paper-section h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 8px;
+  margin: 0 0 6px;
+  color: var(--lattice-git-muted);
+  font-size: var(--lattice-git-caption);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+html[data-synara-embed="true"] .lattice-paper-file {
+  font-family: var(--font-mono-family);
+  font-size: 0.92em;
+  font-weight: 400;
+  color: var(--lattice-settings-faint, var(--lattice-git-muted));
+  overflow-wrap: anywhere;
+}
+html[data-synara-embed="true"] .lattice-paper-sheet {
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--lattice-git-line);
+  border-radius: 10px;
+  background: var(--lattice-git-raised);
+}
+html[data-synara-embed="true"] .lattice-paper-sheet .lattice-prose-changes {
+  gap: 12px;
+}
+html[data-synara-embed="true"] .lattice-paper-comments {
+  display: grid;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+html[data-synara-embed="true"] .lattice-paper-comment {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--lattice-git-muted);
+  font-size: var(--lattice-git-caption);
+  line-height: var(--lattice-git-caption-lh);
+}
+html[data-synara-embed="true"] .lattice-paper-comment > :first-child {
+  align-self: start;
+  margin-top: 1px;
+}
+html[data-synara-embed="true"] .lattice-paper-comment-body {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+html[data-synara-embed="true"] .lattice-paper-comment-body strong {
+  color: var(--lattice-git-ink);
+  font-weight: 500;
+}
+html[data-synara-embed="true"] .lattice-paper-comment time {
+  white-space: nowrap;
+}
+html[data-synara-embed="true"] .lattice-paper-comments-loose {
+  padding: 10px 12px;
+  border: 1px solid var(--lattice-git-line);
+  border-radius: 10px;
+}
+html[data-synara-embed="true"] .lattice-paper-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 0;
+  color: var(--lattice-git-muted);
+  font-size: var(--lattice-git-caption);
+  overflow-wrap: anywhere;
+}
+html[data-synara-embed="true"] .lattice-paper-other > span {
+  min-width: 0;
+}
+html[data-synara-embed="true"] .lattice-paper-other-files {
+  font-family: var(--font-mono-family);
+  font-size: 0.92em;
+}
+html[data-synara-embed="true"] .lattice-paper-note .lattice-git-link {
+  margin-left: 0;
+}
+html[data-synara-embed="true"] .lattice-paper-actions {
+  flex: none;
+  padding: 10px var(--lattice-git-gutter);
+  border-top: 1px solid var(--lattice-git-line);
+  background: var(--app-shell-background);
+}
+html[data-synara-embed="true"] .lattice-paper-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+html[data-synara-embed="true"] .lattice-paper-composer {
+  display: grid;
+  gap: 8px;
+}
+html[data-synara-embed="true"] .lattice-paper-composer textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--lattice-git-line);
+  border-radius: 8px;
+  outline: none;
+  background: var(--lattice-git-raised);
+  color: var(--lattice-git-ink);
+  font-size: var(--lattice-git-label);
+  line-height: var(--lattice-git-label-lh);
+  resize: vertical;
+}
+html[data-synara-embed="true"] .lattice-paper-composer textarea:focus {
+  border-color: var(--lattice-settings-line-strong, var(--lattice-git-line));
+}
+
 html[data-synara-embed="true"] .app-settings-surface {
   border-radius: 0 !important;
   box-shadow: none !important;

@@ -199,6 +199,7 @@ const ACTION_SUCCESS_TITLES: Record<PullRequestAction, string> = {
   draft: "Converted to draft",
   close: "Pull request closed",
   reopen: "Pull request reopened",
+  approve: "Pull request approved",
 };
 
 const ACTION_PENDING_TITLES: Record<Exclude<PullRequestAction, "merge">, string> = {
@@ -206,6 +207,7 @@ const ACTION_PENDING_TITLES: Record<Exclude<PullRequestAction, "merge">, string>
   draft: "Converting to draft...",
   close: "Closing pull request...",
   reopen: "Reopening pull request...",
+  approve: "Approving pull request...",
 };
 
 const MERGE_PENDING_TITLES: Record<PullRequestMergeMethod, string> = {

@@ -298,7 +298,9 @@ function GitHubInboxDetail({
   onBack,
   onSelectPullRequest,
   pageHost,
+  lattice,
 }: {
+  lattice: boolean;
   selection: GitHubInboxSelection;
   sendTargets: ReadonlyArray<GitHubItemSendTarget>;
   onBack: (() => void) | undefined;
@@ -325,6 +327,7 @@ function GitHubInboxDetail({
       key={key}
       input={input}
       layout="page"
+      lattice={lattice}
       onSelectPullRequest={onSelectPullRequest}
       sendTargets={sendTargets}
       pageHost={pageHost}
@@ -800,6 +803,7 @@ export function GitHubInbox({
         >
           {selection ? (
             <GitHubInboxDetail
+              lattice={latticeList}
               selection={selection}
               sendTargets={githubInboxSendTargets(listData?.items ?? [], selection, filters)}
               pageHost={pageHost}

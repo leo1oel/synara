@@ -53,6 +53,7 @@ import {
   type GitHubItemSendTarget,
 } from "./GitHubItemAgentActions";
 import { GitHubItemHeader } from "./GitHubItemHeader";
+import { LatticePullRequestPaper } from "./LatticePullRequestPaper";
 import { PullRequestInfo } from "./GitHubItemInfo";
 import {
   DETACHED_GITHUB_ITEM_PAGE_HOST,
@@ -87,7 +88,8 @@ import { PullRequestsUnavailableState } from "./PullRequestsUnavailableState";
 import { PullRequestWarningNote } from "./PullRequestWarningNote";
 import { assessPullRequestStack, pullRequestMergeBlocker } from "./pullRequestStack.logic";
 
-type DetailTab = "summary" | "timeline" | "code";
+// `paper` is Lattice's "In the paper" reading (LatticePullRequestPaper), shown only there.
+type DetailTab = "summary" | "timeline" | "code" | "paper";
 
 function actionSuccessLabel(i18n: I18n, action: PullRequestAction): string {
   switch (action) {
@@ -101,6 +103,8 @@ function actionSuccessLabel(i18n: I18n, action: PullRequestAction): string {
       return i18n._("Pull request closed");
     case "reopen":
       return i18n._("Pull request reopened");
+    case "approve":
+      return i18n._("Pull request approved");
   }
 }
 
@@ -146,6 +150,7 @@ export function PullRequestDetailPanel({
   onAsk,
   askPending,
   pageHost,
+  lattice: latticeProp,
 }: {
   input: PullRequestDetailInput;
   initialTab?: DetailTab;
@@ -164,9 +169,12 @@ export function PullRequestDetailPanel({
   askPending?: boolean;
   /** Page layout: pin, side chat threads, and the floating composer, from the code review page. */
   pageHost?: GitHubItemPageHost;
+  /** Lattice's embed: the page opens on "In the paper", with Files and Conversation beside it. */
+  lattice?: boolean;
 }) {
   const { i18n } = useLingui();
-  const initialTab = initialTabProp ?? "summary";
+  const lattice = latticeProp ?? false;
+  const initialTab = initialTabProp ?? (lattice ? "paper" : "summary");
   const layout = layoutProp ?? "dock";
   const pollingEnabled = pollingEnabledProp ?? true;
   const queryClient = useQueryClient();
@@ -444,23 +452,29 @@ export function PullRequestDetailPanel({
         onSendToAgent={sendToAgent}
       />
     ) : null;
-    const pageTabs: ReadonlyArray<GitHubItemTabOption<DetailTab>> = [
-      { value: "summary", label: i18n._("Summary") },
-      {
-        value: "code",
-        label: i18n._("Changes"),
-        trailing: detail ? (
-          <PullRequestDiffStat
-            additions={detail.additions}
-            deletions={detail.deletions}
-            tone="diff"
-            // Dropped with the other top bar words once the bar is narrow.
-            className="text-ui-xs @max-[46rem]/topbar:hidden"
-          />
-        ) : null,
-      },
-      { value: "timeline", label: i18n._("Timeline") },
-    ];
+    const pageTabs: ReadonlyArray<GitHubItemTabOption<DetailTab>> = lattice
+      ? [
+          { value: "paper", label: i18n._("In the paper") },
+          { value: "code", label: i18n._("Files") },
+          { value: "timeline", label: i18n._("Conversation") },
+        ]
+      : [
+          { value: "summary", label: i18n._("Summary") },
+          {
+            value: "code",
+            label: i18n._("Changes"),
+            trailing: detail ? (
+              <PullRequestDiffStat
+                additions={detail.additions}
+                deletions={detail.deletions}
+                tone="diff"
+                // Dropped with the other top bar words once the bar is narrow.
+                className="text-ui-xs @max-[46rem]/topbar:hidden"
+              />
+            ) : null,
+          },
+          { value: "timeline", label: i18n._("Timeline") },
+        ];
     // Merge and its options are one split control: the label acts, the chevron opens the menu.
     // With no primary action the menu hangs off a quiet "…" instead.
     const menuTrigger = (children: ReactNode, className: string) => (
@@ -468,7 +482,7 @@ export function PullRequestDetailPanel({
         render={
           <Button
             size="sm"
-            variant={primaryAction ? (primaryBlocked ? "subtle" : "default") : "ghost"}
+            variant={primaryAction && !lattice ? (primaryBlocked ? "subtle" : "default") : "ghost"}
             aria-label={i18n._("More actions")}
             title={i18n._("More actions")}
             className={className}
@@ -492,7 +506,8 @@ export function PullRequestDetailPanel({
           onSendToAgent={sendToAgent}
         />
         <Menu>
-          {primaryAction ? (
+          {/* Lattice's paper puts Merge at its foot; the top bar keeps only the menu. */}
+          {primaryAction && !lattice ? (
             <ChatHeaderSplitGroup label={i18n._("Merge actions")}>
               {primaryButton(
                 "sm",
@@ -544,7 +559,19 @@ export function PullRequestDetailPanel({
         banners={banners}
         overlay={confirmDialog}
       >
-        {!detail ? null : tab === "summary" ? (
+        {!detail ? null : tab === "paper" ? (
+          <LatticePullRequestPaper
+            input={input}
+            detail={detail}
+            primaryAction={primaryAction}
+            actionPending={actionPending}
+            pendingAction={pendingAction}
+            onMerge={() => setConfirmAction("merge")}
+            onReady={() => void runAction("ready")}
+            onApprove={() => void runAction("approve")}
+            onOpenFiles={() => setTab("code")}
+          />
+        ) : tab === "summary" ? (
           <GitHubItemPageBody
             header={
               <GitHubItemHeader

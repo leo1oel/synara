@@ -90,6 +90,7 @@ function optimisticPullRequestActionPatch(
     case "reopen":
       return { state: "open", closedAt: null };
     case "merge":
+    case "approve":
       return null;
   }
 }
@@ -119,6 +120,7 @@ function pullRequestActionTargetState(
       return "open";
     case "ready":
     case "draft":
+    case "approve":
       return undefined;
   }
 }

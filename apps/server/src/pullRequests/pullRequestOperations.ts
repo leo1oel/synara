@@ -104,6 +104,7 @@ export function makePullRequestOperations(dependencies: {
           url: comment.url,
           path: comment.path,
           reviewState: null,
+          line: comment.line ?? null,
         })),
       ].toSorted((left, right) => left.createdAt.localeCompare(right.createdAt));
       return {

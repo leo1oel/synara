@@ -61,3 +61,16 @@ which the inbox query now reads with the row. An empty list says why:
 | No pull requests                 | the list is empty                                                                               | "Open a pull request from <branch>" when Create PR can run from the current branch     |
 
 Repositories GitHub could not read stay listed as notes under the list.
+
+## Reading a pull request in Lattice
+
+The embedded detail (`PullRequestDetailPanel` with `lattice`) opens on "In the paper"
+(`LatticePullRequestPaper`), with Files and Conversation beside it. The tab reads the pull
+request's diff as a red-pen proof: the serif title, its branches, author and how many
+changes in how many sections, each reviewer's latest verdict, then the changed sentences of
+LaTeX, Markdown and text files grouped by section in the reading font. A review comment sits
+under the sentence on its line (review threads now carry `line`, falling back to the line an
+outdated thread was left on); comments that match no changed sentence follow the sections.
+Other changed files are counted with a link to Files. The foot holds Comment…, Approve (the
+new `approve` pull request action, `gh pr review --approve`) and Merge, which goes through
+the panel's own merge confirmation; a draft offers Ready for review instead.

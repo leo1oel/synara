@@ -330,7 +330,7 @@ export interface GitHubCliShape {
     readonly cwd: string;
     readonly repository: string;
     readonly number: number;
-    readonly action: "merge" | "ready" | "draft" | "close" | "reopen";
+    readonly action: "merge" | "ready" | "draft" | "close" | "reopen" | "approve";
     readonly mergeMethod?: PullRequestMergeMethod;
   }) => Effect.Effect<{ readonly mergeOutcome: "merged" | "enqueued" | null }, GitHubCliError>;
 

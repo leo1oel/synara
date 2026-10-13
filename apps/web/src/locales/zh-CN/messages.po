@@ -20,6 +20,7 @@ msgstr ""
 #: src/components/chat/UserInputQuestionForm.tsx
 #: src/components/GitActionsControl.tsx
 #: src/components/ProviderUsageResetCredits.tsx
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
 #: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
 #: src/components/settings/AddProviderAccountDialog.tsx
 #: src/components/settings/ManagedSkillEditorView.tsx
@@ -1476,6 +1477,7 @@ msgstr "无法更改电脑控制设置"
 #: src/components/chat/ProposedPlanActions.tsx
 #: src/components/ChatView.tsx
 #: src/components/GitActionsControl.tsx
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
 #: src/hooks/useCopyToClipboard.ts
 msgid "An error occurred."
 msgstr "发生错误。"
@@ -5016,6 +5018,122 @@ msgid "Open on GitHub"
 msgstr "在 GitHub 上打开"
 
 #. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "Comment posted"
+msgstr "评论已发布"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "Could not post the comment"
+msgstr "无法发布评论"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "{name} approved"
+msgstr "{name} 已批准"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "{name} asked for changes"
+msgstr "{name} 要求修改"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "{name} commented"
+msgstr "{name} 发表了评论"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "{name} has not reviewed"
+msgstr "{name} 尚未审阅"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "{count, plural, one {# change} other {# changes}} in {sections, plural, one {# section} other {# sections}}"
+msgstr "{sections} 节中有 {count} 处改动"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "Reading the changes…"
+msgstr "正在读取改动…"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "The changes could not be read."
+msgstr "无法读取改动。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "Open Files"
+msgstr "打开文件"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "No sentences of the paper changed."
+msgstr "论文中没有句子改动。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "Only the first changes of a long file are shown here."
+msgstr "长文件只显示前面的改动。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "Other review comments"
+msgstr "其他审阅意见"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "{count, plural, one {# other file changed} other {# other files changed}}"
+msgstr "另有 {count} 个文件改动"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "Comment…"
+msgstr "评论…"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "Leave a comment on this pull request"
+msgstr "在此 PR 下留下评论"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "Posting…"
+msgstr "正在发布…"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+#: src/components/pullRequest/PullRequestCommentComposer.tsx
+msgid "Post comment"
+msgstr "发表评论"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "Approving…"
+msgstr "正在批准…"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "Approve"
+msgstr "批准"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+#: src/components/pullRequest/PullRequestActions.tsx
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "Ready for review"
+msgstr "可供审查"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Merging…"
+msgstr "正在合并…"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
 #: src/components/pullRequest/PullRequestActions.tsx
 #: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
 #: src/components/pullRequest/PullRequestSummaryTab.tsx
@@ -5034,19 +5152,8 @@ msgstr "变基合并"
 
 #. js-lingui-explicit-id
 #: src/components/pullRequest/PullRequestActions.tsx
-#: src/components/pullRequest/pullRequestDetail.logic.ts
-msgid "Ready for review"
-msgstr "可供审查"
-
-#. js-lingui-explicit-id
-#: src/components/pullRequest/PullRequestActions.tsx
 msgid "Merging stack…"
 msgstr "正在合并整组…"
-
-#. js-lingui-explicit-id
-#: src/components/pullRequest/PullRequestActions.tsx
-msgid "Merging…"
-msgstr "正在合并…"
 
 #. js-lingui-explicit-id
 #: src/components/pullRequest/PullRequestActions.tsx
@@ -5163,11 +5270,6 @@ msgid "Leave a comment"
 msgstr "发表评论"
 
 #. js-lingui-explicit-id
-#: src/components/pullRequest/PullRequestCommentComposer.tsx
-msgid "Post comment"
-msgstr "发表评论"
-
-#. js-lingui-explicit-id
 #: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
 msgid "Link copied"
 msgstr "链接已复制"
@@ -5243,6 +5345,11 @@ msgstr "PR 已关闭"
 #: src/components/pullRequest/PullRequestDetailPanel.tsx
 msgid "Pull request reopened"
 msgstr "PR 已重新打开"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Pull request approved"
+msgstr "PR 已批准"
 
 #. js-lingui-explicit-id
 #: src/components/chat/TimelineWorkEntryRow.tsx
@@ -5324,6 +5431,23 @@ msgstr "无法加载整组的详情。请先刷新，再合并。"
 #: src/components/pullRequest/PullRequestDetailPanel.tsx
 msgid "Could not refresh pull request details. Showing saved data."
 msgstr "无法刷新 PR 详情，正在显示已保存的数据。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "In the paper"
+msgstr "论文中"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/chat/ToolCallDetailsDialog.tsx
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Files"
+msgstr "文件"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Conversation"
+msgstr "讨论"
 
 #. js-lingui-explicit-id
 #: src/components/pullRequest/PullRequestDetailPanel.tsx
@@ -5588,11 +5712,6 @@ msgstr "没有提交信息。"
 #: src/components/pullRequest/pullRequestDetail.logic.ts
 msgid "{name} reviewed"
 msgstr "{name} 进行了审查"
-
-#. js-lingui-explicit-id
-#: src/components/pullRequest/pullRequestDetail.logic.ts
-msgid "{name} commented"
-msgstr "{name} 发表了评论"
 
 #. js-lingui-explicit-id
 #: src/components/pullRequest/pullRequestDetail.logic.ts
@@ -6992,12 +7111,6 @@ msgstr "向 Synara 团队发送反馈"
 #: src/components/chat/ComposerCommandMenu.tsx
 msgid "Create a scheduled automation from this prompt"
 msgstr "用这段提示创建定时自动化"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerCommandMenu.tsx
-#: src/components/chat/ToolCallDetailsDialog.tsx
-msgid "Files"
-msgstr "文件"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx

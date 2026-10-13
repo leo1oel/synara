@@ -20,6 +20,7 @@ msgstr ""
 #: src/components/chat/UserInputQuestionForm.tsx
 #: src/components/GitActionsControl.tsx
 #: src/components/ProviderUsageResetCredits.tsx
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
 #: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
 #: src/components/settings/AddProviderAccountDialog.tsx
 #: src/components/settings/ManagedSkillEditorView.tsx
@@ -1476,6 +1477,7 @@ msgstr "Computer control could not be changed"
 #: src/components/chat/ProposedPlanActions.tsx
 #: src/components/ChatView.tsx
 #: src/components/GitActionsControl.tsx
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
 #: src/hooks/useCopyToClipboard.ts
 msgid "An error occurred."
 msgstr "An error occurred."
@@ -5016,6 +5018,122 @@ msgid "Open on GitHub"
 msgstr "Open on GitHub"
 
 #. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "Comment posted"
+msgstr "Comment posted"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "Could not post the comment"
+msgstr "Could not post the comment"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "{name} approved"
+msgstr "{name} approved"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "{name} asked for changes"
+msgstr "{name} asked for changes"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "{name} commented"
+msgstr "{name} commented"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "{name} has not reviewed"
+msgstr "{name} has not reviewed"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "{count, plural, one {# change} other {# changes}} in {sections, plural, one {# section} other {# sections}}"
+msgstr "{count, plural, one {# change} other {# changes}} in {sections, plural, one {# section} other {# sections}}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "Reading the changes…"
+msgstr "Reading the changes…"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "The changes could not be read."
+msgstr "The changes could not be read."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "Open Files"
+msgstr "Open Files"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "No sentences of the paper changed."
+msgstr "No sentences of the paper changed."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "Only the first changes of a long file are shown here."
+msgstr "Only the first changes of a long file are shown here."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "Other review comments"
+msgstr "Other review comments"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "{count, plural, one {# other file changed} other {# other files changed}}"
+msgstr "{count, plural, one {# other file changed} other {# other files changed}}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "Comment…"
+msgstr "Comment…"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "Leave a comment on this pull request"
+msgstr "Leave a comment on this pull request"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "Posting…"
+msgstr "Posting…"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+#: src/components/pullRequest/PullRequestCommentComposer.tsx
+msgid "Post comment"
+msgstr "Post comment"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "Approving…"
+msgstr "Approving…"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+msgid "Approve"
+msgstr "Approve"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+#: src/components/pullRequest/PullRequestActions.tsx
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "Ready for review"
+msgstr "Ready for review"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Merging…"
+msgstr "Merging…"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/LatticePullRequestPaper.tsx
 #: src/components/pullRequest/PullRequestActions.tsx
 #: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
 #: src/components/pullRequest/PullRequestSummaryTab.tsx
@@ -5034,19 +5152,8 @@ msgstr "Rebase"
 
 #. js-lingui-explicit-id
 #: src/components/pullRequest/PullRequestActions.tsx
-#: src/components/pullRequest/pullRequestDetail.logic.ts
-msgid "Ready for review"
-msgstr "Ready for review"
-
-#. js-lingui-explicit-id
-#: src/components/pullRequest/PullRequestActions.tsx
 msgid "Merging stack…"
 msgstr "Merging stack…"
-
-#. js-lingui-explicit-id
-#: src/components/pullRequest/PullRequestActions.tsx
-msgid "Merging…"
-msgstr "Merging…"
 
 #. js-lingui-explicit-id
 #: src/components/pullRequest/PullRequestActions.tsx
@@ -5163,11 +5270,6 @@ msgid "Leave a comment"
 msgstr "Leave a comment"
 
 #. js-lingui-explicit-id
-#: src/components/pullRequest/PullRequestCommentComposer.tsx
-msgid "Post comment"
-msgstr "Post comment"
-
-#. js-lingui-explicit-id
 #: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
 msgid "Link copied"
 msgstr "Link copied"
@@ -5243,6 +5345,11 @@ msgstr "Pull request closed"
 #: src/components/pullRequest/PullRequestDetailPanel.tsx
 msgid "Pull request reopened"
 msgstr "Pull request reopened"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Pull request approved"
+msgstr "Pull request approved"
 
 #. js-lingui-explicit-id
 #: src/components/chat/TimelineWorkEntryRow.tsx
@@ -5324,6 +5431,23 @@ msgstr "Stack details could not be loaded. Refresh before merging."
 #: src/components/pullRequest/PullRequestDetailPanel.tsx
 msgid "Could not refresh pull request details. Showing saved data."
 msgstr "Could not refresh pull request details. Showing saved data."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "In the paper"
+msgstr "In the paper"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/chat/ToolCallDetailsDialog.tsx
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Files"
+msgstr "Files"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Conversation"
+msgstr "Conversation"
 
 #. js-lingui-explicit-id
 #: src/components/pullRequest/PullRequestDetailPanel.tsx
@@ -5588,11 +5712,6 @@ msgstr "No commit message."
 #: src/components/pullRequest/pullRequestDetail.logic.ts
 msgid "{name} reviewed"
 msgstr "{name} reviewed"
-
-#. js-lingui-explicit-id
-#: src/components/pullRequest/pullRequestDetail.logic.ts
-msgid "{name} commented"
-msgstr "{name} commented"
 
 #. js-lingui-explicit-id
 #: src/components/pullRequest/pullRequestDetail.logic.ts
@@ -6992,12 +7111,6 @@ msgstr "Send feedback to the Synara team"
 #: src/components/chat/ComposerCommandMenu.tsx
 msgid "Create a scheduled automation from this prompt"
 msgstr "Create a scheduled automation from this prompt"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerCommandMenu.tsx
-#: src/components/chat/ToolCallDetailsDialog.tsx
-msgid "Files"
-msgstr "Files"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx

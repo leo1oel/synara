@@ -129,6 +129,7 @@ export const GitPullRequestComment = Schema.Struct({
   path: Schema.NullOr(TrimmedNonEmptyStringSchema),
   url: Schema.NullOr(Schema.String),
   createdAt: Schema.NullOr(TrimmedNonEmptyStringSchema),
+  line: Schema.optional(Schema.NullOr(Schema.Number)),
 });
 export type GitPullRequestComment = typeof GitPullRequestComment.Type;
 

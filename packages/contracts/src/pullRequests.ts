@@ -15,7 +15,14 @@ export type PullRequestState = typeof PullRequestState.Type;
 export const PullRequestMergeMethod = Schema.Literals(["merge", "squash", "rebase"]);
 export type PullRequestMergeMethod = typeof PullRequestMergeMethod.Type;
 
-export const PullRequestAction = Schema.Literals(["merge", "ready", "draft", "close", "reopen"]);
+export const PullRequestAction = Schema.Literals([
+  "merge",
+  "ready",
+  "draft",
+  "close",
+  "reopen",
+  "approve",
+]);
 export type PullRequestAction = typeof PullRequestAction.Type;
 
 export const PullRequestActor = Schema.Struct({
@@ -77,6 +84,8 @@ export const PullRequestComment = Schema.Struct({
   url: Schema.NullOr(Schema.String),
   path: Schema.NullOr(Schema.String),
   reviewState: Schema.NullOr(Schema.String),
+  /** A review comment's line in the head version of `path`. */
+  line: Schema.optional(Schema.NullOr(Schema.Number)),
 });
 export type PullRequestComment = typeof PullRequestComment.Type;
 
