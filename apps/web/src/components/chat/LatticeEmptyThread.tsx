@@ -112,9 +112,11 @@ interface LatticeEmptyThreadProps {
  * hint (the starters become pills), then the title and the selection chip
  * (the composer's context bar still names the selection), then the pills'
  * labels (one row of the icons the editor's selection toolbar uses, named in
- * their tooltips). Only when even that row does not fit does the view scroll.
+ * their tooltips). When even that row does not fit (the panel's minimum
+ * leaves room for it, so only a long draft or the context bar's open details
+ * get here) the view steps aside rather than show clipped starters.
  */
-const DENSITIES = ["full", "compact", "chips", "bare", "icons"] as const;
+const DENSITIES = ["full", "compact", "chips", "bare", "icons", "hidden"] as const;
 type Density = (typeof DENSITIES)[number];
 
 // The view sits this far clear of the composer's top edge.
@@ -333,6 +335,7 @@ export const LatticeEmptyThread = memo(function LatticeEmptyThread({
             </div>
           ) : null}
           <ul
+            hidden={density === "hidden"}
             className={
               density === "full"
                 ? "mt-4 grid grid-cols-1 gap-2 @[400px]:grid-cols-2"
