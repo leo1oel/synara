@@ -7,6 +7,7 @@
 // Exports: GitHubItemAgentActions, SendToAgentMenuItems, GitHubItemSendTarget,
 //          TOP_BAR_NARROW_LABEL_CLASS_NAME
 
+import { useLingui } from "@lingui/react";
 import type { ProjectId } from "@synara/contracts";
 
 import { ComposerPickerMenuPopup } from "~/components/chat/ComposerPickerMenuPopup";
@@ -39,6 +40,7 @@ export function SendToAgentMenuItems({
   disabled?: boolean;
   onSendToAgent: (projectId: ProjectId) => void;
 }) {
+  const { i18n } = useLingui();
   return sendTargets.map((target) => (
     <MenuItem
       key={target.projectId}
@@ -48,10 +50,10 @@ export function SendToAgentMenuItems({
       <BotIcon className={MENU_ICON_CLASS_NAME} />
       <span className="truncate">
         {sending
-          ? "Preparing…"
+          ? i18n._("Preparing…")
           : sendTargets.length > 1
-            ? `Send to agent in ${target.projectTitle}`
-            : "Send to agent"}
+            ? i18n._("Send to agent in {project}", { project: target.projectTitle })
+            : i18n._("Send to agent")}
       </span>
     </MenuItem>
   ));
@@ -68,7 +70,8 @@ export function GitHubItemAgentActions({
   sending: boolean;
   onSendToAgent: (projectId: ProjectId) => void;
 }) {
-  const sendLabel = sending ? "Preparing…" : "Send to agent";
+  const { i18n } = useLingui();
+  const sendLabel = sending ? i18n._("Preparing…") : i18n._("Send to agent");
   const label = <span className={TOP_BAR_NARROW_LABEL_CLASS_NAME}>{sendLabel}</span>;
   const icon = sending ? <LoaderIcon className="animate-spin" /> : <BotIcon />;
   const [onlyTarget] = sendTargets;
@@ -81,7 +84,7 @@ export function GitHubItemAgentActions({
               variant="outline"
               size="sm"
               disabled={sending}
-              aria-label="Send to agent: choose project"
+              aria-label={i18n._("Send to agent: choose project")}
             />
           }
         >

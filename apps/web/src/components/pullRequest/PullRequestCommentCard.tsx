@@ -8,6 +8,8 @@
 // Layer: Pull request presentation
 // Exports: PullRequestCommentCard
 
+import type { I18n } from "@lingui/core";
+import { useLingui } from "@lingui/react";
 import type { PullRequestComment } from "@synara/contracts";
 import { useState } from "react";
 
@@ -31,6 +33,12 @@ function severityToneClassName(severity: PullRequestCommentSeverity): string {
   return "text-muted-foreground";
 }
 
+function severityLabel(i18n: I18n, severity: PullRequestCommentSeverity): string {
+  if (severity === "High") return i18n._("High Severity");
+  if (severity === "Medium") return i18n._("Medium Severity");
+  return i18n._("Low Severity");
+}
+
 export function PullRequestCommentCard({
   comment,
   prUrl,
@@ -44,6 +52,7 @@ export function PullRequestCommentCard({
    *  dozens of markdown trees. */
   defaultOpen?: boolean;
 }) {
+  const { i18n } = useLingui();
   const defaultOpen = defaultOpenProp ?? true;
   const [open, setOpen] = useState(defaultOpen);
   const finding = parseFindingComment(comment.body);
@@ -91,13 +100,13 @@ export function PullRequestCommentCard({
                   severityToneClassName(finding.severity),
                 )}
               >
-                {finding.severity} Severity
+                {severityLabel(i18n, finding.severity)}
               </p>
             </div>
           ) : null}
           <PullRequestMarkdown
             text={finding ? finding.body : comment.body}
-            fallback="_No review body._"
+            fallback={`_${i18n._("No review body.")}_`}
             cwd={workspaceRoot}
           />
           <div className="mt-2 flex justify-end">
@@ -109,7 +118,7 @@ export function PullRequestCommentCard({
                 "rounded px-1.5 py-0.5 font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground",
               )}
             >
-              Reply
+              {i18n._("Reply")}
             </button>
           </div>
         </div>

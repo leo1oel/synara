@@ -8,11 +8,12 @@
 //      menus. Centralizing both keeps every pin control's wording and glyph aligned.
 
 import type { SVGProps } from "react";
+import { i18n } from "../i18n";
 import { PinFilledIcon, PinIcon } from "./icons";
 
 /** Accessible verb for a pin toggle: "Pin <target>" when unpinned, "Unpin <target>" when pinned. */
 export function pinActionLabel(target: string, pinned: boolean): string {
-  return `${pinned ? "Unpin" : "Pin"} ${target}`;
+  return pinned ? i18n._("Unpin {target}", { target }) : i18n._("Pin {target}", { target });
 }
 
 // State-reflecting pin glyph: the solid fill-set pin once pinned, the outline pin

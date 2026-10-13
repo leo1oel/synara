@@ -8,6 +8,7 @@
 // Exports: PullRequestCommentComposer, GitHubCommentTarget, GitHubCommentMutation
 
 import { GLASS_RAISED_SURFACE_CLASS_NAME } from "~/surfaceStyles";
+import { useLingui } from "@lingui/react";
 import type { PullRequestDetailInput } from "@synara/contracts";
 import { useRef, useState } from "react";
 
@@ -36,6 +37,7 @@ export function PullRequestCommentComposer({
   target: GitHubCommentTarget;
   mutation: GitHubCommentMutation;
 }) {
+  const { i18n } = useLingui();
   const [body, setBody] = useState("");
   // Synchronous re-entrancy lock: mutation.isPending updates on React's schedule, which is
   // too late to stop a rapid double Enter from posting the comment twice.
@@ -62,8 +64,9 @@ export function PullRequestCommentComposer({
         // The draft stays in the field on failure — nothing to re-type.
         toastManager.add({
           type: "error",
-          title: "Could not post comment",
-          description: error instanceof Error ? error.message : "GitHub CLI comment failed.",
+          title: i18n._("Could not post comment"),
+          description:
+            error instanceof Error ? error.message : i18n._("GitHub CLI comment failed."),
         });
       })
       .finally(() => {
@@ -80,7 +83,7 @@ export function PullRequestCommentComposer({
     >
       <span
         className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--color-background-elevated-secondary)] text-muted-foreground"
-        title="Commenting as your GitHub account"
+        title={i18n._("Commenting as your GitHub account")}
       >
         <GitHubIcon className="size-3" />
       </span>
@@ -88,8 +91,8 @@ export function PullRequestCommentComposer({
         rows={Math.min(6, body.split("\n").length)}
         value={body}
         disabled={mutation.isPending}
-        placeholder="Leave a comment"
-        aria-label="Leave a comment"
+        placeholder={i18n._("Leave a comment")}
+        aria-label={i18n._("Leave a comment")}
         onChange={(event) => setBody(event.target.value)}
         onKeyDown={(event) => {
           // Enter during IME composition confirms the composition, not the comment.
@@ -108,8 +111,8 @@ export function PullRequestCommentComposer({
       <button
         type="button"
         disabled={!canSubmit}
-        aria-label="Post comment"
-        title="Post comment"
+        aria-label={i18n._("Post comment")}
+        title={i18n._("Post comment")}
         onClick={() => void submit()}
         className="flex size-7 shrink-0 items-center justify-center self-end rounded-full bg-primary text-primary-foreground transition-opacity disabled:opacity-35"
       >
