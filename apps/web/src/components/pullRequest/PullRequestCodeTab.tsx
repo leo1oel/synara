@@ -5,6 +5,7 @@
 // Layer: Pull request presentation
 // Exports: PullRequestCodeTab (default export for React.lazy)
 
+import { useLingui } from "@lingui/react";
 import type { PullRequestDetail, PullRequestDetailInput } from "@synara/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -32,6 +33,7 @@ export function PullRequestCodeTab({
   input: PullRequestDetailInput;
   detail: PullRequestDetail;
 }) {
+  const { i18n } = useLingui();
   const { resolvedTheme } = useTheme();
   const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(() => new Set());
   const diffQuery = useQuery(pullRequestDiffQueryOptions(input));
@@ -58,7 +60,7 @@ export function PullRequestCodeTab({
       <div className="flex h-full min-h-0 flex-col">
         {diffQuery.data?.truncated ? (
           <PullRequestWarningNote shape="banner">
-            Diff exceeded 8 MiB and was truncated.
+            {i18n._("Diff exceeded 8 MiB and was truncated.")}
           </PullRequestWarningNote>
         ) : null}
         {patchTotals ? (
@@ -68,7 +70,11 @@ export function PullRequestCodeTab({
               "border-b border-border/60 px-3 py-2 text-muted-foreground",
             )}
           >
-            <span>{patchTotals.fileCount} files</span>
+            <span>
+              {i18n._("{count, plural, one {# file} other {# files}}", {
+                count: patchTotals.fileCount,
+              })}
+            </span>
             <PullRequestDiffStat
               additions={patchTotals.additions}
               deletions={patchTotals.deletions}
@@ -77,7 +83,7 @@ export function PullRequestCodeTab({
           </PullRequestMetaLine>
         ) : null}
         {diffQuery.isPending ? (
-          <DiffPanelLoadingState label="Loading pull request diff…" />
+          <DiffPanelLoadingState label={i18n._("Loading pull request diff…")} />
         ) : (
           <DiffPanelPatchViewport
             renderablePatch={renderablePatch}
@@ -101,12 +107,12 @@ export function PullRequestCodeTab({
               diffQuery.isError
                 ? diffQuery.error instanceof Error
                   ? diffQuery.error.message
-                  : "Could not load diff."
+                  : i18n._("Could not load diff.")
                 : null
             }
-            loadingLabel="Loading pull request diff…"
-            emptyLabel="This pull request has no file changes."
-            unavailableLabel="The pull request diff is unavailable."
+            loadingLabel={i18n._("Loading pull request diff…")}
+            emptyLabel={i18n._("This pull request has no file changes.")}
+            unavailableLabel={i18n._("The pull request diff is unavailable.")}
             viewKind="repo"
           />
         )}

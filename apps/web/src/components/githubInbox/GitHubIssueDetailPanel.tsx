@@ -9,6 +9,8 @@
 // Layer: GitHub inbox presentation
 // Exports: GitHubIssueDetailPanel
 
+import type { I18n } from "@lingui/core";
+import { useLingui } from "@lingui/react";
 import type { GitHubIssueDetailInput } from "@synara/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -50,10 +52,12 @@ import { pullRequestQueryErrorState } from "~/lib/pullRequestReactQuery";
 
 type IssueTab = "summary" | "timeline";
 
-const ISSUE_TABS: ReadonlyArray<{ value: IssueTab; label: string }> = [
-  { value: "summary", label: "Summary" },
-  { value: "timeline", label: "Timeline" },
-];
+function issueTabs(i18n: I18n): ReadonlyArray<{ value: IssueTab; label: string }> {
+  return [
+    { value: "summary", label: i18n._("Summary") },
+    { value: "timeline", label: i18n._("Timeline") },
+  ];
+}
 
 export function GitHubIssueDetailPanel({
   input,
@@ -71,6 +75,7 @@ export function GitHubIssueDetailPanel({
   /** Pin, side chat threads, and the floating composer, from the code review page. */
   pageHost?: GitHubItemPageHost;
 }) {
+  const { i18n } = useLingui();
   const pollingEnabled = pollingEnabledProp ?? true;
   // The page remounts the panel per issue, so the tab starts on Summary for each one.
   const [tab, setTab] = useState<IssueTab>("summary");
@@ -95,7 +100,7 @@ export function GitHubIssueDetailPanel({
       action: "send",
       projectId,
       card: (environment) => createGitHubItemContextDraft(source, environment),
-      errorTitle: "Could not send the issue to an agent",
+      errorTitle: i18n._("Could not send the issue to an agent"),
     });
   };
 
@@ -119,14 +124,19 @@ export function GitHubIssueDetailPanel({
     <GitHubItemDetailPage
       onBack={onBack}
       tabs={
-        <GitHubItemTabs label="Issue detail tabs" tabs={ISSUE_TABS} value={tab} onChange={setTab} />
+        <GitHubItemTabs
+          label={i18n._("Issue detail tabs")}
+          tabs={issueTabs(i18n)}
+          value={tab}
+          onChange={setTab}
+        />
       }
       actions={
         detail ? (
           <>
             <GitHubItemPageIconActions
               url={detail.url}
-              itemLabel={`issue #${detail.number}`}
+              itemLabel={i18n._("issue #{number}", { number: detail.number })}
               pin={host.pin}
             />
             <GitHubItemAgentActions
@@ -140,18 +150,18 @@ export function GitHubIssueDetailPanel({
       query={{
         isPending: detailQuery.isPending,
         initialError,
-        subject: "Issues",
+        subject: i18n._("Issues"),
         onRetry: () => void detailQuery.refetch(),
         loaded: detail !== undefined,
       }}
       notFound={{
-        title: "Issue not found",
-        description: "The selected issue could not be loaded.",
+        title: i18n._("Issue not found"),
+        description: i18n._("The selected issue could not be loaded."),
       }}
       banners={
         backgroundError ? (
           <PullRequestWarningNote shape="banner" role="status">
-            Could not refresh the issue. Showing saved data.
+            {i18n._("Could not refresh the issue. Showing saved data.")}
           </PullRequestWarningNote>
         ) : null
       }
@@ -180,7 +190,9 @@ export function GitHubIssueDetailPanel({
               workspaceRoot={detail.workspaceRoot}
               warning={
                 detail.commentsTruncated
-                  ? "Some comments are not shown here. Open the issue on GitHub for the full discussion."
+                  ? i18n._(
+                      "Some comments are not shown here. Open the issue on GitHub for the full discussion.",
+                    )
                   : null
               }
               target={detail}

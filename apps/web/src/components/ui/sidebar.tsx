@@ -2,6 +2,7 @@ import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
+import { i18n } from "~/i18n";
 import { LayoutAlignLeftIcon, LayoutLeftIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { FluidHoverSurface } from "./fluid-hover-surface";
@@ -470,8 +471,8 @@ function SidebarRail({
   } | null>(null);
   const resolvedResizable = sidebarInstance?.resizable ?? null;
   const canResize = resolvedResizable !== null && open;
-  const railLabel = canResize ? "Resize Sidebar" : "Toggle Sidebar";
-  const railTitle = canResize ? "Drag to resize sidebar" : "Toggle Sidebar";
+  const railLabel = canResize ? i18n._("Resize Sidebar") : i18n._("Toggle Sidebar");
+  const railTitle = canResize ? i18n._("Drag to resize sidebar") : i18n._("Toggle Sidebar");
 
   const stopResize = React.useCallback(
     (pointerId: number) => {

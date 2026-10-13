@@ -12,6 +12,7 @@
 //          PullRequestDetailSkeleton
 
 import { useInPageGlassOverlay } from "~/hooks/useInPageGlassOverlay";
+import { useLingui } from "@lingui/react";
 import type { ProjectId, ThreadId } from "@synara/contracts";
 import { useState, type ReactNode } from "react";
 
@@ -87,6 +88,7 @@ export function GitHubItemAskComposer({
   host: GitHubItemPageHost;
   onSendToAgent: (projectId: ProjectId) => void;
 }) {
+  const { i18n } = useLingui();
   const [chosenProjectId, setChosenProjectId] = useState<ProjectId | null>(null);
   const projectId =
     chosenProjectId !== null && sendTargets.some((target) => target.projectId === chosenProjectId)
@@ -96,7 +98,9 @@ export function GitHubItemAskComposer({
   const { onAskQuestion, onAsk } = host;
   return (
     <GitHubItemFloatingComposer
-      placeholder={`Ask about this ${noun}`}
+      placeholder={
+        noun === "issue" ? i18n._("Ask about this issue") : i18n._("Ask about this pull request")
+      }
       projects={sendTargets}
       projectId={projectId}
       onProjectChange={setChosenProjectId}
@@ -107,7 +111,7 @@ export function GitHubItemAskComposer({
           {onAsk ? (
             <MenuItem onClick={() => onAsk(buildTarget(projectId))}>
               <ChatBubbleIcon className={MENU_ICON_CLASS_NAME} />
-              <span>Open side chat</span>
+              <span>{i18n._("Open side chat")}</span>
             </MenuItem>
           ) : null}
           <SendToAgentMenuItems sendTargets={sendTargets} onSendToAgent={onSendToAgent} />
@@ -175,6 +179,7 @@ export function GitHubItemPageIconActions({
   itemLabel: string;
   pin: { pinned: boolean; onToggle: () => void } | undefined;
 }) {
+  const { i18n } = useLingui();
   return (
     <>
       {pin ? (
@@ -193,8 +198,8 @@ export function GitHubItemPageIconActions({
       <IconButton
         variant="ghost"
         size="icon-sm"
-        label="Copy link"
-        tooltip="Copy link"
+        label={i18n._("Copy link")}
+        tooltip={i18n._("Copy link")}
         tooltipSide="bottom"
         onClick={() => copyPullRequestLink(url)}
       >
@@ -203,8 +208,8 @@ export function GitHubItemPageIconActions({
       <IconButton
         variant="ghost"
         size="icon-sm"
-        label="Open on GitHub"
-        tooltip="Open on GitHub"
+        label={i18n._("Open on GitHub")}
+        tooltip={i18n._("Open on GitHub")}
         tooltipSide="bottom"
         onClick={() => void ensureNativeApi().shell.openExternal(url)}
       >
@@ -322,6 +327,7 @@ export function GitHubItemPageBody({
   children: ReactNode;
   composer?: ReactNode;
 }) {
+  const { i18n } = useLingui();
   return (
     <div className="@container/detail relative min-h-0 flex-1">
       <div className="h-full overflow-y-auto">
@@ -332,7 +338,7 @@ export function GitHubItemPageBody({
             {children}
           </div>
           <aside
-            aria-label="Details"
+            aria-label={i18n._("Details")}
             className="sticky top-1 hidden w-[22rem] shrink-0 @min-[52rem]/detail:block"
           >
             {info("column")}

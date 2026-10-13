@@ -3,6 +3,7 @@
 // Layer: Chat right-dock UI
 // Depends on: ui/sidebar primitive, right-dock pane metadata, and a caller-provided pane renderer.
 
+import { useLingui } from "@lingui/react";
 import {
   type CSSProperties,
   type ReactNode,
@@ -102,9 +103,10 @@ function RightDockLauncher(props: {
   items: readonly RightDockLauncherItem[];
   onOpen: (kind: RightDockPaneKind) => void;
 }) {
+  const { i18n } = useLingui();
   return (
     <nav
-      aria-label="Open a panel"
+      aria-label={i18n._("Open a panel")}
       className="flex h-full min-h-0 items-center justify-center overflow-y-auto p-6"
     >
       <div className="flex w-full max-w-sm flex-col gap-1.5">
@@ -114,7 +116,7 @@ function RightDockLauncher(props: {
             variant="subtle"
             size="xl"
             className="h-11 w-full justify-start gap-3 rounded-xl px-4 text-ui-lg font-normal"
-            aria-label={`Open ${label}`}
+            aria-label={i18n._("Open {panel}", { panel: label })}
             onClick={() => props.onOpen(kind)}
           >
             <Icon className="size-4 shrink-0" />
@@ -165,6 +167,7 @@ function useKeepMountedPaneIds(
 }
 
 export function RightDock(props: RightDockProps) {
+  const { i18n } = useLingui();
   const activePane = resolveActivePane(props.state);
   const onSelectPane = props.onSelectPane;
   const activePaneRuntimeMode = props.activePaneRuntimeMode ?? "live";
@@ -320,7 +323,7 @@ export function RightDock(props: RightDockProps) {
             )}
           >
             <SurfaceContentTabs
-              ariaLabel="Open panels"
+              ariaLabel={i18n._("Open panels")}
               activeKey={props.state.activePaneId}
               onMove={props.onMovePane}
               tabs={props.state.panes.map((pane) => ({
@@ -338,8 +341,8 @@ export function RightDock(props: RightDockProps) {
                     <Button
                       variant="chrome"
                       size="icon-xs"
-                      aria-label="Add panel"
-                      title="Add panel"
+                      aria-label={i18n._("Add panel")}
+                      title={i18n._("Add panel")}
                       className={DOCK_HEADER_ICON_BUTTON_CLASS}
                     />
                   }
@@ -376,8 +379,8 @@ export function RightDock(props: RightDockProps) {
               <IconButton
                 variant="chrome"
                 size="icon-xs"
-                label={maximized ? "Restore panel" : "Maximize panel"}
-                tooltip={maximized ? "Restore panel" : "Maximize panel"}
+                label={maximized ? i18n._("Restore panel") : i18n._("Maximize panel")}
+                tooltip={maximized ? i18n._("Restore panel") : i18n._("Maximize panel")}
                 tooltipSide="bottom"
                 aria-pressed={maximized}
                 className={DOCK_HEADER_ICON_BUTTON_CLASS}
@@ -393,8 +396,8 @@ export function RightDock(props: RightDockProps) {
             <IconButton
               variant="chrome"
               size="icon-xs"
-              label="Collapse panel"
-              tooltip="Collapse panel"
+              label={i18n._("Collapse panel")}
+              tooltip={i18n._("Collapse panel")}
               tooltipSide="bottom"
               className={DOCK_HEADER_ICON_BUTTON_CLASS}
               onClick={props.onCollapse}

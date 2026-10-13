@@ -20,6 +20,7 @@ msgstr ""
 #: src/components/chat/UserInputQuestionForm.tsx
 #: src/components/GitActionsControl.tsx
 #: src/components/ProviderUsageResetCredits.tsx
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
 #: src/components/settings/AddProviderAccountDialog.tsx
 #: src/components/settings/ManagedSkillEditorView.tsx
 #: src/components/ThreadWorktreeHandoffDialog.tsx
@@ -109,6 +110,7 @@ msgstr "Project binding failed: {error}"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
 #: src/routes/_chat.source-control.tsx
 msgid "Changes"
 msgstr "Changes"
@@ -634,6 +636,7 @@ msgid "Completed"
 msgstr "Completed"
 
 #. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
 #: src/components/chat/SubagentRunCard.logic.ts
 #: src/components/chat/SubagentThreadIntro.tsx
 #: src/components/chat/TimelineWorkEntryRow.tsx
@@ -643,6 +646,7 @@ msgid "Failed"
 msgstr "Failed"
 
 #. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
 #: src/lib/liveActivityPresentation.ts
 msgid "Cancelled"
 msgstr "Cancelled"
@@ -671,6 +675,16 @@ msgstr "Active {duration} ago"
 #: src/lib/liveActivityPresentation.ts
 msgid "{duration} elapsed"
 msgstr "{duration} elapsed"
+
+#. js-lingui-explicit-id
+#: src/lib/pin.tsx
+msgid "Unpin {target}"
+msgstr "Unpin {target}"
+
+#. js-lingui-explicit-id
+#: src/lib/pin.tsx
+msgid "Pin {target}"
+msgstr "Pin {target}"
 
 #. js-lingui-explicit-id
 #: src/lib/providerSetupStatus.ts
@@ -1028,6 +1042,7 @@ msgid "Subagent"
 msgstr "Subagent"
 
 #. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
 #: src/components/chat/SubagentRunCard.logic.ts
 #: src/components/chat/SubagentThreadIntro.tsx
 #: src/components/chat/TimelineWorkEntryRow.tsx
@@ -1288,6 +1303,7 @@ msgid "The side chat is open. Send the prompt again when it finishes loading."
 msgstr "The side chat is open. Send the prompt again when it finishes loading."
 
 #. js-lingui-explicit-id
+#: src/components/githubInbox/useGitHubInboxSidechat.ts
 #: src/hooks/useComposerSlashCommands.ts
 msgid "Side chat is still syncing"
 msgstr "Side chat is still syncing"
@@ -1511,6 +1527,16 @@ msgstr "Thread ID copied"
 #: src/hooks/useCopyToClipboard.ts
 msgid "Failed to copy thread ID"
 msgstr "Failed to copy thread ID"
+
+#. js-lingui-explicit-id
+#: src/hooks/useEmbeddedWorkspaceProject.ts
+msgid "The local Agent connection is unavailable."
+msgstr "The local Agent connection is unavailable."
+
+#. js-lingui-explicit-id
+#: src/hooks/useEmbeddedWorkspaceProject.ts
+msgid "The Lattice project could not be bound."
+msgstr "The Lattice project could not be bound."
 
 #. js-lingui-explicit-id
 #: src/hooks/useSidebarThreadActions.ts
@@ -1838,6 +1864,7 @@ msgstr "Loading stash details..."
 #: src/components/BranchToolbarBranchSelector.tsx
 #: src/components/chat/ComposerSlashStatusDialog.tsx
 #: src/components/GitCreatePrDialog.tsx
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
 msgid "Branch"
 msgstr "Branch"
 
@@ -2196,6 +2223,7 @@ msgstr "The conversation could not be deleted."
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
+#: src/components/pullRequest/GitHubItemInfo.tsx
 msgid "Threads"
 msgstr "Threads"
 
@@ -2253,6 +2281,7 @@ msgstr "Temporary"
 #. js-lingui-explicit-id
 #: src/components/chat/SingleChatSurface.tsx
 #: src/components/ChatView.tsx
+#: src/components/pullRequest/useHostThreadSidechatAsk.ts
 msgid "Side chat is unavailable"
 msgstr "Side chat is unavailable"
 
@@ -2273,6 +2302,8 @@ msgstr "Could not start side chat"
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
+#: src/components/githubInbox/useGitHubInboxSidechat.ts
+#: src/components/pullRequest/useHostThreadSidechatAsk.ts
 msgid "An error occurred while creating the side chat."
 msgstr "An error occurred while creating the side chat."
 
@@ -2333,11 +2364,13 @@ msgstr "Ask for follow-up changes"
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
+#: src/components/pullRequest/GitHubItemPageLayout.tsx
 msgid "Ask about this issue"
 msgstr "Ask about this issue"
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
+#: src/components/pullRequest/GitHubItemPageLayout.tsx
 msgid "Ask about this pull request"
 msgstr "Ask about this pull request"
 
@@ -2360,6 +2393,8 @@ msgstr "What should we work on?"
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
 #: src/components/ChatView.tsx
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+#: src/components/pullRequest/GitHubItemFloatingComposer.tsx
 msgid "Project"
 msgstr "Project"
 
@@ -2604,7 +2639,9 @@ msgid "No local changes"
 msgstr "No local changes"
 
 #. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
 #: src/components/GitCommitDialog.tsx
+#: src/components/pullRequest/PullRequestCodeTab.tsx
 msgid "{count, plural, one {# file} other {# files}}"
 msgstr "{count, plural, one {# file} other {# files}}"
 
@@ -2742,6 +2779,8 @@ msgstr "{provider} usage"
 #. js-lingui-explicit-id
 #: src/components/chat/MessagesTimeline.logic.ts
 #: src/components/ProviderUsagePanelContent.tsx
+#: src/components/pullRequest/GitHubItemPageLayout.tsx
+#: src/components/pullRequest/pullRequestMarkdown.logic.ts
 msgid "Details"
 msgstr "Details"
 
@@ -3039,6 +3078,19 @@ msgid "Hand off to {provider} in this thread"
 msgstr "Hand off to {provider} in this thread"
 
 #. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+#: src/components/SidebarListSection.tsx
+msgid "Show more"
+msgstr "Show more"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+#: src/components/settings/ModelsSettingsPanel.tsx
+#: src/components/SidebarListSection.tsx
+msgid "Show less"
+msgstr "Show less"
+
+#. js-lingui-explicit-id
 #: src/components/ThreadWorktreeHandoffDialog.tsx
 msgid "Hand off to worktree"
 msgstr "Hand off to worktree"
@@ -3076,6 +3128,7 @@ msgstr "Copy {label}"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ProposedPlanActions.tsx
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
 #: src/components/ui/copyTextButton.tsx
 #: src/components/ui/toast.tsx
 msgid "Copied"
@@ -3083,11 +3136,28 @@ msgstr "Copied"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerSlashStatusDialog.tsx
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
 #: src/components/settings/ProviderSignInDialog.tsx
 #: src/components/ui/dialog.tsx
 #: src/components/ui/sheet.tsx
 msgid "Close"
 msgstr "Close"
+
+#. js-lingui-explicit-id
+#: src/components/ui/sidebar.tsx
+msgid "Resize Sidebar"
+msgstr "Resize Sidebar"
+
+#. js-lingui-explicit-id
+#: src/components/ui/sidebar.tsx
+msgid "Toggle Sidebar"
+msgstr "Toggle Sidebar"
+
+#. js-lingui-explicit-id
+#: src/components/ui/sidebar.tsx
+msgid "Drag to resize sidebar"
+msgstr "Drag to resize sidebar"
 
 #. js-lingui-explicit-id
 #: src/components/chat/MessagesTimeline.tsx
@@ -3106,6 +3176,7 @@ msgid "Copy error message"
 msgstr "Copy error message"
 
 #. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
 #: src/components/ui/toast.tsx
 msgid "Copy"
@@ -3188,6 +3259,8 @@ msgid "Could not copy"
 msgstr "Could not copy"
 
 #. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
 msgid "Clipboard access failed."
 msgstr "Clipboard access failed."
@@ -3461,6 +3534,7 @@ msgstr "Resuming..."
 #. js-lingui-explicit-id
 #: src/components/chat/AgentActivityDetailView.tsx
 #: src/components/chat/ComposerExtrasPanel.tsx
+#: src/components/pullRequest/GitHubItemHeader.tsx
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
 msgid "Back"
 msgstr "Back"
@@ -3857,12 +3931,6 @@ msgid "Enable a provider in Settings → Providers to add custom models."
 msgstr "Enable a provider in Settings → Providers to add custom models."
 
 #. js-lingui-explicit-id
-#: src/components/chat/MessagesTimeline.tsx
-#: src/components/settings/ModelsSettingsPanel.tsx
-msgid "Show less"
-msgstr "Show less"
-
-#. js-lingui-explicit-id
 #: src/components/settings/ModelsSettingsPanel.tsx
 msgid "Show more ({count})"
 msgstr "Show more ({count})"
@@ -3879,6 +3947,7 @@ msgstr "No model activity yet."
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
 #: src/components/settings/ProviderAccentColorControl.tsx
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Clear"
@@ -4073,6 +4142,7 @@ msgid "Updating"
 msgstr "Updating"
 
 #. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestRow.tsx
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Updated"
 msgstr "Updated"
@@ -4639,6 +4709,7 @@ msgstr "Included"
 #: src/components/chat/ComposerCommandMenu.tsx
 #: src/components/chat/ComposerSlashStatusDialog.tsx
 #: src/components/chat/SynaraThreadCreationCard.tsx
+#: src/components/pullRequest/GitHubItemFloatingComposer.tsx
 #: src/components/settings/SkillsSettingsPanel.tsx
 msgid "Local"
 msgstr "Local"
@@ -4758,6 +4829,1299 @@ msgstr "{skillCount, plural, one {# skill} other {# skills}}"
 #: src/components/settings/skillsSettingsModel.ts
 msgid "Shared across agents"
 msgstr "Shared across agents"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemAgentActions.tsx
+msgid "Preparing…"
+msgstr "Preparing…"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemAgentActions.tsx
+msgid "Send to agent in {project}"
+msgstr "Send to agent in {project}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemAgentActions.tsx
+msgid "Send to agent"
+msgstr "Send to agent"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemAgentActions.tsx
+msgid "Send to agent: choose project"
+msgstr "Send to agent: choose project"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemFloatingComposer.tsx
+msgid "Project: {project}"
+msgstr "Project: {project}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemFloatingComposer.tsx
+msgid "Runs in this project's local checkout"
+msgstr "Runs in this project's local checkout"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemFloatingComposer.tsx
+msgid "More ways to use this item"
+msgstr "More ways to use this item"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemFloatingComposer.tsx
+msgid "Starting side chat"
+msgstr "Starting side chat"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemFloatingComposer.tsx
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Ask in a side chat"
+msgstr "Ask in a side chat"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemHeader.tsx
+msgid "just now"
+msgstr "just now"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemHeader.tsx
+msgid "{relative} ago"
+msgstr "{relative} ago"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemHeader.tsx
+msgid "Back to code review"
+msgstr "Back to code review"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemHeader.tsx
+msgid "State: {state}. Change state"
+msgstr "State: {state}. Change state"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "Request"
+msgstr "Request"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "Comments"
+msgstr "Comments"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+#: src/components/pullRequest/GitHubItemInfo.tsx
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "No comments"
+msgstr "No comments"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "{count, plural, one {# comment} other {# comments}}"
+msgstr "{count, plural, one {# comment} other {# comments}}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "Merge status"
+msgstr "Merge status"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "Approved"
+msgstr "Approved"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "Changes requested"
+msgstr "Changes requested"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "Reviews"
+msgstr "Reviews"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "No reviews"
+msgstr "No reviews"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "Show fewer"
+msgstr "Show fewer"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "View more"
+msgstr "View more"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "Checks"
+msgstr "Checks"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+#: src/components/pullRequest/GitHubItemInfo.tsx
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "No checks"
+msgstr "No checks"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "Assignees"
+msgstr "Assignees"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "Unassigned"
+msgstr "Unassigned"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "Labels"
+msgstr "Labels"
+
+#. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
+#: src/components/chat/TimelineWorkEntryRow.tsx
+#: src/components/pullRequest/GitHubItemInfo.tsx
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "None"
+msgstr "None"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemPageLayout.tsx
+msgid "Open side chat"
+msgstr "Open side chat"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemPageLayout.tsx
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Copy link"
+msgstr "Copy link"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemPageLayout.tsx
+msgid "Open on GitHub"
+msgstr "Open on GitHub"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "Merge"
+msgstr "Merge"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Squash"
+msgstr "Squash"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Rebase"
+msgstr "Rebase"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "Ready for review"
+msgstr "Ready for review"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Merging stack…"
+msgstr "Merging stack…"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Merging…"
+msgstr "Merging…"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgid "Merge stack"
+msgstr "Merge stack"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "Draft"
+msgstr "Draft"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Preparing findings…"
+msgstr "Preparing findings…"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Fix findings"
+msgstr "Fix findings"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Preparing conflicts…"
+msgstr "Preparing conflicts…"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Resolve conflicts"
+msgstr "Resolve conflicts"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Close pull request"
+msgstr "Close pull request"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Reopen pull request"
+msgstr "Reopen pull request"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCodeTab.tsx
+msgid "Diff exceeded 8 MiB and was truncated."
+msgstr "Diff exceeded 8 MiB and was truncated."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCodeTab.tsx
+msgid "Loading pull request diff…"
+msgstr "Loading pull request diff…"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCodeTab.tsx
+msgid "Could not load diff."
+msgstr "Could not load diff."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCodeTab.tsx
+msgid "This pull request has no file changes."
+msgstr "This pull request has no file changes."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCodeTab.tsx
+msgid "The pull request diff is unavailable."
+msgstr "The pull request diff is unavailable."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCommentCard.tsx
+msgid "High Severity"
+msgstr "High Severity"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCommentCard.tsx
+msgid "Medium Severity"
+msgstr "Medium Severity"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCommentCard.tsx
+msgid "Low Severity"
+msgstr "Low Severity"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCommentCard.tsx
+msgid "No review body."
+msgstr "No review body."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCommentCard.tsx
+msgid "Reply"
+msgstr "Reply"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCommentComposer.tsx
+msgid "Could not post comment"
+msgstr "Could not post comment"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCommentComposer.tsx
+msgid "GitHub CLI comment failed."
+msgstr "GitHub CLI comment failed."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCommentComposer.tsx
+msgid "Commenting as your GitHub account"
+msgstr "Commenting as your GitHub account"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCommentComposer.tsx
+msgid "Leave a comment"
+msgstr "Leave a comment"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCommentComposer.tsx
+msgid "Post comment"
+msgstr "Post comment"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgid "Link copied"
+msgstr "Link copied"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgid "Could not copy link"
+msgstr "Could not copy link"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgid "Close pull request?"
+msgstr "Close pull request?"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgid "{count, plural, one {Merge # pull request?} other {Merge # pull requests?}}"
+msgstr "{count, plural, one {Merge # pull request?} other {Merge # pull requests?}}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgid "Merge pull request?"
+msgstr "Merge pull request?"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgid "This will close #{number} without merging it."
+msgstr "This will close #{number} without merging it."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgid "This will atomically merge every open pull request through #{number} into {branch} using {method}."
+msgstr "This will atomically merge every open pull request through #{number} into {branch} using {method}."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgid "Pull requests above it will remain open and GitHub will retarget them."
+msgstr "Pull requests above it will remain open and GitHub will retarget them."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgid "This will merge #{number} into {branch} using {method}."
+msgstr "This will merge #{number} into {branch} using {method}."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgid "This will merge #{number} using {method}."
+msgstr "This will merge #{number} using {method}."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Pull request merged"
+msgstr "Pull request merged"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Marked ready for review"
+msgstr "Marked ready for review"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Converted to draft"
+msgstr "Converted to draft"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Pull request closed"
+msgstr "Pull request closed"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Pull request reopened"
+msgstr "Pull request reopened"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+#: src/components/githubInbox/GitHubIssueDetailPanel.tsx
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Summary"
+msgstr "Summary"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubIssueDetailPanel.tsx
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Timeline"
+msgstr "Timeline"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Code"
+msgstr "Code"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Stack added to merge queue"
+msgstr "Stack added to merge queue"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Pull request added to merge queue"
+msgstr "Pull request added to merge queue"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+#: src/components/pullRequest/pullRequestStack.logic.ts
+msgid "Stack merged"
+msgstr "Stack merged"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Pull request action failed"
+msgstr "Pull request action failed"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "GitHub CLI action failed."
+msgstr "GitHub CLI action failed."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Could not send the pull request to an agent"
+msgstr "Could not send the pull request to an agent"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Could not prepare findings"
+msgstr "Could not prepare findings"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Merge conflicts"
+msgstr "Merge conflicts"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "Conflicts with {branch}"
+msgstr "Conflicts with {branch}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Could not prepare conflict resolution"
+msgstr "Could not prepare conflict resolution"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Stack details could not be loaded. Refresh before merging."
+msgstr "Stack details could not be loaded. Refresh before merging."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Could not refresh pull request details. Showing saved data."
+msgstr "Could not refresh pull request details. Showing saved data."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "More actions"
+msgstr "More actions"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+#: src/components/pullRequest/PullRequestRow.tsx
+msgid "pull request #{number}"
+msgstr "pull request #{number}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Merge actions"
+msgstr "Merge actions"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Pull request detail tabs"
+msgstr "Pull request detail tabs"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Pull request not found"
+msgstr "Pull request not found"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "The selected pull request could not be loaded."
+msgstr "The selected pull request could not be loaded."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Open in external browser"
+msgstr "Open in external browser"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Close pull request panel"
+msgstr "Close pull request panel"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDockPane.tsx
+msgid "Select a pull request to open it here."
+msgstr "Select a pull request to open it here."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestMarkdown.tsx
+msgid "Image"
+msgstr "Image"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubIssueDetailPanel.tsx
+#: src/components/pullRequest/PullRequestRow.tsx
+msgid "issue #{number}"
+msgstr "issue #{number}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestRow.tsx
+msgid "{count} projects"
+msgstr "{count} projects"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestRow.tsx
+msgid "{item} in {project}"
+msgstr "{item} in {project}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestRow.tsx
+msgid "Opened"
+msgstr "Opened"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestStackPopover.tsx
+msgid "View stack {number}, pull request {position} of {size}"
+msgstr "View stack {number}, pull request {position} of {size}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestStackPopover.tsx
+msgid "Stack #{number}"
+msgstr "Stack #{number}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestStackPopover.tsx
+msgid "Stack #{number} · targets {branch}"
+msgstr "Stack #{number} · targets {branch}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestStackPosition.tsx
+msgid "Stack #{number}, pull request {position} of {size}"
+msgstr "Stack #{number}, pull request {position} of {size}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestStackPosition.tsx
+msgid "Stack #{number} · PR {position} of {size} · targets {branch}"
+msgstr "Stack #{number} · PR {position} of {size} · targets {branch}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "No description provided."
+msgstr "No description provided."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "Some unresolved review comments could not be loaded. Check GitHub for the complete review."
+msgstr "Some unresolved review comments could not be loaded. Check GitHub for the complete review."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "More unresolved review comments may be available on GitHub."
+msgstr "More unresolved review comments may be available on GitHub."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "Reviewers"
+msgstr "Reviewers"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "Description"
+msgstr "Description"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "No checks reported."
+msgstr "No checks reported."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "Could not copy command"
+msgstr "Could not copy command"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessageCopyButton.tsx
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "Copy to clipboard"
+msgstr "Copy to clipboard"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "Pull requests"
+msgstr "Pull requests"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "GitHub CLI is required"
+msgstr "GitHub CLI is required"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "Sign in to GitHub CLI"
+msgstr "Sign in to GitHub CLI"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "GitHub rate limit reached"
+msgstr "GitHub rate limit reached"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "{subject} are unavailable"
+msgstr "{subject} are unavailable"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "Synara reads GitHub data only through the gh CLI. Install it, then reopen this view."
+msgstr "Synara reads GitHub data only through the gh CLI. Install it, then reopen this view."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "Authenticate the GitHub CLI in a terminal, then retry."
+msgstr "Authenticate the GitHub CLI in a terminal, then retry."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "Synara pauses GitHub requests until the limit resets at {time}."
+msgstr "Synara pauses GitHub requests until the limit resets at {time}."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "Synara pauses GitHub requests until the limit resets."
+msgstr "Synara pauses GitHub requests until the limit resets."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "The request to GitHub failed."
+msgstr "The request to GitHub failed."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "Install instructions"
+msgstr "Install instructions"
+
+#. js-lingui-explicit-id
+#: src/components/chat/WorkerMonitorNoticePill.tsx
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "Retry"
+msgstr "Retry"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "The list refreshes on its own once the limit resets."
+msgstr "The list refreshes on its own once the limit resets."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "Check your connection and try again."
+msgstr "Check your connection and try again."
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "Merged"
+msgstr "Merged"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "Closed"
+msgstr "Closed"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "Someone"
+msgstr "Someone"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "{name} opened this issue"
+msgstr "{name} opened this issue"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "{name} opened this pull request"
+msgstr "{name} opened this pull request"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "Commit {sha} by {name}"
+msgstr "Commit {sha} by {name}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "Commit {sha}"
+msgstr "Commit {sha}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "No commit message."
+msgstr "No commit message."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "{name} reviewed"
+msgstr "{name} reviewed"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "{name} commented"
+msgstr "{name} commented"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "Issue merged"
+msgstr "Issue merged"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "Issue closed"
+msgstr "Issue closed"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "Can merge without conflicts"
+msgstr "Can merge without conflicts"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "Merge status unknown"
+msgstr "Merge status unknown"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "{count} failing"
+msgstr "{count} failing"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "{count} pending"
+msgstr "{count} pending"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "{count} successful"
+msgstr "{count} successful"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "{count} skipped"
+msgstr "{count} skipped"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestList.logic.ts
+msgid "Pinned"
+msgstr "Pinned"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestList.logic.ts
+msgid "Authored by me"
+msgstr "Authored by me"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestList.logic.ts
+msgid "Needs my review"
+msgstr "Needs my review"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestList.logic.ts
+msgid "Involving me"
+msgstr "Involving me"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestList.logic.ts
+msgid "Everything else"
+msgstr "Everything else"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestList.logic.ts
+msgid "All"
+msgstr "All"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStack.logic.ts
+msgid "Ready to merge"
+msgstr "Ready to merge"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStack.logic.ts
+msgid "Stack needs attention"
+msgstr "Stack needs attention"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStack.logic.ts
+msgid "Merge status pending"
+msgstr "Merge status pending"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStack.logic.ts
+msgid "Mergeable with failing checks"
+msgstr "Mergeable with failing checks"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStack.logic.ts
+msgid "#{number} is closed without being merged."
+msgstr "#{number} is closed without being merged."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStack.logic.ts
+msgid "#{number} is still a draft."
+msgstr "#{number} is still a draft."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStack.logic.ts
+msgid "#{number} is not ready to merge."
+msgstr "#{number} is not ready to merge."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStack.logic.ts
+msgid "Stack details are temporarily unavailable. Refresh before merging."
+msgstr "Stack details are temporarily unavailable. Refresh before merging."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStack.logic.ts
+msgid "This stack is not ready to merge."
+msgstr "This stack is not ready to merge."
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStack.logic.ts
+msgid "Resolve merge conflicts before merging"
+msgstr "Resolve merge conflicts before merging"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "PR open"
+msgstr "PR open"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "PR closed"
+msgstr "PR closed"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "PR merged"
+msgstr "PR merged"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "PR draft"
+msgstr "PR draft"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "PR has conflicts"
+msgstr "PR has conflicts"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "Issue open"
+msgstr "Issue open"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "Issue not planned"
+msgstr "Issue not planned"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "Not planned"
+msgstr "Not planned"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "Has conflicts"
+msgstr "Has conflicts"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/useHostThreadSidechatAsk.ts
+msgid "Open a server-backed main thread before starting a side chat."
+msgstr "Open a server-backed main thread before starting a side chat."
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/useGitHubInboxSidechat.ts
+#: src/components/pullRequest/useHostThreadSidechatAsk.ts
+msgid "Could not start a side chat"
+msgstr "Could not start a side chat"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Refreshing resumes at {time}."
+msgstr "Refreshing resumes at {time}."
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Refreshing resumes soon."
+msgstr "Refreshing resumes soon."
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "GitHub rate limit reached. Showing the last loaded items. {refresh}"
+msgstr "GitHub rate limit reached. Showing the last loaded items. {refresh}"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "GitHub rate limit reached. Some repositories could not be loaded. {refresh}"
+msgstr "GitHub rate limit reached. Some repositories could not be loaded. {refresh}"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "No pull requests found"
+msgstr "No pull requests found"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "No issues found"
+msgstr "No issues found"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "No pull requests and issues found"
+msgstr "No pull requests and issues found"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Showing merged pull requests from the 50 newest closed pull requests per repository."
+msgstr "Showing merged pull requests from the 50 newest closed pull requests per repository."
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Showing merged pull requests from the 50 most recently updated closed pull requests per repository."
+msgstr "Showing merged pull requests from the 50 most recently updated closed pull requests per repository."
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Showing the 50 newest pull requests per repository."
+msgstr "Showing the 50 newest pull requests per repository."
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Showing the 50 most recently updated pull requests per repository."
+msgstr "Showing the 50 most recently updated pull requests per repository."
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Showing the 50 newest issues per repository."
+msgstr "Showing the 50 newest issues per repository."
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Showing the 50 most recently updated issues per repository."
+msgstr "Showing the 50 most recently updated issues per repository."
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Showing the 50 newest pull requests and issues per repository."
+msgstr "Showing the 50 newest pull requests and issues per repository."
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Showing the 50 most recently updated pull requests and issues per repository."
+msgstr "Showing the 50 most recently updated pull requests and issues per repository."
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "{count, plural, one {# repository has more on GitHub.} other {# repositories have more on GitHub.}}"
+msgstr "{count, plural, one {# repository has more on GitHub.} other {# repositories have more on GitHub.}}"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Resize code review list"
+msgstr "Resize code review list"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "List takes {percent}% of the width"
+msgstr "List takes {percent}% of the width"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Loading code review"
+msgstr "Loading code review"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Select a pull request or issue"
+msgstr "Select a pull request or issue"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Choose one from the sidebar to review it"
+msgstr "Choose one from the sidebar to review it"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Could not update pin"
+msgstr "Could not update pin"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "The pin could not be saved."
+msgstr "The pin could not be saved."
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Waiting for the Lattice project…"
+msgstr "Waiting for the Lattice project…"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Refreshing…"
+msgstr "Refreshing…"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Wait for the pull request action to finish"
+msgstr "Wait for the pull request action to finish"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Could not refresh code review"
+msgstr "Could not refresh code review"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Code review could not be refreshed."
+msgstr "Code review could not be refreshed."
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Code review list"
+msgstr "Code review list"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Lattice project"
+msgstr "Lattice project"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Pull requests and issues"
+msgstr "Pull requests and issues"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "No projects yet"
+msgstr "No projects yet"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Review requests only apply to open pull requests"
+msgstr "Review requests only apply to open pull requests"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Code review lists pull requests and issues from the GitHub repositories of your projects."
+msgstr "Code review lists pull requests and issues from the GitHub repositories of your projects."
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Select Open to see pull requests awaiting your review."
+msgstr "Select Open to see pull requests awaiting your review."
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Try another filter, or clear them."
+msgstr "Try another filter, or clear them."
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Nothing here in the repositories of your projects."
+msgstr "Nothing here in the repositories of your projects."
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Clear filters"
+msgstr "Clear filters"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "{count, plural, one {# project repository was unavailable. Healthy repositories are still shown.} other {# project repositories were unavailable. Healthy repositories are still shown.}}"
+msgstr "{count, plural, one {# project repository was unavailable. Healthy repositories are still shown.} other {# project repositories were unavailable. Healthy repositories are still shown.}}"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "The latest background refresh failed. Showing the last loaded items."
+msgstr "The latest background refresh failed. Showing the last loaded items."
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Item details"
+msgstr "Item details"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Kind"
+msgstr "Kind"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "{kind}, {count}"
+msgstr "{kind}, {count}"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Remove filter: {label}"
+msgstr "Remove filter: {label}"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Code review"
+msgstr "Code review"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Sort: {sort}"
+msgstr "Sort: {sort}"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Sort by"
+msgstr "Sort by"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Filter ({count} active)"
+msgstr "Filter ({count} active)"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Filter"
+msgstr "Filter"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/chat/ToolCallDetailsDialog.tsx
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Status"
+msgstr "Status"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Involvement"
+msgstr "Involvement"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Projects"
+msgstr "Projects"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "No projects"
+msgstr "No projects"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "No labels in this view"
+msgstr "No labels in this view"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "More code review actions"
+msgstr "More code review actions"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "More"
+msgstr "More"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Refresh"
+msgstr "Refresh"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Search or paste a PR link"
+msgstr "Search or paste a PR link"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Search pull requests and issues"
+msgstr "Search pull requests and issues"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Active filters"
+msgstr "Active filters"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxSidechatDock.tsx
+msgid "Ask about issue #{number}"
+msgstr "Ask about issue #{number}"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxSidechatDock.tsx
+msgid "Ask about PR #{number}"
+msgstr "Ask about PR #{number}"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxSidechatDock.tsx
+msgid "New side chat"
+msgstr "New side chat"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubIssueDetailPanel.tsx
+msgid "Could not send the issue to an agent"
+msgstr "Could not send the issue to an agent"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubIssueDetailPanel.tsx
+msgid "Issue detail tabs"
+msgstr "Issue detail tabs"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubIssueDetailPanel.tsx
+msgid "Issues"
+msgstr "Issues"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubIssueDetailPanel.tsx
+msgid "Issue not found"
+msgstr "Issue not found"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubIssueDetailPanel.tsx
+msgid "The selected issue could not be loaded."
+msgstr "The selected issue could not be loaded."
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubIssueDetailPanel.tsx
+msgid "Could not refresh the issue. Showing saved data."
+msgstr "Could not refresh the issue. Showing saved data."
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubIssueDetailPanel.tsx
+msgid "Some comments are not shown here. Open the issue on GitHub for the full discussion."
+msgstr "Some comments are not shown here. Open the issue on GitHub for the full discussion."
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/useGitHubInboxSidechat.ts
+msgid "It will appear as soon as the thread list refreshes."
+msgstr "It will appear as soon as the thread list refreshes."
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/useGitHubInboxSidechat.ts
+msgid "The item could not be loaded."
+msgstr "The item could not be loaded."
 
 #. js-lingui-explicit-id
 #: src/components/chat/ActiveTaskListCard.tsx
@@ -5320,12 +6684,6 @@ msgstr "Fork"
 #: src/components/chat/ComposerCommandMenu.tsx
 msgid "Sidechat"
 msgstr "Sidechat"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerCommandMenu.tsx
-#: src/components/chat/ToolCallDetailsDialog.tsx
-msgid "Status"
-msgstr "Status"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
@@ -6847,11 +8205,6 @@ msgstr "You can also use owner/repository to publish to an organization."
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitRepositorySetup.tsx
-msgid "Description"
-msgstr "Description"
-
-#. js-lingui-explicit-id
-#: src/components/chat/GitRepositorySetup.tsx
 msgid "Optional"
 msgstr "Optional"
 
@@ -7054,11 +8407,6 @@ msgstr "Selection"
 #: src/components/chat/MessageCopyButton.tsx
 msgid "Copy message"
 msgstr "Copy message"
-
-#. js-lingui-explicit-id
-#: src/components/chat/MessageCopyButton.tsx
-msgid "Copy to clipboard"
-msgstr "Copy to clipboard"
 
 #. js-lingui-explicit-id
 #: src/components/chat/MessageTrail.tsx
@@ -7315,11 +8663,6 @@ msgstr "Send"
 
 #. js-lingui-explicit-id
 #: src/components/chat/MessagesTimeline.tsx
-msgid "Show more"
-msgstr "Show more"
-
-#. js-lingui-explicit-id
-#: src/components/chat/MessagesTimeline.tsx
 msgid "Answer"
 msgstr "Answer"
 
@@ -7528,6 +8871,41 @@ msgstr "Edit queued follow-up"
 #: src/components/chat/RateLimitBanner.tsx
 msgid "Dismiss rate limit status"
 msgstr "Dismiss rate limit status"
+
+#. js-lingui-explicit-id
+#: src/components/chat/RightDock.tsx
+msgid "Open a panel"
+msgstr "Open a panel"
+
+#. js-lingui-explicit-id
+#: src/components/chat/RightDock.tsx
+msgid "Open {panel}"
+msgstr "Open {panel}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/RightDock.tsx
+msgid "Open panels"
+msgstr "Open panels"
+
+#. js-lingui-explicit-id
+#: src/components/chat/RightDock.tsx
+msgid "Add panel"
+msgstr "Add panel"
+
+#. js-lingui-explicit-id
+#: src/components/chat/RightDock.tsx
+msgid "Restore panel"
+msgstr "Restore panel"
+
+#. js-lingui-explicit-id
+#: src/components/chat/RightDock.tsx
+msgid "Maximize panel"
+msgstr "Maximize panel"
+
+#. js-lingui-explicit-id
+#: src/components/chat/RightDock.tsx
+msgid "Collapse panel"
+msgstr "Collapse panel"
 
 #. js-lingui-explicit-id
 #: src/components/chat/SelectionNewChatComposer.tsx
@@ -8112,11 +9490,6 @@ msgstr "current directory"
 
 #. js-lingui-explicit-id
 #: src/components/chat/TimelineWorkEntryRow.tsx
-msgid "Summary"
-msgstr "Summary"
-
-#. js-lingui-explicit-id
-#: src/components/chat/TimelineWorkEntryRow.tsx
 msgid "Raw call"
 msgstr "Raw call"
 
@@ -8219,12 +9592,6 @@ msgstr "Error"
 #: src/components/chat/TimelineWorkEntryRow.tsx
 msgid "The session did not start."
 msgstr "The session did not start."
-
-#. js-lingui-explicit-id
-#: src/components/chat/modelPickerLabels.ts
-#: src/components/chat/TimelineWorkEntryRow.tsx
-msgid "None"
-msgstr "None"
 
 #. js-lingui-explicit-id
 #: src/components/chat/TimelineWorkEntryRow.tsx
@@ -8375,11 +9742,6 @@ msgstr "Select one or more."
 #: src/components/chat/WorkerMonitorNoticePill.tsx
 msgid "PR"
 msgstr "PR"
-
-#. js-lingui-explicit-id
-#: src/components/chat/WorkerMonitorNoticePill.tsx
-msgid "Retry"
-msgstr "Retry"
 
 #. js-lingui-explicit-id
 #: src/components/chat/WorkerMonitorNoticePill.tsx
@@ -8587,6 +9949,71 @@ msgstr "Could not update the subagent"
 msgid "The subagent request failed. Try again."
 msgstr "The subagent request failed. Try again."
 
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "{count, plural, one {# failing check} other {# failing checks}}"
+msgstr "{count, plural, one {# failing check} other {# failing checks}}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "{count, plural, one {# cancelled check} other {# cancelled checks}}"
+msgstr "{count, plural, one {# cancelled check} other {# cancelled checks}}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "{count, plural, one {# pending check} other {# pending checks}}"
+msgstr "{count, plural, one {# pending check} other {# pending checks}}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "No required checks"
+msgstr "No required checks"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "All checks passed"
+msgstr "All checks passed"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "Succeeded"
+msgstr "Succeeded"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "Skipped"
+msgstr "Skipped"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "Neutral"
+msgstr "Neutral"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "Comments may exist"
+msgstr "Comments may exist"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "{count, plural, one {#+ comment} other {#+ comments}}"
+msgstr "{count, plural, one {#+ comment} other {#+ comments}}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "Issue in {repository}"
+msgstr "Issue in {repository}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "Pull request in {repository}"
+msgstr "Pull request in {repository}"
+
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgctxt "Between the parts of a checks summary"
+msgid ", "
+msgstr ", "
+
 #. placeholder {0}: progress.questionIndex + 1
 #: src/components/chat/ComposerPendingUserInputPanel.tsx
 msgid "{0} of {questionCount}"
@@ -8603,6 +10030,10 @@ msgstr "Agent providers"
 #: src/settingsNavigation.ts
 msgid "Agent skills"
 msgstr "Agent skills"
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "All"
+msgstr "All"
 
 #: src/components/chat/ComposerPendingApprovalPanel.tsx
 msgid "Allow Computer for this task"
@@ -8635,6 +10066,10 @@ msgstr "Antigravity binary path"
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Antigravity CLI binary path"
 msgstr "Antigravity CLI binary path"
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Anyone"
+msgstr "Anyone"
 
 #: src/settingsNavigation.ts
 msgid "Appearance"
@@ -8679,6 +10114,14 @@ msgstr "Artifacts, /design and /slides"
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Ask before resuming a long idle session"
 msgstr "Ask before resuming a long idle session"
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Assigned to me"
+msgstr "Assigned to me"
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Authored by me"
+msgstr "Authored by me"
 
 #: src/components/chat/ProviderModelPicker.tsx
 msgid "Back"
@@ -8740,6 +10183,10 @@ msgstr "Claude HOME"
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Claude HOME path"
 msgstr "Claude HOME path"
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Closed"
+msgstr "Closed"
 
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Codex binary path"
@@ -8910,6 +10357,14 @@ msgstr "Install"
 msgid "Integrations"
 msgstr "Integrations"
 
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Involving me"
+msgstr "Involving me"
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Issues"
+msgstr "Issues"
+
 #: src/components/chat/ComposerPendingApprovalPanel.tsx
 msgid "Keep it in the background"
 msgstr "Keep it in the background"
@@ -8974,6 +10429,15 @@ msgstr "Managed worktrees"
 msgid "MCP connections"
 msgstr "MCP connections"
 
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgctxt "merge method"
+msgid "merge"
+msgstr "merge"
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Merged"
+msgstr "Merged"
+
 #: src/components/settings/ModelsSettingsPanel.tsx
 msgid "Model slugs must be {max} characters or less."
 msgstr "Model slugs must be {max} characters or less."
@@ -8981,6 +10445,10 @@ msgstr "Model slugs must be {max} characters or less."
 #: src/components/chat/ChatHeader.tsx
 msgid "New chat"
 msgstr "New chat"
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Newest"
+msgstr "Newest"
 
 #: src/components/chat/ChatHeader.tsx
 msgid "No chats in this project yet"
@@ -9005,6 +10473,15 @@ msgstr "Oh My Pi agent directory"
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Oh My Pi binary path"
 msgstr "Oh My Pi binary path"
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Open"
+msgstr "Open"
+
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgctxt "GitHub item state"
+msgid "Open"
+msgstr "Open"
 
 #: src/components/chat/ComposerModelPicker.tsx
 msgid "Open provider setup"
@@ -9066,9 +10543,26 @@ msgstr "Pi agent directory"
 msgid "Profile"
 msgstr "Profile"
 
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "PRs"
+msgstr "PRs"
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Pull requests"
+msgstr "Pull requests"
+
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Quickstart"
 msgstr "Quickstart"
+
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgctxt "merge method"
+msgid "rebase"
+msgstr "rebase"
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Recently updated"
+msgstr "Recently updated"
 
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Reference"
@@ -9097,6 +10591,10 @@ msgstr "Retry"
 #: src/settingsNavigation.ts
 msgid "Review and clean up isolated workspaces created by Lattice."
 msgstr "Review and clean up isolated workspaces created by Lattice."
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Review requested"
+msgstr "Review requested"
 
 #: src/components/chat/ComposerPendingApprovalPanel.tsx
 msgid "Review the request to continue."
@@ -9129,6 +10627,11 @@ msgstr "Show this on your screen?"
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Source"
 msgstr "Source"
+
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgctxt "merge method"
+msgid "squash"
+msgstr "squash"
 
 #: src/components/chat/MessagesTimeline.tsx
 msgid "Steering conversation"

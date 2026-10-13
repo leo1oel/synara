@@ -16,6 +16,7 @@ import type { ExpandedImagePreview } from "~/components/chat/ExpandedImagePrevie
 import { useExpandedImagePreview } from "~/components/chat/useExpandedImagePreview";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { DisclosureChevron } from "~/components/ui/DisclosureChevron";
+import { i18n } from "~/i18n";
 import { cn } from "~/lib/utils";
 import {
   preparePullRequestMarkdown,
@@ -88,7 +89,7 @@ export function PullRequestMarkdown({
     const index = sourceImage ? elements.indexOf(sourceImage) : -1;
     const images = elements.map((image) => ({
       src: image.getAttribute("src") ?? "",
-      name: image.alt || "Image",
+      name: image.alt || i18n._("Image"),
     }));
     setExpandedImage(index < 0 ? preview : { images, index });
   };

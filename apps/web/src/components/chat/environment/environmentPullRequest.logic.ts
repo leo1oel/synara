@@ -20,6 +20,7 @@ import {
   type PullRequestContextDraft,
   type PullRequestContextScope,
 } from "~/lib/pullRequestContext";
+import { i18n } from "~/i18n";
 import { randomUUID } from "~/lib/utils";
 
 export type PullRequestChecksTone = "pending" | "success" | "failure" | "none";
@@ -44,24 +45,57 @@ export function summarizePullRequestChecks(
 ): PullRequestChecksSummary {
   const failing = checks.filter((check) => check.status === "failure").length;
   if (failing > 0) {
-    return { label: `${failing} ${pluralize(failing, "failing check")}`, tone: "failure" };
+    return {
+      label: i18n._("{count, plural, one {# failing check} other {# failing checks}}", {
+        count: failing,
+      }),
+      tone: "failure",
+    };
   }
   const cancelled = checks.filter((check) => check.status === "cancelled").length;
   if (cancelled > 0) {
-    return { label: `${cancelled} ${pluralize(cancelled, "cancelled check")}`, tone: "failure" };
+    return {
+      label: i18n._("{count, plural, one {# cancelled check} other {# cancelled checks}}", {
+        count: cancelled,
+      }),
+      tone: "failure",
+    };
   }
   const pending = checks.filter((check) => check.status === "pending").length;
   if (pending > 0) {
-    return { label: `${pending} ${pluralize(pending, "pending check")}`, tone: "pending" };
+    return {
+      label: i18n._("{count, plural, one {# pending check} other {# pending checks}}", {
+        count: pending,
+      }),
+      tone: "pending",
+    };
   }
   if (checks.length === 0) {
-    return { label: "No checks", tone: "none" };
+    return { label: i18n._("No checks"), tone: "none" };
   }
   const successful = checks.filter((check) => check.status === "success").length;
   if (successful === 0) {
-    return { label: "No required checks", tone: "none" };
+    return { label: i18n._("No required checks"), tone: "none" };
   }
-  return { label: "All checks passed", tone: "success" };
+  return { label: i18n._("All checks passed"), tone: "success" };
+}
+
+/** A check's status as the UI names it. Prompts keep PULL_REQUEST_CHECK_STATUS_LABELS' English. */
+export function pullRequestCheckStatusLabel(status: GitPullRequestCheck["status"]): string {
+  switch (status) {
+    case "pending":
+      return i18n._("Running");
+    case "success":
+      return i18n._("Succeeded");
+    case "failure":
+      return i18n._("Failed");
+    case "skipped":
+      return i18n._("Skipped");
+    case "neutral":
+      return i18n._("Neutral");
+    case "cancelled":
+      return i18n._("Cancelled");
+  }
 }
 
 export const PULL_REQUEST_CHECK_STATUS_LABELS: Record<GitPullRequestCheck["status"], string> = {
@@ -108,14 +142,17 @@ export function summarizePullRequestDiffStat(pr: {
     additions: pr.additions ?? 0,
     deletions: pr.deletions ?? 0,
     filesLabel:
-      pr.changedFiles === null ? null : `${pr.changedFiles} ${pluralize(pr.changedFiles, "file")}`,
+      pr.changedFiles === null
+        ? null
+        : i18n._("{count, plural, one {# file} other {# files}}", { count: pr.changedFiles }),
   };
 }
 
 export function summarizePullRequestComments(count: number, truncated = false): string {
-  if (count === 0) return truncated ? "Comments may exist" : "No comments";
-  const noun = pluralize(count, "comment");
-  return truncated ? `${count}+ ${noun}` : `${count} ${noun}`;
+  if (count === 0) return truncated ? i18n._("Comments may exist") : i18n._("No comments");
+  return truncated
+    ? i18n._("{count, plural, one {#+ comment} other {#+ comments}}", { count })
+    : i18n._("{count, plural, one {# comment} other {# comments}}", { count });
 }
 
 export interface PullRequestCommentDisplay {
@@ -783,7 +820,10 @@ export function createGitHubItemContextDraft(
     scope: "reference",
     pr: { number: item.number, url: item.url },
     title: `#${item.number} ${item.title}`,
-    subtitle: `${item.itemKind === "issue" ? "Issue" : "Pull request"} in ${item.repository}`,
+    subtitle:
+      item.itemKind === "issue"
+        ? i18n._("Issue in {repository}", { repository: item.repository })
+        : i18n._("Pull request in {repository}", { repository: item.repository }),
     // The PR URL is the reference; let the agent read current GitHub details as needed.
     // Keep the title/subtitle for the card without copying the discussion into the prompt.
     text:

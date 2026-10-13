@@ -5,6 +5,7 @@
 // Layer: Pull request presentation
 // Exports: PullRequestStackPopover
 
+import { useLingui } from "@lingui/react";
 import type { PullRequestStack } from "@synara/contracts";
 import { useState } from "react";
 
@@ -16,7 +17,7 @@ import { cn } from "~/lib/utils";
 
 import { PullRequestStateGlyph } from "./PullRequestStateGlyph";
 import { PullRequestStackPosition } from "./PullRequestStackPosition";
-import { assessPullRequestStack } from "./pullRequestStack.logic";
+import { assessPullRequestStack, localizeStackAssessmentLabel } from "./pullRequestStack.logic";
 
 const ASSESSMENT_COLOR_CLASS = {
   ready: "text-status-open",
@@ -35,6 +36,7 @@ export function PullRequestStackPopover({
   currentNumber: number;
   onSelectPullRequest?: ((number: number) => void) | undefined;
 }) {
+  const { i18n } = useLingui();
   const [open, setOpen] = useState(false);
   const assessment = assessPullRequestStack(stack);
   const entriesTopDown = stack.entries.toReversed();
@@ -47,8 +49,12 @@ export function PullRequestStackPopover({
             variant="chrome-outline"
             size="xs"
             className={cn(CHAT_HEADER_CONTROL_CLASS_NAME, "gap-1.5 px-2 font-normal")}
-            aria-label={`View stack ${stack.number}, pull request ${stack.position} of ${stack.size}`}
-            title={`Stack #${stack.number}`}
+            aria-label={i18n._("View stack {number}, pull request {position} of {size}", {
+              number: stack.number,
+              position: stack.position,
+              size: stack.size,
+            })}
+            title={i18n._("Stack #{number}", { number: stack.number })}
           >
             <PullRequestStackPosition stack={stack} appearance="plain" />
           </Button>
@@ -62,10 +68,13 @@ export function PullRequestStackPopover({
       >
         <div className="border-b border-border px-4 py-3">
           <div className={cn("text-ui-lg font-medium", ASSESSMENT_COLOR_CLASS[assessment.tone])}>
-            {assessment.label}
+            {localizeStackAssessmentLabel(assessment.label)}
           </div>
           <div className="mt-0.5 text-ui leading-snug text-muted-foreground">
-            Stack #{stack.number} · targets {stack.baseBranch}
+            {i18n._("Stack #{number} · targets {branch}", {
+              number: stack.number,
+              branch: stack.baseBranch,
+            })}
           </div>
         </div>
 

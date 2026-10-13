@@ -20,6 +20,7 @@ msgstr ""
 #: src/components/chat/UserInputQuestionForm.tsx
 #: src/components/GitActionsControl.tsx
 #: src/components/ProviderUsageResetCredits.tsx
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
 #: src/components/settings/AddProviderAccountDialog.tsx
 #: src/components/settings/ManagedSkillEditorView.tsx
 #: src/components/ThreadWorktreeHandoffDialog.tsx
@@ -109,6 +110,7 @@ msgstr "项目绑定失败：{error}"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
 #: src/routes/_chat.source-control.tsx
 msgid "Changes"
 msgstr "更改"
@@ -634,6 +636,7 @@ msgid "Completed"
 msgstr "已完成"
 
 #. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
 #: src/components/chat/SubagentRunCard.logic.ts
 #: src/components/chat/SubagentThreadIntro.tsx
 #: src/components/chat/TimelineWorkEntryRow.tsx
@@ -643,6 +646,7 @@ msgid "Failed"
 msgstr "失败"
 
 #. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
 #: src/lib/liveActivityPresentation.ts
 msgid "Cancelled"
 msgstr "已取消"
@@ -671,6 +675,16 @@ msgstr "{duration}前有动静"
 #: src/lib/liveActivityPresentation.ts
 msgid "{duration} elapsed"
 msgstr "已用 {duration}"
+
+#. js-lingui-explicit-id
+#: src/lib/pin.tsx
+msgid "Unpin {target}"
+msgstr "取消固定{target}"
+
+#. js-lingui-explicit-id
+#: src/lib/pin.tsx
+msgid "Pin {target}"
+msgstr "固定{target}"
 
 #. js-lingui-explicit-id
 #: src/lib/providerSetupStatus.ts
@@ -1028,6 +1042,7 @@ msgid "Subagent"
 msgstr "子助手"
 
 #. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
 #: src/components/chat/SubagentRunCard.logic.ts
 #: src/components/chat/SubagentThreadIntro.tsx
 #: src/components/chat/TimelineWorkEntryRow.tsx
@@ -1288,6 +1303,7 @@ msgid "The side chat is open. Send the prompt again when it finishes loading."
 msgstr "旁聊已经打开。加载完成后请再发送一次提示。"
 
 #. js-lingui-explicit-id
+#: src/components/githubInbox/useGitHubInboxSidechat.ts
 #: src/hooks/useComposerSlashCommands.ts
 msgid "Side chat is still syncing"
 msgstr "旁聊还在同步"
@@ -1511,6 +1527,16 @@ msgstr "对话 ID 已复制"
 #: src/hooks/useCopyToClipboard.ts
 msgid "Failed to copy thread ID"
 msgstr "复制对话 ID 失败"
+
+#. js-lingui-explicit-id
+#: src/hooks/useEmbeddedWorkspaceProject.ts
+msgid "The local Agent connection is unavailable."
+msgstr "暂时无法连接本地 AI 服务。"
+
+#. js-lingui-explicit-id
+#: src/hooks/useEmbeddedWorkspaceProject.ts
+msgid "The Lattice project could not be bound."
+msgstr "无法关联 Lattice 项目。"
 
 #. js-lingui-explicit-id
 #: src/hooks/useSidebarThreadActions.ts
@@ -1838,6 +1864,7 @@ msgstr "正在加载暂存详情..."
 #: src/components/BranchToolbarBranchSelector.tsx
 #: src/components/chat/ComposerSlashStatusDialog.tsx
 #: src/components/GitCreatePrDialog.tsx
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
 msgid "Branch"
 msgstr "分支"
 
@@ -2196,6 +2223,7 @@ msgstr "这个对话没能删除。"
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
+#: src/components/pullRequest/GitHubItemInfo.tsx
 msgid "Threads"
 msgstr "对话"
 
@@ -2253,6 +2281,7 @@ msgstr "临时"
 #. js-lingui-explicit-id
 #: src/components/chat/SingleChatSurface.tsx
 #: src/components/ChatView.tsx
+#: src/components/pullRequest/useHostThreadSidechatAsk.ts
 msgid "Side chat is unavailable"
 msgstr "无法使用旁聊"
 
@@ -2273,6 +2302,8 @@ msgstr "无法开始旁聊"
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
+#: src/components/githubInbox/useGitHubInboxSidechat.ts
+#: src/components/pullRequest/useHostThreadSidechatAsk.ts
 msgid "An error occurred while creating the side chat."
 msgstr "创建旁聊时出错了。"
 
@@ -2333,13 +2364,15 @@ msgstr "继续提出修改要求"
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
+#: src/components/pullRequest/GitHubItemPageLayout.tsx
 msgid "Ask about this issue"
-msgstr "就这个问题提问"
+msgstr "就这个议题提问"
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
+#: src/components/pullRequest/GitHubItemPageLayout.tsx
 msgid "Ask about this pull request"
-msgstr "就这个拉取请求提问"
+msgstr "就这个 PR 提问"
 
 #. js-lingui-explicit-id
 #: src/components/ChatView.tsx
@@ -2360,6 +2393,8 @@ msgstr "我们来做点什么？"
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
 #: src/components/ChatView.tsx
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+#: src/components/pullRequest/GitHubItemFloatingComposer.tsx
 msgid "Project"
 msgstr "项目"
 
@@ -2604,7 +2639,9 @@ msgid "No local changes"
 msgstr "没有本地更改"
 
 #. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
 #: src/components/GitCommitDialog.tsx
+#: src/components/pullRequest/PullRequestCodeTab.tsx
 msgid "{count, plural, one {# file} other {# files}}"
 msgstr "{count} 个文件"
 
@@ -2742,6 +2779,8 @@ msgstr "{provider} 用量"
 #. js-lingui-explicit-id
 #: src/components/chat/MessagesTimeline.logic.ts
 #: src/components/ProviderUsagePanelContent.tsx
+#: src/components/pullRequest/GitHubItemPageLayout.tsx
+#: src/components/pullRequest/pullRequestMarkdown.logic.ts
 msgid "Details"
 msgstr "详情"
 
@@ -3039,6 +3078,19 @@ msgid "Hand off to {provider} in this thread"
 msgstr "在本对话中移交给 {provider}"
 
 #. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+#: src/components/SidebarListSection.tsx
+msgid "Show more"
+msgstr "显示更多"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessagesTimeline.tsx
+#: src/components/settings/ModelsSettingsPanel.tsx
+#: src/components/SidebarListSection.tsx
+msgid "Show less"
+msgstr "收起"
+
+#. js-lingui-explicit-id
 #: src/components/ThreadWorktreeHandoffDialog.tsx
 msgid "Hand off to worktree"
 msgstr "移交到工作树"
@@ -3076,6 +3128,7 @@ msgstr "复制{label}"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ProposedPlanActions.tsx
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
 #: src/components/ui/copyTextButton.tsx
 #: src/components/ui/toast.tsx
 msgid "Copied"
@@ -3083,11 +3136,28 @@ msgstr "已复制"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerSlashStatusDialog.tsx
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
 #: src/components/settings/ProviderSignInDialog.tsx
 #: src/components/ui/dialog.tsx
 #: src/components/ui/sheet.tsx
 msgid "Close"
 msgstr "关闭"
+
+#. js-lingui-explicit-id
+#: src/components/ui/sidebar.tsx
+msgid "Resize Sidebar"
+msgstr "调整侧栏宽度"
+
+#. js-lingui-explicit-id
+#: src/components/ui/sidebar.tsx
+msgid "Toggle Sidebar"
+msgstr "显示或隐藏侧栏"
+
+#. js-lingui-explicit-id
+#: src/components/ui/sidebar.tsx
+msgid "Drag to resize sidebar"
+msgstr "拖动以调整侧栏宽度"
 
 #. js-lingui-explicit-id
 #: src/components/chat/MessagesTimeline.tsx
@@ -3106,6 +3176,7 @@ msgid "Copy error message"
 msgstr "复制错误信息"
 
 #. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
 #: src/components/ui/toast.tsx
 msgid "Copy"
@@ -3188,6 +3259,8 @@ msgid "Could not copy"
 msgstr "无法复制"
 
 #. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
 msgid "Clipboard access failed."
 msgstr "无法访问剪贴板。"
@@ -3461,6 +3534,7 @@ msgstr "正在恢复..."
 #. js-lingui-explicit-id
 #: src/components/chat/AgentActivityDetailView.tsx
 #: src/components/chat/ComposerExtrasPanel.tsx
+#: src/components/pullRequest/GitHubItemHeader.tsx
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
 msgid "Back"
 msgstr "返回"
@@ -3857,12 +3931,6 @@ msgid "Enable a provider in Settings → Providers to add custom models."
 msgstr "请先在“设置 → 提供商”中启用一个提供商，再添加自定义模型。"
 
 #. js-lingui-explicit-id
-#: src/components/chat/MessagesTimeline.tsx
-#: src/components/settings/ModelsSettingsPanel.tsx
-msgid "Show less"
-msgstr "收起"
-
-#. js-lingui-explicit-id
 #: src/components/settings/ModelsSettingsPanel.tsx
 msgid "Show more ({count})"
 msgstr "显示更多（{count}）"
@@ -3879,6 +3947,7 @@ msgstr "尚无模型活动。"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
 #: src/components/settings/ProviderAccentColorControl.tsx
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Clear"
@@ -4073,6 +4142,7 @@ msgid "Updating"
 msgstr "正在更新"
 
 #. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestRow.tsx
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Updated"
 msgstr "已更新"
@@ -4639,6 +4709,7 @@ msgstr "内置"
 #: src/components/chat/ComposerCommandMenu.tsx
 #: src/components/chat/ComposerSlashStatusDialog.tsx
 #: src/components/chat/SynaraThreadCreationCard.tsx
+#: src/components/pullRequest/GitHubItemFloatingComposer.tsx
 #: src/components/settings/SkillsSettingsPanel.tsx
 msgid "Local"
 msgstr "本地"
@@ -4758,6 +4829,1299 @@ msgstr "{skillCount, plural, other {# 个 Skills}}"
 #: src/components/settings/skillsSettingsModel.ts
 msgid "Shared across agents"
 msgstr "多个 AI 共用"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemAgentActions.tsx
+msgid "Preparing…"
+msgstr "正在准备…"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemAgentActions.tsx
+msgid "Send to agent in {project}"
+msgstr "在 {project} 中交给 AI"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemAgentActions.tsx
+msgid "Send to agent"
+msgstr "交给 AI"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemAgentActions.tsx
+msgid "Send to agent: choose project"
+msgstr "交给 AI：选择项目"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemFloatingComposer.tsx
+msgid "Project: {project}"
+msgstr "项目：{project}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemFloatingComposer.tsx
+msgid "Runs in this project's local checkout"
+msgstr "在这个项目的本地检出中运行"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemFloatingComposer.tsx
+msgid "More ways to use this item"
+msgstr "更多用法"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemFloatingComposer.tsx
+msgid "Starting side chat"
+msgstr "正在开始旁聊"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemFloatingComposer.tsx
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Ask in a side chat"
+msgstr "在旁聊中提问"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemHeader.tsx
+msgid "just now"
+msgstr "刚刚"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemHeader.tsx
+msgid "{relative} ago"
+msgstr "{relative}前"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemHeader.tsx
+msgid "Back to code review"
+msgstr "返回代码审查"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemHeader.tsx
+msgid "State: {state}. Change state"
+msgstr "状态：{state}。更改状态"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "Request"
+msgstr "请求审查"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "Comments"
+msgstr "评论"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+#: src/components/pullRequest/GitHubItemInfo.tsx
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "No comments"
+msgstr "没有评论"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "{count, plural, one {# comment} other {# comments}}"
+msgstr "{count, plural, other {# 条评论}}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "Merge status"
+msgstr "合并状态"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "Approved"
+msgstr "已批准"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "Changes requested"
+msgstr "需要修改"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "Reviews"
+msgstr "审查"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "No reviews"
+msgstr "没有审查"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "Show fewer"
+msgstr "收起"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "View more"
+msgstr "查看更多"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "Checks"
+msgstr "检查"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+#: src/components/pullRequest/GitHubItemInfo.tsx
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "No checks"
+msgstr "没有检查"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "Assignees"
+msgstr "负责人"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "Unassigned"
+msgstr "未分配"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+#: src/components/pullRequest/GitHubItemInfo.tsx
+msgid "Labels"
+msgstr "标签"
+
+#. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
+#: src/components/chat/TimelineWorkEntryRow.tsx
+#: src/components/pullRequest/GitHubItemInfo.tsx
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "None"
+msgstr "无"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemPageLayout.tsx
+msgid "Open side chat"
+msgstr "打开旁聊"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemPageLayout.tsx
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Copy link"
+msgstr "复制链接"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/GitHubItemPageLayout.tsx
+msgid "Open on GitHub"
+msgstr "在 GitHub 上打开"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "Merge"
+msgstr "合并"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Squash"
+msgstr "压缩合并"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Rebase"
+msgstr "变基合并"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "Ready for review"
+msgstr "可供审查"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Merging stack…"
+msgstr "正在合并整组…"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Merging…"
+msgstr "正在合并…"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgid "Merge stack"
+msgstr "合并整组"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "Draft"
+msgstr "草稿"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Preparing findings…"
+msgstr "正在整理问题…"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Fix findings"
+msgstr "修复问题"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Preparing conflicts…"
+msgstr "正在整理冲突…"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Resolve conflicts"
+msgstr "解决冲突"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Close pull request"
+msgstr "关闭 PR"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestActions.tsx
+msgid "Reopen pull request"
+msgstr "重新打开 PR"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCodeTab.tsx
+msgid "Diff exceeded 8 MiB and was truncated."
+msgstr "差异超过 8 MiB，已截断。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCodeTab.tsx
+msgid "Loading pull request diff…"
+msgstr "正在加载 PR 差异…"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCodeTab.tsx
+msgid "Could not load diff."
+msgstr "无法加载差异。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCodeTab.tsx
+msgid "This pull request has no file changes."
+msgstr "这个 PR 没有文件改动。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCodeTab.tsx
+msgid "The pull request diff is unavailable."
+msgstr "暂时无法查看这个 PR 的差异。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCommentCard.tsx
+msgid "High Severity"
+msgstr "高严重度"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCommentCard.tsx
+msgid "Medium Severity"
+msgstr "中严重度"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCommentCard.tsx
+msgid "Low Severity"
+msgstr "低严重度"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCommentCard.tsx
+msgid "No review body."
+msgstr "审查没有正文。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCommentCard.tsx
+msgid "Reply"
+msgstr "回复"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCommentComposer.tsx
+msgid "Could not post comment"
+msgstr "无法发表评论"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCommentComposer.tsx
+msgid "GitHub CLI comment failed."
+msgstr "GitHub CLI 发表评论失败。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCommentComposer.tsx
+msgid "Commenting as your GitHub account"
+msgstr "以你的 GitHub 账号评论"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCommentComposer.tsx
+msgid "Leave a comment"
+msgstr "发表评论"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestCommentComposer.tsx
+msgid "Post comment"
+msgstr "发表评论"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgid "Link copied"
+msgstr "链接已复制"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgid "Could not copy link"
+msgstr "无法复制链接"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgid "Close pull request?"
+msgstr "要关闭 PR 吗？"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgid "{count, plural, one {Merge # pull request?} other {Merge # pull requests?}}"
+msgstr "{count, plural, other {要合并 # 个 PR 吗？}}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgid "Merge pull request?"
+msgstr "要合并 PR 吗？"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgid "This will close #{number} without merging it."
+msgstr "这会关闭 #{number}，不合并。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgid "This will atomically merge every open pull request through #{number} into {branch} using {method}."
+msgstr "这会以{method}方式，把直到 #{number} 的所有打开的 PR 一次性合并到 {branch}。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgid "Pull requests above it will remain open and GitHub will retarget them."
+msgstr "它上面的 PR 会保持打开，GitHub 会把它们改为指向新的目标分支。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgid "This will merge #{number} into {branch} using {method}."
+msgstr "这会以{method}方式把 #{number} 合并到 {branch}。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgid "This will merge #{number} using {method}."
+msgstr "这会以{method}方式合并 #{number}。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Pull request merged"
+msgstr "PR 已合并"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Marked ready for review"
+msgstr "已标记为可供审查"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Converted to draft"
+msgstr "已转为草稿"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Pull request closed"
+msgstr "PR 已关闭"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Pull request reopened"
+msgstr "PR 已重新打开"
+
+#. js-lingui-explicit-id
+#: src/components/chat/TimelineWorkEntryRow.tsx
+#: src/components/githubInbox/GitHubIssueDetailPanel.tsx
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Summary"
+msgstr "摘要"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubIssueDetailPanel.tsx
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Timeline"
+msgstr "时间线"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Code"
+msgstr "代码"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Stack added to merge queue"
+msgstr "整组已加入合并队列"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Pull request added to merge queue"
+msgstr "PR 已加入合并队列"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+#: src/components/pullRequest/pullRequestStack.logic.ts
+msgid "Stack merged"
+msgstr "整组已合并"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Pull request action failed"
+msgstr "PR 操作失败"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "GitHub CLI action failed."
+msgstr "GitHub CLI 操作失败。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Could not send the pull request to an agent"
+msgstr "无法把 PR 交给 AI"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Could not prepare findings"
+msgstr "无法整理问题"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Merge conflicts"
+msgstr "合并冲突"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "Conflicts with {branch}"
+msgstr "与 {branch} 有冲突"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Could not prepare conflict resolution"
+msgstr "无法准备冲突解决"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Stack details could not be loaded. Refresh before merging."
+msgstr "无法加载整组的详情。请先刷新，再合并。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Could not refresh pull request details. Showing saved data."
+msgstr "无法刷新 PR 详情，正在显示已保存的数据。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "More actions"
+msgstr "更多操作"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+#: src/components/pullRequest/PullRequestRow.tsx
+msgid "pull request #{number}"
+msgstr "PR #{number}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Merge actions"
+msgstr "合并操作"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Pull request detail tabs"
+msgstr "PR 详情标签页"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Pull request not found"
+msgstr "找不到这个 PR"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "The selected pull request could not be loaded."
+msgstr "无法加载所选的 PR。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Open in external browser"
+msgstr "在外部浏览器中打开"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDetailPanel.tsx
+msgid "Close pull request panel"
+msgstr "关闭 PR 面板"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestDockPane.tsx
+msgid "Select a pull request to open it here."
+msgstr "选择一个 PR，在这里打开。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestMarkdown.tsx
+msgid "Image"
+msgstr "图片"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubIssueDetailPanel.tsx
+#: src/components/pullRequest/PullRequestRow.tsx
+msgid "issue #{number}"
+msgstr "议题 #{number}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestRow.tsx
+msgid "{count} projects"
+msgstr "{count} 个项目"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestRow.tsx
+msgid "{item} in {project}"
+msgstr "{project} 中的{item}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestRow.tsx
+msgid "Opened"
+msgstr "已创建"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestStackPopover.tsx
+msgid "View stack {number}, pull request {position} of {size}"
+msgstr "查看第 {number} 组，第 {position}/{size} 个 PR"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestStackPopover.tsx
+msgid "Stack #{number}"
+msgstr "第 {number} 组"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestStackPopover.tsx
+msgid "Stack #{number} · targets {branch}"
+msgstr "第 {number} 组 · 目标分支 {branch}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestStackPosition.tsx
+msgid "Stack #{number}, pull request {position} of {size}"
+msgstr "第 {number} 组，第 {position}/{size} 个 PR"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestStackPosition.tsx
+msgid "Stack #{number} · PR {position} of {size} · targets {branch}"
+msgstr "第 {number} 组 · 第 {position}/{size} 个 PR · 目标分支 {branch}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "No description provided."
+msgstr "没有描述。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "Some unresolved review comments could not be loaded. Check GitHub for the complete review."
+msgstr "有些未解决的审查评论无法加载。完整的审查请到 GitHub 上查看。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "More unresolved review comments may be available on GitHub."
+msgstr "GitHub 上可能还有更多未解决的审查评论。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "Reviewers"
+msgstr "审查者"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "Description"
+msgstr "描述"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestSummaryTab.tsx
+msgid "No checks reported."
+msgstr "没有报告任何检查。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "Could not copy command"
+msgstr "无法复制命令"
+
+#. js-lingui-explicit-id
+#: src/components/chat/MessageCopyButton.tsx
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "Copy to clipboard"
+msgstr "复制到剪贴板"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "Pull requests"
+msgstr "PR"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "GitHub CLI is required"
+msgstr "需要 GitHub CLI"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "Sign in to GitHub CLI"
+msgstr "登录 GitHub CLI"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "GitHub rate limit reached"
+msgstr "已达到 GitHub 请求限额"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "{subject} are unavailable"
+msgstr "暂时无法加载{subject}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "Synara reads GitHub data only through the gh CLI. Install it, then reopen this view."
+msgstr "GitHub 数据只通过 gh CLI 读取。请先安装，再重新打开这个视图。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "Authenticate the GitHub CLI in a terminal, then retry."
+msgstr "请在终端里登录 GitHub CLI，然后重试。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "Synara pauses GitHub requests until the limit resets at {time}."
+msgstr "GitHub 请求已暂停，将在 {time} 限额重置后恢复。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "Synara pauses GitHub requests until the limit resets."
+msgstr "GitHub 请求已暂停，限额重置后恢复。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "The request to GitHub failed."
+msgstr "GitHub 请求失败了。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "Install instructions"
+msgstr "安装说明"
+
+#. js-lingui-explicit-id
+#: src/components/chat/WorkerMonitorNoticePill.tsx
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "Retry"
+msgstr "重试"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "The list refreshes on its own once the limit resets."
+msgstr "限额重置后，列表会自动刷新。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/PullRequestsUnavailableState.tsx
+msgid "Check your connection and try again."
+msgstr "请检查网络连接，然后重试。"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "Merged"
+msgstr "已合并"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "Closed"
+msgstr "已关闭"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "Someone"
+msgstr "有人"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "{name} opened this issue"
+msgstr "{name} 创建了这个议题"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "{name} opened this pull request"
+msgstr "{name} 创建了这个 PR"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "Commit {sha} by {name}"
+msgstr "{name} 的提交 {sha}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "Commit {sha}"
+msgstr "提交 {sha}"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "No commit message."
+msgstr "没有提交信息。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "{name} reviewed"
+msgstr "{name} 进行了审查"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "{name} commented"
+msgstr "{name} 发表了评论"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "Issue merged"
+msgstr "议题已合并"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "Issue closed"
+msgstr "议题已关闭"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "Can merge without conflicts"
+msgstr "可以合并，没有冲突"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "Merge status unknown"
+msgstr "合并状态未知"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "{count} failing"
+msgstr "{count} 项失败"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "{count} pending"
+msgstr "{count} 项进行中"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "{count} successful"
+msgstr "{count} 项成功"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgid "{count} skipped"
+msgstr "{count} 项跳过"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestList.logic.ts
+msgid "Pinned"
+msgstr "已固定"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestList.logic.ts
+msgid "Authored by me"
+msgstr "我创建的"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestList.logic.ts
+msgid "Needs my review"
+msgstr "待我审查"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestList.logic.ts
+msgid "Involving me"
+msgstr "与我有关"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestList.logic.ts
+msgid "Everything else"
+msgstr "其他"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestList.logic.ts
+msgid "All"
+msgstr "全部"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStack.logic.ts
+msgid "Ready to merge"
+msgstr "可以合并"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStack.logic.ts
+msgid "Stack needs attention"
+msgstr "整组需要处理"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStack.logic.ts
+msgid "Merge status pending"
+msgstr "合并状态待定"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStack.logic.ts
+msgid "Mergeable with failing checks"
+msgstr "可以合并，但有检查失败"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStack.logic.ts
+msgid "#{number} is closed without being merged."
+msgstr "#{number} 已关闭，没有合并。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStack.logic.ts
+msgid "#{number} is still a draft."
+msgstr "#{number} 还是草稿。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStack.logic.ts
+msgid "#{number} is not ready to merge."
+msgstr "#{number} 还不能合并。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStack.logic.ts
+msgid "Stack details are temporarily unavailable. Refresh before merging."
+msgstr "暂时无法查看整组详情。请先刷新，再合并。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStack.logic.ts
+msgid "This stack is not ready to merge."
+msgstr "这组 PR 还不能合并。"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStack.logic.ts
+msgid "Resolve merge conflicts before merging"
+msgstr "请先解决合并冲突，再合并"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "PR open"
+msgstr "PR 已打开"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "PR closed"
+msgstr "PR 已关闭"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "PR merged"
+msgstr "PR 已合并"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "PR draft"
+msgstr "PR 草稿"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "PR has conflicts"
+msgstr "PR 有冲突"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "Issue open"
+msgstr "议题已打开"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "Issue not planned"
+msgstr "议题不予处理"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "Not planned"
+msgstr "不予处理"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgid "Has conflicts"
+msgstr "有冲突"
+
+#. js-lingui-explicit-id
+#: src/components/pullRequest/useHostThreadSidechatAsk.ts
+msgid "Open a server-backed main thread before starting a side chat."
+msgstr "请先打开一个由服务端保存的主对话，再开始旁聊。"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/useGitHubInboxSidechat.ts
+#: src/components/pullRequest/useHostThreadSidechatAsk.ts
+msgid "Could not start a side chat"
+msgstr "无法开始旁聊"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Refreshing resumes at {time}."
+msgstr "将在 {time} 恢复刷新。"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Refreshing resumes soon."
+msgstr "很快会恢复刷新。"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "GitHub rate limit reached. Showing the last loaded items. {refresh}"
+msgstr "已达到 GitHub 请求限额，正在显示上次加载的内容。{refresh}"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "GitHub rate limit reached. Some repositories could not be loaded. {refresh}"
+msgstr "已达到 GitHub 请求限额，有些仓库无法加载。{refresh}"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "No pull requests found"
+msgstr "没有找到 PR"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "No issues found"
+msgstr "没有找到议题"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "No pull requests and issues found"
+msgstr "没有找到 PR 和议题"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Showing merged pull requests from the 50 newest closed pull requests per repository."
+msgstr "每个仓库只显示最新关闭的 50 个 PR 中已合并的那些。"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Showing merged pull requests from the 50 most recently updated closed pull requests per repository."
+msgstr "每个仓库只显示最近更新的 50 个已关闭 PR 中已合并的那些。"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Showing the 50 newest pull requests per repository."
+msgstr "每个仓库只显示最新的 50 个 PR。"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Showing the 50 most recently updated pull requests per repository."
+msgstr "每个仓库只显示最近更新的 50 个 PR。"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Showing the 50 newest issues per repository."
+msgstr "每个仓库只显示最新的 50 个议题。"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Showing the 50 most recently updated issues per repository."
+msgstr "每个仓库只显示最近更新的 50 个议题。"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Showing the 50 newest pull requests and issues per repository."
+msgstr "每个仓库只显示最新的 50 个 PR 和议题。"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Showing the 50 most recently updated pull requests and issues per repository."
+msgstr "每个仓库只显示最近更新的 50 个 PR 和议题。"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "{count, plural, one {# repository has more on GitHub.} other {# repositories have more on GitHub.}}"
+msgstr "{count, plural, other {GitHub 上还有 # 个仓库有更多内容。}}"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Resize code review list"
+msgstr "调整代码审查列表宽度"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "List takes {percent}% of the width"
+msgstr "列表占宽度的 {percent}%"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Loading code review"
+msgstr "正在加载代码审查"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Select a pull request or issue"
+msgstr "选择一个 PR 或议题"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Choose one from the sidebar to review it"
+msgstr "从侧栏中选一个来审查"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Could not update pin"
+msgstr "无法更新固定状态"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "The pin could not be saved."
+msgstr "无法保存固定状态。"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Waiting for the Lattice project…"
+msgstr "正在等待 Lattice 项目…"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Refreshing…"
+msgstr "正在刷新…"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Wait for the pull request action to finish"
+msgstr "请等 PR 操作完成"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Could not refresh code review"
+msgstr "无法刷新代码审查"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Code review could not be refreshed."
+msgstr "代码审查无法刷新。"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Code review list"
+msgstr "代码审查列表"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Lattice project"
+msgstr "Lattice 项目"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Pull requests and issues"
+msgstr "PR 和议题"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "No projects yet"
+msgstr "还没有项目"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Review requests only apply to open pull requests"
+msgstr "审查请求只适用于打开的 PR"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Code review lists pull requests and issues from the GitHub repositories of your projects."
+msgstr "代码审查会列出你的项目所在 GitHub 仓库中的 PR 和议题。"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Select Open to see pull requests awaiting your review."
+msgstr "选择“已打开”，查看等你审查的 PR。"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Try another filter, or clear them."
+msgstr "换个筛选条件，或者清除筛选。"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Nothing here in the repositories of your projects."
+msgstr "你的项目所在仓库里暂时没有内容。"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Clear filters"
+msgstr "清除筛选"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "{count, plural, one {# project repository was unavailable. Healthy repositories are still shown.} other {# project repositories were unavailable. Healthy repositories are still shown.}}"
+msgstr "{count, plural, other {有 # 个项目仓库无法访问，其余正常的仓库仍会显示。}}"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "The latest background refresh failed. Showing the last loaded items."
+msgstr "最近一次后台刷新失败，正在显示上次加载的内容。"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInbox.tsx
+msgid "Item details"
+msgstr "条目详情"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Kind"
+msgstr "类型"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "{kind}, {count}"
+msgstr "{kind}，{count}"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Remove filter: {label}"
+msgstr "移除筛选：{label}"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Code review"
+msgstr "代码审查"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Sort: {sort}"
+msgstr "排序：{sort}"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Sort by"
+msgstr "排序方式"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Filter ({count} active)"
+msgstr "筛选（{count} 项已启用）"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Filter"
+msgstr "筛选"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/chat/ToolCallDetailsDialog.tsx
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Status"
+msgstr "状态"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Involvement"
+msgstr "参与情况"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Projects"
+msgstr "项目"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "No projects"
+msgstr "没有项目"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "No labels in this view"
+msgstr "当前视图里没有标签"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "More code review actions"
+msgstr "更多代码审查操作"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "More"
+msgstr "更多"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Refresh"
+msgstr "刷新"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Search or paste a PR link"
+msgstr "搜索，或粘贴 PR 链接"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Search pull requests and issues"
+msgstr "搜索 PR 和议题"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Active filters"
+msgstr "已启用的筛选"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxSidechatDock.tsx
+msgid "Ask about issue #{number}"
+msgstr "就议题 #{number} 提问"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxSidechatDock.tsx
+msgid "Ask about PR #{number}"
+msgstr "就 PR #{number} 提问"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubInboxSidechatDock.tsx
+msgid "New side chat"
+msgstr "新建旁聊"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubIssueDetailPanel.tsx
+msgid "Could not send the issue to an agent"
+msgstr "无法把议题交给 AI"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubIssueDetailPanel.tsx
+msgid "Issue detail tabs"
+msgstr "议题详情标签页"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubIssueDetailPanel.tsx
+msgid "Issues"
+msgstr "议题"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubIssueDetailPanel.tsx
+msgid "Issue not found"
+msgstr "找不到这个议题"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubIssueDetailPanel.tsx
+msgid "The selected issue could not be loaded."
+msgstr "无法加载所选的议题。"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubIssueDetailPanel.tsx
+msgid "Could not refresh the issue. Showing saved data."
+msgstr "无法刷新议题，正在显示已保存的数据。"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/GitHubIssueDetailPanel.tsx
+msgid "Some comments are not shown here. Open the issue on GitHub for the full discussion."
+msgstr "这里没有显示全部评论。完整讨论请到 GitHub 上打开议题查看。"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/useGitHubInboxSidechat.ts
+msgid "It will appear as soon as the thread list refreshes."
+msgstr "对话列表刷新后就会出现。"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/useGitHubInboxSidechat.ts
+msgid "The item could not be loaded."
+msgstr "无法加载这一项。"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ActiveTaskListCard.tsx
@@ -5320,12 +6684,6 @@ msgstr "分叉"
 #: src/components/chat/ComposerCommandMenu.tsx
 msgid "Sidechat"
 msgstr "旁聊"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerCommandMenu.tsx
-#: src/components/chat/ToolCallDetailsDialog.tsx
-msgid "Status"
-msgstr "状态"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
@@ -6847,11 +8205,6 @@ msgstr "也可以使用 owner/repository 格式发布到组织。"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitRepositorySetup.tsx
-msgid "Description"
-msgstr "描述"
-
-#. js-lingui-explicit-id
-#: src/components/chat/GitRepositorySetup.tsx
 msgid "Optional"
 msgstr "可选"
 
@@ -7054,11 +8407,6 @@ msgstr "选区"
 #: src/components/chat/MessageCopyButton.tsx
 msgid "Copy message"
 msgstr "复制消息"
-
-#. js-lingui-explicit-id
-#: src/components/chat/MessageCopyButton.tsx
-msgid "Copy to clipboard"
-msgstr "复制到剪贴板"
 
 #. js-lingui-explicit-id
 #: src/components/chat/MessageTrail.tsx
@@ -7315,11 +8663,6 @@ msgstr "发送"
 
 #. js-lingui-explicit-id
 #: src/components/chat/MessagesTimeline.tsx
-msgid "Show more"
-msgstr "显示更多"
-
-#. js-lingui-explicit-id
-#: src/components/chat/MessagesTimeline.tsx
 msgid "Answer"
 msgstr "回答"
 
@@ -7528,6 +8871,41 @@ msgstr "编辑排队的追问"
 #: src/components/chat/RateLimitBanner.tsx
 msgid "Dismiss rate limit status"
 msgstr "关闭额度提示"
+
+#. js-lingui-explicit-id
+#: src/components/chat/RightDock.tsx
+msgid "Open a panel"
+msgstr "打开面板"
+
+#. js-lingui-explicit-id
+#: src/components/chat/RightDock.tsx
+msgid "Open {panel}"
+msgstr "打开“{panel}”"
+
+#. js-lingui-explicit-id
+#: src/components/chat/RightDock.tsx
+msgid "Open panels"
+msgstr "已打开的面板"
+
+#. js-lingui-explicit-id
+#: src/components/chat/RightDock.tsx
+msgid "Add panel"
+msgstr "添加面板"
+
+#. js-lingui-explicit-id
+#: src/components/chat/RightDock.tsx
+msgid "Restore panel"
+msgstr "还原面板"
+
+#. js-lingui-explicit-id
+#: src/components/chat/RightDock.tsx
+msgid "Maximize panel"
+msgstr "最大化面板"
+
+#. js-lingui-explicit-id
+#: src/components/chat/RightDock.tsx
+msgid "Collapse panel"
+msgstr "收起面板"
 
 #. js-lingui-explicit-id
 #: src/components/chat/SelectionNewChatComposer.tsx
@@ -8112,11 +9490,6 @@ msgstr "当前文件夹"
 
 #. js-lingui-explicit-id
 #: src/components/chat/TimelineWorkEntryRow.tsx
-msgid "Summary"
-msgstr "摘要"
-
-#. js-lingui-explicit-id
-#: src/components/chat/TimelineWorkEntryRow.tsx
 msgid "Raw call"
 msgstr "原始调用"
 
@@ -8219,12 +9592,6 @@ msgstr "错误"
 #: src/components/chat/TimelineWorkEntryRow.tsx
 msgid "The session did not start."
 msgstr "会话没有启动。"
-
-#. js-lingui-explicit-id
-#: src/components/chat/modelPickerLabels.ts
-#: src/components/chat/TimelineWorkEntryRow.tsx
-msgid "None"
-msgstr "无"
 
 #. js-lingui-explicit-id
 #: src/components/chat/TimelineWorkEntryRow.tsx
@@ -8375,11 +9742,6 @@ msgstr "可以选一个或多个。"
 #: src/components/chat/WorkerMonitorNoticePill.tsx
 msgid "PR"
 msgstr "PR"
-
-#. js-lingui-explicit-id
-#: src/components/chat/WorkerMonitorNoticePill.tsx
-msgid "Retry"
-msgstr "重试"
 
 #. js-lingui-explicit-id
 #: src/components/chat/WorkerMonitorNoticePill.tsx
@@ -8587,6 +9949,71 @@ msgstr "无法更新子助手"
 msgid "The subagent request failed. Try again."
 msgstr "子助手请求失败，请重试。"
 
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "{count, plural, one {# failing check} other {# failing checks}}"
+msgstr "{count, plural, other {# 项检查失败}}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "{count, plural, one {# cancelled check} other {# cancelled checks}}"
+msgstr "{count, plural, other {# 项检查已取消}}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "{count, plural, one {# pending check} other {# pending checks}}"
+msgstr "{count, plural, other {# 项检查进行中}}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "No required checks"
+msgstr "没有必需的检查"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "All checks passed"
+msgstr "所有检查都已通过"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "Succeeded"
+msgstr "成功"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "Skipped"
+msgstr "已跳过"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "Neutral"
+msgstr "中性"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "Comments may exist"
+msgstr "可能有评论"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "{count, plural, one {#+ comment} other {#+ comments}}"
+msgstr "{count, plural, other {#+ 条评论}}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "Issue in {repository}"
+msgstr "{repository} 中的议题"
+
+#. js-lingui-explicit-id
+#: src/components/chat/environment/environmentPullRequest.logic.ts
+msgid "Pull request in {repository}"
+msgstr "{repository} 中的 PR"
+
+#: src/components/pullRequest/pullRequestDetail.logic.ts
+msgctxt "Between the parts of a checks summary"
+msgid ", "
+msgstr "，"
+
 #. placeholder {0}: progress.questionIndex + 1
 #: src/components/chat/ComposerPendingUserInputPanel.tsx
 msgid "{0} of {questionCount}"
@@ -8603,6 +10030,10 @@ msgstr "模型"
 #: src/settingsNavigation.ts
 msgid "Agent skills"
 msgstr "Skills"
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "All"
+msgstr "全部"
 
 #: src/components/chat/ComposerPendingApprovalPanel.tsx
 msgid "Allow Computer for this task"
@@ -8635,6 +10066,10 @@ msgstr "Antigravity 程序路径"
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Antigravity CLI binary path"
 msgstr "Antigravity CLI 程序路径"
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Anyone"
+msgstr "任何人"
 
 #: src/settingsNavigation.ts
 msgid "Appearance"
@@ -8679,6 +10114,14 @@ msgstr "Artifacts、/design 和 /slides"
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Ask before resuming a long idle session"
 msgstr "恢复长时间闲置的会话前先询问"
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Assigned to me"
+msgstr "分配给我的"
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Authored by me"
+msgstr "我创建的"
 
 #: src/components/chat/ProviderModelPicker.tsx
 msgid "Back"
@@ -8740,6 +10183,10 @@ msgstr "Claude HOME"
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Claude HOME path"
 msgstr "Claude HOME 路径"
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Closed"
+msgstr "已关闭"
 
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Codex binary path"
@@ -8910,6 +10357,14 @@ msgstr "安装"
 msgid "Integrations"
 msgstr "集成"
 
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Involving me"
+msgstr "与我有关"
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Issues"
+msgstr "议题"
+
 #: src/components/chat/ComposerPendingApprovalPanel.tsx
 msgid "Keep it in the background"
 msgstr "保持在后台"
@@ -8974,6 +10429,15 @@ msgstr "托管工作树"
 msgid "MCP connections"
 msgstr "MCP 连接"
 
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgctxt "merge method"
+msgid "merge"
+msgstr "合并提交"
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Merged"
+msgstr "已合并"
+
 #: src/components/settings/ModelsSettingsPanel.tsx
 msgid "Model slugs must be {max} characters or less."
 msgstr "模型 ID 不能超过 {max} 个字符。"
@@ -8981,6 +10445,10 @@ msgstr "模型 ID 不能超过 {max} 个字符。"
 #: src/components/chat/ChatHeader.tsx
 msgid "New chat"
 msgstr "新聊天"
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Newest"
+msgstr "最新创建"
 
 #: src/components/chat/ChatHeader.tsx
 msgid "No chats in this project yet"
@@ -9005,6 +10473,15 @@ msgstr "Oh My Pi 助手文件夹"
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Oh My Pi binary path"
 msgstr "Oh My Pi 程序路径"
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Open"
+msgstr "已打开"
+
+#: src/components/pullRequest/pullRequestStatePresentation.tsx
+msgctxt "GitHub item state"
+msgid "Open"
+msgstr "已打开"
 
 #: src/components/chat/ComposerModelPicker.tsx
 msgid "Open provider setup"
@@ -9066,9 +10543,26 @@ msgstr "Pi 助手文件夹"
 msgid "Profile"
 msgstr "个人资料"
 
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "PRs"
+msgstr "PR"
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Pull requests"
+msgstr "PR"
+
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Quickstart"
 msgstr "快速开始"
+
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgctxt "merge method"
+msgid "rebase"
+msgstr "变基合并"
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Recently updated"
+msgstr "最近更新"
 
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Reference"
@@ -9097,6 +10591,10 @@ msgstr "重试"
 #: src/settingsNavigation.ts
 msgid "Review and clean up isolated workspaces created by Lattice."
 msgstr "查看并清理 Lattice 创建的隔离工作区。"
+
+#: src/components/githubInbox/GitHubInboxFilterBar.tsx
+msgid "Review requested"
+msgstr "请求我审查"
 
 #: src/components/chat/ComposerPendingApprovalPanel.tsx
 msgid "Review the request to continue."
@@ -9129,6 +10627,11 @@ msgstr "要在你的屏幕上显示吗？"
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Source"
 msgstr "源码"
+
+#: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
+msgctxt "merge method"
+msgid "squash"
+msgstr "压缩合并"
 
 #: src/components/chat/MessagesTimeline.tsx
 msgid "Steering conversation"

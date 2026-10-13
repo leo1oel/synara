@@ -7,8 +7,9 @@
 // Layer: Pull request presentation
 // Exports: PrStatePresentation, resolvePrStatePresentation, PR_STATE_PRESENTATION_ICONS,
 //          IssueStatePresentation, resolveIssueStatePresentation, ISSUE_STATE_PRESENTATION_ICONS,
-//          PullRequestConflictIcon
+//          PullRequestConflictIcon, localizeGitHubStateLabel
 
+import { msg } from "@lingui/core/macro";
 import type { GitHubIssueState, GitHubIssueStateReason } from "@synara/contracts";
 
 import {
@@ -23,6 +24,7 @@ import {
   type LucideIcon,
 } from "~/lib/icons";
 
+import { i18n } from "~/i18n";
 import { cn } from "~/lib/utils";
 
 /** Shared PR-state presentation so every PR surface labels, colors, and glyphs PRs identically. */
@@ -139,6 +141,48 @@ export function resolveIssueStatePresentation(issue: {
     colorClass: "text-status-merged",
     iconKind: "issue-closed",
   };
+}
+
+const OPEN_STATE = msg({ message: "Open", context: "GitHub item state" });
+
+/**
+ * A state label from this module or `pullRequestStateLabel`, in the UI language. The labels
+ * themselves stay English because agent prompts quote them; only what the UI shows goes
+ * through here.
+ */
+export function localizeGitHubStateLabel(label: string): string {
+  switch (label) {
+    case "PR open":
+      return i18n._("PR open");
+    case "PR closed":
+      return i18n._("PR closed");
+    case "PR merged":
+      return i18n._("PR merged");
+    case "PR draft":
+      return i18n._("PR draft");
+    case "PR has conflicts":
+      return i18n._("PR has conflicts");
+    case "Issue open":
+      return i18n._("Issue open");
+    case "Issue closed":
+      return i18n._("Issue closed");
+    case "Issue not planned":
+      return i18n._("Issue not planned");
+    case "Open":
+      return i18n._(OPEN_STATE);
+    case "Closed":
+      return i18n._("Closed");
+    case "Not planned":
+      return i18n._("Not planned");
+    case "Draft":
+      return i18n._("Draft");
+    case "Has conflicts":
+      return i18n._("Has conflicts");
+    case "Merged":
+      return i18n._("Merged");
+    default:
+      return label;
+  }
 }
 
 /**
