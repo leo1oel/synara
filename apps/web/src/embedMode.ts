@@ -12,6 +12,13 @@ export const LATTICE_AGENT_PERMISSION_MODE_REQUEST = "lattice:request-agent-perm
 export const LATTICE_AGENT_PERMISSION_MODE_SET = "lattice:set-agent-permission-mode";
 export const LATTICE_AGENT_PANEL_OPENED = "lattice:agent-panel-opened";
 export const LATTICE_SETTINGS_SECTION_SET = "lattice:set-settings-section";
+/**
+ * `{ compact: boolean }`: whether Lattice's Settings is in its narrow-window
+ * layout, whose pages take smaller insets. This frame only sees the dialog's
+ * content column, and the same column width occurs on both sides of that
+ * breakpoint, so the host says which side it is on.
+ */
+export const LATTICE_SETTINGS_LAYOUT = "lattice:settings-layout";
 export const LATTICE_PROJECT_HISTORY = "lattice:project-history";
 export const LATTICE_RESTORE_AGENT_CHECKPOINT = "lattice:restore-agent-checkpoint";
 export const LATTICE_HOST_CONTEXT = "lattice:host-context";
@@ -835,6 +842,22 @@ export function readLatticeSettingsSectionMessage(
   return { type: LATTICE_SETTINGS_SECTION_SET, section: event.data.section };
 }
 
+export function readLatticeSettingsLayoutMessage(
+  event: MessageEvent,
+  config: EmbedModeConfig,
+): { compact: boolean } | null {
+  if (
+    !config.hostOrigin ||
+    event.source !== window.parent ||
+    event.origin !== config.hostOrigin ||
+    event.data?.type !== LATTICE_SETTINGS_LAYOUT ||
+    typeof event.data.compact !== "boolean"
+  ) {
+    return null;
+  }
+  return { compact: event.data.compact };
+}
+
 export function postSettingsContentHeightToLattice(
   config: EmbedModeConfig,
   height: number,
@@ -1078,6 +1101,8 @@ export function applyEmbedTheme(
           settingsField: "#1b1b1d",
           settingsPanel: "#202023",
           settingsSoftPanel: "#1b1b1d",
+          settingsSheet: "#1a1a1c",
+          settingsCard: "#252528",
           foreground: "#e9e9e7",
           muted: "#a4a4aa",
           faint: "#88888f",
@@ -1093,6 +1118,8 @@ export function applyEmbedTheme(
           settingsField: "#f9f9fa",
           settingsPanel: "#F9F9FA",
           settingsSoftPanel: "#fbfbfa",
+          settingsSheet: "#fafafa",
+          settingsCard: "#ffffff",
           foreground: "#242426",
           muted: "#606066",
           faint: "#6c6c72",
@@ -1112,6 +1139,9 @@ export function applyEmbedTheme(
         settingsField: hostColors.drawer,
         settingsPanel: hostColors.elevated,
         settingsSoftPanel: hostColors.drawer,
+        // A Lattice that sends no sheet keeps its pages on the lift, as before.
+        settingsSheet: hostColors.panel ?? hostColors.elevated,
+        settingsCard: hostColors.elevated,
         foreground: hostColors.foreground,
         muted: hostColors.muted,
         faint: hostColors.faint,
@@ -1176,6 +1206,10 @@ export function applyEmbedTheme(
     "--lattice-settings-field": colors.settingsField,
     "--lattice-settings-panel": colors.settingsPanel,
     "--lattice-settings-soft-panel": colors.settingsSoftPanel,
+    // Settings pages are a sheet with their rows in lifted cards (Lattice's
+    // SettingsGroup), so the page and its cards take two different surfaces.
+    "--lattice-settings-sheet": colors.settingsSheet,
+    "--lattice-settings-card": colors.settingsCard,
     "--lattice-settings-text": colors.foreground,
     "--lattice-settings-muted": colors.muted,
     "--lattice-settings-faint": colors.faint,
@@ -1188,10 +1222,22 @@ export function applyEmbedTheme(
       config.theme === "dark"
         ? "0 1px 2px rgba(0, 0, 0, 0.18), 0 16px 36px -18px rgba(0, 0, 0, 0.8)"
         : "0 1px 2px rgba(28, 25, 23, 0.06), 0 16px 36px -18px rgba(28, 25, 23, 0.5)",
+    // Lattice's settings layout contract (its foundations.css), copied: the
+    // page column, its compact insets below a 680px window (see
+    // LATTICE_SETTINGS_LAYOUT), and the card each group's rows sit in. The
+    // control metrics below stay the Git drawer's; Settings sets its own
+    // (index.css, `.app-settings-surface`).
     "--lattice-settings-content-max-width": "720px",
     "--lattice-settings-content-padding-top": "32px",
     "--lattice-settings-content-padding-inline": "40px",
     "--lattice-settings-content-padding-bottom": "48px",
+    "--lattice-settings-content-padding-top-compact": "24px",
+    "--lattice-settings-content-padding-inline-compact": "20px",
+    "--lattice-settings-content-padding-bottom-compact": "32px",
+    "--lattice-settings-group-gap": "28px",
+    "--lattice-settings-card-radius": "10px",
+    "--lattice-settings-card-padding-inline": "16px",
+    "--lattice-settings-row-min-height": "52px",
     "--lattice-settings-control-width": "170px",
     "--lattice-settings-control-height": "30px",
     "--lattice-settings-control-radius": "9px",
@@ -1266,7 +1312,7 @@ export function applyEmbedHostTheme(config: EmbedModeConfig, hostTheme: LatticeH
 function embedTypography(usesDrawerSurface: boolean): Record<string, string> {
   const scale = usesDrawerSurface
     ? {
-        heading: ["20px", "24px"],
+        heading: ["24px", "30px"],
         group: ["14px", "20px"],
         label: ["13px", "18px"],
         caption: ["12px", "18px"],

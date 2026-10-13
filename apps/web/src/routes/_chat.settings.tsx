@@ -132,6 +132,7 @@ import {
   postSettingsContentHeightToLattice,
   postSettingsWheelToLattice,
   readEmbedMode,
+  readLatticeSettingsLayoutMessage,
   readLatticeSettingsSectionMessage,
 } from "../embedMode";
 import { useLingui } from "@lingui/react";
@@ -472,6 +473,11 @@ function SettingsRouteView() {
     const embedConfig = readEmbedMode();
     if (!embedConfig?.hostOrigin) return;
     const receiveHostMessage = (event: MessageEvent) => {
+      const layout = readLatticeSettingsLayoutMessage(event, embedConfig);
+      if (layout) {
+        document.documentElement.toggleAttribute("data-lattice-settings-compact", layout.compact);
+        return;
+      }
       const message = readLatticeSettingsSectionMessage(event, embedConfig);
       if (!message || !SETTINGS_NAV_ITEMS.some((item) => item.id === message.section)) return;
       void navigate({

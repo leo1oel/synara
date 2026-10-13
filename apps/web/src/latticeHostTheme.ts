@@ -17,8 +17,13 @@ export const LATTICE_REQUEST_HOST_THEME = "lattice:request-host-theme";
 export interface LatticeHostPalette {
   /** Agent panel surface (embed surface=chrome); always opaque. */
   chrome: string;
-  /** Drawers and the Settings dialog (embed surface=drawer). */
+  /** Drawers and the Settings dialog's fields (embed surface=drawer). */
   drawer: string;
+  /**
+   * The Settings page's sheet, under cards that stand on `elevated`. Optional:
+   * a Lattice that predates it leaves the page on `elevated`.
+   */
+  panel?: string;
   /** Menus, popovers, composer, code blocks, user message bubble. */
   elevated: string;
   foreground: string;
@@ -100,6 +105,8 @@ export function parseLatticeHostTheme(
     if (typeof color !== "string" || !color.trim()) return null;
     palette[key] = color;
   }
+  const panel = (colors as Record<string, unknown>).panel;
+  if (typeof panel === "string" && panel.trim()) palette.panel = panel;
   return {
     type: LATTICE_HOST_THEME,
     version: 1,

@@ -563,7 +563,9 @@ describe("Lattice embed mode", () => {
     const drawer = installBrowserStubs("light", "drawer");
     initializeEmbedMode();
 
-    expect(drawer.setProperty).toHaveBeenCalledWith("--lattice-type-heading-size", "20px");
+    // Settings page titles are Lattice's Title role, 24/30 in its dialog.
+    expect(drawer.setProperty).toHaveBeenCalledWith("--lattice-type-heading-size", "24px");
+    expect(drawer.setProperty).toHaveBeenCalledWith("--lattice-type-heading-line-height", "30px");
     expect(drawer.setProperty).toHaveBeenCalledWith("--lattice-type-group-size", "14px");
     expect(drawer.setProperty).toHaveBeenCalledWith("--lattice-type-group-line-height", "20px");
     expect(drawer.setProperty).toHaveBeenCalledWith("--lattice-type-label-size", "13px");

@@ -736,8 +736,11 @@ html[data-synara-embed="true"] {
      weights live here: the sizes depend on which host surface opened this
      iframe, so `applyEmbedTheme` sets them — this rule and that function both
      only apply once `data-synara-embed` is on the root. */
-  --lattice-type-heading-weight: 600;
+  --lattice-type-heading-weight: 400;
   --lattice-type-group-weight: 600;
+  /* Lattice titles its pages in its serif. Its faces are private to the host,
+     so the iframe uses the system's: New York, with Songti for Chinese. */
+  --lattice-type-title-font: ui-serif, "New York", "Iowan Old Style", Georgia, "Songti SC", serif;
   --lattice-type-label-weight: 500;
   --lattice-type-caption-weight: 400;
   /* Embedded chrome follows Lattice's compact navigation role. Transcript
@@ -799,8 +802,8 @@ html[data-synara-embed="true"] .lattice-empty-thread {
   --lattice-starter-green: #2e8a55;
   --lattice-starter-amber: #b06a00;
   /* The host's reading serif is a private face the iframe cannot load;
-     New York (ui-serif) is the system's, with Songti for Chinese. */
-  --lattice-starter-serif: ui-serif, "New York", "Iowan Old Style", Georgia, "Songti SC", serif;
+     the embed's title serif stands in for it. */
+  --lattice-starter-serif: var(--lattice-type-title-font);
 }
 
 html.dark[data-synara-embed="true"] .lattice-empty-thread {
@@ -984,9 +987,17 @@ html[data-synara-embed="true"]
 html[data-synara-embed="true"] .app-settings-surface {
   border-radius: 0 !important;
   box-shadow: none !important;
-  background: var(--lattice-settings-panel) !important;
+  background: var(--lattice-settings-sheet) !important;
   color: var(--lattice-settings-text);
-  --app-settings-surface: var(--lattice-settings-panel);
+  --app-settings-surface: var(--lattice-settings-sheet);
+  /* Lattice's Settings controls: 32px, a 6px radius, and the card's own
+     surface inside a hairline, so a field reads as part of its row. Scoped
+     here rather than set at the root, where the Git drawer reads the same
+     names for its own, older control metrics. */
+  --lattice-settings-control-height: 32px;
+  --lattice-settings-control-radius: 6px;
+  --lattice-settings-frame-radius: 6px;
+  --lattice-settings-field: var(--lattice-settings-card);
   /* The caption role, not a literal: Lattice's Settings dialog runs a step up
      from its chrome, and `applyEmbedTheme` sets the role to match the surface
      this iframe was opened on. */
@@ -998,7 +1009,14 @@ html[data-synara-embed="true"] .app-settings-surface {
   line-height: 1.45;
 }
 
+html[data-synara-embed="true"]:has(.app-settings-surface),
+html[data-synara-embed="true"]:has(.app-settings-surface) body,
+html[data-synara-embed="true"]:has(.app-settings-surface) #root {
+  background-color: var(--lattice-settings-sheet);
+}
+
 html[data-synara-embed="true"] .app-settings-surface .synara-settings-heading h1 {
+  font-family: var(--lattice-type-title-font);
   font-size: var(--lattice-type-heading-size);
   line-height: var(--lattice-type-heading-line-height);
   font-weight: var(--lattice-type-heading-weight);
@@ -1020,6 +1038,13 @@ html[data-synara-embed="true"] .synara-settings-content {
   margin-inline: 0;
   padding: var(--lattice-settings-content-padding-top)
     var(--lattice-settings-content-padding-inline) var(--lattice-settings-content-padding-bottom);
+}
+
+/* Lattice's narrow-window insets; the host says when (LATTICE_SETTINGS_LAYOUT). */
+html[data-synara-embed="true"][data-lattice-settings-compact] .synara-settings-content {
+  padding: var(--lattice-settings-content-padding-top-compact)
+    var(--lattice-settings-content-padding-inline-compact)
+    var(--lattice-settings-content-padding-bottom-compact);
 }
 
 /* Embedded Settings reports its intrinsic content height to Lattice, which owns
@@ -1076,6 +1101,7 @@ html[data-synara-embed="true"] .synara-settings-heading {
 }
 
 html[data-synara-embed="true"] .synara-settings-heading p {
+  max-width: 54ch;
   margin-top: 6px;
   color: var(--lattice-settings-muted);
   font-size: var(--lattice-type-caption-size);
@@ -1083,10 +1109,12 @@ html[data-synara-embed="true"] .synara-settings-heading p {
   font-weight: var(--lattice-type-caption-weight);
 }
 
+/* The heading sits over its group's card; the card, not a rule under the
+   heading, says which rows belong together. */
 html[data-synara-embed="true"] .app-settings-surface h2 {
   margin: 0;
-  padding: 0 0 8px;
-  border-bottom: 1px solid var(--lattice-settings-line);
+  padding: 0;
+  border: 0;
   color: var(--lattice-settings-text);
   font-size: var(--lattice-type-group-size);
   line-height: var(--lattice-type-group-line-height);
@@ -1096,14 +1124,15 @@ html[data-synara-embed="true"] .app-settings-surface h2 {
 }
 
 html[data-synara-embed="true"] .app-settings-surface section.flex.flex-col {
-  gap: 4px;
+  gap: 8px;
 }
 
-/* Mirror Lattice's native SettingsGroup/SettingsRow geometry. The group rule
-   sits 4px above a 40px row whose content has 4px block padding, so left copy
-   and trailing controls keep the same divider rhythm on every Agent page. The
-   native row centers its content in that box, so a row without a description
-   puts its label and control where Lattice's do. */
+/* Mirror Lattice's native SettingsGroup/SettingsRow geometry: a group's rows
+   share one lifted card with a hairline edge and a hairline between rows, and
+   every single-line row is 52px (a 32px control and its 10px inset), so the
+   dividers fall at one rhythm down the page. The native row centers its
+   content in that box, so a row without a description puts its label and
+   control where Lattice's do. */
 html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] {
   min-height: 40px;
   padding-block: 4px;
@@ -1180,13 +1209,31 @@ html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] 
 }
 
 html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-card"] {
-  border: 0;
-  border-radius: 0 !important;
-  background: transparent;
+  border: 1px solid var(--lattice-settings-line);
+  border-radius: var(--lattice-settings-card-radius) !important;
+  background: var(--lattice-settings-card);
+  overflow: clip;
 }
 
+/* What sits in a card without being a row takes the same inset as the rows. */
+html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-card"] > * {
+  margin: 0;
+  padding: 12px var(--lattice-settings-card-padding-inline);
+}
+
+html[data-synara-embed="true"]
+  .app-settings-surface
+  [data-slot="settings-card"]
+  > [data-slot="settings-row"] {
+  min-height: var(--lattice-settings-row-min-height);
+  padding-block: 10px;
+}
+
+/* Drawn inside the row rather than as a border, so a divider never adds to
+   the height of the row under it. */
 html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-card"] > * + * {
   border-top-width: 0;
+  box-shadow: inset 0 1px 0 var(--lattice-settings-line);
 }
 
 html[data-synara-embed="true"] .app-settings-surface .text-foreground {
@@ -1216,9 +1263,10 @@ html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row"] 
 /* The host's Settings navigation and the embedded page consume width in
    separate documents, so Synara's generic 640px viewport breakpoint stacks
    controls and list actions while Lattice still has room for its trailing
-   column. Keep embedded rows horizontal at the narrower usable threshold;
-   genuinely small hosts retain the base stacked layout. */
-@media (width >= 30rem) {
+   column. Lattice's narrowest window leaves this page about 470px, where its
+   own rows stay horizontal, so these do too; genuinely small hosts retain the
+   base stacked layout. */
+@media (width >= 25rem) {
   /* Lattice keeps 16px between a row's copy and its control, so descriptions
      wrap at the same width as on the native pages. */
   html[data-synara-embed="true"] .app-settings-surface [data-slot="settings-row-layout"] {
@@ -1333,6 +1381,13 @@ html[data-synara-embed="true"] .app-settings-surface .text-xl {
   font-size: 18px;
 }
 
+/* A list inside a row (provider tools) names its items at the row label's
+   size, as Lattice's own lists do; its standalone 14px would outrank the row. */
+html[data-synara-embed="true"] .app-settings-surface .text-ui-lg {
+  font-size: var(--lattice-type-label-size);
+  line-height: var(--lattice-type-label-line-height);
+}
+
 html[data-synara-embed="true"] .app-settings-surface .text-base {
   font-size: 12px;
 }
@@ -1383,11 +1438,7 @@ html[data-synara-embed="true"] .app-settings-surface [data-slot="select-trigger"
 html[data-synara-embed="true"] .app-settings-surface [data-slot="input-control"],
 html[data-synara-embed="true"] .app-settings-surface [data-slot="textarea-control"] {
   border-width: var(--lattice-settings-frame-border-width) !important;
-  border-color: color-mix(
-    in srgb,
-    var(--lattice-settings-text) 12%,
-    var(--lattice-settings-field)
-  ) !important;
+  border-color: var(--lattice-settings-line-strong) !important;
   border-radius: var(--lattice-settings-frame-radius) !important;
   background: var(--lattice-settings-field);
   box-shadow: none !important;
@@ -1398,7 +1449,7 @@ html[data-synara-embed="true"] .app-settings-surface [data-slot="select-trigger"
   min-height: var(--lattice-settings-control-height);
   width: 100%;
   padding: 0 10px;
-  border-radius: 9px !important;
+  border-radius: var(--lattice-settings-frame-radius) !important;
   background: var(--lattice-settings-field) !important;
   color: var(--lattice-settings-text);
   box-shadow: none;
