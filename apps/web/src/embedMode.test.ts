@@ -16,6 +16,8 @@ import {
   postConfirmationRequestToLattice,
   postSettingsContentHeightToLattice,
   postSettingsNavigationToLattice,
+  postSettingsSectionReadyToLattice,
+  readLatticeSettingsSectionMessage,
   postSettingsWheelToLattice,
   postHostContextRequestToLattice,
   postHostContextSelectionClearToLattice,
@@ -49,6 +51,8 @@ import {
   SYNARA_OPEN_REVIEW,
   SYNARA_OPEN_SETTINGS,
   SYNARA_SETTINGS_CONTENT_HEIGHT,
+  SYNARA_SETTINGS_SECTION_READY,
+  LATTICE_SETTINGS_SECTION_SET,
   SYNARA_SETTINGS_NAVIGATION,
   SYNARA_SETTINGS_WHEEL,
   SYNARA_SHOW_IN_FOLDER,
@@ -477,6 +481,43 @@ describe("Lattice embed mode", () => {
         height: 813,
         section: "providers",
       },
+      "http://localhost:1420",
+    );
+  });
+
+  it("answers a settings section request with the request it was asked in", () => {
+    const { postMessage } = installBrowserStubs();
+    initializeEmbedMode();
+    const config = readEmbedMode();
+    expect(config).not.toBeNull();
+    const request = (data: object) =>
+      readLatticeSettingsSectionMessage(
+        {
+          source: window.parent,
+          origin: "http://localhost:1420",
+          data: { type: LATTICE_SETTINGS_SECTION_SET, section: "skills", ...data },
+        } as MessageEvent,
+        config!,
+      );
+
+    expect(request({ request: 7 })).toEqual({
+      type: LATTICE_SETTINGS_SECTION_SET,
+      section: "skills",
+      request: 7,
+    });
+    expect(request({ request: "7" })).toEqual({
+      type: LATTICE_SETTINGS_SECTION_SET,
+      section: "skills",
+    });
+
+    postSettingsSectionReadyToLattice(config!, "skills", 7);
+    postSettingsSectionReadyToLattice(config!, "providers", undefined);
+    expect(postMessage).toHaveBeenCalledWith(
+      { type: SYNARA_SETTINGS_SECTION_READY, section: "skills", request: 7 },
+      "http://localhost:1420",
+    );
+    expect(postMessage).toHaveBeenCalledWith(
+      { type: SYNARA_SETTINGS_SECTION_READY, section: "providers" },
       "http://localhost:1420",
     );
   });

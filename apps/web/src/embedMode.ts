@@ -33,6 +33,7 @@ export const SYNARA_LAYOUT_METRICS = "synara:layout-metrics";
 export const SYNARA_SETTINGS_CONTENT_HEIGHT = "synara:settings-content-height";
 export const SYNARA_SETTINGS_WHEEL = "synara:settings-wheel";
 export const SYNARA_SETTINGS_NAVIGATION = "synara:settings-navigation";
+export const SYNARA_SETTINGS_SECTION_READY = "synara:settings-section-ready";
 export const SYNARA_OPEN_SETTINGS = "synara:open-settings";
 export const SYNARA_OPEN_EXTERNAL = "synara:open-external";
 export const SYNARA_SHOW_IN_FOLDER = "synara:show-in-folder";
@@ -200,6 +201,8 @@ export type LatticeAgentPermissionModeMessage =
 export interface LatticeSettingsSectionMessage {
   type: typeof LATTICE_SETTINGS_SECTION_SET;
   section: string;
+  /** Echoed by `synara:settings-section-ready`, so the host can tell which request it answers. */
+  request?: number;
 }
 
 export function readLatticeAgentPanelOpenedMessage(
@@ -839,7 +842,12 @@ export function readLatticeSettingsSectionMessage(
   ) {
     return null;
   }
-  return { type: LATTICE_SETTINGS_SECTION_SET, section: event.data.section };
+  const request = event.data.request;
+  return {
+    type: LATTICE_SETTINGS_SECTION_SET,
+    section: event.data.section,
+    ...(typeof request === "number" && Number.isSafeInteger(request) ? { request } : {}),
+  };
 }
 
 export function readLatticeSettingsLayoutMessage(
@@ -881,6 +889,26 @@ export function postSettingsNavigationToLattice(
 ): void {
   if (!config.hostOrigin || !section) return;
   window.parent.postMessage({ type: SYNARA_SETTINGS_NAVIGATION, section, view }, config.hostOrigin);
+}
+
+/**
+ * The section is on screen with its first data loaded: Lattice keeps the frame
+ * hidden from a section request until this answers that same request.
+ */
+export function postSettingsSectionReadyToLattice(
+  config: EmbedModeConfig,
+  section: string,
+  request: number | undefined,
+): void {
+  if (!config.hostOrigin || !section) return;
+  window.parent.postMessage(
+    {
+      type: SYNARA_SETTINGS_SECTION_READY,
+      section,
+      ...(request === undefined ? {} : { request }),
+    },
+    config.hostOrigin,
+  );
 }
 
 export function postSettingsWheelToLattice(

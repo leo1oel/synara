@@ -130,12 +130,14 @@ import {
   isSynaraEmbedMode,
   postEmbedReadyToLattice,
   postSettingsContentHeightToLattice,
+  postSettingsSectionReadyToLattice,
   postSettingsWheelToLattice,
   readEmbedMode,
   readLatticeSettingsLayoutMessage,
   readLatticeSettingsSectionMessage,
 } from "../embedMode";
 import { useLingui } from "@lingui/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { isProviderKind, sameProviderOrder } from "../providerOrdering";
 import {
   normalizeSettingsSection,
@@ -149,6 +151,7 @@ import {
   createEmbeddedSettingsHeightReporter,
   measureEmbeddedSettingsHeight,
 } from "../embeddedSettingsHeight";
+import { watchEmbeddedSettingsSectionReady } from "../embeddedSettingsSectionReady";
 
 // ── Settings taxonomy ──────────────────────────────────────────────────────
 
@@ -359,6 +362,12 @@ function SettingsRouteView() {
   const routeSearch = useSearch({ strict: false }) as Record<string, unknown>;
   const activeSection = normalizeSettingsSection(routeSearch.section);
   const [embedUiReady, setEmbedUiReady] = useState(!isEmbed);
+  // The latest section request from Lattice; every request is answered, even
+  // one for the section already shown.
+  const [sectionRequest, setSectionRequest] = useState<{ id: number | undefined }>({
+    id: undefined,
+  });
+  const queryClient = useQueryClient();
   const embeddedSettingsHeightReporterRef = useRef<{
     flush: () => number | null;
     schedule: () => void;
@@ -480,6 +489,7 @@ function SettingsRouteView() {
       }
       const message = readLatticeSettingsSectionMessage(event, embedConfig);
       if (!message || !SETTINGS_NAV_ITEMS.some((item) => item.id === message.section)) return;
+      setSectionRequest({ id: message.request });
       void navigate({
         to: "/settings",
         search: { section: message.section },
@@ -562,6 +572,21 @@ function SettingsRouteView() {
       reporter.dispose();
     };
   }, [activeSection, embedUiReady, isEmbed]);
+
+  useEffect(() => {
+    // Lattice keeps this frame hidden from a section request until the section
+    // answers it: switching sections otherwise showed the previous section, then
+    // empty rows ("No projects are available", a Skills page without its library)
+    // that filled in a moment later.
+    if (!isEmbed || !embedUiReady) return;
+    const embedConfig = readEmbedMode();
+    if (!embedConfig?.hostOrigin) return;
+    return watchEmbeddedSettingsSectionReady({
+      queryClient,
+      onReady: () =>
+        postSettingsSectionReadyToLattice(embedConfig, activeSection, sectionRequest.id),
+    });
+  }, [activeSection, embedUiReady, isEmbed, queryClient, sectionRequest]);
 
   useEffect(() => {
     if (!isEmbed) return;
