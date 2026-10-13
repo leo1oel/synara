@@ -23,6 +23,9 @@ import {
   parseGitHubRepositoryNameWithOwnerFromRemoteUrl,
 } from "@synara/shared/githubRepository";
 
+import { readFile } from "node:fs/promises";
+import * as nodePath from "node:path";
+
 import { runProcess } from "../../processRunner";
 import { makeKeyedSingleFlightCache } from "../../pullRequests/KeyedSingleFlightCache";
 import { GitHubCliError } from "../Errors.ts";
@@ -68,6 +71,24 @@ export function isGitHubRateLimitMessage(message: string): boolean {
     lower.includes("http 429") ||
     (lower.includes("http 403") && lower.includes("rate limit"))
   );
+}
+
+/**
+ * Whether gh has no account for github.com: no token in the environment and no github.com entry
+ * in its hosts file (gh keeps the token in the keychain but always records the host there).
+ */
+export async function isGitHubCliSignedOut(env: NodeJS.ProcessEnv): Promise<boolean> {
+  if (env.GH_TOKEN?.trim() || env.GITHUB_TOKEN?.trim()) return false;
+  const configDir =
+    env.GH_CONFIG_DIR?.trim() ||
+    (env.XDG_CONFIG_HOME?.trim() ? nodePath.join(env.XDG_CONFIG_HOME.trim(), "gh") : null) ||
+    (env.HOME?.trim() ? nodePath.join(env.HOME.trim(), ".config", "gh") : null);
+  if (!configDir) return false;
+  try {
+    return !/^github\.com:/m.test(await readFile(nodePath.join(configDir, "hosts.yml"), "utf8"));
+  } catch (error) {
+    return (error as NodeJS.ErrnoException)?.code === "ENOENT";
+  }
 }
 
 function normalizeGitHubCliError(operation: "execute" | "stdout", error: unknown): GitHubCliError {
@@ -1818,6 +1839,25 @@ const makeGitHubCli = Effect.gen(function* () {
   // instead of failing and retrying on every poll.
   let inboxStackFieldsSupported = true;
 
+  // With GH_HOST pinned (below), a signed-out gh does not refuse: it sends the request
+  // anonymously, and GitHub's anonymous budget (60 an hour per address) answers 403 "rate limit
+  // exceeded". A rate limit from a gh with no account is the account, not the budget.
+  const confirmRateLimit = (error: GitHubCliError): Effect.Effect<GitHubCliError> =>
+    error.reason !== "rate-limited"
+      ? Effect.succeed(error)
+      : Effect.promise(() => isGitHubCliSignedOut(process.env).catch(() => false)).pipe(
+          Effect.map((signedOut) =>
+            signedOut
+              ? new GitHubCliError({
+                  operation: error.operation,
+                  detail: "GitHub CLI is not authenticated. Run `gh auth login` and retry.",
+                  reason: "not-authenticated",
+                  cause: error,
+                })
+              : error,
+          ),
+        );
+
   const execute: GitHubCliShape["execute"] = (input) =>
     Effect.tryPromise({
       try: (signal) =>
@@ -1838,8 +1878,11 @@ const makeGitHubCli = Effect.gen(function* () {
           ...(input.onStderrChunk !== undefined ? { onStderrChunk: input.onStderrChunk } : {}),
         }),
       catch: (error) => normalizeGitHubCliError("execute", error),
+    }).pipe(
+      Effect.catch((error) => Effect.flatMap(confirmRateLimit(error), Effect.fail)),
       // Every command reports here, mutations included, so a limit hit by any of them pauses reads.
-    }).pipe(Effect.tapError((error) => Effect.sync(() => readGate.noteFailure(error))));
+      Effect.tapError((error) => Effect.sync(() => readGate.noteFailure(error))),
+    );
 
   const PULL_REQUEST_DIFF_TOO_LARGE_PATTERN = /exceeded the maximum number of files|too_large/i;
   const PULL_REQUEST_DIFF_MISSING_OBJECT_PATTERN =
@@ -2264,12 +2307,12 @@ const makeGitHubCli = Effect.gen(function* () {
             return Effect.succeed({ changed: true, etag });
           }
           const statusLine = status === null ? "no HTTP status" : `HTTP ${status}`;
-          return Effect.fail(
+          return confirmRateLimit(
             normalizeGitHubCliError(
               "execute",
               new Error(`gh api change probe failed (${statusLine}). ${result.stderr.trim()}`),
             ),
-          );
+          ).pipe(Effect.flatMap(Effect.fail));
         }),
       ),
     getRepositoryInboxItems: (input) =>
