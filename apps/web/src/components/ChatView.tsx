@@ -2204,6 +2204,9 @@ export default function ChatView({
   // A starter fills the composer through the prompt setter declared further
   // down; the ref keeps the empty-state element below stable across renders.
   const latticeStarterPromptRef = useRef<((prompt: string) => void) | null>(null);
+  // The selection's context bar floats above the composer, outside its
+  // measured height; the empty thread's starters keep clear of both.
+  const [latticeContextBarHeightPx, setLatticeContextBarHeightPx] = useState(0);
   const handleLatticeStarter = useCallback((prompt: string) => {
     latticeStarterPromptRef.current?.(prompt);
   }, []);
@@ -2219,6 +2222,7 @@ export default function ChatView({
       return (
         <LatticeEmptyThread
           bottomInsetPx={composerTranscriptInsetPx}
+          contextBarHeightPx={latticeContextBarHeightPx}
           onStarter={handleLatticeStarter}
         />
       );
@@ -2240,6 +2244,7 @@ export default function ChatView({
     activeThreadIsSidechat,
     composerTranscriptInsetPx,
     handleLatticeStarter,
+    latticeContextBarHeightPx,
     handleRetryThreadDetailSync,
     hasPendingThreadWork,
     isEditorRail,
@@ -6283,7 +6288,10 @@ export default function ChatView({
                 via margin collapse. */}
           <div data-composer-panels>
             {isEmbed ? (
-              <ComposerLatticeContextBar onClearSelection={clearLiveLatticeHostSelection} />
+              <ComposerLatticeContextBar
+                onClearSelection={clearLiveLatticeHostSelection}
+                onHeightChange={setLatticeContextBarHeightPx}
+              />
             ) : null}
             <ComposerTransportNotice />
             {isSidechatExpired ? (

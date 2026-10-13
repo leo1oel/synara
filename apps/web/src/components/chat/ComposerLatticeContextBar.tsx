@@ -5,7 +5,7 @@
 
 import { msg } from "@lingui/core/macro";
 import { i18n } from "~/i18n";
-import { useState, useSyncExternalStore } from "react";
+import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { EyeIcon, PanelCollapseIcon, PanelExpandIcon, XIcon } from "~/lib/icons";
 import {
@@ -38,13 +38,42 @@ const INCLUDED_WITH_MESSAGE = msg({ message: "Included", context: "Sent with the
 interface ComposerLatticeContextBarProps {
   onClearSelection?: () => void;
   attachedToPrevious?: boolean;
+  /**
+   * The bar's height as it floats above the composer (0 while hidden), for
+   * content that must stay clear of it: the composer's measured height
+   * leaves it out on purpose.
+   */
+  onHeightChange?: (heightPx: number) => void;
 }
 
 export function ComposerLatticeContextBar({
   onClearSelection,
   attachedToPrevious: attachedToPreviousProp,
+  onHeightChange,
 }: ComposerLatticeContextBarProps) {
   const [expanded, setExpanded] = useState(false);
+  const onHeightChangeRef = useRef(onHeightChange);
+  useLayoutEffect(() => {
+    onHeightChangeRef.current = onHeightChange;
+  });
+  const observerRef = useRef<ResizeObserver | null>(null);
+  const measureRef = useCallback((node: HTMLDivElement | null) => {
+    observerRef.current?.disconnect();
+    observerRef.current = null;
+    const report = (height: number) => onHeightChangeRef.current?.(Math.ceil(height));
+    if (!node) {
+      report(0);
+      return;
+    }
+    report(node.getBoundingClientRect().height);
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) report(entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height);
+    });
+    observer.observe(node);
+    observerRef.current = observer;
+  }, []);
   const context = useSyncExternalStore(
     subscribeLiveLatticeHostContext,
     getLiveLatticeHostContext,
@@ -64,7 +93,7 @@ export function ComposerLatticeContextBar({
     // Keep live editor selections out of the measured composer height: changing
     // the transcript's bottom inset here would move a conversation parked at its end.
     <div className="relative">
-      <div className="absolute inset-x-0 bottom-0 z-10">
+      <div ref={measureRef} className="absolute inset-x-0 bottom-0 z-10">
         <ComposerStackedPanel
           attachedToPrevious={attachedToPrevious}
           data-testid="composer-lattice-context"

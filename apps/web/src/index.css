@@ -846,6 +846,11 @@ html.dark[data-synara-embed="true"] .lattice-empty-thread {
   --lattice-starter-hue: var(--lattice-starter-amber);
 }
 
+/* A pill (the short panel's starters) keeps the hue on its bare glyph. */
+.lattice-starter-glyph {
+  color: var(--lattice-starter-hue);
+}
+
 .lattice-starter-icon {
   color: var(--lattice-starter-hue);
   background: color-mix(
