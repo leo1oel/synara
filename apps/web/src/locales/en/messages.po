@@ -12,6 +12,11 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Up to date with {remote}"
+msgstr "Up to date with {remote}"
+
+#. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
 #: src/components/chat/ComposerAutomationSetupBanner.tsx
 #: src/components/chat/FileLineCommentBox.tsx

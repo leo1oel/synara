@@ -295,7 +295,10 @@ function LatticeSyncState({ actions }: { actions: LatticeGitActions }) {
     );
   }
   return (
-    <span className="lattice-git-sync lattice-git-sync-quiet" title={remote}>
+    <span
+      className="lattice-git-sync lattice-git-sync-quiet lattice-git-sync-current"
+      title={i18n._("Up to date with {remote}", { remote })}
+    >
       <CheckIcon aria-hidden className="lattice-git-sync-check size-3.5" />
       <span className="lattice-git-sync-label">{i18n._("Up to date")}</span>
     </span>

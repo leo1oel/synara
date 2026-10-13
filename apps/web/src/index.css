@@ -1066,9 +1066,11 @@ html[data-synara-embed="true"] .lattice-git-branchbar {
   min-width: 0;
   padding: 10px var(--lattice-git-gutter) 8px;
 }
+/* The branch keeps its name longest; the sync label gives way first. */
 html[data-synara-embed="true"] .lattice-git-branch {
   min-width: 0;
   flex: 0 1 auto;
+  max-width: 60%;
 }
 /* The branch picker sits inline as a chip rather than a full-width row. */
 html[data-synara-embed="true"] .lattice-git-branch [data-lattice-source-control="true"] {
@@ -1105,7 +1107,7 @@ html[data-synara-embed="true"] .lattice-git-menu-button[data-popup-open] {
 }
 html[data-synara-embed="true"] .lattice-git-sync {
   display: inline-flex;
-  flex: 0 1 auto;
+  flex: 0 1000 auto;
   align-items: center;
   gap: 4px;
   min-width: 0;
@@ -1573,7 +1575,15 @@ html[data-synara-embed="true"] .lattice-git-last-sha {
 
 @container lattice-git (width < 300px) {
   html[data-synara-embed="true"] .lattice-git-sync-sub,
-  html[data-synara-embed="true"] .lattice-git-kbd {
+  html[data-synara-embed="true"] .lattice-git-kbd,
+  html[data-synara-embed="true"] .lattice-git-branch [data-slot="environment-row-chevron"] {
+    display: none;
+  }
+  html[data-synara-embed="true"] .lattice-git-branchbar {
+    gap: 4px;
+  }
+  /* A quiet "Up to date" keeps its check; the words stay in its title. */
+  html[data-synara-embed="true"] .lattice-git-sync-current .lattice-git-sync-label {
     display: none;
   }
   html[data-synara-embed="true"] .lattice-git-change {
