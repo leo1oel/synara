@@ -10,6 +10,7 @@ import type { MouseEvent } from "react";
 import { cn } from "~/lib/utils";
 import {
   PR_STATE_PRESENTATION_ICONS,
+  localizeGitHubStateLabel,
   resolvePrStatePresentation,
 } from "./pullRequestStatePresentation";
 import { PR_FINE_TEXT_CLASS_NAME } from "./pullRequestText";
@@ -29,7 +30,7 @@ export function PrStateChip({
   const PrIcon = PR_STATE_PRESENTATION_ICONS[presentation.iconKind];
   return (
     <span
-      title={`#${pr.number} ${presentation.label}: ${pr.title}`}
+      title={`#${pr.number} ${localizeGitHubStateLabel(presentation.label)}: ${pr.title}`}
       onClick={onOpen}
       // Middle-click follows browser link semantics: open on GitHub.
       onAuxClick={onOpen}

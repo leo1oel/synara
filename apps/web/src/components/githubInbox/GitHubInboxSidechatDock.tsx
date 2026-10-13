@@ -5,6 +5,7 @@
 // Layer: GitHub inbox presentation
 // Exports: GitHubInboxSidechatDock
 
+import { useLingui } from "@lingui/react";
 import { useMemo } from "react";
 
 import { RightDock } from "~/components/chat/RightDock";
@@ -41,6 +42,7 @@ export function GitHubInboxSidechatDock({
   /** A new side chat about the selected item, beside the one shown. */
   onNewSidechat: () => void;
 }) {
+  const { i18n } = useLingui();
   const closePane = useRightDockStore((store) => store.closePane);
   const setDockOpen = useRightDockStore((store) => store.setDockOpen);
   // Tab labels need only titles, so the coarse summary selector keeps streaming tokens in the
@@ -66,7 +68,10 @@ export function GitHubInboxSidechatDock({
     {
       kind: "sidechat",
       Icon: ChatBubbleIcon,
-      label: `Ask about ${selection.kind === "issue" ? "issue" : "PR"} #${selection.number}`,
+      label:
+        selection.kind === "issue"
+          ? i18n._("Ask about issue #{number}", { number: selection.number })
+          : i18n._("Ask about PR #{number}", { number: selection.number }),
     },
   ];
 
@@ -79,7 +84,7 @@ export function GitHubInboxSidechatDock({
       shouldAcceptWidth={acceptAnyDockWidth}
       addMenuKinds={[]}
       launcherItems={launcherItems}
-      addAction={{ label: "New side chat", onClick: onNewSidechat }}
+      addAction={{ label: i18n._("New side chat"), onClick: onNewSidechat }}
       motionKey={GITHUB_INBOX_DOCK_HOST_ID}
       {...(paneLabelOverrides ? { paneLabelOverrides } : {})}
       onClosePane={(paneId) => closePane(GITHUB_INBOX_DOCK_HOST_ID, paneId)}

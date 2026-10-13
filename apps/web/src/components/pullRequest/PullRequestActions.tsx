@@ -10,6 +10,8 @@
 // Exports: PullRequestPrimaryAction, resolvePullRequestPrimaryAction, PullRequestPrimaryButton,
 //          PullRequestDraftStateItems, PullRequestActionMenuItems
 
+import type { I18n } from "@lingui/core";
+import { useLingui } from "@lingui/react";
 import type { PullRequestDetail, PullRequestMergeMethod, ProjectId } from "@synara/contracts";
 import type { ComponentProps } from "react";
 
@@ -28,6 +30,18 @@ const OpenIcon = PR_STATE_PRESENTATION_ICONS["pull-request"];
 const DraftIcon = PR_STATE_PRESENTATION_ICONS.draft;
 const ClosedIcon = PR_STATE_PRESENTATION_ICONS["pull-request-closed"];
 const ConflictIcon = PR_STATE_PRESENTATION_ICONS["merge-conflict"];
+
+/** A merge method as the actions menu names it. */
+function mergeMethodLabel(i18n: I18n, method: PullRequestMergeMethod): string {
+  switch (method) {
+    case "merge":
+      return i18n._("Merge");
+    case "squash":
+      return i18n._("Squash");
+    case "rebase":
+      return i18n._("Rebase");
+  }
+}
 
 /** What the primary pill offers; null when an open pull request has nothing to do next. */
 export type PullRequestPrimaryAction =
@@ -91,11 +105,12 @@ export function PullRequestPrimaryButton({
   /** On the words only, so a narrow host can keep just the glyph (e.g. `sr-only` there). */
   labelClassName?: string;
 }) {
+  const { i18n } = useLingui();
   if (action.kind === "ready") {
     return (
       <Button size={size} className={className} disabled={disabled} onClick={onReady}>
         <OpenIcon />
-        <span className={labelClassName}>Ready for review</span>
+        <span className={labelClassName}>{i18n._("Ready for review")}</span>
       </Button>
     );
   }
@@ -103,14 +118,16 @@ export function PullRequestPrimaryButton({
   const label = merging ? (
     <>
       <LoaderIcon className="size-3.5 animate-spin" />
-      <span className={labelClassName}>{stacked ? "Merging stack…" : "Merging…"}</span>
+      <span className={labelClassName}>
+        {stacked ? i18n._("Merging stack…") : i18n._("Merging…")}
+      </span>
     </>
   ) : (
     <>
       <MergeIcon />
       {stacked ? (
         <>
-          <span className={labelClassName}>Merge stack</span>
+          <span className={labelClassName}>{i18n._("Merge stack")}</span>
           <span
             className={cn(
               "rounded-full px-1.5 text-ui-xs tabular-nums",
@@ -121,7 +138,7 @@ export function PullRequestPrimaryButton({
           </span>
         </>
       ) : (
-        <span className={labelClassName}>Merge</span>
+        <span className={labelClassName}>{i18n._("Merge")}</span>
       )}
     </>
   );
@@ -164,6 +181,7 @@ export function PullRequestDraftStateItems({
   disabled: boolean;
   onChange: (next: "draft" | "ready") => void;
 }) {
+  const { i18n } = useLingui();
   return (
     <MenuRadioGroup
       value={isDraft ? "draft" : "ready"}
@@ -175,11 +193,11 @@ export function PullRequestDraftStateItems({
     >
       <MenuRadioItem value="draft" disabled={disabled}>
         <DraftIcon className={MENU_ICON_CLASS_NAME} />
-        <span>Draft</span>
+        <span>{i18n._("Draft")}</span>
       </MenuRadioItem>
       <MenuRadioItem value="ready" disabled={disabled}>
         <OpenIcon className={MENU_ICON_CLASS_NAME} />
-        <span>Ready for review</span>
+        <span>{i18n._("Ready for review")}</span>
       </MenuRadioItem>
     </MenuRadioGroup>
   );
@@ -231,6 +249,7 @@ export function PullRequestActionMenuItems({
   onClose: () => void;
   onReopen: () => void;
 }) {
+  const { i18n } = useLingui();
   const open = detail.state === "open";
   return (
     <>
@@ -255,7 +274,7 @@ export function PullRequestActionMenuItems({
             {mergeMethods.map((method) => (
               <MenuRadioItem key={method} value={method} disabled={actionPending}>
                 <MergeIcon className={MENU_ICON_CLASS_NAME} />
-                <span className="capitalize">{method}</span>
+                <span>{mergeMethodLabel(i18n, method)}</span>
               </MenuRadioItem>
             ))}
           </MenuRadioGroup>
@@ -266,7 +285,7 @@ export function PullRequestActionMenuItems({
         <>
           <MenuItem onClick={() => copyPullRequestLink(detail.url)}>
             <LinkIcon className={MENU_ICON_CLASS_NAME} />
-            <span>Copy link</span>
+            <span>{i18n._("Copy link")}</span>
           </MenuItem>
           <SendToAgentMenuItems
             sendTargets={sendTargets}
@@ -277,14 +296,16 @@ export function PullRequestActionMenuItems({
           {onAsk ? (
             <MenuItem onClick={onAsk} disabled={askPending}>
               <ChatBubbleIcon className={MENU_ICON_CLASS_NAME} />
-              <span>Ask in a side chat</span>
+              <span>{i18n._("Ask in a side chat")}</span>
             </MenuItem>
           ) : null}
         </>
       ) : null}
       <MenuItem onClick={onFixFindings} disabled={preparingThread !== null}>
         <HammerIcon className={MENU_ICON_CLASS_NAME} />
-        <span>{preparingThread === "findings" ? "Preparing findings…" : "Fix findings"}</span>
+        <span>
+          {preparingThread === "findings" ? i18n._("Preparing findings…") : i18n._("Fix findings")}
+        </span>
       </MenuItem>
       {/* Beside Fix findings: the same kind of hand-off, offered only while there is a conflict
           to resolve, which is also when Merge is blocked. */}
@@ -292,7 +313,9 @@ export function PullRequestActionMenuItems({
         <MenuItem onClick={onResolveConflicts} disabled={preparingThread !== null}>
           <ConflictIcon className={MENU_ICON_CLASS_NAME} />
           <span>
-            {preparingThread === "conflicts" ? "Preparing conflicts…" : "Resolve conflicts"}
+            {preparingThread === "conflicts"
+              ? i18n._("Preparing conflicts…")
+              : i18n._("Resolve conflicts")}
           </span>
         </MenuItem>
       ) : null}
@@ -300,12 +323,12 @@ export function PullRequestActionMenuItems({
       {open ? (
         <MenuItem variant="destructive" disabled={actionPending} onClick={onClose}>
           <ClosedIcon className={MENU_ICON_CLASS_NAME} />
-          <span>Close pull request</span>
+          <span>{i18n._("Close pull request")}</span>
         </MenuItem>
       ) : detail.state === "closed" ? (
         <MenuItem disabled={actionPending} onClick={onReopen}>
           <OpenIcon className={MENU_ICON_CLASS_NAME} />
-          <span>Reopen pull request</span>
+          <span>{i18n._("Reopen pull request")}</span>
         </MenuItem>
       ) : null}
     </>

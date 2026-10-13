@@ -7,12 +7,13 @@
 // Layer: Pull request presentation
 // Exports: PullRequestSummaryTab, PullRequestPageSummary, GitHubItemPageSummary, GitHubItemComments
 
+import { useLingui } from "@lingui/react";
 import type { PullRequestComment, PullRequestDetail } from "@synara/contracts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 import {
-  PULL_REQUEST_CHECK_STATUS_LABELS,
+  pullRequestCheckStatusLabel,
   summarizePullRequestChecks,
   summarizePullRequestComments,
   withStableCheckKeys,
@@ -74,11 +75,16 @@ export function GitHubItemPageSummary({
   /** The comments section's content, usually a GitHubItemComments. */
   children: ReactNode;
 }) {
+  const { i18n } = useLingui();
   return (
     <div>
-      <PullRequestMarkdown text={body} fallback="_No description provided._" cwd={workspaceRoot} />
+      <PullRequestMarkdown
+        text={body}
+        fallback={`_${i18n._("No description provided.")}_`}
+        cwd={workspaceRoot}
+      />
       <div className="mt-6">
-        <PullRequestDisclosureSection flush label="Comments" count={commentCount}>
+        <PullRequestDisclosureSection flush label={i18n._("Comments")} count={commentCount}>
           {children}
         </PullRequestDisclosureSection>
       </div>
@@ -103,12 +109,13 @@ export function GitHubItemComments({
   target: GitHubCommentTarget;
   mutation: GitHubCommentMutation;
 }) {
+  const { i18n } = useLingui();
   return (
     <div className="space-y-2">
       {warning ? <PullRequestWarningNote>{warning}</PullRequestWarningNote> : null}
       {comments.length === 0 ? (
         <p className={cn(PR_BODY_TEXT_CLASS_NAME, "py-4 text-center text-muted-foreground")}>
-          No comments
+          {i18n._("No comments")}
         </p>
       ) : (
         <div>
@@ -129,6 +136,7 @@ export function GitHubItemComments({
 }
 
 function PullRequestComments({ detail }: { detail: PullRequestDetail }) {
+  const { i18n } = useLingui();
   const commentMutation = usePullRequestCommentMutation();
   return (
     <GitHubItemComments
@@ -137,9 +145,11 @@ function PullRequestComments({ detail }: { detail: PullRequestDetail }) {
       workspaceRoot={detail.workspaceRoot}
       warning={
         detail.commentsIncomplete
-          ? "Some unresolved review comments could not be loaded. Check GitHub for the complete review."
+          ? i18n._(
+              "Some unresolved review comments could not be loaded. Check GitHub for the complete review.",
+            )
           : detail.commentsTruncated
-            ? "More unresolved review comments may be available on GitHub."
+            ? i18n._("More unresolved review comments may be available on GitHub.")
             : null
       }
       target={detail}
@@ -174,6 +184,7 @@ export function PullRequestSummaryTab({
   /** The title and author line. Off when the host already shows them in a GitHubItemHeader. */
   showHeading?: boolean;
 }) {
+  const { i18n } = useLingui();
   const showHeading = showHeadingProp ?? true;
   return (
     <div className="h-full overflow-y-auto">
@@ -195,7 +206,7 @@ export function PullRequestSummaryTab({
           </div>
         ) : null}
         <div>
-          <PullRequestMetaRow icon={<GitBranchIcon className="size-4" />} label="Branch">
+          <PullRequestMetaRow icon={<GitBranchIcon className="size-4" />} label={i18n._("Branch")}>
             {/* One line: the branch names absorb every pixel the row has spare, and only the
                 separator and the counts are pinned. */}
             <span className="flex min-w-0 items-center gap-1.5">
@@ -215,13 +226,16 @@ export function PullRequestSummaryTab({
               meta rows, and the call to action lives in the header (a disabled Merge pill
               that says why, plus "Resolve conflicts" in its "…" menu). */}
           {detail.state === "open" && detail.mergeability === "conflicting" ? (
-            <PullRequestMetaRow icon={<PullRequestConflictIcon className="size-4" />} label="Merge">
-              Conflicts with {detail.baseBranch}
+            <PullRequestMetaRow
+              icon={<PullRequestConflictIcon className="size-4" />}
+              label={i18n._("Merge")}
+            >
+              {i18n._("Conflicts with {branch}", { branch: detail.baseBranch })}
             </PullRequestMetaRow>
           ) : null}
-          <PullRequestMetaRow icon={<UsersIcon className="size-4" />} label="Reviewers">
+          <PullRequestMetaRow icon={<UsersIcon className="size-4" />} label={i18n._("Reviewers")}>
             {detail.reviewers.length === 0 ? (
-              <span className="text-muted-foreground">None</span>
+              <span className="text-muted-foreground">{i18n._("None")}</span>
             ) : (
               <span className="flex flex-wrap items-center gap-1.5">
                 {detail.reviewers.map((actor) => (
@@ -234,32 +248,35 @@ export function PullRequestSummaryTab({
               </span>
             )}
           </PullRequestMetaRow>
-          <PullRequestMetaRow icon={<ChatBubbleIcon className="size-4" />} label="Comments">
+          <PullRequestMetaRow
+            icon={<ChatBubbleIcon className="size-4" />}
+            label={i18n._("Comments")}
+          >
             {summarizePullRequestComments(detail.comments.length)}
           </PullRequestMetaRow>
           {/* Tone tinting intentionally omitted: the summary reads as plain metadata
               here, matching the muted meta rows around it. */}
           <PullRequestMetaRow
             icon={<PullRequestChecksRing checks={detail.checks} />}
-            label="Checks"
+            label={i18n._("Checks")}
           >
             {summarizePullRequestChecks(detail.checks).label}
           </PullRequestMetaRow>
         </div>
       </section>
       {/* No edit pencil here: there is no backend "edit PR description" action to back it. */}
-      <PullRequestDisclosureSection label="Description">
+      <PullRequestDisclosureSection label={i18n._("Description")}>
         <PullRequestMarkdown
           text={detail.body}
-          fallback="_No description provided._"
+          fallback={`_${i18n._("No description provided.")}_`}
           cwd={detail.workspaceRoot}
         />
       </PullRequestDisclosureSection>
-      <PullRequestDisclosureSection label="Checks" count={detail.checks.length}>
+      <PullRequestDisclosureSection label={i18n._("Checks")} count={detail.checks.length}>
         <div className="space-y-1">
           {detail.checks.length === 0 ? (
             <p className={cn(PR_META_TEXT_CLASS_NAME, "text-muted-foreground")}>
-              No checks reported.
+              {i18n._("No checks reported.")}
             </p>
           ) : (
             withStableCheckKeys(detail.checks).map(({ key, check }) => (
@@ -280,7 +297,7 @@ export function PullRequestSummaryTab({
                 <PullRequestCheckStatusIcon status={check.status} />
                 <span className="min-w-0 flex-1 truncate">{check.name}</span>
                 <span className="text-muted-foreground">
-                  {PULL_REQUEST_CHECK_STATUS_LABELS[check.status]}
+                  {pullRequestCheckStatusLabel(check.status)}
                 </span>
               </button>
             ))
@@ -288,7 +305,7 @@ export function PullRequestSummaryTab({
         </div>
       </PullRequestDisclosureSection>
       {/* Open by default so the comment composer is immediately reachable. */}
-      <PullRequestDisclosureSection label="Comments" count={detail.comments.length}>
+      <PullRequestDisclosureSection label={i18n._("Comments")} count={detail.comments.length}>
         <PullRequestComments detail={detail} />
       </PullRequestDisclosureSection>
     </div>

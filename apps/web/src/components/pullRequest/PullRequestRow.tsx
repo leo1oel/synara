@@ -6,10 +6,12 @@
 // Layer: Pull request presentation
 // Exports: PullRequestRow, githubInboxItemLabel
 
+import { useLingui } from "@lingui/react";
 import type { GitHubInboxItem, GitHubInboxSort } from "@synara/contracts";
 import { pullRequestListProjectContexts } from "@synara/shared/githubRepository";
 import type { ReactNode } from "react";
 
+import { i18n } from "~/i18n";
 import { PinStatusIcon, pinActionLabel } from "~/lib/pin";
 import { formatRelativeTime } from "~/lib/relativeTime";
 import { cn } from "~/lib/utils";
@@ -25,7 +27,9 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 
 /** How a row names its item in accessible labels: "pull request #42", "issue #7". */
 export function githubInboxItemLabel(item: Pick<GitHubInboxItem, "kind" | "number">): string {
-  return `${item.kind === "issue" ? "issue" : "pull request"} #${item.number}`;
+  return item.kind === "issue"
+    ? i18n._("issue #{number}", { number: item.number })
+    : i18n._("pull request #{number}", { number: item.number });
 }
 
 export const PullRequestRow = function PullRequestRow({
@@ -47,16 +51,21 @@ export const PullRequestRow = function PullRequestRow({
   onClick: (entry: GitHubInboxItem) => void;
   onTogglePinned: (entry: GitHubInboxItem) => void;
 }) {
+  const { i18n } = useLingui();
   const showProjectTitle = showProjectTitleProp ?? false;
   const timestamp = sort === "created" ? entry.createdAt : entry.updatedAt;
   const isPinned = entry.isPinned === true;
   const projectContexts = pullRequestListProjectContexts(entry);
   const projectLabel =
-    projectContexts.length > 1 ? `${projectContexts.length} projects` : entry.projectTitle;
+    projectContexts.length > 1
+      ? i18n._("{count} projects", { count: projectContexts.length })
+      : entry.projectTitle;
   const projectTitle = projectContexts.map((context) => context.projectTitle).join(", ");
   const itemLabel = githubInboxItemLabel(entry);
   const pinLabel = pinActionLabel(
-    showProjectTitle ? `${itemLabel} in ${projectLabel}` : itemLabel,
+    showProjectTitle
+      ? i18n._("{item} in {project}", { item: itemLabel, project: projectLabel })
+      : itemLabel,
     isPinned,
   );
   return (
@@ -113,7 +122,7 @@ export const PullRequestRow = function PullRequestRow({
           </span>
           <time
             dateTime={timestamp}
-            title={sort === "created" ? "Opened" : "Updated"}
+            title={sort === "created" ? i18n._("Opened") : i18n._("Updated")}
             className="shrink-0 tabular-nums"
           >
             {formatRelativeTime(timestamp)}

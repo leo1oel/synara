@@ -105,7 +105,7 @@ import {
   describePullRequestAutoFix,
   describePullRequestComment,
   findPullRequestAutoFixState,
-  PULL_REQUEST_CHECK_STATUS_LABELS,
+  pullRequestCheckStatusLabel,
   PULL_REQUEST_CHECKS_TONE_TEXT_CLASS,
   summarizePullRequestChecks,
   summarizePullRequestComments,
@@ -279,7 +279,7 @@ function ChecksMenuRow({
       <PullRequestCheckStatusIcon status={check.status} />
       <span className="min-w-0 truncate text-[var(--color-text-foreground)]">{check.name}</span>
       <span className="shrink-0 text-ui-xs text-muted-foreground">
-        {PULL_REQUEST_CHECK_STATUS_LABELS[check.status]}
+        {pullRequestCheckStatusLabel(check.status)}
       </span>
     </MenuRow>
   );

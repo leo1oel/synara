@@ -9,7 +9,15 @@
 // Layer: GitHub inbox presentation
 // Exports: GitHubInbox
 
-import type { GitHubInboxItem, GitHubInboxListError, ProjectId, ThreadId } from "@synara/contracts";
+import type { I18n } from "@lingui/core";
+import { useLingui } from "@lingui/react";
+import type {
+  GitHubInboxItem,
+  GitHubInboxListError,
+  GitHubInboxSort,
+  ProjectId,
+  ThreadId,
+} from "@synara/contracts";
 import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   type KeyboardEvent as ReactKeyboardEvent,
@@ -80,7 +88,6 @@ import {
   countActiveGitHubInboxFilters,
   countInboxItemsByKind,
   countTruncatedInboxRepositories,
-  githubInboxItemNoun,
   githubInboxListState,
   githubInboxSelection,
   githubInboxSelectionForItem,
@@ -125,14 +132,62 @@ interface DraggedListWidth {
 }
 
 function rateLimitedWarningText(
+  i18n: I18n,
   error: GitHubInboxListError,
   timestampFormat: TimestampFormat,
 ): string {
   const resetTime = error.retryAt ? formatShortTimestamp(error.retryAt, timestampFormat) : null;
-  const refresh = resetTime ? `Refreshing resumes at ${resetTime}.` : "Refreshing resumes soon.";
+  const refresh = resetTime
+    ? i18n._("Refreshing resumes at {time}.", { time: resetTime })
+    : i18n._("Refreshing resumes soon.");
   return error.showingCachedData
-    ? `GitHub rate limit reached. Showing the last loaded items. ${refresh}`
-    : `GitHub rate limit reached. Some repositories could not be loaded. ${refresh}`;
+    ? i18n._("GitHub rate limit reached. Showing the last loaded items. {refresh}", { refresh })
+    : i18n._("GitHub rate limit reached. Some repositories could not be loaded. {refresh}", {
+        refresh,
+      });
+}
+
+/** "No pull requests found", for the kind the list is filtered to. */
+function emptyListTitle(i18n: I18n, kind: GitHubInboxKindFilter): string {
+  if (kind === "pullRequest") return i18n._("No pull requests found");
+  if (kind === "issue") return i18n._("No issues found");
+  return i18n._("No pull requests and issues found");
+}
+
+/** The note under a list GitHub cut short: what it shows, and how many repositories have more. */
+function truncatedListNote(
+  i18n: I18n,
+  input: {
+    state: GitHubInboxStateFilter;
+    kind: GitHubInboxKindFilter;
+    sort: GitHubInboxSort;
+    repositoryCount: number;
+  },
+): string {
+  const newest = input.sort === "created";
+  const shown =
+    input.state === "merged"
+      ? newest
+        ? i18n._("Showing merged pull requests from the 50 newest closed pull requests per repository.")
+        : i18n._(
+            "Showing merged pull requests from the 50 most recently updated closed pull requests per repository.",
+          )
+      : input.kind === "pullRequest"
+        ? newest
+          ? i18n._("Showing the 50 newest pull requests per repository.")
+          : i18n._("Showing the 50 most recently updated pull requests per repository.")
+        : input.kind === "issue"
+          ? newest
+            ? i18n._("Showing the 50 newest issues per repository.")
+            : i18n._("Showing the 50 most recently updated issues per repository.")
+          : newest
+            ? i18n._("Showing the 50 newest pull requests and issues per repository.")
+            : i18n._("Showing the 50 most recently updated pull requests and issues per repository.");
+  const more = i18n._(
+    "{count, plural, one {# repository has more on GitHub.} other {# repositories have more on GitHub.}}",
+    { count: input.repositoryCount },
+  );
+  return `${shown} ${more}`;
 }
 
 /**
@@ -148,6 +203,7 @@ function ListColumnResizeHandle({
   columnRef: RefObject<HTMLElement | null>;
   onResize: (width: number, percent: number) => void;
 }) {
+  const { i18n } = useLingui();
   const resizeTo = (width: number) => {
     const containerWidth = columnRef.current?.parentElement?.clientWidth;
     if (!containerWidth) return;
@@ -192,11 +248,11 @@ function ListColumnResizeHandle({
     <div
       role="separator"
       aria-orientation="vertical"
-      aria-label="Resize code review list"
+      aria-label={i18n._("Resize code review list")}
       aria-valuenow={percent}
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-valuetext={`List takes ${percent}% of the width`}
+      aria-valuetext={i18n._("List takes {percent}% of the width", { percent })}
       tabIndex={0}
       onPointerDown={startResize}
       onKeyDown={handleKeyDown}
@@ -206,9 +262,10 @@ function ListColumnResizeHandle({
 }
 
 function ListSkeleton() {
+  const { i18n } = useLingui();
   // Mirrors the loaded list's row height and spacing so the switch doesn't jump.
   return (
-    <div className="space-y-0.5" aria-busy="true" aria-label="Loading code review">
+    <div className="space-y-0.5" aria-busy="true" aria-label={i18n._("Loading code review")}>
       {Array.from({ length: 7 }, (_, index) => (
         <Skeleton key={index} className="h-[4.75rem] w-full rounded-lg" />
       ))}
@@ -217,13 +274,14 @@ function ListSkeleton() {
 }
 
 function DetailEmptyState() {
+  const { i18n } = useLingui();
   // Quiet and centered; not a card.
   return (
     <div className="flex h-full flex-col items-center justify-center gap-1.5 px-6 text-center">
       <GitPullRequestIcon aria-hidden className="mb-2 size-6 text-muted-foreground/60" />
-      <p className="m-0 text-ui-lg text-foreground">Select a pull request or issue</p>
+      <p className="m-0 text-ui-lg text-foreground">{i18n._("Select a pull request or issue")}</p>
       <p className="m-0 text-ui-sm text-muted-foreground">
-        Choose one from the sidebar to review it
+        {i18n._("Choose one from the sidebar to review it")}
       </p>
     </div>
   );
@@ -302,6 +360,7 @@ export function GitHubInbox({
   scopedProjectId?: ProjectId | null;
   bindingError?: string | null;
 }) {
+  const { i18n } = useLingui();
   const { settings, updateSettings } = useAppSettings();
   const dockOpen = dockOpenProp ?? false;
   const isMobile = useIsMobile();
@@ -389,7 +448,6 @@ export function GitHubInbox({
   const unavailableErrorCount = scopedErrors.filter(
     (error) => error.reason !== "rate-limited",
   ).length;
-  const noun = githubInboxItemNoun(filters.kind);
 
   // ── Filters: a change persists and drops that filter's one-visit URL override ──
   const setKind = (kind: GitHubInboxKindFilter) => {
@@ -431,18 +489,19 @@ export function GitHubInbox({
         onError: (error) =>
           toastManager.add({
             type: "error",
-            title: "Could not update pin",
-            description: error instanceof Error ? error.message : "The pin could not be saved.",
+            title: i18n._("Could not update pin"),
+            description:
+              error instanceof Error ? error.message : i18n._("The pin could not be saved."),
           }),
       });
     }
   };
   const refreshBlockedReason = embedded && !scopedProjectId
-    ? bindingError ?? "Waiting for the Lattice project…"
+    ? bindingError ?? i18n._("Waiting for the Lattice project…")
     : refreshMutation.isPending
-    ? "Refreshing…"
+    ? i18n._("Refreshing…")
     : activeActionCount > 0
-      ? "Wait for the pull request action to finish"
+      ? i18n._("Wait for the pull request action to finish")
       : null;
   const refresh = () => {
     if (refreshBlockedReason !== null) return;
@@ -452,9 +511,9 @@ export function GitHubInbox({
         onError: (error) =>
           toastManager.add({
             type: "error",
-            title: "Could not refresh code review",
+            title: i18n._("Could not refresh code review"),
             description:
-              error instanceof Error ? error.message : "Code review could not be refreshed.",
+              error instanceof Error ? error.message : i18n._("Code review could not be refreshed."),
           }),
       },
     );
@@ -524,7 +583,7 @@ export function GitHubInbox({
       {showList ? (
         <section
           ref={columnRef}
-          aria-label="Code review list"
+          aria-label={i18n._("Code review list")}
           className={cn(
             "relative flex min-h-0 min-w-0 flex-col",
             isMobile ? "min-w-0 flex-1" : "min-w-[16rem] max-w-[calc(100%-18rem)] shrink-0",
@@ -573,13 +632,16 @@ export function GitHubInbox({
           <div className="@container/list min-h-0 flex-1 overflow-y-auto px-6 pt-2 pb-8">
             <div className="flex flex-col gap-3">
               {bindingError ? (
-                <PullRequestsUnavailableState error={new Error(bindingError)} subject="Lattice project" />
+                <PullRequestsUnavailableState
+                  error={new Error(bindingError)}
+                  subject={i18n._("Lattice project")}
+                />
               ) : bindingPending || listQuery.isPending ? (
                 <ListSkeleton />
               ) : initialError ? (
                 <PullRequestsUnavailableState
                   error={initialError}
-                  subject="Pull requests and issues"
+                  subject={i18n._("Pull requests and issues")}
                   onRetry={() => void listQuery.refetch()}
                 />
               ) : entries.length === 0 ? (
@@ -587,25 +649,27 @@ export function GitHubInbox({
                   <EmptyHeader>
                     <EmptyTitle>
                       {repositoryProjects.length === 0
-                        ? "No projects yet"
+                        ? i18n._("No projects yet")
                         : reviewRequestsOnlyOpen
-                          ? "Review requests only apply to open pull requests"
-                          : `No ${noun} found`}
+                          ? i18n._("Review requests only apply to open pull requests")
+                          : emptyListTitle(i18n, filters.kind)}
                     </EmptyTitle>
                     <EmptyDescription>
                       {repositoryProjects.length === 0
-                        ? "Code review lists pull requests and issues from the GitHub repositories of your projects."
+                        ? i18n._(
+                            "Code review lists pull requests and issues from the GitHub repositories of your projects.",
+                          )
                         : reviewRequestsOnlyOpen
-                          ? "Select Open to see pull requests awaiting your review."
+                          ? i18n._("Select Open to see pull requests awaiting your review.")
                           : activeFilterCount > 0
-                            ? "Try another filter, or clear them."
-                            : "Nothing here in the repositories of your projects."}
+                            ? i18n._("Try another filter, or clear them.")
+                            : i18n._("Nothing here in the repositories of your projects.")}
                     </EmptyDescription>
                   </EmptyHeader>
                   {activeFilterCount > 0 ? (
                     <EmptyContent>
                       <Button variant="outline" size="sm" onClick={clearFilters}>
-                        Clear filters
+                        {i18n._("Clear filters")}
                       </Button>
                     </EmptyContent>
                   ) : null}
@@ -627,31 +691,30 @@ export function GitHubInbox({
               )}
               {truncatedRepositoryCount > 0 ? (
                 <p className={cn(PR_FINE_TEXT_CLASS_NAME, "text-muted-foreground")}>
-                  {filters.state === "merged"
-                    ? "Showing merged pull requests from the 50"
-                    : "Showing the 50"}{" "}
-                  {settings.githubInboxSort === "created" ? "newest" : "most recently updated"}{" "}
-                  {filters.state === "merged" ? "closed pull requests" : noun} per repository.{" "}
-                  {truncatedRepositoryCount}{" "}
-                  {truncatedRepositoryCount === 1 ? "repository has" : "repositories have"} more on
-                  GitHub.
+                  {truncatedListNote(i18n, {
+                    state: filters.state,
+                    kind: filters.kind,
+                    sort: settings.githubInboxSort,
+                    repositoryCount: truncatedRepositoryCount,
+                  })}
                 </p>
               ) : null}
               {rateLimitedError ? (
                 <PullRequestWarningNote shape="callout" role="status">
-                  {rateLimitedWarningText(rateLimitedError, settings.timestampFormat)}
+                  {rateLimitedWarningText(i18n, rateLimitedError, settings.timestampFormat)}
                 </PullRequestWarningNote>
               ) : null}
               {unavailableErrorCount > 0 ? (
                 <PullRequestWarningNote shape="callout">
-                  {unavailableErrorCount} project{" "}
-                  {unavailableErrorCount === 1 ? "repository was" : "repositories were"}{" "}
-                  unavailable. Healthy repositories are still shown.
+                  {i18n._(
+                    "{count, plural, one {# project repository was unavailable. Healthy repositories are still shown.} other {# project repositories were unavailable. Healthy repositories are still shown.}}",
+                    { count: unavailableErrorCount },
+                  )}
                 </PullRequestWarningNote>
               ) : null}
               {backgroundError ? (
                 <PullRequestWarningNote shape="callout" role="status">
-                  The latest background refresh failed. Showing the last loaded items.
+                  {i18n._("The latest background refresh failed. Showing the last loaded items.")}
                 </PullRequestWarningNote>
               ) : null}
             </div>
@@ -667,7 +730,7 @@ export function GitHubInbox({
       ) : null}
       {showDetail ? (
         <section
-          aria-label="Item details"
+          aria-label={i18n._("Item details")}
           // The detail's own parts pad for the chat dock; the page gives them more room.
           className={cn("flex min-h-0 min-w-0 flex-1 flex-col", !isMobile && "px-3 pt-2")}
         >

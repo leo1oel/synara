@@ -12,6 +12,7 @@ import type { ThreadId } from "@synara/contracts";
 import type { RightDockPane } from "~/rightDockStore.logic";
 
 import { PanelStateMessage } from "~/components/chat/PanelStateMessage";
+import { i18n } from "~/i18n";
 import {
   pullRequestDetailInputFromPane,
   pullRequestDetailInputKey,
@@ -37,7 +38,9 @@ export function PullRequestDockPane({
   const hostSidechat = useHostThreadSidechatAsk(hostThreadId ?? null);
   const input = pullRequestDetailInputFromPane(pane);
   if (!input) {
-    return <PanelStateMessage>Select a pull request to open it here.</PanelStateMessage>;
+    return (
+      <PanelStateMessage>{i18n._("Select a pull request to open it here.")}</PanelStateMessage>
+    );
   }
   return (
     <PullRequestDetailPanel

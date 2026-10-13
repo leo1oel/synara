@@ -12,6 +12,8 @@ import type {
   GitPullRequestMergeability,
   PullRequestDetail,
 } from "@synara/contracts";
+import type { I18n } from "@lingui/core";
+import { useLingui } from "@lingui/react";
 import type { ReactNode } from "react";
 
 import { ComposerPickerMenuPopup } from "~/components/chat/ComposerPickerMenuPopup";
@@ -29,6 +31,7 @@ import {
   pullRequestStateLabel,
 } from "./PullRequestStateGlyph";
 import {
+  localizeGitHubStateLabel,
   resolveIssueStatePresentation,
   resolvePrStatePresentation,
 } from "./pullRequestStatePresentation";
@@ -55,9 +58,9 @@ export type GitHubItemHeaderItem =
       HeaderFields | "state" | "stateReason" | "assignees"
     >);
 
-function relativeTimeAgo(iso: string): string {
-  const relative = formatRelativeTime(iso);
-  return relative === "now" ? "just now" : `${relative} ago`;
+function relativeTimeAgo(i18n: I18n, iso: string): string {
+  if (Date.now() - new Date(iso).getTime() < 60_000) return i18n._("just now");
+  return i18n._("{relative} ago", { relative: formatRelativeTime(iso) });
 }
 
 /** Returns a narrow layout from the detail to the list; leads the detail page's top bar. */
@@ -68,11 +71,12 @@ export function GitHubItemBackButton({
   onBack: () => void;
   className?: string;
 }) {
+  const { i18n } = useLingui();
   return (
     <IconButton
       variant="chrome"
-      label="Back to code review"
-      tooltip="Back"
+      label={i18n._("Back to code review")}
+      tooltip={i18n._("Back")}
       className={cn("shrink-0", className)}
       onClick={onBack}
     >
@@ -91,10 +95,13 @@ export function GitHubItemHeader({
   stateMenu?: ReactNode;
   className?: string;
 }) {
+  const { i18n } = useLingui();
   const state =
     item.kind === "pullRequest"
       ? {
-          word: pullRequestStateLabel(item.state, item.isDraft, item.mergeability),
+          word: localizeGitHubStateLabel(
+            pullRequestStateLabel(item.state, item.isDraft, item.mergeability),
+          ),
           colorClass: resolvePrStatePresentation(item).colorClass,
           glyph: (
             <PullRequestStateGlyph
@@ -106,7 +113,7 @@ export function GitHubItemHeader({
           ),
         }
       : {
-          word: resolveIssueStatePresentation(item).shortLabel,
+          word: localizeGitHubStateLabel(resolveIssueStatePresentation(item).shortLabel),
           colorClass: resolveIssueStatePresentation(item).colorClass,
           glyph: (
             <IssueStateGlyph
@@ -135,7 +142,7 @@ export function GitHubItemHeader({
         {stateMenu ? (
           <Menu>
             <MenuTrigger
-              aria-label={`State: ${state.word}. Change state`}
+              aria-label={i18n._("State: {state}. Change state", { state: state.word })}
               className={cn(
                 pillClassName,
                 "cursor-pointer pr-1.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
@@ -167,7 +174,7 @@ export function GitHubItemHeader({
       >
         <PullRequestActorLabel actor={item.author} className="font-medium text-foreground" />
         <span title={new Date(item.createdAt).toLocaleString()}>
-          {relativeTimeAgo(item.createdAt)}
+          {relativeTimeAgo(i18n, item.createdAt)}
         </span>
         {item.kind === "pullRequest" ? (
           <span className="flex min-w-0 items-center gap-1.5">

@@ -2,6 +2,7 @@ import type { ProjectId } from "@synara/contracts";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { embedWorkspaceMatches, readEmbedMode } from "../embedMode";
+import { i18n } from "../i18n";
 import { createOrRecoverProjectFromPath } from "../lib/projectCreation";
 import { readNativeApi } from "../nativeApi";
 import { useStore } from "../store";
@@ -28,7 +29,7 @@ export function useEmbeddedWorkspaceProject(): {
     bindingStartedRootRef.current = workspaceRoot;
     const api = readNativeApi();
     if (!api) {
-      setBindingError("The local Agent connection is unavailable.");
+      setBindingError(i18n._("The local Agent connection is unavailable."));
       return;
     }
     void (async () => {
@@ -60,7 +61,9 @@ export function useEmbeddedWorkspaceProject(): {
         setBindingError(null);
       } catch (error) {
         setBindingError(
-          error instanceof Error ? error.message : "The Lattice project could not be bound.",
+          error instanceof Error
+            ? error.message
+            : i18n._("The Lattice project could not be bound."),
         );
       }
     })();

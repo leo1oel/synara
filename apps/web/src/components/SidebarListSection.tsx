@@ -6,6 +6,7 @@
 // Layer: Sidebar UI primitive
 // Exports: SidebarSectionLabel, SidebarCollapsibleSection, SidebarShowMoreRow
 
+import { useLingui } from "@lingui/react";
 import { Children, type MouseEvent, type ReactNode } from "react";
 
 import { cn } from "~/lib/utils";
@@ -117,6 +118,7 @@ export function SidebarShowMoreRow({
   /** Padding of the buttons, where the rows above pad differently from the sidebar's own. */
   className?: string;
 }) {
+  const { i18n } = useLingui();
   if (!canShowMore && !canShowLess) return null;
   const buttonClassName = cn(
     "h-7 cursor-pointer rounded-lg px-2.5 text-left text-ui text-muted-foreground/79 hover:text-foreground",
@@ -127,7 +129,7 @@ export function SidebarShowMoreRow({
     <div className="flex w-full items-center gap-1">
       {canShowMore ? (
         <button type="button" className={cn(buttonClassName, "flex-1")} onClick={onShowMore}>
-          Show more
+          {i18n._("Show more")}
         </button>
       ) : null}
       {canShowLess ? (
@@ -136,7 +138,7 @@ export function SidebarShowMoreRow({
           className={cn(buttonClassName, canShowMore ? "flex-none" : "flex-1")}
           onClick={onShowLess}
         >
-          Show less
+          {i18n._("Show less")}
         </button>
       ) : null}
     </div>
