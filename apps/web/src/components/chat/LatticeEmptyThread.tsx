@@ -121,7 +121,9 @@ export const LatticeEmptyThread = memo(function LatticeEmptyThread({
       <h2 className="lattice-empty-thread-title text-[21px] leading-[26px] font-normal text-balance text-foreground">
         {i18n._("Work on this paper")}
       </h2>
-      <p className="mt-1.5 text-[12.5px] leading-[18px] text-balance text-muted-foreground">
+      {/* Chinese wraps at its punctuation, not between any two characters,
+          so a narrow panel never splits a word such as 编辑器. */}
+      <p className="mt-1.5 text-[12.5px] leading-[18px] text-balance break-keep text-muted-foreground">
         {hasSelection
           ? i18n._("These act on the selected text only")
           : i18n._("To work on a single passage, select it in the editor")}
