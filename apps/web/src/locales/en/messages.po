@@ -6879,8 +6879,8 @@ msgstr "These act on the selected text only"
 
 #. js-lingui-explicit-id
 #: src/components/chat/LatticeEmptyThread.tsx
-msgid "Select a passage in the editor to work on just that part"
-msgstr "Select a passage in the editor to work on just that part"
+msgid "To work on a single passage, select it in the editor"
+msgstr "To work on a single passage, select it in the editor"
 
 #. js-lingui-explicit-id
 #: src/components/chat/LatticeEmptyThread.tsx

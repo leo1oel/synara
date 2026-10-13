@@ -6879,8 +6879,8 @@ msgstr "只作用于选中的文字"
 
 #. js-lingui-explicit-id
 #: src/components/chat/LatticeEmptyThread.tsx
-msgid "Select a passage in the editor to work on just that part"
-msgstr "在编辑器里选中一段，就只改那一段"
+msgid "To work on a single passage, select it in the editor"
+msgstr "只想改其中一段？在编辑器里选中它即可"
 
 #. js-lingui-explicit-id
 #: src/components/chat/LatticeEmptyThread.tsx

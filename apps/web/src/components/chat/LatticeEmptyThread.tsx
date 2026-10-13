@@ -124,7 +124,7 @@ export const LatticeEmptyThread = memo(function LatticeEmptyThread({
       <p className="mt-1.5 text-[12.5px] leading-[18px] text-balance text-muted-foreground">
         {hasSelection
           ? i18n._("These act on the selected text only")
-          : i18n._("Select a passage in the editor to work on just that part")}
+          : i18n._("To work on a single passage, select it in the editor")}
       </p>
       {selectionPlace ? (
         <div
