@@ -177,7 +177,7 @@ export function FastModeToggle({
         render={
           <button
             type="button"
-            aria-label="Fast mode"
+            aria-label={i18n._("Fast mode")}
             aria-pressed={enabled}
             className={cn(
               "flex shrink-0 cursor-pointer items-center justify-center transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_6%,transparent)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--color-border-focus)]/60",

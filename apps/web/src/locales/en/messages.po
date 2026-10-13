@@ -684,6 +684,7 @@ msgstr "Checking setup"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ClaudeCacheDetails.tsx
+#: src/components/chat/modelPickerLabels.ts
 #: src/components/settings/ProviderUsageSettingsPanel.tsx
 #: src/lib/providerSetupStatus.ts
 msgid "Unavailable"
@@ -1910,6 +1911,7 @@ msgid "Choose a project for this chat, then send again."
 msgstr "Choose a project for this chat, then send again."
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPicker.tsx
 #: src/components/chat/ProviderModelPicker.tsx
 #: src/components/ChatView.tsx
 msgid "Loading models"
@@ -5545,6 +5547,23 @@ msgid "No matching command."
 msgstr "No matching command."
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerEffortSliderCard.tsx
+#: src/components/chat/ComposerModelPickerRow.tsx
+#: src/components/chat/ComposerModelPickerTraitRows.tsx
+msgid "Effort"
+msgstr "Effort"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerEffortSliderCard.tsx
+msgid "Reset effort and speed"
+msgstr "Reset effort and speed"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerEffortSliderCard.tsx
+msgid "Reasoning effort"
+msgstr "Reasoning effort"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ComposerEnvironmentPicker.tsx
 msgid "Work in"
 msgstr "Work in"
@@ -5598,6 +5617,8 @@ msgstr "Mode"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerExtrasMenu.tsx
+#: src/components/chat/ComposerModelPickerTraitRows.tsx
+#: src/components/chat/modelPickerLabels.ts
 #: src/components/chat/TimelineWorkEntryRow.tsx
 msgid "Fast"
 msgstr "Fast"
@@ -5665,6 +5686,7 @@ msgstr "Turn debug mode on"
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerExtrasPanel.tsx
 #: src/components/chat/FastModeBadgeIcon.tsx
+#: src/components/chat/TraitsPicker.tsx
 msgid "Fast mode"
 msgstr "Fast mode"
 
@@ -5889,6 +5911,7 @@ msgstr "{summary}. Included with your next message."
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerLatticeContextBar.tsx
+#: src/components/chat/ComposerModelPickerTraitRows.tsx
 #: src/components/chat/TimelineWorkEntryRow.tsx
 msgid "Context"
 msgstr "Context"
@@ -6010,6 +6033,156 @@ msgid "Showing top matches. Keep typing to narrow."
 msgstr "Showing top matches. Keep typing to narrow."
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerModelMenuTrigger.tsx
+msgid "Change model and reasoning"
+msgstr "Change model and reasoning"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPicker.tsx
+msgid "Select effort"
+msgstr "Select effort"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPicker.tsx
+msgid "Search models"
+msgstr "Search models"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPicker.tsx
+msgid "Search starred…"
+msgstr "Search starred…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPicker.tsx
+msgid "Search models…"
+msgstr "Search models…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPicker.tsx
+msgid "{account} needs setup"
+msgstr "{account} needs setup"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPicker.tsx
+msgid "This account needs setup"
+msgstr "This account needs setup"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPicker.tsx
+msgid "No matches"
+msgstr "No matches"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPicker.tsx
+msgid "Star a model to pin it here together with its effort and speed, then pick it in one click."
+msgstr "Star a model to pin it here together with its effort and speed, then pick it in one click."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPicker.tsx
+msgid "No models found"
+msgstr "No models found"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerRow.tsx
+msgid "Remove {model} from starred"
+msgstr "Remove {model} from starred"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerRow.tsx
+msgid "Star {model} with its current effort and speed"
+msgstr "Star {model} with its current effort and speed"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerRow.tsx
+#: src/components/chat/ComposerModelPickerTraitRows.tsx
+msgid "Variant"
+msgstr "Variant"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerRow.tsx
+#: src/components/chat/ComposerModelPickerTraitRows.tsx
+msgid "{option} (default)"
+msgstr "{option} (default)"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTabs.tsx
+msgid "{account} — Unavailable."
+msgstr "{account} — Unavailable."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTabs.tsx
+msgid "{account} — Limited."
+msgstr "{account} — Limited."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTabs.tsx
+msgid "{account} — Not ready."
+msgstr "{account} — Not ready."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTabs.tsx
+msgid "{account} is unavailable in this thread. Start a new thread to switch accounts."
+msgstr "{account} is unavailable in this thread. Start a new thread to switch accounts."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTabs.tsx
+msgid "{account} — Checking."
+msgstr "{account} — Checking."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTabs.tsx
+msgid "Open provider setup to sign in to this account."
+msgstr "Open provider setup to sign in to this account."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTabs.tsx
+msgid "{account} is unavailable right now."
+msgstr "{account} is unavailable right now."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTabs.tsx
+msgid "Model sources"
+msgstr "Model sources"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTabs.tsx
+msgid "Starred"
+msgstr "Starred"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTabs.tsx
+msgid "Add providers"
+msgstr "Add providers"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTraitRows.tsx
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+msgid "On"
+msgstr "On"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTraitRows.tsx
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+#: src/components/chat/modelPickerLabels.ts
+msgid "Off"
+msgstr "Off"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTraitRows.tsx
+msgid "Speed"
+msgstr "Speed"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTraitRows.tsx
+msgid "Standard"
+msgstr "Standard"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTraitRows.tsx
+msgid "Agent"
+msgstr "Agent"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ComposerPendingApprovalPanel.tsx
 msgid "Requested permission profile"
 msgstr "Requested permission profile"
@@ -6079,16 +6252,6 @@ msgstr "Session Status"
 #: src/components/chat/ComposerSlashStatusDialog.tsx
 msgid "Runtime controls and local thread state for the active composer."
 msgstr "Runtime controls and local thread state for the active composer."
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerSlashStatusDialog.tsx
-msgid "On"
-msgstr "On"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerSlashStatusDialog.tsx
-msgid "Off"
-msgstr "Off"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerSlashStatusDialog.tsx
@@ -7166,6 +7329,16 @@ msgid "No answer"
 msgstr "No answer"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ModelCatalogRefresh.tsx
+msgid "Checking for models…"
+msgstr "Checking for models…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ModelCatalogRefresh.tsx
+msgid "Couldn’t update models."
+msgstr "Couldn’t update models."
+
+#. js-lingui-explicit-id
 #: src/components/chat/PastedTextChip.tsx
 msgid "Show in text field"
 msgstr "Show in text field"
@@ -8048,6 +8221,7 @@ msgid "The session did not start."
 msgstr "The session did not start."
 
 #. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
 #: src/components/chat/TimelineWorkEntryRow.tsx
 msgid "None"
 msgstr "None"
@@ -8257,6 +8431,56 @@ msgstr "{count} background tasks"
 #: src/components/chat/backgroundTaskRow.logic.ts
 msgid "{count} finished"
 msgstr "{count} finished"
+
+#. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
+msgid "Minimal"
+msgstr "Minimal"
+
+#. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
+msgid "Low"
+msgstr "Low"
+
+#. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
+msgid "Medium"
+msgstr "Medium"
+
+#. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
+msgid "High"
+msgstr "High"
+
+#. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
+msgid "Extra High"
+msgstr "Extra High"
+
+#. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
+msgid "Max"
+msgstr "Max"
+
+#. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
+msgid "Ultra"
+msgstr "Ultra"
+
+#. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
+msgid "Auto-compact"
+msgstr "Auto-compact"
+
+#. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
+msgid "Thinking on"
+msgstr "Thinking on"
+
+#. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
+msgid "Thinking off"
+msgstr "Thinking off"
 
 #. js-lingui-explicit-id
 #: src/components/chat/toolCallGroup.logic.ts
@@ -8480,6 +8704,7 @@ msgstr "Capture another app's frontmost window directly into a task."
 msgid "Capture, customize, and add shortcuts for every Lattice command."
 msgstr "Capture, customize, and add shortcuts for every Lattice command."
 
+#: src/components/chat/ComposerModelMenuTrigger.tsx
 #: src/components/chat/ProviderModelPicker.tsx
 msgid "Change model"
 msgstr "Change model"
@@ -8781,6 +9006,10 @@ msgstr "Oh My Pi agent directory"
 msgid "Oh My Pi binary path"
 msgstr "Oh My Pi binary path"
 
+#: src/components/chat/ComposerModelPicker.tsx
+msgid "Open provider setup"
+msgstr "Open provider setup"
+
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "OpenAI response WebSockets"
 msgstr "OpenAI response WebSockets"
@@ -8849,9 +9078,21 @@ msgstr "Reference"
 msgid "Reject and let the agent continue"
 msgstr "Reject and let the agent continue"
 
+#: src/components/chat/ComposerEffortSliderCard.tsx
+msgid "Remove Ultrathink from the prompt to change effort."
+msgstr "Remove Ultrathink from the prompt to change effort."
+
 #: src/components/settings/ModelsSettingsPanel.tsx
 msgid "Repository conventions"
 msgstr "Repository conventions"
+
+#: src/components/chat/ComposerEffortSliderCard.tsx
+msgid "Reset to defaults"
+msgstr "Reset to defaults"
+
+#: src/components/chat/ModelCatalogRefresh.tsx
+msgid "Retry"
+msgstr "Retry"
 
 #: src/settingsNavigation.ts
 msgid "Review and clean up isolated workspaces created by Lattice."
@@ -8920,6 +9161,11 @@ msgstr "That custom model is already saved."
 #: src/components/settings/ModelsSettingsPanel.tsx
 msgid "That model is already built in."
 msgstr "That model is already built in."
+
+#: src/components/chat/modelPickerLabels.ts
+msgctxt "model trait"
+msgid "Thinking"
+msgstr "Thinking"
 
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Update"

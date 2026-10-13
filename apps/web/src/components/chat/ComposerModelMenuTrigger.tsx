@@ -4,6 +4,8 @@
 // Layer: Chat composer presentation
 // Depends on: menu/tooltip primitives, provider icons, and composer picker text tokens.
 
+import { useLingui } from "@lingui/react";
+import { Trans } from "@lingui/react/macro";
 import type { ProviderKind } from "@synara/contracts";
 import { useState } from "react";
 
@@ -49,6 +51,7 @@ export function ComposerModelMenuTrigger(props: {
   openPlaceholderLabel?: string | null | undefined;
   shortcutLabel?: string | null | undefined;
 }) {
+  const { i18n } = useLingui();
   const freezesLabel = props.isMenuOpen && Boolean(props.openPlaceholderLabel);
   // A compact (icon-only) trigger has no room for the placeholder; it only freezes.
   const showsPlaceholder = freezesLabel && !props.hideModelLabel;
@@ -88,7 +91,7 @@ export function ComposerModelMenuTrigger(props: {
         COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME,
         props.dense ? "!h-8 shrink-0" : "shrink-0",
       )}
-      aria-label="Change model and reasoning"
+      aria-label={i18n._("Change model and reasoning")}
       {...(hiddenTriggerTitle.length > 0 ? { title: hiddenTriggerTitle } : {})}
     />
   );
@@ -199,7 +202,9 @@ export function ComposerModelMenuTrigger(props: {
       {!props.isMenuOpen ? (
         <TooltipPopup side="top" sideOffset={6} variant="picker">
           <span className="inline-flex items-center gap-2 px-1 py-0.5">
-            <span>Change model</span>
+            <span>
+              <Trans>Change model</Trans>
+            </span>
             <ShortcutKbd shortcutLabel={props.shortcutLabel} className="h-4 min-w-4 text-ui-2xs" />
           </span>
         </TooltipPopup>

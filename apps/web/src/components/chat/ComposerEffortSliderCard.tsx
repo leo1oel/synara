@@ -11,6 +11,8 @@ import type {
   ProviderModelDescriptor,
   ThreadId,
 } from "@synara/contracts";
+import { useLingui } from "@lingui/react";
+import { Trans } from "@lingui/react/macro";
 import { type ReactNode, useState } from "react";
 
 import { ChevronRightIcon, ResetIcon } from "~/lib/icons";
@@ -27,6 +29,7 @@ import {
   resolveComposerTraitStatusLabel,
   supportsComposerFastModeControl,
 } from "./composerTraits";
+import { localizeModelPickerLabel } from "./modelPickerLabels";
 import { FastModeToggle } from "./TraitsPicker";
 import { useComposerTraitCommit } from "./useComposerTraitCommit";
 
@@ -54,6 +57,7 @@ const CARD_ICON_BUTTON_CLASS_NAME =
 export function ComposerEffortSliderCard(props: ComposerEffortSliderCardProps) {
   const { provider, threadId, model, modelOptions, prompt, onPromptChange } = props;
   const [modelListOpen, setModelListOpen] = useState(false);
+  const { i18n } = useLingui();
   const selection = getComposerTraitSelection(
     provider,
     model,
@@ -74,7 +78,10 @@ export function ComposerEffortSliderCard(props: ComposerEffortSliderCardProps) {
 
   const ladderIndex = resolveComposerEffortLadderIndex(selection);
   const activeLevel = effortLevels[ladderIndex];
-  const statusLabel = resolveComposerTraitStatusLabel(selection) ?? activeLevel?.label ?? "Effort";
+  const statusLabel = localizeModelPickerLabel(
+    i18n,
+    resolveComposerTraitStatusLabel(selection) ?? activeLevel?.label ?? i18n._("Effort"),
+  );
   const effortIsDefault = ultrathinkPromptControlled || effort === defaultEffort;
   const canReset = fastModeEnabled || !effortIsDefault;
 
@@ -146,7 +153,7 @@ export function ComposerEffortSliderCard(props: ComposerEffortSliderCardProps) {
             render={
               <button
                 type="button"
-                aria-label="Reset effort and speed"
+                aria-label={i18n._("Reset effort and speed")}
                 disabled={!canReset}
                 className={cn(
                   CARD_ICON_BUTTON_CLASS_NAME,
@@ -159,7 +166,7 @@ export function ComposerEffortSliderCard(props: ComposerEffortSliderCardProps) {
             <ResetIcon aria-hidden="true" className="size-3.5" />
           </TooltipTrigger>
           <TooltipPopup side="top" variant="picker">
-            Reset to defaults
+            <Trans>Reset to defaults</Trans>
           </TooltipPopup>
         </Tooltip>
       </div>
@@ -173,14 +180,17 @@ export function ComposerEffortSliderCard(props: ComposerEffortSliderCardProps) {
           showStepMarks
           magnetic
           disabled={ultrathinkPromptControlled}
-          aria-label="Reasoning effort"
-          getAriaValueText={(index) => effortLevels[index]?.label ?? String(index)}
+          aria-label={i18n._("Reasoning effort")}
+          getAriaValueText={(index) => {
+            const label = effortLevels[index]?.label;
+            return label === undefined ? String(index) : localizeModelPickerLabel(i18n, label);
+          }}
           onValueChange={handleSliderChange}
         />
       </div>
       {ultrathinkPromptControlled ? (
         <div className="px-1 pt-1 text-muted-foreground/80 text-ui leading-snug">
-          Remove Ultrathink from the prompt to change effort.
+          <Trans>Remove Ultrathink from the prompt to change effort.</Trans>
         </div>
       ) : null}
     </div>

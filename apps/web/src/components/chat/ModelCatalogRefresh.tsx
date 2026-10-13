@@ -2,6 +2,8 @@
 // Purpose: Silently check the visible catalog; expose a retry only after failure.
 // Layer: Chat picker UI
 
+import { useLingui } from "@lingui/react";
+import { Trans } from "@lingui/react/macro";
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import type { ProviderInstanceId, ProviderKind } from "@synara/contracts";
 import type { ProviderModelCatalog } from "../../hooks/useProviderModelCatalog";
@@ -14,6 +16,7 @@ export function ModelCatalogRefresh(props: {
   onRefresh: ProviderModelCatalog["refreshModels"];
 }) {
   const { provider, instanceId, onRefresh } = props;
+  const { i18n } = useLingui();
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
   const requestId = useRef(0);
@@ -53,7 +56,7 @@ export function ModelCatalogRefresh(props: {
   return (
     <div className="flex items-center justify-end gap-2 border-t border-border px-2 py-1">
       <span role="status" className="mr-auto text-ui-xs text-muted-foreground">
-        {pending ? "Checking for models…" : "Couldn’t update models."}
+        {pending ? i18n._("Checking for models…") : i18n._("Couldn’t update models.")}
       </span>
       <Button
         type="button"
@@ -66,7 +69,7 @@ export function ModelCatalogRefresh(props: {
           aria-hidden="true"
           className={pending ? "size-3 motion-safe:animate-spin" : "size-3"}
         />
-        Retry
+        <Trans>Retry</Trans>
       </Button>
     </div>
   );

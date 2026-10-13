@@ -4,6 +4,7 @@
 // Layer: Chat composer presentation
 // Depends on: composer trait resolution, starred model keys, and shared menu primitives.
 
+import { useLingui } from "@lingui/react";
 import { type ProviderModelDescriptor } from "@synara/contracts";
 
 import { type StarredModel, starredModelSlotKey } from "~/lib/starredModels";
@@ -27,6 +28,7 @@ import {
 import { ComposerPickerMenuSubPopup } from "./ComposerPickerMenuPopup";
 import { COMPOSER_MUTED_ACCENT_TEXT_CLASS_NAME } from "./composerPickerStyles";
 import { getComposerTraitSelection } from "./composerTraits";
+import { localizeModelPickerLabel } from "./modelPickerLabels";
 import { ModelStarButton } from "./ModelStarButton";
 import { PICKER_PANEL_ROW_SELECTED_CLASS_NAME } from "./pickerPanelStyles";
 import { getProviderIconClassName } from "./ProviderModelPicker";
@@ -51,6 +53,7 @@ export function ComposerModelPickerRow(props: {
   onUnstarModel: (entry: Pick<StarredModel, "provider" | "instanceId" | "model">) => void;
 }) {
   const { row } = props;
+  const { i18n } = useLingui();
   const selection = getComposerTraitSelection(
     row.provider,
     row.model,
@@ -85,8 +88,8 @@ export function ComposerModelPickerRow(props: {
       iconClassName="size-3.5"
       label={
         starred
-          ? `Remove ${row.name} from starred`
-          : `Star ${row.name} with its current effort and speed`
+          ? i18n._("Remove {model} from starred", { model: row.name })
+          : i18n._("Star {model} with its current effort and speed", { model: row.name })
       }
       onToggle={() =>
         row.preset === null && starred ? props.onUnstarModel(row) : props.onToggleStar(starEntry)
@@ -160,7 +163,9 @@ export function ComposerModelPickerRow(props: {
       </MenuSubTrigger>
       <ComposerPickerMenuSubPopup>
         <MenuGroup>
-          <MenuGroupLabel>{row.provider === "opencode" ? "Variant" : "Effort"}</MenuGroupLabel>
+          <MenuGroupLabel>
+            {row.provider === "opencode" ? i18n._("Variant") : i18n._("Effort")}
+          </MenuGroupLabel>
           <MenuRadioGroup value={selection.effort ?? ""}>
             {effortLevels.map((level) => (
               <MenuRadioItem
@@ -168,8 +173,11 @@ export function ComposerModelPickerRow(props: {
                 value={level.value}
                 onClick={() => onSelectEffort(row, level.value)}
               >
-                {level.label}
-                {level.value === selection.defaultEffort ? " (default)" : ""}
+                {level.value === selection.defaultEffort
+                  ? i18n._("{option} (default)", {
+                      option: localizeModelPickerLabel(i18n, level.label),
+                    })
+                  : localizeModelPickerLabel(i18n, level.label)}
               </MenuRadioItem>
             ))}
           </MenuRadioGroup>

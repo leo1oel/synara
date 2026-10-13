@@ -11,6 +11,7 @@ import {
   type ProviderModelDescriptor,
   type ThreadId,
 } from "@synara/contracts";
+import { useLingui } from "@lingui/react";
 import { useState, type ReactNode } from "react";
 
 import type { FastModeNotice } from "~/lib/fastModeState";
@@ -27,6 +28,7 @@ import {
   showsComposerFastModeBadge,
   supportsComposerFastModeControl,
 } from "./composerTraits";
+import { localizeModelPickerLabel } from "./modelPickerLabels";
 import { defaultAgentForProvider, getAgentOptions, getSelectedAgentValue } from "./TraitsPicker";
 import { useComposerTraitCommit } from "./useComposerTraitCommit";
 
@@ -43,6 +45,7 @@ function TraitRow(props: {
   onValueChange: (value: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const { i18n } = useLingui();
   return (
     <MenuSub open={open} onOpenChange={setOpen}>
       <MenuSubTrigger disabled={props.disabled ?? false}>
@@ -63,8 +66,9 @@ function TraitRow(props: {
         >
           {props.options.map((option) => (
             <MenuRadioItem key={option.value} value={option.value} onClick={() => setOpen(false)}>
-              {option.label}
-              {option.isDefault ? " (default)" : ""}
+              {option.isDefault
+                ? i18n._("{option} (default)", { option: option.label })
+                : option.label}
             </MenuRadioItem>
           ))}
         </MenuRadioGroup>
@@ -89,6 +93,8 @@ export function ComposerModelPickerTraitRows(props: {
   fastModeNotice?: FastModeNotice | null | undefined;
 }) {
   const { provider, threadId, model, modelOptions, prompt } = props;
+  const { i18n } = useLingui();
+  const localizeLabel = (label: string) => localizeModelPickerLabel(i18n, label);
   const selection = getComposerTraitSelection(
     provider,
     model,
@@ -118,12 +124,12 @@ export function ComposerModelPickerTraitRows(props: {
     rows.push(
       <TraitRow
         key="thinking"
-        label="Thinking"
+        label={localizeLabel("Thinking")}
         value={selection.thinkingEnabled ? "on" : "off"}
-        valueLabel={selection.thinkingEnabled ? "On" : "Off"}
+        valueLabel={selection.thinkingEnabled ? i18n._("On") : i18n._("Off")}
         options={[
-          { value: "on", label: "On", isDefault: true },
-          { value: "off", label: "Off" },
+          { value: "on", label: i18n._("On"), isDefault: true },
+          { value: "off", label: i18n._("Off") },
         ]}
         onValueChange={(value) => commitTrait({ thinking: value === "on" })}
       />,
@@ -133,15 +139,19 @@ export function ComposerModelPickerTraitRows(props: {
     rows.push(
       <TraitRow
         key="context"
-        label={selection.contextWindowDescriptor?.label ?? "Context"}
-        value={contextWindowValue}
-        valueLabel={
-          selection.contextWindowOptions.find((option) => option.value === contextWindowValue)
-            ?.label ?? contextWindowValue
+        label={
+          selection.contextWindowDescriptor
+            ? localizeLabel(selection.contextWindowDescriptor.label)
+            : i18n._("Context")
         }
+        value={contextWindowValue}
+        valueLabel={localizeLabel(
+          selection.contextWindowOptions.find((option) => option.value === contextWindowValue)
+            ?.label ?? contextWindowValue,
+        )}
         options={selection.contextWindowOptions.map((option) => ({
           value: option.value,
-          label: option.label,
+          label: localizeLabel(option.label),
           isDefault: option.value === selection.defaultContextWindow,
         }))}
         onValueChange={(value) => commitTrait({ [contextWindowTraitId]: value })}
@@ -152,14 +162,14 @@ export function ComposerModelPickerTraitRows(props: {
     rows.push(
       <TraitRow
         key="effort"
-        label={provider === "opencode" ? "Variant" : "Effort"}
+        label={provider === "opencode" ? i18n._("Variant") : i18n._("Effort")}
         value={selection.effort ?? ""}
-        valueLabel={resolveComposerTraitStatusLabel(selection) ?? ""}
+        valueLabel={localizeLabel(resolveComposerTraitStatusLabel(selection) ?? "")}
         // Ultrathink is pinned by the prompt; the ladder is read-only until it is removed.
         disabled={selection.ultrathinkPromptControlled}
         options={selection.effortLevels.map((option) => ({
           value: option.value,
-          label: option.label,
+          label: localizeLabel(option.label),
           isDefault: option.value === selection.defaultEffort,
         }))}
         onValueChange={(value) => {
@@ -178,12 +188,14 @@ export function ComposerModelPickerTraitRows(props: {
     rows.push(
       <TraitRow
         key="speed"
-        label="Speed"
+        label={i18n._("Speed")}
         value={selection.fastModeEnabled ? "on" : "off"}
-        valueLabel={selection.fastModeEnabled ? (fastModeNotice?.label ?? "Fast") : "Standard"}
+        valueLabel={
+          selection.fastModeEnabled ? (fastModeNotice?.label ?? i18n._("Fast")) : i18n._("Standard")
+        }
         options={[
-          { value: "off", label: "Standard", isDefault: true },
-          { value: "on", label: "Fast" },
+          { value: "off", label: i18n._("Standard"), isDefault: true },
+          { value: "on", label: i18n._("Fast") },
         ]}
         onValueChange={(value) => commitTrait({ fastMode: value === "on" })}
       />,
@@ -193,7 +205,7 @@ export function ComposerModelPickerTraitRows(props: {
     rows.push(
       <TraitRow
         key="agent"
-        label="Agent"
+        label={i18n._("Agent")}
         value={selectedAgent}
         valueLabel={
           agentOptions.find((agent) => agent.name === selectedAgent)?.displayName ?? selectedAgent

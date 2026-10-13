@@ -91,9 +91,11 @@ export function buildStarredModelOptionsPatch(input: {
 }
 
 // "High · Fast" style summary of a preset, labelled through the target model's ladder.
+// `localizeLabel` translates each fixed English word; the default leaves them as they are.
 export function formatStarredTraitsLabel(
   starred: Pick<StarredModel, "effort" | "fastMode" | "thinking">,
   effortLevels: ComposerTraitSelection["effortLevels"],
+  localizeLabel: (label: string) => string = (label) => label,
 ): string {
   const effortLabel =
     starred.effort !== null
@@ -107,6 +109,7 @@ export function formatStarredTraitsLabel(
     starred.fastMode ? "Fast" : null,
   ]
     .filter((part): part is string => part !== null)
+    .map(localizeLabel)
     .join(" · ");
 }
 
@@ -197,7 +200,10 @@ export function buildStarredTabRows(input: {
     provider: ProviderKind,
     model: string,
   ) => ComposerTraitSelection["effortLevels"];
+  /** Translates the fixed English words of a row's detail (traits, "Unavailable"). */
+  localizeLabel?: (label: string) => string;
 }): ComposerModelPickerRow[] {
+  const localizeLabel = input.localizeLabel ?? ((label: string) => label);
   return input.starredModels.flatMap((entry) => {
     const instanceId = starredModelInstanceId(entry);
     const options = input.modelOptionsFor(entry.provider, instanceId);
@@ -220,6 +226,7 @@ export function buildStarredTabRows(input: {
     const traitsLabel = formatStarredTraitsLabel(
       entry,
       input.effortLevelsFor(entry.provider, entry.model),
+      localizeLabel,
     );
     return [
       {
@@ -231,7 +238,7 @@ export function buildStarredTabRows(input: {
         name,
         detail:
           selectableModel === null
-            ? "Unavailable"
+            ? localizeLabel("Unavailable")
             : [accountLabel, traitsLabel].filter(Boolean).join(" · ") || null,
         selected:
           selectableModel !== null &&

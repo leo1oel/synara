@@ -15,6 +15,8 @@ import {
   type ServerProviderStatus,
   type ThreadId,
 } from "@synara/contracts";
+import { useLingui } from "@lingui/react";
+import { Trans } from "@lingui/react/macro";
 import {
   useDeferredValue,
   useEffect,
@@ -89,6 +91,7 @@ import {
   resolveProviderModelLabel,
   resolveVisibleProviderOptions,
 } from "./ProviderModelPicker";
+import { localizeModelPickerLabel } from "./modelPickerLabels";
 import { resolveRuntimeModelDescriptor } from "./runtimeModelCapabilities";
 
 export type ComposerModelSelectionOptions = {
@@ -181,6 +184,8 @@ function groupRowElements(
 
 export function ComposerModelPicker(props: ComposerModelPickerProps) {
   const { onOpenChange, open, lockedProvider, threadId } = props;
+  const { i18n } = useLingui();
+  const localizeLabel = (label: string) => localizeModelPickerLabel(i18n, label);
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const isMenuOpen = open ?? uncontrolledOpen;
   const activeProvider = lockedProvider ?? props.provider;
@@ -310,6 +315,7 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
     props.modelOptions,
     props.runtimeModel,
   );
+  const currentStatusLabel = resolveComposerTraitStatusLabel(currentTraitSelection);
 
   const visibleProviderOptions = resolveVisibleProviderOptions({
     provider: props.provider,
@@ -330,6 +336,7 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
       ? undefined
       : AVAILABLE_PROVIDER_OPTIONS.find((option) => option.value === activeProvider);
   const providerTabs = resolveComposerModelPickerProviderTabs({
+    i18n,
     options:
       activeProviderOption &&
       !visibleProviderOptions.some((option) => option.value === activeProvider)
@@ -408,6 +415,7 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
               ...resolveStarredTraits(currentTraitSelection),
             },
             effortLevelsFor: (provider, model) => traitSelectionFor(provider, model).effortLevels,
+            localizeLabel,
           })
         : buildProviderTabRows({
             provider: tabAccount.provider,
@@ -543,7 +551,7 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
         accountName={activeProviderTab?.dotted ? activeProviderTab.name : null}
         accountAccentColor={activeProviderTab?.accentColor}
         modelLabel={modelLabel}
-        statusLabel={resolveComposerTraitStatusLabel(currentTraitSelection)}
+        statusLabel={currentStatusLabel === null ? null : localizeLabel(currentStatusLabel)}
         contextWindowLabel={activeProvider === "claudeAgent" ? props.contextWindowLabel : null}
         showsFastBadge={showsComposerFastModeBadge(currentTraitSelection)}
         fastModeNotice={activeProvider === "claudeAgent" ? props.fastModeNotice : null}
@@ -551,7 +559,7 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
         hideStatusLabel={props.hideStatusLabel}
         disabled={props.disabled}
         isMenuOpen={isMenuOpen}
-        openPlaceholderLabel={usesEffortSlider ? "Select effort" : null}
+        openPlaceholderLabel={usesEffortSlider ? i18n._("Select effort") : null}
         shortcutLabel={props.shortcutLabel}
       />
       <ComposerPickerMenuPopup
@@ -585,8 +593,10 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
               ref={searchInputRef}
               size="sm"
               type="search"
-              aria-label="Search models"
-              placeholder={tab === STARRED_TAB ? "Search starred…" : "Search models…"}
+              aria-label={i18n._("Search models")}
+              placeholder={
+                tab === STARRED_TAB ? i18n._("Search starred…") : i18n._("Search models…")
+              }
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               onKeyDownCapture={(event) => {
@@ -625,13 +635,15 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
                   />
                 ) : null}
                 <span className="text-ui font-medium text-foreground">
-                  {openProviderTab?.label ?? "This account"} needs setup
+                  {openProviderTab
+                    ? i18n._("{account} needs setup", { account: openProviderTab.label })
+                    : i18n._("This account needs setup")}
                 </span>
                 <span className="text-ui-sm leading-snug text-muted-foreground">
                   {setupMessage}
                 </span>
                 <Button type="button" size="xs" variant="outline" onClick={openProviderSettings}>
-                  Open provider setup
+                  <Trans>Open provider setup</Trans>
                 </Button>
               </div>
             ) : discoveryError ? (
@@ -640,7 +652,7 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
               </div>
             ) : null}
             {setupMessage !== null ? null : isTabLoading ? (
-              <div className="space-y-2 px-2 py-2" aria-label="Loading models">
+              <div className="space-y-2 px-2 py-2" aria-label={i18n._("Loading models")}>
                 {Array.from({ length: 5 }, (_, index) => (
                   <Skeleton
                     key={index}
@@ -674,10 +686,12 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
             ) : (
               <div className="px-2 py-3 text-muted-foreground text-ui leading-relaxed">
                 {normalizedQuery.length > 0
-                  ? "No matches"
+                  ? i18n._("No matches")
                   : tab === STARRED_TAB
-                    ? "Star a model to pin it here together with its effort and speed, then pick it in one click."
-                    : "No models found"}
+                    ? i18n._(
+                        "Star a model to pin it here together with its effort and speed, then pick it in one click.",
+                      )
+                    : i18n._("No models found")}
               </div>
             )}
           </div>

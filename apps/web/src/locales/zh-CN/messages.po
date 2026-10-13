@@ -684,6 +684,7 @@ msgstr "正在检查设置"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ClaudeCacheDetails.tsx
+#: src/components/chat/modelPickerLabels.ts
 #: src/components/settings/ProviderUsageSettingsPanel.tsx
 #: src/lib/providerSetupStatus.ts
 msgid "Unavailable"
@@ -1910,6 +1911,7 @@ msgid "Choose a project for this chat, then send again."
 msgstr "请为这个对话选择项目，然后再发送。"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPicker.tsx
 #: src/components/chat/ProviderModelPicker.tsx
 #: src/components/ChatView.tsx
 msgid "Loading models"
@@ -5545,6 +5547,23 @@ msgid "No matching command."
 msgstr "没有匹配的命令。"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerEffortSliderCard.tsx
+#: src/components/chat/ComposerModelPickerRow.tsx
+#: src/components/chat/ComposerModelPickerTraitRows.tsx
+msgid "Effort"
+msgstr "推理强度"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerEffortSliderCard.tsx
+msgid "Reset effort and speed"
+msgstr "重置推理强度和速度"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerEffortSliderCard.tsx
+msgid "Reasoning effort"
+msgstr "推理强度"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ComposerEnvironmentPicker.tsx
 msgid "Work in"
 msgstr "工作位置"
@@ -5598,6 +5617,8 @@ msgstr "模式"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerExtrasMenu.tsx
+#: src/components/chat/ComposerModelPickerTraitRows.tsx
+#: src/components/chat/modelPickerLabels.ts
 #: src/components/chat/TimelineWorkEntryRow.tsx
 msgid "Fast"
 msgstr "快速"
@@ -5665,6 +5686,7 @@ msgstr "开启调试模式"
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerExtrasPanel.tsx
 #: src/components/chat/FastModeBadgeIcon.tsx
+#: src/components/chat/TraitsPicker.tsx
 msgid "Fast mode"
 msgstr "快速模式"
 
@@ -5889,6 +5911,7 @@ msgstr "{summary}。会随下一条消息一起发送。"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerLatticeContextBar.tsx
+#: src/components/chat/ComposerModelPickerTraitRows.tsx
 #: src/components/chat/TimelineWorkEntryRow.tsx
 msgid "Context"
 msgstr "上下文"
@@ -6010,6 +6033,156 @@ msgid "Showing top matches. Keep typing to narrow."
 msgstr "只显示最匹配的结果，继续输入可以缩小范围。"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerModelMenuTrigger.tsx
+msgid "Change model and reasoning"
+msgstr "更换模型和推理强度"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPicker.tsx
+msgid "Select effort"
+msgstr "选择推理强度"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPicker.tsx
+msgid "Search models"
+msgstr "搜索模型"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPicker.tsx
+msgid "Search starred…"
+msgstr "搜索星标模型…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPicker.tsx
+msgid "Search models…"
+msgstr "搜索模型…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPicker.tsx
+msgid "{account} needs setup"
+msgstr "{account} 需要设置"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPicker.tsx
+msgid "This account needs setup"
+msgstr "这个账号需要设置"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPicker.tsx
+msgid "No matches"
+msgstr "没有匹配的模型"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPicker.tsx
+msgid "Star a model to pin it here together with its effort and speed, then pick it in one click."
+msgstr "给模型加星标，它会连同推理强度和速度固定在这里，之后一键即可选用。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPicker.tsx
+msgid "No models found"
+msgstr "没有找到模型"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerRow.tsx
+msgid "Remove {model} from starred"
+msgstr "取消 {model} 的星标"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerRow.tsx
+msgid "Star {model} with its current effort and speed"
+msgstr "给 {model} 加星标，并记住当前的推理强度和速度"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerRow.tsx
+#: src/components/chat/ComposerModelPickerTraitRows.tsx
+msgid "Variant"
+msgstr "变体"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerRow.tsx
+#: src/components/chat/ComposerModelPickerTraitRows.tsx
+msgid "{option} (default)"
+msgstr "{option}（默认）"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTabs.tsx
+msgid "{account} — Unavailable."
+msgstr "{account} — 不可用。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTabs.tsx
+msgid "{account} — Limited."
+msgstr "{account} — 受限。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTabs.tsx
+msgid "{account} — Not ready."
+msgstr "{account} — 尚未就绪。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTabs.tsx
+msgid "{account} is unavailable in this thread. Start a new thread to switch accounts."
+msgstr "这个对话无法使用 {account}。如需切换账号，请新建对话。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTabs.tsx
+msgid "{account} — Checking."
+msgstr "{account} — 正在检查。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTabs.tsx
+msgid "Open provider setup to sign in to this account."
+msgstr "打开提供商设置，登录这个账号。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTabs.tsx
+msgid "{account} is unavailable right now."
+msgstr "{account} 暂时不可用。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTabs.tsx
+msgid "Model sources"
+msgstr "模型来源"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTabs.tsx
+msgid "Starred"
+msgstr "星标"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTabs.tsx
+msgid "Add providers"
+msgstr "添加提供商"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTraitRows.tsx
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+msgid "On"
+msgstr "开"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTraitRows.tsx
+#: src/components/chat/ComposerSlashStatusDialog.tsx
+#: src/components/chat/modelPickerLabels.ts
+msgid "Off"
+msgstr "关"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTraitRows.tsx
+msgid "Speed"
+msgstr "速度"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTraitRows.tsx
+msgid "Standard"
+msgstr "标准"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPickerTraitRows.tsx
+msgid "Agent"
+msgstr "智能体"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ComposerPendingApprovalPanel.tsx
 msgid "Requested permission profile"
 msgstr "请求的权限配置"
@@ -6079,16 +6252,6 @@ msgstr "会话状态"
 #: src/components/chat/ComposerSlashStatusDialog.tsx
 msgid "Runtime controls and local thread state for the active composer."
 msgstr "当前输入框的运行设置和本地对话状态。"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerSlashStatusDialog.tsx
-msgid "On"
-msgstr "开"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerSlashStatusDialog.tsx
-msgid "Off"
-msgstr "关"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerSlashStatusDialog.tsx
@@ -7166,6 +7329,16 @@ msgid "No answer"
 msgstr "未回答"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ModelCatalogRefresh.tsx
+msgid "Checking for models…"
+msgstr "正在检查模型…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ModelCatalogRefresh.tsx
+msgid "Couldn’t update models."
+msgstr "无法更新模型列表。"
+
+#. js-lingui-explicit-id
 #: src/components/chat/PastedTextChip.tsx
 msgid "Show in text field"
 msgstr "在输入框中显示"
@@ -8048,6 +8221,7 @@ msgid "The session did not start."
 msgstr "会话没有启动。"
 
 #. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
 #: src/components/chat/TimelineWorkEntryRow.tsx
 msgid "None"
 msgstr "无"
@@ -8257,6 +8431,56 @@ msgstr "{count} 个后台任务"
 #: src/components/chat/backgroundTaskRow.logic.ts
 msgid "{count} finished"
 msgstr "{count} 个已完成"
+
+#. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
+msgid "Minimal"
+msgstr "最低"
+
+#. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
+msgid "Low"
+msgstr "低"
+
+#. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
+msgid "Medium"
+msgstr "中"
+
+#. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
+msgid "High"
+msgstr "高"
+
+#. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
+msgid "Extra High"
+msgstr "超高"
+
+#. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
+msgid "Max"
+msgstr "最高"
+
+#. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
+msgid "Ultra"
+msgstr "极限"
+
+#. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
+msgid "Auto-compact"
+msgstr "自动压缩"
+
+#. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
+msgid "Thinking on"
+msgstr "思考：开"
+
+#. js-lingui-explicit-id
+#: src/components/chat/modelPickerLabels.ts
+msgid "Thinking off"
+msgstr "思考：关"
 
 #. js-lingui-explicit-id
 #: src/components/chat/toolCallGroup.logic.ts
@@ -8480,6 +8704,7 @@ msgstr "把另一个应用的最前端窗口直接截取到任务中。"
 msgid "Capture, customize, and add shortcuts for every Lattice command."
 msgstr "查看、自定义并添加每个 Lattice 命令的快捷键。"
 
+#: src/components/chat/ComposerModelMenuTrigger.tsx
 #: src/components/chat/ProviderModelPicker.tsx
 msgid "Change model"
 msgstr "更改模型"
@@ -8781,6 +9006,10 @@ msgstr "Oh My Pi 助手文件夹"
 msgid "Oh My Pi binary path"
 msgstr "Oh My Pi 程序路径"
 
+#: src/components/chat/ComposerModelPicker.tsx
+msgid "Open provider setup"
+msgstr "打开提供商设置"
+
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "OpenAI response WebSockets"
 msgstr "OpenAI 响应 WebSocket"
@@ -8849,9 +9078,21 @@ msgstr "参考"
 msgid "Reject and let the agent continue"
 msgstr "拒绝，让 AI 继续"
 
+#: src/components/chat/ComposerEffortSliderCard.tsx
+msgid "Remove Ultrathink from the prompt to change effort."
+msgstr "从提示中删掉 Ultrathink 后才能调整推理强度。"
+
 #: src/components/settings/ModelsSettingsPanel.tsx
 msgid "Repository conventions"
 msgstr "沿用仓库惯例"
+
+#: src/components/chat/ComposerEffortSliderCard.tsx
+msgid "Reset to defaults"
+msgstr "恢复默认"
+
+#: src/components/chat/ModelCatalogRefresh.tsx
+msgid "Retry"
+msgstr "重试"
 
 #: src/settingsNavigation.ts
 msgid "Review and clean up isolated workspaces created by Lattice."
@@ -8920,6 +9161,11 @@ msgstr "该自定义模型已保存。"
 #: src/components/settings/ModelsSettingsPanel.tsx
 msgid "That model is already built in."
 msgstr "该模型已内置。"
+
+#: src/components/chat/modelPickerLabels.ts
+msgctxt "model trait"
+msgid "Thinking"
+msgstr "思考"
 
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Update"
