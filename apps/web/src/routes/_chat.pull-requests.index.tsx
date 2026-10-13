@@ -42,7 +42,11 @@ function GitHubInboxRouteView() {
   const navigate = useNavigate({ from: Route.fullPath });
   const updateSearch = (patch: GitHubInboxSearchPatch) =>
     void navigate({
-      search: (previous) => mergeGitHubInboxSearch(previous, embedMode ? { ...patch, projectId: embeddedProjectId ?? undefined } : patch),
+      search: (previous) =>
+        mergeGitHubInboxSearch(
+          previous,
+          embedMode ? { ...patch, projectId: embeddedProjectId ?? undefined } : patch,
+        ),
       replace: true,
     });
   const selection = githubInboxSelection(scopedSearch);
@@ -66,17 +70,20 @@ function GitHubInboxRouteView() {
           {/* Like Settings: the title lives at the top of the list column, so this strip only
               holds the sidebar toggle (shown while the sidebar is collapsed) and stays a drag
               region. */}
-          {!embedMode ? <RouteSurfaceHeader
-            divider={false}
-            className="app-top-bar shrink-0"
-            // Keeps the shell band's height even though the strip holds only the toggle.
-            rowClassName="h-[var(--app-top-strip-height)]"
-          /> : null}
+          {!embedMode ? (
+            <RouteSurfaceHeader
+              divider={false}
+              className="app-top-bar shrink-0"
+              // Keeps the shell band's height even though the strip holds only the toggle.
+              rowClassName="h-[var(--app-top-strip-height)]"
+            />
+          ) : null}
           <GitHubInbox
             search={scopedSearch}
             embedded={Boolean(embedMode)}
             scopedProjectId={embeddedProjectId}
             bindingError={bindingError}
+            workspaceRoot={embedMode?.workspaceRoot ?? null}
             onSearchChange={updateSearch}
             sidechat={sidechat}
             dockOpen={selection !== null && sidechat.dockState.open}

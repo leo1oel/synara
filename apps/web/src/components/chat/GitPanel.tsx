@@ -44,15 +44,14 @@ import {
   CHAT_SURFACE_HEADER_ACTION_ICON_CLASS_NAME,
   DOCK_HEADER_ICON_BUTTON_CLASS,
 } from "./chatHeaderControls";
-import { BranchToolbarBranchSelector } from "../BranchToolbarBranchSelector";
 import { DiffStat } from "./DiffStatLabel";
 import { DockPaneHeader } from "./DockPaneHeader";
 import { FileDiffHeader } from "./FileDiffHeader";
 import { SingleFileDiffBody } from "./FileDiffView";
 import { FileEntryIcon } from "./FileEntryIcon";
 import { FileRowsSkeleton } from "./FileRowsSkeleton";
-import GitActionsControl from "../GitActionsControl";
 import { GitHubRemoteSetupCard, GitInitializationState } from "./GitRepositorySetup";
+import { LatticeGitChanges } from "./LatticeGitChanges";
 import { PanelStateMessage } from "./PanelStateMessage";
 
 type GitPanelSection = "staged" | "unstaged";
@@ -206,16 +205,6 @@ function GitFileSectionSkeleton(props: { label: string }) {
       </div>
       <FileRowsSkeleton label={props.label} showStats className="px-1.5" />
     </section>
-  );
-}
-
-// Holds the branch picker and Commit & push rows while the repository probe is pending.
-function GitPanelActionsSkeleton() {
-  return (
-    <div className="flex flex-col gap-2 border-b border-border/70 px-2 py-2" aria-hidden>
-      <Skeleton className="h-7 w-full rounded-md" />
-      <Skeleton className="h-7 w-full rounded-md" />
-    </div>
   );
 }
 
@@ -383,6 +372,34 @@ export function GitPanel(props: {
     );
   }
 
+  // Lattice's Changes view: its own layout over the same reads and index mutations. It mounts
+  // with the repository probe still pending, so changed files land as soon as the diffs do.
+  if (props.showActions && !repositoryMissing && !branchError) {
+    return (
+      <LatticeGitChanges
+        cwd={cwd}
+        theme={theme}
+        stagedFiles={stagedFiles}
+        unstagedFiles={unstagedFiles}
+        stagedPatch={stagedPatch ?? ""}
+        unstagedPatch={unstagedPatch ?? ""}
+        isLoading={isLoading}
+        error={error}
+        mutating={mutating}
+        onStage={stage}
+        onUnstage={unstage}
+        refreshing={refreshMutation.isPending}
+        onRefresh={() => refreshMutation.mutate()}
+        remoteSetup={
+          repositoryReady && !branchQuery.data.hasOriginRemote ? (
+            <GitHubRemoteSetupCard cwd={cwd} />
+          ) : null
+        }
+        loadingRows={<GitFileSectionSkeleton label={i18n._("Loading changes...")} />}
+      />
+    );
+  }
+
   return (
     <div
       className={cn(
@@ -425,34 +442,6 @@ export function GitPanel(props: {
         <GitInitializationState cwd={cwd} />
       ) : (
         <>
-          {props.showActions && repositoryPending ? <GitPanelActionsSkeleton /> : null}
-          {props.showActions && repositoryReady ? (
-            <div
-              data-lattice-source-control-actions=""
-              className="flex flex-col gap-2 border-b border-border/70 px-2 py-2"
-            >
-              <BranchToolbarBranchSelector
-                activeProjectCwd={cwd}
-                activeThreadBranch={null}
-                activeWorktreePath={null}
-                branchCwd={cwd}
-                effectiveEnvMode="local"
-                envLocked
-                hasServerThread={false}
-                isThreadSettled
-                onSetThreadWorkspace={() => undefined}
-                variant="panel"
-                latticeSourceControl
-              />
-              <GitActionsControl
-                gitCwd={cwd}
-                activeThreadId={props.hostThreadId ?? null}
-                variant="panel"
-                latticeSourceControl
-              />
-            </div>
-          ) : null}
-
           {repositoryReady && !branchQuery.data.hasOriginRemote ? (
             <GitHubRemoteSetupCard cwd={cwd} />
           ) : null}

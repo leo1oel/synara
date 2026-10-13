@@ -79,6 +79,7 @@ import { useStore } from "~/store";
 import { formatShortTimestamp } from "~/timestampFormat";
 import { GitHubInboxFilterBar } from "./GitHubInboxFilterBar";
 import { GitHubIssueDetailPanel } from "./GitHubIssueDetailPanel";
+import { LatticePullRequestList } from "./LatticePullRequestList";
 import {
   CLEARED_GITHUB_INBOX_FILTER_SEARCH,
   CLEARED_GITHUB_INBOX_FILTER_SETTINGS,
@@ -168,7 +169,9 @@ function truncatedListNote(
   const shown =
     input.state === "merged"
       ? newest
-        ? i18n._("Showing merged pull requests from the 50 newest closed pull requests per repository.")
+        ? i18n._(
+            "Showing merged pull requests from the 50 newest closed pull requests per repository.",
+          )
         : i18n._(
             "Showing merged pull requests from the 50 most recently updated closed pull requests per repository.",
           )
@@ -182,7 +185,9 @@ function truncatedListNote(
             : i18n._("Showing the 50 most recently updated issues per repository.")
           : newest
             ? i18n._("Showing the 50 newest pull requests and issues per repository.")
-            : i18n._("Showing the 50 most recently updated pull requests and issues per repository.");
+            : i18n._(
+                "Showing the 50 most recently updated pull requests and issues per repository.",
+              );
   const more = i18n._(
     "{count, plural, one {# repository has more on GitHub.} other {# repositories have more on GitHub.}}",
     { count: input.repositoryCount },
@@ -349,6 +354,7 @@ export function GitHubInbox({
   embedded = false,
   scopedProjectId,
   bindingError,
+  workspaceRoot,
 }: {
   search: GitHubInboxSearch;
   onSearchChange: (patch: GitHubInboxSearchPatch) => void;
@@ -359,6 +365,8 @@ export function GitHubInbox({
   embedded?: boolean;
   scopedProjectId?: ProjectId | null;
   bindingError?: string | null;
+  /** Lattice's workspace; with it the embedded page shows Lattice's pull request list. */
+  workspaceRoot?: string | null;
 }) {
   const { i18n } = useLingui();
   const { settings, updateSettings } = useAppSettings();
@@ -387,15 +395,34 @@ export function GitHubInbox({
     [repositoryProjects],
   );
   const resolvedFilters = resolveGitHubInboxFilters(search, settings, existingProjectIds);
-  const filters = embedded ? { ...resolvedFilters, projectIds: scopedProjectId ? [scopedProjectId] : [] } : resolvedFilters;
+  // Lattice's list reads the project's open pull requests (and its closed list for Recently
+  // merged) and groups them itself, so the standalone filters do not apply there.
+  const latticeList = embedded && Boolean(workspaceRoot);
+  const filters: typeof resolvedFilters = latticeList
+    ? {
+        kind: "pullRequest",
+        state: "open",
+        involvement: "everything",
+        labels: [],
+        projectIds: scopedProjectId ? [scopedProjectId] : [],
+      }
+    : embedded
+      ? { ...resolvedFilters, projectIds: scopedProjectId ? [scopedProjectId] : [] }
+      : resolvedFilters;
   const selection = githubInboxSelection(search);
   const listState = githubInboxListState(filters.state);
 
   // One list per state and sort; kind, project, involvement, label, and text filters apply below, so
   // switching them never reaches GitHub.
-  const listScope = embedded && scopedProjectId
-    ? { projectId: scopedProjectId, ...(filters.involvement === "authored" || filters.involvement === "reviewRequested" ? { involvement: filters.involvement } : {}) }
-    : undefined;
+  const listScope =
+    embedded && scopedProjectId
+      ? {
+          projectId: scopedProjectId,
+          ...(filters.involvement === "authored" || filters.involvement === "reviewRequested"
+            ? { involvement: filters.involvement }
+            : {}),
+        }
+      : undefined;
   const bindingPending = embedded && !scopedProjectId && !bindingError;
   const listQuery = useQuery({
     ...githubInboxListQueryOptions(listState, settings.githubInboxSort, listScope),
@@ -496,13 +523,14 @@ export function GitHubInbox({
       });
     }
   };
-  const refreshBlockedReason = embedded && !scopedProjectId
-    ? bindingError ?? i18n._("Waiting for the Lattice project…")
-    : refreshMutation.isPending
-    ? i18n._("Refreshing…")
-    : activeActionCount > 0
-      ? i18n._("Wait for the pull request action to finish")
-      : null;
+  const refreshBlockedReason =
+    embedded && !scopedProjectId
+      ? (bindingError ?? i18n._("Waiting for the Lattice project…"))
+      : refreshMutation.isPending
+        ? i18n._("Refreshing…")
+        : activeActionCount > 0
+          ? i18n._("Wait for the pull request action to finish")
+          : null;
   const refresh = () => {
     if (refreshBlockedReason !== null) return;
     refreshMutation.mutate(
@@ -513,7 +541,9 @@ export function GitHubInbox({
             type: "error",
             title: i18n._("Could not refresh code review"),
             description:
-              error instanceof Error ? error.message : i18n._("Code review could not be refreshed."),
+              error instanceof Error
+                ? error.message
+                : i18n._("Code review could not be refreshed."),
           }),
       },
     );
@@ -598,127 +628,161 @@ export function GitHubInbox({
                 }
           }
         >
-          <div className="shrink-0">
-            <GitHubInboxFilterBar
-              filters={filters}
-              sort={settings.githubInboxSort}
-              onSortChange={(sort) => updateSettings({ githubInboxSort: sort })}
-              query={query}
-              kindCounts={
-                listData
-                  ? countInboxItemsByKind(listData.items, filters, {
-                      viewer: listData.viewer,
-                      normalizedQuery: deferredQuery,
-                      repositoryBatches: listData.repositoryBatches,
-                    })
-                  : null
-              }
-              projectOptions={embedded ? projectOptions.filter((option) => option.id === scopedProjectId) : projectOptions}
-              projectLocked={embedded}
-              labelOptions={labelOptions}
-              refreshing={refreshMutation.isPending}
-              refreshBlockedReason={refreshBlockedReason}
-              onQueryChange={(value) => onSearchChange({ q: value || undefined })}
-              onKindChange={setKind}
-              onStateChange={setState}
-              onInvolvementChange={setInvolvement}
-              onProjectIdsChange={setProjectIds}
-              onLabelsChange={setLabels}
-              onClearFilters={clearFilters}
-              onRefresh={refresh}
-              onPasteReference={pasteReference}
-            />
-          </div>
-          <div className="@container/list min-h-0 flex-1 overflow-y-auto px-6 pt-2 pb-8">
-            <div className="flex flex-col gap-3">
-              {bindingError ? (
+          {latticeList && workspaceRoot ? (
+            bindingError ? (
+              <div className="px-3">
                 <PullRequestsUnavailableState
                   error={new Error(bindingError)}
                   subject={i18n._("Lattice project")}
                 />
-              ) : bindingPending || listQuery.isPending ? (
-                <ListSkeleton />
-              ) : initialError ? (
-                <PullRequestsUnavailableState
-                  error={initialError}
-                  subject={i18n._("Pull requests and issues")}
-                  onRetry={() => void listQuery.refetch()}
-                />
-              ) : entries.length === 0 ? (
-                <Empty className="py-12">
-                  <EmptyHeader>
-                    <EmptyTitle>
-                      {repositoryProjects.length === 0
-                        ? i18n._("No projects yet")
-                        : reviewRequestsOnlyOpen
-                          ? i18n._("Review requests only apply to open pull requests")
-                          : emptyListTitle(i18n, filters.kind)}
-                    </EmptyTitle>
-                    <EmptyDescription>
-                      {repositoryProjects.length === 0
-                        ? i18n._(
-                            "Code review lists pull requests and issues from the GitHub repositories of your projects.",
-                          )
-                        : reviewRequestsOnlyOpen
-                          ? i18n._("Select Open to see pull requests awaiting your review.")
-                          : activeFilterCount > 0
-                            ? i18n._("Try another filter, or clear them.")
-                            : i18n._("Nothing here in the repositories of your projects.")}
-                    </EmptyDescription>
-                  </EmptyHeader>
-                  {activeFilterCount > 0 ? (
-                    <EmptyContent>
-                      <Button variant="outline" size="sm" onClick={clearFilters}>
-                        {i18n._("Clear filters")}
-                      </Button>
-                    </EmptyContent>
-                  ) : null}
-                </Empty>
-              ) : (
-                <PullRequestList
+              </div>
+            ) : (
+              <LatticePullRequestList
+                workspaceRoot={workspaceRoot}
+                projectId={scopedProjectId ?? ("" as ProjectId)}
+                openList={listData}
+                openPending={bindingPending || !scopedProjectId || listQuery.isPending}
+                openError={initialError}
+                onRetry={() => void listQuery.refetch()}
+                query={query}
+                onQueryChange={(value) => onSearchChange({ q: value || undefined })}
+                onPasteReference={pasteReference}
+                isSelected={(item) => isGitHubInboxItemSelected(item, selection)}
+                onSelect={selectItem}
+                loading={<ListSkeleton />}
+              />
+            )
+          ) : (
+            <>
+              <div className="shrink-0">
+                <GitHubInboxFilterBar
+                  filters={filters}
                   sort={settings.githubInboxSort}
-                  groups={groups}
-                  isSectionOpen={isSectionOpen}
-                  onToggleSection={toggleSection}
-                  isSelected={(item) => isGitHubInboxItemSelected(item, selection)}
-                  showProjectTitle={
-                    filters.projectIds.length !== 1 && repositoryProjects.length > 1
+                  onSortChange={(sort) => updateSettings({ githubInboxSort: sort })}
+                  query={query}
+                  kindCounts={
+                    listData
+                      ? countInboxItemsByKind(listData.items, filters, {
+                          viewer: listData.viewer,
+                          normalizedQuery: deferredQuery,
+                          repositoryBatches: listData.repositoryBatches,
+                        })
+                      : null
                   }
-                  projectIconFor={projectIconFor}
-                  onSelect={selectItem}
-                  onTogglePinned={togglePinned}
+                  projectOptions={
+                    embedded
+                      ? projectOptions.filter((option) => option.id === scopedProjectId)
+                      : projectOptions
+                  }
+                  projectLocked={embedded}
+                  labelOptions={labelOptions}
+                  refreshing={refreshMutation.isPending}
+                  refreshBlockedReason={refreshBlockedReason}
+                  onQueryChange={(value) => onSearchChange({ q: value || undefined })}
+                  onKindChange={setKind}
+                  onStateChange={setState}
+                  onInvolvementChange={setInvolvement}
+                  onProjectIdsChange={setProjectIds}
+                  onLabelsChange={setLabels}
+                  onClearFilters={clearFilters}
+                  onRefresh={refresh}
+                  onPasteReference={pasteReference}
                 />
-              )}
-              {truncatedRepositoryCount > 0 ? (
-                <p className={cn(PR_FINE_TEXT_CLASS_NAME, "text-muted-foreground")}>
-                  {truncatedListNote(i18n, {
-                    state: filters.state,
-                    kind: filters.kind,
-                    sort: settings.githubInboxSort,
-                    repositoryCount: truncatedRepositoryCount,
-                  })}
-                </p>
-              ) : null}
-              {rateLimitedError ? (
-                <PullRequestWarningNote shape="callout" role="status">
-                  {rateLimitedWarningText(i18n, rateLimitedError, settings.timestampFormat)}
-                </PullRequestWarningNote>
-              ) : null}
-              {unavailableErrorCount > 0 ? (
-                <PullRequestWarningNote shape="callout">
-                  {i18n._(
-                    "{count, plural, one {# project repository was unavailable. Healthy repositories are still shown.} other {# project repositories were unavailable. Healthy repositories are still shown.}}",
-                    { count: unavailableErrorCount },
+              </div>
+              <div className="@container/list min-h-0 flex-1 overflow-y-auto px-6 pt-2 pb-8">
+                <div className="flex flex-col gap-3">
+                  {bindingError ? (
+                    <PullRequestsUnavailableState
+                      error={new Error(bindingError)}
+                      subject={i18n._("Lattice project")}
+                    />
+                  ) : bindingPending || listQuery.isPending ? (
+                    <ListSkeleton />
+                  ) : initialError ? (
+                    <PullRequestsUnavailableState
+                      error={initialError}
+                      subject={i18n._("Pull requests and issues")}
+                      onRetry={() => void listQuery.refetch()}
+                    />
+                  ) : entries.length === 0 ? (
+                    <Empty className="py-12">
+                      <EmptyHeader>
+                        <EmptyTitle>
+                          {repositoryProjects.length === 0
+                            ? i18n._("No projects yet")
+                            : reviewRequestsOnlyOpen
+                              ? i18n._("Review requests only apply to open pull requests")
+                              : emptyListTitle(i18n, filters.kind)}
+                        </EmptyTitle>
+                        <EmptyDescription>
+                          {repositoryProjects.length === 0
+                            ? i18n._(
+                                "Code review lists pull requests and issues from the GitHub repositories of your projects.",
+                              )
+                            : reviewRequestsOnlyOpen
+                              ? i18n._("Select Open to see pull requests awaiting your review.")
+                              : activeFilterCount > 0
+                                ? i18n._("Try another filter, or clear them.")
+                                : i18n._("Nothing here in the repositories of your projects.")}
+                        </EmptyDescription>
+                      </EmptyHeader>
+                      {activeFilterCount > 0 ? (
+                        <EmptyContent>
+                          <Button variant="outline" size="sm" onClick={clearFilters}>
+                            {i18n._("Clear filters")}
+                          </Button>
+                        </EmptyContent>
+                      ) : null}
+                    </Empty>
+                  ) : (
+                    <PullRequestList
+                      sort={settings.githubInboxSort}
+                      groups={groups}
+                      isSectionOpen={isSectionOpen}
+                      onToggleSection={toggleSection}
+                      isSelected={(item) => isGitHubInboxItemSelected(item, selection)}
+                      showProjectTitle={
+                        filters.projectIds.length !== 1 && repositoryProjects.length > 1
+                      }
+                      projectIconFor={projectIconFor}
+                      onSelect={selectItem}
+                      onTogglePinned={togglePinned}
+                    />
                   )}
-                </PullRequestWarningNote>
-              ) : null}
-              {backgroundError ? (
-                <PullRequestWarningNote shape="callout" role="status">
-                  {i18n._("The latest background refresh failed. Showing the last loaded items.")}
-                </PullRequestWarningNote>
-              ) : null}
-            </div>
-          </div>
+                  {truncatedRepositoryCount > 0 ? (
+                    <p className={cn(PR_FINE_TEXT_CLASS_NAME, "text-muted-foreground")}>
+                      {truncatedListNote(i18n, {
+                        state: filters.state,
+                        kind: filters.kind,
+                        sort: settings.githubInboxSort,
+                        repositoryCount: truncatedRepositoryCount,
+                      })}
+                    </p>
+                  ) : null}
+                  {rateLimitedError ? (
+                    <PullRequestWarningNote shape="callout" role="status">
+                      {rateLimitedWarningText(i18n, rateLimitedError, settings.timestampFormat)}
+                    </PullRequestWarningNote>
+                  ) : null}
+                  {unavailableErrorCount > 0 ? (
+                    <PullRequestWarningNote shape="callout">
+                      {i18n._(
+                        "{count, plural, one {# project repository was unavailable. Healthy repositories are still shown.} other {# project repositories were unavailable. Healthy repositories are still shown.}}",
+                        { count: unavailableErrorCount },
+                      )}
+                    </PullRequestWarningNote>
+                  ) : null}
+                  {backgroundError ? (
+                    <PullRequestWarningNote shape="callout" role="status">
+                      {i18n._(
+                        "The latest background refresh failed. Showing the last loaded items.",
+                      )}
+                    </PullRequestWarningNote>
+                  ) : null}
+                </div>
+              </div>
+            </>
+          )}
           {isMobile ? null : (
             <ListColumnResizeHandle
               percent={draggedListWidth?.percent ?? (dockOpen ? 50 : 32)}

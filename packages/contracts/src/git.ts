@@ -72,6 +72,8 @@ export const GitRecentCommit = Schema.Struct({
   shortSha: TrimmedNonEmptyStringSchema,
   subject: Schema.String,
   committedAt: Schema.String,
+  // Optional so an older server's rows still decode.
+  authorName: Schema.optional(Schema.String),
 });
 export type GitRecentCommit = typeof GitRecentCommit.Type;
 
@@ -209,6 +211,22 @@ export const GitReadFileAtRevResult = Schema.Struct({
   truncated: Schema.Boolean,
 });
 export type GitReadFileAtRevResult = typeof GitReadFileAtRevResult.Type;
+
+// Drafts a commit message for what Commit would include, without committing or touching the
+// index: `filePaths` are the files the commit would take (every change when omitted).
+export const GitGenerateCommitMessageInput = Schema.Struct({
+  cwd: TrimmedNonEmptyStringSchema,
+  filePaths: Schema.optional(
+    Schema.Array(TrimmedNonEmptyStringSchema).check(Schema.isMinLength(1)),
+  ),
+  codexHomePath: Schema.optional(TrimmedNonEmptyStringSchema),
+  providerOptions: Schema.optional(ProviderStartOptions),
+  textGenerationModel: Schema.optional(TrimmedNonEmptyStringSchema).pipe(
+    Schema.withConstructorDefault(() => Option.some(DEFAULT_GIT_TEXT_GENERATION_MODEL)),
+  ),
+  textGenerationModelSelection: Schema.optional(ModelSelection),
+});
+export type GitGenerateCommitMessageInput = typeof GitGenerateCommitMessageInput.Type;
 
 // Read-only diff summary requests reuse the shared git text-generation model settings.
 export const GitSummarizeDiffInput = Schema.Struct({
@@ -689,6 +707,12 @@ export const GitPullResult = Schema.Struct({
   upstreamBranch: TrimmedNonEmptyStringSchema.pipe(Schema.NullOr),
 });
 export type GitPullResult = typeof GitPullResult.Type;
+
+export const GitGenerateCommitMessageResult = Schema.Struct({
+  subject: TrimmedNonEmptyStringSchema,
+  body: Schema.String,
+});
+export type GitGenerateCommitMessageResult = typeof GitGenerateCommitMessageResult.Type;
 
 export const GitSummarizeDiffResult = Schema.Struct({
   summary: TrimmedNonEmptyStringSchema,

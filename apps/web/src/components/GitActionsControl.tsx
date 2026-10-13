@@ -15,7 +15,7 @@ import type {
 } from "@synara/contracts";
 import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLingui } from "@lingui/react";
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { ChevronDownIcon, InfoIcon } from "~/lib/icons";
 import { Input } from "~/components/ui/input";
 import {
@@ -116,13 +116,47 @@ import { readNativeApi } from "~/nativeApi";
 import { createThreadGitActionsMetadataSelector } from "~/storeSelectors";
 import { useStore } from "~/store";
 
+/**
+ * What Lattice's embedded Changes and Pull requests views need from this control: the live
+ * status and the same runners, confirmations, toasts and dialogs every other surface uses.
+ * The views lay these out themselves (`variant="lattice"`).
+ */
+export interface LatticeGitActions {
+  status: GitStatusWithPullRequest | null;
+  statusPending: boolean;
+  isBusy: boolean;
+  isPullRunning: boolean;
+  isDefaultBranch: boolean;
+  hasOriginRemote: boolean;
+  defaultBranchName: string | null;
+  /** Commits `filePaths` (every change when null), then pushes when `push` is set. */
+  commit: (input: {
+    message: string | null;
+    filePaths: string[] | null;
+    push: boolean;
+    onCommitted?: () => void;
+  }) => void;
+  /** Drafts the message Commit would write for `filePaths` (every change when null). */
+  writeCommitMessage: (filePaths: string[] | null) => Promise<{ subject: string; body: string }>;
+  /** Pushes local commits, leaving uncommitted changes where they are. */
+  push: () => void;
+  pull: () => void;
+  /** Opens the Create PR dialog, or the open PR when the branch already has one. */
+  createPullRequest: { available: boolean; opensExisting: boolean; open: () => void };
+  /** The More Git actions menu's rows, for a menu the view anchors itself. */
+  menuContent: ReactNode;
+  refreshMenuAvailability: () => void;
+}
+
 interface GitActionsControlProps {
   gitCwd: string | null;
   activeThreadId: ThreadId | null;
   hideQuickActionLabel?: boolean;
   // `header` renders the split quick-action button; `panel` collapses git actions into
   // an Environment row + dropdown, promoting Pull as the primary row when behind upstream.
-  variant?: "header" | "panel";
+  // `lattice` renders nothing of its own but the dialogs: `renderLattice` lays out the rest.
+  variant?: "header" | "panel" | "lattice";
+  renderLattice?: (actions: LatticeGitActions) => ReactNode;
   /** Applies Lattice's embedded Source Control field/menu visual contract. */
   latticeSourceControl?: boolean;
   // `always` (default) keeps the control mounted. `pull-available` hides the header
@@ -143,6 +177,8 @@ interface PendingDefaultBranchAction {
   forcePushOnlyProgress: boolean;
   onConfirmed?: () => void;
   filePaths?: string[];
+  allowDirtyWorkingTree?: boolean;
+  afterSuccess?: (result: GitRunStackedActionResult) => void;
 }
 
 type GitActionToastId = ReturnType<typeof toastManager.add>;
@@ -271,6 +307,7 @@ export default function GitActionsControl({
   latticeSourceControl: latticeSourceControlProp,
   visibleWhen: visibleWhenProp,
   onRegisterCommitAndPushTrigger,
+  renderLattice,
 }: GitActionsControlProps) {
   const { i18n } = useLingui();
   const localizeGit = useCallback((text: string) => localizeGitText(i18n, text), [i18n]);
@@ -778,6 +815,8 @@ export default function GitActionsControl({
           forcePushOnlyProgress,
           ...(onConfirmed ? { onConfirmed } : {}),
           ...(filePaths ? { filePaths } : {}),
+          ...(allowDirtyWorkingTree ? { allowDirtyWorkingTree } : {}),
+          ...(afterSuccess ? { afterSuccess } : {}),
         });
         return;
       }
@@ -1134,8 +1173,15 @@ export default function GitActionsControl({
 
   const continuePendingDefaultBranchAction = useCallback(() => {
     if (!pendingDefaultBranchAction) return;
-    const { action, commitMessage, forcePushOnlyProgress, onConfirmed, filePaths } =
-      pendingDefaultBranchAction;
+    const {
+      action,
+      commitMessage,
+      forcePushOnlyProgress,
+      onConfirmed,
+      filePaths,
+      allowDirtyWorkingTree,
+      afterSuccess,
+    } = pendingDefaultBranchAction;
     setPendingDefaultBranchAction(null);
     void runGitActionWithToast({
       action,
@@ -1143,6 +1189,8 @@ export default function GitActionsControl({
       forcePushOnlyProgress,
       ...(onConfirmed ? { onConfirmed } : {}),
       ...(filePaths ? { filePaths } : {}),
+      ...(allowDirtyWorkingTree ? { allowDirtyWorkingTree } : {}),
+      ...(afterSuccess ? { afterSuccess } : {}),
       ...(requiresFeatureBranchForDefaultBranchAction(action) ? { featureBranch: true } : {}),
       skipDefaultBranchPrompt: true,
     });
@@ -1150,8 +1198,15 @@ export default function GitActionsControl({
 
   const checkoutFeatureBranchAndContinuePendingAction = useCallback(() => {
     if (!pendingDefaultBranchAction) return;
-    const { action, commitMessage, forcePushOnlyProgress, onConfirmed, filePaths } =
-      pendingDefaultBranchAction;
+    const {
+      action,
+      commitMessage,
+      forcePushOnlyProgress,
+      onConfirmed,
+      filePaths,
+      allowDirtyWorkingTree,
+      afterSuccess,
+    } = pendingDefaultBranchAction;
     setPendingDefaultBranchAction(null);
     void runGitActionWithToast({
       action,
@@ -1159,6 +1214,8 @@ export default function GitActionsControl({
       forcePushOnlyProgress,
       ...(onConfirmed ? { onConfirmed } : {}),
       ...(filePaths ? { filePaths } : {}),
+      ...(allowDirtyWorkingTree ? { allowDirtyWorkingTree } : {}),
+      ...(afterSuccess ? { afterSuccess } : {}),
       featureBranch: true,
       skipDefaultBranchPrompt: true,
     });
@@ -1584,7 +1641,7 @@ export default function GitActionsControl({
   const runnableCommitPushMenuItem = findRunnableCommitPushMenuItem(gitActionMenuItems);
 
   // Shared dropdown body — the picker rows plus the contextual git-status warnings.
-  // Rendered identically by the header split button and the panel "Commit and Push" row.
+  // Rendered identically by the header split button and the panel "Commit & push" row.
   const gitMenuContent = (
     <>
       <MenuGroup>
@@ -1800,6 +1857,69 @@ export default function GitActionsControl({
     </>
   );
 
+  if (variant === "lattice") {
+    const createPrExecution = resolveCreatePrExecution({
+      gitStatus: gitStatusForActions,
+      isBusy: isGitActionRunning,
+      isDefaultBranch,
+      hasOriginRemote,
+      defaultBranchName,
+    });
+    const latticeActions: LatticeGitActions = {
+      status: gitStatusForActions,
+      // Status waits for branch discovery, so it is unknown until both have answered.
+      statusPending: isGitStatusPending || !branchListReady || gitStatusData === undefined,
+      isBusy: isGitActionRunning,
+      isPullRunning,
+      isDefaultBranch,
+      hasOriginRemote,
+      defaultBranchName,
+      commit: ({ message, filePaths, push, onCommitted }) => {
+        void runGitActionWithToast({
+          action: push ? "commit_push" : "commit",
+          ...(message?.trim() ? { commitMessage: message.trim() } : {}),
+          ...(filePaths && filePaths.length > 0 ? { filePaths } : {}),
+          ...(onCommitted ? { afterSuccess: () => onCommitted() } : {}),
+        });
+      },
+      writeCommitMessage: async (filePaths) => {
+        const api = readNativeApi();
+        if (!api || !gitCwd) throw new Error(i18n._("Git is unavailable."));
+        return api.git.generateCommitMessage({
+          cwd: gitCwd,
+          ...(filePaths && filePaths.length > 0 ? { filePaths } : {}),
+          ...(settings.codexHomePath ? { codexHomePath: settings.codexHomePath } : {}),
+          ...(settings.textGenerationModel
+            ? { textGenerationModel: settings.textGenerationModel }
+            : {}),
+          textGenerationModelSelection: gitTextGenerationModelSelection,
+          ...(providerOptions ? { providerOptions } : {}),
+        });
+      },
+      push: () => {
+        void runGitActionWithToast({
+          action: "push",
+          forcePushOnlyProgress: true,
+          ...(gitStatusForActions?.hasWorkingTreeChanges ? { allowDirtyWorkingTree: true } : {}),
+        });
+      },
+      pull: runSyncWithRemote,
+      createPullRequest: {
+        available: createPrExecution.kind !== "unavailable",
+        opensExisting: createPrExecution.kind === "open_pr",
+        open: () => openCreatePrDialog(),
+      },
+      menuContent: gitMenuContent,
+      refreshMenuAvailability: requestGitActionAvailabilityRefresh,
+    };
+    return (
+      <>
+        {renderLattice?.(latticeActions)}
+        {gitActionDialogs}
+      </>
+    );
+  }
+
   if (isPanel) {
     const showPanelPullRow = showPromotedPullAction;
     // The panel row runs its action on click — exactly like Pull — and the chevron
@@ -1810,7 +1930,7 @@ export default function GitActionsControl({
         ? localizeGit(promotedPull?.label ?? "Pull")
         : runnableCommitPushMenuItem
           ? localizeGit(runnableCommitPushMenuItem.label)
-          : i18n._("Commit and Push");
+          : i18n._("Commit & push");
     const panelPrimaryGlyph: GitGlyphName = showPanelPullRow ? "sync" : "push";
     const runPanelPrimaryAction = () => {
       if (showPanelPullRow) {

@@ -34,6 +34,8 @@ import {
   GitStatusResult,
   GitSummarizeDiffInput,
   GitSummarizeDiffResult,
+  GitGenerateCommitMessageInput,
+  GitGenerateCommitMessageResult,
 } from "@synara/contracts";
 import { ServiceMap } from "effect";
 import type { Effect } from "effect";
@@ -113,6 +115,13 @@ export interface GitManagerShape {
   readonly summarizeDiff: (
     input: GitSummarizeDiffInput,
   ) => Effect.Effect<GitSummarizeDiffResult, GitManagerServiceError>;
+
+  /**
+   * Draft the commit message Commit would generate for these files, without committing.
+   */
+  readonly generateCommitMessage: (
+    input: GitGenerateCommitMessageInput,
+  ) => Effect.Effect<GitGenerateCommitMessageResult, GitManagerServiceError>;
 
   /**
    * Resolve a pull request by URL/number against the current repository.

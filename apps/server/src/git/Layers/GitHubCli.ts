@@ -965,7 +965,8 @@ fragment InboxPullRequestFields on PullRequest {
   reviewRequests(first: 20) { nodes { requestedReviewer { __typename ... on User { login } ... on Team { slug } } } }
   labels(first: 20) { nodes { name color } }
   assignees(first: 10) { nodes { login avatarUrl url name } }
-  comments { totalCount }${options.includeStacks ? "\n  stackEntry { position }\n  stack { number size baseRefName }" : ""}
+  comments { totalCount }
+  commits(last: 1) { nodes { commit { statusCheckRollup { state } } } }${options.includeStacks ? "\n  stackEntry { position }\n  stack { number size baseRefName }" : ""}
 }
 fragment InboxIssueFields on Issue {
   __typename number title url state stateReason createdAt updatedAt closedAt
@@ -1113,6 +1114,25 @@ const RawInboxPullRequestSchema = Schema.Struct({
   labels: Schema.optional(Schema.NullOr(rawGraphQlNodes(RawLabelSchema))),
   assignees: Schema.optional(Schema.NullOr(rawGraphQlNodes(RawActorSchema))),
   comments: Schema.optional(Schema.NullOr(RawGraphQlCountSchema)),
+  commits: Schema.optional(
+    Schema.NullOr(
+      rawGraphQlNodes(
+        Schema.Struct({
+          commit: Schema.optional(
+            Schema.NullOr(
+              Schema.Struct({
+                statusCheckRollup: Schema.optional(
+                  Schema.NullOr(
+                    Schema.Struct({ state: Schema.optional(Schema.NullOr(Schema.String)) }),
+                  ),
+                ),
+              }),
+            ),
+          ),
+        }),
+      ),
+    ),
+  ),
   stackEntry: Schema.optional(Schema.NullOr(Schema.Struct({ position: PositiveInt }))),
   stack: Schema.optional(
     Schema.NullOr(
@@ -1158,7 +1178,11 @@ const RawNodeList = Schema.optional(
     Schema.Struct({
       totalCount: Schema.optional(Schema.NullOr(Schema.Number)),
       issueCount: Schema.optional(Schema.NullOr(Schema.Number)),
-      pageInfo: Schema.optional(Schema.NullOr(Schema.Struct({ hasNextPage: Schema.Boolean, endCursor: Schema.NullOr(Schema.String) }))),
+      pageInfo: Schema.optional(
+        Schema.NullOr(
+          Schema.Struct({ hasNextPage: Schema.Boolean, endCursor: Schema.NullOr(Schema.String) }),
+        ),
+      ),
       nodes: Schema.optional(Schema.NullOr(Schema.Array(Schema.Unknown))),
     }),
   ),
@@ -1290,8 +1314,29 @@ function normalizeInboxPullRequest(
           }
         : null,
     commentCount: nonNegativeCount(raw.comments?.totalCount),
+    checksState: normalizeChecksRollupState(
+      graphQlNodes(raw.commits).at(-1)?.commit?.statusCheckRollup?.state,
+    ),
     assignees: normalizeInboxActors(raw.assignees),
   };
+}
+
+/** GitHub's StatusState folded to what a row can show: running, passed or failed. */
+function normalizeChecksRollupState(
+  state: string | null | undefined,
+): "pending" | "success" | "failure" | null {
+  switch (state?.trim().toUpperCase()) {
+    case "SUCCESS":
+      return "success";
+    case "FAILURE":
+    case "ERROR":
+      return "failure";
+    case "PENDING":
+    case "EXPECTED":
+      return "pending";
+    default:
+      return null;
+  }
 }
 
 function normalizeInboxIssue(
@@ -2168,7 +2213,11 @@ const makeGitHubCli = Effect.gen(function* () {
             (includeStacks) => [
               `query=${buildGitHubInboxInvolvementQuery({ includeStacks, paginated: input.exactInvolvement !== undefined })}`,
               ...(input.exactInvolvement
-                ? ["-f", `mineQuery=repo:${repository} is:pr is:${input.state} ${input.exactInvolvement === "authored" ? "author:@me" : "review-requested:@me"} sort:${input.sort ?? "updated"}-desc`, ...(input.cursor ? ["-f", `cursor=${input.cursor}`] : [])]
+                ? [
+                    "-f",
+                    `mineQuery=repo:${repository} is:pr is:${input.state} ${input.exactInvolvement === "authored" ? "author:@me" : "review-requested:@me"} sort:${input.sort ?? "updated"}-desc`,
+                    ...(input.cursor ? ["-f", `cursor=${input.cursor}`] : []),
+                  ]
                 : githubInboxInvolvementQueryVariables(repository, input.state, input.sort)),
             ],
             decodeRepositoryInvolvementJson,

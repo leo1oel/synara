@@ -21,3 +21,43 @@ identity and invalidates them after git mutations. Missing, signed-out, or faili
 `gh` returns `{ pr: null }` without breaking local status or caching the failure.
 Manual Refresh invalidates both client queries. Loading file rows reuse the
 review tree's skeleton component.
+
+## Lattice's Changes view
+
+With `showActions` (the `/source-control` embed), `GitPanel` hands its reads and index
+mutations to `LatticeGitChanges`, which lays them out for a writer:
+
+- One line holds the branch picker, where the branch stands against its upstream (a
+  "Push 2", "Pull 3" or "Publish" button, or a quiet "Up to date"), the Git actions menu
+  and Refresh. `git.status` names the upstream's branch, not its remote, so the copy says
+  `origin`.
+- The commit message is written in the panel. Commit takes the staged files, or every
+  change when none are staged; "Push after committing" (remembered per browser) makes it
+  Commit & push. "Write the message for me" calls `git.generateCommitMessage`, which runs
+  the same generation an empty-message commit runs, from a copy of the index
+  (`GitCore.previewCommitContext`), so drafting a message never moves staged files.
+- A file's checkbox stages or unstages it. Opening a LaTeX, Markdown or text file reads its
+  change as sentences with words struck and inserted (`lib/proseDiff.ts`); other files keep
+  the code diff.
+- Nothing to commit shows the dated-drafts drawing, what is still left (commits to push or
+  pull, or a branch to publish) and the last commit (`git.listRecentCommits` now carries an
+  optional `authorName`).
+
+Every action goes through `GitActionsControl`'s `lattice` variant, so confirmations,
+progress toasts and dialogs are the ones the other surfaces use.
+
+## Lattice's Pull requests list
+
+With `workspaceRoot` (the `/pull-requests/` embed), the list column is
+`LatticePullRequestList`: the project's open pull requests grouped as Needs your review,
+Yours and Also open, then up to five pull requests merged in the last 30 days from the
+project's closed list. Rows carry `checksState`, the head commit's combined check state,
+which the inbox query now reads with the row. An empty list says why:
+
+| Cause                            | How it is known                                                                                 | What it offers                                                                         |
+| -------------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| GitHub CLI missing or signed out | the list fails with `PullRequestsUnavailableError` (`gh-not-installed`, `gh-not-authenticated`) | the command to run, Check again                                                        |
+| Not on GitHub                    | the list answers with no repository batches and no errors (no GitHub remote)                    | Publish to GitHub when there is no `origin`; otherwise it says the remote is elsewhere |
+| No pull requests                 | the list is empty                                                                               | "Open a pull request from <branch>" when Create PR can run from the current branch     |
+
+Repositories GitHub could not read stay listed as notes under the list.

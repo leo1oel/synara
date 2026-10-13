@@ -1606,6 +1606,37 @@ export const makeGitManager = Effect.gen(function* () {
     };
   });
 
+  // The same generation Commit runs for an empty message, read from a copied index so the
+  // writer can see and edit the message first.
+  const generateCommitMessage: GitManagerShape["generateCommitMessage"] = Effect.fnUntraced(
+    function* (input) {
+      const context = yield* gitCore.previewCommitContext(input.cwd, input.filePaths);
+      if (!context) {
+        return yield* gitManagerError("generateCommitMessage", "There is nothing to commit.");
+      }
+      const branch = (yield* gitCore.readBranchContext(input.cwd)).branch;
+      const generated = yield* textGeneration
+        .generateCommitMessage({
+          cwd: input.cwd,
+          branch,
+          stagedSummary: limitContext(context.stagedSummary, 8_000),
+          stagedPatch: limitContext(context.stagedPatch, 50_000),
+          ...buildGitTextGenerationCallInput(input),
+        })
+        .pipe(
+          Effect.map((result) => sanitizeCommitMessage(result)),
+          Effect.catchTag("TextGenerationError", (error) =>
+            Effect.logWarning(
+              `GitManager.generateCommitMessage: falling back to heuristic commit message in ${input.cwd}: ${error.message}`,
+            ).pipe(
+              Effect.as(createFallbackCommitSuggestion({ stagedSummary: context.stagedSummary })),
+            ),
+          ),
+        );
+      return { subject: generated.subject, body: generated.body };
+    },
+  );
+
   const resolvePullRequest: GitManagerShape["resolvePullRequest"] = Effect.fnUntraced(
     function* (input, options) {
       const pullRequest = yield* gitHubCli
@@ -2965,6 +2996,7 @@ The local stash entry was kept for recovery.`,
     blameLine,
     readFileAtRev,
     summarizeDiff,
+    generateCommitMessage,
     resolvePullRequest,
     pullRequestSnapshot,
     preparePullRequestThread: (input) =>

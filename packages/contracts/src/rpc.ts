@@ -218,6 +218,8 @@ import {
   GitBranchPullRequestResult,
   GitSummarizeDiffInput,
   GitSummarizeDiffResult,
+  GitGenerateCommitMessageInput,
+  GitGenerateCommitMessageResult,
   GitUnstageFilesInput,
   GitWorktreeSetupProgressEvent,
   GitUnstageFilesResult,
@@ -1108,6 +1110,12 @@ export const WsGitWorkingTreeDiffStatsRpc = Rpc.make(WS_METHODS.gitWorkingTreeDi
 export const WsGitSummarizeDiffRpc = Rpc.make(WS_METHODS.gitSummarizeDiff, {
   payload: GitSummarizeDiffInput,
   success: GitSummarizeDiffResult,
+  error: WsRpcError,
+});
+
+export const WsGitGenerateCommitMessageRpc = Rpc.make(WS_METHODS.gitGenerateCommitMessage, {
+  payload: GitGenerateCommitMessageInput,
+  success: GitGenerateCommitMessageResult,
   error: WsRpcError,
 });
 
@@ -2028,6 +2036,7 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsGitListRecentCommitsRpc,
   WsGitWorkingTreeDiffStatsRpc,
   WsGitSummarizeDiffRpc,
+  WsGitGenerateCommitMessageRpc,
   WsGitPullRpc,
   WsGitRunStackedActionRpc,
   WsGitResolvePullRequestRpc,

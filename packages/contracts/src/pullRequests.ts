@@ -189,6 +189,10 @@ export const PullRequestListEntry = Schema.Struct({
   // The inbox query returns these with the row at no extra cost. Decoding defaults keep rows
   // from an older server (or a recovered pin) valid during version skew.
   commentCount: Schema.optional(NonNegativeInt).pipe(Schema.withDecodingDefault(() => 0)),
+  // The head commit's combined check state; null when the commit has no checks.
+  checksState: Schema.optional(
+    Schema.NullOr(Schema.Literals(["pending", "success", "failure"])),
+  ).pipe(Schema.withDecodingDefault(() => null)),
   assignees: Schema.optional(Schema.Array(PullRequestActor)).pipe(
     Schema.withDecodingDefault(() => []),
   ),

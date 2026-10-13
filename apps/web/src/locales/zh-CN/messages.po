@@ -211,6 +211,7 @@ msgid "A pull request is already open for this branch."
 msgstr "此分支已有打开的 PR。"
 
 #. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
 #: src/lib/gitLocalization.ts
 msgid "Branch has diverged from upstream. Rebase/merge first."
 msgstr "分支已与上游分叉。请先变基或合并。"
@@ -247,7 +248,7 @@ msgid "Commit"
 msgstr "提交"
 
 #. js-lingui-explicit-id
-#: src/components/chat/GitPanel.browser.tsx
+#: src/components/GitActionsControl.tsx
 #: src/lib/gitLocalization.ts
 msgid "Commit & push"
 msgstr "提交并推送"
@@ -1471,6 +1472,7 @@ msgstr "无法更改电脑控制设置"
 
 #. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/chat/LatticeGitChanges.tsx
 #: src/components/chat/ProposedPlanActions.tsx
 #: src/components/ChatView.tsx
 #: src/components/GitActionsControl.tsx
@@ -2576,10 +2578,11 @@ msgstr "从当前 HEAD 创建并切换到新分支。后续提交、推送和 PR
 
 #. js-lingui-explicit-id
 #: src/components/GitActionsControl.tsx
-msgid "Commit and Push"
-msgstr "提交并推送"
+msgid "Git is unavailable."
+msgstr "Git 不可用。"
 
 #. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
 #: src/components/GitActionsControl.tsx
 msgid "More Git actions"
 msgstr "更多 Git 操作"
@@ -2617,11 +2620,13 @@ msgid "(detached HEAD)"
 msgstr "（分离的 HEAD）"
 
 #. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
 #: src/components/GitCommitDialog.tsx
 msgid "Commit message"
 msgstr "提交信息"
 
 #. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
 #: src/components/GitCommitDialog.tsx
 msgid "Message (leave empty to generate)"
 msgstr "提交信息（留空则自动生成）"
@@ -3136,6 +3141,7 @@ msgstr "已复制"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerSlashStatusDialog.tsx
+#: src/components/chat/GitPanel.browser.tsx
 #: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
 #: src/components/pullRequest/PullRequestDetailPanel.tsx
 #: src/components/settings/ProviderSignInDialog.tsx
@@ -4916,6 +4922,7 @@ msgstr "没有评论"
 
 #. js-lingui-explicit-id
 #: src/components/chat/environment/environmentPullRequest.logic.ts
+#: src/components/githubInbox/LatticePullRequestList.tsx
 #: src/components/pullRequest/GitHubItemInfo.tsx
 msgid "{count, plural, one {# comment} other {# comments}}"
 msgstr "{count, plural, other {# 条评论}}"
@@ -5437,6 +5444,7 @@ msgstr "审查者"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitRepositorySetup.tsx
+#: src/components/chat/LatticeGitChanges.tsx
 #: src/components/pullRequest/PullRequestSummaryTab.tsx
 msgid "Description"
 msgstr "描述"
@@ -5447,12 +5455,14 @@ msgid "No checks reported."
 msgstr "没有报告任何检查。"
 
 #. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
 #: src/components/pullRequest/PullRequestsUnavailableState.tsx
 msgid "Could not copy command"
 msgstr "无法复制命令"
 
 #. js-lingui-explicit-id
 #: src/components/chat/MessageCopyButton.tsx
+#: src/components/githubInbox/LatticePullRequestList.tsx
 #: src/components/pullRequest/PullRequestsUnavailableState.tsx
 msgid "Copy to clipboard"
 msgstr "复制到剪贴板"
@@ -5503,11 +5513,13 @@ msgid "Synara pauses GitHub requests until the limit resets."
 msgstr "GitHub 请求已暂停，限额重置后恢复。"
 
 #. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
 #: src/components/pullRequest/PullRequestsUnavailableState.tsx
 msgid "The request to GitHub failed."
 msgstr "GitHub 请求失败了。"
 
 #. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
 #: src/components/pullRequest/PullRequestsUnavailableState.tsx
 msgid "Install instructions"
 msgstr "安装说明"
@@ -6114,6 +6126,154 @@ msgid "Some comments are not shown here. Open the issue on GitHub for the full d
 msgstr "这里没有显示全部评论。完整讨论请到 GitHub 上打开议题查看。"
 
 #. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Needs your review"
+msgstr "待你审查"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Yours"
+msgstr "你的"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Also open"
+msgstr "其他进行中"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Recently merged"
+msgstr "最近合并"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Search pull requests"
+msgstr "搜索 PR"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Search or paste a pull request link"
+msgstr "搜索，或粘贴 PR 链接"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Clear search"
+msgstr "清除搜索"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Open a pull request from {branch}"
+msgstr "从 {branch} 发起 PR"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "New"
+msgstr "新建"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Pull requests could not be loaded"
+msgstr "无法加载 PR"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadDetailHydrationState.tsx
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Try again"
+msgstr "重试"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "No pull requests match “{query}”"
+msgstr "没有与“{query}”匹配的 PR"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "No open pull requests"
+msgstr "没有进行中的 PR"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "{branch} has commits that are not on {base}. Open a pull request to ask your co-authors to review them"
+msgstr "{branch} 上有尚未进入 {base} 的提交。发起 PR，请合作者审阅"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "When you or a co-author opens a pull request on GitHub, it shows up here"
+msgstr "你或合作者在 GitHub 上发起 PR 后，会显示在这里"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Could not read {repository} on GitHub: {message}"
+msgstr "无法读取 GitHub 上的 {repository}：{message}"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Could not read this project’s repositories: {message}"
+msgstr "无法读取此项目的仓库：{message}"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Checks passed"
+msgstr "检查已通过"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Checks failed"
+msgstr "检查未通过"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Checks running"
+msgstr "检查进行中"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "This project is not on GitHub"
+msgstr "此项目不在 GitHub 上"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Pull requests need a GitHub repository, and this project’s remote is somewhere else"
+msgstr "PR 需要 GitHub 仓库，而此项目的远程仓库在别处"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Pull requests need a GitHub repository. Publish the project privately and invite your co-authors"
+msgstr "PR 需要 GitHub 仓库。将项目私密发布，再邀请合作者"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Publish to GitHub"
+msgstr "发布到 GitHub"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Install the GitHub CLI to see pull requests"
+msgstr "安装 GitHub CLI 以查看 PR"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Sign in to GitHub to see pull requests"
+msgstr "登录 GitHub 以查看 PR"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Lattice reads pull requests through the GitHub CLI. Install it in Terminal"
+msgstr "Lattice 通过 GitHub CLI 读取 PR。请在终端中安装"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Lattice reads pull requests through the GitHub CLI. Run this once in Terminal"
+msgstr "Lattice 通过 GitHub CLI 读取 PR。请在终端中运行一次"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Check again"
+msgstr "再次检查"
+
+#. js-lingui-explicit-id
 #: src/components/githubInbox/useGitHubInboxSidechat.ts
 msgid "It will appear as soon as the thread list refreshes."
 msgstr "对话列表刷新后就会出现。"
@@ -6390,11 +6550,6 @@ msgstr "删除对话"
 #: src/components/chat/ChatHeader.tsx
 msgid "New editor rail item"
 msgstr "新建编辑器项"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ChatHeader.tsx
-msgid "New"
-msgstr "新建"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ChatHeader.tsx
@@ -7159,6 +7314,7 @@ msgstr "论文"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerLatticeContextBar.logic.ts
+#: src/components/chat/LatticeProseChanges.tsx
 msgid "Line {line}"
 msgstr "第 {line} 行"
 
@@ -8023,9 +8179,26 @@ msgid "Download"
 msgstr "下载"
 
 #. js-lingui-explicit-id
+#: src/components/chat/GitPanel.browser.tsx
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "{count, plural, one {Commit & push # file} other {Commit & push # files}}"
+msgstr "提交并推送 {count} 个文件"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.browser.tsx
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "{count, plural, one {Push # commit} other {Push # commits}}"
+msgstr "推送 {count} 个提交"
+
+#. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
 msgid "Source control is unavailable for this thread."
 msgstr "此对话无法使用源代码管理。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Loading changes..."
+msgstr "正在加载更改..."
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
@@ -8039,6 +8212,7 @@ msgstr "关闭源代码管理"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
+#: src/components/chat/LatticeGitChanges.tsx
 msgid "Refresh changes"
 msgstr "刷新更改"
 
@@ -8054,11 +8228,7 @@ msgstr "有 {count} 个本地提交尚未推送。"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
-msgid "Loading changes..."
-msgstr "正在加载更改..."
-
-#. js-lingui-explicit-id
-#: src/components/chat/GitPanel.tsx
+#: src/components/chat/LatticeGitChanges.tsx
 #: src/components/chat/TimelineWorkEntryRow.tsx
 msgid "Staged"
 msgstr "已暂存"
@@ -8075,6 +8245,7 @@ msgstr "取消暂存文件"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
+#: src/components/chat/LatticeGitChanges.tsx
 msgid "Unstage all"
 msgstr "全部取消暂存"
 
@@ -8090,6 +8261,7 @@ msgstr "暂存文件"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
+#: src/components/chat/LatticeGitChanges.tsx
 msgid "Stage all"
 msgstr "全部暂存"
 
@@ -8140,6 +8312,7 @@ msgstr "发布新的私有仓库，或连接已有仓库。"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitRepositorySetup.tsx
+#: src/components/chat/LatticeGitChanges.tsx
 msgid "Publish"
 msgstr "发布"
 
@@ -8147,11 +8320,6 @@ msgstr "发布"
 #: src/components/chat/GitRepositorySetup.tsx
 msgid "Connect existing"
 msgstr "连接已有仓库"
-
-#. js-lingui-explicit-id
-#: src/components/chat/GitRepositorySetup.tsx
-msgid "Publish to GitHub"
-msgstr "发布到 GitHub"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitRepositorySetup.tsx
@@ -8402,6 +8570,167 @@ msgstr "只想改其中一段？在编辑器里选中它即可"
 #: src/components/chat/LatticeEmptyThread.tsx
 msgid "Selection"
 msgstr "选区"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Local only"
+msgstr "仅在本地"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Publish {branch} to {remote}"
+msgstr "将 {branch} 发布到 {remote}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Diverged"
+msgstr "已分叉"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "{count, plural, one {Pull # commit from {remote}} other {Pull # commits from {remote}}}"
+msgstr "从 {remote} 拉取 {count} 个提交"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Pull {count}"
+msgstr "拉取 {count}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "{count, plural, one {Push # commit to {remote}} other {Push # commits to {remote}}}"
+msgstr "推送 {count} 个提交到 {remote}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Push {count}"
+msgstr "推送 {count}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Up to date"
+msgstr "已是最新"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Could not write a commit message"
+msgstr "无法撰写提交信息"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "{count, plural, one {Commit # file} other {Commit # files}}"
+msgstr "提交 {count} 个文件"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Write the message for me"
+msgstr "帮我写提交信息"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Description (optional)"
+msgstr "描述（可选）"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "More ways to commit"
+msgstr "更多提交方式"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Push after committing"
+msgstr "提交后推送"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Not staged"
+msgstr "未暂存"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Added"
+msgstr "已添加"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+#: src/components/chat/LatticeProseChanges.tsx
+msgid "Deleted"
+msgstr "已删除"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Renamed"
+msgstr "已重命名"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Modified"
+msgstr "已修改"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Unstage {path}"
+msgstr "取消暂存 {path}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Stage {path}"
+msgstr "暂存 {path}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Only spacing or line breaks changed."
+msgstr "只改动了空格或换行。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Showing the first {count} changed lines."
+msgstr "仅显示前 {count} 行改动。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Edits you make show up here, ready to commit"
+msgstr "你的修改会显示在这里，随时可以提交"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "{count, plural, one {# new commit is on {remote}. Pull it to bring your copy up to date} other {# new commits are on {remote}. Pull them to bring your copy up to date}}"
+msgstr "{remote} 上有 {count} 个新提交。拉取后，你的副本即为最新"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "{count, plural, one {Pull # commit} other {Pull # commits}}"
+msgstr "拉取 {count} 个提交"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "{count, plural, one {# commit is waiting to go to {remote}. Push it when you are ready to share it} other {# commits are waiting to go to {remote}. Push them when you are ready to share them}}"
+msgstr "有 {count} 个提交等待推送到 {remote}。准备好分享时再推送"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "{branch} is not on {remote} yet. Publish it to share your commits"
+msgstr "{branch} 还不在 {remote} 上。发布后即可分享你的提交"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Publish {branch}"
+msgstr "发布 {branch}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Everything is committed"
+msgstr "全部已提交"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Last commit"
+msgstr "最近一次提交"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeProseChanges.tsx
+msgid "Inserted"
+msgstr "插入"
 
 #. js-lingui-explicit-id
 #: src/components/chat/MessageCopyButton.tsx
@@ -9197,11 +9526,6 @@ msgstr "正在加载对话"
 #: src/components/chat/ThreadDetailHydrationState.tsx
 msgid "This conversation didn't load."
 msgstr "这个对话没能加载出来。"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ThreadDetailHydrationState.tsx
-msgid "Try again"
-msgstr "重试"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ThreadErrorBanner.tsx

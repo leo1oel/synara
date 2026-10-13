@@ -95,6 +95,8 @@ export interface GitHubPullRequestListItem {
 export interface GitHubInboxPullRequest extends GitHubPullRequestListItem {
   readonly commentCount: number;
   readonly assignees: ReadonlyArray<PullRequestActor>;
+  /** The head commit's combined check state; null without checks. */
+  readonly checksState?: "pending" | "success" | "failure" | null;
 }
 
 export interface GitHubInboxIssue {

@@ -6,7 +6,10 @@ const INDEX_CSS = readFileSync(new URL("./index.css", import.meta.url), "utf8").
   " ",
 );
 const EMBED_MODE = readFileSync(new URL("./embedMode.ts", import.meta.url), "utf8");
-const GIT_PANEL = readFileSync(new URL("./components/chat/GitPanel.tsx", import.meta.url), "utf8");
+const LATTICE_GIT_CHANGES = readFileSync(
+  new URL("./components/chat/LatticeGitChanges.tsx", import.meta.url),
+  "utf8",
+);
 const BRANCH_SELECTOR = readFileSync(
   new URL("./components/BranchToolbarBranchSelector.tsx", import.meta.url),
   "utf8",
@@ -29,7 +32,7 @@ describe("embedded Source Control picker styles", () => {
   });
 
   it("wires both Source Control pickers to Lattice's shared embed tokens", () => {
-    expect(GIT_PANEL).toContain("latticeSourceControl");
+    expect(LATTICE_GIT_CHANGES).toContain("latticeSourceControl");
     expect(BRANCH_SELECTOR).toContain("data-lattice-source-control");
     expect(GIT_ACTIONS).toContain("data-lattice-source-control-split");
     expect(INDEX_CSS).toContain("var(--lattice-settings-control-height)");

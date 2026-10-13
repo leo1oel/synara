@@ -148,7 +148,7 @@ export function GitHubRemoteSetupCard(props: { cwd: string }) {
   );
 }
 
-function GitHubRepositorySetupDialog(props: {
+export function GitHubRepositorySetupDialog(props: {
   cwd: string;
   mode: GitHubRepositorySetupMode;
   open: boolean;

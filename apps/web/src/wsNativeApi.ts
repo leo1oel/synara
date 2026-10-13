@@ -670,6 +670,10 @@ export function createWsNativeApi(): NativeApi {
         transport.request(WS_METHODS.gitSummarizeDiff, input, {
           timeoutMs: null,
         }),
+      generateCommitMessage: (input) =>
+        transport.request(WS_METHODS.gitGenerateCommitMessage, input, {
+          timeoutMs: null,
+        }),
       runStackedAction: (input) =>
         transport.request(WS_METHODS.gitRunStackedAction, input, {
           timeoutMs: null,

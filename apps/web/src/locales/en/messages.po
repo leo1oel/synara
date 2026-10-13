@@ -211,6 +211,7 @@ msgid "A pull request is already open for this branch."
 msgstr "A pull request is already open for this branch."
 
 #. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
 #: src/lib/gitLocalization.ts
 msgid "Branch has diverged from upstream. Rebase/merge first."
 msgstr "Branch has diverged from upstream. Rebase/merge first."
@@ -247,7 +248,7 @@ msgid "Commit"
 msgstr "Commit"
 
 #. js-lingui-explicit-id
-#: src/components/chat/GitPanel.browser.tsx
+#: src/components/GitActionsControl.tsx
 #: src/lib/gitLocalization.ts
 msgid "Commit & push"
 msgstr "Commit & push"
@@ -1471,6 +1472,7 @@ msgstr "Computer control could not be changed"
 
 #. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/chat/LatticeGitChanges.tsx
 #: src/components/chat/ProposedPlanActions.tsx
 #: src/components/ChatView.tsx
 #: src/components/GitActionsControl.tsx
@@ -2576,10 +2578,11 @@ msgstr "Create and switch to a branch from the current HEAD. Future commits, pus
 
 #. js-lingui-explicit-id
 #: src/components/GitActionsControl.tsx
-msgid "Commit and Push"
-msgstr "Commit and Push"
+msgid "Git is unavailable."
+msgstr "Git is unavailable."
 
 #. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
 #: src/components/GitActionsControl.tsx
 msgid "More Git actions"
 msgstr "More Git actions"
@@ -2617,11 +2620,13 @@ msgid "(detached HEAD)"
 msgstr "(detached HEAD)"
 
 #. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
 #: src/components/GitCommitDialog.tsx
 msgid "Commit message"
 msgstr "Commit message"
 
 #. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
 #: src/components/GitCommitDialog.tsx
 msgid "Message (leave empty to generate)"
 msgstr "Message (leave empty to generate)"
@@ -3136,6 +3141,7 @@ msgstr "Copied"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerSlashStatusDialog.tsx
+#: src/components/chat/GitPanel.browser.tsx
 #: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
 #: src/components/pullRequest/PullRequestDetailPanel.tsx
 #: src/components/settings/ProviderSignInDialog.tsx
@@ -4916,6 +4922,7 @@ msgstr "No comments"
 
 #. js-lingui-explicit-id
 #: src/components/chat/environment/environmentPullRequest.logic.ts
+#: src/components/githubInbox/LatticePullRequestList.tsx
 #: src/components/pullRequest/GitHubItemInfo.tsx
 msgid "{count, plural, one {# comment} other {# comments}}"
 msgstr "{count, plural, one {# comment} other {# comments}}"
@@ -5437,6 +5444,7 @@ msgstr "Reviewers"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitRepositorySetup.tsx
+#: src/components/chat/LatticeGitChanges.tsx
 #: src/components/pullRequest/PullRequestSummaryTab.tsx
 msgid "Description"
 msgstr "Description"
@@ -5447,12 +5455,14 @@ msgid "No checks reported."
 msgstr "No checks reported."
 
 #. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
 #: src/components/pullRequest/PullRequestsUnavailableState.tsx
 msgid "Could not copy command"
 msgstr "Could not copy command"
 
 #. js-lingui-explicit-id
 #: src/components/chat/MessageCopyButton.tsx
+#: src/components/githubInbox/LatticePullRequestList.tsx
 #: src/components/pullRequest/PullRequestsUnavailableState.tsx
 msgid "Copy to clipboard"
 msgstr "Copy to clipboard"
@@ -5503,11 +5513,13 @@ msgid "Synara pauses GitHub requests until the limit resets."
 msgstr "Synara pauses GitHub requests until the limit resets."
 
 #. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
 #: src/components/pullRequest/PullRequestsUnavailableState.tsx
 msgid "The request to GitHub failed."
 msgstr "The request to GitHub failed."
 
 #. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
 #: src/components/pullRequest/PullRequestsUnavailableState.tsx
 msgid "Install instructions"
 msgstr "Install instructions"
@@ -6114,6 +6126,154 @@ msgid "Some comments are not shown here. Open the issue on GitHub for the full d
 msgstr "Some comments are not shown here. Open the issue on GitHub for the full discussion."
 
 #. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Needs your review"
+msgstr "Needs your review"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Yours"
+msgstr "Yours"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Also open"
+msgstr "Also open"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Recently merged"
+msgstr "Recently merged"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Search pull requests"
+msgstr "Search pull requests"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Search or paste a pull request link"
+msgstr "Search or paste a pull request link"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Clear search"
+msgstr "Clear search"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Open a pull request from {branch}"
+msgstr "Open a pull request from {branch}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ChatHeader.tsx
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "New"
+msgstr "New"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Pull requests could not be loaded"
+msgstr "Pull requests could not be loaded"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ThreadDetailHydrationState.tsx
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Try again"
+msgstr "Try again"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "No pull requests match “{query}”"
+msgstr "No pull requests match “{query}”"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "No open pull requests"
+msgstr "No open pull requests"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "{branch} has commits that are not on {base}. Open a pull request to ask your co-authors to review them"
+msgstr "{branch} has commits that are not on {base}. Open a pull request to ask your co-authors to review them"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "When you or a co-author opens a pull request on GitHub, it shows up here"
+msgstr "When you or a co-author opens a pull request on GitHub, it shows up here"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Could not read {repository} on GitHub: {message}"
+msgstr "Could not read {repository} on GitHub: {message}"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Could not read this project’s repositories: {message}"
+msgstr "Could not read this project’s repositories: {message}"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Checks passed"
+msgstr "Checks passed"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Checks failed"
+msgstr "Checks failed"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Checks running"
+msgstr "Checks running"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "This project is not on GitHub"
+msgstr "This project is not on GitHub"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Pull requests need a GitHub repository, and this project’s remote is somewhere else"
+msgstr "Pull requests need a GitHub repository, and this project’s remote is somewhere else"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Pull requests need a GitHub repository. Publish the project privately and invite your co-authors"
+msgstr "Pull requests need a GitHub repository. Publish the project privately and invite your co-authors"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Publish to GitHub"
+msgstr "Publish to GitHub"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Install the GitHub CLI to see pull requests"
+msgstr "Install the GitHub CLI to see pull requests"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Sign in to GitHub to see pull requests"
+msgstr "Sign in to GitHub to see pull requests"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Lattice reads pull requests through the GitHub CLI. Install it in Terminal"
+msgstr "Lattice reads pull requests through the GitHub CLI. Install it in Terminal"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Lattice reads pull requests through the GitHub CLI. Run this once in Terminal"
+msgstr "Lattice reads pull requests through the GitHub CLI. Run this once in Terminal"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Check again"
+msgstr "Check again"
+
+#. js-lingui-explicit-id
 #: src/components/githubInbox/useGitHubInboxSidechat.ts
 msgid "It will appear as soon as the thread list refreshes."
 msgstr "It will appear as soon as the thread list refreshes."
@@ -6390,11 +6550,6 @@ msgstr "Delete thread"
 #: src/components/chat/ChatHeader.tsx
 msgid "New editor rail item"
 msgstr "New editor rail item"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ChatHeader.tsx
-msgid "New"
-msgstr "New"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ChatHeader.tsx
@@ -7159,6 +7314,7 @@ msgstr "Paper"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerLatticeContextBar.logic.ts
+#: src/components/chat/LatticeProseChanges.tsx
 msgid "Line {line}"
 msgstr "Line {line}"
 
@@ -8023,9 +8179,26 @@ msgid "Download"
 msgstr "Download"
 
 #. js-lingui-explicit-id
+#: src/components/chat/GitPanel.browser.tsx
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "{count, plural, one {Commit & push # file} other {Commit & push # files}}"
+msgstr "{count, plural, one {Commit & push # file} other {Commit & push # files}}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.browser.tsx
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "{count, plural, one {Push # commit} other {Push # commits}}"
+msgstr "{count, plural, one {Push # commit} other {Push # commits}}"
+
+#. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
 msgid "Source control is unavailable for this thread."
 msgstr "Source control is unavailable for this thread."
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitPanel.tsx
+msgid "Loading changes..."
+msgstr "Loading changes..."
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
@@ -8039,6 +8212,7 @@ msgstr "Close source control"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
+#: src/components/chat/LatticeGitChanges.tsx
 msgid "Refresh changes"
 msgstr "Refresh changes"
 
@@ -8054,11 +8228,7 @@ msgstr "{count, plural, one {# local commit has not been pushed.} other {# local
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
-msgid "Loading changes..."
-msgstr "Loading changes..."
-
-#. js-lingui-explicit-id
-#: src/components/chat/GitPanel.tsx
+#: src/components/chat/LatticeGitChanges.tsx
 #: src/components/chat/TimelineWorkEntryRow.tsx
 msgid "Staged"
 msgstr "Staged"
@@ -8075,6 +8245,7 @@ msgstr "Unstage file"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
+#: src/components/chat/LatticeGitChanges.tsx
 msgid "Unstage all"
 msgstr "Unstage all"
 
@@ -8090,6 +8261,7 @@ msgstr "Stage file"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
+#: src/components/chat/LatticeGitChanges.tsx
 msgid "Stage all"
 msgstr "Stage all"
 
@@ -8140,6 +8312,7 @@ msgstr "Publish a new private repository or attach one you already have."
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitRepositorySetup.tsx
+#: src/components/chat/LatticeGitChanges.tsx
 msgid "Publish"
 msgstr "Publish"
 
@@ -8147,11 +8320,6 @@ msgstr "Publish"
 #: src/components/chat/GitRepositorySetup.tsx
 msgid "Connect existing"
 msgstr "Connect existing"
-
-#. js-lingui-explicit-id
-#: src/components/chat/GitRepositorySetup.tsx
-msgid "Publish to GitHub"
-msgstr "Publish to GitHub"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitRepositorySetup.tsx
@@ -8402,6 +8570,167 @@ msgstr "To work on a single passage, select it in the editor"
 #: src/components/chat/LatticeEmptyThread.tsx
 msgid "Selection"
 msgstr "Selection"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Local only"
+msgstr "Local only"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Publish {branch} to {remote}"
+msgstr "Publish {branch} to {remote}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Diverged"
+msgstr "Diverged"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "{count, plural, one {Pull # commit from {remote}} other {Pull # commits from {remote}}}"
+msgstr "{count, plural, one {Pull # commit from {remote}} other {Pull # commits from {remote}}}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Pull {count}"
+msgstr "Pull {count}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "{count, plural, one {Push # commit to {remote}} other {Push # commits to {remote}}}"
+msgstr "{count, plural, one {Push # commit to {remote}} other {Push # commits to {remote}}}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Push {count}"
+msgstr "Push {count}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Up to date"
+msgstr "Up to date"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Could not write a commit message"
+msgstr "Could not write a commit message"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "{count, plural, one {Commit # file} other {Commit # files}}"
+msgstr "{count, plural, one {Commit # file} other {Commit # files}}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Write the message for me"
+msgstr "Write the message for me"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Description (optional)"
+msgstr "Description (optional)"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "More ways to commit"
+msgstr "More ways to commit"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Push after committing"
+msgstr "Push after committing"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Not staged"
+msgstr "Not staged"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Added"
+msgstr "Added"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+#: src/components/chat/LatticeProseChanges.tsx
+msgid "Deleted"
+msgstr "Deleted"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Renamed"
+msgstr "Renamed"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Modified"
+msgstr "Modified"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Unstage {path}"
+msgstr "Unstage {path}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Stage {path}"
+msgstr "Stage {path}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Only spacing or line breaks changed."
+msgstr "Only spacing or line breaks changed."
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Showing the first {count} changed lines."
+msgstr "Showing the first {count} changed lines."
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Edits you make show up here, ready to commit"
+msgstr "Edits you make show up here, ready to commit"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "{count, plural, one {# new commit is on {remote}. Pull it to bring your copy up to date} other {# new commits are on {remote}. Pull them to bring your copy up to date}}"
+msgstr "{count, plural, one {# new commit is on {remote}. Pull it to bring your copy up to date} other {# new commits are on {remote}. Pull them to bring your copy up to date}}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "{count, plural, one {Pull # commit} other {Pull # commits}}"
+msgstr "{count, plural, one {Pull # commit} other {Pull # commits}}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "{count, plural, one {# commit is waiting to go to {remote}. Push it when you are ready to share it} other {# commits are waiting to go to {remote}. Push them when you are ready to share them}}"
+msgstr "{count, plural, one {# commit is waiting to go to {remote}. Push it when you are ready to share it} other {# commits are waiting to go to {remote}. Push them when you are ready to share them}}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "{branch} is not on {remote} yet. Publish it to share your commits"
+msgstr "{branch} is not on {remote} yet. Publish it to share your commits"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Publish {branch}"
+msgstr "Publish {branch}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Everything is committed"
+msgstr "Everything is committed"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Last commit"
+msgstr "Last commit"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeProseChanges.tsx
+msgid "Inserted"
+msgstr "Inserted"
 
 #. js-lingui-explicit-id
 #: src/components/chat/MessageCopyButton.tsx
@@ -9197,11 +9526,6 @@ msgstr "Loading conversation"
 #: src/components/chat/ThreadDetailHydrationState.tsx
 msgid "This conversation didn't load."
 msgstr "This conversation didn't load."
-
-#. js-lingui-explicit-id
-#: src/components/chat/ThreadDetailHydrationState.tsx
-msgid "Try again"
-msgstr "Try again"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ThreadErrorBanner.tsx

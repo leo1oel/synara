@@ -291,11 +291,17 @@ function parseRecentCommitLines(stdout: string): ReadonlyArray<GitRecentCommit> 
   const commits: GitRecentCommit[] = [];
   for (const line of stdout.split("\n")) {
     if (line.length === 0) continue;
-    const [sha = "", shortSha = "", subject = "", committedAt = ""] = line.split(
+    const [sha = "", shortSha = "", subject = "", committedAt = "", authorName = ""] = line.split(
       RECENT_COMMIT_FIELD_SEPARATOR,
     );
     if (sha.length === 0 || shortSha.length === 0) continue;
-    commits.push({ sha, shortSha, subject, committedAt });
+    commits.push({
+      sha,
+      shortSha,
+      subject,
+      committedAt,
+      ...(authorName.length > 0 ? { authorName } : {}),
+    });
   }
   return commits;
 }
@@ -2749,6 +2755,98 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
         };
       });
 
+    // Stages into a copied index only, so a message can be drafted before committing without
+    // moving the user's staged and unstaged files.
+    const previewCommitContext: GitCoreShape["previewCommitContext"] = (cwd, filePaths) =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const operation = "GitCore.previewCommitContext";
+          if (filePaths?.some((filePath) => filePath.includes("\0"))) {
+            return yield* createGitCommandError(
+              `${operation}.addSelected`,
+              cwd,
+              ["add", "-A"],
+              "Selected file paths cannot contain NUL characters.",
+            );
+          }
+          const indexPathRaw = yield* runGitStdout(`${operation}.indexPath`, cwd, [
+            "rev-parse",
+            "--git-path",
+            "index",
+          ]).pipe(Effect.map((stdout) => stdout.trim()));
+          const tempIndexDir = yield* fileSystem
+            .makeTempDirectoryScoped({ prefix: `synara-commit-preview-${process.pid}-` })
+            .pipe(
+              Effect.mapError((cause) =>
+                createGitCommandError(`${operation}.tempIndex`, cwd, ["add", "-A"], cause.message),
+              ),
+            );
+          const tempIndexPath = nodePath.join(tempIndexDir, "index");
+          if (indexPathRaw.length > 0) {
+            yield* Effect.tryPromise(() =>
+              nodeFs.copyFile(resolveGitPath(cwd, indexPathRaw), tempIndexPath),
+            ).pipe(
+              Effect.catch((cause) =>
+                hasNodeErrorCode(cause, "ENOENT")
+                  ? Effect.void
+                  : Effect.fail(
+                      createGitCommandError(
+                        `${operation}.copyIndex`,
+                        cwd,
+                        ["add", "-A"],
+                        cause instanceof Error ? cause.message : "failed to copy the index.",
+                      ),
+                    ),
+              ),
+            );
+          }
+          const env = { GIT_INDEX_FILE: tempIndexPath };
+          if (filePaths && filePaths.length > 0) {
+            // Mirrors prepareCommitContext: a selection commits exactly those paths.
+            yield* executeGit(`${operation}.reset`, cwd, ["reset"], { env }).pipe(
+              Effect.catch(() => Effect.void),
+            );
+            const pathspec = nodePath.join(tempIndexDir, "paths");
+            yield* Effect.tryPromise(() =>
+              nodeFs.writeFile(pathspec, `${filePaths.join("\0")}\0`),
+            ).pipe(
+              Effect.mapError(() =>
+                createGitCommandError(
+                  `${operation}.addSelected`,
+                  cwd,
+                  ["add", "-A"],
+                  "failed to stage selected files.",
+                ),
+              ),
+            );
+            yield* executeGit(
+              `${operation}.addSelected`,
+              cwd,
+              ["add", "-A", `--pathspec-from-file=${pathspec}`, "--pathspec-file-nul"],
+              { env },
+            );
+          } else {
+            yield* executeGit(`${operation}.addAll`, cwd, ["add", "-A"], { env });
+          }
+          const stagedSummary = yield* executeGit(
+            `${operation}.stagedSummary`,
+            cwd,
+            ["diff", "--cached", "--name-status"],
+            { env },
+          ).pipe(Effect.map((result) => result.stdout.trim()));
+          if (stagedSummary.length === 0) {
+            return null;
+          }
+          const stagedPatch = yield* executeGit(
+            `${operation}.stagedPatch`,
+            cwd,
+            ["diff", "--cached", "--patch", "--minimal", "--no-ext-diff", "--no-textconv"],
+            { env, maxOutputBytes: 2_000_000, outputMode: "truncate" },
+          ).pipe(Effect.map((result) => result.stdout));
+          return { stagedSummary, stagedPatch };
+        }),
+      );
+
     const commit: GitCoreShape["commit"] = (cwd, subject, body, options?: GitCommitOptions) =>
       Effect.gen(function* () {
         const args = ["commit", "-m", subject];
@@ -3186,7 +3284,7 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
         const result = yield* executeGit(
           "GitCore.listRecentCommits",
           input.cwd,
-          ["log", "--format=%H%x1f%h%x1f%s%x1f%cI", "-n", String(limit)],
+          ["log", "--format=%H%x1f%h%x1f%s%x1f%cI%x1f%an", "-n", String(limit)],
           {
             timeoutMs: 10_000,
             allowNonZeroExit: true,
@@ -4380,6 +4478,7 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
       readRefPatch,
       readDiffStats,
       prepareCommitContext,
+      previewCommitContext,
       commit,
       pushCurrentBranch,
       pullCurrentBranch,

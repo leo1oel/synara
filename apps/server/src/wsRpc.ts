@@ -1955,6 +1955,21 @@ const makeWsRpcHandlersLayer = () =>
             }),
             "Failed to summarize diff",
           ),
+        [WS_METHODS.gitGenerateCommitMessage]: (input) =>
+          rpcEffect(
+            Effect.gen(function* () {
+              const settings = yield* serverSettings.getSettings;
+              const routing = resolveTextGenerationRouting(settings, input);
+              return yield* gitManager.generateCommitMessage({
+                ...input,
+                ...(routing.modelSelection
+                  ? { textGenerationModelSelection: routing.modelSelection }
+                  : {}),
+                ...(routing.providerOptions ? { providerOptions: routing.providerOptions } : {}),
+              });
+            }),
+            "Failed to write a commit message",
+          ),
         [WS_METHODS.gitPull]: (input) =>
           rpcEffect(
             refreshGitStatusAfter(

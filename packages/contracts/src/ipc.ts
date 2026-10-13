@@ -163,6 +163,8 @@ import type {
   GitBranchPullRequestResult,
   GitSummarizeDiffInput,
   GitSummarizeDiffResult,
+  GitGenerateCommitMessageInput,
+  GitGenerateCommitMessageResult,
   GitUnstageFilesInput,
   GitUnstageFilesResult,
 } from "./git";
@@ -1273,6 +1275,9 @@ export interface NativeApi {
     ) => Promise<GitWorkingTreeDiffStatsResult>;
     blameLine: (input: GitBlameLineInput) => Promise<GitBlameLineResult>;
     summarizeDiff: (input: GitSummarizeDiffInput) => Promise<GitSummarizeDiffResult>;
+    generateCommitMessage: (
+      input: GitGenerateCommitMessageInput,
+    ) => Promise<GitGenerateCommitMessageResult>;
     runStackedAction: (input: GitRunStackedActionInput) => Promise<GitRunStackedActionResult>;
     onActionProgress: (callback: (event: GitActionProgressEvent) => void) => () => void;
     onWorktreeSetupProgress: (

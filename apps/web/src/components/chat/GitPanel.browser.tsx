@@ -251,7 +251,7 @@ describe("GitPanel", () => {
     await expect.poll(() => scrollViewport!.scrollLeft).toBeGreaterThan(0);
   });
 
-  it("renders Commit & push as a direct action with a separate, stateful options menu", async () => {
+  it("composes the commit message in the panel and commits with Commit & push", async () => {
     const { actionCalls } = installGitApi();
     await renderWithQueryClient(
       <GitPanel
@@ -263,70 +263,29 @@ describe("GitPanel", () => {
       />,
     );
 
-    const commitAndPush = page.getByRole("button", { name: "Commit & push", exact: true });
+    const commitAndPush = page.getByRole("button", { name: /^Commit & push 1 file/ });
     const moreActions = page.getByRole("button", { name: "More Git actions" });
     await expect.element(commitAndPush).toBeEnabled();
     await expect.element(moreActions).toHaveAttribute("aria-expanded", "false");
+    await expect.element(page.getByText("Up to date", { exact: true })).toBeVisible();
 
     const branchTrigger = document.querySelector<HTMLElement>('[data-slot="combobox-trigger"]');
-    const commitAndPushElement = document.querySelector<HTMLButtonElement>(
-      'button[aria-label="Commit & push"]',
-    );
-    const moreActionsElement = document.querySelector<HTMLButtonElement>(
-      'button[aria-label="More Git actions"]',
-    );
-    const chevron = moreActionsElement?.querySelector<SVGElement>("svg") ?? null;
+    const branchBar = document.querySelector<HTMLElement>("[data-lattice-git-branchbar]");
     expect(branchTrigger).not.toBeNull();
-    expect(commitAndPushElement).not.toBeNull();
-    expect(moreActionsElement).not.toBeNull();
-    expect(chevron).not.toBeNull();
-    const sourceControlActions = document.querySelector<HTMLElement>(
-      "[data-lattice-source-control-actions]",
-    );
-    expect(sourceControlActions).not.toBeNull();
-    expect(getComputedStyle(sourceControlActions!).rowGap).toBe("8px");
-    expect(
-      Math.abs(
-        branchTrigger!.getBoundingClientRect().left -
-          commitAndPushElement!.getBoundingClientRect().left,
-      ),
-    ).toBeLessThan(1);
-    expect(getComputedStyle(commitAndPushElement!).color).toBe(
-      getComputedStyle(branchTrigger!).color,
-    );
-    expect(getComputedStyle(commitAndPushElement!).borderTopRightRadius).toBe("0px");
-    expect(getComputedStyle(moreActionsElement!).borderTopLeftRadius).toBe("0px");
-    expect(getComputedStyle(moreActionsElement!).borderLeftWidth).toBe("1px");
-    const closedRotation = getComputedStyle(chevron!).rotate;
+    expect(branchBar?.contains(branchTrigger)).toBe(true);
 
     await moreActions.click();
     await expect.element(moreActions).toHaveAttribute("aria-expanded", "true");
     await expect.element(page.getByText("Git actions", { exact: true })).toBeVisible();
-    const actionAnchor = document.querySelector<HTMLElement>("[data-panel-git-actions-anchor]");
-    const actionMenu = document.querySelector<HTMLElement>('[data-slot="menu-positioner"]');
-    expect(actionAnchor).not.toBeNull();
-    expect(actionMenu).not.toBeNull();
-    expect(
-      Math.abs(
-        actionMenu!.getBoundingClientRect().left - actionAnchor!.getBoundingClientRect().left,
-      ),
-    ).toBeLessThan(1);
-    expect(
-      Math.abs(
-        actionAnchor!.getBoundingClientRect().left - branchTrigger!.getBoundingClientRect().left,
-      ),
-    ).toBeLessThan(1);
-    await new Promise((resolve) => window.setTimeout(resolve, 250));
-    const openChevron = document
-      .querySelector<HTMLButtonElement>('button[aria-label="More Git actions"]')
-      ?.querySelector<SVGElement>("svg");
-    expect(openChevron).not.toBeNull();
-    expect(getComputedStyle(openChevron!).rotate).not.toBe(closedRotation);
+    await userEvent.keyboard("{Escape}");
 
-    await moreActions.click();
+    await page.getByRole("textbox", { name: "Commit message" }).fill("Tighten the long file");
     await commitAndPush.click();
     await expect.poll(() => actionCalls.length).toBe(1);
-    expect(actionCalls[0]).toMatchObject({ action: "commit_push" });
+    expect(actionCalls[0]).toMatchObject({
+      action: "commit_push",
+      commitMessage: "Tighten the long file",
+    });
     expect(actionCalls[0]?.filePaths).toBeUndefined();
   });
 
@@ -358,8 +317,21 @@ describe("GitPanel", () => {
         />,
       );
 
+      // With changes the composer commits and pushes; clean, the push waits in the clean state.
       const openConfirmation = () =>
-        page.getByRole("button", { name: i18n._("Commit & push"), exact: true }).click();
+        (hasWorkingTreeChanges
+          ? page.getByRole("button", {
+              name: new RegExp(
+                `^${i18n._("{count, plural, one {Commit & push # file} other {Commit & push # files}}", { count: 1 })}`,
+              ),
+            })
+          : page.getByRole("button", {
+              name: i18n._("{count, plural, one {Push # commit} other {Push # commits}}", {
+                count: 1,
+              }),
+              exact: true,
+            })
+        ).click();
       await openConfirmation();
       await expect.element(page.getByRole("dialog")).toBeVisible();
       const popup = document.querySelector<HTMLElement>('[data-slot="dialog-popup"]')!;
@@ -371,7 +343,7 @@ describe("GitPanel", () => {
       expect(popup.getBoundingClientRect().height).toBeLessThan(260);
       await new Promise((resolve) => window.setTimeout(resolve, 250));
       await page.screenshot();
-      await page.getByRole("button", { name: "Close", exact: true }).click();
+      await page.getByRole("button", { name: i18n._("Close"), exact: true }).click();
       await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
 
       await openConfirmation();
@@ -485,7 +457,7 @@ describe("GitPanel", () => {
     expect(refreshButton.element().querySelector(".animate-spin")).toBeNull();
   });
 
-  it("keeps the clean-state action legible and explains why it cannot run", async () => {
+  it("says everything is committed and offers no commit action when clean", async () => {
     installGitApi({ hasWorkingTreeChanges: false });
     await renderWithQueryClient(
       <GitPanel
@@ -497,20 +469,15 @@ describe("GitPanel", () => {
       />,
     );
 
-    const commitAndPush = page.getByRole("button", { name: "Commit and Push" });
-    await expect.element(commitAndPush).toBeDisabled();
-    await expect.element(page.getByText("No uncommitted changes.", { exact: true })).toBeVisible();
-
-    const branchTrigger = document.querySelector<HTMLElement>('[data-slot="combobox-trigger"]');
-    const commitAndPushElement = document.querySelector<HTMLButtonElement>(
-      'button[aria-label="Commit and Push"]',
-    );
-    expect(branchTrigger).not.toBeNull();
-    expect(commitAndPushElement).not.toBeNull();
-    expect(getComputedStyle(commitAndPushElement!).opacity).toBe("1");
-    expect(getComputedStyle(commitAndPushElement!).color).toBe(
-      getComputedStyle(branchTrigger!).color,
-    );
+    await expect.element(page.getByText("Everything is committed", { exact: true })).toBeVisible();
+    await expect
+      .element(page.getByText("Edits you make show up here, ready to commit", { exact: true }))
+      .toBeVisible();
+    await expect.element(page.getByText("Up to date", { exact: true })).toBeVisible();
+    await expect
+      .element(page.getByRole("button", { name: /^Commit & push/ }))
+      .not.toBeInTheDocument();
+    expect(document.querySelector('[data-kind="dated-drafts"]')).not.toBeNull();
   });
 
   it("waits for remote status before showing the clean state and Git actions", async () => {
@@ -525,19 +492,22 @@ describe("GitPanel", () => {
     try {
       await expect.element(page.getByRole("status", { name: "Loading changes..." })).toBeVisible();
       await expect
-        .element(page.getByText("No uncommitted changes.", { exact: true }))
+        .element(page.getByText("Everything is committed", { exact: true }))
         .not.toBeInTheDocument();
       await expect.element(page.getByRole("button", { name: "More Git actions" })).toBeDisabled();
-      await expect
-        .element(page.getByRole("button", { name: "Refreshing git status..." }))
-        .toBeDisabled();
       await page.screenshot();
     } finally {
       releaseStatus();
     }
     await expect
-      .element(page.getByText("86 local commits have not been pushed.", { exact: true }))
+      .element(
+        page.getByText(
+          "86 commits are waiting to go to origin. Push them when you are ready to share them",
+          { exact: true },
+        ),
+      )
       .toBeVisible();
+    await expect.element(page.getByRole("button", { name: "Push 86 commits" })).toBeEnabled();
     await expect.element(page.getByRole("button", { name: "More Git actions" })).toBeEnabled();
     await page.screenshot();
   });
@@ -560,19 +530,17 @@ describe("GitPanel", () => {
           "readWorkingTreeDiff:unstaged",
           "status",
         ]);
-      // The changed files render before the branch list answers; only the action
-      // row is still a placeholder.
+      // The changed files render before the branch list answers; only the commit
+      // button waits for the status it commits against.
       await expect.element(page.getByRole("button", { name: /src\/long\.ts/ })).toBeVisible();
       await expect
-        .element(page.getByRole("button", { name: "Commit & push", exact: true }))
-        .not.toBeInTheDocument();
+        .element(page.getByRole("button", { name: /^Commit & push 1 file/ }))
+        .toBeDisabled();
       await page.screenshot();
     } finally {
       releaseBranches();
     }
-    await expect
-      .element(page.getByRole("button", { name: "Commit & push", exact: true }))
-      .toBeVisible();
+    await expect.element(page.getByRole("button", { name: /^Commit & push 1 file/ })).toBeEnabled();
   });
 
   it("shows changes and Git actions without waiting for the branch pull request", async () => {
@@ -582,9 +550,7 @@ describe("GitPanel", () => {
     );
 
     await expect.element(page.getByRole("button", { name: /src\/long\.ts/ })).toBeVisible();
-    await expect
-      .element(page.getByRole("button", { name: "Commit & push", exact: true }))
-      .toBeEnabled();
+    await expect.element(page.getByRole("button", { name: /^Commit & push 1 file/ })).toBeEnabled();
     expect(readCalls).toContain("branchPullRequest");
   });
 
@@ -615,7 +581,7 @@ describe("GitPanel", () => {
     );
     try {
       await expect
-        .element(page.getByText("No uncommitted changes.", { exact: true }))
+        .element(page.getByText("Everything is committed", { exact: true }))
         .toBeVisible();
       await page.getByRole("button", { name: "More Git actions" }).click();
       // A clean published feature branch can still create a PR. Once an existing PR
@@ -644,18 +610,19 @@ describe("GitPanel", () => {
       />,
     );
 
-    const cleanMessage = page.getByText("No uncommitted changes.", { exact: true });
-    const committedMessage = page.getByText("3 local commits have not been pushed.", {
-      exact: true,
-    });
-    await expect.element(cleanMessage).toBeVisible();
-    await expect.element(committedMessage).toBeVisible();
+    await expect.element(page.getByText("Everything is committed", { exact: true })).toBeVisible();
+    await expect
+      .element(
+        page.getByText(
+          "3 commits are waiting to go to origin. Push them when you are ready to share them",
+          { exact: true },
+        ),
+      )
+      .toBeVisible();
+    await expect.element(page.getByRole("button", { name: /^Push 3\s*origin$/ })).toBeVisible();
     await expect
       .element(page.getByText("Select a file to view its diff.", { exact: true }))
       .not.toBeInTheDocument();
-    expect(getComputedStyle(cleanMessage.element()).fontSize).toBe(
-      getComputedStyle(committedMessage.element()).fontSize,
-    );
   });
 
   it("lists existing branches and checks out the selected branch", async () => {

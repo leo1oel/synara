@@ -301,6 +301,15 @@ export interface GitCoreShape {
   ) => Effect.Effect<GitPreparedCommitContext | null, GitCommandError>;
 
   /**
+   * The context `prepareCommitContext` would build, read from a copy of the index so the
+   * user's staging area is untouched. Null when the commit would include nothing.
+   */
+  readonly previewCommitContext: (
+    cwd: string,
+    filePaths?: readonly string[],
+  ) => Effect.Effect<GitPreparedCommitContext | null, GitCommandError>;
+
+  /**
    * Create a commit with provided subject/body.
    */
   readonly commit: (

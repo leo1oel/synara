@@ -106,6 +106,7 @@ export function buildPullRequestListEntry(input: {
     stack: pullRequest.stack,
     labels: pullRequest.labels,
     commentCount: pullRequest.commentCount,
+    checksState: pullRequest.checksState ?? null,
     assignees: pullRequest.assignees,
     viewerInvolvement: input.viewerInvolvement,
   };
