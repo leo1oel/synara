@@ -139,12 +139,16 @@ export function GitHubItemFloatingComposer({
               </ComposerPickerMenuPopup>
             </Menu>
           ) : (
-            <span className={CHIP_CLASS_NAME} title={i18n._("Project")}>
+            <span className={cn(CHIP_CLASS_NAME, "min-w-0")} title={i18n._("Project")}>
               <FolderIcon aria-hidden className="size-3.5 shrink-0" />
               <span className="truncate">{projectTitle}</span>
             </span>
           )}
-          <span className={CHIP_CLASS_NAME} title={i18n._("Runs in this project's local checkout")}>
+          {/* Never shrinks: a CJK word would otherwise break between its characters. */}
+          <span
+            className={cn(CHIP_CLASS_NAME, "shrink-0 whitespace-nowrap")}
+            title={i18n._("Runs in this project's local checkout")}
+          >
             <CentralIcon name="macbook-air" className="size-3.5 shrink-0" />
             {i18n._("Local")}
           </span>

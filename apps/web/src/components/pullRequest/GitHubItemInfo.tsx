@@ -261,13 +261,15 @@ function ChecksSection({ variant, detail }: { variant: InfoVariant; detail: Pull
             type="button"
             aria-expanded={open}
             onClick={() => setOpen((current) => !current)}
-            className="flex w-fit items-center gap-1.5 rounded-md text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            title={brief.label}
+            className="flex w-fit max-w-full items-center gap-1.5 rounded-md text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             {brief.tone === "success" ? (
-              <CircleCheckIcon className="size-4 text-status-success" aria-hidden />
+              <CircleCheckIcon className="size-4 shrink-0 text-status-success" aria-hidden />
             ) : null}
-            {brief.label}
-            <DisclosureChevron open={open} />
+            {/* One line, ellipsized in the narrowest panel rather than spilling past it. */}
+            <span className="min-w-0 truncate">{brief.label}</span>
+            <DisclosureChevron open={open} className="shrink-0" />
           </button>
           <DisclosureRegion open={open}>
             <div className="pt-1.5">
