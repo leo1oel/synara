@@ -204,6 +204,24 @@ function captureProcessChildrenMap(): Promise<ProcessChildrenMap | null> {
   });
 }
 
+function capturedTreeFromChildrenMap(
+  rootPid: number,
+  childrenByParentPid: ProcessChildrenMap | null,
+): CapturedProcessTree {
+  if (!childrenByParentPid) return { descendants: [], captureComplete: false };
+  // A root absent from the snapshot — neither a child of another process
+  // nor a parent key — is provably not running, and refusing to collect
+  // also closes the stale-pid kill path. Sparse maps may legitimately list
+  // a live root only as a parent key, so parentage alone counts as presence.
+  if (!childrenByParentPid.has(rootPid) && !processesByPid(childrenByParentPid).has(rootPid)) {
+    return { descendants: [], captureComplete: true };
+  }
+  return {
+    descendants: collectDescendantProcesses(rootPid, childrenByParentPid),
+    captureComplete: true,
+  };
+}
+
 function readCurrentProcesses(pids: readonly number[]): ProcessIdentityMap | null {
   const uniquePids = [...new Set(pids.filter(isSignalablePid))];
   if (uniquePids.length === 0) return new Map();
@@ -327,18 +345,7 @@ export function createProcessTreeKiller(
       ) {
         childrenByParentPid = deps.captureChildrenMap();
       }
-      if (!childrenByParentPid) return { descendants: [], captureComplete: false };
-      // A root absent from the snapshot — neither a child of another process
-      // nor a parent key — is provably not running, and refusing to collect
-      // also closes the stale-pid kill path. Sparse maps may legitimately list
-      // a live root only as a parent key, so parentage alone counts as presence.
-      if (!childrenByParentPid.has(rootPid) && !processesByPid(childrenByParentPid).has(rootPid)) {
-        return { descendants: [], captureComplete: true };
-      }
-      return {
-        descendants: collectDescendantProcesses(rootPid, childrenByParentPid),
-        captureComplete: true,
-      };
+      return capturedTreeFromChildrenMap(rootPid, childrenByParentPid);
     },
     inspect: (tree) => {
       if (tree.captureComplete === false) {
@@ -438,11 +445,7 @@ export async function captureProcessTree(
     ) {
       childrenByParentPid = await capturePosixChildren();
     }
-    if (!childrenByParentPid) return { descendants: [], captureComplete: false };
-    return {
-      descendants: collectDescendantProcesses(rootPid, childrenByParentPid),
-      captureComplete: true,
-    };
+    return capturedTreeFromChildrenMap(rootPid, childrenByParentPid);
   }
 
   const childrenByParentPid = await (

@@ -141,6 +141,7 @@ import {
   ProjectWriteFileInput,
 } from "./project";
 import { StudioListThreadOutputsInput } from "./studio";
+import { OrchestrationGetInlineVisualInput } from "./inlineVisual";
 import { FilesystemBrowseInput } from "./filesystem";
 import {
   DEVICE_WS_CHANNELS,
@@ -487,6 +488,7 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(ORCHESTRATION_WS_METHODS.repairState, OrchestrationRepairStateInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.getTurnDiff, OrchestrationGetTurnDiffInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.getFullThreadDiff, OrchestrationGetFullThreadDiffInput),
+  tagRequestBody(ORCHESTRATION_WS_METHODS.getInlineVisual, OrchestrationGetInlineVisualInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.replayEvents, OrchestrationReplayEventsInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.subscribeShell, OrchestrationSubscribeShellInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.unsubscribeShell, OrchestrationUnsubscribeShellInput),

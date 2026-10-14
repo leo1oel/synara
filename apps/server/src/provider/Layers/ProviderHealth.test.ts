@@ -62,7 +62,10 @@ import {
   makeProviderUpdateEnv,
 } from "./ProviderHealth";
 import { resolvePackageManagedProviderMaintenance } from "../providerMaintenance";
-import { providerIsolatedHomePath } from "../providerProcessEnv.ts";
+import {
+  MODEL_PROVIDER_API_KEY_ENV_MAPPINGS,
+  providerIsolatedHomePath,
+} from "../providerProcessEnv.ts";
 
 // ── Test helpers ────────────────────────────────────────────────────
 
@@ -2679,7 +2682,9 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
   describe("checkPiProviderStatus", () => {
     it.effect("returns ready for the bundled Pi SDK without probing a CLI", () =>
       Effect.gen(function* () {
-        const status = yield* checkPiProviderStatus();
+        const status = yield* checkPiProviderStatus(undefined, undefined, {
+          ANTHROPIC_API_KEY: "sk-test",
+        });
         assert.strictEqual(status.provider, "pi");
         assert.strictEqual(status.status, "ready");
         assert.strictEqual(status.available, true);
@@ -2689,19 +2694,67 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           status.message,
           "Pi SDK is included with Synara. Configure provider credentials inside Pi as needed.",
         );
-      }),
+      }).pipe(Effect.provide(failingSpawnerLayer("Pi CLI must not be probed"))),
     );
 
-    it.effect("reports the configured Pi agent directory", () =>
-      Effect.gen(function* () {
-        const status = yield* checkPiProviderStatus("/tmp/pi-agent");
-        assert.strictEqual(status.status, "ready");
-        assert.strictEqual(
-          status.message,
-          "Pi SDK is included with Synara. Using Pi agent dir /tmp/pi-agent.",
-        );
-      }),
-    );
+    it.effect("reports the configured Pi agent directory", () => {
+      const agentDir = mkdtempSync(join(OS.tmpdir(), "synara-pi-health-"));
+      writeFileSync(join(agentDir, "auth.json"), '{"anthropic":{"type":"api_key","key":"x"}}');
+      return Effect.gen(function* () {
+        try {
+          const status = yield* checkPiProviderStatus(agentDir);
+          assert.strictEqual(status.status, "ready");
+          assert.strictEqual(
+            status.message,
+            `Pi SDK is included with Synara. Using Pi agent dir ${agentDir}.`,
+          );
+        } finally {
+          rmSync(agentDir, { recursive: true, force: true });
+        }
+      });
+    });
+
+    it.effect("reports Pi as not set up when the CLI is missing and no credentials exist", () => {
+      const agentDir = mkdtempSync(join(OS.tmpdir(), "synara-pi-health-"));
+      // An empty credentials file is not evidence of an SDK-only setup.
+      writeFileSync(join(agentDir, "auth.json"), "");
+      return Effect.gen(function* () {
+        try {
+          const status = yield* checkPiProviderStatus(agentDir);
+          assert.strictEqual(status.provider, "pi");
+          assert.strictEqual(status.status, "error");
+          assert.strictEqual(status.available, false);
+          assert.strictEqual(status.authStatus, "unknown");
+          assert.strictEqual(
+            status.message,
+            `Pi is not set up. Install the Pi CLI (\`pi\`) or add Pi credentials to ${agentDir} to use the Pi provider.`,
+          );
+        } finally {
+          rmSync(agentDir, { recursive: true, force: true });
+        }
+      }).pipe(Effect.provide(failingSpawnerLayer("spawn pi ENOENT")));
+    });
+
+    it.effect("does not mistake SDK-created empty or invalid files for Pi setup", () => {
+      const agentDir = mkdtempSync(join(OS.tmpdir(), "synara-pi-health-"));
+      return Effect.gen(function* () {
+        try {
+          // Pi itself creates auth.json with {} before any login exists.
+          for (const content of ["{}", "not-json", '{"anthropic":{}}']) {
+            writeFileSync(join(agentDir, "auth.json"), content);
+            writeFileSync(join(agentDir, "models.json"), '{"providers":{}}');
+            const status = yield* checkPiProviderStatus(agentDir, undefined, {}, undefined, {
+              homeDir: agentDir,
+              isolationRootDir: agentDir,
+            });
+            assert.strictEqual(status.message?.includes("Pi is not set up"), true);
+            assert.strictEqual(status.available, false);
+          }
+        } finally {
+          rmSync(agentDir, { recursive: true, force: true });
+        }
+      }).pipe(Effect.provide(failingSpawnerLayer("spawn pi ENOENT")));
+    });
 
     it("does not register Pi as a separately updatable CLI", () => {
       assert.strictEqual(PACKAGE_MANAGED_PROVIDER_UPDATES.pi, undefined);
