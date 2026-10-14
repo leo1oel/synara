@@ -130,8 +130,10 @@ function joinScannedLines(lines: readonly ScannedLine[]): string {
  * It puts them on lines of their own, as list items, or inline after other
  * text. Every directive outside fenced code and inline code is removed from
  * the text and returned in order; a list item or line that held only
- * directives goes with them, so no empty bullet is left. With `streaming`, an
- * unfinished directive at the end of the reply is held back as well.
+ * directives goes with them, so no empty bullet is left. The reply's last
+ * line also loses an unfinished directive or a bare list marker while it
+ * streams, and once directives were found: a reply cut off mid-stream (a
+ * steer interrupts it) keeps the half-written tail it had.
  */
 export function splitCodexFollowUps(text: string, streaming = false): CodexFollowUpSplit {
   const lastLine = text.slice(text.lastIndexOf("\n") + 1);
@@ -139,6 +141,8 @@ export function splitCodexFollowUps(text: string, streaming = false): CodexFollo
     return { text, followUps: [] };
   }
   const lines = text.split("\n");
+  let tailIndex = lines.length - 1;
+  while (tailIndex > 0 && !lines[tailIndex]!.trim()) tailIndex -= 1;
   const scanned: ScannedLine[] = [];
   const followUps: CodexFollowUp[] = [];
   let changed = false;
@@ -158,12 +162,11 @@ export function splitCodexFollowUps(text: string, streaming = false): CodexFollo
       return;
     }
     let rest = liftLineDirectives(line, followUps);
-    if (rest !== null && streaming && index === lines.length - 1) {
+    if (rest !== null && index === tailIndex && (streaming || followUps.length > 0)) {
       const cut = partialDirectiveStart(rest);
-      if (cut !== -1) {
-        const head = rest.slice(0, cut).replace(/[ \t]+$/, "");
-        rest = LEFTOVER_PATTERN.test(head) ? null : head;
-      }
+      const head = (cut === -1 ? rest : rest.slice(0, cut)).replace(/[ \t]+$/, "");
+      if (head !== rest) rest = head;
+      if (rest.trim() && LEFTOVER_PATTERN.test(rest)) rest = null;
     }
     if (rest !== line) changed = true;
     if (rest === null) scanned.push({ kind: "removed", text: line });
