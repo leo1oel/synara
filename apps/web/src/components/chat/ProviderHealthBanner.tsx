@@ -59,6 +59,7 @@ export const ProviderHealthBanner = function ProviderHealthBanner({
     <ChatColumnBannerFrame>
       <Alert
         className={cn(
+          "provider-health-banner",
           EXPANDED_NOTIFICATION_SURFACE_CLASS_NAME,
           !onConfigure && onDismiss && "pr-10",
         )}
