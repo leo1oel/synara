@@ -56,6 +56,7 @@ import {
 import { Duration, Effect, FileSystem, Option, Schema } from "effect";
 import { randomUUID } from "node:crypto";
 
+import { ACTIVE_AGENT_HOST_PROFILE } from "../agentGateway/hostProfile.ts";
 import { writeFileStringAtomically } from "../atomicWrite";
 import { ServerConfig } from "../config";
 import {
@@ -231,8 +232,15 @@ function buildCrashResumeRecord(input: {
       .map((project) => project.id),
   );
   const threads = input.readModel.threads.filter((thread) => {
+    // Stored user messages keep a null turnId (the turn request binds them only
+    // in client transcripts), so the running turn's pending message names its
+    // request as well.
     const message = thread.messages.findLast(
-      (message) => message.role === "user" && message.turnId === thread.latestTurn?.turnId,
+      (message) =>
+        message.role === "user" &&
+        (message.turnId === thread.latestTurn?.turnId ||
+          (message.turnId === null &&
+            message.id === (thread.latestTurn?.pendingMessageId ?? undefined))),
     );
     // Resume turns also use automation origin to preserve human recency. They
     // remain ordinary chat work when another unexpected shutdown interrupts them.
@@ -261,8 +269,7 @@ function buildCrashResumeRecord(input: {
   return buildQuitResumeRecord({
     request: {
       threadIds: threads.slice(0, QUIT_RESUME_MAX_THREADS).map((thread) => thread.id),
-      continuationPrompt:
-        "Synara stopped unexpectedly while this task was running. Check the conversation and current workspace state, verify whether pending operations already completed before repeating them, and continue the remaining work. Preserve pending approval and user decisions; ask again when needed.",
+      continuationPrompt: `${ACTIVE_AGENT_HOST_PROFILE.displayName} stopped unexpectedly while this task was running. Check the conversation and current workspace state, verify whether pending operations already completed before repeating them, and continue the remaining work. Preserve pending approval and user decisions; ask again when needed.`,
     },
     threads,
     recordId: `crash:${randomUUID()}`,
