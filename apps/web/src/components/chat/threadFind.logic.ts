@@ -5,6 +5,7 @@
 // Depends on: timeline entry shape and message ids only.
 
 import { type MessageId } from "@synara/contracts";
+import { splitCodexFollowUps } from "../../lib/codexFollowUps";
 import { repairMarkdownTableDelimiters } from "../../lib/markdownTableRepair";
 import { deriveDisplayedUserMessageState } from "../../lib/terminalContext";
 import { type TimelineEntry } from "../../session-logic";
@@ -114,7 +115,8 @@ export function resolveThreadFindDocumentText(message: ChatMessage, text = messa
     });
     return resolveUserMessageMarkdownText(displayed.visibleText, displayed.contexts);
   }
-  return repairMarkdownTableDelimiters(text);
+  // The transcript renders Codex follow-up directives as chips, not text.
+  return repairMarkdownTableDelimiters(splitCodexFollowUps(text, message.streaming).text);
 }
 
 type ThreadFindDocumentTextResolver = (message: ChatMessage, text: string) => string;

@@ -2210,6 +2210,12 @@ export default function ChatView({
   const handleLatticeStarter = useCallback((prompt: string) => {
     latticeStarterPromptRef.current?.(prompt);
   }, []);
+  // A reply's suggested follow-up fills the composer the same way, through a
+  // ref so the memoized transcript keeps one stable handler.
+  const followUpPromptRef = useRef<((prompt: string) => void) | null>(null);
+  const handleSelectFollowUp = useCallback((prompt: string) => {
+    followUpPromptRef.current?.(prompt);
+  }, []);
   const transcriptEmptyStateContent = useMemo((): ReactNode => {
     if (
       isEmbed &&
@@ -4890,6 +4896,18 @@ export default function ChatView({
     latticeStarterPromptRef.current = (prompt) =>
       setPromptFromTraits(latticeStarterDraft(promptRef.current, prompt));
   }, [promptRef, setPromptFromTraits]);
+  // The prompt a follow-up chip last wrote: choosing another chip replaces it
+  // while it is untouched, and anything the user typed is kept.
+  const followUpDraftRef = useRef<string | null>(null);
+  useEffect(() => {
+    followUpPromptRef.current = (prompt) => {
+      const current = promptRef.current;
+      const typed = current.trim();
+      const replace = !typed || typed === followUpDraftRef.current;
+      followUpDraftRef.current = prompt.trim();
+      setPromptFromTraits(replace ? prompt : `${current.trimEnd()}\n\n${prompt}`);
+    };
+  }, [promptRef, setPromptFromTraits]);
   const selectedProviderModelOptions = composerModelOptions?.[selectedProvider];
   const composerTraitSelection = getComposerTraitSelection(
     selectedProvider,
@@ -7165,6 +7183,7 @@ export default function ChatView({
                     onStopBackgroundTask={onStopBackgroundTask}
                     computerControlEnabled={enableComputerControl}
                     onEnableComputerControl={handleEnableComputerControlFromDenial}
+                    onSelectFollowUp={handleSelectFollowUp}
                     revertTurnCountByUserMessageId={revertTurnCountByUserMessageId}
                     onRevertUserMessage={onRevertUserMessage}
                     onUndoTurnFiles={onUndoTurnFiles}

@@ -12,11 +12,6 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
-#: src/components/chat/LatticeGitChanges.tsx
-msgid "Up to date with {remote}"
-msgstr "已与 {remote} 同步"
-
-#. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
 #: src/components/chat/ComposerAutomationSetupBanner.tsx
 #: src/components/chat/FileLineCommentBox.tsx
@@ -6803,6 +6798,11 @@ msgid "Cache state is estimated. It does not measure your plan's remaining usage
 msgstr "缓存状态是估算的，不代表你套餐的剩余额度。"
 
 #. js-lingui-explicit-id
+#: src/components/chat/CodexFollowUpChips.tsx
+msgid "Suggested follow-ups"
+msgstr "后续建议"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ComposerAutomationSetupBanner.tsx
 msgid "Setting up automation"
 msgstr "正在设置自动化"
@@ -8723,6 +8723,11 @@ msgstr "推送 {count} 个提交到 {remote}"
 #: src/components/chat/LatticeGitChanges.tsx
 msgid "Push {count}"
 msgstr "推送 {count}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Up to date with {remote}"
+msgstr "已与 {remote} 同步"
 
 #. js-lingui-explicit-id
 #: src/components/chat/LatticeGitChanges.tsx

@@ -120,6 +120,7 @@ interface ChatTranscriptPaneProps {
   onStopBackgroundTask?: ComponentProps<typeof MessagesTimeline>["onStopBackgroundTask"];
   computerControlEnabled?: ComponentProps<typeof MessagesTimeline>["computerControlEnabled"];
   onEnableComputerControl?: ComponentProps<typeof MessagesTimeline>["onEnableComputerControl"];
+  onSelectFollowUp?: ComponentProps<typeof MessagesTimeline>["onSelectFollowUp"];
   onRevertUserMessage: (messageId: MessageId) => void;
   onUndoTurnFiles?: ComponentProps<typeof MessagesTimeline>["onUndoTurnFiles"];
   onRespondToAsyncUserInput?: ComponentProps<typeof MessagesTimeline>["onRespondToAsyncUserInput"];
@@ -223,6 +224,7 @@ export function ChatTranscriptPane({
   onStopBackgroundTask,
   computerControlEnabled,
   onEnableComputerControl,
+  onSelectFollowUp,
   onRevertUserMessage,
   onUndoTurnFiles,
   onEditUserMessage,
@@ -450,6 +452,7 @@ export function ChatTranscriptPane({
               {...(onOpenAutomation ? { onOpenAutomation } : {})}
               {...(computerControlEnabled !== undefined ? { computerControlEnabled } : {})}
               {...(onEnableComputerControl ? { onEnableComputerControl } : {})}
+              {...(onSelectFollowUp ? { onSelectFollowUp } : {})}
               revertTurnCountByUserMessageId={revertTurnCountByUserMessageId}
               onRevertUserMessage={onRevertUserMessage}
               {...(onUndoTurnFiles ? { onUndoTurnFiles } : {})}

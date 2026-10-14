@@ -879,6 +879,30 @@ html.dark[data-synara-embed="true"] .lattice-empty-thread {
   );
 }
 
+/* A reply's suggested follow-ups (CodexFollowUpChips) wear the empty thread's
+   starter surface and ease on Lattice's hover tier; under reduced motion they
+   change at once. */
+html[data-synara-embed="true"] .codex-follow-up {
+  border-color: var(--color-border);
+  background-color: var(--lattice-reading-surface);
+  transition:
+    background-color var(--lattice-motion-hover),
+    border-color var(--lattice-motion-hover);
+}
+html[data-synara-embed="true"] .codex-follow-up:hover {
+  border-color: var(--lattice-settings-line-strong, var(--color-border));
+  background-color: color-mix(
+    in srgb,
+    var(--color-text-foreground) 3.5%,
+    var(--lattice-reading-surface)
+  );
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-synara-embed="true"] .codex-follow-up {
+    transition: none;
+  }
+}
+
 html[data-synara-embed="true"] .lattice-source-control {
   --app-font-size-ui: 11px;
   /* This route lives in a resizable iframe. Keep Tailwind's `sm:` variants

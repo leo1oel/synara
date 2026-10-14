@@ -190,6 +190,8 @@ import {
   disclosureContentClassName,
 } from "~/lib/disclosureMotion";
 import { getAppTypographyScale } from "../../lib/appTypography";
+import { splitCodexFollowUps } from "../../lib/codexFollowUps";
+import { CodexFollowUpChips } from "./CodexFollowUpChips";
 import {
   USER_MESSAGE_COLLAPSED_FADE_LINES,
   USER_MESSAGE_COLLAPSED_MAX_LINES,
@@ -527,6 +529,8 @@ interface MessagesTimelineProps {
   computerControlEnabled?: boolean;
   /** Switch computer control on from a "computer control denied" transcript card. */
   onEnableComputerControl?: () => void;
+  /** Writes a follow-up the latest reply suggested into the composer. */
+  onSelectFollowUp?: (prompt: string) => void;
   revertTurnCountByUserMessageId: Map<MessageId, number>;
   onRevertUserMessage: (messageId: MessageId) => void;
   onUndoTurnFiles?: (turnCounts: readonly number[]) => void;
@@ -631,6 +635,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   onStopBackgroundTask,
   computerControlEnabled,
   onEnableComputerControl,
+  onSelectFollowUp,
   revertTurnCountByUserMessageId,
   onRevertUserMessage,
   onUndoTurnFiles,
@@ -982,6 +987,15 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     }
     return null;
   }, [rows]);
+  // Only the reply that ends the transcript offers its follow-ups: once the
+  // conversation moves on, older suggestions no longer follow from it.
+  const lastMessageId = useMemo(() => {
+    for (let index = rows.length - 1; index >= 0; index -= 1) {
+      const row = rows[index]!;
+      if (row.kind === "message") return row.message.id;
+    }
+    return null;
+  }, [rows]);
   // On a subagent's thread, the answers to its parent's briefs went back to the
   // parent: the terminal answer after an agent-sent message carries that note.
   const subagentDeliveredMessageIds = useMemo(() => {
@@ -1017,6 +1031,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       firstUserMessageId,
       highlightedMessageId,
       lastLiveWorkGroupId,
+      lastMessageId,
       pinnedMessageIds,
       settledTurnCollapseTransitions,
       submittingEditedUserMessageId,
@@ -1038,6 +1053,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       firstUserMessageId,
       highlightedMessageId,
       lastLiveWorkGroupId,
+      lastMessageId,
       pinnedMessageIds,
       settledTurnCollapseTransitions,
       submittingEditedUserMessageId,
@@ -2085,7 +2101,14 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       {row.kind === "message" &&
         row.message.role === "assistant" &&
         (() => {
-          const messageText = resolveAssistantMessageDisplayText(row);
+          const displayText = resolveAssistantMessageDisplayText(row);
+          // Codex's suggested next prompts become chips; their directive
+          // syntax never reaches the markdown, the copy text or a find match.
+          const codexFollowUps =
+            displayText === null
+              ? null
+              : splitCodexFollowUps(displayText, Boolean(row.message.streaming));
+          const messageText = codexFollowUps?.text ?? null;
           const buildWorkDisplay = (workEntries: WorkLogEntry[], workGroupId: string | null) => {
             const displayEntries = workEntries.filter((entry) => !entry.synaraThreadCreation);
             const toolEntries = displayEntries.filter((entry) => entry.tone === "tool");
@@ -2137,7 +2160,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             row.inlineWorkGroupId ?? null,
           );
           const assistantCopyState = resolveAssistantMessageCopyState({
-            text: row.message.text ?? null,
+            text: row.message.text ? (codexFollowUps?.text ?? row.message.text) : null,
             showCopyButton: row.showAssistantCopyButton,
             streaming: row.assistantCopyStreaming,
           });
@@ -2639,6 +2662,16 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                       {...threadFindMarkdownProps(findHighlight, row.message.id)}
                     />
                   </div>
+                ) : null}
+                {onSelectFollowUp &&
+                isTerminalAssistantMessage &&
+                row.message.id === lastMessageId &&
+                codexFollowUps &&
+                codexFollowUps.followUps.length > 0 ? (
+                  <CodexFollowUpChips
+                    followUps={codexFollowUps.followUps}
+                    onSelect={onSelectFollowUp}
+                  />
                 ) : null}
                 {conversationOnly ? null : renderWorkDisplay(inlineWorkDisplay, "inline")}
                 {!conversationOnly && inlineEditedFilesFromTurnSummary.length > 0 && (

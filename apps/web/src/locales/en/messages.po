@@ -12,11 +12,6 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
-#: src/components/chat/LatticeGitChanges.tsx
-msgid "Up to date with {remote}"
-msgstr "Up to date with {remote}"
-
-#. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
 #: src/components/chat/ComposerAutomationSetupBanner.tsx
 #: src/components/chat/FileLineCommentBox.tsx
@@ -6803,6 +6798,11 @@ msgid "Cache state is estimated. It does not measure your plan's remaining usage
 msgstr "Cache state is estimated. It does not measure your plan's remaining usage."
 
 #. js-lingui-explicit-id
+#: src/components/chat/CodexFollowUpChips.tsx
+msgid "Suggested follow-ups"
+msgstr "Suggested follow-ups"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ComposerAutomationSetupBanner.tsx
 msgid "Setting up automation"
 msgstr "Setting up automation"
@@ -8723,6 +8723,11 @@ msgstr "{count, plural, one {Push # commit to {remote}} other {Push # commits to
 #: src/components/chat/LatticeGitChanges.tsx
 msgid "Push {count}"
 msgstr "Push {count}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "Up to date with {remote}"
+msgstr "Up to date with {remote}"
 
 #. js-lingui-explicit-id
 #: src/components/chat/LatticeGitChanges.tsx
