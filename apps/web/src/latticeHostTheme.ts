@@ -24,7 +24,14 @@ export interface LatticeHostPalette {
    * a Lattice that predates it leaves the page on `elevated`.
    */
   panel?: string;
-  /** Menus, popovers, composer, code blocks, user message bubble. */
+  /**
+   * The editor's page. In the light theme the transcript's reading surfaces
+   * (user bubble, code, starter and question cards) take it instead of
+   * `elevated`, which Graphite keeps pure white for menus. Optional: a Lattice
+   * that predates it leaves them on `elevated`.
+   */
+  editor?: string;
+  /** Menus, popovers, the composer; in the dark theme also code and the user bubble. */
   elevated: string;
   foreground: string;
   muted: string;
@@ -105,8 +112,10 @@ export function parseLatticeHostTheme(
     if (typeof color !== "string" || !color.trim()) return null;
     palette[key] = color;
   }
-  const panel = (colors as Record<string, unknown>).panel;
-  if (typeof panel === "string" && panel.trim()) palette.panel = panel;
+  for (const key of ["panel", "editor"] as const) {
+    const color = (colors as Record<string, unknown>)[key];
+    if (typeof color === "string" && color.trim()) palette[key] = color;
+  }
   return {
     type: LATTICE_HOST_THEME,
     version: 1,

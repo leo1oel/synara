@@ -1,6 +1,7 @@
 import { useLingui } from "@lingui/react";
 import type { AsyncUserInput, MessageId, UserInputQuestion } from "@synara/contracts";
 import { useMemo, useRef, useState } from "react";
+import { isSynaraEmbedMode } from "~/embedMode";
 import { CircleQuestionIcon, CheckIcon } from "~/lib/icons";
 import {
   buildPendingUserInputAnswers,
@@ -46,7 +47,10 @@ export function AsyncUserInputCard({
       ]),
     ),
   );
-  const [open, setOpen] = useState(false);
+  // Upstream keeps a question folded into its chip. Lattice's narrow panel shows
+  // one that still waits for an answer open, so it can be answered without a
+  // click first; an answered one folds back into its chip like upstream's.
+  const [open, setOpen] = useState(() => isSynaraEmbedMode() && !input.response);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submission, setSubmission] = useState<{

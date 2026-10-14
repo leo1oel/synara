@@ -1179,6 +1179,12 @@ export function applyEmbedTheme(
         accentSoft: hostColors.accentSoft,
       }
     : graphite;
+  // The transcript's reading surfaces: user bubbles, code, inline code, and
+  // the starter and question cards. In the light theme they sit on the
+  // editor's page rather than the lift, which Graphite keeps pure white for
+  // menus and popovers; the dark lift already reads as the editor's sheet.
+  const readingSurface =
+    config.theme === "dark" ? colors.elevated : (hostColors?.editor ?? colors.settingsSheet);
   const controlHover =
     hostColors?.controlHover ??
     (config.theme === "dark" ? "rgba(255, 255, 255, 0.07)" : "rgba(36, 36, 38, 0.07)");
@@ -1200,8 +1206,9 @@ export function applyEmbedTheme(
     "--app-overlay-surface": colors.elevated,
     "--app-overlay-backing": "transparent",
     "--app-composer-picker-surface": colors.elevated,
-    "--app-chat-code-surface": colors.elevated,
-    "--app-user-message-background": colors.elevated,
+    "--app-chat-code-surface": readingSurface,
+    "--app-user-message-background": readingSurface,
+    "--lattice-reading-surface": readingSurface,
     "--color-background-panel": colors.surface,
     "--color-background-surface": colors.surface,
     "--color-background-surface-under": colors.background,

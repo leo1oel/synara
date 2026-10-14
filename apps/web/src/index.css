@@ -796,17 +796,18 @@ html[data-synara-embed="true"] .lattice-agent-header {
   padding-inline-end: 8px;
 }
 
-/* The empty thread (LatticeEmptyThread). Cards sit on the host's lift (its
-   elevated surface); the four hues are Lattice's file-glyph family (style,
-   tex, image, bib), so an action reads the same colour in both apps. */
+/* The empty thread (LatticeEmptyThread). Cards sit on the transcript's reading
+   surface (the editor's page in the light theme, the lift in the dark); the four
+   hues are Lattice's file-glyph family (style, tex, image, bib), so an action
+   reads the same colour in both apps. */
 html[data-synara-embed="true"] .lattice-empty-thread {
-  --lattice-starter-surface: var(--color-background-elevated-primary-opaque);
+  --lattice-starter-surface: var(--lattice-reading-surface);
   --lattice-starter-surface-hover: color-mix(
     in srgb,
     var(--color-text-foreground) 3.5%,
-    var(--color-background-elevated-primary-opaque)
+    var(--lattice-reading-surface)
   );
-  --lattice-starter-chip-surface: var(--color-background-elevated-primary-opaque);
+  --lattice-starter-chip-surface: var(--lattice-reading-surface);
   --lattice-starter-wash: 12%;
   --lattice-starter-violet: #7a52c4;
   --lattice-starter-blue: #3b5bd6;
