@@ -21,7 +21,7 @@ export function ChatColumnBannerFrame({
   className?: string;
 }) {
   return (
-    <div className={cn("pt-3", CHAT_COLUMN_GUTTER_CLASS_NAME, className)}>
+    <div className={cn("chat-column-banner pt-3", CHAT_COLUMN_GUTTER_CLASS_NAME, className)}>
       <div className={CHAT_COLUMN_FRAME_CLASS_NAME}>{children}</div>
     </div>
   );

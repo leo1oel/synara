@@ -818,6 +818,13 @@ html[data-synara-embed="true"] .lattice-empty-thread {
   --lattice-starter-serif: var(--lattice-type-title-font);
 }
 
+/* A status banner at the top of the thread (the provider-health card) sits in
+   the transcript, not over it: in Lattice it takes the reading surface rather
+   than the pure-white popup fill it shares with menus. */
+html[data-synara-embed="true"] .chat-column-banner .app-popup-surface {
+  background: var(--lattice-reading-surface);
+}
+
 html.dark[data-synara-embed="true"] .lattice-empty-thread {
   --lattice-starter-wash: 18%;
   --lattice-starter-violet: #bba3f2;
