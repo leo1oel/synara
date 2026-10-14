@@ -12,6 +12,11 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "Pi is not set up. Install the Pi CLI (`pi`) or add Pi credentials to {agentDir} to use the Pi provider."
+msgstr "Pi is not set up. Install the Pi CLI (`pi`) or add Pi credentials to {agentDir} to use the Pi provider."
+
+#. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
 #: src/components/chat/ComposerAutomationSetupBanner.tsx
 #: src/components/chat/FileLineCommentBox.tsx

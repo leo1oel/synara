@@ -66,6 +66,15 @@ export function localizeProviderStatusMessage(i18n: I18n, message: string): stri
     default: {
       const signIn = /^Sign in with `([^`]+)` to see usage\.$/u.exec(message);
       if (signIn) return i18n._("Sign in with `{command}` to see usage.", { command: signIn[1]! });
+      const piNotSetUp =
+        /^Pi is not set up\. Install the Pi CLI \(`pi`\) or add Pi credentials to (.+) to use the Pi provider\.$/u.exec(
+          message,
+        );
+      if (piNotSetUp)
+        return i18n._(
+          "Pi is not set up. Install the Pi CLI (`pi`) or add Pi credentials to {agentDir} to use the Pi provider.",
+          { agentDir: piNotSetUp[1]! },
+        );
       const failed = /^Codex usage request failed \((\d+)\)\.$/u.exec(message);
       if (failed) return i18n._("Codex usage request failed ({status}).", { status: failed[1]! });
       return message;
