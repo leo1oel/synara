@@ -1097,9 +1097,48 @@ function embedStorageKey(base: string): string {
   return surface ? `${base}:${surface}` : base;
 }
 
+/**
+ * The handshake this document booted with, held for its whole life. Every
+ * theme pass and every attachment URL reads it, so it must not depend on the
+ * slot above staying reachable: when Lattice's native WebKit frame lost the
+ * slot mid-session, the next `applyThemeState` painted Synara's own white
+ * palette and the next transcript update rebuilt every image URL without its
+ * token, which the cross-site frame (no cookies) cannot load. sessionStorage
+ * stays the copy a reload recovers from. Keyed by window, one per document.
+ */
+interface EmbedHandshake {
+  config: EmbedModeConfig;
+  authToken: string | null;
+  hostTheme: LatticeHostTheme | null;
+}
+
+const embedHandshakes = new WeakMap<object, EmbedHandshake>();
+
+function documentHandshake(): EmbedHandshake | undefined {
+  return typeof window === "undefined" ? undefined : embedHandshakes.get(window);
+}
+
+function rememberHandshake(config: EmbedModeConfig, authToken: string | null): void {
+  embedHandshakes.set(window, {
+    config,
+    authToken,
+    hostTheme: documentHandshake()?.hostTheme ?? readStoredHostTheme(config),
+  });
+}
+
+function readStoredAuthToken(): string | null {
+  try {
+    return sessionStorage.getItem(embedStorageKey(EMBED_AUTH_TOKEN_STORAGE_KEY))?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 export function readEmbeddedHostAuthToken(): string | null {
-  if (typeof window === "undefined" || !readEmbedMode()) return null;
-  return sessionStorage.getItem(embedStorageKey(EMBED_AUTH_TOKEN_STORAGE_KEY))?.trim() || null;
+  if (typeof window === "undefined") return null;
+  const remembered = documentHandshake()?.authToken;
+  if (remembered) return remembered;
+  return readEmbedMode() ? readStoredAuthToken() : null;
 }
 
 export function readEmbeddedHostWsUrl(): string | null {
@@ -1312,6 +1351,13 @@ export function applyEmbedTheme(
  * reloaded for a theme switch and Lattice sends the matching one after ready.
  */
 function readEmbedHostTheme(config: EmbedModeConfig): LatticeHostTheme | null {
+  const remembered = documentHandshake()?.hostTheme;
+  return (
+    (remembered && parseLatticeHostTheme(remembered, config.theme)) ?? readStoredHostTheme(config)
+  );
+}
+
+function readStoredHostTheme(config: EmbedModeConfig): LatticeHostTheme | null {
   try {
     const stored = JSON.parse(
       sessionStorage.getItem(embedStorageKey(EMBED_HOST_THEME_STORAGE_KEY)) ?? "null",
@@ -1324,6 +1370,8 @@ function readEmbedHostTheme(config: EmbedModeConfig): LatticeHostTheme | null {
 
 /** Store a validated `lattice:host-theme` message and repaint this frame with it. */
 export function applyEmbedHostTheme(config: EmbedModeConfig, hostTheme: LatticeHostTheme): void {
+  const handshake = documentHandshake();
+  if (handshake) handshake.hostTheme = hostTheme;
   try {
     sessionStorage.setItem(
       embedStorageKey(EMBED_HOST_THEME_STORAGE_KEY),
@@ -1393,6 +1441,7 @@ export function initializeEmbedMode(): void {
       sessionStorage.setItem(embedStorageKey(EMBED_AUTH_TOKEN_STORAGE_KEY), authToken);
     }
     sessionStorage.setItem(embedStorageKey(EMBED_MODE_STORAGE_KEY), JSON.stringify(config));
+    rememberHandshake(config, authToken ?? readStoredAuthToken());
     applyEmbedTheme(config);
     return;
   }
@@ -1410,16 +1459,20 @@ export function initializeEmbedMode(): void {
     if (config !== existing) {
       sessionStorage.setItem(embedStorageKey(EMBED_MODE_STORAGE_KEY), JSON.stringify(config));
     }
+    rememberHandshake(config, readStoredAuthToken());
     applyEmbedTheme(config);
     return;
   }
 
+  embedHandshakes.delete(window);
   sessionStorage.removeItem(embedStorageKey(EMBED_MODE_STORAGE_KEY));
   sessionStorage.removeItem(embedStorageKey(EMBED_AUTH_TOKEN_STORAGE_KEY));
   sessionStorage.removeItem(embedStorageKey(EMBED_HOST_THEME_STORAGE_KEY));
 }
 
 export function readEmbedMode(): EmbedModeConfig | null {
+  const remembered = documentHandshake();
+  if (remembered) return remembered.config;
   try {
     const parsed = JSON.parse(
       sessionStorage.getItem(embedStorageKey(EMBED_MODE_STORAGE_KEY)) ?? "null",

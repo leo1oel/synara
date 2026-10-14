@@ -270,10 +270,12 @@ describe("Lattice embed mode", () => {
     expect(readEmbeddedHostAuthToken()).toBe("secret-token");
     expect(drawer.frame.name).not.toBe(agent.frame.name);
 
+    // A lost slot never falls back to the pre-surface one; the frame keeps the
+    // token it booted with.
     agent.values.delete("synara.poc.embed-auth-token:chrome");
     agent.values.set("synara.poc.embed-auth-token", "stale-token");
-    expect(readEmbeddedHostAuthToken()).toBeNull();
-    expect(readEmbeddedHostWsUrl()).toBeNull();
+    expect(readEmbeddedHostAuthToken()).toBe("secret-token");
+    expect(readEmbeddedHostWsUrl()).toBe("ws://127.0.0.1:4567/?token=secret-token");
   });
 
   it("clears embed config when a top-level window has no handshake query", () => {
