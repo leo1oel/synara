@@ -93,7 +93,7 @@ export const makeLatticePresentationTools = (options: {
       definition: {
         name: "preview_presentation_page",
         description:
-          "Render one page of an Open Slide deck in the active Lattice project, as the files on disk now stand, and return it as a 1920 × 1080 image without editor chrome. Use it after creating or editing pages to check layout, overflow, wraps, colors, and images. It does not move the user's current page or selection.",
+          "Render one page of an Open Slide deck in the active Lattice project, as the files on disk now stand, and return it as a 1920 × 1080 image without editor chrome. Run it after creating or editing a deck to check layout, overflow, wraps, colors, and images; a `presentation_build_failed` error lists the deck's build errors with file:line:column - fix them and preview again before handing the deck over. It does not move the user's current page or selection.",
         inputSchema: {
           type: "object",
           properties: {
