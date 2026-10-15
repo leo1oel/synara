@@ -195,6 +195,8 @@ import {
 } from "./stats";
 import {
   ProviderListCommandsInput,
+  ProviderListMcpServersInput,
+  ProviderMcpServerActionInput,
   ProviderGetComposerCapabilitiesInput,
   ProviderListPluginsInput,
   ProviderListModelsInput,
@@ -360,6 +362,8 @@ export const WS_METHODS = {
   providerGetComposerCapabilities: "provider.getComposerCapabilities",
   providerCompactThread: "provider.compactThread",
   providerListCommands: "provider.listCommands",
+  providerListMcpServers: "provider.listMcpServers",
+  providerRunMcpServerAction: "provider.runMcpServerAction",
   providerListSkills: "provider.listSkills",
   providerListSkillsCatalog: "provider.listSkillsCatalog",
   providerImportSkill: "provider.importSkill",
@@ -644,6 +648,8 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.providerGetComposerCapabilities, ProviderGetComposerCapabilitiesInput),
   tagRequestBody(WS_METHODS.providerCompactThread, ProviderCompactThreadInput),
   tagRequestBody(WS_METHODS.providerListCommands, ProviderListCommandsInput),
+  tagRequestBody(WS_METHODS.providerListMcpServers, ProviderListMcpServersInput),
+  tagRequestBody(WS_METHODS.providerRunMcpServerAction, ProviderMcpServerActionInput),
   tagRequestBody(WS_METHODS.providerListSkills, ProviderListSkillsInput),
   tagRequestBody(WS_METHODS.providerListSkillsCatalog, ProviderSkillsCatalogInput),
   tagRequestBody(WS_METHODS.providerImportSkill, ProviderImportSkillInput),

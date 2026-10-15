@@ -25,6 +25,7 @@ export const BUILT_IN_COMPOSER_SLASH_COMMANDS = [
   "rename",
   "feedback",
   "automation",
+  "mcp",
 ] as const;
 
 export type BuiltInComposerSlashCommand = (typeof BUILT_IN_COMPOSER_SLASH_COMMANDS)[number];

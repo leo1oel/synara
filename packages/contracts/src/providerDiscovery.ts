@@ -236,6 +236,83 @@ export const ProviderListCommandsResult = Schema.Struct({
 });
 export type ProviderListCommandsResult = typeof ProviderListCommandsResult.Type;
 
+// The `/mcp` view: the provider runtime's own MCP servers for a thread or
+// workspace, as the provider reports them (not re-parsed from config files).
+export const ProviderMcpServerStatus = Schema.Literals([
+  "connected",
+  "failed",
+  "needs-auth",
+  "pending",
+  "disabled",
+]);
+export type ProviderMcpServerStatus = typeof ProviderMcpServerStatus.Type;
+
+export const ProviderMcpServerTransport = Schema.Literals(["stdio", "http", "sse", "other"]);
+export type ProviderMcpServerTransport = typeof ProviderMcpServerTransport.Type;
+
+export const ProviderMcpServerAction = Schema.Literals([
+  "reconnect",
+  "enable",
+  "disable",
+  "authenticate",
+]);
+export type ProviderMcpServerAction = typeof ProviderMcpServerAction.Type;
+
+export const ProviderMcpServerDescriptor = Schema.Struct({
+  name: TrimmedNonEmptyString,
+  status: ProviderMcpServerStatus,
+  transport: ProviderMcpServerTransport,
+  // Null when the runtime has no tool list for the server (not connected).
+  toolCount: Schema.NullOr(Schema.Number),
+  error: Schema.optional(TrimmedNonEmptyString),
+  // Where the server is configured (user, project, local, plugin, ...), when known.
+  scope: Schema.optional(TrimmedNonEmptyString),
+  // The HTTP origin, or the stdio command name. Never carries credentials or arguments.
+  endpoint: Schema.optional(TrimmedNonEmptyString),
+  actions: Schema.Array(ProviderMcpServerAction),
+});
+export type ProviderMcpServerDescriptor = typeof ProviderMcpServerDescriptor.Type;
+
+const ProviderMcpTargetFields = {
+  provider: ProviderDiscoveryKind,
+  instanceId: Schema.optional(ProviderInstanceId),
+  cwd: TrimmedNonEmptyString,
+  threadId: Schema.optional(TrimmedNonEmptyString),
+};
+
+export const ProviderListMcpServersInput = Schema.Struct({
+  ...ProviderMcpTargetFields,
+  // Only this server: a sign-in watch need not reconnect every other server.
+  serverName: Schema.optional(TrimmedNonEmptyString),
+  // Re-read the provider's MCP config. Without a live session the runtime that
+  // answers keeps the config it started with, so a server added in Terminal
+  // appears only after a reload.
+  forceReload: Schema.optional(Schema.Boolean),
+});
+export type ProviderListMcpServersInput = typeof ProviderListMcpServersInput.Type;
+
+export const ProviderListMcpServersResult = Schema.Struct({
+  servers: Schema.Array(ProviderMcpServerDescriptor),
+  // "session": the thread's live runtime answered; "workspace": a runtime started
+  // for this folder answered, because the thread has none running.
+  source: Schema.Literals(["session", "workspace"]),
+});
+export type ProviderListMcpServersResult = typeof ProviderListMcpServersResult.Type;
+
+export const ProviderMcpServerActionInput = Schema.Struct({
+  ...ProviderMcpTargetFields,
+  serverName: TrimmedNonEmptyString,
+  action: ProviderMcpServerAction,
+});
+export type ProviderMcpServerActionInput = typeof ProviderMcpServerActionInput.Type;
+
+export const ProviderMcpServerActionResult = Schema.Struct({
+  // Sign-in: the provider's authorization URL, to open in the user's browser.
+  // The provider itself receives the redirect, so the app only needs to wait.
+  authUrl: Schema.optional(TrimmedNonEmptyString),
+});
+export type ProviderMcpServerActionResult = typeof ProviderMcpServerActionResult.Type;
+
 // Plugin discovery mirrors Codex app-server's marketplace + plugin summary surface.
 export const ProviderPluginMarketplaceInterface = Schema.Struct({
   displayName: Schema.optional(TrimmedNonEmptyString),
