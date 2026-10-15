@@ -12,6 +12,91 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Do anything in Lattice"
+msgstr "Do anything in Lattice"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Do anything in Synara"
+msgstr "Do anything in Synara"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerBlockedHandoffNotice.tsx
+msgid "{source} still has background tasks running in this thread, so it can't switch to {target} yet. Stop them to switch now, or wait for them to finish and send again."
+msgstr "{source} still has background tasks running in this thread, so it can't switch to {target} yet. Stop them to switch now, or wait for them to finish and send again."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerBlockedHandoffNotice.tsx
+msgid "Stop tasks and switch"
+msgstr "Stop tasks and switch"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Connector"
+msgstr "Connector"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Connectors"
+msgstr "Connectors"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLiveChangesHeader.tsx
+msgid "{files} · Review changes"
+msgstr "{files} · Review changes"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "Visual unavailable."
+msgstr "Visual unavailable."
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "Loading {title}"
+msgstr "Loading {title}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "This visual needs a newer {app}."
+msgstr "This visual needs a newer {app}."
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "pending"
+msgstr "pending"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "Recommended"
+msgstr "Recommended"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "Views"
+msgstr "Views"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualFrame.tsx
+msgid "HTML visuals are not available in Lattice."
+msgstr "HTML visuals are not available in Lattice."
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualFrame.tsx
+msgid "HTML visuals are available in Synara desktop. Use native components in the browser."
+msgstr "HTML visuals are available in Synara desktop. Use native components in the browser."
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualTable.tsx
+msgid "Show fewer rows"
+msgstr "Show fewer rows"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualTable.tsx
+msgid "Show all {count} rows"
+msgstr "Show all {count} rows"
+
+#. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
 #: src/components/chat/ComposerAutomationSetupBanner.tsx
 #: src/components/chat/FileLineCommentBox.tsx
@@ -110,6 +195,7 @@ msgid "Project binding failed: {error}"
 msgstr "Project binding failed: {error}"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerLiveChangesHeader.tsx
 #: src/components/chat/GitPanel.tsx
 #: src/components/pullRequest/PullRequestDetailPanel.tsx
 #: src/routes/_chat.source-control.tsx
@@ -1794,6 +1880,7 @@ msgstr "Checkout Pull Request"
 
 #. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/chat/InlineVisualBlocks.tsx
 msgid "current"
 msgstr "current"
 
@@ -2382,11 +2469,6 @@ msgstr "Ask about this issue"
 #: src/components/pullRequest/GitHubItemPageLayout.tsx
 msgid "Ask about this pull request"
 msgstr "Ask about this pull request"
-
-#. js-lingui-explicit-id
-#: src/components/ChatView.tsx
-msgid "Ask anything, @tag files/folders, or use / to show available commands"
-msgstr "Ask anything, @tag files/folders, or use / to show available commands"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ChatEmptyStateHero.tsx
@@ -5654,6 +5736,7 @@ msgid "Install instructions"
 msgstr "Install instructions"
 
 #. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
 #: src/components/chat/WorkerMonitorNoticePill.tsx
 #: src/components/pullRequest/PullRequestsUnavailableState.tsx
 msgid "Retry"
@@ -6449,16 +6532,6 @@ msgid "Open tasks sidebar"
 msgstr "Open tasks sidebar"
 
 #. js-lingui-explicit-id
-#: src/components/chat/ActiveTaskListCard.tsx
-msgid "Expand task banner"
-msgstr "Expand task banner"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ActiveTaskListCard.tsx
-msgid "Collapse task banner"
-msgstr "Collapse task banner"
-
-#. js-lingui-explicit-id
 #: src/components/chat/AgentActivityDetailView.tsx
 msgid "Prompt"
 msgstr "Prompt"
@@ -6847,6 +6920,12 @@ msgstr "Setting up automation"
 #: src/components/chat/ComposerAutomationSetupBanner.tsx
 msgid "Cancel automation setup"
 msgstr "Cancel automation setup"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerBlockedHandoffNotice.tsx
+#: src/components/chat/ComposerExpiredUserInputNotice.tsx
+msgid "Dismiss"
+msgstr "Dismiss"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerBranchMismatchBanner.tsx
@@ -7261,11 +7340,6 @@ msgid "Restore answers"
 msgstr "Restore answers"
 
 #. js-lingui-explicit-id
-#: src/components/chat/ComposerExpiredUserInputNotice.tsx
-msgid "Dismiss"
-msgstr "Dismiss"
-
-#. js-lingui-explicit-id
 #: src/components/chat/ComposerExtrasMenu.tsx
 #: src/components/chat/ComposerExtrasTrigger.tsx
 msgid "Composer extras"
@@ -7412,16 +7486,6 @@ msgstr "Pause goal"
 #: src/components/chat/ComposerGoalHeader.tsx
 msgid "Delete goal"
 msgstr "Delete goal"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerGoalHeader.tsx
-msgid "Collapse goal"
-msgstr "Collapse goal"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerGoalHeader.tsx
-msgid "Expand goal"
-msgstr "Expand goal"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerImageAttachmentChip.tsx
@@ -8614,6 +8678,18 @@ msgstr "Create repository"
 #: src/components/chat/GitRepositorySetup.tsx
 msgid "Connect repository"
 msgstr "Connect repository"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualCharts.tsx
+#: src/components/chat/ToolCallDetailsDialog.tsx
+msgid "Before"
+msgstr "Before"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualCharts.tsx
+#: src/components/chat/ToolCallDetailsDialog.tsx
+msgid "After"
+msgstr "After"
 
 #. js-lingui-explicit-id
 #: src/components/chat/LatticeEmptyThread.logic.ts
@@ -10108,16 +10184,6 @@ msgstr "Edits"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ToolCallDetailsDialog.tsx
-msgid "Before"
-msgstr "Before"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ToolCallDetailsDialog.tsx
-msgid "After"
-msgstr "After"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ToolCallDetailsDialog.tsx
 msgid "Written Content"
 msgstr "Written Content"
 
@@ -10708,6 +10774,10 @@ msgstr "Computer use"
 msgid "Config"
 msgstr "Config"
 
+#: src/settingsNavigation.ts
+msgid "Connectors"
+msgstr "Connectors"
+
 #: src/components/chat/ComposerPendingApprovalPanel.tsx
 msgid "Continue routine desktop actions until this response ends. Stop cancels access. Clipboard reads still ask separately."
 msgstr "Continue routine desktop actions until this response ends. Stop cancels access. Clipboard reads still ask separately."
@@ -11111,6 +11181,10 @@ msgstr "Show on screen for this task"
 #: src/components/chat/ComposerPendingApprovalPanel.tsx
 msgid "Show this on your screen?"
 msgstr "Show this on your screen?"
+
+#: src/settingsNavigation.ts
+msgid "Sign in to Supabase, Linear, Notion, and other services your agents can use."
+msgstr "Sign in to Supabase, Linear, Notion, and other services your agents can use."
 
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Source"

@@ -12,6 +12,91 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Do anything in Lattice"
+msgstr "在 Lattice 中做任何事"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Do anything in Synara"
+msgstr "在 Synara 中做任何事"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerBlockedHandoffNotice.tsx
+msgid "{source} still has background tasks running in this thread, so it can't switch to {target} yet. Stop them to switch now, or wait for them to finish and send again."
+msgstr "{source} 在这个对话中仍有后台任务在运行，暂时无法切换到 {target}。停止这些任务即可立即切换，或等它们完成后再发送。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerBlockedHandoffNotice.tsx
+msgid "Stop tasks and switch"
+msgstr "停止任务并切换"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Connector"
+msgstr "连接器"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Connectors"
+msgstr "连接器"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLiveChangesHeader.tsx
+msgid "{files} · Review changes"
+msgstr "{files} · 查看更改"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "Visual unavailable."
+msgstr "可视化内容不可用。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "Loading {title}"
+msgstr "正在加载 {title}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "This visual needs a newer {app}."
+msgstr "这个可视化内容需要更新版本的 {app}。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "pending"
+msgstr "待处理"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "Recommended"
+msgstr "推荐"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "Views"
+msgstr "视图"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualFrame.tsx
+msgid "HTML visuals are not available in Lattice."
+msgstr "Lattice 不支持 HTML 可视化内容。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualFrame.tsx
+msgid "HTML visuals are available in Synara desktop. Use native components in the browser."
+msgstr "HTML 可视化内容仅在 Synara 桌面版中可用。在浏览器中请使用原生组件。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualTable.tsx
+msgid "Show fewer rows"
+msgstr "收起"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualTable.tsx
+msgid "Show all {count} rows"
+msgstr "显示全部 {count} 行"
+
+#. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
 #: src/components/chat/ComposerAutomationSetupBanner.tsx
 #: src/components/chat/FileLineCommentBox.tsx
@@ -110,6 +195,7 @@ msgid "Project binding failed: {error}"
 msgstr "项目绑定失败：{error}"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerLiveChangesHeader.tsx
 #: src/components/chat/GitPanel.tsx
 #: src/components/pullRequest/PullRequestDetailPanel.tsx
 #: src/routes/_chat.source-control.tsx
@@ -1794,6 +1880,7 @@ msgstr "检出拉取请求"
 
 #. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
+#: src/components/chat/InlineVisualBlocks.tsx
 msgid "current"
 msgstr "当前"
 
@@ -2382,11 +2469,6 @@ msgstr "就这个议题提问"
 #: src/components/pullRequest/GitHubItemPageLayout.tsx
 msgid "Ask about this pull request"
 msgstr "就这个 PR 提问"
-
-#. js-lingui-explicit-id
-#: src/components/ChatView.tsx
-msgid "Ask anything, @tag files/folders, or use / to show available commands"
-msgstr "随便问，用 @ 引用文件或文件夹，输入 / 查看可用命令"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ChatEmptyStateHero.tsx
@@ -5654,6 +5736,7 @@ msgid "Install instructions"
 msgstr "安装说明"
 
 #. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
 #: src/components/chat/WorkerMonitorNoticePill.tsx
 #: src/components/pullRequest/PullRequestsUnavailableState.tsx
 msgid "Retry"
@@ -6449,16 +6532,6 @@ msgid "Open tasks sidebar"
 msgstr "打开任务侧栏"
 
 #. js-lingui-explicit-id
-#: src/components/chat/ActiveTaskListCard.tsx
-msgid "Expand task banner"
-msgstr "展开任务栏"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ActiveTaskListCard.tsx
-msgid "Collapse task banner"
-msgstr "收起任务栏"
-
-#. js-lingui-explicit-id
 #: src/components/chat/AgentActivityDetailView.tsx
 msgid "Prompt"
 msgstr "提示"
@@ -6847,6 +6920,12 @@ msgstr "正在设置自动化"
 #: src/components/chat/ComposerAutomationSetupBanner.tsx
 msgid "Cancel automation setup"
 msgstr "取消设置自动化"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerBlockedHandoffNotice.tsx
+#: src/components/chat/ComposerExpiredUserInputNotice.tsx
+msgid "Dismiss"
+msgstr "关闭"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerBranchMismatchBanner.tsx
@@ -7261,11 +7340,6 @@ msgid "Restore answers"
 msgstr "恢复回答"
 
 #. js-lingui-explicit-id
-#: src/components/chat/ComposerExpiredUserInputNotice.tsx
-msgid "Dismiss"
-msgstr "关闭"
-
-#. js-lingui-explicit-id
 #: src/components/chat/ComposerExtrasMenu.tsx
 #: src/components/chat/ComposerExtrasTrigger.tsx
 msgid "Composer extras"
@@ -7412,16 +7486,6 @@ msgstr "暂停目标"
 #: src/components/chat/ComposerGoalHeader.tsx
 msgid "Delete goal"
 msgstr "删除目标"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerGoalHeader.tsx
-msgid "Collapse goal"
-msgstr "收起目标"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerGoalHeader.tsx
-msgid "Expand goal"
-msgstr "展开目标"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerImageAttachmentChip.tsx
@@ -8614,6 +8678,18 @@ msgstr "创建仓库"
 #: src/components/chat/GitRepositorySetup.tsx
 msgid "Connect repository"
 msgstr "连接仓库"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualCharts.tsx
+#: src/components/chat/ToolCallDetailsDialog.tsx
+msgid "Before"
+msgstr "修改前"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualCharts.tsx
+#: src/components/chat/ToolCallDetailsDialog.tsx
+msgid "After"
+msgstr "修改后"
 
 #. js-lingui-explicit-id
 #: src/components/chat/LatticeEmptyThread.logic.ts
@@ -10108,16 +10184,6 @@ msgstr "编辑"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ToolCallDetailsDialog.tsx
-msgid "Before"
-msgstr "修改前"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ToolCallDetailsDialog.tsx
-msgid "After"
-msgstr "修改后"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ToolCallDetailsDialog.tsx
 msgid "Written Content"
 msgstr "写入的内容"
 
@@ -10708,6 +10774,10 @@ msgstr "电脑控制"
 msgid "Config"
 msgstr "配置"
 
+#: src/settingsNavigation.ts
+msgid "Connectors"
+msgstr "连接器"
+
 #: src/components/chat/ComposerPendingApprovalPanel.tsx
 msgid "Continue routine desktop actions until this response ends. Stop cancels access. Clipboard reads still ask separately."
 msgstr "在这次回复结束前继续执行常规的电脑操作。点停止会取消权限。读取剪贴板仍会单独询问。"
@@ -11111,6 +11181,10 @@ msgstr "这次任务在屏幕上显示"
 #: src/components/chat/ComposerPendingApprovalPanel.tsx
 msgid "Show this on your screen?"
 msgstr "要在你的屏幕上显示吗？"
+
+#: src/settingsNavigation.ts
+msgid "Sign in to Supabase, Linear, Notion, and other services your agents can use."
+msgstr "登录 Supabase、Linear、Notion 等智能体可以使用的服务。"
 
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Source"

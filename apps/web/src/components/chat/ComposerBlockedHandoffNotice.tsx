@@ -7,6 +7,8 @@
 import { PROVIDER_DISPLAY_NAMES } from "@synara/contracts";
 import { useState } from "react";
 
+import { i18n } from "~/i18n";
+
 import type { BlockedProviderHandoff } from "~/lib/threadHandoff";
 import { ComposerActionNotice } from "./ComposerActionNotice";
 
@@ -31,10 +33,17 @@ export function ComposerBlockedHandoffNotice({
   return (
     <ComposerActionNotice
       data-testid="blocked-handoff-notice"
-      message={`${sourceName} still has background tasks running in this thread, so it can't switch to ${targetName} yet. Stop them to switch now, or wait for them to finish and send again.`}
+      message={i18n._(
+        "{source} still has background tasks running in this thread, so it can't switch to {target} yet. Stop them to switch now, or wait for them to finish and send again.",
+        { source: sourceName, target: targetName },
+      )}
       actions={[
-        { label: "Stop tasks and switch", onClick: stopTasksAndSwitch, disabled: switching },
-        { label: "Dismiss", onClick: onDismiss, disabled: switching },
+        {
+          label: i18n._("Stop tasks and switch"),
+          onClick: stopTasksAndSwitch,
+          disabled: switching,
+        },
+        { label: i18n._("Dismiss"), onClick: onDismiss, disabled: switching },
       ]}
     />
   );

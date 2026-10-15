@@ -9,6 +9,7 @@ import type { InlineVisualBlock } from "@synara/contracts";
 import { useLayoutEffect, useRef, useState, type PointerEvent } from "react";
 
 import { cn } from "~/lib/utils";
+import { i18n } from "~/i18n";
 
 import { formatVisualNumber, niceAxisTicks } from "./inlineVisualBlocks.logic";
 import {
@@ -46,11 +47,11 @@ export function InlineVisualBarChart({ block }: { readonly block: BarChartBlock 
           <span className="flex items-center gap-3 text-chat-sm text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <span aria-hidden className="h-1.5 w-3 rounded-full bg-[var(--chart-muted)]" />
-              {block.baselineLabel ?? "Before"}
+              {block.baselineLabel ?? i18n._("Before")}
             </span>
             <span className="flex items-center gap-1.5">
               <span aria-hidden className="h-2 w-3 rounded-full bg-[var(--chart-accent)]" />
-              {block.valueLabel ?? "After"}
+              {block.valueLabel ?? i18n._("After")}
             </span>
           </span>
         ) : null

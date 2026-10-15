@@ -5757,8 +5757,9 @@ diffs-container {
 
 /* Lattice owns the embedded surface theme. Use a dedicated bridge token here
    so Synara's persisted standalone theme cannot repaint the composer after the
-   host has already selected dark mode. */
-html[data-synara-embed="true"] .chat-composer-surface {
+   host has already selected dark mode. The composer's /, @ and + menus wear the
+   same surface, opaque like every other embedded panel. */
+html[data-synara-embed="true"] :is(.chat-composer-surface, .chat-composer-menu-surface) {
   background: var(--lattice-agent-composer-surface, var(--composer-surface));
   color: var(--color-text-foreground);
 }

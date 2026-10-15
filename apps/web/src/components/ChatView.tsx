@@ -4626,11 +4626,11 @@ export default function ChatView({
       if (error instanceof ProviderHandoffBackgroundTasksError) return;
       toastManager.add({
         type: "error",
-        title: "Could not hand off this thread",
+        title: i18n._("Could not hand off this thread"),
         description:
           error instanceof Error
             ? error.message
-            : "An error occurred while handing off the thread.",
+            : i18n._("An error occurred while handing off the thread."),
       });
     }
   });
@@ -7403,7 +7403,13 @@ export default function ChatView({
                         data-chat-composer-status-row=""
                         className="@container flex min-h-9 w-full min-w-0 flex-wrap items-center gap-1 pb-1.5 pt-1"
                       >
-                        <RuntimeUsageControls {...runtimeUsageControlsProps} className="shrink-0" />
+                        {/* Lattice sets the permission mode from its own Agent header. */}
+                        {isEmbed ? null : (
+                          <RuntimeUsageControls
+                            {...runtimeUsageControlsProps}
+                            className="shrink-0"
+                          />
+                        )}
                         {showTrailingBranchToolbar ? (
                           <BranchToolbar
                             {...branchToolbarProps}

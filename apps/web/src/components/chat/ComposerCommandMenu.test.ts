@@ -113,7 +113,8 @@ describe("groupCommandItems", () => {
 });
 
 describe("groupCommandItems connectors", () => {
-  it("puts connectors in their own first group", () => {
+  // Lattice keeps project files first; connectors lead the remaining groups.
+  it("puts connectors in their own group after files", () => {
     const items: ComposerCommandItem[] = [
       {
         id: "path:file:/workspace/AGENTS.md",
@@ -139,8 +140,8 @@ describe("groupCommandItems connectors", () => {
         group.items.map((item) => item.id),
       ]),
     ).toEqual([
+      ["Files", ["path:file:/workspace/AGENTS.md"]],
       ["Connectors", ["connector:mcp_conn_1"]],
-      ["Local", ["path:file:/workspace/AGENTS.md"]],
     ]);
   });
 });

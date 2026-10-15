@@ -17,6 +17,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useRef, type CSSProperties, type ReactNode } from "react";
 
 import { useTheme } from "~/hooks/useTheme";
+import { i18n } from "~/i18n";
+import { isSynaraEmbedMode } from "~/embedMode";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -80,7 +82,7 @@ export function InlineVisualBlocks({
     return source.isError ? (
       <BlocksNotice
         title={visual.title}
-        message="Visual unavailable."
+        message={i18n._("Visual unavailable.")}
         {...((source.error as { retryable?: boolean } | null)?.retryable === false
           ? {}
           : { onRetry: () => void source.refetch() })}
@@ -88,14 +90,21 @@ export function InlineVisualBlocks({
     ) : (
       <div
         role="status"
-        aria-label={`Loading ${visual.title}`}
+        aria-label={i18n._("Loading {title}", { title: visual.title })}
         className="animate-pulse rounded-2xl bg-[color:color-mix(in_srgb,var(--foreground)_4%,transparent)]"
         style={{ height: visual.height || INLINE_VISUAL_DEFAULT_HEIGHT }}
       />
     );
   }
   if (spec === null) {
-    return <BlocksNotice title={visual.title} message="This visual needs a newer Synara." />;
+    return (
+      <BlocksNotice
+        title={visual.title}
+        message={i18n._("This visual needs a newer {app}.", {
+          app: isSynaraEmbedMode() ? "Lattice" : "Synara",
+        })}
+      />
+    );
   }
   return (
     <figure
@@ -133,7 +142,7 @@ function BlocksNotice(props: {
       <span className="min-w-0 flex-1">{props.message}</span>
       {props.onRetry ? (
         <Button size="xs" variant="outline" onClick={props.onRetry}>
-          Retry
+          {i18n._("Retry")}
         </Button>
       ) : null}
     </div>
@@ -386,7 +395,7 @@ function StepMarker({ status }: { readonly status: BlockOf<"list">["items"][numb
       return (
         <span
           className={cn(base, "border-2 border-[var(--chart-accent)] bg-[var(--background)]")}
-          aria-label="current"
+          aria-label={i18n._("current")}
         >
           <span className="size-2 rounded-full bg-[var(--chart-accent)]" />
         </span>
@@ -395,7 +404,7 @@ function StepMarker({ status }: { readonly status: BlockOf<"list">["items"][numb
       return (
         <span
           className={cn(base, "border border-[var(--chart-muted)] bg-[var(--background)]")}
-          aria-label="pending"
+          aria-label={i18n._("pending")}
         />
       );
   }
@@ -443,7 +452,7 @@ function CompareBlock({ block }: { readonly block: BlockOf<"compare"> }) {
               <span className="truncate font-medium">{option.title}</span>
               {option.highlight ? (
                 <span className="shrink-0 rounded-full bg-[color:color-mix(in_srgb,var(--chart-accent)_14%,transparent)] px-2 py-px text-chat-sm font-medium text-[color:color-mix(in_srgb,var(--chart-accent)_80%,var(--foreground))]">
-                  Recommended
+                  {i18n._("Recommended")}
                 </span>
               ) : null}
             </div>
@@ -521,7 +530,7 @@ function TabsBlock({
         value={active}
         options={block.tabs.map((entry, index) => ({ value: String(index), label: entry.label }))}
         onValueChange={setActive}
-        ariaLabel="Views"
+        ariaLabel={i18n._("Views")}
         className="-mx-1 w-full max-w-md"
       />
       <div className="flex min-w-0 flex-col gap-4">

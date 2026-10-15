@@ -16,6 +16,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { isElectron } from "~/env";
+import { isSynaraEmbedMode } from "~/embedMode";
+import { i18n } from "~/i18n";
 import { useInlineVisualTheme } from "~/hooks/useInlineVisualTheme";
 import { DISCLOSURE_FADE_MOTION_CLASS } from "~/lib/disclosureMotion";
 import { RotateCcwIcon } from "~/lib/icons";
@@ -45,7 +47,13 @@ export function InlineVisualFrame(props: {
   ) : (
     <InlineVisualNotice
       title={props.visual.title}
-      message="HTML visuals are available in Synara desktop. Use native components in the browser."
+      message={
+        isSynaraEmbedMode()
+          ? i18n._("HTML visuals are not available in Lattice.")
+          : i18n._(
+              "HTML visuals are available in Synara desktop. Use native components in the browser.",
+            )
+      }
     />
   );
 }
