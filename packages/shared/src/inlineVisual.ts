@@ -4,7 +4,8 @@
 // Layer: Shared runtime (consumed by the web transcript; contracts own the payload schema)
 // Exports: INLINE_VISUAL_CONTENT_SECURITY_POLICY, buildInlineVisualDocument,
 //          readInlineVisualFrameMessage, inlineVisualThemeMessage, inlineVisualLinkResult,
-//          clampInlineVisualHeight, INLINE_VISUAL_SERIES_COLORS, readInlineVisualEmbedIds
+//          clampInlineVisualHeight, INLINE_VISUAL_SERIES_COLORS, readInlineVisualEmbedIds,
+//          isInlineVisualEmbedFence
 
 import {
   INLINE_VISUAL_EMBED_FENCE,
@@ -234,16 +235,34 @@ export function readInlineVisualEmbedId(body: string): string | null {
   return /^vis_[0-9a-f]{32}$/.test(id) ? id : null;
 }
 
+/**
+ * The Lattice host profile rewrites every model-visible "synara", so an agent there
+ * receives and writes this fence name instead of `INLINE_VISUAL_EMBED_FENCE`.
+ */
+const LATTICE_INLINE_VISUAL_EMBED_FENCE = "lattice-visual";
+
+/** Whether a code fence's info string places an inline visual. */
+export function isInlineVisualEmbedFence(info: string | null | undefined): boolean {
+  return info === INLINE_VISUAL_EMBED_FENCE || info === LATTICE_INLINE_VISUAL_EMBED_FENCE;
+}
+
 const EMBED_PATTERN = new RegExp(
-  "^ {0,3}(`{3,}|~{3,})[ \\t]*" +
+  "^ {0,3}(`{3,}|~{3,})[ \\t]*(?:" +
     INLINE_VISUAL_EMBED_FENCE +
-    "[ \\t]*\\r?\\n([\\s\\S]*?)^ {0,3}(`{3,}|~{3,})[ \\t]*$",
+    "|" +
+    LATTICE_INLINE_VISUAL_EMBED_FENCE +
+    ")[ \\t]*\\r?\\n([\\s\\S]*?)^ {0,3}(`{3,}|~{3,})[ \\t]*$",
   "gm",
 );
 
 /** Complete, exact visual fences; malformed fences remain ordinary code. */
 export function readInlineVisualEmbedIds(text: string): string[] {
-  if (!text.includes(INLINE_VISUAL_EMBED_FENCE)) return [];
+  if (
+    !text.includes(INLINE_VISUAL_EMBED_FENCE) &&
+    !text.includes(LATTICE_INLINE_VISUAL_EMBED_FENCE)
+  ) {
+    return [];
+  }
   return Array.from(text.matchAll(EMBED_PATTERN)).flatMap((match) => {
     if (!match[3]!.startsWith(match[1]!)) return [];
     const id = readInlineVisualEmbedId(match[2]!);

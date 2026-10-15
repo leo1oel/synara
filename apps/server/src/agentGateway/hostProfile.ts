@@ -72,6 +72,7 @@ const LATTICE_TOOL_ALIASES = new Map<string, string>([
   ["synara_update_automation", "update_automation"],
   ["synara_cancel_automation", "cancel_automation"],
   ["synara_report_automation_result", "report_automation_result"],
+  ["synara_show_visual", "show_visual"],
 ]);
 
 const LATTICE_NATIVE_TOOL_NAMES = new Set([
@@ -94,6 +95,7 @@ const LATTICE_NATIVE_TOOL_NAMES = new Set([
   "preview_presentation_page",
   "device_list",
   "device_boot",
+  "device_configure",
   "device_install",
   "device_launch",
   "device_open_url",
@@ -104,6 +106,8 @@ const LATTICE_NATIVE_TOOL_NAMES = new Set([
   "device_screenshot",
   "device_describe_ui",
   "device_scroll_to_element",
+  "device_wait",
+  "device_logs",
 ]);
 
 export function replaceModelVisibleHostBranding(value: string): string {

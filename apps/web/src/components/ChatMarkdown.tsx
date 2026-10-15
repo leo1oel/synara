@@ -14,11 +14,7 @@ import {
   TriangleAlertIcon,
   type LucideIcon,
 } from "~/lib/icons";
-import {
-  INLINE_VISUAL_EMBED_FENCE,
-  ThreadId,
-  type ProviderMentionReference,
-} from "@synara/contracts";
+import { ThreadId, type ProviderMentionReference } from "@synara/contracts";
 import { isLocalAbsolutePath } from "@synara/shared/path";
 import "katex/dist/katex.min.css";
 import { remarkWikiLinks } from "../lib/remarkWikiLinks";
@@ -88,7 +84,7 @@ import {
 } from "./composerInlineChip";
 import { LinkChipIcon } from "./LinkChipIcon";
 import { InlineAgentChip } from "./chat/InlineAgentChip";
-import { readInlineVisualEmbedId } from "@synara/shared/inlineVisual";
+import { isInlineVisualEmbedFence, readInlineVisualEmbedId } from "@synara/shared/inlineVisual";
 import { InlineVisualEmbedContext } from "./chat/inlineVisualEmbedContext";
 import { InlineLinkChip } from "./InlineLinkChip";
 import { InlineMentionChip } from "./chat/InlineMentionChip";
@@ -1651,7 +1647,7 @@ const MARKDOWN_COMPONENTS: Components = {
     const rawFenceInfo = extractRawFenceInfo(codeBlock.className);
     // An agent places a visual in its reply with a fence naming the visual id.
     // Only this transcript's own visuals render; anything else stays code.
-    if (rawFenceInfo === INLINE_VISUAL_EMBED_FENCE && renderInlineVisual && !isUserVariant) {
+    if (isInlineVisualEmbedFence(rawFenceInfo) && renderInlineVisual && !isUserVariant) {
       const visualId = readInlineVisualEmbedId(codeBlock.code);
       const visual = visualId === null ? null : renderInlineVisual(visualId);
       if (visual !== null) return <div className="my-4 first:mt-0 last:mb-0">{visual}</div>;
