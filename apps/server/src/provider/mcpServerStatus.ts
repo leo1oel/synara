@@ -44,10 +44,14 @@ function serverActions(input: {
   readonly status: ProviderMcpServerStatus;
   readonly transport: ProviderMcpServerTransport;
   readonly canToggle: boolean;
+  readonly canSignOut: boolean;
 }): ProviderMcpServerAction[] {
   const actions: ProviderMcpServerAction[] = [];
   if (input.status === "needs-auth" && input.transport !== "stdio") {
     actions.push("authenticate");
+  }
+  if (input.status === "connected" && input.canSignOut) {
+    actions.push("sign-out");
   }
   if (input.status !== "disabled") {
     actions.push("reconnect");
@@ -81,7 +85,12 @@ export interface ClaudeMcpServerStatusLike {
   readonly error?: string | undefined;
   readonly scope?: string | undefined;
   readonly source?: string | undefined;
-  readonly config?: { readonly type?: string; readonly url?: string; readonly command?: string };
+  readonly config?: {
+    readonly type?: string;
+    readonly url?: string;
+    readonly command?: string;
+    readonly headers?: Readonly<Record<string, string>>;
+  };
   readonly tools?: ReadonlyArray<unknown> | undefined;
 }
 
@@ -95,6 +104,16 @@ function claudeStatus(status: string): ProviderMcpServerStatus {
     default:
       return "pending";
   }
+}
+
+/**
+ * Claude Code keeps an OAuth sign-in only for the HTTP and SSE servers in its
+ * own config (claude.ai connectors sign in on claude.ai). A server that sends
+ * its own Authorization header has no sign-in to clear.
+ */
+function claudeCanSignOut(config: ClaudeMcpServerStatusLike["config"]): boolean {
+  if (config?.type !== "http" && config?.type !== "sse") return false;
+  return !Object.keys(config.headers ?? {}).some((name) => name.toLowerCase() === "authorization");
 }
 
 function claudeTransport(type: string | undefined): ProviderMcpServerTransport {
@@ -134,7 +153,12 @@ export function mapClaudeMcpServerStatuses(
       ...(scope ? { scope } : {}),
       ...(endpoint ? { endpoint } : {}),
       // Plugin servers belong to their plugin; Claude refuses to toggle them alone.
-      actions: serverActions({ status, transport, canToggle: entry.source !== "plugin" }),
+      actions: serverActions({
+        status,
+        transport,
+        canToggle: entry.source !== "plugin",
+        canSignOut: claudeCanSignOut(entry.config),
+      }),
     });
   }
   return sortServers(servers);
@@ -196,8 +220,14 @@ export function mapCodexMcpServerStatuses(
       toolCount: status === "connected" ? tools : null,
       ...(status === "failed" && toolsError ? { error: toolsError } : {}),
       ...(origin ? { endpoint: origin } : {}),
-      // Codex keeps enablement in config.toml only (see runMcpServerAction).
-      actions: serverActions({ status, transport, canToggle: false }),
+      // Codex keeps enablement in config.toml only (see runMcpServerAction), and
+      // reports which servers it holds an OAuth sign-in for.
+      actions: serverActions({
+        status,
+        transport,
+        canToggle: false,
+        canSignOut: authStatus === "oAuth",
+      }),
     });
   }
   return sortServers(servers);

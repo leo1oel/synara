@@ -1,6 +1,6 @@
 // FILE: ComposerMcpDialog.tsx
 // Purpose: The `/mcp` view: the active agent's MCP servers as its runtime reports
-//          them, with sign-in, reconnect, and enable/disable per server.
+//          them, with sign-in, sign-out, reconnect, and enable/disable per server.
 // Layer: Chat composer UI
 // Exports: ComposerMcpDialog
 
@@ -14,6 +14,7 @@ import type {
 } from "@synara/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
 import { openExternalLink } from "~/lib/linkChips";
 import { Loader2Icon, RefreshCwIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
@@ -77,6 +78,8 @@ function actionLabel(action: ProviderMcpServerAction): string {
       return i18n._("Enable");
     case "disable":
       return i18n._("Disable");
+    case "sign-out":
+      return i18n._("Sign out");
   }
 }
 
@@ -90,6 +93,8 @@ function actionDoneMessage(action: ProviderMcpServerAction, server: string): str
       return i18n._("Disabled {server}", { server });
     case "authenticate":
       return i18n._("Signed in to {server}", { server });
+    case "sign-out":
+      return i18n._("Signed out of {server}", { server });
   }
 }
 
@@ -139,6 +144,9 @@ export function ComposerMcpDialog(props: {
 }) {
   const { open, onOpenChange, provider, instanceId, cwd, threadId } = props;
   const [busyServer, setBusyServer] = useState<string | null>(null);
+  // Signing out is asked for once more in the row before it runs.
+  const [confirmingSignOut, setConfirmingSignOut] = useState<string | null>(null);
+  const { copyToClipboard, isCopied } = useCopyToClipboard();
   // Each opening, and each Refresh, asks the runtime to re-read its MCP config
   // once (a server added in Terminal since the last look then shows up); the
   // polls in between only re-read status.
@@ -230,7 +238,10 @@ export function ComposerMcpDialog(props: {
   }, [signIn, signedInServer, refetchServers]);
 
   useEffect(() => {
-    if (!open) setSignIn(null);
+    if (!open) {
+      setSignIn(null);
+      setConfirmingSignOut(null);
+    }
   }, [open]);
 
   const runAction = async (
@@ -238,6 +249,7 @@ export function ComposerMcpDialog(props: {
     action: ProviderMcpServerAction,
   ) => {
     if (!requestBase) return;
+    setConfirmingSignOut(null);
     setBusyServer(server.name);
     try {
       const result = await ensureNativeApi().provider.runMcpServerAction({
@@ -248,6 +260,24 @@ export function ComposerMcpDialog(props: {
       if (action === "authenticate" && result.authUrl) {
         setSignIn({ server: server.name, authUrl: result.authUrl, startedAt: Date.now() });
         openExternalLink(result.authUrl);
+      } else if (action === "sign-out") {
+        // An HTTP server that never asked for a sign-in has nothing to clear and
+        // simply reconnects; say so rather than claim a sign-out.
+        const refreshed = await serversQuery.refetch();
+        const after = refreshed.data?.servers.find((entry) => entry.name === server.name);
+        toastManager.add(
+          after?.status === "connected"
+            ? {
+                type: "info",
+                title: i18n._("{server} has no saved sign-in", { server: server.name }),
+                description: i18n._("It is still connected."),
+              }
+            : {
+                type: "success",
+                title: actionDoneMessage(action, server.name),
+                description: i18n._("Sign in again to connect an account."),
+              },
+        );
       } else {
         toastManager.add({ type: "success", title: actionDoneMessage(action, server.name) });
       }
@@ -351,7 +381,7 @@ export function ComposerMcpDialog(props: {
                         </p>
                       </div>
                       {server.actions.length > 0 ? (
-                        <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+                        <div className="flex max-w-full min-w-0 flex-wrap items-center gap-1.5">
                           {busy ? (
                             <Loader2Icon className="size-3.5 animate-spin text-muted-foreground" />
                           ) : null}
@@ -361,8 +391,14 @@ export function ComposerMcpDialog(props: {
                               type="button"
                               size="xs"
                               variant={action === "authenticate" ? "default" : "outline"}
-                              disabled={busy || busyServer !== null}
-                              onClick={() => void runAction(server, action)}
+                              disabled={
+                                busy || busyServer !== null || confirmingSignOut === server.name
+                              }
+                              onClick={() =>
+                                action === "sign-out"
+                                  ? setConfirmingSignOut(server.name)
+                                  : void runAction(server, action)
+                              }
                             >
                               {actionLabel(action)}
                             </Button>
@@ -375,19 +411,99 @@ export function ComposerMcpDialog(props: {
                         {server.error}
                       </p>
                     ) : null}
+                    {confirmingSignOut === server.name ? (
+                      provider === "codex" ? (
+                        <div className="mt-1.5 space-y-1.5 rounded-md border border-border/60 bg-muted/40 p-2.5">
+                          <p className="text-ui-sm leading-snug font-medium text-foreground">
+                            {i18n._("Sign out of {server} in Terminal", { server: server.name })}
+                          </p>
+                          <p className="text-ui-sm leading-snug text-muted-foreground">
+                            {i18n._(
+                              "Codex can't sign out of an MCP server from here. Run this command, then press Reconnect:",
+                            )}
+                          </p>
+                          <code className="block rounded bg-background px-2 py-1 font-mono text-ui-sm break-words text-foreground">
+                            codex mcp logout {server.name}
+                          </code>
+                          <div className="flex flex-wrap justify-end gap-1.5">
+                            <Button
+                              type="button"
+                              size="xs"
+                              variant="outline"
+                              onClick={() => setConfirmingSignOut(null)}
+                            >
+                              {i18n._("Cancel")}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="xs"
+                              variant="outline"
+                              onClick={() => copyToClipboard(`codex mcp logout ${server.name}`)}
+                            >
+                              {isCopied ? i18n._("Copied") : i18n._("Copy command")}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="xs"
+                              disabled={busyServer !== null}
+                              onClick={() => void runAction(server, "reconnect")}
+                            >
+                              {i18n._("Reconnect")}
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-1.5 space-y-1.5 rounded-md border border-border/60 bg-muted/40 p-2.5">
+                          <p className="text-ui-sm leading-snug font-medium text-foreground">
+                            {i18n._("Sign out of {server}?", { server: server.name })}
+                          </p>
+                          <p className="text-ui-sm leading-snug text-muted-foreground">
+                            {i18n._(
+                              "This forgets the sign-in the agent saved for this server. The server stays set up; sign in again to connect it, with another account if you like.",
+                            )}
+                          </p>
+                          <div className="flex flex-wrap justify-end gap-1.5">
+                            <Button
+                              type="button"
+                              size="xs"
+                              variant="outline"
+                              onClick={() => setConfirmingSignOut(null)}
+                            >
+                              {i18n._("Cancel")}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="xs"
+                              variant="destructive"
+                              disabled={busyServer !== null}
+                              onClick={() => void runAction(server, "sign-out")}
+                            >
+                              {i18n._("Sign out")}
+                            </Button>
+                          </div>
+                        </div>
+                      )
+                    ) : null}
                     {waitingForBrowser && signIn ? (
-                      <p className="text-ui-sm leading-snug text-muted-foreground">
-                        {i18n._("Finish signing in in your browser. This updates on its own.")}{" "}
-                        <Button
-                          type="button"
-                          size="chip"
-                          variant="link"
-                          className="px-0 align-baseline"
-                          onClick={() => openExternalLink(signIn.authUrl)}
-                        >
-                          {i18n._("Open the sign-in page again")}
-                        </Button>
-                      </p>
+                      <>
+                        <p className="text-ui-sm leading-snug text-muted-foreground">
+                          {i18n._("Finish signing in in your browser. This updates on its own.")}{" "}
+                          <Button
+                            type="button"
+                            size="chip"
+                            variant="link"
+                            className="px-0 align-baseline"
+                            onClick={() => openExternalLink(signIn.authUrl)}
+                          >
+                            {i18n._("Open the sign-in page again")}
+                          </Button>
+                        </p>
+                        <p className="text-ui-sm leading-snug text-muted-foreground">
+                          {i18n._(
+                            "It connects the account or workspace your browser is signed in to there; to use another, switch it in the browser first.",
+                          )}
+                        </p>
+                      </>
                     ) : null}
                   </li>
                 );

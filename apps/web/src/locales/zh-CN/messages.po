@@ -14,6 +14,7 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
 #: src/components/chat/ComposerAutomationSetupBanner.tsx
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/chat/FileLineCommentBox.tsx
 #: src/components/chat/GitRepositorySetup.tsx
 #: src/components/chat/MessagesTimeline.tsx
@@ -3311,6 +3312,7 @@ msgid "Copy {label}"
 msgstr "复制{label}"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/chat/ProposedPlanActions.tsx
 #: src/components/pullRequest/PullRequestsUnavailableState.tsx
 #: src/components/ui/copyTextButton.tsx
@@ -7906,8 +7908,18 @@ msgstr "禁用"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerMcpDialog.tsx
+msgid "Sign out"
+msgstr "退出登录"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 msgid "Signed in to {server}"
 msgstr "已登录 {server}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Signed out of {server}"
+msgstr "已退出 {server} 的登录"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerMcpDialog.tsx
@@ -7933,6 +7945,21 @@ msgstr "在终端中用 claude mcp add 添加一个，然后重新打开 /mcp。
 #: src/components/chat/ComposerMcpDialog.tsx
 msgid "Open a project folder to see MCP servers."
 msgstr "打开一个项目文件夹后才能查看 MCP 服务器。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "{server} has no saved sign-in"
+msgstr "{server} 没有保存的登录"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "It is still connected."
+msgstr "它仍处于连接状态。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Sign in again to connect an account."
+msgstr "再次登录即可连接账号。"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerMcpDialog.tsx
@@ -7971,6 +7998,31 @@ msgstr "还没有配置 MCP 服务器。"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerMcpDialog.tsx
+msgid "Sign out of {server} in Terminal"
+msgstr "在终端中退出 {server} 的登录"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Codex can't sign out of an MCP server from here. Run this command, then press Reconnect:"
+msgstr "Codex 无法在这里退出 MCP 服务器的登录。请运行下面的命令，然后点击“重新连接”："
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Copy command"
+msgstr "复制命令"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Sign out of {server}?"
+msgstr "退出 {server} 的登录？"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "This forgets the sign-in the agent saved for this server. The server stays set up; sign in again to connect it, with another account if you like."
+msgstr "这会清除智能体为该服务器保存的登录信息。服务器配置会保留；再次登录即可重新连接，也可以换用其他账号。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 msgid "Finish signing in in your browser. This updates on its own."
 msgstr "请在浏览器中完成登录，这里会自动更新。"
 
@@ -7978,6 +8030,11 @@ msgstr "请在浏览器中完成登录，这里会自动更新。"
 #: src/components/chat/ComposerMcpDialog.tsx
 msgid "Open the sign-in page again"
 msgstr "重新打开登录页面"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "It connects the account or workspace your browser is signed in to there; to use another, switch it in the browser first."
+msgstr "连接的是浏览器中当前登录的账号或工作区；如需使用其他账号，请先在浏览器中切换。"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerModelMenuTrigger.tsx

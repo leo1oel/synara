@@ -634,6 +634,11 @@ interface ClaudeQueryRuntime extends AsyncIterable<SDKMessage> {
   // the authorization URL, then receives the redirect on its own localhost
   // listener and reconnects the server.
   readonly mcpAuthenticate?: (serverName: string) => Promise<ClaudeMcpAuthenticateResponse>;
+  // Also unpublished: `/mcp` > Clear authentication. Claude Code revokes and
+  // deletes only this server's OAuth entry (tokens and client registration) in
+  // its keychain credentials, keeps the server's config, and reports the server
+  // as needing sign-in again.
+  readonly mcpClearAuth?: (serverName: string) => Promise<unknown>;
   readonly close: () => void;
 }
 
@@ -9119,6 +9124,12 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             const authUrl = nonEmptyTrimmed(response?.authUrl);
             return authUrl ? { authUrl } : {};
           }
+          case "sign-out":
+            yield* request(
+              "mcpClearAuth",
+              query.mcpClearAuth && (() => query.mcpClearAuth!(input.serverName)),
+            );
+            return {};
         }
       });
 

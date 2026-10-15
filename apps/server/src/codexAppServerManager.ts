@@ -3747,6 +3747,12 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         throw new Error(
           `Codex turns MCP servers on and off in ~/.codex/config.toml: set enabled = ${input.action === "enable" ? "true" : "false"} under [mcp_servers.${input.serverName}].`,
         );
+      case "sign-out":
+        // app-server has no MCP OAuth logout; the view tells the user to run
+        // `codex mcp logout` instead of offering a sign-out that does nothing.
+        throw new Error(
+          `Codex signs out of MCP servers only in Terminal: run codex mcp logout ${input.serverName}, then reconnect.`,
+        );
       case "reconnect":
         if (context.discovery && context.discoveryKey) {
           // The next request starts an app-server that reads config.toml again.

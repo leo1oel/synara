@@ -14,6 +14,7 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
 #: src/components/chat/ComposerAutomationSetupBanner.tsx
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/chat/FileLineCommentBox.tsx
 #: src/components/chat/GitRepositorySetup.tsx
 #: src/components/chat/MessagesTimeline.tsx
@@ -3311,6 +3312,7 @@ msgid "Copy {label}"
 msgstr "Copy {label}"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/chat/ProposedPlanActions.tsx
 #: src/components/pullRequest/PullRequestsUnavailableState.tsx
 #: src/components/ui/copyTextButton.tsx
@@ -7906,8 +7908,18 @@ msgstr "Disable"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerMcpDialog.tsx
+msgid "Sign out"
+msgstr "Sign out"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 msgid "Signed in to {server}"
 msgstr "Signed in to {server}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Signed out of {server}"
+msgstr "Signed out of {server}"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerMcpDialog.tsx
@@ -7933,6 +7945,21 @@ msgstr "Add one in Terminal with claude mcp add, then reopen /mcp."
 #: src/components/chat/ComposerMcpDialog.tsx
 msgid "Open a project folder to see MCP servers."
 msgstr "Open a project folder to see MCP servers."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "{server} has no saved sign-in"
+msgstr "{server} has no saved sign-in"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "It is still connected."
+msgstr "It is still connected."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Sign in again to connect an account."
+msgstr "Sign in again to connect an account."
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerMcpDialog.tsx
@@ -7971,6 +7998,31 @@ msgstr "No MCP servers are configured."
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerMcpDialog.tsx
+msgid "Sign out of {server} in Terminal"
+msgstr "Sign out of {server} in Terminal"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Codex can't sign out of an MCP server from here. Run this command, then press Reconnect:"
+msgstr "Codex can't sign out of an MCP server from here. Run this command, then press Reconnect:"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Copy command"
+msgstr "Copy command"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Sign out of {server}?"
+msgstr "Sign out of {server}?"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "This forgets the sign-in the agent saved for this server. The server stays set up; sign in again to connect it, with another account if you like."
+msgstr "This forgets the sign-in the agent saved for this server. The server stays set up; sign in again to connect it, with another account if you like."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 msgid "Finish signing in in your browser. This updates on its own."
 msgstr "Finish signing in in your browser. This updates on its own."
 
@@ -7978,6 +8030,11 @@ msgstr "Finish signing in in your browser. This updates on its own."
 #: src/components/chat/ComposerMcpDialog.tsx
 msgid "Open the sign-in page again"
 msgstr "Open the sign-in page again"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "It connects the account or workspace your browser is signed in to there; to use another, switch it in the browser first."
+msgstr "It connects the account or workspace your browser is signed in to there; to use another, switch it in the browser first."
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerModelMenuTrigger.tsx

@@ -255,6 +255,9 @@ export const ProviderMcpServerAction = Schema.Literals([
   "enable",
   "disable",
   "authenticate",
+  // Forget the server's stored OAuth sign-in (tokens and client registration),
+  // keeping its configuration, so the next sign-in can pick another account.
+  "sign-out",
 ]);
 export type ProviderMcpServerAction = typeof ProviderMcpServerAction.Type;
 
