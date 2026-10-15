@@ -12,11 +12,6 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
-#: src/lib/providerStatusMessages.ts
-msgid "Pi is not set up. Install the Pi CLI (`pi`) or add Pi credentials to {agentDir} to use the Pi provider."
-msgstr "Pi 还没有配置好。请安装 Pi CLI（`pi`），或在 {agentDir} 中添加 Pi 凭据，然后再使用 Pi。"
-
-#. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
 #: src/components/chat/ComposerAutomationSetupBanner.tsx
 #: src/components/chat/FileLineCommentBox.tsx
@@ -892,6 +887,11 @@ msgstr "这个 Claude 登录无法提供用量：它的令牌缺少 user:profile
 #: src/lib/providerStatusMessages.ts
 msgid "Sign in with `{command}` to see usage."
 msgstr "请先用 `{command}` 登录，才能看到用量。"
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "Pi is not set up. Install the Pi CLI (`pi`) or add Pi credentials to {agentDir} to use the Pi provider."
+msgstr "Pi 还没有配置好。请安装 Pi CLI（`pi`），或在 {agentDir} 中添加 Pi 凭据，然后再使用 Pi。"
 
 #. js-lingui-explicit-id
 #: src/lib/providerStatusMessages.ts
@@ -2789,6 +2789,7 @@ msgid "{provider} usage"
 msgstr "{provider} 用量"
 
 #. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
 #: src/components/chat/MessagesTimeline.logic.ts
 #: src/components/ProviderUsagePanelContent.tsx
 #: src/components/pullRequest/GitHubItemPageLayout.tsx
@@ -5642,7 +5643,6 @@ msgid "Synara pauses GitHub requests until the limit resets."
 msgstr "GitHub 请求已暂停，限额重置后恢复。"
 
 #. js-lingui-explicit-id
-#: src/components/githubInbox/LatticePullRequestList.tsx
 #: src/components/pullRequest/PullRequestsUnavailableState.tsx
 msgid "The request to GitHub failed."
 msgstr "GitHub 请求失败了。"
@@ -6297,8 +6297,28 @@ msgstr "新建"
 
 #. js-lingui-explicit-id
 #: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Pull requests need a Git repository"
+msgstr "PR 需要 Git 仓库"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Start version control for this project, then publish it to GitHub to review changes with your co-authors"
+msgstr "先为此项目开启版本控制，再发布到 GitHub，就能和合作者一起审阅修改"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
 msgid "Pull requests could not be loaded"
 msgstr "无法加载 PR"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "GitHub is limiting requests for now. Try again in a few minutes"
+msgstr "GitHub 暂时限制了请求，请几分钟后再试"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Lattice could not reach GitHub. Check your connection and try again"
+msgstr "Lattice 无法连接 GitHub，请检查网络后重试"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ThreadDetailHydrationState.tsx
@@ -6328,13 +6348,18 @@ msgstr "你或合作者在 GitHub 上发起 PR 后，会显示在这里"
 
 #. js-lingui-explicit-id
 #: src/components/githubInbox/LatticePullRequestList.tsx
-msgid "Could not read {repository} on GitHub: {message}"
-msgstr "无法读取 GitHub 上的 {repository}：{message}"
+msgid "GitHub is limiting requests for now. Lattice will try again shortly"
+msgstr "GitHub 暂时限制了请求，Lattice 稍后会自动重试"
 
 #. js-lingui-explicit-id
 #: src/components/githubInbox/LatticePullRequestList.tsx
-msgid "Could not read this project’s repositories: {message}"
-msgstr "无法读取此项目的仓库：{message}"
+msgid "Could not read {repository} on GitHub"
+msgstr "无法读取 GitHub 上的 {repository}"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Could not read this project’s Git remotes"
+msgstr "无法读取此项目的 Git 远程仓库"
 
 #. js-lingui-explicit-id
 #: src/components/githubInbox/LatticePullRequestList.tsx
@@ -6371,6 +6396,12 @@ msgstr "PR 需要 GitHub 仓库。将项目私密发布，再邀请合作者"
 #: src/components/githubInbox/LatticePullRequestList.tsx
 msgid "Publish to GitHub"
 msgstr "发布到 GitHub"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Connect existing"
+msgstr "连接已有仓库"
 
 #. js-lingui-explicit-id
 #: src/components/githubInbox/LatticePullRequestList.tsx
@@ -8425,6 +8456,16 @@ msgstr "无法初始化 Git。"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitRepositorySetup.tsx
+msgid "Git could not be initialized in this folder"
+msgstr "无法在此文件夹中初始化 Git"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Keep a history of this project on your Mac: see what changed since each commit and go back to any earlier version. Nothing is uploaded"
+msgstr "在这台 Mac 上保留此项目的历史：查看每次提交以来改了什么，并可回到任一早期版本。不会上传任何内容"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
 msgid "Connect to GitHub"
 msgstr "连接到 GitHub"
 
@@ -8438,11 +8479,6 @@ msgstr "发布新的私有仓库，或连接已有仓库。"
 #: src/components/chat/LatticeGitChanges.tsx
 msgid "Publish"
 msgstr "发布"
-
-#. js-lingui-explicit-id
-#: src/components/chat/GitRepositorySetup.tsx
-msgid "Connect existing"
-msgstr "连接已有仓库"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitRepositorySetup.tsx

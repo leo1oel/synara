@@ -1,6 +1,7 @@
 // FILE: ResearchArt.tsx
 // Purpose: Lattice's research-desk drawings for the embedded Git views' larger empty states:
-//          dated drafts for a clean Changes view, a routing envelope for Pull requests.
+//          dated drafts for a clean Changes view, a blank logbook for a folder without Git yet,
+//          and a routing envelope for Pull requests.
 // Layer: Embedded presentation
 // Exports: ResearchArt, ResearchDrawing, ResearchArtTone
 //
@@ -40,8 +41,9 @@ export function ResearchArt({
       aria-hidden="true"
       focusable="false"
     >
-      {drawing.paths.map(([tone, d]) => (
-        <path key={`${tone}:${d}`} data-tone={tone} d={d} />
+      {/* A static list in painter's order, so the index is its identity (paths can repeat). */}
+      {drawing.paths.map(([tone, d], index) => (
+        <path key={index} data-tone={tone} d={d} />
       ))}
     </svg>
   );

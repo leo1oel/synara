@@ -12,11 +12,6 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
-#: src/lib/providerStatusMessages.ts
-msgid "Pi is not set up. Install the Pi CLI (`pi`) or add Pi credentials to {agentDir} to use the Pi provider."
-msgstr "Pi is not set up. Install the Pi CLI (`pi`) or add Pi credentials to {agentDir} to use the Pi provider."
-
-#. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
 #: src/components/chat/ComposerAutomationSetupBanner.tsx
 #: src/components/chat/FileLineCommentBox.tsx
@@ -892,6 +887,11 @@ msgstr "This Claude login cannot report usage: its token lacks the user:profile 
 #: src/lib/providerStatusMessages.ts
 msgid "Sign in with `{command}` to see usage."
 msgstr "Sign in with `{command}` to see usage."
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "Pi is not set up. Install the Pi CLI (`pi`) or add Pi credentials to {agentDir} to use the Pi provider."
+msgstr "Pi is not set up. Install the Pi CLI (`pi`) or add Pi credentials to {agentDir} to use the Pi provider."
 
 #. js-lingui-explicit-id
 #: src/lib/providerStatusMessages.ts
@@ -2789,6 +2789,7 @@ msgid "{provider} usage"
 msgstr "{provider} usage"
 
 #. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
 #: src/components/chat/MessagesTimeline.logic.ts
 #: src/components/ProviderUsagePanelContent.tsx
 #: src/components/pullRequest/GitHubItemPageLayout.tsx
@@ -5642,7 +5643,6 @@ msgid "Synara pauses GitHub requests until the limit resets."
 msgstr "Synara pauses GitHub requests until the limit resets."
 
 #. js-lingui-explicit-id
-#: src/components/githubInbox/LatticePullRequestList.tsx
 #: src/components/pullRequest/PullRequestsUnavailableState.tsx
 msgid "The request to GitHub failed."
 msgstr "The request to GitHub failed."
@@ -6297,8 +6297,28 @@ msgstr "New"
 
 #. js-lingui-explicit-id
 #: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Pull requests need a Git repository"
+msgstr "Pull requests need a Git repository"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Start version control for this project, then publish it to GitHub to review changes with your co-authors"
+msgstr "Start version control for this project, then publish it to GitHub to review changes with your co-authors"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
 msgid "Pull requests could not be loaded"
 msgstr "Pull requests could not be loaded"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "GitHub is limiting requests for now. Try again in a few minutes"
+msgstr "GitHub is limiting requests for now. Try again in a few minutes"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Lattice could not reach GitHub. Check your connection and try again"
+msgstr "Lattice could not reach GitHub. Check your connection and try again"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ThreadDetailHydrationState.tsx
@@ -6328,13 +6348,18 @@ msgstr "When you or a co-author opens a pull request on GitHub, it shows up here
 
 #. js-lingui-explicit-id
 #: src/components/githubInbox/LatticePullRequestList.tsx
-msgid "Could not read {repository} on GitHub: {message}"
-msgstr "Could not read {repository} on GitHub: {message}"
+msgid "GitHub is limiting requests for now. Lattice will try again shortly"
+msgstr "GitHub is limiting requests for now. Lattice will try again shortly"
 
 #. js-lingui-explicit-id
 #: src/components/githubInbox/LatticePullRequestList.tsx
-msgid "Could not read this project’s repositories: {message}"
-msgstr "Could not read this project’s repositories: {message}"
+msgid "Could not read {repository} on GitHub"
+msgstr "Could not read {repository} on GitHub"
+
+#. js-lingui-explicit-id
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Could not read this project’s Git remotes"
+msgstr "Could not read this project’s Git remotes"
 
 #. js-lingui-explicit-id
 #: src/components/githubInbox/LatticePullRequestList.tsx
@@ -6371,6 +6396,12 @@ msgstr "Pull requests need a GitHub repository. Publish the project privately an
 #: src/components/githubInbox/LatticePullRequestList.tsx
 msgid "Publish to GitHub"
 msgstr "Publish to GitHub"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+#: src/components/githubInbox/LatticePullRequestList.tsx
+msgid "Connect existing"
+msgstr "Connect existing"
 
 #. js-lingui-explicit-id
 #: src/components/githubInbox/LatticePullRequestList.tsx
@@ -8425,6 +8456,16 @@ msgstr "Git could not be initialized."
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitRepositorySetup.tsx
+msgid "Git could not be initialized in this folder"
+msgstr "Git could not be initialized in this folder"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
+msgid "Keep a history of this project on your Mac: see what changed since each commit and go back to any earlier version. Nothing is uploaded"
+msgstr "Keep a history of this project on your Mac: see what changed since each commit and go back to any earlier version. Nothing is uploaded"
+
+#. js-lingui-explicit-id
+#: src/components/chat/GitRepositorySetup.tsx
 msgid "Connect to GitHub"
 msgstr "Connect to GitHub"
 
@@ -8438,11 +8479,6 @@ msgstr "Publish a new private repository or attach one you already have."
 #: src/components/chat/LatticeGitChanges.tsx
 msgid "Publish"
 msgstr "Publish"
-
-#. js-lingui-explicit-id
-#: src/components/chat/GitRepositorySetup.tsx
-msgid "Connect existing"
-msgstr "Connect existing"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitRepositorySetup.tsx

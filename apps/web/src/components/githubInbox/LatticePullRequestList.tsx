@@ -24,6 +24,7 @@ import {
   CopyIcon,
   CreatePullRequestIcon,
   GitHubIcon,
+  LinkIcon,
   MessageCircleIcon,
   SearchIcon,
   XIcon,
@@ -35,7 +36,11 @@ import { formatRelativeTime } from "~/lib/relativeTime";
 import { cn } from "~/lib/utils";
 import { ensureNativeApi } from "~/nativeApi";
 import GitActionsControl from "../GitActionsControl";
-import { GitHubRepositorySetupDialog } from "../chat/GitRepositorySetup";
+import {
+  GitHubRepositorySetupDialog,
+  LatticeErrorDetails,
+  LatticeGitInitializeButton,
+} from "../chat/GitRepositorySetup";
 import { PullRequestStateGlyph } from "../pullRequest/PullRequestStateGlyph";
 import { ResearchArt } from "../researchArt/ResearchArt";
 import { ROUTING_ENVELOPE } from "../researchArt/routingEnvelope";
@@ -138,6 +143,10 @@ export function LatticePullRequestList(props: LatticePullRequestListProps) {
   const unavailable = isPullRequestsUnavailableError(props.openError) ? props.openError : null;
   const ghBlocked =
     unavailable?.reason === "gh-not-installed" || unavailable?.reason === "gh-not-authenticated";
+  // A folder that is not a Git repository fails the inbox's remote inventory with Git's own
+  // "not a git repository"; the branch probe says so plainly, so it decides the state instead.
+  const repositoryProbePending = branchesQuery.isPending;
+  const notARepository = branchesQuery.data?.isRepo === false;
 
   return (
     <div className="lattice-git lattice-prs" data-lattice-pull-requests="">
@@ -152,7 +161,7 @@ export function LatticePullRequestList(props: LatticePullRequestListProps) {
             actions.createPullRequest.available && !actions.createPullRequest.opensExisting;
           return (
             <>
-              {!ghBlocked && !notOnGitHub ? (
+              {!ghBlocked && !notOnGitHub && !notARepository ? (
                 <div className="lattice-prs-head">
                   <label className="lattice-prs-search">
                     <SearchIcon aria-hidden className="size-3.5" />
@@ -192,8 +201,16 @@ export function LatticePullRequestList(props: LatticePullRequestListProps) {
                 </div>
               ) : null}
               <div className="lattice-git-scroll lattice-prs-scroll">
-                {props.openPending ? (
+                {props.openPending || repositoryProbePending ? (
                   props.loading
+                ) : notARepository ? (
+                  <PullRequestsEmpty
+                    title={i18n._("Pull requests need a Git repository")}
+                    description={i18n._(
+                      "Start version control for this project, then publish it to GitHub to review changes with your co-authors",
+                    )}
+                    action={<LatticeGitInitializeButton cwd={props.workspaceRoot} />}
+                  />
                 ) : unavailable && ghBlocked ? (
                   <GitHubCliState
                     notInstalled={unavailable.reason === "gh-not-installed"}
@@ -203,9 +220,20 @@ export function LatticePullRequestList(props: LatticePullRequestListProps) {
                   <PullRequestsEmpty
                     title={i18n._("Pull requests could not be loaded")}
                     description={
-                      props.openError instanceof Error
-                        ? props.openError.message
-                        : i18n._("The request to GitHub failed.")
+                      <>
+                        <span>
+                          {unavailable?.reason === "rate-limited"
+                            ? i18n._(
+                                "GitHub is limiting requests for now. Try again in a few minutes",
+                              )
+                            : i18n._(
+                                "Lattice could not reach GitHub. Check your connection and try again",
+                              )}
+                        </span>
+                        <LatticeErrorDetails
+                          detail={props.openError instanceof Error ? props.openError.message : null}
+                        />
+                      </>
                     }
                     action={
                       <button type="button" className="lattice-git-button" onClick={props.onRetry}>
@@ -274,25 +302,31 @@ export function LatticePullRequestList(props: LatticePullRequestListProps) {
                     ) : null,
                   )
                 )}
-                {listErrors.map((error) => (
-                  <p
-                    key={`${error.repository ?? ""}:${error.reason}`}
-                    className="lattice-prs-warning"
-                    role="status"
-                  >
-                    <CircleAlertIcon aria-hidden className="size-3.5" />
-                    <span>
-                      {error.repository
-                        ? i18n._("Could not read {repository} on GitHub: {message}", {
-                            repository: error.repository,
-                            message: error.message,
-                          })
-                        : i18n._("Could not read this project’s repositories: {message}", {
-                            message: error.message,
-                          })}
-                    </span>
-                  </p>
-                ))}
+                {notARepository
+                  ? null
+                  : listErrors.map((error) => (
+                      <div
+                        key={`${error.repository ?? ""}:${error.reason}`}
+                        className="lattice-prs-warning"
+                        role="status"
+                      >
+                        <CircleAlertIcon aria-hidden className="size-3.5" />
+                        <div className="lattice-prs-warning-body">
+                          <span>
+                            {error.reason === "rate-limited"
+                              ? i18n._(
+                                  "GitHub is limiting requests for now. Lattice will try again shortly",
+                                )
+                              : error.repository
+                                ? i18n._("Could not read {repository} on GitHub", {
+                                    repository: error.repository,
+                                  })
+                                : i18n._("Could not read this project’s Git remotes")}
+                          </span>
+                          <LatticeErrorDetails detail={error.message} />
+                        </div>
+                      </div>
+                    ))}
               </div>
             </>
           );
@@ -437,7 +471,7 @@ function PullRequestsEmpty(props: { title: string; description: ReactNode; actio
 
 function NotOnGitHubState(props: { workspaceRoot: string; hasOriginRemote: boolean }) {
   const { i18n } = useLingui();
-  const [publishing, setPublishing] = useState(false);
+  const [setup, setSetup] = useState<"create" | "connect" | null>(null);
   return (
     <>
       <PullRequestsEmpty
@@ -453,24 +487,35 @@ function NotOnGitHubState(props: { workspaceRoot: string; hasOriginRemote: boole
         }
         action={
           props.hasOriginRemote ? null : (
-            <button
-              type="button"
-              className="lattice-git-button lattice-git-tinted"
-              onClick={() => setPublishing(true)}
-            >
-              <GitHubIcon aria-hidden className="size-3.5" />
-              <span className="lattice-git-button-label">{i18n._("Publish to GitHub")}</span>
-            </button>
+            <>
+              <button
+                type="button"
+                className="lattice-git-button lattice-git-tinted"
+                onClick={() => setSetup("create")}
+              >
+                <GitHubIcon aria-hidden className="size-3.5" />
+                <span className="lattice-git-button-label">{i18n._("Publish to GitHub")}</span>
+              </button>
+              <button
+                type="button"
+                className="lattice-git-button"
+                onClick={() => setSetup("connect")}
+              >
+                <LinkIcon aria-hidden className="size-3.5" />
+                <span className="lattice-git-button-label">{i18n._("Connect existing")}</span>
+              </button>
+            </>
           )
         }
       />
-      {publishing ? (
+      {setup ? (
         <GitHubRepositorySetupDialog
+          key={setup}
           cwd={props.workspaceRoot}
-          mode="create"
+          mode={setup}
           open
           onOpenChange={(open) => {
-            if (!open) setPublishing(false);
+            if (!open) setSetup(null);
           }}
         />
       ) : null}

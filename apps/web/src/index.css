@@ -1905,6 +1905,61 @@ html[data-synara-embed="true"] .lattice-prs-warning svg {
   margin-top: 2px;
   color: var(--warning-foreground, var(--warning));
 }
+html[data-synara-embed="true"] .lattice-prs-warning-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+/* A failure in words; what Git or gh printed stays folded under Details. */
+html[data-synara-embed="true"] .lattice-git-error {
+  display: flex;
+  flex-basis: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  max-width: 100%;
+  font-size: var(--lattice-git-caption);
+  line-height: var(--lattice-git-caption-lh);
+}
+html[data-synara-embed="true"] .lattice-git-error p {
+  margin: 0;
+  color: var(--status-failure);
+}
+html[data-synara-embed="true"] .lattice-git-details {
+  min-width: 0;
+  max-width: 100%;
+  color: var(--lattice-git-muted);
+  font-size: var(--lattice-git-caption);
+  line-height: var(--lattice-git-caption-lh);
+  text-align: start;
+}
+html[data-synara-embed="true"] .lattice-git-details summary {
+  width: fit-content;
+  cursor: pointer;
+}
+html[data-synara-embed="true"]
+  :is(.lattice-git-empty, .lattice-git-error)
+  .lattice-git-details
+  summary {
+  margin-inline: auto;
+}
+html[data-synara-embed="true"] .lattice-git-details pre {
+  max-height: 120px;
+  margin: 4px 0 0;
+  padding: 6px 8px;
+  overflow: auto;
+  border-radius: 6px;
+  background: var(--lattice-control-hover-surface);
+  color: var(--lattice-git-ink);
+  font-family: var(--font-mono-family);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 html[data-synara-embed="true"] .lattice-prs-command {
   display: flex;
   align-items: center;

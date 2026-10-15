@@ -50,7 +50,11 @@ import { FileDiffHeader } from "./FileDiffHeader";
 import { SingleFileDiffBody } from "./FileDiffView";
 import { FileEntryIcon } from "./FileEntryIcon";
 import { FileRowsSkeleton } from "./FileRowsSkeleton";
-import { GitHubRemoteSetupCard, GitInitializationState } from "./GitRepositorySetup";
+import {
+  GitHubRemoteSetupCard,
+  GitInitializationState,
+  LatticeGitInitializationState,
+} from "./GitRepositorySetup";
 import { LatticeGitChanges } from "./LatticeGitChanges";
 import { PanelStateMessage } from "./PanelStateMessage";
 
@@ -370,6 +374,10 @@ export function GitPanel(props: {
         {i18n._("Source control is unavailable for this thread.")}
       </PanelStateMessage>
     );
+  }
+
+  if (props.showActions && repositoryMissing) {
+    return <LatticeGitInitializationState cwd={cwd} />;
   }
 
   // Lattice's Changes view: its own layout over the same reads and index mutations. It mounts

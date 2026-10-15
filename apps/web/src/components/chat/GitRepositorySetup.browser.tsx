@@ -12,7 +12,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
 
 import { i18n } from "../../i18n";
-import { GitHubRemoteSetupCard, GitInitializationState } from "./GitRepositorySetup";
+import {
+  GitHubRemoteSetupCard,
+  GitInitializationState,
+  LatticeGitInitializationState,
+} from "./GitRepositorySetup";
 
 i18n.loadAndActivate({ locale: "en", messages: {} });
 
@@ -59,6 +63,31 @@ describe("GitRepositorySetup", () => {
     expect(action).not.toBeNull();
     expect(getComputedStyle(heading!).fontWeight).toBe("500");
     expect(action!.getBoundingClientRect().height).toBeLessThanOrEqual(32);
+  });
+
+  it("draws Lattice's no-repository Changes state as a research-desk drawing that fits a narrow panel", async () => {
+    document.documentElement.setAttribute("data-synara-embed", "true");
+    try {
+      await renderWithQueryClient(
+        <div style={{ width: 240, height: 480 }}>
+          <LatticeGitInitializationState cwd="/tmp/research-writer" />
+        </div>,
+      );
+
+      await expect.element(page.getByText("Start version control")).toBeVisible();
+      await expect.element(page.getByRole("button", { name: "Initialize Git" })).toBeVisible();
+      const art = document.querySelector<SVGElement>('svg.research-art[data-kind="blank-logbook"]');
+      expect(art).not.toBeNull();
+      expect(art!.getBoundingClientRect().width).toBe(132);
+      const root = document.querySelector<HTMLElement>("[data-lattice-git-init]")!;
+      for (const element of root.querySelectorAll<HTMLElement>("*")) {
+        expect(element.getBoundingClientRect().right).toBeLessThanOrEqual(
+          root.getBoundingClientRect().right + 0.5,
+        );
+      }
+    } finally {
+      document.documentElement.removeAttribute("data-synara-embed");
+    }
   });
 
   it("opens a styled publish dialog with private visibility selected by default", async () => {

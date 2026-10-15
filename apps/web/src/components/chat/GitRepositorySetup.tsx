@@ -7,8 +7,11 @@ import {
   gitCreateGitHubRepositoryMutationOptions,
   gitInitMutationOptions,
 } from "~/lib/gitReactQuery";
+import { githubInboxQueryKeys } from "~/lib/githubInboxQueryOptions";
 import { GitBranchIcon, GitHubIcon, InfoIcon, LinkIcon, LoaderCircleIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
+import { ResearchArt } from "../researchArt/ResearchArt";
+import { BLANK_LOGBOOK } from "../researchArt/blankLogbook";
 import { Button } from "../ui/button";
 import {
   dialogFieldLabelClassName,
@@ -36,12 +39,13 @@ function mutationErrorMessage(error: unknown, fallback: string): string | null {
   return error instanceof Error ? error.message : fallback;
 }
 
-export function GitInitializationState(props: { cwd: string }) {
+/** Runs `git init` for a folder; the success toast is shared, the failure stays on the caller. */
+export function useGitInitialization(cwd: string) {
   const { i18n } = useLingui();
   const queryClient = useQueryClient();
   const initMutation = useMutation(
     gitInitMutationOptions({
-      cwd: props.cwd,
+      cwd,
       queryClient,
     }),
   );
@@ -49,6 +53,8 @@ export function GitInitializationState(props: { cwd: string }) {
   const initialize = async () => {
     try {
       await initMutation.mutateAsync();
+      // The Pull requests view read the folder as "not a repository"; let it read again.
+      void queryClient.invalidateQueries({ queryKey: githubInboxQueryKeys.all });
       toastManager.add({
         type: "success",
         title: i18n._("Version control enabled"),
@@ -59,6 +65,13 @@ export function GitInitializationState(props: { cwd: string }) {
       // The inline error keeps the failure attached to the action.
     }
   };
+
+  return { initialize, pending: initMutation.isPending, error: initMutation.error };
+}
+
+export function GitInitializationState(props: { cwd: string }) {
+  const { i18n } = useLingui();
+  const { initialize, pending, error } = useGitInitialization(props.cwd);
 
   return (
     <div className="flex min-h-0 flex-1 items-center justify-center px-6 py-8">
@@ -74,24 +87,99 @@ export function GitInitializationState(props: { cwd: string }) {
             "Track changes locally, review diffs, and restore earlier work. Nothing is uploaded.",
           )}
         </p>
-        <Button
-          size="sm"
-          className="mt-4"
-          disabled={initMutation.isPending}
-          onClick={() => void initialize()}
-        >
-          {initMutation.isPending ? (
+        <Button size="sm" className="mt-4" disabled={pending} onClick={() => void initialize()}>
+          {pending ? (
             <LoaderCircleIcon className="size-3.5 animate-spin" />
           ) : (
             <GitBranchIcon className="size-3.5" />
           )}
-          {initMutation.isPending ? i18n._("Initializing…") : i18n._("Initialize Git")}
+          {pending ? i18n._("Initializing…") : i18n._("Initialize Git")}
         </Button>
-        {initMutation.error ? (
+        {error ? (
           <p role="alert" className="mt-3 text-ui-xs leading-snug text-destructive">
-            {mutationErrorMessage(initMutation.error, i18n._("Git could not be initialized."))}
+            {mutationErrorMessage(error, i18n._("Git could not be initialized."))}
           </p>
         ) : null}
+      </div>
+    </div>
+  );
+}
+
+/** Lattice's Initialize Git button, for the Changes and Pull requests empty states. */
+export function LatticeGitInitializeButton(props: { cwd: string }) {
+  const { i18n } = useLingui();
+  const { initialize, pending, error } = useGitInitialization(props.cwd);
+  return (
+    <>
+      <button
+        type="button"
+        className="lattice-git-button lattice-git-tinted"
+        disabled={pending}
+        aria-busy={pending || undefined}
+        onClick={() => void initialize()}
+      >
+        {pending ? (
+          <LoaderCircleIcon aria-hidden className="size-3.5 animate-spin" />
+        ) : (
+          <GitBranchIcon aria-hidden className="size-3.5" />
+        )}
+        <span className="lattice-git-button-label">
+          {pending ? i18n._("Initializing…") : i18n._("Initialize Git")}
+        </span>
+      </button>
+      {error ? (
+        <LatticeErrorNote
+          message={i18n._("Git could not be initialized in this folder")}
+          detail={error instanceof Error ? error.message : null}
+        />
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * A failure in words, with what Git or the GitHub CLI printed folded under Details: the raw
+ * output helps someone debugging, but it is never the message.
+ */
+export function LatticeErrorNote(props: { message: string; detail: string | null }) {
+  return (
+    <div className="lattice-git-error" role="alert">
+      <p>{props.message}</p>
+      <LatticeErrorDetails detail={props.detail} />
+    </div>
+  );
+}
+
+export function LatticeErrorDetails(props: { detail: string | null | undefined }) {
+  const { i18n } = useLingui();
+  const detail = props.detail?.trim();
+  if (!detail) return null;
+  return (
+    <details className="lattice-git-details">
+      <summary>{i18n._("Details")}</summary>
+      <pre>{detail}</pre>
+    </details>
+  );
+}
+
+/** Lattice's Changes view on a folder that is not a Git repository yet. */
+export function LatticeGitInitializationState(props: { cwd: string }) {
+  const { i18n } = useLingui();
+  return (
+    <div className="lattice-git lattice-source-control" data-lattice-git-init="">
+      <div className="lattice-git-scroll">
+        <div className="lattice-git-empty" role="status">
+          <ResearchArt drawing={BLANK_LOGBOOK} />
+          <p className="lattice-git-empty-title">{i18n._("Start version control")}</p>
+          <p className="lattice-git-empty-description">
+            {i18n._(
+              "Keep a history of this project on your Mac: see what changed since each commit and go back to any earlier version. Nothing is uploaded",
+            )}
+          </p>
+          <div className="lattice-git-empty-actions">
+            <LatticeGitInitializeButton cwd={props.cwd} />
+          </div>
+        </div>
       </div>
     </div>
   );
