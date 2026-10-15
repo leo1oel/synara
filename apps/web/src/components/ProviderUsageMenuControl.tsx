@@ -10,7 +10,7 @@ import {
 } from "@synara/contracts";
 import { providerUsageNeedsAuthDetail } from "@synara/shared/providerUsage";
 import { useLingui } from "@lingui/react";
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { useAppSettings } from "~/appSettings";
 import {
@@ -19,6 +19,7 @@ import {
 } from "~/hooks/useProviderUsageSummary";
 import {
   deriveProviderUsageDisplayRows,
+  localizeProviderUsageDisplayText,
   selectPrimaryProviderUsageDisplayRow,
   type ProviderUsageDisplayRow,
 } from "~/lib/providerUsageDisplay";
@@ -91,6 +92,7 @@ export function useProviderUsageMenuModel(
   input: {
     instanceId?: ProviderInstanceId | undefined;
     providerSnapshot?: ServerGetProviderUsageSnapshotResult | undefined;
+    enabled?: boolean | undefined;
   } = {},
 ): ProviderUsageMenuModel {
   const { i18n } = useLingui();
@@ -103,6 +105,7 @@ export function useProviderUsageMenuModel(
     codexHomePath: settings.codexHomePath || null,
     providerSnapshot: input.providerSnapshot,
     fetchOpenUsageData: false,
+    enabled: input.enabled,
   });
 
   const model = buildProviderUsageMenuModel({
@@ -152,8 +155,25 @@ export function ProviderUsageMenuPopup({
   );
 }
 
+// The header mounts with the chat, and a usage read can start a provider CLI on the server
+// (Claude's /usage when its login is out of the server's reach). Starting it after the chat has
+// painted keeps that process from competing with the panel's own startup.
+const HEADER_USAGE_READ_DELAY_MS = 2_000;
+
+function useDelayedStart(delayMs: number): boolean {
+  const [started, setStarted] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setStarted(true), delayMs);
+    return () => window.clearTimeout(timer);
+  }, [delayMs]);
+  return started;
+}
+
 export function ProviderUsageMenuControl({ provider }: { provider: ProviderKind }) {
-  const model = useProviderUsageMenuModel(provider);
+  const { i18n } = useLingui();
+  const model = useProviderUsageMenuModel(provider, {
+    enabled: useDelayedStart(HEADER_USAGE_READ_DELAY_MS),
+  });
 
   if (!model.primaryRow) {
     return null;
@@ -179,7 +199,26 @@ export function ProviderUsageMenuControl({ provider }: { provider: ProviderKind 
             </MenuTrigger>
           }
         />
-        <TooltipPopup side="bottom">{model.menuTitle}</TooltipPopup>
+        {/* The chip shows the tightest window; hovering names every window and when it resets. */}
+        <TooltipPopup side="bottom">
+          <div className="flex flex-col gap-0.5">
+            <span>{model.menuTitle}</span>
+            {model.rows.map((row) => {
+              const text = localizeProviderUsageDisplayText(i18n, row);
+              return (
+                // The reset sits under its window, so a narrow panel never breaks a phrase.
+                <span key={row.id} className="flex flex-col tabular-nums">
+                  <span className="whitespace-nowrap opacity-80">
+                    {text.label} · {text.leftText}
+                  </span>
+                  {text.resetText ? (
+                    <span className="whitespace-nowrap opacity-60">{text.resetText}</span>
+                  ) : null}
+                </span>
+              );
+            })}
+          </div>
+        </TooltipPopup>
       </Tooltip>
     </ProviderUsageMenuPopup>
   );

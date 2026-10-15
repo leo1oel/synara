@@ -46,11 +46,18 @@ import {
 } from "../parse";
 import { createRateLimitResilience } from "../rateLimitResilience";
 import type { ProviderUsageContext, ProviderUsageFetcher } from "../types";
+import {
+  __resetClaudeCliUsageCooldownForTests,
+  readClaudeCliUsageThroughSdk,
+  readClaudeUsageFromCli,
+  type ReadClaudeCliUsage,
+} from "./claudeCliUsage";
 
 const execFileAsync = promisify(execProcessFile);
 const log = createLogger("provider-usage:claude");
 
 const SOURCE = "claude-oauth-usage";
+const CLI_SOURCE = "claude-cli-usage";
 const USAGE_URL = "https://api.anthropic.com/api/oauth/usage";
 const KEYCHAIN_SERVICE = "Claude Code-credentials";
 const REFRESH_BUFFER_MS = 5 * 60 * 1000;
@@ -223,6 +230,8 @@ interface ClaudeAuthNudgeDeps {
     homeDir: string;
     env: NodeJS.ProcessEnv;
   }) => Promise<void>;
+  /** Ask the CLI for `/usage` when its login is out of this process's reach. */
+  readCliUsage: ReadClaudeCliUsage;
 }
 
 const defaultAuthNudgeDeps: ClaudeAuthNudgeDeps = {
@@ -240,6 +249,7 @@ const defaultAuthNudgeDeps: ClaudeAuthNudgeDeps = {
       }),
     });
   },
+  readCliUsage: readClaudeCliUsageThroughSdk,
 };
 
 let authNudgeDeps: ClaudeAuthNudgeDeps = defaultAuthNudgeDeps;
@@ -279,10 +289,14 @@ async function nudgeClaudeCliAuthRefresh(ctx: ProviderUsageContext): Promise<boo
   }
 }
 
-/** Test-only: replace the CLI nudge (lock + exec) and clear its cooldown memory. */
+/** Test-only: replace the CLI nudge and usage read (lock + exec) and clear their cooldowns. */
 export function __setClaudeAuthNudgeDepsForTests(deps: Partial<ClaudeAuthNudgeDeps> | null): void {
-  authNudgeDeps = { ...defaultAuthNudgeDeps, ...(deps ?? {}) };
+  // A stubbed test never starts the real CLI for usage unless it asks to.
+  authNudgeDeps = deps
+    ? { ...defaultAuthNudgeDeps, readCliUsage: async () => null, ...deps }
+    : defaultAuthNudgeDeps;
   authNudgeNotBeforeMs.clear();
+  __resetClaudeCliUsageCooldownForTests();
 }
 
 export function parseClaudeUsage(input: { json: unknown; nowMs: number; planName?: string }) {
@@ -404,6 +418,10 @@ export const claudeUsageFetcher: ProviderUsageFetcher = {
     }
     const candidates = await resolveClaudeCredCandidates(ctx);
     if (candidates.length === 0) {
+      const cliSnapshot = await claudeCliUsageSnapshot(ctx);
+      if (cliSnapshot) {
+        return cliSnapshot;
+      }
       return {
         ...needsAuthSnapshot("claudeAgent", ctx.nowMs, SOURCE),
         detail:
@@ -529,10 +547,30 @@ export const claudeUsageFetcher: ProviderUsageFetcher = {
     return (
       inferenceOnlySnapshot ??
       lastErrorSnapshot ??
+      // Every stored credential was rejected: one left behind by an earlier login, while the
+      // CLI's own login lives where only it can read.
+      (await claudeCliUsageSnapshot(ctx)) ??
       needsAuthSnapshot("claudeAgent", ctx.nowMs, SOURCE)
     );
   },
 };
+
+async function claudeCliUsageSnapshot(
+  ctx: ProviderUsageContext,
+): Promise<ServerProviderUsageSnapshot | null> {
+  const usage = await readClaudeUsageFromCli(ctx, {
+    acquireLock: authNudgeDeps.acquireLock,
+    readUsage: authNudgeDeps.readCliUsage,
+  });
+  if (!usage) {
+    return null;
+  }
+  const planName = usage.subscriptionType ? titleCase(usage.subscriptionType) : undefined;
+  return {
+    ...parseClaudeUsage({ json: usage.json, nowMs: ctx.nowMs, ...(planName ? { planName } : {}) }),
+    source: CLI_SOURCE,
+  };
+}
 
 function fetchClaudeUsage(accessToken: string) {
   return fetchJson({

@@ -108,10 +108,14 @@ export function useProviderUsageSummary(input: {
   codexHomePath?: string | null;
   providerSnapshot?: ServerGetProviderUsageSnapshotResult | undefined;
   fetchOpenUsageData?: boolean | undefined;
+  /** False holds every usage read back, e.g. until a surface has finished starting. */
+  enabled?: boolean | undefined;
 }) {
   const provider = input.provider ?? null;
   const instanceId = input.instanceId ?? input.providerSnapshot?.instanceId;
-  const shouldFetchLiveProviderUsage = provider !== null && input.providerSnapshot === undefined;
+  const enabled = input.enabled ?? true;
+  const shouldFetchLiveProviderUsage =
+    enabled && provider !== null && input.providerSnapshot === undefined;
   const allProviderUsageQuery = useQuery(
     serverAllProviderUsageQueryOptions({
       enabled: shouldFetchLiveProviderUsage,
@@ -138,7 +142,7 @@ export function useProviderUsageSummary(input: {
   );
   const openUsageSnapshotQuery = useQuery(
     openUsageProviderSnapshotQueryOptions(provider, {
-      enabled: !accountScoped && (input.fetchOpenUsageData ?? true),
+      enabled: enabled && !accountScoped && (input.fetchOpenUsageData ?? true),
     }),
   );
   const accountRateLimits = accountScoped
