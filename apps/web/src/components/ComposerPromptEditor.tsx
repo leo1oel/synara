@@ -603,6 +603,8 @@ interface ComposerPromptEditorProps {
   placeholder: string;
   ariaLabel?: string | undefined;
   className?: string;
+  /** One-line field for the single-row composer: one line tall, placeholder truncated. */
+  singleLine?: boolean;
   onRemoveTerminalContext: (contextId: string) => void;
   /**
    * Invoked when a sufficiently large text paste should collapse into an attachment
@@ -1138,6 +1140,7 @@ function ComposerPromptEditorInner({
   placeholder,
   ariaLabel,
   className,
+  singleLine,
   onRemoveTerminalContext,
   onCollapsePastedText,
   onChange,
@@ -1416,6 +1419,7 @@ function ComposerPromptEditorInner({
                 COMPOSER_EDITOR_TYPOGRAPHY_CLASS_NAME,
                 COMPOSER_EDITOR_MIN_HEIGHT_CLASS_NAME,
                 COMPOSER_EDITOR_CONTENT_RESET_CLASS_NAME,
+                singleLine && "min-h-[1lh]",
                 className,
               )}
               data-testid="composer-editor"
@@ -1432,6 +1436,7 @@ function ComposerPromptEditorInner({
                   "pointer-events-none absolute inset-0",
                   COMPOSER_PLACEHOLDER_TEXT_CLASS_NAME,
                   COMPOSER_EDITOR_TYPOGRAPHY_CLASS_NAME,
+                  singleLine && "truncate",
                 )}
               >
                 {placeholder}
@@ -1471,6 +1476,7 @@ export const ComposerPromptEditor = forwardRef<
     placeholder,
     ariaLabel,
     className,
+    singleLine,
     onRemoveTerminalContext,
     onCollapsePastedText,
     onChange,
@@ -1517,6 +1523,7 @@ export const ComposerPromptEditor = forwardRef<
         {...(onCollapsePastedText ? { onCollapsePastedText } : {})}
         {...(onCommandKeyDown ? { onCommandKeyDown } : {})}
         {...(className ? { className } : {})}
+        {...(singleLine ? { singleLine } : {})}
       />
     </LexicalComposer>
   );

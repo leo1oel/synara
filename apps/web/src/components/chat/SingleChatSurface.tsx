@@ -501,15 +501,17 @@ export function SingleChatSurface(props: {
     });
   };
 
-  const handleUpdateEditorDiffPanelState = (
-    patch: Partial<Pick<SplitViewPanePanelState, "panel" | "diffTurnId" | "diffFilePath">>,
-  ) => {
-    setEditorDiffPanelState((previous) => ({
-      panel: "diff",
-      diffTurnId: "diffTurnId" in patch ? (patch.diffTurnId ?? null) : previous.diffTurnId,
-      diffFilePath: "diffFilePath" in patch ? (patch.diffFilePath ?? null) : previous.diffFilePath,
-    }));
-  };
+  const handleUpdateEditorDiffPanelState = useCallback(
+    (patch: Partial<Pick<SplitViewPanePanelState, "panel" | "diffTurnId" | "diffFilePath">>) => {
+      setEditorDiffPanelState((previous) => ({
+        panel: "diff",
+        diffTurnId: "diffTurnId" in patch ? (patch.diffTurnId ?? null) : previous.diffTurnId,
+        diffFilePath:
+          "diffFilePath" in patch ? (patch.diffFilePath ?? null) : previous.diffFilePath,
+      }));
+    },
+    [],
+  );
   const handleEditorDiffFilesChange = (
     files: ReadonlyArray<FileDiffMetadata>,
     isLoading: boolean,
@@ -524,9 +526,6 @@ export function SingleChatSurface(props: {
       panel: "diff",
       diffFilePath: filePath,
     }));
-  };
-  const handleEditorDiffOptionsChange = (control: ReactNode | null) => {
-    setEditorDiffOptionsControl(control);
   };
   const handleReferenceInChat = (reference: ChatFileReference) => {
     appendChatFileReference(props.threadId, reference);
@@ -1092,7 +1091,7 @@ export function SingleChatSurface(props: {
                   queriesEnabled
                   hideHeader
                   onRenderableFilesChange={handleEditorDiffFilesChange}
-                  onEditorDiffOptionsChange={handleEditorDiffOptionsChange}
+                  onEditorDiffOptionsChange={setEditorDiffOptionsControl}
                 />
               }
               chatPanel={

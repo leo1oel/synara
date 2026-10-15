@@ -1,5 +1,4 @@
 import { ComposerEnvironmentPicker } from "./chat/ComposerEnvironmentPicker";
-import { requestCurrentAppSnap } from "../appSnap.logic";
 // FILE: BranchToolbar.tsx
 // Purpose: Renders the chat thread's compact workspace controls, including the
 // local usage popover, inline workspace handoff actions, and runtime access toggle.
@@ -24,6 +23,7 @@ import { useProviderUsageSummary } from "../hooks/useProviderUsageSummary";
 import { resolveThreadEnvironmentPresentation } from "../lib/threadEnvironment";
 import {
   RUNTIME_MODE_PRESENTATION,
+  runtimeModePresentation,
   providerModelSupportsAutoRuntimeMode,
 } from "../lib/runtimeMode";
 import { useStore } from "../store";
@@ -44,8 +44,6 @@ import {
   type BranchSelectorVariant,
 } from "./BranchToolbarBranchSelector";
 import {
-  COMPOSER_TOOLBAR_PICKER_TRIGGER_CLASS_NAME,
-  RUNTIME_AUTO_ACCENT_CLASS_NAME,
   RUNTIME_FULL_ACCESS_ACCENT_CLASS_NAME,
   COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME,
 } from "./chat/composerPickerStyles";
@@ -113,14 +111,16 @@ function ContinueInMenuItem({
 
 function RuntimeModeMenuItem({
   mode,
+  provider,
   icon,
   accent = false,
 }: {
   mode: RuntimeMode;
+  provider: ProviderKind | undefined;
   icon: ReactNode;
   accent?: boolean;
 }) {
-  const presentation = RUNTIME_MODE_PRESENTATION[mode];
+  const presentation = runtimeModePresentation(mode, provider);
   return (
     <MenuRadioItem
       value={mode}
@@ -204,7 +204,7 @@ export function RuntimeUsageControls({
   const autoModeAvailable =
     provider !== undefined &&
     providerModelSupportsAutoRuntimeMode(provider, runtimeModel, providerStatus);
-  const runtimePresentation = RUNTIME_MODE_PRESENTATION[runtimeMode ?? "approval-required"];
+  const runtimePresentation = runtimeModePresentation(runtimeMode ?? "approval-required", provider);
   const runtimeModePending = activeRuntimeMode !== undefined && activeRuntimeMode !== runtimeMode;
   const pendingDescription = runtimeModePending
     ? ` Applies next turn. This turn still uses ${RUNTIME_MODE_PRESENTATION[activeRuntimeMode].label}.`
@@ -227,7 +227,6 @@ export function RuntimeUsageControls({
                 className={cn(
                   "min-w-0 shrink-0 justify-start gap-1.5 whitespace-nowrap px-2 [&_svg]:mx-0 sm:px-2.5",
                   COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME,
-                  runtimeMode === "auto" && RUNTIME_AUTO_ACCENT_CLASS_NAME,
                   runtimeMode === "full-access" && RUNTIME_FULL_ACCESS_ACCENT_CLASS_NAME,
                 )}
                 title={`${runtimePresentation.label}: ${runtimePresentation.description}.${pendingDescription} Click to change permissions.`}
@@ -276,26 +275,23 @@ export function RuntimeUsageControls({
             >
               <RuntimeModeMenuItem
                 mode="approval-required"
+                provider={provider}
                 icon={<HiOutlineHandRaised className="size-4 shrink-0" />}
               />
               {autoModeAvailable ? (
                 <RuntimeModeMenuItem
                   mode="auto"
+                  provider={provider}
                   icon={<CentralIcon name="shield-code" className="size-4 shrink-0" />}
                 />
               ) : null}
               <RuntimeModeMenuItem
                 mode="full-access"
+                provider={provider}
                 accent
                 icon={<CentralIcon name="shield-access" className="size-4 shrink-0" />}
               />
             </MenuRadioGroup>
-            {typeof window !== "undefined" && window.desktopBridge?.appSnap?.captureCurrentApp ? (
-              <>
-                <MenuSeparator />
-                <MenuItem onClick={requestCurrentAppSnap}>Share current app</MenuItem>
-              </>
-            ) : null}
           </ComposerPickerMenuPopup>
         </Menu>
       ) : null}
@@ -541,7 +537,7 @@ export default function BranchToolbar({
         className,
       )}
     >
-      <div className={isPanel ? "flex flex-col gap-0.5" : "flex items-center gap-2"}>
+      <div className={isPanel ? "flex flex-col gap-0.5" : "flex w-full min-w-0 items-center gap-2"}>
         {!showEnvironmentPicker ? null : showEnvPicker ? (
           <ComposerEnvironmentPicker
             environmentPresentation={environmentPresentation}
@@ -562,7 +558,9 @@ export default function BranchToolbar({
                 <Collapsible open={rateLimitsOpen} onOpenChange={setRateLimitsOpen}>
                   <MenuItem closeOnClick={false} onClick={() => setRateLimitsOpen((open) => !open)}>
                     <CentralIcon name="clock" className="size-3.5 text-muted-foreground" />
-                    <span className="min-w-0 flex-1 truncate">{i18n._("Rate limits remaining")}</span>
+                    <span className="min-w-0 flex-1 truncate">
+                      {i18n._("Rate limits remaining")}
+                    </span>
                     <DisclosureChevron
                       open={rateLimitsOpen}
                       className="text-[var(--color-text-foreground-secondary)]"

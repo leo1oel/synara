@@ -911,7 +911,7 @@ export function BranchToolbarBranchSelector({
         className={cn(
           isPanel
             ? ENVIRONMENT_ROW_CLASS_NAME
-            : `${COMPOSER_TOOLBAR_PICKER_TRIGGER_CLASS_NAME} disabled:cursor-not-allowed disabled:opacity-50`,
+            : `${COMPOSER_TOOLBAR_PICKER_TRIGGER_CLASS_NAME} min-w-0 disabled:cursor-not-allowed disabled:opacity-50`,
           isPanel && isBranchMenuOpen && "bg-[var(--color-background-elevated-secondary)]",
         )}
         disabled={(branchesQuery.isLoading && branches.length === 0) || isBranchActionPending}
@@ -925,7 +925,9 @@ export function BranchToolbarBranchSelector({
         ) : (
           <>
             <GitBranchIcon className="size-3.5 shrink-0" />
-            <span className="max-w-[240px] truncate">{triggerLabel}</span>
+            <span className="min-w-0 max-w-[240px] truncate" title={triggerLabel}>
+              {triggerLabel}
+            </span>
             <EnvironmentRowChevron open={isBranchMenuOpen} />
           </>
         )}

@@ -127,7 +127,6 @@ interface ComposerQueuedHeaderProps {
   onEditPaused?: () => void;
   /** Workspace root used to resolve local file links/mentions inside the parsed preview. */
   cwd?: string | undefined;
-  attachedToPrevious?: boolean;
 }
 
 export const ComposerQueuedHeader = function ComposerQueuedHeader({
@@ -139,15 +138,13 @@ export const ComposerQueuedHeader = function ComposerQueuedHeader({
   onResume,
   onEditPaused,
   cwd,
-  attachedToPrevious: attachedToPreviousProp,
 }: ComposerQueuedHeaderProps) {
-  const attachedToPrevious = attachedToPreviousProp ?? false;
   if (queuedTurns.length === 0) {
     return null;
   }
 
   return (
-    <ComposerStackedPanel attachedToPrevious={attachedToPrevious} className="flex flex-col">
+    <ComposerStackedPanel className="flex flex-col">
       {pause && onResume && onEditPaused ? (
         <QueuedComposerPausedNotice pause={pause} onResume={onResume} onEdit={onEditPaused} />
       ) : null}

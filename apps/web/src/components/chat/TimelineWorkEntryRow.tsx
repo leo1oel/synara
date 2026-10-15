@@ -71,6 +71,7 @@ import ChatMarkdown from "../ChatMarkdown";
 import { DiffStatLabel } from "./DiffStatLabel";
 import { type ExpandedImagePreview } from "./ExpandedImagePreview";
 import { LinkChipIcon } from "../LinkChipIcon";
+import { McpServerIcon } from "./McpServerIcon";
 import { normalizeCompactToolLabel } from "./MessagesTimeline.logic";
 import { SynaraLogo } from "../SynaraLogo";
 import { ToolCallDetailsContent } from "./ToolCallDetailsDialog";
@@ -1023,6 +1024,11 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
                 >
                   {webFetchUrl ? (
                     <LinkChipIcon url={webFetchUrl} className={compact ? "size-3.5" : "size-4"} />
+                  ) : isMcpToolRow && LeftIcon === McpIcon && workEntry.mcpServer ? (
+                    <McpServerIcon
+                      serverName={workEntry.mcpServer}
+                      className={compact ? "size-3.5" : "size-4"}
+                    />
                   ) : (
                     renderWorkEntryIcon(LeftIcon, compact ? "size-3.5" : "size-4")
                   )}

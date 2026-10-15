@@ -53,6 +53,7 @@ import {
   buildStarredTabRows,
   type ComposerModelPickerRow as PickerRow,
   type ComposerModelPickerTab,
+  composerModelDisplayName,
   MODEL_PICKER_POPUP_ATTRIBUTE,
   MODEL_PICKER_SHORTCUT_ROW_LIMIT,
   modelPickerShortcutRowIndex,
@@ -550,7 +551,7 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
         // The default account is implied; only another one is worth the room.
         accountName={activeProviderTab?.dotted ? activeProviderTab.name : null}
         accountAccentColor={activeProviderTab?.accentColor}
-        modelLabel={modelLabel}
+        modelLabel={composerModelDisplayName(activeProvider, modelLabel)}
         statusLabel={currentStatusLabel === null ? null : localizeLabel(currentStatusLabel)}
         contextWindowLabel={activeProvider === "claudeAgent" ? props.contextWindowLabel : null}
         showsFastBadge={showsComposerFastModeBadge(currentTraitSelection)}

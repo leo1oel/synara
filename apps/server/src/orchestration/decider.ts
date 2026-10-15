@@ -1656,6 +1656,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       }
       if (command.providerHandoff === true) {
         yield* validateProviderHandoff(command, thread);
+      } else if (command.providerHandoffStopsBackgroundTasks === true) {
+        return yield* new OrchestrationCommandInvariantError({
+          commandType: command.type,
+          detail: "Stopping background tasks is only allowed as part of a provider handoff.",
+        });
       }
       const occurredAt = nowIso();
       return {
@@ -1702,7 +1707,14 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
             : {}),
           ...resolveThreadGoalPatch(command, thread, occurredAt),
           ...(command.providerHandoff === true
-            ? { providerHandoff: { sourceModelSelection: thread.modelSelection } }
+            ? {
+                providerHandoff: {
+                  sourceModelSelection: thread.modelSelection,
+                  ...(command.providerHandoffStopsBackgroundTasks === true
+                    ? { stopBackgroundTasks: true }
+                    : {}),
+                },
+              }
             : {}),
           updatedAt: occurredAt,
         },

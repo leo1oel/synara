@@ -7,6 +7,7 @@
 import { rankProviderDiscoveryItems } from "~/lib/providerDiscovery";
 import { i18n } from "./i18n";
 import {
+  isSettingsSectionAvailable,
   settingRowAnchorId,
   SETTINGS_NAV_ITEMS,
   type SettingsSectionId,
@@ -206,6 +207,12 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   },
 
   // ── Appearance ───────────────────────────────────────────────────────────────
+  {
+    id: "appearance:ascii-background",
+    section: "appearance",
+    title: "ASCII background",
+    keywords: "animated empty chat landing background field waves ripples reduced motion disable",
+  },
   {
     id: "appearance:theme",
     section: "appearance",
@@ -641,6 +648,15 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     title: "Recovery tools",
     keywords:
       "Rebuild local project indexes without clearing existing chats when the local state gets out of sync.",
+  },
+  {
+    id: "connectors:catalog",
+    section: "connectors",
+    title: "Connectors",
+    keywords:
+      "Connect Supabase Cloudflare Linear Notion Sentry Stripe Neon Atlassian PostHog remote MCP server sign in OAuth custom URL apps tools",
+    target: null,
+    applies: () => isSettingsSectionAvailable("connectors"),
   },
   {
     id: "integrations:external-mcp",

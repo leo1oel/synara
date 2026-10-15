@@ -21,6 +21,7 @@ import { threadIdFromThreadMentionPath } from "@synara/shared/threadMentions";
 import { useStore } from "~/store";
 import { resolveThreadDisplayProvider } from "~/lib/threadDisplayProvider";
 import { ProviderIcon } from "../ProviderIcon";
+import { ConnectorIcon } from "../ConnectorIcon";
 
 export type { MentionChipKind };
 
@@ -87,6 +88,9 @@ export const MentionChipIcon = function MentionChipIcon(props: {
   }
   if (resolvedKind === "paper") {
     return <PaperIcon className={className} />;
+  }
+  if (resolvedKind === "connector") {
+    return <ConnectorIcon name={props.path} className={className} />;
   }
   const kind = inferEntryKindFromPath(props.path);
   if (kind === "directory") {

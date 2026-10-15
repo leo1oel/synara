@@ -1,5 +1,6 @@
 import { i18n } from "~/i18n";
 import type {
+  McpConnector,
   ProjectEntry,
   ProviderAgentDescriptor,
   ProviderArtifactsState,
@@ -31,6 +32,7 @@ import {
   getProviderNativeSlashCommandSearchTerms,
   shouldHideProviderNativeCommandFromComposerMenu,
 } from "../composerSlashCommands";
+import { mcpConnectorMentionPath } from "@synara/shared/mcpConnectors";
 import { threadMentionPathForThreadId } from "@synara/shared/threadMentions";
 import { isGroupContainerKind } from "@synara/shared/projectContainers";
 
@@ -382,6 +384,8 @@ export function useComposerCommandMenuItems(input: {
     readonly scopeProjectId?: string | null;
   };
   paperMentionSources?: readonly ComposerPaperMentionSource[];
+  /** Connected connectors this provider's sessions receive (Beta). */
+  connectors?: readonly McpConnector[];
 }): ComposerCommandItem[] {
   const {
     composerTrigger,
@@ -402,6 +406,7 @@ export function useComposerCommandMenuItems(input: {
     dynamicAgents,
     threadMentionSources,
     paperMentionSources,
+    connectors,
   } = input;
 
   if (!composerTrigger) return [];
@@ -442,6 +447,18 @@ export function useComposerCommandMenuItems(input: {
       }));
     })();
 
+    const connectorItems = rankProviderDiscoveryItems(connectors ?? [], query, (connector) => [
+      { value: connector.name },
+      { value: connector.presetId ?? "", weight: 200 },
+    ]).map((connector) => ({
+      id: `connector:${connector.connectorId}`,
+      type: "connector" as const,
+      connectorName: connector.name,
+      mention: { name: connector.name, path: mcpConnectorMentionPath(connector.serverName) },
+      label: connector.name,
+      // Host only: some servers keep an API key in the URL path.
+      description: new URL(connector.url).host,
+    }));
     const pluginItems = rankProviderDiscoveryItems(
       providerPlugins.filter(({ plugin }) => isInstalledProviderPlugin(plugin)),
       query,
@@ -490,6 +507,7 @@ export function useComposerCommandMenuItems(input: {
     return [
       ...pathItems,
       ...paperItems,
+      ...connectorItems,
       ...pluginItems,
       ...threadItems,
       ...localRootItems,

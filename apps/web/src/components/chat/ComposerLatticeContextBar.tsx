@@ -37,7 +37,6 @@ const INCLUDED_WITH_MESSAGE = msg({ message: "Included", context: "Sent with the
 
 interface ComposerLatticeContextBarProps {
   onClearSelection?: () => void;
-  attachedToPrevious?: boolean;
   /**
    * The bar's height as it floats above the composer (0 while hidden), for
    * content that must stay clear of it: the composer's measured height
@@ -48,7 +47,6 @@ interface ComposerLatticeContextBarProps {
 
 export function ComposerLatticeContextBar({
   onClearSelection,
-  attachedToPrevious: attachedToPreviousProp,
   onHeightChange,
 }: ComposerLatticeContextBarProps) {
   const [expanded, setExpanded] = useState(false);
@@ -80,7 +78,6 @@ export function ComposerLatticeContextBar({
     getLiveLatticeHostContext,
   );
   if (!context) return null;
-  const attachedToPrevious = attachedToPreviousProp ?? false;
   const summary = latticeContextSummary(context, i18n);
   const details = latticeContextDetails(context, i18n);
   const selection = latticeContextSelection(context, i18n);
@@ -94,10 +91,7 @@ export function ComposerLatticeContextBar({
     // the transcript's bottom inset here would move a conversation parked at its end.
     <div className="relative">
       <div ref={measureRef} className="absolute inset-x-0 bottom-0 z-10">
-        <ComposerStackedPanel
-          attachedToPrevious={attachedToPrevious}
-          data-testid="composer-lattice-context"
-        >
+        <ComposerStackedPanel data-testid="composer-lattice-context">
           <ComposerStackedPanelHeaderRow>
             <button
               type="button"

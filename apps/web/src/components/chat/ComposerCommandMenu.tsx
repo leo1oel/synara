@@ -32,6 +32,7 @@ import { formatSkillScope } from "~/lib/providerDiscovery";
 import { cn } from "~/lib/utils";
 import { FileEntryIcon } from "./FileEntryIcon";
 import { ProviderIcon } from "../ProviderIcon";
+import { ConnectorIcon } from "../ConnectorIcon";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import {
   COMPOSER_MENU_PANEL_GLYPH_CLASS_NAME,
@@ -119,6 +120,10 @@ function commandMenuTrailingMeta(i18n: I18n, item: ComposerCommandItem): string 
 
   if (item.type === "plugin") {
     return i18n._("Plugin");
+  }
+
+  if (item.type === "connector") {
+    return i18n._("Connector");
   }
 
   if (item.type === "thread") {
@@ -215,6 +220,7 @@ function commandMenuSecondaryText(i18n: I18n, item: ComposerCommandItem): string
 
   if (
     item.type === "plugin" ||
+    item.type === "connector" ||
     item.type === "skill" ||
     item.type === "local-root" ||
     item.type === "thread" ||
@@ -311,6 +317,15 @@ export type ComposerCommandItem =
     }
   | {
       id: string;
+      type: "connector";
+      /** Display name, also what picks the brand mark or favicon. */
+      connectorName: string;
+      mention: ProviderMentionReference;
+      label: string;
+      description: string;
+    }
+  | {
+      id: string;
       type: "skill";
       skill: ProviderSkillDescriptor;
       label: string;
@@ -340,12 +355,14 @@ export function groupCommandItems(
   if (triggerKind === "mention") {
     const fileItems = items.filter((item) => item.type === "path");
     const paperItems = items.filter((item) => item.type === "paper");
+    const connectorItems = items.filter((item) => item.type === "connector");
     const pluginItems = items.filter((item) => item.type === "plugin");
     const threadItems = items.filter((item) => item.type === "thread");
     const localItems = items.filter((item) => item.type === "local-root");
     const agentItems = items.filter((item) => item.type === "agent");
     const otherItems = items.filter(
       (item) =>
+        item.type !== "connector" &&
         item.type !== "plugin" &&
         item.type !== "thread" &&
         item.type !== "local-root" &&
@@ -360,6 +377,9 @@ export function groupCommandItems(
     }
     if (paperItems.length > 0) {
       groups.push({ id: "papers", label: "Papers", items: paperItems });
+    }
+    if (connectorItems.length > 0) {
+      groups.push({ id: "connectors", label: "Connectors", items: connectorItems });
     }
     if (pluginItems.length > 0) {
       groups.push({ id: "plugins", label: "Plugins", items: pluginItems });
@@ -452,6 +472,8 @@ function localizeGroupLabel(i18n: I18n, group: ComposerCommandGroupModel): strin
       return i18n._("Provider");
     case "skills":
       return i18n._("Skills");
+    case "connectors":
+      return i18n._("Connectors");
     default:
       return group.label;
   }
@@ -620,6 +642,8 @@ function commandMenuItemGlyph(item: ComposerCommandItem, theme: "light" | "dark"
       return <ProviderIcon provider={item.provider} className={cls} />;
     case "paper":
       return <SkillCubeIcon className={cls} />;
+    case "connector":
+      return <ConnectorIcon name={item.connectorName} className={cls} />;
     case "skill":
       return <SkillCubeIcon className={cls} />;
     default:
