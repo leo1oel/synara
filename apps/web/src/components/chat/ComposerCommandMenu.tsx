@@ -90,6 +90,8 @@ function commandMenuTitle(
       return i18n._("Rename");
     case "automation":
       return i18n._("Automation");
+    case "mcp":
+      return i18n._("MCP Servers");
     default:
       return humanizeProviderCommandName(item.command);
   }
@@ -194,6 +196,8 @@ function localizedSlashCommandDescription(i18n: I18n, command: string): string |
       return i18n._("Send feedback to the Synara team");
     case "automation":
       return i18n._("Create a scheduled automation from this prompt");
+    case "mcp":
+      return i18n._("Show this agent's MCP servers, sign in, reconnect, or turn them off");
     default:
       return null;
   }

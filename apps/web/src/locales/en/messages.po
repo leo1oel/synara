@@ -12,91 +12,6 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
-#: src/components/ChatView.tsx
-msgid "Do anything in Lattice"
-msgstr "Do anything in Lattice"
-
-#. js-lingui-explicit-id
-#: src/components/ChatView.tsx
-msgid "Do anything in Synara"
-msgstr "Do anything in Synara"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerBlockedHandoffNotice.tsx
-msgid "{source} still has background tasks running in this thread, so it can't switch to {target} yet. Stop them to switch now, or wait for them to finish and send again."
-msgstr "{source} still has background tasks running in this thread, so it can't switch to {target} yet. Stop them to switch now, or wait for them to finish and send again."
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerBlockedHandoffNotice.tsx
-msgid "Stop tasks and switch"
-msgstr "Stop tasks and switch"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerCommandMenu.tsx
-msgid "Connector"
-msgstr "Connector"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerCommandMenu.tsx
-msgid "Connectors"
-msgstr "Connectors"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerLiveChangesHeader.tsx
-msgid "{files} · Review changes"
-msgstr "{files} · Review changes"
-
-#. js-lingui-explicit-id
-#: src/components/chat/InlineVisualBlocks.tsx
-msgid "Visual unavailable."
-msgstr "Visual unavailable."
-
-#. js-lingui-explicit-id
-#: src/components/chat/InlineVisualBlocks.tsx
-msgid "Loading {title}"
-msgstr "Loading {title}"
-
-#. js-lingui-explicit-id
-#: src/components/chat/InlineVisualBlocks.tsx
-msgid "This visual needs a newer {app}."
-msgstr "This visual needs a newer {app}."
-
-#. js-lingui-explicit-id
-#: src/components/chat/InlineVisualBlocks.tsx
-msgid "pending"
-msgstr "pending"
-
-#. js-lingui-explicit-id
-#: src/components/chat/InlineVisualBlocks.tsx
-msgid "Recommended"
-msgstr "Recommended"
-
-#. js-lingui-explicit-id
-#: src/components/chat/InlineVisualBlocks.tsx
-msgid "Views"
-msgstr "Views"
-
-#. js-lingui-explicit-id
-#: src/components/chat/InlineVisualFrame.tsx
-msgid "HTML visuals are not available in Lattice."
-msgstr "HTML visuals are not available in Lattice."
-
-#. js-lingui-explicit-id
-#: src/components/chat/InlineVisualFrame.tsx
-msgid "HTML visuals are available in Synara desktop. Use native components in the browser."
-msgstr "HTML visuals are available in Synara desktop. Use native components in the browser."
-
-#. js-lingui-explicit-id
-#: src/components/chat/InlineVisualTable.tsx
-msgid "Show fewer rows"
-msgstr "Show fewer rows"
-
-#. js-lingui-explicit-id
-#: src/components/chat/InlineVisualTable.tsx
-msgid "Show all {count} rows"
-msgstr "Show all {count} rows"
-
-#. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
 #: src/components/chat/ComposerAutomationSetupBanner.tsx
 #: src/components/chat/FileLineCommentBox.tsx
@@ -724,6 +639,7 @@ msgid "Completed"
 msgstr "Completed"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/chat/environment/environmentPullRequest.logic.ts
 #: src/components/chat/SubagentRunCard.logic.ts
 #: src/components/chat/SubagentThreadIntro.tsx
@@ -793,6 +709,7 @@ msgid "Unavailable"
 msgstr "Unavailable"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/lib/providerSetupStatus.ts
 msgid "Needs sign-in"
 msgstr "Needs sign-in"
@@ -813,12 +730,14 @@ msgid "Installed · sign-in not verified"
 msgstr "Installed · sign-in not verified"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
 #: src/lib/providerSetupStatus.ts
 msgid "Connected"
 msgstr "Connected"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/settings/ManagedSkillDetailView.tsx
 #: src/components/settings/SkillsSettingsPanel.tsx
 #: src/lib/providerSetupStatus.ts
@@ -1484,6 +1403,66 @@ msgstr "An error occurred while exporting the thread."
 
 #. js-lingui-explicit-id
 #: src/hooks/useComposerSlashCommands.ts
+msgid "Reconnected {count} MCP servers"
+msgstr "Reconnected {count} MCP servers"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Enabled {count} MCP servers"
+msgstr "Enabled {count} MCP servers"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Disabled {count} MCP servers"
+msgstr "Disabled {count} MCP servers"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Reconnected {server}"
+msgstr "Reconnected {server}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Enabled {server}"
+msgstr "Enabled {server}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Disabled {server}"
+msgstr "Disabled {server}"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Could not update every MCP server"
+msgstr "Could not update every MCP server"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Could not update {server}"
+msgstr "Could not update {server}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+#: src/hooks/useComposerSlashCommands.ts
+msgid "The agent did not accept the request."
+msgstr "The agent did not accept the request."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "No MCP server to change"
+msgstr "No MCP server to change"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Send /mcp to see this agent's servers."
+msgstr "Send /mcp to see this agent's servers."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
 msgid "Add a task after /computer-use"
 msgstr "Add a task after /computer-use"
 
@@ -1491,6 +1470,16 @@ msgstr "Add a task after /computer-use"
 #: src/hooks/useComposerSlashCommands.ts
 msgid "For example: /computer-use open Calculator and calculate 123 × 45."
 msgstr "For example: /computer-use open Calculator and calculate 123 × 45."
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Unknown /mcp action"
+msgstr "Unknown /mcp action"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "“{action}” is not an /mcp action. Send /mcp to see your servers, or use /mcp reconnect, /mcp enable, or /mcp disable with a server name."
+msgstr "“{action}” is not an /mcp action. Send /mcp to see your servers, or use /mcp reconnect, /mcp enable, or /mcp disable with a server name."
 
 #. js-lingui-explicit-id
 #: src/hooks/useComposerSlashCommands.ts
@@ -2471,6 +2460,16 @@ msgid "Ask about this pull request"
 msgstr "Ask about this pull request"
 
 #. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Do anything in Lattice"
+msgstr "Do anything in Lattice"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Do anything in Synara"
+msgstr "Do anything in Synara"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ChatEmptyStateHero.tsx
 #: src/components/ChatView.tsx
 msgid "Synara logo"
@@ -2483,6 +2482,7 @@ msgstr "What should we work on?"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/ChatView.tsx
 #: src/components/githubInbox/GitHubInboxFilterBar.tsx
 #: src/components/pullRequest/GitHubItemFloatingComposer.tsx
@@ -3230,6 +3230,7 @@ msgid "Copied"
 msgstr "Copied"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/chat/ComposerSlashStatusDialog.tsx
 #: src/components/chat/GitPanel.browser.tsx
 #: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
@@ -4111,6 +4112,7 @@ msgid "Unable to connect to the Synara server."
 msgstr "Unable to connect to the Synara server."
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/chat/GitRepositorySetup.tsx
 #: src/components/settings/ProviderSignInDialog.tsx
 msgid "Connecting…"
@@ -4441,6 +4443,7 @@ msgid "Sign in to {account}"
 msgstr "Sign in to {account}"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Sign in"
 msgstr "Sign in"
@@ -4803,6 +4806,7 @@ msgstr "Included"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/chat/ComposerSlashStatusDialog.tsx
 #: src/components/chat/SynaraThreadCreationCard.tsx
 #: src/components/pullRequest/GitHubItemFloatingComposer.tsx
@@ -6263,6 +6267,7 @@ msgid "More"
 msgstr "More"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/githubInbox/GitHubInboxFilterBar.tsx
 msgid "Refresh"
 msgstr "Refresh"
@@ -6404,6 +6409,7 @@ msgid "Lattice could not reach GitHub. Check your connection and try again"
 msgstr "Lattice could not reach GitHub. Check your connection and try again"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/chat/ThreadDetailHydrationState.tsx
 #: src/components/githubInbox/LatticePullRequestList.tsx
 msgid "Try again"
@@ -6923,6 +6929,16 @@ msgstr "Cancel automation setup"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerBlockedHandoffNotice.tsx
+msgid "{source} still has background tasks running in this thread, so it can't switch to {target} yet. Stop them to switch now, or wait for them to finish and send again."
+msgstr "{source} still has background tasks running in this thread, so it can't switch to {target} yet. Stop them to switch now, or wait for them to finish and send again."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerBlockedHandoffNotice.tsx
+msgid "Stop tasks and switch"
+msgstr "Stop tasks and switch"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerBlockedHandoffNotice.tsx
 #: src/components/chat/ComposerExpiredUserInputNotice.tsx
 msgid "Dismiss"
 msgstr "Dismiss"
@@ -7119,11 +7135,17 @@ msgstr "Automation"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
+msgid "MCP Servers"
+msgstr "MCP Servers"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
 msgid "Personal"
 msgstr "Personal"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/chat/ComposerMcpDialog.tsx
 msgid "User"
 msgstr "User"
 
@@ -7134,6 +7156,7 @@ msgstr "System"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/chat/ComposerMcpDialog.tsx
 msgid "Plugin"
 msgstr "Plugin"
 
@@ -7141,6 +7164,11 @@ msgstr "Plugin"
 #: src/components/chat/ComposerCommandMenu.tsx
 msgid "delegate task to subagent"
 msgstr "delegate task to subagent"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Connector"
+msgstr "Connector"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
@@ -7234,6 +7262,11 @@ msgstr "Create a scheduled automation from this prompt"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
+msgid "Show this agent's MCP servers, sign in, reconnect, or turn them off"
+msgstr "Show this agent's MCP servers, sign in, reconnect, or turn them off"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
 msgid "Papers"
 msgstr "Papers"
 
@@ -7251,6 +7284,11 @@ msgstr "Chats"
 #: src/components/chat/ComposerCommandMenu.tsx
 msgid "Built-in"
 msgstr "Built-in"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Connectors"
+msgstr "Connectors"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
@@ -7695,6 +7733,11 @@ msgid "{count} files changed"
 msgstr "{count} files changed"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerLiveChangesHeader.tsx
+msgid "{files} · Review changes"
+msgstr "{files} · Review changes"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ComposerLocalDirectoryMenu.tsx
 msgid "Folder not found."
 msgstr "Folder not found."
@@ -7763,6 +7806,97 @@ msgstr "No files or folders here."
 #: src/components/chat/ComposerLocalDirectoryMenu.tsx
 msgid "Showing top matches. Keep typing to narrow."
 msgstr "Showing top matches. Keep typing to narrow."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Reconnect"
+msgstr "Reconnect"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+#: src/components/chat/ComputerControlDeniedCard.tsx
+msgid "Enable"
+msgstr "Enable"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Disable"
+msgstr "Disable"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Signed in to {server}"
+msgstr "Signed in to {server}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "1 tool"
+msgstr "1 tool"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "{count} tools"
+msgstr "{count} tools"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Add one in Terminal with codex mcp add, then reopen /mcp."
+msgstr "Add one in Terminal with codex mcp add, then reopen /mcp."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Add one in Terminal with claude mcp add, then reopen /mcp."
+msgstr "Add one in Terminal with claude mcp add, then reopen /mcp."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Open a project folder to see MCP servers."
+msgstr "Open a project folder to see MCP servers."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "No agent session is running in this thread, so this is what a new session in this folder loads."
+msgstr "No agent session is running in this thread, so this is what a new session in this folder loads."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "The servers this thread's agent session has loaded."
+msgstr "The servers this thread's agent session has loaded."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "MCP servers"
+msgstr "MCP servers"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Asking the agent for its MCP servers…"
+msgstr "Asking the agent for its MCP servers…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Could not read MCP servers"
+msgstr "Could not read MCP servers"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "The agent did not answer."
+msgstr "The agent did not answer."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "No MCP servers are configured."
+msgstr "No MCP servers are configured."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Finish signing in in your browser. This updates on its own."
+msgstr "Finish signing in in your browser. This updates on its own."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Open the sign-in page again"
+msgstr "Open the sign-in page again"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerModelMenuTrigger.tsx
@@ -8109,11 +8243,6 @@ msgstr "Computer control is on for this chat"
 #: src/components/chat/ComputerControlDeniedCard.tsx
 msgid "Computer control is off"
 msgstr "Computer control is off"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComputerControlDeniedCard.tsx
-msgid "Enable"
-msgstr "Enable"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComputerControlDeniedCard.tsx
@@ -8680,6 +8809,36 @@ msgid "Connect repository"
 msgstr "Connect repository"
 
 #. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "Visual unavailable."
+msgstr "Visual unavailable."
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "Loading {title}"
+msgstr "Loading {title}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "This visual needs a newer {app}."
+msgstr "This visual needs a newer {app}."
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "pending"
+msgstr "pending"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "Recommended"
+msgstr "Recommended"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "Views"
+msgstr "Views"
+
+#. js-lingui-explicit-id
 #: src/components/chat/InlineVisualCharts.tsx
 #: src/components/chat/ToolCallDetailsDialog.tsx
 msgid "Before"
@@ -8690,6 +8849,26 @@ msgstr "Before"
 #: src/components/chat/ToolCallDetailsDialog.tsx
 msgid "After"
 msgstr "After"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualFrame.tsx
+msgid "HTML visuals are not available in Lattice."
+msgstr "HTML visuals are not available in Lattice."
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualFrame.tsx
+msgid "HTML visuals are available in Synara desktop. Use native components in the browser."
+msgstr "HTML visuals are available in Synara desktop. Use native components in the browser."
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualTable.tsx
+msgid "Show fewer rows"
+msgstr "Show fewer rows"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualTable.tsx
+msgid "Show all {count} rows"
+msgstr "Show all {count} rows"
 
 #. js-lingui-explicit-id
 #: src/components/chat/LatticeEmptyThread.logic.ts

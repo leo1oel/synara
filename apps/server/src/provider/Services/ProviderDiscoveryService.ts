@@ -5,6 +5,10 @@ import type {
   ProviderListAgentsResult,
   ProviderListCommandsInput,
   ProviderListCommandsResult,
+  ProviderListMcpServersInput,
+  ProviderListMcpServersResult,
+  ProviderMcpServerActionInput,
+  ProviderMcpServerActionResult,
   ProviderListModelsInput,
   ProviderListModelsResult,
   ProviderListPluginsInput,
@@ -35,6 +39,12 @@ export interface ProviderDiscoveryServiceShape {
   readonly listCommands: (
     input: ProviderListCommandsInput,
   ) => Effect.Effect<ProviderListCommandsResult, ProviderDiscoveryError>;
+  readonly listMcpServers: (
+    input: ProviderListMcpServersInput,
+  ) => Effect.Effect<ProviderListMcpServersResult, ProviderDiscoveryError>;
+  readonly runMcpServerAction: (
+    input: ProviderMcpServerActionInput,
+  ) => Effect.Effect<ProviderMcpServerActionResult, ProviderDiscoveryError>;
   readonly listSkills: (
     input: ProviderListSkillsInput,
   ) => Effect.Effect<ProviderListSkillsResult, ProviderDiscoveryError>;

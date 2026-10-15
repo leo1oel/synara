@@ -12,91 +12,6 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
-#: src/components/ChatView.tsx
-msgid "Do anything in Lattice"
-msgstr "在 Lattice 中做任何事"
-
-#. js-lingui-explicit-id
-#: src/components/ChatView.tsx
-msgid "Do anything in Synara"
-msgstr "在 Synara 中做任何事"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerBlockedHandoffNotice.tsx
-msgid "{source} still has background tasks running in this thread, so it can't switch to {target} yet. Stop them to switch now, or wait for them to finish and send again."
-msgstr "{source} 在这个对话中仍有后台任务在运行，暂时无法切换到 {target}。停止这些任务即可立即切换，或等它们完成后再发送。"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerBlockedHandoffNotice.tsx
-msgid "Stop tasks and switch"
-msgstr "停止任务并切换"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerCommandMenu.tsx
-msgid "Connector"
-msgstr "连接器"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerCommandMenu.tsx
-msgid "Connectors"
-msgstr "连接器"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerLiveChangesHeader.tsx
-msgid "{files} · Review changes"
-msgstr "{files} · 查看更改"
-
-#. js-lingui-explicit-id
-#: src/components/chat/InlineVisualBlocks.tsx
-msgid "Visual unavailable."
-msgstr "可视化内容不可用。"
-
-#. js-lingui-explicit-id
-#: src/components/chat/InlineVisualBlocks.tsx
-msgid "Loading {title}"
-msgstr "正在加载 {title}"
-
-#. js-lingui-explicit-id
-#: src/components/chat/InlineVisualBlocks.tsx
-msgid "This visual needs a newer {app}."
-msgstr "这个可视化内容需要更新版本的 {app}。"
-
-#. js-lingui-explicit-id
-#: src/components/chat/InlineVisualBlocks.tsx
-msgid "pending"
-msgstr "待处理"
-
-#. js-lingui-explicit-id
-#: src/components/chat/InlineVisualBlocks.tsx
-msgid "Recommended"
-msgstr "推荐"
-
-#. js-lingui-explicit-id
-#: src/components/chat/InlineVisualBlocks.tsx
-msgid "Views"
-msgstr "视图"
-
-#. js-lingui-explicit-id
-#: src/components/chat/InlineVisualFrame.tsx
-msgid "HTML visuals are not available in Lattice."
-msgstr "Lattice 不支持 HTML 可视化内容。"
-
-#. js-lingui-explicit-id
-#: src/components/chat/InlineVisualFrame.tsx
-msgid "HTML visuals are available in Synara desktop. Use native components in the browser."
-msgstr "HTML 可视化内容仅在 Synara 桌面版中可用。在浏览器中请使用原生组件。"
-
-#. js-lingui-explicit-id
-#: src/components/chat/InlineVisualTable.tsx
-msgid "Show fewer rows"
-msgstr "收起"
-
-#. js-lingui-explicit-id
-#: src/components/chat/InlineVisualTable.tsx
-msgid "Show all {count} rows"
-msgstr "显示全部 {count} 行"
-
-#. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
 #: src/components/chat/ComposerAutomationSetupBanner.tsx
 #: src/components/chat/FileLineCommentBox.tsx
@@ -724,6 +639,7 @@ msgid "Completed"
 msgstr "已完成"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/chat/environment/environmentPullRequest.logic.ts
 #: src/components/chat/SubagentRunCard.logic.ts
 #: src/components/chat/SubagentThreadIntro.tsx
@@ -793,6 +709,7 @@ msgid "Unavailable"
 msgstr "不可用"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/lib/providerSetupStatus.ts
 msgid "Needs sign-in"
 msgstr "需要登录"
@@ -813,12 +730,14 @@ msgid "Installed · sign-in not verified"
 msgstr "已安装 · 未确认登录"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/settings/ExternalMcpSettingsPanel.tsx
 #: src/lib/providerSetupStatus.ts
 msgid "Connected"
 msgstr "已连接"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/settings/ManagedSkillDetailView.tsx
 #: src/components/settings/SkillsSettingsPanel.tsx
 #: src/lib/providerSetupStatus.ts
@@ -1484,6 +1403,66 @@ msgstr "导出对话时出错了。"
 
 #. js-lingui-explicit-id
 #: src/hooks/useComposerSlashCommands.ts
+msgid "Reconnected {count} MCP servers"
+msgstr "已重新连接 {count} 个 MCP 服务器"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Enabled {count} MCP servers"
+msgstr "已开启 {count} 个 MCP 服务器"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Disabled {count} MCP servers"
+msgstr "已禁用 {count} 个 MCP 服务器"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Reconnected {server}"
+msgstr "已重新连接 {server}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Enabled {server}"
+msgstr "已开启 {server}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Disabled {server}"
+msgstr "已禁用 {server}"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Could not update every MCP server"
+msgstr "有 MCP 服务器没能更新"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Could not update {server}"
+msgstr "无法更新 {server}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+#: src/hooks/useComposerSlashCommands.ts
+msgid "The agent did not accept the request."
+msgstr "智能体没有接受这个请求。"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "No MCP server to change"
+msgstr "没有可更改的 MCP 服务器"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Send /mcp to see this agent's servers."
+msgstr "发送 /mcp 查看这个智能体的服务器。"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
 msgid "Add a task after /computer-use"
 msgstr "请在 /computer-use 后面写上要做的事"
 
@@ -1491,6 +1470,16 @@ msgstr "请在 /computer-use 后面写上要做的事"
 #: src/hooks/useComposerSlashCommands.ts
 msgid "For example: /computer-use open Calculator and calculate 123 × 45."
 msgstr "例如：/computer-use 打开计算器，算一下 123 × 45。"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "Unknown /mcp action"
+msgstr "未知的 /mcp 操作"
+
+#. js-lingui-explicit-id
+#: src/hooks/useComposerSlashCommands.ts
+msgid "“{action}” is not an /mcp action. Send /mcp to see your servers, or use /mcp reconnect, /mcp enable, or /mcp disable with a server name."
+msgstr "“{action}” 不是 /mcp 操作。发送 /mcp 查看你的服务器，或在 /mcp reconnect、/mcp enable、/mcp disable 后加上服务器名称。"
 
 #. js-lingui-explicit-id
 #: src/hooks/useComposerSlashCommands.ts
@@ -2471,6 +2460,16 @@ msgid "Ask about this pull request"
 msgstr "就这个 PR 提问"
 
 #. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Do anything in Lattice"
+msgstr "在 Lattice 中做任何事"
+
+#. js-lingui-explicit-id
+#: src/components/ChatView.tsx
+msgid "Do anything in Synara"
+msgstr "在 Synara 中做任何事"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ChatEmptyStateHero.tsx
 #: src/components/ChatView.tsx
 msgid "Synara logo"
@@ -2483,6 +2482,7 @@ msgstr "我们来做点什么？"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/ChatView.tsx
 #: src/components/githubInbox/GitHubInboxFilterBar.tsx
 #: src/components/pullRequest/GitHubItemFloatingComposer.tsx
@@ -3230,6 +3230,7 @@ msgid "Copied"
 msgstr "已复制"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/chat/ComposerSlashStatusDialog.tsx
 #: src/components/chat/GitPanel.browser.tsx
 #: src/components/pullRequest/PullRequestConfirmActionDialog.tsx
@@ -4111,6 +4112,7 @@ msgid "Unable to connect to the Synara server."
 msgstr "连不上 Synara 服务。"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/chat/GitRepositorySetup.tsx
 #: src/components/settings/ProviderSignInDialog.tsx
 msgid "Connecting…"
@@ -4441,6 +4443,7 @@ msgid "Sign in to {account}"
 msgstr "登录 {account}"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Sign in"
 msgstr "登录"
@@ -4803,6 +4806,7 @@ msgstr "内置"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/chat/ComposerSlashStatusDialog.tsx
 #: src/components/chat/SynaraThreadCreationCard.tsx
 #: src/components/pullRequest/GitHubItemFloatingComposer.tsx
@@ -6263,6 +6267,7 @@ msgid "More"
 msgstr "更多"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/githubInbox/GitHubInboxFilterBar.tsx
 msgid "Refresh"
 msgstr "刷新"
@@ -6404,6 +6409,7 @@ msgid "Lattice could not reach GitHub. Check your connection and try again"
 msgstr "Lattice 无法连接 GitHub，请检查网络后重试"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
 #: src/components/chat/ThreadDetailHydrationState.tsx
 #: src/components/githubInbox/LatticePullRequestList.tsx
 msgid "Try again"
@@ -6923,6 +6929,16 @@ msgstr "取消设置自动化"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerBlockedHandoffNotice.tsx
+msgid "{source} still has background tasks running in this thread, so it can't switch to {target} yet. Stop them to switch now, or wait for them to finish and send again."
+msgstr "{source} 在这个对话中仍有后台任务在运行，暂时无法切换到 {target}。停止这些任务即可立即切换，或等它们完成后再发送。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerBlockedHandoffNotice.tsx
+msgid "Stop tasks and switch"
+msgstr "停止任务并切换"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerBlockedHandoffNotice.tsx
 #: src/components/chat/ComposerExpiredUserInputNotice.tsx
 msgid "Dismiss"
 msgstr "关闭"
@@ -7119,11 +7135,17 @@ msgstr "自动化"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
+msgid "MCP Servers"
+msgstr "MCP 服务器"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
 msgid "Personal"
 msgstr "个人"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/chat/ComposerMcpDialog.tsx
 msgid "User"
 msgstr "用户"
 
@@ -7134,6 +7156,7 @@ msgstr "系统"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
+#: src/components/chat/ComposerMcpDialog.tsx
 msgid "Plugin"
 msgstr "插件"
 
@@ -7141,6 +7164,11 @@ msgstr "插件"
 #: src/components/chat/ComposerCommandMenu.tsx
 msgid "delegate task to subagent"
 msgstr "把任务交给子助手"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Connector"
+msgstr "连接器"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
@@ -7234,6 +7262,11 @@ msgstr "用这段提示创建定时自动化"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
+msgid "Show this agent's MCP servers, sign in, reconnect, or turn them off"
+msgstr "查看这个智能体的 MCP 服务器，登录、重新连接或停用它们"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
 msgid "Papers"
 msgstr "论文"
 
@@ -7251,6 +7284,11 @@ msgstr "对话"
 #: src/components/chat/ComposerCommandMenu.tsx
 msgid "Built-in"
 msgstr "内置"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerCommandMenu.tsx
+msgid "Connectors"
+msgstr "连接器"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerCommandMenu.tsx
@@ -7695,6 +7733,11 @@ msgid "{count} files changed"
 msgstr "改动了 {count} 个文件"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerLiveChangesHeader.tsx
+msgid "{files} · Review changes"
+msgstr "{files} · 查看更改"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ComposerLocalDirectoryMenu.tsx
 msgid "Folder not found."
 msgstr "找不到文件夹。"
@@ -7763,6 +7806,97 @@ msgstr "这里没有文件或文件夹。"
 #: src/components/chat/ComposerLocalDirectoryMenu.tsx
 msgid "Showing top matches. Keep typing to narrow."
 msgstr "只显示最匹配的结果，继续输入可以缩小范围。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Reconnect"
+msgstr "重新连接"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+#: src/components/chat/ComputerControlDeniedCard.tsx
+msgid "Enable"
+msgstr "开启"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Disable"
+msgstr "禁用"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Signed in to {server}"
+msgstr "已登录 {server}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "1 tool"
+msgstr "1 个工具"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "{count} tools"
+msgstr "{count} 个工具"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Add one in Terminal with codex mcp add, then reopen /mcp."
+msgstr "在终端中用 codex mcp add 添加一个，然后重新打开 /mcp。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Add one in Terminal with claude mcp add, then reopen /mcp."
+msgstr "在终端中用 claude mcp add 添加一个，然后重新打开 /mcp。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Open a project folder to see MCP servers."
+msgstr "打开一个项目文件夹后才能查看 MCP 服务器。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "No agent session is running in this thread, so this is what a new session in this folder loads."
+msgstr "这个对话里没有正在运行的智能体会话，所以这里显示的是在这个文件夹新建会话时会加载的服务器。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "The servers this thread's agent session has loaded."
+msgstr "这个对话的智能体会话已加载的服务器。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "MCP servers"
+msgstr "MCP 服务器"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Asking the agent for its MCP servers…"
+msgstr "正在向智能体查询 MCP 服务器…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Could not read MCP servers"
+msgstr "无法读取 MCP 服务器"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "The agent did not answer."
+msgstr "智能体没有响应。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "No MCP servers are configured."
+msgstr "还没有配置 MCP 服务器。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Finish signing in in your browser. This updates on its own."
+msgstr "请在浏览器中完成登录，这里会自动更新。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+msgid "Open the sign-in page again"
+msgstr "重新打开登录页面"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerModelMenuTrigger.tsx
@@ -8109,11 +8243,6 @@ msgstr "这个对话已开启电脑控制"
 #: src/components/chat/ComputerControlDeniedCard.tsx
 msgid "Computer control is off"
 msgstr "电脑控制已关闭"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComputerControlDeniedCard.tsx
-msgid "Enable"
-msgstr "开启"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComputerControlDeniedCard.tsx
@@ -8680,6 +8809,36 @@ msgid "Connect repository"
 msgstr "连接仓库"
 
 #. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "Visual unavailable."
+msgstr "可视化内容不可用。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "Loading {title}"
+msgstr "正在加载 {title}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "This visual needs a newer {app}."
+msgstr "这个可视化内容需要更新版本的 {app}。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "pending"
+msgstr "待处理"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "Recommended"
+msgstr "推荐"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualBlocks.tsx
+msgid "Views"
+msgstr "视图"
+
+#. js-lingui-explicit-id
 #: src/components/chat/InlineVisualCharts.tsx
 #: src/components/chat/ToolCallDetailsDialog.tsx
 msgid "Before"
@@ -8690,6 +8849,26 @@ msgstr "修改前"
 #: src/components/chat/ToolCallDetailsDialog.tsx
 msgid "After"
 msgstr "修改后"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualFrame.tsx
+msgid "HTML visuals are not available in Lattice."
+msgstr "Lattice 不支持 HTML 可视化内容。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualFrame.tsx
+msgid "HTML visuals are available in Synara desktop. Use native components in the browser."
+msgstr "HTML 可视化内容仅在 Synara 桌面版中可用。在浏览器中请使用原生组件。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualTable.tsx
+msgid "Show fewer rows"
+msgstr "收起"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualTable.tsx
+msgid "Show all {count} rows"
+msgstr "显示全部 {count} 行"
 
 #. js-lingui-explicit-id
 #: src/components/chat/LatticeEmptyThread.logic.ts

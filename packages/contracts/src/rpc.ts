@@ -275,6 +275,10 @@ import {
   ProviderListAgentsResult,
   ProviderListCommandsInput,
   ProviderListCommandsResult,
+  ProviderListMcpServersInput,
+  ProviderListMcpServersResult,
+  ProviderMcpServerActionInput,
+  ProviderMcpServerActionResult,
   ProviderListModelsInput,
   ProviderListModelsResult,
   ProviderListPluginsInput,
@@ -1651,6 +1655,18 @@ export const WsProviderListCommandsRpc = Rpc.make(WS_METHODS.providerListCommand
   error: WsRpcError,
 });
 
+export const WsProviderListMcpServersRpc = Rpc.make(WS_METHODS.providerListMcpServers, {
+  payload: ProviderListMcpServersInput,
+  success: ProviderListMcpServersResult,
+  error: WsRpcError,
+});
+
+export const WsProviderRunMcpServerActionRpc = Rpc.make(WS_METHODS.providerRunMcpServerAction, {
+  payload: ProviderMcpServerActionInput,
+  success: ProviderMcpServerActionResult,
+  error: WsRpcError,
+});
+
 export const WsProviderListSkillsRpc = Rpc.make(WS_METHODS.providerListSkills, {
   payload: ProviderListSkillsInput,
   success: ProviderListSkillsResult,
@@ -2158,6 +2174,8 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsProviderGetComposerCapabilitiesRpc,
   WsProviderCompactThreadRpc,
   WsProviderListCommandsRpc,
+  WsProviderListMcpServersRpc,
+  WsProviderRunMcpServerActionRpc,
   WsProviderListSkillsRpc,
   WsProviderListSkillsCatalogRpc,
   WsProviderImportSkillRpc,

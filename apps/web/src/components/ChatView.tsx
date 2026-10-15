@@ -373,6 +373,7 @@ import { COMPOSER_STACKED_PANEL_ICON_CLASS_NAME } from "./chat/composerStackedPa
 import { ComposerPullRequestAutoFixHint } from "./chat/ComposerPullRequestAutoFixHint";
 import { ComposerReferenceAttachments } from "./chat/ComposerReferenceAttachments";
 import { ComposerSlashStatusDialog } from "./chat/ComposerSlashStatusDialog";
+import { ComposerMcpDialog } from "./chat/ComposerMcpDialog";
 import {
   findLatestRunningSubagentRun,
   subagentRunPhaseStatusKind,
@@ -5390,6 +5391,8 @@ export default function ChatView({
     handleReviewTargetSelection,
     isSlashStatusDialogOpen,
     setIsSlashStatusDialogOpen,
+    isMcpDialogOpen,
+    setIsMcpDialogOpen,
     handleStandaloneSlashCommand,
     handleSlashCommandSelection,
     clearThreadGoal,
@@ -5414,6 +5417,7 @@ export default function ChatView({
     providerNativeCommands,
     providerCommandDiscoveryCwd: providerModelDiscoveryCwd,
     selectedProvider,
+    selectedProviderInstanceId,
     currentProviderModelOptions,
     selectedModelSelection,
     environmentMode: envMode ?? null,
@@ -7556,6 +7560,14 @@ export default function ChatView({
         rateLimitStatus={activeRateLimitStatus}
         activeContextWindowLabel={contextWindowSelectionStatus.activeLabel}
         pendingContextWindowLabel={contextWindowSelectionStatus.pendingSelectedLabel}
+      />
+      <ComposerMcpDialog
+        open={isMcpDialogOpen}
+        onOpenChange={setIsMcpDialogOpen}
+        provider={selectedProvider}
+        instanceId={selectedProviderInstanceId}
+        cwd={providerModelDiscoveryCwd}
+        threadId={threadId}
       />
 
       <ThreadWorktreeHandoffDialog

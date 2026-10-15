@@ -5,6 +5,7 @@ import {
   type MessageId,
   type ModelSelection,
   type OrchestrationShellSnapshot,
+  type ProviderInstanceId,
   type ProviderInteractionMode,
   type ProviderKind,
   type ProviderNativeCommandDescriptor,
@@ -29,8 +30,10 @@ import {
   parseFastSlashCommandAction,
   parseForkSlashCommandArgs,
   parseGoalSlashCommandArgs,
+  parseMcpSlashCommandArgs,
   parseSideSlashCommandArgs,
   type ForkSlashCommandTarget,
+  type McpSlashCommandAction,
 } from "../composerSlashCommands";
 import { resolveThreadHandoffModelSelection } from "../lib/threadHandoff";
 import { toastManager } from "../components/ui/toast";
@@ -88,6 +91,7 @@ export function useComposerSlashCommands(input: {
   providerNativeCommands: readonly ProviderNativeCommandDescriptor[];
   providerCommandDiscoveryCwd: string | null;
   selectedProvider: ProviderKind;
+  selectedProviderInstanceId: ProviderInstanceId | null;
   currentProviderModelOptions: ProviderModelOptions[ProviderKind] | undefined;
   selectedModelSelection: ModelSelection;
   environmentMode: string | null;
@@ -124,6 +128,7 @@ export function useComposerSlashCommands(input: {
   };
 }) {
   const [isSlashStatusDialogOpen, setIsSlashStatusDialogOpen] = useState(false);
+  const [isMcpDialogOpen, setIsMcpDialogOpen] = useState(false);
   const openGlobalFeedbackDialog = useFeedbackDialogStore((state) => state.openDialog);
   const {
     activeProject,
@@ -141,6 +146,7 @@ export function useComposerSlashCommands(input: {
     providerNativeCommands,
     providerCommandDiscoveryCwd,
     selectedProvider,
+    selectedProviderInstanceId,
     currentProviderModelOptions,
     selectedModelSelection,
     environmentMode,
@@ -877,6 +883,89 @@ export function useComposerSlashCommands(input: {
     selectedProvider,
   ]);
 
+  // The app runs `/mcp reconnect|enable|disable` itself: Claude Code drops a
+  // slash command's arguments in a Synara session (it answers `"" isn't a
+  // recognized /mcp action`), and Codex has no `/mcp`. Without a server name
+  // the action applies to every server that offers it, as Claude Code's own
+  // `/mcp` does.
+  const runMcpSlashServerAction = useCallback(
+    async (action: Extract<McpSlashCommandAction, { kind: "server-action" }>) => {
+      const api = readNativeApi();
+      if (!api || !providerCommandDiscoveryCwd) {
+        setIsMcpDialogOpen(true);
+        return;
+      }
+      const target = {
+        provider: selectedProvider,
+        ...(selectedProviderInstanceId ? { instanceId: selectedProviderInstanceId } : {}),
+        cwd: providerCommandDiscoveryCwd,
+        threadId,
+      };
+      let failure: unknown = null;
+      let serverNames: string[] = action.serverName === null ? [] : [action.serverName];
+      if (action.serverName === null) {
+        try {
+          const listed = await api.provider.listMcpServers(target);
+          serverNames = listed.servers
+            .filter((server) => server.actions.includes(action.action))
+            .map((server) => server.name);
+        } catch (error) {
+          failure = error;
+        }
+      }
+      const count = serverNames.length;
+      // Codex reloads every server in one request.
+      const requests =
+        selectedProvider === "codex" && action.action === "reconnect"
+          ? serverNames.slice(0, 1)
+          : serverNames;
+      for (const serverName of requests) {
+        try {
+          await api.provider.runMcpServerAction({ ...target, serverName, action: action.action });
+        } catch (error) {
+          failure = error;
+        }
+      }
+      const server = action.serverName ?? "";
+      const doneTitle =
+        action.serverName === null
+          ? action.action === "reconnect"
+            ? i18n._("Reconnected {count} MCP servers", { count })
+            : action.action === "enable"
+              ? i18n._("Enabled {count} MCP servers", { count })
+              : i18n._("Disabled {count} MCP servers", { count })
+          : action.action === "reconnect"
+            ? i18n._("Reconnected {server}", { server })
+            : action.action === "enable"
+              ? i18n._("Enabled {server}", { server })
+              : i18n._("Disabled {server}", { server });
+      if (failure !== null) {
+        toastManager.add({
+          type: "error",
+          title:
+            action.serverName === null
+              ? i18n._("Could not update every MCP server")
+              : i18n._("Could not update {server}", { server }),
+          description:
+            failure instanceof Error
+              ? failure.message
+              : i18n._("The agent did not accept the request."),
+        });
+        return;
+      }
+      if (count === 0) {
+        toastManager.add({
+          type: "info",
+          title: i18n._("No MCP server to change"),
+          description: i18n._("Send /mcp to see this agent's servers."),
+        });
+        return;
+      }
+      toastManager.add({ type: "success", title: doneTitle });
+    },
+    [providerCommandDiscoveryCwd, selectedProvider, selectedProviderInstanceId, threadId],
+  );
+
   const handleStandaloneSlashCommand = useCallback(
     async (trimmed: string): Promise<boolean> => {
       const fastSlashAction = parseFastSlashCommandAction(trimmed);
@@ -926,6 +1015,28 @@ export function useComposerSlashCommands(input: {
       if (slashInvocation.command === "status") {
         editorActions.clearComposerSlashDraft();
         setIsSlashStatusDialogOpen(true);
+        return true;
+      }
+      if (slashInvocation.command === "mcp") {
+        const mcpAction = parseMcpSlashCommandArgs(slashInvocation.args);
+        if (mcpAction.kind === "invalid") {
+          // Keep the draft so the action can be corrected in place.
+          toastManager.add({
+            type: "warning",
+            title: i18n._("Unknown /mcp action"),
+            description: i18n._(
+              "“{action}” is not an /mcp action. Send /mcp to see your servers, or use /mcp reconnect, /mcp enable, or /mcp disable with a server name.",
+              { action: mcpAction.action },
+            ),
+          });
+          return true;
+        }
+        editorActions.clearComposerSlashDraft();
+        if (mcpAction.kind === "view") {
+          setIsMcpDialogOpen(true);
+        } else {
+          await runMcpSlashServerAction(mcpAction);
+        }
         return true;
       }
       if (slashInvocation.command === "goal") {
@@ -1100,6 +1211,7 @@ export function useComposerSlashCommands(input: {
       runExportSlashCommand,
       runFastSlashCommand,
       runGoalSlashCommand,
+      runMcpSlashServerAction,
       runRenameSlashCommand,
     ],
   );
@@ -1201,11 +1313,15 @@ export function useComposerSlashCommands(input: {
         return;
       }
 
-      if (item.command === "status") {
+      if (item.command === "status" || item.command === "mcp") {
         const applied = clearSlashCommandFromComposer();
         if (wasPromptReplacementApplied(applied)) {
           editorActions.setComposerHighlightedItemId(null);
-          setIsSlashStatusDialogOpen(true);
+          if (item.command === "status") {
+            setIsSlashStatusDialogOpen(true);
+          } else {
+            setIsMcpDialogOpen(true);
+          }
           editorActions.scheduleComposerFocus();
         }
         return;
@@ -1333,6 +1449,8 @@ export function useComposerSlashCommands(input: {
     handleReviewTargetSelection,
     isSlashStatusDialogOpen,
     setIsSlashStatusDialogOpen,
+    isMcpDialogOpen,
+    setIsMcpDialogOpen,
     handleStandaloneSlashCommand,
     handleSlashCommandSelection,
     clearThreadGoal,
