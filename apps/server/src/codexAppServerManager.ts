@@ -11,7 +11,10 @@ import {
   type ProviderComposerCapabilities,
   ProviderItemId,
   type ProviderListModelsResult,
+  type ProviderListMcpServersResult,
   type ProviderListPluginsResult,
+  type ProviderMcpServerAction,
+  type ProviderMcpServerActionResult,
   type ProviderMentionReference,
   type ProviderReadPluginResult,
   type ProviderForkThreadResult,
@@ -65,7 +68,9 @@ import {
   buildCodexMcpThreadConfig,
   SYNARA_AGENT_GATEWAY_TOKEN_ENV,
   SYNARA_MCP_SERVER_NAME,
+  isSynaraInjectedMcpServerName,
 } from "./agentGateway/mcpInjection.ts";
+import { mapCodexMcpServerStatuses } from "./provider/mcpServerStatus.ts";
 import {
   isSynaraGatewayToolName,
   shouldAllowSynaraComputerProviderTool,
@@ -104,7 +109,6 @@ import {
 } from "./provider/supervisedProcessTeardown.ts";
 import { ensureIsolatedScratchWorkspace, resolveScratchWorkspaceCwd } from "./scratchWorkspaces.ts";
 import { createLogger } from "./logger";
-import { MCP_CONNECTOR_SERVER_NAME_SUFFIX } from "@synara/shared/mcpConnectors";
 import { transcribeVoiceWithChatGptSession } from "./voiceTranscription.ts";
 import {
   CodexAppServerTransportError,
@@ -282,6 +286,22 @@ interface CodexPluginReadInput extends Omit<ProviderReadPluginInput, "provider">
   readonly codexOptions?: CodexDiscoveryOptions;
 }
 
+interface CodexMcpInput {
+  readonly threadId?: string;
+  readonly cwd?: string;
+  readonly codexOptions?: CodexDiscoveryOptions;
+}
+
+interface CodexMcpListInput extends CodexMcpInput {
+  readonly serverName?: string;
+  readonly forceReload?: boolean;
+}
+
+interface CodexMcpActionInput extends CodexMcpInput {
+  readonly serverName: string;
+  readonly action: ProviderMcpServerAction;
+}
+
 type CodexDiscoveryOptions = NonNullable<ProviderStartOptions["codex"]>;
 
 export interface CodexSessionInspection {
@@ -440,9 +460,7 @@ const loggedUserMcpOAuthServers = new Set<string>();
 function userConfiguredMcpOAuthServer(line: string): string | null {
   const server = CODEX_MCP_OAUTH_LOG_REGEX.exec(line)?.[1];
   if (!server) return null;
-  return server === SYNARA_MCP_SERVER_NAME || server.endsWith(MCP_CONNECTOR_SERVER_NAME_SUFFIX)
-    ? null
-    : server;
+  return isSynaraInjectedMcpServerName(server) ? null : server;
 }
 const RECOVERABLE_THREAD_RESUME_ERROR_SNIPPETS = [
   "not found",
@@ -458,6 +476,7 @@ const CODEX_SPARK_DISABLED_PLAN_TYPES = new Set<CodexPlanType>(["free", "go", "p
 // app-server process alive for ten minutes only retains its process tree. A
 // short grace period still collapses startup bursts from adjacent UI queries.
 const CODEX_DISCOVERY_SESSION_IDLE_MS = 15_000;
+const CODEX_MCP_SIGN_IN_WINDOW_MS = 10 * 60_000;
 const CODEX_VOICE_AUTH_CACHE_TTL_MS = 60_000;
 const CODEX_PENDING_SETTLE_DEADLINE_MS = 2_000;
 
@@ -1258,6 +1277,9 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   private readonly discoverySessions = new Map<string, CodexSessionContext>();
   private readonly discoverySessionStartups = new Map<string, Promise<CodexSessionContext>>();
   private readonly discoverySessionIdleTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  // An MCP sign-in started on a discovery session finishes inside that
+  // app-server, which receives the OAuth redirect; idling it out would drop it.
+  private readonly discoverySessionHoldUntil = new Map<string, number>();
   private voiceAuthCache:
     | {
         readonly optionsKey: string;
@@ -3584,6 +3606,153 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     return result;
   }
 
+  /**
+   * MCP servers as Codex reports them: the thread's own connection when this
+   * thread has a live session, otherwise a discovery app-server for the folder.
+   */
+  async listMcpServers(input: CodexMcpListInput): Promise<ProviderListMcpServersResult> {
+    let { context, providerThreadId } = await this.resolveMcpContext(input);
+    // Synara rebuilds Codex's config from the user's config.toml when an
+    // app-server starts, so a server added in Terminal reaches a discovery
+    // app-server only through a restart. A held one is finishing a sign-in.
+    if (input.forceReload && context.discovery && context.discoveryKey) {
+      const holdUntil = this.discoverySessionHoldUntil.get(context.discoveryKey) ?? 0;
+      if (holdUntil <= Date.now()) {
+        await this.stopDiscoverySession(context.discoveryKey);
+        ({ context, providerThreadId } = await this.resolveMcpContext(input));
+      }
+    }
+    const entries: unknown[] = [];
+    let cursor: string | null = null;
+    // Bounded: a misbehaving cursor must not spin forever.
+    for (let page = 0; page < 20; page += 1) {
+      const response: Record<string, unknown> = await this.sendRequest<Record<string, unknown>>(
+        context,
+        "mcpServerStatus/list",
+        {
+          detail: "toolsAndAuthOnly",
+          limit: 100,
+          ...(cursor ? { cursor } : {}),
+          ...(providerThreadId ? { threadId: providerThreadId } : {}),
+          ...(input.serverName ? { serverName: input.serverName } : {}),
+        },
+      );
+      const data = response.data;
+      if (Array.isArray(data)) entries.push(...data);
+      cursor = this.readString(response, "nextCursor") ?? null;
+      if (!cursor) break;
+    }
+    return {
+      servers: mapCodexMcpServerStatuses(entries, {
+        disabledServerNames: await this.readDisabledMcpServerNames(context, input.cwd),
+      }).filter((server) => !input.serverName || server.name === input.serverName),
+      source: providerThreadId ? "session" : "workspace",
+    };
+  }
+
+  async runMcpServerAction(input: CodexMcpActionInput): Promise<ProviderMcpServerActionResult> {
+    const { context, providerThreadId } = await this.resolveMcpContext(input);
+    switch (input.action) {
+      case "authenticate": {
+        const response = await this.sendRequest<Record<string, unknown>>(
+          context,
+          "mcpServer/oauth/login",
+          {
+            name: input.serverName,
+            ...(providerThreadId ? { threadId: providerThreadId } : {}),
+          },
+        );
+        if (context.discovery && context.discoveryKey) {
+          this.discoverySessionHoldUntil.set(
+            context.discoveryKey,
+            Date.now() + CODEX_MCP_SIGN_IN_WINDOW_MS,
+          );
+          this.scheduleDiscoverySessionIdleStop(context.discoveryKey);
+        }
+        const authUrl = this.readString(response, "authorizationUrl");
+        return authUrl ? { authUrl } : {};
+      }
+      case "enable":
+      case "disable":
+        // Codex has no per-server toggle, and its config writes land in the copy
+        // Synara rebuilds from the user's config.toml at every start, so a
+        // toggle here would quietly undo itself.
+        throw new Error(
+          `Codex turns MCP servers on and off in ~/.codex/config.toml: set enabled = ${input.action === "enable" ? "true" : "false"} under [mcp_servers.${input.serverName}].`,
+        );
+      case "sign-out":
+        // app-server has no MCP OAuth logout; the view tells the user to run
+        // `codex mcp logout` instead of offering a sign-out that does nothing.
+        throw new Error(
+          `Codex signs out of MCP servers only in Terminal: run codex mcp logout ${input.serverName}, then reconnect.`,
+        );
+      case "reconnect":
+        if (context.discovery && context.discoveryKey) {
+          // The next request starts an app-server that reads config.toml again.
+          await this.stopDiscoverySession(context.discoveryKey);
+        } else {
+          await this.sendRequest(context, "config/mcpServer/reload", {});
+        }
+        return {};
+    }
+  }
+
+  private async resolveMcpContext(input: CodexMcpInput) {
+    const cwd = input.cwd?.trim() || undefined;
+    const codexOptions = normalizeCodexDiscoveryOptions(input.codexOptions);
+    const authFingerprint = codexAuthFingerprintForOptions(codexOptions);
+    const context = await this.resolveContextForDiscovery(
+      input.threadId,
+      cwd,
+      codexOptions,
+      authFingerprint,
+    );
+    this.assertDiscoveryAuthMatchesRequest(context, codexOptions, authFingerprint);
+    // Only the thread's own session can answer for its live connections;
+    // another thread's session that shares the folder answers for the folder.
+    const ownSession =
+      !context.discovery &&
+      input.threadId !== undefined &&
+      context.session.threadId === input.threadId.trim();
+    const providerThreadId = ownSession
+      ? readResumeThreadId({ resumeCursor: context.session.resumeCursor })
+      : undefined;
+    return { context, providerThreadId };
+  }
+
+  private async readDisabledMcpServerNames(
+    context: CodexSessionContext,
+    cwd: string | undefined,
+  ): Promise<ReadonlySet<string>> {
+    // Codex lists a disabled server like any other; its effective config says
+    // which ones are off. A failed read only loses the "disabled" label.
+    try {
+      const response = await this.sendRequest<Record<string, unknown>>(context, "config/read", {
+        includeLayers: false,
+        ...(cwd ? { cwd } : {}),
+      });
+      const config = response.config;
+      const servers =
+        config && typeof config === "object"
+          ? (config as Record<string, unknown>).mcp_servers
+          : undefined;
+      if (!servers || typeof servers !== "object") return new Set();
+      return new Set(
+        Object.entries(servers as Record<string, unknown>)
+          .filter(
+            ([, server]) =>
+              server !== null &&
+              typeof server === "object" &&
+              (server as Record<string, unknown>).enabled === false,
+          )
+          .map(([name]) => name),
+      );
+    } catch (error) {
+      log.warn("Could not read Codex MCP enablement", { error });
+      return new Set();
+    }
+  }
+
   async readPlugin(input: CodexPluginReadInput): Promise<ProviderReadPluginResult> {
     const marketplacePath = input.marketplacePath.trim();
     const pluginName = input.pluginName.trim();
@@ -4122,11 +4291,13 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       if (
         context.pending.size > 0 ||
         context.pendingApprovals.size > 0 ||
-        context.pendingUserInputs.size > 0
+        context.pendingUserInputs.size > 0 ||
+        (this.discoverySessionHoldUntil.get(discoveryKey) ?? 0) > Date.now()
       ) {
         this.scheduleDiscoverySessionIdleStop(discoveryKey);
         return;
       }
+      this.discoverySessionHoldUntil.delete(discoveryKey);
 
       void this.stopDiscoverySession(discoveryKey).catch((error) => {
         log.warn("Failed to stop idle Codex discovery session", { discoveryKey, error });
@@ -4164,6 +4335,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   private async stopDiscoverySessionContext(context: CodexSessionContext): Promise<void> {
     const discoveryKey = context.discoveryKey ?? context.session.cwd ?? "";
     if (this.discoverySessions.get(discoveryKey) === context) {
+      this.discoverySessionHoldUntil.delete(discoveryKey);
       const idleTimer = this.discoverySessionIdleTimers.get(discoveryKey);
       if (idleTimer) {
         clearTimeout(idleTimer);

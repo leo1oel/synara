@@ -19,6 +19,10 @@ import type {
   ProviderListAgentsResult,
   ProviderListCommandsInput,
   ProviderListCommandsResult,
+  ProviderListMcpServersInput,
+  ProviderListMcpServersResult,
+  ProviderMcpServerAction,
+  ProviderMcpServerActionResult,
   ProviderListModelsInput,
   ProviderListModelsResult,
   ProviderListPluginsInput,
@@ -143,6 +147,26 @@ export type ProviderAdapterSessionStartInput = ProviderSessionStartInput &
   ProviderContinuationLaunchRequirements;
 export type ProviderAdapterForkThreadInput = ProviderForkThreadInput &
   ProviderContinuationLaunchRequirements;
+
+/**
+ * `/mcp` input after discovery resolved the provider instance: the account
+ * options a new session would get, so a workspace runtime reads the same config.
+ */
+export interface ProviderMcpAdapterInput extends ProviderListMcpServersInput {
+  readonly binaryPath?: string | undefined;
+  readonly homePath?: string | undefined;
+  readonly shadowHomePath?: string | undefined;
+  readonly accountId?: string | undefined;
+  readonly environment?: Readonly<Record<string, string>> | undefined;
+}
+
+export interface ProviderMcpAdapterActionInput extends Omit<
+  ProviderMcpAdapterInput,
+  "serverName" | "forceReload"
+> {
+  readonly serverName: string;
+  readonly action: ProviderMcpServerAction;
+}
 
 export interface ProviderAdapterShape<TError> {
   /**
@@ -383,6 +407,21 @@ export interface ProviderAdapterShape<TError> {
   readonly listCommands?: (
     input: ProviderListCommandsInput,
   ) => Effect.Effect<ProviderListCommandsResult, TError>;
+
+  /**
+   * List the provider runtime's MCP servers: the thread's live session when it
+   * has one, otherwise a runtime started for the workspace.
+   */
+  readonly listMcpServers?: (
+    input: ProviderMcpAdapterInput,
+  ) => Effect.Effect<ProviderListMcpServersResult, TError>;
+
+  /**
+   * Reconnect, enable, disable, or start sign-in for one MCP server.
+   */
+  readonly runMcpServerAction?: (
+    input: ProviderMcpAdapterActionInput,
+  ) => Effect.Effect<ProviderMcpServerActionResult, TError>;
 
   /**
    * List plugins available for the current provider/runtime.

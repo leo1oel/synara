@@ -17,6 +17,7 @@ import type {
   HookInput,
   HookJSONOutput,
   Options as ClaudeQueryOptions,
+  McpServerStatus,
   ModelInfo,
   PermissionMode,
   PermissionResult,
@@ -114,13 +115,17 @@ import {
 } from "effect";
 
 import { buildClaudeMcpServers } from "../../agentGateway/mcpInjection.ts";
+import { mapClaudeMcpServerStatuses } from "../mcpServerStatus.ts";
 import { renderSynaraHarnessPolicy } from "../../agentGateway/harnessPolicy.ts";
 import {
   isSynaraGatewayToolName,
   shouldAllowSynaraComputerProviderTool,
 } from "../../agentGateway/computerToolPermission.ts";
 import { AgentGatewayCredentials } from "../../agentGateway/Services/AgentGatewayCredentials.ts";
-import { PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY } from "../Services/ProviderAdapter.ts";
+import {
+  PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
+  type ProviderMcpAdapterInput,
+} from "../Services/ProviderAdapter.ts";
 import {
   acquireAgentGatewaySessionLease,
   cancelAgentGatewayTurn,
@@ -618,7 +623,27 @@ interface ClaudeQueryRuntime extends AsyncIterable<SDKMessage> {
   readonly supportedCommands: () => Promise<SlashCommand[]>;
   readonly supportedModels: () => Promise<ModelInfo[]>;
   readonly supportedAgents: () => Promise<AgentInfo[]>;
+  // Optional so runtimes and test doubles without MCP control keep working;
+  // `/mcp` reports such a runtime as unable to answer.
+  readonly mcpServerStatus?: () => Promise<McpServerStatus[]>;
+  readonly reconnectMcpServer?: (serverName: string) => Promise<void>;
+  readonly toggleMcpServer?: (serverName: string, enabled: boolean) => Promise<void>;
+  // Present on the SDK's Query but left out of its published types: Claude Code
+  // starts the server's OAuth flow without opening a browser and answers with
+  // the authorization URL, then receives the redirect on its own localhost
+  // listener and reconnects the server.
+  readonly mcpAuthenticate?: (serverName: string) => Promise<ClaudeMcpAuthenticateResponse>;
+  // Also unpublished: `/mcp` > Clear authentication. Claude Code revokes and
+  // deletes only this server's OAuth entry (tokens and client registration) in
+  // its keychain credentials, keeps the server's config, and reports the server
+  // as needing sign-in again.
+  readonly mcpClearAuth?: (serverName: string) => Promise<unknown>;
   readonly close: () => void;
+}
+
+interface ClaudeMcpAuthenticateResponse {
+  readonly authUrl?: string;
+  readonly requiresUserAction?: boolean;
 }
 
 function cancellableClaudeMessageStream(
@@ -8867,9 +8892,250 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         cached: false,
       } satisfies ProviderListSkillsResult);
 
+    // `/mcp` asks the thread's own live session when it has one. Otherwise a
+    // workspace runtime answers: one Claude Code process per account and folder
+    // that stays up between calls, so a reopened view watches servers finish
+    // connecting instead of a fresh process's `pending`, and so a sign-in can
+    // finish. Claude Code receives the OAuth redirect on its own localhost
+    // listener, which lives only as long as that process.
+    interface ClaudeMcpWorkspaceRuntime {
+      readonly query: ClaudeQueryRuntime;
+      readonly processOwner: ClaudeProcessOwner;
+      stopTimer: ReturnType<typeof setTimeout> | undefined;
+      stopAt: number;
+      signInUntil: number;
+      closed: boolean;
+    }
+    const CLAUDE_MCP_WORKSPACE_IDLE_MS = 2 * 60_000;
+    const CLAUDE_MCP_SIGN_IN_WINDOW_MS = 10 * 60_000;
+    const mcpWorkspaceRuntimes = new Map<string, Promise<ClaudeMcpWorkspaceRuntime>>();
+
+    const closeMcpWorkspaceRuntime = (key: string, runtime: ClaudeMcpWorkspaceRuntime) =>
+      Effect.gen(function* () {
+        if (runtime.closed) return;
+        runtime.closed = true;
+        clearTimeout(runtime.stopTimer);
+        const current = mcpWorkspaceRuntimes.get(key);
+        if (current && (yield* Effect.promise(() => current.catch(() => undefined))) === runtime) {
+          mcpWorkspaceRuntimes.delete(key);
+        }
+        yield* Effect.sync(() => runtime.query.close());
+        yield* teardownDiscoveryProcess(runtime.processOwner);
+      }).pipe(Effect.ignore);
+
+    const keepMcpWorkspaceRuntime = (
+      key: string,
+      runtime: ClaudeMcpWorkspaceRuntime,
+      durationMs: number,
+    ) => {
+      const stopAt = Date.now() + durationMs;
+      if (runtime.closed || stopAt <= runtime.stopAt) return;
+      runtime.stopAt = stopAt;
+      clearTimeout(runtime.stopTimer);
+      runtime.stopTimer = setTimeout(() => {
+        void Effect.runPromise(closeMcpWorkspaceRuntime(key, runtime));
+      }, durationMs);
+      runtime.stopTimer.unref?.();
+    };
+
+    const startMcpWorkspaceRuntime = async (
+      key: string,
+      input: ProviderMcpAdapterInput,
+    ): Promise<ClaudeMcpWorkspaceRuntime> => {
+      await Effect.runPromise(teardownFailedDiscoveryProcesses());
+      const env = await Effect.runPromise(
+        resolveClaudeSdkEnv(input.homePath, input.environment, input.instanceId),
+      );
+      const processOwner: ClaudeProcessOwner = {};
+      let query: ClaudeQueryRuntime;
+      try {
+        query = await createQuery({
+          prompt: neverResolvingUserMessageStream(),
+          options: {
+            cwd: input.cwd,
+            pathToClaudeCodeExecutable: input.binaryPath ?? "claude",
+            settingSources: [...CLAUDE_SETTING_SOURCES],
+            permissionMode: "plan" as PermissionMode,
+            persistSession: false,
+            env,
+            spawnClaudeCodeProcess: bindClaudeProcessOwner(processOwner, false),
+          },
+        });
+      } catch (cause) {
+        await Effect.runPromise(teardownDiscoveryProcess(processOwner).pipe(Effect.ignore));
+        throw cause;
+      }
+      const runtime: ClaudeMcpWorkspaceRuntime = {
+        query,
+        processOwner,
+        stopTimer: undefined,
+        stopAt: 0,
+        signInUntil: 0,
+        closed: false,
+      };
+      // Iterating drives the init handshake the control requests wait for; an
+      // exited process ends the loop and retires the runtime.
+      void (async () => {
+        for await (const message of query) {
+          void message;
+        }
+      })()
+        .catch(() => undefined)
+        .finally(() => {
+          void Effect.runPromise(closeMcpWorkspaceRuntime(key, runtime));
+        });
+      keepMcpWorkspaceRuntime(key, runtime, CLAUDE_MCP_WORKSPACE_IDLE_MS);
+      return runtime;
+    };
+
+    const acquireMcpWorkspaceRuntime = async (
+      input: ProviderMcpAdapterInput,
+    ): Promise<ClaudeMcpWorkspaceRuntime> => {
+      // The folder is part of the key: project servers and per-project
+      // enablement differ between folders.
+      const key = claudeDiscoveryKey(input);
+      const existing = await mcpWorkspaceRuntimes.get(key)?.catch(() => undefined);
+      if (existing && !existing.closed) {
+        // A reload restarts Claude Code so it reads its config again, unless a
+        // sign-in is still waiting for its redirect in this process.
+        if (!input.forceReload || existing.signInUntil > Date.now()) {
+          keepMcpWorkspaceRuntime(key, existing, CLAUDE_MCP_WORKSPACE_IDLE_MS);
+          return existing;
+        }
+        await Effect.runPromise(closeMcpWorkspaceRuntime(key, existing));
+      }
+      const startup = startMcpWorkspaceRuntime(key, input);
+      mcpWorkspaceRuntimes.set(key, startup);
+      startup.catch(() => {
+        if (mcpWorkspaceRuntimes.get(key) === startup) mcpWorkspaceRuntimes.delete(key);
+      });
+      return startup;
+    };
+
+    const closeAllMcpWorkspaceRuntimes = () =>
+      settleConcurrentTeardowns([...mcpWorkspaceRuntimes], ([key, startup]) =>
+        Effect.promise(() => startup.catch(() => undefined)).pipe(
+          Effect.flatMap((runtime) =>
+            runtime ? closeMcpWorkspaceRuntime(key, runtime) : Effect.void,
+          ),
+        ),
+      );
+
+    const resolveMcpRuntime = (input: Omit<ProviderMcpAdapterInput, "serverName">) =>
+      Effect.gen(function* () {
+        // The thread's own session is the truth for that thread, as long as it
+        // runs on the account this request resolved to.
+        const ownContext = input.threadId
+          ? sessions.get(ThreadId.makeUnsafe(input.threadId))
+          : undefined;
+        if (
+          ownContext &&
+          !ownContext.stopped &&
+          ownContext.accountDiscoveryKey === claudeDiscoveryKey({ ...input, includeCwd: false })
+        ) {
+          return {
+            source: "session" as const,
+            query: ownContext.query,
+            keepForSignIn: (): void => undefined,
+          };
+        }
+        const runtime = yield* Effect.tryPromise({
+          try: () => acquireMcpWorkspaceRuntime(input),
+          catch: (cause) =>
+            new ProviderAdapterProcessError({
+              provider: PROVIDER,
+              threadId: CLAUDE_DISCOVERY_THREAD_ID,
+              detail: toMessage(cause, "Could not start Claude to read its MCP servers."),
+              cause,
+            }),
+        });
+        return {
+          source: "workspace" as const,
+          query: runtime.query,
+          keepForSignIn: (): void => {
+            runtime.signInUntil = Date.now() + CLAUDE_MCP_SIGN_IN_WINDOW_MS;
+            keepMcpWorkspaceRuntime(
+              claudeDiscoveryKey(input),
+              runtime,
+              CLAUDE_MCP_SIGN_IN_WINDOW_MS,
+            );
+          },
+        };
+      });
+
+    const mcpControlUnavailable = (method: string) =>
+      new ProviderAdapterRequestError({
+        provider: PROVIDER,
+        method,
+        detail: "This Claude Code version cannot report or manage MCP servers.",
+      });
+
+    const listMcpServers: NonNullable<ClaudeAdapterShape["listMcpServers"]> = (input) =>
+      Effect.gen(function* () {
+        const runtime = yield* resolveMcpRuntime(input);
+        const readStatus = runtime.query.mcpServerStatus;
+        if (!readStatus) return yield* mcpControlUnavailable("mcpServerStatus");
+        const statuses = yield* Effect.tryPromise({
+          try: () => readStatus.call(runtime.query),
+          catch: (cause) => toRequestError(CLAUDE_DISCOVERY_THREAD_ID, "mcpServerStatus", cause),
+        });
+        const servers = mapClaudeMcpServerStatuses(statuses);
+        return {
+          servers: input.serverName
+            ? servers.filter((server) => server.name === input.serverName)
+            : servers,
+          source: runtime.source,
+        };
+      });
+
+    const runMcpServerAction: NonNullable<ClaudeAdapterShape["runMcpServerAction"]> = (input) =>
+      Effect.gen(function* () {
+        const runtime = yield* resolveMcpRuntime(input);
+        const query = runtime.query;
+        const request = <T>(method: string, call: (() => Promise<T>) | undefined) =>
+          call
+            ? Effect.tryPromise({
+                try: call,
+                catch: (cause) => toRequestError(CLAUDE_DISCOVERY_THREAD_ID, method, cause),
+              })
+            : Effect.fail(mcpControlUnavailable(method));
+        switch (input.action) {
+          case "reconnect":
+            yield* request(
+              "reconnectMcpServer",
+              query.reconnectMcpServer && (() => query.reconnectMcpServer!(input.serverName)),
+            );
+            return {};
+          case "enable":
+          case "disable":
+            yield* request(
+              "toggleMcpServer",
+              query.toggleMcpServer &&
+                (() => query.toggleMcpServer!(input.serverName, input.action === "enable")),
+            );
+            return {};
+          case "authenticate": {
+            const response = yield* request(
+              "mcpAuthenticate",
+              query.mcpAuthenticate && (() => query.mcpAuthenticate!(input.serverName)),
+            );
+            runtime.keepForSignIn();
+            const authUrl = nonEmptyTrimmed(response?.authUrl);
+            return authUrl ? { authUrl } : {};
+          }
+          case "sign-out":
+            yield* request(
+              "mcpClearAuth",
+              query.mcpClearAuth && (() => query.mcpClearAuth!(input.serverName)),
+            );
+            return {};
+        }
+      });
+
     const stopAll: ClaudeAdapterShape["stopAll"] = () =>
       settleConcurrentTeardowns(
         [
+          closeAllMcpWorkspaceRuntimes(),
           settleConcurrentTeardowns([...sessions.values()], (context) =>
             stopSessionInternal(context, { emitExitEvent: true }),
           ),
@@ -8884,6 +9150,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
     yield* Effect.addFinalizer(() =>
       settleConcurrentTeardowns(
         [
+          closeAllMcpWorkspaceRuntimes(),
           settleConcurrentTeardowns([...sessions.values()], (context) =>
             stopSessionInternal(context, { emitExitEvent: false }),
           ),
@@ -9018,6 +9285,8 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
       stopAll,
       getComposerCapabilities,
       listCommands,
+      listMcpServers,
+      runMcpServerAction,
       listSkills,
       listModels,
       listAgents,

@@ -2675,6 +2675,13 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(providerService.compactThread(input), "Failed to compact thread"),
         [WS_METHODS.providerListCommands]: (input) =>
           rpcEffect(providerDiscoveryService.listCommands(input), "Failed to list commands"),
+        [WS_METHODS.providerListMcpServers]: (input) =>
+          rpcEffect(providerDiscoveryService.listMcpServers(input), "Failed to list MCP servers"),
+        [WS_METHODS.providerRunMcpServerAction]: (input) =>
+          rpcEffect(
+            providerDiscoveryService.runMcpServerAction(input),
+            "Failed to update the MCP server",
+          ),
         [WS_METHODS.providerListSkills]: (input) =>
           rpcEffect(providerDiscoveryService.listSkills(input), "Failed to list skills"),
         [WS_METHODS.providerListSkillsCatalog]: (input) =>

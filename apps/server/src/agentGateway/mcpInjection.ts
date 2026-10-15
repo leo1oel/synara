@@ -15,6 +15,7 @@
  * @module agentGateway/mcpInjection
  */
 import type * as Acp from "@agentclientprotocol/sdk";
+import { MCP_CONNECTOR_SERVER_NAME_SUFFIX } from "@synara/shared/mcpConnectors";
 
 import type {
   AgentGatewayMcpConnection,
@@ -25,6 +26,11 @@ export const SYNARA_MCP_SERVER_NAME = "synara";
 export const SYNARA_AGENT_GATEWAY_TOKEN_ENV = "SYNARA_AGENT_GATEWAY_TOKEN";
 export const SYNARA_AGENT_GATEWAY_BOOTSTRAP_TOKEN_ENV = "SYNARA_AGENT_GATEWAY_BOOTSTRAP_TOKEN";
 export const SYNARA_AGENT_GATEWAY_URL_ENV = "SYNARA_AGENT_GATEWAY_URL";
+
+/** Servers Synara injects into a session itself: its gateway and the user's Connectors. */
+export function isSynaraInjectedMcpServerName(name: string): boolean {
+  return name === SYNARA_MCP_SERVER_NAME || name.endsWith(MCP_CONNECTOR_SERVER_NAME_SUFFIX);
+}
 
 function authorizationHeader(connection: AgentGatewayMcpConnection): string {
   return `Bearer ${connection.bearerToken}`;

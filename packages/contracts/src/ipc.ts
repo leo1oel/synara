@@ -370,6 +370,10 @@ import type {
   ProviderListAgentsResult,
   ProviderListCommandsInput,
   ProviderListCommandsResult,
+  ProviderListMcpServersInput,
+  ProviderListMcpServersResult,
+  ProviderMcpServerActionInput,
+  ProviderMcpServerActionResult,
   ProviderListModelsInput,
   ProviderListModelsResult,
   ProviderListPluginsInput,
@@ -1364,6 +1368,10 @@ export interface NativeApi {
     ) => Promise<ProviderComposerCapabilities>;
     compactThread: (input: ProviderCompactThreadInput) => Promise<void>;
     listCommands: (input: ProviderListCommandsInput) => Promise<ProviderListCommandsResult>;
+    listMcpServers: (input: ProviderListMcpServersInput) => Promise<ProviderListMcpServersResult>;
+    runMcpServerAction: (
+      input: ProviderMcpServerActionInput,
+    ) => Promise<ProviderMcpServerActionResult>;
     listSkills: (input: ProviderListSkillsInput) => Promise<ProviderListSkillsResult>;
     listSkillsCatalog: (input: ProviderSkillsCatalogInput) => Promise<ProviderSkillsCatalogResult>;
     listPlugins: (input: ProviderListPluginsInput) => Promise<ProviderListPluginsResult>;

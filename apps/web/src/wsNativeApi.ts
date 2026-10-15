@@ -837,6 +837,10 @@ export function createWsNativeApi(): NativeApi {
       compactThread: (input) =>
         transport.request(WS_METHODS.providerCompactThread, input, { timeoutMs: null }),
       listCommands: (input) => transport.request(WS_METHODS.providerListCommands, input),
+      listMcpServers: (input) => transport.request(WS_METHODS.providerListMcpServers, input),
+      // Actions can wait on Claude Code starting and on the server's own handshake.
+      runMcpServerAction: (input) =>
+        transport.request(WS_METHODS.providerRunMcpServerAction, input, { timeoutMs: 120_000 }),
       listSkills: (input) => transport.request(WS_METHODS.providerListSkills, input),
       listSkillsCatalog: (input) => transport.request(WS_METHODS.providerListSkillsCatalog, input),
       listPlugins: (input) => transport.request(WS_METHODS.providerListPlugins, input),

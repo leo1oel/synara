@@ -18,6 +18,7 @@ import {
   InfoIcon,
   ListTodoIcon,
   type LucideIcon,
+  McpIcon,
   MessageCircleIcon,
   Minimize2,
   TemporaryThreadIcon,
@@ -43,6 +44,7 @@ export const SLASH_COMMAND_ICONS: Record<string, LucideIcon> = {
   automation: ClockIcon,
   goal: GoalIcon,
   "computer-use": ComputerUseIcon,
+  mcp: McpIcon,
 };
 
 /** Glyph for a slash command, falling back to `fallback` for unmapped commands. */
