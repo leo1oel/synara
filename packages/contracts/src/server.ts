@@ -96,6 +96,17 @@ export const ServerProviderAuthStatus = Schema.Literals([
 ]);
 export type ServerProviderAuthStatus = typeof ServerProviderAuthStatus.Type;
 
+// Set while a provider's runtime packages are not on this machine: a slim host installs
+// Pi and OpenCode on demand. "missing" offers the install; absent means installed.
+export const ServerProviderRuntimeInstall = Schema.Struct({
+  status: Schema.Literals(["missing", "installing", "failed"]),
+  completedPackages: Schema.optional(Schema.Number),
+  totalPackages: Schema.optional(Schema.Number),
+  failure: Schema.optional(Schema.Literals(["offline", "download", "integrity", "disk", "verify"])),
+  message: Schema.optional(TrimmedNonEmptyString),
+});
+export type ServerProviderRuntimeInstall = typeof ServerProviderRuntimeInstall.Type;
+
 const ServerProviderStatusWire = Schema.Struct({
   provider: ProviderDriverKind,
   instanceId: ProviderInstanceId,
@@ -131,6 +142,7 @@ const ServerProviderStatusWire = Schema.Struct({
       message: Schema.NullOr(TrimmedNonEmptyString),
     }),
   ),
+  runtimeInstall: Schema.optionalKey(ServerProviderRuntimeInstall),
   updateState: Schema.optionalKey(
     Schema.Struct({
       status: Schema.Literals(["idle", "queued", "running", "succeeded", "failed", "unchanged"]),
@@ -173,6 +185,7 @@ const ServerProviderStatusSource = Schema.Struct({
       message: Schema.NullOr(TrimmedNonEmptyString),
     }),
   ),
+  runtimeInstall: Schema.optionalKey(ServerProviderRuntimeInstall),
   updateState: Schema.optionalKey(
     Schema.Struct({
       status: Schema.Literals(["idle", "queued", "running", "succeeded", "failed", "unchanged"]),
@@ -681,6 +694,11 @@ export class ServerProviderUpdateError extends Schema.TaggedErrorClass<ServerPro
 }
 
 export const ServerProviderUpdateResult = ServerProviderStatusesUpdatedPayload;
+
+export const ServerInstallProviderRuntimeInput = Schema.Struct({
+  provider: Schema.Literals(["pi", "opencode"]),
+});
+export type ServerInstallProviderRuntimeInput = typeof ServerInstallProviderRuntimeInput.Type;
 export type ServerProviderUpdateResult = typeof ServerProviderUpdateResult.Type;
 
 export const ServerGetSettingsResult = ServerSettingsView;

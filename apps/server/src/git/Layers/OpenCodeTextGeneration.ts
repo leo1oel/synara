@@ -21,6 +21,7 @@ import { resolveProviderAttachmentPath } from "../../provider/providerAttachment
 import { ServerConfig } from "../../config.ts";
 import { appendFileAttachmentsPromptBlock } from "../../provider/attachmentProjection.ts";
 import {
+  ensureOpenCodeSdkLoaded,
   OpenCodeRuntime,
   OPENCODE_CLI_SPEC,
   type OpenCodeCompatibleCliSpec,
@@ -442,6 +443,7 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
       const runAgainstServer = (server: Pick<OpenCodeServerConnection, "url" | "serverPassword">) =>
         Effect.tryPromise({
           try: async (signal) => {
+            await ensureOpenCodeSdkLoaded();
             const client = openCodeRuntime.createOpenCodeSdkClient({
               baseUrl: server.url,
               directory: input.cwd,

@@ -14,16 +14,15 @@ import type {
   ProviderInteractionMode,
   RuntimeMode,
 } from "@synara/contracts";
-import {
-  type ConsoleState,
-  createOpencodeClient,
-  type Agent,
-  type FilePartInput,
-  type OpencodeClient,
-  type PermissionRuleset,
-  type ProviderListResponse,
-  type QuestionAnswer,
-  type QuestionRequest,
+import type {
+  ConsoleState,
+  Agent,
+  FilePartInput,
+  OpencodeClient,
+  PermissionRuleset,
+  ProviderListResponse,
+  QuestionAnswer,
+  QuestionRequest,
 } from "@opencode-ai/sdk/v2";
 import {
   Cause,
@@ -61,6 +60,7 @@ import { isWindowsShellCommandMissingResult } from "../shell-command-detection.t
 import { parseOpenCodeReasoningOptions } from "./openCodeReasoningOptions.ts";
 import { detectOpenCodeProtocol } from "./openCodeProtocol.ts";
 import { openCodeV2CredentialProviderIDs, withOpenCodeV2Client } from "./openCodeV2Client.ts";
+import { loadedProviderRuntimeModule, loadProviderRuntimeModule } from "./providerRuntimes.ts";
 
 const DEFAULT_OPENCODE_SERVER_TIMEOUT_MS = 20_000;
 const DEFAULT_HOSTNAME = "127.0.0.1";
@@ -126,6 +126,17 @@ interface PooledOpenCodeServer {
 }
 
 const OPENCODE_RUNTIME_ERROR_TAG = "OpenCodeRuntimeError";
+/**
+ * Loads the OpenCode SDK packages that `createOpenCodeSdkClient` uses. A slim host may
+ * not have installed them yet (providerRuntimes.ts), so callers await this first.
+ */
+export async function ensureOpenCodeSdkLoaded(): Promise<void> {
+  await Promise.all([
+    loadProviderRuntimeModule("@opencode-ai/sdk/v2"),
+    loadProviderRuntimeModule("@opencode/client"),
+  ]);
+}
+
 export class OpenCodeRuntimeError extends Data.TaggedError(OPENCODE_RUNTIME_ERROR_TAG)<{
   readonly operation: string;
   readonly cause?: unknown;
@@ -1461,17 +1472,32 @@ const makeOpenCodeRuntime = (options?: OpenCodeRuntimeLiveOptions) =>
       ),
     );
 
+    // Every SDK client is created for a server connection, so the OpenCode SDK
+    // packages load here; a slim host may still have to install them.
+    const loadOpenCodeSdk = Effect.tryPromise({
+      try: ensureOpenCodeSdkLoaded,
+      catch: (cause) =>
+        new OpenCodeRuntimeError({
+          operation: "loadOpenCodeSdk",
+          detail: openCodeRuntimeErrorDetail(cause),
+          cause,
+        }),
+    });
+
     const connectToOpenCodeServer: OpenCodeRuntimeShape["connectToOpenCodeServer"] = (input) => {
       const serverUrl = input.serverUrl?.trim();
       if (serverUrl) {
-        return Effect.succeed({
-          url: serverUrl,
-          exitCode: null,
-          external: true,
-        });
+        return loadOpenCodeSdk.pipe(
+          Effect.as({
+            url: serverUrl,
+            exitCode: null,
+            external: true,
+          }),
+        );
       }
 
       return Effect.gen(function* () {
+        yield* loadOpenCodeSdk;
         const callerScope = yield* Scope.Scope;
         const pooledServer = yield* acquirePooledServer({
           binaryPath: input.binaryPath,
@@ -1511,6 +1537,7 @@ const makeOpenCodeRuntime = (options?: OpenCodeRuntimeLiveOptions) =>
             Authorization: `Basic ${Buffer.from(`${(input.cliSpec ?? OPENCODE_CLI_SPEC).serverAuthUsername}:${input.serverPassword}`, "utf8").toString("base64")}`,
           }
         : undefined;
+      const { createOpencodeClient } = loadedProviderRuntimeModule("@opencode-ai/sdk/v2");
       const client = createOpencodeClient({
         baseUrl: input.baseUrl,
         directory: input.directory,

@@ -1,7 +1,8 @@
 import { createOpencodeClient } from "@opencode-ai/sdk/v2";
 import type { FormInfo } from "@opencode/client";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { withOpenCodeV2Client, openCodeV2ExecutionOutcome } from "./openCodeV2Client.ts";
+import { ensureOpenCodeSdkLoaded } from "./opencodeRuntime.ts";
 import type { NormalizedOpenCodeEvent } from "./openCodeV2Messages.ts";
 
 const json = (data: unknown) => Response.json(data);
@@ -259,6 +260,9 @@ function fixture() {
 }
 
 describe("OpenCode V2 client boundary", () => {
+  // The runtime connects before creating clients; these tests build clients directly.
+  beforeAll(ensureOpenCodeSdkLoaded);
+
   it("keeps child session pagination scoped to its parent", async () => {
     const server = fixture();
     server.pagedChildren = true;

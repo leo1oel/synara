@@ -359,6 +359,7 @@ import {
   ServerListWorktreesResult,
   ServerProviderUpdateError,
   ServerProviderUpdateInput,
+  ServerInstallProviderRuntimeInput,
   ServerProviderUpdateResult,
   ServerRefreshProvidersResult,
   ServerStopLocalServerInput,
@@ -1425,6 +1426,12 @@ export const WsServerUpdateProviderRpc = Rpc.make(WS_METHODS.serverUpdateProvide
   error: ServerProviderUpdateError,
 });
 
+export const WsServerInstallProviderRuntimeRpc = Rpc.make(WS_METHODS.serverInstallProviderRuntime, {
+  payload: ServerInstallProviderRuntimeInput,
+  success: ServerProviderUpdateResult,
+  error: ServerProviderUpdateError,
+});
+
 export const WsServerListExternalMcpIntegrationsRpc = Rpc.make(
   WS_METHODS.serverListExternalMcpIntegrations,
   {
@@ -2141,6 +2148,7 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsServerUpdateSettingsRpc,
   WsServerRefreshProvidersRpc,
   WsServerUpdateProviderRpc,
+  WsServerInstallProviderRuntimeRpc,
   WsServerListExternalMcpIntegrationsRpc,
   WsServerCreateExternalMcpIntegrationRpc,
   WsServerRevokeExternalMcpIntegrationRpc,

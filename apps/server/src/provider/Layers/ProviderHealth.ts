@@ -131,6 +131,35 @@ import {
   type ProviderProcessEnvDriver,
 } from "../providerProcessEnv.ts";
 import { defaultPiSdkAgentDir, makePiStoragePaths } from "../piStoragePaths.ts";
+import {
+  configureProviderRuntimes,
+  providerRuntimeAvailability,
+  providerRuntimeIdForDriver,
+  providerRuntimeInstallState,
+  type ProviderRuntimeId,
+  subscribeProviderRuntimeChanges,
+} from "../providerRuntimes.ts";
+
+// A slim host installs Pi and OpenCode on demand; until then the provider offers the
+// install instead of probing a runtime it does not have.
+function providerRuntimeMissingStatus(
+  provider: ProviderRuntimeId,
+  checkedAt: string,
+): ServerProviderStatus | null {
+  if (providerRuntimeAvailability(provider) !== "missing") return null;
+  const name = provider === "pi" ? "Pi" : "OpenCode";
+  return {
+    provider,
+    instanceId: provider,
+    driver: provider,
+    status: "error",
+    available: false,
+    authStatus: "unknown",
+    checkedAt,
+    message: `${name} is not installed. Install ${name} in provider settings to use it.`,
+    runtimeInstall: { status: "missing" },
+  } satisfies ServerProviderStatus;
+}
 
 export { parseClaudeAuthStatusFromOutput } from "../claudeAuthStatus";
 export type { CommandResult } from "../providerCliOutput";
@@ -1805,6 +1834,8 @@ export const makeCheckOpenCodeProviderStatus = (
 ): Effect.Effect<ServerProviderStatus, never, ChildProcessSpawner.ChildProcessSpawner> =>
   Effect.gen(function* () {
     const checkedAt = new Date().toISOString();
+    const runtimeMissing = providerRuntimeMissingStatus(OPENCODE_PROVIDER, checkedAt);
+    if (runtimeMissing) return runtimeMissing;
     const configuredServerUrl = nonEmptyTrimmed(connection?.serverUrl);
     if (configuredServerUrl) {
       return openCodeExternalServerStatus({
@@ -2042,6 +2073,8 @@ export const checkPiProviderStatus = (
 ): Effect.Effect<ServerProviderStatus, never, FileSystem.FileSystem> =>
   Effect.gen(function* () {
     const checkedAt = new Date().toISOString();
+    const runtimeMissing = providerRuntimeMissingStatus(PI_PROVIDER, checkedAt);
+    if (runtimeMissing) return runtimeMissing;
     const probeEnvResult = tryMakeProviderProbeEnv(PI_PROVIDER, environment, instanceId, paths);
     if (!probeEnvResult.ok) {
       return providerHomePreparationFailure(PI_PROVIDER, checkedAt, probeEnvResult.cause);
@@ -2077,9 +2110,15 @@ export const checkPiProviderStatus = (
       available: true,
       authStatus: "unknown" as const,
       checkedAt,
-      message: configuredAgentDir
-        ? `Pi SDK is included with Synara. Using Pi agent dir ${configuredAgentDir}.`
-        : "Pi SDK is included with Synara. Configure provider credentials inside Pi as needed.",
+      message: `${
+        providerRuntimeAvailability(PI_PROVIDER) === "installed"
+          ? "Pi SDK is installed."
+          : "Pi SDK is included with Synara."
+      } ${
+        configuredAgentDir
+          ? `Using Pi agent dir ${configuredAgentDir}.`
+          : "Configure provider credentials inside Pi as needed."
+      }`,
     } satisfies ServerProviderStatus;
   });
 
@@ -3202,8 +3241,30 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
       );
 
       const applyVolatileProviderState = Effect.fn("applyVolatileProviderState")(function* (
-        status: ServerProviderStatus,
+        probedStatus: ServerProviderStatus,
       ) {
+        const runtimeState = probedStatus.runtimeInstall
+          ? providerRuntimeInstallState(
+              providerRuntimeIdForDriver(probedStatus.driver ?? probedStatus.provider) ?? "pi",
+            )
+          : null;
+        const status: ServerProviderStatus = !runtimeState
+          ? probedStatus
+          : {
+              ...probedStatus,
+              runtimeInstall:
+                runtimeState.status === "installing"
+                  ? {
+                      status: "installing",
+                      completedPackages: runtimeState.completed,
+                      totalPackages: runtimeState.total,
+                    }
+                  : {
+                      status: "failed",
+                      failure: runtimeState.failure,
+                      message: runtimeState.message,
+                    },
+            };
         const updateStates = yield* Ref.get(updateStatesRef);
         const updateState = updateStates.get(providerStatusIdentityKey(status));
         if (!updateState) {
@@ -3639,6 +3700,24 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
       const refresh: Effect.Effect<ProviderStatuses> = ensureRefreshFiber().pipe(
         Effect.flatMap(Fiber.join),
       );
+
+      // On-demand Pi/OpenCode installs report progress through the provider statuses;
+      // once one settles, probe again so an installed provider shows its real state.
+      configureProviderRuntimes({ baseDir: serverConfig.baseDir });
+      const unsubscribeProviderRuntimes = subscribeProviderRuntimeChanges((_runtime, finished) => {
+        Effect.runFork(
+          finished
+            ? Effect.gen(function* () {
+                yield* publishProjectedStatuses();
+                if (yield* Ref.get(refreshFiberRef)) {
+                  yield* Ref.set(refreshNeedsFollowUpRef, true);
+                }
+                yield* ensureRefreshFiber().pipe(Effect.flatMap(Fiber.join));
+              })
+            : publishProjectedStatuses().pipe(Effect.asVoid),
+        );
+      });
+      yield* Effect.addFinalizer(() => Effect.sync(unsubscribeProviderRuntimes));
 
       const nowIso = Effect.map(DateTime.now, DateTime.formatIso);
 

@@ -189,6 +189,7 @@ import {
 import { recoverUnregisteredGitHubCheckout } from "./project/githubProjectRegistration";
 import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegistry";
 import { ProviderHealth } from "./provider/Services/ProviderHealth";
+import { requestProviderRuntimeInstall } from "./provider/providerRuntimes.ts";
 import { ProviderService } from "./provider/Services/ProviderService";
 import { consumeCodexResetCreditEffect, listProviderUsage } from "./providerUsage";
 import { getProviderUsageSnapshot } from "./providerUsageSnapshot";
@@ -2359,6 +2360,13 @@ const makeWsRpcHandlersLayer = () =>
             "Failed to refresh providers",
           ),
         [WS_METHODS.serverUpdateProvider]: (input) => providerHealth.updateProvider(input),
+        // Starts (or joins) the install and answers at once; progress and the
+        // outcome arrive through the provider status stream.
+        [WS_METHODS.serverInstallProviderRuntime]: (input) =>
+          Effect.sync(() => void requestProviderRuntimeInstall(input.provider)).pipe(
+            Effect.andThen(providerHealth.getStatuses),
+            Effect.map((providers) => ({ providers })),
+          ),
         [WS_METHODS.serverListExternalMcpIntegrations]: () =>
           rpcEffect(
             requireOwner.pipe(Effect.andThen(externalMcp.listIntegrations())),

@@ -1,12 +1,7 @@
-import {
-  OpenCode,
-  type FormInfo,
-  type ModelRef,
-  type SessionMessageInfo,
-  type SessionPromptInput,
-} from "@opencode/client";
+import type { FormInfo, ModelRef, SessionMessageInfo, SessionPromptInput } from "@opencode/client";
 import type { OpencodeClient, PermissionRuleset } from "@opencode-ai/sdk/v2";
 import { detectOpenCodeProtocol } from "./openCodeProtocol.ts";
+import { loadedProviderRuntimeModule } from "./providerRuntimes.ts";
 import { setTimeout as delay } from "node:timers/promises";
 import {
   openCodeV2Agent,
@@ -77,7 +72,7 @@ export function withOpenCodeV2Client(
     readonly fetch?: typeof globalThis.fetch;
   },
 ): OpencodeClient {
-  const native = OpenCode.make(input);
+  const native = loadedProviderRuntimeModule("@opencode/client").OpenCode.make(input);
   const location = { directory: input.directory };
   let protocol: "v1" | "v2" | undefined;
   const permissions = new Map<string, string>();

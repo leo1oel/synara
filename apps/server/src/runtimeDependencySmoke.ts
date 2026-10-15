@@ -6,12 +6,29 @@ import { strict as assert } from "node:assert";
 
 import { loadAcpSdk } from "./provider/acp/AcpSdk.ts";
 import { loadClaudeAgentSdk } from "./provider/claudeAgentSdk.ts";
+import {
+  loadProviderRuntimeModule,
+  providerRuntimeAvailability,
+  ProviderRuntimeMissingError,
+} from "./provider/providerRuntimes.ts";
 
 // Keep these imports external, just like the server. Running this entrypoint
 // from app.asar exposes missing peers that the development install can hide.
 await loadAcpSdk();
 await loadClaudeAgentSdk();
-await import("@earendil-works/pi-coding-agent");
+// Pi and OpenCode are optional runtimes: a full install loads them here, while a slim
+// host that leaves them out must report them as installable, not crash.
+for (const runtime of ["pi", "opencode"] as const) {
+  const availability = providerRuntimeAvailability(runtime);
+  const specifier =
+    runtime === "pi" ? "@earendil-works/pi-coding-agent" : ("@opencode-ai/sdk/v2" as const);
+  if (availability === "missing") {
+    await assert.rejects(loadProviderRuntimeModule(specifier), ProviderRuntimeMissingError);
+  } else {
+    await loadProviderRuntimeModule(specifier);
+  }
+  console.log(`Provider runtime ${runtime}: ${availability}.`);
+}
 await import("open");
 await import("node-pty");
 await import("@xterm/headless");

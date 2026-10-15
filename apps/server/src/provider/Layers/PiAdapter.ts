@@ -17,7 +17,6 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import type { AgentToolResult, ThinkingLevel } from "@earendil-works/pi-agent-core";
 import type { Api, ImageContent, Model, TextContent } from "@earendil-works/pi-ai";
-import { resetApiProviders } from "@earendil-works/pi-ai/compat";
 import {
   ApprovalRequestId,
   type ChatAttachment,
@@ -72,7 +71,6 @@ import {
 } from "../../agentGateway/sessionLease.ts";
 import { resolveProviderAttachmentPath } from "../providerAttachmentPaths.ts";
 import { ServerConfig } from "../../config.ts";
-import { lazyModule } from "../../lazyModule.ts";
 import { buildProviderChildEnvironment } from "../../providerChildEnvironment.ts";
 import {
   ProviderAdapterRequestError,
@@ -92,12 +90,15 @@ import { makeKeyedLock } from "../keyedLock.ts";
 import { settleConcurrentTeardowns } from "../settleConcurrentTeardowns.ts";
 import { classifyPiTurnFailure } from "../piTurnFailure.ts";
 import { fetchOpenRouterModels, OPENROUTER_BASE_URL } from "../OpenRouterDiscovery.ts";
-import { openrouterProvider } from "@earendil-works/pi-ai/providers/openrouter";
 import {
   buildProviderProcessEnv,
   MODEL_PROVIDER_API_KEY_ENV_MAPPINGS,
 } from "../providerProcessEnv.ts";
 import { makePiStoragePaths } from "../piStoragePaths.ts";
+import {
+  loadProviderRuntimeModule,
+  loadedProviderRuntimeModuleIfAny,
+} from "../providerRuntimes.ts";
 import {
   compactProviderRuntimeEventForIngress,
   isTerminalProviderRuntimeEvent,
@@ -392,10 +393,21 @@ export function makePiBashProcessSupervisor(
 
 // Loads the Pi SDK only when the Pi provider is actually used. The SDK brings in
 // a native clipboard module, so importing it during Synara startup can bloat the
-// desktop backend before any Pi session exists.
-const loadPiCodingAgentModule: () => Promise<PiCodingAgentModule> = lazyModule(
-  () => import("@earendil-works/pi-coding-agent"),
-);
+// desktop backend before any Pi session exists. A slim host installs Pi on demand
+// (providerRuntimes.ts); until then this rejects with ProviderRuntimeMissingError.
+async function loadPiCodingAgentModule(): Promise<PiCodingAgentModule> {
+  const [sdk] = await Promise.all([
+    loadProviderRuntimeModule("@earendil-works/pi-coding-agent"),
+    loadProviderRuntimeModule("@earendil-works/pi-ai/compat"),
+  ]);
+  return sdk;
+}
+
+// Clears API providers that pi-ai registered. Before pi-ai has loaded none exist,
+// so there is nothing to clear.
+function resetApiProviders(): void {
+  loadedProviderRuntimeModuleIfAny("@earendil-works/pi-ai/compat")?.resetApiProviders();
+}
 
 interface PiSessionContext {
   harnessPolicyDelivered?: boolean;
@@ -1822,6 +1834,9 @@ export async function refreshPiOpenRouterModels(
     return;
   const live = await fetchOpenRouterModels();
   if (live.length === 0) return;
+  const { openrouterProvider } = await loadProviderRuntimeModule(
+    "@earendil-works/pi-ai/providers/openrouter",
+  );
   const base = openrouterProvider();
   const models = new Map(base.getModels().map((model) => [model.id, model]));
   for (const model of live) models.set(model.id, model);

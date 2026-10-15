@@ -1,0 +1,9 @@
+{
+  "name": "@synara/provider-runtime-pi",
+  "private": true,
+  "dependencies": {
+    "@earendil-works/pi-agent-core": "0.87.1",
+    "@earendil-works/pi-ai": "0.87.1",
+    "@earendil-works/pi-coding-agent": "0.87.1"
+  }
+}

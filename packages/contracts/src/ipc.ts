@@ -315,6 +315,7 @@ import type {
   ServerListLocalServersResult,
   ServerListWorktreesResult,
   ServerProviderUpdateInput,
+  ServerInstallProviderRuntimeInput,
   ServerProviderUpdateResult,
   ServerRefreshProvidersResult,
   ServerStopLocalServerInput,
@@ -1356,6 +1357,9 @@ export interface NativeApi {
     getMcpConnectorSetup: () => Promise<McpConnectorSetup>;
     refreshProviders: () => Promise<ServerRefreshProvidersResult>;
     updateProvider: (input: ServerProviderUpdateInput) => Promise<ServerProviderUpdateResult>;
+    installProviderRuntime: (
+      input: ServerInstallProviderRuntimeInput,
+    ) => Promise<ServerProviderUpdateResult>;
     listWorktrees: () => Promise<ServerListWorktreesResult>;
     listLocalServers: () => Promise<ServerListLocalServersResult>;
     stopLocalServer: (input: ServerStopLocalServerInput) => Promise<ServerStopLocalServerResult>;
