@@ -750,6 +750,12 @@ msgid "Checking account status"
 msgstr "正在检查账号状态"
 
 #. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+#: src/lib/providerSetupStatus.ts
+msgid "Not installed"
+msgstr "未安装"
+
+#. js-lingui-explicit-id
 #: src/lib/providerSetupStatus.ts
 msgid "Not authenticated"
 msgstr "未登录"
@@ -839,6 +845,16 @@ msgstr "Claude CLI 已安装，但运行超时了。"
 #: src/lib/providerStatusMessages.ts
 msgid "Could not verify Claude authentication status. Timed out while running command."
 msgstr "无法确认 Claude 的登录状态：命令运行超时。"
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "Pi is not installed. Install Pi in provider settings to use it."
+msgstr "Pi 尚未安装。请在提供方设置中安装 Pi 后使用。"
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "OpenCode is not installed. Install OpenCode in provider settings to use it."
+msgstr "OpenCode 尚未安装。请在提供方设置中安装 OpenCode 后使用。"
 
 #. js-lingui-explicit-id
 #: src/lib/providerStatusMessages.ts
@@ -2795,6 +2811,79 @@ msgid "Create draft PR"
 msgstr "创建草稿 PR"
 
 #. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "Installing {percent}%"
+msgstr "正在安装 {percent}%"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "Install failed"
+msgstr "安装失败"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "Could not reach the package registry. Check your internet connection, then try again."
+msgstr "无法连接到软件包仓库。请检查网络连接后重试。"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "A downloaded package did not match its expected checksum, so nothing was installed. Try again."
+msgstr "下载的软件包与预期校验值不符，因此未安装任何内容。请重试。"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "Could not write the files. Check that your disk has free space, then try again."
+msgstr "无法写入文件。请确认磁盘有可用空间后重试。"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "The downloaded packages did not load, so nothing was installed. Try again."
+msgstr "下载的软件包无法加载，因此未安装任何内容。请重试。"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "The download did not complete, so nothing was installed. Try again."
+msgstr "下载未完成，因此未安装任何内容。请重试。"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "Installing"
+msgstr "正在安装"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+#: src/components/chat/ThreadDetailHydrationState.tsx
+#: src/components/githubInbox/LatticePullRequestList.tsx
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "Try again"
+msgstr "重试"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "Install"
+msgstr "安装"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "{provider} is downloaded separately to keep the app small. After a one-time download it also works offline."
+msgstr "为了让应用保持小巧，{provider} 需单独下载。下载一次后即可离线使用。"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "Installing {provider}"
+msgstr "正在安装 {provider}"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "Installing {provider}: {completed} of {total} packages"
+msgstr "正在安装 {provider}：{completed} / {total} 个软件包"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "Install {provider}"
+msgstr "安装 {provider}"
+
+#. js-lingui-explicit-id
 #: src/components/ProviderUsageLineList.tsx
 msgid "24h"
 msgstr "24 小时"
@@ -3784,7 +3873,6 @@ msgstr "所有 Skills"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ManagedSkillDetailView.tsx
-#: src/components/settings/ProvidersSettingsPanel.tsx
 #: src/components/settings/skillsSettingsModel.ts
 #: src/components/settings/SkillsSettingsPanel.tsx
 msgid "Included with Lattice"
@@ -4686,8 +4774,8 @@ msgstr "提供商运行时"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Review external provider CLIs and the Pi SDK included with Lattice. Pi does not require a separate CLI installation or update."
-msgstr "查看外部提供商 CLI 以及 Lattice 内置的 Pi SDK。Pi 无需单独安装或更新 CLI。"
+msgid "Review external provider CLIs. Pi and OpenCode are downloaded when you install them here; Pi runs on its SDK and needs no separate CLI."
+msgstr "查看外部提供商 CLI。Pi 和 OpenCode 在此处安装时才会下载；Pi 基于其 SDK 运行，无需单独安装 CLI。"
 
 #. js-lingui-explicit-id
 #: src/components/settings/SkillsSettingsPanel.tsx
@@ -6409,13 +6497,6 @@ msgid "Lattice could not reach GitHub. Check your connection and try again"
 msgstr "Lattice 无法连接 GitHub，请检查网络后重试"
 
 #. js-lingui-explicit-id
-#: src/components/chat/ComposerMcpDialog.tsx
-#: src/components/chat/ThreadDetailHydrationState.tsx
-#: src/components/githubInbox/LatticePullRequestList.tsx
-msgid "Try again"
-msgstr "重试"
-
-#. js-lingui-explicit-id
 #: src/components/githubInbox/LatticePullRequestList.tsx
 msgid "No pull requests match “{query}”"
 msgstr "没有与“{query}”匹配的 PR"
@@ -7922,6 +8003,11 @@ msgstr "搜索星标模型…"
 #: src/components/chat/ComposerModelPicker.tsx
 msgid "Search models…"
 msgstr "搜索模型…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPicker.tsx
+msgid "{account} is not installed"
+msgstr "{account} 尚未安装"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerModelPicker.tsx

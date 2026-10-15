@@ -41,6 +41,7 @@ import { SearchIcon } from "~/lib/icons";
 import { starredModelInstanceId, starredModelSlotKey } from "~/lib/starredModels";
 import { cn, isMacNavigatorPlatform } from "~/lib/utils";
 import { ProviderAccountAvatar } from "../ProviderAccountMark";
+import { ProviderRuntimeInstallPanel } from "../ProviderRuntimeInstall";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Menu, MenuGroup, MenuGroupLabel } from "../ui/menu";
@@ -627,7 +628,22 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
                 {modelSelectionIssue}
               </div>
             ) : null}
-            {setupMessage !== null ? (
+            {setupMessage !== null && openProviderTab?.runtimeInstallStatus ? (
+              // The provider is not installed yet: install it right here, one click.
+              <div className="flex flex-col items-center gap-2 px-3 py-4 text-center">
+                <ProviderAccountAvatar
+                  provider={openProviderTab.provider}
+                  accentColor={openProviderTab.accentColor}
+                />
+                <span className="max-w-full text-ui font-medium text-foreground [overflow-wrap:anywhere]">
+                  {i18n._("{account} is not installed", { account: openProviderTab.label })}
+                </span>
+                <ProviderRuntimeInstallPanel
+                  status={openProviderTab.runtimeInstallStatus}
+                  align="center"
+                />
+              </div>
+            ) : setupMessage !== null ? (
               <div className="flex flex-col items-center gap-2 px-3 py-4 text-center">
                 {openProviderTab ? (
                   <ProviderAccountAvatar

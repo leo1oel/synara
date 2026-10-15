@@ -48,6 +48,10 @@ export function providerAccountStatusSummary(input: {
   if (!status) {
     return { tone: "idle", headline: i18n._("Checking account status"), detail: null };
   }
+  // The provider row above offers the install of a runtime the host left out.
+  if (status.runtimeInstall) {
+    return { tone: "error", headline: i18n._("Not installed"), detail: null };
+  }
   const detail = status.message?.trim() || null;
   if (!status.available) {
     return { tone: "error", headline: i18n._("Unavailable"), detail };

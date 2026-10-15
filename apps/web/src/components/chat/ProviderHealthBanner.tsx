@@ -17,6 +17,11 @@ import { CircleAlertIcon, TriangleAlertIcon, XIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { ChatColumnBannerFrame } from "./ChatColumnBannerFrame";
 import { isProviderKind } from "../../providerOrdering";
+import {
+  ProviderRuntimeInstallButton,
+  providerRuntimeInstallFailureMessage,
+  providerRuntimeInstallOf,
+} from "../ProviderRuntimeInstall";
 
 export const ProviderHealthBanner = function ProviderHealthBanner({
   needsProviderSetup = false,
@@ -44,11 +49,16 @@ export const ProviderHealthBanner = function ProviderHealthBanner({
     : status?.status === "error"
       ? i18n._("{provider} provider is unavailable.", { provider: providerLabel })
       : i18n._("{provider} provider has limited availability.", { provider: providerLabel });
+  // A provider runtime the host left out installs right from the banner.
+  const runtimeInstall = needsProviderSetup ? null : providerRuntimeInstallOf(status);
+  const hasAction = Boolean(onConfigure || runtimeInstall);
   const message = needsProviderSetup
     ? defaultMessage
-    : status?.message
-      ? localizeProviderStatusMessage(i18n, status.message)
-      : defaultMessage;
+    : runtimeInstall?.status === "failed"
+      ? providerRuntimeInstallFailureMessage(i18n, runtimeInstall)
+      : status?.message
+        ? localizeProviderStatusMessage(i18n, status.message)
+        : defaultMessage;
   const title = needsProviderSetup
     ? i18n._("Set up an agent provider")
     : i18n._("{provider} provider status", { provider: providerLabel });
@@ -61,7 +71,7 @@ export const ProviderHealthBanner = function ProviderHealthBanner({
         className={cn(
           "provider-health-banner",
           EXPANDED_NOTIFICATION_SURFACE_CLASS_NAME,
-          !onConfigure && onDismiss && "pr-10",
+          !hasAction && onDismiss && "pr-10",
         )}
         variant={needsProviderSetup ? "info" : isError ? "error" : "warning"}
       >
@@ -70,9 +80,11 @@ export const ProviderHealthBanner = function ProviderHealthBanner({
         <AlertDescription className="line-clamp-3 text-[var(--notification-fg)]/72" title={message}>
           {message}
         </AlertDescription>
-        {onConfigure || onDismiss ? (
-          <AlertAction className={cn("items-center", !onConfigure && "absolute top-2 right-2")}>
-            {onConfigure ? (
+        {hasAction || onDismiss ? (
+          <AlertAction className={cn("items-center", !hasAction && "absolute top-2 right-2")}>
+            {runtimeInstall && status ? (
+              <ProviderRuntimeInstallButton status={status} />
+            ) : onConfigure ? (
               <Button size="xs" variant="outline" onClick={onConfigure}>
                 {i18n._("Provider settings")}
               </Button>

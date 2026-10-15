@@ -810,6 +810,9 @@ export function createWsNativeApi(): NativeApi {
       // withProviderUpdateTimeout, which owns the client-side watchdog.
       updateProvider: (input) =>
         transport.request(WS_METHODS.serverUpdateProvider, input, { timeoutMs: null }),
+      // Answers at once; install progress arrives with the provider statuses.
+      installProviderRuntime: (input) =>
+        transport.request(WS_METHODS.serverInstallProviderRuntime, input),
       listWorktrees: () => transport.request(WS_METHODS.serverListWorktrees),
       listLocalServers: () => transport.request(WS_METHODS.serverListLocalServers),
       stopLocalServer: (input) => transport.request(WS_METHODS.serverStopLocalServer, input),

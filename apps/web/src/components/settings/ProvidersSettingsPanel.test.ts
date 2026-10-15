@@ -90,7 +90,7 @@ describe("createProviderInstallResetPatch", () => {
 });
 
 describe("providerUpdateStatusLabel", () => {
-  it("identifies Pi as included when no external CLI version exists", () => {
+  it("identifies Pi as installed when no external CLI version exists", () => {
     expect(
       providerUpdateStatusLabel({
         provider: "pi",
@@ -100,7 +100,7 @@ describe("providerUpdateStatusLabel", () => {
         checkedAt: "2026-07-30T12:00:00.000Z",
         message: "Pi SDK is included with Synara.",
       }),
-    ).toBe("Included with Lattice");
+    ).toBe("Installed");
   });
 });
 

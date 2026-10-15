@@ -125,6 +125,12 @@ import { DisclosureChevron } from "../ui/DisclosureChevron";
 import { SelectItem } from "../ui/select";
 import { Switch } from "../ui/switch";
 import { toastManager } from "../ui/toast";
+import {
+  ProviderRuntimeInstallButton,
+  ProviderRuntimeInstallPanel,
+  providerRuntimeInstallLabel,
+  providerRuntimeInstallOf,
+} from "../ProviderRuntimeInstall";
 import { ProviderIcon } from "../ProviderIcon";
 import { ProviderAccountAvatar } from "../ProviderAccountMark";
 import { StatusChip } from "../ui/status-chip";
@@ -630,6 +636,7 @@ function SortableProviderVisibilityRow(props: {
   } = useSortable({ id: props.option.provider });
   const isChecking = props.providerStatus === undefined;
   const isAvailable = props.providerStatus?.available === true;
+  const runtimeInstall = providerRuntimeInstallOf(props.providerStatus);
   const isEnabled = isProviderPickerProviderEnabled(props.providerStatus, props.isHidden);
 
   return (
@@ -665,10 +672,16 @@ function SortableProviderVisibilityRow(props: {
               ? i18n._("Checking")
               : isAvailable
                 ? i18n._("Installed")
-                : i18n._("CLI not installed")}
+                : runtimeInstall
+                  ? providerRuntimeInstallLabel(i18n, runtimeInstall)
+                  : i18n._("CLI not installed")}
           </span>
         </span>
       </div>
+      {/* Installing it here is what makes the provider pickable at all. */}
+      {runtimeInstall && props.providerStatus ? (
+        <ProviderRuntimeInstallButton status={props.providerStatus} className="ml-auto" />
+      ) : null}
       <Switch
         checked={isEnabled}
         disabled={isChecking || !isAvailable}
@@ -751,7 +764,8 @@ export function providerUpdateStatusLabel(provider: ServerProviderStatus): strin
   }
   const currentVersion = formatProviderVersion(provider.version);
   if (currentVersion) return i18n._("Current {version}", { version: currentVersion });
-  return provider.provider === "pi" && provider.available ? i18n._("Included with Lattice") : null;
+  // Pi runs on its SDK, so it has no CLI version to show.
+  return provider.provider === "pi" && provider.available ? i18n._("Installed") : null;
 }
 
 function providerUpdateFailureMessage(provider: ServerProviderStatus | undefined): string | null {
@@ -1860,6 +1874,8 @@ function ProviderToolRow(props: {
 }) {
   const title = PROVIDER_DISPLAY_NAMES[props.config.provider];
   const isDirty = isProviderInstallConfigDirty(props.config, props.settings, props.defaults);
+  // A slim host installs Pi and OpenCode on demand; until then the row offers it.
+  const runtimeInstall = providerRuntimeInstallOf(props.providerStatus);
   const showProviderUpdateStatus = props.providerStatus
     ? shouldShowProviderUpdateStatus({
         provider: props.providerStatus,
@@ -1871,15 +1887,17 @@ function ProviderToolRow(props: {
   const providerUpdateSuppressed =
     updateAdvisory?.status === "behind_latest" && !showProviderUpdateStatus;
   const currentProviderVersion = formatProviderVersion(props.providerStatus?.version);
-  const providerUpdateLabel = props.providerStatus
-    ? !props.settings.enableProviderUpdateChecks
-      ? currentProviderVersion
-        ? i18n._("Current {version}", { version: currentProviderVersion })
-        : null
-      : providerUpdateSuppressed
-        ? null
-        : providerUpdateStatusLabel(props.providerStatus)
-    : null;
+  const providerUpdateLabel = runtimeInstall
+    ? providerRuntimeInstallLabel(i18n, runtimeInstall)
+    : props.providerStatus
+      ? !props.settings.enableProviderUpdateChecks
+        ? currentProviderVersion
+          ? i18n._("Current {version}", { version: currentProviderVersion })
+          : null
+        : providerUpdateSuppressed
+          ? null
+          : providerUpdateStatusLabel(props.providerStatus)
+      : null;
   const updateActive = Boolean(
     (props.providerStatus && isProviderUpdateActive(props.providerStatus)) ||
     props.updatingProviders.has(
@@ -1917,7 +1935,10 @@ function ProviderToolRow(props: {
                   "shrink-0 text-ui-sm",
                   updateAdvisory?.status === "behind_latest"
                     ? "text-foreground"
-                    : "text-muted-foreground",
+                    : runtimeInstall?.status === "failed"
+                      ? "text-destructive"
+                      : "text-muted-foreground",
+                  runtimeInstall?.status === "installing" && "tabular-nums",
                 )}
               >
                 {providerUpdateLabel}
@@ -1928,6 +1949,9 @@ function ProviderToolRow(props: {
               className="size-4 shrink-0 text-muted-foreground"
             />
           </CollapsibleTrigger>
+          {runtimeInstall && props.providerStatus ? (
+            <ProviderRuntimeInstallButton status={props.providerStatus} />
+          ) : null}
           {showUpdateButton && props.providerStatus ? (
             <ProviderUpdateAction
               providerStatus={props.providerStatus}
@@ -1941,6 +1965,13 @@ function ProviderToolRow(props: {
         <CollapsiblePanel>
           <div className="border-t border-border/70 bg-muted/20 px-3 py-3">
             <div className="space-y-3">
+              {runtimeInstall && props.providerStatus ? (
+                <ProviderRuntimeInstallPanel
+                  status={props.providerStatus}
+                  align="start"
+                  showAction={false}
+                />
+              ) : null}
               <ProviderDocsLinks docs={props.config.docs} />
               {showProviderUpdateStatus && updateAdvisory?.status === "behind_latest" ? (
                 <div className="text-ui leading-snug text-muted-foreground">
@@ -2398,7 +2429,7 @@ export function ProvidersSettingsPanel({
           <SettingsRow
             title={i18n._("Provider runtimes")}
             description={i18n._(
-              "Review external provider CLIs and the Pi SDK included with Lattice. Pi does not require a separate CLI installation or update.",
+              "Review external provider CLIs. Pi and OpenCode are downloaded when you install them here; Pi runs on its SDK and needs no separate CLI.",
             )}
             status={
               !settings.enableProviderUpdateChecks

@@ -100,6 +100,8 @@ export type ComposerModelPickerProviderTab = {
   blocked: boolean;
   /** Shown in place of the model list when the account still has to be signed in or fixed. */
   setupMessage: string | null;
+  /** The account's status while its provider runtime still has to be installed. */
+  runtimeInstallStatus: ServerProviderStatus | null;
 };
 
 // Why an enabled account cannot run, phrased for its tab tooltip.
@@ -123,7 +125,10 @@ function resolveAccountTabState(input: {
   label: string;
   status: ServerProviderStatus | undefined;
   lockedToSibling: boolean;
-}): Pick<ComposerModelPickerProviderTab, "unavailableLabel" | "blocked" | "setupMessage"> {
+}): Pick<
+  ComposerModelPickerProviderTab,
+  "unavailableLabel" | "blocked" | "setupMessage" | "runtimeInstallStatus"
+> {
   const { i18n, label, status } = input;
   if (input.lockedToSibling) {
     return {
@@ -133,16 +138,23 @@ function resolveAccountTabState(input: {
       ),
       blocked: true,
       setupMessage: null,
+      runtimeInstallStatus: null,
     };
   }
   if (!resolveLiveProviderAvailability(status).disabled) {
-    return { unavailableLabel: null, blocked: false, setupMessage: null };
+    return {
+      unavailableLabel: null,
+      blocked: false,
+      setupMessage: null,
+      runtimeInstallStatus: null,
+    };
   }
   if (!status) {
     return {
       unavailableLabel: i18n._("{account} — Checking.", { account: label }),
       blocked: true,
       setupMessage: null,
+      runtimeInstallStatus: null,
     };
   }
   const trimmedMessage = status.message?.trim();
@@ -155,6 +167,7 @@ function resolveAccountTabState(input: {
       status.authStatus === "unauthenticated"
         ? i18n._("Open provider setup to sign in to this account.")
         : (message ?? i18n._("{account} is unavailable right now.", { account: label })),
+    runtimeInstallStatus: status.runtimeInstall ? status : null,
   };
 }
 
@@ -221,6 +234,7 @@ export function resolveComposerModelPickerProviderTabs(input: {
         unavailableLabel: state.unavailableLabel,
         blocked: state.blocked,
         setupMessage: state.setupMessage,
+        runtimeInstallStatus: state.runtimeInstallStatus,
       };
     });
   });

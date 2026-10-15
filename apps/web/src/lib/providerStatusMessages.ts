@@ -38,6 +38,11 @@ export function localizeProviderStatusMessage(i18n: I18n, message: string): stri
       return i18n._(
         "Could not verify Claude authentication status. Timed out while running command.",
       );
+    // Provider runtimes a slim host installs on demand (apps/server/src/provider/providerRuntimes.ts).
+    case "Pi is not installed. Install Pi in provider settings to use it.":
+      return i18n._("Pi is not installed. Install Pi in provider settings to use it.");
+    case "OpenCode is not installed. Install OpenCode in provider settings to use it.":
+      return i18n._("OpenCode is not installed. Install OpenCode in provider settings to use it.");
     case "Cursor Agent is not authenticated. Run `cursor-agent login` and try again.":
       return i18n._("Cursor Agent is not authenticated. Run `cursor-agent login` and try again.");
     // Usage snapshot details (apps/server/src/providerUsage).

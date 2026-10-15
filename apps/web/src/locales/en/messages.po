@@ -750,6 +750,12 @@ msgid "Checking account status"
 msgstr "Checking account status"
 
 #. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+#: src/lib/providerSetupStatus.ts
+msgid "Not installed"
+msgstr "Not installed"
+
+#. js-lingui-explicit-id
 #: src/lib/providerSetupStatus.ts
 msgid "Not authenticated"
 msgstr "Not authenticated"
@@ -839,6 +845,16 @@ msgstr "Claude Agent CLI is installed but failed to run. Timed out while running
 #: src/lib/providerStatusMessages.ts
 msgid "Could not verify Claude authentication status. Timed out while running command."
 msgstr "Could not verify Claude authentication status. Timed out while running command."
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "Pi is not installed. Install Pi in provider settings to use it."
+msgstr "Pi is not installed. Install Pi in provider settings to use it."
+
+#. js-lingui-explicit-id
+#: src/lib/providerStatusMessages.ts
+msgid "OpenCode is not installed. Install OpenCode in provider settings to use it."
+msgstr "OpenCode is not installed. Install OpenCode in provider settings to use it."
 
 #. js-lingui-explicit-id
 #: src/lib/providerStatusMessages.ts
@@ -2795,6 +2811,79 @@ msgid "Create draft PR"
 msgstr "Create draft PR"
 
 #. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "Installing {percent}%"
+msgstr "Installing {percent}%"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "Install failed"
+msgstr "Install failed"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "Could not reach the package registry. Check your internet connection, then try again."
+msgstr "Could not reach the package registry. Check your internet connection, then try again."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "A downloaded package did not match its expected checksum, so nothing was installed. Try again."
+msgstr "A downloaded package did not match its expected checksum, so nothing was installed. Try again."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "Could not write the files. Check that your disk has free space, then try again."
+msgstr "Could not write the files. Check that your disk has free space, then try again."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "The downloaded packages did not load, so nothing was installed. Try again."
+msgstr "The downloaded packages did not load, so nothing was installed. Try again."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "The download did not complete, so nothing was installed. Try again."
+msgstr "The download did not complete, so nothing was installed. Try again."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "Installing"
+msgstr "Installing"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerMcpDialog.tsx
+#: src/components/chat/ThreadDetailHydrationState.tsx
+#: src/components/githubInbox/LatticePullRequestList.tsx
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "Try again"
+msgstr "Try again"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "Install"
+msgstr "Install"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "{provider} is downloaded separately to keep the app small. After a one-time download it also works offline."
+msgstr "{provider} is downloaded separately to keep the app small. After a one-time download it also works offline."
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "Installing {provider}"
+msgstr "Installing {provider}"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "Installing {provider}: {completed} of {total} packages"
+msgstr "Installing {provider}: {completed} of {total} packages"
+
+#. js-lingui-explicit-id
+#: src/components/ProviderRuntimeInstall.tsx
+msgid "Install {provider}"
+msgstr "Install {provider}"
+
+#. js-lingui-explicit-id
 #: src/components/ProviderUsageLineList.tsx
 msgid "24h"
 msgstr "24h"
@@ -3784,7 +3873,6 @@ msgstr "All skills"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ManagedSkillDetailView.tsx
-#: src/components/settings/ProvidersSettingsPanel.tsx
 #: src/components/settings/skillsSettingsModel.ts
 #: src/components/settings/SkillsSettingsPanel.tsx
 msgid "Included with Lattice"
@@ -4686,8 +4774,8 @@ msgstr "Provider runtimes"
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
-msgid "Review external provider CLIs and the Pi SDK included with Lattice. Pi does not require a separate CLI installation or update."
-msgstr "Review external provider CLIs and the Pi SDK included with Lattice. Pi does not require a separate CLI installation or update."
+msgid "Review external provider CLIs. Pi and OpenCode are downloaded when you install them here; Pi runs on its SDK and needs no separate CLI."
+msgstr "Review external provider CLIs. Pi and OpenCode are downloaded when you install them here; Pi runs on its SDK and needs no separate CLI."
 
 #. js-lingui-explicit-id
 #: src/components/settings/SkillsSettingsPanel.tsx
@@ -6409,13 +6497,6 @@ msgid "Lattice could not reach GitHub. Check your connection and try again"
 msgstr "Lattice could not reach GitHub. Check your connection and try again"
 
 #. js-lingui-explicit-id
-#: src/components/chat/ComposerMcpDialog.tsx
-#: src/components/chat/ThreadDetailHydrationState.tsx
-#: src/components/githubInbox/LatticePullRequestList.tsx
-msgid "Try again"
-msgstr "Try again"
-
-#. js-lingui-explicit-id
 #: src/components/githubInbox/LatticePullRequestList.tsx
 msgid "No pull requests match “{query}”"
 msgstr "No pull requests match “{query}”"
@@ -7922,6 +8003,11 @@ msgstr "Search starred…"
 #: src/components/chat/ComposerModelPicker.tsx
 msgid "Search models…"
 msgstr "Search models…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerModelPicker.tsx
+msgid "{account} is not installed"
+msgstr "{account} is not installed"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerModelPicker.tsx
