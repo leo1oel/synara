@@ -3313,6 +3313,7 @@ msgstr "Copy {label}"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerMcpDialog.tsx
+#: src/components/chat/InlineVisualFrame.tsx
 #: src/components/chat/ProposedPlanActions.tsx
 #: src/components/pullRequest/PullRequestsUnavailableState.tsx
 #: src/components/ui/copyTextButton.tsx
@@ -5831,6 +5832,7 @@ msgstr "Install instructions"
 
 #. js-lingui-explicit-id
 #: src/components/chat/InlineVisualBlocks.tsx
+#: src/components/chat/InlineVisualFrame.tsx
 #: src/components/chat/WorkerMonitorNoticePill.tsx
 #: src/components/pullRequest/PullRequestsUnavailableState.tsx
 msgid "Retry"
@@ -8655,6 +8657,7 @@ msgstr "Expand generated image"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GeneratedMarkdownImage.tsx
+#: src/components/chat/InlineVisualFrame.tsx
 msgid "Expand"
 msgstr "Expand"
 
@@ -8953,6 +8956,7 @@ msgstr "Connect repository"
 
 #. js-lingui-explicit-id
 #: src/components/chat/InlineVisualBlocks.tsx
+#: src/components/chat/InlineVisualFrame.tsx
 msgid "Visual unavailable."
 msgstr "Visual unavailable."
 
@@ -8995,13 +8999,43 @@ msgstr "After"
 
 #. js-lingui-explicit-id
 #: src/components/chat/InlineVisualFrame.tsx
-msgid "HTML visuals are not available in Lattice."
-msgstr "HTML visuals are not available in Lattice."
+msgid "HTML visuals are available in Synara desktop. Use native components in the browser."
+msgstr "HTML visuals are available in Synara desktop. Use native components in the browser."
 
 #. js-lingui-explicit-id
 #: src/components/chat/InlineVisualFrame.tsx
-msgid "HTML visuals are available in Synara desktop. Use native components in the browser."
-msgstr "HTML visuals are available in Synara desktop. Use native components in the browser."
+msgid "Expand visual"
+msgstr "Expand visual"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualFrame.tsx
+msgid "Reload visual"
+msgstr "Reload visual"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualFrame.tsx
+msgid "Reload"
+msgstr "Reload"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualFrame.tsx
+msgid "This visual stopped because it could not stay isolated."
+msgstr "This visual stopped because it could not stay isolated."
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualFrame.tsx
+msgid "Loading visual…"
+msgstr "Loading visual…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualFrame.tsx
+msgid "Copy source"
+msgstr "Copy source"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualFrame.tsx
+msgid "Download HTML"
+msgstr "Download HTML"
 
 #. js-lingui-explicit-id
 #: src/components/chat/InlineVisualTable.tsx

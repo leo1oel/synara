@@ -54,7 +54,7 @@ export function renderSynaraHarnessPolicy(capabilities: SynaraHarnessCapabilitie
             "Use preview_presentation_page to look at an Open Slide page after creating or editing it; it renders the deck's files as they now stand on disk. Never say a page was visually checked unless that tool returned its image.",
             ...(capabilities.inlineVisuals === true
               ? [
-                  "When a chart, table, or comparison says more than prose, call show_visual with blocks and place its block in your reply. Lattice draws blocks only; it does not run html visuals.",
+                  "When a chart, table, or comparison says more than prose, call show_visual with blocks and place its block in your reply. Send html only for what blocks cannot draw, such as a diagram or a custom interactive view; Lattice runs it in an isolated frame without network access or persistent storage.",
                 ]
               : []),
             "For task discovery and diagnosis, use list_tasks, read_task, read_task_activity, read_task_events, read_task_runtime_events, and diagnose_task before inspecting Lattice's internal SQLite files or process logs. Fall back to host storage only when a tool's coverage metadata says the required evidence is unavailable.",

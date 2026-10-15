@@ -45,6 +45,8 @@ export const SYNARA_SETTINGS_SECTION_READY = "synara:settings-section-ready";
 export const SYNARA_OPEN_SETTINGS = "synara:open-settings";
 export const SYNARA_OPEN_EXTERNAL = "synara:open-external";
 export const SYNARA_SHOW_IN_FOLDER = "synara:show-in-folder";
+export const SYNARA_SAVE_VISUAL = "synara:save-visual";
+export const SYNARA_EXPAND_VISUAL = "synara:expand-visual";
 export const SYNARA_EMBED_READY = "synara:embed-ready";
 export const SYNARA_OPEN_REVIEW = "synara:open-review";
 export const SYNARA_OPEN_FILE = "synara:open-file";
@@ -966,6 +968,44 @@ export function postSettingsWheelToLattice(
 export function postExternalLinkToLattice(config: EmbedModeConfig, url: string): boolean {
   if (!config.hostOrigin || !/^https?:\/\//i.test(url)) return false;
   window.parent.postMessage({ type: SYNARA_OPEN_EXTERNAL, url }, config.hostOrigin);
+  return true;
+}
+
+/**
+ * WebKit cancels a download from a frame unless the native host handles it, so
+ * Lattice saves an inline visual's HTML itself, to a path the writer picks.
+ */
+export function postSaveVisualToLattice(
+  config: EmbedModeConfig,
+  visual: { readonly filename: string; readonly html: string },
+): boolean {
+  if (!config.hostOrigin) return false;
+  window.parent.postMessage(
+    { type: SYNARA_SAVE_VISUAL, filename: visual.filename, html: visual.html },
+    config.hostOrigin,
+  );
+  return true;
+}
+
+/**
+ * The panel is often too narrow to enlarge a visual inside it, so Lattice shows
+ * it over its window: in a frame of the same sandbox, loading the host document
+ * built here (`buildInlineVisualHostDocument`), with its policy and bootstrap.
+ */
+export function postExpandVisualToLattice(
+  config: EmbedModeConfig,
+  visual: { readonly title: string; readonly html: string; readonly document: string },
+): boolean {
+  if (!config.hostOrigin) return false;
+  window.parent.postMessage(
+    {
+      type: SYNARA_EXPAND_VISUAL,
+      title: visual.title,
+      html: visual.html,
+      document: visual.document,
+    },
+    config.hostOrigin,
+  );
   return true;
 }
 

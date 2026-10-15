@@ -1,8 +1,9 @@
 // FILE: inlineVisual.ts
-// Purpose: Builds the sandboxed frame document for an inline visual and reads the
+// Purpose: Builds the sandboxed frame documents for an inline visual and reads the
 //          messages its bootstrap posts back to the host.
 // Layer: Shared runtime (consumed by the web transcript; contracts own the payload schema)
 // Exports: INLINE_VISUAL_CONTENT_SECURITY_POLICY, buildInlineVisualDocument,
+//          buildInlineVisualHostDocument,
 //          readInlineVisualFrameMessage, inlineVisualThemeMessage, inlineVisualLinkResult,
 //          clampInlineVisualHeight, INLINE_VISUAL_SERIES_COLORS, readInlineVisualEmbedIds,
 //          isInlineVisualEmbedFence
@@ -21,10 +22,13 @@ import {
  * scripts and styles. It allows inline code and data: media while blocking
  * remote resource fetches. A document can only add policies, never relax this one.
  *
- * Not covered by CSP, and therefore not claimed: a page navigating its own
- * frame (HTML is desktop-only, where subframe navigation is blocked before
- * loading). The trusted bootstrap removes WebRTC constructors before agent
- * scripts. HTML messages cannot open host URLs; native host links are separate.
+ * A page navigating its own frame is governed by its *parent's* `frame-src`,
+ * not by its own policy, so `buildInlineVisualHostDocument` gives every visual
+ * a parent under this policy: the browser refuses the navigation before it
+ * sends a request. WebRTC is not covered by CSP either: the trusted bootstrap
+ * removes its constructors before agent scripts, and removes every frame the
+ * page nests before it loads, since a nested window would have its own.
+ * HTML messages cannot open host URLs; native host links are separate.
  */
 export const INLINE_VISUAL_CONTENT_SECURITY_POLICY = [
   "default-src 'none'",
@@ -77,14 +81,19 @@ const OPEN_LINK_METHOD = "ui/open-link";
 const HOST_CONTEXT_CHANGED_METHOD = "ui/notifications/host-context-changed";
 const SCROLL_INTENT_METHOD = "synara/notifications/scroll-intent";
 const STOPPED_METHOD = "synara/notifications/visual-stopped";
+const ESCAPE_METHOD = "synara/notifications/escape";
 const MAX_LINK_LENGTH = 2048;
 const THEME_STYLE_ID = "synara-visual-theme";
 const VARIABLE_NAME_PATTERN = /^--[a-z0-9-]+$/;
+// A declarative shadow root renamed to this stays an inert template.
+const INERT_SHADOW_ROOT_PATTERN = /shadowrootmode/gi;
+const INERT_SHADOW_ROOT_ATTRIBUTE = "data-inert-shadowrootmode";
 
 export type InlineVisualFrameMessage =
   | { readonly type: "size"; readonly height: number }
   | { readonly type: "open-link"; readonly id: string | number; readonly url: string }
   | { readonly type: "scroll-intent"; readonly upward: boolean }
+  | { readonly type: "escape" }
   | { readonly type: "stopped" };
 
 /**
@@ -122,6 +131,8 @@ export function readInlineVisualFrameMessage(data: unknown): InlineVisualFrameMe
     }
     case STOPPED_METHOD:
       return { type: "stopped" };
+    case ESCAPE_METHOD:
+      return { type: "escape" };
     case SCROLL_INTENT_METHOD:
       return typeof fields.upward === "boolean"
         ? { type: "scroll-intent", upward: fields.upward }
@@ -187,13 +198,18 @@ function themeCss(theme: InlineVisualTheme): string {
 // document resolves relative and #fragment links against the *app's* URL),
 // (4) forwards scroll gestures, which never reach the host document from inside
 // a frame, so a reader scrolling over a visual still detaches transcript
-// follow, and (5) replaces storage that the opaque origin refuses with an
-// in-memory stand-in so ordinary page code keeps working.
+// follow, (5) reports an Escape the page left alone, so a dialog showing the
+// visual can close while focus is inside the frame, and (6) replaces storage
+// that the opaque origin refuses with an in-memory stand-in so ordinary page
+// code keeps working. Before any of that it removes WebRTC, in this window and
+// in any frame the page would nest.
 const BOOTSTRAP_SCRIPT = `(function(){
 var style=document.getElementById(${JSON.stringify(THEME_STYLE_ID)}),base=${JSON.stringify(BASE_CSS)},parentWindow=window.parent,linkId=0;
 function post(message){if(parentWindow&&parentWindow!==window)parentWindow.postMessage(message,"*");}
 // WebRTC ICE bypasses connect-src. Remove capabilities before agent markup; stop parsing if a runtime cannot enforce that boundary.
 try{["RTCPeerConnection","webkitRTCPeerConnection","mozRTCPeerConnection","RTCIceGatherer","RTCIceTransport","RTCDtlsTransport","RTCRtpSender","RTCRtpReceiver","RTCSctpTransport","RTCQuicTransport"].forEach(function(name){Object.defineProperty(window,name,{value:undefined,writable:false,configurable:false});});}catch(error){window.stop();document.documentElement.replaceChildren();post({jsonrpc:"2.0",method:${JSON.stringify(STOPPED_METHOD)}});return;}
+// A frame the page nests is a new window, with WebRTC of its own. Remove each one when it is inserted, before it loads (a later task), shadow roots included; declarative shadow roots stay inert so none can hide a frame from the observer.
+try{var FRAME_TAGS=/^(IFRAME|FRAME|OBJECT|EMBED|FENCEDFRAME|PORTAL)$/,FRAME_SELECTOR="iframe,frame,object,embed,fencedframe,portal";function removeFrames(nodes){for(var i=0;i<nodes.length;i++){var node=nodes[i];if(node.nodeType!==1)continue;if(FRAME_TAGS.test(node.tagName)){node.remove();continue;}var found=node.querySelectorAll(FRAME_SELECTOR);for(var j=0;j<found.length;j++)found[j].remove();}}var frameObserver=new MutationObserver(function(records){for(var i=0;i<records.length;i++)removeFrames(records[i].addedNodes);});frameObserver.observe(document,{childList:true,subtree:true});function lock(target,name,wrap){var original=target&&target[name];if(typeof original==="function")Object.defineProperty(target,name,{value:wrap(original),writable:false,configurable:false});}lock(Element.prototype,"attachShadow",function(original){return function(){var root=original.apply(this,arguments);frameObserver.observe(root,{childList:true,subtree:true});return root;};});function inertHtml(original){return function(){return original.apply(this,Array.prototype.map.call(arguments,function(value){return String(value).replace(${INERT_SHADOW_ROOT_PATTERN.toString()},${JSON.stringify(INERT_SHADOW_ROOT_ATTRIBUTE)});}));};}lock(Element.prototype,"setHTMLUnsafe",inertHtml);lock(window.ShadowRoot&&ShadowRoot.prototype,"setHTMLUnsafe",inertHtml);lock(Document,"parseHTMLUnsafe",inertHtml);lock(Document.prototype,"write",inertHtml);lock(Document.prototype,"writeln",inertHtml);}catch(error){window.stop();document.documentElement.replaceChildren();post({jsonrpc:"2.0",method:${JSON.stringify(STOPPED_METHOD)}});return;}
 function applyTheme(appearance,variables){if(!style||!variables||typeof variables!=="object")return;var css=":root{color-scheme:"+(appearance==="light"?"light":"dark")+";";for(var name in variables){if(${VARIABLE_NAME_PATTERN.toString()}.test(name))css+=name+":"+String(variables[name]).replace(/[;{}<>]/g,"")+";";}style.textContent=css+"}"+base;}
 window.addEventListener("message",function(event){if(event.source!==parentWindow)return;var data=event.data,params=data&&data.params;if(data&&data.jsonrpc==="2.0"&&data.method===${JSON.stringify(HOST_CONTEXT_CHANGED_METHOD)}&&params&&params.styles)applyTheme(params.theme,params.styles.variables);});
 function memoryStorage(){var items=new Map();return{get length(){return items.size;},key:function(index){var keys=Array.from(items.keys());return index>=0&&index<keys.length?keys[index]:null;},getItem:function(key){key=String(key);return items.has(key)?items.get(key):null;},setItem:function(key,value){items.set(String(key),String(value));},removeItem:function(key){items.delete(String(key));},clear:function(){items.clear();}};}
@@ -206,6 +222,7 @@ var intentQueued=false,intentUpward=false;function scrollIntent(upward){if(upwar
 window.addEventListener("wheel",function(event){if(event.ctrlKey||event.deltaY===0)return;scrollIntent(event.deltaY<0);},{passive:true,capture:true});
 var touchY=null;window.addEventListener("touchstart",function(event){touchY=event.touches.length===1?event.touches[0].clientY:null;},{passive:true,capture:true});
 window.addEventListener("touchmove",function(event){if(touchY===null||event.touches.length!==1)return;var y=event.touches[0].clientY;if(y!==touchY){scrollIntent(y>touchY);touchY=y;}},{passive:true,capture:true});
+window.addEventListener("keydown",function(event){if(event.key==="Escape"&&!event.defaultPrevented&&!event.isComposing)post({jsonrpc:"2.0",method:${JSON.stringify(ESCAPE_METHOD)}});});
 window.addEventListener("keydown",function(event){if(event.defaultPrevented||event.ctrlKey||event.metaKey||event.altKey)return;var target=event.target;if(target&&(target.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName||"")))return;var key=event.key;if(key==="ArrowUp"||key==="PageUp"||key==="Home"||(key===" "&&event.shiftKey))scrollIntent(true);else if(key==="ArrowDown"||key==="PageDown"||key==="End"||key===" ")scrollIntent(false);},true);
 })();`;
 
@@ -225,7 +242,53 @@ export function buildInlineVisualDocument(html: string, theme: InlineVisualTheme
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
     `<style id="${THEME_STYLE_ID}">${themeCss(theme)}</style>`,
     `<script>${BOOTSTRAP_SCRIPT}</script>`,
-    html.replace(LEADING_DOCTYPE, ""),
+    html
+      .replace(LEADING_DOCTYPE, "")
+      .replace(INERT_SHADOW_ROOT_PATTERN, INERT_SHADOW_ROOT_ATTRIBUTE),
+  ].join("");
+}
+
+// The host document's only script. It relays messages between the app and the
+// visual (in both directions, and only between those two windows), follows a
+// theme change it relays with its own color scheme, and stops
+// the visual when the browser refused a navigation of its frame or a second
+// document loaded there anyway, since that page has left the one it was given.
+const RELAY_SCRIPT = `(function(){
+var frame=document.getElementById("visual"),visual=frame.contentWindow,host=window.parent,loads=0,stopped=false;
+function stop(){if(stopped)return;stopped=true;frame.remove();host.postMessage({jsonrpc:"2.0",method:${JSON.stringify(STOPPED_METHOD)}},"*");}
+frame.addEventListener("load",function(){if(++loads>1)stop();});
+document.addEventListener("securitypolicyviolation",function(event){if(event.effectiveDirective==="frame-src"||event.effectiveDirective==="child-src")stop();});
+window.addEventListener("message",function(event){if(stopped)return;if(event.source===host){var data=event.data,params=data&&data.params;if(data&&data.method===${JSON.stringify(HOST_CONTEXT_CHANGED_METHOD)}&&params&&(params.theme==="light"||params.theme==="dark"))document.documentElement.style.colorScheme=params.theme;visual.postMessage(data,"*");}else if(event.source===visual)host.postMessage(event.data,"*");});
+})();`;
+
+function escapeAttribute(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+}
+
+/**
+ * The `srcdoc` a transcript frame loads: a page of the app's own, under the
+ * visual policy, whose one child is the visual's `buildInlineVisualDocument`
+ * in a frame sandboxed like its own (scripts and form handlers, no
+ * same-origin, popups, or top navigation).
+ *
+ * The extra level exists for its policy. A visual that sets `location`, follows
+ * a link, submits a form, or refreshes itself navigates its own frame, and a
+ * browser checks that navigation against the parent's `frame-src` before any
+ * request leaves: `'none'` here, so the URL (and anything encoded in it) never
+ * reaches the network. Without this parent the check would fall to the app's
+ * page, which only a native host (Electron's subframe guard) could enforce.
+ * A `srcdoc` child inherits this policy as well as declaring its own.
+ */
+export function buildInlineVisualHostDocument(html: string, theme: InlineVisualTheme): string {
+  return [
+    "<!doctype html>",
+    `<meta http-equiv="Content-Security-Policy" content="${INLINE_VISUAL_CONTENT_SECURITY_POLICY}">`,
+    '<meta http-equiv="x-dns-prefetch-control" content="off">',
+    // The visual's scheme, so its frame stays transparent: a frame whose
+    // scheme differs from its document's paints an opaque backdrop.
+    `<style>:root{color-scheme:${theme.appearance === "light" ? "light" : "dark"}}html,body{margin:0;height:100%;overflow:hidden}iframe{display:block;width:100%;height:100%;border:0;background:transparent}</style>`,
+    `<iframe id="visual" sandbox="allow-scripts allow-forms" referrerpolicy="no-referrer" srcdoc="${escapeAttribute(buildInlineVisualDocument(html, theme))}"></iframe>`,
+    `<script>${RELAY_SCRIPT}</script>`,
   ].join("");
 }
 

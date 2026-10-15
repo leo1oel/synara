@@ -3313,6 +3313,7 @@ msgstr "复制{label}"
 
 #. js-lingui-explicit-id
 #: src/components/chat/ComposerMcpDialog.tsx
+#: src/components/chat/InlineVisualFrame.tsx
 #: src/components/chat/ProposedPlanActions.tsx
 #: src/components/pullRequest/PullRequestsUnavailableState.tsx
 #: src/components/ui/copyTextButton.tsx
@@ -5831,6 +5832,7 @@ msgstr "安装说明"
 
 #. js-lingui-explicit-id
 #: src/components/chat/InlineVisualBlocks.tsx
+#: src/components/chat/InlineVisualFrame.tsx
 #: src/components/chat/WorkerMonitorNoticePill.tsx
 #: src/components/pullRequest/PullRequestsUnavailableState.tsx
 msgid "Retry"
@@ -8655,6 +8657,7 @@ msgstr "放大生成的图片"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GeneratedMarkdownImage.tsx
+#: src/components/chat/InlineVisualFrame.tsx
 msgid "Expand"
 msgstr "放大"
 
@@ -8953,6 +8956,7 @@ msgstr "连接仓库"
 
 #. js-lingui-explicit-id
 #: src/components/chat/InlineVisualBlocks.tsx
+#: src/components/chat/InlineVisualFrame.tsx
 msgid "Visual unavailable."
 msgstr "可视化内容不可用。"
 
@@ -8995,13 +8999,43 @@ msgstr "修改后"
 
 #. js-lingui-explicit-id
 #: src/components/chat/InlineVisualFrame.tsx
-msgid "HTML visuals are not available in Lattice."
-msgstr "Lattice 不支持 HTML 可视化内容。"
+msgid "HTML visuals are available in Synara desktop. Use native components in the browser."
+msgstr "HTML 可视化内容仅在 Synara 桌面版中可用。在浏览器中请使用原生组件。"
 
 #. js-lingui-explicit-id
 #: src/components/chat/InlineVisualFrame.tsx
-msgid "HTML visuals are available in Synara desktop. Use native components in the browser."
-msgstr "HTML 可视化内容仅在 Synara 桌面版中可用。在浏览器中请使用原生组件。"
+msgid "Expand visual"
+msgstr "放大可视化内容"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualFrame.tsx
+msgid "Reload visual"
+msgstr "重新加载可视化内容"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualFrame.tsx
+msgid "Reload"
+msgstr "重新加载"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualFrame.tsx
+msgid "This visual stopped because it could not stay isolated."
+msgstr "此可视化内容无法保持隔离，已停止。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualFrame.tsx
+msgid "Loading visual…"
+msgstr "正在加载可视化内容…"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualFrame.tsx
+msgid "Copy source"
+msgstr "复制源代码"
+
+#. js-lingui-explicit-id
+#: src/components/chat/InlineVisualFrame.tsx
+msgid "Download HTML"
+msgstr "下载 HTML"
 
 #. js-lingui-explicit-id
 #: src/components/chat/InlineVisualTable.tsx
