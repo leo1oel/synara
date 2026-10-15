@@ -6,6 +6,7 @@ import { ChevronsUpDownIcon, XIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { Input } from "~/components/ui/input";
 import { ScrollArea } from "~/components/ui/scroll-area";
+import { observeHostDismissiblePopup } from "~/latticePopupDismissal";
 
 const Autocomplete = AutocompletePrimitive.Root;
 
@@ -102,6 +103,7 @@ function AutocompletePopup({
   return (
     <AutocompletePrimitive.Portal>
       <AutocompletePrimitive.Positioner
+        ref={observeHostDismissiblePopup}
         align={align}
         alignOffset={alignOffset}
         anchor={anchor}

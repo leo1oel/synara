@@ -28,6 +28,14 @@ export const LATTICE_PAPER_LIBRARY = "lattice:paper-library";
 export const LATTICE_PAPER_LIBRARY_REQUEST = "lattice:request-paper-library";
 export const LATTICE_COMPOSER_FILES = "lattice:composer-files";
 export const LATTICE_HOST_POINTER = "lattice:host-pointer";
+/**
+ * A press landed in Lattice outside this frame. Base UI dismisses a popup on a
+ * press it hears in its own document, and a press in the host window never
+ * reaches this cross-origin one (latticePopupDismissal.ts).
+ */
+export const LATTICE_OUTSIDE_POINTER_DOWN = "lattice:outside-pointerdown";
+/** `{ open: boolean }`: whether this frame shows a popup a host press should dismiss. */
+export const SYNARA_POPUP_OPEN = "synara:popup-open";
 export const SYNARA_AGENT_PERMISSION_MODE_STATUS = "synara:agent-permission-mode";
 export const SYNARA_LAYOUT_METRICS = "synara:layout-metrics";
 export const SYNARA_SETTINGS_CONTENT_HEIGHT = "synara:settings-content-height";
@@ -237,6 +245,26 @@ export function readLatticeHostPointerMessage(
     typeof event.data === "object" &&
     event.data.type === LATTICE_HOST_POINTER,
   );
+}
+
+/** True for the host's report of a press outside this frame (LATTICE_OUTSIDE_POINTER_DOWN). */
+export function readLatticeOutsidePointerDownMessage(
+  event: MessageEvent,
+  config: EmbedModeConfig,
+): boolean {
+  return Boolean(
+    config.hostOrigin &&
+    event.source === window.parent &&
+    event.origin === config.hostOrigin &&
+    event.data &&
+    typeof event.data === "object" &&
+    event.data.type === LATTICE_OUTSIDE_POINTER_DOWN,
+  );
+}
+
+export function postPopupOpenToLattice(config: EmbedModeConfig, open: boolean): void {
+  if (!config.hostOrigin) return;
+  window.parent.postMessage({ type: SYNARA_POPUP_OPEN, open }, config.hostOrigin);
 }
 
 export interface LatticeProjectHistoryCheckpoint {

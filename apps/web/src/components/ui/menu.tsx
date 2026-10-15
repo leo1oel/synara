@@ -20,8 +20,19 @@ import {
 } from "./checkbox";
 import { ShortcutKbd } from "./kbd";
 import { SWITCH_THUMB_CLASS_NAME, SWITCH_TRACK_CLASS_NAME } from "./switch";
+import { observeHostDismissiblePopup } from "~/latticePopupDismissal";
 
 const MenuCreateHandle = MenuPrimitive.createHandle;
+
+/** Stable, so React does not detach and reattach both observers on every render. */
+function observeMenuPositioner(element: HTMLElement | null): (() => void) | undefined {
+  const stopOcclusion = observeNativeSurfaceOverlay(element);
+  const stopDismissal = observeHostDismissiblePopup(element);
+  return () => {
+    stopOcclusion?.();
+    stopDismissal?.();
+  };
+}
 
 type MenuProps = MenuPrimitive.Root.Props & {
   /** Keep a controlled menu open while one of its portalled submenus is being entered. */
@@ -104,7 +115,7 @@ function MenuPopupBase({
   return (
     <MenuPrimitive.Portal>
       <MenuPrimitive.Positioner
-        ref={observeNativeSurfaceOverlay}
+        ref={observeMenuPositioner}
         align={align}
         alignOffset={alignOffset}
         anchor={anchor}

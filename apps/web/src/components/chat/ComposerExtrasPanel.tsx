@@ -27,6 +27,7 @@ import {
   WindowIcon,
 } from "~/lib/icons";
 import { cn } from "~/lib/utils";
+import { useTrackedOpenPopup } from "~/latticePopupDismissal";
 import {
   COMPOSER_MENU_PANEL_GLYPH_CLASS_NAME,
   ComposerMenuPanel,
@@ -80,6 +81,8 @@ export function ComposerExtrasPanel(props: {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [view, setView] = useState<"root" | "windows">("root");
   const [activeRowId, setActiveRowId] = useState<string | null>(ROW_FILES);
+  // Its outside-press listener below also closes it on the press Lattice relays.
+  useTrackedOpenPopup();
 
   // Listed while the panel is open (not only in the window view) so the root row can
   // name the frontmost app and capture it in one click.

@@ -10,6 +10,7 @@ import { Input, type InputProps } from "~/components/ui/input";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { FluidHoverSurface } from "./fluid-hover-surface";
 import { APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME } from "../chat/composerPickerStyles";
+import { observeHostDismissiblePopup } from "~/latticePopupDismissal";
 
 const ComboboxContext = React.createContext<{
   chipsRef: React.RefObject<Element | null> | null;
@@ -172,6 +173,7 @@ function ComboboxPopup({
   return (
     <ComboboxPrimitive.Portal>
       <ComboboxPrimitive.Positioner
+        ref={observeHostDismissiblePopup}
         align={align}
         alignOffset={alignOffset}
         anchor={anchor}

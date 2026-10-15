@@ -21,6 +21,7 @@ import { answerLatticeEditorCommentsRequest } from "./latticeEditorCommentsRelay
 import { answerLatticePresentationRequest } from "./latticePresentationRelay";
 import { startLatticeHostToolRelay } from "./latticeHostToolRelay";
 import { startLatticeHostThemeRelay } from "./latticeHostThemeRelay";
+import { startLatticePopupDismissal } from "./latticePopupDismissal";
 import { isElectron } from "./env";
 import { isMacPlatform } from "./lib/utils";
 import { installGlassOverlayCutout } from "./lib/glassOverlayCutout";
@@ -42,6 +43,7 @@ startLatticeHostToolRelay({
   presentation: answerLatticePresentationRequest,
 });
 startLatticeHostThemeRelay();
+startLatticePopupDismissal();
 // Before the first render: settings hooks read the stored rail on mount.
 revealHubsRailItemOnce();
 const router = getRouter(appHistory);

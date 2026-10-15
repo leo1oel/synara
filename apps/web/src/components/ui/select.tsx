@@ -24,6 +24,7 @@ import {
   COMPOSER_PICKER_SELECT_OPTION_CLASS_NAME,
   COMPOSER_SURFACE_SHADOW_CLASS_NAME,
 } from "../chat/composerPickerStyles";
+import { observeHostDismissiblePopup } from "~/latticePopupDismissal";
 
 const Select = SelectPrimitive.Root;
 
@@ -186,6 +187,7 @@ function SelectPopup({
     <SelectPopupSurfaceContext.Provider value={surface}>
       <SelectPrimitive.Portal>
         <SelectPrimitive.Positioner
+          ref={observeHostDismissiblePopup}
           align={align}
           alignItemWithTrigger={alignItemWithTrigger}
           alignOffset={alignOffset}

@@ -4,6 +4,7 @@ import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 
 import { cn } from "~/lib/utils";
 import { APP_TRANSLUCENT_POPUP_SURFACE_CLASS_NAME } from "../chat/composerPickerStyles";
+import { observeHostDismissiblePopup } from "~/latticePopupDismissal";
 
 const PopoverCreateHandle = PopoverPrimitive.createHandle;
 
@@ -43,6 +44,8 @@ function PopoverPopup({
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Positioner
+        // A tooltip-style popover opens on hover; a press need not dismiss it first.
+        ref={tooltipStyle ? undefined : observeHostDismissiblePopup}
         align={align}
         alignOffset={alignOffset}
         anchor={anchor}
