@@ -469,7 +469,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
     }),
   );
 
-  it.effect("routes file-scoped working-tree diffs and rejects other scopes", () =>
+  it.effect("routes file-scoped working-tree, staged and unstaged diffs and rejects others", () =>
     Effect.gen(function* () {
       const repoDir = yield* makeTempDir("synara-file-diff-");
       yield* initRepo(repoDir);
@@ -485,7 +485,14 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
       });
       expect(patch).toContain("selected.txt");
       expect(patch).not.toContain("other.txt");
-      for (const scope of ["staged", "unstaged", "branch", "ref"] as const) {
+      const unstaged = yield* manager.readWorkingTreeDiff({
+        cwd: repoDir,
+        scope: "unstaged",
+        filePath: "selected.txt",
+      });
+      expect(unstaged.patch).toContain("selected.txt");
+      expect(unstaged.patch).not.toContain("other.txt");
+      for (const scope of ["branch", "ref"] as const) {
         const exit = yield* manager
           .readWorkingTreeDiff({
             cwd: repoDir,
@@ -496,7 +503,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
           .pipe(Effect.exit);
         expect(Exit.isFailure(exit)).toBe(true);
         if (Exit.isFailure(exit))
-          expect(String(exit.cause)).toContain("only supported for the working tree");
+          expect(String(exit.cause)).toContain("only supported for the working tree, staged");
       }
       expect(
         Exit.isFailure(

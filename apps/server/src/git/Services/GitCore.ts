@@ -10,6 +10,7 @@ import { ServiceMap } from "effect";
 import type { Effect, Scope } from "effect";
 import type {
   GitBlameLineInput,
+  GitChangedFile,
   GitReadFileAtRevInput,
   GitReadFileAtRevResult,
   GitBlameLineResult,
@@ -132,6 +133,11 @@ export interface GitRangeContext {
 export interface GitWorkingTreePatch {
   patch: string;
   truncated: boolean;
+}
+
+export interface GitScopedPatch extends GitWorkingTreePatch {
+  /** Every file in the scope, named as Git stores it, including any the capped patch cut off. */
+  files: ReadonlyArray<GitChangedFile>;
 }
 
 export interface GitRenameBranchInput {
@@ -258,14 +264,22 @@ export interface GitCoreShape {
   ) => Effect.Effect<GitWorkingTreePatch, GitCommandError>;
 
   /**
-   * Read only unstaged tracked changes plus untracked files.
+   * Read only unstaged tracked changes plus untracked files. An optional file path, which must
+   * name one of the listed files, limits the patch to that file.
    */
-  readonly readUnstagedPatch: (cwd: string) => Effect.Effect<GitWorkingTreePatch, GitCommandError>;
+  readonly readUnstagedPatch: (
+    cwd: string,
+    filePath?: string,
+  ) => Effect.Effect<GitScopedPatch, GitCommandError>;
 
   /**
-   * Read only staged changes.
+   * Read only staged changes. An optional file path, which must name one of the listed files,
+   * limits the patch to that file and its rename source.
    */
-  readonly readStagedPatch: (cwd: string) => Effect.Effect<GitWorkingTreePatch, GitCommandError>;
+  readonly readStagedPatch: (
+    cwd: string,
+    filePath?: string,
+  ) => Effect.Effect<GitScopedPatch, GitCommandError>;
 
   /**
    * Read aggregate branch changes from the upstream/base merge-base through the working tree.

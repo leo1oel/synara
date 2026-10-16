@@ -8690,6 +8690,7 @@ msgstr "此对话无法使用源代码管理。"
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
+#: src/components/chat/LatticeGitChanges.tsx
 msgid "Loading changes..."
 msgstr "正在加载更改..."
 
@@ -9244,6 +9245,11 @@ msgstr "未暂存"
 
 #. js-lingui-explicit-id
 #: src/components/chat/LatticeGitChanges.tsx
+msgid "Too many changes to preview at once. Open a file to load its change."
+msgstr "更改太多，无法一次预览。打开文件即可加载它的更改。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
 msgid "Added"
 msgstr "已添加"
 
@@ -9272,6 +9278,11 @@ msgstr "取消暂存 {path}"
 #: src/components/chat/LatticeGitChanges.tsx
 msgid "Stage {path}"
 msgstr "暂存 {path}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "This change is too large to show here."
+msgstr "此更改太大，无法在此显示。"
 
 #. js-lingui-explicit-id
 #: src/components/chat/LatticeGitChanges.tsx

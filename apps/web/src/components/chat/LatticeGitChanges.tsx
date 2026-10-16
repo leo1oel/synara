@@ -6,13 +6,20 @@
 // Depends on: GitActionsControl's `lattice` variant for every runner, confirmation, toast and
 //             dialog, so commit, push, pull and Create PR behave exactly as on other surfaces.
 
-import { type FileDiffMetadata } from "@pierre/diffs/react";
+import { type GitChangedFile } from "@synara/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useLingui } from "@lingui/react";
-import { type KeyboardEvent, type ReactElement, type ReactNode, useId, useState } from "react";
+import {
+  type KeyboardEvent,
+  type ReactElement,
+  type ReactNode,
+  useId,
+  useMemo,
+  useState,
+} from "react";
 
 import { formatRelativeTime } from "~/lib/relativeTime";
-import { gitRecentCommitsQueryOptions } from "~/lib/gitReactQuery";
+import { gitRecentCommitsQueryOptions, gitWorkingTreeDiffQueryOptions } from "~/lib/gitReactQuery";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -25,11 +32,7 @@ import {
   RefreshCwIcon,
 } from "~/lib/icons";
 import { isProsePath, readProseChanges, splitPatchByFile } from "~/lib/proseDiff";
-import {
-  resolveFileDiffPath,
-  splitRepoRelativePath,
-  summarizeFileDiffStats,
-} from "~/lib/diffRendering";
+import { getRenderablePatch, splitRepoRelativePath } from "~/lib/diffRendering";
 import { cn } from "~/lib/utils";
 import { Alert } from "../ui/alert";
 import { Checkbox } from "../ui/checkbox";
@@ -66,22 +69,36 @@ function writePushAfterCommit(value: boolean) {
 // `git.status` names the upstream's branch, not its remote; Lattice projects push to origin.
 const UPSTREAM_REMOTE = "origin";
 
-type FileStatus = "A" | "M" | "D" | "R";
+const STATUS_LETTERS = {
+  added: "A",
+  modified: "M",
+  deleted: "D",
+  renamed: "R",
+} as const satisfies Record<GitChangedFile["status"], string>;
 
-function statusOf(fileDiff: FileDiffMetadata): FileStatus {
-  if (fileDiff.type === "new") return "A";
-  if (fileDiff.type === "deleted") return "D";
-  if (fileDiff.type === "rename-pure" || fileDiff.type === "rename-changed") return "R";
-  return "M";
+/** A rename moves two index entries, so staging, unstaging or committing one names both. */
+function actionPathsOf(file: GitChangedFile): string[] {
+  return file.previousPath === undefined ? [file.path] : [file.path, file.previousPath];
+}
+
+/**
+ * One side of the index as `git.readWorkingTreeDiff` returns it. `files` is Git's own list and
+ * decides what is shown, staged and committed; `patch` only supplies each file's change, and is
+ * capped, so with `truncated` set it can stop inside one file and omit the rest.
+ */
+export interface LatticeChangeScope {
+  files: ReadonlyArray<GitChangedFile>;
+  patch: string;
+  truncated: boolean;
 }
 
 export interface LatticeGitChangesProps {
   cwd: string;
   theme: "light" | "dark";
-  stagedFiles: FileDiffMetadata[];
-  unstagedFiles: FileDiffMetadata[];
-  stagedPatch: string;
-  unstagedPatch: string;
+  staged: LatticeChangeScope;
+  unstaged: LatticeChangeScope;
+  /** Whether `git.status` sees uncommitted work; the clean state also needs it to agree. */
+  statusHasChanges: boolean;
   isLoading: boolean;
   error: string | null;
   mutating: boolean;
@@ -109,9 +126,12 @@ export function LatticeGitChanges(props: LatticeGitChangesProps) {
 }
 
 function LatticeGitChangesBody(props: LatticeGitChangesProps & { actions: LatticeGitActions }) {
-  const { actions } = props;
-  const hasChanges = props.stagedFiles.length > 0 || props.unstagedFiles.length > 0;
-  const showClean = !props.error && !props.isLoading && !hasChanges;
+  const { actions, staged, unstaged } = props;
+  const hasChanges = staged.files.length > 0 || unstaged.files.length > 0;
+  // Status and the file lists refresh separately. While status still reports work the lists
+  // have not caught up with, keep the loading rows rather than claim everything is committed.
+  const listsCatchingUp = !hasChanges && props.statusHasChanges;
+  const showClean = !props.error && !props.isLoading && !hasChanges && !listsCatchingUp;
   return (
     <>
       <LatticeBranchBar
@@ -127,29 +147,31 @@ function LatticeGitChangesBody(props: LatticeGitChangesProps & { actions: Lattic
             {props.error}
           </Alert>
         ) : null}
-        {!props.error && props.isLoading && !hasChanges ? props.loadingRows : null}
+        {!props.error && (props.isLoading || listsCatchingUp) && !hasChanges
+          ? props.loadingRows
+          : null}
         {hasChanges ? (
           <>
             <LatticeCommitComposer
               actions={actions}
-              stagedFiles={props.stagedFiles}
-              unstagedFiles={props.unstagedFiles}
+              stagedFiles={staged.files}
+              unstagedFiles={unstaged.files}
             />
-            {props.stagedFiles.length > 0 ? (
+            {staged.files.length > 0 ? (
               <LatticeFileSection
                 section="staged"
-                files={props.stagedFiles}
-                patch={props.stagedPatch}
+                scope={staged}
+                cwd={props.cwd}
                 theme={props.theme}
                 mutating={props.mutating}
                 onToggle={props.onUnstage}
               />
             ) : null}
-            {props.unstagedFiles.length > 0 ? (
+            {unstaged.files.length > 0 ? (
               <LatticeFileSection
                 section="unstaged"
-                files={props.unstagedFiles}
-                patch={props.unstagedPatch}
+                scope={unstaged}
+                cwd={props.cwd}
                 theme={props.theme}
                 mutating={props.mutating}
                 onToggle={props.onStage}
@@ -311,8 +333,8 @@ function LatticeSyncState({ actions }: { actions: LatticeGitActions }) {
  */
 function LatticeCommitComposer(props: {
   actions: LatticeGitActions;
-  stagedFiles: FileDiffMetadata[];
-  unstagedFiles: FileDiffMetadata[];
+  stagedFiles: ReadonlyArray<GitChangedFile>;
+  unstagedFiles: ReadonlyArray<GitChangedFile>;
 }) {
   const { i18n } = useLingui();
   const { actions } = props;
@@ -322,12 +344,9 @@ function LatticeCommitComposer(props: {
   const [pushAfter, setPushAfter] = useState(readPushAfterCommit);
   const [writing, setWriting] = useState(false);
 
-  const stagedPaths = props.stagedFiles.map((file) => resolveFileDiffPath(file));
-  const allPaths = [
-    ...new Set([...stagedPaths, ...props.unstagedFiles.map((file) => resolveFileDiffPath(file))]),
-  ];
-  const commitPaths = stagedPaths.length > 0 ? stagedPaths : null;
-  const fileCount = commitPaths ? commitPaths.length : allPaths.length;
+  const commitPaths =
+    props.stagedFiles.length > 0 ? props.stagedFiles.flatMap(actionPathsOf) : null;
+  const fileCount = commitPaths ? props.stagedFiles.length : props.unstagedFiles.length;
   // Until status answers, assume a push is possible so the button's label does not flip.
   const canPush =
     actions.statusPending || (actions.hasOriginRemote && actions.status?.branch != null);
@@ -498,71 +517,92 @@ function LatticeGitMenu(props: {
   );
 }
 
+/**
+ * Each file's own patch, keyed by its path. A truncated patch may stop inside its last file, so
+ * that file is left out too and, like every file past the cut, loads its change on demand.
+ */
+function readCompleteFilePatches(patch: string, truncated: boolean): Map<string, string> {
+  const filePatches = splitPatchByFile(patch);
+  const lastPath = [...filePatches.keys()].at(-1);
+  if (truncated && lastPath !== undefined) filePatches.delete(lastPath);
+  return filePatches;
+}
+
 function LatticeFileSection(props: {
   section: "staged" | "unstaged";
-  files: FileDiffMetadata[];
-  patch: string;
+  scope: LatticeChangeScope;
+  cwd: string;
   theme: "light" | "dark";
   mutating: boolean;
   onToggle: (paths: string[]) => void;
 }) {
   const { i18n } = useLingui();
+  const { scope } = props;
   const [openPath, setOpenPath] = useState<string | null>(null);
-  const filePatches = splitPatchByFile(props.patch);
+  // The patch can be a megabyte, so it is split once per read, not on every render.
+  const filePatches = useMemo(
+    () => readCompleteFilePatches(scope.patch, scope.truncated),
+    [scope.patch, scope.truncated],
+  );
   const staged = props.section === "staged";
-  const paths = props.files.map((file) => resolveFileDiffPath(file));
   return (
     <section className="lattice-git-section" data-lattice-git-section={props.section}>
       <header className="lattice-git-section-head">
         <h3>{staged ? i18n._("Staged") : i18n._("Not staged")}</h3>
-        <span className="lattice-git-count">{props.files.length}</span>
+        <span className="lattice-git-count">{scope.files.length}</span>
         <button
           type="button"
           className="lattice-git-link"
           disabled={props.mutating}
-          onClick={() => props.onToggle(paths)}
+          onClick={() => props.onToggle(scope.files.flatMap(actionPathsOf))}
         >
           {staged ? i18n._("Unstage all") : i18n._("Stage all")}
         </button>
       </header>
+      {scope.truncated ? (
+        <p className="lattice-git-change-note" data-lattice-git-truncated="">
+          {i18n._("Too many changes to preview at once. Open a file to load its change.")}
+        </p>
+      ) : null}
       <ul>
-        {props.files.map((file) => {
-          const path = resolveFileDiffPath(file);
-          return (
-            <LatticeFileRow
-              key={path}
-              fileDiff={file}
-              path={path}
-              staged={staged}
-              open={openPath === path}
-              filePatch={filePatches.get(path) ?? ""}
-              theme={props.theme}
-              mutating={props.mutating}
-              onToggleOpen={() => setOpenPath((current) => (current === path ? null : path))}
-              onToggleStaged={() => props.onToggle([path])}
-            />
-          );
-        })}
+        {scope.files.map((file) => (
+          <LatticeFileRow
+            key={file.path}
+            file={file}
+            section={props.section}
+            open={openPath === file.path}
+            filePatch={filePatches.get(file.path)}
+            cwd={props.cwd}
+            theme={props.theme}
+            mutating={props.mutating}
+            onToggleOpen={() =>
+              setOpenPath((current) => (current === file.path ? null : file.path))
+            }
+            onToggleStaged={() => props.onToggle(actionPathsOf(file))}
+          />
+        ))}
       </ul>
     </section>
   );
 }
 
 function LatticeFileRow(props: {
-  fileDiff: FileDiffMetadata;
-  path: string;
-  staged: boolean;
+  file: GitChangedFile;
+  section: "staged" | "unstaged";
   open: boolean;
-  filePatch: string;
+  /** The file's complete patch, or undefined when it has to be loaded on its own. */
+  filePatch: string | undefined;
+  cwd: string;
   theme: "light" | "dark";
   mutating: boolean;
   onToggleOpen: () => void;
   onToggleStaged: () => void;
 }) {
   const { i18n } = useLingui();
-  const { dir, name } = splitRepoRelativePath(props.path);
-  const stat = summarizeFileDiffStats([props.fileDiff]);
-  const status = statusOf(props.fileDiff);
+  const { file } = props;
+  const staged = props.section === "staged";
+  const { dir, name } = splitRepoRelativePath(file.path);
+  const status = STATUS_LETTERS[file.status];
   const statusLabel =
     status === "A"
       ? i18n._("Added")
@@ -575,28 +615,23 @@ function LatticeFileRow(props: {
     <li className="lattice-git-file" data-open={props.open || undefined}>
       <div className="lattice-git-file-row">
         <Checkbox
-          checked={props.staged}
+          checked={staged}
           disabled={props.mutating}
           aria-label={
-            props.staged
-              ? i18n._("Unstage {path}", { path: props.path })
-              : i18n._("Stage {path}", { path: props.path })
+            staged
+              ? i18n._("Unstage {path}", { path: file.path })
+              : i18n._("Stage {path}", { path: file.path })
           }
           onCheckedChange={props.onToggleStaged}
         />
         <button
           type="button"
           className="lattice-git-file-name"
-          title={props.path}
+          title={file.path}
           aria-expanded={props.open}
           onClick={props.onToggleOpen}
         >
-          <FileEntryIcon
-            pathValue={props.path}
-            kind="file"
-            theme={props.theme}
-            className="size-4"
-          />
+          <FileEntryIcon pathValue={file.path} kind="file" theme={props.theme} className="size-4" />
           <span>
             {dir ? <span className="lattice-git-file-dir">{dir}</span> : null}
             {name}
@@ -607,41 +642,84 @@ function LatticeFileRow(props: {
           <span className="sr-only">{statusLabel}</span>
         </span>
         <span className="lattice-git-stat">
-          {stat.additions > 0 ? <span data-kind="add">+{stat.additions}</span> : null}
-          {stat.deletions > 0 ? <span data-kind="del">−{stat.deletions}</span> : null}
+          {file.insertions > 0 ? <span data-kind="add">+{file.insertions}</span> : null}
+          {file.deletions > 0 ? <span data-kind="del">−{file.deletions}</span> : null}
         </span>
       </div>
       {props.open ? (
-        <LatticeFileChange
-          fileDiff={props.fileDiff}
-          path={props.path}
-          filePatch={props.filePatch}
-          theme={props.theme}
-        />
+        props.filePatch !== undefined ? (
+          <LatticeFileChange
+            path={file.path}
+            filePatch={props.filePatch}
+            truncated={false}
+            theme={props.theme}
+          />
+        ) : (
+          <LatticeLoadedFileChange
+            cwd={props.cwd}
+            section={props.section}
+            path={file.path}
+            theme={props.theme}
+          />
+        )
       ) : null}
     </li>
   );
 }
 
-/** A paper's change read as sentences; anything else in the usual code diff. */
-function LatticeFileChange(props: {
-  fileDiff: FileDiffMetadata;
+/** A file the section's patch did not carry whole, read on its own when opened. */
+function LatticeLoadedFileChange(props: {
+  cwd: string;
+  section: "staged" | "unstaged";
   path: string;
-  filePatch: string;
   theme: "light" | "dark";
 }) {
   const { i18n } = useLingui();
+  const query = useQuery(
+    gitWorkingTreeDiffQueryOptions({ cwd: props.cwd, scope: props.section, filePath: props.path }),
+  );
+  if (query.data) {
+    return (
+      <LatticeFileChange
+        path={props.path}
+        filePatch={query.data.patch}
+        truncated={query.data.truncated}
+        theme={props.theme}
+      />
+    );
+  }
+  return (
+    <p className="lattice-git-change-note">
+      {query.error instanceof Error ? query.error.message : i18n._("Loading changes...")}
+    </p>
+  );
+}
+
+/** A paper's change read as sentences; anything else in the usual code diff. */
+function LatticeFileChange(props: {
+  path: string;
+  filePatch: string;
+  /** The patch was cut at the response cap, so it ends partway through the change. */
+  truncated: boolean;
+  theme: "light" | "dark";
+}) {
+  const { i18n } = useLingui();
+  const tooLarge = (
+    <p className="lattice-git-change-note">{i18n._("This change is too large to show here.")}</p>
+  );
   if (isProsePath(props.path) && props.filePatch) {
     const { changes, truncated } = readProseChanges(props.filePatch);
     if (changes.length === 0) {
-      return (
+      return props.truncated ? (
+        tooLarge
+      ) : (
         <p className="lattice-git-change-note">{i18n._("Only spacing or line breaks changed.")}</p>
       );
     }
     return (
       <div className="lattice-git-change">
         <ProseChangeList changes={changes} />
-        {truncated ? (
+        {truncated || props.truncated ? (
           <p className="lattice-git-change-note">
             {i18n._("Showing the first {count} changed lines.", { count: changes.length })}
           </p>
@@ -649,9 +727,15 @@ function LatticeFileChange(props: {
       </div>
     );
   }
+  // A cut patch would render as a change it is not, so only a whole one is drawn.
+  const renderable = props.truncated
+    ? null
+    : getRenderablePatch(props.filePatch, `lattice-git:${props.path}`);
+  const fileDiff = renderable?.kind === "files" ? renderable.files[0] : undefined;
+  if (!fileDiff) return props.filePatch ? tooLarge : null;
   return (
     <div className="lattice-git-change lattice-git-change-code diff-render-file">
-      <SingleFileDiffBody fileDiff={props.fileDiff} theme={props.theme} />
+      <SingleFileDiffBody fileDiff={fileDiff} theme={props.theme} />
     </div>
   );
 }

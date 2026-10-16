@@ -9,7 +9,11 @@
 // through GitCore; on settle we invalidate the per-cwd git caches so both lists stay in sync.
 
 import { type FileDiffMetadata } from "@pierre/diffs/react";
-import { type ProjectId, type ThreadId } from "@synara/contracts";
+import {
+  type GitReadWorkingTreeDiffResult,
+  type ProjectId,
+  type ThreadId,
+} from "@synara/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLingui } from "@lingui/react";
 import { type ReactNode, useMemo, useState } from "react";
@@ -55,7 +59,7 @@ import {
   GitInitializationState,
   LatticeGitInitializationState,
 } from "./GitRepositorySetup";
-import { LatticeGitChanges } from "./LatticeGitChanges";
+import { type LatticeChangeScope, LatticeGitChanges } from "./LatticeGitChanges";
 import { PanelStateMessage } from "./PanelStateMessage";
 
 type GitPanelSection = "staged" | "unstaged";
@@ -74,6 +78,16 @@ function parsePatchToSortedFiles(
 ): FileDiffMetadata[] {
   const renderable = getRenderablePatch(patch, cacheScope);
   return renderable?.kind === "files" ? sortFileDiffsByPath(renderable.files) : [];
+}
+
+function toLatticeChangeScope(
+  result: GitReadWorkingTreeDiffResult | undefined,
+): LatticeChangeScope {
+  return {
+    files: result?.files ?? [],
+    patch: result?.patch ?? "",
+    truncated: result?.truncated ?? false,
+  };
 }
 
 function GitFileRow(props: {
@@ -295,13 +309,15 @@ export function GitPanel(props: {
 
   const stagedPatch = stagedQuery.data?.patch;
   const unstagedPatch = unstagedQuery.data?.patch;
+  // Lattice's Changes view lists from the scopes' file lists instead, so it skips this parse.
+  const latticeView = props.showActions === true;
   const stagedFiles = useMemo(
-    () => parsePatchToSortedFiles(stagedPatch, `git-pane:staged:${theme}`),
-    [stagedPatch, theme],
+    () => (latticeView ? [] : parsePatchToSortedFiles(stagedPatch, `git-pane:staged:${theme}`)),
+    [latticeView, stagedPatch, theme],
   );
   const unstagedFiles = useMemo(
-    () => parsePatchToSortedFiles(unstagedPatch, `git-pane:unstaged:${theme}`),
-    [theme, unstagedPatch],
+    () => (latticeView ? [] : parsePatchToSortedFiles(unstagedPatch, `git-pane:unstaged:${theme}`)),
+    [latticeView, theme, unstagedPatch],
   );
 
   const stageMutation = useMutation(gitStageFilesMutationOptions({ cwd, queryClient }));
@@ -387,10 +403,9 @@ export function GitPanel(props: {
       <LatticeGitChanges
         cwd={cwd}
         theme={theme}
-        stagedFiles={stagedFiles}
-        unstagedFiles={unstagedFiles}
-        stagedPatch={stagedPatch ?? ""}
-        unstagedPatch={unstagedPatch ?? ""}
+        staged={toLatticeChangeScope(stagedQuery.data)}
+        unstaged={toLatticeChangeScope(unstagedQuery.data)}
+        statusHasChanges={statusQuery.data?.hasWorkingTreeChanges === true}
         isLoading={isLoading}
         error={error}
         mutating={mutating}

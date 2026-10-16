@@ -8690,6 +8690,7 @@ msgstr "Source control is unavailable for this thread."
 
 #. js-lingui-explicit-id
 #: src/components/chat/GitPanel.tsx
+#: src/components/chat/LatticeGitChanges.tsx
 msgid "Loading changes..."
 msgstr "Loading changes..."
 
@@ -9244,6 +9245,11 @@ msgstr "Not staged"
 
 #. js-lingui-explicit-id
 #: src/components/chat/LatticeGitChanges.tsx
+msgid "Too many changes to preview at once. Open a file to load its change."
+msgstr "Too many changes to preview at once. Open a file to load its change."
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
 msgid "Added"
 msgstr "Added"
 
@@ -9272,6 +9278,11 @@ msgstr "Unstage {path}"
 #: src/components/chat/LatticeGitChanges.tsx
 msgid "Stage {path}"
 msgstr "Stage {path}"
+
+#. js-lingui-explicit-id
+#: src/components/chat/LatticeGitChanges.tsx
+msgid "This change is too large to show here."
+msgstr "This change is too large to show here."
 
 #. js-lingui-explicit-id
 #: src/components/chat/LatticeGitChanges.tsx

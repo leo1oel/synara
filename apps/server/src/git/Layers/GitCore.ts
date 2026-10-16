@@ -31,6 +31,7 @@ import {
   DEFAULT_GIT_RECENT_COMMIT_LIMIT,
   GIT_READ_FILE_AT_REV_MAX_BYTES,
   type GitBlameLineResult,
+  type GitChangedFile,
   type GitRecentCommit,
 } from "@synara/contracts";
 import { isTemporaryWorktreeBranch } from "@synara/shared/git";
@@ -43,6 +44,7 @@ import { parseGitBlamePorcelain } from "../gitBlameParsing.ts";
 import {
   countTextFileLines,
   normalizeConfiguredMergeBranch,
+  parseGitNameStatus,
   parseGitStatusPorcelain,
   summarizeGitNumstatOutputs,
 } from "../gitStatusParsing.ts";
@@ -270,6 +272,23 @@ function toWorkingTreePatch(accumulator: PatchAccumulator): GitWorkingTreePatch 
     patch: accumulator.chunks.join(""),
     truncated: accumulator.truncated,
   };
+}
+
+// A file-scoped staged or unstaged read only targets a path Git itself listed (undefined: the
+// whole scope; null: not listed), so its literal pathspec never names anything outside the scope.
+function findScopeFile(
+  files: ReadonlyArray<GitChangedFile>,
+  filePath: string | undefined,
+): GitChangedFile | null | undefined {
+  return filePath === undefined
+    ? undefined
+    : (files.find((file) => file.path === filePath) ?? null);
+}
+
+function literalPathspec(file: GitChangedFile | undefined): string[] {
+  if (file === undefined) return [];
+  const paths = file.previousPath === undefined ? [file.path] : [file.path, file.previousPath];
+  return ["--", ...paths.map((path) => `:(literal)${path}`)];
 }
 
 function parseBranchLine(line: string): { name: string; current: boolean } | null {
@@ -2082,12 +2101,133 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
         return mergeBase;
       });
 
-    const readUnstagedPatch: GitCoreShape["readUnstagedPatch"] = (cwd) =>
+    // The file list of a staged or unstaged scope, from metadata Git never truncates or
+    // C-quotes. The patch for the same scope is capped at DEFAULT_MAX_OUTPUT_BYTES and can stop
+    // partway, so surfaces list (and stage, and commit) from this rather than from the patch.
+    const readScopeFiles = (cwd: string, scope: "staged" | "unstaged", operationPrefix: string) =>
       Effect.gen(function* () {
-        const tracked = yield* executeGit(
-          "GitCore.readUnstagedPatch.trackedPatch",
+        const diffArgs = scope === "staged" ? ["diff", "--cached"] : ["diff"];
+        const [nameStatusStdout, numstatStdout, untrackedPaths] = yield* Effect.all(
+          [
+            runGitNulMetadata(`${operationPrefix}.nameStatus`, cwd, [
+              ...diffArgs,
+              "--name-status",
+              "-z",
+              "--no-ext-diff",
+            ]),
+            runGitNulMetadata(`${operationPrefix}.numstat`, cwd, [
+              ...diffArgs,
+              "--numstat",
+              "-z",
+              "--no-ext-diff",
+            ]),
+            scope === "unstaged"
+              ? listUntrackedFiles(cwd, operationPrefix)
+              : Effect.succeed<ReadonlyArray<string>>([]),
+          ],
+          { concurrency: "unbounded" },
+        );
+        const stats = new Map(
+          summarizeGitNumstatOutputs([numstatStdout]).files.map((file) => [file.path, file]),
+        );
+        // The parsed entries are fresh objects, so the counts are added in place.
+        const tracked: GitChangedFile[] = parseGitNameStatus(nameStatusStdout).map((entry) =>
+          Object.assign(entry, {
+            insertions: stats.get(entry.path)?.insertions ?? 0,
+            deletions: stats.get(entry.path)?.deletions ?? 0,
+          }),
+        );
+        const untracked = yield* Effect.forEach(
+          untrackedPaths,
+          (filePath) =>
+            Effect.tryPromise(() => nodeFs.readFile(nodePath.join(cwd, filePath))).pipe(
+              Effect.map((contents) => countTextFileLines(new Uint8Array(contents))),
+              Effect.catch(() => Effect.succeed(0)),
+              Effect.map(
+                (insertions): GitChangedFile => ({
+                  path: filePath,
+                  status: "added",
+                  insertions,
+                  deletions: 0,
+                }),
+              ),
+            ),
+          { concurrency: MAX_UNTRACKED_DIFF_CONCURRENCY },
+        );
+        return {
+          files: [...tracked, ...untracked].toSorted((a, b) => a.path.localeCompare(b.path)),
+          untrackedPaths,
+        };
+      });
+
+    const readUnstagedPatch: GitCoreShape["readUnstagedPatch"] = (cwd, filePath) =>
+      Effect.gen(function* () {
+        const { files, untrackedPaths } = yield* readScopeFiles(
           cwd,
-          ["diff", "--patch", "--no-color", "--no-ext-diff", "--no-textconv"],
+          "unstaged",
+          "GitCore.readUnstagedPatch",
+        );
+        const file = findScopeFile(files, filePath);
+        if (file === null) return { patch: "", truncated: false, files: [] };
+        const accumulator = makePatchAccumulator();
+        const fileIsUntracked = file !== undefined && untrackedPaths.includes(file.path);
+        if (!fileIsUntracked) {
+          const tracked = yield* executeGit(
+            "GitCore.readUnstagedPatch.trackedPatch",
+            cwd,
+            [
+              "diff",
+              "--patch",
+              "--no-color",
+              "--no-ext-diff",
+              "--no-textconv",
+              ...literalPathspec(file),
+            ],
+            {
+              allowNonZeroExit: true,
+              timeoutMs: WORKING_TREE_DIFF_TIMEOUT_MS,
+              maxOutputBytes: DEFAULT_MAX_OUTPUT_BYTES,
+              outputMode: "truncate",
+            },
+          );
+          appendPatchSegment(
+            accumulator,
+            tracked.stdout,
+            tracked.stdoutTruncated === true,
+            DEFAULT_MAX_OUTPUT_BYTES,
+          );
+        }
+        const untrackedToRead =
+          file === undefined ? untrackedPaths : fileIsUntracked ? [file.path] : [];
+        const patch =
+          untrackedToRead.length === 0
+            ? toWorkingTreePatch(accumulator)
+            : yield* readUntrackedPatches(
+                cwd,
+                "GitCore.readUnstagedPatch",
+                accumulator,
+                untrackedToRead,
+              );
+        return { ...patch, files: file ? [file] : files };
+      });
+
+    const readStagedPatch: GitCoreShape["readStagedPatch"] = (cwd, filePath) =>
+      Effect.gen(function* () {
+        const { files } = yield* readScopeFiles(cwd, "staged", "GitCore.readStagedPatch");
+        const file = findScopeFile(files, filePath);
+        if (file === null) return { patch: "", truncated: false, files: [] };
+        const result = yield* executeGit(
+          "GitCore.readStagedPatch",
+          cwd,
+          [
+            "diff",
+            "--cached",
+            "--patch",
+            "--no-color",
+            "--no-ext-diff",
+            "--no-textconv",
+            ...literalPathspec(file),
+          ],
           {
             allowNonZeroExit: true,
             timeoutMs: WORKING_TREE_DIFF_TIMEOUT_MS,
@@ -2095,33 +2235,12 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
             outputMode: "truncate",
           },
         );
-        const accumulator = makePatchAccumulator();
-        appendPatchSegment(
-          accumulator,
-          tracked.stdout,
-          tracked.stdoutTruncated === true,
-          DEFAULT_MAX_OUTPUT_BYTES,
-        );
-        return yield* readUntrackedPatches(cwd, "GitCore.readUnstagedPatch", accumulator);
-      });
-
-    const readStagedPatch: GitCoreShape["readStagedPatch"] = (cwd) =>
-      executeGit(
-        "GitCore.readStagedPatch",
-        cwd,
-        ["diff", "--cached", "--patch", "--no-color", "--no-ext-diff", "--no-textconv"],
-        {
-          allowNonZeroExit: true,
-          timeoutMs: WORKING_TREE_DIFF_TIMEOUT_MS,
-          maxOutputBytes: DEFAULT_MAX_OUTPUT_BYTES,
-          outputMode: "truncate",
-        },
-      ).pipe(
-        Effect.map((result) => ({
+        return {
           patch: result.stdout,
           truncated: result.stdoutTruncated === true,
-        })),
-      );
+          files: file ? [file] : files,
+        };
+      });
 
     const readWorkingTreePatch: GitCoreShape["readWorkingTreePatch"] = (cwd, filePath) =>
       Effect.gen(function* () {

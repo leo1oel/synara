@@ -36,12 +36,21 @@ mutations to `LatticeGitChanges`, which lays them out for a writer:
   Commit & push. "Write the message for me" calls `git.generateCommitMessage`, which runs
   the same generation an empty-message commit runs, from a copy of the index
   (`GitCore.previewCommitContext`), so drafting a message never moves staged files.
-- A file's checkbox stages or unstages it. Opening a LaTeX, Markdown or text file reads its
-  change as sentences with words struck and inserted (`lib/proseDiff.ts`); other files keep
-  the code diff.
+- The rows are the `files` that `git.readWorkingTreeDiff` returns with each staged and
+  unstaged patch: Git's own list (`--name-status -z`, `--numstat -z` and the untracked files),
+  so every changed file is listed with its raw name even when the patch, capped at 1 MB, stops
+  partway. A file's checkbox stages or unstages that raw name (a rename sends both of its
+  paths), never a path read back from a patch header, where Git C-quotes non-ASCII, quote,
+  tab and backslash names.
+- Opening a file shows its section of the scope patch, found by decoding those quoted
+  headers (`lib/gitPatchPaths.ts`). A file the capped patch cut off, or stopped inside, is
+  read on its own with `filePath` when opened, and a cut section says so. A LaTeX, Markdown
+  or text file reads its change as sentences with words struck and inserted
+  (`lib/proseDiff.ts`); other files keep the code diff.
 - Nothing to commit shows the dated-drafts drawing, what is still left (commits to push or
   pull, or a branch to publish) and the last commit (`git.listRecentCommits` now carries an
-  optional `authorName`).
+  optional `authorName`). It needs empty file lists and a clean `git.status`; while status
+  still reports changes the lists have not caught up with, the loading rows stay.
 
 Every action goes through `GitActionsControl`'s `lattice` variant, so confirmations,
 progress toasts and dialogs are the ones the other surfaces use.

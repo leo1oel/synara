@@ -5,6 +5,8 @@
 // Layer: Pure diff presentation helpers
 // Exports: splitPatchByFile, readProseChanges, wordDiff, isProsePath
 
+import { readPatchSectionPath } from "./gitPatchPaths";
+
 /** One run of a changed sentence: kept words, words taken out, or words put in. */
 export interface ProseSegment {
   kind: "same" | "del" | "ins";
@@ -24,16 +26,16 @@ export function isProsePath(path: string): boolean {
   return /\.(tex|ltx|md|markdown|txt|rst|org)$/i.test(path);
 }
 
-/** A multi-file patch cut into one patch per file, keyed by the file's new path. */
+/**
+ * A multi-file patch cut into one patch per file, keyed by the file's new path as Git stores it
+ * (quoted patch paths decoded), in patch order.
+ */
 export function splitPatchByFile(patch: string): Map<string, string> {
   const files = new Map<string, string>();
   for (const chunk of patch.split(/^(?=diff --git )/m)) {
     if (!chunk.startsWith("diff --git ")) continue;
-    const path =
-      /^\+\+\+ b\/(.+)$/m.exec(chunk)?.[1] ??
-      /^--- a\/(.+)$/m.exec(chunk)?.[1] ??
-      /^diff --git a\/.+ b\/(.+)$/m.exec(chunk)?.[1];
-    if (path) files.set(path.trim(), chunk);
+    const path = readPatchSectionPath(chunk);
+    if (path) files.set(path, chunk);
   }
   return files;
 }

@@ -165,7 +165,7 @@ export const GitReadWorkingTreeDiffInput = Schema.Struct({
     Schema.Literals(["workingTree", "unstaged", "staged", "branch", "ref"]),
   ).pipe(Schema.withConstructorDefault(() => Option.some("workingTree" as const))),
   compareRef: Schema.optional(GitRevisionArgumentSchema),
-  /** Limit a workingTree patch to one exact workspace-relative file. */
+  /** Limit a workingTree, staged or unstaged patch to one exact workspace-relative file. */
   filePath: Schema.optional(TrimmedNonEmptyStringSchema),
 });
 export type GitReadWorkingTreeDiffInput = typeof GitReadWorkingTreeDiffInput.Type;
@@ -531,9 +531,28 @@ export const GitStatusStreamEvent = Schema.Union([
 ]);
 export type GitStatusStreamEvent = typeof GitStatusStreamEvent.Type;
 
+// Paths exactly as Git stores them: read from `-z` output, so never C-quoted and never trimmed.
+const GitChangedFilePath = Schema.String.check(Schema.isNonEmpty());
+
+/** One file of a staged or unstaged scope, listed whether or not its patch fits the response. */
+export const GitChangedFile = Schema.Struct({
+  path: GitChangedFilePath,
+  /** The rename source, which must travel with `path` when the pair is staged or committed. */
+  previousPath: Schema.optional(GitChangedFilePath),
+  status: Schema.Literals(["added", "modified", "deleted", "renamed"]),
+  insertions: NonNegativeInt,
+  deletions: NonNegativeInt,
+});
+export type GitChangedFile = typeof GitChangedFile.Type;
+
 export const GitReadWorkingTreeDiffResult = Schema.Struct({
   patch: Schema.String,
   truncated: Schema.Boolean,
+  /**
+   * Every file in a staged or unstaged scope. The patch is capped and can stop partway, so this
+   * list, not the files parsed from the patch, says what changed.
+   */
+  files: Schema.optional(Schema.Array(GitChangedFile)),
 });
 export type GitReadWorkingTreeDiffResult = typeof GitReadWorkingTreeDiffResult.Type;
 

@@ -1507,14 +1507,10 @@ export const makeGitManager = Effect.gen(function* () {
 
   const readWorkingTreeDiff: GitManagerShape["readWorkingTreeDiff"] = Effect.fnUntraced(
     function* (input) {
-      if (
-        input.filePath !== undefined &&
-        input.scope !== undefined &&
-        input.scope !== "workingTree"
-      ) {
+      if (input.filePath !== undefined && (input.scope === "branch" || input.scope === "ref")) {
         return yield* gitManagerError(
           "readWorkingTreeDiff",
-          "File-scoped diffs are only supported for the working tree scope.",
+          "File-scoped diffs are only supported for the working tree, staged and unstaged scopes.",
         );
       }
       switch (input.scope) {
@@ -1531,9 +1527,9 @@ export const makeGitManager = Effect.gen(function* () {
         case "branch":
           return yield* gitCore.readBranchPatch(input.cwd);
         case "staged":
-          return yield* gitCore.readStagedPatch(input.cwd);
+          return yield* gitCore.readStagedPatch(input.cwd, input.filePath);
         case "unstaged":
-          return yield* gitCore.readUnstagedPatch(input.cwd);
+          return yield* gitCore.readUnstagedPatch(input.cwd, input.filePath);
         case "workingTree":
         default:
           return yield* gitCore.readWorkingTreePatch(input.cwd, input.filePath);

@@ -5,7 +5,12 @@
 import "../../index.css";
 
 import { I18nProvider } from "@lingui/react";
-import type { GitBranchPullRequest, GitStatusResult, NativeApi } from "@synara/contracts";
+import type {
+  GitBranchPullRequest,
+  GitReadWorkingTreeDiffResult,
+  GitStatusResult,
+  NativeApi,
+} from "@synara/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -40,6 +45,19 @@ function buildLongPatch(lineCount = 80): string {
   ].join("\n");
 }
 
+function quotedSection(quoted: string, line: string): string {
+  return [
+    `diff --git "a/${quoted}" "b/${quoted}"`,
+    "index 1111111..2222222 100644",
+    `--- "a/${quoted}"`,
+    `+++ "b/${quoted}"`,
+    "@@ -1 +1,2 @@",
+    " first",
+    `+${line}`,
+    "",
+  ].join("\n");
+}
+
 function gitStatus(branch: string, hasWorkingTreeChanges = true, aheadCount = 0): GitStatusResult {
   return {
     branch,
@@ -66,6 +84,8 @@ function installGitApi(
     branchesGate?: Promise<void>;
     pullRequestGate?: Promise<void>;
     pullRequest?: GitBranchPullRequest;
+    /** Scope reads by `staged`/`unstaged`, and file-scoped reads by `<scope>:<path>`. */
+    diffs?: Record<string, GitReadWorkingTreeDiffResult>;
   } = {},
 ) {
   const hasWorkingTreeChanges = options.hasWorkingTreeChanges ?? true;
@@ -75,9 +95,20 @@ function installGitApi(
   const checkoutCalls: string[] = [];
   const actionCalls: Array<{ action: string; filePaths?: string[] }> = [];
   const readCalls: string[] = [];
+  const stageCalls: string[][] = [];
+  const unstageCalls: string[][] = [];
   const openedUrls: string[] = [];
   let resolvedPullRequests = 0;
-  const patch = hasWorkingTreeChanges ? buildLongPatch() : "";
+  const diffs: Record<string, GitReadWorkingTreeDiffResult> = options.diffs ?? {
+    staged: { patch: "", truncated: false, files: [] },
+    unstaged: hasWorkingTreeChanges
+      ? {
+          patch: buildLongPatch(),
+          truncated: false,
+          files: [{ path: "src/long.ts", status: "modified", insertions: 80, deletions: 80 }],
+        }
+      : { patch: "", truncated: false, files: [] },
+  };
 
   window.nativeApi = {
     git: {
@@ -120,9 +151,18 @@ function installGitApi(
         resolvedPullRequests += 1;
         return { branch: currentBranch, pr: options.pullRequest ?? null };
       },
-      readWorkingTreeDiff: async ({ scope }: { scope?: string }) => {
-        readCalls.push(`readWorkingTreeDiff:${scope ?? "workingTree"}`);
-        return { patch: scope === "staged" ? "" : patch };
+      readWorkingTreeDiff: async ({ scope, filePath }: { scope?: string; filePath?: string }) => {
+        const key = filePath ? `${scope}:${filePath}` : (scope ?? "workingTree");
+        readCalls.push(`readWorkingTreeDiff:${key}`);
+        return diffs[key] ?? { patch: "", truncated: false, files: [] };
+      },
+      stageFiles: async ({ paths }: { paths: string[] }) => {
+        stageCalls.push(paths);
+        return { ok: true };
+      },
+      unstageFiles: async ({ paths }: { paths: string[] }) => {
+        unstageCalls.push(paths);
+        return { ok: true };
       },
       checkout: async ({ branch }: { branch: string }) => {
         checkoutCalls.push(branch);
@@ -162,6 +202,8 @@ function installGitApi(
     actionCalls,
     checkoutCalls,
     readCalls,
+    stageCalls,
+    unstageCalls,
     openedUrls,
     get resolvedPullRequests() {
       return resolvedPullRequests;
@@ -455,6 +497,155 @@ describe("GitPanel", () => {
     releaseRefresh();
     await expect.poll(() => refreshButton.element().getAttribute("aria-busy")).toBeNull();
     expect(refreshButton.element().querySelector(".animate-spin")).toBeNull();
+  });
+
+  // Lattice audit Q1: a working tree whose aggregate patch passes the response cap read as
+  // "Everything is committed" because the list came from the parsed patch.
+  it("lists every changed file with a notice when the patch stops at its cap", async () => {
+    const mainPatch = [
+      "diff --git a/main.tex b/main.tex",
+      "index 1111111..2222222 100644",
+      "--- a/main.tex",
+      "+++ b/main.tex",
+      "@@ -1 +1,2 @@",
+      " \\section{Intro}",
+      "+A fresh sentence about the method.",
+      "",
+    ].join("\n");
+    // Past the client's render budget, like the audit's 1 MB patch; the cap lands partway
+    // through this file's lines.
+    const longPatch = [
+      "diff --git a/a-long.tex b/a-long.tex",
+      "new file mode 100644",
+      "index 0000000..3333333",
+      "--- /dev/null",
+      "+++ b/a-long.tex",
+      "@@ -0,0 +1,120000 @@",
+      ...Array.from({ length: 16_000 }, (_, index) => `+Paragraph ${index} of the long draft.`),
+      "+Paragraph 16000 of the lo",
+    ].join("\n");
+    const notePatch = [
+      "diff --git a/z-note.md b/z-note.md",
+      "new file mode 100644",
+      "index 0000000..4444444",
+      "--- /dev/null",
+      "+++ b/z-note.md",
+      "@@ -0,0 +1 @@",
+      "+A note written after the cap.",
+      "",
+    ].join("\n");
+    const unstagedFiles = [
+      { path: "a-long.tex", status: "added", insertions: 120_000, deletions: 0 },
+      { path: "both.tex", status: "modified", insertions: 1, deletions: 0 },
+      { path: "figure.png", status: "added", insertions: 0, deletions: 0 },
+      { path: "main.tex", status: "modified", insertions: 1, deletions: 0 },
+      { path: "z-note.md", status: "added", insertions: 1, deletions: 0 },
+    ] as const;
+    const { readCalls, stageCalls } = installGitApi({
+      diffs: {
+        staged: {
+          patch: "",
+          truncated: false,
+          files: [{ path: "both.tex", status: "modified", insertions: 1, deletions: 0 }],
+        },
+        unstaged: { patch: mainPatch + longPatch, truncated: true, files: unstagedFiles },
+        "unstaged:z-note.md": { patch: notePatch, truncated: false, files: [unstagedFiles[4]] },
+        "unstaged:a-long.tex": { patch: longPatch, truncated: true, files: [unstagedFiles[0]] },
+      },
+    });
+    await renderWithQueryClient(
+      <GitPanel projectId={null} cwdOverride={TEST_CWD} showActions title="Changes" />,
+    );
+
+    await expect.element(page.getByRole("button", { name: /^Commit & push 1 file/ })).toBeVisible();
+    await expect
+      .element(
+        page.getByText("Too many changes to preview at once. Open a file to load its change.", {
+          exact: true,
+        }),
+      )
+      .toBeVisible();
+    await expect.element(page.getByRole("checkbox", { name: "Unstage both.tex" })).toBeVisible();
+    for (const file of unstagedFiles) {
+      await expect
+        .element(page.getByRole("checkbox", { name: `Stage ${file.path}`, exact: true }))
+        .toBeVisible();
+    }
+    expect(document.querySelector("[data-lattice-git-clean]")).toBeNull();
+
+    // A file the patch carries whole opens from it.
+    await page.getByRole("button", { name: "main.tex", exact: true }).click();
+    await expect.element(page.getByText("A fresh sentence about the method.")).toBeVisible();
+    expect(readCalls).not.toContain("readWorkingTreeDiff:unstaged:main.tex");
+
+    // Files past the cut, and the one it landed in, load their own change when opened.
+    await page.getByRole("button", { name: "z-note.md", exact: true }).click();
+    await expect.element(page.getByText("A note written after the cap.")).toBeVisible();
+    await page.getByRole("button", { name: "a-long.tex", exact: true }).click();
+    await expect.element(page.getByText(/^Showing the first \d+ changed lines\.$/)).toBeVisible();
+    expect(readCalls).toContain("readWorkingTreeDiff:unstaged:z-note.md");
+    expect(readCalls).toContain("readWorkingTreeDiff:unstaged:a-long.tex");
+
+    await page.getByRole("checkbox", { name: "Stage figure.png", exact: true }).click();
+    await expect.poll(() => stageCalls).toEqual([["figure.png"]]);
+  });
+
+  // Lattice audit Q3: Git C-quotes these names in patch headers (`x-\344\270\255...`); rows
+  // showed the escapes and staging sent them to `git add`, which matched no file.
+  it("shows and stages files by the names Git stores, not their quoted patch paths", async () => {
+    const names = [
+      ["x-中文.tex", "x-\\344\\270\\255\\346\\226\\207.tex", "Chinese name line."],
+      ['has space "q".tex', 'has space \\"q\\".tex', "Quoted name line."],
+      ["tab\there.tex", "tab\\there.tex", "Tab name line."],
+      ["back\\slash.tex", "back\\\\slash.tex", "Backslash name line."],
+    ] as const;
+    const renamed = 'ren-中文 "x".tex';
+    const { readCalls, stageCalls, unstageCalls } = installGitApi({
+      diffs: {
+        staged: {
+          patch: [
+            'diff --git a/plain.tex "b/ren-\\344\\270\\255\\346\\226\\207 \\"x\\".tex"',
+            "similarity index 100%",
+            "rename from plain.tex",
+            'rename to "ren-\\344\\270\\255\\346\\226\\207 \\"x\\".tex"',
+            "",
+          ].join("\n"),
+          truncated: false,
+          files: [
+            {
+              path: renamed,
+              previousPath: "plain.tex",
+              status: "renamed",
+              insertions: 0,
+              deletions: 0,
+            },
+          ],
+        },
+        unstaged: {
+          patch: names.map(([, quoted, line]) => quotedSection(quoted, line)).join(""),
+          truncated: false,
+          files: names.map(([path]) => ({ path, status: "modified", insertions: 1, deletions: 0 })),
+        },
+      },
+    });
+    await renderWithQueryClient(
+      <GitPanel projectId={null} cwdOverride={TEST_CWD} showActions title="Changes" />,
+    );
+
+    for (const [path, , line] of names) {
+      await expect
+        .element(page.getByRole("checkbox", { name: `Stage ${path}`, exact: true }))
+        .toBeVisible();
+      await page.getByRole("button", { name: path, exact: true }).click();
+      await expect.element(page.getByText(line)).toBeVisible();
+    }
+    expect(document.body.textContent).not.toContain("\\344");
+    expect(readCalls.filter((call) => call.split(":").length > 2)).toEqual([]);
+
+    await page.getByRole("checkbox", { name: "Stage x-中文.tex", exact: true }).click();
+    await expect.poll(() => stageCalls).toEqual([["x-中文.tex"]]);
+    await page.getByRole("checkbox", { name: `Unstage ${renamed}` }).click();
+    await expect.poll(() => unstageCalls).toEqual([[renamed, "plain.tex"]]);
   });
 
   it("says everything is committed and offers no commit action when clean", async () => {

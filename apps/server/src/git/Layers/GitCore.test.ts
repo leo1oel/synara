@@ -728,6 +728,127 @@ it.layer(TestLayer)("git integration", (it) => {
     );
   });
 
+  describe("staged and unstaged file lists", () => {
+    // Lattice audit Q1: the aggregate patch hits its cap, yet every changed file must still be
+    // listed, so the Changes view never mistakes a large working tree for a clean one.
+    it.effect("lists every file in each scope when the capped patch stops partway", () =>
+      Effect.gen(function* () {
+        const core = yield* GitCore;
+        const tmp = yield* makeTmpDir();
+        yield* initRepoWithCommit(tmp);
+        yield* writeTextFile(path.join(tmp, "both.tex"), "first\n");
+        yield* writeTextFile(path.join(tmp, "gone.tex"), "gone\n");
+        yield* git(tmp, ["add", "."]);
+        yield* git(tmp, ["commit", "-m", "add tracked files"]);
+        yield* writeTextFile(path.join(tmp, "both.tex"), "first\nstaged\n");
+        yield* writeTextFile(path.join(tmp, "staged.tex"), "new\n");
+        yield* git(tmp, ["add", "both.tex", "staged.tex"]);
+        yield* writeTextFile(path.join(tmp, "both.tex"), "first\nstaged\nunstaged\n");
+        yield* writeTextFile(path.join(tmp, "README.md"), "# test\nedited\n");
+        yield* Effect.promise(() => fs.rm(path.join(tmp, "gone.tex")));
+        // Sorted first among the untracked files, so the cap lands inside its patch.
+        yield* writeTextFile(path.join(tmp, "a-long.tex"), "long line\n".repeat(120_000));
+        yield* Effect.promise(() =>
+          fs.writeFile(path.join(tmp, "figure.png"), new Uint8Array([0x89, 0x50, 0, 1, 2])),
+        );
+        yield* writeTextFile(path.join(tmp, "z-note.md"), "a note\n");
+
+        const unstaged = yield* core.readUnstagedPatch(tmp);
+        expect(unstaged.truncated).toBe(true);
+        expect(unstaged.patch).toContain("diff --git a/a-long.tex b/a-long.tex");
+        expect(unstaged.patch).not.toContain("z-note.md");
+        expect(unstaged.files).toEqual([
+          { path: "a-long.tex", status: "added", insertions: 120_000, deletions: 0 },
+          { path: "both.tex", status: "modified", insertions: 1, deletions: 0 },
+          { path: "figure.png", status: "added", insertions: 0, deletions: 0 },
+          { path: "gone.tex", status: "deleted", insertions: 0, deletions: 1 },
+          { path: "README.md", status: "modified", insertions: 1, deletions: 0 },
+          { path: "z-note.md", status: "added", insertions: 1, deletions: 0 },
+        ]);
+
+        const staged = yield* core.readStagedPatch(tmp);
+        expect(staged.truncated).toBe(false);
+        expect(staged.files).toEqual([
+          { path: "both.tex", status: "modified", insertions: 1, deletions: 0 },
+          { path: "staged.tex", status: "added", insertions: 1, deletions: 0 },
+        ]);
+
+        // A file the capped patch cut off is read on its own.
+        const note = yield* core.readUnstagedPatch(tmp, "z-note.md");
+        expect(note.truncated).toBe(false);
+        expect(note.patch).toContain("+a note");
+        expect(note.files).toEqual([
+          { path: "z-note.md", status: "added", insertions: 1, deletions: 0 },
+        ]);
+        const both = yield* core.readUnstagedPatch(tmp, "both.tex");
+        expect(both.patch).toContain("+unstaged");
+        expect(both.patch).not.toContain("+staged");
+        const bothStaged = yield* core.readStagedPatch(tmp, "both.tex");
+        expect(bothStaged.patch).toContain("+staged");
+        expect(bothStaged.patch).not.toContain("+unstaged");
+
+        // Only a listed file can be read; anything else is an empty scope, not a Git pathspec.
+        const unlisted = yield* core.readUnstagedPatch(tmp, "staged.tex");
+        expect(unlisted).toEqual({ patch: "", truncated: false, files: [] });
+      }),
+    );
+
+    // Lattice audit Q3: Git C-quotes these names in patch headers under the default
+    // core.quotePath, so only the raw listed name can be handed back to `git add`.
+    it.effect("names files exactly as Git stores them and stages them by that name", () =>
+      Effect.gen(function* () {
+        const core = yield* GitCore;
+        const tmp = yield* makeTmpDir();
+        yield* initRepoWithCommit(tmp);
+        const names = [
+          "a-very-long-name-in-english-and-中文.tex",
+          'has space "quoted".tex',
+          "tab\there.tex",
+          "back\\slash.tex",
+          "plain.tex",
+        ];
+        for (const name of names) {
+          yield* writeTextFile(path.join(tmp, name), "first\n");
+        }
+        yield* git(tmp, ["add", "."]);
+        yield* git(tmp, ["commit", "-m", "add awkward names"]);
+        for (const name of names.slice(0, 4)) {
+          yield* writeTextFile(path.join(tmp, name), "first\nsecond\n");
+        }
+        const renamed = '改名 "copy".tex';
+        yield* git(tmp, ["mv", "plain.tex", renamed]);
+
+        const unstaged = yield* core.readUnstagedPatch(tmp);
+        expect(unstaged.patch).toContain("\\344\\270\\255\\346\\226\\207");
+        expect(unstaged.files.map((file) => file.path).toSorted()).toEqual(
+          names.slice(0, 4).toSorted(),
+        );
+
+        const staged = yield* core.readStagedPatch(tmp);
+        expect(staged.files).toEqual([
+          {
+            path: renamed,
+            previousPath: "plain.tex",
+            status: "renamed",
+            insertions: 0,
+            deletions: 0,
+          },
+        ]);
+        const renamePatch = yield* core.readStagedPatch(tmp, renamed);
+        expect(renamePatch.patch).toContain("rename from plain.tex");
+
+        yield* core.stageFiles(
+          tmp,
+          unstaged.files.map((file) => file.path),
+        );
+        const cached = yield* git(tmp, ["diff", "--cached", "--name-only", "-z"]);
+        expect(cached.split("\0").filter(Boolean).toSorted()).toEqual(
+          [...names.slice(0, 4), renamed].toSorted(),
+        );
+      }),
+    );
+  });
+
   describe("blameLine", () => {
     it.effect("attributes a committed line at a resolved revision", () =>
       Effect.gen(function* () {
