@@ -3186,66 +3186,6 @@ msgid "Got it"
 msgstr "知道了"
 
 #. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "Reconnecting to Synara server"
-msgstr "正在重新连接 Synara 服务"
-
-#. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "Synara server recovered"
-msgstr "Synara 服务已恢复"
-
-#. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "Synara server is busy"
-msgstr "Synara 服务正忙"
-
-#. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "1 request is still waiting."
-msgstr "还有 1 个请求在等待。"
-
-#. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "{pendingRequests} requests are still waiting."
-msgstr "还有 {pendingRequests} 个请求在等待。"
-
-#. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "The connection was interrupted. Thread updates will resume automatically when it recovers. {waiting}"
-msgstr "连接中断了。恢复后，对话更新会自动继续。{waiting}"
-
-#. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "The connection was interrupted. Thread updates will resume automatically when it recovers."
-msgstr "连接中断了。恢复后，对话更新会自动继续。"
-
-#. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "The server is not answering. Heavy load or a connection delay may be the cause. {waiting}"
-msgstr "服务没有响应，可能是负载过高或连接延迟。{waiting}"
-
-#. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "The server is not answering. Heavy load or a connection delay may be the cause. Updates will resume when it responds."
-msgstr "服务没有响应，可能是负载过高或连接延迟。服务响应后，更新会继续。"
-
-#. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "The server paused for {seconds} s and is responding again. {waiting}"
-msgstr "服务停顿了 {seconds} 秒，现在已恢复响应。{waiting}"
-
-#. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "The server paused for {seconds} s and is responding again."
-msgstr "服务停顿了 {seconds} 秒，现在已恢复响应。"
-
-#. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "{waiting} You can keep working while it completes."
-msgstr "{waiting}在它完成前，你可以继续工作。"
-
-#. js-lingui-explicit-id
 #: src/components/chat/ChatHeader.tsx
 #: src/components/Sidebar.tsx
 #: src/components/ThreadWorktreeHandoffDialog.tsx

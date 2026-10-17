@@ -1888,6 +1888,7 @@ export function makeCursorAdapter(
                   models: cliModels,
                   source: "cursor.cli",
                   cached: false,
+                  degraded: true,
                 }) satisfies ProviderListModelsResult,
             ),
           ),

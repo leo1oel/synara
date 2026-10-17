@@ -3186,66 +3186,6 @@ msgid "Got it"
 msgstr "Got it"
 
 #. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "Reconnecting to Synara server"
-msgstr "Reconnecting to Synara server"
-
-#. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "Synara server recovered"
-msgstr "Synara server recovered"
-
-#. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "Synara server is busy"
-msgstr "Synara server is busy"
-
-#. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "1 request is still waiting."
-msgstr "1 request is still waiting."
-
-#. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "{pendingRequests} requests are still waiting."
-msgstr "{pendingRequests} requests are still waiting."
-
-#. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "The connection was interrupted. Thread updates will resume automatically when it recovers. {waiting}"
-msgstr "The connection was interrupted. Thread updates will resume automatically when it recovers. {waiting}"
-
-#. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "The connection was interrupted. Thread updates will resume automatically when it recovers."
-msgstr "The connection was interrupted. Thread updates will resume automatically when it recovers."
-
-#. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "The server is not answering. Heavy load or a connection delay may be the cause. {waiting}"
-msgstr "The server is not answering. Heavy load or a connection delay may be the cause. {waiting}"
-
-#. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "The server is not answering. Heavy load or a connection delay may be the cause. Updates will resume when it responds."
-msgstr "The server is not answering. Heavy load or a connection delay may be the cause. Updates will resume when it responds."
-
-#. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "The server paused for {seconds} s and is responding again. {waiting}"
-msgstr "The server paused for {seconds} s and is responding again. {waiting}"
-
-#. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "The server paused for {seconds} s and is responding again."
-msgstr "The server paused for {seconds} s and is responding again."
-
-#. js-lingui-explicit-id
-#: src/components/ServerBusyIndicator.tsx
-msgid "{waiting} You can keep working while it completes."
-msgstr "{waiting} You can keep working while it completes."
-
-#. js-lingui-explicit-id
 #: src/components/chat/ChatHeader.tsx
 #: src/components/Sidebar.tsx
 #: src/components/ThreadWorktreeHandoffDialog.tsx

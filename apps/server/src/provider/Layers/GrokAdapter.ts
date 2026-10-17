@@ -2541,6 +2541,7 @@ export function makeGrokAdapter(
           models,
           source: cliModels.length > 0 ? "grok-cli" : "grok-cli+xai-api",
           cached: false,
+          degraded: cliModels.length === 0,
         } satisfies ProviderListModelsResult;
       }).pipe(
         Effect.scoped,

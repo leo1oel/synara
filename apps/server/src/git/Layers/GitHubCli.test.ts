@@ -2007,6 +2007,8 @@ layer("GitHubCliLive", (it) => {
       expect(mockedRunProcess.mock.calls[2]?.[1]).toEqual([
         "diff",
         "--no-color",
+        "--src-prefix=a/",
+        "--dst-prefix=b/",
         "1111111111111111...2222222222222222",
       ]);
     }),
