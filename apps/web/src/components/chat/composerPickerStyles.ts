@@ -214,8 +214,10 @@ export const COMPOSER_PICKER_TOOLTIP_SURFACE_CLASS_NAME = `${COMPOSER_PICKER_MEN
 /** Opaque floating panel for the slash/mention command menu, the + panel and the @local
  *  browser. A solid fill in every window mode: the menu floats over the live transcript,
  *  above the edge where it dissolves, so the composer's glass (sheer and unblurred on a
- *  whole-window glass shell) would leave the transcript text readable through the rows. */
-export const COMPOSER_COMMAND_MENU_SURFACE_CLASS_NAME = `relative overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground ${COMPOSER_SURFACE_SHADOW_CLASS_NAME}`;
+ *  whole-window glass shell) would leave the transcript text readable through the rows.
+ *  `chat-composer-menu-surface` carries no styles of its own: it is the hook the Lattice embed
+ *  uses (index.css) to give these menus the host-themed composer surface. */
+export const COMPOSER_COMMAND_MENU_SURFACE_CLASS_NAME = `chat-composer-menu-surface relative overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground ${COMPOSER_SURFACE_SHADOW_CLASS_NAME}`;
 
 /** Environment panel card. Opaque for the same reason as the command menu (it overlays the
  *  transcript), except on a whole-window glass shell, where it takes the shared raised
