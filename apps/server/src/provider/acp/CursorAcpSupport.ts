@@ -49,6 +49,13 @@ export interface CursorAcpRuntimeInput extends Omit<
 > {
   readonly childProcessSpawner: ChildProcessSpawner.ChildProcessSpawner["Service"];
   readonly cursorSettings: CursorAcpRuntimeCursorSettings | null | undefined;
+  /**
+   * Whether the session may send `authenticate` (which opens Cursor's sign-in page)
+   * when setup reports auth-required. Background probes pass `false` so a signed-out
+   * account fails the probe instead of popping a browser; only a user-driven session
+   * keeps the default.
+   */
+  readonly allowInteractiveAuth?: boolean;
 }
 
 export interface CursorAcpModelSelectionErrorContext {
@@ -149,7 +156,8 @@ export const makeCursorAcpRuntime = (
         spawn: buildCursorAcpSpawnInput(input.cursorSettings, input.cwd),
         // Authenticate on demand only: always-auth makes cursor-agent re-open the
         // OAuth login page on every session start (#1341); same pattern as Devin.
-        authPolicy: "on-demand",
+        // Background probes never authenticate: the user signs in from the panel.
+        authPolicy: input.allowInteractiveAuth === false ? "never" : "on-demand",
         authMethodId: "cursor_login",
         authenticateMeta: { headless: true },
         clientCapabilities: CURSOR_PARAMETERIZED_MODEL_PICKER_CAPABILITIES,
