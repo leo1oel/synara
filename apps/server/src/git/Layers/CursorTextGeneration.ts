@@ -91,6 +91,8 @@ const makeCursorAcpConfig = (serverConfig: {
       childProcessSpawner,
       cwd,
       clientInfo: { name: "synara-git-text", version: "0.0.0" },
+      // Background text generation must never open Cursor's sign-in page.
+      allowInteractiveAuth: false,
     }),
   prepareRuntime: ({
     runtime,

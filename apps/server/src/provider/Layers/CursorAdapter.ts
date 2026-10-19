@@ -1843,6 +1843,9 @@ export function makeCursorAdapter(
           childProcessSpawner,
           cwd: process.cwd(),
           clientInfo: { name: ACTIVE_AGENT_HOST_PROFILE.displayName, version: "0.0.0" },
+          // Model discovery runs at startup; a signed-out account must fall back to
+          // the CLI list rather than open Cursor's sign-in page in the browser.
+          allowInteractiveAuth: false,
         });
         const started = yield* runtime.start();
         const models = yield* fetchCursorAcpModelDescriptors(runtime, started.sessionId);

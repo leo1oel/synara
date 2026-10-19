@@ -409,8 +409,11 @@ export interface AcpSessionRuntimeOptions {
    * - "on-demand": attempt session setup without authenticate; if it fails with a
    *   verified auth-required error, resolve the advertised auth method,
    *   authenticate once, and retry the same setup operation once.
+   * - "never": attempt session setup without ever sending `authenticate`, so a
+   *   background probe fails with the auth-required error instead of opening the
+   *   provider's sign-in page.
    */
-  readonly authPolicy?: "always" | "on-demand";
+  readonly authPolicy?: "always" | "on-demand" | "never";
   /**
    * Provider-specific predicate consulted during on-demand auth. After session
    * setup returns while still unauthenticated, if this returns true the session
@@ -1981,7 +1984,10 @@ const makeAcpSessionRuntime = (
           // decide whether an unauthenticated setup result is an auth-required
           // signal. The generic ACP path only retries on a verified auth-required
           // transport/request failure.
-          if (options.authPolicy === "on-demand" && !(yield* Ref.get(authenticatedRef))) {
+          if (
+            (options.authPolicy === "on-demand" || options.authPolicy === "never") &&
+            !(yield* Ref.get(authenticatedRef))
+          ) {
             const authRequired =
               options.authSetupHeuristic?.(initializeResult, sessionSetupResult) ?? false;
             if (authRequired) {
@@ -2037,15 +2043,17 @@ const makeAcpSessionRuntime = (
         });
 
         const setup =
-          options.authPolicy === "on-demand"
-            ? runSessionSetup.pipe(
-                Effect.catchCause((cause) =>
-                  causeIndicatesAuthRequired(cause)
-                    ? runAuthenticate.pipe(Effect.andThen(runSessionSetup))
-                    : Effect.failCause(cause),
-                ),
-              )
-            : runAuthenticate.pipe(Effect.andThen(runSessionSetup));
+          options.authPolicy === "never"
+            ? runSessionSetup
+            : options.authPolicy === "on-demand"
+              ? runSessionSetup.pipe(
+                  Effect.catchCause((cause) =>
+                    causeIndicatesAuthRequired(cause)
+                      ? runAuthenticate.pipe(Effect.andThen(runSessionSetup))
+                      : Effect.failCause(cause),
+                  ),
+                )
+              : runAuthenticate.pipe(Effect.andThen(runSessionSetup));
 
         const { sessionId, sessionSetupResult, sessionSetupMethod } = yield* setup;
 
