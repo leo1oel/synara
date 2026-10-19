@@ -77,7 +77,8 @@ export function PullRequestCommentComposer({
   return (
     <div
       className={cn(
-        FIELD_CONTROL_CLASS_NAME, GLASS_RAISED_SURFACE_CLASS_NAME,
+        FIELD_CONTROL_CLASS_NAME,
+        GLASS_RAISED_SURFACE_CLASS_NAME,
         "flex items-center gap-2 rounded-lg py-1 pl-3 pr-1.5",
       )}
     >

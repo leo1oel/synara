@@ -1150,7 +1150,7 @@ export const makeAgentGateway = Effect.gen(function* () {
     projectAgent: projectAgentService,
   });
 
-    const surfacedComputerControlDenials = new Set<string>();
+  const surfacedComputerControlDenials = new Set<string>();
   const surfaceCapabilityDenial: NonNullable<
     Parameters<typeof makeAgentGatewayMcpTransport>[0]["onCapabilityDenied"]
   > = (denial) => {

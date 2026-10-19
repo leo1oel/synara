@@ -14,7 +14,15 @@ export type SearchInputProps = InputProps & {
 };
 
 export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(function SearchInput(
-  { className, containerClassName, type: typeProp, size: sizeProp, variant: variantProp, shape, ...props },
+  {
+    className,
+    containerClassName,
+    type: typeProp,
+    size: sizeProp,
+    variant: variantProp,
+    shape,
+    ...props
+  },
   ref,
 ) {
   const type = typeProp ?? "search";

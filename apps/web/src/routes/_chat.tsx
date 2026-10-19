@@ -641,27 +641,29 @@ function ChatRouteLayout() {
     >
       <ThreadRetentionMaintenanceToast />
       <ChatRouteGlobalShortcuts />
-      {isEmbed ? mainContentShell : (
-      <AppRailSlotProvider value={railSlot}>
-        <SidebarLeadingControlsDock routeColumn={routeColumn} railSlot={railSlot}>
-          {isMobile ? (
-            // Phones show the sidebar as a sheet that carries its own rail (see ThreadSidebar),
-            // so the shell keeps no left column.
-            sidebarElement
-          ) : (
-            <div className="flex min-h-0 shrink-0 flex-col">
-              <AppShellTopStrip />
-              <div className="flex min-h-0 flex-1">
-                <div ref={setRailSlot} className="flex shrink-0" />
-                <div className="app-rail-panel relative flex shrink-0 overflow-hidden [contain:paint]">
-                  {sidebarElement}
+      {isEmbed ? (
+        mainContentShell
+      ) : (
+        <AppRailSlotProvider value={railSlot}>
+          <SidebarLeadingControlsDock routeColumn={routeColumn} railSlot={railSlot}>
+            {isMobile ? (
+              // Phones show the sidebar as a sheet that carries its own rail (see ThreadSidebar),
+              // so the shell keeps no left column.
+              sidebarElement
+            ) : (
+              <div className="flex min-h-0 shrink-0 flex-col">
+                <AppShellTopStrip />
+                <div className="flex min-h-0 flex-1">
+                  <div ref={setRailSlot} className="flex shrink-0" />
+                  <div className="app-rail-panel relative flex shrink-0 overflow-hidden [contain:paint]">
+                    {sidebarElement}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-          {mainContentShell}
-        </SidebarLeadingControlsDock>
-      </AppRailSlotProvider>
+            )}
+            {mainContentShell}
+          </SidebarLeadingControlsDock>
+        </AppRailSlotProvider>
       )}
     </SidebarProvider>
   );

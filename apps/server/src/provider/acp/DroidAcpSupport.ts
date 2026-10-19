@@ -181,10 +181,14 @@ export const makeDroidAcpRuntime = (
         spawn: buildDroidAcpSpawnInput(input.droidSettings, input.cwd),
         authPolicy: "on-demand",
         resolveAuthMethodId: (initializeResult) =>
-          resolveDroidAcpAuthMethodId(initializeResult, {
-            ...process.env,
-            ...(input.droidSettings?.environment ?? {}),
-          }, input.allowDevicePairing),
+          resolveDroidAcpAuthMethodId(
+            initializeResult,
+            {
+              ...process.env,
+              ...(input.droidSettings?.environment ?? {}),
+            },
+            input.allowDevicePairing,
+          ),
         authenticateMeta: { headless: true },
       }).pipe(
         Layer.provide(

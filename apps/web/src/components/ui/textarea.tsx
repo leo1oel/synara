@@ -20,12 +20,11 @@ function Textarea({ className, size: sizeProp, unstyled: unstyledProp, ...props 
     <span
       className={
         cn(
-          !unstyled &&
-            GLASS_RAISED_SURFACE_CLASS_NAME,
-            cn(
-              "relative inline-flex w-full rounded-lg text-ui text-foreground has-aria-invalid:border-destructive/36 has-focus-visible:has-aria-invalid:border-destructive/64 has-disabled:opacity-64 sm:text-ui",
-              FIELD_CONTROL_CLASS_NAME,
-            ),
+          !unstyled && GLASS_RAISED_SURFACE_CLASS_NAME,
+          cn(
+            "relative inline-flex w-full rounded-lg text-ui text-foreground has-aria-invalid:border-destructive/36 has-focus-visible:has-aria-invalid:border-destructive/64 has-disabled:opacity-64 sm:text-ui",
+            FIELD_CONTROL_CLASS_NAME,
+          ),
           className,
         ) || undefined
       }

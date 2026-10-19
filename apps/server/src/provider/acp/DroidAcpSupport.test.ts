@@ -330,7 +330,8 @@ describe("resolveDroidAcpAuthMethodId", () => {
     const id = await Effect.runPromise(
       resolveDroidAcpAuthMethodId(
         initializeWithAuthMethods(["device-pairing", "factory-api-key"]),
-        undefined, false,
+        undefined,
+        false,
       ),
     );
     expect(id).toBe("factory-api-key");
@@ -339,9 +340,11 @@ describe("resolveDroidAcpAuthMethodId", () => {
   it("refuses device pairing during discovery even when an unusable API key is present", async () => {
     process.env.FACTORY_API_KEY = "test-factory-key";
     const error = await Effect.runPromise(
-      resolveDroidAcpAuthMethodId(initializeWithAuthMethods(["device-pairing"]), undefined, false).pipe(
-        Effect.flip,
-      ),
+      resolveDroidAcpAuthMethodId(
+        initializeWithAuthMethods(["device-pairing"]),
+        undefined,
+        false,
+      ).pipe(Effect.flip),
     );
     expect(error).toBeInstanceOf(AcpErrors.AcpRequestError);
   });

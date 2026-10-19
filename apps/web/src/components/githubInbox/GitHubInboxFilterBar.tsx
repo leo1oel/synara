@@ -180,14 +180,16 @@ function ActiveFilterChip({
     <Badge variant="info" className="max-w-full min-w-0 rounded-full pr-0.5 pl-1.5 font-normal">
       {icon}
       <span className="min-w-0 truncate">{label}</span>
-      {!locked ? <button
-        type="button"
-        aria-label={i18n._("Remove filter: {label}", { label })}
-        className="flex size-4 shrink-0 items-center justify-center rounded-full hover:bg-info/16 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        onClick={onRemove}
-      >
-        <XIcon aria-hidden className="size-2.5" />
-      </button> : null}
+      {!locked ? (
+        <button
+          type="button"
+          aria-label={i18n._("Remove filter: {label}", { label })}
+          className="flex size-4 shrink-0 items-center justify-center rounded-full hover:bg-info/16 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          onClick={onRemove}
+        >
+          <XIcon aria-hidden className="size-2.5" />
+        </button>
+      ) : null}
     </Badge>
   );
 }
@@ -242,7 +244,8 @@ export function GitHubInboxFilterBar({
     INVOLVEMENT_OPTIONS.find((option) => option.value === filters.involvement) ??
     INVOLVEMENT_OPTIONS[0]!;
   const toggleProject = (projectId: ProjectId) =>
-    !projectLocked && onProjectIdsChange(
+    !projectLocked &&
+    onProjectIdsChange(
       filters.projectIds.includes(projectId)
         ? filters.projectIds.filter((id) => id !== projectId)
         : [...filters.projectIds, projectId],
@@ -456,10 +459,7 @@ export function GitHubInboxFilterBar({
         />
         <KindTabs value={filters.kind} counts={kindCounts} onChange={onKindChange} />
         {menuFilterCount > 0 ? (
-          <div
-            className="flex flex-wrap items-center gap-1"
-            aria-label={i18n._("Active filters")}
-          >
+          <div className="flex flex-wrap items-center gap-1" aria-label={i18n._("Active filters")}>
             {filters.state !== "open" ? (
               <ActiveFilterChip
                 label={filters.state === "merged" ? i18n._("Merged") : i18n._("Closed")}

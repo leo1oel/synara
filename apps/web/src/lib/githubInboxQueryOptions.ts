@@ -25,9 +25,20 @@ export const GITHUB_INBOX_STATES: readonly GitHubInboxState[] = ["open", "closed
 export const githubInboxQueryKeys = {
   all: ["github-inbox"] as const,
   lists: (state: GitHubInboxState) => ["github-inbox", "list", state] as const,
-  list: (state: GitHubInboxState, sort: GitHubInboxSort = "created", scope?: GitHubInboxListScope) =>
+  list: (
+    state: GitHubInboxState,
+    sort: GitHubInboxSort = "created",
+    scope?: GitHubInboxListScope,
+  ) =>
     scope?.projectId
-      ? (["github-inbox", "list", state, sort, scope.projectId, scope.involvement ?? "all"] as const)
+      ? ([
+          "github-inbox",
+          "list",
+          state,
+          sort,
+          scope.projectId,
+          scope.involvement ?? "all",
+        ] as const)
       : (["github-inbox", "list", state, sort] as const),
   issueDetail: (
     input: Pick<GitHubIssueDetailInput, "projectId" | "repository" | "number"> | null,
@@ -49,7 +60,11 @@ export const GITHUB_INBOX_BADGE_POLL_INTERVAL_MS = 15 * 60_000;
 export const GITHUB_ITEM_DETAIL_POLL_INTERVAL_MS = 2 * 60_000;
 export const GITHUB_ITEM_DETAIL_STALE_TIME_MS = 60_000;
 
-function fetchGitHubInboxList(state: GitHubInboxState, sort: GitHubInboxSort, scope?: GitHubInboxListScope) {
+function fetchGitHubInboxList(
+  state: GitHubInboxState,
+  sort: GitHubInboxSort,
+  scope?: GitHubInboxListScope,
+) {
   return ensureNativeApi().githubInbox.list({ state, sort, ...scope });
 }
 

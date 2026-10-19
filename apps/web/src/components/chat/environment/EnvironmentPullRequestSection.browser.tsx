@@ -50,7 +50,11 @@ const {
 
 vi.mock("~/nativeApi", () => ({
   ensureNativeApi: () => ({
-    git: { branchPullRequest: getBranchPullRequest, status: getGitStatus, pullRequestSnapshot: getPullRequestSnapshot },
+    git: {
+      branchPullRequest: getBranchPullRequest,
+      status: getGitStatus,
+      pullRequestSnapshot: getPullRequestSnapshot,
+    },
     pullRequests: {
       detail: getPullRequestDetail,
       action: runPullRequestAction,

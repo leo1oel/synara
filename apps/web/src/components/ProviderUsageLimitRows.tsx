@@ -79,7 +79,9 @@ function SettingsUsageLimitRow({ row }: { row: ProviderUsageDisplayRow }) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-1.5">
-        <span className="text-ui leading-snug font-medium text-foreground">{localizedText.label}</span>
+        <span className="text-ui leading-snug font-medium text-foreground">
+          {localizedText.label}
+        </span>
         <StatusDot
           className={trackProps.markerClassName}
           title={localizedText.paceTitle}
