@@ -118,9 +118,16 @@ export const gitMutationKeys = {
 };
 
 type GitRefreshDepth = "availability" | "active-details";
+/**
+ * "local" skips the GitHub repository and pull-request reads: agent tool activity only
+ * moves the working copy, and those remote reads fan out per visible PR in the folder.
+ */
+type GitRefreshScope = "all" | "local";
 
 interface ActiveGitRefresh {
   depth: GitRefreshDepth;
+  /** Read when each phase starts, so a queued "local" refresh can be upgraded to "all". */
+  includeRemote: boolean;
   started: boolean;
   /** Resolves after the availability phase (repository/status/branches). */
   availability: Promise<void>;
@@ -183,13 +190,19 @@ async function refetchFreshGitQueries(
   );
 }
 
-async function refreshGitAvailability(queryClient: QueryClient, cwd: string): Promise<void> {
+async function refreshGitAvailability(
+  queryClient: QueryClient,
+  cwd: string,
+  includeRemote: boolean,
+): Promise<void> {
   await Promise.all([
-    queryClient.invalidateQueries({
-      queryKey: gitQueryKeys.githubRepository(cwd),
-      exact: true,
-      refetchType: "none",
-    }),
+    includeRemote
+      ? queryClient.invalidateQueries({
+          queryKey: gitQueryKeys.githubRepository(cwd),
+          exact: true,
+          refetchType: "none",
+        })
+      : undefined,
     queryClient.invalidateQueries({
       queryKey: gitQueryKeys.status(cwd),
       exact: true,
@@ -206,7 +219,9 @@ async function refreshGitAvailability(queryClient: QueryClient, cwd: string): Pr
     }),
   ]);
   await Promise.all([
-    refetchFreshGitQueries(queryClient, gitQueryKeys.githubRepository(cwd)),
+    includeRemote
+      ? refetchFreshGitQueries(queryClient, gitQueryKeys.githubRepository(cwd))
+      : undefined,
     refetchFreshGitQueries(queryClient, gitQueryKeys.status(cwd)),
     refetchFreshGitQueries(queryClient, gitQueryKeys.branches(cwd)),
     ...queryClient
@@ -216,14 +231,16 @@ async function refreshGitAvailability(queryClient: QueryClient, cwd: string): Pr
   ]);
 }
 
-function activeGitDetailQueries(queryClient: QueryClient, cwd: string) {
+function activeGitDetailQueries(queryClient: QueryClient, cwd: string, includeRemote = true) {
   const queryCache = queryClient.getQueryCache();
   const queries = [
     ...queryCache.findAll({
       queryKey: gitQueryKeys.workingTreeDiffs(cwd),
       type: "active",
     }),
-    ...queryCache.findAll({ queryKey: gitQueryKeys.pullRequest(cwd), type: "active" }),
+    ...(includeRemote
+      ? queryCache.findAll({ queryKey: gitQueryKeys.pullRequest(cwd), type: "active" })
+      : []),
     // A mounted diff editor keeps showing a base blob, and an open blame
     // popover its attribution, until refetched.
     ...queryCache.findAll({ queryKey: ["git", "file-at-rev", cwd] as const, type: "active" }),
@@ -241,16 +258,22 @@ function activeGitDetailQueries(queryClient: QueryClient, cwd: string) {
   });
 }
 
-async function refreshActiveGitDetails(queryClient: QueryClient, cwd: string): Promise<void> {
+async function refreshActiveGitDetails(
+  queryClient: QueryClient,
+  cwd: string,
+  includeRemote: boolean,
+): Promise<void> {
   await Promise.all([
     queryClient.invalidateQueries({
       queryKey: gitQueryKeys.workingTreeDiffs(cwd),
       refetchType: "none",
     }),
-    queryClient.invalidateQueries({
-      queryKey: gitQueryKeys.pullRequest(cwd),
-      refetchType: "none",
-    }),
+    includeRemote
+      ? queryClient.invalidateQueries({
+          queryKey: gitQueryKeys.pullRequest(cwd),
+          refetchType: "none",
+        })
+      : undefined,
     // Revision-dependent families: after a save, commit, or branch movement the
     // cached attribution/blobs would otherwise survive their stale windows.
     queryClient.invalidateQueries({
@@ -262,7 +285,7 @@ async function refreshActiveGitDetails(queryClient: QueryClient, cwd: string): P
       refetchType: "none",
     }),
   ]);
-  for (const query of activeGitDetailQueries(queryClient, cwd)) {
+  for (const query of activeGitDetailQueries(queryClient, cwd, includeRemote)) {
     await enqueueGitRefresh(queryClient, () => refetchFreshGitQueries(queryClient, query.queryKey));
   }
 }
@@ -344,27 +367,32 @@ export function refreshGitQueriesForCwd(
   queryClient: QueryClient,
   cwd: string,
   depth: GitRefreshDepth = "active-details",
+  scope: GitRefreshScope = "all",
 ): Promise<void> {
   const existing = activeGitRefreshes.get(queryClient)?.get(cwd);
   if (existing && !existing.started) {
     if (depth === "active-details") existing.depth = "active-details";
+    if (scope === "all") existing.includeRemote = true;
     return depth === "availability" ? existing.availability : existing.promise;
   }
 
   const entry: ActiveGitRefresh = {
     depth,
+    includeRemote: scope === "all",
     started: false,
     availability: Promise.resolve(),
     promise: Promise.resolve(),
   };
   entry.availability = enqueueGitRefresh(queryClient, () => {
     entry.started = true;
-    return refreshGitAvailability(queryClient, cwd);
+    return refreshGitAvailability(queryClient, cwd, entry.includeRemote);
   });
   // Read entry.depth only after availability settles so a pre-start upgrade to
   // "active-details" is honored even when the original request was availability-only.
   entry.promise = entry.availability.then(() =>
-    entry.depth === "active-details" ? refreshActiveGitDetails(queryClient, cwd) : undefined,
+    entry.depth === "active-details"
+      ? refreshActiveGitDetails(queryClient, cwd, entry.includeRemote)
+      : undefined,
   );
   trackGitRefresh(queryClient, cwd, entry);
   return depth === "availability" ? entry.availability : entry.promise;
@@ -418,10 +446,25 @@ export function invalidateGitQueriesForCwds(queryClient: QueryClient, cwds: Iter
   return Promise.all(uniqueCwds.map((cwd) => refreshGitQueriesForCwd(queryClient, cwd)));
 }
 
-/** Event-driven refresh for checkouts that running agents just touched; see activityRefreshThrottle. */
+/**
+ * Event-driven full refresh (including GitHub repository and pull requests) for checkouts
+ * whose turn diff or workspace metadata just changed; see activityRefreshThrottle.
+ */
 export const refreshGitQueriesForCwdsAfterActivity = createActivityRefreshThrottle(
   (queryClient, cwd) => {
     void refreshGitQueriesForCwd(queryClient, cwd).catch(() => undefined);
+  },
+);
+
+/**
+ * Mid-turn refresh after agent tool calls: local Git state only. Pull requests and the
+ * GitHub repository wait for the finalized turn diff, focus or their own polling.
+ */
+export const refreshLocalGitQueriesForCwdsAfterActivity = createActivityRefreshThrottle(
+  (queryClient, cwd) => {
+    void refreshGitQueriesForCwd(queryClient, cwd, "active-details", "local").catch(
+      () => undefined,
+    );
   },
 );
 

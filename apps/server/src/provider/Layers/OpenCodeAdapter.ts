@@ -339,6 +339,15 @@ const installOpenCodeGatewayMcp = Effect.fn("installOpenCodeGatewayMcp")(functio
           ),
         ).pipe(
           Effect.timeout("10 seconds"),
+          Effect.flatMap((added) => {
+            const connectorStatus = added.data?.[connector.name]?.status;
+            return connectorStatus === "connected"
+              ? Effect.void
+              : Effect.logWarning("OpenCode connector MCP install failed", {
+                  connector: connector.name,
+                  detail: `status: ${connectorStatus ?? "missing"}`,
+                });
+          }),
           // Log the summarized detail only: the raw cause can echo request headers.
           Effect.catch((error) =>
             Effect.logWarning("OpenCode connector MCP install failed", {
@@ -1399,9 +1408,12 @@ const stopOpenCodeContext = Effect.fn("stopOpenCodeContext")(function* (
 
   yield* runOpenCodeSdk("session.abort", () =>
     context.client.session.abort({ sessionID: context.openCodeSessionId }),
-  ).pipe(Effect.ignore({ log: true }));
-
-  yield* releaseOpenCodeSessionResources(context, beforeRelease);
+  ).pipe(
+    Effect.ignore({ log: true }),
+    // A cancelled abort still retires the stopped context before recovery can
+    // replace it. Otherwise its managed server and gateway lease are abandoned.
+    Effect.ensuring(releaseOpenCodeSessionResources(context, beforeRelease)),
+  );
 });
 
 export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
@@ -4572,7 +4584,10 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         Effect.sync(() => [...sessions.values()].map((context) => context.session));
 
       const hasSession: OpenCodeAdapterShape["hasSession"] = (threadId) =>
-        Effect.sync(() => sessions.has(threadId));
+        Effect.sync(() => {
+          const context = sessions.get(threadId);
+          return context !== undefined && !Ref.getUnsafe(context.stopped);
+        });
 
       const readThread: OpenCodeAdapterShape["readThread"] = Effect.fn("readThread")(
         function* (threadId) {
