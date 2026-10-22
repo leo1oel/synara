@@ -94,6 +94,10 @@ import {
   COMPOSER_NODE_CLASSES,
   type ComposerInlineTokenNode,
 } from "./composer-nodes";
+import { ComposerDrawnCaretPlugin, shouldDrawComposerCaret } from "./ComposerDrawnCaretPlugin";
+
+const DRAW_COMPOSER_CARET =
+  typeof navigator !== "undefined" && shouldDrawComposerCaret(navigator.userAgent);
 
 const COMPOSER_EDITOR_HMR_KEY = `composer-editor-${Math.random().toString(36).slice(2)}`;
 
@@ -1445,6 +1449,7 @@ function ComposerPromptEditorInner({
           }
           ErrorBoundary={LexicalErrorBoundary}
         />
+        {DRAW_COMPOSER_CARET ? <ComposerDrawnCaretPlugin /> : null}
         <OnChangePlugin onChange={handleEditorChange} />
         <ComposerCommandKeyPlugin {...(onCommandKeyDown ? { onCommandKeyDown } : {})} />
         <ComposerInlineTokenArrowPlugin />

@@ -395,6 +395,24 @@
   }
 }
 
+/* The WebKit composer's drawn caret (ComposerDrawnCaretPlugin) blinks at the
+   macOS insertion point's ~1s cadence; the plugin restarts it on every move. */
+@keyframes composer-drawn-caret-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+
+  50.01%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.composer-drawn-caret {
+  animation: composer-drawn-caret-blink 1.06s 0.5s infinite;
+}
+
 /* One-shot entry for the sidebar's segment surface swap (Studio <-> Projects).
    Keyed remounts play this on the incoming surface so the switch reads
    as a movement instead of a hard cut. Enter-only by design: no exit or height
