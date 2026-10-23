@@ -12,6 +12,36 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
+#: src/hooks/useTerminalSurfaceController.ts
+msgid "Unable to close terminal"
+msgstr "无法关闭终端"
+
+#. js-lingui-explicit-id
+#: src/hooks/useTerminalSurfaceController.ts
+msgid "Please try again."
+msgstr "请再试一次。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerRunningAgentsCapsule.tsx
+msgid "1 agent running"
+msgstr "1 个子助手正在运行"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerRunningAgentsCapsule.tsx
+msgid "{count} agents running"
+msgstr "{count} 个子助手正在运行"
+
+#. js-lingui-explicit-id
+#: src/components/chat/useChatRuntimeModes.ts
+msgid "Could not update access mode"
+msgstr "无法更新权限模式"
+
+#. js-lingui-explicit-id
+#: src/components/chat/useChatRuntimeModes.ts
+msgid "Send a message to switch to {provider} first, then choose this access mode."
+msgstr "请先发送一条消息切换到 {provider}，再选择此权限模式。"
+
+#. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
 #: src/components/chat/ComposerAutomationSetupBanner.tsx
 #: src/components/chat/ComposerMcpDialog.tsx
@@ -9892,16 +9922,6 @@ msgstr "正在加载文件…"
 #: src/components/chat/SingleChatSurface.tsx
 msgid "Editor view"
 msgstr "编辑器视图"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SingleChatSurface.tsx
-msgid "Unable to close terminal"
-msgstr "无法关闭终端"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SingleChatSurface.tsx
-msgid "Please try again."
-msgstr "请再试一次。"
 
 #. js-lingui-explicit-id
 #: src/components/chat/SubagentRunCard.logic.ts

@@ -8,6 +8,7 @@ import {
   type ServerProviderStatus,
 } from "@synara/contracts";
 import { useCallback, useEffect, useRef } from "react";
+import { i18n } from "~/i18n";
 import { newCommandId } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
 import { useComposerDraftStore } from "../../composerDraftStore";
@@ -84,7 +85,7 @@ export function useChatRuntimeModes({
           if (!api) {
             toastManager.add({
               type: "error",
-              title: "Could not update access mode",
+              title: i18n._("Could not update access mode"),
               description: "Synara is not connected to the server.",
             });
             return false;
@@ -97,10 +98,11 @@ export function useChatRuntimeModes({
             // cannot run it. The switch itself happens on Send.
             toastManager.add({
               type: "error",
-              title: "Could not update access mode",
-              description: `Send a message to switch to ${
-                PROVIDER_DISPLAY_NAMES[selectedModelSelection.provider]
-              } first, then choose this access mode.`,
+              title: i18n._("Could not update access mode"),
+              description: i18n._(
+                "Send a message to switch to {provider} first, then choose this access mode.",
+                { provider: PROVIDER_DISPLAY_NAMES[selectedModelSelection.provider] },
+              ),
             });
             return false;
           }
@@ -137,7 +139,7 @@ export function useChatRuntimeModes({
           } catch (error) {
             toastManager.add({
               type: "error",
-              title: "Could not update access mode",
+              title: i18n._("Could not update access mode"),
               description: error instanceof Error ? error.message : "An unexpected error occurred.",
             });
             return false;

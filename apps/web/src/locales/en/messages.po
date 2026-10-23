@@ -12,6 +12,36 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
+#: src/hooks/useTerminalSurfaceController.ts
+msgid "Unable to close terminal"
+msgstr "Unable to close terminal"
+
+#. js-lingui-explicit-id
+#: src/hooks/useTerminalSurfaceController.ts
+msgid "Please try again."
+msgstr "Please try again."
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerRunningAgentsCapsule.tsx
+msgid "1 agent running"
+msgstr "1 agent running"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerRunningAgentsCapsule.tsx
+msgid "{count} agents running"
+msgstr "{count} agents running"
+
+#. js-lingui-explicit-id
+#: src/components/chat/useChatRuntimeModes.ts
+msgid "Could not update access mode"
+msgstr "Could not update access mode"
+
+#. js-lingui-explicit-id
+#: src/components/chat/useChatRuntimeModes.ts
+msgid "Send a message to switch to {provider} first, then choose this access mode."
+msgstr "Send a message to switch to {provider} first, then choose this access mode."
+
+#. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
 #: src/components/chat/ComposerAutomationSetupBanner.tsx
 #: src/components/chat/ComposerMcpDialog.tsx
@@ -9892,16 +9922,6 @@ msgstr "Loading file..."
 #: src/components/chat/SingleChatSurface.tsx
 msgid "Editor view"
 msgstr "Editor view"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SingleChatSurface.tsx
-msgid "Unable to close terminal"
-msgstr "Unable to close terminal"
-
-#. js-lingui-explicit-id
-#: src/components/chat/SingleChatSurface.tsx
-msgid "Please try again."
-msgstr "Please try again."
 
 #. js-lingui-explicit-id
 #: src/components/chat/SubagentRunCard.logic.ts

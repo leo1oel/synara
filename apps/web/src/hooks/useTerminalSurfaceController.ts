@@ -15,6 +15,7 @@ import { selectRightDockState, useRightDockStore } from "~/rightDockStore";
 import { selectThreadTerminalState, useTerminalStateStore } from "~/terminalStateStore";
 import { disposeAndCloseTerminalSession } from "~/components/terminal/terminalSession";
 import { toastManager } from "~/components/ui/toast";
+import { i18n } from "~/i18n";
 
 type TerminalMetadata = { cliKind: TerminalCliKind | null; label: string };
 type TerminalActivity = {
@@ -143,8 +144,8 @@ export async function closeDockTerminalPane(input: {
   } catch (error: unknown) {
     toastManager.add({
       type: "error",
-      title: "Unable to close terminal",
-      description: error instanceof Error ? error.message : "Please try again.",
+      title: i18n._("Unable to close terminal"),
+      description: error instanceof Error ? error.message : i18n._("Please try again."),
     });
   }
 }

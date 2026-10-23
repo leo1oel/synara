@@ -5,8 +5,7 @@
 // Layer: Chat composer UI
 // Exports: ComposerRunningAgentsCapsule
 
-import { pluralize } from "@synara/shared/text";
-
+import { i18n } from "~/i18n";
 import { BotIcon } from "~/lib/icons";
 import { ComposerCapsule } from "./ComposerCapsule";
 import { COMPOSER_STACKED_PANEL_ICON_CLASS_NAME } from "./composerStackedPanelStyles";
@@ -24,7 +23,7 @@ export function ComposerRunningAgentsCapsule({ count, onShow }: ComposerRunningA
       onClick={onShow}
       testId="running-agents-capsule"
     >
-      {count} {pluralize(count, "agent")} running
+      {count === 1 ? i18n._("1 agent running") : i18n._("{count} agents running", { count })}
     </ComposerCapsule>
   );
 }
