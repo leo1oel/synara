@@ -34,6 +34,10 @@ import {
   readLatticeConfirmationMessage,
   readLatticeHostPointerMessage,
   LATTICE_COMPOSER_FILES,
+  LATTICE_COMPOSER_PROMPT,
+  SYNARA_COMPOSER_PROMPT_RESULT,
+  postComposerPromptResultToLattice,
+  readLatticeComposerPromptMessage,
   LATTICE_HOST_POINTER,
   LATTICE_CONFIRMATION_ACK,
   LATTICE_CONFIRMATION_RESPONSE,
@@ -57,6 +61,10 @@ import {
   SYNARA_SETTINGS_WHEEL,
   SYNARA_SHOW_IN_FOLDER,
 } from "./embedMode";
+
+function fromHost(data: unknown): MessageEvent {
+  return { source: window.parent, origin: "http://localhost:1420", data } as MessageEvent;
+}
 
 function installBrowserStubs(
   theme: "light" | "dark" = "dark",
@@ -1010,6 +1018,169 @@ describe("Lattice embed mode", () => {
     postHostContextSelectionClearToLattice(config);
     expect(postMessage).toHaveBeenCalledWith(
       { type: LATTICE_HOST_CONTEXT_SELECTION_CLEAR },
+      "http://localhost:1420",
+    );
+  });
+
+  it("keeps valid slide comments and preview links and drops malformed ones alone", () => {
+    installBrowserStubs();
+    initializeEmbedMode();
+    const config = readEmbedMode()!;
+    const comment = {
+      id: "c-1234abcd",
+      line: 44,
+      ts: "2026-09-03T00:00:00.000Z",
+      note: "Make this chart larger",
+    };
+    const regionComment = {
+      ...comment,
+      id: "c-region",
+      hint: "chart",
+      rect: { x: 10, y: 20, w: 300, h: 200 },
+      page: 2,
+    };
+    const presentation = {
+      slideId: "research-update",
+      pageIndex: 2,
+      pageNumber: 3,
+      totalPages: 8,
+      slideTitle: "Research update",
+      view: "slides",
+      pagePath: "slides/research-update/index.tsx",
+      selection: null,
+      updatedAt: "2026-09-04T12:00:00.000Z",
+    };
+    const read = (presentationFields: Record<string, unknown>) =>
+      readLatticeHostContextMessage(
+        {
+          source: window.parent,
+          origin: "http://localhost:1420",
+          data: {
+            type: LATTICE_HOST_CONTEXT,
+            version: 1,
+            workspaceRoot: "/Users/me/paper",
+            activeSurface: "editor",
+            presentation: { ...presentation, ...presentationFields },
+          },
+        } as MessageEvent,
+        config,
+      )?.presentation;
+
+    expect(
+      read({
+        pendingComments: [comment, regionComment],
+        previewUrl: "http://127.0.0.1:5173/s/research-update?page=3",
+      }),
+    ).toEqual({
+      ...presentation,
+      pendingComments: [comment, regionComment],
+      previewUrl: "http://127.0.0.1:5173/s/research-update?page=3",
+    });
+    expect(
+      read({
+        pendingComments: [
+          comment,
+          { ...comment, id: "" },
+          { ...comment, line: -1 },
+          { ...comment, note: 7 },
+          { ...comment, rect: { x: 1, y: 2, w: "wide", h: 4 } },
+          { ...comment, page: 1.5 },
+          null,
+        ],
+        previewUrl: "javascript:alert(1)",
+      }),
+    ).toEqual({ ...presentation, pendingComments: [comment] });
+    expect(read({ pendingComments: "three", previewUrl: 42 })).toEqual(presentation);
+    expect(
+      read({ pendingComments: Array.from({ length: 250 }, () => comment) })?.pendingComments,
+    ).toHaveLength(200);
+  });
+
+  it("reads composer prompt requests once and answers rejected ones", () => {
+    const { postMessage } = installBrowserStubs();
+    initializeEmbedMode();
+    const config = readEmbedMode()!;
+    const valid = {
+      type: LATTICE_COMPOSER_PROMPT,
+      version: 1,
+      requestId: "req-1",
+      workspaceRoot: "/Users/me/paper/",
+      text: "Apply the slide comments",
+      mode: "send",
+    };
+
+    const event = fromHost(valid);
+    expect(readLatticeComposerPromptMessage(event, config)).toEqual({
+      kind: "request",
+      request: {
+        requestId: "req-1",
+        workspaceRoot: "/Users/me/paper/",
+        text: "Apply the slide comments",
+        mode: "send",
+        thread: "active",
+      },
+    });
+    // A second chat pane reading the same event must not act on it again.
+    expect(readLatticeComposerPromptMessage(event, config)).toBeNull();
+    expect(
+      readLatticeComposerPromptMessage(
+        fromHost({ ...valid, thread: "new", mode: "draft", text: "" }),
+        config,
+      ),
+    ).toMatchObject({ kind: "request", request: { thread: "new", mode: "draft", text: "" } });
+
+    expect(
+      readLatticeComposerPromptMessage(
+        { source: window.parent, origin: "https://untrusted.example", data: valid } as MessageEvent,
+        config,
+      ),
+    ).toBeNull();
+    expect(
+      readLatticeComposerPromptMessage(
+        fromHost({ ...valid, type: LATTICE_COMPOSER_FILES }),
+        config,
+      ),
+    ).toBeNull();
+
+    for (const invalid of [
+      { ...valid, version: 2 },
+      { ...valid, mode: "steer" },
+      { ...valid, thread: "side" },
+      { ...valid, text: "x".repeat(4_001) },
+      { ...valid, text: "   " },
+      { ...valid, workspaceRoot: "" },
+    ]) {
+      expect(readLatticeComposerPromptMessage(fromHost(invalid), config)).toMatchObject({
+        kind: "rejected",
+        requestId: "req-1",
+        code: "invalid",
+      });
+    }
+    expect(
+      readLatticeComposerPromptMessage(fromHost({ ...valid, requestId: "r".repeat(129) }), config),
+    ).toMatchObject({ kind: "rejected", requestId: "", code: "invalid" });
+    expect(
+      readLatticeComposerPromptMessage(
+        fromHost({ ...valid, workspaceRoot: "/Users/me/other" }),
+        config,
+      ),
+    ).toMatchObject({ kind: "rejected", requestId: "req-1", code: "workspace-mismatch" });
+
+    postComposerPromptResultToLattice(config, {
+      requestId: "req-1",
+      ok: true,
+      outcome: "queued",
+      threadId: "thread-1",
+    });
+    expect(postMessage).toHaveBeenCalledWith(
+      {
+        type: SYNARA_COMPOSER_PROMPT_RESULT,
+        version: 1,
+        requestId: "req-1",
+        ok: true,
+        outcome: "queued",
+        threadId: "thread-1",
+      },
       "http://localhost:1420",
     );
   });

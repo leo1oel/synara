@@ -1,6 +1,7 @@
 // FILE: ComposerLatticeContextBar.logic.test.ts
 // Purpose: Pins the exact context summary, detail, and selection-clear semantics.
 
+import { setupI18n } from "@lingui/core";
 import { describe, expect, it } from "vitest";
 
 import { LATTICE_HOST_CONTEXT, type LatticeHostContextSnapshot } from "../../embedMode";
@@ -123,6 +124,41 @@ describe("ComposerLatticeContextBar presentation", () => {
         },
       })?.text,
     ).toBe("<h1>");
+  });
+
+  it("counts the slide's pending comments, in English and Chinese", async () => {
+    const comment = { id: "c-1", line: 44, ts: "2026-09-03T00:00:00.000Z", note: "Larger chart" };
+    const withComments = (count: number): LatticeHostContextSnapshot => ({
+      ...presentationContext,
+      presentation: {
+        ...presentationContext.presentation!,
+        pendingComments: Array.from({ length: count }, (_, index) => ({
+          ...comment,
+          id: `c-${index}`,
+        })),
+      },
+    });
+    const commentDetail = (
+      context: LatticeHostContextSnapshot,
+      i18n?: Parameters<typeof latticeContextDetails>[1],
+    ) =>
+      latticeContextDetails(context, i18n).find(
+        (detail) => detail.label === "Slide comments" || detail.label === "幻灯片评论",
+      );
+
+    expect(commentDetail(presentationContext)).toBeUndefined();
+    expect(commentDetail(withComments(0))).toBeUndefined();
+    expect(commentDetail(withComments(1))).toEqual({ label: "Slide comments", value: "1 comment" });
+    expect(commentDetail(withComments(3))).toEqual({
+      label: "Slide comments",
+      value: "3 comments",
+    });
+
+    const { messages } = await import("../../locales/zh-CN/messages.po");
+    const zh = setupI18n();
+    zh.loadAndActivate({ locale: "zh-CN", messages });
+    expect(commentDetail(withComments(1), zh)).toEqual({ label: "幻灯片评论", value: "1 条评论" });
+    expect(commentDetail(withComments(3), zh)).toEqual({ label: "幻灯片评论", value: "3 条评论" });
   });
 
   it("clears only explicit selections and preserves ambient context", () => {

@@ -176,24 +176,31 @@ async function handleNewThread(
   return { ok: true, outcome: "sent", threadId };
 }
 
+/** Carry out one valid request; never throws, so Lattice always gets an answer. */
+export async function respondToLatticeComposerPrompt(
+  request: LatticeComposerPromptRequest,
+  options: LatticeComposerPromptOptions,
+): Promise<PromptResult> {
+  try {
+    return request.thread === "new"
+      ? await handleNewThread(request, options)
+      : await handleActiveThread(request, options);
+  } catch (error) {
+    return {
+      ok: false,
+      error: {
+        code: "send-failed",
+        message: error instanceof Error ? error.message : String(error),
+      },
+    };
+  }
+}
+
 export function useLatticeComposerPrompt(options: LatticeComposerPromptOptions): void {
-  const handleRequest = useStableCallback(async (request: LatticeComposerPromptRequest) => {
-    // Capture this render's state: the chat may switch threads while we wait.
-    const opts = options;
-    try {
-      return request.thread === "new"
-        ? await handleNewThread(request, opts)
-        : await handleActiveThread(request, opts);
-    } catch (error) {
-      return {
-        ok: false,
-        error: {
-          code: "send-failed",
-          message: error instanceof Error ? error.message : String(error),
-        },
-      } satisfies PromptResult;
-    }
-  });
+  // Answer with this render's state: the chat may switch threads while a send runs.
+  const handleRequest = useStableCallback((request: LatticeComposerPromptRequest) =>
+    respondToLatticeComposerPrompt(request, options),
+  );
 
   const enabled = options.enabled;
   useEffect(() => {
