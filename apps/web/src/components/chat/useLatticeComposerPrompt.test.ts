@@ -136,17 +136,38 @@ describe("respondToLatticeComposerPrompt in the active chat", () => {
 
   it("drafts instead of answering a pending question or approval", async () => {
     for (const pending of [{ hasPendingUserInput: true }, { hasPendingApproval: true }]) {
+      const drafts = useComposerDraftStore.getState();
+      drafts.setPrompt(THREAD_ID, "Unsent draft");
+      // While the composer shows the approval or the question's answer, its
+      // editor does not hold the draft.
       const h = harness({ ...pending, hasLiveTurn: true });
+      h.composer = "answer text";
       await expect(respondToLatticeComposerPrompt(request(), h.options)).resolves.toMatchObject({
         ok: false,
         outcome: "drafted",
         threadId: THREAD_ID,
         error: { code: "awaiting-input" },
       });
-      expect(h.composer).toBe("Apply the slide comments");
+      expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt).toBe(
+        "Unsent draft\nApply the slide comments",
+      );
+      expect(h.composer).toBe("answer text");
+      expect(h.options.setComposerPromptAndFocus).not.toHaveBeenCalled();
       expect(h.options.sendQueuedTurn).not.toHaveBeenCalled();
       expect(h.options.enqueueQueuedTurn).not.toHaveBeenCalled();
     }
+  });
+
+  it("drafts behind a pending approval into the saved draft too", async () => {
+    useComposerDraftStore.getState().setPrompt(THREAD_ID, "");
+    const h = harness({ hasPendingApproval: true });
+    await expect(
+      respondToLatticeComposerPrompt(request({ mode: "draft" }), h.options),
+    ).resolves.toEqual({ ok: true, outcome: "drafted", threadId: THREAD_ID });
+    expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt).toBe(
+      "Apply the slide comments",
+    );
+    expect(h.options.setComposerPromptAndFocus).not.toHaveBeenCalled();
   });
 
   it("drafts and reports no-provider when the provider cannot send", async () => {

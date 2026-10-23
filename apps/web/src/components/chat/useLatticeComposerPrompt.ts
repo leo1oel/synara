@@ -59,6 +59,15 @@ async function handleActiveThread(
 ): Promise<PromptResult> {
   const threadId = opts.threadId;
   const draft = () => {
+    if (opts.hasPendingApproval || opts.hasPendingUserInput) {
+      // The composer is the approval prompt or the question's answer box right
+      // now, not the draft: add to the saved draft it returns to afterwards, so
+      // Lattice's text never becomes an answer and the user's draft survives.
+      const drafts = useComposerDraftStore.getState();
+      const saved = drafts.draftsByThreadId[threadId]?.prompt ?? "";
+      drafts.setPrompt(threadId, appendComposerPromptDraft(saved, request.text));
+      return;
+    }
     opts.setComposerPromptAndFocus(
       appendComposerPromptDraft(opts.readComposerPrompt(), request.text),
     );
