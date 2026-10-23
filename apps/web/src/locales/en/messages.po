@@ -12,34 +12,9 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
-#: src/hooks/useTerminalSurfaceController.ts
-msgid "Unable to close terminal"
-msgstr "Unable to close terminal"
-
-#. js-lingui-explicit-id
-#: src/hooks/useTerminalSurfaceController.ts
-msgid "Please try again."
-msgstr "Please try again."
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerRunningAgentsCapsule.tsx
-msgid "1 agent running"
-msgstr "1 agent running"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerRunningAgentsCapsule.tsx
-msgid "{count} agents running"
-msgstr "{count} agents running"
-
-#. js-lingui-explicit-id
-#: src/components/chat/useChatRuntimeModes.ts
-msgid "Could not update access mode"
-msgstr "Could not update access mode"
-
-#. js-lingui-explicit-id
-#: src/components/chat/useChatRuntimeModes.ts
-msgid "Send a message to switch to {provider} first, then choose this access mode."
-msgstr "Send a message to switch to {provider} first, then choose this access mode."
+#: src/components/chat/OpenThreadTabStrip.tsx
+msgid "New thread in this workspace"
+msgstr "New thread in this workspace"
 
 #. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
@@ -1778,6 +1753,16 @@ msgstr "Deleted {count} threads"
 #: src/hooks/useSidebarThreadActions.ts
 msgid "Failed to delete threads"
 msgstr "Failed to delete threads"
+
+#. js-lingui-explicit-id
+#: src/hooks/useTerminalSurfaceController.ts
+msgid "Unable to close terminal"
+msgstr "Unable to close terminal"
+
+#. js-lingui-explicit-id
+#: src/hooks/useTerminalSurfaceController.ts
+msgid "Please try again."
+msgstr "Please try again."
 
 #. js-lingui-explicit-id
 #: src/hooks/useThreadWorkspaceHandoff.ts
@@ -8220,6 +8205,16 @@ msgid "Code block"
 msgstr "Code block"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerRunningAgentsCapsule.tsx
+msgid "1 agent running"
+msgstr "1 agent running"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerRunningAgentsCapsule.tsx
+msgid "{count} agents running"
+msgstr "{count} agents running"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ComposerSlashStatusDialog.tsx
 msgid "New worktree (pending)"
 msgstr "New worktree (pending)"
@@ -10819,6 +10814,16 @@ msgstr "1 other action"
 #: src/components/chat/toolCallGroup.logic.ts
 msgid "{count} other actions"
 msgstr "{count} other actions"
+
+#. js-lingui-explicit-id
+#: src/components/chat/useChatRuntimeModes.ts
+msgid "Could not update access mode"
+msgstr "Could not update access mode"
+
+#. js-lingui-explicit-id
+#: src/components/chat/useChatRuntimeModes.ts
+msgid "Send a message to switch to {provider} first, then choose this access mode."
+msgstr "Send a message to switch to {provider} first, then choose this access mode."
 
 #. js-lingui-explicit-id
 #: src/components/chat/useSubagentRunControls.ts

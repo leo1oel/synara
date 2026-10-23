@@ -12,34 +12,9 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
-#: src/hooks/useTerminalSurfaceController.ts
-msgid "Unable to close terminal"
-msgstr "无法关闭终端"
-
-#. js-lingui-explicit-id
-#: src/hooks/useTerminalSurfaceController.ts
-msgid "Please try again."
-msgstr "请再试一次。"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerRunningAgentsCapsule.tsx
-msgid "1 agent running"
-msgstr "1 个子助手正在运行"
-
-#. js-lingui-explicit-id
-#: src/components/chat/ComposerRunningAgentsCapsule.tsx
-msgid "{count} agents running"
-msgstr "{count} 个子助手正在运行"
-
-#. js-lingui-explicit-id
-#: src/components/chat/useChatRuntimeModes.ts
-msgid "Could not update access mode"
-msgstr "无法更新权限模式"
-
-#. js-lingui-explicit-id
-#: src/components/chat/useChatRuntimeModes.ts
-msgid "Send a message to switch to {provider} first, then choose this access mode."
-msgstr "请先发送一条消息切换到 {provider}，再选择此权限模式。"
+#: src/components/chat/OpenThreadTabStrip.tsx
+msgid "New thread in this workspace"
+msgstr "在此工作区新建线程"
 
 #. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
@@ -1778,6 +1753,16 @@ msgstr "已删除 {count} 个对话"
 #: src/hooks/useSidebarThreadActions.ts
 msgid "Failed to delete threads"
 msgstr "删除对话失败"
+
+#. js-lingui-explicit-id
+#: src/hooks/useTerminalSurfaceController.ts
+msgid "Unable to close terminal"
+msgstr "无法关闭终端"
+
+#. js-lingui-explicit-id
+#: src/hooks/useTerminalSurfaceController.ts
+msgid "Please try again."
+msgstr "请再试一次。"
 
 #. js-lingui-explicit-id
 #: src/hooks/useThreadWorkspaceHandoff.ts
@@ -8220,6 +8205,16 @@ msgid "Code block"
 msgstr "代码块"
 
 #. js-lingui-explicit-id
+#: src/components/chat/ComposerRunningAgentsCapsule.tsx
+msgid "1 agent running"
+msgstr "1 个子助手正在运行"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerRunningAgentsCapsule.tsx
+msgid "{count} agents running"
+msgstr "{count} 个子助手正在运行"
+
+#. js-lingui-explicit-id
 #: src/components/chat/ComposerSlashStatusDialog.tsx
 msgid "New worktree (pending)"
 msgstr "新工作树（准备中）"
@@ -10819,6 +10814,16 @@ msgstr "另外 1 项操作"
 #: src/components/chat/toolCallGroup.logic.ts
 msgid "{count} other actions"
 msgstr "另外 {count} 项操作"
+
+#. js-lingui-explicit-id
+#: src/components/chat/useChatRuntimeModes.ts
+msgid "Could not update access mode"
+msgstr "无法更新权限模式"
+
+#. js-lingui-explicit-id
+#: src/components/chat/useChatRuntimeModes.ts
+msgid "Send a message to switch to {provider} first, then choose this access mode."
+msgstr "请先发送一条消息切换到 {provider}，再选择此权限模式。"
 
 #. js-lingui-explicit-id
 #: src/components/chat/useSubagentRunControls.ts

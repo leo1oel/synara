@@ -8,6 +8,7 @@
 //             thread context menu.
 
 import type { ProjectId, ResolvedKeybindingsConfig, ThreadId } from "@synara/contracts";
+import { useLingui } from "@lingui/react";
 import { useEffect, useState, type RefObject } from "react";
 
 import { useComposerDraftStore } from "~/composerDraftStore";
@@ -64,6 +65,7 @@ export function OpenThreadTabStrip(props: {
   onNewThread: (() => void) | null;
 }) {
   const { activeThreadId, keybindings } = props;
+  const { i18n } = useLingui();
   useRecordOpenThreadTab(activeThreadId);
   const tabs = useOpenThreadTabs({ activeThreadId });
   const closeThreadTab = useOpenThreadTabsStore((state) => state.closeThreadTab);
@@ -261,7 +263,7 @@ export function OpenThreadTabStrip(props: {
                   type="button"
                   variant="chrome"
                   size="icon-xs"
-                  aria-label="New thread in this workspace"
+                  aria-label={i18n._("New thread in this workspace")}
                   className={DOCK_HEADER_ICON_BUTTON_CLASS}
                   onClick={() => props.onNewThread?.()}
                 />
@@ -269,7 +271,7 @@ export function OpenThreadTabStrip(props: {
             >
               <PlusSignIcon className="size-3.5" />
             </TooltipTrigger>
-            <TooltipPopup side="bottom">New thread in this workspace</TooltipPopup>
+            <TooltipPopup side="bottom">{i18n._("New thread in this workspace")}</TooltipPopup>
           </Tooltip>
         ) : null
       }

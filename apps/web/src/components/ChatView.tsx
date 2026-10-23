@@ -4276,6 +4276,9 @@ export default function ChatView({
   // false return leaves the chord for the native window-close role.
   const closeActiveThreadTabRef = useRef<(() => boolean) | null>(null);
   const onCloseActiveThreadTab = useStableCallback(() => {
+    // The embedding host owns Cmd/Ctrl+W (Lattice: File > Close Window), so a wide embedded
+    // panel with the tab strip mounted leaves the chord to it like a narrow one does.
+    if (isEmbed) return false;
     return closeActiveThreadTabRef.current?.() ?? false;
   });
   const onCloseDockTerminalPane = useStableCallback((paneId: string) => {
