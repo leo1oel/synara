@@ -371,6 +371,10 @@ export function runAcpFreshSessionSetup<A>(
 }
 
 export interface AcpSessionRuntimeOptions {
+  /** Adapter-owned identity for separating concurrent assistant streams. */
+  readonly assistantItemScope?: (
+    metadata: Record<string, unknown> | undefined,
+  ) => string | undefined;
   readonly spawn: AcpSpawnInput;
   readonly cwd: string;
   readonly resumeSessionId?: string;
@@ -436,6 +440,8 @@ export interface AcpSessionRuntimeOptions {
   readonly loadReplayPolicy?: {
     readonly quietMs?: number;
     readonly hardTimeoutMs?: number;
+    /** Forward historical tool state to an adapter that rebuilds native task ownership. */
+    readonly retainToolState?: boolean;
   };
   readonly requestLogger?: (event: AcpSessionRequestLogEvent) => Effect.Effect<void, never>;
   readonly normalizeIncomingMessage?: (message: unknown) => unknown;
@@ -589,6 +595,7 @@ type AcpStartState =
 interface AcpAssistantSegmentState {
   readonly nextSegmentIndex: number;
   readonly activeItemId?: string;
+  readonly activeItemScope?: string;
 }
 
 interface EnsureActiveAssistantSegmentResult {
@@ -1303,14 +1310,14 @@ const makeAcpSessionRuntime = (
         | Acp.LoadSessionResponse
         | Acp.NewSessionResponse
         | Acp.ResumeSessionResponse,
-      options: {
+      epochOptions: {
         readonly replay?: "all" | "bounded-only";
         readonly resetState?: boolean;
       } = {},
     ): Effect.Effect<void> =>
       Effect.gen(function* () {
-        const replay = options.replay ?? "all";
-        const resetState = options.resetState ?? false;
+        const replay = epochOptions.replay ?? "all";
+        const resetState = epochOptions.resetState ?? false;
 
         // Atomically capture and clear pending state for the new session. Notifications
         // belonging to other (e.g. discarded probe) sessions are discarded.
@@ -1359,6 +1366,8 @@ const makeAcpSessionRuntime = (
             toolCallsRef,
             assistantSegmentRef,
             runtimeInstanceId,
+            assistantItemScope: options.assistantItemScope,
+            retainReplayToolState: options.loadReplayPolicy?.retainToolState === true,
             resolveConfigOptionUpdateWaiters,
             skipTranscriptEvents: replay === "bounded-only",
             params: notification,
@@ -1445,6 +1454,8 @@ const makeAcpSessionRuntime = (
               toolCallsRef,
               assistantSegmentRef,
               runtimeInstanceId,
+              assistantItemScope: options.assistantItemScope,
+              retainReplayToolState: options.loadReplayPolicy?.retainToolState === true,
               resolveConfigOptionUpdateWaiters,
               skipTranscriptEvents: false,
               params: notification,
@@ -1584,6 +1595,8 @@ const makeAcpSessionRuntime = (
             toolCallsRef,
             assistantSegmentRef,
             runtimeInstanceId,
+            assistantItemScope: options.assistantItemScope,
+            retainReplayToolState: options.loadReplayPolicy?.retainToolState === true,
             resolveConfigOptionUpdateWaiters,
             skipTranscriptEvents: suppress,
             params: notification,
@@ -2395,6 +2408,8 @@ const processSessionUpdate = ({
   assistantSegmentRef,
   runtimeInstanceId,
   skipTranscriptEvents,
+  retainReplayToolState,
+  assistantItemScope,
   resolveConfigOptionUpdateWaiters,
   params,
 }: {
@@ -2409,6 +2424,8 @@ const processSessionUpdate = ({
   readonly assistantSegmentRef: Ref.Ref<AcpAssistantSegmentState>;
   readonly runtimeInstanceId: string;
   readonly skipTranscriptEvents: boolean;
+  readonly retainReplayToolState: boolean;
+  readonly assistantItemScope?: AcpSessionRuntimeOptions["assistantItemScope"];
   readonly resolveConfigOptionUpdateWaiters: (
     configOptions: ReadonlyArray<Acp.SessionConfigOption>,
   ) => Effect.Effect<void>;
@@ -2443,6 +2460,11 @@ const processSessionUpdate = ({
     }
 
     if (skipTranscriptEvents) {
+      if (retainReplayToolState) {
+        for (const event of parsed.events) {
+          if (event._tag === "ToolCallUpdated") yield* offer({ ...event, replayed: true });
+        }
+      }
       return;
     }
 
@@ -2498,6 +2520,7 @@ const processSessionUpdate = ({
           epoch,
           runtimeInstanceId,
           requestedItemId: event.itemId,
+          requestedItemScope: assistantItemScope?.(event.metadata),
         });
         yield* offer({
           ...event,
@@ -2552,6 +2575,7 @@ const ensureActiveAssistantSegment = ({
   epoch,
   runtimeInstanceId,
   requestedItemId,
+  requestedItemScope,
 }: {
   readonly getSessionEpoch: () => Effect.Effect<SessionEpoch>;
   readonly offer: (event: AcpParsedSessionEvent) => Effect.Effect<void>;
@@ -2560,6 +2584,7 @@ const ensureActiveAssistantSegment = ({
   readonly epoch: SessionEpoch;
   readonly runtimeInstanceId: string;
   readonly requestedItemId?: string | undefined;
+  readonly requestedItemScope?: string | undefined;
 }) =>
   Effect.gen(function* () {
     if (!(yield* isCurrentSessionEpoch(getSessionEpoch, sessionId, epoch))) {
@@ -2568,10 +2593,18 @@ const ensureActiveAssistantSegment = ({
     return yield* Ref.modify<AcpAssistantSegmentState, EnsureActiveAssistantSegmentResult>(
       assistantSegmentRef,
       (current) => {
-        if (current.activeItemId && current.activeItemId === requestedItemId) {
+        if (
+          current.activeItemId &&
+          current.activeItemId === requestedItemId &&
+          current.activeItemScope === requestedItemScope
+        ) {
           return [{ itemId: current.activeItemId }, current] as const;
         }
-        if (current.activeItemId && requestedItemId === undefined) {
+        if (
+          current.activeItemId &&
+          requestedItemId === undefined &&
+          current.activeItemScope === requestedItemScope
+        ) {
           return [{ itemId: current.activeItemId }, current] as const;
         }
         // Cursor can provide stable message ids for chunks that resume after tool calls.
@@ -2600,6 +2633,7 @@ const ensureActiveAssistantSegment = ({
                 ? current.nextSegmentIndex + 1
                 : current.nextSegmentIndex,
             activeItemId: itemId,
+            ...(requestedItemScope !== undefined ? { activeItemScope: requestedItemScope } : {}),
           } satisfies AcpAssistantSegmentState,
         ] as const;
       },

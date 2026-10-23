@@ -15,7 +15,7 @@ import {
 import { readInlineVisualEmbedIds } from "@synara/shared/inlineVisual";
 import { type TailUserMessageEditTarget } from "@synara/shared/conversationEdit";
 import { type TimelineEntry, type WorkLogEntry, formatElapsed } from "../../session-logic";
-import type { WorkLogUserInputExchangeItem } from "../../workLog";
+import { isCodexRuntimeWarningType, type WorkLogUserInputExchangeItem } from "../../workLog";
 import { normalizeCompactToolLabel as normalizeCompactToolLabelValue } from "../../lib/toolCallLabel";
 import { isCodexActivityStatusWorkEntry } from "./agentActivity.logic";
 import {
@@ -1052,16 +1052,28 @@ export function deriveTerminalAssistantMessageIds(
   return terminalAssistantMessageIds;
 }
 
-// Server-posted coordinator notices and provider handoff boundaries keep their own
-// row: they are not turn work, so they never merge into or fold with a turn.
+// Thread-scoped notices and provider handoff boundaries keep their own row:
+// they are not turn work, so they never merge into or fold with a turn.
 export function isStandaloneWorkEntry(
   entry: Pick<
     WorkLogEntry,
-    "synaraWorkerNotice" | "providerHandoff" | "turnFailure" | "subagentRun"
+    | "synaraWorkerNotice"
+    | "providerHandoff"
+    | "turnFailure"
+    | "subagentRun"
+    | "activityKind"
+    | "nativeEventType"
+    | "turnId"
   >,
 ): boolean {
   return Boolean(
-    entry.synaraWorkerNotice || entry.providerHandoff || entry.turnFailure || entry.subagentRun,
+    entry.synaraWorkerNotice ||
+    entry.providerHandoff ||
+    entry.turnFailure ||
+    entry.subagentRun ||
+    (entry.activityKind === "runtime.warning" &&
+      entry.turnId == null &&
+      isCodexRuntimeWarningType(entry.nativeEventType)),
   );
 }
 

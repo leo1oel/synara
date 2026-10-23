@@ -161,7 +161,7 @@ interface GitActionsControlProps {
   latticeSourceControl?: boolean;
   // `always` (default) keeps the control mounted. `pull-available` hides the header
   // control unless Pull is the current action or a pull is already running — used
-  // next to Hand off / Add action while Environment owns the rest of git actions.
+  // next to Hand off / New thread while Environment owns the rest of git actions.
   visibleWhen?: "always" | "pull-available";
   // Lets a parent capture "run commit & push for this instance's repo" so a global
   // keyboard shortcut can trigger it without duplicating the action logic. Called with

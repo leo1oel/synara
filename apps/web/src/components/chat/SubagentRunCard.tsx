@@ -259,6 +259,7 @@ export function SubagentRunCard({ workEntry }: { workEntry: WorkLogEntry }) {
   const backgrounded = context?.backgroundedProviderThreadIds ?? EMPTY_IDS;
   const launchTurnLive = context ? isLaunchTurnLive(workEntry, context.liveTurnId) : true;
   const taskEnds = context?.taskEndByToolUseId ?? EMPTY_TASK_ENDS;
+  const runtimeRetired = context?.runtimeRetired === true;
   const card = useMemo(
     () =>
       deriveSubagentRunCard({
@@ -269,11 +270,13 @@ export function SubagentRunCard({ workEntry }: { workEntry: WorkLogEntry }) {
         backgroundedProviderThreadIds: backgrounded,
         launchTurnLive,
         taskEndByToolUseId: taskEnds,
+        runtimeRetired,
       }),
     [
       backgrounded,
       launchTurnLive,
       parentThreadId,
+      runtimeRetired,
       taskEnds,
       threads,
       workEntry.subagentRun,

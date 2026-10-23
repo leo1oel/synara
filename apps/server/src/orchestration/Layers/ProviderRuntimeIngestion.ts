@@ -61,6 +61,7 @@ import { copyAndAttributeStudioGeneratedImage } from "../../studioGeneratedImage
 import { parseCheckpointFilesFromUnifiedDiff } from "../../checkpointing/Diffs.ts";
 import { ProviderService } from "../../provider/Services/ProviderService.ts";
 import { ComputerService } from "../../computer/Services/ComputerService.ts";
+import { DeviceService } from "../../device/Services/DeviceService.ts";
 import { activeThreadGoal } from "../../provider/goalMode.ts";
 import {
   classifyTerminalTurnApplicability,
@@ -823,6 +824,7 @@ const make = Effect.gen(function* () {
   const projectionSnapshotQuery = yield* ProjectionSnapshotQuery;
   const providerService = yield* ProviderService;
   const computerService = yield* Effect.serviceOption(ComputerService);
+  const deviceService = yield* Effect.serviceOption(DeviceService);
   const projectionTurnRepository = yield* ProjectionTurnRepository;
   const projectionThreadActivityRepository = yield* ProjectionThreadActivityRepository;
   const projectionThreadSessionRepository = yield* ProjectionThreadSessionRepository;
@@ -833,14 +835,14 @@ const make = Effect.gen(function* () {
   // Throttle map for the durable last-runtime-activity timestamp: one row
   // write per thread per ~15s of observed activity instead of per event.
   const lastActivityFlushByThreadRef = yield* Ref.make(new Map<string, number>());
-  const outstandingTurnIdsByThreadRef = yield* Ref.make<ReadonlyMap<ThreadId, ReadonlySet<TurnId>>>(
-    new Map(),
-  );
+  const outstandingTurnIdsByThreadRef = yield* Ref.make<
+    ReadonlyMap<ThreadId, ReadonlyMap<TurnId, string | undefined>>
+  >(new Map());
 
-  const rememberOutstandingTurn = (threadId: ThreadId, turnId: TurnId) =>
+  const rememberOutstandingTurn = (threadId: ThreadId, turnId: TurnId, generation?: string) =>
     Ref.update(outstandingTurnIdsByThreadRef, (state) => {
       const next = new Map(state);
-      next.set(threadId, new Set([...(next.get(threadId) ?? []), turnId]));
+      next.set(threadId, new Map(next.get(threadId)).set(turnId, generation));
       return next;
     });
   const forgetOutstandingTurn = (threadId: ThreadId, turnId: TurnId) =>
@@ -848,17 +850,24 @@ const make = Effect.gen(function* () {
       const current = state.get(threadId);
       if (!current?.has(turnId)) return state;
       const next = new Map(state);
-      const remaining = new Set(current);
+      const remaining = new Map(current);
       remaining.delete(turnId);
       if (remaining.size === 0) next.delete(threadId);
       else next.set(threadId, remaining);
       return next;
     });
-  const clearOutstandingTurns = (threadId: ThreadId) =>
+  const clearOutstandingTurns = (threadId: ThreadId, generation?: string) =>
     Ref.update(outstandingTurnIdsByThreadRef, (state) => {
-      if (!state.has(threadId)) return state;
+      const current = state.get(threadId);
+      if (!current) return state;
       const next = new Map(state);
-      next.delete(threadId);
+      const remaining = new Map(
+        [...current].filter(
+          ([, heldGeneration]) => generation !== undefined && heldGeneration !== generation,
+        ),
+      );
+      if (remaining.size === 0) next.delete(threadId);
+      else next.set(threadId, remaining);
       return next;
     });
 
@@ -1237,6 +1246,19 @@ const make = Effect.gen(function* () {
     }
     if (key && fingerprint) {
       yield* Cache.set(latestActivityUpdateFingerprintByKey, key, fingerprint);
+    }
+    if (
+      event.provider === "devin" &&
+      activity.kind === "tool.completed" &&
+      asObject(activity.payload)?.itemType === "collab_agent_tool_call"
+    ) {
+      // Native replay can confirm a locally stopped child is still running.
+      // Its identical pre-stop snapshot must reach the durable projection again.
+      const updateKey = providerActivityUpdateDedupeKey(event, threadId, {
+        ...activity,
+        kind: "tool.updated",
+      });
+      if (updateKey) yield* Cache.invalidate(latestActivityUpdateFingerprintByKey, updateKey);
     }
   });
 
@@ -2653,7 +2675,7 @@ const make = Effect.gen(function* () {
       const isTerminalTurnEvent = event.type === "turn.completed" || event.type === "turn.aborted";
       const rawEventTurnId = toTurnId(event.turnId);
       if (event.type === "turn.started" && rawEventTurnId) {
-        yield* rememberOutstandingTurn(thread.id, rawEventTurnId);
+        yield* rememberOutstandingTurn(thread.id, rawEventTurnId, event.lifecycleGeneration);
       }
       const hasAmbiguousTurns =
         isTerminalTurnEvent &&
@@ -2785,15 +2807,14 @@ const make = Effect.gen(function* () {
         event.type === "runtime.error" ||
         (event.type === "session.state.changed" &&
           (event.payload.state === "stopped" || event.payload.state === "error"));
-      if (
-        Option.isSome(computerService) &&
-        (computerSessionEnded ||
-          (isTerminalTurnEvent &&
-            (eventTurnId !== undefined || (shouldApplyThreadLifecycle && !hasAmbiguousTurns))))
-      ) {
-        const releasedTurnId = isTerminalTurnEvent
-          ? eventTurnId
-          : (rawEventTurnId ?? activeTurnId ?? undefined);
+      const shouldReleaseTurnResources =
+        computerSessionEnded ||
+        (isTerminalTurnEvent &&
+          (eventTurnId !== undefined || (shouldApplyThreadLifecycle && !hasAmbiguousTurns)));
+      const releasedTurnId = isTerminalTurnEvent
+        ? eventTurnId
+        : (rawEventTurnId ?? activeTurnId ?? undefined);
+      if (Option.isSome(computerService) && shouldReleaseTurnResources) {
         endComputerTurnTiming(thread.id, releasedTurnId);
         yield* Effect.tryPromise(() =>
           computerService.value.manager.releaseDesktopControl(thread.id, releasedTurnId),
@@ -2806,6 +2827,42 @@ const make = Effect.gen(function* () {
             }),
           ),
         );
+      }
+
+      const outstandingTurns = (yield* Ref.get(outstandingTurnIdsByThreadRef)).get(thread.id);
+      const generation = event.lifecycleGeneration;
+      // A runtime.error can end one turn while its session serves another. Only actual
+      // session teardown retires a generation. A named turn already settled in the ledger
+      // cannot authorize retiring overlapping work, even after the active projection clears.
+      const sessionEndsObservedTurns =
+        computerSessionEnded &&
+        event.type !== "runtime.error" &&
+        (rawEventTurnId === undefined ||
+          (outstandingTurns?.has(rawEventTurnId) === true &&
+            (activeTurnId === null ||
+              rawEventTurnId === activeTurnId ||
+              (generation !== undefined && outstandingTurns?.get(activeTurnId) !== generation))));
+      // Never enumerate manager leases: a newer gateway turn can precede ingestion.
+      if (Option.isSome(deviceService) && shouldReleaseTurnResources) {
+        const endedDeviceTurns = new Set<TurnId>();
+        if (
+          releasedTurnId !== undefined &&
+          (!computerSessionEnded ||
+            rawEventTurnId !== undefined ||
+            generation === undefined ||
+            outstandingTurns?.get(releasedTurnId) === generation)
+        )
+          endedDeviceTurns.add(releasedTurnId);
+        if (sessionEndsObservedTurns) {
+          for (const [turnId, heldGeneration] of outstandingTurns ?? []) {
+            if (generation === undefined || heldGeneration === generation)
+              endedDeviceTurns.add(turnId);
+          }
+        }
+        if (endedDeviceTurns.size === 0 && generation === undefined)
+          deviceService.value.manager.endAgentTurn(thread.id);
+        for (const turnId of endedDeviceTurns)
+          deviceService.value.manager.endAgentTurn(thread.id, turnId);
       }
 
       if (event.type === "session.started") {
@@ -3400,7 +3457,9 @@ const make = Effect.gen(function* () {
       }
 
       if (event.type === "session.exited") {
-        yield* clearOutstandingTurns(thread.id);
+        if (sessionEndsObservedTurns) yield* clearOutstandingTurns(thread.id, generation);
+        else if (rawEventTurnId !== undefined)
+          yield* forgetOutstandingTurn(thread.id, rawEventTurnId);
         const exitedTurnId = eventTurnId ?? activeTurnId ?? undefined;
         if (exitedTurnId) {
           yield* markTurnFinalized(thread.id, exitedTurnId);
@@ -3534,6 +3593,26 @@ const make = Effect.gen(function* () {
         });
       }
 
+      // A native subagent's resolved model (agent definition, env or tool input)
+      // only shows up in its own messages. Child threads only: the parent's
+      // model is the user's selection.
+      if (event.type === "thread.metadata.updated" && thread.id !== parentThread.id) {
+        const resolvedModel = event.payload.metadata?.model;
+        if (
+          thread.creationSource === "provider_native" &&
+          typeof resolvedModel === "string" &&
+          resolvedModel.length > 0 &&
+          resolvedModel !== thread.modelSelection.model
+        ) {
+          yield* orchestrationEngine.dispatch({
+            type: "thread.meta.update",
+            commandId: providerCommandId(event, "subagent-thread-model-update", thread.id),
+            threadId: thread.id,
+            modelSelection: { ...thread.modelSelection, model: resolvedModel },
+          });
+        }
+      }
+
       // A newer snapshot of this turn's cumulative diff later in the same journal
       // page supersedes this one (see coalesceProviderRuntimeProgress): skip the
       // patch parse and placeholder write, the survivor carries the newest files.
@@ -3579,9 +3658,10 @@ const make = Effect.gen(function* () {
               trackedPlaceholder?.files ??
               existingCheckpoint?.files ??
               [];
-            const checkpointRef =
-              livePlaceholder?.checkpointRef ??
-              CheckpointRef.makeUnsafe(`provider-diff:${event.eventId}`);
+            const checkpointRef = canParseLiveDiffPatch
+              ? CheckpointRef.makeUnsafe(`provider-diff:${event.eventId}`)
+              : (livePlaceholder?.checkpointRef ??
+                CheckpointRef.makeUnsafe(`provider-diff:${event.eventId}`));
             const checkpointTurnCount = livePlaceholder?.checkpointTurnCount ?? maxTurnCount + 1;
             // Leave assistantMessageId undefined on the placeholder: the real
             // capture performed by CheckpointReactor will resolve the actual

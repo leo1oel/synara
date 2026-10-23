@@ -48,9 +48,29 @@ with an error while unrelated tasks remain usable. Persisted Claude compaction r
 unavailable owner remain held for reconciliation; startup skips their provider recovery instead
 of failing or resending the held message.
 
+Codex native resume is confirmed only when the runtime returns the requested thread ID.
+If a recoverable resume failure starts a fresh Codex thread instead, Synara treats its native
+history as unavailable and carries the stored transcript through the existing bounded recovery
+summary. Starting the replacement process alone does not prove that native history was restored.
+Recovery remains pending until Codex acknowledges the recap turn, or another provider reports
+matching terminal success. Synara then retires the durable recovery marker; rejected
+submissions keep it for retry, and an explicit stop discards it.
+This applies to every provider after a stored provider change. Delayed recovery
+evidence can retire only the provider session generation that accepted the recap,
+so an old activity retry cannot discard a newer session's pending transcript.
+If the runtime restarts before that evidence is committed, Synara conservatively
+retains the recap for the next accepted turn, even when native resume succeeds.
+
 Codex's internal `turn/moderationMetadata` notifications stay in local native event logs
 when logging is enabled and do not create conversation activity rows. Actual provider
 errors still appear. Previously stored activity rows are preserved.
+
+Codex `guardianWarning` and `warning` notifications appear as runtime warning notices.
+Their messages are retained in local thread activities, up to the existing 2,000-character
+warning limit, so they remain available after raw runtime events age out. These warnings
+remain visible when the provider supplies no turn ID. Routine approved Guardian reviews stay
+quiet, and credential values in warning messages and details are redacted before storage.
+These warnings do not fail the session or create operational diagnostic incidents.
 
 Runtime events are journaled before live subscribers receive them. Codex and Claude can combine
 contiguous assistant-text deltas into one durable event, with a 25 ms admission window, at most
@@ -80,6 +100,13 @@ Pi preserves separate assistant messages within a turn, including progress befor
 and the final response. Reasoning items also end with their SDK message. Retries start new
 message items while the overall turn remains active until Pi settles. This applies to newly
 received messages; previously stored concatenated replies are not rewritten.
+
+Devin ACP subagents and background shells use the existing task and subagent controls. Their
+activity stays with the launching turn and child thread, including nested work that continues
+after the parent response ends. Stopping one task leaves the parent and sibling tasks running.
+A local stop remains subject to a later native completion; after restart, session replay can
+restore the original ownership and correct the recorded outcome. If native resume fails, Synara
+reports that the old task can no longer be tracked or controlled rather than claiming it completed.
 
 Claude's readable reasoning appears as compact progress text between tool actions while it works.
 Open a reasoning row to read its available detail. This text comes from the running provider;
@@ -213,6 +240,12 @@ after a restart. Catalog revalidation uses a temporary Claude process because ru
 retain the model metadata returned when they initialized. Ordinary picker reads share the
 server cache rather than starting a process each time.
 
+Codex plugin catalogs run in a dedicated discovery process scoped to the same working directory,
+account, home, configuration, and authentication generation as the request. Discovery stdout
+frames have a 32 MiB limit because `plugin/list` is not paginated and catalogs can exceed 16 MiB.
+A response beyond that bound fails discovery without stopping a conversation. Conversation stdout
+frames and all stdin frames retain the 16 MiB limit.
+
 For Codex, successful model discovery determines the built-in choices, including when the returned
 catalog is empty. Models absent from that catalog are not added back from Synara's static list.
 Custom models remain available. Until discovery succeeds, Synara uses a static fallback; a failed
@@ -334,8 +367,12 @@ parent thread when more ran.
 The parent transcript groups adjacent child launches from the same turn in a compact card at
 their launch position; assistant narration separates groups. Cards start collapsed and preserve
 each invocation's status, elapsed time, current step and short result. Their compact headers stay
-visible after the parent turn ends, including while background children continue working. A running card outside the viewport
-gets a floating chip that brings it back into view. Stop all stays visible on a live header;
+visible after the parent turn ends, including while background children continue working.
+While agents are active, an “N agents running” capsule above the composer counts them during
+and after the turn; selecting it brings the newest available running card or task into view.
+It replaces the duplicate floating running-card chip. In a child thread, it counts that child’s
+nested agents, not its siblings. Background commands and monitors remain in the transcript
+and sidebar background-work status; they do not count as agents. Stop all stays visible on a live header;
 expanded rows show per-child controls, with Message on hover or keyboard focus. The header counts direct children and labels additional nested
 subagents separately; their rows start collapsed. The sidebar lists top-level threads only;
 child threads are reached from the card, Environment and the Subagents dock. Child threads link back to
@@ -586,8 +623,18 @@ launch tests use disposable CLI fixtures and do not authenticate personal accoun
 A [provider handoff](https://www.trysynara.com/docs/workflows/handoffs) allows another provider to
 continue the task and work in the same environment with the context Synara passes to it.
 
+Continue task, workflow resumes, and plan follow-ups use the same handoff eligibility checks
+as Send. A refused plan handoff keeps the thread's runtime and interaction modes; a refusal
+caused by background tasks uses the existing stop-or-wait notice. Editing a queued message
+after a handoff restores the current provider and an access mode it supports.
+
 Use handoffs deliberately. Review the working tree before and after changing providers so ownership
 remains clear.
+
+When a provider cannot resume its native conversation, Synara can continue from a bounded transcript
+summary. The existing recovery activity reports how many messages that summary omitted or shortened;
+expand it to inspect the summary size and preview. Omitted content remains in the Synara conversation.
+This fallback does not recreate provider-native tool results, reasoning, or cache state.
 
 ## When a provider is missing
 

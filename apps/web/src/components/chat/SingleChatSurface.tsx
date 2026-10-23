@@ -17,8 +17,7 @@ import {
   useState,
 } from "react";
 
-import { closeTerminalSurface } from "../../hooks/useTerminalSurfaceController";
-import { dockTerminalThreadId } from "../../lib/dockTerminalScope";
+import { closeDockTerminalPane } from "../../hooks/useTerminalSurfaceController";
 import { useAppSettings } from "../../appSettings";
 import { useComposerDraftStore } from "../../composerDraftStore";
 import type { DiffRouteSearch } from "../../diffRouteSearch";
@@ -460,7 +459,8 @@ export function SingleChatSurface(props: {
     });
   };
 
-  const handleSelectEditorFile = (filePath: string) => {
+  const handleSelectEditorFile = (filePath: string, beforeOpen?: () => void) => {
+    beforeOpen?.();
     setEditorCenterMode("file");
     void navigate({
       to: "/$threadId",
@@ -553,7 +553,7 @@ export function SingleChatSurface(props: {
   // outside the workspace report unhandled so chips fall back to the external
   // editor.
   const dockFileOpener: WorkspaceFileOpener = {
-    openFile: (path) => {
+    openFile: (path, beforeOpen) => {
       // In-workspace references map to relative paths for the file-read RPC;
       // binary previews in a session's scratch workspace (outside the chat
       // workspace) open by absolute path through the local-image route.
@@ -566,9 +566,11 @@ export function SingleChatSurface(props: {
       if (props.embedMode && workspaceRoot) {
         const relativePath = resolveWorkspaceFileOpenTarget(path, workspaceRoot);
         if (relativePath && postOpenFileToLattice(readEmbedMode(), relativePath)) {
+          beforeOpen?.();
           return true;
         }
       }
+      beforeOpen?.();
       requestImmediateDockHydration("file");
       openPane(props.threadId, { kind: "file", filePath: targetPath });
       return true;
@@ -578,7 +580,7 @@ export function SingleChatSurface(props: {
   // Editor surface: the center file pane is already the file viewer, so file
   // references select into it instead of opening a dock pane.
   const editorFileOpener: WorkspaceFileOpener = {
-    openFile: (path) => {
+    openFile: (path, beforeOpen) => {
       if (!workspaceRoot) {
         return false;
       }
@@ -586,7 +588,7 @@ export function SingleChatSurface(props: {
       if (!relativePath) {
         return false;
       }
-      handleSelectEditorFile(relativePath);
+      handleSelectEditorFile(relativePath, beforeOpen);
       return true;
     },
     prefetchFile: prefetchOpenerFile,
@@ -1197,22 +1199,11 @@ export function SingleChatSurface(props: {
             onSelectPane={handleSelectDockPane}
             onClosePane={(paneId) => {
               if (dockState.panes.find((pane) => pane.id === paneId)?.kind === "terminal") {
-                void closeTerminalSurface(
-                  dockTerminalThreadId(props.threadId),
-                  appSettings.confirmTerminalTabClose,
+                void closeDockTerminalPane({
+                  hostThreadId: props.threadId,
                   paneId,
-                )
-                  .then((closed) => {
-                    if (closed) closePane(props.threadId, paneId);
-                  })
-                  .catch((error: unknown) => {
-                    toastManager.add({
-                      type: "error",
-                      title: i18n._("Unable to close terminal"),
-                      description:
-                        error instanceof Error ? error.message : i18n._("Please try again."),
-                    });
-                  });
+                  confirmationEnabled: appSettings.confirmTerminalTabClose,
+                });
                 return;
               }
               if (dockState.panes.find((pane) => pane.id === paneId)?.kind !== "explorer") {

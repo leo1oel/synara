@@ -40,6 +40,54 @@ describe("deriveSubagentTaskEnds", () => {
       previous: { outcome: "completed", endedAt: firstEnd.createdAt },
     });
   });
+
+  it("resolves an end that names only its task through the open task's start", () => {
+    const started = makeActivity({
+      id: "started",
+      kind: "task.started",
+      createdAt: "2026-10-10T00:00:01Z",
+      payload: { taskId: "task-bg", toolUseId: "toolu_bg" },
+    });
+    const stopped = makeActivity({
+      id: "stopped",
+      kind: "task.completed",
+      createdAt: "2026-10-10T00:05:00Z",
+      payload: { taskId: "task-bg", status: "stopped" },
+    });
+    expect(deriveSubagentTaskEnds([started, stopped]).get("toolu_bg")).toEqual({
+      outcome: "stopped",
+      endedAt: stopped.createdAt,
+    });
+
+    // A late stop for a task that already ended does not overwrite its outcome.
+    const completed = makeActivity({
+      id: "completed",
+      kind: "task.completed",
+      createdAt: "2026-10-10T00:02:00Z",
+      payload: { taskId: "task-bg", toolUseId: "toolu_bg", status: "completed" },
+    });
+    expect(deriveSubagentTaskEnds([started, completed, stopped]).get("toolu_bg")).toEqual({
+      outcome: "completed",
+      endedAt: completed.createdAt,
+    });
+
+    const anonymous = makeActivity({
+      id: "anonymous",
+      kind: "task.started",
+      createdAt: "2026-10-10T00:00:01Z",
+      payload: { taskId: "task-bash" },
+    });
+    expect(
+      deriveSubagentTaskEnds([
+        anonymous,
+        makeActivity({
+          id: "bash-done",
+          kind: "task.completed",
+          payload: { taskId: "task-bash", status: "completed" },
+        }),
+      ]).size,
+    ).toBe(0);
+  });
 });
 
 describe("deriveWorkLogEntries", () => {
@@ -782,7 +830,13 @@ describe("deriveWorkLogEntries", () => {
         turnId: "turn-bg",
         payload: { taskId, taskType: "local_bash", toolUseId, detail: `Run ${taskId}` },
       });
-    const taskCompleted = (taskId: string, status: string, detail: string, at: string) =>
+    const taskCompleted = (
+      taskId: string,
+      status: string,
+      detail: string,
+      at: string,
+      reconcilesStop = false,
+    ) =>
       makeActivity({
         id: `${taskId}-${status}`,
         createdAt: at,
@@ -790,7 +844,7 @@ describe("deriveWorkLogEntries", () => {
         summary: "Task completed",
         tone: "info",
         turnId: "turn-bg",
-        payload: { taskId, status, detail },
+        payload: { taskId, status, detail, ...(reconcilesStop ? { reconcilesStop: true } : {}) },
       });
     const turnCompleted = (at: string) =>
       makeActivity({
@@ -862,7 +916,12 @@ describe("deriveWorkLogEntries", () => {
       expect(entries.filter((entry) => entry.backgroundTask)).toMatchObject([
         {
           id: "launch",
-          backgroundTask: { taskId: "task-1", status: "running", command: "sleep 20" },
+          backgroundTask: {
+            taskId: "task-1",
+            status: "running",
+            command: "sleep 20",
+            description: "Run task-1",
+          },
         },
       ]);
     });
@@ -928,6 +987,74 @@ describe("deriveWorkLogEntries", () => {
           .map((entry) => entry.backgroundTaskCompletion?.outcome),
       ).toEqual(["failed", "finished", "stopped"]);
     });
+
+    it.each([
+      { status: "completed", confirmed: true, expected: "finished" },
+      { status: "running", confirmed: true, expected: "running" },
+      { status: "running", confirmed: false, expected: "stopped" },
+    ] as const)(
+      "reconciles a stopped task with $status, confirmed=$confirmed",
+      ({ status, confirmed, expected }) => {
+        const nativeUpdate =
+          status === "completed"
+            ? taskCompleted(
+                "task-late",
+                "completed",
+                "Build finished",
+                "2026-10-10T00:09:59.000Z",
+                true,
+              )
+            : makeActivity({
+                id: "native-replayed-running",
+                createdAt: "2026-10-10T00:09:59.000Z",
+                kind: "task.updated",
+                summary: "Task running",
+                tone: "info",
+                turnId: "turn-bg",
+                payload: {
+                  taskId: "task-late",
+                  status: "running",
+                  isBackgrounded: true,
+                  reconcilesStop: confirmed,
+                },
+              });
+        const entries = deriveWorkLogEntries(
+          [
+            launchCall("launch", "toolu_late", "bun run build", "2026-10-10T00:09:57.000Z"),
+            taskStarted("task-late", "toolu_late", "2026-10-10T00:09:57.100Z"),
+            makeActivity({
+              id: "task-late-background",
+              createdAt: "2026-10-10T00:09:57.200Z",
+              kind: "task.updated",
+              summary: "Task running in background",
+              tone: "info",
+              turnId: "turn-bg",
+              payload: { taskId: "task-late", status: "running", isBackgrounded: true },
+            }),
+            taskCompleted("task-late", "stopped", "Build stopped", "2026-10-10T00:09:58.000Z"),
+            nativeUpdate,
+          ],
+          undefined,
+          options,
+        );
+
+        expect(entries.filter((entry) => entry.backgroundTask)).toMatchObject([
+          {
+            id: "launch",
+            backgroundTask: {
+              taskId: "task-late",
+              status: expected,
+              completedAt:
+                expected === "running"
+                  ? null
+                  : expected === "stopped"
+                    ? "2026-10-10T00:09:58.000Z"
+                    : "2026-10-10T00:09:59.000Z",
+            },
+          },
+        ]);
+      },
+    );
 
     it("treats completions and Monitor events inside a working turn as updates, not wake-ups", () => {
       const entries = deriveWorkLogEntries(
@@ -2074,6 +2201,44 @@ describe("deriveWorkLogEntries", () => {
       "2 notices - 2026-09-20T16:48:02.034254Z ERROR rmcp::transport::worker: http/request failed (http://127.0.0.1:14242/mcp)",
     );
     expect(entries[1]?.detail).toContain("https://chatgpt.com/backend-api/ps/mcp");
+  });
+
+  it("keeps thread-level runtime warnings visible alongside turn-scoped messages", () => {
+    const currentTurn = TurnId.makeUnsafe("current-turn");
+    const activities = [
+      makeActivity({
+        id: "thread-warning",
+        kind: "runtime.warning",
+        tone: "info",
+        payload: {
+          message: "Automatic approval review is unavailable.",
+          nativeEventType: "codex.guardianWarning",
+        },
+      }),
+      makeActivity({
+        id: "old-turn-warning",
+        kind: "runtime.warning",
+        tone: "info",
+        turnId: "old-turn",
+        payload: { message: "Earlier turn warning" },
+      }),
+      makeActivity({ id: "turnless-tool", kind: "tool.completed", tone: "tool" }),
+      makeActivity({
+        id: "unrelated-thread-warning",
+        kind: "runtime.warning",
+        tone: "info",
+        payload: { message: "Other provider notice", nativeEventType: "other-provider" },
+      }),
+    ];
+    for (const visibleTurnIds of [undefined, new Set([currentTurn])]) {
+      const entries = deriveWorkLogEntries(
+        activities,
+        currentTurn,
+        visibleTurnIds ? { visibleTurnIds } : {},
+      );
+      expect(entries.map((entry) => entry.id)).toEqual(["thread-warning"]);
+      expect(entries[0]?.detail).toBe("Automatic approval review is unavailable.");
+    }
   });
 
   it("does not collapse identical runtime warnings across turn boundaries", () => {
