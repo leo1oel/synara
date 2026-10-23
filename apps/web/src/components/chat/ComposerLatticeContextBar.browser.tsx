@@ -85,3 +85,38 @@ it("keeps the bottom of a long context selection inside its scroll area", async 
   );
   await page.screenshot();
 });
+
+// The bar itself appears only for an explicit selection; comments are one of its details.
+it("lists the slide's pending comment count among the context details", async () => {
+  const comment = { id: "c-1", line: 44, ts: "2026-09-03T00:00:00.000Z", note: "Larger chart" };
+  setLiveLatticeHostContext({
+    type: LATTICE_HOST_CONTEXT,
+    version: 1,
+    workspaceRoot: "/Users/me/paper",
+    activeSurface: "editor",
+    presentation: {
+      slideId: "research-update",
+      pageIndex: 2,
+      pageNumber: 3,
+      totalPages: 8,
+      slideTitle: "Research update",
+      view: "slides",
+      pagePath: "slides/research-update/index.tsx",
+      selection: { line: 42, column: 6, tagName: "h1", text: "Q2 Roadmap" },
+      pendingComments: [comment, { ...comment, id: "c-2" }, { ...comment, id: "c-3" }],
+      updatedAt: "2026-09-04T12:00:00.000Z",
+    },
+  });
+  await render(
+    <div className="w-[320px] p-4 pt-80">
+      <ComposerColumnFrame>
+        <ComposerLatticeContextBar />
+        <div className="h-24">Composer</div>
+      </ComposerColumnFrame>
+    </div>,
+  );
+
+  await page.getByRole("button", { name: "Show included context details" }).click();
+  await expect.element(page.getByText("Slide comments")).toBeVisible();
+  await expect.element(page.getByText("3 comments")).toBeVisible();
+});
