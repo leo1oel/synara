@@ -123,6 +123,16 @@ export function latticeContextDetails(
         })}`,
       });
     }
+    const commentCount = context.presentation.pendingComments?.length ?? 0;
+    if (commentCount > 0) {
+      details.push({
+        label: i18n._("Slide comments"),
+        value:
+          commentCount === 1
+            ? i18n._("1 comment")
+            : i18n._("{count} comments", { count: commentCount }),
+      });
+    }
   }
   if (context.editor) {
     details.push({

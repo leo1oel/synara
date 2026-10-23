@@ -12,9 +12,19 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
-#: src/components/chat/OpenThreadTabStrip.tsx
-msgid "New thread in this workspace"
-msgstr "在此工作区新建线程"
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Slide comments"
+msgstr "幻灯片评论"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "1 comment"
+msgstr "1 条评论"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "{count} comments"
+msgstr "{count} 条评论"
 
 #. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
@@ -9581,6 +9591,11 @@ msgstr "正在检查模型…"
 #: src/components/chat/ModelCatalogRefresh.tsx
 msgid "Couldn’t update models."
 msgstr "无法更新模型列表。"
+
+#. js-lingui-explicit-id
+#: src/components/chat/OpenThreadTabStrip.tsx
+msgid "New thread in this workspace"
+msgstr "在此工作区新建线程"
 
 #. js-lingui-explicit-id
 #: src/components/chat/PastedTextChip.tsx

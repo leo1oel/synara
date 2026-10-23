@@ -12,9 +12,19 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
-#: src/components/chat/OpenThreadTabStrip.tsx
-msgid "New thread in this workspace"
-msgstr "New thread in this workspace"
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "Slide comments"
+msgstr "Slide comments"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "1 comment"
+msgstr "1 comment"
+
+#. js-lingui-explicit-id
+#: src/components/chat/ComposerLatticeContextBar.logic.ts
+msgid "{count} comments"
+msgstr "{count} comments"
 
 #. js-lingui-explicit-id
 #: src/components/BranchToolbarBranchSelector.tsx
@@ -9581,6 +9591,11 @@ msgstr "Checking for models…"
 #: src/components/chat/ModelCatalogRefresh.tsx
 msgid "Couldn’t update models."
 msgstr "Couldn’t update models."
+
+#. js-lingui-explicit-id
+#: src/components/chat/OpenThreadTabStrip.tsx
+msgid "New thread in this workspace"
+msgstr "New thread in this workspace"
 
 #. js-lingui-explicit-id
 #: src/components/chat/PastedTextChip.tsx

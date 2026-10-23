@@ -83,7 +83,11 @@ import {
   FolderIcon,
 } from "~/lib/icons";
 import { getLocalFolderBrowseRootPath } from "~/lib/localFolderMentions";
-import { findProviderStatus, resolveVoiceTranscriptionTarget } from "~/lib/providerAvailability";
+import {
+  findProviderStatus,
+  resolveProviderSendAvailabilityWithRefresh,
+  resolveVoiceTranscriptionTarget,
+} from "~/lib/providerAvailability";
 import { resolveProviderInstanceLabel } from "~/lib/providerInstancePresentation";
 import { holdQueuedComposerTurnsForStop } from "~/lib/queuedComposerDrain";
 import { resolveAuxiliaryTextGenerationSelection } from "~/lib/textGenerationCapabilities";
@@ -168,6 +172,7 @@ import { useClaudeContextCompaction } from "../hooks/useClaudeContextCompaction"
 import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
 import { useHandleNewThread } from "../hooks/useHandleNewThread";
+import { useLatticeComposerPrompt } from "./chat/useLatticeComposerPrompt";
 import { useTheme } from "../hooks/useTheme";
 import { useThreadHandoff } from "../hooks/useThreadHandoff";
 import { useThreadUnblock } from "../hooks/useThreadUnblock";
@@ -5086,6 +5091,35 @@ export default function ChatView({
     latticeStarterPromptRef.current = (prompt) =>
       setPromptFromTraits(latticeStarterDraft(promptRef.current, prompt));
   }, [promptRef, setPromptFromTraits]);
+  useLatticeComposerPrompt({
+    enabled: isEmbed && !isInactiveSplitPane,
+    threadId,
+    projectId: activeProject?.id ?? null,
+    hasPendingApproval: activePendingApproval !== null,
+    hasPendingUserInput: pendingUserInputs.length > 0,
+    hasLiveTurn,
+    isSendBusy,
+    isConnecting,
+    queuedTurnCount: queuedComposerTurns.length,
+    turnDispatchSettings,
+    selectedProvider,
+    selectedModel,
+    selectedPromptEffort,
+    readComposerPrompt: () => composerEditorRef.current?.readSnapshot()?.value ?? promptRef.current,
+    setComposerPromptAndFocus: setPromptFromTraits,
+    isProviderUsable: async () =>
+      (
+        await resolveProviderSendAvailabilityWithRefresh({
+          provider: turnDispatchSettings.modelSelection.provider,
+          instanceId: turnDispatchSettings.modelSelection.instanceId,
+          statuses: providerStatuses,
+          refreshStatuses: () => refreshProviderStatuses({ silent: true }),
+        })
+      ).usable,
+    enqueueQueuedTurn: enqueueQueuedComposerTurn,
+    sendQueuedTurn: (turn) => submitComposerTurn(undefined, "queue", turn),
+    createThread: handleNewThread,
+  });
   // The prompt a follow-up chip last wrote: choosing another chip replaces it
   // while it is untouched, and anything the user typed is kept.
   const followUpDraftRef = useRef<string | null>(null);

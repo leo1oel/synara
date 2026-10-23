@@ -27,6 +27,7 @@ export const LATTICE_HOST_CONTEXT_SELECTION_CLEAR = "lattice:clear-host-context-
 export const LATTICE_PAPER_LIBRARY = "lattice:paper-library";
 export const LATTICE_PAPER_LIBRARY_REQUEST = "lattice:request-paper-library";
 export const LATTICE_COMPOSER_FILES = "lattice:composer-files";
+export const LATTICE_COMPOSER_PROMPT = "lattice:composer-prompt";
 export const LATTICE_HOST_POINTER = "lattice:host-pointer";
 /**
  * A press landed in Lattice outside this frame. Base UI dismisses a popup on a
@@ -48,6 +49,7 @@ export const SYNARA_SHOW_IN_FOLDER = "synara:show-in-folder";
 export const SYNARA_SAVE_VISUAL = "synara:save-visual";
 export const SYNARA_EXPAND_VISUAL = "synara:expand-visual";
 export const SYNARA_EMBED_READY = "synara:embed-ready";
+export const SYNARA_COMPOSER_PROMPT_RESULT = "synara:composer-prompt-result";
 export const SYNARA_OPEN_REVIEW = "synara:open-review";
 export const SYNARA_OPEN_FILE = "synara:open-file";
 export const SYNARA_CONFIRMATION_REQUEST = "synara:confirmation-request";
@@ -137,9 +139,25 @@ export interface LatticeHostContextSnapshot {
       tagName: string;
       text: string;
     } | null;
+    /** Open Slide comments the agent has not applied yet; absent from older Lattice builds. */
+    pendingComments?: LatticePresentationComment[];
+    /** Opens this page alone, for the agent's post-edit screenshot. */
+    previewUrl?: string;
     updatedAt: string;
   };
   editorComments?: LatticeEditorCommentsSnapshot;
+}
+
+export interface LatticePresentationComment {
+  id: string;
+  line: number;
+  ts: string;
+  note: string;
+  hint?: string;
+  /** Region the note covers, in pixels on the 1920 x 1080 page; absent for an element comment. */
+  rect?: { x: number; y: number; w: number; h: number };
+  /** 0-based page index the comment was left on. */
+  page?: number;
 }
 
 export interface LatticeAgentComment {
@@ -195,6 +213,41 @@ export interface LatticeComposerFilesMessage {
   version: 1;
   files: LatticeComposerFileEntry[];
 }
+
+export interface LatticeComposerPromptRequest {
+  requestId: string;
+  workspaceRoot: string;
+  /** Already localized by Lattice. An empty draft only focuses the composer. */
+  text: string;
+  mode: "draft" | "send";
+  thread: "active" | "new";
+}
+
+export type SynaraComposerPromptErrorCode =
+  | "invalid"
+  | "workspace-mismatch"
+  | "no-provider"
+  | "awaiting-input"
+  | "send-failed";
+
+export interface SynaraComposerPromptResult {
+  type: typeof SYNARA_COMPOSER_PROMPT_RESULT;
+  version: 1;
+  requestId: string;
+  ok: boolean;
+  outcome?: "drafted" | "sent" | "queued";
+  threadId?: string;
+  error?: { code: SynaraComposerPromptErrorCode; message: string };
+}
+
+export type LatticeComposerPromptMessage =
+  | { kind: "request"; request: LatticeComposerPromptRequest }
+  | {
+      kind: "rejected";
+      requestId: string;
+      code: Extract<SynaraComposerPromptErrorCode, "invalid" | "workspace-mismatch">;
+      message: string;
+    };
 
 export function embedWorkspaceMatches(config: EmbedModeConfig, projectCwd: unknown): boolean {
   return (
@@ -425,6 +478,10 @@ export function latticeEmbedSearchFromConfig(config: EmbedModeConfig | null): La
 
 // Lattice truncates a selected slide element's text to this many characters.
 const MAX_PRESENTATION_SELECTION_TEXT = 12_000;
+// Every pending comment rides along in each sent prompt, so a runaway list is
+// cut rather than trusted; a real review is far below this.
+const MAX_PRESENTATION_PENDING_COMMENTS = 200;
+const MAX_PRESENTATION_COMMENT_TEXT = 12_000;
 
 function boundedString(value: unknown, maximum: number): value is string {
   return typeof value === "string" && value.length <= maximum;
@@ -446,6 +503,59 @@ function lineRange(value: unknown): value is { start: number; end: number } {
 
 function nonEmptyBoundedString(value: unknown, maximum: number): value is string {
   return boundedString(value, maximum) && value.trim().length > 0;
+}
+
+function finiteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function readPresentationComment(value: unknown): LatticePresentationComment | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const candidate = value as Record<string, unknown>;
+  if (
+    !nonEmptyBoundedString(candidate.id, 256) ||
+    !nonNegativeInteger(candidate.line) ||
+    !boundedString(candidate.ts, 128) ||
+    !boundedString(candidate.note, MAX_PRESENTATION_COMMENT_TEXT) ||
+    (candidate.hint !== undefined &&
+      !boundedString(candidate.hint, MAX_PRESENTATION_COMMENT_TEXT)) ||
+    (candidate.page !== undefined && !nonNegativeInteger(candidate.page))
+  ) {
+    return null;
+  }
+  let rect: LatticePresentationComment["rect"];
+  if (candidate.rect !== undefined) {
+    const box = candidate.rect as Record<string, unknown> | null;
+    if (
+      !box ||
+      typeof box !== "object" ||
+      !finiteNumber(box.x) ||
+      !finiteNumber(box.y) ||
+      !finiteNumber(box.w) ||
+      !finiteNumber(box.h)
+    ) {
+      return null;
+    }
+    rect = { x: box.x, y: box.y, w: box.w, h: box.h };
+  }
+  return {
+    id: candidate.id,
+    line: candidate.line,
+    ts: candidate.ts,
+    note: candidate.note,
+    ...(candidate.hint !== undefined ? { hint: candidate.hint } : {}),
+    ...(rect ? { rect } : {}),
+    ...(candidate.page !== undefined ? { page: candidate.page } : {}),
+  };
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 function isSafePaperId(value: string): boolean {
@@ -583,8 +693,10 @@ export function readLatticeHostContextMessage(
   }
 
   const presentation = value.presentation;
-  let presentationSelection: NonNullable<LatticeHostContextSnapshot["presentation"]>["selection"] =
-    null;
+  type PresentationContext = NonNullable<LatticeHostContextSnapshot["presentation"]>;
+  let presentationSelection: PresentationContext["selection"] = null;
+  let presentationComments: PresentationContext["pendingComments"];
+  let presentationPreviewUrl: PresentationContext["previewUrl"];
   if (presentation !== undefined) {
     if (!presentation || typeof presentation !== "object") return null;
     const candidate = presentation as Record<string, unknown>;
@@ -622,6 +734,17 @@ export function readLatticeHostContextMessage(
                 : "",
           }
         : null;
+    // Comments and the preview link are optional details too: a malformed
+    // comment is dropped on its own and a bad link is left out.
+    if (Array.isArray(candidate.pendingComments)) {
+      presentationComments = candidate.pendingComments
+        .slice(0, MAX_PRESENTATION_PENDING_COMMENTS)
+        .map(readPresentationComment)
+        .filter((comment): comment is LatticePresentationComment => comment !== null);
+    }
+    if (nonEmptyBoundedString(candidate.previewUrl, 4_096) && isHttpUrl(candidate.previewUrl)) {
+      presentationPreviewUrl = candidate.previewUrl;
+    }
   }
 
   if (
@@ -631,9 +754,21 @@ export function readLatticeHostContextMessage(
     return null;
   }
   const snapshot = value as unknown as LatticeHostContextSnapshot;
-  return snapshot.presentation
-    ? { ...snapshot, presentation: { ...snapshot.presentation, selection: presentationSelection } }
-    : snapshot;
+  if (!snapshot.presentation) return snapshot;
+  const {
+    pendingComments: _pendingComments,
+    previewUrl: _previewUrl,
+    ...presentationFields
+  } = snapshot.presentation;
+  return {
+    ...snapshot,
+    presentation: {
+      ...presentationFields,
+      selection: presentationSelection,
+      ...(presentationComments ? { pendingComments: presentationComments } : {}),
+      ...(presentationPreviewUrl ? { previewUrl: presentationPreviewUrl } : {}),
+    },
+  };
 }
 
 export function readLatticePaperLibraryMessage(
@@ -738,6 +873,87 @@ export function readLatticeComposerFilesMessage(
   if (consumedComposerFileEvents.has(event)) return null;
   consumedComposerFileEvents.add(event);
   return files;
+}
+
+const MAX_COMPOSER_PROMPT_TEXT = 4_000;
+
+// Like dropped files, a prompt must land in exactly one composer even when
+// several chat panes listen to the same frame.
+const consumedComposerPromptEvents = new WeakSet<MessageEvent>();
+
+/**
+ * Read Lattice's request to prefill or send a composer prompt. Returns null
+ * for anything that is not a composer-prompt message from the host; a
+ * malformed or foreign-workspace request comes back as `rejected` so the
+ * caller can still answer it.
+ */
+export function readLatticeComposerPromptMessage(
+  event: MessageEvent,
+  config: EmbedModeConfig,
+): LatticeComposerPromptMessage | null {
+  if (
+    !config.hostOrigin ||
+    event.source !== window.parent ||
+    event.origin !== config.hostOrigin ||
+    !event.data ||
+    typeof event.data !== "object"
+  ) {
+    return null;
+  }
+  const value = event.data as Record<string, unknown>;
+  if (value.type !== LATTICE_COMPOSER_PROMPT) return null;
+  if (consumedComposerPromptEvents.has(event)) return null;
+  consumedComposerPromptEvents.add(event);
+
+  const requestId = nonEmptyBoundedString(value.requestId, 128) ? value.requestId : "";
+  const thread = value.thread ?? "active";
+  if (
+    value.version !== 1 ||
+    requestId === "" ||
+    !nonEmptyBoundedString(value.workspaceRoot, 4_096) ||
+    !boundedString(value.text, MAX_COMPOSER_PROMPT_TEXT) ||
+    (value.mode !== "draft" && value.mode !== "send") ||
+    (thread !== "active" && thread !== "new")
+  ) {
+    return {
+      kind: "rejected",
+      requestId,
+      code: "invalid",
+      message: "The composer prompt request is malformed.",
+    };
+  }
+  if (value.mode === "send" && value.text.trim().length === 0) {
+    return { kind: "rejected", requestId, code: "invalid", message: "There is no text to send." };
+  }
+  if (!workspaceRootsEqual(value.workspaceRoot, config.workspaceRoot)) {
+    return {
+      kind: "rejected",
+      requestId,
+      code: "workspace-mismatch",
+      message: "The request is for a different workspace than this panel.",
+    };
+  }
+  return {
+    kind: "request",
+    request: {
+      requestId,
+      workspaceRoot: value.workspaceRoot,
+      text: value.text,
+      mode: value.mode,
+      thread,
+    },
+  };
+}
+
+export function postComposerPromptResultToLattice(
+  config: EmbedModeConfig,
+  result: Omit<SynaraComposerPromptResult, "type" | "version">,
+): void {
+  if (!config.hostOrigin) return;
+  window.parent.postMessage(
+    { type: SYNARA_COMPOSER_PROMPT_RESULT, version: 1, ...result },
+    config.hostOrigin,
+  );
 }
 
 export function postHostContextRequestToLattice(
