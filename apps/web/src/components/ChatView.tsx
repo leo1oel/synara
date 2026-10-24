@@ -173,6 +173,7 @@ import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
 import { useHandleNewThread } from "../hooks/useHandleNewThread";
 import { useLatticeComposerPrompt } from "./chat/useLatticeComposerPrompt";
+import { useLatticeTurnActivity } from "./chat/useLatticeTurnActivity";
 import { useTheme } from "../hooks/useTheme";
 import { useThreadHandoff } from "../hooks/useThreadHandoff";
 import { useThreadUnblock } from "../hooks/useThreadUnblock";
@@ -5119,6 +5120,19 @@ export default function ChatView({
     enqueueQueuedTurn: enqueueQueuedComposerTurn,
     sendQueuedTurn: (turn) => submitComposerTurn(undefined, "queue", turn),
     createThread: handleNewThread,
+  });
+  useLatticeTurnActivity({
+    enabled: isEmbed && !isInactiveSplitPane,
+    threadId: activeThreadId,
+    projectCwd: activeProject?.cwd ?? null,
+    turnId: activeLatestTurnId,
+    turnLive: latestTurnLive,
+    awaitingInput: activePendingApproval !== null || pendingUserInputs.length > 0,
+    provider: {
+      id: activeThread?.session?.provider ?? selectedProvider,
+      label: providerDisplayName,
+    },
+    workLogEntries,
   });
   // The prompt a follow-up chip last wrote: choosing another chip replaces it
   // while it is untouched, and anything the user typed is kept.

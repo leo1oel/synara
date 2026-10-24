@@ -50,6 +50,7 @@ export const SYNARA_SAVE_VISUAL = "synara:save-visual";
 export const SYNARA_EXPAND_VISUAL = "synara:expand-visual";
 export const SYNARA_EMBED_READY = "synara:embed-ready";
 export const SYNARA_COMPOSER_PROMPT_RESULT = "synara:composer-prompt-result";
+export const SYNARA_TURN_ACTIVITY = "synara:turn-activity";
 export const SYNARA_OPEN_REVIEW = "synara:open-review";
 export const SYNARA_OPEN_FILE = "synara:open-file";
 export const SYNARA_CONFIRMATION_REQUEST = "synara:confirmation-request";
@@ -238,6 +239,24 @@ export interface SynaraComposerPromptResult {
   outcome?: "drafted" | "sent" | "queued";
   threadId?: string;
   error?: { code: SynaraComposerPromptErrorCode; message: string };
+}
+
+/**
+ * What the panel's active thread is doing, so Lattice can light up the canvas
+ * the agent is working on. Only names and project-relative paths ride along,
+ * never tool input contents or output.
+ */
+export interface SynaraTurnActivityMessage {
+  type: typeof SYNARA_TURN_ACTIVITY;
+  version: 1;
+  workspaceRoot: string;
+  threadId: string;
+  turnId: string | null;
+  /** `waiting`: the live turn is blocked on a pending approval or question. */
+  state: "running" | "waiting" | "idle";
+  provider: { id: string; label: string };
+  /** The tool call in flight; absent between tools and once idle. */
+  tool?: { title: string; detail: string | null; paths: string[] };
 }
 
 export type LatticeComposerPromptMessage =
@@ -1289,6 +1308,14 @@ export function openEmbeddedProviderSettings(): boolean {
 export function postEmbedReadyToLattice(config: EmbedModeConfig): void {
   if (!config.hostOrigin) return;
   window.parent.postMessage({ type: SYNARA_EMBED_READY }, config.hostOrigin);
+}
+
+export function postTurnActivityToLattice(
+  config: EmbedModeConfig,
+  message: SynaraTurnActivityMessage,
+): void {
+  if (!config.hostOrigin) return;
+  window.parent.postMessage(message, config.hostOrigin);
 }
 
 export function postConfirmationRequestToLattice(
