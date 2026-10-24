@@ -2,6 +2,8 @@ import { TurnId } from "@synara/contracts";
 import { describe, expect, it } from "vitest";
 
 import { SYNARA_TURN_ACTIVITY, type SynaraTurnActivityMessage } from "../embedMode";
+import { makeActivity } from "../storeTestFixtures";
+import { deriveWorkLogEntries } from "../workLog";
 import {
   buildTurnActivityMessage,
   createTurnActivityReporter,
@@ -127,6 +129,47 @@ describe("buildTurnActivityMessage", () => {
     );
     expect(long.tool?.detail).toHaveLength(160);
     expect(long.tool?.detail?.endsWith("…")).toBe(true);
+  });
+
+  it("names the file a Codex shell read targets, from the started command", () => {
+    const item = {
+      type: "commandExecution",
+      command: "/bin/zsh -lc 'sed -n 1,5p slides/intro/index.tsx'",
+      cwd: ROOT,
+      status: "inProgress",
+      commandActions: [
+        {
+          type: "read",
+          command: "sed -n '1,5p' slides/intro/index.tsx",
+          name: "index.tsx",
+          path: `${ROOT}/slides/intro/index.tsx`,
+        },
+      ],
+      aggregatedOutput: null,
+    };
+    const workLogEntries = deriveWorkLogEntries(
+      [
+        makeActivity({
+          id: "read-started",
+          kind: "tool.started",
+          summary: "Ran command",
+          turnId: "turn-1",
+          payload: {
+            itemType: "command_execution",
+            status: "inProgress",
+            title: "Ran command",
+            detail: item.command,
+            data: { item },
+          },
+        }),
+      ],
+      undefined,
+    );
+    expect(buildTurnActivityMessage(snapshot({ workLogEntries })).tool).toEqual({
+      title: "Reading",
+      detail: "index.tsx",
+      paths: ["slides/intro/index.tsx"],
+    });
   });
 
   it("waits on a pending approval or question while the turn is live", () => {

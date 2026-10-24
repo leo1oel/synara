@@ -161,6 +161,8 @@ export interface WorkLogEntry {
   rawCommand?: string;
   preview?: string;
   changedFiles?: ReadonlyArray<string>;
+  /** Paths a shell command reads, lists or searches, as the provider parsed it. */
+  commandActionPaths?: ReadonlyArray<string>;
   tone: "thinking" | "tool" | "info" | "error";
   toolTitle?: string;
   toolName?: string;
@@ -1961,6 +1963,10 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
   if (changedFiles.length > 0) {
     entry.changedFiles = changedFiles;
   }
+  const commandActionPaths = extractCommandActionPaths(payload);
+  if (commandActionPaths.length > 0) {
+    entry.commandActionPaths = commandActionPaths;
+  }
   if (itemType) {
     entry.itemType = itemType;
   }
@@ -3355,6 +3361,15 @@ function extractPrimaryCommandAction(
 
 // Codex has emitted commandActions both on the item and on the surrounding raw
 // payload; scan the nearby envelopes before falling back to generic command text.
+function extractCommandActionPaths(payload: Record<string, unknown> | null): string[] {
+  const data = asRecord(payload?.data);
+  const paths = collectCommandActions(payload, data, asRecord(data?.item)).flatMap((action) => {
+    const path = asTrimmedString(asRecord(action)?.path);
+    return path ? [path] : [];
+  });
+  return [...new Set(paths)];
+}
+
 function collectCommandActions(
   payload: Record<string, unknown> | null,
   data: Record<string, unknown> | null,

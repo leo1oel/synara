@@ -28,6 +28,7 @@ export type TurnActivityWorkLogEntry = Pick<
   | "preview"
   | "command"
   | "changedFiles"
+  | "commandActionPaths"
   | "liveActivity"
 >;
 
@@ -90,7 +91,10 @@ function currentTool(
     return {
       title: boundedLine(entry.toolTitle ?? entry.label, MAX_TOOL_TITLE_LENGTH) ?? "Tool call",
       detail: boundedLine(entry.preview ?? entry.command, MAX_TOOL_DETAIL_LENGTH),
-      paths: relativizeToolPaths(entry.changedFiles ?? [], snapshot.workspaceRoot),
+      paths: relativizeToolPaths(
+        [...(entry.changedFiles ?? []), ...(entry.commandActionPaths ?? [])],
+        snapshot.workspaceRoot,
+      ),
     };
   }
   return undefined;
