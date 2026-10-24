@@ -7,6 +7,7 @@ import {
   embedWorkspaceMatches,
   initializeEmbedMode,
   postEmbedReadyToLattice,
+  postTurnActivityToLattice,
   postOpenFileToLattice,
   postOpenReviewToLattice,
   postOpenSettingsToLattice,
@@ -50,6 +51,7 @@ import {
   LATTICE_PROJECT_HISTORY,
   LATTICE_RESTORE_AGENT_CHECKPOINT,
   SYNARA_EMBED_READY,
+  SYNARA_TURN_ACTIVITY,
   SYNARA_CONFIRMATION_REQUEST,
   SYNARA_OPEN_FILE,
   SYNARA_OPEN_REVIEW,
@@ -159,6 +161,26 @@ describe("Lattice embed mode", () => {
     postEmbedReadyToLattice(config!);
 
     expect(postMessage).toHaveBeenCalledWith({ type: SYNARA_EMBED_READY }, "http://localhost:1420");
+  });
+
+  it("posts turn activity only to the configured Lattice origin", () => {
+    const { postMessage } = installBrowserStubs();
+    initializeEmbedMode();
+    const message = {
+      type: SYNARA_TURN_ACTIVITY,
+      version: 1,
+      workspaceRoot: "/Users/me/paper",
+      threadId: "thread-1",
+      turnId: "turn-1",
+      state: "running",
+      provider: { id: "claudeAgent", label: "Claude" },
+    } as const;
+
+    postTurnActivityToLattice(readEmbedMode()!, message);
+    postTurnActivityToLattice({ ...readEmbedMode()!, hostOrigin: null }, message);
+
+    expect(postMessage).toHaveBeenCalledTimes(1);
+    expect(postMessage).toHaveBeenCalledWith(message, "http://localhost:1420");
   });
 
   it("asks the trusted Lattice host to open a local skill folder", () => {
