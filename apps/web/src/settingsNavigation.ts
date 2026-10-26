@@ -170,7 +170,6 @@ const ALL_SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     description: msg`Sign in to Supabase, Linear, Notion, and other services your agents can use.`,
     icon: "connectors-1",
     eyebrow: "Remote MCP servers",
-    badge: "Beta",
   },
   {
     id: "integrations",

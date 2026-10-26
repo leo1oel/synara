@@ -966,7 +966,6 @@ export default function ChatView({
   ]);
 
   const composerFormRef = useRef<HTMLFormElement>(null);
-  const composerSurfaceRef = useRef<HTMLDivElement>(null);
   const composerStatusRowRef = useRef<HTMLDivElement>(null);
   // Set by whichever mounted GitActionsControl instance (header quick-action or the
   // Environment panel row) last registered — either performs the identical commit &
@@ -2710,7 +2709,7 @@ export default function ChatView({
     isServerThread &&
     activeThread !== undefined &&
     threadExportBlockedReason(activeThread) === null;
-  // Connectors (Beta) are mentionable only where the session receives them.
+  // Connectors are mentionable only where the session receives them.
   const connectorsMentionable =
     MCP_CONNECTORS_ON && providerSupportsMcpConnectors(selectedProvider);
   const connectorsQuery = useQuery({
@@ -6836,7 +6835,6 @@ export default function ChatView({
             {...threadMentionDropzoneProps}
           >
             <div
-              ref={composerSurfaceRef}
               data-chat-composer-surface=""
               className={cn(
                 COMPOSER_INPUT_SURFACE_CLASS_NAME,
@@ -7319,7 +7317,7 @@ export default function ChatView({
                 )}
               >
                 {settings.showAsciiBackground && !terminalWorkspaceTerminalTabActive ? (
-                  <AsciiWaveBackground exclusionRef={composerSurfaceRef} />
+                  <AsciiWaveBackground />
                 ) : null}
                 {/* The heading floats centered in the space above the composer, which is
                     anchored to the bottom of the pane (with its workspace-tools rail

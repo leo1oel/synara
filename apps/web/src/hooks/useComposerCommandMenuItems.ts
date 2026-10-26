@@ -384,7 +384,7 @@ export function useComposerCommandMenuItems(input: {
     readonly scopeProjectId?: string | null;
   };
   paperMentionSources?: readonly ComposerPaperMentionSource[];
-  /** Connected connectors this provider's sessions receive (Beta). */
+  /** Connected connectors this provider's sessions receive. */
   connectors?: readonly McpConnector[];
 }): ComposerCommandItem[] {
   const {

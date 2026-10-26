@@ -80,6 +80,14 @@ immediately. Native interruption and session teardown begin before waiting for t
 Session teardown and the text drain run concurrently under the old lifecycle generation;
 retirement waits for both, and a teardown failure preserves that generation and the accepted text.
 Stop, session replacement and graceful shutdown flush before retiring the text's owner.
+Conditional Stop records its command identity, original runtime generation and exact provider turn
+before sending physical control. A database retry can finish that same retirement, but cannot adopt
+a replacement runtime or a later turn in the same runtime. The receipt uses the existing internal
+runtime payload; it adds no transport field or database migration. Failed observations remain
+retryable or explicitly uncertain rather than being acknowledged as a successful Stop.
+If the initial target cannot be saved, Stop is rejected before any adapter call; a new explicit
+Stop may observe the current target. Interrupt-only controls for steer and goal fences preserve
+queued messages and transcript bootstrap when finishing the same receipt after a retry.
 Unknown metadata or nonempty raw payloads retain their original events.
 
 This optimization requires the adapter's explicit `fresh-ids-once` delivery guarantee: each
@@ -292,6 +300,11 @@ Install V2 following the [official guide](https://opencode.ai/v2/docs/), then se
 `opencode` executable in the existing provider account. Restart provider sessions and refresh
 model discovery. V2 uses `@opencode/cli` or `anomalyco/tap/opencode-v2` for package updates;
 V1 retains its own packages. External-server updates belong to that server's operator.
+
+V2 discovery loads models before reading provider metadata, so Console providers initialized by
+that first lookup appear on cold servers. When CLI help advertises `--standalone`, the model-list
+fallback uses a private server with the selected account's environment instead of the background
+service's shared port.
 
 Preserve the OpenCode account/data directories to retain native session IDs. OpenCode owns
 migration of its history and credentials. Synara does not copy provider databases or silently
@@ -575,6 +588,12 @@ appropriate machine. Synara never submits browser credentials or accepts consent
 Pi-family **Sign-in options** sends the native `/login` TUI command after you have completed startup
 prompts. It is never passed as a model prompt. OpenCode accounts configured for an external server
 must authenticate on that server; Synara reports this instead of changing a local account.
+
+For local OpenCode sign-in, Synara checks `auth login --help` and adds `--standalone` when supported.
+The private login server uses the selected account's home and XDG directories without connecting
+to another account's background service. Legacy CLIs keep `auth login`. Authentication terminals
+use the embedded renderer's terminal and color capabilities, including when the server inherited
+`TERM=dumb` or `NO_COLOR`.
 
 For non-default native Devin, Antigravity, and Droid accounts, the first launch saves isolated home
 and credential-directory environment settings so later managed sessions and health checks use the

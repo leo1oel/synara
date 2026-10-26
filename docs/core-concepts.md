@@ -28,8 +28,8 @@ composer; it is not sent twice.
 
 Empty chats show an animated ASCII background by default. Turn it off in **Settings →
 Appearance → ASCII background**. With reduced motion enabled, the field stays still; deliberate
-clicks can still trigger a ripple. The pattern fades around the composer and stays out of the
-input, including during ripples. The decoration pauses while its chat is hidden.
+clicks can still trigger a ripple. The composer keeps its own surface over the pattern. The
+decoration pauses while its chat is hidden.
 
 ## The main surfaces
 
@@ -129,6 +129,13 @@ thread's model picker cannot change its account in place.
 ## Projects
 
 A project is the folder Synara works with.
+
+Wherever a project appears (sidebar rows, pinned rail shortcuts, hover cards, search, pickers, and the
+Edit project preview), its glyph is the project's local favicon when one is available, with a folder
+as the fallback. An emoji, icon, or folder color chosen in Edit project takes priority over the
+detected favicon. The folder opens and closes with its sidebar row; a pinned row, or a row showing
+any other glyph, adds a chevron for that state. Detected logos must be image files inside the project;
+links to files outside it are ignored, and logo documents cannot run scripts.
 
 The project picker shows registered projects and local folders. Creating a task worktree does not
 add another project entry. If the current draft already uses an unregistered folder, the picker keeps
@@ -276,6 +283,12 @@ For work that should continue across several turns, set a deliberate
 [thread goal](https://www.trysynara.com/docs/features/thread-goals). A goal can continue after a
 clean turn, but queued user work, approvals, questions, interruptions, failures, and pause rules
 remain in control.
+
+Hosts advertise `orchestration.thread-goal-visible-start` when they accept
+`goalStartBehavior: "start-with-message"`. Native clients use it only for a new,
+idle goal outside Plan mode, so the visible message and first turn request are
+committed together. Older hosts keep the existing goal path; this optional capability does
+not change the required protocol revision or require re-pairing.
 
 Use a [thread fork](https://www.trysynara.com/docs/workflows/forks) when a new task should inherit
 the conversation or split from one exact turn. Use a

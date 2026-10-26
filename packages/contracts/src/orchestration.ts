@@ -968,7 +968,12 @@ export const ThreadNotes = Schema.String.check(Schema.isMaxLength(THREAD_NOTES_M
 export type ThreadNotes = typeof ThreadNotes.Type;
 export const ThreadGoal = Schema.String.check(Schema.isMaxLength(THREAD_GOAL_MAX_CHARS));
 export type ThreadGoal = typeof ThreadGoal.Type;
-export const ThreadGoalStartBehavior = Schema.Literals(["start-if-idle", "defer"]);
+// The visible start atomically records the goal message and its first turn intent.
+export const ThreadGoalStartBehavior = Schema.Literals([
+  "start-if-idle",
+  "start-with-message",
+  "defer",
+]);
 export type ThreadGoalStartBehavior = typeof ThreadGoalStartBehavior.Type;
 export const ThreadGoalContinuationTrigger = Schema.Literals([
   "goal-updated",
@@ -1806,6 +1811,7 @@ const ThreadDispatchQueuedTurnCommand = Schema.Struct({
   commandId: CommandId,
   threadId: ThreadId,
   messageId: MessageId,
+  initialGoalStartedAt: Schema.optional(IsoDateTime),
   modelSelection: Schema.optional(ModelSelection),
   providerOptions: Schema.optional(ProviderStartOptions),
   enableComputerControl: Schema.optional(Schema.Boolean),
@@ -2456,6 +2462,8 @@ export const ThreadClaudeCacheResponseRequestedPayload = Schema.Struct({
 export const ThreadTurnStartRequestedPayload = Schema.Struct({
   threadId: ThreadId,
   messageId: MessageId,
+  // Server-owned pursuit identity for the visible first goal turn, retained by queue replay.
+  initialGoalStartedAt: Schema.optional(IsoDateTime),
   modelSelection: Schema.optional(ModelSelection),
   providerOptions: Schema.optional(ProviderStartOptions),
   enableComputerControl: Schema.optional(Schema.Boolean),
