@@ -5843,6 +5843,8 @@ export default function Sidebar() {
     // name container itself is not focusable — the row's button is.
     const projectToolbarReserveClassName =
       "group-hover/project-header:pr-[4.75rem] project-header-focus:pr-[4.75rem]";
+    // Configured display name only — folder identity lives in the hover card (#1000).
+    const projectRowLabel = resolveSidebarProjectRowLabel(project);
 
     return (
       <div className="group/collapsible">
