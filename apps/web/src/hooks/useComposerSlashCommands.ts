@@ -1056,7 +1056,7 @@ export function useComposerSlashCommands(input: {
         ) {
           if (await persistThreadGoal(goalAction.goal, { startBehavior: "start-with-message" })) {
             editorActions.clearComposerSlashDraft();
-            toastManager.add({ type: "success", title: "Thread goal updated" });
+            toastManager.add({ type: "success", title: i18n._("Thread goal updated") });
           }
           return true;
         }
