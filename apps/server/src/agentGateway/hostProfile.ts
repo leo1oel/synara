@@ -93,6 +93,7 @@ const LATTICE_NATIVE_TOOL_NAMES = new Set([
   "create_project_document",
   "read_editor_comments",
   "preview_presentation_page",
+  "preview_latex_figure",
   "device_list",
   "device_boot",
   "device_configure",

@@ -6,7 +6,7 @@ const RESULT_PATH = "/api/lattice/presentation-tools/result";
 
 interface PresentationRequest {
   readonly id: string;
-  readonly action: "preview_page";
+  readonly action: "preview_page" | "preview_figure";
   readonly args: Record<string, unknown>;
   readonly expiresAt: number;
 }

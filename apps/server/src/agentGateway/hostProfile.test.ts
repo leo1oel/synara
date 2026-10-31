@@ -100,6 +100,15 @@ describe("agent host profile", () => {
         handler: () => Effect.succeed({ content: [] }),
       },
       {
+        requiredCapability: "thread:read",
+        definition: {
+          name: "preview_latex_figure",
+          description: "Typeset a LaTeX figure and return its image.",
+          inputSchema: { type: "object" },
+        },
+        handler: () => Effect.succeed({ content: [] }),
+      },
+      {
         requiredCapability: "thread:write",
         definition: {
           name: "synara_set_thread_goal",
@@ -158,6 +167,7 @@ describe("agent host profile", () => {
       "spreadsheet_read",
       "spreadsheet_batch_update",
       "create_project_document",
+      "preview_latex_figure",
       "set_task_goal",
       "create_automation",
       "update_automation_memory",

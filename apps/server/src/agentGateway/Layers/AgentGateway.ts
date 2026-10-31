@@ -139,6 +139,7 @@ import {
 } from "../hostProfile.ts";
 import { makeLatticeLiteratureTools } from "../latticeLiteratureTools.ts";
 import { makeLatticeCanvasTools } from "../latticeCanvasTools.ts";
+import { makeLatticeFigureTools } from "../latticeFigureTools.ts";
 import { makeLatticePresentationTools } from "../latticePresentationTools.ts";
 import { makeLatticeSpreadsheetTools } from "../latticeSpreadsheetTools.ts";
 import { makeLatticeProjectDocumentTools } from "../latticeProjectDocumentTools.ts";
@@ -1503,6 +1504,10 @@ export const makeAgentGateway = Effect.gen(function* () {
     ACTIVE_AGENT_HOST_PROFILE.id === "lattice"
       ? yield* makeLatticePresentationTools({ resolveWorkspaceRoot: resolveLatticeWorkspaceRoot })
       : [];
+  const latticeFigureTools =
+    ACTIVE_AGENT_HOST_PROFILE.id === "lattice"
+      ? yield* makeLatticeFigureTools({ resolveWorkspaceRoot: resolveLatticeWorkspaceRoot })
+      : [];
 
   const kanbanTools = makeAgentGatewayKanbanTools({
     snapshotQuery,
@@ -1676,6 +1681,7 @@ export const makeAgentGateway = Effect.gen(function* () {
     ...latticeProjectDocumentTools,
     ...latticeEditorCommentsTools,
     ...latticePresentationTools,
+    ...latticeFigureTools,
     // Same switch as the todo.* RPCs: a build without Tasks offers agents no to-do tools.
     ...(isServerBetaFeatureEnabled("tasks") ? todoTools : []),
     // Shared policy enables inline visuals in both Stable and Beta.

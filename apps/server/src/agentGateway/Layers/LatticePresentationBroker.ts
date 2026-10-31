@@ -16,7 +16,8 @@ import {
 import { LatticeHostToolQueueLive } from "./LatticeHostToolQueue.ts";
 
 // Lattice may first have to start its presentation runtime (up to 30 seconds)
-// before the preview page settles (up to 20 seconds) and is rasterized.
+// before the preview page settles (up to 20 seconds) and is rasterized. A
+// figure is stopped after 45 seconds of TeX.
 export const LATTICE_PRESENTATION_TOOL_TIMEOUT_MS = 75_000;
 
 export function makeLatticePresentationBroker(
@@ -55,7 +56,7 @@ export function makeLatticePresentationBroker(
             Effect.fail(
               new LatticePresentationBrokerError(
                 "presentation_tool_timeout",
-                "The presentation tool timed out after 75 seconds.",
+                "The Lattice preview timed out after 75 seconds.",
               ),
             ),
           );

@@ -1,7 +1,9 @@
 import { ServiceMap } from "effect";
 import type { Effect } from "effect";
 
-export type LatticePresentationAction = "preview_page";
+// The channel carries every host-rendered preview back as an image: a page
+// of an Open Slide deck, and a LaTeX figure typeset on its own.
+export type LatticePresentationAction = "preview_page" | "preview_figure";
 
 export interface LatticePresentationRequest {
   readonly id: string;
