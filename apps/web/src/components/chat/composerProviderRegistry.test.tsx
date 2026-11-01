@@ -594,6 +594,7 @@ describe("getComposerProviderState", () => {
       provider: "claudeAgent",
       promptEffort: "high",
       modelOptionsForDispatch: {
+        effort: "high",
         fastMode: true,
       },
     });
@@ -965,7 +966,35 @@ describe("CLI-discovered Claude dispatch", () => {
         runtimeModel,
         modelOptions: { claudeAgent: {} },
       }).modelOptionsForDispatch,
-    ).toBeUndefined();
+    ).toEqual({ effort: "low" });
+  });
+  // Claude Code falls back to settings.json `effortLevel` when no effort is
+  // sent, so every effort the picker can show must be dispatched verbatim.
+  it.each([
+    ["claude-sonnet-5", undefined],
+    ["claude-sonnet-5", { effort: "high" as const }],
+    ["claude-sonnet-5", { effort: "low" as const }],
+    ["claude-opus-4-6", {}],
+    ["runtime-fixture-model", {}],
+    ["runtime-fixture-model", { effort: "low" as const }],
+  ])("dispatches the effort the picker shows for %s %j", (model, claudeOptions) => {
+    const modelOptions = claudeOptions === undefined ? undefined : { claudeAgent: claudeOptions };
+    const shownEffort = getComposerTraitSelection(
+      "claudeAgent",
+      model,
+      "",
+      modelOptions?.claudeAgent,
+      model === "runtime-fixture-model" ? runtimeModel : undefined,
+    ).effort;
+    const dispatched = getComposerProviderState({
+      provider: "claudeAgent",
+      model,
+      prompt: "",
+      ...(model === "runtime-fixture-model" ? { runtimeModel } : {}),
+      modelOptions,
+    }).modelOptionsForDispatch as { effort?: string } | undefined;
+    expect(shownEffort).toBeTruthy();
+    expect(dispatched?.effort).toBe(shownEffort);
   });
   it("honors an explicit empty CLI ladder instead of restoring the static one", () => {
     const selection = getComposerTraitSelection("claudeAgent", "claude-opus-4-8", "", undefined, {

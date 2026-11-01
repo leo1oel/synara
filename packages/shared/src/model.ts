@@ -66,7 +66,7 @@ export const EMPTY_MODEL_CAPABILITIES: ModelCapabilities = {
   contextWindowOptions: [],
 };
 
-function isClaudeCodeEffort(value: string): value is ClaudeCodeEffort {
+export function isClaudeCodeEffort(value: string): value is ClaudeCodeEffort {
   return CLAUDE_CODE_EFFORT_SET.has(value);
 }
 
