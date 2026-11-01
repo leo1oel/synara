@@ -37,6 +37,12 @@ export const LATTICE_HOST_POINTER = "lattice:host-pointer";
 export const LATTICE_OUTSIDE_POINTER_DOWN = "lattice:outside-pointerdown";
 /** `{ open: boolean }`: whether this frame shows a popup a host press should dismiss. */
 export const SYNARA_POPUP_OPEN = "synara:popup-open";
+/** `{ version: 1 }`: this frame asks for the keys Lattice keeps (latticeHostShortcuts.ts). */
+export const LATTICE_HOST_SHORTCUTS_REQUEST = "lattice:request-host-shortcuts";
+/** `{ version: 1, shortcuts }`: the keys Lattice's window can run now, which this frame leaves to it. */
+export const LATTICE_HOST_SHORTCUTS = "lattice:host-shortcuts";
+/** `{ version: 1, key, code, metaKey, ctrlKey, shiftKey, altKey }`: one of those keys, pressed here. */
+export const SYNARA_HOST_SHORTCUT = "synara:host-shortcut";
 export const SYNARA_AGENT_PERMISSION_MODE_STATUS = "synara:agent-permission-mode";
 export const SYNARA_LAYOUT_METRICS = "synara:layout-metrics";
 export const SYNARA_SETTINGS_CONTENT_HEIGHT = "synara:settings-content-height";

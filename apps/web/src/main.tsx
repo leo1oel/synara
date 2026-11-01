@@ -22,6 +22,7 @@ import { answerLatticePresentationRequest } from "./latticePresentationRelay";
 import { startLatticeHostToolRelay } from "./latticeHostToolRelay";
 import { startLatticeHostThemeRelay } from "./latticeHostThemeRelay";
 import { startLatticePopupDismissal } from "./latticePopupDismissal";
+import { startLatticeHostShortcuts } from "./latticeHostShortcuts";
 import { isElectron } from "./env";
 import { readDesktopWindowTranslucency } from "./lib/desktopWindowTranslucency";
 import { installGlassOverlayCutout } from "./lib/glassOverlayCutout";
@@ -44,6 +45,8 @@ startLatticeHostToolRelay({
 });
 startLatticeHostThemeRelay();
 startLatticePopupDismissal();
+// Before the first render, so Lattice's keys are stopped ahead of every shortcut listener here.
+startLatticeHostShortcuts();
 // Before the first render: settings hooks read the stored rail on mount.
 revealHubsRailItemOnce();
 const router = getRouter(appHistory);
