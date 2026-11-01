@@ -45,6 +45,7 @@ import {
 import type { SynaraDesktopFlavor } from "@synara/shared/desktopIdentity";
 import { codexAccountInstanceId } from "@synara/shared/providerInstances";
 import { useLocalStorage } from "./hooks/useLocalStorage";
+import { isLatticeEmbedDocument } from "./embedMode";
 import { EnvMode } from "./components/BranchToolbar.logic";
 import { normalizeCursorModelVariantBaseId } from "./cursorModelVariants";
 import { formatProviderModelOptionName, type ProviderModelOption } from "./providerModelOptions";
@@ -620,7 +621,11 @@ export const AppSettingsSchema = Schema.Struct({
   proofreadProviderInstanceId: Schema.optional(ProviderInstanceId),
   proofreadModel: Schema.optional(TrimmedNonEmptyString),
   uiFontFamily: Schema.String.check(Schema.isMaxLength(256)).pipe(withDefaults(() => "")),
-  defaultProvider: PersistedProviderKind.pipe(withDefaults(() => "codex" as const)),
+  // Lattice's agent panel is a Claude-first writing surface; elsewhere Codex
+  // stays the default. A stored choice always wins over this default.
+  defaultProvider: PersistedProviderKind.pipe(
+    withDefaults(() => (isLatticeEmbedDocument() ? "claudeAgent" : "codex")),
+  ),
   // Local-only UI preference: providers explicitly hidden from the composer picker.
   // The active/locked provider for a thread is always shown regardless, so users
   // never get stuck on a thread whose provider they later chose to hide.

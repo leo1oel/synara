@@ -1738,14 +1738,36 @@ function embedTypography(usesDrawerSurface: boolean): Record<string, string> {
   };
 }
 
+function isEmbedHandshakeSearch(search: URLSearchParams): boolean {
+  const embed = search.get("embed");
+  return (
+    (embed === "1" || embed === '"1"' || embed === "true") &&
+    Boolean(search.get("workspaceRoot")?.trim())
+  );
+}
+
+/**
+ * Whether this document is Lattice's embedded agent panel. Unlike
+ * `readEmbedMode`, this also answers before `initializeEmbedMode` runs, so
+ * module-level defaults (app settings) can depend on it.
+ */
+export function isLatticeEmbedDocument(): boolean {
+  if (typeof window === "undefined") return false;
+  if (readEmbedMode()) return true;
+  try {
+    return isEmbedHandshakeSearch(new URLSearchParams(window.location.search));
+  } catch {
+    return false;
+  }
+}
+
 export function initializeEmbedMode(): void {
   const search = new URLSearchParams(window.location.search);
   const workspaceRoot = search.get("workspaceRoot")?.trim() ?? "";
-  const embed = search.get("embed");
   const themeValue = search.get("theme");
   const theme = themeValue === "dark" || themeValue === '"dark"' ? "dark" : "light";
   const surface = search.get("surface") === "drawer" ? "drawer" : "chrome";
-  if ((embed === "1" || embed === '"1"' || embed === "true") && workspaceRoot) {
+  if (isEmbedHandshakeSearch(search)) {
     const hostOrigin =
       normalizedOrigin(search.get("hostOrigin")) || normalizedOrigin(document.referrer);
     const locale = search.get("locale") === "zh-CN" ? "zh-CN" : "en";

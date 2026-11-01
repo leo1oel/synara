@@ -11,7 +11,7 @@ import {
   type ProviderKind,
 } from "@synara/contracts";
 import { codexAccountInstanceId } from "@synara/shared/providerInstances";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   didProviderCommandDiscoverySettingsChange,
@@ -72,6 +72,28 @@ describe("provider process priority settings", () => {
     expect(appSettingsPatchToServerSettingsPatch({ lowerProviderProcessPriority: true })).toEqual({
       lowerProviderProcessPriority: true,
     });
+  });
+});
+
+describe("default provider", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("keeps Codex as the default outside Lattice", () => {
+    expect(Schema.decodeSync(AppSettingsSchema)({}).defaultProvider).toBe("codex");
+  });
+
+  it("defaults Lattice's embedded panel to Claude and keeps a stored choice", () => {
+    vi.stubGlobal("window", {
+      name: "",
+      location: { search: "?embed=1&workspaceRoot=%2Ftmp%2Fpaper" },
+    });
+    expect(Schema.decodeSync(AppSettingsSchema)({}).defaultProvider).toBe("claudeAgent");
+    expect(AppSettingsSchema.makeUnsafe({}).defaultProvider).toBe("claudeAgent");
+    expect(Schema.decodeSync(AppSettingsSchema)({ defaultProvider: "codex" }).defaultProvider).toBe(
+      "codex",
+    );
   });
 });
 
