@@ -59,6 +59,7 @@ export const ORCHESTRATION_WS_METHODS = {
   importProject: "orchestration.importProject",
   loadProjectImportHistory: "orchestration.loadProjectImportHistory",
   regenerateThreadTitle: "orchestration.regenerateThreadTitle",
+  showPanelThread: "orchestration.showPanelThread",
   repairState: "orchestration.repairState",
   getTurnDiff: "orchestration.getTurnDiff",
   getFullThreadDiff: "orchestration.getFullThreadDiff",
@@ -3165,6 +3166,31 @@ export const OrchestrationRegenerateThreadTitleResult = Schema.Union([
 export type OrchestrationRegenerateThreadTitleResult =
   typeof OrchestrationRegenerateThreadTitleResult.Type;
 
+/**
+ * An embedded panel reports the thread it shows (null for none). The shown
+ * thread's provider runtime is kept warm: exempt from the idle stop while the
+ * report is renewed, and, with `prewarm`, started now with the composer's
+ * settings so a cold start overlaps typing. `threadId` may name a draft the
+ * server has not seen yet; its first send adopts the warm runtime.
+ */
+export const OrchestrationShowPanelThreadInput = Schema.Struct({
+  panelId: TrimmedNonEmptyString.check(Schema.isMaxLength(128)),
+  threadId: Schema.NullOr(ThreadId),
+  prewarm: Schema.optional(
+    Schema.Struct({
+      projectId: ProjectId,
+      modelSelection: ModelSelection,
+      runtimeMode: RuntimeMode,
+    }),
+  ),
+});
+export type OrchestrationShowPanelThreadInput = typeof OrchestrationShowPanelThreadInput.Type;
+
+export const OrchestrationShowPanelThreadResult = Schema.Struct({
+  prewarm: Schema.Literals(["started", "running", "skipped", "not-requested"]),
+});
+export type OrchestrationShowPanelThreadResult = typeof OrchestrationShowPanelThreadResult.Type;
+
 export const OrchestrationUnsubscribeThreadInput = Schema.Struct({
   threadId: ThreadId,
 });
@@ -3212,6 +3238,10 @@ export const OrchestrationRpcSchemas = {
   regenerateThreadTitle: {
     input: OrchestrationRegenerateThreadTitleInput,
     output: OrchestrationRegenerateThreadTitleResult,
+  },
+  showPanelThread: {
+    input: OrchestrationShowPanelThreadInput,
+    output: OrchestrationShowPanelThreadResult,
   },
   getTurnDiff: {
     input: OrchestrationGetTurnDiffInput,

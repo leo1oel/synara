@@ -482,6 +482,15 @@ export const WsOrchestrationRegenerateThreadTitleRpc = Rpc.make(
   },
 );
 
+export const WsOrchestrationShowPanelThreadRpc = Rpc.make(
+  ORCHESTRATION_WS_METHODS.showPanelThread,
+  {
+    payload: OrchestrationRpcSchemas.showPanelThread.input,
+    success: OrchestrationRpcSchemas.showPanelThread.output,
+    error: WsRpcError,
+  },
+);
+
 export const WsOrchestrationGetSnapshotRpc = Rpc.make(ORCHESTRATION_WS_METHODS.getSnapshot, {
   payload: OrchestrationRpcSchemas.getSnapshot.input,
   success: OrchestrationRpcSchemas.getSnapshot.output,
@@ -2086,6 +2095,7 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsImportProjectRpc,
   WsLoadProjectImportHistoryRpc,
   WsOrchestrationRegenerateThreadTitleRpc,
+  WsOrchestrationShowPanelThreadRpc,
   WsOrchestrationGetSnapshotRpc,
   WsOrchestrationGetShellSnapshotRpc,
   WsOrchestrationGetThreadDetailSnapshotRpc,

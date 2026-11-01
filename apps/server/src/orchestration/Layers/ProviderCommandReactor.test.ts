@@ -865,7 +865,15 @@ describe("ProviderCommandReactor", () => {
     };
 
     const unsupported = () => Effect.die(new Error("Unsupported provider call in test")) as never;
+    const panelVisibleThreads = new Map<string, ThreadId>();
     const service: ProviderServiceShape = {
+      setPanelVisibleThread: ({ panelId, threadId }) =>
+        Effect.sync(() => {
+          const previous = panelVisibleThreads.get(panelId) ?? null;
+          if (threadId === null) panelVisibleThreads.delete(panelId);
+          else panelVisibleThreads.set(panelId, threadId);
+          return { previousThreadId: previous !== threadId ? previous : null };
+        }),
       startSession: startSession as ProviderServiceShape["startSession"],
       startSessionWithOutcome,
       completePriorTranscriptBootstrap,
@@ -18051,6 +18059,128 @@ describe("ProviderCommandReactor", () => {
       expect(harness.clearSessionResumeCursor).not.toHaveBeenCalled();
     },
   );
+
+  describe("panel prewarm", () => {
+    const claude = { provider: "claudeAgent", model: "claude-opus-4-7" } as const;
+    const draftId = ThreadId.makeUnsafe("thread-draft");
+    const prewarm = (
+      harness: Awaited<ReturnType<typeof createHarness>>,
+      threadId: ThreadId | null,
+      modelSelection: ModelSelection = claude,
+    ) =>
+      Effect.runPromise(
+        harness.reactor.showPanelThread({
+          panelId: "panel-1",
+          threadId,
+          ...(threadId
+            ? {
+                prewarm: {
+                  projectId: asProjectId("project-1"),
+                  modelSelection,
+                  runtimeMode: "approval-required" as const,
+                },
+              }
+            : {}),
+        }),
+      );
+    const createAndSend = async (
+      harness: Awaited<ReturnType<typeof createHarness>>,
+      modelSelection: ModelSelection = claude,
+    ) => {
+      const now = new Date().toISOString();
+      await Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.create",
+          commandId: CommandId.makeUnsafe("cmd-thread-create-draft"),
+          threadId: draftId,
+          projectId: asProjectId("project-1"),
+          title: "Draft",
+          modelSelection,
+          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          runtimeMode: "approval-required",
+          branch: null,
+          worktreePath: null,
+          createdAt: now,
+        }),
+      );
+      await Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.turn.start",
+          commandId: CommandId.makeUnsafe("cmd-turn-start-draft"),
+          threadId: draftId,
+          message: {
+            messageId: asMessageId("user-message-draft"),
+            role: "user",
+            text: "hello",
+            attachments: [],
+          },
+          modelSelection,
+          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          runtimeMode: "approval-required",
+          createdAt: now,
+        }),
+      );
+      await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    };
+
+    it("starts a draft's Claude runtime early and lets its first send reuse it", async () => {
+      const harness = await createHarness({ threadModelSelection: claude });
+      expect(await prewarm(harness, draftId)).toEqual({ prewarm: "started" });
+      expect(harness.startSession.mock.calls).toHaveLength(1);
+      expect(harness.startSession.mock.calls[0]?.[1]).toMatchObject({
+        threadId: draftId,
+        cwd: "/tmp/provider-project",
+        runtimeMode: "approval-required",
+        modelSelection: { provider: "claudeAgent", model: "claude-opus-4-7" },
+      });
+      // Focus and heartbeats repeat the report without starting anything else.
+      expect(await prewarm(harness, draftId)).toEqual({ prewarm: "running" });
+
+      await createAndSend(harness);
+      expect(harness.startSession.mock.calls).toHaveLength(1);
+      expect(harness.stopSession).not.toHaveBeenCalled();
+    });
+
+    it("replaces the warm runtime when a spawn-fixed setting changed before the send", async () => {
+      const harness = await createHarness({ threadModelSelection: claude });
+      await prewarm(harness, draftId);
+      const maxEffort = { ...claude, options: { effort: "max" as const } };
+      await createAndSend(harness, maxEffort);
+      expect(harness.startSession.mock.calls).toHaveLength(2);
+      expect(harness.startSession.mock.calls[1]?.[1]).toMatchObject({
+        threadId: draftId,
+        modelSelection: { options: { effort: "max" } },
+      });
+    });
+
+    it("stops an unused warm runtime once the panel shows another thread", async () => {
+      const harness = await createHarness({ threadModelSelection: claude });
+      await prewarm(harness, draftId);
+      expect(await prewarm(harness, null)).toEqual({ prewarm: "not-requested" });
+      await waitFor(() => harness.stopSession.mock.calls.length === 1);
+      expect(harness.stopSession.mock.calls[0]?.[0]).toMatchObject({ threadId: draftId });
+    });
+
+    it("leaves Codex threads to start on send", async () => {
+      const harness = await createHarness();
+      expect(
+        await prewarm(harness, draftId, { provider: "codex", model: "gpt-5-codex" }),
+      ).toEqual({ prewarm: "skipped" });
+      expect(harness.startSession).not.toHaveBeenCalled();
+    });
+
+    it("resumes an existing thread's stopped Claude runtime when it is shown", async () => {
+      const harness = await createHarness({ threadModelSelection: claude });
+      expect(await prewarm(harness, ThreadId.makeUnsafe("thread-1"))).toEqual({
+        prewarm: "started",
+      });
+      expect(harness.startSession.mock.calls).toHaveLength(1);
+      expect(harness.startSession.mock.calls[0]?.[1]).toMatchObject({
+        threadId: "thread-1",
+        modelSelection: { provider: "claudeAgent" },
+      });
+    });
+  });
 
   it("restarts an idle Claude session only for spawn-fixed model selection changes", async () => {
     const harness = await createHarness({

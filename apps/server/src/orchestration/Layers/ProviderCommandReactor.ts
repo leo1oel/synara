@@ -28,6 +28,8 @@ import {
   type OrchestrationEvent,
   OrchestrationEventType,
   type OrchestrationRegenerateThreadTitleResult,
+  type OrchestrationShowPanelThreadInput,
+  type OrchestrationShowPanelThreadResult,
   PROVIDER_DISPLAY_NAMES,
   PROVIDER_SEND_TURN_MAX_INPUT_CHARS,
   type ProviderMentionReference,
@@ -1146,6 +1148,14 @@ const make = Effect.gen(function* () {
   // was actually spawned with so a changed value restarts the runtime instead
   // of silently reusing a session provisioned under the old approval set.
   const threadSessionAutoApproveSynaraTools = new Map<string, boolean>();
+  // Runtimes a panel started ahead of the first send (showPanelThread). A draft
+  // entry names a thread the projection does not have yet; its first turn
+  // adopts the runtime when the launch still matches. Any real use of the
+  // thread clears the entry, and an unused one stops when the panel moves on.
+  const prewarmedSessions = new Map<
+    string,
+    { readonly draft: boolean; readonly modelSelection: ModelSelection }
+  >();
   // Seeded from the engine's in-memory command read model, not a second snapshot query.
   // The engine loads that model once after the projection bootstrap and keeps it current
   // as commands commit, so reading it here is both free and strictly fresher than
@@ -2421,8 +2431,12 @@ const make = Effect.gen(function* () {
       readonly enableComputerControl?: boolean;
       readonly runtimeMode?: RuntimeMode;
       readonly registerPriorTranscriptBootstrapOnFreshStart?: boolean;
+      /** A panel warm-up rather than real use of the thread. */
+      readonly prewarm?: boolean;
     },
   ) {
+    const prewarmed = prewarmedSessions.get(threadId);
+    if (options?.prewarm !== true) prewarmedSessions.delete(threadId);
     const thread = yield* resolveThreadShell(threadId);
     if (!thread) {
       return yield* Effect.die(
@@ -2742,6 +2756,44 @@ const make = Effect.gen(function* () {
           ? "Finish or stop this thread's background tasks before switching providers."
           : "Finish or stop this thread's background tasks before resuming in the new project path.",
       });
+    }
+    // A draft's first send adopts the runtime its panel started while the user
+    // typed. Anything that would restart a bound session starts fresh instead;
+    // ProviderService retires the warm runtime before spawning its replacement.
+    if (
+      prewarmed?.draft === true &&
+      options?.prewarm !== true &&
+      thread.session === null &&
+      activeSessionBeforeEnsure !== undefined
+    ) {
+      const adoptable =
+        activeSessionBeforeEnsure.provider === preferredProvider &&
+        (activeSessionBeforeEnsure.providerInstanceId ?? preferredProvider) ===
+          desiredProviderInstanceId &&
+        activeSessionBeforeEnsure.runtimeMode === desiredRuntimeMode &&
+        !workspaceChanged &&
+        additionalDirectories.length === 0 &&
+        !autoApproveSynaraTools &&
+        (options?.enableComputerControl ?? false) === false &&
+        !claudeSelectionRequiresRestart(prewarmed.modelSelection, desiredModelSelection) &&
+        !shouldRestartForProviderOptionsChange({
+          requestedProvider: desiredRoutedModelSelection.provider,
+          previousProviderOptions: threadProviderOptions.get(threadId),
+          requestedProviderOptions: resolvedProviderOptions,
+        });
+      if (adoptable) {
+        yield* bindSessionToThread(activeSessionBeforeEnsure);
+        suppressContextBootstrapOnNextStartThreadIds.delete(threadId);
+        return {
+          activeSessionBeforeEnsure,
+          activeSession: activeSessionBeforeEnsure,
+          nativeResumeSucceeded: false,
+          nativeResumeFailed: false,
+          nativeSessionRestarted: false,
+          computerControlRestartDeferred: false,
+          forkComputerControl: undefined,
+        };
+      }
     }
     const reusableSession =
       thread.session && thread.session.status !== "stopped" ? activeSessionBeforeEnsure : undefined;
@@ -7970,7 +8022,11 @@ const make = Effect.gen(function* () {
           return;
         }
         case "thread.created":
-          threadSessionModelSelections.set(event.payload.threadId, event.payload.modelSelection);
+          // A draft's warm runtime was spawned from the panel's selection; keep
+          // comparing against that so a spawn-fixed change still restarts it.
+          if (prewarmedSessions.get(event.payload.threadId)?.draft !== true) {
+            threadSessionModelSelections.set(event.payload.threadId, event.payload.modelSelection);
+          }
           return;
         case "thread.deleted":
           // Cancel any queued/promoting turns for the deleted thread BEFORE
@@ -10268,12 +10324,142 @@ const make = Effect.gen(function* () {
       );
     });
 
+  // Stop a runtime the panel warmed for a thread it no longer shows, unless
+  // the thread was used meanwhile (which clears its entry).
+  const releasePrewarmedSession = (threadId: ThreadId) =>
+    withProviderSessionLease(
+      threadId,
+      Effect.gen(function* () {
+        const record = prewarmedSessions.get(threadId);
+        if (!record) return;
+        prewarmedSessions.delete(threadId);
+        if (record.draft) {
+          threadSessionModelSelections.delete(threadId);
+          threadSessionComputerControl.delete(threadId);
+          threadProviderOptions.delete(threadId);
+          yield* providerService.stopSession({ threadId });
+        } else if (providerService.stopRuntimeSession) {
+          yield* providerService.stopRuntimeSession({ threadId });
+        }
+      }),
+    ).pipe(
+      Effect.catchCause((cause) =>
+        Effect.logWarning("provider command reactor could not release a warm runtime", {
+          threadId,
+          cause,
+        }),
+      ),
+    );
+
+  const prewarmThreadSession = (
+    threadId: ThreadId,
+    prewarm: NonNullable<OrchestrationShowPanelThreadInput["prewarm"]>,
+  ): Effect.Effect<OrchestrationShowPanelThreadResult> =>
+    Effect.gen(function* () {
+      const sessions = yield* providerService.listSessions();
+      if (sessions.some((session) => session.threadId === threadId)) {
+        return { prewarm: "running" as const };
+      }
+      const thread = yield* resolveThreadShell(threadId);
+      if (thread) {
+        // A stopped runtime resumes exactly as the next turn would start it.
+        prewarmedSessions.set(threadId, { draft: false, modelSelection: prewarm.modelSelection });
+        yield* ensureSessionForThread(threadId, new Date().toISOString(), {
+          modelSelection: prewarm.modelSelection,
+          runtimeMode: prewarm.runtimeMode,
+          prewarm: true,
+        });
+        return { prewarm: "started" as const };
+      }
+      // A draft: start what its first send would start for a local chat.
+      const settings = yield* serverSettings.getSettings;
+      const instanceId = prewarm.modelSelection.instanceId ?? prewarm.modelSelection.provider;
+      const instance = resolveProviderInstance(settings, { instanceId });
+      if (!instance || !instance.enabled || instance.driver !== "claudeAgent") {
+        return { prewarm: "skipped" as const };
+      }
+      const project = Option.getOrUndefined(
+        yield* projectionSnapshotQuery.getProjectShellById(prewarm.projectId),
+      );
+      if (!project || (project.additionalFolders ?? []).length > 0) {
+        return { prewarm: "skipped" as const };
+      }
+      const cwd = yield* resolveProjectedThreadWorkspaceCwd({
+        projectId: prewarm.projectId,
+        envMode: "local",
+        worktreePath: null,
+        workingDirectory: null,
+      });
+      const providerOptions = mergeProviderStartOptions(
+        providerStartOptionsFromServerSettings(settings),
+        providerStartOptionsFromInstance(instance),
+      );
+      prewarmedSessions.set(threadId, { draft: true, modelSelection: prewarm.modelSelection });
+      threadSessionModelSelections.set(threadId, prewarm.modelSelection);
+      threadSessionComputerControl.set(threadId, false);
+      setThreadProviderOptions(threadId, providerOptions);
+      yield* providerService.startSession(threadId, {
+        threadId,
+        provider: "claudeAgent",
+        providerInstanceId: instance.instanceId,
+        ...(cwd ? { cwd } : {}),
+        modelSelection: {
+          ...prewarm.modelSelection,
+          provider: "claudeAgent",
+          instanceId: instance.instanceId,
+        } as ModelSelection,
+        providerOptions,
+        runtimeMode: prewarm.runtimeMode,
+      });
+      return { prewarm: "started" as const };
+    }).pipe(
+      Effect.catchCause((cause) =>
+        Effect.logWarning("provider command reactor could not prewarm a thread", {
+          threadId,
+          cause,
+        }).pipe(Effect.as({ prewarm: "skipped" as const })),
+      ),
+    );
+
+  const showPanelThread: ProviderCommandReactorShape["showPanelThread"] = (input) =>
+    Effect.gen(function* () {
+      const { previousThreadId } = providerService.setPanelVisibleThread
+        ? yield* providerService.setPanelVisibleThread({
+            panelId: input.panelId,
+            threadId: input.threadId,
+          })
+        : { previousThreadId: null };
+      if (previousThreadId !== null && prewarmedSessions.has(previousThreadId)) {
+        yield* releasePrewarmedSession(previousThreadId);
+      }
+      if (input.threadId === null || input.prewarm === undefined) {
+        return { prewarm: "not-requested" as const };
+      }
+      // The measured cold start is Claude Code's; other providers start as before.
+      if (input.prewarm.modelSelection.provider !== "claudeAgent") {
+        return { prewarm: "skipped" as const };
+      }
+      const threadId = input.threadId;
+      return yield* withProviderSessionLease(
+        threadId,
+        prewarmThreadSession(threadId, input.prewarm),
+      ).pipe(
+        Effect.catchCause((cause) =>
+          Effect.logWarning("provider command reactor could not prewarm a thread", {
+            threadId,
+            cause,
+          }).pipe(Effect.as({ prewarm: "skipped" as const })),
+        ),
+      );
+    });
+
   return {
     start,
     drain,
     listBlockingDeliveries,
     reconcileDelivery,
     regenerateThreadTitle,
+    showPanelThread,
   } satisfies ProviderCommandReactorShape;
 });
 

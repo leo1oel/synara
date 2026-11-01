@@ -1427,6 +1427,11 @@ const makeWsRpcHandlersLayer = () =>
             providerCommandReactor.regenerateThreadTitle(input),
             "Failed to regenerate thread title",
           ),
+        [ORCHESTRATION_WS_METHODS.showPanelThread]: (input) =>
+          rpcEffect(
+            providerCommandReactor.showPanelThread(input),
+            "Failed to record the panel's thread",
+          ),
         [ORCHESTRATION_WS_METHODS.getSnapshot]: () =>
           rpcEffect(
             projectionReadModelQuery.getSnapshot(),

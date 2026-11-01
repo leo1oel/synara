@@ -80,6 +80,7 @@ describe("OrchestrationReactor", () => {
             listBlockingDeliveries: () => Effect.succeed([]),
             reconcileDelivery: () => Effect.succeed(null),
             regenerateThreadTitle: () => Effect.succeed({ status: "no-context", title: null }),
+            showPanelThread: () => Effect.succeed({ prewarm: "not-requested" as const }),
           }),
         ),
         Layer.provideMerge(
