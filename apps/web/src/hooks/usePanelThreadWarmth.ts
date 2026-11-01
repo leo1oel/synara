@@ -85,7 +85,10 @@ export function startPanelThreadReports(
  */
 export function usePanelThreadWarmth(input: PanelThreadWarmthInput): void {
   const latest = useRef(input);
-  latest.current = input;
+  // Writing a ref during render defeats the React Compiler; sync it after commit.
+  useEffect(() => {
+    latest.current = input;
+  });
   const modelKey = JSON.stringify(input.modelSelection);
 
   useEffect(() => {
