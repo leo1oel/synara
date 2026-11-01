@@ -913,6 +913,8 @@ export function createWsNativeApi(): NativeApi {
         transport.request(ORCHESTRATION_WS_METHODS.regenerateThreadTitle, input, {
           timeoutMs: null,
         }),
+      showPanelThread: (input) =>
+        transport.request(ORCHESTRATION_WS_METHODS.showPanelThread, input),
       repairState: () => transport.request(ORCHESTRATION_WS_METHODS.repairState),
       getTurnDiff: (input) => transport.request(ORCHESTRATION_WS_METHODS.getTurnDiff, input),
       getInlineVisual: (input) =>

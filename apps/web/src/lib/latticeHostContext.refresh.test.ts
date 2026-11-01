@@ -111,7 +111,7 @@ describe("refreshLatticeHostContextForSend", () => {
     capturedAt,
     comments: [{ body }] as never[],
     omittedCount: 0,
-    overleaf: { status: "ok" as const },
+    overleaf: { status: "fresh" as const },
   });
 
   it("does not hold a send behind a slow host, and folds the late refresh into the cache", async () => {

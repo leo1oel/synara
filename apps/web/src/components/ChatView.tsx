@@ -94,6 +94,7 @@ import { resolveAuxiliaryTextGenerationSelection } from "~/lib/textGenerationCap
 import { resolveInheritedThreadContext } from "~/lib/threadBootstrap";
 import { cn, isMacNavigatorPlatform, newCommandId, newThreadId, randomUUID } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
+import { usePanelThreadWarmth } from "~/hooks/usePanelThreadWarmth";
 import { dispatchThreadSnoozedUntil, resolveSnoozeDeadline } from "~/lib/threadSnooze";
 import {
   ChatLinkActionsContext,
@@ -1529,6 +1530,13 @@ export default function ChatView({
     resolvedThreadWorktreePath,
     // Same gate as the Hand off menu: a coordinator is one per-group identity.
     allowProviderHandoff: isServerThread && !isCoordinatorConversation,
+  });
+  usePanelThreadWarmth({
+    enabled: isEmbed,
+    threadId: activeThreadId,
+    projectId: activeProjectId,
+    modelSelection: selectedModelSelection,
+    runtimeMode,
   });
   const selectedProviderInstances = useMemo(
     () => providerInstances.filter((instance) => instance.provider === selectedProvider),
