@@ -6,6 +6,7 @@
 
 import { rankProviderDiscoveryItems } from "~/lib/providerDiscovery";
 import { i18n } from "./i18n";
+import { isSynaraEmbedMode } from "./embedMode";
 import {
   isSettingsSectionAvailable,
   settingRowAnchorId,
@@ -572,6 +573,14 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     title: "Keep Synara responsive",
     keywords:
       "Lower agent CPU scheduling priority performance load nice responsiveness restart sessions",
+  },
+  {
+    id: "providers:claude-user-mcp-servers",
+    section: "providers",
+    title: "Load my MCP servers in Claude",
+    keywords:
+      "MCP servers claude.ai connectors plugins tools strict Lattice faster start startup performance",
+    applies: () => isSynaraEmbedMode(),
   },
   {
     id: "providers:automatic-cli-update-checks",

@@ -75,6 +75,27 @@ describe("provider process priority settings", () => {
   });
 });
 
+describe("Claude MCP server setting", () => {
+  it("defaults to Lattice-only MCP and forwards the opt-in to the server", () => {
+    expect(Schema.decodeSync(AppSettingsSchema)({}).claudeLoadUserMcpServers).toBe(false);
+    expect(appSettingsPatchToServerSettingsPatch({ claudeLoadUserMcpServers: true })).toEqual({
+      providers: { claudeAgent: { loadUserMcpServers: true } },
+    });
+    expect(
+      serverSettingsToAppSettings({
+        ...DEFAULT_SERVER_SETTINGS_VIEW,
+        providers: {
+          ...DEFAULT_SERVER_SETTINGS_VIEW.providers,
+          claudeAgent: {
+            ...DEFAULT_SERVER_SETTINGS_VIEW.providers.claudeAgent,
+            loadUserMcpServers: true,
+          },
+        },
+      }).claudeLoadUserMcpServers,
+    ).toBe(true);
+  });
+});
+
 describe("default provider", () => {
   afterEach(() => {
     vi.unstubAllGlobals();

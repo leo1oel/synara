@@ -4682,6 +4682,21 @@ msgstr "只对新启动的 AI 助手进程生效。重启现有会话后才会�
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Load my MCP servers in Claude"
+msgstr "在 Claude 中加载我的 MCP 服务器"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Off: new chats start faster and use only Lattice's tools. On: Claude can also use the MCP servers and claude.ai connectors you set up for Claude Code, but every new or restarted chat first waits for all of them to connect, often several seconds."
+msgstr "关闭：新对话启动更快，只使用 Lattice 的工具。开启：Claude 还可以使用你为 Claude Code 配置的 MCP 服务器和 claude.ai 连接器，但每个新建或重启的对话都要先等它们全部连上，通常要多等几秒。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Applies to new and restarted chats. A chat that is already running keeps its current tools."
+msgstr "对新建和重启的对话生效。正在运行的对话保持当前的工具。"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Updates"
 msgstr "更新"
 

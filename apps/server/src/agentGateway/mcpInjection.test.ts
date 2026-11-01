@@ -17,6 +17,7 @@ import {
   buildOpenCodeMcpServer,
   callAgentGatewayMcpTool,
   listAgentGatewayMcpTools,
+  resolveClaudeMcpLaunchOptions,
   SYNARA_AGENT_GATEWAY_TOKEN_ENV,
 } from "./mcpInjection.ts";
 
@@ -309,6 +310,53 @@ describe("connector injection", () => {
         headers: { Authorization: authorization },
       },
     });
+  });
+
+  it("keeps Lattice's Claude on its own MCP server unless the user opts in", () => {
+    const hostOnly = {
+      mcpServers: {
+        synara: { type: "http", url: connection.url, headers: { Authorization: authorization } },
+      },
+      strictMcpConfig: true,
+    };
+    assert.deepEqual(
+      resolveClaudeMcpLaunchOptions({
+        connection: withConnectors,
+        hostProfileId: "lattice",
+        loadUserMcpServers: false,
+      }),
+      hostOnly,
+    );
+    // Opting in restores the previous launch: connectors plus the user's own
+    // MCP config, which Claude Code loads when strictMcpConfig is absent.
+    assert.deepEqual(
+      resolveClaudeMcpLaunchOptions({
+        connection: withConnectors,
+        hostProfileId: "lattice",
+        loadUserMcpServers: true,
+      }),
+      { mcpServers: buildClaudeMcpServers(withConnectors) },
+    );
+    // Strict also applies when no gateway is attached, so no user MCP loads.
+    assert.deepEqual(
+      resolveClaudeMcpLaunchOptions({
+        connection: undefined,
+        hostProfileId: "lattice",
+        loadUserMcpServers: false,
+      }),
+      { strictMcpConfig: true },
+    );
+  });
+
+  it("leaves Synara's own Claude MCP launch unchanged", () => {
+    assert.deepEqual(
+      resolveClaudeMcpLaunchOptions({
+        connection: withConnectors,
+        hostProfileId: "synara",
+        loadUserMcpServers: false,
+      }),
+      { mcpServers: buildClaudeMcpServers(withConnectors) },
+    );
   });
 
   it("adds connector proxies only to Codex's per-thread config", () => {

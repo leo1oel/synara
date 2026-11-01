@@ -69,6 +69,11 @@ export const ClaudeServerProviderSettings = Schema.Struct({
   // large session after a long pause. When on, Synara asks the way Claude
   // Code's interactive resume prompt does.
   confirmColdCacheResume: Schema.Boolean.pipe(Schema.withDecodingDefault(() => false)),
+  // Lattice profile only. Off by default: the embedded panel's Claude loads only
+  // Lattice's MCP server (strictMcpConfig), because Claude Code otherwise waits
+  // for every user-configured MCP server and claude.ai connector before its
+  // first request. On restores the user's own MCP servers at that startup cost.
+  loadUserMcpServers: Schema.Boolean.pipe(Schema.withDecodingDefault(() => false)),
 });
 export type ClaudeServerProviderSettings = typeof ClaudeServerProviderSettings.Type;
 
@@ -251,6 +256,7 @@ export const ServerSettingsPatch = Schema.Struct({
           launchArgs: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(4096))),
           enableArtifacts: Schema.optionalKey(Schema.Boolean),
           confirmColdCacheResume: Schema.optionalKey(Schema.Boolean),
+          loadUserMcpServers: Schema.optionalKey(Schema.Boolean),
         }),
       ),
       cursor: Schema.optionalKey(

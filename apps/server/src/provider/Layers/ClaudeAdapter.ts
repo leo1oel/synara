@@ -1,4 +1,5 @@
 import { providerProcessPriorityEnabled } from "../../providerProcessPriority";
+import { claudeUserMcpServersEnabled } from "../claudeUserMcpSetting";
 import { claudeTurnResultUsage, type ClaudeResultUsageBaseline } from "../claudeResultUsage.ts";
 import { restoreClaudeImportedCopyDates } from "../claudeImportedCopyDates.ts";
 /**
@@ -116,7 +117,10 @@ import {
   Stream,
 } from "effect";
 
-import { buildClaudeMcpServers, SYNARA_MCP_SERVER_NAME } from "../../agentGateway/mcpInjection.ts";
+import {
+  resolveClaudeMcpLaunchOptions,
+  SYNARA_MCP_SERVER_NAME,
+} from "../../agentGateway/mcpInjection.ts";
 import { mapClaudeMcpServerStatuses } from "../mcpServerStatus.ts";
 import { renderSynaraHarnessPolicy } from "../../agentGateway/harnessPolicy.ts";
 import {
@@ -7455,11 +7459,11 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
                 ],
               }
             : {}),
-          ...(agentGatewayCredentials
-            ? {
-                mcpServers: buildClaudeMcpServers(gatewaySessionLease!.connection),
-              }
-            : {}),
+          ...resolveClaudeMcpLaunchOptions({
+            connection: agentGatewayCredentials ? gatewaySessionLease!.connection : undefined,
+            hostProfileId: ACTIVE_AGENT_HOST_PROFILE.id,
+            loadUserMcpServers: yield* claudeUserMcpServersEnabled,
+          }),
         };
 
         const queryRuntime = yield* Effect.tryPromise({

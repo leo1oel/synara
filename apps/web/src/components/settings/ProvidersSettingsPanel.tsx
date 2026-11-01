@@ -66,7 +66,7 @@ import {
   type ProviderInstanceOption,
   type ProviderInstancePatch,
 } from "~/appSettings";
-import { postExternalLinkToLattice, readEmbedMode } from "~/embedMode";
+import { isSynaraEmbedMode, postExternalLinkToLattice, readEmbedMode } from "~/embedMode";
 import { useProviderStatusesForLocalConfig } from "~/hooks/useProviderStatusesForLocalConfig";
 import { useRefreshProviderStatusesNow } from "~/hooks/useProviderStatusRefresh";
 import { CentralIcon } from "~/lib/central-icons";
@@ -2332,6 +2332,38 @@ export function ProvidersSettingsPanel({
               />
             }
           />
+          {isSynaraEmbedMode() ? (
+            <SettingsRow
+              title={i18n._("Load my MCP servers in Claude")}
+              description={i18n._(
+                "Off: new chats start faster and use only Lattice's tools. On: Claude can also use the MCP servers and claude.ai connectors you set up for Claude Code, but every new or restarted chat first waits for all of them to connect, often several seconds.",
+              )}
+              status={i18n._(
+                "Applies to new and restarted chats. A chat that is already running keeps its current tools.",
+              )}
+              resetAction={
+                settings.claudeLoadUserMcpServers !== defaults.claudeLoadUserMcpServers ? (
+                  <SettingResetButton
+                    label={i18n._("Load my MCP servers in Claude")}
+                    onClick={() =>
+                      updateSettings({
+                        claudeLoadUserMcpServers: defaults.claudeLoadUserMcpServers,
+                      })
+                    }
+                  />
+                ) : null
+              }
+              control={
+                <Switch
+                  checked={settings.claudeLoadUserMcpServers}
+                  onCheckedChange={(checked) =>
+                    updateSettings({ claudeLoadUserMcpServers: Boolean(checked) })
+                  }
+                  aria-label={i18n._("Load my MCP servers in Claude")}
+                />
+              }
+            />
+          ) : null}
         </SettingsSection>
       </div>
 

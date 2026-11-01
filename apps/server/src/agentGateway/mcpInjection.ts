@@ -244,15 +244,45 @@ export function callAgentGatewayMcpTool(input: {
 
 export function buildClaudeMcpServers(
   connection: AgentGatewayMcpConnection,
+  options: { readonly includeConnectors?: boolean } = {},
 ): Record<string, ClaudeMcpHttpServerConfig> {
   const headers = { Authorization: authorizationHeader(connection) };
   const servers: Record<string, ClaudeMcpHttpServerConfig> = {
     [SYNARA_MCP_SERVER_NAME]: { type: "http", url: connection.url, headers },
   };
+  if (options.includeConnectors === false) return servers;
   for (const connector of connection.connectors ?? []) {
     servers[connector.name] = { type: "http", url: connector.url, headers };
   }
   return servers;
+}
+
+/**
+ * MCP options for a Claude Code session. Whenever the SDK passes `mcpServers`,
+ * Claude Code holds its first request until every MCP server the user has
+ * configured (plugins, claude.ai connectors) has connected, which measured
+ * 3.5-6 s per session start in Lattice. Lattice's panel therefore loads only its
+ * own server under `strictMcpConfig` unless the user opts back in.
+ */
+export function resolveClaudeMcpLaunchOptions(input: {
+  readonly connection: AgentGatewayMcpConnection | undefined;
+  readonly hostProfileId: "synara" | "lattice";
+  readonly loadUserMcpServers: boolean;
+}): {
+  readonly mcpServers?: Record<string, ClaudeMcpHttpServerConfig>;
+  readonly strictMcpConfig?: true;
+} {
+  const hostOnly = input.hostProfileId === "lattice" && !input.loadUserMcpServers;
+  return {
+    ...(input.connection
+      ? {
+          mcpServers: buildClaudeMcpServers(input.connection, {
+            includeConnectors: !hostOnly,
+          }),
+        }
+      : {}),
+    ...(hostOnly ? { strictMcpConfig: true as const } : {}),
+  };
 }
 
 export type AcpStdioProxySpawn = AgentGatewayStdioProxySpawn;

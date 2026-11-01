@@ -4682,6 +4682,21 @@ msgstr "Applies to newly launched agent processes. Restart existing sessions to 
 
 #. js-lingui-explicit-id
 #: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Load my MCP servers in Claude"
+msgstr "Load my MCP servers in Claude"
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Off: new chats start faster and use only Lattice's tools. On: Claude can also use the MCP servers and claude.ai connectors you set up for Claude Code, but every new or restarted chat first waits for all of them to connect, often several seconds."
+msgstr "Off: new chats start faster and use only Lattice's tools. On: Claude can also use the MCP servers and claude.ai connectors you set up for Claude Code, but every new or restarted chat first waits for all of them to connect, often several seconds."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
+msgid "Applies to new and restarted chats. A chat that is already running keeps its current tools."
+msgstr "Applies to new and restarted chats. A chat that is already running keeps its current tools."
+
+#. js-lingui-explicit-id
+#: src/components/settings/ProvidersSettingsPanel.tsx
 msgid "Updates"
 msgstr "Updates"
 

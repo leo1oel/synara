@@ -712,6 +712,9 @@ function SettingsRouteView() {
     ...(settings.lowerProviderProcessPriority !== defaults.lowerProviderProcessPriority
       ? ["Keep Synara responsive"]
       : []),
+    ...(settings.claudeLoadUserMcpServers !== defaults.claudeLoadUserMcpServers
+      ? ["Load my MCP servers in Claude"]
+      : []),
     ...(defaultDiffRenderMode !== DEFAULT_DIFF_RENDER_MODE ? ["Diff layout"] : []),
     ...(settings.diffWordWrap !== defaults.diffWordWrap ? ["Diff line wrapping"] : []),
     ...(settings.githubLinkOpenTarget !== defaults.githubLinkOpenTarget
