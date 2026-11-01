@@ -23,6 +23,8 @@ export const LATTICE_PROJECT_HISTORY = "lattice:project-history";
 export const LATTICE_RESTORE_AGENT_CHECKPOINT = "lattice:restore-agent-checkpoint";
 export const LATTICE_HOST_CONTEXT = "lattice:host-context";
 export const LATTICE_HOST_CONTEXT_REQUEST = "lattice:request-host-context";
+/** Lattice's answer to a comment refresh it cannot serve (no context, other project, load error). */
+export const LATTICE_HOST_CONTEXT_REFRESH_FAILED = "lattice:host-context-refresh-failed";
 export const LATTICE_HOST_CONTEXT_SELECTION_CLEAR = "lattice:clear-host-context-selection";
 export const LATTICE_PAPER_LIBRARY = "lattice:paper-library";
 export const LATTICE_PAPER_LIBRARY_REQUEST = "lattice:request-paper-library";
@@ -588,6 +590,27 @@ function isSafePaperId(value: string): boolean {
     !value.includes("\\") &&
     value.split("/").every((segment) => segment.length > 0 && segment !== "." && segment !== "..")
   );
+}
+
+/** The request id of a valid refresh-failed reply from this frame's host, else null. */
+export function readLatticeHostContextRefreshFailedMessage(
+  event: MessageEvent,
+  config: EmbedModeConfig,
+): string | null {
+  if (
+    !config.hostOrigin ||
+    event.source !== window.parent ||
+    event.origin !== config.hostOrigin ||
+    !event.data ||
+    typeof event.data !== "object"
+  ) {
+    return null;
+  }
+  const value = event.data as Record<string, unknown>;
+  return value.type === LATTICE_HOST_CONTEXT_REFRESH_FAILED &&
+    nonEmptyBoundedString(value.requestId, 128)
+    ? value.requestId
+    : null;
 }
 
 export function readLatticeHostContextMessage(

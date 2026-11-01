@@ -2,6 +2,7 @@ import {
   postHostContextSelectionClearToLattice,
   postHostContextRequestToLattice,
   readLatticeHostContextMessage,
+  readLatticeHostContextRefreshFailedMessage,
   readEmbedMode,
   type LatticeHostContextSnapshot,
 } from "../embedMode";
@@ -148,45 +149,83 @@ export function appendLatticeHostContextToPrompt(
   return visiblePrompt ? `${visiblePrompt}\n\n${block}` : block;
 }
 
-/** Refresh comments at dispatch time without ever blocking the user's send indefinitely. */
+/**
+ * How long a send waits for Lattice's comment refresh. Lattice answers a local
+ * project in tens of milliseconds, but an Overleaf-linked one first makes two
+ * Overleaf REST calls (0.3-1.4 s, more on a bad network), and that wait sat in
+ * front of every send. Past this cap the send uses the cached context: Lattice
+ * pushes it with its locally cached comments, a late reply still refreshes
+ * that cache for the next message, and the agent can call
+ * `read_editor_comments` whenever it needs the live list.
+ */
+export const LATTICE_HOST_CONTEXT_SEND_WAIT_MS = 300;
+// How long a late refresh may still update the cache after the send went out.
+const LATE_REFRESH_WINDOW_MS = 15_000;
+
+function cachedContextForSend(workspaceRoot: string): LatticeHostContextSnapshot | null {
+  const latest = getLiveLatticeHostContext();
+  if (!latest || !workspaceRootsEqual(latest.workspaceRoot, workspaceRoot)) return null;
+  if (latest.editorComments) return latest;
+  return {
+    ...latest,
+    editorComments: {
+      workspaceRoot,
+      capturedAt: latest.capturedAt ?? "unknown",
+      comments: [],
+      omittedCount: 0,
+      overleaf: { status: "unavailable", error: "Comment refresh timed out." },
+    },
+  };
+}
+
+/** Refresh comments at dispatch time, waiting at most `waitMs` before sending the cached context. */
 export async function refreshLatticeHostContextForSend(
-  timeoutMs = 5_000,
+  waitMs = LATTICE_HOST_CONTEXT_SEND_WAIT_MS,
 ): Promise<LatticeHostContextSnapshot | null> {
   const current = getLiveLatticeHostContext();
   const config = readEmbedMode();
   if (!config?.hostOrigin || window.parent === window) return current;
   const requestId = randomUUID();
   return new Promise((resolve) => {
-    let settled = false;
-    const finish = (context: LatticeHostContextSnapshot | null) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      window.removeEventListener("message", onMessage);
+    let sent = false;
+    const send = (context: LatticeHostContextSnapshot | null) => {
+      if (sent) return;
+      sent = true;
+      clearTimeout(sendTimer);
       resolve(context);
     };
+    const stopListening = () => {
+      clearTimeout(lateTimer);
+      window.removeEventListener("message", onMessage);
+    };
     const onMessage = (event: MessageEvent) => {
+      if (readLatticeHostContextRefreshFailedMessage(event, config) === requestId) {
+        stopListening();
+        send(cachedContextForSend(config.workspaceRoot));
+        return;
+      }
       const context = readLatticeHostContextMessage(event, config);
       if (!context || context.requestId !== requestId) return;
-      setLiveLatticeHostContext(context);
-      finish(context);
-    };
-    const timer = window.setTimeout(() => {
-      const latest = getLiveLatticeHostContext();
-      if (!latest || !workspaceRootsEqual(latest.workspaceRoot, config.workspaceRoot)) {
-        return finish(null);
+      stopListening();
+      if (!sent) {
+        setLiveLatticeHostContext(context);
+        send(context);
+        return;
       }
-      finish({
-        ...latest,
-        editorComments: {
-          workspaceRoot: config.workspaceRoot,
-          capturedAt: latest.editorComments?.capturedAt ?? latest.capturedAt ?? "unknown",
-          comments: latest.editorComments?.comments ?? [],
-          omittedCount: latest.editorComments?.omittedCount ?? 0,
-          overleaf: { status: "unavailable", error: "Comment refresh timed out." },
-        },
-      });
-    }, timeoutMs);
+      // The send already went out with the cache. Keep the newer editor state
+      // Lattice pushed meanwhile and take only the refreshed comments.
+      const live = getLiveLatticeHostContext();
+      if (live && workspaceRootsEqual(live.workspaceRoot, context.workspaceRoot)) {
+        setLiveLatticeHostContext(
+          context.editorComments ? { ...live, editorComments: context.editorComments } : live,
+        );
+      }
+    };
+    const sendTimer = window.setTimeout(
+      () => send(cachedContextForSend(config.workspaceRoot)),
+      waitMs,
+    );
+    const lateTimer = window.setTimeout(stopListening, Math.max(waitMs, LATE_REFRESH_WINDOW_MS));
     window.addEventListener("message", onMessage);
     postHostContextRequestToLattice(config, { requestId, refreshComments: true });
   });

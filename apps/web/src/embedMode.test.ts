@@ -31,6 +31,7 @@ import {
   readLatticeCheckpointRestoreMessage,
   readLatticeComposerFilesMessage,
   readLatticeHostContextMessage,
+  readLatticeHostContextRefreshFailedMessage,
   readLatticePaperLibraryMessage,
   readLatticeConfirmationMessage,
   readLatticeHostPointerMessage,
@@ -44,6 +45,7 @@ import {
   LATTICE_CONFIRMATION_RESPONSE,
   LATTICE_AGENT_PANEL_OPENED,
   LATTICE_HOST_CONTEXT,
+  LATTICE_HOST_CONTEXT_REFRESH_FAILED,
   LATTICE_HOST_CONTEXT_REQUEST,
   LATTICE_HOST_CONTEXT_SELECTION_CLEAR,
   LATTICE_PAPER_LIBRARY,
@@ -966,6 +968,27 @@ describe("Lattice embed mode", () => {
         config,
       ),
     ).toBe(false);
+  });
+
+  it("accepts a comment refresh failure only from the frame's own host", () => {
+    installBrowserStubs();
+    initializeEmbedMode();
+    const config = readEmbedMode()!;
+    const data = { type: LATTICE_HOST_CONTEXT_REFRESH_FAILED, requestId: "refresh-1" };
+    const read = (event: Partial<MessageEvent>) =>
+      readLatticeHostContextRefreshFailedMessage(event as MessageEvent, config);
+    expect(read({ source: window.parent, origin: "http://localhost:1420", data })).toBe(
+      "refresh-1",
+    );
+    expect(read({ source: window.parent, origin: "https://untrusted.example", data })).toBeNull();
+    expect(read({ source: {} as Window, origin: "http://localhost:1420", data })).toBeNull();
+    expect(
+      read({
+        source: window.parent,
+        origin: "http://localhost:1420",
+        data: { ...data, requestId: "" },
+      }),
+    ).toBeNull();
   });
 
   it("accepts live host context only from the configured Lattice workspace", () => {

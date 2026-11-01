@@ -16,6 +16,12 @@ vi.mock("../embedMode", async (importOriginal) => {
     ...actual,
     readEmbedMode: () => config,
     postHostContextRequestToLattice: postRequest,
+    readLatticeHostContextRefreshFailedMessage: (event: MessageEvent) =>
+      event.source === window.parent &&
+      event.origin === config.hostOrigin &&
+      event.data?.type === "lattice:host-context-refresh-failed"
+        ? event.data.requestId
+        : null,
     readLatticeHostContextMessage: (event: MessageEvent) =>
       event.source === window.parent &&
       event.origin === config.hostOrigin &&
@@ -26,7 +32,13 @@ vi.mock("../embedMode", async (importOriginal) => {
 });
 vi.mock("./utils", () => ({ randomUUID: () => "refresh-1" }));
 
-import { refreshLatticeHostContextForSend, setLiveLatticeHostContext } from "./latticeHostContext";
+import { LATTICE_HOST_CONTEXT_REFRESH_FAILED } from "../embedMode";
+import {
+  getLiveLatticeHostContext,
+  LATTICE_HOST_CONTEXT_SEND_WAIT_MS,
+  refreshLatticeHostContextForSend,
+  setLiveLatticeHostContext,
+} from "./latticeHostContext";
 
 const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
 afterEach(() => {
@@ -92,5 +104,67 @@ describe("refreshLatticeHostContextForSend", () => {
       editorComments: { capturedAt: "2026-09-18T00:00:00Z", overleaf: { status: "unavailable" } },
     });
     expect((await promise)?.editor?.selection).toBeUndefined();
+  });
+
+  const comments = (capturedAt: string, body: string) => ({
+    workspaceRoot: "/workspace",
+    capturedAt,
+    comments: [{ body }] as never[],
+    omittedCount: 0,
+    overleaf: { status: "ok" as const },
+  });
+
+  it("does not hold a send behind a slow host, and folds the late refresh into the cache", async () => {
+    vi.useFakeTimers();
+    const { parent, listeners } = installWindow();
+    const cached = { ...snapshot(), editorComments: comments("t0", "cached") };
+    setLiveLatticeHostContext(cached);
+    let settled = false;
+    const promise = refreshLatticeHostContextForSend().then((context) => {
+      settled = true;
+      return context;
+    });
+    await vi.advanceTimersByTimeAsync(LATTICE_HOST_CONTEXT_SEND_WAIT_MS - 1);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(promise).resolves.toBe(cached);
+    expect(LATTICE_HOST_CONTEXT_SEND_WAIT_MS).toBeLessThanOrEqual(300);
+
+    // Lattice pushed a newer editor state, then the Overleaf refresh landed.
+    const pushed = { ...snapshot("new selection"), editorComments: comments("t1", "pushed") };
+    setLiveLatticeHostContext(pushed);
+    const refreshed = { ...snapshot(), requestId: "refresh-1", editorComments: comments("t2", "fresh") };
+    for (const listener of [...listeners])
+      listener({ source: parent, origin: config.hostOrigin, data: refreshed } as MessageEvent);
+    expect(getLiveLatticeHostContext()).toEqual({ ...pushed, editorComments: refreshed.editorComments });
+    expect(listeners.size).toBe(0);
+  });
+
+  it("sends at the cap when the host never answers and stops listening later", async () => {
+    vi.useFakeTimers();
+    const { listeners } = installWindow();
+    setLiveLatticeHostContext(snapshot());
+    const promise = refreshLatticeHostContextForSend();
+    await vi.advanceTimersByTimeAsync(LATTICE_HOST_CONTEXT_SEND_WAIT_MS);
+    await expect(promise).resolves.toMatchObject({ editor: { path: "main.tex" } });
+    expect(listeners.size).toBe(1);
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(listeners.size).toBe(0);
+  });
+
+  it("sends immediately when Lattice reports it cannot refresh", async () => {
+    vi.useFakeTimers();
+    const { parent, listeners } = installWindow();
+    const cached = { ...snapshot(), editorComments: comments("t0", "cached") };
+    setLiveLatticeHostContext(cached);
+    const promise = refreshLatticeHostContextForSend();
+    for (const listener of [...listeners])
+      listener({
+        source: parent,
+        origin: config.hostOrigin,
+        data: { type: LATTICE_HOST_CONTEXT_REFRESH_FAILED, requestId: "refresh-1" },
+      } as MessageEvent);
+    await expect(promise).resolves.toBe(cached);
+    expect(listeners.size).toBe(0);
   });
 });
