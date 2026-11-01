@@ -315,9 +315,13 @@ describe("connector injection", () => {
   it("keeps Lattice's Claude on its own MCP server unless the user opts in", () => {
     const hostOnly = {
       mcpServers: {
-        synara: { type: "http", url: connection.url, headers: { Authorization: authorization } },
+        synara: {
+          type: "http" as const,
+          url: connection.url,
+          headers: { Authorization: authorization },
+        },
       },
-      strictMcpConfig: true,
+      strictMcpConfig: true as const,
     };
     assert.deepEqual(
       resolveClaudeMcpLaunchOptions({

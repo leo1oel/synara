@@ -9159,6 +9159,60 @@ idleCleanup.layer("ProviderServiceLive idle cleanup", (it) => {
     }),
   );
 
+  it.effect("never idle-stops the thread a panel shows, and resumes once it is hidden", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const visible = asThreadId("thread-idle-visible-in-panel");
+      const background = asThreadId("thread-idle-background-in-panel");
+
+      idleCleanup.claude.stopSession.mockClear();
+      for (const threadId of [visible, background]) {
+        yield* provider.startSession(threadId, {
+          provider: "claudeAgent",
+          threadId,
+          runtimeMode: "full-access",
+        });
+      }
+      yield* idleCleanup.claude.waitForRuntimeSubscribers();
+      assert.deepEqual(
+        yield* provider.setPanelVisibleThread!({ panelId: "panel-1", threadId: visible }),
+        { previousThreadId: null },
+      );
+      for (const threadId of [visible, background]) {
+        idleCleanup.claude.emit({
+          type: "turn.completed",
+          eventId: asEventId(`runtime-${threadId}-completed`),
+          provider: "claudeAgent",
+          createdAt: "2026-11-01T20:00:00.000Z",
+          threadId,
+          payload: { state: "completed" },
+        });
+      }
+
+      // The background thread keeps its idle stop; the visible one survives it.
+      yield* waitUntil(
+        () => idleCleanup.claude.stopSession.mock.calls.some(([id]) => id === background),
+        500,
+        20,
+        "idle stop of the background thread",
+      );
+      yield* sleep(250);
+      assert.isFalse(idleCleanup.claude.stopSession.mock.calls.some(([id]) => id === visible));
+
+      // Showing another thread reports the old one and puts it back on the timer.
+      assert.deepEqual(
+        yield* provider.setPanelVisibleThread!({ panelId: "panel-1", threadId: background }),
+        { previousThreadId: visible },
+      );
+      yield* waitUntil(
+        () => idleCleanup.claude.stopSession.mock.calls.some(([id]) => id === visible),
+        500,
+        20,
+        "idle stop once the thread is no longer visible",
+      );
+    }),
+  );
+
   it.effect("keeps the runtime alive until background tasks settle", () =>
     Effect.gen(function* () {
       const provider = yield* ProviderService;

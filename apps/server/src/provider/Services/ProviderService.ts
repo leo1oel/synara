@@ -277,6 +277,17 @@ export interface ProviderServiceShape {
   readonly hasLiveRuntimeTasks?: (input: { readonly threadId: ThreadId }) => Effect.Effect<boolean>;
 
   /**
+   * Record the thread an embedded panel is showing (null when it shows none).
+   * That thread's runtime is exempt from the idle stop until the report's lease
+   * lapses, so callers renew it while the thread stays on screen. Returns the
+   * thread the panel showed before, if it changed.
+   */
+  readonly setPanelVisibleThread?: (input: {
+    readonly panelId: string;
+    readonly threadId: ThreadId | null;
+  }) => Effect.Effect<{ readonly previousThreadId: ThreadId | null }>;
+
+  /**
    * Forget a stale provider-native resume cursor while preserving local routing
    * metadata such as provider options and runtime mode.
    */

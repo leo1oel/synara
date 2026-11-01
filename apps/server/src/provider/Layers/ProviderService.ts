@@ -115,6 +115,7 @@ import {
   AGENT_GATEWAY_CREDENTIAL_ROTATION_REQUIRED,
   AGENT_GATEWAY_TURN_AUTHORITY_RETIRED,
 } from "../../agentGateway/sessionLease.ts";
+import { ACTIVE_AGENT_HOST_PROFILE } from "../../agentGateway/hostProfile.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import { ServerSecretStore } from "../../auth/Services/ServerSecretStore.ts";
 import {
@@ -141,6 +142,8 @@ export interface ProviderServiceLiveOptions {
   readonly canonicalEventLogPath?: string;
   readonly canonicalEventLogger?: EventNdjsonLogger;
   readonly runtimeIdleStopMs?: number;
+  /** Test override for how long a panel's visible-thread report holds. */
+  readonly panelVisibleThreadLeaseMs?: number;
   /** Test/embedding override for the lossless runtime-event fan-out budget. */
   readonly runtimeEventBufferCapacity?: number;
   /** Production journal hook. The event must be durable before this effect returns. */
@@ -158,12 +161,20 @@ export interface ProviderServiceLiveOptions {
 }
 
 const DEFAULT_PROVIDER_RUNTIME_IDLE_STOP_MS = 10 * 60 * 1000;
+// Writing a paper pauses far longer than coding does, and every stop makes the
+// next turn pay a full CLI cold start (5-7 s measured), so Lattice's profile
+// keeps background runtimes for an hour. The visible thread never idle-stops.
+const LATTICE_PROVIDER_RUNTIME_IDLE_STOP_MS = 60 * 60 * 1000;
+/** How long a panel's visible-thread report holds without a renewal. */
+export const PANEL_VISIBLE_THREAD_LEASE_MS = 3 * 60 * 1000;
 export const PROVIDER_RUNTIME_EVENT_BUFFER_CAPACITY = 2_048;
 export const PROVIDER_RUNTIME_QUARANTINE_CAUSE_MAX_BYTES = 16 * 1024;
 const configuredProviderRuntimeIdleStopMs = process.env.SYNARA_PROVIDER_RUNTIME_IDLE_STOP_MS;
 const PROVIDER_RUNTIME_IDLE_STOP_MS = Number.isFinite(Number(configuredProviderRuntimeIdleStopMs))
   ? Math.max(0, Number(configuredProviderRuntimeIdleStopMs))
-  : DEFAULT_PROVIDER_RUNTIME_IDLE_STOP_MS;
+  : ACTIVE_AGENT_HOST_PROFILE.id === "lattice"
+    ? LATTICE_PROVIDER_RUNTIME_IDLE_STOP_MS
+    : DEFAULT_PROVIDER_RUNTIME_IDLE_STOP_MS;
 const MAX_TARGETED_CHILD_INTERRUPT_TOMBSTONES = 16_384;
 const PROVIDER_OPTIONS_FINGERPRINT_HMAC_SECRET = "provider-options-fingerprint-hmac-key";
 
@@ -1089,6 +1100,20 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
     );
     const runtimeEventProducerScope = yield* Scope.make("sequential");
     const runtimeIdleTimers = new Map<ThreadId, ReturnType<typeof setTimeout>>();
+    // Each embedded panel reports the thread it shows; that runtime is never
+    // idle-stopped while the report's lease holds.
+    const panelVisibleThreads = new Map<string, { threadId: ThreadId; expiresAt: number }>();
+    const panelVisibleThreadLeaseMs =
+      options?.panelVisibleThreadLeaseMs ?? PANEL_VISIBLE_THREAD_LEASE_MS;
+    const isThreadVisibleInPanel = (threadId: ThreadId): boolean => {
+      const now = Date.now();
+      let visible = false;
+      for (const [panelId, lease] of panelVisibleThreads) {
+        if (lease.expiresAt <= now) panelVisibleThreads.delete(panelId);
+        else if (lease.threadId === threadId) visible = true;
+      }
+      return visible;
+    };
     const liveRuntimeTaskIds = new Map<ThreadId, Set<string>>();
     const runtimeTaskSettlementWaiters = new Map<ThreadId, Set<() => void>>();
     // Fired idle callbacks outlive their timer map entry, so use generations to
@@ -1149,6 +1174,10 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
       const generation = invalidateRuntimeIdleGeneration(threadId);
       const timer = setTimeout(() => {
         runtimeIdleTimers.delete(threadId);
+        if (isThreadVisibleInPanel(threadId)) {
+          scheduleRuntimeIdleStop(threadId);
+          return;
+        }
         stopIdleRuntimeSession?.(threadId, generation);
       }, runtimeIdleStopMs);
       timer.unref();
@@ -5609,7 +5638,26 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
 
     yield* Effect.addFinalizer(() => closeRuntimeEvents);
 
+    const setPanelVisibleThread: NonNullable<ProviderServiceShape["setPanelVisibleThread"]> = (
+      input,
+    ) =>
+      Effect.sync(() => {
+        const previous = panelVisibleThreads.get(input.panelId);
+        if (input.threadId === null) panelVisibleThreads.delete(input.panelId);
+        else
+          panelVisibleThreads.set(input.panelId, {
+            threadId: input.threadId,
+            expiresAt: Date.now() + panelVisibleThreadLeaseMs,
+          });
+        const previousThreadId =
+          previous && previous.threadId !== input.threadId && previous.expiresAt > Date.now()
+            ? previous.threadId
+            : null;
+        return { previousThreadId };
+      });
+
     return {
+      setPanelVisibleThread,
       startSession,
       startSessionWithOutcome,
       getPersistedSessionProfile,
