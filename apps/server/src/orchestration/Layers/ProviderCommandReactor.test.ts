@@ -18163,9 +18163,9 @@ describe("ProviderCommandReactor", () => {
 
     it("leaves Codex threads to start on send", async () => {
       const harness = await createHarness();
-      expect(
-        await prewarm(harness, draftId, { provider: "codex", model: "gpt-5-codex" }),
-      ).toEqual({ prewarm: "skipped" });
+      expect(await prewarm(harness, draftId, { provider: "codex", model: "gpt-5-codex" })).toEqual({
+        prewarm: "skipped",
+      });
       expect(harness.startSession).not.toHaveBeenCalled();
     });
 

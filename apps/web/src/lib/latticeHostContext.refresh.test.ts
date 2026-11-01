@@ -72,6 +72,14 @@ const snapshot = (selection?: string) => ({
   editor: { path: "main.tex", line: 1, column: 0, ...(selection ? { selection } : {}) },
 });
 
+const comments = (capturedAt: string, body: string) => ({
+  workspaceRoot: "/workspace",
+  capturedAt,
+  comments: [{ body }] as never[],
+  omittedCount: 0,
+  overleaf: { status: "fresh" as const },
+});
+
 describe("refreshLatticeHostContextForSend", () => {
   it("requests the configured workspace and accepts only matching source, origin, and request id", async () => {
     const { parent, listeners } = installWindow();
@@ -106,14 +114,6 @@ describe("refreshLatticeHostContextForSend", () => {
     expect((await promise)?.editor?.selection).toBeUndefined();
   });
 
-  const comments = (capturedAt: string, body: string) => ({
-    workspaceRoot: "/workspace",
-    capturedAt,
-    comments: [{ body }] as never[],
-    omittedCount: 0,
-    overleaf: { status: "fresh" as const },
-  });
-
   it("does not hold a send behind a slow host, and folds the late refresh into the cache", async () => {
     vi.useFakeTimers();
     const { parent, listeners } = installWindow();
@@ -133,10 +133,17 @@ describe("refreshLatticeHostContextForSend", () => {
     // Lattice pushed a newer editor state, then the Overleaf refresh landed.
     const pushed = { ...snapshot("new selection"), editorComments: comments("t1", "pushed") };
     setLiveLatticeHostContext(pushed);
-    const refreshed = { ...snapshot(), requestId: "refresh-1", editorComments: comments("t2", "fresh") };
-    for (const listener of [...listeners])
+    const refreshed = {
+      ...snapshot(),
+      requestId: "refresh-1",
+      editorComments: comments("t2", "fresh"),
+    };
+    for (const listener of Array.from(listeners))
       listener({ source: parent, origin: config.hostOrigin, data: refreshed } as MessageEvent);
-    expect(getLiveLatticeHostContext()).toEqual({ ...pushed, editorComments: refreshed.editorComments });
+    expect(getLiveLatticeHostContext()).toEqual({
+      ...pushed,
+      editorComments: refreshed.editorComments,
+    });
     expect(listeners.size).toBe(0);
   });
 
@@ -158,7 +165,7 @@ describe("refreshLatticeHostContextForSend", () => {
     const cached = { ...snapshot(), editorComments: comments("t0", "cached") };
     setLiveLatticeHostContext(cached);
     const promise = refreshLatticeHostContextForSend();
-    for (const listener of [...listeners])
+    for (const listener of Array.from(listeners))
       listener({
         source: parent,
         origin: config.hostOrigin,
