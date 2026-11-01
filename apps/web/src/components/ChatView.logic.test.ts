@@ -1853,38 +1853,54 @@ describe("resolveEmbeddedNewThreadModelSelection", () => {
     checkedAt: "2026-08-26T12:00:00.000Z",
   });
 
-  it("uses GPT-5.6 Sol at high effort when there is no previous chat", () => {
+  it("starts on Claude's default model when there is no previous chat", () => {
     expect(
       resolveEmbeddedNewThreadModelSelection({
         projectSelection: { provider: "codex", model: "gpt-5.5" },
         threadSummaries: [],
-        providerStatuses: [providerStatus("codex")],
+        providerStatuses: [providerStatus("codex"), providerStatus("claudeAgent")],
         providerStatusesReconciled: true,
         providerOrder: ["codex", "claudeAgent"],
         hiddenProviders: [],
       }),
-    ).toEqual({
-      provider: "codex",
-      model: "gpt-5.6-sol",
-      options: { reasoningEffort: "high" },
-    });
+    ).toEqual({ provider: "claudeAgent", model: "claude-sonnet-5" });
   });
 
-  it("falls back to a visible authenticated subscription when Codex is unavailable", () => {
+  it("keeps the model of the user's last chat, Codex included", () => {
+    expect(
+      resolveEmbeddedNewThreadModelSelection({
+        projectSelection: null,
+        threadSummaries: [
+          {
+            latestUserMessageAt: "2026-08-26T12:00:00.000Z",
+            modelSelection: { provider: "codex", model: "gpt-5.6-sol" },
+            parentThreadId: null,
+            sidechatSourceThreadId: null,
+          },
+        ],
+        providerStatuses: [providerStatus("codex"), providerStatus("claudeAgent")],
+        providerStatusesReconciled: true,
+        providerOrder: ["codex", "claudeAgent"],
+        hiddenProviders: [],
+      }),
+    ).toMatchObject({ provider: "codex", model: "gpt-5.6-sol" });
+  });
+
+  it("falls back to a visible authenticated subscription when Claude is unavailable", () => {
     expect(
       resolveEmbeddedNewThreadModelSelection({
         projectSelection: { provider: "codex", model: "gpt-5.5" },
         threadSummaries: [],
         providerStatuses: [
-          providerStatus("codex", { authStatus: "unauthenticated" }),
-          providerStatus("claudeAgent"),
+          providerStatus("claudeAgent", { authStatus: "unauthenticated" }),
+          providerStatus("codex"),
           providerStatus("cursor"),
         ],
         providerStatusesReconciled: true,
-        providerOrder: ["cursor", "claudeAgent", "codex"],
+        providerOrder: ["cursor", "codex", "claudeAgent"],
         hiddenProviders: ["cursor"],
       }),
-    ).toEqual({ provider: "claudeAgent", model: "claude-sonnet-5" });
+    ).toEqual({ provider: "codex", model: DEFAULT_MODEL_BY_PROVIDER.codex });
   });
 });
 

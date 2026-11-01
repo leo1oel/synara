@@ -1250,7 +1250,8 @@ export function resolveComposerDefaultModelSelection(input: {
 /**
  * Lattice starts a new embedded chat with the last model the user actually used.
  * A legacy project bootstrap default is ignored by the resolver above; if there
- * is no chat history yet, prefer GPT-5.6 Sol at high effort. Once provider health
+ * is no chat history yet, start on Claude's default model, the Claude Code
+ * harness Lattice users compare the panel with. Once provider health
  * is authoritative, fall back to the first visible authenticated provider so a
  * stale Codex default cannot strand the new draft on an unusable subscription.
  */
@@ -1272,7 +1273,7 @@ export function resolveEmbeddedNewThreadModelSelection(input: {
       embedded: true,
       projectSelection: input.projectSelection,
       threadSummaries: input.threadSummaries,
-    }) ?? makeModelSelection("codex", "gpt-5.6-sol", { reasoningEffort: "high" });
+    }) ?? makeModelSelection("claudeAgent", DEFAULT_MODEL_BY_PROVIDER.claudeAgent);
 
   if (
     !input.providerStatusesReconciled ||
