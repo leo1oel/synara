@@ -8,7 +8,7 @@
 // Layer: Chat transcript UI
 // Exports: SubagentRunCard, SubagentIdentityLine
 
-import { i18n } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 import { ThreadId } from "@synara/contracts";
 import { pluralize } from "~/i18n/pluralize";
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -42,7 +42,6 @@ import {
   type SubagentRunRow,
 } from "./SubagentRunCard.logic";
 import { useSubagentRunContext, type SubagentRunContextValue } from "./subagentRunContext";
-import { useTranslation } from "~/i18n";
 
 const EMPTY_THREADS: SubagentRunContextValue["threads"] = [];
 const EMPTY_IDS: ReadonlySet<string> = new Set();
@@ -132,7 +131,7 @@ function SubagentRunRowView({
           className="flex min-w-0 flex-1 items-center gap-2 text-left outline-none after:absolute after:inset-0 after:rounded-lg after:content-[''] focus-visible:after:ring-1 focus-visible:after:ring-ring/60 disabled:cursor-default"
           disabled={!openThread}
           onClick={openThread}
-          aria-label={i18n._("Open {name}", { name: row.item.primaryLabel })}
+          aria-label={t("workspace:open", { value0: row.item.primaryLabel })}
         >
           <span className="flex min-w-0 flex-1 items-center gap-2">
             <SubagentIdentityLine item={row.item} />
@@ -179,8 +178,8 @@ function SubagentRunRowView({
             onClick={() => setNestedOpen((open) => !open)}
           >
             {row.nested.length === 1
-              ? i18n._("launched 1 subagent")
-              : i18n._("launched {count} subagents", { count: row.nested.length })}
+              ? t("lattice:launched1Subagent")
+              : t("lattice:launchedSubagents", { count: row.nested.length })}
             <DisclosureChevron open={nestedOpen} className="size-3" />
           </Button>
         ) : null}
@@ -217,7 +216,7 @@ function SubagentRunRowView({
             size="xs"
             className="shrink-0"
             onClick={() => void onStop(row.item)}
-            aria-label={i18n._("Stop {name}", { name: row.item.primaryLabel })}
+            aria-label={t("chat:stop2", { value0: row.item.primaryLabel })}
           >
             <StopIcon className="size-2.5" />
             {t("chat:stop")}

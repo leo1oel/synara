@@ -1,10 +1,3 @@
-// FILE: ComposerModelPickerRow.tsx
-// Purpose: One model row of the composer model picker — name, mod+digit hint, star toggle,
-//   and (for models with an effort ladder, in menu mode) a hover side block that picks model + effort at once.
-// Layer: Chat composer presentation
-// Depends on: composer trait resolution, starred model keys, and shared menu primitives.
-
-import { useLingui } from "@lingui/react";
 import { type ProviderModelDescriptor } from "@synara/contracts";
 
 import { type StarredModel, starredModelSlotKey } from "~/lib/starredModels";
@@ -34,7 +27,7 @@ import { ModelStarButton } from "./ModelStarButton";
 import { PICKER_PANEL_ROW_SELECTED_CLASS_NAME } from "./pickerPanelStyles";
 import { getProviderIconClassName } from "./ProviderModelPicker";
 import { resolveRuntimeModelDescriptor } from "./runtimeModelCapabilities";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 // Each row resolves its own traits, so a long catalog only recomputes the rows whose
 // inputs changed instead of the whole list on every keystroke.
@@ -93,8 +86,8 @@ export function ComposerModelPickerRow(props: {
       iconClassName="size-3.5"
       label={
         starred
-          ? i18n._("Remove {model} from starred", { model: row.name })
-          : i18n._("Star {model} with its current effort and speed", { model: row.name })
+          ? t("chat:removeFromStarred", { value0: row.name })
+          : t("chat:starWithItsCurrentEffortAndSpeed", { value0: row.name })
       }
       onToggle={() =>
         row.preset === null && starred ? props.onUnstarModel(row) : props.onToggleStar(starEntry)
@@ -189,10 +182,8 @@ export function ComposerModelPickerRow(props: {
                 onClick={() => onSelectEffort(row, level.value)}
               >
                 {level.value === selection.defaultEffort
-                  ? i18n._("{option} (default)", {
-                      option: localizeModelPickerLabel(i18n, level.label),
-                    })
-                  : localizeModelPickerLabel(i18n, level.label)}
+                  ? t("lattice:default2", { option: localizeModelPickerLabel(t, level.label) })
+                  : localizeModelPickerLabel(t, level.label)}
               </MenuRadioItem>
             ))}
           </MenuRadioGroup>

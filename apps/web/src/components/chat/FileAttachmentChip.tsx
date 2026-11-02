@@ -3,8 +3,6 @@
 // Layer: Chat attachment presentation
 // Depends on: shared byte formatting, chat attachment types, and compact chip styles.
 
-import type { I18n } from "@lingui/core";
-import { useLingui } from "@lingui/react";
 import { formatBytes } from "@synara/shared/formatBytes";
 
 import { basenameOfPath } from "~/file-icons";
@@ -99,8 +97,8 @@ function fileAttachmentTypeLabel(file: ChatFileAttachment): string {
   return t("chat:fILE");
 }
 
-function fileAttachmentDetail(i18n: I18n, file: ChatFileAttachment): string {
-  const mimeType = file.mimeType.trim() || i18n._("Unknown type");
+function fileAttachmentDetail(file: ChatFileAttachment): string {
+  const mimeType = file.mimeType.trim() || "Unknown type";
   return `${mimeType} - ${formatBytes(file.sizeBytes)}`;
 }
 
@@ -136,7 +134,7 @@ function FileAttachmentPillTrigger({
         <AttachmentRemoveButton
           size="sm"
           placement="center-right"
-          label={i18n._("Remove {name}", { name: file.name })}
+          label={t("workspace:remove", { value0: file.name })}
           onRemove={() => onRemove(file.id)}
         />
       ) : null}
@@ -153,8 +151,7 @@ export function FileAttachmentChip({
 }: FileAttachmentChipProps) {
   const nonPersisted = nonPersistedProp ?? false;
   const variant = variantProp ?? "pill";
-  const { i18n } = useLingui();
-  const detail = fileAttachmentDetail(i18n, file);
+  const detail = fileAttachmentDetail(file);
   const typeLabel = fileAttachmentTypeLabel(file);
   const trigger =
     variant === "card" ? (
@@ -179,7 +176,7 @@ export function FileAttachmentChip({
           </>
         }
         onRemove={onRemove ? () => onRemove(file.id) : undefined}
-        removeLabel={i18n._("Remove {name}", { name: file.name })}
+        removeLabel={`Remove ${file.name}`}
       />
     ) : (
       <FileAttachmentPillTrigger
@@ -198,9 +195,7 @@ export function FileAttachmentChip({
           <p className="text-ui leading-snug font-medium text-foreground">{file.name}</p>
           <p className="text-ui-sm text-muted-foreground">{detail}</p>
           {nonPersisted ? (
-            <p className="text-ui-sm text-amber-600">
-              {i18n._(DRAFT_ATTACHMENT_WARNING_DESCRIPTION)}
-            </p>
+            <p className="text-ui-sm text-amber-600">{DRAFT_ATTACHMENT_WARNING_DESCRIPTION}</p>
           ) : null}
         </div>
       </TooltipPopup>

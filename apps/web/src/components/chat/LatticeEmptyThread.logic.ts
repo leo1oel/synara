@@ -1,13 +1,5 @@
-// FILE: LatticeEmptyThread.logic.ts
-// Purpose: The Lattice empty thread's starters and selection chip: which
-// editing prompt each starter writes into the composer, and how the live
-// host selection is named.
-// Layer: Chat presentation logic
-
-import type { I18n } from "@lingui/core";
-
 import type { LatticeHostContextSnapshot } from "../../embedMode";
-import { i18n as appI18n } from "../../i18n";
+import { t } from "../../i18n";
 
 /** The editor's selection actions, mirrored as starters with the same icons. */
 export type LatticeStarterKind = "polish" | "revise" | "proofread" | "references";
@@ -27,17 +19,29 @@ export interface LatticeStarterCopy {
 
 export function latticeStarterCopy(
   kind: LatticeStarterKind,
-  i18n: I18n = appI18n,
+  translate: typeof t = t,
 ): LatticeStarterCopy {
   switch (kind) {
     case "polish":
-      return { title: i18n._("Polish"), example: i18n._("Polish this paragraph") };
+      return {
+        title: translate("lattice:polish"),
+        example: translate("lattice:polishThisParagraph"),
+      };
     case "revise":
-      return { title: i18n._("Revise"), example: i18n._("Revise to address a review comment") };
+      return {
+        title: translate("lattice:revise"),
+        example: translate("lattice:reviseToAddressAReviewComment"),
+      };
     case "proofread":
-      return { title: i18n._("Proofread"), example: i18n._("Proofread grammar and spelling") };
+      return {
+        title: translate("lattice:proofread"),
+        example: translate("lattice:proofreadGrammarAndSpelling"),
+      };
     case "references":
-      return { title: i18n._("Check references"), example: i18n._("Check my references") };
+      return {
+        title: translate("lattice:checkReferences"),
+        example: translate("lattice:checkMyReferences"),
+      };
   }
 }
 
@@ -50,37 +54,25 @@ export function latticeStarterCopy(
 export function latticeStarterPrompt(
   kind: LatticeStarterKind,
   hasSelection: boolean,
-  i18n: I18n = appI18n,
+  translate: typeof t = t,
 ): string {
   switch (kind) {
     case "polish":
       return hasSelection
-        ? i18n._(
-            "Polish the selected text for clarity and flow. Keep its meaning, citations and LaTeX commands unchanged.",
-          )
-        : i18n._(
-            "Polish the paragraph at my cursor for clarity and flow. Keep its meaning, citations and LaTeX commands unchanged.",
-          );
+        ? translate("lattice:polishTheSelectedTextForClarityAnd")
+        : translate("lattice:polishTheParagraphAtMyCursorFor");
     case "revise":
       return hasSelection
-        ? i18n._("Revise the selected text to address this review comment: ")
-        : i18n._("Revise the paper to address this review comment: ");
+        ? translate("lattice:reviseTheSelectedTextToAddressThis")
+        : translate("lattice:reviseThePaperToAddressThisReview");
     case "proofread":
       return hasSelection
-        ? i18n._(
-            "Proofread the selected text and fix grammar, spelling and punctuation. Leave the wording otherwise unchanged.",
-          )
-        : i18n._(
-            "Proofread the section at my cursor and fix grammar, spelling and punctuation. Leave the wording otherwise unchanged.",
-          );
+        ? translate("lattice:proofreadTheSelectedTextAndFixGrammar")
+        : translate("lattice:proofreadTheSectionAtMyCursorAnd");
     case "references":
       return hasSelection
-        ? i18n._(
-            "Check the citations in the selected text: every \\cite key should exist in the bibliography with accurate details, and each cited work should support its claim. Fix what is wrong.",
-          )
-        : i18n._(
-            "Check the citations in this paper: every \\cite key should exist in the bibliography with accurate details, and each cited work should support its claim. Fix what is wrong.",
-          );
+        ? translate("lattice:checkTheCitationsInTheSelectedText")
+        : translate("lattice:checkTheCitationsInThisPaperEvery");
   }
 }
 
@@ -101,11 +93,11 @@ export interface LatticeSelectionPlace {
  */
 export function latticeSelectionPlace(
   context: LatticeHostContextSnapshot | null,
-  i18n: I18n = appI18n,
+  translate: typeof t = t,
 ): LatticeSelectionPlace | null {
   if (!context) return null;
   if (context.presentation?.selection) {
-    return { name: context.presentation.slideTitle || i18n._("Slides"), detail: null };
+    return { name: context.presentation.slideTitle || translate("lattice:slides"), detail: null };
   }
   const editor = context.editor?.selection ? context.editor : null;
   const pdf = context.pdf?.selection ? context.pdf : null;
@@ -130,12 +122,12 @@ export function latticeSelectionPlace(
       detail: !lines
         ? null
         : lines.start === lines.end
-          ? i18n._("line {line}", { line: lines.start })
-          : i18n._("lines {start}–{end}", { start: lines.start, end: lines.end }),
+          ? translate("workspace:selectionLine", { location: lines.start })
+          : translate("lattice:lines", { start: lines.start, end: lines.end }),
     };
   }
   if (surface === "pdf" && pdf) {
-    return { name: "PDF", detail: i18n._("page {page}", { page: pdf.page }) };
+    return { name: "PDF", detail: translate("lattice:page", { page: pdf.page }) };
   }
   if (surface === "paper" && paper) return { name: paper.title, detail: null };
   return null;
@@ -146,11 +138,15 @@ export function latticeSelectionPlace(
  * empty draft or another starter's untouched prompt, and follows anything the
  * writer typed themselves rather than discarding it.
  */
-export function latticeStarterDraft(current: string, prompt: string, i18n: I18n = appI18n): string {
+export function latticeStarterDraft(
+  current: string,
+  prompt: string,
+  translate: typeof t = t,
+): string {
   const typed = current.trim();
   const isStarterPrompt = LATTICE_STARTER_KINDS.some((kind) =>
     [true, false].some(
-      (hasSelection) => latticeStarterPrompt(kind, hasSelection, i18n).trim() === typed,
+      (hasSelection) => latticeStarterPrompt(kind, hasSelection, translate).trim() === typed,
     ),
   );
   return !typed || isStarterPrompt ? prompt : `${current.trimEnd()}\n\n${prompt}`;

@@ -4,6 +4,7 @@
 // Depends on: provider/model menu items, traits menu content (which owns the fast-mode
 //   toggle in its Effort header), shared menu primitives, and composer trait helpers.
 
+import { t } from "~/i18n";
 import {
   type ModelSlug,
   type ProviderAgentDescriptor,
@@ -160,7 +161,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
         props.dense ? "!h-8 shrink-0" : "shrink-0",
         COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME,
       )}
-      aria-label="Change model and reasoning"
+      aria-label={t("chat:modelEffort_changeModelAndReasoning")}
       {...(hiddenTriggerTitle.length > 0 ? { title: hiddenTriggerTitle } : {})}
     />
   );
@@ -269,7 +270,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
           {!isMenuOpen ? (
             <TooltipPopup side="top" sideOffset={6} variant="picker">
               <span className="inline-flex items-center gap-2 px-1 py-0.5">
-                <span>Change model</span>
+                <span>{t("chat:providerModelPicker_changeModel")}</span>
                 <ShortcutKbd
                   shortcutLabel={props.shortcutLabel}
                   className="h-4 min-w-4 px-1 text-ui-2xs text-muted-foreground"

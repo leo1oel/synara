@@ -1,4 +1,4 @@
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 export const ComposerPlanFollowUpBanner = function ComposerPlanFollowUpBanner({
   planTitle,
 }: {

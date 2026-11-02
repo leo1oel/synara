@@ -1,9 +1,5 @@
-// FILE: CodexFollowUpChips.tsx
-// Purpose: The suggested next prompts a Codex reply ends with, as chips under
-// the reply; choosing one writes its prompt into the composer.
-// Layer: Chat presentation
+import { t } from "~/i18n";
 
-import { useLingui } from "@lingui/react";
 import { memo } from "react";
 
 import type { CodexFollowUp } from "~/lib/codexFollowUps";
@@ -15,11 +11,10 @@ export const CodexFollowUpChips = memo(function CodexFollowUpChips({
   followUps: readonly CodexFollowUp[];
   onSelect: (prompt: string) => void;
 }) {
-  const { i18n } = useLingui();
   return (
     <div
       role="group"
-      aria-label={i18n._("Suggested follow-ups")}
+      aria-label={t("lattice:suggestedFollowUps")}
       className="mt-2.5 flex min-w-0 flex-wrap gap-1.5"
     >
       {followUps.map((followUp, index) => (

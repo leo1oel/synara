@@ -1,4 +1,5 @@
-import { useLingui } from "@lingui/react";
+import { t } from "~/i18n";
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 
@@ -41,7 +42,6 @@ function mutationErrorMessage(error: unknown, fallback: string): string | null {
 
 /** Runs `git init` for a folder; the success toast is shared, the failure stays on the caller. */
 export function useGitInitialization(cwd: string) {
-  const { i18n } = useLingui();
   const queryClient = useQueryClient();
   const initMutation = useMutation(
     gitInitMutationOptions({
@@ -57,8 +57,8 @@ export function useGitInitialization(cwd: string) {
       void queryClient.invalidateQueries({ queryKey: githubInboxQueryKeys.all });
       toastManager.add({
         type: "success",
-        title: i18n._("Version control enabled"),
-        description: i18n._("This folder is now a local Git repository."),
+        title: t("lattice:versionControlEnabled"),
+        description: t("lattice:thisFolderIsNowALocalGit"),
         timeout: 4_000,
       });
     } catch {
@@ -70,7 +70,6 @@ export function useGitInitialization(cwd: string) {
 }
 
 export function GitInitializationState(props: { cwd: string }) {
-  const { i18n } = useLingui();
   const { initialize, pending, error } = useGitInitialization(props.cwd);
 
   return (
@@ -80,12 +79,10 @@ export function GitInitializationState(props: { cwd: string }) {
           <GitBranchIcon className="size-4.5" />
         </div>
         <h2 className="font-system-ui text-ui-lg font-medium text-foreground">
-          {i18n._("Start version control")}
+          {t("lattice:startVersionControl")}
         </h2>
         <p className="mt-1.5 text-ui-sm leading-relaxed text-muted-foreground">
-          {i18n._(
-            "Track changes locally, review diffs, and restore earlier work. Nothing is uploaded.",
-          )}
+          {t("lattice:trackChangesLocallyReviewDiffsAndRestore")}
         </p>
         <Button size="sm" className="mt-4" disabled={pending} onClick={() => void initialize()}>
           {pending ? (
@@ -93,11 +90,11 @@ export function GitInitializationState(props: { cwd: string }) {
           ) : (
             <GitBranchIcon className="size-3.5" />
           )}
-          {pending ? i18n._("Initializing…") : i18n._("Initialize Git")}
+          {pending ? t("git:initializing") : t("git:initializeGit")}
         </Button>
         {error ? (
           <p role="alert" className="mt-3 text-ui-xs leading-snug text-destructive">
-            {mutationErrorMessage(error, i18n._("Git could not be initialized."))}
+            {mutationErrorMessage(error, t("lattice:gitCouldNotBeInitialized"))}
           </p>
         ) : null}
       </div>
@@ -107,7 +104,6 @@ export function GitInitializationState(props: { cwd: string }) {
 
 /** Lattice's Initialize Git button, for the Changes and Pull requests empty states. */
 export function LatticeGitInitializeButton(props: { cwd: string }) {
-  const { i18n } = useLingui();
   const { initialize, pending, error } = useGitInitialization(props.cwd);
   return (
     <>
@@ -124,12 +120,12 @@ export function LatticeGitInitializeButton(props: { cwd: string }) {
           <GitBranchIcon aria-hidden className="size-3.5" />
         )}
         <span className="lattice-git-button-label">
-          {pending ? i18n._("Initializing…") : i18n._("Initialize Git")}
+          {pending ? t("git:initializing") : t("git:initializeGit")}
         </span>
       </button>
       {error ? (
         <LatticeErrorNote
-          message={i18n._("Git could not be initialized in this folder")}
+          message={t("lattice:gitCouldNotBeInitializedInThis")}
           detail={error instanceof Error ? error.message : null}
         />
       ) : null}
@@ -151,12 +147,11 @@ export function LatticeErrorNote(props: { message: string; detail: string | null
 }
 
 export function LatticeErrorDetails(props: { detail: string | null | undefined }) {
-  const { i18n } = useLingui();
   const detail = props.detail?.trim();
   if (!detail) return null;
   return (
     <details className="lattice-git-details">
-      <summary>{i18n._("Details")}</summary>
+      <summary>{t("common:detail_details")}</summary>
       <pre>{detail}</pre>
     </details>
   );
@@ -164,17 +159,14 @@ export function LatticeErrorDetails(props: { detail: string | null | undefined }
 
 /** Lattice's Changes view on a folder that is not a Git repository yet. */
 export function LatticeGitInitializationState(props: { cwd: string }) {
-  const { i18n } = useLingui();
   return (
     <div className="lattice-git lattice-source-control" data-lattice-git-init="">
       <div className="lattice-git-scroll">
         <div className="lattice-git-empty" role="status">
           <ResearchArt drawing={BLANK_LOGBOOK} />
-          <p className="lattice-git-empty-title">{i18n._("Start version control")}</p>
+          <p className="lattice-git-empty-title">{t("lattice:startVersionControl")}</p>
           <p className="lattice-git-empty-description">
-            {i18n._(
-              "Keep a history of this project on your Mac: see what changed since each commit and go back to any earlier version. Nothing is uploaded",
-            )}
+            {t("lattice:keepAHistoryOfThisProjectOn")}
           </p>
           <div className="lattice-git-empty-actions">
             <LatticeGitInitializeButton cwd={props.cwd} />
@@ -186,7 +178,6 @@ export function LatticeGitInitializationState(props: { cwd: string }) {
 }
 
 export function GitHubRemoteSetupCard(props: { cwd: string }) {
-  const { i18n } = useLingui();
   const [dialogMode, setDialogMode] = useState<GitHubRepositorySetupMode | null>(null);
 
   return (
@@ -198,17 +189,17 @@ export function GitHubRemoteSetupCard(props: { cwd: string }) {
           </div>
           <div className="min-w-0 flex-1">
             <h2 className="font-system-ui text-ui font-medium text-[var(--color-text-foreground)]">
-              {i18n._("Connect to GitHub")}
+              {t("lattice:connectToGitHub")}
             </h2>
             <p className="mt-0.5 text-ui-xs leading-relaxed text-[var(--color-text-foreground-secondary)]">
-              {i18n._("Publish a new private repository or attach one you already have.")}
+              {t("lattice:publishANewPrivateRepositoryOrAttach")}
             </p>
           </div>
         </div>
         <div className="mt-2.5 grid grid-cols-2 gap-1.5">
           <Button size="xs" onClick={() => setDialogMode("create")}>
             <GitHubIcon />
-            {i18n._("Publish")}
+            {t("lattice:publish")}
           </Button>
           <Button
             size="xs"
@@ -217,7 +208,7 @@ export function GitHubRemoteSetupCard(props: { cwd: string }) {
             onClick={() => setDialogMode("connect")}
           >
             <LinkIcon />
-            {i18n._("Connect existing")}
+            {t("lattice:connectExisting")}
           </Button>
         </div>
       </section>
@@ -242,8 +233,6 @@ export function GitHubRepositorySetupDialog(props: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { i18n } = useLingui();
-
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogPopup className="max-w-md">
@@ -257,17 +246,13 @@ export function GitHubRepositorySetupDialog(props: {
           </div>
           <DialogTitle>
             {props.mode === "create"
-              ? i18n._("Publish to GitHub")
-              : i18n._("Connect GitHub repository")}
+              ? t("lattice:publishToGitHub")
+              : t("lattice:connectGitHubRepository")}
           </DialogTitle>
           <DialogDescription>
             {props.mode === "create"
-              ? i18n._(
-                  "Create a GitHub repository for this folder. Your files stay local until you commit and push them.",
-                )
-              : i18n._(
-                  "Attach an existing GitHub repository as origin. This does not fetch, pull, or upload files.",
-                )}
+              ? t("lattice:createAGitHubRepositoryForThisFolder")
+              : t("lattice:attachAnExistingGitHubRepositoryAsOrigin")}
           </DialogDescription>
         </DialogHeader>
         <GitHubRepositorySetupForm
@@ -280,14 +265,12 @@ export function GitHubRepositorySetupDialog(props: {
               type: "success",
               title:
                 props.mode === "create"
-                  ? i18n._("GitHub repository created")
-                  : i18n._("GitHub repository connected"),
+                  ? t("lattice:gitHubRepositoryCreated")
+                  : t("lattice:gitHubRepositoryConnected"),
               description:
                 props.mode === "create"
-                  ? i18n._("{repository} is ready. Files stay local until your first push.", {
-                      repository: result.repository,
-                    })
-                  : i18n._("{repository} is now connected as {remoteName}.", {
+                  ? t("lattice:isReadyFilesStayLocalUntilYour", { repository: result.repository })
+                  : t("lattice:isNowConnectedAs", {
                       repository: result.repository,
                       remoteName: result.remoteName,
                     }),
@@ -306,7 +289,6 @@ function GitHubRepositorySetupForm(props: {
   onCancel: () => void;
   onComplete: (result: { repository: string; remoteName: string; url: string }) => void;
 }) {
-  const { i18n } = useLingui();
   const queryClient = useQueryClient();
   const repositoryNameId = useId();
   const descriptionId = useId();
@@ -361,7 +343,7 @@ function GitHubRepositorySetupForm(props: {
           <>
             <div className="space-y-1.5">
               <label htmlFor={repositoryNameId} className={dialogFieldLabelClassName}>
-                {i18n._("Repository name")}
+                {t("lattice:repositoryName")}
               </label>
               <Input
                 id={repositoryNameId}
@@ -374,38 +356,38 @@ function GitHubRepositorySetupForm(props: {
               />
               {submitted && !createNameValid ? (
                 <p role="alert" className="text-ui-xs text-destructive">
-                  {i18n._("Use letters, numbers, periods, hyphens, or underscores.")}
+                  {t("lattice:useLettersNumbersPeriodsHyphensOrUnderscores")}
                 </p>
               ) : (
                 <p className="text-ui-xs text-muted-foreground">
-                  {i18n._("You can also use owner/repository to publish to an organization.")}
+                  {t("lattice:youCanAlsoUseOwnerRepositoryTo")}
                 </p>
               )}
             </div>
             <div className="space-y-1.5">
               <label htmlFor={descriptionId} className={dialogFieldLabelClassName}>
-                {i18n._("Description")}{" "}
-                <span className="font-normal text-muted-foreground">{i18n._("Optional")}</span>
+                {t("git:description")}{" "}
+                <span className="font-normal text-muted-foreground">{t("lattice:optional")}</span>
               </label>
               <Input
                 id={descriptionId}
                 value={description}
                 disabled={isPending}
                 onChange={(event) => setDescription(event.target.value)}
-                placeholder={i18n._("What is this project about?")}
+                placeholder={t("lattice:whatIsThisProjectAbout")}
               />
             </div>
             <fieldset className="space-y-1.5">
-              <legend className={dialogFieldLabelClassName}>{i18n._("Visibility")}</legend>
+              <legend className={dialogFieldLabelClassName}>{t("lattice:visibility")}</legend>
               <div
                 role="radiogroup"
-                aria-label={i18n._("Repository visibility")}
+                aria-label={t("lattice:repositoryVisibility")}
                 className="grid grid-cols-2 gap-2"
               >
                 {(
                   [
-                    ["private", i18n._("Private"), i18n._("Only you and invited collaborators")],
-                    ["public", i18n._("Public"), i18n._("Visible to everyone")],
+                    ["private", t("lattice:private"), t("lattice:onlyYouAndInvitedCollaborators")],
+                    ["public", t("lattice:public"), t("lattice:visibleToEveryone")],
                   ] as const
                 ).map(([value, label, help]) => {
                   const selected = visibility === value;
@@ -437,7 +419,7 @@ function GitHubRepositorySetupForm(props: {
         ) : (
           <div className="space-y-1.5">
             <label htmlFor={remoteUrlId} className={dialogFieldLabelClassName}>
-              {i18n._("Repository URL")}
+              {t("lattice:repositoryURL")}
             </label>
             <Input
               id={remoteUrlId}
@@ -450,11 +432,11 @@ function GitHubRepositorySetupForm(props: {
             />
             {submitted && !remoteUrlValid ? (
               <p role="alert" className="text-ui-xs text-destructive">
-                {i18n._("Enter a GitHub HTTPS or SSH repository URL.")}
+                {t("lattice:enterAGitHubHTTPSOrSSHRepository")}
               </p>
             ) : (
               <p className="text-ui-xs text-muted-foreground">
-                {i18n._("HTTPS and git@github.com SSH URLs are supported.")}
+                {t("lattice:hTTPSAndGitGithubComSSHURLs")}
               </p>
             )}
           </div>
@@ -464,37 +446,30 @@ function GitHubRepositorySetupForm(props: {
           <InfoIcon className="mt-0.5 size-3.5 shrink-0" />
           <p className="text-ui-xs leading-relaxed">
             {props.mode === "create"
-              ? i18n._(
-                  "Publishing creates the empty remote only. Review your files and .gitignore before the first push.",
-                )
-              : i18n._(
-                  "Connecting changes repository configuration only. Your working files are not modified.",
-                )}
+              ? t("lattice:publishingCreatesTheEmptyRemoteOnlyReview")
+              : t("lattice:connectingChangesRepositoryConfigurationOnlyYourWorking")}
           </p>
         </div>
 
         {mutation.error ? (
           <p role="alert" className="text-ui-xs leading-snug text-destructive">
-            {mutationErrorMessage(
-              mutation.error,
-              i18n._("The GitHub setup could not be completed."),
-            )}
+            {mutationErrorMessage(mutation.error, t("lattice:theGitHubSetupCouldNotBeCompleted"))}
           </p>
         ) : null}
       </DialogPanel>
       <DialogFooter>
         <Button type="button" variant="outline" disabled={isPending} onClick={props.onCancel}>
-          {i18n._("Cancel")}
+          {t("common:form_cancel")}
         </Button>
         <Button type="submit" disabled={isPending}>
           {isPending ? <LoaderCircleIcon className="animate-spin" /> : null}
           {isPending
             ? props.mode === "create"
-              ? i18n._("Creating…")
-              : i18n._("Connecting…")
+              ? t("workspace:creating")
+              : t("computer:connecting")
             : props.mode === "create"
-              ? i18n._("Create repository")
-              : i18n._("Connect repository")}
+              ? t("lattice:createRepository")
+              : t("lattice:connectRepository")}
         </Button>
       </DialogFooter>
     </form>

@@ -1,15 +1,3 @@
-// FILE: PullRequestDetailPanel.tsx
-// Purpose: Orchestrator for the pull request detail surface — owns the queries, gh-backed
-//          actions (merge/ready/draft/close/reopen, fix findings, resolve conflicts, Send to
-//          agent), the tab state, and the confirm dialogs. Two hosts: the chat thread's right dock
-//          (a compact tab header, the default) and the code review page (`layout="page"`: the
-//          GitHub item page shell shared with issues). The action controls themselves live in
-//          PullRequestActions; Summary, Timeline, and Changes render in their own tab components.
-// Layer: Pull request presentation
-// Exports: PullRequestDetailPanel
-
-import type { I18n } from "@lingui/core";
-import { useLingui } from "@lingui/react";
 import type {
   PullRequestAction,
   PullRequestDetailInput,
@@ -87,25 +75,25 @@ import { PullRequestTimelineTab } from "./PullRequestTimelineTab";
 import { PullRequestsUnavailableState } from "./PullRequestsUnavailableState";
 import { PullRequestWarningNote } from "./PullRequestWarningNote";
 import { assessPullRequestStack, pullRequestMergeBlocker } from "./pullRequestStack.logic";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 // `paper` is Lattice's "In the paper" reading (LatticePullRequestPaper), shown only there.
 type DetailTab = "summary" | "timeline" | "code" | "paper";
 
-function actionSuccessLabel(i18n: I18n, action: PullRequestAction): string {
+function actionSuccessLabel(translate: typeof t, action: PullRequestAction): string {
   switch (action) {
     case "merge":
-      return i18n._("Pull request merged");
+      return translate("lattice:pullRequestMerged");
     case "ready":
-      return i18n._("Marked ready for review");
+      return translate("lattice:markedReadyForReview");
     case "draft":
-      return i18n._("Converted to draft");
+      return translate("lattice:convertedToDraft");
     case "close":
-      return i18n._("Pull request closed");
+      return translate("lattice:pullRequestClosed");
     case "reopen":
-      return i18n._("Pull request reopened");
+      return translate("lattice:pullRequestReopened");
     case "approve":
-      return i18n._("Pull request approved");
+      return translate("lattice:pullRequestApproved");
   }
 }
 
@@ -171,7 +159,6 @@ export function PullRequestDetailPanel({
   /** Lattice's embed: the page opens on "In the paper", with Files and Conversation beside it. */
   lattice?: boolean;
 }) {
-  const { i18n } = useLingui();
   const lattice = latticeProp ?? false;
   const initialTab = initialTabProp ?? (lattice ? "paper" : "summary");
   const layout = layoutProp ?? "dock";
@@ -246,8 +233,8 @@ export function PullRequestDetailPanel({
               ? t("git:stackAddedToMergeQueue")
               : t("git:pullRequestAddedToMergeQueue")
             : action === "merge" && detail?.stack
-              ? i18n._("Stack merged")
-              : actionSuccessLabel(i18n, action);
+              ? t("git:stackMerged")
+              : actionSuccessLabel(t, action);
         toastManager.add({ type: "success", title });
       })
       .catch((error: unknown) => {
@@ -316,8 +303,8 @@ export function PullRequestDetailPanel({
     const card = createPullRequestContextDraft({
       scope: "conflicts",
       pr: detail,
-      title: i18n._("Merge conflicts"),
-      subtitle: i18n._("Conflicts with {branch}", { branch: detail.baseBranch }),
+      title: t("git:mergeConflicts"),
+      subtitle: t("lattice:conflictsWith", { branch: detail.baseBranch }),
       text: buildResolveConflictsPrompt({
         prNumber: detail.number,
         prUrl: detail.url,
@@ -453,15 +440,15 @@ export function PullRequestDetailPanel({
     ) : null;
     const pageTabs: ReadonlyArray<GitHubItemTabOption<DetailTab>> = lattice
       ? [
-          { value: "paper", label: i18n._("In the paper") },
-          { value: "code", label: i18n._("Files") },
-          { value: "timeline", label: i18n._("Conversation") },
+          { value: "paper", label: t("lattice:inThePaper") },
+          { value: "code", label: t("workspace:toolCallDetails_filesSection") },
+          { value: "timeline", label: t("settings:conversation") },
         ]
       : [
-          { value: "summary", label: i18n._("Summary") },
+          { value: "summary", label: t("chat:timeline_summaryLabel") },
           {
             value: "code",
-            label: i18n._("Changes"),
+            label: t("git:panel_changes"),
             trailing: detail ? (
               <PullRequestDiffStat
                 additions={detail.additions}
@@ -472,7 +459,7 @@ export function PullRequestDetailPanel({
               />
             ) : null,
           },
-          { value: "timeline", label: i18n._("Timeline") },
+          { value: "timeline", label: t("git:timeline") },
         ];
     // Merge and its options are one split control: the label acts, the chevron opens the menu.
     // With no primary action the menu hangs off a quiet "…" instead.
@@ -482,8 +469,8 @@ export function PullRequestDetailPanel({
           <Button
             size="sm"
             variant={primaryAction && !lattice ? (primaryBlocked ? "subtle" : "default") : "ghost"}
-            aria-label={i18n._("More actions")}
-            title={i18n._("More actions")}
+            aria-label={t("workspace:workspaceFilePreviewHeader_moreActions")}
+            title={t("workspace:workspaceFilePreviewHeader_moreActions")}
             className={className}
           />
         }
@@ -496,7 +483,7 @@ export function PullRequestDetailPanel({
         {stackPopover}
         <GitHubItemPageIconActions
           url={detail.url}
-          itemLabel={i18n._("pull request #{number}", { number: detail.number })}
+          itemLabel={t("lattice:pullRequest", { number: detail.number })}
           pin={host.pin}
         />
         <GitHubItemAgentActions
@@ -507,7 +494,7 @@ export function PullRequestDetailPanel({
         <Menu>
           {/* Lattice's paper puts Merge at its foot; the top bar keeps only the menu. */}
           {primaryAction && !lattice ? (
-            <ChatHeaderSplitGroup label={i18n._("Merge actions")}>
+            <ChatHeaderSplitGroup label={t("git:mergeActions")}>
               {primaryButton(
                 "sm",
                 cn(CHAT_HEADER_SPLIT_LEADING_CLASS_NAME, PAGE_PRIMARY_BUTTON_CLASS_NAME),

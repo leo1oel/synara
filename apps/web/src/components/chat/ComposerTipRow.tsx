@@ -6,7 +6,6 @@ import { useTranslation } from "~/i18n";
 // Layer: Chat composer UI
 // Exports: ComposerTipRow
 
-import { i18n } from "~/i18n";
 import type { ReactNode } from "react";
 
 import { XIcon } from "~/lib/icons";

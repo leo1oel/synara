@@ -12,7 +12,13 @@ import {
   UI_LOCALES,
 } from "./locale";
 import { uiLocalizationResources } from "@synara/shared/uiLocalizationResources";
-import { UI_LOCALE_REGISTRY, isUiMessageKey } from "@synara/shared/uiLocale";
+import { readEmbedMode } from "../embedMode";
+import latticeZhOverrides from "./latticeZhOverrides.json";
+import {
+  UI_LOCALES as UI_LOCALE_IDS,
+  UI_LOCALE_REGISTRY,
+  isUiMessageKey,
+} from "@synara/shared/uiLocale";
 
 function browserLanguages(): readonly string[] {
   try {
@@ -29,8 +35,20 @@ function browserLanguages(): readonly string[] {
       : [];
 }
 
+// Lattice's embedded panel follows the language Lattice passes in the handshake, so the
+// panel matches the host regardless of the OS language or a preference saved earlier.
+// Upstream gates Chinese by desktop flavor; an explicit host choice is not a flavor.
+function hostLanguagePreference(): SupportedLocale | null {
+  try {
+    return readEmbedMode()?.locale ?? null;
+  } catch {
+    // Storage access can fail before the handshake exists; the app then follows its own setting.
+    return null;
+  }
+}
+
 function storedPreference(): LanguagePreference {
-  return readLanguagePreference();
+  return hostLanguagePreference() ?? readLanguagePreference();
 }
 
 let preference = storedPreference();
@@ -73,7 +91,8 @@ void i18n.use(initReactI18next).init({
     resolveLanguagePreference(preference) === "system" ? browserLanguages() : [],
   ),
   fallbackLng: "en",
-  supportedLngs: [...UI_LOCALES],
+  // Every catalog loads; availability is decided by the preference resolution above.
+  supportedLngs: [...UI_LOCALE_IDS],
   resources: uiLocalizationResources,
   ns: Object.keys(uiLocalizationResources.en),
   defaultNS: "common",
@@ -83,6 +102,12 @@ void i18n.use(initReactI18next).init({
   interpolation: { escapeValue: false },
   react: { useSuspense: false, transSupportBasicHtmlNodes: false },
 });
+
+// Lattice keeps its own wording where upstream's Chinese contradicts Lattice's terminology
+// (PR, AI/助手, 工作树, Skills) or the meaning in context. See latticeZhOverrides.json.
+for (const [namespace, entries] of Object.entries(latticeZhOverrides)) {
+  i18n.addResourceBundle("zh-CN", namespace, entries, true, true);
+}
 
 export function t(message: string, values?: Record<string, unknown>): string {
   if (!isUiMessageKey(message, uiLocalizationResources.en)) return message;
@@ -121,11 +146,12 @@ function updateDocumentLanguage(locale: SupportedLocale): void {
 }
 
 /** Changes only the runtime; the existing app-settings hook owns persistence. */
-export function setLanguagePreference(next: LanguagePreference): void {
-  const locale = resolveLocale(
-    next,
-    resolveLanguagePreference(next) === "system" ? browserLanguages() : [],
-  );
+export function setLanguagePreference(requested: LanguagePreference): void {
+  const host = hostLanguagePreference();
+  const next = host ?? requested;
+  const locale =
+    host ??
+    resolveLocale(next, resolveLanguagePreference(next) === "system" ? browserLanguages() : []);
   if (preference !== next || i18n.language !== locale) {
     preference = next;
     void i18n.changeLanguage(locale);
@@ -141,7 +167,7 @@ export function initializeI18n(): () => void {
 
   const syncPreference = () => setLanguagePreference(storedPreference());
   const onLanguageChange = () => {
-    if (resolveLanguagePreference(preference) !== "system") return;
+    if (hostLanguagePreference() || resolveLanguagePreference(preference) !== "system") return;
     // Refresh native candidates once: preload values would otherwise stay frozen at launch.
     const locale = resolveLocale(preference, browserLanguages());
     void i18n.changeLanguage(locale);

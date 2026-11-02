@@ -6,14 +6,12 @@ import "../../index.css";
 
 import type { ProviderSkillDescriptor } from "@synara/contracts";
 import { DEFAULT_SERVER_SETTINGS } from "@synara/contracts";
-import { I18nProvider } from "@lingui/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
 
-import { i18n } from "../../i18n";
-import { messages } from "../../locales/en/messages.po";
+import { t, setLanguagePreference } from "../../i18n";
 import { providerDiscoveryQueryKeys } from "../../lib/providerDiscoveryReactQuery";
 import { serverQueryKeys } from "../../lib/serverReactQuery";
 import { SkillsSettingsPanel } from "./SkillsSettingsPanel";
@@ -38,7 +36,7 @@ describe("SkillsSettingsPanel navigation", () => {
 
   it("opens detail at the top and restores the scrolled list position on back", async () => {
     await page.viewport(620, 480);
-    i18n.loadAndActivate({ locale: "en", messages });
+    setLanguagePreference("en");
     const skills = Array.from({ length: 18 }, (_, index) => managedSkill(index));
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     queryClient.setQueryData(providerDiscoveryQueryKeys.skillsCatalog(null), { skills });
@@ -54,11 +52,11 @@ describe("SkillsSettingsPanel navigation", () => {
     scrollOwner.className = "synara-settings-scroll h-80 overflow-y-auto";
     document.body.append(scrollOwner);
     const mounted = await render(
-      <I18nProvider i18n={i18n}>
+      <>
         <QueryClientProvider client={queryClient}>
           <SkillsSettingsPanel />
         </QueryClientProvider>
-      </I18nProvider>,
+      </>,
       { container: scrollOwner },
     );
 

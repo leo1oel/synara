@@ -6,7 +6,6 @@
 // Exports: SettingsSidebarNav
 
 import { type KeyboardEvent as ReactKeyboardEvent, useState } from "react";
-import { useLingui } from "@lingui/react";
 
 import { CentralIcon } from "~/lib/central-icons";
 import { cn } from "~/lib/utils";

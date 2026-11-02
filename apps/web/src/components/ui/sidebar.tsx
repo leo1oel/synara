@@ -2,7 +2,7 @@ import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { i18n } from "~/i18n";
+import { i18n, useTranslation } from "~/i18n";
 import { LayoutAlignLeftIcon, LayoutLeftIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { FluidHoverSurface } from "./fluid-hover-surface";
@@ -22,7 +22,6 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { useIsMobile } from "~/hooks/useMediaQuery";
 import { getLocalStorageItem, setLocalStorageItem } from "~/hooks/useLocalStorage";
 import { Schema } from "effect";
-import { useTranslation } from "~/i18n";
 
 const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_MOBILE = "calc(100vw - var(--spacing(3)))";

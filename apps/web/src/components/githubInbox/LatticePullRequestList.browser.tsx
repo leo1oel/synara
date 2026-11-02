@@ -13,14 +13,13 @@ import {
   type ProjectId,
   PullRequestsUnavailableError,
 } from "@synara/contracts";
-import { I18nProvider } from "@lingui/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { page } from "vitest/browser";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
-import { i18n } from "../../i18n";
+import { t, setLanguagePreference } from "../../i18n";
 import type { LatticeGitActions } from "../GitActionsControl";
 
 // The Lattice variant only lays out what `renderLattice` returns; its runners are not under test.
@@ -46,7 +45,7 @@ vi.mock("../GitActionsControl", () => ({
 
 import { LatticePullRequestList } from "./LatticePullRequestList";
 
-i18n.loadAndActivate({ locale: "en", messages: {} });
+setLanguagePreference("en");
 
 const PROJECT = "project-a" as ProjectId;
 const ROOT = "/Users/Shared/paper";
@@ -109,7 +108,7 @@ function renderList(props: { openList?: GitHubInboxListResult; openError?: unkno
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
-    <I18nProvider i18n={i18n}>
+    <>
       <QueryClientProvider client={queryClient}>
         <div style={{ width: 280, height: 560 }}>
           <LatticePullRequestList
@@ -128,7 +127,7 @@ function renderList(props: { openList?: GitHubInboxListResult; openError?: unkno
           />
         </div>
       </QueryClientProvider>
-    </I18nProvider>,
+    </>,
   );
 }
 

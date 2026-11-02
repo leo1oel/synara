@@ -24,7 +24,7 @@ import {
   DialogPopup,
   DialogTitle,
 } from "./ui/dialog";
-import { useTranslation } from "~/i18n";
+import { useTranslation, t } from "~/i18n";
 
 type View = "current" | "changelog";
 
@@ -174,7 +174,7 @@ function ChangelogHeader({ onBack }: { readonly onBack: () => void }) {
         <ArrowLeftIcon className="size-4" />
       </Button>
       <div className="flex min-w-0 flex-col">
-        <DialogTitle className="text-ui-lg">Complete changelog</DialogTitle>
+        <DialogTitle className="text-ui-lg">{t("common:whatsNew_completeChangelog")}</DialogTitle>
         <DialogDescription className="text-ui leading-snug">
           {t("common:everyCuratedReleaseNewestFirst")}
         </DialogDescription>

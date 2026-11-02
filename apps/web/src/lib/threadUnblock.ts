@@ -80,7 +80,7 @@ export async function unblockThreadFromClient(
   if (remaining.length > 0) {
     throw new Error(
       "The provider is still blocking this thread. " +
-        (remaining[0]?.lastError ?? i18n._("Resolve the provider error before retrying.")),
+        (remaining[0]?.lastError ?? t("lattice:resolveTheProviderErrorBeforeRetrying")),
     );
   }
 
@@ -115,7 +115,7 @@ export function describeThreadUnblockResult(result: ThreadUnblockResult): Thread
     case "unblocked":
       return {
         type: "success",
-        title: i18n._("Delivery blockers cleared"),
+        title: t("lattice:deliveryBlockersCleared"),
         description:
           "Skipped messages were retried. Resend your last message if idle; clearing a delivery blocker does not repair a provider runtime error.",
       };
@@ -128,7 +128,7 @@ export function describeThreadUnblockResult(result: ThreadUnblockResult): Thread
     case "already-clear":
       return {
         type: "info",
-        title: i18n._("No delivery blockers"),
+        title: t("lattice:noDeliveryBlockers"),
         description:
           "No delivery is blocking this thread. If the provider still reports an error, resolve it before you resend your message.",
       };

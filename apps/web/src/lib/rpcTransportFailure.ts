@@ -5,7 +5,6 @@
 // Exports: classifyRpcTransportFailure, markRequestNotSent, formatTransportFailureMessage,
 //          describeTransportFailureForDiagnostics, nextTransportFailureRef
 
-import { i18n } from "~/i18n";
 import { Schema } from "effect";
 import { RpcClientError } from "effect/unstable/rpc";
 
@@ -105,7 +104,7 @@ export function classifyRpcTransportFailure(
 }
 
 export function formatTransportFailureMessage(ref: string): string {
-  return `${i18n._("Connection interrupted. Check the operation's status.")} (ref: ${ref})`;
+  return `Connection interrupted. Check the operation's status. (ref: ${ref})`;
 }
 
 /**

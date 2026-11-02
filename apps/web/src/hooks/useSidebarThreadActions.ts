@@ -3,7 +3,7 @@
 // Layer: Web Sidebar controller hook
 // Exports: useSidebarThreadActions
 
-import { i18n } from "~/i18n";
+import { i18n, t, useTranslation } from "~/i18n";
 import { type ProjectId, ThreadId } from "@synara/contracts";
 import { pluralize } from "~/i18n/pluralize";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -67,7 +67,6 @@ import { useTemporaryThreadStore } from "../temporaryThreadStore";
 import { getThreadFromState } from "../threadDerivation";
 import { useThreadSelectionStore } from "../threadSelectionStore";
 import type { Project, SidebarThreadSummary } from "../types";
-import { t, useTranslation } from "~/i18n";
 
 const ARCHIVE_UNDO_TOAST_DURATION_MS = 8000;
 /**

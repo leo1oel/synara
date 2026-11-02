@@ -1,4 +1,3 @@
-import { i18n } from "~/i18n";
 import { useRef, type RefObject } from "react";
 import { CheckIcon, CopyIcon } from "~/lib/icons";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";

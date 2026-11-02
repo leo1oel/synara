@@ -41,6 +41,10 @@ export const PROTECTED_TOKENS = [
 export const UI_LITERAL_ALLOWLIST: Readonly<Record<string, string>> = {
   ...Object.fromEntries(PROTECTED_TOKENS.map((value) => [value, "Product or protocol identifier"])),
   "Synara Beta": "Product name",
+  // Lattice's fork: the host product name, a CLI command and an example repository name.
+  Lattice: "Product name",
+  "codex mcp logout": "CLI command",
+  "research-writer": "Example repository name",
   "Synara Canary": "Product name",
   OpenAI: "Provider name",
   Anthropic: "Provider name",

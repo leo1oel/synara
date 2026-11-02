@@ -11,8 +11,6 @@ import type {
   ProviderInteractionMode,
   ThreadId,
 } from "@synara/contracts";
-import type { I18n } from "@lingui/core";
-import { useLingui } from "@lingui/react";
 import { useEffect, useId, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 
 import {
@@ -123,7 +121,7 @@ export function ComposerExtrasPanel(props: {
                 icon: <ArrowLeftIcon className={GLYPH} />,
                 title: t("common:app_back"),
               },
-              ...appSnapWindowRows(appSnap),
+              ...appSnapWindowRows(t, appSnap),
             ],
           },
         ]
@@ -144,8 +142,8 @@ export function ComposerExtrasPanel(props: {
                           id: ROW_WINDOW,
                           icon: windowGlyph(frontmostWindow),
                           title: frontmostWindow.appName?.trim()
-                            ? i18n._("Attach {app}", { app: frontmostWindow.appName.trim() })
-                            : i18n._("Attach window"),
+                            ? t("chat:attach", { value0: frontmostWindow.appName.trim() })
+                            : t("chat:attachWindow"),
                           disabled: appSnap.busy,
                           trailing: (
                             <button
@@ -182,21 +180,21 @@ export function ComposerExtrasPanel(props: {
               {
                 id: ROW_PLAN,
                 icon: <ListTodoIcon className={GLYPH} />,
-                title: i18n._("Plan mode"),
+                title: t("chat:composerExtras_planMode"),
                 secondary:
                   props.interactionMode === "plan"
-                    ? i18n._("Turn plan mode off")
-                    : i18n._("Turn plan mode on"),
+                    ? t("lattice:turnPlanModeOff")
+                    : t("lattice:turnPlanModeOn"),
                 trailing: props.interactionMode === "plan" ? CHECK : null,
               },
               {
                 id: ROW_DEBUG,
                 icon: <BugIcon className={GLYPH} />,
-                title: i18n._("Debug mode"),
+                title: t("chat:debugMode2"),
                 secondary:
                   props.interactionMode === "debug"
-                    ? i18n._("Turn debug mode off")
-                    : i18n._("Turn debug mode on"),
+                    ? t("lattice:turnDebugModeOff")
+                    : t("lattice:turnDebugModeOn"),
                 trailing: props.interactionMode === "debug" ? CHECK : null,
               },
               ...(props.supportsFastMode
@@ -204,10 +202,10 @@ export function ComposerExtrasPanel(props: {
                     {
                       id: ROW_FAST,
                       icon: <FastModeIcon className={GLYPH} />,
-                      title: i18n._("Fast mode"),
+                      title: t("chat:sessionStatus_fastMode"),
                       secondary: props.fastModeEnabled
-                        ? i18n._("Turn fast mode off")
-                        : i18n._("Turn fast mode on"),
+                        ? t("lattice:turnFastModeOff")
+                        : t("lattice:turnFastModeOn"),
                       trailing: props.fastModeEnabled ? CHECK : null,
                     },
                   ]
@@ -380,7 +378,7 @@ export function ComposerExtrasPanel(props: {
 }
 
 function appSnapWindowRows(
-  i18n: I18n,
+  translate: typeof t,
   appSnap: ReturnType<typeof useAppSnapWindows>,
 ): ComposerMenuPanelRow[] {
   if (appSnap.unavailableMessage) {

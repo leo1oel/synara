@@ -12,7 +12,6 @@ import {
   type ThreadId,
 } from "@synara/contracts";
 import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { i18n } from "~/i18n";
 import type { FastModeNotice } from "~/lib/fastModeState";
 import { ChevronDownIcon, FastModeIcon, FastModeOutlineIcon, SettingsIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";

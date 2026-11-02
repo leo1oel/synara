@@ -1,4 +1,3 @@
-import { i18n } from "~/i18n";
 import { memo, useMemo, useState, type ReactNode } from "react";
 import {
   buildProposedPlanMarkdownFilename,

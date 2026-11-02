@@ -1,4 +1,3 @@
-import { i18n } from "~/i18n";
 import { useCallback, useEffect, useRef } from "react";
 import type { ThreadId } from "@synara/contracts";
 import type { ComposerComputerControlMode } from "~/computerControlMode";

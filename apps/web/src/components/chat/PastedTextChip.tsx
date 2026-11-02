@@ -4,7 +4,6 @@
 //   (click-to-expand echo of a sent paste).
 // Layer: Chat composer/transcript presentation
 
-import { i18n } from "~/i18n";
 import { type ButtonHTMLAttributes, type ReactNode, useState } from "react";
 
 import { ChevronRightIcon, FileIcon } from "~/lib/icons";

@@ -5,8 +5,6 @@
 // Layer: Chat composer UI
 // Exports: ComposerGoalHeader, goalElapsedMs
 
-import { i18n } from "~/i18n";
-
 import { useNowMs } from "~/hooks/useNowMs";
 import { GoalIcon, PauseOutlineIcon, PencilIcon, PlayOutlineIcon, TrashCanIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
@@ -72,11 +70,7 @@ export function ComposerGoalHeader({
   const paused = (goalPausedAt ?? null) !== null;
   const nowMs = useNowMs(!paused && goalStartedAt != null);
   const elapsedMs = goalElapsedMs({ goalStartedAt, goalPausedAt }, nowMs);
-  const stateLabel = canPause
-    ? paused
-      ? i18n._("Goal paused")
-      : i18n._("Pursuing goal")
-    : i18n._("Goal");
+  const stateLabel = canPause ? (paused ? "Goal paused" : "Pursuing goal") : "Goal";
   const elapsedLabel = elapsedMs !== null ? formatClockDuration(elapsedMs) : null;
 
   return (

@@ -14,9 +14,6 @@ import {
 import { getModelOptions, normalizeModelSlug } from "@synara/shared/model";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
-import { useLingui } from "@lingui/react";
-import { msg } from "@lingui/core/macro";
-import type { I18n, MessageDescriptor } from "@lingui/core";
 
 import {
   CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS,
@@ -47,12 +44,12 @@ import {
 } from "./SettingControls";
 import { SettingsRow, SettingsSection, SettingsSelectPopup } from "./SettingsPanelPrimitives";
 import { DebouncedSettingTextarea } from "./DebouncedSettingTextInput";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 const SOURCE_CONTROL_WRITING_OPTIONS: readonly {
   value: SourceControlWritingStyle;
-  label: MessageDescriptor;
-  description: MessageDescriptor;
+  label: string;
+  description: string;
 }[] = [
   {
     value: "repository",
@@ -79,14 +76,11 @@ type CustomModelValidationResult =
   | { readonly model: string; readonly error?: never }
   | { readonly model?: never; readonly error: string };
 
-export function validateCustomModelInput(
-  input: {
-    readonly provider: ProviderKind;
-    readonly value: string;
-    readonly savedModels: readonly string[];
-  },
-  i18n: I18n,
-): CustomModelValidationResult {
+export function validateCustomModelInput(input: {
+  readonly provider: ProviderKind;
+  readonly value: string;
+  readonly savedModels: readonly string[];
+}): CustomModelValidationResult {
   const normalized = normalizeModelSlug(input.value, input.provider);
   if (!normalized) {
     return { error: "settings:modelSlugRequired" };
@@ -95,8 +89,7 @@ export function validateCustomModelInput(
     return { error: "settings:modelAlreadyBuiltIn" };
   }
   if (normalized.length > MAX_CUSTOM_MODEL_LENGTH) {
-    const max = MAX_CUSTOM_MODEL_LENGTH;
-    return { error: i18n._(msg`Model slugs must be ${max} characters or less.`) };
+    return { error: "settings:modelSlugTooLong" };
   }
   if (input.savedModels.includes(normalized)) {
     return { error: "settings:customModelAlreadySaved" };
@@ -244,7 +237,7 @@ export function ModelsSettingsPanel({
   const selectedProofreadPickerOption = proofreadOverrideValue
     ? gitTextGenerationPickerOptions.find((entry) => entry.value === proofreadOverrideValue)
     : undefined;
-  const inheritedProofreadLabel = i18n._("Same as Git writing ({model})", {
+  const inheritedProofreadLabel = t("lattice:sameAsGitWriting", {
     model: selectedGitTextGenerationModelLabel,
   });
   const selectedProofreadModelLabel = !proofreadOverrideValue
@@ -278,14 +271,11 @@ export function ModelsSettingsPanel({
   const addCustomModel = useCallback(
     (provider: ProviderKind) => {
       const customModels = getCustomModelsForProvider(settings, provider);
-      const result = validateCustomModelInput(
-        {
-          provider,
-          value: customModelInputByProvider[provider] ?? "",
-          savedModels: customModels,
-        },
-        i18n,
-      );
+      const result = validateCustomModelInput({
+        provider,
+        value: customModelInputByProvider[provider] ?? "",
+        savedModels: customModels,
+      });
       if ("error" in result) {
         setCustomModelErrorByProvider((existing) => ({
           ...existing,
@@ -298,7 +288,7 @@ export function ModelsSettingsPanel({
       setCustomModelInputByProvider((existing) => ({ ...existing, [provider]: "" }));
       setCustomModelErrorByProvider((existing) => ({ ...existing, [provider]: null }));
     },
-    [customModelInputByProvider, i18n, settings, updateSettings],
+    [customModelInputByProvider, t, settings, updateSettings],
   );
 
   const removeCustomModel = useCallback(
@@ -347,7 +337,7 @@ export function ModelsSettingsPanel({
       <button
         type="button"
         className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100 hover:opacity-100"
-        aria-label={i18n._("Remove {model}", { model: row.slug })}
+        aria-label={t("workspace:remove", { value0: row.slug })}
         onClick={() => removeCustomModel(row.provider, row.slug)}
       >
         <XIcon className="size-3.5 text-muted-foreground hover:text-foreground" />
@@ -420,9 +410,7 @@ export function ModelsSettingsPanel({
         <SettingsRow
           id="setting-git-writing-model"
           title="settings:changed_gitWritingModel"
-          description={i18n._(
-            "Used for generated commit messages, PR titles, and branch names. Lattice proofreading follows it unless a proofreading model is chosen.",
-          )}
+          description={t("lattice:usedForGeneratedCommitMessagesPRTitles")}
           resetAction={
             isGitTextGenerationModelDirty ? (
               <SettingResetButton
@@ -464,14 +452,12 @@ export function ModelsSettingsPanel({
           }
         />
         <SettingsRow
-          title={i18n._("Proofreading model")}
-          description={i18n._(
-            "Used by Lattice to proofread a selection, without tools or file access. Follows the Git writing model until you choose one.",
-          )}
+          title={t("lattice:proofreadingModel")}
+          description={t("lattice:usedByLatticeToProofreadASelection")}
           resetAction={
             proofreadOverrideValue ? (
               <SettingResetButton
-                label="proofreading model"
+                label={t("lattice:proofreadingModelResetLabel")}
                 onClick={() =>
                   updateSettings({
                     proofreadProvider: undefined,
@@ -504,7 +490,7 @@ export function ModelsSettingsPanel({
                   proofreadModel: model,
                 });
               }}
-              ariaLabel={i18n._("Proofreading model")}
+              ariaLabel={t("lattice:proofreadingModel")}
               triggerClassName="w-full sm:w-52"
               valueContent={selectedProofreadModelLabel}
             >
@@ -520,15 +506,13 @@ export function ModelsSettingsPanel({
           }
         />
         <SettingsRow
-          title={i18n._("Compile repair model")}
-          description={i18n._(
-            "Used by Lattice to repair one compile diagnostic in an independent background task.",
-          )}
+          title={t("lattice:compileRepairModel")}
+          description={t("lattice:usedByLatticeToRepairOneCompile")}
           resetAction={
             settings.compileRepairProvider !== defaults.compileRepairProvider ||
             settings.compileRepairModel !== defaults.compileRepairModel ? (
               <SettingResetButton
-                label="compile repair model"
+                label={t("lattice:compileRepairModelResetLabel")}
                 onClick={() =>
                   updateSettings({
                     compileRepairProvider: defaults.compileRepairProvider,
@@ -549,7 +533,7 @@ export function ModelsSettingsPanel({
                 if (!provider || !model) return;
                 updateSettings({ compileRepairProvider: provider, compileRepairModel: model });
               }}
-              ariaLabel={i18n._("Compile repair model")}
+              ariaLabel={t("lattice:compileRepairModel")}
               triggerClassName="w-full sm:w-52"
               valueContent={
                 compileRepairModelOptions.find(
@@ -575,10 +559,8 @@ export function ModelsSettingsPanel({
       <SettingsSection title="settings:changed_customModels">
         <SettingsRow
           id="setting-saved-model-slugs"
-          title={i18n._("Add models manually")}
-          description={i18n._(
-            "If a model does not appear automatically, choose its provider and enter its model ID. It will then be available in model pickers.",
-          )}
+          title={t("lattice:addModelsManually")}
+          description={t("lattice:ifAModelDoesNotAppearAutomatically")}
           resetAction={
             savedCustomModelRows.length > 0 ? (
               <SettingResetButton label={t("settings:customModels")} onClick={resetCustomModels} />
@@ -675,10 +657,8 @@ export function ModelsSettingsPanel({
                       onClick={() => setShowAllCustomModels((value) => !value)}
                     >
                       {showAllCustomModels
-                        ? i18n._("Show less")
-                        : i18n._("Show more ({count})", {
-                            count: overflowCustomModelRows.length,
-                          })}
+                        ? t("workspace:timeline_showLess")
+                        : t("settings:showMore", { value0: overflowCustomModelRows.length })}
                     </button>
                   </>
                 ) : null}

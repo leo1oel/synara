@@ -72,6 +72,8 @@ describe("userMessageEditRejectionCopy", () => {
       userMessageEditRejectionCopy("spans-multiple-turns"),
     );
   });
+});
+
 describe("turn header copy", () => {
   it.each([
     [

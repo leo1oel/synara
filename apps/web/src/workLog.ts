@@ -1,4 +1,4 @@
-import { i18n } from "~/i18n";
+import { i18n, t } from "~/i18n";
 import {
   type ComputerPermission,
   type ComputerBuildSignature,
@@ -33,7 +33,6 @@ import {
   summarizeToolRawOutput,
 } from "@synara/shared/toolOutputSummary";
 import { pluralize, stripTerminalControlSequences } from "@synara/shared/text";
-import { i18n, t } from "~/i18n";
 import { suppressCoordinatorCheckinMessages } from "@synara/shared/coordinatorCheckin";
 import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
 import {

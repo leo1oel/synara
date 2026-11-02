@@ -1,11 +1,5 @@
-// FILE: PullRequestStackPopover.tsx
-// Purpose: Compact stack position control plus a full bottom-to-top stack navigator for the
-//          pull request detail header. GitHub stack state stays visible without duplicating a
-//          second pull request surface.
-// Layer: Pull request presentation
-// Exports: PullRequestStackPopover
+import { t, useTranslation } from "~/i18n";
 
-import { useLingui } from "@lingui/react";
 import type { PullRequestStack } from "@synara/contracts";
 import { useState } from "react";
 
@@ -50,12 +44,12 @@ export function PullRequestStackPopover({
             variant="chrome-outline"
             size="xs"
             className={cn(CHAT_HEADER_CONTROL_CLASS_NAME, "gap-1.5 px-2 font-normal")}
-            aria-label={i18n._("View stack {number}, pull request {position} of {size}", {
-              number: stack.number,
-              position: stack.position,
-              size: stack.size,
+            aria-label={t("git:viewStackPullRequestOf", {
+              value0: stack.number,
+              value1: stack.position,
+              value2: stack.size,
             })}
-            title={i18n._("Stack #{number}", { number: stack.number })}
+            title={t("git:stack2", { value0: stack.number })}
           >
             <PullRequestStackPosition stack={stack} appearance="plain" />
           </Button>
@@ -72,10 +66,7 @@ export function PullRequestStackPopover({
             {localizeStackAssessmentLabel(assessment.label)}
           </div>
           <div className="mt-0.5 text-ui leading-snug text-muted-foreground">
-            {i18n._("Stack #{number} · targets {branch}", {
-              number: stack.number,
-              branch: stack.baseBranch,
-            })}
+            {t("lattice:stackTargets", { number: stack.number, branch: stack.baseBranch })}
           </div>
         </div>
 

@@ -23,7 +23,7 @@ import {
   type ShortcutSheetSection,
 } from "../shortcutsSheet";
 import type { ProjectScript } from "../types";
-import { useTranslation } from "~/i18n";
+import { useTranslation, t } from "~/i18n";
 
 export default function ShortcutsDialog(props: {
   open: boolean;
@@ -84,14 +84,14 @@ function ShortcutsDialogContent(props: {
   return (
     <>
       <DialogHeader className="pb-2">
-        <DialogTitle className="text-ui-lg">Keybindings</DialogTitle>
+        <DialogTitle className="text-ui-lg">{t("common:advanced_keybindings")}</DialogTitle>
         <DialogDescription className="text-ui leading-snug">
           {t("common:reflectsTheBindingsActiveInYourCurrentContext")}
         </DialogDescription>
         <div className="pt-2">
           <SearchInput
             ref={inputRef}
-            placeholder="Search shortcuts..."
+            placeholder={t("common:shortcuts_searchPlaceholder")}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={(event) => {

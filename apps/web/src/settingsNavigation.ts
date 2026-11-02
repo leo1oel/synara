@@ -7,8 +7,6 @@ import { MCP_CONNECTORS_BETA_FEATURE } from "@synara/shared/betaFeatures";
 
 import { isBetaFeatureOn } from "~/betaFeatures";
 import { KEYBINDINGS_ICON_NAME } from "~/lib/icons";
-import { msg } from "@lingui/core/macro";
-import type { MessageDescriptor } from "@lingui/core";
 
 export const SETTINGS_SECTION_IDS = [
   "general",
@@ -51,8 +49,8 @@ export const SETTINGS_TARGETS = {
 export type SettingsNavItem = {
   id: SettingsSectionId;
   group: SettingsNavGroupId;
-  label: MessageDescriptor;
-  description: MessageDescriptor;
+  label: string;
+  description: string;
   /** Basename of a SVG under `/central-icons-reversed`. */
   icon: string;
   eyebrow: string;
@@ -67,7 +65,7 @@ export type SettingsNavItem = {
 // Keep English source keys here: callers translate at render time, while section/row ids stay stable.
 export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
   id: SettingsNavGroupId;
-  label: MessageDescriptor;
+  label: string;
 }> = [
   { id: "personal", label: "settings:personal" },
   { id: "integrations", label: "common:integrations" },
@@ -118,8 +116,8 @@ const ALL_SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   {
     id: "notifications",
     group: "personal",
-    label: msg`Notifications`,
-    description: msg`Choose how Lattice tells you when work finishes or needs attention.`,
+    label: "settings:nav_notifications",
+    description: "lattice:chooseHowLatticeTellsYouWhenWork",
     icon: "bell",
     eyebrow: "Alerts",
   },
@@ -134,8 +132,8 @@ const ALL_SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   {
     id: "shortcuts",
     group: "personal",
-    label: msg`Keybindings`,
-    description: msg`Capture, customize, and add shortcuts for every Lattice command.`,
+    label: "common:advanced_keybindings",
+    description: "lattice:captureCustomizeAndAddShortcutsForEvery",
     icon: KEYBINDINGS_ICON_NAME,
     eyebrow: "Key bindings",
   },
@@ -175,32 +173,32 @@ const ALL_SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   {
     id: "integrations",
     group: "integrations",
-    label: msg`MCP connections`,
-    description: msg`Give Codex, Claude, and other local agents scoped access to Lattice tasks.`,
+    label: "settings:mCPConnections",
+    description: "lattice:giveCodexClaudeAndOtherLocalAgents",
     icon: "plugin-1",
     eyebrow: "External agents",
   },
   {
     id: "providers",
     group: "coding",
-    label: msg`Agent providers`,
-    description: msg`Choose coding agents, their installed tools, and model defaults for Git writing.`,
+    label: "settings:agentProviders",
+    description: "lattice:chooseCodingAgentsTheirInstalledToolsAnd",
     icon: "puzzle",
     eyebrow: "Agents & models",
   },
   {
     id: "skills",
     group: "coding",
-    label: msg`Agent skills`,
-    description: msg`Create, import, and manage the Skills Lattice uses.`,
+    label: "settings:nav_skillsEyebrow",
+    description: "lattice:createImportAndManageTheSkillsLattice",
     icon: "building-blocks",
     eyebrow: "Reusable workflows",
   },
   {
     id: "worktrees",
     group: "coding",
-    label: msg`Managed worktrees`,
-    description: msg`Review and clean up isolated workspaces created by Lattice.`,
+    label: "onboarding:managedWorktrees",
+    description: "lattice:reviewAndCleanUpIsolatedWorkspacesCreated",
     icon: "branch-simple",
     eyebrow: "Workspace management",
   },

@@ -5,7 +5,6 @@
 // Layer: Chat composer UI primitive
 // Exports: QueuedComposerActions
 
-import { useLingui } from "@lingui/react";
 import { EllipsisIcon, SteerIcon, Trash2 } from "~/lib/icons";
 
 import type { QueuedComposerTurn } from "../../composerDraftStore";

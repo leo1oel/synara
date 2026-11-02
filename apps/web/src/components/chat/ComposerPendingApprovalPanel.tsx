@@ -43,16 +43,6 @@ type ApprovalAction = {
   tone: ComposerChoiceTone;
 };
 
-function formatToolParameterValue(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (value === null) return "null";
-  try {
-    return JSON.stringify(value) ?? String(value);
-  } catch {
-    return String(value);
-  }
-}
-
 // Order is the card-local shortcut order (1-4): recommended action first, stop-everything last.
 const APPROVAL_ACTIONS: ReadonlyArray<ApprovalAction> = [
   {
@@ -360,6 +350,20 @@ function ApprovalDetail({
       {t("chat:approvalActions_reviewRequest")}
     </p>
   );
+}
+
+function formatToolParameterValue(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (value === null) {
+    return "null";
+  }
+  try {
+    return JSON.stringify(value) ?? String(value);
+  } catch {
+    return String(value);
+  }
 }
 
 /**

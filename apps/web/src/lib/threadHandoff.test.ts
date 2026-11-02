@@ -1,4 +1,5 @@
-import { setupI18n } from "@lingui/core";
+import { t, setLanguagePreference } from "~/i18n";
+
 import {
   DEFAULT_MODEL_BY_PROVIDER,
   EventId,
@@ -9,7 +10,7 @@ import {
   type ServerProviderStatus,
   ThreadId,
 } from "@synara/contracts";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { AppSettingsSchema, getProviderInstanceOptions } from "../appSettings";
 import type { Thread } from "../types";
 import {
@@ -29,6 +30,8 @@ import {
   extractTrailingBrowserAnnotations,
   type BrowserAnnotationDraft,
 } from "./browserAnnotations";
+
+afterEach(() => setLanguagePreference("en"));
 
 describe("threadHandoff", () => {
   it("reads a same-thread handoff outcome from the activity keyed by its command", () => {
@@ -357,8 +360,7 @@ describe("threadHandoff", () => {
   });
 
   it("localizes the handoff source badge in Chinese", () => {
-    const i18n = setupI18n();
-    i18n.loadAndActivate({ locale: "zh-CN", messages: zhMessages });
+    setLanguagePreference("zh-CN");
 
     expect(
       resolveThreadHandoffBadgeLabel(
@@ -370,7 +372,7 @@ describe("threadHandoff", () => {
             bootstrapStatus: "completed",
           },
         },
-        i18n,
+        t,
       ),
     ).toBe("从 Claude 移交而来");
   });

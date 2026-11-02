@@ -12,7 +12,6 @@ import type { ThreadId } from "@synara/contracts";
 import type { RightDockPane } from "~/rightDockStore.logic";
 
 import { PanelStateMessage } from "~/components/chat/PanelStateMessage";
-import { i18n } from "~/i18n";
 import {
   pullRequestDetailInputFromPane,
   pullRequestDetailInputKey,

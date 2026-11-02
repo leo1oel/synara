@@ -1,4 +1,4 @@
-import { i18n } from "~/i18n";
+import { i18n, t, useTranslation } from "~/i18n";
 import type {
   McpConnector,
   ProjectEntry,
@@ -41,7 +41,6 @@ import type { ProviderModelOption } from "../providerModelOptions";
 import { getClaudeArtifactCommandNotice } from "../lib/claudeArtifactCommands";
 import { compareProvidersByOrder } from "../providerOrdering";
 import type { ComposerThreadMentionSource, Project } from "../types";
-import { t, useTranslation } from "~/i18n";
 
 type ComposerPluginSuggestion = {
   plugin: ProviderPluginDescriptor;

@@ -1,11 +1,5 @@
-// FILE: ProviderRuntimeInstall.tsx
-// Purpose: One-click install of a provider runtime a slim host leaves out (Pi, OpenCode):
-//   the offer, its progress, and a retryable, localized failure.
-// Layer: Provider presentation
-// Exports: runtime install state helpers, the install action, and the install panel.
+import { t } from "~/i18n";
 
-import type { I18n } from "@lingui/core";
-import { useLingui } from "@lingui/react";
 import {
   PROVIDER_DISPLAY_NAMES,
   type ServerProviderRuntimeInstall,
@@ -38,36 +32,32 @@ export function providerRuntimeInstallPercent(install: ServerProviderRuntimeInst
 }
 
 export function providerRuntimeInstallLabel(
-  i18n: I18n,
+  translate: typeof t,
   install: ServerProviderRuntimeInstall,
 ): string {
   if (install.status === "installing") {
-    return i18n._("Installing {percent}%", { percent: providerRuntimeInstallPercent(install) });
+    return translate("lattice:installing", { percent: providerRuntimeInstallPercent(install) });
   }
-  return install.status === "failed" ? i18n._("Install failed") : i18n._("Not installed");
+  return install.status === "failed"
+    ? translate("lattice:installFailed")
+    : translate("onboarding:notInstalled");
 }
 
 export function providerRuntimeInstallFailureMessage(
-  i18n: I18n,
+  translate: typeof t,
   install: ServerProviderRuntimeInstall,
 ): string {
   switch (install.failure) {
     case "offline":
-      return i18n._(
-        "Could not reach the package registry. Check your internet connection, then try again.",
-      );
+      return translate("lattice:couldNotReachThePackageRegistryCheck");
     case "integrity":
-      return i18n._(
-        "A downloaded package did not match its expected checksum, so nothing was installed. Try again.",
-      );
+      return translate("lattice:aDownloadedPackageDidNotMatchIts");
     case "disk":
-      return i18n._(
-        "Could not write the files. Check that your disk has free space, then try again.",
-      );
+      return translate("lattice:couldNotWriteTheFilesCheckThat");
     case "verify":
-      return i18n._("The downloaded packages did not load, so nothing was installed. Try again.");
+      return translate("lattice:theDownloadedPackagesDidNotLoadSo");
     default:
-      return i18n._("The download did not complete, so nothing was installed. Try again.");
+      return translate("lattice:theDownloadDidNotCompleteSoNothing");
   }
 }
 
@@ -95,7 +85,6 @@ export function ProviderRuntimeInstallButton(props: {
   readonly status: ServerProviderStatus;
   readonly className?: string;
 }) {
-  const { i18n } = useLingui();
   const { install, requesting } = useInstallProviderRuntime();
   const runtime = providerRuntimeInstallOf(props.status);
   if (!runtime) return null;
@@ -118,10 +107,10 @@ export function ProviderRuntimeInstallButton(props: {
         <DownloadIcon className="size-3.5" />
       )}
       {installing
-        ? i18n._("Installing")
+        ? t("lattice:installing2")
         : runtime.status === "failed"
-          ? i18n._("Try again")
-          : i18n._("Install")}
+          ? t("chat:profile_tryAgain")
+          : t("settings:providers_docInstall")}
     </Button>
   );
 }
@@ -138,7 +127,6 @@ export function ProviderRuntimeInstallPanel(props: {
   /** False where the install button already sits beside the panel (a settings row). */
   readonly showAction?: boolean;
 }) {
-  const { i18n } = useLingui();
   const { install, requesting, requestError } = useInstallProviderRuntime();
   const runtime = providerRuntimeInstallOf(props.status);
   if (!runtime) return null;
@@ -155,17 +143,14 @@ export function ProviderRuntimeInstallPanel(props: {
       )}
     >
       <span className="text-muted-foreground">
-        {i18n._(
-          "{provider} is downloaded separately to keep the app small. After a one-time download it also works offline.",
-          { provider: name },
-        )}
+        {t("lattice:isDownloadedSeparatelyToKeepTheApp", { provider: name })}
       </span>
       {runtime.status === "installing" ? (
         <div className="flex w-full min-w-0 flex-col gap-1" role="status">
           <div
             className="h-1 w-full overflow-hidden rounded-full bg-muted"
             role="progressbar"
-            aria-label={i18n._("Installing {provider}", { provider: name })}
+            aria-label={t("lattice:installing3", { provider: name })}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={percent}
@@ -176,7 +161,7 @@ export function ProviderRuntimeInstallPanel(props: {
             />
           </div>
           <span className="text-muted-foreground tabular-nums">
-            {i18n._("Installing {provider}: {completed} of {total} packages", {
+            {t("lattice:installingOfPackages", {
               provider: name,
               completed: runtime.completedPackages ?? 0,
               total: runtime.totalPackages ?? 0,
@@ -187,7 +172,7 @@ export function ProviderRuntimeInstallPanel(props: {
       {runtime.status === "failed" || requestError ? (
         <span role="alert" className="text-destructive">
           {runtime.status === "failed"
-            ? providerRuntimeInstallFailureMessage(i18n, runtime)
+            ? providerRuntimeInstallFailureMessage(t, runtime)
             : requestError}
         </span>
       ) : null}
@@ -207,8 +192,8 @@ export function ProviderRuntimeInstallPanel(props: {
           )}
           <span className="truncate">
             {runtime.status === "failed"
-              ? i18n._("Try again")
-              : i18n._("Install {provider}", { provider: name })}
+              ? t("chat:profile_tryAgain")
+              : t("lattice:install", { provider: name })}
           </span>
         </Button>
       )}

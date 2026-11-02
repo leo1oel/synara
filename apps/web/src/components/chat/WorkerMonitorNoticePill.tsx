@@ -1,4 +1,3 @@
-import { i18n } from "~/i18n";
 import { ProjectId, ThreadId } from "@synara/contracts";
 import { useState } from "react";
 import type { WorkLogEntry, WorkLogSynaraWorkerNotice } from "../../workLog";

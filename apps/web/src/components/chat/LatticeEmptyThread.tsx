@@ -1,3 +1,4 @@
+import { getFormatLocale, t } from "~/i18n";
 // FILE: LatticeEmptyThread.tsx
 // Purpose: The embedded (Lattice) Agent panel's empty thread: the agent as a
 // writing partner, with starters that mirror the editor's selection actions.
@@ -16,7 +17,6 @@ import {
 } from "react";
 import { flushSync } from "react-dom";
 
-import { i18n } from "~/i18n";
 import {
   getLiveLatticeHostContext,
   subscribeLiveLatticeHostContext,
@@ -135,7 +135,7 @@ export const LatticeEmptyThread = memo(function LatticeEmptyThread({
     getLiveLatticeHostContext,
     getLiveLatticeHostContext,
   );
-  const selectionPlace = latticeSelectionPlace(context, i18n);
+  const selectionPlace = latticeSelectionPlace(context, t);
   const hasSelection = selectionPlace !== null;
 
   // A fit pass starts from the roomiest density and steps down, one render at
@@ -159,7 +159,7 @@ export const LatticeEmptyThread = memo(function LatticeEmptyThread({
   }, []);
   // What changes the content's size without resizing the viewport.
   const selectionKey = selectionPlace ? `${selectionPlace.name}|${selectionPlace.detail}` : "";
-  useLayoutEffect(refit, [refit, selectionKey, i18n.locale]);
+  useLayoutEffect(refit, [refit, selectionKey, getFormatLocale()]);
   useLayoutEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
@@ -190,8 +190,8 @@ export const LatticeEmptyThread = memo(function LatticeEmptyThread({
 
   const starter = (kind: LatticeStarterKind) => {
     const Icon = STARTER_ICONS[kind];
-    const copy = latticeStarterCopy(kind, i18n);
-    const onClick = () => onStarter(latticeStarterPrompt(kind, hasSelection, i18n));
+    const copy = latticeStarterCopy(kind, t);
+    const onClick = () => onStarter(latticeStarterPrompt(kind, hasSelection, t));
     if (density === "icons") {
       return (
         <li key={kind} className="flex">
@@ -288,7 +288,7 @@ export const LatticeEmptyThread = memo(function LatticeEmptyThread({
             <h2
               className={`lattice-empty-thread-title font-normal text-balance text-foreground ${density === "chips" ? "text-[17px] leading-[22px]" : "text-[21px] leading-[26px]"}`}
             >
-              {i18n._("Work on this paper")}
+              {t("lattice:workOnThisPaper")}
             </h2>
           ) : null}
           {/* Chinese wraps at its punctuation, not between any two characters,
@@ -296,8 +296,8 @@ export const LatticeEmptyThread = memo(function LatticeEmptyThread({
           {showHint ? (
             <p className="mt-1.5 text-[12.5px] leading-[18px] text-balance break-keep text-muted-foreground">
               {hasSelection
-                ? i18n._("These act on the selected text only")
-                : i18n._("To work on a single passage, select it in the editor")}
+                ? t("lattice:theseActOnTheSelectedTextOnly")
+                : t("lattice:toWorkOnASinglePassageSelect")}
             </p>
           ) : null}
           {showChip && selectionPlace ? (
@@ -310,7 +310,7 @@ export const LatticeEmptyThread = memo(function LatticeEmptyThread({
                   the label and the name go (the context bar and the tooltip keep
                   the name), and only then may the lines ellipsize. */}
               <span className="shrink-0 font-medium text-foreground/85 @max-[200px]:hidden">
-                {i18n._("Selection")}
+                {t("lattice:selection")}
               </span>
               <span
                 aria-hidden="true"

@@ -8,7 +8,6 @@ import {
   type TerminalOpenInput,
 } from "@synara/contracts";
 import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
-import { I18nProvider } from "@lingui/react";
 import { page, userEvent } from "vitest/browser";
 import { beforeEach, expect, it, vi } from "vitest";
 import { render as renderInBrowser } from "vitest-browser-react";
@@ -76,7 +75,7 @@ vi.mock("~/nativeApi", () => ({
 }));
 
 import { AppSettingsSchema, type AppSettings } from "~/appSettings";
-import { i18n } from "~/i18n";
+import { t, setLanguagePreference } from "~/i18n";
 import { ProvidersSettingsPanel } from "./ProvidersSettingsPanel";
 import TerminalViewport from "../terminal/TerminalViewport";
 import { terminalRuntimeRegistry } from "../terminal/terminalRuntimeRegistry";
@@ -93,11 +92,11 @@ const props = {
 
 // The panel reads its copy through Lingui, so every render needs the provider.
 function render(ui: ReactNode) {
-  return renderInBrowser(<I18nProvider i18n={i18n}>{ui}</I18nProvider>);
+  return renderInBrowser(<>{ui}</>);
 }
 
 beforeEach(() => {
-  i18n.loadAndActivate({ locale: "en", messages: {} });
+  setLanguagePreference("en");
   harness.usage = [];
   harness.reconciled = true;
   harness.refresh.mockReset();
@@ -149,13 +148,13 @@ it("saves provider CPU priority opt-out and exposes reset to the default", async
   await control.click();
   expect(updateSettings).toHaveBeenCalledWith({ lowerProviderProcessPriority: false });
   await result.rerender(
-    <I18nProvider i18n={i18n}>
+    <>
       <ProvidersSettingsPanel
         {...props}
         settings={{ ...props.settings, lowerProviderProcessPriority: false }}
         updateSettings={updateSettings}
       />
-    </I18nProvider>,
+    </>,
   );
   await page.getByRole("button", { name: "Reset Keep Synara responsive to default" }).click();
   expect(updateSettings).toHaveBeenLastCalledWith({ lowerProviderProcessPriority: true });

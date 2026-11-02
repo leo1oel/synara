@@ -9,8 +9,6 @@ import {
   type ProviderKind,
   type ServerProviderStatus,
 } from "@synara/contracts";
-import type { I18n } from "@lingui/core";
-import { useLingui } from "@lingui/react";
 import { type CSSProperties, type ReactNode } from "react";
 
 import { PlusIcon, StarFilledIcon } from "~/lib/icons";
@@ -30,7 +28,7 @@ import {
   type ProviderModelPickerInstance,
   resolveLiveProviderAvailability,
 } from "./ProviderModelPicker";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 function PickerTabButton(props: {
   label: string;
@@ -107,22 +105,22 @@ export type ComposerModelPickerProviderTab = {
 
 // Why an enabled account cannot run, phrased for its tab tooltip.
 function describeUnavailableAccount(
-  i18n: I18n,
+  translate: typeof t,
   label: string,
   status: ServerProviderStatus,
   message: string | undefined,
 ): string {
   const summary =
     status.status === "error" || !status.available
-      ? i18n._("{account} — Unavailable.", { account: label })
+      ? translate("lattice:unavailable", { account: label })
       : status.status === "warning"
-        ? i18n._("{account} — Limited.", { account: label })
-        : i18n._("{account} — Not ready.", { account: label });
+        ? translate("lattice:limited", { account: label })
+        : translate("lattice:notReady", { account: label });
   return [summary, message].filter(Boolean).join(" ");
 }
 
 function resolveAccountTabState(input: {
-  i18n: I18n;
+  translate: typeof t;
   label: string;
   status: ServerProviderStatus | undefined;
   lockedToSibling: boolean;
@@ -130,13 +128,10 @@ function resolveAccountTabState(input: {
   ComposerModelPickerProviderTab,
   "unavailableLabel" | "blocked" | "setupMessage" | "runtimeInstallStatus"
 > {
-  const { i18n, label, status } = input;
+  const { translate, label, status } = input;
   if (input.lockedToSibling) {
     return {
-      unavailableLabel: i18n._(
-        "{account} is unavailable in this thread. Start a new thread to switch accounts.",
-        { account: label },
-      ),
+      unavailableLabel: t("lattice:isUnavailableInThisThreadStartA", { account: label }),
       blocked: true,
       setupMessage: null,
       runtimeInstallStatus: null,
@@ -152,7 +147,7 @@ function resolveAccountTabState(input: {
   }
   if (!status) {
     return {
-      unavailableLabel: i18n._("{account} — Checking.", { account: label }),
+      unavailableLabel: t("lattice:checking", { account: label }),
       blocked: true,
       setupMessage: null,
       runtimeInstallStatus: null,
@@ -160,14 +155,14 @@ function resolveAccountTabState(input: {
   }
   const trimmedMessage = status.message?.trim();
   const message =
-    trimmedMessage === undefined ? undefined : localizeProviderStatusMessage(i18n, trimmedMessage);
+    trimmedMessage === undefined ? undefined : localizeProviderStatusMessage(t, trimmedMessage);
   return {
-    unavailableLabel: describeUnavailableAccount(i18n, label, status, message),
+    unavailableLabel: describeUnavailableAccount(t, label, status, message),
     blocked: false,
     setupMessage:
       status.authStatus === "unauthenticated"
-        ? i18n._("Open provider setup to sign in to this account.")
-        : (message ?? i18n._("{account} is unavailable right now.", { account: label })),
+        ? t("lattice:openProviderSetupToSignInTo")
+        : (message ?? t("settings:providerUnavailableNow", { provider: label })),
     runtimeInstallStatus: status.runtimeInstall ? status : null,
   };
 }
@@ -176,7 +171,7 @@ function resolveAccountTabState(input: {
 // another provider. A started thread stays on its account: siblings are listed but closed.
 // An account that still needs signing in stays openable and invites the user to set it up.
 export function resolveComposerModelPickerProviderTabs(input: {
-  i18n: I18n;
+  translate: typeof t;
   options: ReadonlyArray<{ value: ProviderKind; label: string }>;
   providers: ReadonlyArray<ServerProviderStatus> | undefined;
   providerInstances?: ReadonlyArray<ProviderModelPickerInstance> | undefined;
@@ -213,7 +208,7 @@ export function resolveComposerModelPickerProviderTabs(input: {
           ];
     return tabs.map((tab) => {
       const state = resolveAccountTabState({
-        i18n: input.i18n,
+        translate: input.translate,
         label: tab.label,
         status: findProviderStatusForInstance({
           providers: input.providers,

@@ -80,7 +80,7 @@ import {
 // they carry `positionerProps.anchor`, so every notification this pane raised —
 // save confirmations and input errors alike — was silently discarded.
 import { toastManager } from "./ui/toast";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 /**
  * How often the pane re-reads setup state while the checklist is up.
@@ -897,8 +897,7 @@ function DeviceVideoOverlay(props: {
   if (status.kind === "unsupported") {
     return (
       <p className="text-balance text-center text-ui-xs text-white/70 leading-snug">
-        This browser cannot decode the simulator stream. Chrome, Edge, or Safari 17+ support the
-        required WebCodecs video decoder.
+        {t("lattice:simulatorStreamUnsupported")}
       </p>
     );
   }
@@ -947,10 +946,10 @@ function DeviceBootLimitDialog(props: {
             and one of them is about to lose whatever is on it.
           */}
           <DialogDescription>
-            {i18n._(
-              "At most {limit} simulators can run at once, because each one holds a few gigabytes of memory. Pick one to shut down — anything running on it closes — and {device} starts in its place.",
-              { limit: state?.limit ?? 0, device: props.deviceName },
-            )}
+            {t("lattice:atMostSimulatorsCanRunAtOnce", {
+              limit: state?.limit ?? 0,
+              device: props.deviceName,
+            })}
           </DialogDescription>
         </DialogHeader>
         <ul className="space-y-1">

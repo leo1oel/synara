@@ -3,7 +3,7 @@
 // Layer: Web transport
 // Exports: WsTransport plus stream-selection helpers used by tests.
 
-import { i18n } from "./i18n";
+import { t } from "./i18n";
 import { recordRendererActivity, rendererRpcActivity } from "./lib/rendererErrorDiagnostics";
 
 import {
@@ -314,8 +314,7 @@ const INITIAL_RECONNECT_RETRY_MS = 500;
 const DEFECT_CIRCUIT_BREAKER_THRESHOLD = 2;
 const RECOVERY_ESCALATION_LOG_MS = 20_000;
 // Read at throw time so the message follows the active locale.
-const trippedRecoveryMessage = () =>
-  i18n._("Connection recovery stopped. Reload the app and check the operation's status.");
+const trippedRecoveryMessage = () => t("lattice:connectionRecoveryStoppedReloadTheAppAnd");
 const MAX_RECONNECT_RETRY_MS = 5_000;
 
 /** Keeps outages gentle on the backend while still recovering promptly. */
@@ -1334,9 +1333,7 @@ export class WsTransport {
           throw error;
         if (this.isRecoveryTripped()) {
           throw new WsTransportRequestInterruptedError({
-            message: `${this.trippedRecoveryError().message} ${i18n._(
-              "Message delivery could not be checked. Reconnect and check the conversation before sending again.",
-            )}`,
+            message: `${this.trippedRecoveryError().message} ${t("lattice:messageDeliveryCouldNotBeCheckedReconnect")}`,
             code: "WS_TURN_SETTLEMENT_UNAVAILABLE",
             method: ORCHESTRATION_WS_METHODS.settleTurnDispatch,
             retryable: false,

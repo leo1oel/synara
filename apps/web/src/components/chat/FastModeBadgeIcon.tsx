@@ -1,4 +1,3 @@
-import { i18n } from "~/i18n";
 import type { FastModeNotice } from "~/lib/fastModeState";
 import { FastModeIcon, FastModeOutlineIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";

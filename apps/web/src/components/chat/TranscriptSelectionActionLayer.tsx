@@ -1,4 +1,3 @@
-import { i18n } from "~/i18n";
 import type { ThreadEnvironmentMode } from "@synara/contracts";
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -7,7 +6,7 @@ import type { TranscriptAssistantSelection } from "./chatSelectionActions";
 import { SelectionNewChatComposer } from "./SelectionNewChatComposer";
 import type { PendingTranscriptSelectionAction } from "./useTranscriptAssistantSelectionAction";
 import { TranscriptSelectionAction } from "./TranscriptSelectionAction";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 interface TranscriptSelectionActionLayerProps {
   action: PendingTranscriptSelectionAction | null;
@@ -78,8 +77,8 @@ export function TranscriptSelectionActionLayer(props: TranscriptSelectionActionL
                 .catch((error: unknown) =>
                   toastManager.add({
                     type: "error",
-                    title: i18n._("Could not add selection to Side"),
-                    description: error instanceof Error ? error.message : i18n._("Try again."),
+                    title: t("chat:couldNotAddSelectionToSide"),
+                    description: error instanceof Error ? error.message : t("chat:tryAgain"),
                   }),
                 )
                 .finally(() => {

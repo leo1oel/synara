@@ -1,10 +1,4 @@
-// FILE: ComposerLatticeContextBar.tsx
-// Purpose: Makes Lattice's automatically injected editor/PDF/paper/slide context
-// visible and inspectable immediately above the embedded chat composer.
-// Layer: Chat composer UI
-
-import { msg } from "@lingui/core/macro";
-import { i18n } from "~/i18n";
+import { t, getFormatLocale } from "~/i18n";
 import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { EyeIcon, PanelCollapseIcon, PanelExpandIcon, XIcon } from "~/lib/icons";
@@ -33,7 +27,7 @@ import {
 } from "./composerStackedPanelStyles";
 
 // "Included" alone also labels bundled skills (内置); the context keeps the two translations apart.
-const INCLUDED_WITH_MESSAGE = msg({ message: "Included", context: "Sent with the next message" });
+const INCLUDED_WITH_MESSAGE = "lattice:includedWithMessage";
 
 interface ComposerLatticeContextBarProps {
   onClearSelection?: () => void;
@@ -78,13 +72,13 @@ export function ComposerLatticeContextBar({
     getLiveLatticeHostContext,
   );
   if (!context) return null;
-  const summary = latticeContextSummary(context, i18n);
-  const details = latticeContextDetails(context, i18n);
-  const selection = latticeContextSelection(context, i18n);
+  const summary = latticeContextSummary(context, t);
+  const details = latticeContextDetails(context, t);
+  const selection = latticeContextSelection(context, t);
   if (!selection) return null;
   const disclosureLabel = expanded
-    ? i18n._("Hide included context details")
-    : i18n._("Show included context details");
+    ? t("lattice:hideIncludedContextDetails")
+    : t("lattice:showIncludedContextDetails");
 
   return (
     // Keep live editor selections out of the measured composer height: changing
@@ -98,23 +92,25 @@ export function ComposerLatticeContextBar({
               className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
               aria-expanded={expanded}
               aria-label={disclosureLabel}
-              title={i18n._("{summary}. Included with your next message.", { summary })}
+              title={t("lattice:includedWithYourNextMessage", { summary })}
               onClick={() => setExpanded((current) => !current)}
             >
               <EyeIcon className={COMPOSER_STACKED_PANEL_ICON_CLASS_NAME} />
               <span className="shrink-0 text-ui font-medium text-foreground/90">
-                {i18n._("Context")}
+                {t("chat:traitsPicker_context")}
               </span>
               <span className="min-w-0 flex-1 truncate text-ui-sm text-muted-foreground/75">
                 {summary}
               </span>
               {selection ? (
                 <span className="shrink-0 rounded-full bg-[var(--color-background-button-secondary)] px-1.5 py-0.5 text-ui-xs text-[var(--color-text-foreground-secondary)]">
-                  {i18n._("{count} chars", { count: selection.length.toLocaleString() })}
+                  {t("lattice:chars", {
+                    count: selection.length.toLocaleString(getFormatLocale()),
+                  })}
                 </span>
               ) : (
                 <span className="shrink-0 text-ui-xs text-muted-foreground/55">
-                  {i18n._(INCLUDED_WITH_MESSAGE)}
+                  {t(INCLUDED_WITH_MESSAGE)}
                 </span>
               )}
               {expanded ? (
@@ -130,8 +126,8 @@ export function ComposerLatticeContextBar({
                 size="icon-xs"
                 className={cn("shrink-0", COMPOSER_STACKED_PANEL_ICON_BUTTON_CLASS_NAME)}
                 onClick={onClearSelection}
-                aria-label={i18n._("Exclude selected text from context")}
-                title={i18n._("Exclude selected text from the next message")}
+                aria-label={t("lattice:excludeSelectedTextFromContext")}
+                title={t("lattice:excludeSelectedTextFromTheNextMessage")}
               >
                 <XIcon className="size-3" />
               </Button>
@@ -149,10 +145,10 @@ export function ComposerLatticeContextBar({
             >
               <div className="mb-2 flex items-center justify-between gap-2">
                 <p className="text-ui-sm text-muted-foreground/75">
-                  {i18n._("Included automatically with your next message")}
+                  {t("lattice:includedAutomaticallyWithYourNextMessage")}
                 </p>
                 <span className="shrink-0 rounded-full bg-[var(--color-background-button-secondary)] px-1.5 py-0.5 text-ui-xs font-medium text-[var(--color-text-foreground-secondary)]">
-                  {i18n._(INCLUDED_WITH_MESSAGE)}
+                  {t(INCLUDED_WITH_MESSAGE)}
                 </span>
               </div>
               <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-ui-sm">
@@ -171,8 +167,8 @@ export function ComposerLatticeContextBar({
                         {selection.label}
                       </p>
                       <p className="text-ui-xs text-muted-foreground/55">
-                        {i18n._("{count} characters", {
-                          count: selection.length.toLocaleString(),
+                        {t("chat:characters", {
+                          value0: selection.length.toLocaleString(getFormatLocale()),
                         })}
                       </p>
                     </div>
@@ -184,7 +180,7 @@ export function ComposerLatticeContextBar({
                         className="h-6 shrink-0 px-2 text-ui-xs font-normal text-muted-foreground"
                         onClick={onClearSelection}
                       >
-                        {i18n._("Exclude selection")}
+                        {t("lattice:excludeSelection")}
                       </Button>
                     ) : null}
                   </div>

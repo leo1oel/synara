@@ -11,7 +11,6 @@ import {
   type ProviderModelDescriptor,
   type ThreadId,
 } from "@synara/contracts";
-import { useLingui } from "@lingui/react";
 import { useState, type ReactNode } from "react";
 
 import type { FastModeNotice } from "~/lib/fastModeState";
@@ -31,7 +30,7 @@ import {
 import { localizeModelPickerLabel } from "./modelPickerLabels";
 import { defaultAgentForProvider, getAgentOptions, getSelectedAgentValue } from "./TraitsPicker";
 import { useComposerTraitCommit } from "./useComposerTraitCommit";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 // Footer row "<Trait> ……… <value> ›" opening a radio submenu. Picking a value closes
 // only the submenu, so the user can compose model + traits and then star the result.
@@ -68,9 +67,7 @@ function TraitRow(props: {
         >
           {props.options.map((option) => (
             <MenuRadioItem key={option.value} value={option.value} onClick={() => setOpen(false)}>
-              {option.isDefault
-                ? i18n._("{option} (default)", { option: option.label })
-                : option.label}
+              {option.isDefault ? t("lattice:default2", { option: option.label }) : option.label}
             </MenuRadioItem>
           ))}
         </MenuRadioGroup>
@@ -97,8 +94,7 @@ export function ComposerModelPickerTraitRows(props: {
   const { t } = useTranslation();
 
   const { provider, threadId, model, modelOptions, prompt } = props;
-  const { i18n } = useLingui();
-  const localizeLabel = (label: string) => localizeModelPickerLabel(i18n, label);
+  const localizeLabel = (label: string) => localizeModelPickerLabel(t, label);
   const selection = getComposerTraitSelection(
     provider,
     model,
@@ -151,7 +147,7 @@ export function ComposerModelPickerTraitRows(props: {
         label={
           selection.contextWindowDescriptor
             ? localizeLabel(selection.contextWindowDescriptor.label)
-            : i18n._("Context")
+            : t("chat:traitsPicker_context")
         }
         value={contextWindowValue}
         valueLabel={localizeLabel(

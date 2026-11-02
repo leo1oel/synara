@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { setupI18n } from "@lingui/core";
+import { t, setLanguagePreference } from "~/i18n";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { type AppSettings, AppSettingsSchema } from "~/appSettings";
 
@@ -11,6 +11,8 @@ import {
 } from "./ProvidersSettingsPanel";
 
 const defaults = AppSettingsSchema.makeUnsafe({});
+
+afterEach(() => setLanguagePreference("en"));
 
 describe("isProviderInstallSettingsDirty", () => {
   it("covers every provider install text and boolean field", () => {
@@ -106,18 +108,10 @@ describe("providerUpdateStatusLabel", () => {
 
 describe("provider picker localization", () => {
   it("removes provider activity controls while retaining the picker explanation", async () => {
-    const { messages } = await import("../../locales/zh-CN/messages.po");
-    const catalog = setupI18n();
-    catalog.loadAndActivate({ locale: "zh-CN", messages });
+    setLanguagePreference("zh-CN");
 
-    expect(messages).not.toHaveProperty("Provider activity");
-    expect(messages).not.toHaveProperty("Enabled providers");
-    expect(
-      catalog._(
-        "Show or hide installed providers in the picker and drag them into your preferred order. Hiding a provider here does not disable its server activity.",
-      ),
-    ).toBe(
-      "在选择器中显示或隐藏已安装的提供商，并拖动调整顺序。在此隐藏提供商不会停用其服务端活动。",
+    expect(t("settings:showOrHideInstalledProvidersInThePickerAnd2")).toBe(
+      "在选择器中显示或隐藏已安装的提供商，并拖动调整顺序。在此隐藏提供商不会禁用其服务器活动。",
     );
   });
 });

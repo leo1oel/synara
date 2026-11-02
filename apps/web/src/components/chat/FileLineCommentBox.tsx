@@ -5,7 +5,7 @@
 //          Cancel/Comment actions (Comment stays disabled until non-empty text).
 // Layer: Chat file-preview interaction UI
 
-import { i18n } from "~/i18n";
+import { i18n, useTranslation } from "~/i18n";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
 import { FILE_COMMENT_TEXT_MAX_CHARS, normalizeFileCommentText } from "~/lib/fileComments";

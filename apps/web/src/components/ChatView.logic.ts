@@ -1,4 +1,4 @@
-import { i18n } from "~/i18n";
+import { t } from "~/i18n";
 import {
   resolveComputerControlMode,
   type ComposerComputerControlMode,
@@ -2213,20 +2213,20 @@ export function buildBlockedComposerSendToastCopy(reason: BlockedComposerSendRea
     case "send-in-flight":
       return {
         type: "info",
-        title: i18n._("Still sending your last message"),
-        description: i18n._("Wait for it to show in the chat before sending again."),
+        title: t("lattice:stillSendingYourLastMessage"),
+        description: t("lattice:waitForItToShowInThe"),
       };
     case "session-starting":
       return {
         type: "info",
-        title: i18n._("The session is still starting"),
-        description: i18n._("Send again once it is ready. Your message stays in the composer."),
+        title: t("lattice:theSessionIsStillStarting"),
+        description: t("lattice:sendAgainOnceItIsReadyYour"),
       };
     case "no-project":
       return {
         type: "warning",
-        title: i18n._("This chat has no project"),
-        description: i18n._("Choose a project for this chat, then send again."),
+        title: t("lattice:thisChatHasNoProject"),
+        description: t("lattice:chooseAProjectForThisChatThen"),
       };
   }
 }

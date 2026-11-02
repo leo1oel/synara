@@ -17,7 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useRef, type CSSProperties, type ReactNode } from "react";
 
 import { useTheme } from "~/hooks/useTheme";
-import { i18n } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 import { isSynaraEmbedMode } from "~/embedMode";
 import {
   ArrowDownIcon,
@@ -44,7 +44,6 @@ import { InlineVisualSurface, toneColor, toneTextClassName } from "./InlineVisua
 import { InlineVisualTable } from "./InlineVisualTable";
 import { decodeInlineVisualSpec, useInlineVisualState } from "./inlineVisualBlocks.logic";
 import { InlineVisualEmbedContext } from "./inlineVisualEmbedContext";
-import { useTranslation } from "~/i18n";
 
 export interface InlineVisualBlocksActions {
   /** Markdown links and file paths resolve against this. */
@@ -93,7 +92,7 @@ export function InlineVisualBlocks({
     ) : (
       <div
         role="status"
-        aria-label={i18n._("Loading {title}", { title: visual.title })}
+        aria-label={t("chat:loading", { value0: visual.title })}
         className="animate-pulse rounded-2xl bg-[color:color-mix(in_srgb,var(--foreground)_4%,transparent)]"
         style={{ height: visual.height || INLINE_VISUAL_DEFAULT_HEIGHT }}
       />
@@ -103,7 +102,7 @@ export function InlineVisualBlocks({
     return (
       <BlocksNotice
         title={visual.title}
-        message={i18n._("This visual needs a newer {app}.", {
+        message={t("lattice:thisVisualNeedsANewer", {
           app: isSynaraEmbedMode() ? "Lattice" : "Synara",
         })}
       />

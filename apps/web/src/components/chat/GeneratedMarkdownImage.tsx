@@ -8,7 +8,6 @@
 //        <button> because it wires into class-based stylesheet selectors
 //        (`chat-generated-image__*`) rather than shadcn Button.
 
-import { i18n } from "~/i18n";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type MouseEvent, useEffect, useMemo, useRef, useState } from "react";
 

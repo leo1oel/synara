@@ -1,4 +1,3 @@
-import { useLingui } from "@lingui/react";
 import { useEffect, useRef } from "react";
 import { Button } from "./ui/button";
 import {
@@ -11,7 +10,7 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { Input } from "./ui/input";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 interface ThreadWorktreeHandoffDialogProps {
   open: boolean;
@@ -79,7 +78,7 @@ export function ThreadWorktreeHandoffDialog({
           >
             <label className="grid gap-1.5">
               <span className="text-ui-xs font-medium text-foreground">
-                {i18n._("Worktree name")}
+                {t("common:worktreeHandoff_worktreeName")}
               </span>
               <Input
                 ref={worktreeInputRef}

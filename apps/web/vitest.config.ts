@@ -4,7 +4,7 @@
 //
 // The setup has to hang off a vitest-only config rather than `vite.config.ts`:
 // the browser suites merge that file directly, and they need neither the
-// localStorage shim nor the mocked Lingui hook.
+// localStorage shim.
 
 import { fileURLToPath } from "node:url";
 import { defineConfig, mergeConfig } from "vitest/config";

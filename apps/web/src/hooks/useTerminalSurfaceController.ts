@@ -16,7 +16,6 @@ import { selectRightDockState, useRightDockStore } from "~/rightDockStore";
 import { selectThreadTerminalState, useTerminalStateStore } from "~/terminalStateStore";
 import { disposeAndCloseTerminalSession } from "~/components/terminal/terminalSession";
 import { toastManager } from "~/components/ui/toast";
-import { i18n } from "~/i18n";
 
 type TerminalMetadata = { cliKind: TerminalCliKind | null; label: string };
 type TerminalActivity = {

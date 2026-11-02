@@ -1,10 +1,4 @@
-// FILE: MessagesTimeline.logic.ts
-// Purpose: Owns row derivation and localized labels used by the transcript hot path.
-// Layer: Web chat presentation helpers
-// Exports: row derivation, structural sharing, copy/timer helpers
-
-import type { I18n } from "@lingui/core";
-import { i18n as appI18n } from "../../i18n";
+import { t } from "../../i18n";
 import {
   type InlineVisualActivityPayload,
   type MessageId,
@@ -61,26 +55,22 @@ export function canSubmitUserMessageEdit(input: {
 // phrasing hid which of these actually happened.
 export function userMessageEditRejectionCopy(
   reason: Extract<TailUserMessageEditTarget, { editable: false }>["reason"],
-  i18n: I18n = appI18n,
+  translate: typeof t = t,
 ): string {
   switch (reason) {
     case "missing-message":
-      return i18n._("This message is no longer part of the conversation, so it can't be edited.");
+      return translate("lattice:thisMessageIsNoLongerPartOf");
     case "not-latest-native-user-message":
-      return i18n._(
-        "A newer message has been sent since, and only the latest user message can be edited.",
-      );
+      return translate("lattice:aNewerMessageHasBeenSentSince");
     case "spans-multiple-turns":
-      return i18n._(
-        "The conversation has moved on across newer turns, so this message can no longer be edited and resent.",
-      );
+      return translate("lattice:theConversationHasMovedOnAcrossNewer");
     case "missing-turn-metadata":
-      return i18n._("This message's turn can no longer be rolled back, so it can't be edited.");
+      return translate("lattice:thisMessageSTurnCanNoLonger");
     case "not-user-message":
     case "non-native-message":
-      return i18n._("Only your own chat messages can be edited.");
+      return translate("lattice:onlyYourOwnChatMessagesCanBe");
     case "structured-answer":
-      return i18n._("Structured answers can't be edited and resent.");
+      return translate("lattice:structuredAnswersCanTBeEditedAnd");
   }
 }
 

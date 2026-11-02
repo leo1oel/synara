@@ -7,7 +7,6 @@
 import { localizeProviderStatusMessage } from "~/lib/providerStatusMessages";
 import type { ProviderKind, ServerCodexResetCredits } from "@synara/contracts";
 import { providerUsageDisplayName, providerUsageLabel } from "@synara/shared/providerUsage";
-import { useLingui } from "@lingui/react";
 
 import { useAppSettings } from "~/appSettings";
 import { ExternalLinkIcon, TriangleAlertIcon } from "~/lib/icons";
@@ -28,7 +27,7 @@ import { ProviderUsageLineList } from "./ProviderUsageLineList";
 import { ProviderUsageResetCredits } from "./ProviderUsageResetCredits";
 import { DisclosureChevron } from "./ui/DisclosureChevron";
 import { DisclosureRegion } from "./ui/DisclosureRegion";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 export { providerUsageLabel };
 
@@ -81,15 +80,13 @@ export function ProviderUsagePanelContent(props: {
     <div className={cn("space-y-2", props.className)}>
       {props.showTitle !== false ? (
         <div className="text-chat-meta font-medium text-muted-foreground">
-          {i18n._("{provider} usage", {
-            provider: providerUsageDisplayName(props.provider),
-          })}
+          {t("common:providerUsageTitle", { provider: providerUsageDisplayName(props.provider) })}
         </div>
       ) : null}
       {props.notice ? (
         <p className="flex items-start gap-1.5 text-chat-meta leading-relaxed text-amber-600 dark:text-amber-300/90">
           <TriangleAlertIcon className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
-          <span>{localizeProviderUsageNotice(i18n, props.notice)}</span>
+          <span>{localizeProviderUsageNotice(t, props.notice)}</span>
         </p>
       ) : null}
       <ProviderUsageLimitRows rows={visibleRows} surface="popover" />
@@ -122,7 +119,7 @@ export function ProviderUsagePanelContent(props: {
             ) : (
               <p className="text-chat-meta leading-relaxed text-muted-foreground">
                 {(props.emptyMessage
-                  ? localizeProviderStatusMessage(i18n, props.emptyMessage)
+                  ? localizeProviderStatusMessage(t, props.emptyMessage)
                   : null) ??
                   (props.provider
                     ? t("common:noLocalUsageDataWasFoundYetForThe")

@@ -3,21 +3,19 @@
 // Layer: Browser UI test
 
 import "../index.css";
-
-import { I18nProvider } from "@lingui/react";
 import { ProjectId, ThreadId } from "@synara/contracts";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
 
-import { i18n } from "../i18n";
+import { t, setLanguagePreference } from "../i18n";
 import { DEFAULT_INTERACTION_MODE, type SidebarThreadSummary } from "../types";
 import { SidebarThreadRowContent } from "./SidebarThreadRowContent";
 
-i18n.loadAndActivate({ locale: "en", messages: {} });
+setLanguagePreference("en");
 
 function renderThreadRow(content: ReactElement) {
-  return render(<I18nProvider i18n={i18n}>{content}</I18nProvider>);
+  return render(<>{content}</>);
 }
 
 function makeThread(overrides: Partial<SidebarThreadSummary> = {}): SidebarThreadSummary {
@@ -44,7 +42,7 @@ function makeThread(overrides: Partial<SidebarThreadSummary> = {}): SidebarThrea
 
 describe("SidebarThreadRowContent", () => {
   afterEach(() => {
-    i18n.loadAndActivate({ locale: "en", messages: {} });
+    setLanguagePreference("en");
     document.body.innerHTML = "";
   });
 

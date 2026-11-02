@@ -1,3 +1,4 @@
+import { getFormatLocale, t, useTranslation } from "~/i18n";
 import {
   ProjectId,
   type ExternalMcpCapability,
@@ -5,7 +6,6 @@ import {
 } from "@synara/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { useLingui } from "@lingui/react";
 
 import { Button } from "~/components/ui/button";
 import { DisclosureChevron } from "~/components/ui/DisclosureChevron";
@@ -25,7 +25,6 @@ import {
   externalMcpSetupAction,
 } from "./externalMcpSetup";
 import { SettingsListRow, SettingsRow, SettingsSection } from "./SettingsPanelPrimitives";
-import { t, useTranslation } from "~/i18n";
 
 const INTEGRATIONS_QUERY_KEY = ["server", "externalMcpIntegrations"] as const;
 const PROJECTS_QUERY_KEY = ["orchestration", "externalMcpProjects"] as const;
@@ -50,7 +49,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
   const { t, formatLocale } = useTranslation();
 
   const queryClient = useQueryClient();
-  const [name, setName] = useState<string>(() => i18n._("Coding agent"));
+  const [name, setName] = useState<string>(() => t("lattice:codingAgent"));
   const [allProjects, setAllProjects] = useState(true);
   const [selectedProjects, setSelectedProjects] = useState<ReadonlySet<string>>(new Set());
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -62,8 +61,8 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
   const [allowComputerControl, setAllowComputerControl] = useState(false);
   const [setup, setSetup] = useState<ExternalMcpCreateIntegrationResult | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
-  const displayLocale = i18n.locale === "zh-CN" ? "zh-CN" : "en";
-  const neverLabel = i18n._("Never");
+  const displayLocale = getFormatLocale() === "zh-CN" ? "zh-CN" : "en";
+  const neverLabel = t("settings:detail_never");
 
   const copyWithToast = (value: string, title: string): void => {
     void copyTextToClipboard(value).then(
@@ -71,8 +70,8 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
       (error: unknown) =>
         toastManager.add({
           type: "error",
-          title: i18n._("Could not copy"),
-          description: error instanceof Error ? error.message : i18n._("Clipboard access failed."),
+          title: t("settings:couldNotCopy"),
+          description: error instanceof Error ? error.message : t("git:clipboardAccessFailed"),
         }),
     );
   };
@@ -187,7 +186,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
       integration,
       pairingCode: "already-paired",
       pairingExpiresAt: integration.createdAt,
-      setupCommand: i18n._("Pairing already completed"),
+      setupCommand: t("lattice:pairingAlreadyCompleted"),
       stdio: integration.stdio,
     });
   };
@@ -263,13 +262,13 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
       const active = integration.revokedAt === null && dateMillis(integration.expiresAt) > nowMs;
       const status = active
         ? integration.lastUsedAt
-          ? i18n._("Connected")
+          ? t("chat:connected")
           : integration.pairedAt
-            ? i18n._("Paired — not used yet")
-            : i18n._("Waiting for pairing")
+            ? t("settings:externalStatus_pairedUnused")
+            : t("settings:externalStatus_waitingPairing")
         : integration.revokedAt
-          ? i18n._("Revoked")
-          : i18n._("Expired");
+          ? t("settings:externalStatus_revoked")
+          : t("common:expired");
       return (
         <SettingsListRow
           key={integration.integrationId}
@@ -279,12 +278,12 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
             <div className="space-y-1">
               <div>{status}</div>
               <div>
-                {i18n._("Projects: {projects}", {
+                {t("lattice:projects", {
                   projects: describeExternalMcpProjects(integration, displayLocale),
                 })}
               </div>
               <div>
-                {i18n._("Permissions: {permissions}", {
+                {t("lattice:permissions", {
                   permissions: describeExternalMcpPermissions(
                     integration.capabilities,
                     displayLocale,
@@ -292,10 +291,10 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                 })}
               </div>
               <div>
-                {i18n._("Created {created} · Last used {lastUsed} · Expires {expires}", {
-                  created: formatDate(integration.createdAt, i18n.locale, neverLabel),
-                  lastUsed: formatDate(integration.lastUsedAt, i18n.locale, neverLabel),
-                  expires: formatDate(integration.expiresAt, i18n.locale, neverLabel),
+                {t("lattice:createdLastUsedExpires", {
+                  created: formatDate(integration.createdAt, getFormatLocale(), neverLabel),
+                  lastUsed: formatDate(integration.lastUsedAt, getFormatLocale(), neverLabel),
+                  expires: formatDate(integration.expiresAt, getFormatLocale(), neverLabel),
                 })}
               </div>
             </div>
@@ -312,7 +311,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                     else refreshPairingMutation.mutate(integration.integrationId);
                   }}
                 >
-                  {integration.pairedAt ? i18n._("Continue setup") : i18n._("Resume pairing")}
+                  {integration.pairedAt ? t("settings:continueSetup") : t("settings:resumePairing")}
                 </Button>
                 <Button
                   size="xs"
@@ -320,7 +319,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                   disabled={revokeMutation.isPending}
                   onClick={() => revokeMutation.mutate(integration.integrationId)}
                 >
-                  {i18n._("Revoke")}
+                  {t("settings:revoke")}
                 </Button>
               </div>
             ) : null
@@ -334,25 +333,21 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
       {!setup ? (
         <SettingsSection title="settings:connectACodingAgent">
           <SettingsRow
-            title={i18n._("Name")}
-            description={i18n._(
-              "How this connection appears in Lattice. Works with Codex, Claude, and any other MCP-capable agent.",
-            )}
+            title={t("common:scripts_name")}
+            description={t("lattice:howThisConnectionAppearsInLatticeWorks")}
             control={
               <Input
                 className="w-full sm:w-64"
                 value={name}
                 maxLength={120}
-                placeholder={i18n._("Coding agent")}
+                placeholder={t("lattice:codingAgent")}
                 onChange={(event) => setName(event.target.value)}
               />
             }
           />
           <SettingsRow
-            title={i18n._("Access all Lattice projects")}
-            description={i18n._(
-              "The agent can discover and work in every project, including ones you add later. Turn off to pick specific projects.",
-            )}
+            title={t("lattice:accessAllLatticeProjects")}
+            description={t("settings:theAgentCanDiscoverAndWorkInEveryProject")}
             control={<Switch checked={allProjects} onCheckedChange={setAllProjects} />}
           >
             <DisclosureRegion open={!allProjects} contentClassName="mt-3">
@@ -385,7 +380,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                 })}
                 {projects.length === 0 ? (
                   <span className="text-ui-xs text-muted-foreground">
-                    {i18n._("No projects are available.")}
+                    {t("settings:noProjectsAreAvailable")}
                   </span>
                 ) : null}
               </div>
@@ -414,7 +409,9 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-ui-xs font-medium">{i18n._("Read other project tasks")}</div>
+                  <div className="text-ui-xs font-medium">
+                    {t("settings:readOtherProjectTasks")}
+                  </div>
                   <div className="mt-0.5 text-ui-sm leading-relaxed text-muted-foreground">
                     {t("settings:withoutThisPermissionTheAgentCanReadOnlyTasks")}
                   </div>
@@ -422,13 +419,13 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                 <Switch
                   checked={allowProjectRead}
                   onCheckedChange={setAllowProjectRead}
-                  aria-label={i18n._("Read other project tasks")}
+                  aria-label={t("settings:readOtherProjectTasks")}
                 />
               </div>
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="text-ui-xs font-medium">
-                    {i18n._("Use the shared local checkout")}
+                    {t("settings:externalPermission_local")}
                   </div>
                   <div className="mt-0.5 text-ui-sm leading-relaxed text-muted-foreground">
                     {t("settings:highImpactTasksMayModifyTheCheckoutYouAre")}
@@ -437,13 +434,13 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                 <Switch
                   checked={allowLocal}
                   onCheckedChange={setAllowLocal}
-                  aria-label={i18n._("Use the shared local checkout")}
+                  aria-label={t("settings:externalPermission_local")}
                 />
               </div>
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="text-ui-xs font-medium">
-                    {i18n._("Run without approval prompts")}
+                    {t("settings:externalPermission_fullAccess")}
                   </div>
                   <div className="mt-0.5 text-ui-sm leading-relaxed text-muted-foreground">
                     {t("settings:highImpactTheExternalAgentMayStartFullAccess")}
@@ -452,15 +449,14 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                 <Switch
                   checked={allowFullAccess}
                   onCheckedChange={setAllowFullAccess}
-                  aria-label={i18n._("Run without approval prompts")}
+                  aria-label={t("settings:externalPermission_fullAccess")}
                 />
               </div>
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-ui-xs font-medium">{i18n._("Computer control")}</div>
+                  <div className="text-ui-xs font-medium">{t("settings:computerControl")}</div>
                   <div className="mt-0.5 text-ui-sm leading-relaxed text-muted-foreground">
-                    High impact. Tasks may drive this Mac&apos;s screen — observe, click, type,
-                    menus, clipboard. Every computer action still asks for your approval.
+                    {t("lattice:computerControlHighImpact")}
                   </div>
                 </div>
                 <Switch checked={allowComputerControl} onCheckedChange={setAllowComputerControl} />
@@ -483,7 +479,9 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
       ) : null}
 
       {setup && setupIntegration && setupPrompt && manualConfiguration && examplePrompt ? (
-        <SettingsSection title={i18n._("Connect {name}", { name: setupIntegration.name })}>
+        <SettingsSection
+          title={t("settings:connectorConnectTitle", { name: setupIntegration.name })}
+        >
           <SettingsRow
             title={
               <span className="flex items-center gap-2">
@@ -503,26 +501,24 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
             }
             description={
               revoked
-                ? i18n._("This connection has been revoked and can no longer access Lattice.")
+                ? t("lattice:thisConnectionHasBeenRevokedAndCan")
                 : integrationExpired
-                  ? i18n._("This connection has expired and can no longer access Lattice.")
+                  ? t("lattice:thisConnectionHasExpiredAndCanNo")
                   : connected
-                    ? i18n._("Lattice received a request from this agent. Setup is complete.")
+                    ? t("lattice:latticeReceivedARequestFromThisAgent")
                     : paired
-                      ? i18n._(
-                          "The private credential is stored locally. If the agent has not registered Lattice yet, give it the setup prompt below.",
-                        )
+                      ? t("lattice:thePrivateCredentialIsStoredLocallyIf")
                       : pairingExpired
                         ? t("settings:externalPairingExpired")
                         : t("settings:externalPairingInstructions")
             }
             status={
               connected
-                ? i18n._("Last connected {date}.", {
-                    date: formatDate(setupIntegration.lastUsedAt, i18n.locale, neverLabel),
+                ? t("settings:externalLastConnected", {
+                    date: formatDate(setupIntegration.lastUsedAt, getFormatLocale(), neverLabel),
                   })
-                : i18n._("Connection expires {date}.", {
-                    date: formatDate(setupIntegration.expiresAt, i18n.locale, neverLabel),
+                : t("settings:externalConnectionExpires", {
+                    date: formatDate(setupIntegration.expiresAt, getFormatLocale(), neverLabel),
                   })
             }
             control={
@@ -559,15 +555,13 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
             }
           />
           <SettingsRow
-            title={i18n._("1. Give your agent this prompt")}
-            description={i18n._(
-              "Copy the prompt and paste it into the agent you want to connect (Codex, Claude Code, or any MCP-capable app). The agent pairs this computer, registers Lattice in its own configuration, and verifies the connection by itself.",
-            )}
+            title={t("settings:1GiveYourAgentThisPrompt")}
+            description={t("lattice:copyThePromptAndPasteItInto")}
             status={
               paired
-                ? i18n._("Paired. The prompt now covers only registration and verification.")
-                : i18n._("Pairing code expires {date}.", {
-                    date: formatDate(setup.pairingExpiresAt, i18n.locale, neverLabel),
+                ? t("settings:externalPairedPromptStatus")
+                : t("settings:externalPairingExpires", {
+                    date: formatDate(setup.pairingExpiresAt, getFormatLocale(), neverLabel),
                   })
             }
             control={
@@ -609,7 +603,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                 <div>
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <span className="text-ui-xs font-medium">
-                      {i18n._("Pairing command (run in Terminal)")}
+                      {t("settings:pairingCommandRunInTerminal")}
                     </span>
                     <Button
                       size="xs"
@@ -633,7 +627,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
               <div>
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <span className="text-ui-xs font-medium">
-                    {i18n._("MCP configuration (JSON)")}
+                    {t("settings:mCPConfigurationJSON")}
                   </span>
                   <Button
                     size="xs"
@@ -661,8 +655,8 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
             description="settings:openANewChatInTheAgentYouJust"
             status={
               connected
-                ? i18n._("Connection verified by Lattice.")
-                : i18n._("Lattice will show Connected after the agent makes its first request.")
+                ? t("lattice:connectionVerifiedByLattice")
+                : t("lattice:latticeWillShowConnectedAfterTheAgent")
             }
             control={
               <Button
@@ -688,26 +682,20 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
 
       <SettingsSection title="settings:connectedAgents">
         {integrationsQuery.isLoading ? (
-          <SettingsListRow title={i18n._("Loading connections...")} />
+          <SettingsListRow title={t("settings:loadingConnections")} />
         ) : currentIntegrations.length ? (
           renderIntegrationRows(currentIntegrations)
         ) : (
           <SettingsListRow
-            title={i18n._("No connected agents")}
-            description={i18n._(
-              "Connect Codex, Claude, or another local MCP agent to create and follow Lattice tasks.",
-            )}
+            title={t("settings:noConnectedAgents")}
+            description={t("lattice:connectCodexClaudeOrAnotherLocalMCP")}
           />
         )}
         {revokedIntegrations.length > 0 ? (
           <>
             <SettingsListRow
-              title={i18n._("Revoked connections ({count})", {
-                count: revokedIntegrations.length,
-              })}
-              description={i18n._(
-                "Revoked connections are hidden by default. Their credentials no longer work.",
-              )}
+              title={t("lattice:revokedConnections", { count: revokedIntegrations.length })}
+              description={t("lattice:revokedConnectionsAreHiddenByDefaultTheir")}
               actions={
                 <Button
                   size="xs"
@@ -715,7 +703,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                   aria-expanded={revokedOpen}
                   onClick={() => setRevokedOpen((current) => !current)}
                 >
-                  {revokedOpen ? i18n._("Hide") : i18n._("Show")}
+                  {revokedOpen ? t("chat:hide") : t("chat:show")}
                   <DisclosureChevron open={revokedOpen} className="ml-1 size-3.5" />
                 </Button>
               }

@@ -2,7 +2,6 @@
 // Purpose: Human-in-the-loop provider authentication in the shared isolated terminal.
 // Layer: Settings UI
 
-import { i18n } from "~/i18n";
 import { ThreadId, type ProviderKind } from "@synara/contracts";
 import { PROVIDER_AUTHENTICATION } from "@synara/shared/providerCliProfiles";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -68,15 +67,11 @@ export default function ProviderSignInDialog(props: {
     setResult(
       status?.authStatus === "authenticated"
         ? props.provider === "claudeAgent"
-          ? i18n._("Signed in locally. You can close this window; usage is checked separately.")
-          : i18n._("Authenticated. You can close this window.")
+          ? "Signed in locally. You can close this window; usage is checked separately."
+          : "Authenticated. You can close this window."
         : status?.authStatus === "unauthenticated"
-          ? i18n._(
-              "This account is not authenticated yet. Complete the sign-in steps and check again.",
-            )
-          : i18n._(
-              "Authentication could not be verified. Complete the provider's steps and check again; some providers do not expose a login status.",
-            ),
+          ? "This account is not authenticated yet. Complete the sign-in steps and check again."
+          : "Authentication could not be verified. Complete the provider's steps and check again; some providers do not expose a login status.",
     );
     // Native account preparation can save its isolated roots server-side.
     void queryClient.invalidateQueries({ queryKey: serverQueryKeys.settings() });
@@ -123,7 +118,7 @@ export default function ProviderSignInDialog(props: {
         setResult(
           error instanceof Error
             ? error.message
-            : i18n._("Unable to stop sign-in. Retry closing this window."),
+            : "Unable to stop sign-in. Retry closing this window.",
         );
     } finally {
       closingRef.current = false;
@@ -139,7 +134,7 @@ export default function ProviderSignInDialog(props: {
     } catch (error) {
       if (!alive.current) return;
       setOptionsSent(false);
-      setResult(error instanceof Error ? error.message : i18n._("Unable to open sign-in options."));
+      setResult(error instanceof Error ? error.message : "Unable to open sign-in options.");
     }
   };
 

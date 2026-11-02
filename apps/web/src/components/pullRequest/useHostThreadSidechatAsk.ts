@@ -11,7 +11,6 @@ import { useState } from "react";
 import { createGitHubItemContextDraft } from "~/components/chat/environment/environmentPullRequest.logic";
 import { scheduleDeferredChatMount } from "~/components/chat/deferredChatMount";
 import { toastManager } from "~/components/ui/toast";
-import { i18n } from "~/i18n";
 import { requestComposerFocus } from "~/composerFocusRequestStore";
 import { addChatPullRequestContext } from "~/lib/chatReferences";
 import { waitForSidechatCreator } from "~/lib/sidechatCreatorRegistry";
@@ -50,8 +49,8 @@ export function useHostThreadSidechatAsk(hostThreadId: ThreadId | null) {
         if (!createSidechat) {
           toastManager.add({
             type: "warning",
-            title: i18n._("Side chat is unavailable"),
-            description: i18n._("Open a server-backed main thread before starting a side chat."),
+            title: "Side chat is unavailable",
+            description: "Open a server-backed main thread before starting a side chat.",
           });
           return;
         }
@@ -66,11 +65,11 @@ export function useHostThreadSidechatAsk(hostThreadId: ThreadId | null) {
       .catch((error: unknown) => {
         toastManager.add({
           type: "error",
-          title: i18n._("Could not start a side chat"),
+          title: "Could not start a side chat",
           description:
             error instanceof Error
               ? error.message
-              : i18n._("An error occurred while creating the side chat."),
+              : "An error occurred while creating the side chat.",
         });
       })
       .finally(() => setPending(false));

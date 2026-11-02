@@ -7,13 +7,12 @@
 // Layer: Pull request presentation
 // Exports: GitHubItemHeader, GitHubItemHeaderItem, GitHubItemBackButton
 
+import { localizeGitHubStateLabel } from "./pullRequestStatePresentation";
 import type {
   GitHubIssueDetail,
   GitPullRequestMergeability,
   PullRequestDetail,
 } from "@synara/contracts";
-import type { I18n } from "@lingui/core";
-import { useLingui } from "@lingui/react";
 import type { ReactNode } from "react";
 
 import { ComposerPickerMenuPopup } from "~/components/chat/ComposerPickerMenuPopup";
@@ -36,7 +35,7 @@ import {
   resolvePrStatePresentation,
 } from "./pullRequestStatePresentation";
 import { PR_FINE_TEXT_CLASS_NAME, PR_META_TEXT_CLASS_NAME } from "./pullRequestText";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 type HeaderFields =
   | "number"
@@ -140,7 +139,7 @@ export function GitHubItemHeader({
         {stateMenu ? (
           <Menu>
             <MenuTrigger
-              aria-label={i18n._("State: {state}. Change state", { state: state.word })}
+              aria-label={t("git:stateChangeState", { value0: state.word })}
               className={cn(
                 pillClassName,
                 "cursor-pointer pr-1.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",

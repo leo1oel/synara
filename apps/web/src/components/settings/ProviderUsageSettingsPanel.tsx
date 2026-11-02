@@ -1,11 +1,4 @@
 import { localizedProviderUsageNeedsAuthDetail } from "~/lib/providerUsageDisplay";
-// FILE: ProviderUsageSettingsPanel.tsx
-// Purpose: Settings → Usage panel. One card per supported provider account showing live remaining
-// quota/credits with linear progress meters, the provider brand icon, and plan/status pills.
-// Usage is fetched read-only from each CLI's stored credentials by the server.
-
-import type { I18n } from "@lingui/core";
-import { useLingui } from "@lingui/react";
 import { DEFAULT_SERVER_SETTINGS_VIEW, type ServerProviderUsageSnapshot } from "@synara/contracts";
 import { deriveProviderInstances } from "@synara/shared/providerInstances";
 import {
@@ -65,7 +58,10 @@ interface StatusPill {
   className: string;
 }
 
-function statusPill(i18n: I18n, status: ServerProviderUsageSnapshot["status"]): StatusPill | null {
+function statusPill(
+  translate: typeof t,
+  status: ServerProviderUsageSnapshot["status"],
+): StatusPill | null {
   switch (status) {
     case "needs-auth":
       return {
@@ -87,38 +83,36 @@ function statusPill(i18n: I18n, status: ServerProviderUsageSnapshot["status"]): 
   }
 }
 
-function localizeUsageDetail(i18n: I18n, snapshot: ServerProviderUsageSnapshot): string {
+function localizeUsageDetail(translate: typeof t, snapshot: ServerProviderUsageSnapshot): string {
   const detail = snapshot.detail?.trim() ?? "";
   const signInMatch = /^Sign in with `(.+)` to see usage\.$/u.exec(detail);
   if (signInMatch) {
-    return i18n._("Sign in with {command} to see usage.", { command: signInMatch[1]! });
+    return translate("lattice:signInWithToSeeUsage", { command: signInMatch[1]! });
   }
   if (detail === "Sign in with the provider CLI to see usage.") {
-    return i18n._("Sign in with the provider CLI to see usage.");
+    return translate("settings:usageSignInProviderCli");
   }
   if (detail === "Codex API-key auth has no usage endpoint. Sign in with ChatGPT to see usage.") {
-    return i18n._("Codex API-key auth has no usage endpoint. Sign in with ChatGPT to see usage.");
+    return translate("lattice:codexAPIKeyAuthHasNoUsage");
   }
   if (
     detail === "Usage is currently unavailable." ||
     detail === "Usage fetch failed unexpectedly."
   ) {
-    return i18n._("Usage is currently unavailable.");
+    return translate("common:usageIsCurrentlyUnavailable");
   }
   const requestFailedMatch = /^(.+) usage request failed \((.+)\)\.$/u.exec(detail);
   if (requestFailedMatch) {
-    return i18n._("{provider} usage request failed ({status}).", {
+    return translate("lattice:usageRequestFailed", {
       provider: requestFailedMatch[1]!,
       status: requestFailedMatch[2]!,
     });
   }
   const unreachableMatch = /^Could not reach the (.+)\.$/u.exec(detail);
   if (unreachableMatch) {
-    return i18n._("Could not reach the {destination}.", {
-      destination: unreachableMatch[1]!,
-    });
+    return translate("lattice:couldNotReachThe", { destination: unreachableMatch[1]! });
   }
-  return detail || i18n._("Sign in with the provider CLI to see usage.");
+  return detail || translate("settings:usageSignInProviderCli");
 }
 
 function ProviderUsageCard({
@@ -143,7 +137,7 @@ function ProviderUsageCard({
   const resetCredits = provider === "codex" ? snapshot.resetCredits : undefined;
   const hasResetCredits = Boolean(resetCredits && resetCredits.availableCount > 0);
   const hasUsage = meterRows.length > 0 || usageLines.length > 0 || hasResetCredits;
-  const pill = status === "ok" ? null : statusPill(i18n, snapshot.status);
+  const pill = status === "ok" ? null : statusPill(t, snapshot.status);
 
   return (
     <SettingsCard>
@@ -178,7 +172,7 @@ function ProviderUsageCard({
             {usageSummary.usageNotice ? (
               <p className="flex items-start gap-1.5 text-ui leading-relaxed text-amber-600 dark:text-amber-300/90">
                 <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-                <span>{localizeProviderUsageNotice(i18n, usageSummary.usageNotice)}</span>
+                <span>{localizeProviderUsageNotice(t, usageSummary.usageNotice)}</span>
               </p>
             ) : null}
             {meterRows.length > 0 ? (
@@ -201,8 +195,8 @@ function ProviderUsageCard({
         ) : (
           <p className="text-ui leading-relaxed text-muted-foreground">
             {status === "ok"
-              ? i18n._("No usage data reported yet.")
-              : localizeUsageDetail(i18n, snapshot)}
+              ? t("settings:noUsageDataReportedYet")
+              : localizeUsageDetail(t, snapshot)}
           </p>
         )}
       </div>
@@ -336,15 +330,15 @@ export function ProviderUsageSettingsPanel() {
           }
         />
         <SettingsListRow
-          title="Banked resets"
-          description="Include Codex banked resets in the details."
+          title={t("common:bankedResets")}
+          description={t("settings:includeCodexBankedResetsInTheDetails")}
           actions={
             <Switch
               checked={settings.usagePopoverShowResetCredits}
               onCheckedChange={(next) =>
                 updateSettings({ usagePopoverShowResetCredits: Boolean(next) })
               }
-              aria-label="Show banked resets in usage popovers"
+              aria-label={t("settings:showBankedResetsInUsagePopovers")}
             />
           }
         />
@@ -405,9 +399,7 @@ export function ProviderUsageSettingsPanel() {
         )}
 
         <p className="px-2 text-ui-sm leading-relaxed text-muted-foreground">
-          {i18n._(
-            "Usage is read locally from each provider CLI's stored credentials and fetched directly from the provider. The list follows whatever you are signed into; unsigned providers stay visible until any account is connected, then drop away. Short-lived tokens are refreshed through the provider's own CLI or official token endpoint.",
-          )}
+          {t("settings:usageIsReadLocallyFromEachProviderCLIS")}
         </p>
       </SettingsSectionShell>
     </>

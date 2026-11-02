@@ -1471,7 +1471,7 @@ export function AutomationDialog({
                       size="sm"
                       value={form.stopWhen}
                       onChange={(event) => setField("stopWhen", event.target.value)}
-                      placeholder="PR is ready to merge"
+                      placeholder={t("automation:schedule_stopWhenPlaceholder")}
                       className="w-full text-ui-xs"
                     />
                   </div>

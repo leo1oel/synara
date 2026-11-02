@@ -3,7 +3,6 @@
 // compact always-visible action opens the file in the preferred editor.
 // Layer: Chat changed-files UI
 
-import { i18n } from "~/i18n";
 import type { EditorId, ResolvedKeybindingsConfig } from "@synara/contracts";
 import type { CSSProperties } from "react";
 
@@ -64,7 +63,7 @@ export function EditedFileRow(props: EditedFileRowProps) {
     >
       <button
         type="button"
-        aria-label={i18n._("Review changes to {path}", { path: props.filePath })}
+        aria-label={t("chat:reviewChangesTo", { value0: props.filePath })}
         className="group/file-row flex min-w-0 flex-1 items-center gap-2 self-stretch bg-transparent py-1 pl-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
         onClick={props.onReview}
       >

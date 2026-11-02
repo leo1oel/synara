@@ -1,11 +1,3 @@
-// FILE: GitHubInboxSidechatDock.tsx
-// Purpose: The inbox page's right dock: the selected item's side chat (Ask), rendered by the
-//          same side chat pane the chat thread's dock uses. With no side chat for the item yet,
-//          an open dock offers "Ask about …" instead.
-// Layer: GitHub inbox presentation
-// Exports: GitHubInboxSidechatDock
-
-import { useLingui } from "@lingui/react";
 import { useMemo } from "react";
 
 import { RightDock } from "~/components/chat/RightDock";
@@ -20,7 +12,7 @@ import { GITHUB_INBOX_DOCK_HOST_ID, type RightDockThreadState } from "~/rightDoc
 import { useStore } from "~/store";
 import { createSidebarThreadSummariesSelector } from "~/storeSelectors";
 import type { GitHubInboxSelection } from "./githubInbox.logic";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 const acceptAnyDockWidth = () => true;
 
@@ -72,8 +64,8 @@ export function GitHubInboxSidechatDock({
       Icon: ChatBubbleIcon,
       label:
         selection.kind === "issue"
-          ? i18n._("Ask about issue #{number}", { number: selection.number })
-          : i18n._("Ask about PR #{number}", { number: selection.number }),
+          ? t("lattice:askAboutIssue", { number: selection.number })
+          : t("lattice:askAboutPR", { number: selection.number }),
     },
   ];
 

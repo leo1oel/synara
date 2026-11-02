@@ -1,7 +1,6 @@
 import "../../index.css";
 
 import { useState } from "react";
-import { I18nProvider } from "@lingui/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { page, userEvent } from "vitest/browser";
 import { afterEach, expect, it, vi } from "vitest";
@@ -37,7 +36,7 @@ vi.mock("~/hooks/useProviderModelCatalog", () => ({
 }));
 
 import { AppSettingsSchema, type AppSettings } from "~/appSettings";
-import { i18n } from "~/i18n";
+import { t, setLanguagePreference } from "~/i18n";
 import { ModelsSettingsPanel } from "./ModelsSettingsPanel";
 
 const defaults = AppSettingsSchema.makeUnsafe({});
@@ -45,7 +44,7 @@ const defaults = AppSettingsSchema.makeUnsafe({});
 function Harness() {
   const [settings, setSettings] = useState(defaults);
   return (
-    <I18nProvider i18n={i18n}>
+    <>
       <div className="p-4">
         <ModelsSettingsPanel
           settings={settings}
@@ -57,7 +56,7 @@ function Harness() {
           active
         />
       </div>
-    </I18nProvider>
+    </>
   );
 }
 
@@ -65,7 +64,7 @@ afterEach(cleanup);
 
 it("switches descriptions, saves custom text, preserves it across styles, and resets the row", async () => {
   await page.viewport(1280, 800);
-  i18n.loadAndActivate({ locale: "en", messages: {} });
+  setLanguagePreference("en");
   await render(<Harness />);
   const picker = page.getByRole("combobox", { name: "Source control writing style" });
   expect(document.body.textContent).toContain(
@@ -97,7 +96,7 @@ it("switches descriptions, saves custom text, preserves it across styles, and re
 
 it("supports keyboard selection and keeps the custom editor within a narrow viewport", async () => {
   await page.viewport(360, 800);
-  i18n.loadAndActivate({ locale: "en", messages: {} });
+  setLanguagePreference("en");
   await render(<Harness />);
   const picker = page.getByRole("combobox", { name: "Source control writing style" });
   (picker.element() as HTMLElement).focus();
@@ -120,7 +119,7 @@ it("supports keyboard selection and keeps the custom editor within a narrow view
 
 it("selects discovered, custom and transient repair models independently and resets the row", async () => {
   await page.viewport(900, 800);
-  i18n.loadAndActivate({ locale: "en", messages: {} });
+  setLanguagePreference("en");
   const settings = {
     ...defaults,
     compileRepairProvider: "codex" as const,
@@ -133,7 +132,7 @@ it("selects discovered, custom and transient repair models independently and res
   host.className = "app-settings-surface p-6";
   document.body.append(host);
   const mounted = await render(
-    <I18nProvider i18n={i18n}>
+    <>
       <QueryClientProvider client={client}>
         <ModelsSettingsPanel
           active
@@ -143,7 +142,7 @@ it("selects discovered, custom and transient repair models independently and res
           updateSettings={updateSettings}
         />
       </QueryClientProvider>
-    </I18nProvider>,
+    </>,
     { container: host },
   );
   try {
@@ -173,7 +172,7 @@ it("selects discovered, custom and transient repair models independently and res
 
 it("inherits the Git writing model for proofreading until a model is chosen, then resets", async () => {
   await page.viewport(900, 800);
-  i18n.loadAndActivate({ locale: "en", messages: {} });
+  setLanguagePreference("en");
   await render(<Harness />);
   const picker = page.getByRole("combobox", { name: "Proofreading model", exact: true });
   const inherited = "Same as Git writing (";

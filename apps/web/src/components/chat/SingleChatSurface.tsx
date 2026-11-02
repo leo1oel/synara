@@ -1,4 +1,4 @@
-import { i18n } from "~/i18n";
+import { i18n, useTranslation } from "~/i18n";
 import { flushWorkspaceEditors } from "~/lib/workspaceEditorSession";
 import type { FileDiffMetadata } from "@pierre/diffs/react";
 import { isWorkspaceRelativePathSafe } from "@synara/shared/path";
@@ -127,7 +127,6 @@ import {
 import { isShortcutDispatchSuspended, resolveShortcutCommand } from "~/keybindings";
 import { isTerminalFocused } from "~/lib/terminalFocus";
 import { cn } from "~/lib/utils";
-import { useTranslation } from "~/i18n";
 
 const PullRequestDockPane = lazy(() => import("../pullRequest/PullRequestDockPane"));
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];

@@ -1666,7 +1666,7 @@ describe("deriveWorkLogEntries", () => {
       TurnId.makeUnsafe("turn-1"),
     );
 
-    expect(entry?.label).toBe("1 out of 3 tasks completed");
+    expect(entry?.label).toBe("1 of 3 tasks");
     expect(entry?.detail).toBe("Implementing inline editing UI");
     expect(entry?.toolTitle).toBeUndefined();
   });

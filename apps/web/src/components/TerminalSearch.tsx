@@ -9,7 +9,7 @@ import { IconButton } from "~/components/ui/icon-button";
 import { SearchInput } from "~/components/ui/search-input";
 import { ChevronDownIcon, ChevronUpIcon, XIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
-import { useTranslation } from "~/i18n";
+import { useTranslation, t } from "~/i18n";
 
 interface TerminalSearchProps {
   searchAddon: SearchAddon | null;
@@ -144,8 +144,8 @@ export function TerminalSearch({ searchAddon, isOpen, onClose }: TerminalSearchP
         value={query}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
-        placeholder="Find"
-        aria-label="Find in terminal"
+        placeholder={t("common:find")}
+        aria-label={t("lattice:findInTerminal")}
         containerClassName="w-32 shrink"
       />
       {hasResults === false && query && (

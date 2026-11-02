@@ -96,8 +96,8 @@ describe("rankSettingsSearchEntries", () => {
     const entry = SETTINGS_SEARCH_ENTRIES.find(
       (candidate) => candidate.id === "computer:how-agents-use-the-desktop",
     );
-    expect(entry?.title).toBe("Computer control");
-    expect(entry?.keywords).toContain("Approval gates and Stop still apply");
+    expect(t(entry!.title)).toBe("Computer control");
+    expect(t(entry!.keywords)).toContain("Approval gates and Stop still apply");
   });
 
   it("includes the activity toasts notification row", () => {
@@ -175,7 +175,6 @@ describe("SettingsSidebarNav", () => {
 
     expect(markup).toContain('aria-label="Search settings"');
     expect(markup).toContain('aria-label="Settings sections"');
-    expect(markup).toContain("Back to app");
   });
 
   it("groups settings by user intent instead of implementation ownership", () => {

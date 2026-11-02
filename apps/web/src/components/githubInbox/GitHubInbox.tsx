@@ -1,16 +1,3 @@
-// FILE: GitHubInbox.tsx
-// Purpose: The GitHub inbox body under the route header: a resizable list column (filter bar,
-//          involvement sections of pull request and issue rows, notes) beside an inline detail pane. On a narrow
-//          window it shows the list or the detail, with a back control. Filters persist in the
-//          local app settings; URL parameters override them for one visit, and the selection
-//          lives in the URL so an open item stays linkable. The detail's floating composer feeds
-//          the route's side chat dock; Send to agent picks among the projects the item's
-//          repository belongs to.
-// Layer: GitHub inbox presentation
-// Exports: GitHubInbox
-
-import type { I18n } from "@lingui/core";
-import { useLingui } from "@lingui/react";
 import type {
   GitHubInboxItem,
   GitHubInboxListError,
@@ -134,7 +121,7 @@ interface DraggedListWidth {
 }
 
 function rateLimitedWarningText(
-  i18n: I18n,
+  translate: typeof t,
   error: GitHubInboxListError,
   timestampFormat: TimestampFormat,
 ): string {
@@ -142,25 +129,23 @@ function rateLimitedWarningText(
     ? formatShortTimestamp(error.retryAt, timestampFormat, getFormatLocale())
     : null;
   const refresh = resetTime
-    ? i18n._("Refreshing resumes at {time}.", { time: resetTime })
-    : i18n._("Refreshing resumes soon.");
+    ? translate("lattice:refreshingResumesAt", { time: resetTime })
+    : translate("lattice:refreshingResumesSoon");
   return error.showingCachedData
-    ? i18n._("GitHub rate limit reached. Showing the last loaded items. {refresh}", { refresh })
-    : i18n._("GitHub rate limit reached. Some repositories could not be loaded. {refresh}", {
-        refresh,
-      });
+    ? translate("git:gitHubRateLimitReachedShowingTheLastLoadedItems", { value0: refresh })
+    : translate("git:gitHubRateLimitReachedSomeRepositoriesCouldNotBe", { value0: refresh });
 }
 
 /** "No pull requests found", for the kind the list is filtered to. */
-function emptyListTitle(i18n: I18n, kind: GitHubInboxKindFilter): string {
-  if (kind === "pullRequest") return i18n._("No pull requests found");
-  if (kind === "issue") return i18n._("No issues found");
-  return i18n._("No pull requests and issues found");
+function emptyListTitle(translate: typeof t, kind: GitHubInboxKindFilter): string {
+  if (kind === "pullRequest") return translate("lattice:noPullRequestsFound");
+  if (kind === "issue") return translate("lattice:noIssuesFound");
+  return translate("lattice:noPullRequestsAndIssuesFound");
 }
 
 /** The note under a list GitHub cut short: what it shows, and how many repositories have more. */
 function truncatedListNote(
-  i18n: I18n,
+  translate: typeof t,
   input: {
     state: GitHubInboxStateFilter;
     kind: GitHubInboxKindFilter;
@@ -172,29 +157,20 @@ function truncatedListNote(
   const shown =
     input.state === "merged"
       ? newest
-        ? i18n._(
-            "Showing merged pull requests from the 50 newest closed pull requests per repository.",
-          )
-        : i18n._(
-            "Showing merged pull requests from the 50 most recently updated closed pull requests per repository.",
-          )
+        ? translate("lattice:showingMergedPullRequestsFromThe50")
+        : translate("lattice:showingMergedPullRequestsFromThe502")
       : input.kind === "pullRequest"
         ? newest
-          ? i18n._("Showing the 50 newest pull requests per repository.")
-          : i18n._("Showing the 50 most recently updated pull requests per repository.")
+          ? translate("lattice:showingThe50NewestPullRequestsPer")
+          : translate("lattice:showingThe50MostRecentlyUpdatedPull")
         : input.kind === "issue"
           ? newest
-            ? i18n._("Showing the 50 newest issues per repository.")
-            : i18n._("Showing the 50 most recently updated issues per repository.")
+            ? translate("lattice:showingThe50NewestIssuesPerRepository")
+            : translate("lattice:showingThe50MostRecentlyUpdatedIssues")
           : newest
-            ? i18n._("Showing the 50 newest pull requests and issues per repository.")
-            : i18n._(
-                "Showing the 50 most recently updated pull requests and issues per repository.",
-              );
-  const more = i18n._(
-    "{count, plural, one {# repository has more on GitHub.} other {# repositories have more on GitHub.}}",
-    { count: input.repositoryCount },
-  );
+            ? translate("lattice:showingThe50NewestPullRequestsAnd")
+            : translate("lattice:showingThe50MostRecentlyUpdatedPull2");
+  const more = translate("lattice:repositoriesHaveMoreOnGitHub", { count: input.repositoryCount });
   return `${shown} ${more}`;
 }
 
@@ -261,7 +237,7 @@ function ListColumnResizeHandle({
       aria-valuenow={percent}
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-valuetext={i18n._("List takes {percent}% of the width", { percent })}
+      aria-valuetext={t("lattice:listTakesOfTheWidth", { percent })}
       tabIndex={0}
       onPointerDown={startResize}
       onKeyDown={handleKeyDown}
@@ -534,11 +510,11 @@ export function GitHubInbox({
   };
   const refreshBlockedReason =
     embedded && !scopedProjectId
-      ? (bindingError ?? i18n._("Waiting for the Lattice project…"))
+      ? (bindingError ?? t("lattice:waitingForTheLatticeProject"))
       : refreshMutation.isPending
-        ? i18n._("Refreshing…")
+        ? t("git:refreshing")
         : activeActionCount > 0
-          ? i18n._("Wait for the pull request action to finish")
+          ? t("lattice:waitForThePullRequestActionTo")
           : null;
   const refresh = () => {
     if (refreshBlockedReason !== null) return;
@@ -640,7 +616,7 @@ export function GitHubInbox({
               <div className="px-3">
                 <PullRequestsUnavailableState
                   error={new Error(bindingError)}
-                  subject={i18n._("Lattice project")}
+                  subject={t("lattice:latticeProject")}
                 />
               </div>
             ) : (
@@ -701,14 +677,14 @@ export function GitHubInbox({
                   {bindingError ? (
                     <PullRequestsUnavailableState
                       error={new Error(bindingError)}
-                      subject={i18n._("Lattice project")}
+                      subject={t("lattice:latticeProject")}
                     />
                   ) : bindingPending || listQuery.isPending ? (
                     <ListSkeleton />
                   ) : initialError ? (
                     <PullRequestsUnavailableState
                       error={initialError}
-                      subject={i18n._("Pull requests and issues")}
+                      subject={t("lattice:pullRequestsAndIssues")}
                       onRetry={() => void listQuery.refetch()}
                     />
                   ) : entries.length === 0 ? (
@@ -716,27 +692,25 @@ export function GitHubInbox({
                       <EmptyHeader>
                         <EmptyTitle>
                           {repositoryProjects.length === 0
-                            ? i18n._("No projects yet")
+                            ? t("common:emptyStates_noProjects")
                             : reviewRequestsOnlyOpen
-                              ? i18n._("Review requests only apply to open pull requests")
-                              : emptyListTitle(i18n, filters.kind)}
+                              ? t("git:reviewRequestsOnlyApplyToOpenPullRequests")
+                              : emptyListTitle(t, filters.kind)}
                         </EmptyTitle>
                         <EmptyDescription>
                           {repositoryProjects.length === 0
-                            ? i18n._(
-                                "Code review lists pull requests and issues from the GitHub repositories of your projects.",
-                              )
+                            ? t("git:codeReviewListsPullRequestsAndIssuesFromThe")
                             : reviewRequestsOnlyOpen
-                              ? i18n._("Select Open to see pull requests awaiting your review.")
+                              ? t("git:selectOpenToSeePullRequestsAwaitingYourReview")
                               : activeFilterCount > 0
-                                ? i18n._("Try another filter, or clear them.")
-                                : i18n._("Nothing here in the repositories of your projects.")}
+                                ? t("git:tryAnotherFilterOrClearThem")
+                                : t("git:nothingHereInTheRepositoriesOfYourProjects")}
                         </EmptyDescription>
                       </EmptyHeader>
                       {activeFilterCount > 0 ? (
                         <EmptyContent>
                           <Button variant="outline" size="sm" onClick={clearFilters}>
-                            {i18n._("Clear filters")}
+                            {t("git:clearFilters")}
                           </Button>
                         </EmptyContent>
                       ) : null}
@@ -758,7 +732,7 @@ export function GitHubInbox({
                   )}
                   {truncatedRepositoryCount > 0 ? (
                     <p className={cn(PR_FINE_TEXT_CLASS_NAME, "text-muted-foreground")}>
-                      {truncatedListNote(i18n, {
+                      {truncatedListNote(t, {
                         state: filters.state,
                         kind: filters.kind,
                         sort: settings.githubInboxSort,
@@ -768,22 +742,19 @@ export function GitHubInbox({
                   ) : null}
                   {rateLimitedError ? (
                     <PullRequestWarningNote shape="callout" role="status">
-                      {rateLimitedWarningText(i18n, rateLimitedError, settings.timestampFormat)}
+                      {rateLimitedWarningText(t, rateLimitedError, settings.timestampFormat)}
                     </PullRequestWarningNote>
                   ) : null}
                   {unavailableErrorCount > 0 ? (
                     <PullRequestWarningNote shape="callout">
-                      {i18n._(
-                        "{count, plural, one {# project repository was unavailable. Healthy repositories are still shown.} other {# project repositories were unavailable. Healthy repositories are still shown.}}",
-                        { count: unavailableErrorCount },
-                      )}
+                      {t("lattice:projectRepositoriesWereUnavailableHealthyRepositoriesAre", {
+                        count: unavailableErrorCount,
+                      })}
                     </PullRequestWarningNote>
                   ) : null}
                   {backgroundError ? (
                     <PullRequestWarningNote shape="callout" role="status">
-                      {i18n._(
-                        "The latest background refresh failed. Showing the last loaded items.",
-                      )}
+                      {t("git:theLatestBackgroundRefreshFailedShowingTheLastLoaded")}
                     </PullRequestWarningNote>
                   ) : null}
                 </div>

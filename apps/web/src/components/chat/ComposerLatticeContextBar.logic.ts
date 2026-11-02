@@ -1,12 +1,5 @@
-// FILE: ComposerLatticeContextBar.logic.ts
-// Purpose: Converts Lattice's live host snapshot into compact, user-facing
-// composer context labels without leaking protocol details into the component.
-// Layer: Chat composer presentation logic
-
-import type { I18n } from "@lingui/core";
-
 import type { LatticeHostContextSnapshot, LatticeHostSurface } from "../../embedMode";
-import { i18n as appI18n } from "../../i18n";
+import { t } from "../../i18n";
 
 export interface LatticeContextDetail {
   label: string;
@@ -24,45 +17,45 @@ function basename(path: string): string {
   return path.replaceAll("\\", "/").split("/").filter(Boolean).at(-1) ?? path;
 }
 
-function pageLabel(i18n: I18n, page: number, pageCount: number | null): string {
+function pageLabel(translate: typeof t, page: number, pageCount: number | null): string {
   return pageCount
-    ? i18n._("Page {page} of {pageCount}", { page, pageCount })
-    : i18n._("Page {page}", { page });
+    ? translate("lattice:pageOf", { page, pageCount })
+    : translate("common:page2", { value0: page });
 }
 
 export function latticeContextSummary(
   context: LatticeHostContextSnapshot,
-  i18n: I18n = appI18n,
+  translate: typeof t = t,
 ): string {
   if (context.presentation) {
-    return `${i18n._("Slides")} · ${context.presentation.slideTitle} · ${pageLabel(
-      i18n,
+    return `${translate("lattice:slides")} · ${context.presentation.slideTitle} · ${pageLabel(
+      translate,
       context.presentation.pageNumber,
       context.presentation.totalPages,
     )}`;
   }
   if (context.activeSurface === "paper" && context.paper) {
-    return `${i18n._("Paper")} · ${context.paper.title}`;
+    return `${translate("lattice:paper")} · ${context.paper.title}`;
   }
   if (context.activeSurface === "pdf" && context.pdf) {
-    return `PDF · ${pageLabel(i18n, context.pdf.page, context.pdf.pageCount)}`;
+    return `PDF · ${pageLabel(translate, context.pdf.page, context.pdf.pageCount)}`;
   }
   if (context.editor) {
-    return `${basename(context.editor.path)} · ${i18n._("Line {line}", { line: context.editor.line })}`;
+    return `${basename(context.editor.path)} · ${translate("lattice:line", { line: context.editor.line })}`;
   }
-  return i18n._("Active project");
+  return translate("lattice:activeProject");
 }
 
 export function latticeContextSelection(
   context: LatticeHostContextSnapshot,
-  i18n: I18n = appI18n,
+  translate: typeof t = t,
 ): LatticeContextSelection | null {
   if (context.presentation?.selection) {
     const selection = context.presentation.selection;
     const text = selection.text.trim() || `<${selection.tagName}>`;
     return {
       source: "presentation",
-      label: i18n._("Slide element"),
+      label: translate("lattice:slideElement"),
       text,
       length: text.length,
     };
@@ -72,9 +65,13 @@ export function latticeContextSelection(
     label: string;
     text: string | undefined;
   }> = [
-    { source: "paper", label: i18n._("Paper selection"), text: context.paper?.selection },
-    { source: "pdf", label: i18n._("PDF selection"), text: context.pdf?.selection },
-    { source: "editor", label: i18n._("Editor selection"), text: context.editor?.selection },
+    { source: "paper", label: translate("lattice:paperSelection"), text: context.paper?.selection },
+    { source: "pdf", label: translate("lattice:pDFSelection"), text: context.pdf?.selection },
+    {
+      source: "editor",
+      label: translate("lattice:editorSelection"),
+      text: context.editor?.selection,
+    },
   ];
   const selected = candidates.find((candidate) => candidate.text);
   return selected?.text
@@ -89,81 +86,83 @@ export function latticeContextSelection(
 
 export function latticeContextDetails(
   context: LatticeHostContextSnapshot,
-  i18n: I18n = appI18n,
+  translate: typeof t = t,
 ): LatticeContextDetail[] {
   const details: LatticeContextDetail[] = [
     {
-      label: i18n._("Active view"),
+      label: translate("lattice:activeView"),
       value: context.presentation
-        ? i18n._("Slides")
+        ? translate("lattice:slides")
         : context.activeSurface === "paper"
-          ? i18n._("Paper")
+          ? translate("lattice:paper")
           : context.activeSurface === "pdf"
             ? "PDF"
-            : i18n._("Editor"),
+            : translate("chat:general_editor"),
     },
-    { label: i18n._("Workspace"), value: context.workspaceRoot },
+    { label: translate("workspace:editor_workspaceLabel"), value: context.workspaceRoot },
   ];
 
   if (context.presentation) {
     details.push(
-      { label: i18n._("Presentation"), value: context.presentation.slideTitle },
+      { label: translate("lattice:presentation"), value: context.presentation.slideTitle },
       {
-        label: i18n._("Slide"),
-        value: pageLabel(i18n, context.presentation.pageNumber, context.presentation.totalPages),
+        label: translate("lattice:slide"),
+        value: pageLabel(
+          translate,
+          context.presentation.pageNumber,
+          context.presentation.totalPages,
+        ),
       },
     );
     if (context.presentation.selection) {
       const selection = context.presentation.selection;
       details.push({
-        label: i18n._("Selected element"),
-        value: `<${selection.tagName}> · ${i18n._("Line {line}, column {column}", {
-          line: selection.line,
-          column: selection.column,
-        })}`,
+        label: translate("lattice:selectedElement"),
+        value: `<${selection.tagName}> · ${translate("lattice:lineColumn", { line: selection.line, column: selection.column })}`,
       });
     }
     const commentCount = context.presentation.pendingComments?.length ?? 0;
     if (commentCount > 0) {
       details.push({
-        label: i18n._("Slide comments"),
+        label: translate("lattice:slideComments"),
         value:
           commentCount === 1
-            ? i18n._("1 comment")
-            : i18n._("{count} comments", { count: commentCount }),
+            ? translate("lattice:n1Comment")
+            : translate("lattice:comments", { count: commentCount }),
       });
     }
   }
   if (context.editor) {
     details.push({
-      label: i18n._("Editor"),
-      value: `${context.editor.path} · ${i18n._("Line {line}, column {column}", {
-        line: context.editor.line,
-        column: context.editor.column,
-      })}`,
+      label: translate("chat:general_editor"),
+      value: `${context.editor.path} · ${translate("lattice:lineColumn", { line: context.editor.line, column: context.editor.column })}`,
     });
     if (context.editor.secondaryPath) {
-      details.push({ label: i18n._("Second editor"), value: context.editor.secondaryPath });
+      details.push({
+        label: translate("lattice:secondEditor"),
+        value: context.editor.secondaryPath,
+      });
     }
   }
   if (context.pdf) {
     details.push({
       label: "PDF",
-      value: pageLabel(i18n, context.pdf.page, context.pdf.pageCount),
+      value: pageLabel(translate, context.pdf.page, context.pdf.pageCount),
     });
   }
   if (context.paper) {
     details.push(
-      { label: i18n._("Paper"), value: context.paper.title },
-      { label: i18n._("Paper source"), value: context.paper.path },
+      { label: translate("lattice:paper"), value: context.paper.title },
+      { label: translate("lattice:paperSource"), value: context.paper.path },
       { label: "arXiv", value: context.paper.arxivId },
       {
-        label: i18n._("Reading view"),
-        value: context.paper.view === "blog" ? i18n._("Blog") : i18n._("Full text"),
+        label: translate("lattice:readingView"),
+        value:
+          context.paper.view === "blog" ? translate("lattice:blog") : translate("lattice:fullText"),
       },
     );
     if (context.paper.citationKey) {
-      details.push({ label: i18n._("Citation key"), value: context.paper.citationKey });
+      details.push({ label: translate("lattice:citationKey"), value: context.paper.citationKey });
     }
   }
 

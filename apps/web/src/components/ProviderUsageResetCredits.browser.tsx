@@ -5,8 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import type { ServerCodexResetCredits } from "@synara/contracts";
 
-import { i18n } from "~/i18n";
-import { messages } from "../locales/en/messages.po";
+import { setLanguagePreference } from "~/i18n";
 
 const harness = vi.hoisted(() => ({ consume: vi.fn(), toast: vi.fn() }));
 vi.mock("~/lib/serverReactQuery", () => ({
@@ -16,7 +15,7 @@ vi.mock("~/lib/serverReactQuery", () => ({
 vi.mock("~/components/ui/toast", () => ({ toastManager: { add: harness.toast } }));
 import { ProviderUsageResetCredits } from "./ProviderUsageResetCredits";
 
-i18n.loadAndActivate({ locale: "en", messages });
+setLanguagePreference("en");
 
 const credits: ServerCodexResetCredits = {
   accountId: "browser-account",

@@ -2,7 +2,6 @@ import { getModelOptions } from "@synara/shared/model";
 import { describe, expect, it } from "vitest";
 
 import { MAX_CUSTOM_MODEL_LENGTH } from "~/appSettings";
-import { i18n } from "~/i18n";
 
 import { validateCustomModelInput } from "./ModelsSettingsPanel";
 
@@ -18,14 +17,11 @@ describe("validateCustomModelInput", () => {
     ).toEqual({ error: "settings:modelAlreadyBuiltIn" });
 
     expect(
-      validateCustomModelInput(
-        {
-          provider: "codex",
-          value: "x".repeat(MAX_CUSTOM_MODEL_LENGTH + 1),
-          savedModels: [],
-        },
-        i18n,
-      ),
+      validateCustomModelInput({
+        provider: "codex",
+        value: "x".repeat(MAX_CUSTOM_MODEL_LENGTH + 1),
+        savedModels: [],
+      }),
     ).toEqual({
       error: "settings:modelSlugTooLong",
     });
@@ -41,14 +37,11 @@ describe("validateCustomModelInput", () => {
 
   it("returns the normalized model when it can be saved", () => {
     expect(
-      validateCustomModelInput(
-        {
-          provider: "codex",
-          value: " custom/model ",
-          savedModels: [],
-        },
-        i18n,
-      ),
+      validateCustomModelInput({
+        provider: "codex",
+        value: " custom/model ",
+        savedModels: [],
+      }),
     ).toEqual({ model: "custom/model" });
   });
 });

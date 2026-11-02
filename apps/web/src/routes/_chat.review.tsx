@@ -4,6 +4,7 @@
 //          hands off to the host, which opens this route in a drawer iframe.
 // Layer: Route screen
 
+import { t } from "~/i18n";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
@@ -59,14 +60,14 @@ function ReviewRouteView() {
   if (!embedMode) {
     return (
       <div className="grid h-svh place-items-center bg-background px-6 text-ui text-muted-foreground">
-        Turn review embed mode requires a Lattice workspace.
+        {t("lattice:turnReviewNeedsWorkspace")}
       </div>
     );
   }
   if (!search.threadId || !search.turnId) {
     return (
       <div className="grid h-svh place-items-center bg-background px-6 text-ui text-muted-foreground">
-        This surface needs a thread and turn to review.
+        {t("lattice:turnReviewNeedsThreadAndTurn")}
       </div>
     );
   }
@@ -75,7 +76,7 @@ function ReviewRouteView() {
     <div className="h-svh min-h-0 w-full bg-background text-[var(--color-text-foreground)]">
       {bindingError ? (
         <div className="absolute inset-x-3 top-11 z-50 rounded-md border border-destructive/30 bg-background/95 px-3 py-2 text-ui-xs text-destructive shadow">
-          Project binding failed: {bindingError}
+          {t("lattice:projectBindingFailed", { error: bindingError })}
         </div>
       ) : null}
       {/* "sidebar" fills the container; "inline" is a fixed 42vw/560px side

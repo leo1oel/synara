@@ -2,6 +2,7 @@
 // Purpose: Resolve the active thread route into either a single chat surface or a persisted split view.
 // Layer: Route container
 
+import { t } from "~/i18n";
 import { type ProjectId, ThreadId } from "@synara/contracts";
 import { workspaceRootsEqual } from "@synara/shared/threadWorkspace";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -270,7 +271,7 @@ function ChatThreadRouteContent() {
     <>
       {embedBindingError ? (
         <div className="absolute inset-x-3 top-3 z-50 rounded-md border border-destructive/30 bg-background/95 px-3 py-2 text-ui-xs text-destructive shadow">
-          Project binding failed: {embedBindingError}
+          {t("lattice:projectBindingFailed", { error: embedBindingError })}
         </div>
       ) : null}
       <SingleChatSurface

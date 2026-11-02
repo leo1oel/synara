@@ -279,7 +279,7 @@ export function SettingsRow({
               data-slot="settings-row-description"
               className={SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME}
             >
-              {description}
+              {t(description)}
             </p>
           ) : null}
           {status ? <div className="pt-1 text-ui-sm text-muted-foreground">{status}</div> : null}

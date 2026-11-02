@@ -11,8 +11,6 @@ import type {
   ProviderModelDescriptor,
   ThreadId,
 } from "@synara/contracts";
-import { useLingui } from "@lingui/react";
-import { Trans } from "@lingui/react/macro";
 import { type ReactNode, useState } from "react";
 
 import { ChevronRightIcon, ResetIcon } from "~/lib/icons";
@@ -32,7 +30,7 @@ import {
 import { localizeModelPickerLabel } from "./modelPickerLabels";
 import { FastModeToggle } from "./TraitsPicker";
 import { useComposerTraitCommit } from "./useComposerTraitCommit";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 type ComposerEffortSliderCardProps = {
   provider: ProviderKind;
@@ -60,7 +58,6 @@ export function ComposerEffortSliderCard(props: ComposerEffortSliderCardProps) {
 
   const { provider, threadId, model, modelOptions, prompt, onPromptChange } = props;
   const [modelListOpen, setModelListOpen] = useState(false);
-  const { i18n } = useLingui();
   const selection = getComposerTraitSelection(
     provider,
     model,
@@ -83,8 +80,10 @@ export function ComposerEffortSliderCard(props: ComposerEffortSliderCardProps) {
   const ladderIndex = resolveComposerEffortLadderIndex(selection);
   const activeLevel = effortLevels[ladderIndex];
   const statusLabel = localizeModelPickerLabel(
-    i18n,
-    resolveComposerTraitStatusLabel(selection) ?? activeLevel?.label ?? i18n._("Effort"),
+    t,
+    resolveComposerTraitStatusLabel(selection) ??
+      activeLevel?.label ??
+      t("chat:traitsPicker_effort"),
   );
   const effortIsDefault = ultrathinkPromptControlled || effort === defaultEffort;
   const canReset = fastModeEnabled || !effortIsDefault;
@@ -184,10 +183,10 @@ export function ComposerEffortSliderCard(props: ComposerEffortSliderCardProps) {
           showStepMarks
           magnetic
           disabled={ultrathinkPromptControlled}
-          aria-label={i18n._("Reasoning effort")}
+          aria-label={t("chat:reasoningEffort")}
           getAriaValueText={(index) => {
             const label = effortLevels[index]?.label;
-            return label === undefined ? String(index) : localizeModelPickerLabel(i18n, label);
+            return label === undefined ? String(index) : localizeModelPickerLabel(t, label);
           }}
           onValueChange={handleSliderChange}
         />

@@ -1,3 +1,4 @@
+import { useTranslation, t } from "~/i18n";
 // FILE: ReviewFileTreePanel.tsx
 // Purpose: Compact, searchable file-tree side panel for the review/diff panel.
 //          Renders the changed files of the active diff as a nested, collapsible
@@ -220,7 +221,11 @@ export const ReviewFileTreePanel = function ReviewFileTreePanel(props: {
         )}
       >
         {showLoadingRows ? (
-          <FileRowsSkeleton label="Loading changed files..." nested className="px-1 py-1.5" />
+          <FileRowsSkeleton
+            label={t("workspace:diff_loadingChangedFiles")}
+            nested
+            className="px-1 py-1.5"
+          />
         ) : !hasFiles ? (
           <PanelStateMessage density="compact" fill="flex">
             <p>{t("common:editor_noFilesInDiff")}</p>

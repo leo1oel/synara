@@ -2,7 +2,6 @@
 // Purpose: Identify the source thread for conversations created by another Synara agent.
 // Layer: Chat transcript UI
 
-import { i18n } from "~/i18n";
 import { type ProviderKind, type ThreadId } from "@synara/contracts";
 import { memo, type ReactNode } from "react";
 
@@ -33,7 +32,7 @@ function OriginContent({ text }: { readonly text: string }): ReactNode {
   return (
     <>
       <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground/70">
-        <SynaraLogo className="h-4 w-auto" aria-label={i18n._("Synara")} />
+        <SynaraLogo className="h-4 w-auto" aria-label="Synara" />
       </span>
       <span className="truncate">{text}</span>
     </>

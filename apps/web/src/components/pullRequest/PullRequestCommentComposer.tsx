@@ -8,7 +8,6 @@
 // Exports: PullRequestCommentComposer, GitHubCommentTarget, GitHubCommentMutation
 
 import { GLASS_RAISED_SURFACE_CLASS_NAME } from "~/surfaceStyles";
-import { useLingui } from "@lingui/react";
 import type { PullRequestDetailInput } from "@synara/contracts";
 import { useRef, useState } from "react";
 
@@ -17,7 +16,7 @@ import { FIELD_CONTROL_CLASS_NAME } from "~/components/ui/field-styles";
 import { ArrowUpIcon, GitHubIcon } from "~/lib/icons";
 import { PR_BODY_TEXT_CLASS_NAME } from "./pullRequestText";
 import { cn } from "~/lib/utils";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 /** The item a comment goes to. Pull requests and issues share one number space per repository. */
 export type GitHubCommentTarget = Pick<

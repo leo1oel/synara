@@ -1,11 +1,3 @@
-// FILE: MessagesTimeline.tsx
-// Purpose: Renders the chat transcript rows and lets LegendList own scrolling/follow behavior.
-// Layer: Web chat presentation component
-// Exports: MessagesTimeline
-
-import type { I18n, MessageDescriptor } from "@lingui/core";
-import { msg } from "@lingui/core/macro";
-import { useLingui } from "@lingui/react";
 import {
   type EditorId,
   type HubWorkItem,
@@ -219,7 +211,7 @@ import {
   type ThreadFindHighlight,
   type ThreadFindMatch,
 } from "./threadFind.logic";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 const MAX_VISIBLE_INLINE_TOOL_ENTRIES = 4;
 const EMPTY_EDITOR_KEYBINDINGS: ResolvedKeybindingsConfig = [];
@@ -288,25 +280,25 @@ export interface MessagesTimelineController {
 // Which marker (if any) applies comes from the shared resolveUserTurnMarker predicate.
 const USER_TURN_MARKER_PRESENTATION: Record<
   UserTurnMarkerKind,
-  { readonly Icon: LucideIcon; readonly label: MessageDescriptor }
+  { readonly Icon: LucideIcon; readonly label: string }
 > = {
-  automation: { Icon: ClockIcon, label: msg`Sent via Automation` },
-  agent: { Icon: BotIcon, label: msg`Sent by agent` },
-  steer: { Icon: SteerIcon, label: msg`Steering conversation` },
+  automation: { Icon: ClockIcon, label: "chat:timeline_sentViaAutomation" },
+  agent: { Icon: BotIcon, label: "chat:sentByAgent" },
+  steer: { Icon: SteerIcon, label: "chat:timeline_steeringConversation" },
 };
 
 /** The working indicator's label set is fixed (see `WorkingLabel`), so each maps to a message. */
-function localizeWorkingLabel(i18n: I18n, label: WorkingLabel): string {
+function localizeWorkingLabel(translate: typeof t, label: WorkingLabel): string {
   switch (label) {
     case "Loading":
-      return i18n._("Loading");
+      return translate("chat:spinner_loading");
     case "Thinking":
-      return i18n._("Thinking");
+      return translate("chat:timeline_thinking");
     case "Checking message delivery…":
-      return i18n._("Checking message delivery…");
+      return translate("lattice:checkingMessageDelivery");
     default: {
       const provider = /^Starting (.+)…$/u.exec(label)?.[1];
-      return provider ? i18n._("Starting {provider}…", { provider }) : label;
+      return provider ? translate("lattice:starting", { provider }) : label;
     }
   }
 }
@@ -320,7 +312,6 @@ function UserDispatchModeChip({
   dispatchOrigin: TimelineMessage["dispatchOrigin"];
   hasLeadingMedia: boolean;
 }) {
-  const { i18n } = useLingui();
   const markerKind = resolveUserTurnMarker({ dispatchMode, dispatchOrigin });
   if (!markerKind) {
     return null;
@@ -335,7 +326,7 @@ function UserDispatchModeChip({
       )}
     >
       <Icon className="size-3 shrink-0 text-muted-foreground/75" />
-      <span>{i18n._(label)}</span>
+      <span>{t(label)}</span>
     </div>
   );
 }
@@ -380,7 +371,6 @@ function WorktreeSetupCard({
   pendingAction?: WorktreeSetupResolutionAction | null;
   onResolve?: (action: WorktreeSetupResolutionAction) => void;
 }) {
-  const { i18n } = useLingui();
   const canResolve =
     onResolve !== undefined &&
     steps.every((step) => step.status !== "error") &&
@@ -699,7 +689,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   // an `AssignmentPattern` in the parameter list makes React Compiler bail out on the
   // entire component (silently, since `panicThreshold` is unset), which would drop
   // memoization for the whole transcript. See MessagesTimeline.compiler.test.ts.
-  const workingLabel = workingLabelProp ?? t("chat:timeline_thinking");
+  const workingLabel = workingLabelProp ?? "Thinking";
   const workingIcon =
     workingLabel === "Thinking"
       ? ThinkingIcon
@@ -2272,11 +2262,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                       initialValue={displayedUserMessage.copyText}
                       disabled={isSubmittingThisEdit || isRevertingCheckpoint}
                       submitBlockedHint={
-                        editSubmitBlocked
-                          ? i18n._(
-                              "The conversation has moved on, so this message can no longer be edited and resent.",
-                            )
-                          : null
+                        editSubmitBlocked ? t("lattice:theConversationHasMovedOnSoThis") : null
                       }
                       allowEmpty={renderedBrowserAnnotations.length > 0}
                       chatTypographyStyle={userMessageTypographyStyle}
@@ -2658,9 +2644,9 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                             onClick={() => handleToggleWorkGroup(display.toolGroupId!)}
                           >
                             {display.toolExpanded
-                              ? i18n._("Show less")
-                              : i18n._("+{count} more tool calls", {
-                                  count: cappedRenderPlan.hiddenEntryCount,
+                              ? t("workspace:timeline_showLess")
+                              : t("chat:moreToolCalls", {
+                                  value0: cappedRenderPlan.hiddenEntryCount,
                                 })}
                           </button>
                         </div>
@@ -2686,10 +2672,8 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                             onClick={() => handleToggleWorkGroup(display.toolGroupId!)}
                           >
                             {display.toolExpanded
-                              ? i18n._("Show less")
-                              : i18n._("+{count} more tool calls", {
-                                  count: display.hiddenToolCount,
-                                })}
+                              ? t("workspace:timeline_showLess")
+                              : t("chat:moreToolCalls", { value0: display.hiddenToolCount })}
                           </button>
                         </div>
                       )}
@@ -2895,8 +2879,8 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                   );
                   const editedFilesLabel =
                     checkpointFiles.length === 1
-                      ? i18n._("Edited 1 file")
-                      : i18n._("Edited {count} files", { count: checkpointFiles.length });
+                      ? t("lattice:edited1File")
+                      : t("lattice:editedFiles", { count: checkpointFiles.length });
                   const visibleCheckpointFileCount =
                     collapsibleHiddenRowCount(checkpointFiles.length, MAX_VISIBLE_CHANGED_FILES) > 0
                       ? MAX_VISIBLE_CHANGED_FILES
@@ -3022,10 +3006,10 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                             <DisclosureChevron open={fileListExpanded} />
                             <span>
                               {fileListExpanded
-                                ? i18n._("Show less")
+                                ? t("workspace:timeline_showLess")
                                 : overflowCheckpointFiles.length === 1
-                                  ? i18n._("Show 1 more file")
-                                  : i18n._("Show {count} more files", {
+                                  ? t("lattice:show1MoreFile")
+                                  : t("lattice:showMoreFiles", {
                                       count: overflowCheckpointFiles.length,
                                     })}
                             </span>
@@ -3094,10 +3078,10 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                           <GoalIcon className={MESSAGE_ACTION_ICON_CLASS_NAME} />
                           <span className="truncate">
                             {goalAchievement.elapsedMs !== null
-                              ? i18n._("Goal achieved in {duration}", {
-                                  duration: formatClockDuration(goalAchievement.elapsedMs),
+                              ? t("chat:goalAchievedIn", {
+                                  value0: formatClockDuration(goalAchievement.elapsedMs),
                                 })
-                              : i18n._("Goal achieved")}
+                              : t("chat:goalAchieved")}
                           </span>
                         </p>
                       </>
@@ -3185,7 +3169,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           <span aria-hidden="true" className="flex shrink-0">
             {renderWorkEntryIcon(workingIcon, MESSAGE_ACTION_ICON_CLASS_NAME)}
           </span>
-          <span>{localizeWorkingLabel(i18n, workingLabel)}</span>
+          <span>{localizeWorkingLabel(t, workingLabel)}</span>
         </div>
       )}
 
@@ -3850,7 +3834,7 @@ const UserImageAttachmentThumbnail = memo(function UserImageAttachmentThumbnail(
     <button
       type="button"
       className="flex size-15 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-background/82 text-left shadow-[0_1px_0_rgba(255,255,255,0.2)_inset] transition-colors hover:bg-background/94"
-      aria-label={i18n._("Preview {name}", { name: props.image.name })}
+      aria-label={t("chat:preview", { value0: props.image.name })}
       title={props.image.name}
       onClick={() => {
         const preview = buildExpandedImagePreview(props.userImages, props.image.id);

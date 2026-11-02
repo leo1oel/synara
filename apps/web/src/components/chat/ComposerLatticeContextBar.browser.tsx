@@ -5,13 +5,12 @@ import { afterEach, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
 
 import { LATTICE_HOST_CONTEXT } from "../../embedMode";
-import { i18n } from "../../i18n";
+import { setLanguagePreference } from "../../i18n";
 import { setLiveLatticeHostContext } from "../../lib/latticeHostContext";
 import { ComposerColumnFrame } from "./ComposerColumnFrame";
 import { ComposerLatticeContextBar } from "./ComposerLatticeContextBar";
-import { messages } from "../../locales/en/messages.po";
 
-i18n.loadAndActivate({ locale: "en", messages });
+setLanguagePreference("en");
 
 afterEach(() => {
   setLiveLatticeHostContext(null);

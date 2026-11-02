@@ -10,7 +10,6 @@ import type {
   RuntimeMode,
 } from "@synara/contracts";
 import { CheckIcon, ChevronDownIcon, HandoffIcon, WorktreeIcon } from "~/lib/icons";
-import { useLingui } from "@lingui/react";
 import { HiOutlineHandRaised } from "react-icons/hi2";
 import { CentralIcon } from "~/lib/central-icons";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
@@ -66,7 +65,7 @@ import {
   MenuTrigger,
 } from "./ui/menu";
 import type { ThreadWorkspacePatch } from "../types";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 function WorktreeGlyph({ className }: { className?: string }) {
   return <WorktreeIcon className={className} />;

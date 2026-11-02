@@ -3,7 +3,6 @@
 // Layer: Settings UI components
 // Depends on: account presentation helpers.
 
-import { i18n } from "~/i18n";
 import {
   normalizeProviderAccentColor,
   PROVIDER_ACCENT_COLOR_SWATCHES,

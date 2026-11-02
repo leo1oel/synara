@@ -2,8 +2,6 @@
 // Purpose: Silently check the visible catalog; expose a retry only after failure.
 // Layer: Chat picker UI
 
-import { useLingui } from "@lingui/react";
-import { Trans } from "@lingui/react/macro";
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import type { ProviderInstanceId, ProviderKind } from "@synara/contracts";
 import type { ProviderModelCatalog } from "../../hooks/useProviderModelCatalog";

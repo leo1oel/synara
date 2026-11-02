@@ -3,14 +3,13 @@
 // Layer: Chat composer presentation
 // Depends on: live waveform samples and caller-owned record/cancel/send actions.
 
-import { i18n } from "~/i18n";
+import { i18n, useTranslation } from "~/i18n";
 import { useEffect, useRef, useState } from "react";
 
 import { Loader2Icon, XIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { MAX_WAVEFORM_SAMPLES } from "~/lib/voiceRecorder";
 import { Button } from "../ui/button";
-import { useTranslation } from "~/i18n";
 
 interface ComposerVoiceRecorderBarProps {
   disabled?: boolean;

@@ -1,9 +1,5 @@
-// FILE: ProviderHealthBanner.tsx
-// Purpose: Surfaces provider availability warnings above the active chat.
-// Layer: Chat status presentation
-// Exports: ProviderHealthBanner
+import { t } from "~/i18n";
 
-import { useLingui } from "@lingui/react";
 import { localizeProviderStatusMessage } from "~/lib/providerStatusMessages";
 import { PROVIDER_DISPLAY_NAMES, type ServerProviderStatus } from "@synara/contracts";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "../ui/alert";
@@ -34,7 +30,6 @@ export const ProviderHealthBanner = function ProviderHealthBanner({
   onDismiss?: () => void;
   status: ServerProviderStatus | null;
 }) {
-  const { i18n } = useLingui();
   if (!needsProviderSetup && (!status || status.status === "ready")) {
     return null;
   }
@@ -45,23 +40,23 @@ export const ProviderHealthBanner = function ProviderHealthBanner({
       : status?.provider;
   const providerLabel = status?.displayName?.trim() || providerLabelFallback || status?.provider;
   const defaultMessage = needsProviderSetup
-    ? i18n._("Install or sign in to at least one provider before starting an agent chat.")
+    ? t("lattice:installOrSignInToAtLeast")
     : status?.status === "error"
-      ? i18n._("{provider} provider is unavailable.", { provider: providerLabel })
-      : i18n._("{provider} provider has limited availability.", { provider: providerLabel });
+      ? t("chat:providerIsUnavailable", { value0: providerLabel })
+      : t("chat:providerHasLimitedAvailability", { value0: providerLabel });
   // A provider runtime the host left out installs right from the banner.
   const runtimeInstall = needsProviderSetup ? null : providerRuntimeInstallOf(status);
   const hasAction = Boolean(onConfigure || runtimeInstall);
   const message = needsProviderSetup
     ? defaultMessage
     : runtimeInstall?.status === "failed"
-      ? providerRuntimeInstallFailureMessage(i18n, runtimeInstall)
+      ? providerRuntimeInstallFailureMessage(t, runtimeInstall)
       : status?.message
-        ? localizeProviderStatusMessage(i18n, status.message)
+        ? localizeProviderStatusMessage(t, status.message)
         : defaultMessage;
   const title = needsProviderSetup
-    ? i18n._("Set up an agent provider")
-    : i18n._("{provider} provider status", { provider: providerLabel });
+    ? t("lattice:setUpAnAgentProvider")
+    : t("chat:providerStatus", { value0: providerLabel });
   const isError = status?.status === "error";
   const Icon = isError ? CircleAlertIcon : TriangleAlertIcon;
 
@@ -86,14 +81,14 @@ export const ProviderHealthBanner = function ProviderHealthBanner({
               <ProviderRuntimeInstallButton status={status} />
             ) : onConfigure ? (
               <Button size="xs" variant="outline" onClick={onConfigure}>
-                {i18n._("Provider settings")}
+                {t("lattice:providerSettings")}
               </Button>
             ) : null}
             {onDismiss ? (
               <IconButton
                 className="size-6 rounded-full text-[var(--notification-fg)]/65 hover:bg-[var(--notification-fg)]/10 hover:text-[var(--notification-fg)] focus-visible:ring-[var(--notification-fg)]/35 sm:size-6"
-                label={i18n._("Dismiss provider status")}
-                title={i18n._("Dismiss provider status")}
+                label={t("chat:providerHealthBanner_dismissLabel")}
+                title={t("chat:providerHealthBanner_dismissLabel")}
                 onClick={onDismiss}
               >
                 <XIcon className="size-3.5" />

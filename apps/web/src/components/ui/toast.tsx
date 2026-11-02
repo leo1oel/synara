@@ -1,6 +1,6 @@
 "use client";
 
-import { i18n } from "~/i18n";
+import { i18n, useTranslation } from "~/i18n";
 import { Toast, type ToastObject } from "@base-ui/react/toast";
 import { useMemo, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useParams } from "@tanstack/react-router";

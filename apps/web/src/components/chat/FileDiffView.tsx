@@ -6,6 +6,7 @@
 // Layer: Chat/diff UI primitives
 // Depends on: @pierre/diffs FileDiff/Virtualizer, diffRendering (theme + unsafeCSS), FileDiffHeader
 
+import { t } from "~/i18n";
 import {
   areLanguagesAttached,
   areThemesAttached,
@@ -188,7 +189,7 @@ export function SingleFileDiffBody(props: { fileDiff: FileDiffMetadata; theme: "
   if (loadResult?.key === preloadKey && loadResult.error) {
     return (
       <div className="px-3 py-2 text-ui-xs text-destructive" role="alert">
-        Could not render this diff: {loadResult.error.message}
+        {t("lattice:couldNotRenderThisDiff", { message: loadResult.error.message })}
       </div>
     );
   }
@@ -196,7 +197,7 @@ export function SingleFileDiffBody(props: { fileDiff: FileDiffMetadata; theme: "
   if (!resourcesReady) {
     return (
       <div className="px-3 py-2 text-ui-xs text-muted-foreground" role="status">
-        Rendering diff…
+        {t("lattice:renderingDiff")}
       </div>
     );
   }

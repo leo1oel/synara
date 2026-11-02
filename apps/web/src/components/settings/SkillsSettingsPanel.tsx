@@ -18,7 +18,6 @@ import {
   type ChangeEvent,
   type MouseEvent,
 } from "react";
-import { useLingui } from "@lingui/react";
 
 import { ComposerPickerMenuPopup } from "~/components/chat/ComposerPickerMenuPopup";
 import {
@@ -59,7 +58,7 @@ import {
   settingsSkillNameKey,
   type SettingsSkillGroup,
 } from "./skillsSettingsModel";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 function filterSkillGroups(
   groups: ReadonlyArray<SettingsSkillGroup>,
@@ -183,8 +182,8 @@ export function SkillsSettingsPanel() {
     await refreshSkillQueries();
     toastManager.add({
       type: "success",
-      title: status === "replaced" ? i18n._("Skill updated") : i18n._("Skill added"),
-      description: i18n._("{skillName} is ready to use in Lattice.", { skillName }),
+      title: status === "replaced" ? t("lattice:skillUpdated") : t("lattice:skillAdded"),
+      description: t("lattice:isReadyToUseInLattice", { skillName }),
     });
   };
 
@@ -200,9 +199,7 @@ export function SkillsSettingsPanel() {
       });
       if (result.status === "conflict") {
         const replace = await api.dialogs.confirm(
-          i18n._("A skill named “{folderName}” is already installed. Replace it?", {
-            folderName: selection.folderName,
-          }),
+          t("lattice:aSkillNamedIsAlreadyInstalledReplace", { folderName: selection.folderName }),
         );
         if (!replace) return;
         const replacement = await api.provider.importSkill({
@@ -211,9 +208,7 @@ export function SkillsSettingsPanel() {
           overwrite: true,
         });
         if (replacement.status === "conflict") {
-          throw new Error(
-            i18n._("The existing skill changed before it could be replaced. Try again."),
-          );
+          throw new Error(t("lattice:theExistingSkillChangedBeforeItCould"));
         }
         await finishSkillImport(
           replacement.status,
@@ -225,9 +220,9 @@ export function SkillsSettingsPanel() {
     } catch (error) {
       toastManager.add({
         type: "error",
-        title: i18n._("Could not add skill"),
+        title: t("lattice:couldNotAddSkill"),
         description:
-          error instanceof Error ? error.message : i18n._("The selected folder is not valid."),
+          error instanceof Error ? error.message : t("lattice:theSelectedFolderIsNotValid"),
       });
     } finally {
       setIsImportingSkill(false);
@@ -248,17 +243,15 @@ export function SkillsSettingsPanel() {
       await refreshSkillQueries();
       toastManager.add({
         type: "success",
-        title: i18n._("Skill restored"),
-        description: i18n._("{skillName} is available again.", {
-          skillName: result.skill.name,
-        }),
+        title: t("lattice:skillRestored"),
+        description: t("lattice:isAvailableAgain", { skillName: result.skill.name }),
       });
     } catch (error) {
       toastManager.add({
         type: "error",
-        title: i18n._("Could not restore skill"),
+        title: t("lattice:couldNotRestoreSkill"),
         description:
-          error instanceof Error ? error.message : i18n._("The skill could not be restored."),
+          error instanceof Error ? error.message : t("lattice:theSkillCouldNotBeRestored"),
       });
     }
   };
@@ -268,9 +261,7 @@ export function SkillsSettingsPanel() {
     if (!management?.canDelete) return;
     const displayName = skill.interface?.displayName ?? skill.name;
     const confirmed = await ensureNativeApi().dialogs.confirm(
-      i18n._("Remove “{displayName}” from Lattice? You can undo this immediately afterward.", {
-        displayName,
-      }),
+      t("lattice:removeFromLatticeYouCanUndoThis", { displayName }),
     );
     if (!confirmed) return;
 
@@ -281,10 +272,10 @@ export function SkillsSettingsPanel() {
       await refreshSkillQueries();
       toastManager.add({
         type: "success",
-        title: i18n._("Skill removed"),
-        description: i18n._("{displayName} was removed from Lattice.", { displayName }),
+        title: t("lattice:skillRemoved"),
+        description: t("lattice:wasRemovedFromLattice", { displayName }),
         actionProps: {
-          children: i18n._("Undo"),
+          children: t("workspace:toast_undo"),
           onClick: () => {
             void restoreRemovedSkill(result.id, result.trashId);
           },
@@ -293,9 +284,9 @@ export function SkillsSettingsPanel() {
     } catch (error) {
       toastManager.add({
         type: "error",
-        title: i18n._("Could not remove skill"),
+        title: t("lattice:couldNotRemoveSkill"),
         description:
-          error instanceof Error ? error.message : i18n._("The skill could not be removed."),
+          error instanceof Error ? error.message : t("lattice:theSkillCouldNotBeRemoved"),
       });
     } finally {
       setRemovingSkillId(null);
@@ -320,8 +311,8 @@ export function SkillsSettingsPanel() {
     setSelectedSkill(result.detail.skill);
     toastManager.add({
       type: "success",
-      title: result.status === "created" ? i18n._("Skill created") : i18n._("Skill updated"),
-      description: i18n._("{displayName} is ready to use.", {
+      title: result.status === "created" ? t("lattice:skillCreated") : t("lattice:skillUpdated"),
+      description: t("lattice:isReadyToUse", {
         displayName: result.detail.skill.interface?.displayName ?? result.detail.skill.name,
       }),
     });
@@ -349,15 +340,14 @@ export function SkillsSettingsPanel() {
       setSkillEditor({ mode: "update", detail: result.detail });
       toastManager.add({
         type: "success",
-        title: i18n._("Editable copy created"),
-        description: i18n._("The copy is in your user skills folder. Your original is unchanged."),
+        title: t("lattice:editableCopyCreated"),
+        description: t("lattice:theCopyIsInYourUserSkills"),
       });
     } catch (error) {
       toastManager.add({
         type: "error",
-        title: i18n._("Could not create a copy"),
-        description:
-          error instanceof Error ? error.message : i18n._("The skill could not be copied."),
+        title: t("lattice:couldNotCreateACopy"),
+        description: error instanceof Error ? error.message : t("lattice:theSkillCouldNotBeCopied"),
       });
     } finally {
       setCustomizingSkillId(null);
@@ -392,10 +382,10 @@ export function SkillsSettingsPanel() {
               }
             >
               {management?.kind === "bundled"
-                ? i18n._("Included")
+                ? t("lattice:included")
                 : management?.kind === "installed"
-                  ? i18n._("Local")
-                  : i18n._("Detected")}
+                  ? t("computer:worktreeMode_local")
+                  : t("lattice:detected")}
             </Badge>
           </span>
         }
@@ -403,7 +393,7 @@ export function SkillsSettingsPanel() {
         status={
           <span className="flex min-w-0 flex-col gap-1">
             <span>
-              {enabled ? i18n._("Enabled") : i18n._("Disabled")} · {sourceLabels}
+              {enabled ? t("lattice:enabled2") : t("chat:disabled")} · {sourceLabels}
             </span>
             {group.sources.map((source) => (
               <code
@@ -422,19 +412,15 @@ export function SkillsSettingsPanel() {
               <Switch
                 checked={enabled}
                 onCheckedChange={(checked) => setSkillEnabled(skill.name, Boolean(checked))}
-                aria-label={i18n._("Enable the {displayName} skill", {
-                  displayName: group.displayName,
-                })}
+                aria-label={t("settings:enableTheSkill", { value0: group.displayName })}
               />
               {management?.canDelete ? (
                 <Button
                   size="icon-xs"
                   variant="ghost"
                   disabled={isRemoving}
-                  aria-label={i18n._("Remove the {displayName} skill", {
-                    displayName: group.displayName,
-                  })}
-                  title={i18n._("Remove skill")}
+                  aria-label={t("lattice:removeTheSkill", { displayName: group.displayName })}
+                  title={t("lattice:removeSkill")}
                   onClick={() => void removeSkill(skill)}
                 >
                   {isRemoving ? (
@@ -449,10 +435,8 @@ export function SkillsSettingsPanel() {
               <Button
                 size="icon-xs"
                 variant="ghost"
-                aria-label={i18n._("Open {displayName} details", {
-                  displayName: group.displayName,
-                })}
-                title={i18n._("Open skill details")}
+                aria-label={t("lattice:openDetails", { displayName: group.displayName })}
+                title={t("lattice:openSkillDetails")}
                 onClick={(event) => {
                   event.stopPropagation();
                   openSkillDetail(skill);
@@ -518,13 +502,11 @@ export function SkillsSettingsPanel() {
 
   return (
     <div ref={panelRef} className="space-y-6">
-      <SettingsSection title={i18n._("Skills Manager")}>
+      <SettingsSection title={t("lattice:skillsManager")}>
         <SettingsRow
           id="setting-synara-skills-folder"
-          title={i18n._("Your skill library")}
-          description={i18n._(
-            "Manage Skills included with Lattice, imported by you, or detected from other tools.",
-          )}
+          title={t("lattice:yourSkillLibrary")}
+          description={t("lattice:manageSkillsIncludedWithLatticeImportedBy")}
           control={
             <div className="skills-library-actions w-full sm:w-52">
               <input
@@ -536,7 +518,7 @@ export function SkillsSettingsPanel() {
                 multiple
                 className="hidden"
                 onChange={handleSkillFolderSelection}
-                aria-label={i18n._("Choose a skill folder")}
+                aria-label={t("lattice:chooseASkillFolder")}
               />
               <Menu>
                 <MenuTrigger
@@ -548,7 +530,9 @@ export function SkillsSettingsPanel() {
                   ) : (
                     <PlusIcon className="size-3.5" />
                   )}
-                  {isImportingSkill ? i18n._("Importing…") : i18n._("New skill")}
+                  {isImportingSkill
+                    ? t("workspace:searchPalette_importing")
+                    : t("lattice:newSkill")}
                   {!isImportingSkill ? (
                     <ChevronDownIcon aria-hidden="true" className="ml-auto size-3 opacity-60" />
                   ) : null}
@@ -561,11 +545,11 @@ export function SkillsSettingsPanel() {
                     }}
                   >
                     <PlusIcon className="size-4 shrink-0" />
-                    {i18n._("Create skill")}
+                    {t("lattice:createSkill")}
                   </MenuItem>
                   <MenuItem onClick={() => skillFolderInputRef.current?.click()}>
                     <FolderOpenIcon className="size-4 shrink-0" />
-                    {i18n._("Import skill")}
+                    {t("lattice:importSkill")}
                   </MenuItem>
                 </ComposerPickerMenuPopup>
               </Menu>
@@ -576,9 +560,9 @@ export function SkillsSettingsPanel() {
 
       <SearchInput
         nativeInput
-        placeholder={i18n._("Search skills...")}
+        placeholder={t("lattice:searchSkills")}
         value={searchQuery}
-        aria-label={i18n._("Search skills")}
+        aria-label={t("common:searchSkills")}
         onChange={(event) => setSearchQuery(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Escape" && searchQuery.length > 0) {
@@ -590,47 +574,45 @@ export function SkillsSettingsPanel() {
       />
 
       {catalogQuery.isError ? (
-        <SettingsSectionShell title={i18n._("Skills")}>
+        <SettingsSectionShell title={t("common:plugin_skillsSection")}>
           <SettingsEmptyState tone="destructive" layout="status">
-            {i18n._(
-              "Lattice could not scan the skill library. Check that the local service is running, then reopen Settings.",
-            )}
+            {t("lattice:latticeCouldNotScanTheSkillLibrary")}
           </SettingsEmptyState>
         </SettingsSectionShell>
       ) : null}
 
       {!catalogQuery.isLoading && !catalogQuery.isError && !hasVisibleSkills ? (
         <SettingsSectionShell
-          title={searchQuery.trim() ? i18n._("Search results") : i18n._("Skills")}
+          title={searchQuery.trim() ? t("lattice:searchResults") : t("common:plugin_skillsSection")}
         >
           <SettingsEmptyState>
             {searchQuery.trim()
-              ? i18n._("No skills match “{query}”.", { query: searchQuery.trim() })
-              : i18n._("No skills found. Create one here or import a folder containing SKILL.md.")}
+              ? t("lattice:noSkillsMatch", { query: searchQuery.trim() })
+              : t("lattice:noSkillsFoundCreateOneHereOr")}
           </SettingsEmptyState>
         </SettingsSectionShell>
       ) : null}
 
       {visibleBundledGroups.length > 0 ? (
-        <SettingsSectionShell title={i18n._("Included with Lattice")}>
+        <SettingsSectionShell title={t("lattice:includedWithLattice")}>
           <SettingsCard>{visibleBundledGroups.map(renderSkillRow)}</SettingsCard>
         </SettingsSectionShell>
       ) : null}
 
       {visibleInstalledGroups.length > 0 ? (
-        <SettingsSectionShell title={i18n._("Installed by you")}>
+        <SettingsSectionShell title={t("lattice:installedByYou")}>
           <SettingsCard>{visibleInstalledGroups.map(renderSkillRow)}</SettingsCard>
         </SettingsSectionShell>
       ) : null}
 
       {visibleDetectedSections.length > 0 ? (
-        <SettingsSectionShell title={i18n._("Detected from your environment")}>
+        <SettingsSectionShell title={t("lattice:detectedFromYourEnvironment")}>
           <div className="space-y-4">
             {visibleDetectedSections.map((section) => {
-              const skillCountLabel = i18n._(
-                "{skillCount, plural, one {# skill} other {# skills}}",
-                { skillCount: section.groups.length },
-              );
+              const skillCountLabel = t("lattice:skills", {
+                skillCount: section.groups.length,
+                count: section.groups.length,
+              });
               return (
                 <section
                   key={section.key}

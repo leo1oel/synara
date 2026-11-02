@@ -1,6 +1,5 @@
 // Purpose: Floating composer that retains a transcript quote while the user writes a new prompt.
 
-import { i18n } from "~/i18n";
 import type { ThreadEnvironmentMode } from "@synara/contracts";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 

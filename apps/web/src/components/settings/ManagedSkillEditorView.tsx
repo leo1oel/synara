@@ -1,9 +1,9 @@
+import { t } from "~/i18n";
 // FILE: ManagedSkillEditorView.tsx
 // Purpose: Beginner-friendly in-app creation and editing for Lattice-managed Skills.
 // Layer: Settings UI
 
 import type { ProviderManagedSkillDetail, ProviderSaveManagedSkillResult } from "@synara/contracts";
-import { useLingui } from "@lingui/react";
 import { useMemo, useState, type FormEvent } from "react";
 
 import { SettingsCard, SettingsSectionShell } from "~/components/settings/SettingsPanelPrimitives";
@@ -25,7 +25,6 @@ export function ManagedSkillEditorView({
   onCancel: () => void;
   onSaved: (result: ProviderSaveManagedSkillResult) => void;
 }) {
-  const { i18n } = useLingui();
   const initialDisplayName = detail?.skill.interface?.displayName ?? detail?.skill.name ?? "";
   const initialDescription =
     detail?.skill.description ?? detail?.skill.interface?.shortDescription ?? "";
@@ -41,7 +40,7 @@ export function ManagedSkillEditorView({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!id) {
-      setErrorMessage(i18n._("This skill does not have an editable identifier."));
+      setErrorMessage(t("lattice:thisSkillDoesNotHaveAnEditable"));
       return;
     }
     setIsSaving(true);
@@ -57,7 +56,7 @@ export function ManagedSkillEditorView({
       onSaved(result);
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : i18n._("The skill could not be saved."),
+        error instanceof Error ? error.message : t("lattice:theSkillCouldNotBeSaved"),
       );
     } finally {
       setIsSaving(false);
@@ -68,11 +67,11 @@ export function ManagedSkillEditorView({
     <form className="[&>.settings-group]:mt-4!" onSubmit={(event) => void handleSubmit(event)}>
       <Button type="button" size="sm" variant="ghost" className="-ml-2" onClick={onCancel}>
         <ChevronLeftIcon className="size-3.5" aria-hidden="true" />
-        {mode === "create" ? i18n._("All skills") : i18n._("Skill details")}
+        {mode === "create" ? t("lattice:allSkills") : t("lattice:skillDetails")}
       </Button>
 
       <SettingsSectionShell
-        title={mode === "create" ? i18n._("Create a skill") : i18n._("Edit skill")}
+        title={mode === "create" ? t("lattice:createASkill") : t("lattice:editSkill")}
       >
         <SettingsCard divided={false} className="managed-skill-editor-fields space-y-5 pt-4">
           <div className="space-y-1.5">
@@ -80,7 +79,7 @@ export function ManagedSkillEditorView({
               className="managed-skill-field-label font-system-ui font-medium text-foreground"
               htmlFor="managed-skill-name"
             >
-              {i18n._("Skill name")}
+              {t("lattice:skillName")}
             </label>
             <Input
               id="managed-skill-name"
@@ -88,7 +87,7 @@ export function ManagedSkillEditorView({
               value={displayName}
               maxLength={100}
               autoFocus
-              placeholder={i18n._("Literature Review")}
+              placeholder={t("lattice:literatureReview")}
               onChange={(event) => setDisplayName(event.target.value)}
               aria-describedby="managed-skill-name-help"
             />
@@ -97,10 +96,8 @@ export function ManagedSkillEditorView({
               className="managed-skill-field-help text-muted-foreground"
             >
               {mode === "create"
-                ? i18n._("Lattice will save this as “{generatedId}”.", { generatedId })
-                : i18n._("Internal name: {internalName}", {
-                    internalName: detail?.skill.name ?? id,
-                  })}
+                ? t("lattice:latticeWillSaveThisAs", { generatedId })
+                : t("lattice:internalName", { internalName: detail?.skill.name ?? id })}
             </p>
           </div>
 
@@ -109,18 +106,18 @@ export function ManagedSkillEditorView({
               className="managed-skill-field-label font-system-ui font-medium text-foreground"
               htmlFor="managed-skill-description"
             >
-              {i18n._("What should this skill do?")}
+              {t("lattice:whatShouldThisSkillDo")}
             </label>
             <Textarea
               id="managed-skill-description"
               value={description}
               maxLength={4_000}
-              placeholder={i18n._("Explain what the skill does and when Lattice should use it.")}
+              placeholder={t("lattice:explainWhatTheSkillDoesAndWhen")}
               className="[&_[data-slot=textarea]]:min-h-24"
               onChange={(event) => setDescription(event.target.value)}
             />
             <p className="managed-skill-field-help text-muted-foreground">
-              {i18n._("Include the kinds of requests that should activate this skill.")}
+              {t("lattice:includeTheKindsOfRequestsThatShould")}
             </p>
           </div>
 
@@ -129,21 +126,17 @@ export function ManagedSkillEditorView({
               className="managed-skill-field-label font-system-ui font-medium text-foreground"
               htmlFor="managed-skill-instructions"
             >
-              {i18n._("Instructions")}
+              {t("lattice:instructions")}
             </label>
             <Textarea
               id="managed-skill-instructions"
               value={instructions}
-              placeholder={i18n._(
-                "Write the workflow, rules, examples, or guidance Lattice should follow.",
-              )}
+              placeholder={t("lattice:writeTheWorkflowRulesExamplesOrGuidance")}
               className="[&_[data-slot=textarea]]:min-h-52"
               onChange={(event) => setInstructions(event.target.value)}
             />
             <p className="managed-skill-field-help text-muted-foreground">
-              {i18n._(
-                "Plain text works. Markdown formatting is optional, and everything wraps inside the editor.",
-              )}
+              {t("lattice:plainTextWorksMarkdownFormattingIsOptional")}
             </p>
           </div>
 
@@ -156,7 +149,7 @@ export function ManagedSkillEditorView({
           <div className="flex flex-wrap justify-end gap-2 border-t border-border/65 pt-4">
             {mode === "update" ? (
               <Button type="button" size="sm" variant="outline" onClick={onCancel}>
-                {i18n._("Cancel")}
+                {t("common:form_cancel")}
               </Button>
             ) : null}
             <Button
@@ -168,10 +161,10 @@ export function ManagedSkillEditorView({
             >
               {isSaving ? <Loader2Icon className="size-3.5 animate-spin" /> : null}
               {isSaving
-                ? i18n._("Saving…")
+                ? t("common:saving")
                 : mode === "create"
-                  ? i18n._("Create skill")
-                  : i18n._("Save changes")}
+                  ? t("lattice:createSkill")
+                  : t("workspace:scripts_saveChanges")}
             </Button>
           </div>
         </SettingsCard>

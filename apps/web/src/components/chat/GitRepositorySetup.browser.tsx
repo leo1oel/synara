@@ -3,22 +3,20 @@
 // Layer: Browser UI test
 
 import "../../index.css";
-
-import { I18nProvider } from "@lingui/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
 
-import { i18n } from "../../i18n";
+import { t, setLanguagePreference } from "../../i18n";
 import {
   GitHubRemoteSetupCard,
   GitInitializationState,
   LatticeGitInitializationState,
 } from "./GitRepositorySetup";
 
-i18n.loadAndActivate({ locale: "en", messages: {} });
+setLanguagePreference("en");
 
 function renderWithQueryClient(element: ReactNode) {
   const queryClient = new QueryClient({
@@ -28,11 +26,11 @@ function renderWithQueryClient(element: ReactNode) {
     },
   });
   return render(
-    <I18nProvider i18n={i18n}>
+    <>
       <QueryClientProvider client={queryClient}>
         <div className="h-[640px] w-[360px] bg-background text-foreground">{element}</div>
       </QueryClientProvider>
-    </I18nProvider>,
+    </>,
   );
 }
 

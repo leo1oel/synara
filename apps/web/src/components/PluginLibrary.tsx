@@ -580,8 +580,12 @@ export function PluginLibrary(props?: {
             if (selectedTab === "plugins") setPluginSearch(e.target.value);
             else setSkillSearch(e.target.value);
           }}
-          placeholder={selectedTab === "plugins" ? "Search plugins" : "Search skills"}
-          aria-label={selectedTab === "plugins" ? "Search plugins" : "Search skills"}
+          placeholder={
+            selectedTab === "plugins" ? t("common:searchPlugins") : t("common:searchSkills")
+          }
+          aria-label={
+            selectedTab === "plugins" ? t("common:searchPlugins") : t("common:searchSkills")
+          }
         />
       </div>
 

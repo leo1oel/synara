@@ -2,7 +2,6 @@
 // Purpose: Edit process-scoped environment variables for an individual provider instance.
 // Layer: Settings UI components
 
-import { i18n } from "~/i18n";
 import { Schema } from "effect";
 import { useState } from "react";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { i18n } from "~/i18n";
+import { i18n, useTranslation } from "~/i18n";
 import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
 import { CheckIcon, ChevronsUpDownIcon, XIcon } from "~/lib/icons";
 import * as React from "react";

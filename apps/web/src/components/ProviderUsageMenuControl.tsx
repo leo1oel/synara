@@ -9,7 +9,6 @@ import {
   type ServerGetProviderUsageSnapshotResult,
 } from "@synara/contracts";
 import { providerUsageNeedsAuthDetail } from "@synara/shared/providerUsage";
-import { useLingui } from "@lingui/react";
 import { type ReactNode, useEffect, useState } from "react";
 
 import { useAppSettings } from "~/appSettings";
@@ -19,6 +18,7 @@ import {
 } from "~/hooks/useProviderUsageSummary";
 import {
   deriveProviderUsageDisplayRows,
+  localizedProviderUsageNeedsAuthDetail,
   localizeProviderUsageDisplayText,
   selectPrimaryProviderUsageDisplayRow,
   type ProviderUsageDisplayRow,
@@ -124,7 +124,7 @@ export function useProviderUsageMenuModel(
   });
   return {
     ...model,
-    menuTitle: i18n._("{provider} usage", { provider: PROVIDER_DISPLAY_NAMES[provider] }),
+    menuTitle: t("common:providerUsageTitle", { provider: PROVIDER_DISPLAY_NAMES[provider] }),
   };
 }
 
@@ -179,7 +179,6 @@ function useDelayedStart(delayMs: number): boolean {
 }
 
 export function ProviderUsageMenuControl({ provider }: { provider: ProviderKind }) {
-  const { i18n } = useLingui();
   const model = useProviderUsageMenuModel(provider, {
     enabled: useDelayedStart(HEADER_USAGE_READ_DELAY_MS),
   });
@@ -213,7 +212,7 @@ export function ProviderUsageMenuControl({ provider }: { provider: ProviderKind 
           <div className="flex flex-col gap-0.5">
             <span>{model.menuTitle}</span>
             {model.rows.map((row) => {
-              const text = localizeProviderUsageDisplayText(i18n, row);
+              const text = localizeProviderUsageDisplayText(t, row);
               return (
                 // The reset sits under its window, so a narrow panel never breaks a phrase.
                 <span key={row.id} className="flex flex-col tabular-nums">

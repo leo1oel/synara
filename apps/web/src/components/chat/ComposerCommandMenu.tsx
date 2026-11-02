@@ -8,8 +8,6 @@ import {
   type ProviderPluginDescriptor,
   type ProviderSkillDescriptor,
 } from "@synara/contracts";
-import type { I18n } from "@lingui/core";
-import { useLingui } from "@lingui/react";
 import { type ReactNode } from "react";
 import { type ComposerTriggerKind } from "../../composer-logic";
 import { type ComposerSlashCommand } from "../../composerSlashCommands";
@@ -51,7 +49,7 @@ function humanizeProviderCommandName(command: string): string {
 }
 
 function commandMenuTitle(
-  i18n: I18n,
+  translate: typeof t,
   item: Extract<ComposerCommandItem, { type: "slash-command" | "provider-native-command" }>,
 ): string {
   switch (item.command) {
@@ -80,53 +78,53 @@ function commandMenuTitle(
     case "subagents":
       return t("chat:subagents");
     case "feedback":
-      return i18n._("Feedback Synara");
+      return translate("workspace:feedbackSynara");
     case "computer-use":
-      return i18n._("Computer use");
+      return translate("settings:computerUse");
     case "export":
-      return i18n._("Export");
+      return translate("lattice:export");
     case "goal":
-      return i18n._("Goal");
+      return translate("chat:goal");
     case "rename":
-      return i18n._("Rename");
+      return translate("workspace:rename");
     case "automation":
-      return i18n._("Automation");
+      return translate("lattice:automation");
     case "mcp":
-      return i18n._("MCP Servers");
+      return translate("lattice:mCPServers");
     default:
       return humanizeProviderCommandName(item.command);
   }
 }
 
-function localizeSkillScope(i18n: I18n, scope: string | undefined): string {
+function localizeSkillScope(translate: typeof t, scope: string | undefined): string {
   switch (scope?.trim().toLowerCase() ?? "") {
     case "":
     case "personal":
-      return i18n._("Personal");
+      return translate("settings:personal");
     case "project":
-      return i18n._("Project");
+      return translate("chat:detail_project");
     case "user":
-      return i18n._("User");
+      return translate("lattice:user");
     case "system":
-      return i18n._("System");
+      return translate("common:themeOptions_system");
     case "plugin":
-      return i18n._("Plugin");
+      return translate("lattice:plugin");
     default:
       return formatSkillScope(scope);
   }
 }
 
-function commandMenuTrailingMeta(i18n: I18n, item: ComposerCommandItem): string | null {
+function commandMenuTrailingMeta(translate: typeof t, item: ComposerCommandItem): string | null {
   if (item.type === "agent") {
-    return i18n._("delegate task to subagent");
+    return translate("lattice:delegateTaskToSubagent");
   }
 
   if (item.type === "plugin") {
-    return i18n._("Plugin");
+    return translate("lattice:plugin");
   }
 
   if (item.type === "connector") {
-    return i18n._("Connector");
+    return translate("lattice:connector");
   }
 
   if (item.type === "thread") {
@@ -134,15 +132,15 @@ function commandMenuTrailingMeta(i18n: I18n, item: ComposerCommandItem): string 
   }
 
   if (item.type === "local-root") {
-    return i18n._("Local");
+    return translate("computer:worktreeMode_local");
   }
 
   if (item.type === "skill") {
-    return localizeSkillScope(i18n, item.skill.scope);
+    return localizeSkillScope(translate, item.skill.scope);
   }
 
   if (item.type === "model") {
-    return i18n._("Model");
+    return translate("chat:detail_model");
   }
 
   if (item.type === "slash-command" || item.type === "provider-native-command") {
@@ -159,52 +157,52 @@ function commandMenuTrailingMeta(i18n: I18n, item: ComposerCommandItem): string 
 }
 
 /** Built-in command descriptions, translated here so the shared definitions stay plain data. */
-function localizedSlashCommandDescription(i18n: I18n, command: string): string | null {
+function localizedSlashCommandDescription(translate: typeof t, command: string): string | null {
   switch (command) {
     case "clear":
-      return i18n._("Start a fresh thread and clear the current conversation context");
+      return translate("common:startAFreshThreadAndClearTheCurrentConversation");
     case "compact":
-      return i18n._("Compact the current thread context to free space");
+      return translate("common:compactTheCurrentThreadContextToFreeSpace");
     case "model":
-      return i18n._("Switch response model for this thread");
+      return translate("common:switchResponseModelForThisThread");
     case "plan":
-      return i18n._("Switch this thread into plan mode");
+      return translate("common:switchThisThreadIntoPlanMode");
     case "debug":
-      return i18n._("Switch this thread into evidence-first debug mode");
+      return translate("common:switchThisThreadIntoEvidenceFirstDebugMode");
     case "default":
-      return i18n._("Switch this thread back to normal chat mode");
+      return translate("common:switchThisThreadBackToNormalChatMode");
     case "review":
-      return i18n._("Start a code review for current changes");
+      return translate("common:startACodeReviewForCurrentChanges");
     case "fork":
-      return i18n._("Fork this thread into local or a new worktree");
+      return translate("common:forkThisThreadIntoLocalOrANewWorktree");
     case "side":
-      return i18n._("Open a guarded Side from this thread, optionally on another provider");
+      return translate("common:openAGuardedSideFromThisThreadOptionallyOn");
     case "status":
-      return i18n._("Show context usage and rate-limit status");
+      return translate("common:showContextUsageAndRateLimitStatus");
     case "subagents":
-      return i18n._("Insert a prompt that asks the assistant to delegate work");
+      return translate("common:insertAPromptThatAsksTheAssistantToDelegate");
     case "computer-use":
-      return i18n._("Use Synara Computer for this request only");
+      return translate("common:useSynaraComputerForThisRequestOnly");
     case "fast":
-      return i18n._("Turn fast mode on or off for this thread");
+      return translate("common:turnFastModeOnOrOffForThisThread");
     case "export":
-      return i18n._("Download this thread as a ZIP archive (thread.json + transcript.md)");
+      return translate("common:downloadThisThreadAsAZIPArchiveThreadJson");
     case "goal":
-      return i18n._("Set, edit, pause, resume, or clear this thread's persistent goal");
+      return translate("common:setEditPauseResumeOrClearThisThreadS");
     case "rename":
-      return i18n._("Regenerate this thread title, or set an exact title");
+      return translate("common:regenerateThisThreadTitleOrSetAnExactTitle");
     case "feedback":
-      return i18n._("Send feedback to the Synara team");
+      return translate("common:sendFeedbackToTheSynaraTeam");
     case "automation":
-      return i18n._("Create a scheduled automation from this prompt");
+      return translate("common:createAScheduledAutomationFromThisPrompt");
     case "mcp":
-      return i18n._("Show this agent's MCP servers, sign in, reconnect, or turn them off");
+      return translate("lattice:showThisAgentSMCPServersSign");
     default:
       return null;
   }
 }
 
-function commandMenuSecondaryText(i18n: I18n, item: ComposerCommandItem): string | null {
+function commandMenuSecondaryText(translate: typeof t, item: ComposerCommandItem): string | null {
   // The menu is driven from the composer, so focus never reaches the warning icon:
   // the row itself has to say why the command will not work.
   if (item.type === "provider-native-command" && item.notice) {
@@ -212,7 +210,7 @@ function commandMenuSecondaryText(i18n: I18n, item: ComposerCommandItem): string
   }
 
   if (item.type === "slash-command") {
-    return localizedSlashCommandDescription(i18n, item.command) ?? item.description;
+    return localizedSlashCommandDescription(translate, item.command) ?? item.description;
   }
 
   if (item.type === "provider-native-command") {
@@ -461,28 +459,28 @@ function CommandNoticeBadge(props: { notice: string }) {
 const BROWSABLE_MENTION_GROUP_IDS = new Set(["files", "papers"]);
 const BROWSABLE_MENTION_GROUP_ROW_CAP = 4;
 
-function localizeGroupLabel(i18n: I18n, group: ComposerCommandGroupModel): string | null {
+function localizeGroupLabel(translate: typeof t, group: ComposerCommandGroupModel): string | null {
   switch (group.id) {
     case "files":
-      return i18n._("Files");
+      return translate("workspace:toolCallDetails_filesSection");
     case "papers":
-      return i18n._("Papers");
+      return translate("lattice:papers");
     case "plugins":
-      return i18n._("Plugins");
+      return translate("common:plugin_pluginsTab");
     case "chats":
-      return i18n._("Chats");
+      return translate("workspace:general_chats");
     case "local":
-      return i18n._("Local");
+      return translate("computer:worktreeMode_local");
     case "subagents":
-      return i18n._("Subagents");
+      return translate("chat:subagents");
     case "built-in":
-      return i18n._("Built-in");
+      return translate("chat:builtIn");
     case "provider":
-      return i18n._("Provider");
+      return translate("workspace:models_customModelProvider");
     case "skills":
-      return i18n._("Skills");
+      return translate("common:plugin_skillsSection");
     case "connectors":
-      return i18n._("Connectors");
+      return translate("settings:connectors");
     default:
       return group.label;
   }
@@ -512,28 +510,28 @@ export function ComposerCommandMenu(props: {
     // their height so Plugins, Chats, Local, and Subagents stay in view.
     label:
       group.label && BROWSABLE_MENTION_GROUP_IDS.has(group.id)
-        ? `${localizeGroupLabel(i18n, group)} · ${group.items.length}`
-        : localizeGroupLabel(i18n, group),
+        ? `${localizeGroupLabel(t, group)} · ${group.items.length}`
+        : localizeGroupLabel(t, group),
     ...(BROWSABLE_MENTION_GROUP_IDS.has(group.id) &&
     group.items.length > BROWSABLE_MENTION_GROUP_ROW_CAP
-      ? { boundedViewport: true, labelTrailing: i18n._("Scroll to browse") }
+      ? { boundedViewport: true, labelTrailing: t("lattice:scrollToBrowse") }
       : {}),
     rows: group.items.map((item) => ({
       id: item.id,
       icon: commandMenuItemGlyph(item, props.resolvedTheme),
       title:
         item.type === "slash-command" || item.type === "provider-native-command"
-          ? commandMenuTitle(i18n, item)
+          ? commandMenuTitle(t, item)
           : item.label,
-      secondary: commandMenuSecondaryText(i18n, item),
+      secondary: commandMenuSecondaryText(t, item),
       trailing:
         item.type === "provider-native-command" && item.notice ? (
           <span className="inline-flex items-center gap-1.5">
-            {commandMenuTrailingMeta(i18n, item)}
+            {commandMenuTrailingMeta(t, item)}
             <CommandNoticeBadge notice={item.notice.detail} />
           </span>
         ) : (
-          commandMenuTrailingMeta(i18n, item)
+          commandMenuTrailingMeta(t, item)
         ),
     })),
   }));
@@ -557,7 +555,7 @@ export function ComposerCommandMenu(props: {
           /* This footer is informational copy, not a selectable result group. */
           <div className="pt-0.5 pb-2">
             <p className={cn(COMPOSER_MENU_PANEL_GROUP_LABEL_CLASS_NAME, "px-2 py-0")}>
-              {i18n._("Files")}
+              {t("workspace:toolCallDetails_filesSection")}
             </p>
             <p className="px-2 pt-0.5 text-ui-sm text-muted-foreground/55">
               {t("workspace:typeToSearchForFiles")}

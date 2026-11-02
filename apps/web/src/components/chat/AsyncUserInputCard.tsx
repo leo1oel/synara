@@ -1,4 +1,3 @@
-import { useLingui } from "@lingui/react";
 import type { AsyncUserInput, MessageId, UserInputQuestion } from "@synara/contracts";
 import { useMemo, useRef, useState } from "react";
 import { isSynaraEmbedMode } from "~/embedMode";
@@ -14,7 +13,7 @@ import { Button } from "../ui/button";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
 import { Textarea } from "../ui/textarea";
 import { UserInputQuestionForm } from "./UserInputQuestionForm";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 export function AsyncUserInputCard({
   messageId,
@@ -32,12 +31,12 @@ export function AsyncUserInputCard({
     () =>
       input.questions.map((question, index) => ({
         id: `question-${index}`,
-        header: i18n._("Question"),
+        header: t("lattice:question"),
         question: question.title,
         options: (question.options ?? []).map((label) => ({ label, description: label })),
         multiSelect: false,
       })),
-    [i18n, input.questions],
+    [t, input.questions],
   );
   const [answers, setAnswers] = useState<Record<string, PendingUserInputDraftAnswer>>(() =>
     Object.fromEntries(
@@ -102,8 +101,8 @@ export function AsyncUserInputCard({
       <CollapsibleTrigger className="inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-ui leading-snug text-muted-foreground hover:bg-muted/50 hover:text-foreground">
         <CircleQuestionIcon className="size-3.5" aria-hidden="true" />
         {questions.length === 1
-          ? i18n._("1 question")
-          : i18n._("{count} questions", { count: questions.length })}
+          ? t("lattice:n1Question")
+          : t("lattice:questions", { count: questions.length })}
         {answered && (
           <>
             <CheckIcon className="size-3" aria-hidden="true" />
@@ -154,7 +153,7 @@ export function AsyncUserInputCard({
               >
                 <div className="mt-3 space-y-2">
                   <Textarea
-                    aria-label={i18n._("Answer: {question}", { question: activeQuestion.question })}
+                    aria-label={t("chat:answer2", { value0: activeQuestion.question })}
                     value={progress.customAnswer}
                     disabled={disabled}
                     rows={2}

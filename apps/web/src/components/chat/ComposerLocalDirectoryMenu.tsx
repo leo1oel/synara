@@ -4,8 +4,6 @@
 // Depends on: the same Command primitives used by ComposerCommandMenu so both pickers share chrome.
 
 import type { ProjectFileSystemEntry, ProjectLocalSearchEntry } from "@synara/contracts";
-import type { I18n } from "@lingui/core";
-import { useLingui } from "@lingui/react";
 import type { Ref } from "react";
 import { useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -130,18 +128,18 @@ function isRootDirectory(directoryPath: string): boolean {
 
 // Effect/fs errors come through with deep stack traces and absolute internal paths.
 // Surface a short, user-friendly reason so the popover stays tidy on missing/denied paths.
-function summarizeDirectoryLoadError(i18n: I18n, error: unknown): string {
+function summarizeDirectoryLoadError(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error ?? "");
   if (/ENOENT|no such file or directory/i.test(raw)) {
-    return i18n._("Folder not found.");
+    return "Folder not found.";
   }
   if (/EACCES|permission denied/i.test(raw)) {
-    return i18n._("Permission denied.");
+    return "Permission denied.";
   }
   if (/ENOTDIR|not a directory/i.test(raw)) {
-    return i18n._("Not a folder.");
+    return "Not a folder.";
   }
-  return i18n._("Unable to load folders.");
+  return "Unable to load folders.";
 }
 
 export function ComposerLocalDirectoryMenu(props: {
@@ -210,7 +208,7 @@ export function ComposerLocalDirectoryMenu(props: {
         })
         .catch((error) => {
           setEntriesByPath((current) => ({ ...current, [expandedDirectory]: [] }));
-          setErrorMessage(summarizeDirectoryLoadError(i18n, error));
+          setErrorMessage(summarizeDirectoryLoadError(error));
         })
         .finally(() => {
           setLoadingPaths((current) => {
@@ -224,7 +222,7 @@ export function ComposerLocalDirectoryMenu(props: {
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [entriesByPath, expandedDirectory, i18n, isAwaitingHomeDir, loadingPaths]);
+  }, [entriesByPath, expandedDirectory, isAwaitingHomeDir, loadingPaths]);
 
   const rawEntries = entriesByPath[expandedDirectory];
   const isLoading = loadingPaths.has(expandedDirectory);

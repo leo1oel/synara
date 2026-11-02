@@ -1,4 +1,3 @@
-import { i18n } from "~/i18n";
 import {
   PROVIDER_DISPLAY_NAMES,
   THREAD_GOAL_MAX_CHARS,
@@ -942,40 +941,40 @@ export function useComposerSlashCommands(input: {
       const doneTitle =
         action.serverName === null
           ? action.action === "reconnect"
-            ? i18n._("Reconnected {count} MCP servers", { count })
+            ? t("lattice:reconnectedMCPServers", { count })
             : action.action === "enable"
-              ? i18n._("Enabled {count} MCP servers", { count })
-              : i18n._("Disabled {count} MCP servers", { count })
+              ? t("lattice:enabledMCPServers", { count })
+              : t("lattice:disabledMCPServers", { count })
           : action.action === "reconnect"
-            ? i18n._("Reconnected {server}", { server })
+            ? t("lattice:reconnected", { server })
             : action.action === "enable"
-              ? i18n._("Enabled {server}", { server })
-              : i18n._("Disabled {server}", { server });
+              ? t("lattice:enabled", { server })
+              : t("lattice:disabled", { server });
       if (failure !== null) {
         toastManager.add({
           type: "error",
           title:
             action.serverName === null
-              ? i18n._("Could not update every MCP server")
-              : i18n._("Could not update {server}", { server }),
+              ? t("lattice:couldNotUpdateEveryMCPServer")
+              : t("settings:couldNotUpdate", { value0: server }),
           description:
             failure instanceof Error
               ? failure.message
-              : i18n._("The agent did not accept the request."),
+              : t("lattice:theAgentDidNotAcceptTheRequest"),
         });
         return;
       }
       if (count === 0) {
         toastManager.add({
           type: "info",
-          title: i18n._("No MCP server to change"),
-          description: i18n._("Send /mcp to see this agent's servers."),
+          title: t("lattice:noMCPServerToChange"),
+          description: t("lattice:sendMcpToSeeThisAgentS"),
         });
         return;
       }
       toastManager.add({ type: "success", title: doneTitle });
     },
-    [providerCommandDiscoveryCwd, selectedProvider, selectedProviderInstanceId, threadId],
+    [providerCommandDiscoveryCwd, selectedProvider, selectedProviderInstanceId, t, threadId],
   );
 
   const handleStandaloneSlashCommand = useCallback(
@@ -1035,11 +1034,8 @@ export function useComposerSlashCommands(input: {
           // Keep the draft so the action can be corrected in place.
           toastManager.add({
             type: "warning",
-            title: i18n._("Unknown /mcp action"),
-            description: i18n._(
-              "“{action}” is not an /mcp action. Send /mcp to see your servers, or use /mcp reconnect, /mcp enable, or /mcp disable with a server name.",
-              { action: mcpAction.action },
-            ),
+            title: t("lattice:unknownMcpAction"),
+            description: t("lattice:isNotAnMcpActionSendMcp", { action: mcpAction.action }),
           });
           return true;
         }

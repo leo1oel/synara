@@ -5,7 +5,7 @@
 // Exports: entry type, the index, section label lookup, and the ranking helper
 
 import { rankProviderDiscoveryItems } from "~/lib/providerDiscovery";
-import { i18n } from "./i18n";
+import { i18n, t } from "./i18n";
 import { isSynaraEmbedMode } from "./embedMode";
 import {
   isSettingsSectionAvailable,
@@ -554,40 +554,39 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
 
   // ── Models (owned by Agent providers) ─────────────────────────────────────────
   {
+    target: null,
     id: "models:compile-repair-model",
     section: "providers",
-    title: "Compile repair model",
-    keywords: "Lattice LaTeX diagnostic fix independent background task provider model",
+    title: "lattice:compileRepairModel",
+    keywords: "lattice:compileRepairModelKeywords",
   },
   {
+    target: null,
     id: "models:proofreading-model",
     section: "providers",
-    title: "Proofreading model",
-    keywords:
-      "Lattice proofread grammar spelling selection provider model inherit Git writing model",
+    title: "lattice:proofreadingModel",
+    keywords: "lattice:proofreadingModelKeywords",
   },
   {
     target: "setting-source-control-writing-style",
     id: "models:source-control-writing-style",
     section: "providers",
-    title: "Source control writing style",
-    keywords:
-      "Repository conventions Conventional Commits custom instructions commit messages PR titles descriptions",
+    title: "settings:sourceControlWritingStyle",
+    keywords: "settings:repositoryConventionsConventionalCommitsCustomInstructionsCommitMessagesPR",
   },
   {
     target: "setting-git-writing-model",
     id: "models:git-writing-model",
     section: "providers",
-    title: "Git writing model",
-    keywords:
-      "Used for generated commit messages, PR titles, and branch names. Lattice proofreading follows it unless a proofreading model is chosen.",
+    title: "settings:changed_gitWritingModel",
+    keywords: "lattice:usedForGeneratedCommitMessagesPRTitles",
   },
   {
     target: "setting-saved-model-slugs",
     id: "models:saved-model-slugs",
     section: "providers",
-    title: "Saved model slugs",
-    keywords: "Add custom model slugs for supported providers. custom model",
+    title: "settings:models_savedModelSlugs",
+    keywords: "settings:addCustomModelSlugsForSupportedProvidersCustomModel",
   },
 
   // ── Providers ─────────────────────────────────────────────────────────────────
@@ -609,8 +608,8 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     target: "setting-claude-user-mcp-servers",
     id: "providers:claude-user-mcp-servers",
     section: "providers",
-    title: "lattice:loadMyMcpServersInClaude",
-    keywords: "lattice:loadMyMcpServersInClaudeKeywords",
+    title: "lattice:loadMyMCPServersInClaude",
+    keywords: "lattice:loadMyMCPServersInClaudeKeywords",
     applies: () => isSynaraEmbedMode(),
   },
   {

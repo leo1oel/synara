@@ -33,7 +33,7 @@ describe("locale-aware presentation", () => {
       resolveIssueStatePresentation({ state: "closed", stateReason: "completed" }).shortLabel,
     ).toBe("Closed");
     expect(renderToStaticMarkup(<PullRequestStateGlyph state="open" isDraft={true} />)).toContain(
-      'aria-label="拉取请求草稿"',
+      'aria-label="PR 草稿"',
     );
     expect(
       renderToStaticMarkup(<IssueStateGlyph state="closed" stateReason="completed" />),

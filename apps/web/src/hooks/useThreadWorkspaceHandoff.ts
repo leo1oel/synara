@@ -1,4 +1,3 @@
-import { i18n } from "~/i18n";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   resolveWorktreeHandoffIntent,

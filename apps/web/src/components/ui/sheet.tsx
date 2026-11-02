@@ -1,6 +1,5 @@
 "use client";
 
-import { i18n } from "~/i18n";
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
 import { XIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";

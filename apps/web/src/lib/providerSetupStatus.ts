@@ -1,4 +1,4 @@
-import { i18n } from "~/i18n";
+import { t } from "~/i18n";
 import { localizeProviderUsageNotice } from "~/lib/providerUsageDisplay";
 import type { ServerProviderStatus, ServerProviderUsageSnapshot } from "@synara/contracts";
 
@@ -52,11 +52,11 @@ export function providerAccountStatusSummary(
   }
   const status = input.status;
   if (!status) {
-    return { tone: "idle", headline: i18n._("Checking account status"), detail: null };
+    return { tone: "idle", headline: t("settings:accountCheckingStatus"), detail: null };
   }
   // The provider row above offers the install of a runtime the host left out.
   if (status.runtimeInstall) {
-    return { tone: "error", headline: i18n._("Not installed"), detail: null };
+    return { tone: "error", headline: t("onboarding:notInstalled"), detail: null };
   }
   const detail = status.message?.trim() || null;
   if (!status.available) {
@@ -77,10 +77,10 @@ export function providerAccountStatusSummary(
     if (claude && usage && (usage.status === "needs-auth" || usage.status === "error")) {
       return {
         tone: "warning",
-        headline: i18n._("Usage needs attention"),
+        headline: t("settings:accountUsageNeedsAttention"),
         detail: usage.detail
-          ? localizeProviderUsageNotice(i18n, usage.detail)
-          : i18n._("Claude usage could not be verified. The CLI reports a local sign-in."),
+          ? localizeProviderUsageNotice(t, usage.detail)
+          : t("settings:accountClaudeUsageUnverified"),
       };
     }
     const authLabel = status.authLabel?.trim() || status.authType?.trim();
@@ -89,9 +89,7 @@ export function providerAccountStatusSummary(
       : translate("settings:accountAuthenticated");
     return {
       tone: "ready",
-      headline: authLabel
-        ? i18n._("{headline} · {account}", { headline, account: authLabel })
-        : headline,
+      headline: authLabel ? t("common:symbol9", { value0: headline, value1: authLabel }) : headline,
       detail,
     };
   }

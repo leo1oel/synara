@@ -41,8 +41,8 @@ export function ComposerExpiredUserInputNotice({
     <ComposerActionNotice
       message={t("chat:theseQuestionsHaveExpiredRestoreYourAnswersToReview")}
       actions={[
-        { label: i18n._("Restore answers"), onClick: restore },
-        { label: i18n._("Dismiss"), onClick: dismiss },
+        { label: "Restore answers", onClick: restore },
+        { label: "Dismiss", onClick: dismiss },
       ]}
     />
   );

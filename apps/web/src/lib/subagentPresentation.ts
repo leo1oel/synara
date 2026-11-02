@@ -2,7 +2,6 @@
 // Purpose: Normalizes subagent identity and status (labels, tones, dots) for sidebar/chat UI.
 // Exports: Shared presentation helpers consumed by sidebar rows, chat cards, and thread hydration.
 
-import { i18n } from "~/i18n";
 import {
   buildSubagentIdentityDirectory,
   extractSubagentIdentityHints as extractParsedSubagentIdentityHints,
@@ -71,6 +70,7 @@ type ParentSubagentIdentityIndex = {
   firstPromptByAgentId: ReadonlyMap<string, string>;
 };
 
+const DEFAULT_SUBAGENT_LABEL = "Subagent";
 const SUBAGENT_PROMPT_LABEL_MAX_LENGTH = 60;
 
 const subagentIdentityIndexByActivities = new WeakMap<
@@ -472,17 +472,17 @@ export function humanizeSubagentStatus(
 
   switch (normalized) {
     case "running":
-      return i18n._("Running");
+      return "Running";
     case "completed":
-      return i18n._("Completed");
+      return "Completed";
     case "failed":
-      return i18n._("Failed");
+      return "Failed";
     case "stopped":
-      return i18n._("Stopped");
+      return "Stopped";
     case "queued":
-      return i18n._("Queued");
+      return "Queued";
     case "idle":
-      return i18n._("Idle");
+      return "Idle";
   }
 }
 

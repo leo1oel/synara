@@ -3,7 +3,7 @@
 // Layer: Chat picker UI
 // Depends on: shared input styling plus caller-provided content slots.
 
-import { i18n } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 import { useEffect, useRef, type ReactNode } from "react";
 import { cn } from "~/lib/utils";
 import { SearchInput } from "../ui/search-input";
@@ -56,7 +56,7 @@ export function PickerPanelShell(props: {
     listMaxHeightClassName,
   } = props;
   const variant = variantProp ?? "default";
-  const searchPlaceholder = searchPlaceholderProp ?? i18n._("Search");
+  const searchPlaceholder = searchPlaceholderProp ?? t("workspace:primaryActions_search");
   const query = queryProp ?? "";
   const stopSearchKeyPropagation = stopSearchKeyPropagationProp ?? false;
   const autoFocusSearch = autoFocusSearchProp ?? false;

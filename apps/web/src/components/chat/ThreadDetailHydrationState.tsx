@@ -3,7 +3,6 @@
 // Layer: Chat presentation
 // Depends on: shared Spinner and Button primitives, DelayedLoaderFade.
 
-import { i18n } from "~/i18n";
 import { Button } from "~/components/ui/button";
 import { Spinner } from "~/components/ui/spinner";
 

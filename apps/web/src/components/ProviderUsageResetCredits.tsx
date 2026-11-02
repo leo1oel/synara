@@ -11,7 +11,6 @@ import type {
   ServerCodexResetCredits,
   ServerConsumeCodexResetCreditInput,
 } from "@synara/contracts";
-import type { I18n } from "@lingui/core";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 
@@ -31,32 +30,32 @@ import {
   prepareCodexResetAttempt,
   readCodexResetAttempt,
 } from "~/lib/codexResetAttempt";
-import { i18n } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 import { consumeCodexResetCredit, serverQueryKeys } from "~/lib/serverReactQuery";
 
-function formatExpiry(i18n: I18n, expiresAt: string | undefined, now: number): string {
-  if (!expiresAt) return i18n._("No expiry date");
+function formatExpiry(translate: typeof t, expiresAt: string | undefined, now: number): string {
+  if (!expiresAt) return translate("lattice:noExpiryDate");
   const ms = Date.parse(expiresAt) - now;
-  if (!Number.isFinite(ms) || ms <= 0) return i18n._("Expired");
+  if (!Number.isFinite(ms) || ms <= 0) return translate("common:expired");
   const mins = Math.floor(ms / 60_000);
-  if (mins < 60) return i18n._("Expires in {count}m", { count: mins });
+  if (mins < 60) return translate("lattice:expiresInM", { count: mins });
   const hours = Math.floor(mins / 60);
   if (hours < 48) {
-    return i18n._("Expires in {hours}h {minutes}m", { hours, minutes: mins % 60 });
+    return translate("lattice:expiresInHM", { hours, minutes: mins % 60 });
   }
-  return i18n._("Expires in {days}d {hours}h", { days: Math.floor(hours / 24), hours: hours % 24 });
+  return translate("lattice:expiresInDH", { days: Math.floor(hours / 24), hours: hours % 24 });
 }
 
-function outcomeMessage(i18n: I18n, outcome: CodexResetCreditOutcome): string {
+function outcomeMessage(translate: typeof t, outcome: CodexResetCreditOutcome): string {
   switch (outcome) {
     case "reset":
-      return i18n._("Codex usage limits were reset.");
+      return translate("lattice:codexUsageLimitsWereReset");
     case "nothingToReset":
-      return i18n._("Codex usage limits don't need a reset right now. No reset was used.");
+      return translate("lattice:codexUsageLimitsDonTNeedA");
     case "noCredit":
-      return i18n._("No saved resets left.");
+      return translate("lattice:noSavedResetsLeft");
     case "alreadyRedeemed":
-      return i18n._("That reset was already used.");
+      return translate("lattice:thatResetWasAlreadyUsed");
   }
 }
 
@@ -64,23 +63,23 @@ function outcomeMessage(i18n: I18n, outcome: CodexResetCreditOutcome): string {
 function localizeResetError(message: string): string {
   switch (message) {
     case "Codex rejected the reset-credit request.":
-      return i18n._("Codex rejected the reset request.");
+      return t("lattice:codexRejectedTheResetRequest");
     case "Codex reset-credit request timed out. Retry the same attempt.":
-      return i18n._("Codex didn't answer in time. Retry to check the same attempt.");
+      return t("lattice:codexDidnTAnswerInTimeRetry");
     case "Codex app-server exited during the reset-credit request.":
-      return i18n._("Codex stopped during the reset request. Retry to check the same attempt.");
+      return t("lattice:codexStoppedDuringTheResetRequestRetry");
     case "The Codex account changed. Refresh usage before using a reset.":
-      return i18n._("The Codex account changed. Refresh usage before using a reset.");
+      return t("lattice:theCodexAccountChangedRefreshUsageBefore");
     case "Current Codex usage is unavailable. Retry the same attempt when it returns.":
-      return i18n._("Current Codex usage can't be read. Retry the same attempt later.");
+      return t("lattice:currentCodexUsageCanTBeRead");
     case "Codex returned an unknown reset result. Retry the same attempt.":
-      return i18n._("Codex returned an unexpected result. Retry to check the same attempt.");
+      return t("lattice:codexReturnedAnUnexpectedResultRetryTo");
     case "A reset is already in progress for this Codex account.":
-      return i18n._("A reset is already in progress for this Codex account.");
+      return t("lattice:aResetIsAlreadyInProgressFor");
     case "Retry the previous reset before choosing another one.":
-      return i18n._("Retry the previous reset before choosing another one.");
+      return t("lattice:retryThePreviousResetBeforeChoosingAnother");
     case "The previous Codex reset attempt could not be read. No new reset was requested.":
-      return i18n._("The previous reset attempt couldn't be read. No new reset was requested.");
+      return t("lattice:thePreviousResetAttemptCouldnTBe");
     default:
       return message;
   }
@@ -129,7 +128,7 @@ export function ProviderUsageResetCredits({
       toastManager.add({
         type:
           result.outcome === "reset" || result.outcome === "alreadyRedeemed" ? "success" : "info",
-        title: outcomeMessage(i18n, result.outcome),
+        title: outcomeMessage(t, result.outcome),
       });
     },
   });
@@ -142,11 +141,11 @@ export function ProviderUsageResetCredits({
     } catch (error) {
       toastManager.add({
         type: "error",
-        title: i18n._("Couldn't confirm whether the reset was used"),
+        title: t("lattice:couldnTConfirmWhetherTheResetWas"),
         description:
           error instanceof Error
             ? localizeResetError(error.message)
-            : i18n._("Choose Retry reset to check the same attempt again."),
+            : t("lattice:chooseRetryResetToCheckTheSame"),
       });
     } finally {
       void queryClient.invalidateQueries({ queryKey: serverQueryKeys.allProviderUsage() });
@@ -182,17 +181,17 @@ export function ProviderUsageResetCredits({
       className={`space-y-0.5 border-t border-[color:var(--color-border)] ${compact ? "pt-2" : "pt-3"}`}
     >
       <div className={rowClass}>
-        <span className="font-medium text-foreground">{i18n._("Saved resets")}</span>
+        <span className="font-medium text-foreground">{t("lattice:savedResets")}</span>
         <span className="text-right tabular-nums text-muted-foreground">
-          {i18n._("{count} left", { count: availableCount })}
+          {t("common:left2", { duration: availableCount })}
         </span>
       </div>
       <p className={subtitleClass}>
         {pendingAttempt
-          ? i18n._("A previous reset wasn't confirmed. Retry checks the same attempt.")
+          ? t("lattice:aPreviousResetWasnTConfirmedRetry")
           : canUse === true
-            ? i18n._("Your 5-hour or weekly limit is nearly used up, so a reset can be used now.")
-            : i18n._("Can be used once your 5-hour or weekly limit has 10% or less left.")}
+            ? t("lattice:your5HourOrWeeklyLimitIs")
+            : t("lattice:canBeUsedOnceYour5Hour")}
       </p>
       {rows.length > 0 ? (
         <div className="mt-1.5 space-y-1.5">
@@ -227,7 +226,7 @@ export function ProviderUsageResetCredits({
                 </div>
                 {credit ? (
                   <div className={`${subtitleClass} tabular-nums`} title={credit.expiresAt}>
-                    {formatExpiry(i18n, credit.expiresAt, now)}
+                    {formatExpiry(t, credit.expiresAt, now)}
                   </div>
                 ) : null}
               </div>
@@ -250,17 +249,12 @@ export function ProviderUsageResetCredits({
             <>
               <AlertDialogHeader>
                 <AlertDialogTitle>
-                  {shown.isRetry ? i18n._("Check the previous reset?") : i18n._("Use 1 reset now?")}
+                  {shown.isRetry ? t("lattice:checkThePreviousReset") : t("lattice:use1ResetNow")}
                 </AlertDialogTitle>
                 <AlertDialogDescription>
                   {shown.isRetry
-                    ? i18n._(
-                        "This asks Codex again whether your previous reset went through. If it didn't, that same reset is used now. A used reset can't be undone or given back.",
-                      )
-                    : i18n._(
-                        "This uses 1 of your {count} saved resets to restore your Codex usage limits right away. A used reset can't be undone or given back.",
-                        { count: availableCount },
-                      )}
+                    ? t("lattice:thisAsksCodexAgainWhetherYourPrevious")
+                    : t("lattice:thisUses1OfYourSavedResets", { count: availableCount })}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -269,7 +263,7 @@ export function ProviderUsageResetCredits({
                   ref={initialFocusRef}
                   render={<Button variant="outline" size="sm" />}
                 >
-                  {i18n._("Cancel")}
+                  {t("common:form_cancel")}
                 </AlertDialogClose>
                 <Button
                   size="sm"
@@ -278,7 +272,7 @@ export function ProviderUsageResetCredits({
                     void consume(shown.creditId);
                   }}
                 >
-                  {shown.isRetry ? i18n._("Retry reset") : i18n._("Use reset")}
+                  {shown.isRetry ? t("common:retryReset") : t("common:useReset")}
                 </Button>
               </AlertDialogFooter>
             </>
@@ -287,22 +281,18 @@ export function ProviderUsageResetCredits({
               <AlertDialogHeader>
                 <AlertDialogTitle>
                   {shown.kind === "notYet"
-                    ? i18n._("You can't use a reset yet")
-                    : i18n._("Current usage isn't available")}
+                    ? t("lattice:youCanTUseAResetYet")
+                    : t("lattice:currentUsageIsnTAvailable")}
                 </AlertDialogTitle>
                 <AlertDialogDescription>
                   {shown.kind === "notYet"
-                    ? i18n._(
-                        "A reset can only be used once your 5-hour or weekly limit has 10% or less left. You still have more than that, so nothing was used.",
-                      )
-                    : i18n._(
-                        "Your current Codex usage couldn't be read, so there's no way to tell whether a reset would help. Nothing was used. Try again in a moment.",
-                      )}
+                    ? t("lattice:aResetCanOnlyBeUsedOnce")
+                    : t("lattice:yourCurrentCodexUsageCouldnTBe")}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogClose ref={initialFocusRef} render={<Button size="sm" />}>
-                  {i18n._("Got it")}
+                  {t("common:whatsNew_gotIt")}
                 </AlertDialogClose>
               </AlertDialogFooter>
             </>

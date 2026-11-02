@@ -22,7 +22,6 @@ import {
 } from "~/components/pullRequest/githubItemAgentContext";
 import { focusPullRequestRow } from "~/components/pullRequest/pullRequestFocus";
 import { toastManager } from "~/components/ui/toast";
-import { i18n } from "~/i18n";
 import {
   resolvePreferredComposerModelSelection,
   useComposerDraftStore,
@@ -205,7 +204,7 @@ export function useGitHubInboxSidechat(selection: GitHubInboxSelection | null) {
     if (creatingKeys.current.has(key)) return Promise.resolve();
     const api = readNativeApi();
     if (!api) {
-      toastManager.add({ type: "error", title: i18n._("Could not start a side chat") });
+      toastManager.add({ type: "error", title: "Could not start a side chat" });
       return Promise.resolve();
     }
     creatingKeys.current.add(key);
@@ -251,19 +250,19 @@ export function useGitHubInboxSidechat(selection: GitHubInboxSelection | null) {
         if (result.snapshotError) {
           toastManager.add({
             type: "warning",
-            title: i18n._("Side chat is still syncing"),
-            description: i18n._("It will appear as soon as the thread list refreshes."),
+            title: "Side chat is still syncing",
+            description: "It will appear as soon as the thread list refreshes.",
           });
         }
       })
       .catch((error: unknown) => {
         toastManager.add({
           type: "error",
-          title: i18n._("Could not start a side chat"),
+          title: "Could not start a side chat",
           description:
             error instanceof Error
               ? error.message
-              : i18n._("An error occurred while creating the side chat."),
+              : "An error occurred while creating the side chat.",
         });
       })
       .finally(() => {
@@ -341,9 +340,8 @@ export function useGitHubInboxSidechat(selection: GitHubInboxSelection | null) {
       (error: unknown) => {
         toastManager.add({
           type: "error",
-          title: i18n._("Could not start a side chat"),
-          description:
-            error instanceof Error ? error.message : i18n._("The item could not be loaded."),
+          title: "Could not start a side chat",
+          description: error instanceof Error ? error.message : "The item could not be loaded.",
         });
       },
     );

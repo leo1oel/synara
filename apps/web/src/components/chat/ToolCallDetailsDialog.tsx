@@ -4,7 +4,6 @@
 // Exports: ToolCallDetailsContent
 // Depends on: WorkLogEntry.toolDetails
 
-import { i18n } from "~/i18n";
 import type { ReactNode } from "react";
 import { createMarkdownCodeFence, formatShellTranscript } from "~/lib/toolCallDetailsFormatting";
 import { cn } from "~/lib/utils";
@@ -220,7 +219,7 @@ function ToolOutputMetadata({ output }: { output: WorkLogToolOutputDetails }) {
     <div className="flex flex-wrap items-center gap-2 text-ui-sm text-muted-foreground/68">
       {output.exitCode !== undefined ? (
         <span className="rounded-full border border-border/45 px-2 py-0.5">
-          {i18n._("Exit code {code}", { code: output.exitCode })}
+          {t("chat:exitCode")} {output.exitCode}
         </span>
       ) : null}
       {output.truncated ? (

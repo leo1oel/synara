@@ -1,7 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
-import { I18nProvider } from "@lingui/react";
 
 import "@fontsource-variable/jetbrains-mono";
 import "@fontsource-variable/inter";
@@ -29,15 +28,13 @@ import { installGlassOverlayCutout } from "./lib/glassOverlayCutout";
 import { installRendererErrorDiagnostics } from "./lib/rendererErrorDiagnostics";
 import { initializeI18n } from "./i18n";
 
+// The embed handshake carries Lattice's language, so it is read before i18n starts.
+initializeEmbedMode();
 const disposeI18n = initializeI18n();
 if (import.meta.hot) import.meta.hot.dispose(disposeI18n);
 
 const disposeRendererDiagnostics = installRendererErrorDiagnostics();
 if (import.meta.hot) import.meta.hot.dispose(() => disposeRendererDiagnostics?.());
-import { activateInitialLocale, i18n } from "./i18n";
-
-initializeEmbedMode();
-await activateInitialLocale();
 startLatticeAgentQualityRelay();
 startLatticeHostToolRelay({
   bibliography: answerLatticeBibliographyRequest,
@@ -73,8 +70,6 @@ if (isElectron) {
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <I18nProvider i18n={i18n}>
-      <RouterProvider router={router} />
-    </I18nProvider>
+    <RouterProvider router={router} />
   </React.StrictMode>,
 );

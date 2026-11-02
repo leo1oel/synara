@@ -3,8 +3,6 @@
 // Layer: Browser UI test
 
 import "../../index.css";
-
-import { I18nProvider } from "@lingui/react";
 import type {
   GitBranchPullRequest,
   GitReadWorkingTreeDiffResult,
@@ -17,12 +15,12 @@ import { afterEach, describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 
-import { i18n } from "../../i18n";
+import { t, setLanguagePreference } from "../../i18n";
 import { GitPanel } from "./GitPanel";
 import { useAppTypography } from "../../hooks/useAppTypography";
 
 const TEST_CWD = "/tmp/research-writer";
-i18n.loadAndActivate({ locale: "en", messages: {} });
+setLanguagePreference("en");
 
 function buildLongPatch(lineCount = 80): string {
   return [
@@ -224,19 +222,19 @@ function renderWithQueryClient(element: ReactNode) {
     },
   });
   return render(
-    <I18nProvider i18n={i18n}>
+    <>
       <QueryClientProvider client={queryClient}>
         <Typography />
         <div className="h-[420px] w-[360px] bg-background text-foreground">{element}</div>
       </QueryClientProvider>
-    </I18nProvider>,
+    </>,
   );
 }
 
 describe("GitPanel", () => {
   afterEach(() => {
     delete window.nativeApi;
-    i18n.loadAndActivate({ locale: "en", messages: {} });
+    setLanguagePreference("en");
   });
 
   it("keeps a long selected-file diff on one wheel-scrollable viewport with fixed scrollbars", async () => {
@@ -345,8 +343,7 @@ describe("GitPanel", () => {
         hasWorkingTreeChanges,
       });
       if (locale === "zh-CN") {
-        const { messages } = await import("../../locales/zh-CN/messages.po");
-        i18n.loadAndActivate({ locale, messages });
+        setLanguagePreference("zh-CN");
       }
       await page.viewport(480, 720);
       await renderWithQueryClient(
@@ -363,14 +360,10 @@ describe("GitPanel", () => {
       const openConfirmation = () =>
         (hasWorkingTreeChanges
           ? page.getByRole("button", {
-              name: new RegExp(
-                `^${i18n._("{count, plural, one {Commit & push # file} other {Commit & push # files}}", { count: 1 })}`,
-              ),
+              name: new RegExp(`^${t("lattice:commitPushFiles", { count: 1 })}`),
             })
           : page.getByRole("button", {
-              name: i18n._("{count, plural, one {Push # commit} other {Push # commits}}", {
-                count: 1,
-              }),
+              name: t("lattice:pushCommits", { count: 1 }),
               exact: true,
             })
         ).click();
@@ -385,7 +378,7 @@ describe("GitPanel", () => {
       expect(popup.getBoundingClientRect().height).toBeLessThan(260);
       await new Promise((resolve) => window.setTimeout(resolve, 250));
       await page.screenshot();
-      await page.getByRole("button", { name: i18n._("Close"), exact: true }).click();
+      await page.getByRole("button", { name: t("common:app_close"), exact: true }).click();
       await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
 
       await openConfirmation();
@@ -393,7 +386,7 @@ describe("GitPanel", () => {
       await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
 
       await openConfirmation();
-      await page.getByRole("button", { name: i18n._("Abort"), exact: true }).click();
+      await page.getByRole("button", { name: t("git:abort"), exact: true }).click();
       await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
       expect(actionCalls).toEqual([]);
       await page.viewport(1280, 720);

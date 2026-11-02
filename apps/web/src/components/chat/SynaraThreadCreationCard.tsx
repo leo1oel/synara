@@ -2,7 +2,7 @@
 // Purpose: End-of-turn recap for threads created through the Synara MCP harness.
 // Layer: Chat transcript UI
 
-import { i18n } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 import { PROVIDER_DISPLAY_NAMES } from "@synara/contracts";
 import { formatModelDisplayName } from "@synara/shared/model";
 import { memo } from "react";
@@ -13,11 +13,13 @@ import { isSynaraEmbedMode } from "../../embedMode";
 import { ProviderIcon } from "../ProviderIcon";
 import { SynaraLogo } from "../SynaraLogo";
 import { Button } from "../ui/button";
-import { useTranslation } from "~/i18n";
 
 function threadMeta(thread: WorkLogSynaraThreadCreation["threads"][number]): string {
   const model = formatModelDisplayName(thread.model) ?? thread.model;
-  const environment = thread.environment === "worktree" ? i18n._("Worktree") : i18n._("Local");
+  const environment =
+    thread.environment === "worktree"
+      ? t("common:worktreeMode_worktree")
+      : t("computer:worktreeMode_local");
   return `${PROVIDER_DISPLAY_NAMES[thread.provider]} · ${model} · ${environment}`;
 }
 
@@ -46,9 +48,9 @@ export const SynaraThreadCreationCard = memo(function SynaraThreadCreationCard({
       <div className="flex min-w-0 items-center gap-3 px-3 py-2.5">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[var(--color-background-elevated-secondary)] text-foreground">
           {latticeMode ? (
-            <GoTasklist className="size-5" aria-label={i18n._("Lattice tasks")} />
+            <GoTasklist className="size-5" aria-label={t("lattice:latticeTasks")} />
           ) : (
-            <SynaraLogo className="h-[22px] w-auto" aria-label={i18n._("Synara")} />
+            <SynaraLogo className="h-[22px] w-auto" aria-label={t("lattice:synara")} />
           )}
         </span>
         <div className="min-w-0 flex-1">
@@ -71,7 +73,7 @@ export const SynaraThreadCreationCard = memo(function SynaraThreadCreationCard({
             className="shrink-0"
             onClick={() => onOpenThread(singleThread.threadId)}
           >
-            Open {noun}
+            {t("lattice:openNoun", { noun })}
           </Button>
         ) : null}
       </div>

@@ -75,12 +75,12 @@ export function summarizeBackgroundTaskGroup(
 function backgroundTaskStatusCount(status: WorkLogBackgroundTask["status"], count: number): string {
   switch (status) {
     case "running":
-      return i18n._("{count} running", { count });
+      return t("chat:backgroundTasksRunning", { count });
     case "finished":
-      return i18n._("{count} finished", { count });
+      return t("common:finished2", { value0: count });
     case "failed":
-      return i18n._("{count} failed", { count });
+      return t("chat:failed", { value0: count });
     case "stopped":
-      return i18n._("{count} stopped", { count });
+      return t("common:stopped", { value0: count });
   }
 }

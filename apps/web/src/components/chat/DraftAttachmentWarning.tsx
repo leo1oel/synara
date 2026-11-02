@@ -1,23 +1,14 @@
-// FILE: DraftAttachmentWarning.tsx
-// Purpose: Single source of truth for the "this draft attachment may not survive a
-//   reload" warning shared by image and file attachment chips — the amber glyph, its
-//   accessible label, and the explanatory copy. Keeps the wording and affordance from
-//   drifting between the two surfaces.
-// Layer: Chat attachment presentation
-// Exports: DraftAttachmentWarningIcon, DRAFT_ATTACHMENT_WARNING_LABEL,
-//   DRAFT_ATTACHMENT_WARNING_DESCRIPTION
+import { t } from "~/i18n";
 
-import { msg } from "@lingui/core/macro";
-import { useLingui } from "@lingui/react";
 import { forwardRef, type ComponentPropsWithoutRef } from "react";
 
 import { CircleAlertIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 
 /** Accessible label on the warning glyph. */
-export const DRAFT_ATTACHMENT_WARNING_LABEL = msg`Draft attachment may not persist`;
+export const DRAFT_ATTACHMENT_WARNING_LABEL = "lattice:draftAttachmentMayNotPersist";
 /** Explanatory copy shown in the hover tooltip / detail row (render with `i18n._`). */
-export const DRAFT_ATTACHMENT_WARNING_DESCRIPTION = msg`Draft attachment is kept in memory and may be lost on navigation.`;
+export const DRAFT_ATTACHMENT_WARNING_DESCRIPTION = "lattice:draftAttachmentIsKeptInMemoryAnd";
 
 // `inline` sits in a card's detail row; `badge` floats over an image thumbnail
 // (opaque surface + shadow so it stays legible on any preview).
@@ -33,13 +24,12 @@ export const DraftAttachmentWarningIcon = forwardRef<
   DraftAttachmentWarningIconProps
 >(function DraftAttachmentWarningIcon({ variant: variantProp, className, ...rest }, ref) {
   const variant = variantProp ?? "inline";
-  const { i18n } = useLingui();
   return (
     <span
       ref={ref}
       {...rest}
       role="img"
-      aria-label={i18n._(DRAFT_ATTACHMENT_WARNING_LABEL)}
+      aria-label={t(DRAFT_ATTACHMENT_WARNING_LABEL)}
       className={cn(
         "inline-flex shrink-0 items-center justify-center rounded-full text-amber-600",
         variant === "badge" ? "size-5 bg-[var(--composer-surface)] shadow-sm" : "size-4",

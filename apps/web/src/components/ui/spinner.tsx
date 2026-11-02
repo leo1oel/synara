@@ -1,6 +1,5 @@
 import { useRef } from "react";
 
-import { i18n } from "~/i18n";
 import { useTimelineSynchronizedAnimations } from "~/lib/animationTimelineSync";
 import { Loader2Icon, LoaderIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";

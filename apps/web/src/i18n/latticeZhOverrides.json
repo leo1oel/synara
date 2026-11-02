@@ -1,0 +1,54 @@
+{
+  "automation": {
+    "approval_approve": "批准"
+  },
+  "chat": {
+    "agentTask": "AI 任务",
+    "sentByAgent": "由 AI 发送",
+    "subagent": "子助手",
+    "subagents": "子助手"
+  },
+  "common": {
+    "forkThisThreadIntoLocalOrANewWorktree": "把这个对话分叉到本地或新的工作树",
+    "plugin_skillsSection": "Skills",
+    "searchSkills": "搜索 Skills",
+    "worktreeHandoff_worktreeName": "工作树名称",
+    "worktreeMode_worktree": "工作树"
+  },
+  "git": {
+    "behindUpstreamPullRebaseFirst": "落后于上游。请先拉取或变基。",
+    "codeReviewListsPullRequestsAndIssuesFromThe": "代码审查会列出你的项目所在 GitHub 仓库中的 PR 和议题。",
+    "createAndSwitchToABranchFromTheCurrent": "从当前 HEAD 创建并切换到新分支。后续提交、推送和 PR 将使用该分支。",
+    "createPR": "创建 PR",
+    "createPRUnavailable": "无法创建 PR",
+    "detachedHEADCreateAndCheckoutABranchToEnable": "HEAD 处于分离状态：请创建并检出分支，以启用推送和 PR 操作。",
+    "mergePullRequest": "要合并 PR 吗？",
+    "openPRInBrowser": "在浏览器中打开 PR",
+    "pRDraft": "PR 草稿",
+    "pullRequestsAboveItWillRemainOpenAndGitHub": "它上面的 PR 会保持打开，GitHub 会把它们改为指向新的目标分支。",
+    "reviewRequestsOnlyApplyToOpenPullRequests": "审查请求只适用于打开的 PR",
+    "selectOpenToSeePullRequestsAwaitingYourReview": "选择“已打开”，查看等你审查的 PR。",
+    "sendToAgent": "交给 AI",
+    "sendToAgentIn": "在 {{value0}} 中交给 AI",
+    "stackPullRequestOf": "第 {{value0}} 组，第 {{value1}}/{{value2}} 个 PR",
+    "synaraPausesGitHubRequestsUntilTheLimitResets": "GitHub 请求已暂停，限额重置后恢复。",
+    "synaraPausesGitHubRequestsUntilTheLimitResetsAt": "GitHub 请求已暂停，将在 {{value0}} 限额重置后恢复。",
+    "viewPR": "查看 PR",
+    "viewStackPullRequestOf": "查看第 {{value0}} 组，第 {{value1}}/{{value2}} 个 PR"
+  },
+  "lattice": {
+    "worktree": "工作树"
+  },
+  "onboarding": {
+    "managedWorktrees": "托管工作树"
+  },
+  "settings": {
+    "agentProviders": "模型",
+    "conversation": "讨论",
+    "detail_never": "从未",
+    "enableTheSkill": "启用 {{value0}} Skill",
+    "giveAgentProcessesAndTheirCommandsAModeratelyLower": "电脑繁忙时，适当降低 AI 助手进程及其命令的 CPU 优先级。",
+    "nav_skillsEyebrow": "Skills",
+    "providers_piAgentDir": "Pi 助手文件夹"
+  }
+}

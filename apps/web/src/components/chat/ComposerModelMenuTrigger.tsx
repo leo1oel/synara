@@ -1,11 +1,3 @@
-// FILE: ComposerModelMenuTrigger.tsx
-// Purpose: The composer footer's "provider icon · model · effort" menu trigger, shared by
-//   every picker that opens from it so label degradation and the shortcut tooltip stay identical.
-// Layer: Chat composer presentation
-// Depends on: menu/tooltip primitives, provider icons, and composer picker text tokens.
-
-import { useLingui } from "@lingui/react";
-import { Trans } from "@lingui/react/macro";
 import type { ProviderKind } from "@synara/contracts";
 import { useState } from "react";
 
@@ -24,7 +16,7 @@ import {
   COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME,
 } from "./composerPickerStyles";
 import { getProviderIconClassName } from "./ProviderModelPicker";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 // Effort and context window ("High", "1M") share one muted tone after the model name.
 const TRIGGER_TRAIT_LABEL_CLASS_NAME = cn(

@@ -2,7 +2,6 @@
 // Purpose: Provider-agnostic labels and live timing for normalized transcript activity.
 // Layer: Web presentation helper
 
-import { i18n } from "~/i18n";
 import { useSyncExternalStore } from "react";
 import { t } from "~/i18n";
 

@@ -9,7 +9,6 @@ import type { InlineVisualBlock } from "@synara/contracts";
 import { useLayoutEffect, useRef, useState, type PointerEvent } from "react";
 
 import { cn } from "~/lib/utils";
-import { i18n } from "~/i18n";
 
 import { formatVisualNumber, niceAxisTicks } from "./inlineVisualBlocks.logic";
 import {

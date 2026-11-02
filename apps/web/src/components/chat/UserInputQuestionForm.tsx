@@ -1,4 +1,3 @@
-import { useLingui } from "@lingui/react";
 import type { UserInputQuestion } from "@synara/contracts";
 import { useEffect, useEffectEvent, useRef, type ReactNode } from "react";
 import {
@@ -121,7 +120,6 @@ export function UserInputQuestionForm({
     return null;
   }
 
-  const { i18n } = useLingui();
   const questionCount = questions.length;
   const showNavigation = questionCount > 1;
   const canGoBack = progress.questionIndex > 0;
@@ -148,10 +146,7 @@ export function UserInputQuestionForm({
               <ChevronLeftIcon className="size-3.5" />
             </button>
             <span className="px-0.5 text-ui-sm tabular-nums">
-              {i18n._("{current} of {total}", {
-                current: progress.questionIndex + 1,
-                total: questionCount,
-              })}
+              {progress.questionIndex + 1} {t("onboarding:of")} {questionCount}
             </span>
             <button
               type="button"

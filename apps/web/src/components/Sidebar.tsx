@@ -107,8 +107,6 @@ import {
   type ResolvedKeybindingsConfig,
   WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY,
 } from "@synara/contracts";
-import type { I18n } from "@lingui/core";
-import { useLingui } from "@lingui/react";
 import { isGenericChatThreadTitle } from "@synara/shared/chatThreads";
 import { parseGitHubRepositoryNameWithOwnerFromPullRequestUrl } from "@synara/shared/githubRepository";
 import { getDefaultModel } from "@synara/shared/model";
@@ -760,7 +758,7 @@ type ThreadMetaChip = {
  * Priority lowest -> highest: handoff -> fork -> worktree.
  */
 function resolveThreadRowMetaChips(input: {
-  i18n: I18n;
+  translate: typeof t;
   thread: Pick<
     Thread,
     "forkSourceThreadId" | "sidechatSourceThreadId" | "envMode" | "worktreePath" | "handoff"
@@ -3507,10 +3505,8 @@ export default function Sidebar() {
         [
           ...continueHandoffTargets.map((target) => ({
             id: `handoff-here:${target.instanceId}`,
-            label: i18n._("{provider} in this thread", { provider: target.label }),
-            standaloneLabel: i18n._("Hand off to {provider} in this thread", {
-              provider: target.label,
-            }),
+            label: t("workspace:inThisThread", { value0: target.label }),
+            standaloneLabel: t("lattice:handOffToInThisThread", { provider: target.label }),
             icon: THREAD_CONTEXT_MENU_ICONS.handoff,
           })),
           ...handoffTargets.map((target, index) => ({
@@ -3875,7 +3871,7 @@ export default function Sidebar() {
       forkThread,
       groupProjectIdSet,
       handoffThread,
-      i18n,
+      t,
       membersLoaded,
       moveThreadToGroup,
       handleMarkThreadUnread,
@@ -5503,7 +5499,7 @@ export default function Sidebar() {
     const isActive = visualActiveSidebarThreadId === thread.id;
     const projectLabel = resolvePinnedThreadProjectLabel(thread.projectId);
     const rightMetaChips = resolveThreadRowMetaChips({
-      i18n,
+      translate: t,
       thread,
       includeHandoffBadge: true,
       handoffShownInAvatar:
@@ -5647,7 +5643,7 @@ export default function Sidebar() {
       ? "text-foreground/54 dark:text-foreground/64"
       : "text-muted-foreground/34";
     const rightMetaChips = resolveThreadRowMetaChips({
-      i18n,
+      translate: t,
       thread,
       includeHandoffBadge: !isTemporaryThread,
       handoffShownInAvatar:

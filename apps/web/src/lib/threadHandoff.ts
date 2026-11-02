@@ -3,7 +3,7 @@
 // Layer: Web handoff utilities
 // Exports: target-provider, title, transcript, and model-selection helpers.
 
-import { t } from "~/i18n";
+import { t, i18n } from "~/i18n";
 import {
   EventId,
   MessageId,
@@ -17,7 +17,6 @@ import {
 } from "@synara/contracts";
 import { getDefaultModel } from "@synara/shared/model";
 import type { ProviderInstanceOption } from "../appSettings";
-import { i18n } from "../i18n";
 import { type Thread } from "../types";
 import {
   extractProviderHandoffInfo,

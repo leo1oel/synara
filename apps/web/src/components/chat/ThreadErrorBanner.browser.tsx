@@ -6,9 +6,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
 import { ThreadErrorBanner } from "./ThreadErrorBanner";
-import { i18n } from "~/i18n";
-
-i18n.loadAndActivate({ locale: "en", messages: {} });
 
 const LONG_ERROR = [
   "Provider request failed",

@@ -5,7 +5,6 @@
 // Layer: Chat changed-files UI
 // Exports: ReviewChangesButton
 
-import { i18n } from "~/i18n";
 import type { CSSProperties } from "react";
 
 import { cn } from "~/lib/utils";

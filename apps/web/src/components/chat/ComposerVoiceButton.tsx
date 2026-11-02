@@ -4,7 +4,6 @@ import { useTranslation } from "~/i18n";
 // Layer: Chat composer presentation
 // Depends on: shared button styling and caller-owned voice recording state callbacks.
 
-import { i18n } from "~/i18n";
 import { Loader2Icon, MicIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { Button } from "../ui/button";

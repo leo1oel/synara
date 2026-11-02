@@ -1,11 +1,3 @@
-// FILE: PullRequestsUnavailableState.tsx
-// Purpose: Actionable empty state for the pull requests surface when the GitHub CLI is missing,
-//          unauthenticated, rate-limited, or a request otherwise failed — each case gets a short
-//          explanation and a copyable terminal command or reset time instead of a dead end.
-// Layer: Pull request presentation
-// Exports: PullRequestsUnavailableState
-
-import { useLingui } from "@lingui/react";
 import { useEffect, useRef, useState } from "react";
 
 import { useAppSettings } from "~/appSettings";
@@ -26,7 +18,7 @@ import { cn } from "~/lib/utils";
 import { ensureNativeApi } from "~/nativeApi";
 import { formatShortTimestamp } from "~/timestampFormat";
 import { PR_FINE_TEXT_CLASS_NAME, PR_META_TEXT_CLASS_NAME } from "./pullRequestText";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 function githubCliInstallCommand(platform: string): string | null {
   if (/mac/i.test(platform)) return "brew install gh";
@@ -144,8 +136,8 @@ export function PullRequestsUnavailableState({
             : notAuthenticated
               ? t("git:signInToGitHubCLI")
               : rateLimited
-                ? i18n._("GitHub rate limit reached")
-                : i18n._("{subject} are unavailable", { subject })}
+                ? t("git:gitHubRateLimitReached")
+                : t("git:areUnavailable", { value0: subject })}
         </EmptyTitle>
         <EmptyDescription>
           {notInstalled
@@ -154,10 +146,8 @@ export function PullRequestsUnavailableState({
               ? t("git:authenticateTheGitHubCLIInATerminalThenRetry")
               : rateLimited
                 ? resetTime
-                  ? i18n._("Synara pauses GitHub requests until the limit resets at {time}.", {
-                      time: resetTime,
-                    })
-                  : i18n._("Synara pauses GitHub requests until the limit resets.")
+                  ? t("git:synaraPausesGitHubRequestsUntilTheLimitResetsAt", { value0: resetTime })
+                  : t("git:synaraPausesGitHubRequestsUntilTheLimitResets")
                 : error instanceof Error
                   ? error.message
                   : t("git:theRequestToGitHubFailed")}

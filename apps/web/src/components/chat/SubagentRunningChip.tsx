@@ -5,14 +5,13 @@
 // Layer: Chat transcript UI
 // Exports: SubagentRunningChip
 
-import { i18n } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 import { pluralize } from "~/i18n/pluralize";
 
 import { ArrowDownIcon, ArrowUpIcon } from "~/lib/icons";
 import { subagentStatusTextToneClassName } from "~/lib/subagentPresentation";
 import { cn } from "~/lib/utils";
 import { LiveStatusSpinner } from "../ui/spinner";
-import { useTranslation } from "~/i18n";
 
 export function SubagentRunningChip({
   runningCount,
@@ -38,8 +37,8 @@ export function SubagentRunningChip({
       tabIndex={visible ? 0 : -1}
       aria-label={
         runningCount === 1
-          ? i18n._("1 subagent running, show it")
-          : i18n._("{count} subagents running, show them", { count: runningCount })
+          ? t("lattice:n1SubagentRunningShowIt")
+          : t("lattice:subagentsRunningShowThem", { count: runningCount })
       }
       onClick={onClick}
       className={cn(
@@ -51,7 +50,9 @@ export function SubagentRunningChip({
       <LiveStatusSpinner
         className={cn("size-3 shrink-0", subagentStatusTextToneClassName("running"))}
       />
-      <span className="tabular-nums">{i18n._("{count} running", { count: runningCount })}</span>
+      <span className="tabular-nums">
+        {t("chat:backgroundTasksRunning", { count: runningCount })}
+      </span>
       <span aria-hidden="true" className="h-3 w-px bg-[var(--color-border)]" />
       <Arrow aria-hidden="true" className="size-3 shrink-0 text-muted-foreground" />
     </button>

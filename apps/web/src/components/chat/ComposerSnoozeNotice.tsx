@@ -4,7 +4,6 @@
 // Layer: Chat composer UI
 // Exports: ComposerSnoozeNotice
 
-import { i18n } from "~/i18n";
 import { useState } from "react";
 
 import { ClockIcon } from "~/lib/icons";

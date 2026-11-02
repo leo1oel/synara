@@ -8,7 +8,6 @@ import type { InlineVisualBlock } from "@synara/contracts";
 
 import { ArrowDownIcon, ArrowUpIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
-import { i18n } from "~/i18n";
 
 import {
   formatVisualNumber,
@@ -133,9 +132,7 @@ export function InlineVisualTable({
             onClick={() => setExpanded((value) => !value)}
             className="rounded text-chat-sm text-muted-foreground hover:text-foreground"
           >
-            {expanded
-              ? i18n._("Show fewer rows")
-              : i18n._("Show all {count} rows", { count: rows.length })}
+            {expanded ? t("chat:showFewerRows") : t("chat:showAllRows", { value0: rows.length })}
           </button>
         </div>
       ) : null}

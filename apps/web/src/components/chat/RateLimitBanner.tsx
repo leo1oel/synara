@@ -3,7 +3,6 @@
 // Layer: Chat status presentation
 // Exports: RateLimitBanner and rate-limit derivation helpers.
 
-import { i18n } from "~/i18n";
 import type { OrchestrationThreadActivity } from "@synara/contracts";
 import { Alert, AlertAction, AlertDescription } from "../ui/alert";
 import { IconButton } from "../ui/icon-button";

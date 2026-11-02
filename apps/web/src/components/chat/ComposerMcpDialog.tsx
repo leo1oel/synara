@@ -4,7 +4,7 @@
 // Layer: Chat composer UI
 // Exports: ComposerMcpDialog
 
-import { i18n } from "~/i18n";
+import { t } from "~/i18n";
 import type {
   ProviderInstanceId,
   ProviderKind,
@@ -56,58 +56,58 @@ const STATUS_TEXT_CLASS_NAME: Record<ProviderMcpServerStatus, string> = {
 function statusLabel(status: ProviderMcpServerStatus): string {
   switch (status) {
     case "connected":
-      return i18n._("Connected");
+      return t("chat:connected");
     case "needs-auth":
-      return i18n._("Needs sign-in");
+      return t("common:needsSignIn");
     case "pending":
-      return i18n._("Connecting…");
+      return t("computer:connecting");
     case "failed":
-      return i18n._("Failed");
+      return t("chat:runStatus_failed");
     case "disabled":
-      return i18n._("Disabled");
+      return t("chat:disabled");
   }
 }
 
 function actionLabel(action: ProviderMcpServerAction): string {
   switch (action) {
     case "authenticate":
-      return i18n._("Sign in");
+      return t("chat:providerModelPicker_signIn");
     case "reconnect":
-      return i18n._("Reconnect");
+      return t("settings:connectorReconnect");
     case "enable":
-      return i18n._("Enable");
+      return t("computer:enable");
     case "disable":
-      return i18n._("Disable");
+      return t("lattice:disable");
     case "sign-out":
-      return i18n._("Sign out");
+      return t("settings:signOut");
   }
 }
 
 function actionDoneMessage(action: ProviderMcpServerAction, server: string): string {
   switch (action) {
     case "reconnect":
-      return i18n._("Reconnected {server}", { server });
+      return t("lattice:reconnected", { server });
     case "enable":
-      return i18n._("Enabled {server}", { server });
+      return t("lattice:enabled", { server });
     case "disable":
-      return i18n._("Disabled {server}", { server });
+      return t("lattice:disabled", { server });
     case "authenticate":
-      return i18n._("Signed in to {server}", { server });
+      return t("lattice:signedInTo", { server });
     case "sign-out":
-      return i18n._("Signed out of {server}", { server });
+      return t("lattice:signedOutOf", { server });
   }
 }
 
 function scopeLabel(scope: string): string {
   switch (scope) {
     case "user":
-      return i18n._("User");
+      return t("lattice:user");
     case "project":
-      return i18n._("Project");
+      return t("chat:detail_project");
     case "local":
-      return i18n._("Local");
+      return t("computer:worktreeMode_local");
     case "plugin":
-      return i18n._("Plugin");
+      return t("lattice:plugin");
     default:
       return scope;
   }
@@ -120,8 +120,8 @@ function serverMeta(server: ProviderMcpServerDescriptor): string {
     server.scope ? scopeLabel(server.scope) : null,
     server.toolCount !== null
       ? server.toolCount === 1
-        ? i18n._("1 tool")
-        : i18n._("{count} tools", { count: server.toolCount })
+        ? t("lattice:n1Tool")
+        : t("lattice:tools", { count: server.toolCount })
       : null,
   ]
     .filter((part): part is string => Boolean(part))
@@ -130,8 +130,8 @@ function serverMeta(server: ProviderMcpServerDescriptor): string {
 
 function emptyStateHint(provider: ProviderKind): string {
   return provider === "codex"
-    ? i18n._("Add one in Terminal with codex mcp add, then reopen /mcp.")
-    : i18n._("Add one in Terminal with claude mcp add, then reopen /mcp.");
+    ? t("lattice:addOneInTerminalWithCodexMcp")
+    : t("lattice:addOneInTerminalWithClaudeMcp");
 }
 
 export function ComposerMcpDialog(props: {
@@ -175,7 +175,7 @@ export function ComposerMcpDialog(props: {
   const serversQuery = useQuery({
     queryKey: [...queryKeyBase, view.generation] as const,
     queryFn: () => {
-      if (!requestBase) throw new Error(i18n._("Open a project folder to see MCP servers."));
+      if (!requestBase) throw new Error(t("lattice:openAProjectFolderToSeeMCP"));
       const forceReload = !reloadedGenerations.current.has(view.generation);
       reloadedGenerations.current.add(view.generation);
       return ensureNativeApi().provider.listMcpServers({
@@ -198,8 +198,7 @@ export function ComposerMcpDialog(props: {
   const signInQuery = useQuery({
     queryKey: [...queryKeyBase, "sign-in", signIn?.authUrl ?? null] as const,
     queryFn: () => {
-      if (!requestBase || !signIn)
-        throw new Error(i18n._("Open a project folder to see MCP servers."));
+      if (!requestBase || !signIn) throw new Error(t("lattice:openAProjectFolderToSeeMCP"));
       return ensureNativeApi().provider.listMcpServers({
         ...requestBase,
         serverName: signIn.server,
@@ -269,13 +268,13 @@ export function ComposerMcpDialog(props: {
           after?.status === "connected"
             ? {
                 type: "info",
-                title: i18n._("{server} has no saved sign-in", { server: server.name }),
-                description: i18n._("It is still connected."),
+                title: t("lattice:hasNoSavedSignIn", { server: server.name }),
+                description: t("lattice:itIsStillConnected"),
               }
             : {
                 type: "success",
                 title: actionDoneMessage(action, server.name),
-                description: i18n._("Sign in again to connect an account."),
+                description: t("lattice:signInAgainToConnectAnAccount"),
               },
         );
       } else {
@@ -284,9 +283,9 @@ export function ComposerMcpDialog(props: {
     } catch (error) {
       toastManager.add({
         type: "error",
-        title: i18n._("Could not update {server}", { server: server.name }),
+        title: t("settings:couldNotUpdate", { value0: server.name }),
         description:
-          error instanceof Error ? error.message : i18n._("The agent did not accept the request."),
+          error instanceof Error ? error.message : t("lattice:theAgentDidNotAcceptTheRequest"),
       });
     } finally {
       setBusyServer(null);
@@ -296,23 +295,21 @@ export function ComposerMcpDialog(props: {
 
   const description =
     serversQuery.data?.source === "workspace"
-      ? i18n._(
-          "No agent session is running in this thread, so this is what a new session in this folder loads.",
-        )
-      : i18n._("The servers this thread's agent session has loaded.");
+      ? t("lattice:noAgentSessionIsRunningInThis")
+      : t("lattice:theServersThisThreadSAgentSession");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPopup className="max-w-xl">
         <DialogHeader className="pe-12">
           <div className="flex min-w-0 items-center gap-2">
-            <DialogTitle className="min-w-0 truncate">{i18n._("MCP servers")}</DialogTitle>
+            <DialogTitle className="min-w-0 truncate">{t("lattice:mCPServers2")}</DialogTitle>
             <Button
               type="button"
               size="icon-xs"
               variant="ghost"
               className="shrink-0"
-              aria-label={i18n._("Refresh")}
+              aria-label={t("chat:list_refreshAriaLabel")}
               disabled={serversQuery.isFetching || requestBase === null}
               onClick={() => setView({ open, generation: view.generation + 1 })}
             >
@@ -325,17 +322,17 @@ export function ComposerMcpDialog(props: {
           {serversQuery.isPending && requestBase !== null ? (
             <div className="flex items-center gap-2 py-6 text-ui text-muted-foreground">
               <Loader2Icon className="size-3.5 animate-spin" />
-              {i18n._("Asking the agent for its MCP servers…")}
+              {t("lattice:askingTheAgentForItsMCPServers")}
             </div>
           ) : serversQuery.isError && servers.length === 0 ? (
             <div className="space-y-2 rounded-lg border border-border/60 bg-card p-4">
               <p className="text-ui leading-snug text-foreground">
-                {i18n._("Could not read MCP servers")}
+                {t("lattice:couldNotReadMCPServers")}
               </p>
               <p className="text-ui-sm leading-snug break-words text-muted-foreground">
                 {serversQuery.error instanceof Error
                   ? serversQuery.error.message
-                  : i18n._("The agent did not answer.")}
+                  : t("lattice:theAgentDidNotAnswer")}
               </p>
               <Button
                 type="button"
@@ -343,13 +340,13 @@ export function ComposerMcpDialog(props: {
                 variant="outline"
                 onClick={() => void serversQuery.refetch()}
               >
-                {i18n._("Try again")}
+                {t("chat:profile_tryAgain")}
               </Button>
             </div>
           ) : servers.length === 0 ? (
             <div className="space-y-1 rounded-lg border border-border/60 bg-card p-4">
               <p className="text-ui leading-snug text-foreground">
-                {i18n._("No MCP servers are configured.")}
+                {t("lattice:noMCPServersAreConfigured")}
               </p>
               <p className="text-ui-sm leading-snug text-muted-foreground">
                 {emptyStateHint(provider)}
@@ -415,12 +412,10 @@ export function ComposerMcpDialog(props: {
                       provider === "codex" ? (
                         <div className="mt-1.5 space-y-1.5 rounded-md border border-border/60 bg-muted/40 p-2.5">
                           <p className="text-ui-sm leading-snug font-medium text-foreground">
-                            {i18n._("Sign out of {server} in Terminal", { server: server.name })}
+                            {t("lattice:signOutOfInTerminal", { server: server.name })}
                           </p>
                           <p className="text-ui-sm leading-snug text-muted-foreground">
-                            {i18n._(
-                              "Codex can't sign out of an MCP server from here. Run this command, then press Reconnect:",
-                            )}
+                            {t("lattice:codexCanTSignOutOfAn")}
                           </p>
                           <code className="block rounded bg-background px-2 py-1 font-mono text-ui-sm break-words text-foreground">
                             codex mcp logout {server.name}
@@ -432,7 +427,7 @@ export function ComposerMcpDialog(props: {
                               variant="outline"
                               onClick={() => setConfirmingSignOut(null)}
                             >
-                              {i18n._("Cancel")}
+                              {t("common:form_cancel")}
                             </Button>
                             <Button
                               type="button"
@@ -440,7 +435,7 @@ export function ComposerMcpDialog(props: {
                               variant="outline"
                               onClick={() => copyToClipboard(`codex mcp logout ${server.name}`)}
                             >
-                              {isCopied ? i18n._("Copied") : i18n._("Copy command")}
+                              {isCopied ? t("chat:theme_copied") : t("lattice:copyCommand")}
                             </Button>
                             <Button
                               type="button"
@@ -448,19 +443,17 @@ export function ComposerMcpDialog(props: {
                               disabled={busyServer !== null}
                               onClick={() => void runAction(server, "reconnect")}
                             >
-                              {i18n._("Reconnect")}
+                              {t("settings:connectorReconnect")}
                             </Button>
                           </div>
                         </div>
                       ) : (
                         <div className="mt-1.5 space-y-1.5 rounded-md border border-border/60 bg-muted/40 p-2.5">
                           <p className="text-ui-sm leading-snug font-medium text-foreground">
-                            {i18n._("Sign out of {server}?", { server: server.name })}
+                            {t("lattice:signOutOf", { server: server.name })}
                           </p>
                           <p className="text-ui-sm leading-snug text-muted-foreground">
-                            {i18n._(
-                              "This forgets the sign-in the agent saved for this server. The server stays set up; sign in again to connect it, with another account if you like.",
-                            )}
+                            {t("lattice:thisForgetsTheSignInTheAgent")}
                           </p>
                           <div className="flex flex-wrap justify-end gap-1.5">
                             <Button
@@ -469,7 +462,7 @@ export function ComposerMcpDialog(props: {
                               variant="outline"
                               onClick={() => setConfirmingSignOut(null)}
                             >
-                              {i18n._("Cancel")}
+                              {t("common:form_cancel")}
                             </Button>
                             <Button
                               type="button"
@@ -478,7 +471,7 @@ export function ComposerMcpDialog(props: {
                               disabled={busyServer !== null}
                               onClick={() => void runAction(server, "sign-out")}
                             >
-                              {i18n._("Sign out")}
+                              {t("settings:signOut")}
                             </Button>
                           </div>
                         </div>
@@ -487,7 +480,7 @@ export function ComposerMcpDialog(props: {
                     {waitingForBrowser && signIn ? (
                       <>
                         <p className="text-ui-sm leading-snug text-muted-foreground">
-                          {i18n._("Finish signing in in your browser. This updates on its own.")}{" "}
+                          {t("settings:connectorFinishSignIn")}{" "}
                           <Button
                             type="button"
                             size="chip"
@@ -495,13 +488,11 @@ export function ComposerMcpDialog(props: {
                             className="px-0 align-baseline"
                             onClick={() => openExternalLink(signIn.authUrl)}
                           >
-                            {i18n._("Open the sign-in page again")}
+                            {t("lattice:openTheSignInPageAgain")}
                           </Button>
                         </p>
                         <p className="text-ui-sm leading-snug text-muted-foreground">
-                          {i18n._(
-                            "It connects the account or workspace your browser is signed in to there; to use another, switch it in the browser first.",
-                          )}
+                          {t("lattice:itConnectsTheAccountOrWorkspaceYour")}
                         </p>
                       </>
                     ) : null}
@@ -513,7 +504,7 @@ export function ComposerMcpDialog(props: {
         </DialogPanel>
         <DialogFooter variant="bare">
           <Button type="button" size="sm" onClick={() => onOpenChange(false)}>
-            {i18n._("Close")}
+            {t("common:app_close")}
           </Button>
         </DialogFooter>
       </DialogPopup>

@@ -1,3 +1,4 @@
+import { t } from "~/i18n";
 // FILE: LatticeGitChanges.tsx
 // Purpose: Lattice's embedded Changes view (`/source-control`): the branch and its sync state on
 //          one line, the commit message composed in the panel, files staged by checkbox and read
@@ -8,7 +9,6 @@
 
 import { type GitChangedFile } from "@synara/contracts";
 import { useQuery } from "@tanstack/react-query";
-import { useLingui } from "@lingui/react";
 import {
   type KeyboardEvent,
   type ReactElement,
@@ -192,7 +192,6 @@ function LatticeBranchBar(props: {
   refreshing: boolean;
   onRefresh: () => void;
 }) {
-  const { i18n } = useLingui();
   return (
     <div className="lattice-git-branchbar" data-lattice-git-branchbar="">
       <div className="lattice-git-branch">
@@ -218,8 +217,8 @@ function LatticeBranchBar(props: {
           <button
             type="button"
             className="lattice-git-icon-button lattice-git-menu-button"
-            aria-label={i18n._("More Git actions")}
-            title={i18n._("More Git actions")}
+            aria-label={t("lattice:moreGitActions")}
+            title={t("lattice:moreGitActions")}
             disabled={props.actions.statusPending}
           />
         }
@@ -230,8 +229,8 @@ function LatticeBranchBar(props: {
         size="icon-xs"
         variant="ghost"
         className="lattice-git-icon-button"
-        label={i18n._("Refresh changes")}
-        tooltip={i18n._("Refresh changes")}
+        label={t("git:gitPanel_refreshLabel")}
+        tooltip={t("git:gitPanel_refreshLabel")}
         disabled={props.refreshing}
         aria-busy={props.refreshing || undefined}
         onClick={props.onRefresh}
@@ -244,14 +243,13 @@ function LatticeBranchBar(props: {
 
 /** "Push 2", "Pull 3", "Publish", or a quiet "Up to date": the one thing the branch needs next. */
 function LatticeSyncState({ actions }: { actions: LatticeGitActions }) {
-  const { i18n } = useLingui();
   const status = actions.status;
   if (!status || status.branch === null) return null;
   const remote = UPSTREAM_REMOTE;
   if (!status.hasUpstream) {
     if (!actions.hasOriginRemote) {
       return (
-        <span className="lattice-git-sync lattice-git-sync-quiet">{i18n._("Local only")}</span>
+        <span className="lattice-git-sync lattice-git-sync-quiet">{t("lattice:localOnly")}</span>
       );
     }
     return (
@@ -259,11 +257,11 @@ function LatticeSyncState({ actions }: { actions: LatticeGitActions }) {
         type="button"
         className="lattice-git-sync"
         disabled={actions.isBusy}
-        title={i18n._("Publish {branch} to {remote}", { branch: status.branch, remote })}
+        title={t("lattice:publishTo", { branch: status.branch, remote })}
         onClick={actions.push}
       >
         <ArrowUpIcon aria-hidden className="size-3.5" />
-        <span className="lattice-git-sync-label">{i18n._("Publish")}</span>
+        <span className="lattice-git-sync-label">{t("lattice:publish")}</span>
       </button>
     );
   }
@@ -271,9 +269,9 @@ function LatticeSyncState({ actions }: { actions: LatticeGitActions }) {
     return (
       <span
         className="lattice-git-sync lattice-git-sync-quiet lattice-git-sync-warning"
-        title={i18n._("Branch has diverged from upstream. Rebase/merge first.")}
+        title={t("lattice:branchHasDivergedFromUpstreamRebaseMerge")}
       >
-        {i18n._("Diverged")}
+        {t("lattice:diverged")}
       </span>
     );
   }
@@ -283,15 +281,12 @@ function LatticeSyncState({ actions }: { actions: LatticeGitActions }) {
         type="button"
         className="lattice-git-sync"
         disabled={actions.isBusy}
-        title={i18n._(
-          "{count, plural, one {Pull # commit from {remote}} other {Pull # commits from {remote}}}",
-          { count: status.behindCount, remote },
-        )}
+        title={t("lattice:pullCommitsFrom", { count: status.behindCount, remote })}
         onClick={actions.pull}
       >
         <ArrowDownIcon aria-hidden className="size-3.5" />
         <span className="lattice-git-sync-label">
-          {i18n._("Pull {count}", { count: status.behindCount })}
+          {t("lattice:pull", { count: status.behindCount })}
         </span>
       </button>
     );
@@ -302,15 +297,12 @@ function LatticeSyncState({ actions }: { actions: LatticeGitActions }) {
         type="button"
         className="lattice-git-sync"
         disabled={actions.isBusy}
-        title={i18n._(
-          "{count, plural, one {Push # commit to {remote}} other {Push # commits to {remote}}}",
-          { count: status.aheadCount, remote },
-        )}
+        title={t("lattice:pushCommitsTo", { count: status.aheadCount, remote })}
         onClick={actions.push}
       >
         <ArrowUpIcon aria-hidden className="size-3.5" />
         <span className="lattice-git-sync-label">
-          {i18n._("Push {count}", { count: status.aheadCount })}
+          {t("lattice:push2", { count: status.aheadCount })}
         </span>
         <span className="lattice-git-sync-sub">{remote}</span>
       </button>
@@ -319,10 +311,10 @@ function LatticeSyncState({ actions }: { actions: LatticeGitActions }) {
   return (
     <span
       className="lattice-git-sync lattice-git-sync-quiet lattice-git-sync-current"
-      title={i18n._("Up to date with {remote}", { remote })}
+      title={t("lattice:upToDateWith", { remote })}
     >
       <CheckIcon aria-hidden className="lattice-git-sync-check size-3.5" />
-      <span className="lattice-git-sync-label">{i18n._("Up to date")}</span>
+      <span className="lattice-git-sync-label">{t("lattice:upToDate")}</span>
     </span>
   );
 }
@@ -336,7 +328,6 @@ function LatticeCommitComposer(props: {
   stagedFiles: ReadonlyArray<GitChangedFile>;
   unstagedFiles: ReadonlyArray<GitChangedFile>;
 }) {
-  const { i18n } = useLingui();
   const { actions } = props;
   const descriptionId = useId();
   const [summary, setSummary] = useState("");
@@ -377,8 +368,8 @@ function LatticeCommitComposer(props: {
     } catch (error) {
       toastManager.add({
         type: "error",
-        title: i18n._("Could not write a commit message"),
-        description: error instanceof Error ? error.message : i18n._("An error occurred."),
+        title: t("lattice:couldNotWriteACommitMessage"),
+        description: error instanceof Error ? error.message : t("common:proposedPlan_unknownError"),
       });
     } finally {
       setWriting(false);
@@ -393,10 +384,8 @@ function LatticeCommitComposer(props: {
   };
 
   const label = push
-    ? i18n._("{count, plural, one {Commit & push # file} other {Commit & push # files}}", {
-        count: fileCount,
-      })
-    : i18n._("{count, plural, one {Commit # file} other {Commit # files}}", { count: fileCount });
+    ? t("lattice:commitPushFiles", { count: fileCount })
+    : t("lattice:commitFiles", { count: fileCount });
 
   return (
     <form
@@ -409,10 +398,10 @@ function LatticeCommitComposer(props: {
     >
       <div className="lattice-git-summary">
         <input
-          aria-label={i18n._("Commit message")}
+          aria-label={t("git:commitMessage")}
           aria-describedby={descriptionId}
           maxLength={300}
-          placeholder={i18n._("Message (leave empty to generate)")}
+          placeholder={t("git:messageLeaveEmptyToGenerate")}
           value={summary}
           onChange={(event) => setSummary(event.target.value)}
           onKeyDown={submitOnShortcut}
@@ -421,8 +410,8 @@ function LatticeCommitComposer(props: {
           size="icon-xs"
           variant="ghost"
           className="lattice-git-write"
-          label={i18n._("Write the message for me")}
-          tooltip={i18n._("Write the message for me")}
+          label={t("lattice:writeTheMessageForMe")}
+          tooltip={t("lattice:writeTheMessageForMe")}
           disabled={writing || fileCount === 0}
           aria-busy={writing || undefined}
           onClick={() => void writeMessage()}
@@ -436,10 +425,10 @@ function LatticeCommitComposer(props: {
       </div>
       <textarea
         id={descriptionId}
-        aria-label={i18n._("Description")}
+        aria-label={t("git:description")}
         maxLength={9_000}
         rows={2}
-        placeholder={i18n._("Description (optional)")}
+        placeholder={t("lattice:descriptionOptional")}
         value={description}
         onChange={(event) => setDescription(event.target.value)}
         onKeyDown={submitOnShortcut}
@@ -464,7 +453,7 @@ function LatticeCommitComposer(props: {
               <button
                 type="button"
                 className="lattice-git-button lattice-git-primary lattice-git-caret"
-                aria-label={i18n._("More ways to commit")}
+                aria-label={t("lattice:moreWaysToCommit")}
                 disabled={actions.statusPending}
               />
             }
@@ -481,7 +470,7 @@ function LatticeCommitComposer(props: {
                 writePushAfterCommit(checked === true);
               }}
             />
-            <span>{i18n._("Push after committing")}</span>
+            <span>{t("lattice:pushAfterCommitting")}</span>
           </label>
         ) : null}
       </div>
@@ -536,7 +525,6 @@ function LatticeFileSection(props: {
   mutating: boolean;
   onToggle: (paths: string[]) => void;
 }) {
-  const { i18n } = useLingui();
   const { scope } = props;
   const [openPath, setOpenPath] = useState<string | null>(null);
   // The patch can be a megabyte, so it is split once per read, not on every render.
@@ -548,7 +536,7 @@ function LatticeFileSection(props: {
   return (
     <section className="lattice-git-section" data-lattice-git-section={props.section}>
       <header className="lattice-git-section-head">
-        <h3>{staged ? i18n._("Staged") : i18n._("Not staged")}</h3>
+        <h3>{staged ? t("git:gitPanel_staged") : t("lattice:notStaged")}</h3>
         <span className="lattice-git-count">{scope.files.length}</span>
         <button
           type="button"
@@ -556,12 +544,12 @@ function LatticeFileSection(props: {
           disabled={props.mutating}
           onClick={() => props.onToggle(scope.files.flatMap(actionPathsOf))}
         >
-          {staged ? i18n._("Unstage all") : i18n._("Stage all")}
+          {staged ? t("lattice:unstageAll") : t("lattice:stageAll")}
         </button>
       </header>
       {scope.truncated ? (
         <p className="lattice-git-change-note" data-lattice-git-truncated="">
-          {i18n._("Too many changes to preview at once. Open a file to load its change.")}
+          {t("lattice:tooManyChangesToPreviewAtOnce")}
         </p>
       ) : null}
       <ul>
@@ -598,19 +586,18 @@ function LatticeFileRow(props: {
   onToggleOpen: () => void;
   onToggleStaged: () => void;
 }) {
-  const { i18n } = useLingui();
   const { file } = props;
   const staged = props.section === "staged";
   const { dir, name } = splitRepoRelativePath(file.path);
   const status = STATUS_LETTERS[file.status];
   const statusLabel =
     status === "A"
-      ? i18n._("Added")
+      ? t("common:added")
       : status === "D"
-        ? i18n._("Deleted")
+        ? t("lattice:deleted")
         : status === "R"
-          ? i18n._("Renamed")
-          : i18n._("Modified");
+          ? t("lattice:renamed")
+          : t("lattice:modified");
   return (
     <li className="lattice-git-file" data-open={props.open || undefined}>
       <div className="lattice-git-file-row">
@@ -619,8 +606,8 @@ function LatticeFileRow(props: {
           disabled={props.mutating}
           aria-label={
             staged
-              ? i18n._("Unstage {path}", { path: file.path })
-              : i18n._("Stage {path}", { path: file.path })
+              ? t("lattice:unstage", { path: file.path })
+              : t("lattice:stage", { path: file.path })
           }
           onCheckedChange={props.onToggleStaged}
         />
@@ -674,7 +661,6 @@ function LatticeLoadedFileChange(props: {
   path: string;
   theme: "light" | "dark";
 }) {
-  const { i18n } = useLingui();
   const query = useQuery(
     gitWorkingTreeDiffQueryOptions({ cwd: props.cwd, scope: props.section, filePath: props.path }),
   );
@@ -690,7 +676,7 @@ function LatticeLoadedFileChange(props: {
   }
   return (
     <p className="lattice-git-change-note">
-      {query.error instanceof Error ? query.error.message : i18n._("Loading changes...")}
+      {query.error instanceof Error ? query.error.message : t("git:gitPanel_loading")}
     </p>
   );
 }
@@ -703,9 +689,8 @@ function LatticeFileChange(props: {
   truncated: boolean;
   theme: "light" | "dark";
 }) {
-  const { i18n } = useLingui();
   const tooLarge = (
-    <p className="lattice-git-change-note">{i18n._("This change is too large to show here.")}</p>
+    <p className="lattice-git-change-note">{t("lattice:thisChangeIsTooLargeToShow")}</p>
   );
   if (isProsePath(props.path) && props.filePatch) {
     const { changes, truncated } = readProseChanges(props.filePatch);
@@ -713,7 +698,7 @@ function LatticeFileChange(props: {
       return props.truncated ? (
         tooLarge
       ) : (
-        <p className="lattice-git-change-note">{i18n._("Only spacing or line breaks changed.")}</p>
+        <p className="lattice-git-change-note">{t("lattice:onlySpacingOrLineBreaksChanged")}</p>
       );
     }
     return (
@@ -721,7 +706,7 @@ function LatticeFileChange(props: {
         <ProseChangeList changes={changes} />
         {truncated || props.truncated ? (
           <p className="lattice-git-change-note">
-            {i18n._("Showing the first {count} changed lines.", { count: changes.length })}
+            {t("lattice:showingTheFirstChangedLines", { count: changes.length })}
           </p>
         ) : null}
       </div>
@@ -742,21 +727,17 @@ function LatticeFileChange(props: {
 
 /** Nothing to commit: say so with the drawing, then what is still left (a push or a pull). */
 function LatticeCleanState(props: { cwd: string; actions: LatticeGitActions }) {
-  const { i18n } = useLingui();
   const { actions } = props;
   const status = actions.status;
   const remote = UPSTREAM_REMOTE;
   const lastCommitQuery = useQuery(gitRecentCommitsQueryOptions({ cwd: props.cwd, limit: 1 }));
   const lastCommit = lastCommitQuery.data?.commits[0] ?? null;
 
-  let description: string = i18n._("Edits you make show up here, ready to commit");
+  let description: string = t("lattice:editsYouMakeShowUpHereReady");
   let action: ReactNode = null;
   if (status && status.branch !== null) {
     if (status.hasUpstream && status.behindCount > 0 && status.aheadCount === 0) {
-      description = i18n._(
-        "{count, plural, one {# new commit is on {remote}. Pull it to bring your copy up to date} other {# new commits are on {remote}. Pull them to bring your copy up to date}}",
-        { count: status.behindCount, remote },
-      );
+      description = t("lattice:newCommitsAreOnPullThemTo", { count: status.behindCount, remote });
       action = (
         <button
           type="button"
@@ -765,16 +746,11 @@ function LatticeCleanState(props: { cwd: string; actions: LatticeGitActions }) {
           onClick={actions.pull}
         >
           <ArrowDownIcon aria-hidden className="size-3.5" />
-          {i18n._("{count, plural, one {Pull # commit} other {Pull # commits}}", {
-            count: status.behindCount,
-          })}
+          {t("lattice:pullCommits", { count: status.behindCount })}
         </button>
       );
     } else if (status.hasUpstream && status.aheadCount > 0 && status.behindCount === 0) {
-      description = i18n._(
-        "{count, plural, one {# commit is waiting to go to {remote}. Push it when you are ready to share it} other {# commits are waiting to go to {remote}. Push them when you are ready to share them}}",
-        { count: status.aheadCount, remote },
-      );
+      description = t("lattice:commitsAreWaitingToGoToPush", { count: status.aheadCount, remote });
       action = (
         <button
           type="button"
@@ -783,18 +759,13 @@ function LatticeCleanState(props: { cwd: string; actions: LatticeGitActions }) {
           onClick={actions.push}
         >
           <PushIcon aria-hidden className="size-3.5" />
-          {i18n._("{count, plural, one {Push # commit} other {Push # commits}}", {
-            count: status.aheadCount,
-          })}
+          {t("lattice:pushCommits", { count: status.aheadCount })}
         </button>
       );
     } else if (status.hasUpstream && status.aheadCount > 0) {
-      description = i18n._("Branch has diverged from upstream. Rebase/merge first.");
+      description = t("lattice:branchHasDivergedFromUpstreamRebaseMerge");
     } else if (!status.hasUpstream && actions.hasOriginRemote) {
-      description = i18n._("{branch} is not on {remote} yet. Publish it to share your commits", {
-        branch: status.branch,
-        remote,
-      });
+      description = t("lattice:isNotOnYetPublishItTo", { branch: status.branch, remote });
       action = (
         <button
           type="button"
@@ -803,7 +774,7 @@ function LatticeCleanState(props: { cwd: string; actions: LatticeGitActions }) {
           onClick={actions.push}
         >
           <PushIcon aria-hidden className="size-3.5" />
-          {i18n._("Publish {branch}", { branch: status.branch })}
+          {t("lattice:publish2", { branch: status.branch })}
         </button>
       );
     }
@@ -813,13 +784,13 @@ function LatticeCleanState(props: { cwd: string; actions: LatticeGitActions }) {
     <div className="lattice-git-clean" data-lattice-git-clean="">
       <div className="lattice-git-empty" role="status">
         <ResearchArt drawing={DATED_DRAFTS} />
-        <p className="lattice-git-empty-title">{i18n._("Everything is committed")}</p>
+        <p className="lattice-git-empty-title">{t("lattice:everythingIsCommitted")}</p>
         <p className="lattice-git-empty-description">{description}</p>
         {action ? <div className="lattice-git-empty-actions">{action}</div> : null}
       </div>
       {lastCommit ? (
         <footer className="lattice-git-last">
-          <span className="lattice-git-last-label">{i18n._("Last commit")}</span>
+          <span className="lattice-git-last-label">{t("lattice:lastCommit")}</span>
           <span className="lattice-git-last-title" title={lastCommit.subject}>
             {lastCommit.subject}
           </span>

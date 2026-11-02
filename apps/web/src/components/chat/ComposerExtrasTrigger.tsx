@@ -5,7 +5,6 @@ import { useTranslation } from "~/i18n";
 // Layer: Chat composer presentation
 // Depends on: shared button primitive and caller-owned open state.
 
-import { i18n } from "~/i18n";
 import { PlusIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { Button } from "../ui/button";

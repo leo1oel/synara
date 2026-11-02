@@ -8,8 +8,6 @@
 // Exports: PullRequestMarkdownSection, stripHtmlComments, preparePullRequestMarkdown,
 //          splitPullRequestMarkdownSections, pullRequestMarkdownPreview
 
-import { i18n } from "~/i18n";
-
 const FENCE_PATTERN = /```[\s\S]*?```|~~~[\s\S]*?~~~/g;
 const FENCED_CODE_SPLIT_PATTERN = /(```[\s\S]*?```|~~~[\s\S]*?~~~)/;
 const HTML_COMMENT_PATTERN = /<!--[\s\S]*?-->/g;
@@ -101,7 +99,7 @@ export function splitPullRequestMarkdownSections(markdown: string): PullRequestM
     if (insideAnyRange(match.index, ranges)) continue;
     const leading = markdown.slice(cursor, match.index).trim();
     if (leading.length > 0) sections.push({ kind: "markdown", text: leading });
-    const summary = (match[1] ?? "").replace(HTML_TAG_PATTERN, "").trim() || i18n._("Details");
+    const summary = (match[1] ?? "").replace(HTML_TAG_PATTERN, "").trim() || "Details";
     sections.push({ kind: "details", summary, body: (match[2] ?? "").trim() });
     cursor = match.index + match[0].length;
   }

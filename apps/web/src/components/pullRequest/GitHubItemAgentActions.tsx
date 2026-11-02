@@ -7,7 +7,6 @@
 // Exports: GitHubItemAgentActions, SendToAgentMenuItems, GitHubItemSendTarget,
 //          TOP_BAR_NARROW_LABEL_CLASS_NAME
 
-import { useLingui } from "@lingui/react";
 import type { ProjectId } from "@synara/contracts";
 
 import { ComposerPickerMenuPopup } from "~/components/chat/ComposerPickerMenuPopup";
@@ -54,8 +53,8 @@ export function SendToAgentMenuItems({
         {sending
           ? t("git:preparing")
           : sendTargets.length > 1
-            ? i18n._("Send to agent in {project}", { project: target.projectTitle })
-            : i18n._("Send to agent")}
+            ? t("git:sendToAgentIn", { value0: target.projectTitle })
+            : t("git:sendToAgent")}
       </span>
     </MenuItem>
   ));

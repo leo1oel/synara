@@ -4,7 +4,6 @@
 // Layer: Chat composer UI
 // Exports: ComposerBranchMismatchBanner
 
-import { i18n } from "~/i18n";
 import { ArrowRightIcon, TriangleAlertIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { ComposerStackedPanel } from "./ComposerStackedPanel";

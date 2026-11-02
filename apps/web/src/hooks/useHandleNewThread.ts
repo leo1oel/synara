@@ -1,3 +1,4 @@
+import { useTranslation } from "~/i18n";
 import { useProjectEnvironmentStore } from "../projectEnvironmentStore";
 import { type ProjectId, type ProviderInstanceId, ThreadId } from "@synara/contracts";
 import { getDefaultModel } from "@synara/shared/model";

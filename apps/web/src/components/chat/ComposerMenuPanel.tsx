@@ -4,6 +4,7 @@
 // Layer: Chat composer presentation
 // Depends on: Command primitives and the shared composer picker style tokens.
 
+import { t } from "~/i18n";
 import { memo, useEffect, useRef, type ReactNode } from "react";
 
 import { cn } from "~/lib/utils";
@@ -115,7 +116,10 @@ export function ComposerMenuPanel(props: {
                     // owns an inset one so later groups stay reachable.
                     <div className="me-3 h-28 min-h-0" data-menu-scroll-region={group.id}>
                       <ScrollArea
-                        aria-label={`${group.label ?? group.id}, ${group.rows.length} items`}
+                        aria-label={t("lattice:menuGroupItems", {
+                          group: group.label ?? group.id,
+                          count: group.rows.length,
+                        })}
                         scrollFade
                         scrollbarGutter
                         viewportClassName="scroll-py-1"

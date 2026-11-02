@@ -3,7 +3,6 @@
 // Layer: Chat and composer UI component
 // Exports: ExpandedImageOverlay
 
-import { i18n } from "~/i18n";
 import { useLayoutEffect } from "react";
 
 import { Button } from "~/components/ui/button";

@@ -5,7 +5,6 @@
 //   file and pasted-text attachments beside them.
 // Layer: Chat composer/transcript presentation
 
-import { i18n } from "~/i18n";
 import { useState, type ComponentType } from "react";
 
 import {

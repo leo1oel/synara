@@ -1,4 +1,3 @@
-import { i18n } from "~/i18n";
 import type { PendingClaudeCacheReview } from "@synara/contracts";
 import { assessClaudeCache } from "@synara/shared/claudeCache";
 import { useEffect, useRef, useState } from "react";
@@ -9,7 +8,7 @@ import { cn } from "~/lib/utils";
 import { formatCacheDuration } from "./ClaudeCacheDetails";
 import { ComposerChoiceRow } from "./ComposerChoiceRow";
 import { COMPOSER_INPUT_SURFACE_CLASS_NAME } from "./composerPickerStyles";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 // "never" continues like "continue" and turns the review off, as Claude Code's
 // "Don't ask me again" does.
@@ -72,11 +71,11 @@ export function ComposerClaudeCacheReviewPanel({
       : isCompactionRequest
         ? t("chat:compactionWillReadTheExpiredContext")
         : idleSeconds !== undefined && contextTokens !== undefined
-          ? i18n._("This session is {age} old and {tokens} tokens.", {
-              age: formatCacheDuration(idleSeconds),
-              tokens: formatContextWindowTokens(contextTokens),
+          ? t("chat:thisSessionIsOldAndTokens", {
+              value0: formatCacheDuration(idleSeconds),
+              value1: formatContextWindowTokens(contextTokens),
             })
-          : i18n._("Claude's prompt cache likely expired");
+          : t("chat:claudeSPromptCacheLikelyExpired");
 
   const respondOnce = (decision: ClaudeCacheReviewDecision) => {
     if (disabled || submittedReviewRef.current === review) return;
@@ -119,16 +118,11 @@ export function ComposerClaudeCacheReviewPanel({
           ? t("chat:claudeMayHaveAcceptedTheRequestSendingIsPaused")
           : isCompactionRequest
             ? contextTokens === undefined
-              ? i18n._(
-                  "Your message is saved and on hold. Continuing may reprocess the conversation's context.",
-                )
-              : i18n._(
-                  "Your message is saved and on hold. Continuing may reprocess about {tokens} tokens.",
-                  { tokens: formatContextWindowTokens(contextTokens) },
-                )
-            : i18n._(
-                "Resuming the full session will consume a substantial portion of your usage limits. We recommend resuming from a summary. Your message is saved until you choose.",
-              )}
+              ? t("lattice:yourMessageIsSavedAndOnHold")
+              : t("lattice:yourMessageIsSavedAndOnHold2", {
+                  tokens: formatContextWindowTokens(contextTokens),
+                })
+            : t("chat:resumingTheFullSessionWillConsumeASubstantialPortion")}
       </p>
       {review.error || dispatchError ? (
         <p role="alert" className="mt-2 text-ui leading-relaxed text-destructive">

@@ -2,7 +2,7 @@
 // Purpose: Renders the floating toolbar for assistant transcript selections.
 // Layer: Chat transcript interaction UI
 
-import { i18n } from "~/i18n";
+import { i18n, useTranslation } from "~/i18n";
 import { cn } from "~/lib/utils";
 import { ELEVATED_HOVER_SURFACE_CLASS_NAME } from "~/surfaceStyles";
 

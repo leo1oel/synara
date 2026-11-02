@@ -1,4 +1,3 @@
-import { i18n } from "~/i18n";
 import { Button } from "~/components/ui/button";
 import { useTranslation } from "~/i18n";
 

@@ -2,7 +2,6 @@
 // Purpose: Owns the shared identity and status content rendered by every Sidebar thread row.
 // Exports: SidebarThreadRowContent and its terminal-status presentation type.
 
-import { useLingui } from "@lingui/react";
 import type { ReactNode } from "react";
 
 import { isGenericChatThreadTitle } from "@synara/shared/chatThreads";

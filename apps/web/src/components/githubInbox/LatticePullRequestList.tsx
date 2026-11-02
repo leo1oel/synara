@@ -1,3 +1,4 @@
+import { t } from "~/i18n";
 // FILE: LatticePullRequestList.tsx
 // Purpose: Lattice's embedded Pull requests list: grouped by what needs the writer (Needs your
 //          review, Yours, the rest still open, Recently merged), one row per pull request with
@@ -12,7 +13,6 @@ import type {
   GitHubInboxPullRequestItem,
   ProjectId,
 } from "@synara/contracts";
-import { useLingui } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
 import { type ClipboardEvent, type ReactNode, useState } from "react";
 
@@ -88,7 +88,6 @@ function shortName(item: GitHubInboxPullRequestItem): string | null {
 }
 
 export function LatticePullRequestList(props: LatticePullRequestListProps) {
-  const { i18n } = useLingui();
   const normalizedQuery = props.query.trim().toLowerCase();
   const closedQuery = useQuery({
     ...githubInboxListQueryOptions("closed", "updated", { projectId: props.projectId }),
@@ -120,16 +119,16 @@ export function LatticePullRequestList(props: LatticePullRequestListProps) {
   const groups: Array<{ key: GroupKey; label: string; items: GitHubInboxPullRequestItem[] }> = [
     {
       key: "review",
-      label: i18n._("Needs your review"),
+      label: t("lattice:needsYourReview"),
       items: shown(openItems.filter((item) => item.viewerReviewRequested && !isYours(item))),
     },
-    { key: "yours", label: i18n._("Yours"), items: shown(openItems.filter(isYours)) },
+    { key: "yours", label: t("lattice:yours"), items: shown(openItems.filter(isYours)) },
     {
       key: "open",
-      label: i18n._("Also open"),
+      label: t("lattice:alsoOpen"),
       items: shown(openItems.filter((item) => !item.viewerReviewRequested && !isYours(item))),
     },
-    { key: "merged", label: i18n._("Recently merged"), items: shown(mergedItems) },
+    { key: "merged", label: t("lattice:recentlyMerged"), items: shown(mergedItems) },
   ];
   const visibleCount = groups.reduce((sum, group) => sum + group.items.length, 0);
 
@@ -167,8 +166,8 @@ export function LatticePullRequestList(props: LatticePullRequestListProps) {
                     <SearchIcon aria-hidden className="size-3.5" />
                     <input
                       type="search"
-                      aria-label={i18n._("Search pull requests")}
-                      placeholder={i18n._("Search or paste a pull request link")}
+                      aria-label={t("lattice:searchPullRequests")}
+                      placeholder={t("lattice:searchOrPasteAPullRequestLink")}
                       value={props.query}
                       onChange={(event) => props.onQueryChange(event.target.value)}
                       onPaste={(event: ClipboardEvent<HTMLInputElement>) => {
@@ -180,7 +179,7 @@ export function LatticePullRequestList(props: LatticePullRequestListProps) {
                       <button
                         type="button"
                         className="lattice-prs-clear"
-                        aria-label={i18n._("Clear search")}
+                        aria-label={t("lattice:clearSearch")}
                         onClick={() => props.onQueryChange("")}
                       >
                         <XIcon aria-hidden className="size-3" />
@@ -191,11 +190,11 @@ export function LatticePullRequestList(props: LatticePullRequestListProps) {
                     <button
                       type="button"
                       className="lattice-git-button lattice-git-tinted lattice-prs-new"
-                      title={i18n._("Open a pull request from {branch}", { branch: branch ?? "" })}
+                      title={t("lattice:openAPullRequestFrom", { branch: branch ?? "" })}
                       onClick={actions.createPullRequest.open}
                     >
                       <CreatePullRequestIcon aria-hidden className="size-3.5" />
-                      <span className="lattice-git-button-label">{i18n._("New")}</span>
+                      <span className="lattice-git-button-label">{t("chat:header_new")}</span>
                     </button>
                   ) : null}
                 </div>
@@ -205,10 +204,8 @@ export function LatticePullRequestList(props: LatticePullRequestListProps) {
                   props.loading
                 ) : notARepository ? (
                   <PullRequestsEmpty
-                    title={i18n._("Pull requests need a Git repository")}
-                    description={i18n._(
-                      "Start version control for this project, then publish it to GitHub to review changes with your co-authors",
-                    )}
+                    title={t("lattice:pullRequestsNeedAGitRepository")}
+                    description={t("lattice:startVersionControlForThisProjectThen")}
                     action={<LatticeGitInitializeButton cwd={props.workspaceRoot} />}
                   />
                 ) : unavailable && ghBlocked ? (
@@ -218,17 +215,13 @@ export function LatticePullRequestList(props: LatticePullRequestListProps) {
                   />
                 ) : props.openError && !props.openList ? (
                   <PullRequestsEmpty
-                    title={i18n._("Pull requests could not be loaded")}
+                    title={t("lattice:pullRequestsCouldNotBeLoaded")}
                     description={
                       <>
                         <span>
                           {unavailable?.reason === "rate-limited"
-                            ? i18n._(
-                                "GitHub is limiting requests for now. Try again in a few minutes",
-                              )
-                            : i18n._(
-                                "Lattice could not reach GitHub. Check your connection and try again",
-                              )}
+                            ? t("lattice:gitHubIsLimitingRequestsForNowTry")
+                            : t("lattice:latticeCouldNotReachGitHubCheckYour")}
                         </span>
                         <LatticeErrorDetails
                           detail={props.openError instanceof Error ? props.openError.message : null}
@@ -237,7 +230,7 @@ export function LatticePullRequestList(props: LatticePullRequestListProps) {
                     }
                     action={
                       <button type="button" className="lattice-git-button" onClick={props.onRetry}>
-                        {i18n._("Try again")}
+                        {t("chat:profile_tryAgain")}
                       </button>
                     }
                   />
@@ -248,21 +241,19 @@ export function LatticePullRequestList(props: LatticePullRequestListProps) {
                   />
                 ) : visibleCount === 0 && normalizedQuery ? (
                   <p className="lattice-prs-note">
-                    {i18n._("No pull requests match “{query}”", { query: props.query.trim() })}
+                    {t("lattice:noPullRequestsMatch", { query: props.query.trim() })}
                   </p>
                 ) : openItems.length === 0 ? (
                   <>
                     <PullRequestsEmpty
-                      title={i18n._("No open pull requests")}
+                      title={t("lattice:noOpenPullRequests")}
                       description={
                         canOpen && branch
-                          ? i18n._(
-                              "{branch} has commits that are not on {base}. Open a pull request to ask your co-authors to review them",
-                              { branch, base: actions.defaultBranchName ?? "main" },
-                            )
-                          : i18n._(
-                              "When you or a co-author opens a pull request on GitHub, it shows up here",
-                            )
+                          ? t("lattice:hasCommitsThatAreNotOnOpen", {
+                              branch,
+                              base: actions.defaultBranchName ?? "main",
+                            })
+                          : t("lattice:whenYouOrACoAuthorOpens")
                       }
                       action={
                         canOpen && branch ? (
@@ -273,7 +264,7 @@ export function LatticePullRequestList(props: LatticePullRequestListProps) {
                           >
                             <CreatePullRequestIcon aria-hidden className="size-3.5" />
                             <span className="lattice-git-button-label">
-                              {i18n._("Open a pull request from {branch}", { branch })}
+                              {t("lattice:openAPullRequestFrom", { branch })}
                             </span>
                           </button>
                         ) : null
@@ -314,14 +305,12 @@ export function LatticePullRequestList(props: LatticePullRequestListProps) {
                         <div className="lattice-prs-warning-body">
                           <span>
                             {error.reason === "rate-limited"
-                              ? i18n._(
-                                  "GitHub is limiting requests for now. Lattice will try again shortly",
-                                )
+                              ? t("lattice:gitHubIsLimitingRequestsForNowLattice")
                               : error.repository
-                                ? i18n._("Could not read {repository} on GitHub", {
+                                ? t("lattice:couldNotReadOnGitHub", {
                                     repository: error.repository,
                                   })
-                                : i18n._("Could not read this project’s Git remotes")}
+                                : t("lattice:couldNotReadThisProjectSGit")}
                           </span>
                           <LatticeErrorDetails detail={error.message} />
                         </div>
@@ -385,7 +374,6 @@ function PullRequestRow(props: {
   selected: boolean;
   onSelect: () => void;
 }) {
-  const { i18n } = useLingui();
   const { item } = props;
   const who = shortName(item);
   const checks = item.checksState;
@@ -427,10 +415,10 @@ function PullRequestRow(props: {
             data-state={checks}
             title={
               checks === "success"
-                ? i18n._("Checks passed")
+                ? t("lattice:checksPassed")
                 : checks === "failure"
-                  ? i18n._("Checks failed")
-                  : i18n._("Checks running")
+                  ? t("lattice:checksFailed")
+                  : t("lattice:checksRunning")
             }
           >
             {checks === "success" ? (
@@ -445,9 +433,7 @@ function PullRequestRow(props: {
         {(item.commentCount ?? 0) > 0 ? (
           <span
             className="lattice-prs-comments"
-            title={i18n._("{count, plural, one {# comment} other {# comments}}", {
-              count: item.commentCount,
-            })}
+            title={t("lattice:comments3", { count: item.commentCount })}
           >
             <MessageCircleIcon aria-hidden className="size-3" />
             {item.commentCount}
@@ -470,20 +456,15 @@ function PullRequestsEmpty(props: { title: string; description: ReactNode; actio
 }
 
 function NotOnGitHubState(props: { workspaceRoot: string; hasOriginRemote: boolean }) {
-  const { i18n } = useLingui();
   const [setup, setSetup] = useState<"create" | "connect" | null>(null);
   return (
     <>
       <PullRequestsEmpty
-        title={i18n._("This project is not on GitHub")}
+        title={t("lattice:thisProjectIsNotOnGitHub")}
         description={
           props.hasOriginRemote
-            ? i18n._(
-                "Pull requests need a GitHub repository, and this project’s remote is somewhere else",
-              )
-            : i18n._(
-                "Pull requests need a GitHub repository. Publish the project privately and invite your co-authors",
-              )
+            ? t("lattice:pullRequestsNeedAGitHubRepositoryAnd")
+            : t("lattice:pullRequestsNeedAGitHubRepositoryPublish")
         }
         action={
           props.hasOriginRemote ? null : (
@@ -494,7 +475,7 @@ function NotOnGitHubState(props: { workspaceRoot: string; hasOriginRemote: boole
                 onClick={() => setSetup("create")}
               >
                 <GitHubIcon aria-hidden className="size-3.5" />
-                <span className="lattice-git-button-label">{i18n._("Publish to GitHub")}</span>
+                <span className="lattice-git-button-label">{t("lattice:publishToGitHub")}</span>
               </button>
               <button
                 type="button"
@@ -502,7 +483,7 @@ function NotOnGitHubState(props: { workspaceRoot: string; hasOriginRemote: boole
                 onClick={() => setSetup("connect")}
               >
                 <LinkIcon aria-hidden className="size-3.5" />
-                <span className="lattice-git-button-label">{i18n._("Connect existing")}</span>
+                <span className="lattice-git-button-label">{t("lattice:connectExisting")}</span>
               </button>
             </>
           )
@@ -525,36 +506,33 @@ function NotOnGitHubState(props: { workspaceRoot: string; hasOriginRemote: boole
 
 /** The GitHub CLI is missing or signed out: the one command that fixes it, and Check again. */
 function GitHubCliState(props: { notInstalled: boolean; onRetry: () => void }) {
-  const { i18n } = useLingui();
   const command = props.notInstalled ? "brew install gh" : "gh auth login";
   const [copied, setCopied] = useState(false);
   return (
     <PullRequestsEmpty
       title={
         props.notInstalled
-          ? i18n._("Install the GitHub CLI to see pull requests")
-          : i18n._("Sign in to GitHub to see pull requests")
+          ? t("lattice:installTheGitHubCLIToSeePull")
+          : t("lattice:signInToGitHubToSeePull")
       }
       description={
         <>
           <span>
             {props.notInstalled
-              ? i18n._("Lattice reads pull requests through the GitHub CLI. Install it in Terminal")
-              : i18n._(
-                  "Lattice reads pull requests through the GitHub CLI. Run this once in Terminal",
-                )}
+              ? t("lattice:latticeReadsPullRequestsThroughTheGitHub")
+              : t("lattice:latticeReadsPullRequestsThroughTheGitHub2")}
           </span>
           <button
             type="button"
             className="lattice-prs-command"
-            title={i18n._("Copy to clipboard")}
+            title={t("chat:messageCopy_copyToClipboard")}
             onClick={() => {
               void copyTextToClipboard(command).then(
                 () => {
                   setCopied(true);
                   window.setTimeout(() => setCopied(false), 1500);
                 },
-                () => toastManager.add({ type: "error", title: i18n._("Could not copy command") }),
+                () => toastManager.add({ type: "error", title: t("git:couldNotCopyCommand") }),
               );
             }}
           >
@@ -575,11 +553,11 @@ function GitHubCliState(props: { notInstalled: boolean; onRetry: () => void }) {
               className="lattice-git-button"
               onClick={() => void ensureNativeApi().shell.openExternal("https://cli.github.com/")}
             >
-              {i18n._("Install instructions")}
+              {t("git:installInstructions")}
             </button>
           ) : null}
           <button type="button" className={cn("lattice-git-button")} onClick={props.onRetry}>
-            {i18n._("Check again")}
+            {t("settings:checkAgain")}
           </button>
         </>
       }

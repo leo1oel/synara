@@ -1,4 +1,3 @@
-import { i18n } from "~/i18n";
 import type { ClaudeCacheObservation } from "@synara/contracts";
 import { assessClaudeCache } from "@synara/shared/claudeCache";
 import { formatContextWindowTokens } from "~/lib/contextWindow";

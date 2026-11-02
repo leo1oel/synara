@@ -2,7 +2,6 @@
 // Collapsible trigger/panel; the live clock stays isolated in its leaf component.
 import type { CSSProperties, ReactNode } from "react";
 
-import { i18n } from "~/i18n";
 import { cn } from "~/lib/utils";
 import { MUTED_LABEL_TEXT_CLASS_NAME } from "~/surfaceStyles";
 import { DisclosureChevron } from "../ui/DisclosureChevron";

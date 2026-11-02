@@ -1,12 +1,5 @@
 import { Translation } from "~/i18n/Translation";
-// FILE: ProvidersSettingsPanel.tsx
-// Purpose: Own provider picker, update, and CLI installation settings workflows.
-// Layer: Settings panel
-
-import type { MessageDescriptor } from "@lingui/core";
-import { msg } from "@lingui/core/macro";
-import { Trans } from "@lingui/react/macro";
-import { i18n } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 import {
   DEFAULT_CODEX_ACCOUNT_ID,
   PROVIDER_DISPLAY_NAMES,
@@ -53,7 +46,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { useLingui } from "@lingui/react";
 
 import {
   buildProviderInstanceSettingsPatch,
@@ -150,7 +142,6 @@ import {
 } from "./SettingControls";
 import { SettingsListRow, SettingsRow, SettingsSection } from "./SettingsPanelPrimitives";
 import { UsageLimitRecoverySetting } from "./UsageLimitRecoverySetting";
-import { t, useTranslation } from "~/i18n";
 
 type ProviderInstallTextKey =
   | "claudeBinaryPath"
@@ -203,7 +194,7 @@ type ProviderInstallField =
   | ProviderInstallBooleanField;
 type ProviderInstallSettings = {
   readonly provider: ProviderKind;
-  readonly docs: ReadonlyArray<{ readonly label: MessageDescriptor; readonly href: string }>;
+  readonly docs: ReadonlyArray<{ readonly label: string; readonly href: string }>;
   readonly fields: readonly ProviderInstallField[];
 };
 
@@ -485,16 +476,14 @@ const PROVIDER_INSTALL_SETTINGS: readonly ProviderInstallSettings[] = [
   },
   {
     provider: "pi",
-    docs: [{ label: msg`Config`, href: "https://pi.dev/docs/latest/settings" }],
+    docs: [{ label: "settings:providers_docConfig", href: "https://pi.dev/docs/latest/settings" }],
     fields: [
       {
         kind: "text",
         settingsKey: "piAgentDir",
-        label: msg`Pi agent directory`,
-        placeholder: msg`Pi agent directory`,
-        description: (
-          <Trans>Optional custom Pi agent directory for auth, models, skills, and commands.</Trans>
-        ),
+        label: "settings:providers_piAgentDir",
+        placeholder: "settings:providers_piAgentDir",
+        description: "settings:providers_piAgentDirDescription",
       },
     ],
   },
@@ -683,7 +672,7 @@ function SortableProviderVisibilityRow(props: {
             ELEVATED_HOVER_SURFACE_RAISED_TEXT_CLASS_NAME,
             SETTINGS_INSET_RADIUS_CLASS_NAME,
           )}
-          aria-label={i18n._("Reorder {provider}", { provider: props.option.title })}
+          aria-label={t("workspace:reorder", { value0: props.option.title })}
           {...attributes}
           {...listeners}
         >
@@ -694,12 +683,12 @@ function SortableProviderVisibilityRow(props: {
           <span className="block truncate text-ui text-foreground">{props.option.title}</span>
           <span className="block text-ui-sm text-muted-foreground">
             {isChecking
-              ? i18n._("Checking")
+              ? t("chat:providerModelPicker_checking_command")
               : isAvailable
-                ? i18n._("Installed")
+                ? t("settings:installed")
                 : runtimeInstall
-                  ? providerRuntimeInstallLabel(i18n, runtimeInstall)
-                  : i18n._("CLI not installed")}
+                  ? providerRuntimeInstallLabel(t, runtimeInstall)
+                  : t("lattice:cLINotInstalled")}
           </span>
         </span>
       </div>
@@ -713,14 +702,10 @@ function SortableProviderVisibilityRow(props: {
         onCheckedChange={(checked) => props.onHiddenChange(!Boolean(checked))}
         aria-label={
           isChecking
-            ? i18n._("Checking {provider} CLI availability", { provider: props.option.title })
+            ? t("settings:checkingCLIAvailability", { value0: props.option.title })
             : isAvailable
-              ? i18n._("Show {provider} in the provider picker", {
-                  provider: props.option.title,
-                })
-              : i18n._("{provider} is unavailable in the provider picker", {
-                  provider: props.option.title,
-                })
+              ? t("settings:showInTheProviderPicker", { value0: props.option.title })
+              : t("settings:isUnavailableInTheProviderPicker", { value0: props.option.title })
         }
       />
     </div>
@@ -790,9 +775,9 @@ export function providerUpdateStatusLabel(provider: ServerProviderStatus): strin
       : t("settings:latest", { value0: latestVersion });
   }
   const currentVersion = formatProviderVersion(provider.version);
-  if (currentVersion) return i18n._("Current {version}", { version: currentVersion });
+  if (currentVersion) return t("settings:current", { value0: currentVersion });
   // Pi runs on its SDK, so it has no CLI version to show.
-  return provider.provider === "pi" && provider.available ? i18n._("Installed") : null;
+  return provider.provider === "pi" && provider.available ? t("settings:installed") : null;
 }
 
 function providerUpdateFailureMessage(provider: ServerProviderStatus | undefined): string | null {
@@ -1051,9 +1036,7 @@ function providerAccountIdentityFields(
         key: "configDir",
         label: t("settings:claudeConfigDirectory"),
         placeholder: "~/.claude-work",
-        description: i18n._(
-          "Leave blank and Synara keeps this account's sign-in in its own folder. Set a directory to use a Claude config folder you already signed in to.",
-        ),
+        description: t("lattice:leaveBlankAndSynaraKeepsThisAccount"),
       },
     ];
   }
@@ -1191,10 +1174,10 @@ function ProviderAccountsControl(props: {
     if (input.provider === provider) setSelectedAccountId(input.instanceId);
     toastManager.add({
       type: "success",
-      title: i18n._("Account added"),
-      description: i18n._("{provider} account '{account}' was added.", {
-        provider: PROVIDER_DISPLAY_NAMES[input.provider],
-        account: input.displayName || input.instanceId,
+      title: t("settings:accountAdded"),
+      description: t("settings:accountWasAdded", {
+        value0: PROVIDER_DISPLAY_NAMES[input.provider],
+        value1: input.displayName || input.instanceId,
       }),
     });
   };
@@ -1216,7 +1199,7 @@ function ProviderAccountsControl(props: {
       ...props.settings.providerInstances,
       [instanceId]: {
         driver: provider,
-        displayName: directoryName || i18n._("{provider} imported", { provider: providerLabel }),
+        displayName: directoryName || t("lattice:imported", { provider: providerLabel }),
         enabled: true,
         config: {
           ...providerInstanceLaunchConfig(props.config, props.settings),
@@ -1227,10 +1210,8 @@ function ProviderAccountsControl(props: {
     setSelectedAccountId(instanceId);
     toastManager.add({
       type: "success",
-      title: i18n._("{provider} account imported", { provider: providerLabel }),
-      description: i18n._(
-        "Synara references the selected directory; no files were moved or copied.",
-      ),
+      title: t("settings:accountImported", { value0: providerLabel }),
+      description: t("settings:synaraReferencesTheSelectedDirectoryNoFilesWereMoved"),
     });
   };
   const updateInstance = (
@@ -1293,9 +1274,9 @@ function ProviderAccountsControl(props: {
             onCheckedChange={(checked) =>
               updateInstance(instanceId, { config: { [configKey]: checked } })
             }
-            aria-label={i18n._("{setting} for {account}", {
-              setting: i18n._(field.label),
-              account: instance.displayName || instanceId,
+            aria-label={t("settings:for", {
+              value0: t(field.label),
+              value1: instance.displayName || instanceId,
             })}
           />
         </label>
@@ -1334,9 +1315,9 @@ function ProviderAccountsControl(props: {
               size="xs"
               variant="ghost"
               onClick={() => updateInstance(instanceId, { config: { [configKey]: "" } })}
-              aria-label={i18n._("Clear saved {setting} for {account}", {
-                setting: i18n._(field.label),
-                account: instance.displayName || instanceId,
+              aria-label={t("settings:clearSavedFor", {
+                value0: t(field.label),
+                value1: instance.displayName || instanceId,
               })}
             >
               {t("chat:clear")}
@@ -1368,7 +1349,7 @@ function ProviderAccountsControl(props: {
                 type="button"
                 size="xs"
                 variant="ghost"
-                aria-label={i18n._("Copy {command}", { command: cliCommand })}
+                aria-label={t("settings:copy", { value0: cliCommand })}
                 onClick={() => void copyTextToClipboard(cliCommand)}
               >
                 <CopyIcon className="size-3.5" />
@@ -1417,12 +1398,8 @@ function ProviderAccountsControl(props: {
           {isAccountProvider ? (
             <span className="block text-ui-sm text-muted-foreground sm:col-span-2">
               {provider === "codex"
-                ? i18n._(
-                    "Leave both paths blank and Synara keeps this account's sign-in in its own folder. Set a shadow auth home to keep only the sign-in elsewhere while sharing settings and history with the default account, or a CODEX_HOME to keep everything separate.",
-                  )
-                : i18n._(
-                    "Leave blank and Synara keeps this account's sign-in in its own folder. Set a directory to use a Claude config folder you already signed in to.",
-                  )}
+                ? t("lattice:leaveBothPathsBlankAndSynaraKeeps")
+                : t("lattice:leaveBlankAndSynaraKeepsThisAccount")}
             </span>
           ) : null}
           {!isAccountProvider && provider !== "pi" && provider !== "omp" ? (
@@ -1574,7 +1551,7 @@ function ProviderAccountsControl(props: {
             size="xs"
             variant="outline"
             disabled={!account.enabled || liveStatus?.available === false || startingSignIn}
-            aria-label={i18n._("Sign in to {account}", { account: account.label })}
+            aria-label={t("settings:signInTo2", { value0: account.label })}
             onClick={() => void startSignIn(account)}
           >
             {startingSignIn ? (
@@ -1702,7 +1679,7 @@ function ProviderAccountsControl(props: {
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 sm:flex-nowrap">
         <div className="min-w-0">
           <span className="block text-ui-sm font-medium text-foreground">
-            {i18n._("{provider} accounts", { provider: providerLabel })}
+            {t("settings:accounts2", { value0: providerLabel })}
           </span>
           <span className="mt-1 block text-ui-sm text-muted-foreground">
             {t("settings:eachAccountSignsInOnItsOwnAndGets2")}
@@ -1717,11 +1694,10 @@ function ProviderAccountsControl(props: {
             disabled={typeof window === "undefined" || !window.desktopBridge}
             title={
               typeof window === "undefined" || !window.desktopBridge
-                ? i18n._("Directory import is available in the Synara desktop app.")
-                : i18n._(
-                    "Use an existing {provider} directory as a new account, without moving it.",
-                    { provider: providerLabel },
-                  )
+                ? t("settings:directoryImportIsAvailableInTheSynaraDesktopApp")
+                : t("settings:useAnExistingDirectoryAsANewAccountWithout", {
+                    value0: providerLabel,
+                  })
             }
           >
             <FolderOpenIcon className="size-3.5" />
@@ -1776,7 +1752,7 @@ function ProviderAccountsControl(props: {
               >
                 <button
                   type="button"
-                  aria-label={i18n._("Select {account}", { account: account.label })}
+                  aria-label={t("settings:select", { value0: account.label })}
                   aria-current={selected ? "true" : undefined}
                   className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-left outline-none focus-visible:ring-1 focus-visible:ring-ring/60"
                   onClick={() => setSelectedAccountId(account.instanceId)}
@@ -1794,7 +1770,7 @@ function ProviderAccountsControl(props: {
                   onCheckedChange={(enabled) =>
                     updateInstance(account.instanceId, { enabled: Boolean(enabled) })
                   }
-                  aria-label={i18n._("Enable {account}", { account: account.label })}
+                  aria-label={t("workspace:enable", { value0: account.label })}
                 />
               </div>
             );
@@ -1918,11 +1894,11 @@ function ProviderToolRow(props: {
     updateAdvisory?.status === "behind_latest" && !showProviderUpdateStatus;
   const currentProviderVersion = formatProviderVersion(props.providerStatus?.version);
   const providerUpdateLabel = runtimeInstall
-    ? providerRuntimeInstallLabel(i18n, runtimeInstall)
+    ? providerRuntimeInstallLabel(t, runtimeInstall)
     : props.providerStatus
       ? !props.settings.enableProviderUpdateChecks
         ? currentProviderVersion
-          ? i18n._("Current {version}", { version: currentProviderVersion })
+          ? t("settings:current", { value0: currentProviderVersion })
           : null
         : providerUpdateSuppressed
           ? null
@@ -2013,19 +1989,14 @@ function ProviderToolRow(props: {
                       <code className="font-mono">{updateAdvisory.updateCommand}</code>
                     </>
                   ) : (
-                    i18n._(
-                      "A newer version is available, but Lattice could not identify a safe one-click update command for this installation.",
-                    )
+                    t("lattice:aNewerVersionIsAvailableButLattice")
                   )}
                 </div>
               ) : null}
               {showSelfManagedUpdate && props.providerStatus ? (
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0 text-ui-xs text-muted-foreground">
-                    {i18n._(
-                      "{provider} manages its own releases, so Lattice cannot tell whether a newer version exists. Run the update to be sure.",
-                      { provider: title },
-                    )}
+                    {t("lattice:managesItsOwnReleasesSoLatticeCannot", { provider: title })}
                   </div>
                   <ProviderUpdateAction
                     providerStatus={props.providerStatus}
@@ -2267,29 +2238,23 @@ export function ProvidersSettingsPanel({
   return (
     // Embedded Lattice stacks this panel under ModelsSettingsPanel on one page.
     <div className={cn("space-y-6", SETTINGS_PANEL_SECTION_GAP_CLASS_NAME)}>
-      <SettingsSection title={i18n._("Provider picker")}>
+      <SettingsSection title={t("settings:providers_providerPicker")}>
         <SettingsRow
-          title={i18n._("Available CLIs")}
-          description={i18n._(
-            "Show or hide installed providers in the picker and drag them into your preferred order. Hiding a provider here does not disable its server activity.",
-          )}
+          title={t("settings:availableCLIs")}
+          description={t("settings:showOrHideInstalledProvidersInThePickerAnd2")}
           status={
             serverConfigQuery.isPending || hasPendingProviderStatuses
-              ? i18n._("Checking installed CLIs")
+              ? t("lattice:checkingInstalledCLIs")
               : availableProviderCount === 0
-                ? i18n._("No CLIs detected")
+                ? t("lattice:noCLIsDetected")
                 : visibleAvailableProviderCount < availableProviderCount
-                  ? i18n._(
-                      "{visibleAvailableProviderCount} of {availableProviderCount} installed shown",
-                      { visibleAvailableProviderCount, availableProviderCount },
-                    )
+                  ? t("lattice:ofInstalledShown", {
+                      visibleAvailableProviderCount,
+                      availableProviderCount,
+                    })
                   : isProviderOrderDirty
-                    ? i18n._("{availableProviderCount} installed · custom order", {
-                        availableProviderCount,
-                      })
-                    : i18n._("{availableProviderCount} installed", {
-                        availableProviderCount,
-                      })
+                    ? t("lattice:installedCustomOrder", { availableProviderCount })
+                    : t("lattice:installed", { availableProviderCount })
           }
           resetAction={
             hiddenProviderCount > 0 || isProviderOrderDirty ? (
@@ -2340,21 +2305,17 @@ export function ProvidersSettingsPanel({
       </SettingsSection>
 
       <div className={SETTINGS_PANEL_SECTION_GAP_CLASS_NAME}>
-        <SettingsSection title={i18n._("Performance")}>
+        <SettingsSection title={t("settings:performance")}>
           <UsageLimitRecoverySetting />
           <SettingsRow
             id="setting-keep-synara-responsive"
-            title={i18n._("Keep Synara responsive")}
-            description={i18n._(
-              "Give agent processes and their commands a moderately lower CPU priority when the machine is busy.",
-            )}
-            status={i18n._(
-              "Applies to newly launched agent processes. Restart existing sessions to apply consistently.",
-            )}
+            title={t("settings:keepSynaraResponsive")}
+            description={t("settings:giveAgentProcessesAndTheirCommandsAModeratelyLower")}
+            status={t("lattice:appliesToNewlyLaunchedAgentProcessesRestart")}
             resetAction={
               settings.lowerProviderProcessPriority !== defaults.lowerProviderProcessPriority ? (
                 <SettingResetButton
-                  label={i18n._("Keep Synara responsive")}
+                  label={t("settings:keepSynaraResponsive")}
                   onClick={() =>
                     updateSettings({
                       lowerProviderProcessPriority: defaults.lowerProviderProcessPriority,
@@ -2369,23 +2330,20 @@ export function ProvidersSettingsPanel({
                 onCheckedChange={(checked) =>
                   updateSettings({ lowerProviderProcessPriority: Boolean(checked) })
                 }
-                aria-label={i18n._("Keep Synara responsive")}
+                aria-label={t("settings:keepSynaraResponsive")}
               />
             }
           />
           {isSynaraEmbedMode() ? (
             <SettingsRow
-              title={i18n._("Load my MCP servers in Claude")}
-              description={i18n._(
-                "Off: new chats start faster and use only Lattice's tools. On: Claude can also use the MCP servers and claude.ai connectors you set up for Claude Code, but every new or restarted chat first waits for all of them to connect, often several seconds.",
-              )}
-              status={i18n._(
-                "Applies to new and restarted chats. A chat that is already running keeps its current tools.",
-              )}
+              id="setting-claude-user-mcp-servers"
+              title={t("lattice:loadMyMCPServersInClaude")}
+              description={t("lattice:offNewChatsStartFasterAndUse")}
+              status={t("lattice:appliesToNewAndRestartedChatsA")}
               resetAction={
                 settings.claudeLoadUserMcpServers !== defaults.claudeLoadUserMcpServers ? (
                   <SettingResetButton
-                    label={i18n._("Load my MCP servers in Claude")}
+                    label={t("lattice:loadMyMCPServersInClaude")}
                     onClick={() =>
                       updateSettings({
                         claudeLoadUserMcpServers: defaults.claudeLoadUserMcpServers,
@@ -2400,7 +2358,7 @@ export function ProvidersSettingsPanel({
                   onCheckedChange={(checked) =>
                     updateSettings({ claudeLoadUserMcpServers: Boolean(checked) })
                   }
-                  aria-label={i18n._("Load my MCP servers in Claude")}
+                  aria-label={t("lattice:loadMyMCPServersInClaude")}
                 />
               }
             />
@@ -2409,7 +2367,7 @@ export function ProvidersSettingsPanel({
       </div>
 
       <div id={SETTINGS_TARGETS.providerUpdates} className={SETTINGS_PANEL_SECTION_GAP_CLASS_NAME}>
-        <SettingsSection title={i18n._("Updates")}>
+        <SettingsSection title={t("settings:providerUpdates_updates")}>
           <SettingsRow
             id="setting-automatic-cli-update-checks"
             title="settings:providerUpdates_automaticCliUpdateChecks"
@@ -2439,17 +2397,17 @@ export function ProvidersSettingsPanel({
 
           <SettingsRow
             id="setting-provider-updates"
-            title={i18n._("Provider updates")}
-            description={i18n._("Review installed provider tools that Lattice can safely update.")}
+            title={t("settings:providerUpdates_providerUpdates")}
+            description={t("lattice:reviewInstalledProviderToolsThatLatticeCan")}
             status={
               !settings.enableProviderUpdateChecks
-                ? i18n._("Automatic checks off")
+                ? t("lattice:automaticChecksOff")
                 : outdatedProviderCount > 0
-                  ? i18n._(
-                      "{outdatedProviderCount, plural, one {# update available} other {# updates available}}",
-                      { outdatedProviderCount },
-                    )
-                  : i18n._("No provider updates detected")
+                  ? t("lattice:updatesAvailable", {
+                      outdatedProviderCount,
+                      count: outdatedProviderCount,
+                    })
+                  : t("lattice:noProviderUpdatesDetected")
             }
           >
             {settings.enableProviderUpdateChecks && outdatedProviderStatuses.length > 0 ? (
@@ -2498,22 +2456,20 @@ export function ProvidersSettingsPanel({
       </div>
 
       <div id={SETTINGS_TARGETS.providerInstalls} className={SETTINGS_PANEL_SECTION_GAP_CLASS_NAME}>
-        <SettingsSection title={i18n._("Provider tools")}>
+        <SettingsSection title={t("settings:providers_providerTools")}>
           <SettingsRow
             id="setting-installed-clis"
-            title={i18n._("Provider runtimes")}
-            description={i18n._(
-              "Review external provider CLIs. Pi and OpenCode are downloaded when you install them here; Pi runs on its SDK and needs no separate CLI.",
-            )}
+            title={t("lattice:providerRuntimes")}
+            description={t("lattice:reviewExternalProviderCLIsPiAndOpenCode")}
             status={
               !settings.enableProviderUpdateChecks
-                ? i18n._("Automatic checks off")
+                ? t("lattice:automaticChecksOff")
                 : outdatedProviderCount > 0
-                  ? i18n._(
-                      "{outdatedProviderCount, plural, one {# update available} other {# updates available}}",
-                      { outdatedProviderCount },
-                    )
-                  : i18n._("No provider updates detected")
+                  ? t("lattice:updatesAvailable", {
+                      outdatedProviderCount,
+                      count: outdatedProviderCount,
+                    })
+                  : t("lattice:noProviderUpdatesDetected")
             }
             resetAction={
               installSettingsDirty ? (

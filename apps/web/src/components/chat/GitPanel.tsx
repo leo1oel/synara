@@ -15,7 +15,6 @@ import {
   type ThreadId,
 } from "@synara/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useLingui } from "@lingui/react";
 import { type ReactNode, useMemo, useState } from "react";
 
 import { useTheme } from "~/hooks/useTheme";
@@ -61,7 +60,7 @@ import {
 } from "./GitRepositorySetup";
 import { type LatticeChangeScope, LatticeGitChanges } from "./LatticeGitChanges";
 import { PanelStateMessage } from "./PanelStateMessage";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 type GitPanelSection = "staged" | "unstaged";
 
@@ -387,11 +386,7 @@ export function GitPanel(props: {
   const unpushedCommitCount = statusQuery.data?.hasUpstream ? statusQuery.data.aheadCount : 0;
 
   if (!cwd) {
-    return (
-      <PanelStateMessage>
-        {i18n._("Source control is unavailable for this thread.")}
-      </PanelStateMessage>
-    );
+    return <PanelStateMessage>{t("git:gitPanel_unavailableForThread")}</PanelStateMessage>;
   }
 
   if (props.showActions && repositoryMissing) {
@@ -420,7 +415,7 @@ export function GitPanel(props: {
             <GitHubRemoteSetupCard cwd={cwd} />
           ) : null
         }
-        loadingRows={<GitFileSectionSkeleton label={i18n._("Loading changes...")} />}
+        loadingRows={<GitFileSectionSkeleton label={t("git:gitPanel_loading")} />}
       />
     );
   }
@@ -433,7 +428,7 @@ export function GitPanel(props: {
       )}
     >
       <DockPaneHeader
-        title={props.title ?? i18n._("Source control")}
+        title={props.title ?? t("git:gitPanel_title")}
         onClose={props.onClose}
         closeLabel={t("git:closeSourceControl")}
         actions={
@@ -473,13 +468,10 @@ export function GitPanel(props: {
 
           {showCleanState ? (
             <PanelStateMessage density="compact" fill="flex" className="flex-col gap-1 py-6">
-              <span>{i18n._("No uncommitted changes.")}</span>
+              <span>{t("lattice:noUncommittedChanges")}</span>
               {unpushedCommitCount > 0 ? (
                 <span>
-                  {i18n._(
-                    "{count, plural, one {# local commit has not been pushed.} other {# local commits have not been pushed.}}",
-                    { count: unpushedCommitCount },
-                  )}
+                  {t("lattice:localCommitsHaveNotBeenPushed", { count: unpushedCommitCount })}
                 </span>
               ) : null}
             </PanelStateMessage>
@@ -499,37 +491,37 @@ export function GitPanel(props: {
                       </Alert>
                     ) : null}
                     {!error && isLoading && !hasChanges ? (
-                      <GitFileSectionSkeleton label={i18n._("Loading changes...")} />
+                      <GitFileSectionSkeleton label={t("git:gitPanel_loading")} />
                     ) : null}
                     {hasChanges ? (
                       <>
                         <GitFileSection
-                          title={i18n._("Staged")}
-                          emptyLabel={i18n._("No staged changes.")}
+                          title={t("git:gitPanel_staged")}
+                          emptyLabel={t("lattice:noStagedChanges")}
                           files={stagedFiles}
                           theme={theme}
                           section="staged"
                           selectedPath={
                             selectedResolved?.section === "staged" ? selectedPath : null
                           }
-                          actionLabel={i18n._("Unstage file")}
-                          actionAllLabel={i18n._("Unstage all")}
+                          actionLabel={t("lattice:unstageFile")}
+                          actionAllLabel={t("lattice:unstageAll")}
                           actionIcon="unstage"
                           actionDisabled={mutating}
                           onSelect={selectStaged}
                           onAction={unstage}
                         />
                         <GitFileSection
-                          title={i18n._("Changes")}
-                          emptyLabel={i18n._("No unstaged changes.")}
+                          title={t("git:panel_changes")}
+                          emptyLabel={t("lattice:noUnstagedChanges")}
                           files={unstagedFiles}
                           theme={theme}
                           section="unstaged"
                           selectedPath={
                             selectedResolved?.section === "unstaged" ? selectedPath : null
                           }
-                          actionLabel={i18n._("Stage file")}
-                          actionAllLabel={i18n._("Stage all")}
+                          actionLabel={t("lattice:stageFile")}
+                          actionAllLabel={t("lattice:stageAll")}
                           actionIcon="stage"
                           actionDisabled={mutating}
                           onSelect={selectUnstaged}
@@ -550,7 +542,7 @@ export function GitPanel(props: {
                   />
                 ) : (
                   <PanelStateMessage density="compact">
-                    {i18n._("Select a file to view its diff.")}
+                    {t("git:gitPanel_selectFileDiff")}
                   </PanelStateMessage>
                 )}
               </div>

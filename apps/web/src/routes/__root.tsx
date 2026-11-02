@@ -1,4 +1,3 @@
-import { i18n } from "~/i18n";
 import { EditorDirtyRouteGuard } from "../components/EditorDirtyRouteGuard";
 import {
   ORCHESTRATION_STREAM_OVERFLOW_CODE,
@@ -2536,7 +2535,7 @@ function EventRouter() {
         description: t("common:theUpdateStreamCouldNotKeepUpAfterRepeated"),
         timeout: 0,
         actionProps: {
-          children: i18n._("Retry updates"),
+          children: t("lattice:retryUpdates"),
           onClick: () => {
             toastManager.close(toastId);
             if (disposed) return;
@@ -2581,15 +2580,12 @@ function EventRouter() {
         toastManager.add({
           id: toastId,
           type: "error",
-          title: i18n._("Thread updates paused"),
-          description: i18n._(
-            "The update stream for {threadLabel} could not keep up after repeated retries. Retry to resume updates.",
-            { threadLabel },
-          ),
+          title: t("common:threadUpdatesPaused"),
+          description: t("common:theUpdateStreamForCouldNotKeepUpAfter", { value0: threadLabel }),
           timeout: 0,
           data: { threadId },
           actionProps: {
-            children: i18n._("Retry updates"),
+            children: t("lattice:retryUpdates"),
             onClick: () => {
               toastManager.close(toastId);
               if (disposed || !subscribedThreadIds.has(threadId)) return;

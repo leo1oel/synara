@@ -3,7 +3,7 @@
 // Layer: Chat shell header
 // Depends on: project action controls, git actions, and panel toggle callbacks
 
-import { i18n } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 import {
   type EditorId,
   type ProjectId,
@@ -71,7 +71,6 @@ import { ProviderUsageMenuControl } from "../ProviderUsageMenuControl";
 import { EnvironmentToggle, type EnvironmentToggleState } from "./environment/EnvironmentToggle";
 import { SurfacePanelToggle, type SurfacePanelToggleState } from "./chatHeaderControls";
 import type { ThreadHandoffTarget } from "~/lib/threadHandoff";
-import { useTranslation } from "~/i18n";
 
 /**
  * Width (px) below which collapsible header controls drop their text labels and
@@ -199,7 +198,7 @@ function EditorChatHistoryMenu(props: {
             <button
               type="button"
               className="flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-left text-ui leading-[var(--app-line-height-ui,1.5)] font-normal text-foreground transition-colors hover:bg-secondary"
-              aria-label={i18n._("{title}, open chat history", { title: props.triggerTitle })}
+              aria-label={t("lattice:openChatHistory", { title: props.triggerTitle })}
               data-chat-history-menu-trigger="true"
             >
               <span className="max-w-[min(10rem,calc(100vw-5.5rem))] truncate">
@@ -211,8 +210,8 @@ function EditorChatHistoryMenu(props: {
             <IconButton
               variant="ghost"
               size="icon-xs"
-              label={i18n._("Chat history")}
-              title={i18n._("Chat history")}
+              label={t("chat:header_chatHistory")}
+              title={t("chat:header_chatHistory")}
               className="size-5 shrink-0 text-muted-foreground hover:text-foreground"
             >
               <HistoryIcon className="size-3.5" />
@@ -229,9 +228,7 @@ function EditorChatHistoryMenu(props: {
         {props.onNewChat ? (
           <MenuItem onClick={props.onNewChat}>
             <PlusIcon className="size-3.5 shrink-0 text-muted-foreground" />
-            <span>
-              <Trans>New chat</Trans>
-            </span>
+            <span>{t("workspace:sections_newChat")}</span>
           </MenuItem>
         ) : null}
         {historyThreads.length === 0 ? (
@@ -253,7 +250,9 @@ function EditorChatHistoryMenu(props: {
                 className="size-3.5 shrink-0"
               />
               <span className="min-w-0 flex-1 truncate">
-                {isGenericChatThreadTitle(thread.title) ? i18n._("New thread") : thread.title}
+                {isGenericChatThreadTitle(thread.title)
+                  ? t("chat:sections_newThread")
+                  : thread.title}
               </span>
               {thread.id === props.activeThreadId ? (
                 <CheckIcon className="size-3.5 shrink-0 text-muted-foreground" />
@@ -270,8 +269,8 @@ function EditorChatHistoryMenu(props: {
                 <button
                   type="button"
                   className="ml-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-60 transition-[color,background-color,opacity] hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
-                  aria-label={`Delete thread "${thread.title}"`}
-                  title={i18n._("Delete thread")}
+                  aria-label={t("lattice:deleteThreadNamed", { title: thread.title })}
+                  title={t("lattice:deleteThread")}
                   onMouseDown={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
@@ -843,7 +842,7 @@ export function ChatHeader({
                       )}
                     />
                     {!compact && !handoffIconOnly ? (
-                      <span className="truncate font-normal">{i18n._("Hand off")}</span>
+                      <span className="truncate font-normal">{t("common:header_handOff")}</span>
                     ) : null}
                   </MenuTrigger>
                 }

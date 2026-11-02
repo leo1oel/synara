@@ -9,7 +9,6 @@ import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
-import { I18nProvider } from "@lingui/react";
 
 import {
   ProviderModelPicker,
@@ -20,9 +19,9 @@ import { mergeDynamicModelOptions, type ProviderModelOption } from "../../provid
 import { FAVORITE_MODEL_STORAGE_KEYS } from "../../lib/modelFavorites";
 import { appHistory } from "../../appNavigation";
 import { SYNARA_OPEN_SETTINGS } from "../../embedMode";
-import { i18n } from "../../i18n";
+import { t, setLanguagePreference } from "../../i18n";
 
-i18n.loadAndActivate({ locale: "en", messages: {} });
+setLanguagePreference("en");
 
 const MODEL_OPTIONS_BY_PROVIDER = {
   claudeAgent: [
@@ -218,7 +217,7 @@ async function mountPicker(props: {
   document.body.append(host);
   const onProviderModelChange = vi.fn();
   const screen = await render(
-    <I18nProvider i18n={i18n}>
+    <>
       <ProviderModelPicker
         provider={props.provider}
         model={props.model}
@@ -243,7 +242,7 @@ async function mountPicker(props: {
           : {})}
         onProviderModelChange={onProviderModelChange}
       />
-    </I18nProvider>,
+    </>,
     { container: host },
   );
 

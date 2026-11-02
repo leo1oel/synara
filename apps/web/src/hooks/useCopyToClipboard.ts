@@ -1,4 +1,3 @@
-import { i18n } from "~/i18n";
 import * as React from "react";
 
 import { toastManager } from "../components/ui/toast";

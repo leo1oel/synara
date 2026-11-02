@@ -1,9 +1,3 @@
-// FILE: RightDock.tsx
-// Purpose: Tabbed multi-pane right sidebar shell (browser, diff, terminal, sidechat, git).
-// Layer: Chat right-dock UI
-// Depends on: ui/sidebar primitive, right-dock pane metadata, and a caller-provided pane renderer.
-
-import { useLingui } from "@lingui/react";
 import {
   type CSSProperties,
   type ReactNode,
@@ -55,7 +49,7 @@ import {
   resolveRightDockPaneLabel,
 } from "./rightDockPaneMeta";
 import { useDesktopTopBarWindowControlsGutterClassName } from "~/hooks/useDesktopTopBarGutter";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 // Pane kinds whose content has a natural width, opened at that size rather than
 // at the even split. The device pane frames a portrait phone, so its useful
@@ -122,7 +116,7 @@ function RightDockLauncher(props: {
             variant="subtle"
             size="xl"
             className="h-11 w-full justify-start gap-3 rounded-xl px-4 text-ui-lg font-normal"
-            aria-label={i18n._("Open {panel}", { panel: label })}
+            aria-label={t("workspace:open", { value0: label })}
             onClick={() => props.onOpen(kind)}
           >
             <Icon className="size-4 shrink-0" />

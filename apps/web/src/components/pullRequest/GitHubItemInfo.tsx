@@ -1,13 +1,3 @@
-// FILE: GitHubItemInfo.tsx
-// Purpose: The status facts of a GitHub item's detail page, in two shapes of the same data: a
-//          right-hand column of titled sections (wide panes) and compact label/value rows under
-//          the header (narrow panes, or whenever the side chat dock takes the room). Pull
-//          requests show Merge status, Comments, Reviews, Checks; issues show Assignees, Labels,
-//          Comments. Either can lead with Threads, the item's side chats.
-// Layer: Pull request presentation
-// Exports: PullRequestInfo, IssueInfo, GitHubItemInfoThread, GitHubItemInfoVariant
-
-import { useLingui } from "@lingui/react";
 import type { GitHubIssueDetail, PullRequestDetail, ThreadId } from "@synara/contracts";
 import { useState, type ReactNode } from "react";
 
@@ -38,7 +28,7 @@ import { PullRequestStateGlyph } from "./PullRequestStateGlyph";
 import { PullRequestMetaRow } from "./PullRequestMetaRow";
 import { PullRequestConflictIcon } from "./pullRequestStatePresentation";
 import { PR_META_TEXT_CLASS_NAME, PR_FINE_TEXT_CLASS_NAME } from "./pullRequestText";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 export interface GitHubItemInfoThread {
   id: ThreadId;
@@ -143,9 +133,7 @@ function CommentsSection({ variant, count }: { variant: InfoVariant; count: numb
       icon={<ChatBubbleIcon className="size-4" />}
     >
       <span className={count === 0 ? "text-muted-foreground" : undefined}>
-        {count === 0
-          ? i18n._("No comments")
-          : i18n._("{count, plural, one {# comment} other {# comments}}", { count })}
+        {count === 0 ? t("git:noComments") : t("lattice:comments3", { count })}
       </span>
     </InfoSection>
   );
@@ -179,9 +167,9 @@ function ReviewsSection({ variant, detail }: { variant: InfoVariant; detail: Pul
   const hasReviews = detail.reviewers.length > 0 || reviewCount > 0 || detail.reviewDecision;
   const decision =
     detail.reviewDecision === "APPROVED"
-      ? i18n._("Approved")
+      ? t("lattice:approved")
       : detail.reviewDecision === "CHANGES_REQUESTED"
-        ? i18n._("Changes requested")
+        ? t("lattice:changesRequested")
         : null;
   // GitHub has no request-review action here; its pull request page is where reviewers are picked.
   const request = requestable ? <RequestChip url={detail.url} /> : null;

@@ -8,7 +8,6 @@
 // Exports: deriveComposerSubagentStripItems, toSubagentStripItem,
 // mergeSubagentSnapshots, and the row types
 
-import { i18n } from "~/i18n";
 import { ThreadId, type TurnId } from "@synara/contracts";
 import { t } from "~/i18n";
 

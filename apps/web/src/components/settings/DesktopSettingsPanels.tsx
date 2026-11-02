@@ -423,8 +423,8 @@ export function AppSnapSettingsPanel({
             <p className={cn(SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME, "pt-0.5")}>
               {appSnapState
                 ? (appSnapState.message?.replaceAll("Synara", "Lattice") ??
-                  "AppSnap is available only in the macOS desktop app.")
-                : "AppSnap requires the Lattice desktop app on macOS."}
+                  t("settings:appSnapIsAvailableOnlyInTheMacOSDesktopApp"))
+                : t("lattice:appSnapRequiresLatticeDesktop")}
             </p>
           ) : null}
         </div>
@@ -518,20 +518,20 @@ export function AppSnapSettingsPanel({
       </SettingsSection>
 
       {supported ? (
-        <SettingsSection title="macOS permissions">
+        <SettingsSection title="settings:macOSPermissions">
           <SettingsRow
-            title="Input Monitoring"
-            description="Lets Lattice notice the double-Option chord while another app owns the keyboard. Nothing you type is recorded."
+            title="settings:inputMonitoring"
+            description="lattice:appSnapInputMonitoringDescription"
             control={<AppSnapPermissionBadge permission={appSnapState.inputMonitoringPermission} />}
           />
           <SettingsRow
-            title="Screen Recording"
-            description="Lets Lattice capture an image of the frontmost window. Only the single window you snap is captured, only at the moment you press the chord."
+            title="settings:screenRecording"
+            description="lattice:appSnapScreenRecordingDescription"
             control={<AppSnapPermissionBadge permission={appSnapState.screenRecordingPermission} />}
           />
           <SettingsRow
-            title="Permission status"
-            description="Grant both permissions to Lattice under System Settings → Privacy & Security, then recheck here. macOS may require relaunching the app after a change."
+            title="settings:permissionStatus"
+            description="lattice:appSnapPermissionStatusDescription"
             control={
               <Button
                 type="button"
@@ -539,7 +539,7 @@ export function AppSnapSettingsPanel({
                 variant="outline"
                 onClick={() => void recheckAppSnapPermissions()}
               >
-                Recheck permissions
+                {t("settings:recheckPermissions")}
               </Button>
             }
           />

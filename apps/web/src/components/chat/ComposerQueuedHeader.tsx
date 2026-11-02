@@ -7,7 +7,7 @@
 // Layer: Chat composer UI
 // Exports: ComposerQueuedHeader
 
-import { i18n } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 import type { QueuedComposerTurn } from "../../composerDraftStore";
 import type { QueuedComposerPause, QueuedComposerPauseReason } from "~/lib/queuedComposerPause";
 import { PauseIcon, SteerIcon } from "~/lib/icons";
@@ -27,16 +27,15 @@ import {
 } from "./composerStackedPanelStyles";
 import { COMPOSER_INLINE_ACTION_PILL_CLASS_NAME } from "./composerPickerStyles";
 import { QueuedComposerActions } from "./QueuedComposerActions";
-import { useTranslation } from "~/i18n";
 
 function pauseDetail(reason: QueuedComposerPauseReason): string {
   switch (reason) {
     case "stopped":
-      return i18n._("Paused after you stopped the turn");
+      return t("lattice:pausedAfterYouStoppedTheTurn");
     case "error":
-      return i18n._("Paused after an error");
+      return t("lattice:pausedAfterAnError");
     case "usage-limit":
-      return i18n._("Paused: usage limit");
+      return t("lattice:pausedUsageLimit");
   }
 }
 
@@ -110,10 +109,10 @@ function firstNonEmptyLine(value: string): string {
 export function compactQueuedComposerPreviewMarkdown(value: string): string {
   const firstLine = firstNonEmptyLine(value);
   if (firstLine.length === 0) {
-    return i18n._("Queued follow-up");
+    return t("lattice:queuedFollowUp");
   }
   if (/^(?:`{3,}|~{3,})/.test(firstLine)) {
-    return i18n._("Code block");
+    return t("lattice:codeBlock");
   }
   const normalized = firstLine
     .replace(/^#{1,6}\s+/, "")
@@ -122,7 +121,7 @@ export function compactQueuedComposerPreviewMarkdown(value: string): string {
     .replace(/^[-*+]\s+/, "")
     .replace(/^\d+[.)]\s+/, "")
     .trim();
-  return normalized.length > 0 ? normalized : i18n._("Queued follow-up");
+  return normalized.length > 0 ? normalized : t("lattice:queuedFollowUp");
 }
 
 interface ComposerQueuedHeaderProps {

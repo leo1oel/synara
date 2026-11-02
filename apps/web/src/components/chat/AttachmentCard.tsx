@@ -8,12 +8,11 @@
 // Layer: Chat composer/transcript presentation
 // Exports: AttachmentCard
 
-import { i18n } from "~/i18n";
+import { i18n, useTranslation } from "~/i18n";
 import { forwardRef, type ComponentPropsWithoutRef, type ReactNode } from "react";
 
 import { cn } from "~/lib/utils";
 import { AttachmentRemoveButton, type AttachmentRemoveButtonSize } from "./AttachmentRemoveButton";
-import { useTranslation } from "~/i18n";
 
 export type AttachmentCardSize = "sm" | "md";
 

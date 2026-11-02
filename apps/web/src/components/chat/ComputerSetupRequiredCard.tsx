@@ -2,7 +2,6 @@
 // Purpose: Shows the current desktop permission state and an explicit setup action.
 // Layer: Chat transcript UI
 
-import { i18n } from "~/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { useProvisionComputer } from "~/hooks/useProvisionComputer";
 import { useRefreshOnWindowReturn } from "~/hooks/useRefreshOnWindowReturn";
@@ -171,7 +170,7 @@ export function ConnectedComputerSetupRequiredCard(
               statusError:
                 statusQuery.error instanceof Error && statusQuery.error.message
                   ? statusQuery.error.message
-                  : i18n._("Could not check computer access. Try again."),
+                  : "Could not check computer access. Try again.",
             }
           : {})}
         isPending={setup.isPending}

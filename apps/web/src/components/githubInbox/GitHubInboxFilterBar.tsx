@@ -1,14 +1,3 @@
-// FILE: GitHubInboxFilterBar.tsx
-// Purpose: The head of the code review list: the panel title with refresh and one Filter menu,
-//          the search field, the kind tabs with a count each, and, only while something is
-//          filtered, a row of removable chips naming each active filter. Controlled; the page
-//          owns persistence and URL overrides.
-// Layer: GitHub inbox presentation
-// Exports: GitHubInboxFilterBar
-
-import type { MessageDescriptor } from "@lingui/core";
-import { msg } from "@lingui/core/macro";
-import { useLingui } from "@lingui/react";
 import type { GitHubInboxSort, ProjectId } from "@synara/contracts";
 import type { ReactNode } from "react";
 
@@ -67,7 +56,7 @@ import {
   type GitHubInboxKindCounts,
   type GitHubInboxLabelOption,
 } from "./githubInbox.logic";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 const STATE_OPTIONS: ReadonlyArray<{
   value: GitHubInboxStateFilter;
@@ -186,7 +175,7 @@ function ActiveFilterChip({
       {!locked ? (
         <button
           type="button"
-          aria-label={i18n._("Remove filter: {label}", { label })}
+          aria-label={t("git:removeFilter", { value0: label })}
           className="flex size-4 shrink-0 items-center justify-center rounded-full hover:bg-info/16 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           onClick={onRemove}
         >
@@ -272,8 +261,8 @@ export function GitHubInboxFilterBar({
               <Button
                 variant="ghost"
                 size="icon-xs"
-                aria-label={i18n._("Sort: {sort}", { sort: sortLabel })}
-                title={i18n._("Sort: {sort}", { sort: sortLabel })}
+                aria-label={t("git:sort", { value0: sortLabel })}
+                title={t("git:sort", { value0: sortLabel })}
               />
             }
           >
@@ -482,7 +471,7 @@ export function GitHubInboxFilterBar({
                 locked={projectLocked}
                 label={
                   projectOptions.find((option) => option.id === projectId)?.name ??
-                  i18n._("Project")
+                  t("chat:detail_project")
                 }
                 onRemove={() => toggleProject(projectId)}
               />

@@ -16,7 +16,7 @@ import { desktopFlavorFromProtocol } from "@synara/shared/betaFeatures";
 import { SafariAccessSetupButton } from "../components/SafariAccessOnboarding";
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation, getFormatLocale } from "~/i18n";
 import {
   AVAILABLE_LANGUAGE_PREFERENCES,
   UI_LOCALES,
@@ -146,7 +146,6 @@ import {
   readLatticeSettingsLayoutMessage,
   readLatticeSettingsSectionMessage,
 } from "../embedMode";
-import { useLingui } from "@lingui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { isProviderKind, sameProviderOrder } from "../providerOrdering";
 import {
@@ -391,7 +390,6 @@ function SettingsRouteView() {
       ? routeSearch.provider
       : null;
   const activeSectionItem = SETTINGS_NAV_ITEMS.find((item) => item.id === activeSection)!;
-  const { i18n } = useLingui();
 
   const {
     isDefaultActiveTheme,
@@ -753,7 +751,7 @@ function SettingsRouteView() {
       ? ["settings:changed_diffLineWrapping"]
       : []),
     ...(settings.claudeLoadUserMcpServers !== defaults.claudeLoadUserMcpServers
-      ? ["lattice:loadMyMcpServersInClaude"]
+      ? ["lattice:loadMyMCPServersInClaude"]
       : []),
     ...(settings.githubLinkOpenTarget !== defaults.githubLinkOpenTarget
       ? ["settings:openPullRequestsAndIssues"]
@@ -806,7 +804,7 @@ function SettingsRouteView() {
       [
         t("settings:restoreDefaultSettings"),
         t("settings:thisWillReset", {
-          settings: new Intl.ListFormat(locale).format(changedSettingLabels),
+          settings: new Intl.ListFormat(getFormatLocale()).format(changedSettingLabels),
         }),
       ].join("\n"),
     );
@@ -875,43 +873,43 @@ function SettingsRouteView() {
         {/* Lattice owns the interface language and passes it to the embed; a second
             control here would fight the host's choice. */}
         {isEmbed ? null : (
-        <SettingsRow
-          id="setting-language"
-          status={<EditorLanguageReloadNotice />}
-          title="common:general_languageAria"
-          description="settings:chooseTheLanguageUsedByTheInterfaceSystemFollows"
-          resetAction={
-            settings.language !== defaults.language ? (
-              <SettingResetButton
-                label={t("common:language")}
-                onClick={() => updateSettings({ language: defaults.language })}
-              />
-            ) : null
-          }
-          control={
-            <SettingsSelectControl
-              value={languagePreference}
-              onValueChange={(language) => {
-                if (AVAILABLE_LANGUAGE_PREFERENCES.includes(language as LanguagePreference)) {
-                  updateSettings({ language: language as LanguagePreference });
+          <SettingsRow
+            id="setting-language"
+            status={<EditorLanguageReloadNotice />}
+            title="common:general_languageAria"
+            description="settings:chooseTheLanguageUsedByTheInterfaceSystemFollows"
+            resetAction={
+              settings.language !== defaults.language ? (
+                <SettingResetButton
+                  label={t("common:language")}
+                  onClick={() => updateSettings({ language: defaults.language })}
+                />
+              ) : null
+            }
+            control={
+              <SettingsSelectControl
+                value={languagePreference}
+                onValueChange={(language) => {
+                  if (AVAILABLE_LANGUAGE_PREFERENCES.includes(language as LanguagePreference)) {
+                    updateSettings({ language: language as LanguagePreference });
+                  }
+                }}
+                ariaLabel={t("common:general_languageAria")}
+                valueContent={
+                  languagePreference === "system"
+                    ? t("common:themeOptions_system")
+                    : UI_LOCALE_REGISTRY[languagePreference].nativeName
                 }
-              }}
-              ariaLabel={t("common:general_languageAria")}
-              valueContent={
-                languagePreference === "system"
-                  ? t("common:themeOptions_system")
-                  : UI_LOCALE_REGISTRY[languagePreference].nativeName
-              }
-            >
-              <SelectItem value="system">{t("common:themeOptions_system")}</SelectItem>
-              {UI_LOCALES.map((locale) => (
-                <SelectItem key={locale} value={locale}>
-                  {UI_LOCALE_REGISTRY[locale].nativeName}
-                </SelectItem>
-              ))}
-            </SettingsSelectControl>
-          }
-        />
+              >
+                <SelectItem value="system">{t("common:themeOptions_system")}</SelectItem>
+                {UI_LOCALES.map((locale) => (
+                  <SelectItem key={locale} value={locale}>
+                    {UI_LOCALE_REGISTRY[locale].nativeName}
+                  </SelectItem>
+                ))}
+              </SettingsSelectControl>
+            }
+          />
         )}
         <SettingsRow
           id="setting-default-provider"
@@ -984,8 +982,8 @@ function SettingsRouteView() {
                   : t("computer:worktreeMode_local")
               }
             >
-              <SelectItem value="local">Local</SelectItem>
-              <SelectItem value="worktree">New worktree</SelectItem>
+              <SelectItem value="local">{t("computer:worktreeMode_local")}</SelectItem>
+              <SelectItem value="worktree">{t("chat:general_newWorktree")}</SelectItem>
             </SettingsSelectControl>
           }
         />
@@ -1610,7 +1608,7 @@ function SettingsRouteView() {
                   showClear={settings.terminalFontFamily.length > 0}
                   spellCheck={false}
                   autoComplete="off"
-                  placeholder="Default (TX-02 / JetBrains Mono)"
+                  placeholder={t("lattice:defaultMonospaceFont")}
                   className="w-full sm:w-56"
                   aria-label={t("settings:terminalFontFamily")}
                 />
@@ -2055,7 +2053,7 @@ function SettingsRouteView() {
                 <div className="synara-settings-heading mb-8 flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <h1 className="text-xl font-medium tracking-tight text-foreground">
-                      {i18n._(activeSectionItem.label)}
+                      {t(activeSectionItem.label)}
                     </h1>
                     <p className="mt-1.5 text-ui leading-relaxed text-muted-foreground">
                       {t(activeSectionItem.description)}
@@ -2073,7 +2071,7 @@ function SettingsRouteView() {
                         onClick={() => void restoreDefaults()}
                       >
                         <ResetIcon className="size-3.5" />
-                        Restore defaults
+                        {t("settings:advanced_restoreDefaults")}
                       </Button>
                     )
                   ) : null}

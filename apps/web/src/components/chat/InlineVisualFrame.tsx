@@ -28,7 +28,7 @@ import {
   readEmbedMode,
 } from "~/embedMode";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
-import { i18n } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 import { useInlineVisualTheme } from "~/hooks/useInlineVisualTheme";
 import { downloadBlob } from "~/lib/browserDownload";
 import { DISCLOSURE_FADE_MOTION_CLASS } from "~/lib/disclosureMotion";
@@ -39,7 +39,6 @@ import { cn } from "~/lib/utils";
 import { Button } from "../ui/button";
 import { Dialog, DialogHeader, DialogPopup, DialogTitle } from "../ui/dialog";
 import { IconButton } from "../ui/icon-button";
-import { useTranslation } from "~/i18n";
 
 /** How tall the expanded view lets a page grow before it scrolls the dialog. */
 const EXPANDED_MAX_HEIGHT = 20_000;
@@ -121,8 +120,8 @@ function SandboxedInlineVisualFrame({
           >
             <InlineVisualSourceActions title={visual.title} html={html} />
             <IconButton
-              label={i18n._("Expand visual")}
-              tooltip={i18n._("Expand")}
+              label={t("lattice:expandVisual")}
+              tooltip={t("chat:generatedImage_expand")}
               onClick={() => {
                 const config = readEmbedMode();
                 const hostDocument = buildInlineVisualHostDocument(html, theme);
@@ -141,7 +140,11 @@ function SandboxedInlineVisualFrame({
             >
               <Maximize2 className="size-3.5" />
             </IconButton>
-            <IconButton label={i18n._("Reload visual")} tooltip={i18n._("Reload")} onClick={reload}>
+            <IconButton
+              label={t("chat:reloadVisual")}
+              tooltip={t("computer:panel_reload")}
+              onClick={reload}
+            >
               <RotateCcwIcon className="size-3.5" />
             </IconButton>
           </div>
@@ -188,7 +191,7 @@ function SandboxedInlineVisualFrame({
           title={visual.title}
           message={t("chat:visualUnavailable")}
           {...(isRetryable(visualDocument.error)
-            ? { action: i18n._("Retry"), onAction: () => void visualDocument.refetch() }
+            ? { action: t("common:common_retry"), onAction: () => void visualDocument.refetch() }
             : {})}
         />
       ) : (
@@ -222,15 +225,15 @@ function InlineVisualSourceActions({
   return (
     <>
       <IconButton
-        label={isCopied ? i18n._("Copied") : i18n._("Copy source")}
-        tooltip={isCopied ? i18n._("Copied") : i18n._("Copy source")}
+        label={isCopied ? t("chat:theme_copied") : t("lattice:copySource")}
+        tooltip={isCopied ? t("chat:theme_copied") : t("lattice:copySource")}
         onClick={() => copyToClipboard(html, undefined)}
       >
         {isCopied ? <CheckIcon className="size-3.5" /> : <CopyIcon className="size-3.5" />}
       </IconButton>
       <IconButton
-        label={i18n._("Download HTML")}
-        tooltip={i18n._("Download HTML")}
+        label={t("lattice:downloadHTML")}
+        tooltip={t("lattice:downloadHTML")}
         onClick={download}
       >
         <DownloadIcon className="size-3.5" />

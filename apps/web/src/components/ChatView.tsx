@@ -1,4 +1,3 @@
-import { i18n } from "~/i18n";
 import { PULL_REQUEST_AUTO_FIX_ON } from "../betaFeatures";
 import { type LegendListRef } from "@legendapp/list/react";
 import {
@@ -40,7 +39,6 @@ import { pendingRequestInstanceKey } from "@synara/shared/threadSummary";
 import { deriveAssociatedWorktreeMetadata } from "@synara/shared/threadWorkspace";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useLingui } from "@lingui/react";
 import {
   Suspense,
   lazy,
@@ -537,7 +535,7 @@ import { SidebarHeaderTrigger } from "./ui/sidebar";
 import { Skeleton } from "./ui/skeleton";
 import { toastManager } from "./ui/toast";
 import { isSidechatThread, isStandaloneSidechatThread } from "@synara/shared/sidechatThread";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 import { Translation } from "~/i18n/Translation";
 
 // The terminal panel loads xterm plus its addons (~223 KB gzip). Its mount point
@@ -633,7 +631,7 @@ function ComposerModelLoadingControl(props: { widthClassName?: string; compact?:
     >
       <RefreshCwIcon aria-hidden="true" className="size-3.5 animate-spin" />
       <span className={cn("truncate text-ui-xs", props.compact && "sr-only")}>
-        {i18n._("Loading models")}
+        {t("chat:providerModelPicker_loadingModels")}
       </span>
     </div>
   );
@@ -1392,7 +1390,7 @@ export default function ChatView({
       lastKnownPr?: Thread["lastKnownPr"];
     }) => {
       if (!activeProject) {
-        throw new Error(i18n._("No active project is available for this pull request."));
+        throw new Error(t("lattice:noActiveProjectIsAvailableForThis"));
       }
       const draftThreadContext = {
         branch: input.branch,
@@ -1442,7 +1440,7 @@ export default function ChatView({
       clearProjectDraftThreadId,
       getDraftThread,
       getDraftThreadByProjectId,
-      i18n,
+      t,
       isServerThread,
       navigate,
       setDraftThreadContext,
@@ -1804,19 +1802,19 @@ export default function ChatView({
       sidebarPlanSourceThreadProposedPlans,
     ],
   );
-  const planSidebarLabel = sidebarProposedPlan ? i18n._("Plan details") : i18n._("Tasks");
+  const planSidebarLabel = sidebarProposedPlan ? t("chat:planDetails") : t("chat:tasks");
   const planSidebarToggleLabel = planSidebarOpen
     ? sidebarProposedPlan
-      ? i18n._("Hide plan details")
-      : i18n._("Hide tasks")
+      ? t("lattice:hidePlanDetails")
+      : t("lattice:hideTasks")
     : planSidebarLabel;
   const planSidebarToggleTitle = sidebarProposedPlan
     ? planSidebarOpen
-      ? i18n._("Hide plan details sidebar")
-      : i18n._("Show plan details sidebar")
+      ? t("lattice:hidePlanDetailsSidebar")
+      : t("lattice:showPlanDetailsSidebar")
     : planSidebarOpen
-      ? i18n._("Hide tasks sidebar")
-      : i18n._("Show tasks sidebar");
+      ? t("lattice:hideTasksSidebar")
+      : t("lattice:showTasksSidebar");
   const activeTaskList = useMemo((): ActiveTaskListState | null => {
     if (showDebugTaskBanner) {
       return {
@@ -2599,18 +2597,18 @@ export default function ChatView({
     );
   const claudeCompactDisabledReason = !canRequestNativeClaudeCompaction
     ? isNativeCommandDiscoveryPending
-      ? i18n._("Checking Claude's available commands...")
-      : i18n._("Compaction is unavailable for this Claude session.")
+      ? t("lattice:checkingClaudeSAvailableCommands")
+      : t("lattice:compactionIsUnavailableForThisClaudeSession")
     : hasLiveTurn || isConnecting || (activeBackgroundTasks?.activeCount ?? 0) > 0
-      ? i18n._("Wait for Claude and its background tasks to finish.")
+      ? t("lattice:waitForClaudeAndItsBackgroundTasks")
       : activePendingApproval || pendingUserInputs.length > 0
-        ? i18n._("Resolve the pending request before compacting.")
+        ? t("lattice:resolveThePendingRequestBeforeCompacting")
         : null;
   const standaloneClaudeCompactDisabledReason =
     activeThread?.claudeCacheReview != null
-      ? i18n._("Choose how to resume the held message above.")
+      ? t("lattice:chooseHowToResumeTheHeldMessage")
       : isWorking
-        ? i18n._("Wait for Claude to finish before compacting.")
+        ? t("lattice:waitForClaudeToFinishBeforeCompacting")
         : claudeCompactDisabledReason;
   const { compact: onCompactClaudeContext, isSubmitting: isRequestingClaudeCompaction } =
     useClaudeContextCompaction({
@@ -2630,7 +2628,7 @@ export default function ChatView({
   const onRespondToClaudeCacheReview = useCallback(
     async (review: PendingClaudeCacheReview, decision: ClaudeCacheReviewDecision) => {
       const api = readNativeApi();
-      if (!api) throw new Error(i18n._("Reconnect before choosing how to resume."));
+      if (!api) throw new Error(t("lattice:reconnectBeforeChoosingHowToResume"));
       await api.orchestration.dispatchCommand({
         type: "thread.claude-cache.respond",
         commandId: newCommandId(),
@@ -2642,7 +2640,7 @@ export default function ChatView({
       });
       if (decision === "never") updateSettings({ claudeConfirmColdCacheResume: false });
     },
-    [i18n, threadId, updateSettings],
+    [t, threadId, updateSettings],
   );
   const activeRootBranch = useMemo(
     () =>
@@ -2818,15 +2816,15 @@ export default function ChatView({
           id: "review-target:changes",
           type: "review-target" as const,
           target: "changes" as const,
-          label: i18n._("Review uncommitted changes"),
-          description: i18n._("Review local uncommitted changes"),
+          label: t("lattice:reviewUncommittedChanges"),
+          description: t("chat:reviewLocalUncommittedChanges"),
         },
         {
           id: "review-target:base-branch",
           type: "review-target" as const,
           target: "base-branch" as const,
-          label: i18n._("Review against base branch"),
-          description: i18n._("Review the current branch diff against its base"),
+          label: t("lattice:reviewAgainstBaseBranch"),
+          description: t("chat:reviewTheCurrentBranchDiffAgainstItsBase"),
         },
       ];
     }
@@ -2836,7 +2834,7 @@ export default function ChatView({
     activeThread?.envMode,
     activeThread?.worktreePath,
     composerCommandPicker,
-    i18n,
+    t,
     normalComposerMenuItems,
     t,
   ]);
@@ -3337,7 +3335,7 @@ export default function ChatView({
     refreshVoiceStatus: refreshProviderStatuses,
     actionArmDelayMs: VOICE_RECORDER_ACTION_ARM_DELAY_MS,
     failureCopy: {
-      transcriptionFailedTitle: i18n._("Couldn't transcribe voice note"),
+      transcriptionFailedTitle: t("lattice:couldnTTranscribeVoiceNote"),
     },
     onGuardWarning: warnVoiceGuard,
   });
@@ -4462,7 +4460,7 @@ export default function ChatView({
     [
       activeThreadId,
       addComposerFilesToDraft,
-      i18n,
+      t,
       isSidechatExpired,
       pendingUserInputs.length,
       setThreadError,
@@ -4606,9 +4604,9 @@ export default function ChatView({
       }
       const confirmed = await api.dialogs.confirm(
         [
-          i18n._("Revert this thread to checkpoint {turnCount}?", { turnCount }),
-          i18n._("This will discard newer messages and turn diffs in this thread."),
-          i18n._("This action cannot be undone."),
+          t("lattice:revertThisThreadToCheckpoint", { turnCount }),
+          t("lattice:thisWillDiscardNewerMessagesAndTurn"),
+          t("chat:checkpoint_revertConfirmWarning"),
         ].join("\n"),
       );
       if (!confirmed) {
@@ -4629,13 +4627,13 @@ export default function ChatView({
       } catch (err) {
         setThreadError(
           activeThread.id,
-          err instanceof Error ? err.message : i18n._("Failed to revert thread state."),
+          err instanceof Error ? err.message : t("lattice:failedToRevertThreadState"),
         );
       }
       setIsRevertingCheckpoint(false);
     },
     [
-      i18n,
+      t,
       setIsRevertingCheckpoint,
       activeThread,
       hasLiveTurn,
@@ -4696,12 +4694,12 @@ export default function ChatView({
         setIsRevertingCheckpoint(false);
         setThreadError(
           activeThread.id,
-          err instanceof Error ? err.message : i18n._("Failed to undo file changes."),
+          err instanceof Error ? err.message : t("lattice:failedToUndoFileChanges"),
         );
       });
     },
     [
-      i18n,
+      t,
       setIsRevertingCheckpoint,
       setPendingFileUndo,
       activeThread,
@@ -4758,11 +4756,11 @@ export default function ChatView({
       if (error instanceof ProviderHandoffBackgroundTasksError) return;
       toastManager.add({
         type: "error",
-        title: i18n._("Could not hand off this thread"),
+        title: t("chat:couldNotHandOffThisThread"),
         description:
           error instanceof Error
             ? error.message
-            : i18n._("An error occurred while handing off the thread."),
+            : t("chat:anErrorOccurredWhileHandingOffTheThread"),
       });
     }
   });
@@ -4910,10 +4908,8 @@ export default function ChatView({
       const targetName = PROVIDER_DISPLAY_NAMES[targetProvider] ?? targetProvider;
       toastManager.add({
         type: "error",
-        title: i18n._("Cannot switch to {provider} yet", { provider: targetName }),
-        description: i18n._(
-          "Wait for the current turn to finish and answer any pending request, then send again.",
-        ),
+        title: t("common:cannotSwitchToYet", { value0: targetName }),
+        description: t("chat:waitForTheCurrentTurnToFinishAndAnswer"),
       });
       return false;
     },
@@ -5895,9 +5891,9 @@ export default function ChatView({
       if (!api) return;
       const confirmed = await api.dialogs.confirm(
         [
-          i18n._('Delete "{targetThreadTitle}"?', { targetThreadTitle }),
-          i18n._("This permanently clears this conversation history."),
-          i18n._("This action cannot be undone."),
+          t("automation:delete", { value0: targetThreadTitle }),
+          t("lattice:thisPermanentlyClearsThisConversationHistory"),
+          t("chat:checkpoint_revertConfirmWarning"),
         ].join("\n"),
       );
       if (!confirmed) return;
@@ -5914,23 +5910,21 @@ export default function ChatView({
             if (thread.id === activeThread?.id) onNewEmbedChat();
           },
           removeWorktree: (worktree) => api.git.removeWorktree(worktree),
-          unknownWorktreeErrorMessage: i18n._("Unknown error."),
+          unknownWorktreeErrorMessage: t("common:unknownError"),
         });
       } catch (error) {
         toastManager.add({
           type: "error",
-          title: i18n._("Could not delete thread"),
+          title: t("settings:archived_couldNotDelete"),
           description:
-            error instanceof Error
-              ? error.message
-              : i18n._("The conversation could not be deleted."),
+            error instanceof Error ? error.message : t("lattice:theConversationCouldNotBeDeleted"),
         });
       }
     },
     [
       activeThread?.id,
       clearTemporaryThread,
-      i18n,
+      t,
       isEmbed,
       onNewEmbedChat,
       removeThreadFromSplitViews,
@@ -6215,8 +6209,8 @@ export default function ChatView({
       : null,
     isHomeChat: isChatProject,
     isEmpty: timelineEntries.length === 0,
-    genericChatTitle: i18n._("New Chat"),
-    genericThreadTitle: i18n._("New thread"),
+    genericChatTitle: t("lattice:newChat"),
+    genericThreadTitle: t("chat:sections_newThread"),
   });
 
   const handleRenameActiveThread = async (newTitle: string) => {
@@ -6783,8 +6777,8 @@ export default function ChatView({
                   }
                   message={
                     selectedProvider === "claudeAgent"
-                      ? i18n._("Next reply may use more Claude allowance.")
-                      : i18n._("Chat context uses the new provider’s allowance.")
+                      ? t("chat:nextReplyMayUseMoreClaudeAllowance")
+                      : t("chat:chatContextUsesTheNewProviderSAllowance")
                   }
                   onDismiss={() => setDismissedClaudeSwitchKey(claudeSwitchKey)}
                   testId="composer-claude-model-switch-note"
@@ -6987,7 +6981,9 @@ export default function ChatView({
                     ) : isLocalFolderBrowserOpen ? (
                       <ComposerLocalDirectoryMenu
                         mentionQuery={mentionTriggerQuery}
-                        rootLabel={localFolderBrowseRootPath ?? i18n._("Local folders unavailable")}
+                        rootLabel={
+                          localFolderBrowseRootPath ?? t("lattice:localFoldersUnavailable")
+                        }
                         homeDir={serverConfigQuery.data?.homeDir ?? null}
                         onSelectEntry={(absolutePath) =>
                           handleSelectLocalDirectoryMention(absolutePath)
@@ -7021,8 +7017,8 @@ export default function ChatView({
                     >
                       <LoaderCircleIcon className="size-3.5 animate-spin" />
                       {pendingComposerImageCount === 1
-                        ? i18n._("Optimizing image…")
-                        : i18n._("Optimizing images…")}
+                        ? t("lattice:optimizingImage")
+                        : t("lattice:optimizingImages")}
                     </div>
                   )}
                 {!isComposerApprovalState &&
@@ -7096,10 +7092,10 @@ export default function ChatView({
                                 ? t("chat:placeholder_followUp")
                                 : standaloneSidechatContext
                                   ? standaloneSidechatItemNoun === "issue"
-                                    ? i18n._("Ask about this issue")
-                                    : i18n._("Ask about this pull request")
+                                    ? t("lattice:askAboutThisIssue")
+                                    : t("lattice:askAboutThisPullRequest")
                                   : isEmbed
-                                    ? i18n._("Do anything in Lattice")
+                                    ? t("lattice:doAnythingInLattice")
                                     : t("chat:doAnythingInSynara")
                   }
                   disabled={isComposerEditorDisabled}
@@ -7769,7 +7765,9 @@ export default function ChatView({
               open={projectPanelVisible}
               variant={environmentOverlayVariant}
               projectId={activeProjectId}
-              projectName={activeProjectDisplayName ?? activeProject?.name ?? i18n._("Project")}
+              projectName={
+                activeProjectDisplayName ?? activeProject?.name ?? t("chat:detail_project")
+              }
               workspacePath={activeProject?.cwd ?? ""}
               // "Use default" must mean the app's default model, not whatever the
               // active thread happens to run (W14).

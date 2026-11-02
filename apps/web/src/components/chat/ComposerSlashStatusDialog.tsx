@@ -1,4 +1,3 @@
-import { i18n } from "~/i18n";
 import type { ResolvedThreadWorkspaceState } from "@synara/shared/threadEnvironment";
 import type { ProviderInteractionMode } from "@synara/contracts";
 import type { DraftThreadEnvMode } from "../../composerDraftStore";

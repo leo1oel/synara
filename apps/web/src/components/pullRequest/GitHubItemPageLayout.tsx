@@ -12,7 +12,6 @@
 //          PullRequestDetailSkeleton
 
 import { useInPageGlassOverlay } from "~/hooks/useInPageGlassOverlay";
-import { useLingui } from "@lingui/react";
 import type { ProjectId, ThreadId } from "@synara/contracts";
 import { useState, type ReactNode } from "react";
 
@@ -36,7 +35,7 @@ import type { GitHubItemInfoThread, GitHubItemInfoVariant } from "./GitHubItemIn
 import type { GitHubItemAgentTarget } from "./githubItemAgentContext";
 import { copyPullRequestLink } from "./PullRequestConfirmActionDialog";
 import { PullRequestsUnavailableState } from "./PullRequestsUnavailableState";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 /** What the code review page gives a detail panel beyond the item itself. */
 export interface GitHubItemPageHost {
@@ -101,7 +100,7 @@ export function GitHubItemAskComposer({
   return (
     <GitHubItemFloatingComposer
       placeholder={
-        noun === "issue" ? i18n._("Ask about this issue") : i18n._("Ask about this pull request")
+        noun === "issue" ? t("lattice:askAboutThisIssue") : t("lattice:askAboutThisPullRequest")
       }
       projects={sendTargets}
       projectId={projectId}

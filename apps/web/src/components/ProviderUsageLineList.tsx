@@ -1,9 +1,5 @@
-// FILE: ProviderUsageLineList.tsx
-// Purpose: Shared provider-usage line renderer for settings cards and compact popovers.
-// Keeps label/value/subtitle semantics consistent while allowing each surface its own density.
+import { t } from "~/i18n";
 
-import type { I18n } from "@lingui/core";
-import { useLingui } from "@lingui/react";
 import type { OpenUsageUsageLine } from "~/lib/openUsageRateLimits";
 import { cn } from "~/lib/utils";
 
@@ -35,70 +31,67 @@ const SURFACE_CLASSES: Record<
   },
 };
 
-function localizeUsageLineLabel(i18n: I18n, label: string): string {
+function localizeUsageLineLabel(translate: typeof t, label: string): string {
   switch (label) {
     case "24h":
-      return i18n._("24h");
+      return translate("lattice:n24h");
     case "7d":
-      return i18n._("7d");
+      return translate("lattice:n7d");
     case "30d":
-      return i18n._("30d");
+      return translate("lattice:n30d");
     case "Credits":
-      return i18n._("Credits");
+      return translate("lattice:credits");
     case "On-demand":
-      return i18n._("On-demand");
+      return translate("lattice:onDemand");
     case "Extra usage":
-      return i18n._("Extra usage");
+      return translate("lattice:extraUsage");
     default:
       return label;
   }
 }
 
-function localizeUsageLineValue(i18n: I18n, value: string): string {
+function localizeUsageLineValue(translate: typeof t, value: string): string {
   const tokensMatch = /^(.+) tokens$/u.exec(value);
   if (tokensMatch) {
-    return i18n._("{count} tokens", { count: tokensMatch[1]! });
+    return translate("chat:tokens3", { count: tokensMatch[1]! });
   }
   const remainingOfMatch = /^(.+) of (.+) remaining$/u.exec(value);
   if (remainingOfMatch) {
-    return i18n._("{remaining} of {total} remaining", {
+    return translate("lattice:ofRemaining", {
       remaining: remainingOfMatch[1]!,
       total: remainingOfMatch[2]!,
     });
   }
   const remainingEstimateMatch = /^(.+) remaining \(≈ (.+)\)$/u.exec(value);
   if (remainingEstimateMatch) {
-    return i18n._("{remaining} remaining (≈ {estimate})", {
+    return translate("lattice:remaining", {
       remaining: remainingEstimateMatch[1]!,
       estimate: remainingEstimateMatch[2]!,
     });
   }
   const remainingMatch = /^(.+) remaining$/u.exec(value);
   if (remainingMatch) {
-    return i18n._("{remaining} remaining", { remaining: remainingMatch[1]! });
+    return translate("settings:usageRemaining", { window: remainingMatch[1]! });
   }
   const spentMatch = /^(.+) spent$/u.exec(value);
   if (spentMatch) {
-    return i18n._("{amount} spent", { amount: spentMatch[1]! });
+    return translate("lattice:spent", { amount: spentMatch[1]! });
   }
   const limitMatch = /^(.+) limit$/u.exec(value);
   if (limitMatch) {
-    return i18n._("{amount} limit", { amount: limitMatch[1]! });
+    return translate("lattice:limit", { amount: limitMatch[1]! });
   }
   const usedOfMatch = /^(.+) of (.+)$/u.exec(value);
   if (usedOfMatch) {
-    return i18n._("{used} of {limit}", {
-      used: usedOfMatch[1]!,
-      limit: usedOfMatch[2]!,
-    });
+    return translate("lattice:of", { used: usedOfMatch[1]!, limit: usedOfMatch[2]! });
   }
   return value;
 }
 
-function localizeUsageLineSubtitle(i18n: I18n, subtitle: string): string {
+function localizeUsageLineSubtitle(translate: typeof t, subtitle: string): string {
   const match = /^(.+) recent (session|sessions)$/u.exec(subtitle);
   if (!match) return subtitle;
-  return i18n._("{count} recent sessions", { count: match[1]! });
+  return translate("lattice:recentSessions", { count: match[1]! });
 }
 
 export function ProviderUsageLineList({
@@ -110,7 +103,6 @@ export function ProviderUsageLineList({
   lines: ReadonlyArray<OpenUsageUsageLine>;
   surface: ProviderUsageLineListSurface;
 }) {
-  const { i18n } = useLingui();
   const classes = SURFACE_CLASSES[surface];
 
   return (
@@ -118,11 +110,11 @@ export function ProviderUsageLineList({
       {lines.map((line) => (
         <div key={`${line.label}:${line.value}`} className={classes.item}>
           <div className={classes.row}>
-            <span className={classes.label}>{localizeUsageLineLabel(i18n, line.label)}</span>
-            <span className={classes.value}>{localizeUsageLineValue(i18n, line.value)}</span>
+            <span className={classes.label}>{localizeUsageLineLabel(t, line.label)}</span>
+            <span className={classes.value}>{localizeUsageLineValue(t, line.value)}</span>
           </div>
           {line.subtitle ? (
-            <div className={classes.subtitle}>{localizeUsageLineSubtitle(i18n, line.subtitle)}</div>
+            <div className={classes.subtitle}>{localizeUsageLineSubtitle(t, line.subtitle)}</div>
           ) : null}
         </div>
       ))}

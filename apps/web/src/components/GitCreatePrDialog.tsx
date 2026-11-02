@@ -4,8 +4,8 @@
 // Layer: Header action control
 // Depends on: GitActionsControl.logic resolvers and the shared git dialog chrome.
 
+import { localizeGitText } from "../lib/gitLocalization";
 import { useEffect, useMemo, useState } from "react";
-import { useLingui } from "@lingui/react";
 import { Checkbox } from "~/components/ui/checkbox";
 import { DiffStat } from "~/components/ui/diff-stat";
 import { getSubmitShortcutKeyShortcuts, SubmitShortcutKbd } from "~/components/ui/kbd";
@@ -26,7 +26,7 @@ import {
 } from "./GitDialogChrome";
 import { CreatePullRequestIcon, ExternalLinkIcon, GitPullRequestDraftIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 export interface GitCreatePrDialogSubmission {
   action: "create_pr" | "commit_push_pr";
@@ -96,14 +96,14 @@ export function GitCreatePrDialog({
   return (
     <GitDialogShell open={open} onOpenChange={onOpenChange} onSubmitShortcut={() => submit(false)}>
       <GitDialogHeading
-        eyebrow={i18n._("{kind} → {branch}", {
-          kind: view.isNewBranch ? i18n._("New branch") : i18n._("Branch"),
-          branch: view.baseBranchName,
+        eyebrow={t("chat:symbol9", {
+          value0: view.isNewBranch ? t("lattice:newBranch") : t("common:sessionStatus_branch"),
+          value1: view.baseBranchName,
         })}
         subject={
           view.willCreateFeatureBranch
-            ? i18n._("Auto-named feature branch")
-            : (view.branchName ?? i18n._("(detached HEAD)"))
+            ? t("lattice:autoNamedFeatureBranch")
+            : (view.branchName ?? t("lattice:detachedHEAD"))
         }
         subjectMuted={view.willCreateFeatureBranch}
       />
@@ -141,7 +141,7 @@ export function GitCreatePrDialog({
           </label>
         )}
         {unavailableHint && (
-          <p className="py-1 text-warning text-ui-xs">{localizeGitText(i18n, unavailableHint)}</p>
+          <p className="py-1 text-warning text-ui-xs">{localizeGitText(t, unavailableHint)}</p>
         )}
       </GitDialogBody>
       <GitDialogActionList>

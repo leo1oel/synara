@@ -1,4 +1,3 @@
-import { i18n } from "~/i18n";
 import { useState, type CSSProperties } from "react";
 import {
   buildCollapsedProposedPlanPreviewMarkdown,

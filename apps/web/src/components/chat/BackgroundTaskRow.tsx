@@ -8,7 +8,6 @@
 
 import { createContext, useContext } from "react";
 
-import { i18n } from "~/i18n";
 import { BackgroundTrayIcon, StopIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { MUTED_LABEL_TEXT_CLASS_NAME } from "~/surfaceStyles";
@@ -84,7 +83,7 @@ export function BackgroundTaskRow(props: { task: WorkLogBackgroundTask; fontSize
             size="xs"
             className="shrink-0 text-foreground/80"
             onClick={() => onStop(task.taskId)}
-            aria-label={i18n._("Stop background task {task}", { task: subject })}
+            aria-label={t("chat:stopBackgroundTask", { value0: subject })}
           >
             <StopIcon className="size-2.5" />
             {t("chat:stop")}

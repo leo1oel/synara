@@ -1,10 +1,10 @@
+import { t } from "~/i18n";
 // FILE: ComposerExtrasMenu.tsx
 // Purpose: Hosts the composer `+` menu for file attachments.
 // Layer: Chat composer presentation
 // Depends on: shared menu primitives, icon buttons, and the caller-owned attachment callback.
 
 import { type ProviderInteractionMode } from "@synara/contracts";
-import { useLingui } from "@lingui/react";
 import { useId, useRef, type ChangeEvent } from "react";
 
 import { BugIcon, ListTodoIcon, MessageCircleIcon, PaperclipIcon, PlusIcon } from "~/lib/icons";
@@ -32,7 +32,6 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
   attachmentsOnly?: boolean;
   triggerClassName?: string;
 }) {
-  const { i18n } = useLingui();
   const inputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -63,7 +62,7 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
               size="icon-sm"
               variant="chrome"
               className={cn("shrink-0 rounded-md", props.triggerClassName)}
-              aria-label={i18n._("Composer extras")}
+              aria-label={t("chat:composerExtras_extras")}
             />
           }
         >
@@ -76,13 +75,13 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
             }}
           >
             <PaperclipIcon className="size-4 shrink-0" />
-            {i18n._("Add files")}
+            {t("workspace:addFiles")}
           </MenuItem>
 
           {!props.attachmentsOnly ? <MenuSeparator /> : null}
           {!props.attachmentsOnly ? (
             <MenuSub>
-              <MenuSubTrigger>{i18n._("Mode")}</MenuSubTrigger>
+              <MenuSubTrigger>{t("chat:mode_label")}</MenuSubTrigger>
               <ComposerPickerMenuSubPopup>
                 <MenuRadioGroup
                   value={props.interactionMode}
@@ -95,19 +94,19 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
                   <MenuRadioItem value="default">
                     <span className="inline-flex items-center gap-2">
                       <MessageCircleIcon className="size-4 shrink-0" />
-                      {i18n._("Default")}
+                      {t("settings:reasoningModes_default")}
                     </span>
                   </MenuRadioItem>
                   <MenuRadioItem value="plan">
                     <span className="inline-flex items-center gap-2">
                       <ListTodoIcon className="size-4 shrink-0" />
-                      {i18n._("Plan")}
+                      {t("workspace:plan_badge")}
                     </span>
                   </MenuRadioItem>
                   <MenuRadioItem value="debug">
                     <span className="inline-flex items-center gap-2">
                       <BugIcon className="size-4 shrink-0" />
-                      {i18n._("Debug")}
+                      {t("chat:debug")}
                     </span>
                   </MenuRadioItem>
                 </MenuRadioGroup>
@@ -119,7 +118,7 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
             <>
               <MenuSeparator />
               <MenuSub>
-                <MenuSubTrigger>{i18n._("Fast")}</MenuSubTrigger>
+                <MenuSubTrigger>{t("chat:traitsPicker_fast")}</MenuSubTrigger>
                 <ComposerPickerMenuSubPopup>
                   <MenuRadioGroup
                     value={props.fastModeEnabled ? "fast" : "normal"}
@@ -129,8 +128,10 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
                       props.onToggleFastMode();
                     }}
                   >
-                    <MenuRadioItem value="normal">{i18n._("Default")}</MenuRadioItem>
-                    <MenuRadioItem value="fast">{i18n._("Fast")}</MenuRadioItem>
+                    <MenuRadioItem value="normal">
+                      {t("settings:reasoningModes_default")}
+                    </MenuRadioItem>
+                    <MenuRadioItem value="fast">{t("chat:traitsPicker_fast")}</MenuRadioItem>
                   </MenuRadioGroup>
                 </ComposerPickerMenuSubPopup>
               </MenuSub>

@@ -20,7 +20,7 @@ import {
   type PullRequestContextDraft,
   type PullRequestContextScope,
 } from "~/lib/pullRequestContext";
-import { i18n } from "~/i18n";
+import { t } from "~/i18n";
 import { randomUUID } from "~/lib/utils";
 
 export type PullRequestChecksTone = "pending" | "success" | "failure" | "none";
@@ -46,55 +46,49 @@ export function summarizePullRequestChecks(
   const failing = checks.filter((check) => check.status === "failure").length;
   if (failing > 0) {
     return {
-      label: i18n._("{count, plural, one {# failing check} other {# failing checks}}", {
-        count: failing,
-      }),
+      label: t("lattice:failingChecks", { count: failing }),
       tone: "failure",
     };
   }
   const cancelled = checks.filter((check) => check.status === "cancelled").length;
   if (cancelled > 0) {
     return {
-      label: i18n._("{count, plural, one {# cancelled check} other {# cancelled checks}}", {
-        count: cancelled,
-      }),
+      label: t("lattice:cancelledChecks", { count: cancelled }),
       tone: "failure",
     };
   }
   const pending = checks.filter((check) => check.status === "pending").length;
   if (pending > 0) {
     return {
-      label: i18n._("{count, plural, one {# pending check} other {# pending checks}}", {
-        count: pending,
-      }),
+      label: t("lattice:pendingChecks", { count: pending }),
       tone: "pending",
     };
   }
   if (checks.length === 0) {
-    return { label: i18n._("No checks"), tone: "none" };
+    return { label: t("git:noChecks"), tone: "none" };
   }
   const successful = checks.filter((check) => check.status === "success").length;
   if (successful === 0) {
-    return { label: i18n._("No required checks"), tone: "none" };
+    return { label: t("lattice:noRequiredChecks"), tone: "none" };
   }
-  return { label: i18n._("All checks passed"), tone: "success" };
+  return { label: t("lattice:allChecksPassed"), tone: "success" };
 }
 
 /** A check's status as the UI names it. Prompts keep PULL_REQUEST_CHECK_STATUS_LABELS' English. */
 export function pullRequestCheckStatusLabel(status: GitPullRequestCheck["status"]): string {
   switch (status) {
     case "pending":
-      return i18n._("Running");
+      return t("chat:runStatus_running_command");
     case "success":
-      return i18n._("Succeeded");
+      return t("lattice:succeeded");
     case "failure":
-      return i18n._("Failed");
+      return t("chat:runStatus_failed");
     case "skipped":
-      return i18n._("Skipped");
+      return t("git:runStatus_skipped");
     case "neutral":
-      return i18n._("Neutral");
+      return t("lattice:neutral");
     case "cancelled":
-      return i18n._("Cancelled");
+      return t("git:runStatus_cancelled");
   }
 }
 
@@ -141,18 +135,13 @@ export function summarizePullRequestDiffStat(pr: {
   return {
     additions: pr.additions ?? 0,
     deletions: pr.deletions ?? 0,
-    filesLabel:
-      pr.changedFiles === null
-        ? null
-        : i18n._("{count, plural, one {# file} other {# files}}", { count: pr.changedFiles }),
+    filesLabel: pr.changedFiles === null ? null : t("lattice:files", { count: pr.changedFiles }),
   };
 }
 
 export function summarizePullRequestComments(count: number, truncated = false): string {
-  if (count === 0) return truncated ? i18n._("Comments may exist") : i18n._("No comments");
-  return truncated
-    ? i18n._("{count, plural, one {#+ comment} other {#+ comments}}", { count })
-    : i18n._("{count, plural, one {# comment} other {# comments}}", { count });
+  if (count === 0) return truncated ? t("lattice:commentsMayExist") : t("git:noComments");
+  return truncated ? t("lattice:comments2", { count }) : t("lattice:comments3", { count });
 }
 
 export interface PullRequestCommentDisplay {
@@ -822,8 +811,8 @@ export function createGitHubItemContextDraft(
     title: `#${item.number} ${item.title}`,
     subtitle:
       item.itemKind === "issue"
-        ? i18n._("Issue in {repository}", { repository: item.repository })
-        : i18n._("Pull request in {repository}", { repository: item.repository }),
+        ? t("lattice:issueIn", { repository: item.repository })
+        : t("lattice:pullRequestIn", { repository: item.repository }),
     // The PR URL is the reference; let the agent read current GitHub details as needed.
     // Keep the title/subtitle for the card without copying the discussion into the prompt.
     text:

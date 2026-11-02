@@ -22,7 +22,7 @@ import {
 } from "@synara/shared/githubRepository";
 
 import type { GitHubInboxInvolvementFilter } from "~/appSettings";
-import { i18n } from "~/i18n";
+import { t } from "~/i18n";
 
 export type PullRequestListGroupKey =
   | "pinned"
@@ -41,17 +41,17 @@ export interface PullRequestListGroup<T = GitHubInboxItem> {
 function groupLabel(key: PullRequestListGroupKey): string {
   switch (key) {
     case "pinned":
-      return i18n._("Pinned");
+      return t("common:app_pinned");
     case "authored":
-      return i18n._("Authored by me");
+      return t("git:authoredByMe");
     case "reviewRequested":
-      return i18n._("Needs my review");
+      return t("lattice:needsMyReview");
     case "involved":
-      return i18n._("Involving me");
+      return t("git:involvingMe");
     case "others":
-      return i18n._("Everything else");
+      return t("lattice:everythingElse");
     case "all":
-      return i18n._("All");
+      return t("workspace:all");
   }
 }
 

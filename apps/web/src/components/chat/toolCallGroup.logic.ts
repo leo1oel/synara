@@ -33,7 +33,9 @@ export function workEntryRowCount(entry: WorkLogEntry): number {
 // One-line label for a call that would list several edited-file rows.
 export function multiFileEditLabel(entry: WorkLogEntry, translate: typeof t = t): string | null {
   const rowCount = workEntryRowCount(entry);
-  return rowCount > 1 ? capitalizeFirst(summaryPartPhrase(appI18n, "edit", rowCount, true)) : null;
+  return rowCount > 1
+    ? capitalizeFirst(summaryPartPhrase("edit", rowCount, true, translate))
+    : null;
 }
 
 export type ToolCallSummaryCategory =
@@ -187,7 +189,6 @@ const NAMED_PARTS_BEFORE_OVERFLOW = 2;
 // Lowercase verb phrase; the label capitalizes only its first part. Each count
 // is its own catalog entry so translations need no English plural or case rules.
 function summaryPartPhrase(
-  i18n: I18n,
   category: ToolCallSummaryCategory,
   count: number,
   isSolePart: boolean,
@@ -196,32 +197,36 @@ function summaryPartPhrase(
   const one = count === 1;
   switch (category) {
     case "read":
-      return one ? i18n._("read 1 file") : i18n._("read {count} files", { count });
+      return one ? translate("lattice:read1File") : translate("lattice:readFiles", { count });
     case "edit":
-      return one ? i18n._("edited 1 file") : i18n._("edited {count} files", { count });
+      return one ? translate("lattice:edited1File2") : translate("lattice:editedFiles2", { count });
     case "search":
-      if (one) return i18n._("searched once");
-      if (count === 2) return i18n._("searched twice");
-      return i18n._("searched {count} times", { count });
+      if (one) return translate("chat:searchedOnce");
+      if (count === 2) return translate("chat:searchedTwice");
+      return translate("chat:searchedTimes", { value0: count });
     case "command":
-      return one ? i18n._("ran 1 command") : i18n._("ran {count} commands", { count });
+      return one ? translate("lattice:ran1Command") : translate("lattice:ranCommands", { count });
     case "fetch":
-      return one ? i18n._("fetched 1 page") : i18n._("fetched {count} pages", { count });
+      return one ? translate("lattice:fetched1Page") : translate("lattice:fetchedPages", { count });
     case "agent":
-      return one ? i18n._("ran 1 agent task") : i18n._("ran {count} agent tasks", { count });
+      return one
+        ? translate("lattice:ran1AgentTask")
+        : translate("lattice:ranAgentTasks", { count });
     case "tool":
-      return one ? i18n._("used 1 tool") : i18n._("used {count} tools", { count });
+      return one ? translate("lattice:used1Tool") : translate("lattice:usedTools", { count });
     case "other":
       return isSolePart
         ? one
-          ? i18n._("ran 1 tool call")
-          : i18n._("ran {count} tool calls", { count })
-        : otherActionsPhrase(i18n, count);
+          ? translate("lattice:ran1ToolCall")
+          : translate("lattice:ranToolCalls", { count })
+        : otherActionsPhrase(translate, count);
   }
 }
 
-function otherActionsPhrase(i18n: I18n, count: number): string {
-  return count === 1 ? i18n._("1 other action") : i18n._("{count} other actions", { count });
+function otherActionsPhrase(translate: typeof t, count: number): string {
+  return count === 1
+    ? translate("lattice:n1OtherAction")
+    : translate("lattice:otherActions", { count });
 }
 
 function capitalizeFirst(value: string): string {
@@ -239,9 +244,9 @@ function joinSummaryParts(
     summaryPartPhrase(part.category, part.count, parts.length === 1, translate),
   );
   if (overflowCount > 0) {
-    phrases.push(otherActionsPhrase(i18n, overflowCount));
+    phrases.push(otherActionsPhrase(translate, overflowCount));
   }
-  return capitalizeFirst(phrases.join(i18n._(", ")));
+  return capitalizeFirst(phrases.join(t("lattice:message")));
 }
 
 export function summarizeToolCallGroup(

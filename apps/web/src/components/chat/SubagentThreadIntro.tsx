@@ -7,7 +7,7 @@
 // Exports: SubagentThreadIntro, SubagentBriefCard, SubagentDeliveredNote,
 // SubagentThreadPresentation
 
-import { i18n } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 import type { ProviderKind, ThreadId } from "@synara/contracts";
 import type { CSSProperties } from "react";
 
@@ -21,7 +21,6 @@ import { cn } from "~/lib/utils";
 import { formatClockDuration } from "../../session-logic";
 import ChatMarkdown from "../ChatMarkdown";
 import { ProviderIcon } from "../ProviderIcon";
-import { useTranslation, t } from "~/i18n";
 
 export interface SubagentThreadPresentation {
   parentThreadId: ThreadId;
@@ -52,11 +51,11 @@ export function subagentThreadStateLabel(
     case "queued":
       return t("chat:runStatus_starting");
     case "completed":
-      return elapsed ? i18n._("Done in {elapsed}", { elapsed }) : i18n._("Done");
+      return elapsed ? t("chat:doneIn", { value0: elapsed }) : t("git:detail_done");
     case "failed":
-      return elapsed ? i18n._("Failed after {elapsed}", { elapsed }) : i18n._("Failed");
+      return elapsed ? t("chat:failedAfter", { value0: elapsed }) : t("chat:runStatus_failed");
     case "stopped":
-      return elapsed ? i18n._("Stopped after {elapsed}", { elapsed }) : i18n._("Stopped");
+      return elapsed ? t("chat:stoppedAfter", { value0: elapsed }) : t("chat:stopped");
     default:
       return null;
   }
@@ -89,7 +88,7 @@ export function SubagentThreadIntro({
         className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-[color:var(--color-border)] px-3 py-1 text-muted-foreground transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground"
         onClick={() => onOpenThread?.(subagent.parentThreadId)}
         disabled={!onOpenThread}
-        aria-label={i18n._("Open parent thread {title}", { title: subagent.parentTitle })}
+        aria-label={t("chat:openParentThread", { value0: subagent.parentTitle })}
       >
         <BackToParentIcon className="size-3 shrink-0" />
         <span className="shrink-0">{t("chat:subagentOf")}</span>
@@ -162,10 +161,10 @@ export function SubagentDeliveredNote({ parentTitle }: { parentTitle: string }) 
     <span
       data-testid="subagent-delivered-note"
       className="ml-auto inline-flex min-w-0 items-center gap-1.5"
-      title={i18n._("This answer went back to {title}", { title: parentTitle })}
+      title={t("chat:thisAnswerWentBackTo", { value0: parentTitle })}
     >
       <BackToParentIcon className="size-3 shrink-0" />
-      <span className="truncate">{i18n._("Delivered to {title}", { title: parentTitle })}</span>
+      <span className="truncate">{t("lattice:deliveredTo", { title: parentTitle })}</span>
     </span>
   );
 }

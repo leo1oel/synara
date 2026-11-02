@@ -1,8 +1,6 @@
-// FILE: ComposerLatticeContextBar.logic.test.ts
-// Purpose: Pins the exact context summary, detail, and selection-clear semantics.
+import { t, setLanguagePreference } from "~/i18n";
 
-import { setupI18n } from "@lingui/core";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { LATTICE_HOST_CONTEXT, type LatticeHostContextSnapshot } from "../../embedMode";
 import {
@@ -49,6 +47,8 @@ const presentationContext: LatticeHostContextSnapshot = {
     updatedAt: "2026-09-04T12:00:00.000Z",
   },
 };
+
+afterEach(() => setLanguagePreference("en"));
 
 describe("ComposerLatticeContextBar presentation", () => {
   it("summarizes the active editor and exposes every injected field", () => {
@@ -142,7 +142,7 @@ describe("ComposerLatticeContextBar presentation", () => {
       context: LatticeHostContextSnapshot,
       i18n?: Parameters<typeof latticeContextDetails>[1],
     ) =>
-      latticeContextDetails(context, i18n).find(
+      latticeContextDetails(context, t).find(
         (detail) => detail.label === "Slide comments" || detail.label === "幻灯片评论",
       );
 
@@ -153,12 +153,9 @@ describe("ComposerLatticeContextBar presentation", () => {
       label: "Slide comments",
       value: "3 comments",
     });
-
-    const { messages } = await import("../../locales/zh-CN/messages.po");
-    const zh = setupI18n();
-    zh.loadAndActivate({ locale: "zh-CN", messages });
-    expect(commentDetail(withComments(1), zh)).toEqual({ label: "幻灯片评论", value: "1 条评论" });
-    expect(commentDetail(withComments(3), zh)).toEqual({ label: "幻灯片评论", value: "3 条评论" });
+    setLanguagePreference("zh-CN");
+    expect(commentDetail(withComments(1))).toEqual({ label: "幻灯片评论", value: "1 条评论" });
+    expect(commentDetail(withComments(3))).toEqual({ label: "幻灯片评论", value: "3 条评论" });
   });
 
   it("clears only explicit selections and preserves ambient context", () => {

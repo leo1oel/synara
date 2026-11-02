@@ -4,7 +4,6 @@
 //          the automations view: clock glyph, automation name, cadence, and an Open action.
 // Layer: Chat transcript UI
 
-import { i18n } from "~/i18n";
 import {
   AutomationProposalActions,
   automationProposalListQueryKey,

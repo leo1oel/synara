@@ -6,7 +6,6 @@
 // Layer: web profile feature (settings panel body).
 
 import { useState } from "react";
-import { useLingui } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
 import { type ProfileStats, type ProfileTokenStats, type ProviderKind } from "@synara/contracts";
 import {
@@ -285,7 +284,7 @@ function ProfileContent({
 
       {/* Model usage */}
       <section className="flex flex-col gap-3">
-        <h3 className="text-ui font-medium">{i18n._("Model usage")}</h3>
+        <h3 className="text-ui font-medium">{t("settings:profile_modelUsage")}</h3>
         <p className="text-ui leading-snug text-muted-foreground">
           {t("settings:shareOf")} {formatProfileUsageBasis(modelUsage.metric, formatLocale)}.
         </p>
@@ -301,7 +300,7 @@ function ProfileContent({
             ))}
           </ul>
         ) : (
-          <p className="text-ui text-muted-foreground">{i18n._("No model activity yet.")}</p>
+          <p className="text-ui text-muted-foreground">{t("settings:profile_noModelActivity")}</p>
         )}
         <ProfileUsageCoverage unavailableProviders={modelUsage.unavailableProviders} />
       </section>

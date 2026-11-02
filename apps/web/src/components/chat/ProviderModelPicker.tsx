@@ -1,3 +1,4 @@
+import { t, useTranslation } from "~/i18n";
 // FILE: ProviderModelPicker.tsx
 // Purpose: Renders the composer provider/model menu and supports controlled opening for shortcuts.
 // Layer: Chat composer presentation
@@ -62,8 +63,6 @@ import { PlusIcon } from "~/lib/icons";
 import { isProviderUsable } from "../../lib/providerAvailability";
 import { providerAccountQualifiedLabel } from "../../lib/providerInstancePresentation";
 import { ProviderAccountDot } from "../ProviderAccountMark";
-import { Trans } from "@lingui/react/macro";
-import { useLingui } from "@lingui/react";
 import { openEmbeddedProviderSettings } from "../../embedMode";
 
 function isAvailableProviderOption(option: (typeof PROVIDER_OPTIONS)[number]): option is {
@@ -744,9 +743,7 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
     });
     if (status?.enabled === false) {
       return (
-        <MenuItem onClick={openProviderSettings}>
-          {i18n._("Enable a provider in Settings")}
-        </MenuItem>
+        <MenuItem onClick={openProviderSettings}>{t("chat:enableAProviderInSettings")}</MenuItem>
       );
     }
     return (
@@ -770,7 +767,7 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
           }}
         >
           <ChevronLeftIcon aria-hidden="true" className="size-3 shrink-0" />
-          <Trans>Back</Trans>
+          {t("common:app_back")}
         </MenuItem>
         <MenuSeparator />
         {renderProviderInstanceRadioGroup(expandedProvider)}
@@ -924,9 +921,7 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
       ) : null}
       <MenuItem onClick={openProviderSettings}>
         <PlusIcon aria-hidden="true" className="size-3 shrink-0 text-muted-foreground/85" />
-        <span>
-          <Trans>Add providers</Trans>
-        </span>
+        <span>{t("chat:addProviders2")}</span>
       </MenuItem>
     </>
   );

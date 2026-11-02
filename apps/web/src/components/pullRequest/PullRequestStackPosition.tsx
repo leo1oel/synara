@@ -1,25 +1,18 @@
-// FILE: PullRequestStackPosition.tsx
-// Purpose: Shared compact stack-position indicator for pull request list and detail surfaces.
-// Layer: Pull request presentation
-// Exports: PullRequestStackPosition
-
-import { useLingui } from "@lingui/react";
 import type { PullRequestStackSummary } from "@synara/contracts";
 
 import { Badge } from "~/components/ui/badge";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { GitForkIcon } from "~/lib/icons";
-import { i18n } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 import { cn } from "~/lib/utils";
-import { useTranslation, t } from "~/i18n";
 
 type StackPosition = Pick<PullRequestStackSummary, "number" | "size" | "position" | "baseBranch">;
 
 function stackPositionAriaLabel(stack: StackPosition): string {
-  return i18n._("Stack #{number}, pull request {position} of {size}", {
-    number: stack.number,
-    position: stack.position,
-    size: stack.size,
+  return t("git:stackPullRequestOf", {
+    value0: stack.number,
+    value1: stack.position,
+    value2: stack.size,
   });
 }
 
@@ -69,7 +62,7 @@ export function PullRequestStackPosition({
         }
       />
       <TooltipPopup side="top">
-        {i18n._("Stack #{number} · PR {position} of {size} · targets {branch}", {
+        {t("lattice:stackPROfTargets", {
           number: stack.number,
           position: stack.position,
           size: stack.size,

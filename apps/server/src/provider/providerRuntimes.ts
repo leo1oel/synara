@@ -77,7 +77,8 @@ const RUNTIMES: Record<
         import("@earendil-works/pi-ai/providers/openrouter"),
       "@earendil-works/pi-ai/providers/opencode": () =>
         import("@earendil-works/pi-ai/providers/opencode"),
-      "@earendil-works/pi-ai/providers/azure": () => import("@earendil-works/pi-ai/providers/azure"),
+      "@earendil-works/pi-ai/providers/azure": () =>
+        import("@earendil-works/pi-ai/providers/azure"),
       "@earendil-works/pi-ai/utils/model-operations": () =>
         import("@earendil-works/pi-ai/utils/model-operations"),
     },

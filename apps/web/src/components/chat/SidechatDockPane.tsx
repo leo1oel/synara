@@ -6,7 +6,6 @@
 // Layer: Chat right-dock UI
 // Exports: SidechatDockPane, useSidechatDockPanePruning
 
-import { i18n } from "~/i18n";
 import type { ThreadId } from "@synara/contracts";
 import { useEffect, useSyncExternalStore } from "react";
 

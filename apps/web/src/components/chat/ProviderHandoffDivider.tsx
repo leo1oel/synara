@@ -5,7 +5,6 @@
 //      transcript boundary (like ForkSourceDivider) rather than a work row
 //      folded into the previous turn. Clicking it reveals the transferred context.
 
-import { i18n } from "~/i18n";
 import { memo, useState } from "react";
 
 import type { FastModeNotice } from "~/lib/fastModeState";

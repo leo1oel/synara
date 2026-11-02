@@ -1,13 +1,5 @@
-// FILE: LatticePullRequestPaper.tsx
-// Purpose: Lattice's "In the paper" reading of a pull request, like a red-pen proof: the serif
-//          title, who is asked to review and what they said, then the changed sentences of the
-//          paper by section in the reading font with each review comment under its sentence,
-//          and Comment · Approve · Merge at the foot.
-// Layer: Embedded pull request presentation (Lattice host only)
-// Depends on: the pull request diff query, lib/proseDiff, and the detail panel's own runners
-//             for merge (with its confirmation) and approve.
+import { t } from "~/i18n";
 
-import { useLingui } from "@lingui/react";
 import type {
   PullRequestActor,
   PullRequestComment,
@@ -105,7 +97,6 @@ export function LatticePullRequestPaper(props: {
   onApprove: () => void;
   onOpenFiles: () => void;
 }) {
-  const { i18n } = useLingui();
   const { detail } = props;
   const queryClient = useQueryClient();
   const diffQuery = useQuery(pullRequestDiffQueryOptions(props.input));
@@ -145,13 +136,14 @@ export function LatticePullRequestPaper(props: {
         onSuccess: () => {
           setDraft("");
           setComposing(false);
-          toastManager.add({ type: "success", title: i18n._("Comment posted") });
+          toastManager.add({ type: "success", title: t("lattice:commentPosted") });
         },
         onError: (error) =>
           toastManager.add({
             type: "error",
-            title: i18n._("Could not post the comment"),
-            description: error instanceof Error ? error.message : i18n._("An error occurred."),
+            title: t("lattice:couldNotPostTheComment"),
+            description:
+              error instanceof Error ? error.message : t("common:proposedPlan_unknownError"),
           }),
       },
     );
@@ -161,13 +153,13 @@ export function LatticePullRequestPaper(props: {
     const name = firstName(actor);
     switch (verdict) {
       case "APPROVED":
-        return i18n._("{name} approved", { name });
+        return t("lattice:approved2", { name });
       case "CHANGES_REQUESTED":
-        return i18n._("{name} asked for changes", { name });
+        return t("lattice:askedForChanges", { name });
       case "COMMENTED":
-        return i18n._("{name} commented", { name });
+        return t("lattice:commented", { name });
       default:
-        return i18n._("{name} has not reviewed", { name });
+        return t("lattice:hasNotReviewed", { name });
     }
   };
 
@@ -215,10 +207,10 @@ export function LatticePullRequestPaper(props: {
             ) : null}
             {paper && paper.changeCount > 0 ? (
               <span>
-                {i18n._(
-                  "{count, plural, one {# change} other {# changes}} in {sections, plural, one {# section} other {# sections}}",
-                  { count: paper.changeCount, sections: sectionCount },
-                )}
+                {t("lattice:changesInSections", {
+                  changes: t("lattice:changeCount", { count: paper.changeCount }),
+                  sections: t("lattice:sectionCount", { count: sectionCount }),
+                })}
               </span>
             ) : null}
           </p>
@@ -239,20 +231,20 @@ export function LatticePullRequestPaper(props: {
         {diffQuery.isPending ? (
           <p className="lattice-paper-note" role="status">
             <LoaderCircleIcon aria-hidden className="size-3.5 animate-spin" />
-            {i18n._("Reading the changes…")}
+            {t("lattice:readingTheChanges")}
           </p>
         ) : diffQuery.isError || !paper ? (
           <p className="lattice-paper-note">
-            {i18n._("The changes could not be read.")}{" "}
+            {t("lattice:theChangesCouldNotBeRead")}{" "}
             <button type="button" className="lattice-git-link" onClick={props.onOpenFiles}>
-              {i18n._("Open Files")}
+              {t("lattice:openFiles")}
             </button>
           </p>
         ) : paper.groups.length === 0 ? (
           <p className="lattice-paper-note">
-            {i18n._("No sentences of the paper changed.")}{" "}
+            {t("lattice:noSentencesOfThePaperChanged")}{" "}
             <button type="button" className="lattice-git-link" onClick={props.onOpenFiles}>
-              {i18n._("Open Files")}
+              {t("lattice:openFiles")}
             </button>
           </p>
         ) : (
@@ -283,9 +275,7 @@ export function LatticePullRequestPaper(props: {
               </section>
             ))}
             {paper.truncated ? (
-              <p className="lattice-paper-note">
-                {i18n._("Only the first changes of a long file are shown here.")}
-              </p>
+              <p className="lattice-paper-note">{t("lattice:onlyTheFirstChangesOfALong")}</p>
             ) : null}
           </div>
         )}
@@ -293,7 +283,7 @@ export function LatticePullRequestPaper(props: {
         {looseComments.length > 0 ? (
           <section className="lattice-paper-section">
             <h3>
-              <span>{i18n._("Other review comments")}</span>
+              <span>{t("lattice:otherReviewComments")}</span>
             </h3>
             <ul className="lattice-paper-comments lattice-paper-comments-loose">
               {looseComments.map((comment) => (
@@ -306,14 +296,12 @@ export function LatticePullRequestPaper(props: {
         {paper && paper.otherFiles.length > 0 ? (
           <p className="lattice-paper-note lattice-paper-other">
             <span>
-              {i18n._("{count, plural, one {# other file changed} other {# other files changed}}", {
-                count: paper.otherFiles.length,
-              })}
+              {t("lattice:otherFilesChanged", { count: paper.otherFiles.length })}
               {": "}
               <span className="lattice-paper-other-files">{paper.otherFiles.join(", ")}</span>
             </span>
             <button type="button" className="lattice-git-link" onClick={props.onOpenFiles}>
-              {i18n._("Open Files")}
+              {t("lattice:openFiles")}
             </button>
           </p>
         ) : null}
@@ -332,8 +320,8 @@ export function LatticePullRequestPaper(props: {
               <textarea
                 // oxlint-disable-next-line jsx-a11y/no-autofocus -- opened by the Comment button
                 autoFocus
-                aria-label={i18n._("Comment…")}
-                placeholder={i18n._("Leave a comment on this pull request")}
+                aria-label={t("lattice:comment")}
+                placeholder={t("lattice:leaveACommentOnThisPullRequest")}
                 rows={3}
                 maxLength={65_536}
                 value={draft}
@@ -353,14 +341,14 @@ export function LatticePullRequestPaper(props: {
                   className="lattice-git-button"
                   onClick={() => setComposing(false)}
                 >
-                  {i18n._("Cancel")}
+                  {t("common:form_cancel")}
                 </button>
                 <button
                   type="submit"
                   className="lattice-git-button lattice-git-primary"
                   disabled={!draft.trim() || commentMutation.isPending}
                 >
-                  {commentMutation.isPending ? i18n._("Posting…") : i18n._("Post comment")}
+                  {commentMutation.isPending ? t("lattice:posting") : t("git:postComment")}
                 </button>
               </div>
             </form>
@@ -371,7 +359,7 @@ export function LatticePullRequestPaper(props: {
                 className="lattice-git-button"
                 onClick={() => setComposing(true)}
               >
-                {i18n._("Comment…")}
+                {t("lattice:comment")}
               </button>
               <button
                 type="button"
@@ -379,7 +367,9 @@ export function LatticePullRequestPaper(props: {
                 disabled={props.actionPending}
                 onClick={props.onApprove}
               >
-                {props.pendingAction === "approve" ? i18n._("Approving…") : i18n._("Approve")}
+                {props.pendingAction === "approve"
+                  ? t("lattice:approving")
+                  : t("automation:approval_approve")}
               </button>
               {props.primaryAction?.kind === "ready" ? (
                 <button
@@ -388,7 +378,7 @@ export function LatticePullRequestPaper(props: {
                   disabled={props.actionPending}
                   onClick={props.onReady}
                 >
-                  {i18n._("Ready for review")}
+                  {t("git:readyForReview")}
                 </button>
               ) : props.primaryAction?.kind === "merge" ? (
                 <button
@@ -398,7 +388,7 @@ export function LatticePullRequestPaper(props: {
                   title={props.primaryAction.blockedReason ?? undefined}
                   onClick={props.onMerge}
                 >
-                  {props.pendingAction === "merge" ? i18n._("Merging…") : i18n._("Merge")}
+                  {props.pendingAction === "merge" ? t("git:merging") : t("git:merge")}
                 </button>
               ) : null}
             </div>

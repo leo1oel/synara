@@ -1,15 +1,3 @@
-// FILE: pullRequestStatePresentation.tsx
-// Purpose: Single source of truth for how a pull request's (and an issue's) state renders —
-//          the sidebar thread badge, kanban card chip, list rows, detail panel, and dock tab
-//          all resolve label, color, and glyph from here so no surface can drift. Icons come
-//          from the three-node Central "reversed" family (pull-request / draft /
-//          request-closed / merge-conflict); merged uses the Hugeicons workflow-circle-06.
-// Layer: Pull request presentation
-// Exports: PrStatePresentation, resolvePrStatePresentation, PR_STATE_PRESENTATION_ICONS,
-//          IssueStatePresentation, resolveIssueStatePresentation, ISSUE_STATE_PRESENTATION_ICONS,
-//          PullRequestConflictIcon, localizeGitHubStateLabel
-
-import { msg } from "@lingui/core/macro";
 import type { GitHubIssueState, GitHubIssueStateReason } from "@synara/contracts";
 
 import {
@@ -24,7 +12,7 @@ import {
   type LucideIcon,
 } from "~/lib/icons";
 
-import { i18n } from "~/i18n";
+import { t } from "~/i18n";
 import { cn } from "~/lib/utils";
 
 /** Shared PR-state presentation so every PR surface labels, colors, and glyphs PRs identically. */
@@ -143,7 +131,7 @@ export function resolveIssueStatePresentation(issue: {
   };
 }
 
-const OPEN_STATE = msg({ message: "Open", context: "GitHub item state" });
+const OPEN_STATE = "lattice:githubItemStateOpen";
 
 /**
  * A state label from this module or `pullRequestStateLabel`, in the UI language. The labels
@@ -153,33 +141,33 @@ const OPEN_STATE = msg({ message: "Open", context: "GitHub item state" });
 export function localizeGitHubStateLabel(label: string): string {
   switch (label) {
     case "PR open":
-      return i18n._("PR open");
+      return t("git:pr_open");
     case "PR closed":
-      return i18n._("PR closed");
+      return t("git:pr_closed");
     case "PR merged":
-      return i18n._("PR merged");
+      return t("git:pr_merged");
     case "PR draft":
-      return i18n._("PR draft");
+      return t("git:pRDraft");
     case "PR has conflicts":
-      return i18n._("PR has conflicts");
+      return t("git:pRHasConflicts");
     case "Issue open":
-      return i18n._("Issue open");
+      return t("git:issueOpen");
     case "Issue closed":
-      return i18n._("Issue closed");
+      return t("git:issueClosed");
     case "Issue not planned":
-      return i18n._("Issue not planned");
+      return t("git:issueNotPlanned");
     case "Open":
-      return i18n._(OPEN_STATE);
+      return t(OPEN_STATE);
     case "Closed":
-      return i18n._("Closed");
+      return t("chat:closed");
     case "Not planned":
-      return i18n._("Not planned");
+      return t("git:notPlanned");
     case "Draft":
-      return i18n._("Draft");
+      return t("git:column_draft");
     case "Has conflicts":
-      return i18n._("Has conflicts");
+      return t("git:hasConflicts");
     case "Merged":
-      return i18n._("Merged");
+      return t("git:merged");
     default:
       return label;
   }

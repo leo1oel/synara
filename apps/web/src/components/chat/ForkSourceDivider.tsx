@@ -2,7 +2,6 @@
 // Purpose: Link a forked transcript back to the immediate source chat.
 // Layer: Chat transcript UI
 
-import { i18n } from "~/i18n";
 import { type ThreadId } from "@synara/contracts";
 import { memo, type MouseEvent } from "react";
 

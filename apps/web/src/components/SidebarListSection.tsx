@@ -6,7 +6,6 @@
 // Layer: Sidebar UI primitive
 // Exports: SidebarSectionLabel, SidebarCollapsibleSection, SidebarShowMoreRow
 
-import { useLingui } from "@lingui/react";
 import { Children, type MouseEvent, type ReactNode } from "react";
 
 import { cn } from "~/lib/utils";

@@ -3,7 +3,6 @@
 // the chat header usage chip, and compact environment/Local popovers.
 
 import { localizeProviderStatusMessage } from "./providerStatusMessages";
-import type { I18n } from "@lingui/core";
 import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
 import { t } from "~/i18n";
 import {
@@ -121,16 +120,16 @@ export function providerUsagePaceDetails(
   };
 }
 
-function localizeProviderUsageWindowLabel(i18n: I18n, label: string): string {
+function localizeProviderUsageWindowLabel(translate: typeof t, label: string): string {
   switch (label) {
     case "5h":
-      return i18n._("5h");
+      return translate("common:5h");
     case "Weekly":
-      return i18n._("Weekly");
+      return translate("common:schedule_weekly");
     case "Weekly (overage)":
-      return i18n._("Weekly (overage)");
+      return translate("lattice:weeklyOverage");
     case "Current":
-      return i18n._("Current");
+      return translate("common:list_currentSection");
     default:
       // Model names such as Sonnet and Opus, plus provider-defined future labels,
       // should remain intact instead of being guessed at in the presentation layer.
@@ -138,9 +137,9 @@ function localizeProviderUsageWindowLabel(i18n: I18n, label: string): string {
   }
 }
 
-function localizeCompactDuration(i18n: I18n, duration: string): string {
+function localizeCompactDuration(translate: typeof t, duration: string): string {
   if (duration === "<1m") {
-    return i18n._("<1m");
+    return translate("settings:usageDurationUnderMinute");
   }
   return duration
     .split(" ")
@@ -150,11 +149,11 @@ function localizeCompactDuration(i18n: I18n, duration: string): string {
       const count = match[1]!;
       switch (match[2]) {
         case "d":
-          return i18n._("{count}d", { count });
+          return translate("automation:intentDays", { count });
         case "h":
-          return i18n._("{count}h", { count });
+          return translate("automation:intentHours", { count });
         case "m":
-          return i18n._("{count}m", { count });
+          return translate("automation:intentMinutes", { count });
         default:
           return part;
       }
@@ -162,20 +161,18 @@ function localizeCompactDuration(i18n: I18n, duration: string): string {
     .join(" ");
 }
 
-function localizeResetText(i18n: I18n, resetText: string | null): string | null {
+function localizeResetText(translate: typeof t, resetText: string | null): string | null {
   if (!resetText) return null;
   if (resetText === "Resets soon") {
-    return i18n._("Resets soon");
+    return translate("settings:usageResetsSoon");
   }
   const match = /^Resets in (.+)$/u.exec(resetText);
   if (!match) return resetText;
-  return i18n._("Resets in {duration}", {
-    duration: localizeCompactDuration(i18n, match[1]!),
-  });
+  return translate("lattice:resetsIn", { duration: localizeCompactDuration(translate, match[1]!) });
 }
 
 function localizePaceDetails(
-  i18n: I18n,
+  translate: typeof t,
   details: ProviderUsagePaceDetails | null,
 ): ProviderUsagePaceDetails | null {
   if (!details) return null;
@@ -183,21 +180,21 @@ function localizePaceDetails(
   let amountText = details.amountText;
   const amountMatch = amountText ? /^(\d+)% in (reserve|deficit)$/u.exec(amountText) : null;
   if (amountMatch?.[2] === "reserve") {
-    amountText = i18n._("{percent}% in reserve", { percent: amountMatch[1]! });
+    amountText = translate("settings:usageReserve", { percent: amountMatch[1]! });
   } else if (amountMatch?.[2] === "deficit") {
-    amountText = i18n._("{percent}% in deficit", { percent: amountMatch[1]! });
+    amountText = translate("settings:usageDeficit", { percent: amountMatch[1]! });
   }
 
   let etaText = details.etaText;
   if (etaText === "Lasts until reset") {
-    etaText = i18n._("Lasts until reset");
+    etaText = translate("settings:usageLastsUntilReset");
   } else if (etaText === "Limit reached") {
-    etaText = i18n._("Limit reached");
+    etaText = translate("settings:usageLimitReached");
   } else if (etaText) {
     const runOutMatch = /^Runs out in (.+)$/u.exec(etaText);
     if (runOutMatch) {
-      etaText = i18n._("Runs out in {duration}", {
-        duration: localizeCompactDuration(i18n, runOutMatch[1]!),
+      etaText = translate("settings:usageRunsOut", {
+        duration: localizeCompactDuration(translate, runOutMatch[1]!),
       });
     }
   }
@@ -207,37 +204,36 @@ function localizePaceDetails(
 
 /** Translate the provider-owned usage vocabulary only at the final web display boundary. */
 export function localizeProviderUsageDisplayText(
-  i18n: I18n,
+  translate: typeof t,
   row: ProviderUsageDisplayRow,
 ): LocalizedProviderUsageDisplayText {
-  const label = localizeProviderUsageWindowLabel(i18n, row.label);
+  const label = localizeProviderUsageWindowLabel(translate, row.label);
   const paceStatus = row.pace
     ? row.pace.status === "ahead"
-      ? i18n._("ahead")
+      ? translate("lattice:ahead")
       : row.pace.status === "on-track"
-        ? i18n._("on track")
-        : i18n._("behind")
+        ? translate("lattice:onTrack")
+        : translate("lattice:behind")
     : null;
   return {
     label,
-    leftText: i18n._("{remaining} left", { remaining: row.remainingLabel }),
-    resetText: localizeResetText(i18n, row.resetText),
-    progressLabel: i18n._("{window} remaining", { window: label }),
-    paceTitle: paceStatus ? i18n._("Usage pace: {status}", { status: paceStatus }) : undefined,
-    paceDetails: localizePaceDetails(i18n, providerUsagePaceDetails(row)),
+    leftText: translate("common:left2", { duration: row.remainingLabel }),
+    resetText: localizeResetText(translate, row.resetText),
+    progressLabel: translate("settings:usageRemaining", { window: label }),
+    paceTitle: paceStatus ? translate("common:usagePace", { value0: paceStatus }) : undefined,
+    paceDetails: localizePaceDetails(translate, providerUsagePaceDetails(row)),
   };
 }
 
-export function localizeProviderUsageNotice(i18n: I18n, notice: string): string {
+export function localizeProviderUsageNotice(translate: typeof t, notice: string): string {
   const anthropicThrottleMatch =
     /^Anthropic is rate-limiting usage checks — showing your last values, retrying in ~(\d+)m\. Manual refreshes only extend the limit\.$/u.exec(
       notice,
     );
-  if (!anthropicThrottleMatch) return localizeProviderStatusMessage(i18n, notice);
-  return i18n._(
-    "Anthropic is rate-limiting usage checks — showing your last values, retrying in ~{minutes}m. Manual refreshes only extend the limit.",
-    { minutes: anthropicThrottleMatch[1]! },
-  );
+  if (!anthropicThrottleMatch) return localizeProviderStatusMessage(translate, notice);
+  return translate("lattice:anthropicIsRateLimitingUsageChecksShowing", {
+    minutes: anthropicThrottleMatch[1]!,
+  });
 }
 
 export function deriveProviderUsageDisplayRow(

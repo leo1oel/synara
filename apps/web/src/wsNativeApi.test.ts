@@ -417,6 +417,7 @@ describe("wsNativeApi", () => {
             launchArgs: "",
             enableArtifacts: false,
             confirmColdCacheResume: false,
+            loadUserMcpServers: false,
             customModels: [],
           },
           cursor: { enabled: true, binaryPath: "agent", apiEndpoint: "", customModels: [] },

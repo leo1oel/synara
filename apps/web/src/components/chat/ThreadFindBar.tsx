@@ -4,7 +4,6 @@
 // Layer: Chat transcript presentation
 // Depends on: projected-message matching in threadFind.logic (not the DOM list).
 
-import { i18n } from "~/i18n";
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
 import { IconButton } from "~/components/ui/icon-button";

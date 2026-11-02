@@ -3,7 +3,7 @@
 // Layer: Settings UI logic
 // Exports: origin metadata, canonical skill grouping, and section ordering helpers.
 
-import { i18n } from "~/i18n";
+import { t } from "~/i18n";
 import type { ProviderKind, ProviderSkillDescriptor } from "@synara/contracts";
 import { PROVIDER_DISPLAY_NAMES } from "@synara/contracts";
 import { DEFAULT_PROVIDER_ORDER } from "~/providerOrdering";
@@ -57,9 +57,9 @@ export const ORIGIN_SECTION_ORDER = [
 export function skillOriginInfo(scope: string | undefined): SkillOriginInfo {
   switch (scope) {
     case "bundled":
-      return { label: i18n._("Included with Lattice"), provider: null };
+      return { label: t("lattice:includedWithLattice"), provider: null };
     case "synara":
-      return { label: i18n._("Installed by you"), provider: null };
+      return { label: t("lattice:installedByYou"), provider: null };
     case "codex":
       return { label: PROVIDER_DISPLAY_NAMES.codex, provider: "codex" };
     case "claude":
@@ -124,10 +124,10 @@ function sourceSortKey(source: SettingsSkillSource): string {
 
 function sectionTitle(section: string): string {
   if (section === "bundled") {
-    return i18n._("Included with Lattice");
+    return t("lattice:includedWithLattice");
   }
   if (section === SHARED_SKILLS_SECTION || section === "synara") {
-    return section === "synara" ? i18n._("Installed by you") : i18n._("Shared across agents");
+    return section === "synara" ? t("lattice:installedByYou") : t("lattice:sharedAcrossAgents");
   }
   return skillOriginInfo(section).label;
 }

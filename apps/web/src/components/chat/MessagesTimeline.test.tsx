@@ -1795,7 +1795,7 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup).toContain(
-      '<span data-work-entry-display-text="true">1 out of 3 tasks completed Run verification</span>',
+      '<span data-work-entry-display-text="true">1 of 3 tasks Run verification</span>',
     );
   });
 

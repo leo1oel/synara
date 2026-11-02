@@ -7,8 +7,6 @@ import { useTranslation } from "~/i18n";
 // Layer: Chat composer UI
 // Exports: ComposerAutomationSetupBanner
 
-import { i18n } from "~/i18n";
-
 export const ComposerAutomationSetupBanner = function ComposerAutomationSetupBanner({
   onCancel,
 }: {

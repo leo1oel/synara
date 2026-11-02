@@ -1,6 +1,6 @@
 import type { PullRequestDetail, PullRequestStack, PullRequestStackEntry } from "@synara/contracts";
 
-import { i18n } from "~/i18n";
+import { t } from "~/i18n";
 
 export type PullRequestStackAssessment = {
   readonly label:
@@ -19,15 +19,15 @@ export type PullRequestStackAssessment = {
 export function localizeStackAssessmentLabel(label: PullRequestStackAssessment["label"]): string {
   switch (label) {
     case "Ready to merge":
-      return i18n._("Ready to merge");
+      return t("lattice:readyToMerge");
     case "Stack needs attention":
-      return i18n._("Stack needs attention");
+      return t("lattice:stackNeedsAttention");
     case "Merge status pending":
-      return i18n._("Merge status pending");
+      return t("lattice:mergeStatusPending");
     case "Mergeable with failing checks":
-      return i18n._("Mergeable with failing checks");
+      return t("lattice:mergeableWithFailingChecks");
     case "Stack merged":
-      return i18n._("Stack merged");
+      return t("git:stackMerged");
   }
 }
 
@@ -59,7 +59,7 @@ export function assessPullRequestStack(stack: PullRequestStack): PullRequestStac
       tone: "blocked",
       mergeTargetCount: targets.length,
       canAttemptMerge: false,
-      blocker: i18n._("#{number} is closed without being merged.", { number: closed.number }),
+      blocker: t("lattice:isClosedWithoutBeingMerged", { number: closed.number }),
     };
   }
 
@@ -70,7 +70,7 @@ export function assessPullRequestStack(stack: PullRequestStack): PullRequestStac
       tone: "blocked",
       mergeTargetCount: targets.length,
       canAttemptMerge: false,
-      blocker: i18n._("#{number} is still a draft.", { number: draft.number }),
+      blocker: t("lattice:isStillADraft", { number: draft.number }),
     };
   }
 
@@ -85,7 +85,7 @@ export function assessPullRequestStack(stack: PullRequestStack): PullRequestStac
       tone: "blocked",
       mergeTargetCount: targets.length,
       canAttemptMerge: false,
-      blocker: i18n._("#{number} is not ready to merge.", { number: conflicting.number }),
+      blocker: t("lattice:isNotReadyToMerge", { number: conflicting.number }),
     };
   }
 
@@ -129,12 +129,12 @@ export function pullRequestMergeBlocker(
   stackAssessment: PullRequestStackAssessment | null,
 ): string | null {
   if (detail.stackMetadataIncomplete === true) {
-    return i18n._("Stack details are temporarily unavailable. Refresh before merging.");
+    return t("lattice:stackDetailsAreTemporarilyUnavailableRefreshBefore");
   }
   if (stackAssessment?.canAttemptMerge === false) {
-    return stackAssessment.blocker ?? i18n._("This stack is not ready to merge.");
+    return stackAssessment.blocker ?? t("lattice:thisStackIsNotReadyToMerge");
   }
   return detail.mergeability === "conflicting"
-    ? i18n._("Resolve merge conflicts before merging")
+    ? t("lattice:resolveMergeConflictsBeforeMerging")
     : null;
 }

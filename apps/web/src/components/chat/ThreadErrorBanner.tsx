@@ -7,7 +7,6 @@
 // the same banner inside the timeline. Threads off screen still toast live
 // session errors via useThreadErrorToast.
 
-import { i18n } from "~/i18n";
 import { isProviderDeliveryBlockDetail } from "@synara/shared/providerDeliveryBlock";
 import { useId, useLayoutEffect, useRef, useState } from "react";
 

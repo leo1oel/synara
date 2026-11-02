@@ -1,3 +1,4 @@
+import { useTranslation } from "~/i18n";
 // FILE: SplashScreen.tsx
 // Purpose: Render the branded startup face while the app is still booting a route or session.
 // Layer: Shared app loading presentation

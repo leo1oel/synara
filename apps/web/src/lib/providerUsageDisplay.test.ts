@@ -1,6 +1,6 @@
-import { setupI18n } from "@lingui/core";
+import { t, setLanguagePreference } from "~/i18n";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { messages as zhMessages } from "~/locales/zh-CN/messages.po";
 
 import {
   deriveProviderUsageDisplayRows,
@@ -9,6 +9,8 @@ import {
   providerUsagePaceDetails,
   selectPrimaryProviderUsageDisplayRow,
 } from "./providerUsageDisplay";
+
+afterEach(() => setLanguagePreference("en"));
 
 describe("providerUsageDisplay", () => {
   afterEach(() => {
@@ -70,8 +72,7 @@ describe("providerUsageDisplay", () => {
 
   it("localizes provider usage labels, countdowns, and pace details in Chinese", () => {
     vi.setSystemTime("2026-06-09T12:00:00.000Z");
-    const i18n = setupI18n();
-    i18n.loadAndActivate({ locale: "zh-CN", messages: zhMessages });
+    setLanguagePreference("zh-CN");
     const [row] = deriveProviderUsageDisplayRows([
       {
         provider: "codex",
@@ -87,20 +88,20 @@ describe("providerUsageDisplay", () => {
       },
     ]);
 
-    expect(row ? localizeProviderUsageDisplayText(i18n, row) : null).toEqual({
+    expect(row ? localizeProviderUsageDisplayText(t, row) : null).toEqual({
       label: "5 小时",
       leftText: "剩余 85%",
-      resetText: "将在 36 分钟后重置",
+      resetText: "36 分钟后重置",
       progressLabel: "5 小时剩余额度",
-      paceTitle: "使用进度：低于预期",
+      paceTitle: "用量消耗速度：低于预期",
       paceDetails: {
-        amountText: "比预期少用 73%",
-        etaText: "预计可用到重置",
+        amountText: "比计划用量节余 73%",
+        etaText: "可持续至重置",
       },
     });
     expect(
       localizeProviderUsageNotice(
-        i18n,
+        t,
         "Anthropic is rate-limiting usage checks — showing your last values, retrying in ~2m. Manual refreshes only extend the limit.",
       ),
     ).toBe(

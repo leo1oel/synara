@@ -1,3 +1,4 @@
+import { t } from "~/i18n";
 // Note: option rows render through the shared ComposerChoiceRow (number chip +
 // label + description) so this card and the pending-approval card stay identical;
 // the nav arrows stay raw <button> since they are compact icon controls. The card
@@ -13,8 +14,6 @@ import { CheckIcon, ChevronLeftIcon, ChevronRightIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { ComposerChoiceRow } from "./ComposerChoiceRow";
 import { COMPOSER_INPUT_SURFACE_CLASS_NAME } from "./composerPickerStyles";
-import { Trans } from "@lingui/react/macro";
-import { useLingui } from "@lingui/react";
 import { UserInputQuestionForm } from "./UserInputQuestionForm";
 
 const NAV_BUTTON_CLASS_NAME =
@@ -85,7 +84,6 @@ function ComposerPendingUserInputCard({
   onPrevious: () => void;
   onCancel: () => void;
 }) {
-  const { i18n } = useLingui();
   const progress = derivePendingUserInputProgress(prompt.questions, answers, questionIndex);
   const activeQuestion = progress.activeQuestion;
   const selectedOptionLabelSet = new Set(progress.selectedOptionLabels);
@@ -175,21 +173,22 @@ function ComposerPendingUserInputCard({
               disabled={!canGoBack || isResponding}
               onClick={onPrevious}
               className={NAV_BUTTON_CLASS_NAME}
-              aria-label={i18n._("Previous question")}
+              aria-label={t("chat:composerPendingUserInputPanel_previousQuestion")}
             >
               <ChevronLeftIcon className="size-3.5" />
             </button>
             <span className="px-0.5 text-ui-sm tabular-nums">
-              <Trans>
-                {progress.questionIndex + 1} of {questionCount}
-              </Trans>
+              {t("lattice:questionProgress", {
+                current: progress.questionIndex + 1,
+                total: questionCount,
+              })}
             </span>
             <button
               type="button"
               disabled={!canGoForward || isResponding}
               onClick={() => onAdvance()}
               className={NAV_BUTTON_CLASS_NAME}
-              aria-label={i18n._("Next question")}
+              aria-label={t("chat:composerPendingUserInputPanel_nextQuestion")}
             >
               <ChevronRightIcon className="size-3.5" />
             </button>
@@ -198,7 +197,7 @@ function ComposerPendingUserInputCard({
       </div>
       {activeQuestion.multiSelect ? (
         <p className="mt-1 text-ui-sm text-muted-foreground/55">
-          <Trans>Select one or more.</Trans>
+          {t("chat:composerPendingUserInputPanel_selectOneOrMore")}
         </p>
       ) : null}
       {activeQuestion.options.length > 0 ? (
@@ -235,7 +234,7 @@ function ComposerPendingUserInputCard({
               isResponding && "cursor-not-allowed opacity-50",
             )}
           >
-            <Trans>Cancel</Trans>
+            {t("common:form_cancel")}
           </button>
         </div>
       )}

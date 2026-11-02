@@ -9,10 +9,9 @@ import {
   type ProviderUsageDisplayRow,
 } from "~/lib/providerUsageDisplay";
 import { StatusDot } from "~/components/ui/status-chip";
-import { useLingui } from "@lingui/react";
 
 import { UsageProgressTrack } from "./UsageProgressTrack";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 export type ProviderUsageLimitRowsSurface = "settings" | "popover";
 
@@ -23,8 +22,7 @@ function ProviderUsagePaceLine({
   row: ProviderUsageDisplayRow;
   surface: ProviderUsageLimitRowsSurface;
 }) {
-  const { i18n } = useLingui();
-  const paceDetails = localizeProviderUsageDisplayText(i18n, row).paceDetails;
+  const paceDetails = localizeProviderUsageDisplayText(t, row).paceDetails;
   if (!paceDetails) return null;
 
   if (surface === "popover") {
@@ -59,9 +57,8 @@ function ProviderUsageTrack({
   row: ProviderUsageDisplayRow;
   surface: ProviderUsageLimitRowsSurface;
 }) {
-  const { i18n } = useLingui();
   const trackProps = providerUsageProgressTrackProps(row);
-  const localizedText = localizeProviderUsageDisplayText(i18n, row);
+  const localizedText = localizeProviderUsageDisplayText(t, row);
 
   return (
     <UsageProgressTrack
@@ -77,7 +74,7 @@ function SettingsUsageLimitRow({ row }: { row: ProviderUsageDisplayRow }) {
   const { t } = useTranslation();
 
   const trackProps = providerUsageProgressTrackProps(row);
-  const localizedText = localizeProviderUsageDisplayText(i18n, row);
+  const localizedText = localizeProviderUsageDisplayText(t, row);
 
   return (
     <div className="space-y-1.5">
@@ -102,8 +99,7 @@ function SettingsUsageLimitRow({ row }: { row: ProviderUsageDisplayRow }) {
 }
 
 function PopoverUsageLimitRow({ row }: { row: ProviderUsageDisplayRow }) {
-  const { i18n } = useLingui();
-  const localizedText = localizeProviderUsageDisplayText(i18n, row);
+  const localizedText = localizeProviderUsageDisplayText(t, row);
 
   return (
     <div className="space-y-1 text-chat-meta leading-tight">

@@ -1,53 +1,42 @@
-// FILE: modelPickerLabels.ts
-// Purpose: Translate the fixed English trait words the model picker shows: effort ladder
-//   steps and context options from the shared model catalog, plus the picker's own
-//   "Thinking On" / "Fast" / "Unavailable" summary words.
-// Layer: Web presentation helper
-//
-// The catalog in `@synara/contracts` and providers' live catalogs stay locale-free, so the
-// picker translates at render time. Anything not listed here (model names, "1M", agent
-// names, a provider's own wording) passes through unchanged.
-
-import type { I18n } from "@lingui/core";
-import { msg } from "@lingui/core/macro";
+import { t } from "~/i18n";
 
 // "Thinking" alone already means the live "thinking…" status elsewhere in the catalog.
-const THINKING_TRAIT = msg({ message: "Thinking", context: "model trait" });
+const THINKING_TRAIT = "lattice:modelTraitThinking";
 
-export function localizeModelPickerLabel(i18n: I18n, label: string): string {
+export function localizeModelPickerLabel(translate: typeof t, label: string): string {
   switch (label) {
     case "None":
-      return i18n._("None");
+      return translate("chat:none");
     case "Minimal":
-      return i18n._("Minimal");
+      return translate("chat:effortMinimal");
     case "Low":
-      return i18n._("Low");
+      return translate("common:task_priority_low");
     case "Medium":
-      return i18n._("Medium");
+      return translate("common:task_priority_medium");
     case "High":
-      return i18n._("High");
+      return translate("common:task_priority_high");
     case "Extra High":
     case "XHigh":
-      return i18n._("Extra High");
+      return translate("chat:effortExtraHigh");
     case "Max":
     case "Maximum":
-      return i18n._("Max");
+      return translate("chat:effortMax");
     case "Ultra":
-      return i18n._("Ultra");
+      return translate("chat:effortUltra");
     case "Off":
-      return i18n._("Off");
+      return translate("automation:traitsPicker_off");
     case "Auto-compact":
-      return i18n._("Auto-compact");
+      return translate("chat:traitAutoCompact");
     case "Thinking":
-      return i18n._(THINKING_TRAIT);
+      return translate(THINKING_TRAIT);
     case "Thinking On":
-      return i18n._("Thinking on");
+      return translate("lattice:thinkingOn");
     case "Thinking Off":
-      return i18n._("Thinking off");
+      return translate("lattice:thinkingOff");
     case "Fast":
-      return i18n._("Fast");
+      return translate("chat:traitsPicker_fast");
     case "Unavailable":
-      return i18n._("Unavailable");
+      return translate("chat:providerModelPicker_unavailable");
     default:
       return label;
   }

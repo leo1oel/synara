@@ -15,8 +15,6 @@ import {
   type ServerProviderStatus,
   type ThreadId,
 } from "@synara/contracts";
-import { useLingui } from "@lingui/react";
-import { Trans } from "@lingui/react/macro";
 import {
   useDeferredValue,
   useEffect,
@@ -95,7 +93,7 @@ import {
 } from "./ProviderModelPicker";
 import { localizeModelPickerLabel } from "./modelPickerLabels";
 import { resolveRuntimeModelDescriptor } from "./runtimeModelCapabilities";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 export type ComposerModelSelectionOptions = {
   /** Provider options to commit together with the model (starred presets, row effort). */
@@ -189,8 +187,7 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
   const { t } = useTranslation();
 
   const { onOpenChange, open, lockedProvider, threadId } = props;
-  const { i18n } = useLingui();
-  const localizeLabel = (label: string) => localizeModelPickerLabel(i18n, label);
+  const localizeLabel = (label: string) => localizeModelPickerLabel(t, label);
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const isMenuOpen = open ?? uncontrolledOpen;
   const activeProvider = lockedProvider ?? props.provider;
@@ -343,7 +340,7 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
       ? undefined
       : AVAILABLE_PROVIDER_OPTIONS.find((option) => option.value === activeProvider);
   const providerTabs = resolveComposerModelPickerProviderTabs({
-    i18n,
+    translate: t,
     options:
       activeProviderOption &&
       !visibleProviderOptions.some((option) => option.value === activeProvider)
@@ -566,7 +563,7 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
         hideStatusLabel={props.hideStatusLabel}
         disabled={props.disabled}
         isMenuOpen={isMenuOpen}
-        openPlaceholderLabel={usesEffortSlider ? i18n._("Select effort") : null}
+        openPlaceholderLabel={usesEffortSlider ? t("lattice:selectEffort") : null}
         shortcutLabel={props.shortcutLabel}
       />
       <ComposerPickerMenuPopup
@@ -639,7 +636,7 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
                   accentColor={openProviderTab.accentColor}
                 />
                 <span className="max-w-full text-ui font-medium text-foreground [overflow-wrap:anywhere]">
-                  {i18n._("{account} is not installed", { account: openProviderTab.label })}
+                  {t("lattice:isNotInstalled", { account: openProviderTab.label })}
                 </span>
                 <ProviderRuntimeInstallPanel
                   status={openProviderTab.runtimeInstallStatus}
@@ -656,8 +653,8 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
                 ) : null}
                 <span className="text-ui font-medium text-foreground">
                   {openProviderTab
-                    ? i18n._("{account} needs setup", { account: openProviderTab.label })
-                    : i18n._("This account needs setup")}
+                    ? t("lattice:needsSetup", { account: openProviderTab.label })
+                    : t("lattice:thisAccountNeedsSetup")}
                 </span>
                 <span className="text-ui-sm leading-snug text-muted-foreground">
                   {setupMessage}

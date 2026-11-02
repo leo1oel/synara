@@ -4,7 +4,6 @@
 //          with a one-click way to switch control on and retry.
 // Layer: Chat transcript UI
 
-import { i18n } from "~/i18n";
 import { ComputerActionCard } from "./ComputerActionCard";
 import { useTranslation } from "~/i18n";
 

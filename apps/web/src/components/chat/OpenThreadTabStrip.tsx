@@ -8,7 +8,6 @@
 //             thread context menu.
 
 import type { ProjectId, ResolvedKeybindingsConfig, ThreadId } from "@synara/contracts";
-import { useLingui } from "@lingui/react";
 import { useEffect, useState, type RefObject } from "react";
 
 import { useComposerDraftStore } from "~/composerDraftStore";

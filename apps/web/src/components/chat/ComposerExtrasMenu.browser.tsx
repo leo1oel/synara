@@ -9,12 +9,11 @@ import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import type { ProviderInteractionMode } from "@synara/contracts";
-import { I18nProvider } from "@lingui/react";
 
 import { ComposerExtrasMenu } from "./ComposerExtrasMenu";
-import { i18n } from "../../i18n";
+import { t, setLanguagePreference } from "../../i18n";
 
-i18n.loadAndActivate({ locale: "en", messages: {} });
+setLanguagePreference("en");
 
 async function mountMenu(props?: {
   fastModeEnabled?: boolean;
@@ -27,7 +26,7 @@ async function mountMenu(props?: {
   const host = document.createElement("div");
   document.body.append(host);
   const screen = await render(
-    <I18nProvider i18n={i18n}>
+    <>
       <ComposerExtrasMenu
         interactionMode={props?.interactionMode ?? "default"}
         supportsFastMode={props?.supportsFastMode ?? true}
@@ -36,7 +35,7 @@ async function mountMenu(props?: {
         onToggleFastMode={onToggleFastMode}
         onInteractionModeChange={onInteractionModeChange}
       />
-    </I18nProvider>,
+    </>,
     { container: host },
   );
 
@@ -56,7 +55,7 @@ async function mountMenu(props?: {
 
 describe("ComposerExtrasMenu", () => {
   afterEach(() => {
-    i18n.loadAndActivate({ locale: "en", messages: {} });
+    setLanguagePreference("en");
     document.body.innerHTML = "";
   });
 
@@ -98,11 +97,10 @@ describe("ComposerExtrasMenu", () => {
   });
 
   it("localizes the attachment action in Chinese", async () => {
-    const { messages } = await import("../../locales/zh-CN/messages.po");
-    i18n.loadAndActivate({ locale: "zh-CN", messages });
+    setLanguagePreference("zh-CN");
     await using _ = await mountMenu();
 
-    await page.getByLabelText("Composer extras").click();
+    await page.getByLabelText(t("chat:composerExtras_extras")).click();
 
     await vi.waitFor(() => {
       expect(document.body.textContent ?? "").toContain("添加文件");

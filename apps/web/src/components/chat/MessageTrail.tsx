@@ -12,7 +12,7 @@
 // Layer: Chat transcript shell (presentation)
 // Depends on: pure magnification math in messageTrail.logic.ts (unit-tested).
 
-import { i18n } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 import { type MessageId } from "@synara/contracts";
 import {
   useEffect,
@@ -52,7 +52,6 @@ import {
   type TickStyle,
   type TrailGeometry,
 } from "./messageTrail.logic";
-import { useTranslation } from "~/i18n";
 
 interface MessageTrailProps {
   items: readonly MessageTrailItem[];
@@ -732,7 +731,7 @@ export function MessageTrail({
       </div>
       <nav
         ref={rootRef}
-        aria-label={i18n._("Message navigation")}
+        aria-label={t("chat:messageTrail_messageNavigation")}
         aria-hidden={!visible}
         onKeyDown={handleKeyDown}
         onBlur={handleRailBlur}
@@ -774,7 +773,10 @@ export function MessageTrail({
                   }}
                   type="button"
                   tabIndex={visible && index === tabStop ? 0 : -1}
-                  aria-label={`Message ${item.ordinal}: ${item.preview.slice(0, 60)}`}
+                  aria-label={t("lattice:messageTrailItem", {
+                    ordinal: item.ordinal,
+                    preview: item.preview.slice(0, 60),
+                  })}
                   aria-describedby={tooltipId}
                   aria-current={index === anchorIndex ? "location" : undefined}
                   onFocus={() => handleTickFocus(index)}

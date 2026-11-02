@@ -4,7 +4,6 @@
 // Layer: Chat composer UI
 // Exports: ActiveTaskListCard
 
-import { i18n } from "~/i18n";
 import { pluralize } from "@synara/shared/text";
 import { PiSidebarSimple, PiSlidersHorizontal } from "react-icons/pi";
 
@@ -52,10 +51,7 @@ export function ActiveTaskListCard({
         <ComposerStackedPanelRowMain>
           <PiSlidersHorizontal className={COMPOSER_STACKED_PANEL_ICON_CLASS_NAME} />
           <ComposerStackedPanelRowLabel tone="meta">
-            {i18n._("{completed} out of {total} tasks completed", {
-              completed: completedCount,
-              total: totalCount,
-            })}
+            {completedCount} {t("chat:outOf")} {totalCount} {t("chat:tasksCompleted")}
           </ComposerStackedPanelRowLabel>
         </ComposerStackedPanelRowMain>
         <div className="flex shrink-0 items-center gap-0.5">
