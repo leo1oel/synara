@@ -28,6 +28,7 @@ import {
   readEmbeddedHostAuthToken,
   readEmbeddedHostWsUrl,
   readLatticeAgentPanelOpenedMessage,
+  readLatticeAgentPanelVisibilityMessage,
   readLatticeCheckpointRestoreMessage,
   readLatticeComposerFilesMessage,
   readLatticeHostContextMessage,
@@ -44,6 +45,7 @@ import {
   LATTICE_CONFIRMATION_ACK,
   LATTICE_CONFIRMATION_RESPONSE,
   LATTICE_AGENT_PANEL_OPENED,
+  LATTICE_AGENT_PANEL_VISIBILITY,
   LATTICE_HOST_CONTEXT,
   LATTICE_HOST_CONTEXT_REFRESH_FAILED,
   LATTICE_HOST_CONTEXT_REQUEST,
@@ -1315,5 +1317,38 @@ describe("Lattice embed mode", () => {
         config,
       ),
     ).toBe(false);
+  });
+
+  it("reads Lattice's panel visibility only from the configured host", () => {
+    installBrowserStubs();
+    initializeEmbedMode();
+    const config = readEmbedMode()!;
+    const event = (data: unknown, origin = "http://localhost:1420") =>
+      ({ source: window.parent, origin, data }) as MessageEvent;
+
+    expect(
+      readLatticeAgentPanelVisibilityMessage(
+        event({ type: LATTICE_AGENT_PANEL_VISIBILITY, visible: true }),
+        config,
+      ),
+    ).toBe(true);
+    expect(
+      readLatticeAgentPanelVisibilityMessage(
+        event({ type: LATTICE_AGENT_PANEL_VISIBILITY, visible: false }),
+        config,
+      ),
+    ).toBe(false);
+    expect(
+      readLatticeAgentPanelVisibilityMessage(
+        event({ type: LATTICE_AGENT_PANEL_VISIBILITY, visible: "yes" }),
+        config,
+      ),
+    ).toBeNull();
+    expect(
+      readLatticeAgentPanelVisibilityMessage(
+        event({ type: LATTICE_AGENT_PANEL_VISIBILITY, visible: true }, "http://malicious.example"),
+        config,
+      ),
+    ).toBeNull();
   });
 });

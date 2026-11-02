@@ -175,6 +175,11 @@ import { diagnosticIssueReason } from "@synara/shared/diagnosticIssue";
 import { reportBetaOperationalIssue } from "../../betaOperationalIssue.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import {
+  claudeLaunchSettingsEqual,
+  readClaudeLaunchSettings,
+  type ClaudeLaunchSettings,
+} from "../../provider/claudeLaunchSettings.ts";
+import {
   mergeProviderStartOptions,
   isProviderKind,
   providerStartOptionsFromInstance,
@@ -1160,8 +1165,23 @@ const make = Effect.gen(function* () {
   // thread clears the entry, and an unused one stops when the panel moves on.
   const prewarmedSessions = new Map<
     string,
-    { readonly draft: boolean; readonly modelSelection: ModelSelection }
+    {
+      readonly draft: boolean;
+      readonly modelSelection: ModelSelection;
+      /** A draft's: what its Claude Code was spawned with outside the provider options. */
+      readonly launchSettings?: ClaudeLaunchSettings;
+    }
   >();
+  const currentClaudeLaunchSettings = readClaudeLaunchSettings.pipe(
+    Effect.provideService(ServerSettingsService, serverSettings),
+  );
+  /** False for a warm draft spawned before a launch setting changed (or unknown). */
+  const prewarmedLaunchCurrent = (launchSettings: ClaudeLaunchSettings | undefined) =>
+    launchSettings === undefined
+      ? Effect.succeed(false)
+      : currentClaudeLaunchSettings.pipe(
+          Effect.map((current) => claudeLaunchSettingsEqual(launchSettings, current)),
+        );
   // Seeded from the engine's in-memory command read model, not a second snapshot query.
   // The engine loads that model once after the projection bootstrap and keeps it current
   // as commands commit, so reading it here is both free and strictly fresher than
@@ -2767,6 +2787,13 @@ const make = Effect.gen(function* () {
           : "Finish or stop this thread's background tasks before resuming in the new project path.",
       });
     }
+    // A warm draft spawned before "Load my MCP servers" (or another setting
+    // Claude Code reads only at spawn) changed is not what this send would
+    // start, whether the first send finds it bound to the thread or not.
+    const warmDraftLaunchStale =
+      prewarmed?.draft === true &&
+      options?.prewarm !== true &&
+      !(yield* prewarmedLaunchCurrent(prewarmed.launchSettings));
     // A draft's first send adopts the runtime its panel started while the user
     // typed. Anything that would restart a bound session starts fresh instead;
     // ProviderService retires the warm runtime before spawning its replacement.
@@ -2785,6 +2812,7 @@ const make = Effect.gen(function* () {
         additionalDirectories.length === 0 &&
         !autoApproveSynaraTools &&
         (options?.enableComputerControl ?? false) === false &&
+        !warmDraftLaunchStale &&
         !claudeSelectionRequiresRestart(prewarmed.modelSelection, desiredModelSelection) &&
         !shouldRestartForProviderOptionsChange({
           requestedProvider: desiredRoutedModelSelection.provider,
@@ -2883,7 +2911,8 @@ const make = Effect.gen(function* () {
         !shouldRestartForModelSelectionChange &&
         !computerControlChanged &&
         !autoApproveSynaraToolsChanged &&
-        !providerOptionsChanged
+        !providerOptionsChanged &&
+        !warmDraftLaunchStale
       ) {
         return {
           activeSessionBeforeEnsure,
@@ -10336,24 +10365,25 @@ const make = Effect.gen(function* () {
 
   // Stop a runtime the panel warmed for a thread it no longer shows, unless
   // the thread was used meanwhile (which clears its entry).
+  /** Under the thread's session lease. */
+  const stopPrewarmedSession = (threadId: ThreadId) =>
+    Effect.gen(function* () {
+      const record = prewarmedSessions.get(threadId);
+      if (!record) return;
+      prewarmedSessions.delete(threadId);
+      if (record.draft) {
+        gatewayCredentials.releaseDraftThread?.(threadId);
+        threadSessionModelSelections.delete(threadId);
+        threadSessionComputerControl.delete(threadId);
+        threadProviderOptions.delete(threadId);
+        yield* providerService.stopSession({ threadId });
+      } else if (providerService.stopRuntimeSession) {
+        yield* providerService.stopRuntimeSession({ threadId });
+      }
+    });
+
   const releasePrewarmedSession = (threadId: ThreadId) =>
-    withProviderSessionLease(
-      threadId,
-      Effect.gen(function* () {
-        const record = prewarmedSessions.get(threadId);
-        if (!record) return;
-        prewarmedSessions.delete(threadId);
-        if (record.draft) {
-          gatewayCredentials.releaseDraftThread?.(threadId);
-          threadSessionModelSelections.delete(threadId);
-          threadSessionComputerControl.delete(threadId);
-          threadProviderOptions.delete(threadId);
-          yield* providerService.stopSession({ threadId });
-        } else if (providerService.stopRuntimeSession) {
-          yield* providerService.stopRuntimeSession({ threadId });
-        }
-      }),
-    ).pipe(
+    withProviderSessionLease(threadId, stopPrewarmedSession(threadId)).pipe(
       Effect.catchCause((cause) =>
         Effect.logWarning("provider command reactor could not release a warm runtime", {
           threadId,
@@ -10369,7 +10399,13 @@ const make = Effect.gen(function* () {
     Effect.gen(function* () {
       const sessions = yield* providerService.listSessions();
       if (sessions.some((session) => session.threadId === threadId)) {
-        return { prewarm: "running" as const };
+        const record = prewarmedSessions.get(threadId);
+        // A warm draft spawned before a launch setting changed would not be
+        // adopted by its first send: start the one that would, while it types.
+        if (record?.draft !== true || (yield* prewarmedLaunchCurrent(record.launchSettings))) {
+          return { prewarm: "running" as const };
+        }
+        yield* stopPrewarmedSession(threadId);
       }
       const thread = yield* resolveThreadShell(threadId);
       if (thread) {
@@ -10405,7 +10441,11 @@ const make = Effect.gen(function* () {
         providerStartOptionsFromServerSettings(settings),
         providerStartOptionsFromInstance(instance),
       );
-      prewarmedSessions.set(threadId, { draft: true, modelSelection: prewarm.modelSelection });
+      prewarmedSessions.set(threadId, {
+        draft: true,
+        modelSelection: prewarm.modelSelection,
+        launchSettings: yield* currentClaudeLaunchSettings,
+      });
       threadSessionModelSelections.set(threadId, prewarm.modelSelection);
       threadSessionComputerControl.set(threadId, false);
       setThreadProviderOptions(threadId, providerOptions);

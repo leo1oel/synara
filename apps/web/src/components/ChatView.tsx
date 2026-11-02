@@ -94,7 +94,7 @@ import { resolveAuxiliaryTextGenerationSelection } from "~/lib/textGenerationCap
 import { resolveInheritedThreadContext } from "~/lib/threadBootstrap";
 import { cn, isMacNavigatorPlatform, newCommandId, newThreadId, randomUUID } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
-import { usePanelThreadWarmth } from "~/hooks/usePanelThreadWarmth";
+import { setPanelShownByHost, usePanelThreadWarmth } from "~/hooks/usePanelThreadWarmth";
 import { dispatchThreadSnoozedUntil, resolveSnoozeDeadline } from "~/lib/threadSnooze";
 import {
   ChatLinkActionsContext,
@@ -150,6 +150,7 @@ import {
   postProjectHistoryToLattice,
   readEmbedMode,
   readLatticeAgentPanelOpenedMessage,
+  readLatticeAgentPanelVisibilityMessage,
   readLatticeAgentPermissionModeMessage,
   readLatticeCheckpointRestoreMessage,
   readLatticeComposerFilesMessage,
@@ -2388,6 +2389,8 @@ export default function ChatView({
       // Parsing this message here preserves the host handshake even though the
       // upstream quote surface no longer needs a remount side effect.
       readLatticeAgentPanelOpenedMessage(event, config);
+      const panelVisible = readLatticeAgentPanelVisibilityMessage(event, config);
+      if (panelVisible !== null) setPanelShownByHost(panelVisible);
     };
     postHostContextRequestToLattice(config);
     postPaperLibraryRequestToLattice(config);

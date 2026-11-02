@@ -1,5 +1,4 @@
-import { providerProcessPriorityEnabled } from "../../providerProcessPriority";
-import { claudeUserMcpServersEnabled } from "../claudeUserMcpSetting";
+import { readClaudeLaunchSettings } from "../claudeLaunchSettings";
 import { claudeTurnResultUsage, type ClaudeResultUsageBaseline } from "../claudeResultUsage.ts";
 import { restoreClaudeImportedCopyDates } from "../claudeImportedCopyDates.ts";
 /**
@@ -7410,6 +7409,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           PROVIDER,
           input,
         );
+        const launchSettings = yield* readClaudeLaunchSettings;
         const queryOptions: ClaudeQueryOptions = {
           ...(input.cwd ? { cwd: input.cwd } : {}),
           // Model identity and the spawn-fixed compaction override are separate settings.
@@ -7456,7 +7456,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           env: withClaudeArtifactOptIn(claudeSdkEnv, providerOptions?.enableArtifacts),
           spawnClaudeCodeProcess: bindClaudeProcessOwner(
             processOwner,
-            yield* providerProcessPriorityEnabled,
+            launchSettings.lowerProcessPriority,
           ),
           ...(input.cwd || input.additionalDirectories?.length
             ? {
@@ -7469,7 +7469,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           ...resolveClaudeMcpLaunchOptions({
             connection: agentGatewayCredentials ? gatewaySessionLease!.connection : undefined,
             hostProfileId: ACTIVE_AGENT_HOST_PROFILE.id,
-            loadUserMcpServers: yield* claudeUserMcpServersEnabled,
+            loadUserMcpServers: launchSettings.loadUserMcpServers,
           }),
         };
 

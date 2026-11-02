@@ -11,6 +11,13 @@ export const EMBED_UI_FONT_STACK = '"Inter Variable", Inter, "Avenir Next", "Seg
 export const LATTICE_AGENT_PERMISSION_MODE_REQUEST = "lattice:request-agent-permission-mode";
 export const LATTICE_AGENT_PERMISSION_MODE_SET = "lattice:set-agent-permission-mode";
 export const LATTICE_AGENT_PANEL_OPENED = "lattice:agent-panel-opened";
+/**
+ * `{ visible: boolean }`: whether Lattice shows the agent panel. The frame stays
+ * mounted while the panel is collapsed, behind another tab or closed into the
+ * layout, and its own visibilityState follows only the window, so the host
+ * says so on every change and when the frame becomes ready.
+ */
+export const LATTICE_AGENT_PANEL_VISIBILITY = "lattice:agent-panel-visibility";
 export const LATTICE_SETTINGS_SECTION_SET = "lattice:set-settings-section";
 /**
  * `{ compact: boolean }`: whether Lattice's Settings is in its narrow-window
@@ -307,6 +314,25 @@ export function readLatticeAgentPanelOpenedMessage(
     typeof event.data === "object" &&
     event.data.type === LATTICE_AGENT_PANEL_OPENED,
   );
+}
+
+/** The host's LATTICE_AGENT_PANEL_VISIBILITY, or null for any other message. */
+export function readLatticeAgentPanelVisibilityMessage(
+  event: MessageEvent,
+  config: EmbedModeConfig,
+): boolean | null {
+  if (
+    !config.hostOrigin ||
+    event.source !== window.parent ||
+    event.origin !== config.hostOrigin ||
+    !event.data ||
+    typeof event.data !== "object" ||
+    event.data.type !== LATTICE_AGENT_PANEL_VISIBILITY ||
+    typeof event.data.visible !== "boolean"
+  ) {
+    return null;
+  }
+  return event.data.visible;
 }
 
 /**

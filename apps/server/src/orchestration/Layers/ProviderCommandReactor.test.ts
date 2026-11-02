@@ -18268,6 +18268,38 @@ describe("ProviderCommandReactor", () => {
       });
     });
 
+    // Claude Code reads "Load my MCP servers" (and process priority) from the
+    // settings when it spawns, not from the thread's provider options.
+    it("does not adopt a warm draft spawned before a launch setting changed", async () => {
+      const harness = await createHarness({ threadModelSelection: claude });
+      await prewarm(harness, draftId);
+      await Effect.runPromise(
+        harness.serverSettings.updateSettings({
+          providers: { claudeAgent: { loadUserMcpServers: true } },
+        }),
+      );
+      await createAndSend(harness);
+      expect(harness.startSession.mock.calls).toHaveLength(2);
+      expect(harness.startSession.mock.calls[1]?.[1]).toMatchObject({ threadId: draftId });
+    });
+
+    it("re-warms a draft whose warm runtime predates a launch setting change", async () => {
+      const harness = await createHarness({ threadModelSelection: claude });
+      await prewarm(harness, draftId);
+      await Effect.runPromise(
+        harness.serverSettings.updateSettings({
+          providers: { claudeAgent: { loadUserMcpServers: true } },
+        }),
+      );
+      // The panel's next report (focus, heartbeat) replaces the stale runtime…
+      expect(await prewarm(harness, draftId)).toEqual({ prewarm: "started" });
+      expect(harness.stopSession.mock.calls[0]?.[0]).toMatchObject({ threadId: draftId });
+      expect(harness.startSession.mock.calls).toHaveLength(2);
+      // …which the first send then adopts.
+      await createAndSend(harness);
+      expect(harness.startSession.mock.calls).toHaveLength(2);
+    });
+
     it("stops an unused warm runtime once the panel shows another thread", async () => {
       const harness = await createHarness({ threadModelSelection: claude });
       await prewarm(harness, draftId);
