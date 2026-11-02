@@ -973,12 +973,10 @@ describe("ProviderCommandReactor", () => {
           input?.gatewaySessions
             ? Layer.succeed(AgentGatewaySessionRegistry, input.gatewaySessions)
             : Layer.empty,
-          input?.gatewayCredentials
-            ? Layer.succeed(
-                AgentGatewayCredentials,
-                input.gatewayCredentials as AgentGatewayCredentialsShape,
-              )
-            : Layer.empty,
+          Layer.succeed(
+            AgentGatewayCredentials,
+            (input?.gatewayCredentials ?? {}) as AgentGatewayCredentialsShape,
+          ),
         ),
       ),
       Layer.provideMerge(

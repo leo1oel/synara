@@ -174,6 +174,10 @@ export function makeServerRuntimeServicesLayer(
     // service's principal resolver performs, without going through the service.
     Layer.provideMerge(ProjectAgentRepositoryLive),
     Layer.provideMerge(agentQualityTraceLayer),
+    // The same memoized credentials the gateway verifies with: the reactor
+    // registers pre-warmed drafts there. A sibling in the final mergeAll
+    // would not reach it.
+    Layer.provideMerge(agentGatewayCredentialsLayer),
   );
   const checkpointReactorLayer = CheckpointReactorLive.pipe(
     Layer.provideMerge(runtimeServicesLayer),

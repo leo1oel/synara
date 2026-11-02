@@ -1037,10 +1037,10 @@ const make = Effect.gen(function* () {
   const computerService = yield* Effect.serviceOption(ComputerService);
   const gatewaySessions = yield* Effect.serviceOption(AgentGatewaySessionRegistry);
   // A draft's warm runtime connects to the gateway before its thread exists;
-  // the registration lets that connection succeed (see mcpTransport).
-  const gatewayCredentials = Option.getOrUndefined(
-    yield* Effect.serviceOption(AgentGatewayCredentials),
-  );
+  // the registration lets that connection succeed (see mcpTransport). A hard
+  // dependency, so a composition that forgets to share the gateway's instance
+  // fails to typecheck instead of silently refusing every warm draft.
+  const gatewayCredentials = yield* AgentGatewayCredentials;
   // Resolved at make time: fibers that run turn dispatch do not inherit the
   // layer environment, so per-turn serviceOption lookups would see an empty
   // context.
@@ -2445,7 +2445,7 @@ const make = Effect.gen(function* () {
     if (options?.prewarm !== true) {
       prewarmedSessions.delete(threadId);
       // The thread exists now, so the gateway resolves it like any other.
-      if (prewarmed?.draft === true) gatewayCredentials?.releaseDraftThread?.(threadId);
+      if (prewarmed?.draft === true) gatewayCredentials.releaseDraftThread?.(threadId);
     }
     const thread = yield* resolveThreadShell(threadId);
     if (!thread) {
@@ -10344,7 +10344,7 @@ const make = Effect.gen(function* () {
         if (!record) return;
         prewarmedSessions.delete(threadId);
         if (record.draft) {
-          gatewayCredentials?.releaseDraftThread?.(threadId);
+          gatewayCredentials.releaseDraftThread?.(threadId);
           threadSessionModelSelections.delete(threadId);
           threadSessionComputerControl.delete(threadId);
           threadProviderOptions.delete(threadId);
@@ -10411,7 +10411,7 @@ const make = Effect.gen(function* () {
       setThreadProviderOptions(threadId, providerOptions);
       // Before the spawn: Claude Code connects to the gateway at startup and
       // keeps a server that refused it failed for the whole session.
-      gatewayCredentials?.registerDraftThread?.(threadId);
+      gatewayCredentials.registerDraftThread?.(threadId);
       yield* providerService
         .startSession(threadId, {
           threadId,
@@ -10428,7 +10428,7 @@ const make = Effect.gen(function* () {
         })
         .pipe(
           Effect.onError(() =>
-            Effect.sync(() => gatewayCredentials?.releaseDraftThread?.(threadId)),
+            Effect.sync(() => gatewayCredentials.releaseDraftThread?.(threadId)),
           ),
         );
       return { prewarm: "started" as const };
