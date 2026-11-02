@@ -1,4 +1,12 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -49,6 +57,7 @@ import {
   type AgentGatewayCredentialsShape,
 } from "../../agentGateway/Services/AgentGatewayCredentials.ts";
 import { ServerConfig } from "../../config.ts";
+import { ServerSettingsService } from "../../serverSettings.ts";
 import { MINIMUM_CLAUDE_AUTO_MODE_CLI_VERSION } from "../claudeCliVersion.ts";
 import { claudeCacheForModel } from "../claudeCacheObservation.ts";
 import { ProviderAdapterRequestError, ProviderAdapterValidationError } from "../Errors.ts";
@@ -762,6 +771,65 @@ describe("Claude Synara harness policy", () => {
 });
 
 describe("ClaudeAdapterLive", () => {
+  it.effect("loads the enabled bundled skills into a fresh session as a skills plugin", () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "claude-skills-plugin-"));
+    const bundledDir = path.join(root, "embedded_skills");
+    const synaraBaseDir = path.join(root, "synara-home");
+    for (const name of ["authoring-presentations", "create-theme", "research-writing"]) {
+      mkdirSync(path.join(bundledDir, name), { recursive: true });
+      writeFileSync(
+        path.join(bundledDir, name, "SKILL.md"),
+        `---\nname: ${name}\ndescription: ${name} skill\n---\n# ${name}\n`,
+      );
+    }
+    const previousBundledDir = process.env.SYNARA_BUNDLED_SKILLS_DIR;
+    process.env.SYNARA_BUNDLED_SKILLS_DIR = bundledDir;
+    const harness = makeHarness({ baseDir: synaraBaseDir });
+    return Effect.gen(function* () {
+      const adapter = yield* ClaudeAdapter;
+      yield* adapter.startSession({
+        threadId: THREAD_ID,
+        provider: "claudeAgent",
+        cwd: "/tmp/repos/web",
+        runtimeMode: "full-access",
+      });
+
+      const plugins = harness.getLastCreateQueryInput()?.options.plugins ?? [];
+      assert.equal(plugins.length, 1);
+      const plugin = plugins[0]!;
+      assert.equal(plugin.type, "local");
+      assert.equal(plugin.skipMcpDiscovery, true);
+      // Synara-owned: never ~/.claude or the user's project.
+      assert.isTrue(plugin.path.startsWith(`${synaraBaseDir}${path.sep}`));
+      const manifest = JSON.parse(
+        readFileSync(path.join(plugin.path, ".claude-plugin", "plugin.json"), "utf8"),
+      ) as { name: string };
+      assert.equal(manifest.name, "lattice");
+      // research-writing is off in Settings, so Claude never lists it.
+      assert.deepEqual(readdirSync(path.join(plugin.path, "skills")).toSorted(), [
+        "authoring-presentations",
+        "create-theme",
+      ]);
+      assert.equal(
+        realpathSync(path.join(plugin.path, "skills", "authoring-presentations")),
+        realpathSync(path.join(bundledDir, "authoring-presentations")),
+      );
+    }).pipe(
+      Effect.provideService(Random.Random, makeDeterministicRandomService()),
+      Effect.provide(harness.layer),
+      Effect.provide(
+        ServerSettingsService.layerTest({ skills: { disabled: ["research-writing"] } }),
+      ),
+      Effect.ensuring(
+        Effect.sync(() => {
+          if (previousBundledDir === undefined) delete process.env.SYNARA_BUNDLED_SKILLS_DIR;
+          else process.env.SYNARA_BUNDLED_SKILLS_DIR = previousBundledDir;
+          rmSync(root, { recursive: true, force: true });
+        }),
+      ),
+    );
+  });
+
   it.effect("grants a multi-folder project's extra folders as additional directories", () => {
     const harness = makeHarness();
     return Effect.gen(function* () {

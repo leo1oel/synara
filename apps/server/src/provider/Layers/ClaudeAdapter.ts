@@ -1,4 +1,5 @@
 import { readClaudeLaunchSettings } from "../claudeLaunchSettings";
+import { prepareClaudeSkillsPlugin } from "../claudeSkillsPlugin.ts";
 import { claudeTurnResultUsage, type ClaudeResultUsageBaseline } from "../claudeResultUsage.ts";
 import { restoreClaudeImportedCopyDates } from "../claudeImportedCopyDates.ts";
 /**
@@ -2440,6 +2441,22 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
     const adapterScope = yield* Effect.scope;
     const fileSystem = yield* FileSystem.FileSystem;
     const serverConfig = yield* ServerConfig;
+    // The bundled and `~/.synara/skills` skills, served to Claude Code as a
+    // local plugin so it lists them and can pick one itself. Built from the
+    // launch-time disabled set, so a Settings toggle reaches the next session
+    // rather than a running one. A failure only costs Claude those skills: the
+    // explicit-mention path still inlines them.
+    const resolveClaudeSkillsPluginOptions = (disabledSkillNames: ReadonlyArray<string>) =>
+      Effect.tryPromise(() =>
+        prepareClaudeSkillsPlugin({ synaraBaseDir: serverConfig.baseDir, disabledSkillNames }),
+      ).pipe(
+        Effect.map((prepared) => (prepared ? { plugins: [prepared.plugin] } : {})),
+        Effect.catch((cause) =>
+          Effect.logWarning("Failed to prepare the Claude skills plugin", cause).pipe(
+            Effect.as({}),
+          ),
+        ),
+      );
     // Optional so adapter tests can run without the gateway layer; when
     // present, every session gets the synara_* MCP tools.
     const agentGatewayCredentials = Option.getOrUndefined(
@@ -7410,6 +7427,9 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           input,
         );
         const launchSettings = yield* readClaudeLaunchSettings;
+        const skillsPluginOptions = yield* resolveClaudeSkillsPluginOptions(
+          launchSettings.disabledSkillNames,
+        );
         const queryOptions: ClaudeQueryOptions = {
           ...(input.cwd ? { cwd: input.cwd } : {}),
           // Model identity and the spawn-fixed compaction override are separate settings.
@@ -7471,6 +7491,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             hostProfileId: ACTIVE_AGENT_HOST_PROFILE.id,
             loadUserMcpServers: launchSettings.loadUserMcpServers,
           }),
+          ...skillsPluginOptions,
         };
 
         const queryRuntime = yield* Effect.tryPromise({
@@ -8878,6 +8899,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
       env: NodeJS.ProcessEnv,
       binaryPath: string,
       discover: (queryRuntime: ClaudeQueryRuntime) => Promise<T>,
+      extraOptions?: Pick<ClaudeQueryOptions, "plugins">,
     ): Promise<T> {
       // Never spawn another discovery process until every previously unproven
       // process tree has been reaped successfully.
@@ -8902,6 +8924,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             persistSession: false,
             env,
             spawnClaudeCodeProcess: bindClaudeProcessOwner(processOwner, false),
+            ...extraOptions,
           },
         });
         const queryRuntime = tempQuery;
@@ -8930,16 +8953,24 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
       env: NodeJS.ProcessEnv,
       binaryPath: string,
       artifactsEnabled: boolean,
+      skillsPluginOptions: Pick<ClaudeQueryOptions, "plugins">,
     ): Promise<ProviderListCommandsResult> =>
-      discoverViaTemporaryProcess(cwd, env, binaryPath, (queryRuntime) =>
-        queryRuntime
-          .supportedCommands()
-          .then((commands) =>
-            mapSupportedCommands(
-              commands,
-              resolveClaudeArtifactsState({ artifactsEnabled, commands }),
+      discoverViaTemporaryProcess(
+        cwd,
+        env,
+        binaryPath,
+        (queryRuntime) =>
+          queryRuntime
+            .supportedCommands()
+            .then((commands) =>
+              mapSupportedCommands(
+                commands,
+                resolveClaudeArtifactsState({ artifactsEnabled, commands }),
+              ),
             ),
-          ),
+        // Skills are slash commands too: load the same skills plugin a session
+        // gets, so the list matches what a live session reports.
+        skillsPluginOptions,
       );
 
     const discoverModelsViaTemporaryProcess = (
@@ -9020,6 +9051,9 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           input.instanceId,
         );
         const binaryPath = input.binaryPath ?? "claude";
+        const skillsPluginOptions = yield* resolveClaudeSkillsPluginOptions(
+          (yield* readClaudeLaunchSettings).disabledSkillNames,
+        );
         const pendingKey = JSON.stringify([discoveryKey, enableArtifacts]);
         let discoveryPromise = pendingCommandDiscoveries.get(pendingKey);
         if (!discoveryPromise) {
@@ -9034,6 +9068,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
                 withClaudeArtifactOptIn(claudeSdkEnv, enableArtifacts),
                 binaryPath,
                 enableArtifacts,
+                skillsPluginOptions,
               ),
             );
           discoveryPromise = started;
@@ -9129,6 +9164,8 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
       const processOwner: ClaudeProcessOwner = {};
       let query: ClaudeQueryRuntime;
       try {
+        // No skills plugin here: this process only reports MCP server status
+        // and holds sign-ins open, and never runs a turn that could use one.
         query = await createQuery({
           prompt: neverResolvingUserMessageStream(),
           options: {

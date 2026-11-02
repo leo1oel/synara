@@ -116,6 +116,8 @@ import {
 import { PersistenceDecodeError, PersistenceSqlError } from "../../persistence/Errors.ts";
 import { providerDisabledSettingsMessage } from "../../provider/enabledProviderAdapter.ts";
 import { buildInlineSkillInstructions } from "../../provider/skillPromptInjection.ts";
+import * as nodePath from "node:path";
+import { resolveClaudePluginSkills } from "../../provider/claudeSkillsPlugin.ts";
 import {
   PROVIDER_DEBUG_MODE_PROMPT_PREFIX,
   withProviderDebugModePrompt,
@@ -1181,6 +1183,36 @@ const make = Effect.gen(function* () {
       ? Effect.succeed(false)
       : currentClaudeLaunchSettings.pipe(
           Effect.map((current) => claudeLaunchSettingsEqual(launchSettings, current)),
+        );
+  /**
+   * For Claude: SKILL.md path -> `lattice:<name>` for every skill its skills
+   * plugin serves under the current Settings, so a mention points Claude at
+   * its Skill tool instead of pasting the SKILL.md a second time. A session
+   * started before a toggle may differ; the pointer carries the path for that.
+   */
+  const nativelyServedSkillsFor = (provider: ProviderKind) =>
+    provider !== "claudeAgent"
+      ? Effect.succeed(undefined)
+      : currentClaudeLaunchSettings.pipe(
+          Effect.flatMap((launchSettings) =>
+            Effect.tryPromise(() =>
+              resolveClaudePluginSkills({
+                synaraBaseDir: serverConfig.baseDir,
+                disabledSkillNames: launchSettings.disabledSkillNames,
+              }),
+            ),
+          ),
+          Effect.map(
+            (skills): ReadonlyMap<string, string> =>
+              new Map(
+                skills.map((skill) => [nodePath.resolve(skill.skillPath), skill.qualifiedName]),
+              ),
+          ),
+          Effect.catch((error) =>
+            Effect.logWarning("failed to resolve Claude's plugin-served skills", { error }).pipe(
+              Effect.as(undefined),
+            ),
+          ),
         );
   // Seeded from the engine's in-memory command read model, not a second snapshot query.
   // The engine loads that model once after the projection bootstrap and keeps it current
@@ -3541,12 +3573,17 @@ const make = Effect.gen(function* () {
       // text-only subagent steering channel.
       const steerProvider = (providerThread.session?.providerName ??
         providerThread.modelSelection.provider) as ProviderKind;
+      const steerNativelyServedSkills =
+        input.skills !== undefined && input.skills.length > 0
+          ? yield* nativelyServedSkillsFor(steerProvider)
+          : undefined;
       const steerSkillInlineText =
         input.skills !== undefined && input.skills.length > 0
           ? yield* Effect.tryPromise(() =>
               buildInlineSkillInstructions({
                 provider: steerProvider,
                 skills: input.skills ?? [],
+                nativelyServedSkills: steerNativelyServedSkills,
                 maxChars: Math.max(
                   0,
                   PROVIDER_SEND_TURN_MAX_INPUT_CHARS -
@@ -4006,12 +4043,17 @@ const make = Effect.gen(function* () {
     });
     // Portable skills fallback: providers that cannot load the referenced skill
     // file natively get the skill instructions inlined into the prompt.
+    const nativelyServedSkills =
+      input.skills !== undefined && input.skills.length > 0
+        ? yield* nativelyServedSkillsFor(selectedProvider as ProviderKind)
+        : undefined;
     const skillInlineText =
       input.skills !== undefined && input.skills.length > 0
         ? yield* Effect.tryPromise(() =>
             buildInlineSkillInstructions({
               provider: selectedProvider as ProviderKind,
               skills: input.skills ?? [],
+              nativelyServedSkills,
               maxChars: Math.max(
                 0,
                 PROVIDER_SEND_TURN_MAX_INPUT_CHARS -

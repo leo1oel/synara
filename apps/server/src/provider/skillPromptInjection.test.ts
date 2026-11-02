@@ -149,3 +149,58 @@ describe("buildInlineSkillInstructions", () => {
     },
   );
 });
+
+describe("buildInlineSkillInstructions for Claude's skills plugin", () => {
+  it("points a mentioned plugin-served skill at the Skill tool instead of pasting it again", async () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "skill-claude-plugin-"));
+    const bundledPath = path.join(root, "embedded_skills", "authoring-presentations", "SKILL.md");
+    const otherPath = path.join(root, "elsewhere", "reviewer", "SKILL.md");
+    try {
+      await mkdir(path.dirname(bundledPath), { recursive: true });
+      await mkdir(path.dirname(otherPath), { recursive: true });
+      await writeFile(bundledPath, "# Slides\n\nBUNDLED BODY");
+      await writeFile(otherPath, "# Reviewer\n\nOTHER BODY");
+
+      const text = await buildInlineSkillInstructions({
+        provider: "claudeAgent",
+        skills: [
+          { name: "authoring-presentations", path: bundledPath },
+          { name: "reviewer", path: otherPath },
+        ],
+        maxChars: 10_000,
+        nativelyServedSkills: new Map([[bundledPath, "lattice:authoring-presentations"]]),
+      });
+
+      // Served: one pointer naming what Claude lists, never the body.
+      expect(text).toContain('invoke="lattice:authoring-presentations"');
+      expect(text).toContain(`path=${JSON.stringify(bundledPath)}`);
+      expect(text).toContain("Skill tool");
+      expect(text).not.toContain("BUNDLED BODY");
+      // Not served (for example a skill Settings turned off): still inlined.
+      expect(text).toContain("OTHER BODY");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("inlines a bundled skill for Claude when this session's plugin does not serve it", async () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "skill-claude-unserved-"));
+    const bundledPath = path.join(root, "embedded_skills", "research-writing", "SKILL.md");
+    try {
+      await mkdir(path.dirname(bundledPath), { recursive: true });
+      await writeFile(bundledPath, "# Research\n\nRESEARCH BODY");
+
+      const text = await buildInlineSkillInstructions({
+        provider: "claudeAgent",
+        skills: [{ name: "research-writing", path: bundledPath }],
+        maxChars: 10_000,
+        nativelyServedSkills: new Map(),
+      });
+
+      expect(text).toContain("RESEARCH BODY");
+      expect(text).not.toContain("invoke=");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
