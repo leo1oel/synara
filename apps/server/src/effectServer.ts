@@ -73,6 +73,7 @@ import { ExternalMcpGateway } from "./externalMcp/Services/ExternalMcpGateway";
 import { ExternalMcpService } from "./externalMcp/Services/ExternalMcpService";
 import { mcpConnectorsRouteLayer } from "./mcpConnectors/httpRoute";
 import { McpConnectors } from "./mcpConnectors/Services/McpConnectors";
+import { ACTIVE_AGENT_HOST_PROFILE } from "./agentGateway/hostProfile.ts";
 
 export interface ServerShape {
   readonly start: Effect.Effect<
@@ -303,7 +304,10 @@ export const createEffectServer = Effect.fn(function* (
     reconcileRestartStuckTurns: Effect.gen(function* () {
       // Journal replay has finished; capture only work still orphaned now.
       // An explicit quit record (including an invalid one) takes precedence.
-      if (previousResumeRecord.kind === "absent") {
+      // Lattice stops its loopback service with SIGTERM whenever the writer quits,
+      // so an orphaned turn there is an ordinary quit, not a crash: the chat keeps
+      // its manual Continue instead of starting agent work on the next launch.
+      if (previousResumeRecord.kind === "absent" && ACTIVE_AGENT_HOST_PROFILE.id !== "lattice") {
         const crashResumeRecord = yield* captureCrashResumeRecord;
         if (crashResumeRecord.kind === "record") {
           // Keep the captured intent if this startup dies during reconciliation.
