@@ -40,6 +40,7 @@ import {
   type DiffPanelRepoScopeOption,
   type DiffPanelTurnScopeIntent,
   type DiffPanelViewSource,
+  localizeDiffScopeLabel,
 } from "./DiffPanel.logic";
 import {
   DiffPanelChangeNavigationButtons,
@@ -280,7 +281,7 @@ export const DiffPanelToolbar = function DiffPanelToolbar(props: DiffPanelToolba
           <EnvironmentRowBody
             compact
             icon={scopePickerIcon}
-            label={<span className="truncate">{scopePickerLabel}</span>}
+            label={<span className="truncate">{localizeDiffScopeLabel(scopePickerLabel, t)}</span>}
             trailing={
               <>
                 <ScopeCountBadge count={scopePickerCount} />
@@ -323,7 +324,9 @@ export const DiffPanelToolbar = function DiffPanelToolbar(props: DiffPanelToolba
               {DIFF_PANEL_PICKER_SCOPE_OPTIONS.map((scope) => (
                 <MenuRadioItem key={scope} value={scope}>
                   {resolveScopeMenuIcon(scope)}
-                  <span className="min-w-0 flex-1 truncate">{REPO_DIFF_SCOPE_LABELS[scope]}</span>
+                  <span className="min-w-0 flex-1 truncate">
+                    {localizeDiffScopeLabel(REPO_DIFF_SCOPE_LABELS[scope], t)}
+                  </span>
                   <ScopeCountBadge count={props.scopeFileCounts[scope]} />
                 </MenuRadioItem>
               ))}
