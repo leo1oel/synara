@@ -141,9 +141,12 @@ export function appendLatticeHostContextToPrompt(
 ): string {
   const visiblePrompt = extractTrailingLatticeHostContext(prompt).promptText.trim();
   if (!context) return visiblePrompt;
+  // requestId only pairs a refresh reply with its request; the agent has no
+  // use for it, and a fresh id per send would vary every prompt's tail.
+  const { requestId: _requestId, ...agentContext } = context;
   const block = [
     '<lattice_active_context version="1">',
-    JSON.stringify(context),
+    JSON.stringify(agentContext),
     "</lattice_active_context>",
   ].join("\n");
   return visiblePrompt ? `${visiblePrompt}\n\n${block}` : block;

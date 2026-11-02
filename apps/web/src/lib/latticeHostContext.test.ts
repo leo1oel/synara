@@ -65,6 +65,16 @@ describe("Lattice host context prompt block", () => {
     });
   });
 
+  it("leaves the refresh requestId out of the agent's context block", () => {
+    const prompt = appendLatticeHostContextToPrompt("Explain this", {
+      ...context,
+      requestId: "refresh-1",
+    });
+    expect(prompt).not.toContain("requestId");
+    expect(prompt).not.toContain("refresh-1");
+    expect(extractTrailingLatticeHostContext(prompt).context).toEqual(context);
+  });
+
   it("replaces stale context instead of accumulating copies", () => {
     const first = appendLatticeHostContextToPrompt("Explain this", context);
     const second = appendLatticeHostContextToPrompt(first, {
