@@ -70,6 +70,8 @@ import {
   AgentGatewayCredentials,
   type AgentGatewayCredentialsShape,
 } from "../../agentGateway/Services/AgentGatewayCredentials.ts";
+import { AgentGatewayCredentialsLive } from "../../agentGateway/Layers/AgentGatewayCredentials.ts";
+import { makeAgentGatewayMcpTransport } from "../../agentGateway/mcpTransport.ts";
 import {
   AgentGatewaySessionRegistry,
   type AgentGatewaySessionRegistryShape,
@@ -505,7 +507,7 @@ describe("ProviderCommandReactor", () => {
     readonly generateThreadTitle?: TextGenerationShape["generateThreadTitle"];
     readonly computerService?: ComputerServiceShape;
     readonly gatewaySessions?: AgentGatewaySessionRegistryShape;
-    readonly gatewayCredentials?: Partial<AgentGatewayCredentialsShape>;
+    readonly gatewayCredentials?: Partial<AgentGatewayCredentialsShape> | "live";
     readonly getClaudeCacheObservation?: NonNullable<
       ProviderServiceShape["getClaudeCacheObservation"]
     >;
@@ -973,10 +975,12 @@ describe("ProviderCommandReactor", () => {
           input?.gatewaySessions
             ? Layer.succeed(AgentGatewaySessionRegistry, input.gatewaySessions)
             : Layer.empty,
-          Layer.succeed(
-            AgentGatewayCredentials,
-            (input?.gatewayCredentials ?? {}) as AgentGatewayCredentialsShape,
-          ),
+          input?.gatewayCredentials === "live"
+            ? AgentGatewayCredentialsLive
+            : Layer.succeed(
+                AgentGatewayCredentials,
+                (input?.gatewayCredentials ?? {}) as AgentGatewayCredentialsShape,
+              ),
         ),
       ),
       Layer.provideMerge(
@@ -1185,6 +1189,7 @@ describe("ProviderCommandReactor", () => {
 
     return {
       engine,
+      gatewayCredentials: await runtime.runPromise(Effect.service(AgentGatewayCredentials)),
       realProviderService: await runtime.runPromise(Effect.service(ProviderService)),
       providerRuntimeRepository: Option.getOrUndefined(
         await runtime.runPromise(Effect.serviceOption(ProviderSessionRuntimeRepository)),
@@ -18186,6 +18191,56 @@ describe("ProviderCommandReactor", () => {
       await createAndSend(harness);
       expect(harness.startSession.mock.calls).toHaveLength(1);
       expect(registry.drafts.has(draftId)).toBe(false);
+    });
+
+    it("gives a warm draft's Claude the lattice catalog on its first turn", async () => {
+      const harness = await createHarness({
+        threadModelSelection: claude,
+        gatewayCredentials: "live",
+      });
+      const credentials = harness.gatewayCredentials;
+      const transport = makeAgentGatewayMcpTransport({
+        credentials,
+        snapshotQuery: harness.projectionSnapshotQuery,
+        tools: [
+          {
+            definition: { name: "cite", description: "Cite.", inputSchema: { type: "object" } },
+            requiredCapability: "thread:read",
+            handler: () => Effect.succeed({ content: [] }),
+          },
+        ],
+        instructions: "lattice",
+        requireThreadShell: () => Effect.die(new Error("unused")),
+      });
+      // Stands in for Claude Code: it connects to the gateway once, at spawn,
+      // and keeps that outcome for the whole session.
+      const catalogBySpawn: Array<{ threadId: string; catalog: unknown }> = [];
+      const startSession = harness.startSession.getMockImplementation()!;
+      harness.startSession.mockImplementation((threadId, input) =>
+        Effect.gen(function* () {
+          const { bearerToken } = credentials.connectionForThread(threadId, "claudeAgent");
+          const listed = yield* transport({
+            authorizationHeader: `Bearer ${bearerToken}`,
+            body: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+          });
+          catalogBySpawn.push({
+            threadId,
+            catalog:
+              listed.status === 200
+                ? (listed.body as { result: { tools: Array<{ name: string }> } }).result.tools.map(
+                    (tool) => tool.name,
+                  )
+                : `HTTP ${listed.status}`,
+          });
+          return yield* startSession(threadId, input);
+        }),
+      );
+
+      await prewarm(harness, draftId);
+      await createAndSend(harness);
+      // One spawn: the first turn ran on the warm session, with its catalog.
+      expect(catalogBySpawn).toEqual([{ threadId: draftId, catalog: ["cite"] }]);
+      expect(credentials.isDraftThread?.(draftId)).toBe(false);
     });
 
     it("forgets a warm draft's gateway registration when the panel moves on", async () => {
