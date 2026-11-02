@@ -10,8 +10,6 @@
   },
   "common": {
     "forkThisThreadIntoLocalOrANewWorktree": "把这个对话分叉到本地或新的工作树",
-    "plugin_skillsSection": "Skills",
-    "searchSkills": "搜索 Skills",
     "worktreeHandoff_worktreeName": "工作树名称",
     "worktreeMode_worktree": "工作树"
   },
@@ -46,9 +44,8 @@
     "agentProviders": "模型",
     "conversation": "讨论",
     "detail_never": "从未",
-    "enableTheSkill": "启用 {{value0}} Skill",
     "giveAgentProcessesAndTheirCommandsAModeratelyLower": "电脑繁忙时，适当降低 AI 助手进程及其命令的 CPU 优先级。",
-    "nav_skillsEyebrow": "Skills",
+    "nav_skillsEyebrow": "技能",
     "providers_piAgentDir": "Pi 助手文件夹"
   }
 }
