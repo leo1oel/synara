@@ -20,6 +20,7 @@ import {
   DraftAttachmentWarningIcon,
 } from "./DraftAttachmentWarning";
 import { FileEntryIcon } from "./FileEntryIcon";
+import { useTranslation, t } from "~/i18n";
 
 type FileAttachmentChipVariant = "pill" | "card";
 
@@ -95,7 +96,7 @@ function fileAttachmentTypeLabel(file: ChatFileAttachment): string {
     }
   }
 
-  return "FILE";
+  return t("chat:fILE");
 }
 
 function fileAttachmentDetail(i18n: I18n, file: ChatFileAttachment): string {
@@ -114,7 +115,8 @@ function FileAttachmentPillTrigger({
   className?: string | undefined;
   nonPersisted: boolean;
 }) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   return (
     <span
       className={cn(

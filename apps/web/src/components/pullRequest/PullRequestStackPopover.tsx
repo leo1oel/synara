@@ -36,7 +36,8 @@ export function PullRequestStackPopover({
   currentNumber: number;
   onSelectPullRequest?: ((number: number) => void) | undefined;
 }) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   const [open, setOpen] = useState(false);
   const assessment = assessPullRequestStack(stack);
   const entriesTopDown = stack.entries.toReversed();

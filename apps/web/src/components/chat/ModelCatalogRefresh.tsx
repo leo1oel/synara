@@ -9,14 +9,16 @@ import type { ProviderInstanceId, ProviderKind } from "@synara/contracts";
 import type { ProviderModelCatalog } from "../../hooks/useProviderModelCatalog";
 import { RefreshCwIcon } from "~/lib/icons";
 import { Button } from "../ui/button";
+import { useTranslation } from "~/i18n";
 
 export function ModelCatalogRefresh(props: {
   provider: ProviderKind;
   instanceId: ProviderInstanceId;
   onRefresh: ProviderModelCatalog["refreshModels"];
 }) {
+  const { t } = useTranslation();
+
   const { provider, instanceId, onRefresh } = props;
-  const { i18n } = useLingui();
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
   const requestId = useRef(0);
@@ -56,7 +58,7 @@ export function ModelCatalogRefresh(props: {
   return (
     <div className="flex items-center justify-end gap-2 border-t border-border px-2 py-1">
       <span role="status" className="mr-auto text-ui-xs text-muted-foreground">
-        {pending ? i18n._("Checking for models…") : i18n._("Couldn’t update models.")}
+        {pending ? t("chat:checkingForModels") : t("chat:couldnTUpdateModels")}
       </span>
       <Button
         type="button"
@@ -69,7 +71,7 @@ export function ModelCatalogRefresh(props: {
           aria-hidden="true"
           className={pending ? "size-3 motion-safe:animate-spin" : "size-3"}
         />
-        <Trans>Retry</Trans>
+        {t("common:common_retry")}
       </Button>
     </div>
   );

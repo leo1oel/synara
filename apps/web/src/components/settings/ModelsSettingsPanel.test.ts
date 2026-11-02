@@ -8,16 +8,14 @@ import { validateCustomModelInput } from "./ModelsSettingsPanel";
 
 describe("validateCustomModelInput", () => {
   it("returns the same validation messages as the custom-model editor", () => {
-    expect(
-      validateCustomModelInput({ provider: "codex", value: "   ", savedModels: [] }, i18n),
-    ).toEqual({
-      error: "Enter a model slug.",
+    expect(validateCustomModelInput({ provider: "codex", value: "   ", savedModels: [] })).toEqual({
+      error: "settings:modelSlugRequired",
     });
 
     const builtIn = getModelOptions("codex")[0]!.slug;
     expect(
-      validateCustomModelInput({ provider: "codex", value: builtIn, savedModels: [] }, i18n),
-    ).toEqual({ error: "That model is already built in." });
+      validateCustomModelInput({ provider: "codex", value: builtIn, savedModels: [] }),
+    ).toEqual({ error: "settings:modelAlreadyBuiltIn" });
 
     expect(
       validateCustomModelInput(
@@ -29,19 +27,16 @@ describe("validateCustomModelInput", () => {
         i18n,
       ),
     ).toEqual({
-      error: `Model slugs must be ${MAX_CUSTOM_MODEL_LENGTH} characters or less.`,
+      error: "settings:modelSlugTooLong",
     });
 
     expect(
-      validateCustomModelInput(
-        {
-          provider: "codex",
-          value: " custom/model ",
-          savedModels: ["custom/model"],
-        },
-        i18n,
-      ),
-    ).toEqual({ error: "That custom model is already saved." });
+      validateCustomModelInput({
+        provider: "codex",
+        value: " custom/model ",
+        savedModels: ["custom/model"],
+      }),
+    ).toEqual({ error: "settings:customModelAlreadySaved" });
   });
 
   it("returns the normalized model when it can be saved", () => {

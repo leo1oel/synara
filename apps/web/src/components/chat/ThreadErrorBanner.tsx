@@ -18,6 +18,7 @@ import { DisclosureChevron } from "../ui/DisclosureChevron";
 import { IconButton } from "../ui/icon-button";
 import { CircleAlertIcon, XIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
+import { useTranslation } from "~/i18n";
 
 type ThreadErrorBannerProps = {
   error: string | null;
@@ -49,6 +50,8 @@ function ThreadErrorBannerContent({
   unblocking,
   className,
 }: ThreadErrorBannerProps & { error: string }) {
+  const { t } = useTranslation();
+
   const [expanded, setExpanded] = useState(false);
   const [clamped, setClamped] = useState(false);
   const textRef = useRef<HTMLParagraphElement>(null);
@@ -90,10 +93,10 @@ function ThreadErrorBannerContent({
               onClick={() => setExpanded((value) => !value)}
             >
               <DisclosureChevron open={expanded} />
-              {expanded ? i18n._("Hide details") : i18n._("Show details")}
+              {expanded ? t("chat:hideDetails") : t("chat:showDetails")}
             </Button>
           ) : null}
-          <CopyTextButton text={error} label={i18n._("error")} />
+          <CopyTextButton text={error} label={t("common:error")} />
           {onContinue ? (
             <Button
               size="xs"
@@ -101,12 +104,12 @@ function ThreadErrorBannerContent({
               disabled={recoveryDisabled}
               onClick={onContinue}
             >
-              {i18n._("Continue task")}
+              {t("chat:continueTask")}
             </Button>
           ) : null}
           {onContinue && onChangeModel ? (
             <Button size="xs" variant="outline" disabled={recoveryDisabled} onClick={onChangeModel}>
-              {i18n._("Change model")}
+              {t("chat:providerModelPicker_changeModel")}
             </Button>
           ) : null}
           {canUnblock ? (
@@ -116,7 +119,7 @@ function ThreadErrorBannerContent({
               disabled={unblocking}
               onClick={() => onUnblock?.()}
             >
-              {unblocking ? i18n._("Unblocking…") : i18n._("Unblock thread")}
+              {unblocking ? t("chat:unblocking") : t("chat:unblockThread")}
             </Button>
           ) : null}
         </div>
@@ -124,7 +127,7 @@ function ThreadErrorBannerContent({
       {onDismiss ? (
         <AlertAction className="items-center">
           <IconButton
-            label={i18n._("Dismiss error")}
+            label={t("chat:threadError_dismissError")}
             className="size-6 text-destructive/60 hover:text-destructive sm:size-6"
             onClick={onDismiss}
           >

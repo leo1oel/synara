@@ -87,6 +87,7 @@ import { PullRequestTimelineTab } from "./PullRequestTimelineTab";
 import { PullRequestsUnavailableState } from "./PullRequestsUnavailableState";
 import { PullRequestWarningNote } from "./PullRequestWarningNote";
 import { assessPullRequestStack, pullRequestMergeBlocker } from "./pullRequestStack.logic";
+import { useTranslation } from "~/i18n";
 
 // `paper` is Lattice's "In the paper" reading (LatticePullRequestPaper), shown only there.
 type DetailTab = "summary" | "timeline" | "code" | "paper";
@@ -109,13 +110,11 @@ function actionSuccessLabel(i18n: I18n, action: PullRequestAction): string {
 }
 
 // The dock's tab row; the page names the diff "Changes" and puts it before Timeline.
-function dockTabs(i18n: I18n): ReadonlyArray<GitHubItemTabOption<DetailTab>> {
-  return [
-    { value: "summary", label: i18n._("Summary") },
-    { value: "timeline", label: i18n._("Timeline") },
-    { value: "code", label: i18n._("Code") },
-  ];
-}
+const DOCK_TABS: ReadonlyArray<{ value: DetailTab; labelKey: string }> = [
+  { value: "summary", labelKey: "chat:timeline_summaryLabel" },
+  { value: "timeline", labelKey: "git:timeline" },
+  { value: "code", labelKey: "common:code" },
+];
 
 // Dock header icon controls follow the chat-header recipe (chrome variant + fixed 28px square +
 // full-strength glyph) so they sit level with the Merge pill and the dock chips.
@@ -244,8 +243,8 @@ export function PullRequestDetailPanel({
         const title =
           action === "merge" && result.mergeOutcome === "enqueued"
             ? detail?.stack
-              ? i18n._("Stack added to merge queue")
-              : i18n._("Pull request added to merge queue")
+              ? t("git:stackAddedToMergeQueue")
+              : t("git:pullRequestAddedToMergeQueue")
             : action === "merge" && detail?.stack
               ? i18n._("Stack merged")
               : actionSuccessLabel(i18n, action);
@@ -254,8 +253,8 @@ export function PullRequestDetailPanel({
       .catch((error: unknown) => {
         toastManager.add({
           type: "error",
-          title: i18n._("Pull request action failed"),
-          description: error instanceof Error ? error.message : i18n._("GitHub CLI action failed."),
+          title: t("git:pullRequestActionFailed"),
+          description: error instanceof Error ? error.message : t("git:gitHubCLIActionFailed"),
         });
       })
       .finally(() => {
@@ -271,7 +270,7 @@ export function PullRequestDetailPanel({
       projectId,
       pullRequestUrl: detail.url,
       card: (environment) => createGitHubItemContextDraft(source, environment),
-      errorTitle: i18n._("Could not send the pull request to an agent"),
+      errorTitle: t("git:couldNotSendThePullRequestToAnAgent"),
     });
   };
   const ask = onAsk
@@ -289,7 +288,7 @@ export function PullRequestDetailPanel({
     const card = createPullRequestContextDraft({
       scope: "everything",
       pr: detail,
-      title: i18n._("Fix findings"),
+      title: t("git:fixFindings"),
       subtitle: `#${detail.number} ${detail.title}`,
       text: buildFixFindingsPrompt({
         prNumber: detail.number,
@@ -308,7 +307,7 @@ export function PullRequestDetailPanel({
       projectId: detail.projectId,
       pullRequestUrl: detail.url,
       card: () => card,
-      errorTitle: i18n._("Could not prepare findings"),
+      errorTitle: t("git:couldNotPrepareFindings"),
     });
   };
 
@@ -331,7 +330,7 @@ export function PullRequestDetailPanel({
       projectId: detail.projectId,
       pullRequestUrl: detail.url,
       card: () => card,
-      errorTitle: i18n._("Could not prepare conflict resolution"),
+      errorTitle: t("git:couldNotPrepareConflictResolution"),
     });
   };
 
@@ -405,12 +404,12 @@ export function PullRequestDetailPanel({
     <>
       {detail.stackMetadataIncomplete === true ? (
         <PullRequestWarningNote shape="banner" className="shrink-0" role="status">
-          {i18n._("Stack details could not be loaded. Refresh before merging.")}
+          {t("git:stackDetailsCouldNotBeLoadedRefreshBeforeMerging")}
         </PullRequestWarningNote>
       ) : null}
       {detailErrorState.backgroundError ? (
         <PullRequestWarningNote shape="banner" className="shrink-0" role="status">
-          {i18n._("Could not refresh pull request details. Showing saved data.")}
+          {t("git:couldNotRefreshPullRequestDetailsShowingSavedData")}
         </PullRequestWarningNote>
       ) : null}
     </>
@@ -539,7 +538,7 @@ export function PullRequestDetailPanel({
         onBack={onBack}
         tabs={
           <GitHubItemTabs
-            label={i18n._("Pull request detail tabs")}
+            label={t("git:pullRequestDetailTabs")}
             tabs={pageTabs}
             value={tab}
             onChange={setTab}
@@ -553,8 +552,8 @@ export function PullRequestDetailPanel({
           loaded: detail !== undefined,
         }}
         notFound={{
-          title: i18n._("Pull request not found"),
-          description: i18n._("The selected pull request could not be loaded."),
+          title: t("git:pullRequestNotFound"),
+          description: t("git:theSelectedPullRequestCouldNotBeLoaded"),
         }}
         banners={banners}
         overlay={confirmDialog}
@@ -635,8 +634,8 @@ export function PullRequestDetailPanel({
       <header className="flex min-h-12 shrink-0 items-center gap-2 px-2">
         {/* Scrolls rather than slides under the actions when the pane is very narrow. */}
         <GitHubItemTabs
-          label={i18n._("Pull request detail tabs")}
-          tabs={dockTabs(i18n)}
+          label={t("git:pullRequestDetailTabs")}
+          tabs={DOCK_TABS.map((tab) => ({ value: tab.value, label: t(tab.labelKey) }))}
           value={tab}
           onChange={setTab}
           className="turn-chip-strip overflow-x-auto"
@@ -647,8 +646,8 @@ export function PullRequestDetailPanel({
               {stackPopover}
               <IconButton
                 variant="chrome"
-                label={i18n._("Open in external browser")}
-                tooltip={i18n._("Open in external browser")}
+                label={t("git:openInExternalBrowser")}
+                tooltip={t("git:openInExternalBrowser")}
                 className={DOCK_ICON_BUTTON_CLASS_NAME}
                 onClick={() => void ensureNativeApi().shell.openExternal(detail.url)}
               >
@@ -659,8 +658,8 @@ export function PullRequestDetailPanel({
                   render={
                     <IconButton
                       variant="chrome"
-                      label={i18n._("More actions")}
-                      title={i18n._("More actions")}
+                      label={t("workspace:workspaceFilePreviewHeader_moreActions")}
+                      title={t("workspace:workspaceFilePreviewHeader_moreActions")}
                       className={DOCK_ICON_BUTTON_CLASS_NAME}
                     >
                       <EllipsisIcon />
@@ -679,8 +678,8 @@ export function PullRequestDetailPanel({
           {onClose ? (
             <IconButton
               variant="chrome"
-              label={i18n._("Close pull request panel")}
-              tooltip={i18n._("Close")}
+              label={t("git:closePullRequestPanel")}
+              tooltip={t("common:app_close")}
               className={DOCK_ICON_BUTTON_CLASS_NAME}
               onClick={onClose}
             >
@@ -701,10 +700,8 @@ export function PullRequestDetailPanel({
         ) : !detail ? (
           <Empty>
             <EmptyHeader>
-              <EmptyTitle>{i18n._("Pull request not found")}</EmptyTitle>
-              <EmptyDescription>
-                {i18n._("The selected pull request could not be loaded.")}
-              </EmptyDescription>
+              <EmptyTitle>{t("git:pullRequestNotFound")}</EmptyTitle>
+              <EmptyDescription>{t("git:theSelectedPullRequestCouldNotBeLoaded")}</EmptyDescription>
             </EmptyHeader>
           </Empty>
         ) : (

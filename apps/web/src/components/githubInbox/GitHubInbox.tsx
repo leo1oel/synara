@@ -103,6 +103,7 @@ import {
   type GitHubInboxSearchPatch,
   type GitHubInboxSelection,
 } from "./githubInbox.logic";
+import { useTranslation, t, getFormatLocale } from "~/i18n";
 
 // Without the route's Ask dock the list is a slim column and the detail takes the rest; with it
 // open the page is three even columns (list, detail, chat). When the window is too small for
@@ -137,7 +138,9 @@ function rateLimitedWarningText(
   error: GitHubInboxListError,
   timestampFormat: TimestampFormat,
 ): string {
-  const resetTime = error.retryAt ? formatShortTimestamp(error.retryAt, timestampFormat) : null;
+  const resetTime = error.retryAt
+    ? formatShortTimestamp(error.retryAt, timestampFormat, getFormatLocale())
+    : null;
   const refresh = resetTime
     ? i18n._("Refreshing resumes at {time}.", { time: resetTime })
     : i18n._("Refreshing resumes soon.");
@@ -208,7 +211,8 @@ function ListColumnResizeHandle({
   columnRef: RefObject<HTMLElement | null>;
   onResize: (width: number, percent: number) => void;
 }) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   const resizeTo = (width: number) => {
     const containerWidth = columnRef.current?.parentElement?.clientWidth;
     if (!containerWidth) return;
@@ -253,7 +257,7 @@ function ListColumnResizeHandle({
     <div
       role="separator"
       aria-orientation="vertical"
-      aria-label={i18n._("Resize code review list")}
+      aria-label={t("git:resizeCodeReviewList")}
       aria-valuenow={percent}
       aria-valuemin={0}
       aria-valuemax={100}
@@ -267,10 +271,11 @@ function ListColumnResizeHandle({
 }
 
 function ListSkeleton() {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   // Mirrors the loaded list's row height and spacing so the switch doesn't jump.
   return (
-    <div className="space-y-0.5" aria-busy="true" aria-label={i18n._("Loading code review")}>
+    <div className="space-y-0.5" aria-busy="true" aria-label={t("git:loadingCodeReview")}>
       {Array.from({ length: 7 }, (_, index) => (
         <Skeleton key={index} className="h-[4.75rem] w-full rounded-lg" />
       ))}
@@ -279,14 +284,15 @@ function ListSkeleton() {
 }
 
 function DetailEmptyState() {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   // Quiet and centered; not a card.
   return (
     <div className="flex h-full flex-col items-center justify-center gap-1.5 px-6 text-center">
       <GitPullRequestIcon aria-hidden className="mb-2 size-6 text-muted-foreground/60" />
-      <p className="m-0 text-ui-lg text-foreground">{i18n._("Select a pull request or issue")}</p>
+      <p className="m-0 text-ui-lg text-foreground">{t("git:selectAPullRequestOrIssue")}</p>
       <p className="m-0 text-ui-sm text-muted-foreground">
-        {i18n._("Choose one from the sidebar to review it")}
+        {t("git:chooseOneFromTheSidebarToReviewIt")}
       </p>
     </div>
   );
@@ -371,7 +377,8 @@ export function GitHubInbox({
   /** Lattice's workspace; with it the embedded page shows Lattice's pull request list. */
   workspaceRoot?: string | null;
 }) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   const { settings, updateSettings } = useAppSettings();
   const dockOpen = dockOpenProp ?? false;
   const isMobile = useIsMobile();
@@ -519,9 +526,8 @@ export function GitHubInbox({
         onError: (error) =>
           toastManager.add({
             type: "error",
-            title: i18n._("Could not update pin"),
-            description:
-              error instanceof Error ? error.message : i18n._("The pin could not be saved."),
+            title: t("git:couldNotUpdatePin"),
+            description: error instanceof Error ? error.message : t("git:thePinCouldNotBeSaved"),
           }),
       });
     }
@@ -542,11 +548,9 @@ export function GitHubInbox({
         onError: (error) =>
           toastManager.add({
             type: "error",
-            title: i18n._("Could not refresh code review"),
+            title: t("git:couldNotRefreshCodeReview"),
             description:
-              error instanceof Error
-                ? error.message
-                : i18n._("Code review could not be refreshed."),
+              error instanceof Error ? error.message : t("git:codeReviewCouldNotBeRefreshed"),
           }),
       },
     );
@@ -616,7 +620,7 @@ export function GitHubInbox({
       {showList ? (
         <section
           ref={columnRef}
-          aria-label={i18n._("Code review list")}
+          aria-label={t("git:codeReviewList")}
           className={cn(
             "relative flex min-h-0 min-w-0 flex-col",
             isMobile ? "min-w-0 flex-1" : "min-w-[16rem] max-w-[calc(100%-18rem)] shrink-0",
@@ -797,7 +801,7 @@ export function GitHubInbox({
       ) : null}
       {showDetail ? (
         <section
-          aria-label={i18n._("Item details")}
+          aria-label={t("git:itemDetails")}
           // The detail's own parts pad for the chat dock; the page gives them more room.
           className={cn("flex min-h-0 min-w-0 flex-1 flex-col", !isMobile && "px-3 pt-2")}
         >

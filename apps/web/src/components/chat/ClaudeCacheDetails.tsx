@@ -2,6 +2,7 @@ import { i18n } from "~/i18n";
 import type { ClaudeCacheObservation } from "@synara/contracts";
 import { assessClaudeCache } from "@synara/shared/claudeCache";
 import { formatContextWindowTokens } from "~/lib/contextWindow";
+import { t, useTranslation } from "~/i18n";
 
 export function ClaudeCacheDetails({
   observation,
@@ -10,68 +11,80 @@ export function ClaudeCacheDetails({
   observation: ClaudeCacheObservation | undefined;
   nowMs: number;
 }) {
+  const { t } = useTranslation();
+
   const assessment = assessClaudeCache(observation, nowMs);
   const label =
     assessment.state === "likely-warm"
-      ? i18n._("Likely warm")
+      ? t("chat:likelyWarm")
       : assessment.state === "likely-expired"
-        ? i18n._("Likely expired")
-        : i18n._("Unknown");
+        ? t("chat:likelyExpired")
+        : t("common:common_unknown");
   const usage = observation?.lastRequest;
 
   return (
     <div className="space-y-1.5 border-t border-border/50 pt-2 text-ui leading-snug text-muted-foreground">
-      <div className="font-medium text-foreground">Claude prompt cache: {label}</div>
+      <div className="font-medium text-foreground">
+        {t("chat:claudePromptCache")} {label}
+      </div>
       {observation?.ttlSeconds !== undefined ? (
         <div>
-          Observed lifetime:{" "}
+          {t("chat:observedLifetime")}{" "}
           {observation.partialTtlSeconds !== undefined
-            ? `${formatCacheDuration(observation.partialTtlSeconds)} to `
+            ? t("chat:to2", { value0: formatCacheDuration(observation.partialTtlSeconds) })
             : ""}
           {formatCacheDuration(observation.ttlSeconds)}
         </div>
       ) : (
-        <div>{i18n._("Cache lifetime is unavailable.")}</div>
+        <div>{t("chat:cacheLifetimeIsUnavailable")}</div>
       )}
       {assessment.idleSeconds !== undefined ? (
-        <div>Last response: {formatCacheDuration(assessment.idleSeconds)} ago</div>
+        <div>
+          {t("chat:lastResponseAgo", {
+            duration: formatCacheDuration(assessment.idleSeconds),
+          })}
+        </div>
       ) : null}
       {assessment.state === "likely-expired" && observation?.contextTokens !== undefined ? (
         <p className="max-w-72 leading-relaxed">
-          The next request may reprocess about{" "}
-          {formatContextWindowTokens(observation.contextTokens)} tokens.
+          {t("chat:theNextRequestMayReprocessAbout")}{" "}
+          {formatContextWindowTokens(observation.contextTokens)} {t("chat:tokens2")}
         </p>
       ) : null}
       {usage ? (
         <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1">
-          <dt>{i18n._("Last request · cache read")}</dt>
+          <dt>{t("chat:lastRequestCacheRead")}</dt>
           <dd className="text-right tabular-nums">
             {formatCacheTokens(usage.cacheReadInputTokens)}
           </dd>
-          <dt>{i18n._("Cache written")}</dt>
+          <dt>{t("chat:cacheWritten")}</dt>
           <dd className="text-right tabular-nums">
             {formatCacheTokens(usage.cacheCreationInputTokens)}
           </dd>
-          <dt>{i18n._("Input outside cache")}</dt>
+          <dt>{t("chat:inputOutsideCache")}</dt>
           <dd className="text-right tabular-nums">{formatCacheTokens(usage.inputTokens)}</dd>
         </dl>
       ) : null}
       <p className="max-w-72 leading-relaxed">
-        {i18n._("Cache state is estimated. It does not measure your plan's remaining usage.")}
+        {t("chat:cacheStateIsEstimatedItDoesNotMeasureYour")}
       </p>
     </div>
   );
 }
 
 function formatCacheTokens(value: number | undefined): string {
-  return value === undefined ? i18n._("Unavailable") : `${formatContextWindowTokens(value)} tokens`;
+  return value === undefined
+    ? t("chat:providerModelPicker_unavailable")
+    : t("chat:tokens3", { count: formatContextWindowTokens(value) });
 }
 
 export function formatCacheDuration(seconds: number): string {
-  if (seconds < 60) return "less than a minute";
+  if (seconds < 60) return t("chat:lessThanAMinute");
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes} ${minutes === 1 ? "minute" : "minutes"}`;
+  if (minutes < 60) return t("chat:cacheDurationMinutes", { count: minutes });
   const hours = Math.floor(minutes / 60);
   const remainingMinutes = minutes % 60;
-  return `${hours} ${hours === 1 ? "hour" : "hours"}${remainingMinutes > 0 ? ` ${remainingMinutes} min` : ""}`;
+  return remainingMinutes > 0
+    ? t("chat:cacheDurationHoursMinutes", { count: hours, minutes: remainingMinutes })
+    : t("chat:cacheDurationHours", { count: hours });
 }

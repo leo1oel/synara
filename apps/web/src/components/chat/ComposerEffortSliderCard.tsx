@@ -32,6 +32,7 @@ import {
 import { localizeModelPickerLabel } from "./modelPickerLabels";
 import { FastModeToggle } from "./TraitsPicker";
 import { useComposerTraitCommit } from "./useComposerTraitCommit";
+import { useTranslation } from "~/i18n";
 
 type ComposerEffortSliderCardProps = {
   provider: ProviderKind;
@@ -55,6 +56,8 @@ const CARD_ICON_BUTTON_CLASS_NAME =
 // radio menu exactly; changes commit immediately and keep the menu open so the label
 // and thumb update in place.
 export function ComposerEffortSliderCard(props: ComposerEffortSliderCardProps) {
+  const { t } = useTranslation();
+
   const { provider, threadId, model, modelOptions, prompt, onPromptChange } = props;
   const [modelListOpen, setModelListOpen] = useState(false);
   const { i18n } = useLingui();
@@ -64,6 +67,7 @@ export function ComposerEffortSliderCard(props: ComposerEffortSliderCardProps) {
     prompt,
     modelOptions,
     props.runtimeModel,
+    t,
   );
   const { effortLevels, defaultEffort, effort, fastModeEnabled, ultrathinkPromptControlled } =
     selection;
@@ -153,7 +157,7 @@ export function ComposerEffortSliderCard(props: ComposerEffortSliderCardProps) {
             render={
               <button
                 type="button"
-                aria-label={i18n._("Reset effort and speed")}
+                aria-label={t("chat:resetEffortAndSpeed")}
                 disabled={!canReset}
                 className={cn(
                   CARD_ICON_BUTTON_CLASS_NAME,
@@ -166,7 +170,7 @@ export function ComposerEffortSliderCard(props: ComposerEffortSliderCardProps) {
             <ResetIcon aria-hidden="true" className="size-3.5" />
           </TooltipTrigger>
           <TooltipPopup side="top" variant="picker">
-            <Trans>Reset to defaults</Trans>
+            {t("chat:resetToDefaults")}
           </TooltipPopup>
         </Tooltip>
       </div>
@@ -190,7 +194,7 @@ export function ComposerEffortSliderCard(props: ComposerEffortSliderCardProps) {
       </div>
       {ultrathinkPromptControlled ? (
         <div className="px-1 pt-1 text-muted-foreground/80 text-ui leading-snug">
-          <Trans>Remove Ultrathink from the prompt to change effort.</Trans>
+          {t("chat:traitsPicker_removeUltrathink")}
         </div>
       ) : null}
     </div>

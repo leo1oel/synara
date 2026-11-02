@@ -27,7 +27,7 @@ import {
   GitDialogShell,
 } from "./GitDialogChrome";
 import { cn } from "~/lib/utils";
-import { localizeGitText } from "~/lib/gitLocalization";
+import { useTranslation } from "~/i18n";
 
 export interface GitCommitDialogSubmission {
   action: GitCommitDialogAction["action"];
@@ -58,7 +58,8 @@ export function GitCommitDialog({
   onSubmit,
   onOpenFile,
 }: GitCommitDialogProps) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   const [message, setMessage] = useState("");
   const [excludedFiles, setExcludedFiles] = useState<ReadonlySet<string>>(new Set());
   const [isEditingFiles, setIsEditingFiles] = useState(false);
@@ -119,7 +120,7 @@ export function GitCommitDialog({
         eyebrow={i18n._("Commit")}
         eyebrowTrailing={
           context.isDefaultBranch ? (
-            <span className="text-warning">{i18n._("Default branch")}</span>
+            <span className="text-warning">{t("git:defaultBranch")}</span>
           ) : null
         }
         subject={gitStatus?.branch ?? i18n._("(detached HEAD)")}
@@ -127,10 +128,10 @@ export function GitCommitDialog({
       <GitDialogBody>
         <textarea
           autoFocus
-          aria-label={i18n._("Commit message")}
+          aria-label={t("git:commitMessage")}
           className={cn(GIT_DIALOG_FIELD_CLASS, "resize-none")}
           maxLength={20_000}
-          placeholder={i18n._("Message (leave empty to generate)")}
+          placeholder={t("git:messageLeaveEmptyToGenerate")}
           rows={2}
           value={message}
           onChange={(event) => setMessage(event.target.value)}
@@ -163,7 +164,7 @@ export function GitCommitDialog({
                 className="shrink-0"
                 onClick={() => setIsEditingFiles((prev) => !prev)}
               >
-                {isEditingFiles ? i18n._("Done") : i18n._("Edit")}
+                {isEditingFiles ? t("git:detail_done") : t("git:profile_edit")}
               </Button>
             ) : null}
           </div>
@@ -236,7 +237,8 @@ function ChangedFileRow({
   onToggle: () => void;
   onOpen: () => void;
 }) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   return (
     <div className="flex w-full items-center gap-2 rounded-md px-2 py-1 font-mono text-ui leading-snug transition-colors hover:bg-[var(--color-background-button-secondary-hover)]">
       {selectable ? <Checkbox checked={!excluded} onCheckedChange={onToggle} /> : null}
@@ -256,7 +258,7 @@ function ChangedFileRow({
         </span>
         <span className="shrink-0">
           {excluded ? (
-            <span className="text-muted-foreground">{i18n._("Excluded")}</span>
+            <span className="text-muted-foreground">{t("git:excluded")}</span>
           ) : (
             <DiffStat
               insertions={file.insertions}

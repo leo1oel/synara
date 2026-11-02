@@ -19,6 +19,7 @@ import {
   DialogPopup,
   DialogTitle,
 } from "./ui/dialog";
+import { useTranslation } from "~/i18n";
 
 export interface ReleaseHistoryDialogProps {
   readonly open: boolean;
@@ -41,6 +42,8 @@ export default function ReleaseHistoryDialog({
   entries: entriesProp,
   defaultExpandedVersion: defaultExpandedVersionProp,
 }: ReleaseHistoryDialogProps) {
+  const { t } = useTranslation();
+
   const entries = entriesProp ?? WHATS_NEW_ENTRIES;
   const defaultExpandedVersion = defaultExpandedVersionProp ?? null;
   // Sort at render time so the source of truth (`entries.ts`) stays free of
@@ -53,7 +56,7 @@ export default function ReleaseHistoryDialog({
         <DialogHeader className="gap-1 p-4 pr-12">
           <DialogTitle className="text-ui-lg">Release history</DialogTitle>
           <DialogDescription className="text-ui leading-snug">
-            Every curated release, newest first.
+            {t("common:everyCuratedReleaseNewestFirst")}
           </DialogDescription>
         </DialogHeader>
 
@@ -63,7 +66,7 @@ export default function ReleaseHistoryDialog({
 
         <DialogFooter>
           <Button size="sm" onClick={() => onOpenChange(false)}>
-            Close
+            {t("common:app_close")}
           </Button>
         </DialogFooter>
       </DialogPopup>

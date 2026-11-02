@@ -59,6 +59,7 @@ import {
   settingsSkillNameKey,
   type SettingsSkillGroup,
 } from "./skillsSettingsModel";
+import { useTranslation } from "~/i18n";
 
 function filterSkillGroups(
   groups: ReadonlyArray<SettingsSkillGroup>,
@@ -79,7 +80,8 @@ function filterSkillGroups(
 }
 
 export function SkillsSettingsPanel() {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   const queryClient = useQueryClient();
   const skillFolderInputRef = useRef<HTMLInputElement>(null);
   const [isImportingSkill, setIsImportingSkill] = useState(false);
@@ -518,6 +520,7 @@ export function SkillsSettingsPanel() {
     <div ref={panelRef} className="space-y-6">
       <SettingsSection title={i18n._("Skills Manager")}>
         <SettingsRow
+          id="setting-synara-skills-folder"
           title={i18n._("Your skill library")}
           description={i18n._(
             "Manage Skills included with Lattice, imported by you, or detected from other tools.",

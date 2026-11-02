@@ -10,10 +10,12 @@
 
 import { i18n } from "~/i18n";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type MouseEvent, useEffect, useRef, useState } from "react";
+import { type MouseEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { DownloadIcon, Loader2Icon, Maximize2 } from "~/lib/icons";
-import { buildLocalImageUrl, localImageAbsolutePath } from "~/lib/localImageUrls";
+import type { ProjectCreateLocalFilePreviewGrantResult } from "@synara/contracts";
+import { buildLocalImageUrl, normalizeMarkdownImagePath } from "~/lib/localImageUrls";
+import { toAttachmentPreviewUrl } from "~/lib/wsHttpUrl";
 import {
   isLocalPreviewGrantUsable,
   projectLocalPreviewGrantQueryOptions,
@@ -26,11 +28,14 @@ import {
 } from "../LocalImagePreview";
 import type { ExpandedImagePreview } from "./ExpandedImagePreview";
 import { toastManager } from "../ui/toast";
+import { useTranslation } from "~/i18n";
 
 export interface GeneratedMarkdownImageProps {
   src: string;
   alt: string;
   cwd: string | undefined;
+  threadId?: string | null | undefined;
+  attachmentId?: string | undefined;
   isLinked?: boolean;
   onImageExpand?: ((preview: ExpandedImagePreview) => void) | undefined;
 }
@@ -40,11 +45,32 @@ function stopPropagation(event: MouseEvent<HTMLElement>) {
 }
 
 export function GeneratedMarkdownImage(props: GeneratedMarkdownImageProps) {
-  // Reset grant recovery when the source or workspace changes, including A → B → A.
-  return <GeneratedMarkdownImageContent key={JSON.stringify([props.src, props.cwd])} {...props} />;
+  // An explicit retry resets failed/granted state and resolves a fresh owner-scoped handle.
+  const [retryRevision, setRetryRevision] = useState(0);
+  return (
+    <GeneratedMarkdownImageContent
+      key={JSON.stringify([
+        props.src,
+        props.cwd,
+        props.threadId,
+        props.attachmentId,
+        retryRevision,
+      ])}
+      {...props}
+      cacheKey={retryRevision || undefined}
+      onRetry={() => setRetryRevision((revision) => revision + 1)}
+    />
+  );
 }
 
-function GeneratedMarkdownImageContent(props: GeneratedMarkdownImageProps) {
+function GeneratedMarkdownImageContent(
+  props: GeneratedMarkdownImageProps & {
+    cacheKey: number | undefined;
+    onRetry: () => void;
+  },
+) {
+  const { t } = useTranslation();
+
   const { src, alt, cwd, onImageExpand } = props;
   const queryClient = useQueryClient();
   const mounted = useRef(true);
@@ -54,12 +80,22 @@ function GeneratedMarkdownImageContent(props: GeneratedMarkdownImageProps) {
       mounted.current = false;
     };
   }, []);
-  const absolutePath = localImageAbsolutePath(src);
+  // Managed attachments retain their opaque host-bound URL; never send them through local-file RPCs.
+  const resourceUrl = useMemo(
+    () =>
+      props.attachmentId
+        ? toAttachmentPreviewUrl(`/attachments/${encodeURIComponent(props.attachmentId)}`)
+        : undefined,
+    [props.attachmentId],
+  );
+  const sourcePath = resourceUrl ? null : normalizeMarkdownImagePath(src);
   const [needsGrant, setNeedsGrant] = useState(false);
-  const [previewGrant, setPreviewGrant] = useState<string>();
+  const [previewGrant, setPreviewGrant] = useState<ProjectCreateLocalFilePreviewGrantResult>();
   const grantOptions = projectLocalPreviewGrantQueryOptions({
-    path: absolutePath,
-    enabled: needsGrant && absolutePath !== null && previewGrant === undefined,
+    path: sourcePath,
+    cwd,
+    threadId: props.threadId,
+    enabled: needsGrant && sourcePath !== null && previewGrant === undefined,
     // An HTTP denial must not reuse a token invalidated by a server restart.
     staleTime: 0,
   });
@@ -86,18 +122,20 @@ function GeneratedMarkdownImageContent(props: GeneratedMarkdownImageProps) {
     ) {
       // Freeze the loaded preview. Another file pane may renew the same cache
       // entry; that must not make historical chat images download again.
-      setPreviewGrant(grantQuery.data.grant);
+      setPreviewGrant(grantQuery.data);
     }
   }, [needsGrant, previewGrant, grantQuery.data, grantQuery.isFetching, grantQuery.isSuccess]);
   const { previewUrl, downloadUrl, fileName, downloadName, status, imgProps } =
     useLocalImagePreview({
       src,
       cwd,
-      previewGrant,
-      // Desktop/Downloads captures need the same per-file grant as the file pane.
-      // Keep workspace and temporary images on the existing HTTP-only fast path.
+      canonicalPath: previewGrant?.canonicalPath,
+      resourceUrl,
+      cacheKey: props.cacheKey,
+      previewGrant: previewGrant?.grant,
+      // Relative worktree references and absolute captures use the same bounded per-file recovery.
       onPreviewError: () => {
-        if (absolutePath !== null) setNeedsGrant(true);
+        if (sourcePath !== null) setNeedsGrant(true);
       },
     });
   const resolvingGrant =
@@ -105,16 +143,23 @@ function GeneratedMarkdownImageContent(props: GeneratedMarkdownImageProps) {
     !previewGrant &&
     (grantQuery.isFetching || (grantQuery.isSuccess && isLocalPreviewGrantUsable(grantQuery.data)));
   const resolveGrantedUrl = async (download: boolean) => {
-    if (!needsGrant || absolutePath === null) return download ? downloadUrl : previewUrl;
+    if (resourceUrl || !needsGrant || sourcePath === null)
+      return download ? downloadUrl : previewUrl;
     // A backgrounded chat can outlive the grant TTL. Renew at the point of use.
     const grant = await queryClient.fetchQuery({ ...grantOptions, retry: retryGrant });
-    return buildLocalImageUrl({ src, cwd, download, grant: grant.grant });
+    return buildLocalImageUrl({
+      src,
+      cwd,
+      canonicalPath: grant.canonicalPath,
+      download,
+      grant: grant.grant,
+    });
   };
   const accessibleName = alt?.trim() || "Generated image";
   const downloadImage = useLocalImageDownloadClick({
     downloadUrl,
     downloadName,
-    errorTitle: i18n._("Could not download generated image"),
+    errorTitle: t("chat:generatedImage_couldNotDownload"),
     resolveDownloadUrl: () => resolveGrantedUrl(true),
   });
 
@@ -138,9 +183,8 @@ function GeneratedMarkdownImageContent(props: GeneratedMarkdownImageProps) {
         if (mounted.current) {
           toastManager.add({
             type: "error",
-            title: i18n._("Could not open generated image"),
-            description:
-              error instanceof Error ? error.message : i18n._("The file may be unavailable."),
+            title: t("chat:couldNotOpenGeneratedImage"),
+            description: error instanceof Error ? error.message : t("chat:theFileMayBeUnavailable"),
           });
         }
       });
@@ -164,6 +208,7 @@ function GeneratedMarkdownImageContent(props: GeneratedMarkdownImageProps) {
         className="local-image-error--prose"
         downloadAriaLabel="Download generated image"
         onDownloadClick={downloadImage}
+        onRetry={props.onRetry}
       />
     );
   }
@@ -174,7 +219,7 @@ function GeneratedMarkdownImageContent(props: GeneratedMarkdownImageProps) {
         type="button"
         className="chat-generated-image__frame"
         onClick={expandImage}
-        aria-label={i18n._("Expand generated image")}
+        aria-label={t("chat:generatedImage_expandImage")}
       >
         {status === "loading" || resolvingGrant ? (
           <span className="chat-generated-image__skeleton" aria-hidden="true">
@@ -185,7 +230,7 @@ function GeneratedMarkdownImageContent(props: GeneratedMarkdownImageProps) {
         <span className="chat-generated-image__overlay" aria-hidden="true">
           <span className="chat-generated-image__overlay-pill chat-generated-image__overlay-pill--expand">
             <Maximize2 className="size-3.5" />
-            <span>{i18n._("Expand")}</span>
+            <span>{t("chat:generatedImage_expand")}</span>
           </span>
         </span>
       </button>
@@ -195,11 +240,11 @@ function GeneratedMarkdownImageContent(props: GeneratedMarkdownImageProps) {
         onClick={downloadImage}
         onMouseDown={stopPropagation}
         className="chat-generated-image__overlay-pill chat-generated-image__overlay-pill--download"
-        aria-label={i18n._("Download generated image")}
-        title={i18n._("Download")}
+        aria-label={t("chat:generatedImage_downloadImage")}
+        title={t("common:image_download")}
       >
         <DownloadIcon className="size-3.5" aria-hidden="true" />
-        <span>{i18n._("Download")}</span>
+        <span>{t("common:image_download")}</span>
       </a>
     </span>
   );

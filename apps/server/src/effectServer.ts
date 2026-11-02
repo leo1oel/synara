@@ -46,6 +46,7 @@ import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnap
 import { ProjectionPendingInteractionRepository } from "./persistence/Services/ProjectionPendingInteractions";
 import { ThreadDeletionReactor } from "./orchestration/Services/ThreadDeletionReactor";
 import { ThreadSnoozeReactor } from "./orchestration/Services/ThreadSnoozeReactor";
+import { UsageLimitRecoveryReactor } from "./orchestration/Services/UsageLimitRecoveryReactor";
 import {
   claimQuitResumeRecordAtStartup,
   captureCrashResumeRecord,
@@ -105,6 +106,7 @@ export interface ServerShape {
     | ServerSettingsService
     | ThreadDeletionReactor
     | ThreadSnoozeReactor
+    | UsageLimitRecoveryReactor
     | SqlClient.SqlClient
   >;
   readonly stopSignal: Effect.Effect<void, never>;
@@ -205,6 +207,7 @@ export const createEffectServer = Effect.fn(function* (
   const keepAwake = yield* KeepAwakeService;
   const threadDeletionReactor = yield* ThreadDeletionReactor;
   const threadSnoozeReactor = yield* ThreadSnoozeReactor;
+  const usageLimitRecoveryReactor = yield* UsageLimitRecoveryReactor;
   const readiness = yield* makeServerReadiness;
 
   // Start the runtime before serving config snapshots. This both performs the
@@ -320,6 +323,7 @@ export const createEffectServer = Effect.fn(function* (
       automationRunReactor,
       threadDeletionReactor,
       threadSnoozeReactor,
+      usageLimitRecoveryReactor,
       providerSessionReaper,
       providerRuntimeReconciler,
       { start: () => keepAwake.start },

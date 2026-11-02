@@ -34,6 +34,7 @@ import { ModelStarButton } from "./ModelStarButton";
 import { PICKER_PANEL_ROW_SELECTED_CLASS_NAME } from "./pickerPanelStyles";
 import { getProviderIconClassName } from "./ProviderModelPicker";
 import { resolveRuntimeModelDescriptor } from "./runtimeModelCapabilities";
+import { useTranslation } from "~/i18n";
 
 // Each row resolves its own traits, so a long catalog only recomputes the rows whose
 // inputs changed instead of the whole list on every keystroke.
@@ -53,8 +54,9 @@ export function ComposerModelPickerRow(props: {
   onToggleStar: (entry: StarredModel) => void;
   onUnstarModel: (entry: Pick<StarredModel, "provider" | "instanceId" | "model">) => void;
 }) {
+  const { t } = useTranslation();
+
   const { row } = props;
-  const { i18n } = useLingui();
   const selection = getComposerTraitSelection(
     row.provider,
     row.model,
@@ -65,6 +67,7 @@ export function ComposerModelPickerRow(props: {
       model: row.model,
       runtimeModels: props.runtimeModels,
     }),
+    t,
   );
   const starEntry: StarredModel = row.preset ?? {
     provider: row.provider,
@@ -174,7 +177,9 @@ export function ComposerModelPickerRow(props: {
       <ComposerPickerMenuSubPopup>
         <MenuGroup>
           <MenuGroupLabel>
-            {row.provider === "opencode" ? i18n._("Variant") : i18n._("Effort")}
+            {row.provider === "opencode"
+              ? t("chat:traitsPicker_variant")
+              : t("chat:traitsPicker_effort")}
           </MenuGroupLabel>
           <MenuRadioGroup value={selection.effort ?? ""}>
             {effortLevels.map((level) => (

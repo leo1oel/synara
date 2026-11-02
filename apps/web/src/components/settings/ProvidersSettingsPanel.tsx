@@ -1,3 +1,4 @@
+import { Translation } from "~/i18n/Translation";
 // FILE: ProvidersSettingsPanel.tsx
 // Purpose: Own provider picker, update, and CLI installation settings workflows.
 // Layer: Settings panel
@@ -22,7 +23,7 @@ import {
   providerCliCommandName,
 } from "@synara/shared/providerCliProfiles";
 import { providerImportedDirectoryConfig } from "@synara/shared/providerInstances";
-import { pluralize } from "@synara/shared/text";
+import { pluralize } from "~/i18n/pluralize";
 import {
   closestCenter,
   DndContext,
@@ -148,6 +149,8 @@ import {
   useSettingsRestoreSignal,
 } from "./SettingControls";
 import { SettingsListRow, SettingsRow, SettingsSection } from "./SettingsPanelPrimitives";
+import { UsageLimitRecoverySetting } from "./UsageLimitRecoverySetting";
+import { t, useTranslation } from "~/i18n";
 
 type ProviderInstallTextKey =
   | "claudeBinaryPath"
@@ -176,23 +179,23 @@ type ProviderInstallBooleanKey =
 type ProviderInstallTextField = {
   readonly kind: "text";
   readonly settingsKey: ProviderInstallTextKey;
-  readonly label: MessageDescriptor;
-  readonly placeholder: MessageDescriptor;
-  readonly description: ReactNode;
+  readonly label: string;
+  readonly placeholder: string;
+  readonly description: string | ((translate: typeof t) => ReactNode);
 };
 type ProviderInstallPasswordField = {
   readonly kind: "password";
   readonly settingsKey: ProviderInstallPasswordKey;
   readonly configuredKey: ProviderInstallPasswordConfiguredKey;
-  readonly label: MessageDescriptor;
-  readonly placeholder: MessageDescriptor;
-  readonly description: ReactNode;
+  readonly label: string;
+  readonly placeholder: string;
+  readonly description: string | ((translate: typeof t) => ReactNode);
 };
 type ProviderInstallBooleanField = {
   readonly kind: "boolean";
   readonly settingsKey: ProviderInstallBooleanKey;
-  readonly label: MessageDescriptor;
-  readonly description: ReactNode;
+  readonly label: string;
+  readonly description: string | ((translate: typeof t) => ReactNode);
 };
 type ProviderInstallField =
   | ProviderInstallTextField
@@ -214,134 +217,149 @@ const PROVIDER_INSTALL_SETTINGS: readonly ProviderInstallSettings[] = [
   {
     provider: "codex",
     docs: [
-      { label: msg`Install`, href: "https://help.openai.com/en/articles/11096431" },
-      { label: msg`Update`, href: "https://help.openai.com/en/articles/11096431" },
-      { label: msg`Config`, href: "https://github.com/openai/codex/blob/main/docs/config.md" },
+      {
+        label: "settings:providers_docInstall",
+        href: "https://help.openai.com/en/articles/11096431",
+      },
+      {
+        label: "computer:providerUpdates_update",
+        href: "https://help.openai.com/en/articles/11096431",
+      },
+      {
+        label: "settings:providers_docConfig",
+        href: "https://github.com/openai/codex/blob/main/docs/config.md",
+      },
     ],
     fields: [
       {
         kind: "text",
         settingsKey: "codexBinaryPath",
-        label: msg`Codex binary path`,
-        placeholder: msg`Codex binary path`,
-        description: (
-          <Trans>
-            Leave blank to use <code>codex</code> from your PATH.
-          </Trans>
+        label: "settings:codexBinaryPath",
+        placeholder: "settings:codexBinaryPath",
+        description: () => (
+          <Translation
+            message="settings:binaryPathDescription"
+            values={{ command: "codex" }}
+            components={{ command: <code /> }}
+          />
         ),
       },
       {
         kind: "text",
         settingsKey: "codexHomePath",
-        label: msg`CODEX_HOME path`,
-        placeholder: msg`CODEX_HOME`,
-        description: <Trans>Optional custom Codex home and config directory.</Trans>,
+        label: "settings:providers_codexHomePath",
+        placeholder: "settings:cODEXHOME",
+        description: "settings:providers_codexHomeDescription",
       },
     ],
   },
   {
     provider: "claudeAgent",
     docs: [
-      { label: msg`Install`, href: "https://code.claude.com/docs/en/installation" },
       {
-        label: msg`Update`,
+        label: "settings:providers_docInstall",
+        href: "https://code.claude.com/docs/en/installation",
+      },
+      {
+        label: "computer:providerUpdates_update",
         href: "https://code.claude.com/docs/en/installation#update-claude-code",
       },
-      { label: msg`Config`, href: "https://code.claude.com/docs/en/settings" },
+      { label: "settings:providers_docConfig", href: "https://code.claude.com/docs/en/settings" },
     ],
     fields: [
       {
         kind: "text",
         settingsKey: "claudeBinaryPath",
-        label: msg`Claude binary path`,
-        placeholder: msg`Claude binary path`,
-        description: (
-          <Trans>
-            Leave blank to use <code>claude</code> from your PATH.
-          </Trans>
+        label: "settings:claudeBinaryPath",
+        placeholder: "settings:claudeBinaryPath",
+        description: () => (
+          <Translation
+            message="settings:binaryPathDescription"
+            values={{ command: "claude" }}
+            components={{ command: <code /> }}
+          />
         ),
       },
       {
         kind: "text",
         settingsKey: "claudeHomePath",
-        label: msg`Claude HOME path`,
-        placeholder: msg`Claude HOME`,
-        description: <Trans>Optional HOME directory for this Claude account.</Trans>,
+        label: "settings:claudeHOMEPath",
+        placeholder: "settings:claudeHOME",
+        description: "settings:optionalHOMEDirectoryForThisClaudeAccount",
       },
       {
         kind: "boolean",
         settingsKey: "claudeEnableArtifacts",
-        label: msg`Artifacts, /design and /slides`,
-        description: (
-          <Trans>
-            Claude Code keeps Artifacts off in embedded sessions. Turn this on so{" "}
-            <code>/design</code> and <code>/slides</code> publish to claude.ai. Needs a claude.ai
-            login on a Pro, Max, Team or Enterprise plan, and applies to new sessions.
-          </Trans>
+        label: "settings:artifactsDesignAndSlides",
+        description: () => (
+          <Translation
+            message="settings:claudeArtifactsDescription"
+            components={{ design: <code />, slides: <code /> }}
+          />
         ),
       },
       {
         kind: "boolean",
         settingsKey: "claudeConfirmColdCacheResume",
-        label: msg`Ask before resuming a long idle session`,
-        description: (
-          <Trans>
-            Off by default, like Claude Code. When on, after 70 minutes without a response in a
-            session of 100k tokens or more, hold your message and offer to resume from a summary.
-            Messages from agents and automations are never held.
-          </Trans>
-        ),
+        label: "settings:askBeforeResumingALongIdleSession",
+        description: "settings:offByDefaultLikeClaudeCodeWhenOnAfter",
       },
     ],
   },
   {
     provider: "cursor",
     docs: [
-      { label: msg`Install`, href: "https://docs.cursor.com/en/cli/installation" },
-      { label: msg`Update`, href: "https://docs.cursor.com/en/cli/installation#updates" },
-      { label: msg`Config`, href: "https://docs.cursor.com/en/cli/overview" },
+      {
+        label: "settings:providers_docInstall",
+        href: "https://docs.cursor.com/en/cli/installation",
+      },
+      {
+        label: "computer:providerUpdates_update",
+        href: "https://docs.cursor.com/en/cli/installation#updates",
+      },
+      { label: "settings:providers_docConfig", href: "https://docs.cursor.com/en/cli/overview" },
     ],
     fields: [
       {
         kind: "text",
         settingsKey: "cursorBinaryPath",
-        label: msg`Cursor binary path`,
-        placeholder: msg`Cursor Agent or Cursor CLI path`,
-        description: (
-          <Trans>
-            Leave blank to use <code>cursor-agent</code> from your PATH. Cursor editor CLI paths are
-            accepted too.
-          </Trans>
+        label: "settings:cursorBinaryPath",
+        placeholder: "settings:cursorAgentOrCursorCLIPath",
+        description: () => (
+          <Translation
+            message="settings:cursorBinaryDescription"
+            components={{ command: <code /> }}
+          />
         ),
       },
       {
         kind: "text",
         settingsKey: "cursorApiEndpoint",
-        label: msg`Cursor API endpoint`,
-        placeholder: msg`https://api2.cursor.sh`,
-        description: (
-          <Trans>Optional Cursor API endpoint override passed to `cursor-agent -e`.</Trans>
-        ),
+        label: "settings:providers_cursorApiEndpoint",
+        placeholder: "https://api2.cursor.sh",
+        description: "settings:optionalCursorAPIEndpointOverridePassedToCursorAgent",
       },
     ],
   },
   {
     provider: "antigravity",
     docs: [
-      { label: msg`Install`, href: "https://antigravity.google/docs/cli-using" },
-      { label: msg`Reference`, href: "https://antigravity.google/docs/cli-reference" },
-      { label: msg`Hooks`, href: "https://antigravity.google/docs/hooks" },
+      { label: "settings:providers_docInstall", href: "https://antigravity.google/docs/cli-using" },
+      { label: "settings:reference", href: "https://antigravity.google/docs/cli-reference" },
+      { label: "settings:hooks", href: "https://antigravity.google/docs/hooks" },
     ],
     fields: [
       {
         kind: "text",
         settingsKey: "antigravityBinaryPath",
-        label: msg`Antigravity binary path`,
-        placeholder: msg`Antigravity CLI binary path`,
-        description: (
-          <Trans>
-            Leave blank to use <code>agy</code> from your PATH.
-          </Trans>
+        label: "settings:antigravityBinaryPath",
+        placeholder: "settings:antigravityCLIBinaryPath",
+        description: () => (
+          <Translation
+            message="settings:binaryPathDescription"
+            values={{ command: "agy" }}
+            components={{ command: <code /> }}
+          />
         ),
       },
     ],
@@ -349,20 +367,25 @@ const PROVIDER_INSTALL_SETTINGS: readonly ProviderInstallSettings[] = [
   {
     provider: "grok",
     docs: [
-      { label: msg`Install`, href: "https://docs.x.ai/build/overview" },
-      { label: msg`Headless`, href: "https://docs.x.ai/build/cli/headless-scripting" },
-      { label: msg`Config`, href: "https://docs.x.ai/build/overview" },
+      { label: "settings:providers_docInstall", href: "https://docs.x.ai/build/overview" },
+      {
+        label: "settings:providers_docHeadless",
+        href: "https://docs.x.ai/build/cli/headless-scripting",
+      },
+      { label: "settings:providers_docConfig", href: "https://docs.x.ai/build/overview" },
     ],
     fields: [
       {
         kind: "text",
         settingsKey: "grokBinaryPath",
-        label: msg`Grok binary path`,
-        placeholder: msg`Grok binary path`,
-        description: (
-          <Trans>
-            Leave blank to use <code>grok</code> from your PATH.
-          </Trans>
+        label: "settings:grokBinaryPath",
+        placeholder: "settings:grokBinaryPath",
+        description: () => (
+          <Translation
+            message="settings:binaryPathDescription"
+            values={{ command: "grok" }}
+            components={{ command: <code /> }}
+          />
         ),
       },
     ],
@@ -371,7 +394,7 @@ const PROVIDER_INSTALL_SETTINGS: readonly ProviderInstallSettings[] = [
     provider: "droid",
     docs: [
       {
-        label: msg`Quickstart`,
+        label: "settings:quickstart",
         href: "https://docs.factory.ai/cli/getting-started/quickstart.md",
       },
     ],
@@ -379,12 +402,14 @@ const PROVIDER_INSTALL_SETTINGS: readonly ProviderInstallSettings[] = [
       {
         kind: "text",
         settingsKey: "droidBinaryPath",
-        label: msg`Droid binary path`,
-        placeholder: msg`droid`,
-        description: (
-          <Trans>
-            Leave blank to use <code>droid</code> from your PATH.
-          </Trans>
+        label: "settings:droidBinaryPath",
+        placeholder: "settings:droid",
+        description: () => (
+          <Translation
+            message="settings:binaryPathDescription"
+            values={{ command: "droid" }}
+            components={{ command: <code /> }}
+          />
         ),
       },
     ],
@@ -392,21 +417,24 @@ const PROVIDER_INSTALL_SETTINGS: readonly ProviderInstallSettings[] = [
   {
     provider: "devin",
     docs: [
-      { label: msg`Install`, href: "https://docs.devin.ai/cli" },
-      { label: msg`Commands`, href: "https://docs.devin.ai/cli/reference/commands" },
-      { label: msg`Config`, href: "https://docs.devin.ai/cli/reference/configuration/config-file" },
+      { label: "settings:providers_docInstall", href: "https://docs.devin.ai/cli" },
+      { label: "settings:commands", href: "https://docs.devin.ai/cli/reference/commands" },
+      {
+        label: "settings:providers_docConfig",
+        href: "https://docs.devin.ai/cli/reference/configuration/config-file",
+      },
     ],
     fields: [
       {
         kind: "text",
         settingsKey: "devinBinaryPath",
-        label: msg`Devin binary path`,
-        placeholder: msg`devin`,
-        description: (
-          <Trans>
-            Leave blank to use <code>devin</code> from your PATH. Authenticate with{" "}
-            <code>devin auth login</code> or set WINDSURF_API_KEY.
-          </Trans>
+        label: "settings:devinBinaryPath",
+        placeholder: "settings:devin",
+        description: () => (
+          <Translation
+            message="settings:devinBinaryDescription"
+            components={{ command: <code />, login: <code /> }}
+          />
         ),
       },
     ],
@@ -414,49 +442,44 @@ const PROVIDER_INSTALL_SETTINGS: readonly ProviderInstallSettings[] = [
   {
     provider: "opencode",
     docs: [
-      { label: msg`Install`, href: "https://opencode.ai/docs/" },
-      { label: msg`Update`, href: "https://opencode.ai/docs/cli/" },
-      { label: msg`Config`, href: "https://opencode.ai/docs/config/" },
+      { label: "settings:providers_docInstall", href: "https://opencode.ai/docs/" },
+      { label: "computer:providerUpdates_update", href: "https://opencode.ai/docs/cli/" },
+      { label: "settings:providers_docConfig", href: "https://opencode.ai/docs/config/" },
     ],
     fields: [
       {
         kind: "text",
         settingsKey: "openCodeBinaryPath",
-        label: msg`OpenCode binary path`,
-        placeholder: msg`OpenCode binary path`,
-        description: (
-          <Trans>
-            Leave blank to use <code>opencode</code> from your PATH.
-          </Trans>
+        label: "settings:openCodeBinaryPath",
+        placeholder: "settings:openCodeBinaryPath",
+        description: () => (
+          <Translation
+            message="settings:binaryPathDescription"
+            values={{ command: "opencode" }}
+            components={{ command: <code /> }}
+          />
         ),
       },
       {
         kind: "text",
         settingsKey: "openCodeServerUrl",
-        label: msg`OpenCode server URL`,
-        placeholder: msg`http://127.0.0.1:4096`,
-        description: (
-          <Trans>Optional existing OpenCode server URL. Leave blank to spawn a local server.</Trans>
-        ),
+        label: "settings:openCodeServerURL",
+        placeholder: "http://127.0.0.1:4096",
+        description: "settings:optionalExistingOpenCodeServerURLLeaveBlankToSpawn",
       },
       {
         kind: "password",
         settingsKey: "openCodeServerPassword",
         configuredKey: "openCodeServerPasswordConfigured",
-        label: msg`OpenCode server password`,
-        placeholder: msg`OpenCode server password`,
-        description: <Trans>Optional password for an externally managed OpenCode server.</Trans>,
+        label: "settings:openCodeServerPassword",
+        placeholder: "settings:openCodeServerPassword",
+        description: "settings:optionalPasswordForAnExternallyManagedOpenCodeServer",
       },
       {
         kind: "boolean",
         settingsKey: "openCodeExperimentalWebSockets",
-        label: msg`OpenAI response WebSockets`,
-        description: (
-          <Trans>
-            Use Opencode's experimental OpenAI response WebSocket transport for managed local
-            servers.
-          </Trans>
-        ),
+        label: "settings:providers_openaiResponseWebSockets",
+        description: "settings:providers_openaiResponseWebSocketsDescription",
       },
     ],
   },
@@ -478,32 +501,33 @@ const PROVIDER_INSTALL_SETTINGS: readonly ProviderInstallSettings[] = [
   {
     provider: "omp",
     docs: [
-      { label: msg`Docs`, href: "https://omp.sh/docs" },
-      { label: msg`Install`, href: "https://omp.sh/docs/quickstart" },
-      { label: msg`Source`, href: "https://github.com/can1357/oh-my-pi" },
+      { label: "workspace:docs", href: "https://omp.sh/docs" },
+      { label: "settings:providers_docInstall", href: "https://omp.sh/docs/quickstart" },
+      {
+        label: "common:workspaceFilePreviewHeader_source",
+        href: "https://github.com/can1357/oh-my-pi",
+      },
     ],
     fields: [
       {
         kind: "text",
         settingsKey: "ompBinaryPath",
-        label: msg`Oh My Pi binary path`,
-        placeholder: msg`Oh My Pi binary path`,
-        description: (
-          <Trans>
-            Leave blank to use <code>omp</code> from your PATH.
-          </Trans>
+        label: "settings:ohMyPiBinaryPath",
+        placeholder: "settings:ohMyPiBinaryPath",
+        description: () => (
+          <Translation
+            message="settings:binaryPathDescription"
+            values={{ command: "omp" }}
+            components={{ command: <code /> }}
+          />
         ),
       },
       {
         kind: "text",
         settingsKey: "ompAgentDir",
-        label: msg`Oh My Pi agent directory`,
-        placeholder: msg`Oh My Pi agent directory`,
-        description: (
-          <Trans>
-            Optional custom Oh My Pi agent directory for auth, models, skills, and commands.
-          </Trans>
-        ),
+        label: "settings:ohMyPiAgentDirectory",
+        placeholder: "settings:ohMyPiAgentDirectory",
+        description: "settings:optionalCustomOhMyPiAgentDirectoryForAuth",
       },
     ],
   },
@@ -624,7 +648,8 @@ function SortableProviderVisibilityRow(props: {
   isHidden: boolean;
   onHiddenChange: (hidden: boolean) => void;
 }) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   const {
     attributes,
     listeners,
@@ -703,11 +728,13 @@ function SortableProviderVisibilityRow(props: {
 }
 
 function ProviderDocsLinks({ docs }: { docs: ProviderInstallSettings["docs"] }) {
+  const { t } = useTranslation();
+
   return (
     <div className={cn(SETTINGS_OUTLINED_SURFACE_CLASS_NAME, "px-3 py-2.5")}>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <span className="text-ui leading-snug font-medium text-foreground">
-          {i18n._("CLI docs")}
+          {t("settings:providers_cliDocs")}
         </span>
         <div className="flex flex-wrap gap-2">
           {docs.map((doc) => (
@@ -731,7 +758,7 @@ function ProviderDocsLinks({ docs }: { docs: ProviderInstallSettings["docs"] }) 
                 />
               }
             >
-              <span>{i18n._(doc.label)}</span>
+              <span>{t(doc.label)}</span>
               <ExternalLinkIcon className="size-3" />
             </Button>
           ))}
@@ -749,18 +776,18 @@ function formatProviderVersion(value: string | null | undefined): string | null 
 
 export function providerUpdateStatusLabel(provider: ServerProviderStatus): string | null {
   const state = provider.updateState?.status;
-  if (state === "queued") return i18n._("Update queued");
-  if (state === "running") return i18n._("Updating");
-  if (state === "succeeded") return i18n._("Updated");
-  if (state === "failed") return i18n._("Update failed");
-  if (state === "unchanged") return i18n._("Still outdated");
+  if (state === "queued") return t("settings:updateQueued");
+  if (state === "running") return t("settings:providers_updating");
+  if (state === "succeeded") return t("common:updated");
+  if (state === "failed") return t("common:providerUpdates_failed");
+  if (state === "unchanged") return t("settings:stillOutdated");
   const advisory = provider.versionAdvisory;
   if (advisory?.status === "behind_latest" && advisory.latestVersion) {
     const currentVersion = formatProviderVersion(advisory.currentVersion);
     const latestVersion = formatProviderVersion(advisory.latestVersion);
     return currentVersion
-      ? `${currentVersion} -> ${latestVersion}`
-      : i18n._("Latest {version}", { version: latestVersion });
+      ? t("settings:symbol", { value0: currentVersion, value1: latestVersion })
+      : t("settings:latest", { value0: latestVersion });
   }
   const currentVersion = formatProviderVersion(provider.version);
   if (currentVersion) return i18n._("Current {version}", { version: currentVersion });
@@ -771,7 +798,7 @@ export function providerUpdateStatusLabel(provider: ServerProviderStatus): strin
 function providerUpdateFailureMessage(provider: ServerProviderStatus | undefined): string | null {
   const state = provider?.updateState;
   if (!state || (state.status !== "failed" && state.status !== "unchanged")) return null;
-  return state.output?.trim() || state.message || i18n._("The provider update did not complete.");
+  return state.output?.trim() || state.message || t("settings:theProviderUpdateDidNotComplete");
 }
 
 function providerStatusDisplayName(status: ServerProviderStatus): string {
@@ -786,7 +813,8 @@ export function ProviderUpdateAction(props: {
   disabled: boolean;
   onUpdate: (provider: ProviderKind, instanceId?: ProviderInstanceId) => void;
 }) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   const advisory = props.providerStatus.versionAdvisory;
   return (
     <Button
@@ -795,9 +823,7 @@ export function ProviderUpdateAction(props: {
       variant="outline"
       disabled={props.disabled}
       title={
-        advisory?.updateCommand
-          ? i18n._("Run {command}", { command: advisory.updateCommand })
-          : undefined
+        advisory?.updateCommand ? t("workspace:run", { value0: advisory.updateCommand }) : undefined
       }
       onClick={(event: MouseEvent<HTMLButtonElement>) => {
         event.stopPropagation();
@@ -811,7 +837,7 @@ export function ProviderUpdateAction(props: {
       ) : (
         <DownloadIcon className="size-3.5" />
       )}
-      {props.active ? i18n._("Updating") : i18n._("Update")}
+      {props.active ? t("settings:providers_updating") : t("computer:providerUpdates_update")}
     </Button>
   );
 }
@@ -840,6 +866,8 @@ function ProviderInstallFieldControl(props: {
   settings: AppSettings;
   updateSettings: (patch: Partial<AppSettings>) => void;
 }) {
+  const { t } = useTranslation();
+
   const id = `provider-install-${props.field.settingsKey}`;
   if (props.field.kind === "boolean") {
     return (
@@ -849,10 +877,12 @@ function ProviderInstallFieldControl(props: {
       >
         <span className="min-w-0">
           <span className="block text-ui leading-snug font-medium text-foreground">
-            {i18n._(props.field.label)}
+            {t(props.field.label)}
           </span>
           <span className="mt-1 block text-ui leading-snug text-muted-foreground">
-            {props.field.description}
+            {typeof props.field.description === "string"
+              ? t(props.field.description)
+              : props.field.description(t)}
           </span>
         </span>
         <Switch
@@ -872,7 +902,7 @@ function ProviderInstallFieldControl(props: {
   return (
     <label htmlFor={id} className="block">
       <span className="block text-ui leading-snug font-medium text-foreground">
-        {i18n._(props.field.label)}
+        {t(props.field.label)}
       </span>
       <DebouncedSettingTextInput
         id={id}
@@ -885,15 +915,17 @@ function ProviderInstallFieldControl(props: {
         }
         placeholder={
           isPassword && configured
-            ? i18n._("Configured — enter a replacement or leave blank")
-            : i18n._(props.field.placeholder)
+            ? t("settings:configuredEnterAReplacementOrLeaveBlank")
+            : t(props.field.placeholder)
         }
         type={isPassword ? "password" : undefined}
         autoComplete={isPassword ? "new-password" : undefined}
         spellCheck={false}
       />
       <span className="mt-1 block text-ui leading-snug text-muted-foreground">
-        {props.field.description}
+        {typeof props.field.description === "string"
+          ? t(props.field.description)
+          : props.field.description(t)}
       </span>
     </label>
   );
@@ -905,6 +937,8 @@ function CodexDefaultAccountControl(props: {
   settings: AppSettings;
   updateSettings: (patch: Partial<AppSettings>) => void;
 }) {
+  const { t } = useTranslation();
+
   // The default account goes by the provider's name here too, as in the account list.
   const accountOptions = getCodexAccountOptions(props.settings).map((account) =>
     account.isDefault ? { ...account, label: PROVIDER_DISPLAY_NAMES.codex } : account,
@@ -916,12 +950,12 @@ function CodexDefaultAccountControl(props: {
   return (
     <div className="space-y-1">
       <span className="block text-ui-sm font-medium text-foreground">
-        {i18n._("Codex account for new threads")}
+        {t("settings:codexAccountForNewThreads")}
       </span>
       <SettingsSelectControl
         value={props.settings.selectedCodexAccountId}
         onValueChange={(selectedCodexAccountId) => props.updateSettings({ selectedCodexAccountId })}
-        ariaLabel={i18n._("Codex account for new threads")}
+        ariaLabel={t("settings:codexAccountForNewThreads")}
         triggerClassName="w-full"
         valueContent={<span className="truncate">{selectedAccountLabel}</span>}
       >
@@ -932,7 +966,7 @@ function CodexDefaultAccountControl(props: {
         ))}
       </SettingsSelectControl>
       <span className="block text-ui-sm text-muted-foreground">
-        {i18n._("Used until you pick another account in the model picker.")}
+        {t("settings:usedUntilYouPickAnotherAccountInTheModel")}
       </span>
     </div>
   );
@@ -1005,11 +1039,9 @@ function providerAccountIdentityFields(
     return [
       {
         key: "homePath",
-        label: i18n._("CODEX_HOME path"),
+        label: t("settings:providers_codexHomePath"),
         placeholder: "~/.codex-work",
-        description: i18n._(
-          "Leave blank and Synara keeps this account's sign-in in its own folder.",
-        ),
+        description: t("settings:leaveBlankAndSynaraKeepsThisAccountSSign"),
       },
     ];
   }
@@ -1017,7 +1049,7 @@ function providerAccountIdentityFields(
     return [
       {
         key: "configDir",
-        label: i18n._("Claude config directory"),
+        label: t("settings:claudeConfigDirectory"),
         placeholder: "~/.claude-work",
         description: i18n._(
           "Leave blank and Synara keeps this account's sign-in in its own folder. Set a directory to use a Claude config folder you already signed in to.",
@@ -1029,11 +1061,9 @@ function providerAccountIdentityFields(
   return [
     {
       key: "profileDir",
-      label: i18n._("Profile directory"),
-      placeholder: i18n._("Provider account directory"),
-      description: i18n._(
-        "Used as this account's provider config root without changing your shell files.",
-      ),
+      label: t("settings:profileDirectory"),
+      placeholder: t("settings:providerAccountDirectory"),
+      description: t("settings:usedAsThisAccountSProviderConfigRootWithout"),
     },
   ];
 }
@@ -1061,6 +1091,8 @@ function ProviderAccountsControl(props: {
   updateSettings: (patch: Partial<AppSettings>) => void;
   updateSettingsAndWait: (patch: Partial<AppSettings>) => Promise<void>;
 }) {
+  const { t } = useTranslation();
+
   const provider = props.config.provider;
   const providerLabel = PROVIDER_DISPLAY_NAMES[provider];
   const usageQuery = useQuery(
@@ -1109,9 +1141,9 @@ function ProviderAccountsControl(props: {
     } catch (error) {
       toastManager.add({
         type: "error",
-        title: i18n._("Unable to start sign-in"),
+        title: t("settings:unableToStartSignIn"),
         description:
-          error instanceof Error ? error.message : i18n._("Unable to save provider settings."),
+          error instanceof Error ? error.message : t("settings:unableToSaveProviderSettings"),
       });
     } finally {
       signInPendingRef.current = false;
@@ -1255,7 +1287,7 @@ function ProviderAccountsControl(props: {
           key={field.settingsKey}
           className="flex items-center justify-between gap-3 sm:col-span-2"
         >
-          <span className="text-ui-sm font-medium text-foreground">{i18n._(field.label)}</span>
+          <span className="text-ui-sm font-medium text-foreground">{t(field.label)}</span>
           <Switch
             checked={readConfigBoolean(instance.config, configKey)}
             onCheckedChange={(checked) =>
@@ -1279,7 +1311,7 @@ function ProviderAccountsControl(props: {
     return (
       <div className="block" key={field.settingsKey}>
         <label htmlFor={inputId} className="block text-ui-sm font-medium text-foreground">
-          {i18n._(field.label)}
+          {t(field.label)}
         </label>
         <div className="mt-1 flex items-center gap-2">
           <DebouncedSettingTextInput
@@ -1293,9 +1325,7 @@ function ProviderAccountsControl(props: {
               if (redacted && value.length === 0) return;
               updateInstance(instanceId, { config: { [configKey]: value } }, legacyCodexAccountId);
             }}
-            placeholder={
-              redacted ? i18n._("Secret saved — type to replace") : i18n._(field.placeholder)
-            }
+            placeholder={redacted ? t("settings:secretSavedTypeToReplace") : t(field.placeholder)}
             spellCheck={false}
           />
           {redacted ? (
@@ -1309,7 +1339,7 @@ function ProviderAccountsControl(props: {
                 account: instance.displayName || instanceId,
               })}
             >
-              {i18n._("Clear")}
+              {t("chat:clear")}
             </Button>
           ) : null}
         </div>
@@ -1328,7 +1358,7 @@ function ProviderAccountsControl(props: {
         <div className="grid gap-2 sm:grid-cols-2">
           <label className="block sm:col-span-2">
             <span className="block text-ui-sm font-medium text-foreground">
-              {i18n._("Terminal command")}
+              {t("settings:terminalCommand")}
             </span>
             <div className="mt-1 flex items-center gap-2">
               <code className="min-w-0 flex-1 truncate rounded-md border border-border/70 bg-background/60 px-2.5 py-1.5 text-ui-sm">
@@ -1351,7 +1381,7 @@ function ProviderAccountsControl(props: {
           {provider === "codex" ? (
             <label className="block">
               <span className="block text-ui-sm font-medium text-foreground">
-                {i18n._("Shadow auth home")}
+                {t("settings:shadowAuthHome")}
               </span>
               <DebouncedSettingTextInput
                 id={`provider-instance-${instanceId}-shadow-home`}
@@ -1370,7 +1400,7 @@ function ProviderAccountsControl(props: {
           {provider === "claudeAgent" ? (
             <label className="block sm:col-span-2">
               <span className="block text-ui-sm font-medium text-foreground">
-                {i18n._("Claude config directory")}
+                {t("settings:claudeConfigDirectory")}
               </span>
               <DebouncedSettingTextInput
                 id={`provider-instance-${instanceId}-config-dir`}
@@ -1398,7 +1428,7 @@ function ProviderAccountsControl(props: {
           {!isAccountProvider && provider !== "pi" && provider !== "omp" ? (
             <label className="block sm:col-span-2">
               <span className="block text-ui-sm font-medium text-foreground">
-                {i18n._("Profile directory")}
+                {t("settings:profileDirectory")}
               </span>
               <DebouncedSettingTextInput
                 id={`provider-instance-${instanceId}-profile-dir`}
@@ -1407,11 +1437,11 @@ function ProviderAccountsControl(props: {
                 className="mt-1"
                 value={readConfigString(instance.config, "profileDir")}
                 onCommit={(profileDir) => updateInstance(instanceId, { config: { profileDir } })}
-                placeholder={i18n._("Provider account directory")}
+                placeholder={t("settings:providerAccountDirectory")}
                 spellCheck={false}
               />
               <span className="mt-1 block text-ui-sm text-muted-foreground">
-                Used as this account&apos;s provider config root without changing your shell files.
+                {t("settings:usedAsThisAccountSProviderConfigRootWithout")}
               </span>
             </label>
           ) : null}
@@ -1419,7 +1449,7 @@ function ProviderAccountsControl(props: {
         <ProviderInstanceAdvancedSection>
           <label className="block sm:col-span-2">
             <span className="block text-ui-sm font-medium text-foreground">
-              {i18n._("Command override")}
+              {t("settings:commandOverride")}
             </span>
             <DebouncedSettingTextInput
               id={`provider-instance-${instanceId}-cli-alias`}
@@ -1440,21 +1470,17 @@ function ProviderAccountsControl(props: {
               )}
             >
               {cliAliasInvalid
-                ? i18n._(
-                    "Use 1–64 letters, numbers, dashes, or underscores; bare provider commands are reserved.",
-                  )
+                ? t("settings:use164LettersNumbersDashesOrUnderscoresBare")
                 : cliCommandConflicts
-                  ? i18n._(
-                      "This command is already assigned to another account. Choose a unique override.",
-                    )
-                  : i18n._("Available in Synara terminals for zsh, bash, fish, and scripts.")}
+                  ? t("settings:thisCommandIsAlreadyAssignedToAnotherAccountChoose")
+                  : t("settings:availableInSynaraTerminalsForZshBashFishAnd")}
             </span>
           </label>
           {props.config.fields.filter(isAdvancedField).map((field) => renderField(field, entry))}
           {provider === "claudeAgent" ? (
             <label className="block">
               <span className="block text-ui-sm font-medium text-foreground">
-                {i18n._("Claude credential directory")}
+                {t("settings:claudeCredentialDirectory")}
               </span>
               <DebouncedSettingTextInput
                 id={`provider-instance-${instanceId}-secure-storage-dir`}
@@ -1465,13 +1491,11 @@ function ProviderAccountsControl(props: {
                 onCommit={(secureStorageDir) =>
                   updateInstance(instanceId, { config: { secureStorageDir } })
                 }
-                placeholder={i18n._("Optional shared credential directory")}
+                placeholder={t("settings:optionalSharedCredentialDirectory")}
                 spellCheck={false}
               />
               <span className="mt-1 block text-ui-sm text-muted-foreground">
-                {i18n._(
-                  "Leave blank unless your setup already uses a separate secure-storage directory.",
-                )}
+                {t("settings:leaveBlankUnlessYourSetupAlreadyUsesASeparate")}
               </span>
             </label>
           ) : null}
@@ -1486,11 +1510,14 @@ function ProviderAccountsControl(props: {
     const explicit = props.settings.providerInstances[instanceId];
     const legacyCodexAccountId = manageable?.legacyCodexAccountId ?? null;
     const liveStatus = props.providerStatusByInstance.get(instanceId);
-    const status = providerAccountStatusSummary({
-      status: liveStatus,
-      enabled: account.enabled,
-      usageSnapshot: usageByInstance.get(instanceId),
-    });
+    const status = providerAccountStatusSummary(
+      {
+        status: liveStatus,
+        enabled: account.enabled,
+        usageSnapshot: usageByInstance.get(instanceId),
+      },
+      t,
+    );
     const cliCommand = account.isDefault
       ? provider === "claudeAgent"
         ? "claude"
@@ -1519,7 +1546,7 @@ function ProviderAccountsControl(props: {
         // Remount per account so a pending debounced edit can never land on another one.
         key={instanceId}
         role="group"
-        aria-label={`${account.label} account`}
+        aria-label={t("settings:account", { value0: account.label })}
       >
         <div className="flex items-start gap-3 border-b border-border/70 bg-muted/25 px-3 py-3">
           <ProviderAccountAvatar provider={provider} accentColor={account.accentColor} size="md" />
@@ -1530,7 +1557,7 @@ function ProviderAccountsControl(props: {
               </span>
               {account.isDefault ? (
                 <span className="shrink-0 rounded-full border border-border/70 px-1.5 py-px text-ui-2xs font-medium text-muted-foreground">
-                  {i18n._("Default")}
+                  {t("settings:reasoningModes_default")}
                 </span>
               ) : null}
             </div>
@@ -1555,12 +1582,12 @@ function ProviderAccountsControl(props: {
             ) : (
               <PlayIcon className="size-3.5" />
             )}
-            {i18n._("Sign in")}
+            {t("chat:providerModelPicker_signIn")}
           </Button>
           {account.isDefault ? (
             defaultIsCustomized ? (
               <SettingResetButton
-                label={`${account.label} account`}
+                label={t("settings:account", { value0: account.label })}
                 onClick={resetDefaultAccount}
               />
             ) : null
@@ -1575,7 +1602,7 @@ function ProviderAccountsControl(props: {
               }}
             >
               <XIcon className="size-3.5" />
-              {i18n._("Remove")}
+              {t("workspace:edit_remove")}
             </Button>
           )}
         </div>
@@ -1583,21 +1610,19 @@ function ProviderAccountsControl(props: {
         {status.detail && status.tone !== "ready" && status.tone !== "idle" ? (
           <div className="border-b border-border/70 px-3 py-2 text-ui-sm text-muted-foreground">
             {liveStatus?.authStatus === "unauthenticated"
-              ? i18n._(
-                  "Use Sign in to authenticate this account, then complete the provider's prompts.",
-                )
+              ? t("settings:useSignInToAuthenticateThisAccountThenComplete")
               : status.detail}
           </div>
         ) : null}
 
-        <ProviderAccountEditorSection title={i18n._("Identity")}>
+        <ProviderAccountEditorSection title={t("settings:identity")}>
           <div className="space-y-3">
             <div className="space-y-1">
               <label
                 htmlFor={`provider-instance-${instanceId}-label`}
                 className="block text-ui-sm font-medium text-foreground"
               >
-                {i18n._("Display name")}
+                {t("common:edit_displayName")}
               </label>
               <DebouncedSettingTextInput
                 id={`provider-instance-${instanceId}-label`}
@@ -1611,13 +1636,13 @@ function ProviderAccountsControl(props: {
                 onCommit={(displayName) =>
                   updateInstance(instanceId, { displayName }, legacyCodexAccountId)
                 }
-                placeholder={account.isDefault ? providerLabel : i18n._("Work")}
+                placeholder={account.isDefault ? providerLabel : t("common:work")}
                 spellCheck={false}
               />
             </div>
             <div className="space-y-1">
               <span className="block text-ui-sm font-medium text-foreground">
-                {i18n._("Accent color")}
+                {t("settings:accentColor")}
               </span>
               <div className="flex min-h-7 items-center">
                 <ProviderAccentColorControl
@@ -1632,7 +1657,7 @@ function ProviderAccountsControl(props: {
           </div>
         </ProviderAccountEditorSection>
 
-        <ProviderAccountEditorSection title={i18n._("Runtime")}>
+        <ProviderAccountEditorSection title={t("settings:runtime")}>
           {account.isDefault ? (
             <div className="space-y-3">
               {props.config.fields.map((field) => (
@@ -1658,7 +1683,7 @@ function ProviderAccountsControl(props: {
         {/* A migrated Codex account is routed by its saved identity; an environment of
             its own would make the server drop that route, so none is offered. */}
         {legacyCodexAccountId === null ? (
-          <ProviderAccountEditorSection title={i18n._("Environment")}>
+          <ProviderAccountEditorSection title={t("chat:general_environmentPanel")}>
             <ProviderInstanceEnvironmentEditor
               instanceId={instanceId}
               environment={
@@ -1680,9 +1705,7 @@ function ProviderAccountsControl(props: {
             {i18n._("{provider} accounts", { provider: providerLabel })}
           </span>
           <span className="mt-1 block text-ui-sm text-muted-foreground">
-            {i18n._(
-              "Each account signs in on its own and gets its own tab in the model picker. A thread stays on the account it started with.",
-            )}
+            {t("settings:eachAccountSignsInOnItsOwnAndGets2")}
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -1702,11 +1725,11 @@ function ProviderAccountsControl(props: {
             }
           >
             <FolderOpenIcon className="size-3.5" />
-            {i18n._("Import directory")}
+            {t("settings:importDirectory")}
           </Button>
           <Button type="button" size="xs" variant="outline" onClick={() => setAddDialogOpen(true)}>
             <PlusIcon className="size-3.5" />
-            {i18n._("Add account")}
+            {t("settings:addAccount")}
           </Button>
         </div>
       </div>
@@ -1714,7 +1737,7 @@ function ProviderAccountsControl(props: {
       <div className="flex flex-col gap-3 md:flex-row md:items-start">
         <div
           role="list"
-          aria-label={`${providerLabel} accounts`}
+          aria-label={t("settings:accounts2", { value0: providerLabel })}
           className={cn(
             SETTINGS_INSET_LIST_CLASS_NAME,
             SETTINGS_STACKED_ROWS_DIVIDER_CLASS_NAME,
@@ -1723,11 +1746,14 @@ function ProviderAccountsControl(props: {
         >
           {accounts.map((account) => {
             const selected = account.instanceId === selectedAccount?.instanceId;
-            const status = providerAccountStatusSummary({
-              status: props.providerStatusByInstance.get(account.instanceId),
-              enabled: account.enabled,
-              usageSnapshot: usageByInstance.get(account.instanceId),
-            });
+            const status = providerAccountStatusSummary(
+              {
+                status: props.providerStatusByInstance.get(account.instanceId),
+                enabled: account.enabled,
+                usageSnapshot: usageByInstance.get(account.instanceId),
+              },
+              t,
+            );
             return (
               <div
                 key={account.instanceId}
@@ -1780,7 +1806,7 @@ function ProviderAccountsControl(props: {
       {signInAccount ? (
         <Suspense
           fallback={
-            <p className="text-ui-sm text-muted-foreground">{i18n._("Opening sign-in…")}</p>
+            <p className="text-ui-sm text-muted-foreground">{t("settings:openingSignIn")}</p>
           }
         >
           <ProviderSignInDialog
@@ -1837,6 +1863,8 @@ function ProviderAccountEditorSection(props: { title: string; children: ReactNod
 }
 
 function ProviderInstanceAdvancedSection(props: { children: ReactNode }) {
+  const { t } = useTranslation();
+
   const [open, setOpen] = useState(false);
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
@@ -1844,7 +1872,7 @@ function ProviderInstanceAdvancedSection(props: { children: ReactNode }) {
         type="button"
         className="mt-3 flex items-center gap-1 text-ui-sm text-muted-foreground"
       >
-        {i18n._("Advanced")}
+        {t("settings:nav_advanced")}
         <DisclosureChevron open={open} className="size-3.5 shrink-0" />
       </CollapsibleTrigger>
       <CollapsiblePanel>
@@ -1872,6 +1900,8 @@ function ProviderToolRow(props: {
   updateSettings: (patch: Partial<AppSettings>) => void;
   updateSettingsAndWait: (patch: Partial<AppSettings>) => Promise<void>;
 }) {
+  const { t } = useTranslation();
+
   const title = PROVIDER_DISPLAY_NAMES[props.config.provider];
   const isDirty = isProviderInstallConfigDirty(props.config, props.settings, props.defaults);
   // A slim host installs Pi and OpenCode on demand; until then the row offers it.
@@ -1927,7 +1957,9 @@ function ProviderToolRow(props: {
           >
             <span className="min-w-0 flex-1 text-ui-lg font-medium text-foreground">{title}</span>
             {isDirty ? (
-              <span className="shrink-0 text-ui-sm text-muted-foreground">{i18n._("Custom")}</span>
+              <span className="shrink-0 text-ui-sm text-muted-foreground">
+                {t("settings:schedule_custom")}
+              </span>
             ) : null}
             {providerUpdateLabel ? (
               <span
@@ -1977,7 +2009,7 @@ function ProviderToolRow(props: {
                 <div className="text-ui leading-snug text-muted-foreground">
                   {updateAdvisory.canUpdate && updateAdvisory.updateCommand ? (
                     <>
-                      <span>{i18n._("Command:")} </span>
+                      <span>{t("settings:command")} </span>
                       <code className="font-mono">{updateAdvisory.updateCommand}</code>
                     </>
                   ) : (
@@ -2034,7 +2066,8 @@ export function ProvidersSettingsPanel({
   providerTarget = null,
   resetEpoch,
 }: ProvidersSettingsPanelProps) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   const queryClient = useQueryClient();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const localProviderStatuses = useProviderStatusesForLocalConfig();
@@ -2171,13 +2204,15 @@ export function ProvidersSettingsPanel({
             const manualCommand = refreshedProvider?.versionAdvisory?.updateCommand?.trim();
             toastManager.add({
               type: "error",
-              title: i18n._("Could not update {provider}", {
-                provider: refreshedProvider
+              title: t("settings:couldNotUpdate", {
+                value0: refreshedProvider
                   ? providerStatusDisplayName(refreshedProvider)
                   : PROVIDER_DISPLAY_NAMES[provider],
               }),
               description: manualCommand
-                ? `${failureMessage}\n\n${i18n._("Copy the command below to update manually in a terminal.")}`
+                ? t("settings:copyTheCommandBelowToUpdateManuallyInA", {
+                    value0: failureMessage,
+                  })
                 : failureMessage,
               ...(manualCommand ? { data: { copyText: manualCommand } } : {}),
             });
@@ -2185,16 +2220,20 @@ export function ProvidersSettingsPanel({
           }
           toastManager.add({
             type: "success",
-            title: `${refreshedProvider ? providerStatusDisplayName(refreshedProvider) : PROVIDER_DISPLAY_NAMES[provider]} update finished`,
-            description: i18n._("New sessions will use the refreshed provider."),
+            title: t("settings:updateFinished", {
+              value0: refreshedProvider
+                ? providerStatusDisplayName(refreshedProvider)
+                : PROVIDER_DISPLAY_NAMES[provider],
+            }),
+            description: t("settings:newSessionsWillUseTheRefreshedProvider"),
           });
         })
         .catch((error: unknown) => {
           toastManager.add({
             type: "error",
-            title: `Could not update ${PROVIDER_DISPLAY_NAMES[provider]}`,
+            title: t("settings:couldNotUpdate", { value0: PROVIDER_DISPLAY_NAMES[provider] }),
             description:
-              error instanceof Error ? error.message : i18n._("The provider update failed."),
+              error instanceof Error ? error.message : t("settings:theProviderUpdateFailed"),
           });
         })
         .finally(async () => {
@@ -2208,7 +2247,7 @@ export function ProvidersSettingsPanel({
           });
         });
     },
-    [i18n, queryClient, updatingProviders],
+    [queryClient, updatingProviders, t],
   );
 
   if (!active) return null;
@@ -2255,7 +2294,7 @@ export function ProvidersSettingsPanel({
           resetAction={
             hiddenProviderCount > 0 || isProviderOrderDirty ? (
               <SettingResetButton
-                label="provider picker"
+                label={t("settings:providerPicker")}
                 onClick={() =>
                   updateSettings({
                     hiddenProviders: defaults.hiddenProviders,
@@ -2302,7 +2341,9 @@ export function ProvidersSettingsPanel({
 
       <div className={SETTINGS_PANEL_SECTION_GAP_CLASS_NAME}>
         <SettingsSection title={i18n._("Performance")}>
+          <UsageLimitRecoverySetting />
           <SettingsRow
+            id="setting-keep-synara-responsive"
             title={i18n._("Keep Synara responsive")}
             description={i18n._(
               "Give agent processes and their commands a moderately lower CPU priority when the machine is busy.",
@@ -2370,14 +2411,13 @@ export function ProvidersSettingsPanel({
       <div id={SETTINGS_TARGETS.providerUpdates} className={SETTINGS_PANEL_SECTION_GAP_CLASS_NAME}>
         <SettingsSection title={i18n._("Updates")}>
           <SettingsRow
-            title={i18n._("Automatic CLI update checks")}
-            description={i18n._(
-              "Check Codex, Claude, and other provider CLIs for newer versions in the background.",
-            )}
+            id="setting-automatic-cli-update-checks"
+            title="settings:providerUpdates_automaticCliUpdateChecks"
+            description="settings:checkCodexClaudeAndOtherProviderCLIsForNewer"
             resetAction={
               settings.enableProviderUpdateChecks !== defaults.enableProviderUpdateChecks ? (
                 <SettingResetButton
-                  label={i18n._("CLI update checks")}
+                  label={t("settings:cLIUpdateChecks")}
                   onClick={() =>
                     updateSettings({
                       enableProviderUpdateChecks: defaults.enableProviderUpdateChecks,
@@ -2392,12 +2432,13 @@ export function ProvidersSettingsPanel({
                 onCheckedChange={(checked) =>
                   updateSettings({ enableProviderUpdateChecks: Boolean(checked) })
                 }
-                aria-label={i18n._("Automatic CLI update checks")}
+                aria-label={t("settings:providerUpdates_automaticCliUpdateChecks")}
               />
             }
           />
 
           <SettingsRow
+            id="setting-provider-updates"
             title={i18n._("Provider updates")}
             description={i18n._("Review installed provider tools that Lattice can safely update.")}
             status={
@@ -2443,7 +2484,7 @@ export function ProvidersSettingsPanel({
                           />
                         ) : (
                           <span className="text-ui-sm text-muted-foreground">
-                            {i18n._("Manual update")}
+                            {t("settings:providerUpdates_manualUpdate")}
                           </span>
                         )
                       }
@@ -2459,6 +2500,7 @@ export function ProvidersSettingsPanel({
       <div id={SETTINGS_TARGETS.providerInstalls} className={SETTINGS_PANEL_SECTION_GAP_CLASS_NAME}>
         <SettingsSection title={i18n._("Provider tools")}>
           <SettingsRow
+            id="setting-installed-clis"
             title={i18n._("Provider runtimes")}
             description={i18n._(
               "Review external provider CLIs. Pi and OpenCode are downloaded when you install them here; Pi runs on its SDK and needs no separate CLI.",
@@ -2476,7 +2518,7 @@ export function ProvidersSettingsPanel({
             resetAction={
               installSettingsDirty ? (
                 <SettingResetButton
-                  label="provider tools"
+                  label={t("settings:providerTools")}
                   onClick={() => {
                     updateSettings(createProviderInstallResetPatch(defaults));
                     setOpenInstallProviders(createClosedProviderInstallDisclosureState());

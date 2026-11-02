@@ -64,15 +64,16 @@ export type SettingsNavItem = {
   badge?: string;
 };
 
+// Keep English source keys here: callers translate at render time, while section/row ids stay stable.
 export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
   id: SettingsNavGroupId;
   label: MessageDescriptor;
 }> = [
-  { id: "personal", label: msg`Personal` },
-  { id: "integrations", label: msg`Integrations` },
-  { id: "coding", label: msg`Coding` },
-  { id: "system", label: msg`System` },
-  { id: "archived", label: msg`Archived` },
+  { id: "personal", label: "settings:personal" },
+  { id: "integrations", label: "common:integrations" },
+  { id: "coding", label: "settings:coding" },
+  { id: "system", label: "common:themeOptions_system" },
+  { id: "archived", label: "workspace:archived_archivedRelative" },
 ] as const;
 
 /** Sections that exist only where their Beta-only feature is on. */
@@ -93,24 +94,24 @@ const ALL_SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   {
     id: "general",
     group: "personal",
-    label: msg`General`,
-    description: msg`Choose defaults for new chats, navigation, and the Environment panel.`,
+    label: "settings:nav_general",
+    description: "settings:chooseDefaultsForNewChatsNavigationAndTheEnvironment",
     icon: "settings-gear-4",
     eyebrow: "Workflow defaults",
   },
   {
     id: "profile",
     group: "personal",
-    label: msg`Profile`,
-    description: msg`Your local activity, streaks, and a shareable stats card.`,
+    label: "computer:nav_profile",
+    description: "settings:nav_profileDescription",
     icon: "user",
     eyebrow: "Your stats",
   },
   {
     id: "appearance",
     group: "personal",
-    label: msg`Appearance`,
-    description: msg`Customize the theme, typography, density, and time format.`,
+    label: "common:nav_appearance",
+    description: "settings:customizeTheThemeTypographyDensityAndTimeFormat",
     icon: "color-palette",
     eyebrow: "Visual language",
   },
@@ -125,8 +126,8 @@ const ALL_SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   {
     id: "behavior",
     group: "personal",
-    label: msg`Chat behavior`,
-    description: msg`Control live responses, follow-ups, review defaults, and safety confirmations.`,
+    label: "settings:chatBehavior",
+    description: "settings:controlLiveResponsesFollowUpsReviewDefaultsAndSafety",
     icon: "settings-slider-hor",
     eyebrow: "Interaction rules",
   },
@@ -141,33 +142,33 @@ const ALL_SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   {
     id: "usage",
     group: "personal",
-    label: msg`Usage & limits`,
-    description: msg`See remaining quota and credits for every signed-in provider.`,
+    label: "settings:usageLimits",
+    description: "settings:seeRemainingQuotaAndCreditsForEverySignedIn",
     icon: "gauge",
     eyebrow: "Provider limits",
   },
   {
     id: "appsnap",
     group: "integrations",
-    label: msg`AppSnap`,
-    description: msg`Capture another app's frontmost window directly into a task.`,
+    label: "settings:appSnap",
+    description: "settings:captureAnotherAppSFrontmostWindowDirectlyIntoA",
     icon: "screen-capture",
     eyebrow: "Screen capture",
   },
   {
     id: "computer",
     group: "integrations",
-    label: msg`Computer use`,
-    description: msg`Let agents see and control this computer's desktop, and check backend status.`,
+    label: "settings:computerUse",
+    description: "settings:letAgentsSeeAndControlThisComputerSDesktop",
     icon: "computer-use",
     eyebrow: "Desktop control",
-    badge: "Beta",
+    badge: "workspace:beta",
   },
   {
     id: "connectors",
     group: "integrations",
-    label: msg`Connectors`,
-    description: msg`Sign in to Supabase, Linear, Notion, and other services your agents can use.`,
+    label: "settings:connectors",
+    description: "settings:connectorsDescription",
     icon: "connectors-1",
     eyebrow: "Remote MCP servers",
   },
@@ -206,16 +207,16 @@ const ALL_SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   {
     id: "advanced",
     group: "system",
-    label: msg`System tools`,
-    description: msg`Manage sessions, recovery tools, low-level keybindings, and version details.`,
+    label: "settings:nav_advancedEyebrow",
+    description: "settings:manageSessionsRecoveryToolsLowLevelKeybindingsAndVersion",
     icon: "toolbox",
     eyebrow: "System tools",
   },
   {
     id: "archived",
     group: "archived",
-    label: msg`Archived threads`,
-    description: msg`Find and restore threads you previously archived.`,
+    label: "settings:archivedThreads",
+    description: "settings:findAndRestoreThreadsYouPreviouslyArchived",
     icon: "archive",
     eyebrow: "Thread management",
   },

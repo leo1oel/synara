@@ -31,6 +31,7 @@ import {
   COMPOSER_COMMAND_MENU_SURFACE_CLASS_NAME,
   COMPOSER_PICKER_MENU_POPUP_BODY_CLASS_NAME,
 } from "./composerPickerStyles";
+import { useTranslation, t } from "~/i18n";
 
 type EntriesByPath = Record<string, readonly ProjectFileSystemEntry[] | undefined>;
 
@@ -151,8 +152,9 @@ export function ComposerLocalDirectoryMenu(props: {
   onNavigateFolder: (absolutePath: string) => void;
   handleRef?: Ref<ComposerLocalDirectoryMenuHandle>;
 }) {
+  const { t } = useTranslation();
+
   const { mentionQuery, rootLabel, homeDir, onSelectEntry, onNavigateFolder, handleRef } = props;
-  const { i18n } = useLingui();
   const [entriesByPath, setEntriesByPath] = useState<EntriesByPath>({});
   const [loadingPaths, setLoadingPaths] = useState<ReadonlySet<string>>(() => new Set());
   // Error keyed to the directory it was produced for: navigating away derives
@@ -193,7 +195,7 @@ export function ComposerLocalDirectoryMenu(props: {
       if (cancelled) return;
       const api = readNativeApi();
       if (!api) {
-        setErrorMessage(i18n._("App is still connecting. Try again in a moment."));
+        setErrorMessage(t("chat:projectPicker_connecting"));
         return;
       }
 
@@ -401,7 +403,7 @@ export function ComposerLocalDirectoryMenu(props: {
           {parent ? (
             <button
               type="button"
-              aria-label={i18n._("Go up one directory")}
+              aria-label={t("chat:localDirectory_goUpDirectory")}
               onMouseDown={(event) => event.preventDefault()}
               onClick={handleGoUp}
               className={cn(
@@ -424,7 +426,7 @@ export function ComposerLocalDirectoryMenu(props: {
               onClick={handleSelectCurrentDirectory}
               className={cn(DIRECTORY_MENU_HEADER_ACTION_CLASS_NAME, "px-1.5 py-0.5 text-ui-xs")}
             >
-              {i18n._("Use this folder")}
+              {t("chat:localDirectory_useThisFolder")}
             </button>
           ) : null}
         </div>
@@ -492,7 +494,7 @@ export function ComposerLocalDirectoryMenu(props: {
                 ) : null}
                 <CommandGroup>
                   <CommandGroupLabel className="px-2 pt-1.5 pb-1 text-ui-xs font-semibold text-muted-foreground/55">
-                    {i18n._("Matches deeper")}
+                    {t("chat:localDirectory_matchesDeeper")}
                   </CommandGroupLabel>
                   {searchRows.map((entry, searchIndex) => {
                     const absoluteIndex = searchRowStartIndex + searchIndex;
@@ -515,25 +517,27 @@ export function ComposerLocalDirectoryMenu(props: {
         </div>
         {isAwaitingHomeDir ? (
           <p className="px-2 py-1.5 text-muted-foreground/50 text-ui-sm">
-            {i18n._("Waiting for home directory from server…")}
+            {t("chat:waitingForHomeDirectoryFromServer")}
           </p>
         ) : isLoading && visibleCount === 0 ? (
           <p className="px-2 py-1.5 text-muted-foreground/50 text-ui-sm">
-            {i18n._("Loading local files…")}
+            {t("chat:loadingLocalFiles")}
           </p>
         ) : errorMessage ? (
           <p className="px-2 py-1.5 text-destructive/80 text-ui-sm">{errorMessage}</p>
         ) : isSearchPending ? (
           <p className="px-2 py-1.5 text-muted-foreground/50 text-ui-sm">
-            {i18n._("Searching nested files…")}
+            {t("chat:searchingNestedFiles")}
           </p>
         ) : visibleCount === 0 ? (
           <p className="px-2 py-1.5 text-muted-foreground/50 text-ui-sm">
-            {filter.trim().length > 0 ? i18n._("No matches.") : i18n._("No files or folders here.")}
+            {filter.trim().length > 0
+              ? t("chat:localDirectory_noMatches")
+              : t("chat:localDirectory_noFilesOrFolders")}
           </p>
         ) : searchQuery.data?.truncated ? (
           <p className="px-2 py-1 text-muted-foreground/40 text-ui-xs">
-            {i18n._("Showing top matches. Keep typing to narrow.")}
+            {t("chat:localDirectory_showingTopMatches")}
           </p>
         ) : null}
       </div>
@@ -548,8 +552,9 @@ function UseCurrentFolderRow(props: {
   onHighlight: (index: number) => void;
   onActivate: () => void;
 }) {
+  const { t } = useTranslation();
+
   const { directoryLabel, index, isHighlighted, onHighlight, onActivate } = props;
-  const { i18n } = useLingui();
   return (
     <CommandItem
       data-highlight-index={index}
@@ -566,7 +571,7 @@ function UseCurrentFolderRow(props: {
       <FolderIcon className="size-3.5 text-muted-foreground/60" />
       <div className="min-w-0 flex flex-1 items-center gap-1.5 overflow-hidden">
         <span className="shrink-0 text-ui-sm font-medium text-foreground/80">
-          {i18n._("Use this folder")}
+          {t("chat:localDirectory_useThisFolder")}
         </span>
         <span className="truncate text-ui-sm text-muted-foreground/55">{directoryLabel}</span>
       </div>
@@ -583,7 +588,7 @@ function buildSearchRowSubtitle(entry: ProjectLocalSearchEntry, rootPath: string
     const relative = parent.slice(rootPath.length);
     if (relative.length === 0) return "";
     if (relative.startsWith("/") || relative.startsWith("\\")) return relative;
-    return `/${relative}`;
+    return t("chat:symbol", { value0: relative });
   }
   return parent;
 }

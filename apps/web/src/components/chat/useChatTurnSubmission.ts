@@ -330,8 +330,9 @@ export function useChatTurnSubmission({
       }
       if (!queuedTurn) {
         sendPreflightInFlightRef.current = true;
-        await waitForPendingComposerImages();
+        const imagesReady = await waitForPendingComposerImages();
         sendPreflightInFlightRef.current = false;
+        if (!imagesReady) return false;
       }
       if (
         !activePendingProgress &&
@@ -880,6 +881,8 @@ export function useChatTurnSubmission({
         files: composerFilesSnapshot,
         assistantSelections: composerAssistantSelectionsSnapshot,
       });
+      // Preparation may outlast a failed upload; the original promise still drives rollback.
+      void turnAttachmentsPromise.catch(() => undefined);
       const optimisticAttachments = [
         ...composerAssistantSelectionsSnapshot,
         ...composerImagesSnapshot.map((image) => ({

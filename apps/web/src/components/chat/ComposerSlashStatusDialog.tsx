@@ -19,29 +19,48 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { ContextWindowMeter } from "./ContextWindowMeter";
+import { useTranslation, t } from "~/i18n";
 
-function formatRateLimitMessage(rateLimitStatus: RateLimitStatus): string {
-  const resetSuffix = rateLimitStatus.resetsAt
-    ? ` Resets at ${new Date(rateLimitStatus.resetsAt).toLocaleTimeString()}.`
-    : "";
+function formatRateLimitMessage(
+  rateLimitStatus: RateLimitStatus,
+  translate: typeof t,
+  formatLocale: string,
+): string {
+  const resetAt = rateLimitStatus.resetsAt
+    ? new Date(rateLimitStatus.resetsAt).toLocaleTimeString(formatLocale)
+    : null;
   if (rateLimitStatus.status === "rejected") {
-    return `Rate limit reached.${resetSuffix}`;
+    return resetAt
+      ? translate("chat:rateLimitReachedReset", { resetAt })
+      : translate("chat:rateLimitReachedNoReset");
   }
-  const utilizationSuffix =
+  const usage =
     typeof rateLimitStatus.utilization === "number"
-      ? ` (${Math.round(rateLimitStatus.utilization * 100)}% used)`
-      : "";
-  return `Approaching rate limit${utilizationSuffix}.${resetSuffix}`;
+      ? new Intl.NumberFormat(formatLocale, { style: "percent", maximumFractionDigits: 0 }).format(
+          rateLimitStatus.utilization,
+        )
+      : null;
+  if (usage !== null) {
+    return resetAt
+      ? translate("chat:rateLimitApproachingUsageReset", { usage, resetAt })
+      : translate("chat:rateLimitApproachingUsage", { usage });
+  }
+  return resetAt
+    ? translate("chat:rateLimitApproachingReset", { resetAt })
+    : translate("chat:rateLimitApproaching");
 }
 
 function formatEnvironmentLabel(
   envMode: DraftThreadEnvMode,
   envState: ResolvedThreadWorkspaceState,
+  translate: typeof t,
 ): string {
   if (envMode === "local") {
-    return i18n._("Local");
+    return translate("computer:worktreeMode_local");
   }
-  return envState === "worktree-pending" ? i18n._("New worktree (pending)") : i18n._("Worktree");
+  return envState === "worktree-pending"
+    ? translate("chat:newWorktreePending")
+    : translate("common:worktreeMode_worktree");
 }
 
 export function ComposerSlashStatusDialog(props: {
@@ -60,6 +79,8 @@ export function ComposerSlashStatusDialog(props: {
   activeContextWindowLabel?: string | null;
   pendingContextWindowLabel?: string | null;
 }) {
+  const { t, formatLocale } = useTranslation();
+
   const {
     open,
     onOpenChange,
@@ -81,48 +102,56 @@ export function ComposerSlashStatusDialog(props: {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPopup className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>{i18n._("Session Status")}</DialogTitle>
+          <DialogTitle>{t("chat:sessionStatus_title")}</DialogTitle>
           <DialogDescription>
-            {i18n._("Runtime controls and local thread state for the active composer.")}
+            {t("chat:runtimeControlsAndLocalThreadStateForTheActive")}
           </DialogDescription>
         </DialogHeader>
         <DialogPanel className="space-y-4">
           <div className="grid gap-3 rounded-lg border border-border/60 bg-muted/20 p-4 text-ui-lg leading-snug sm:grid-cols-2">
             <div className="space-y-1">
-              <p className="text-ui leading-snug text-muted-foreground">{i18n._("Model")}</p>
+              <p className="text-ui leading-snug text-muted-foreground">{t("chat:detail_model")}</p>
               <p className="font-medium text-foreground">{selectedModel}</p>
             </div>
             <div className="space-y-1">
-              <p className="text-ui leading-snug text-muted-foreground">{i18n._("Fast Mode")}</p>
+              <p className="text-ui leading-snug text-muted-foreground">{t("chat:fastMode")}</p>
               <p className="font-medium text-foreground">
-                {fastModeEnabled ? i18n._("On") : i18n._("Off")}
+                {fastModeEnabled
+                  ? t("automation:modelEffort_thinkingOn")
+                  : t("automation:traitsPicker_off")}
               </p>
             </div>
             <div className="space-y-1">
-              <p className="text-ui leading-snug text-muted-foreground">{i18n._("Reasoning")}</p>
+              <p className="text-ui leading-snug text-muted-foreground">
+                {t("chat:sessionStatus_reasoning")}
+              </p>
               <p className="font-medium text-foreground">
-                {selectedPromptEffort ?? i18n._("Default")}
+                {selectedPromptEffort ?? t("settings:reasoningModes_default")}
               </p>
             </div>
             <div className="space-y-1">
-              <p className="text-ui leading-snug text-muted-foreground">{i18n._("Mode")}</p>
+              <p className="text-ui leading-snug text-muted-foreground">{t("chat:mode_label")}</p>
               <p className="font-medium text-foreground">
                 {interactionMode === "plan"
-                  ? i18n._("Plan")
+                  ? t("workspace:plan_badge")
                   : interactionMode === "debug"
-                    ? i18n._("Debug")
-                    : i18n._("Default")}
+                    ? t("chat:debug")
+                    : t("settings:reasoningModes_default")}
               </p>
             </div>
             <div className="space-y-1">
-              <p className="text-ui leading-snug text-muted-foreground">{i18n._("Environment")}</p>
+              <p className="text-ui leading-snug text-muted-foreground">
+                {t("chat:general_environmentPanel")}
+              </p>
               <p className="font-medium text-foreground">
-                {formatEnvironmentLabel(envMode, envState)}
+                {formatEnvironmentLabel(envMode, envState, t)}
               </p>
             </div>
             <div className="space-y-1">
-              <p className="text-ui leading-snug text-muted-foreground">{i18n._("Branch")}</p>
-              <p className="font-medium text-foreground">{branch ?? i18n._("Unknown")}</p>
+              <p className="text-ui leading-snug text-muted-foreground">
+                {t("common:sessionStatus_branch")}
+              </p>
+              <p className="font-medium text-foreground">{branch ?? t("common:common_unknown")}</p>
             </div>
           </div>
 
@@ -130,15 +159,16 @@ export function ComposerSlashStatusDialog(props: {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-ui leading-snug text-muted-foreground">
-                  {i18n._("Context Window")}
+                  {t("chat:contextWindow")}
                 </p>
                 <p className="text-ui leading-snug text-muted-foreground">
-                  {i18n._("Latest usage reported by the active thread.")}
+                  {t("chat:latestUsageReportedByTheActiveThread")}
                 </p>
                 {pendingContextWindowLabel ? (
                   <p className="text-ui leading-snug text-muted-foreground">
-                    Current session: {activeContextWindowLabel ?? i18n._("Unknown")}. Next turn:{" "}
-                    {pendingContextWindowLabel}.
+                    {t("chat:sessionStatus_currentSessionLabel")}{" "}
+                    {activeContextWindowLabel ?? t("common:common_unknown")}
+                    {t("chat:nextTurn")} {pendingContextWindowLabel}.
                   </p>
                 ) : null}
               </div>
@@ -155,19 +185,19 @@ export function ComposerSlashStatusDialog(props: {
               {contextWindow ? (
                 <>
                   <div>
-                    <p className="text-muted-foreground">{i18n._("Used")}</p>
+                    <p className="text-muted-foreground">{t("chat:sessionStatus_used")}</p>
                     <p className="font-medium text-foreground">
                       {formatContextWindowTokens(contextWindow.usedTokens)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">{i18n._("Remaining")}</p>
+                    <p className="text-muted-foreground">{t("chat:sessionStatus_remaining")}</p>
                     <p className="font-medium text-foreground">
                       {formatContextWindowTokens(contextWindow.remainingTokens)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">{i18n._("Window")}</p>
+                    <p className="text-muted-foreground">{t("common:sessionStatus_window")}</p>
                     <p className="font-medium text-foreground">
                       {formatContextWindowTokens(contextWindow.maxTokens)}
                     </p>
@@ -175,37 +205,37 @@ export function ComposerSlashStatusDialog(props: {
                 </>
               ) : (
                 <div>
-                  <p className="text-muted-foreground">{i18n._("Context usage")}</p>
-                  <p className="font-medium text-foreground">{i18n._("Not reported yet")}</p>
+                  <p className="text-muted-foreground">{t("chat:contextUsage")}</p>
+                  <p className="font-medium text-foreground">{t("chat:notReportedYet")}</p>
                 </div>
               )}
               <div>
-                <p className="text-muted-foreground">{i18n._("Cost")}</p>
+                <p className="text-muted-foreground">{t("chat:sessionStatus_cost")}</p>
                 <p className="font-medium text-foreground">
                   {cumulativeCostUsd !== null
                     ? formatCostUsd(cumulativeCostUsd)
-                    : i18n._("Not available")}
+                    : t("chat:notAvailable")}
                 </p>
               </div>
             </div>
           </div>
 
           <div className="space-y-2 rounded-lg border border-border/60 bg-card p-4">
-            <p className="text-ui leading-snug text-muted-foreground">{i18n._("Rate Limits")}</p>
+            <p className="text-ui leading-snug text-muted-foreground">{t("chat:rateLimits")}</p>
             {rateLimitStatus ? (
               <p className="text-ui leading-snug text-foreground">
-                {formatRateLimitMessage(rateLimitStatus)}
+                {formatRateLimitMessage(rateLimitStatus, t, formatLocale)}
               </p>
             ) : (
               <p className="text-ui leading-snug text-muted-foreground">
-                {i18n._("No active rate-limit warning for this thread.")}
+                {t("chat:noActiveRateLimitWarningForThisThread")}
               </p>
             )}
           </div>
         </DialogPanel>
         <DialogFooter variant="bare">
           <Button type="button" size="sm" onClick={() => onOpenChange(false)}>
-            {i18n._("Close")}
+            {t("common:app_close")}
           </Button>
         </DialogFooter>
       </DialogPopup>

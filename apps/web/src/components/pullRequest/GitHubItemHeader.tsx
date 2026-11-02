@@ -20,7 +20,7 @@ import { ComposerPickerMenuPopup } from "~/components/chat/ComposerPickerMenuPop
 import { IconButton } from "~/components/ui/icon-button";
 import { Menu, MenuTrigger } from "~/components/ui/menu";
 import { ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon } from "~/lib/icons";
-import { formatRelativeTime } from "~/lib/relativeTime";
+import { formatRelativeTimeAgo } from "~/lib/relativeTime";
 import { cn } from "~/lib/utils";
 import { GitHubLabelChips } from "./GitHubLabelChips";
 import { PullRequestActorLabel } from "./PullRequestActorLabel";
@@ -31,11 +31,12 @@ import {
   pullRequestStateLabel,
 } from "./PullRequestStateGlyph";
 import {
-  localizeGitHubStateLabel,
+  ISSUE_STATE_SHORT_LABEL_KEYS,
   resolveIssueStatePresentation,
   resolvePrStatePresentation,
 } from "./pullRequestStatePresentation";
 import { PR_FINE_TEXT_CLASS_NAME, PR_META_TEXT_CLASS_NAME } from "./pullRequestText";
+import { useTranslation } from "~/i18n";
 
 type HeaderFields =
   | "number"
@@ -58,11 +59,6 @@ export type GitHubItemHeaderItem =
       HeaderFields | "state" | "stateReason" | "assignees"
     >);
 
-function relativeTimeAgo(i18n: I18n, iso: string): string {
-  if (Date.now() - new Date(iso).getTime() < 60_000) return i18n._("just now");
-  return i18n._("{relative} ago", { relative: formatRelativeTime(iso) });
-}
-
 /** Returns a narrow layout from the detail to the list; leads the detail page's top bar. */
 export function GitHubItemBackButton({
   onBack,
@@ -71,12 +67,13 @@ export function GitHubItemBackButton({
   onBack: () => void;
   className?: string;
 }) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   return (
     <IconButton
       variant="chrome"
-      label={i18n._("Back to code review")}
-      tooltip={i18n._("Back")}
+      label={t("git:backToCodeReview")}
+      tooltip={t("common:app_back")}
       className={cn("shrink-0", className)}
       onClick={onBack}
     >
@@ -95,7 +92,8 @@ export function GitHubItemHeader({
   stateMenu?: ReactNode;
   className?: string;
 }) {
-  const { i18n } = useLingui();
+  const { t, formatLocale } = useTranslation();
+
   const state =
     item.kind === "pullRequest"
       ? {
@@ -113,7 +111,7 @@ export function GitHubItemHeader({
           ),
         }
       : {
-          word: localizeGitHubStateLabel(resolveIssueStatePresentation(item).shortLabel),
+          word: t(ISSUE_STATE_SHORT_LABEL_KEYS[resolveIssueStatePresentation(item).shortLabel]),
           colorClass: resolveIssueStatePresentation(item).colorClass,
           glyph: (
             <IssueStateGlyph
@@ -173,8 +171,8 @@ export function GitHubItemHeader({
         className={cn(PR_META_TEXT_CLASS_NAME, "mt-3 flex-wrap text-muted-foreground")}
       >
         <PullRequestActorLabel actor={item.author} className="font-medium text-foreground" />
-        <span title={new Date(item.createdAt).toLocaleString()}>
-          {relativeTimeAgo(i18n, item.createdAt)}
+        <span title={new Date(item.createdAt).toLocaleString(formatLocale)}>
+          {formatRelativeTimeAgo(item.createdAt, undefined, formatLocale, t)}
         </span>
         {item.kind === "pullRequest" ? (
           <span className="flex min-w-0 items-center gap-1.5">

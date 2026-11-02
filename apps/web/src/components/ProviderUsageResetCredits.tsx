@@ -98,6 +98,8 @@ export function ProviderUsageResetCredits({
   resetCredits: ServerCodexResetCredits;
   surface?: "settings" | "popover";
 }) {
+  const { t } = useTranslation();
+
   const { accountId, availableCount, canUse, credits } = resetCredits;
   const queryClient = useQueryClient();
   const locked = useRef(false);
@@ -201,8 +203,8 @@ export function ProviderUsageResetCredits({
                 <div className={rowClass}>
                   <span className="font-medium text-foreground">
                     {credit
-                      ? i18n._("Reset {number}", { number: index + 1 })
-                      : i18n._("Next available reset")}
+                      ? t("common:reset", { value0: index + 1 })
+                      : t("common:nextAvailableReset")}
                   </span>
                   <Button
                     size="xs"
@@ -217,10 +219,10 @@ export function ProviderUsageResetCredits({
                     onClick={() => requestReset(credit?.id, isRetry)}
                   >
                     {busy
-                      ? i18n._("Applying…")
+                      ? t("common:applying")
                       : isRetry
-                        ? i18n._("Retry reset")
-                        : i18n._("Use reset")}
+                        ? t("common:retryReset")
+                        : t("common:useReset")}
                   </Button>
                 </div>
                 {credit ? (

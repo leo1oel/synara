@@ -4,10 +4,13 @@
 
 import { localizeProviderStatusMessage } from "./providerStatusMessages";
 import type { I18n } from "@lingui/core";
+import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
+import { t } from "~/i18n";
 import {
   deriveVisibleRateLimitRows,
   formatRateLimitRemainingPercent,
   formatRateLimitResetCountdown,
+  rateLimitWindowDisplayLabel,
   type ProviderRateLimit,
   type VisibleRateLimitRow,
 } from "~/lib/rateLimits";
@@ -98,7 +101,7 @@ export function providerUsageProgressTrackProps(
   row: ProviderUsageDisplayRow,
 ): ProviderUsageProgressTrackProps {
   return {
-    label: `${row.label} remaining`,
+    label: t("settings:usageRemaining", { window: rateLimitWindowDisplayLabel(row.label) }),
     remainingPercent: row.remainingPercent,
     markerPercent: row.markerPercent,
     fillClassName: providerUsageToneClassName(row.remainingTone),
@@ -237,13 +240,19 @@ export function localizeProviderUsageNotice(i18n: I18n, notice: string): string 
   );
 }
 
-export function deriveProviderUsageDisplayRow(row: VisibleRateLimitRow): ProviderUsageDisplayRow {
+export function deriveProviderUsageDisplayRow(
+  row: VisibleRateLimitRow,
+  translate: typeof t = t,
+): ProviderUsageDisplayRow {
   const remainingPercent = clampPercent(row.remainingPercent);
-  const pace = deriveUsagePace({
-    remainingPercent,
-    resetsAt: row.resetsAt,
-    windowDurationMins: windowDurationMinsForRow(row),
-  });
+  const pace = deriveUsagePace(
+    {
+      remainingPercent,
+      resetsAt: row.resetsAt,
+      windowDurationMins: windowDurationMinsForRow(row),
+    },
+    translate,
+  );
   const remainingLabel = formatRateLimitRemainingPercent(remainingPercent);
   const usageRemainingTone = remainingTone(remainingPercent);
   const usagePaceTone = pace ? paceTone(pace.status) : usageRemainingTone;
@@ -252,8 +261,8 @@ export function deriveProviderUsageDisplayRow(row: VisibleRateLimitRow): Provide
     ...row,
     remainingPercent,
     remainingLabel,
-    leftText: `${remainingLabel} left`,
-    resetText: row.resetsAt ? formatRateLimitResetCountdown(row.resetsAt) : null,
+    leftText: translate("settings:usageLeft", { amount: remainingLabel }),
+    resetText: row.resetsAt ? formatRateLimitResetCountdown(row.resetsAt, translate) : null,
     pace,
     markerPercent: pace ? clampPercent(pace.expectedRemainingPercent) : null,
     remainingTone: usageRemainingTone,
@@ -263,8 +272,11 @@ export function deriveProviderUsageDisplayRow(row: VisibleRateLimitRow): Provide
 
 export function deriveProviderUsageDisplayRows(
   rateLimits: ReadonlyArray<ProviderRateLimit>,
+  translate: typeof t = t,
 ): ProviderUsageDisplayRow[] {
-  return deriveVisibleRateLimitRows(rateLimits).map(deriveProviderUsageDisplayRow);
+  return deriveVisibleRateLimitRows(rateLimits).map((row) =>
+    deriveProviderUsageDisplayRow(row, translate),
+  );
 }
 
 export function selectPrimaryProviderUsageDisplayRow(
@@ -276,4 +288,16 @@ export function selectPrimaryProviderUsageDisplayRow(
     }
     return selected;
   }, null);
+}
+
+/** App-owned sign-in guidance; CLI commands come verbatim from provider metadata. */
+export function localizedProviderUsageNeedsAuthDetail(
+  provider: string | null | undefined,
+  translate: typeof t = t,
+): string {
+  const command = PROVIDER_DESCRIPTORS.find((descriptor) => descriptor.kind === provider)?.usage
+    ?.signInCommand;
+  return command
+    ? translate("settings:usageSignInCommand", { command })
+    : translate("settings:usageSignInProviderCli");
 }

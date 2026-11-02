@@ -17,6 +17,7 @@ import { Input } from "~/components/ui/input";
 import { Switch } from "~/components/ui/switch";
 import { PlusIcon, XIcon } from "~/lib/icons";
 import { DebouncedSettingTextInput } from "./DebouncedSettingTextInput";
+import { useTranslation } from "~/i18n";
 
 const isEnvironmentVariableName = Schema.is(ProviderInstanceEnvironmentVariableName);
 
@@ -39,6 +40,8 @@ function EnvVariableNameInput({
   readonly title?: string;
   readonly onCommit: (nextName: string) => void;
 }) {
+  const { t } = useTranslation();
+
   const [draft, setDraft] = useState(name);
   return (
     <Input
@@ -59,7 +62,7 @@ function EnvVariableNameInput({
           setDraft(name);
         }
       }}
-      placeholder="VAR_NAME"
+      placeholder={t("settings:vARNAME")}
       spellCheck={false}
     />
   );
@@ -74,6 +77,8 @@ export function ProviderInstanceEnvironmentEditor({
   readonly environment: ProviderInstanceEnvironment | undefined;
   readonly onChange: (environment: ProviderInstanceEnvironment) => void;
 }) {
+  const { t } = useTranslation();
+
   const entries = environment ?? [];
   const [draftName, setDraftName] = useState("");
   const [draftValue, setDraftValue] = useState("");
@@ -107,12 +112,10 @@ export function ProviderInstanceEnvironmentEditor({
   return (
     <div className="space-y-2 sm:col-span-2">
       <span className="block text-ui-sm font-medium text-foreground">
-        {i18n._("Environment variables")}
+        {t("settings:environmentVariables")}
       </span>
       <span className="block text-ui-sm text-muted-foreground">
-        {i18n._(
-          "Applied only to this instance's processes. Mark credentials as secret to store them redacted on the server.",
-        )}
+        {t("settings:appliedOnlyToThisInstanceSProcessesMarkCredentials")}
       </span>
 
       {entries.map((entry, index) => {
@@ -140,7 +143,7 @@ export function ProviderInstanceEnvironmentEditor({
                 replaceEntry(index, { ...entry, name: trimmed });
               }}
               {...(redacted
-                ? { title: i18n._("Replace or remove the saved secret before renaming it.") }
+                ? { title: t("settings:replaceOrRemoveTheSavedSecretBeforeRenamingIt") }
                 : {})}
             />
             <DebouncedSettingTextInput
@@ -158,21 +161,21 @@ export function ProviderInstanceEnvironmentEditor({
                 const { valueRedacted: _valueRedacted, ...rest } = entry;
                 replaceEntry(index, { ...rest, value: nextValue });
               }}
-              placeholder={redacted ? i18n._("Secret saved — type to replace") : "value"}
+              placeholder={redacted ? t("settings:secretSavedTypeToReplace") : t("chat:value")}
               spellCheck={false}
             />
             <Switch
               checked={entry.sensitive === true}
               disabled={redacted}
               onCheckedChange={(checked) => replaceEntry(index, { ...entry, sensitive: checked })}
-              aria-label={`Store ${entry.name} as a secret`}
+              aria-label={t("settings:storeAsASecret", { value0: entry.name })}
             />
             <Button
               type="button"
               size="xs"
               variant="ghost"
               onClick={() => replaceEntry(index, null)}
-              aria-label={`Remove ${entry.name}`}
+              aria-label={t("workspace:remove", { value0: entry.name })}
             >
               <XIcon className="size-3.5" />
             </Button>
@@ -188,7 +191,7 @@ export function ProviderInstanceEnvironmentEditor({
           className="w-2/5 font-mono"
           value={draftName}
           onChange={(event) => setDraftName(event.target.value)}
-          placeholder="ANTHROPIC_API_KEY"
+          placeholder={t("settings:aNTHROPICAPIKEY")}
           spellCheck={false}
         />
         <Input
@@ -199,13 +202,13 @@ export function ProviderInstanceEnvironmentEditor({
           type={draftSensitive ? "password" : "text"}
           value={draftValue}
           onChange={(event) => setDraftValue(event.target.value)}
-          placeholder="value"
+          placeholder={t("chat:value")}
           spellCheck={false}
         />
         <Switch
           checked={draftSensitive}
           onCheckedChange={setDraftSensitive}
-          aria-label={i18n._("Store new variable as a secret")}
+          aria-label={t("settings:storeNewVariableAsASecret")}
         />
         <Button
           type="button"
@@ -215,7 +218,7 @@ export function ProviderInstanceEnvironmentEditor({
           onClick={addDraft}
         >
           <PlusIcon className="size-3.5" />
-          {i18n._("Add")}
+          {t("workspace:models_add")}
         </Button>
       </div>
     </div>

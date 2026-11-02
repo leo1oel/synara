@@ -4,11 +4,14 @@ import { i18n } from "~/i18n";
 import { useTimelineSynchronizedAnimations } from "~/lib/animationTimelineSync";
 import { Loader2Icon, LoaderIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
+import { useTranslation } from "~/i18n";
 
 function Spinner({ className, ...props }: React.ComponentProps<typeof Loader2Icon>) {
+  const { t } = useTranslation();
+
   return (
     <Loader2Icon
-      aria-label={i18n._("Loading")}
+      aria-label={t("chat:spinner_loading")}
       className={cn("animate-spin", className)}
       role="status"
       {...props}

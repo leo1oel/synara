@@ -26,6 +26,7 @@ import { ensureNativeApi } from "~/nativeApi";
 import { PullRequestActorLabel } from "./PullRequestActorLabel";
 import { PullRequestMarkdown } from "./PullRequestMarkdown";
 import { parseFindingComment, type PullRequestCommentSeverity } from "./pullRequestComment.logic";
+import { useTranslation } from "~/i18n";
 
 function severityToneClassName(severity: PullRequestCommentSeverity): string {
   if (severity === "High") return "text-destructive";
@@ -52,7 +53,8 @@ export function PullRequestCommentCard({
    *  dozens of markdown trees. */
   defaultOpen?: boolean;
 }) {
-  const { i18n } = useLingui();
+  const { t, formatLocale } = useTranslation();
+
   const defaultOpen = defaultOpenProp ?? true;
   const [open, setOpen] = useState(defaultOpen);
   const finding = parseFindingComment(comment.body);
@@ -72,7 +74,7 @@ export function PullRequestCommentCard({
         <span
           className={cn(PR_FINE_TEXT_CLASS_NAME, "shrink-0 tabular-nums text-muted-foreground")}
         >
-          {formatRelativeTime(comment.createdAt)}
+          {formatRelativeTime(comment.createdAt, undefined, formatLocale)}
         </span>
         <DisclosureChevron open={open} />
       </CollapsibleTrigger>
@@ -118,7 +120,7 @@ export function PullRequestCommentCard({
                 "rounded px-1.5 py-0.5 font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground",
               )}
             >
-              {i18n._("Reply")}
+              {t("git:reply")}
             </button>
           </div>
         </div>

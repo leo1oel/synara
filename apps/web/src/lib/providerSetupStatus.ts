@@ -3,25 +3,28 @@ import { localizeProviderUsageNotice } from "~/lib/providerUsageDisplay";
 import type { ServerProviderStatus, ServerProviderUsageSnapshot } from "@synara/contracts";
 
 /** Installation/auth health is independent of permission to run background work. */
-export function providerSetupStatusLabel(input: {
-  readonly status: ServerProviderStatus | undefined;
-  readonly reconciled: boolean;
-  readonly disabled: boolean;
-}): string {
-  if (input.disabled) return i18n._("Disabled · enable to check setup");
-  if (!input.reconciled || !input.status) return i18n._("Checking setup");
+export function providerSetupStatusLabel(
+  input: {
+    readonly status: ServerProviderStatus | undefined;
+    readonly reconciled: boolean;
+    readonly disabled: boolean;
+  },
+  translate: typeof t = t,
+): string {
+  if (input.disabled) return translate("settings:accountDisabledSetup");
+  if (!input.reconciled || !input.status) return translate("settings:checkingSetup");
   const status = input.status;
   // Missing CLIs and failed probes both report available=false. The server's
   // message supplies the specific diagnosis alongside this label in Settings.
-  if (!status.available) return i18n._("Unavailable");
-  if (status.authStatus === "unauthenticated") return i18n._("Needs sign-in");
-  if (status.status !== "ready") return i18n._("Needs attention");
+  if (!status.available) return translate("chat:providerModelPicker_unavailable");
+  if (status.authStatus === "unauthenticated") return translate("common:needsSignIn");
+  if (status.status !== "ready") return translate("common:triageOutcome_needsAttention");
   if (status.authStatus === "unknown") {
     return (status.driver ?? status.provider) === "opencode"
-      ? i18n._("Installed · authentication managed by OpenCode")
-      : i18n._("Installed · sign-in not verified");
+      ? translate("settings:accountInstalledOpenCode")
+      : translate("settings:accountInstalledUnverified");
   }
-  return i18n._("Connected");
+  return translate("chat:connected");
 }
 
 export type ProviderAccountStatusTone = "ready" | "warning" | "error" | "idle";
@@ -35,14 +38,17 @@ export interface ProviderAccountStatusSummary {
 }
 
 // One title per account row. The local switch wins over a stale status: an account that
-// was just turned off reads "Disabled" before the server reports it.
-export function providerAccountStatusSummary(input: {
-  readonly status: ServerProviderStatus | undefined;
-  readonly enabled: boolean;
-  readonly usageSnapshot?: ServerProviderUsageSnapshot | undefined;
-}): ProviderAccountStatusSummary {
+// was just turned off reads translate("chat:disabled") before the server reports it.
+export function providerAccountStatusSummary(
+  input: {
+    readonly status: ServerProviderStatus | undefined;
+    readonly enabled: boolean;
+    readonly usageSnapshot?: ServerProviderUsageSnapshot | undefined;
+  },
+  translate: typeof t = t,
+): ProviderAccountStatusSummary {
   if (!input.enabled) {
-    return { tone: "idle", headline: i18n._("Disabled"), detail: null };
+    return { tone: "idle", headline: translate("chat:disabled"), detail: null };
   }
   const status = input.status;
   if (!status) {
@@ -54,16 +60,16 @@ export function providerAccountStatusSummary(input: {
   }
   const detail = status.message?.trim() || null;
   if (!status.available) {
-    return { tone: "error", headline: i18n._("Unavailable"), detail };
+    return { tone: "error", headline: translate("chat:providerModelPicker_unavailable"), detail };
   }
   if (status.authStatus === "unauthenticated") {
-    return { tone: "warning", headline: i18n._("Not authenticated"), detail };
+    return { tone: "warning", headline: translate("settings:accountNotAuthenticated"), detail };
   }
   if (status.status === "error") {
-    return { tone: "error", headline: i18n._("Unavailable"), detail };
+    return { tone: "error", headline: translate("chat:providerModelPicker_unavailable"), detail };
   }
   if (status.status === "warning") {
-    return { tone: "warning", headline: i18n._("Needs attention"), detail };
+    return { tone: "warning", headline: translate("common:triageOutcome_needsAttention"), detail };
   }
   if (status.authStatus === "authenticated") {
     const claude = (status.driver ?? status.provider) === "claudeAgent";
@@ -78,7 +84,9 @@ export function providerAccountStatusSummary(input: {
       };
     }
     const authLabel = status.authLabel?.trim() || status.authType?.trim();
-    const headline = claude ? i18n._("Signed in locally") : i18n._("Authenticated");
+    const headline = claude
+      ? translate("settings:accountSignedInLocally")
+      : translate("settings:accountAuthenticated");
     return {
       tone: "ready",
       headline: authLabel
@@ -87,5 +95,5 @@ export function providerAccountStatusSummary(input: {
       detail,
     };
   }
-  return { tone: "ready", headline: i18n._("Available"), detail };
+  return { tone: "ready", headline: translate("chat:available"), detail };
 }

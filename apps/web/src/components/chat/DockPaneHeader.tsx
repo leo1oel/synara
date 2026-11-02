@@ -17,6 +17,7 @@ import {
   CHAT_SURFACE_HEADER_TITLE_CLASS_NAME,
   DOCK_HEADER_ICON_BUTTON_CLASS,
 } from "./chatHeaderControls";
+import { useTranslation } from "~/i18n";
 
 export function DockPaneHeader(props: {
   title: ReactNode;
@@ -27,6 +28,8 @@ export function DockPaneHeader(props: {
   /** Embedded in a shell that already owns the header height, padding, and divider. */
   variant?: "standalone" | "embedded";
 }) {
+  const { t } = useTranslation();
+
   return (
     <header
       className={cn(
@@ -48,7 +51,7 @@ export function DockPaneHeader(props: {
           <IconButton
             size="icon-xs"
             variant="chrome"
-            label={props.closeLabel ?? "Close panel"}
+            label={props.closeLabel ?? t("chat:closePanel")}
             className={DOCK_HEADER_ICON_BUTTON_CLASS}
             onClick={props.onClose}
           >

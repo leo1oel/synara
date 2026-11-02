@@ -1,5 +1,5 @@
+import { useTranslation } from "~/i18n";
 import { ProviderInteractionMode } from "@synara/contracts";
-import { useLingui } from "@lingui/react";
 import { type ReactNode } from "react";
 import { GoTasklist } from "react-icons/go";
 import { BugIcon, ChevronDownIcon, ComposerSendArrowIcon, LayoutSidebarIcon } from "~/lib/icons";
@@ -45,6 +45,10 @@ interface ChatComposerFooterProps {
   } | null;
   submission: {
     phase: SessionPhase;
+    /** An idle quarantined runtime can still need an explicit Stop before recovery. */
+    recoveryStopAvailable?: boolean;
+    /** An armed host-owned wait can be cancelled without a running provider turn. */
+    usageLimitStopAvailable?: boolean;
     busy: boolean;
     connecting: boolean;
     expired: boolean;
@@ -73,7 +77,8 @@ export function ChatComposerFooter({
   pendingInput,
   submission,
 }: ChatComposerFooterProps) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   const row = (layoutProp ?? "block") === "row";
   const voiceActive = voice.recording || voice.transcribing;
   return (
@@ -113,11 +118,9 @@ export function ChatComposerFooter({
                 size="sm"
                 type="button"
                 onClick={resetInteractionMode}
-                title={
-                  interactionMode === "plan"
-                    ? i18n._("Plan mode — click to return to normal build mode")
-                    : i18n._("Debug mode — click to return to normal build mode")
-                }
+                title={t("chat:modeClickToReturnToNormalBuildMode", {
+                  value0: interactionMode === "plan" ? t("workspace:plan_badge") : t("chat:debug"),
+                })}
               >
                 {interactionMode === "plan" ? (
                   <GoTasklist className="size-3.5" />
@@ -125,7 +128,7 @@ export function ChatComposerFooter({
                   <BugIcon className="size-3.5" />
                 )}
                 <span className={row ? "sr-only" : "sr-only sm:not-sr-only"}>
-                  {interactionMode === "plan" ? i18n._("Plan") : i18n._("Debug")}
+                  {interactionMode === "plan" ? t("workspace:plan_badge") : t("chat:debug")}
                 </span>
               </Button>
             ) : null}
@@ -196,12 +199,15 @@ export function ChatComposerFooter({
             }
           >
             {pendingInput.responding
-              ? i18n._("Submitting...")
+              ? t("chat:submitting2")
               : pendingInput.progress.isLastQuestion
-                ? i18n._("Submit answers")
-                : i18n._("Next question")}
+                ? t("chat:submitAnswers")
+                : t("chat:composerPendingUserInputPanel_nextQuestion")}
           </Button>
-        ) : submission.phase === "running" || submission.connecting ? (
+        ) : submission.phase === "running" ||
+          submission.connecting ||
+          submission.recoveryStopAvailable ||
+          submission.usageLimitStopAvailable ? (
           <>
             {/* Dictating a follow-up is allowed mid-turn: the transcript lands in the
                 composer and sending it follows the queue/steer behavior. */}
@@ -230,8 +236,18 @@ export function ChatComposerFooter({
                 size="icon-xs"
                 className={COMPOSER_ACTION_CIRCLE_CLASS_NAME}
                 onClick={submission.onInterrupt}
-                aria-label={i18n._("Stop generation")}
-                title={i18n._("Stop the current response. On Mac, press Ctrl+C to interrupt.")}
+                aria-label={
+                  submission.usageLimitStopAvailable
+                    ? t("chat:cancelUsageLimitResume")
+                    : t("chat:stopGeneration_ariaLabel")
+                }
+                title={
+                  submission.usageLimitStopAvailable
+                    ? t("chat:cancelUsageLimitResume")
+                    : submission.recoveryStopAvailable
+                      ? t("chat:stopRuntimeBeforeUnblock")
+                      : t("chat:stopGeneration_title")
+                }
               >
                 <span aria-hidden="true" className="block size-2 rounded-[1px] bg-current" />
               </Button>
@@ -251,7 +267,9 @@ export function ChatComposerFooter({
                   submission.hasPendingCacheReview
                 }
               >
-                {submission.connecting || submission.busy ? i18n._("Sending...") : i18n._("Refine")}
+                {submission.connecting || submission.busy
+                  ? t("chat:composer_sending")
+                  : t("chat:composer_refine")}
               </Button>
             ) : (
               <div className="flex items-center">
@@ -267,8 +285,8 @@ export function ChatComposerFooter({
                   }
                 >
                   {submission.connecting || submission.busy
-                    ? i18n._("Sending...")
-                    : i18n._("Implement")}
+                    ? t("chat:composer_sending")
+                    : t("chat:composer_implement")}
                 </Button>
                 <Menu>
                   <MenuTrigger
@@ -277,7 +295,7 @@ export function ChatComposerFooter({
                         size="sm"
                         variant="default"
                         className="h-9 rounded-l-none rounded-r-full border-l-white/12 px-2 sm:h-8"
-                        aria-label={i18n._("Implementation actions")}
+                        aria-label={t("chat:composer_implementationActions")}
                         disabled={
                           submission.busy ||
                           submission.connecting ||
@@ -299,7 +317,7 @@ export function ChatComposerFooter({
                       }
                       onClick={() => void submission.onImplementInNewThread()}
                     >
-                      {i18n._("Implement in a new thread")}
+                      {t("chat:composer_implementNewThread")}
                     </MenuItem>
                   </ComposerPickerMenuPopup>
                 </Menu>
@@ -334,20 +352,20 @@ export function ChatComposerFooter({
                 }
                 aria-label={
                   submission.connecting
-                    ? i18n._("Connecting")
+                    ? t("chat:composer_connecting")
                     : voice.transcribing
-                      ? i18n._("Transcribing voice note")
+                      ? t("chat:composer_transcribingVoice")
                       : submission.preparingImages
-                        ? i18n._("Optimizing image")
+                        ? t("chat:optimizingImage")
                         : submission.preparingWorktree
-                          ? i18n._("Preparing worktree")
+                          ? t("workspace:composer_preparingWorktree")
                           : submission.busy
-                            ? i18n._("Sending")
-                            : i18n._("Send message")
+                            ? t("chat:sending")
+                            : t("chat:composer_sendMessage")
                 }
                 title={
                   submission.hasPendingCacheReview
-                    ? i18n._("Choose how to resume the held message above")
+                    ? t("chat:chooseHowToResumeTheHeldMessageAbove")
                     : undefined
                 }
               >

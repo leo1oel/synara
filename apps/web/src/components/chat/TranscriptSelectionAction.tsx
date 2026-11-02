@@ -52,13 +52,15 @@ function TranscriptSelectionToolbarButton({
 }
 
 export function TranscriptSelectionAction(props: TranscriptSelectionActionProps) {
+  const { t } = useTranslation();
+
   return (
     <div
       data-transcript-selection-action="true"
       className="pointer-events-none fixed z-50"
       style={{ left: props.left, top: props.top }}
       role="toolbar"
-      aria-label={i18n._("Selection actions")}
+      aria-label={t("chat:transcriptSelection_selectionActions")}
     >
       <div
         className={cn(
@@ -67,20 +69,20 @@ export function TranscriptSelectionAction(props: TranscriptSelectionActionProps)
         )}
       >
         <TranscriptSelectionToolbarButton
-          label={i18n._("Add to Chat")}
+          label={t("chat:addToChat")}
           onClick={props.onAddToChat}
           disabled={props.disabled}
         />
         {props.onAddToSide ? (
           <TranscriptSelectionToolbarButton
-            label={i18n._("Add to Side")}
+            label={t("chat:addToSide")}
             onClick={props.onAddToSide}
             disabled={props.disabled || props.sideDisabled}
           />
         ) : null}
         {props.onAddToNewChat ? (
           <TranscriptSelectionToolbarButton
-            label={i18n._("Add to new Chat")}
+            label={t("chat:addToNewChat")}
             onClick={props.onAddToNewChat}
             disabled={props.disabled}
           />

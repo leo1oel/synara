@@ -49,15 +49,14 @@ import {
   githubIssueDetailQueryOptions,
 } from "~/lib/githubInboxQueryOptions";
 import { pullRequestQueryErrorState } from "~/lib/pullRequestReactQuery";
+import { useTranslation } from "~/i18n";
 
 type IssueTab = "summary" | "timeline";
 
-function issueTabs(i18n: I18n): ReadonlyArray<{ value: IssueTab; label: string }> {
-  return [
-    { value: "summary", label: i18n._("Summary") },
-    { value: "timeline", label: i18n._("Timeline") },
-  ];
-}
+const ISSUE_TABS: ReadonlyArray<{ value: IssueTab; labelKey: string }> = [
+  { value: "summary", labelKey: "chat:timeline_summaryLabel" },
+  { value: "timeline", labelKey: "git:timeline" },
+];
 
 export function GitHubIssueDetailPanel({
   input,
@@ -75,7 +74,8 @@ export function GitHubIssueDetailPanel({
   /** Pin, side chat threads, and the floating composer, from the code review page. */
   pageHost?: GitHubItemPageHost;
 }) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   const pollingEnabled = pollingEnabledProp ?? true;
   // The page remounts the panel per issue, so the tab starts on Summary for each one.
   const [tab, setTab] = useState<IssueTab>("summary");
@@ -100,7 +100,7 @@ export function GitHubIssueDetailPanel({
       action: "send",
       projectId,
       card: (environment) => createGitHubItemContextDraft(source, environment),
-      errorTitle: i18n._("Could not send the issue to an agent"),
+      errorTitle: t("git:couldNotSendTheIssueToAnAgent"),
     });
   };
 
@@ -125,8 +125,8 @@ export function GitHubIssueDetailPanel({
       onBack={onBack}
       tabs={
         <GitHubItemTabs
-          label={i18n._("Issue detail tabs")}
-          tabs={issueTabs(i18n)}
+          label={t("git:issueDetailTabs")}
+          tabs={ISSUE_TABS.map((tab) => ({ value: tab.value, label: t(tab.labelKey) }))}
           value={tab}
           onChange={setTab}
         />
@@ -155,13 +155,13 @@ export function GitHubIssueDetailPanel({
         loaded: detail !== undefined,
       }}
       notFound={{
-        title: i18n._("Issue not found"),
-        description: i18n._("The selected issue could not be loaded."),
+        title: t("git:issueNotFound"),
+        description: t("git:theSelectedIssueCouldNotBeLoaded"),
       }}
       banners={
         backgroundError ? (
           <PullRequestWarningNote shape="banner" role="status">
-            {i18n._("Could not refresh the issue. Showing saved data.")}
+            {t("git:couldNotRefreshTheIssueShowingSavedData")}
           </PullRequestWarningNote>
         ) : null
       }

@@ -14,6 +14,7 @@ import { Button } from "../ui/button";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
 import { Textarea } from "../ui/textarea";
 import { UserInputQuestionForm } from "./UserInputQuestionForm";
+import { useTranslation } from "~/i18n";
 
 export function AsyncUserInputCard({
   messageId,
@@ -24,7 +25,8 @@ export function AsyncUserInputCard({
   input: AsyncUserInput;
   onRespond?: ((messageId: MessageId, answers: readonly string[]) => Promise<void>) | undefined;
 }) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   // Native questions have no IDs. Their positions are stable within this message.
   const questions = useMemo<ReadonlyArray<UserInputQuestion>>(
     () =>
@@ -87,9 +89,7 @@ export function AsyncUserInputCard({
       setSubmission({ answers: response, responseSequence: input.responseSequence ?? 0 });
     } catch (cause) {
       setError(
-        cause instanceof Error
-          ? cause.message
-          : i18n._("The answer could not be submitted. Try again."),
+        cause instanceof Error ? cause.message : t("chat:theAnswerCouldNotBeSubmittedTryAgain"),
       );
     } finally {
       inFlight.current = false;
@@ -107,7 +107,7 @@ export function AsyncUserInputCard({
         {answered && (
           <>
             <CheckIcon className="size-3" aria-hidden="true" />
-            <span>{i18n._("Answered")}</span>
+            <span>{t("chat:answered")}</span>
           </>
         )}
       </CollapsibleTrigger>
@@ -126,7 +126,7 @@ export function AsyncUserInputCard({
             </dl>
           ) : activeQuestion ? (
             <form
-              aria-label={i18n._("Questions from Codex")}
+              aria-label={t("chat:questionsFromCodex")}
               onSubmit={(event) => {
                 event.preventDefault();
                 void advance();
@@ -160,8 +160,8 @@ export function AsyncUserInputCard({
                     rows={2}
                     placeholder={
                       activeQuestion.options.length > 0
-                        ? i18n._("Or type your own answer…")
-                        : i18n._("Type your answer…")
+                        ? t("chat:orTypeYourOwnAnswer")
+                        : t("chat:typeYourAnswer")
                     }
                     onChange={(event) => {
                       const draft = setPendingUserInputCustomAnswer(
@@ -185,7 +185,7 @@ export function AsyncUserInputCard({
                   )}
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-ui leading-snug text-muted-foreground">
-                      {i18n._("Codex can keep working")}
+                      {t("chat:codexCanKeepWorking")}
                     </span>
                     <Button
                       type="submit"
@@ -197,10 +197,10 @@ export function AsyncUserInputCard({
                       }
                     >
                       {submitting
-                        ? i18n._("Submitting…")
+                        ? t("chat:submitting")
                         : progress.isLastQuestion
-                          ? i18n._("Send answer")
-                          : i18n._("Next")}
+                          ? t("chat:sendAnswer")
+                          : t("onboarding:common_next")}
                     </Button>
                   </div>
                 </div>

@@ -13,6 +13,7 @@ import { isSynaraEmbedMode } from "../../embedMode";
 import { ProviderIcon } from "../ProviderIcon";
 import { SynaraLogo } from "../SynaraLogo";
 import { Button } from "../ui/button";
+import { useTranslation } from "~/i18n";
 
 function threadMeta(thread: WorkLogSynaraThreadCreation["threads"][number]): string {
   const model = formatModelDisplayName(thread.model) ?? thread.model;
@@ -99,7 +100,7 @@ export const SynaraThreadCreationCard = memo(function SynaraThreadCreationCard({
                   className="shrink-0"
                   onClick={() => onOpenThread(thread.threadId)}
                 >
-                  {i18n._("Open")}
+                  {t("onboarding:notification_open")}
                 </Button>
               ) : null}
             </div>

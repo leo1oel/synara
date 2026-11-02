@@ -26,7 +26,7 @@ import {
 } from "./GitDialogChrome";
 import { CreatePullRequestIcon, ExternalLinkIcon, GitPullRequestDraftIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
-import { localizeGitText } from "~/lib/gitLocalization";
+import { useTranslation } from "~/i18n";
 
 export interface GitCreatePrDialogSubmission {
   action: "create_pr" | "commit_push_pr";
@@ -56,7 +56,8 @@ export function GitCreatePrDialog({
   onSubmit,
   onOpenInBrowser,
 }: GitCreatePrDialogProps) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [includeLocalChanges, setIncludeLocalChanges] = useState(true);
@@ -109,18 +110,18 @@ export function GitCreatePrDialog({
       <GitDialogBody>
         <input
           autoFocus
-          aria-label={i18n._("Pull request title")}
+          aria-label={t("git:pullRequestTitle")}
           className={GIT_DIALOG_FIELD_CLASS}
           maxLength={300}
-          placeholder={i18n._("Title (leave empty to generate)")}
+          placeholder={t("git:titleLeaveEmptyToGenerate")}
           value={title}
           onChange={(event) => setTitle(event.target.value)}
         />
         <textarea
-          aria-label={i18n._("Pull request description")}
+          aria-label={t("git:pullRequestDescription")}
           className={cn(GIT_DIALOG_FIELD_CLASS, "resize-none")}
           maxLength={60_000}
-          placeholder={i18n._("Description (leave empty to generate)")}
+          placeholder={t("git:descriptionLeaveEmptyToGenerate")}
           rows={2}
           value={body}
           onChange={(event) => setBody(event.target.value)}
@@ -131,7 +132,7 @@ export function GitCreatePrDialog({
               checked={includeLocalChanges}
               onCheckedChange={(checked) => setIncludeLocalChanges(checked === true)}
             />
-            <span className="flex-1">{i18n._("Commit and push local changes")}</span>
+            <span className="flex-1">{t("git:commitAndPushLocalChanges")}</span>
             <DiffStat
               className="shrink-0 font-mono text-ui leading-snug"
               insertions={view.insertions}
@@ -147,14 +148,14 @@ export function GitCreatePrDialog({
         <GitDialogActionRow
           disabled={!canCreate}
           icon={<GitPullRequestDraftIcon />}
-          label={i18n._("Create draft PR")}
+          label={t("git:createDraftPR")}
           onClick={() => submit(true)}
         />
         <GitDialogActionRow
           highlighted
           disabled={!canCreate}
           icon={<CreatePullRequestIcon />}
-          label={i18n._("Create PR")}
+          label={t("git:createPR")}
           trailing={<SubmitShortcutKbd />}
           aria-keyshortcuts={getSubmitShortcutKeyShortcuts()}
           onClick={() => submit(false)}
@@ -162,7 +163,7 @@ export function GitCreatePrDialog({
         <GitDialogActionRow
           disabled={!canOpenInBrowser}
           icon={<ExternalLinkIcon />}
-          label={i18n._("Open PR in browser")}
+          label={t("git:openPRInBrowser")}
           onClick={() => onOpenInBrowser({ preparation: browserPreparation, includeLocalChanges })}
         />
       </GitDialogActionList>

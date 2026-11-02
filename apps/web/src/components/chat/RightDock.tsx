@@ -9,11 +9,14 @@ import {
   type ReactNode,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
+import { Schema } from "effect";
 
 import { cn } from "~/lib/utils";
+import { getLocalStorageItem } from "~/hooks/useLocalStorage";
 import { useIsMobile } from "~/hooks/useMediaQuery";
 import {
   type DockPaneRuntimeMode,
@@ -31,6 +34,7 @@ import { Button } from "../ui/button";
 import { IconButton } from "../ui/icon-button";
 import { Menu, MenuItem, MenuTrigger } from "../ui/menu";
 import {
+  probeSidebarWidth,
   Sidebar,
   SIDEBAR_OFFCANVAS_MOTION_CLASS,
   SIDEBAR_OFFCANVAS_MOTION_SUPPRESSED_CLASS,
@@ -51,6 +55,7 @@ import {
   resolveRightDockPaneLabel,
 } from "./rightDockPaneMeta";
 import { useDesktopTopBarWindowControlsGutterClassName } from "~/hooks/useDesktopTopBarGutter";
+import { useTranslation } from "~/i18n";
 
 // Pane kinds whose content has a natural width, opened at that size rather than
 // at the even split. The device pane frames a portrait phone, so its useful
@@ -65,9 +70,9 @@ interface RightDockProps {
   state: RightDockThreadState;
   minWidth: number;
   defaultWidth: string;
-  /** Share of the shell the dock takes each time it opens. The chat thread dock is an even
-   *  split (the default, 0.5); a host whose dock is a side companion can open it narrower. */
+  /** Share of the shell used until a resized width is saved (defaults to 0.5). */
   openWidthFraction?: number;
+  widthStorageKey?: string;
   shouldAcceptWidth: (context: { nextWidth: number; wrapper: HTMLElement }) => boolean;
   paneLabelOverrides?: Record<string, string | undefined>;
   // Per-pane tab glyph overrides (same shape as label overrides) — e.g. a pull request pane
@@ -103,10 +108,11 @@ function RightDockLauncher(props: {
   items: readonly RightDockLauncherItem[];
   onOpen: (kind: RightDockPaneKind) => void;
 }) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   return (
     <nav
-      aria-label={i18n._("Open a panel")}
+      aria-label={t("chat:openAPanel")}
       className="flex h-full min-h-0 items-center justify-center overflow-y-auto p-6"
     >
       <div className="flex w-full max-w-sm flex-col gap-1.5">
@@ -167,7 +173,8 @@ function useKeepMountedPaneIds(
 }
 
 export function RightDock(props: RightDockProps) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   const activePane = resolveActivePane(props.state);
   const onSelectPane = props.onSelectPane;
   const activePaneRuntimeMode = props.activePaneRuntimeMode ?? "live";
@@ -178,11 +185,8 @@ export function RightDock(props: RightDockProps) {
     useDesktopTopBarWindowControlsGutterClassName();
 
   const keepMountedPaneIds = useKeepMountedPaneIds(props.state.panes, activePane);
-  // The dock must open as an exact share of the chat shell (half by default). The
-  // CSS default can only approximate it (it cannot observe the resizable left
-  // sidebar), so on every open we measure the shell row hosting chat + dock and
-  // pin the dock width to exactly that share. Mid-session drags still resize
-  // freely; the next open restores the share.
+  // Measure the shell for the initial width; a saved resize takes precedence on
+  // reopen and thread changes. CSS alone cannot observe the resizable left sidebar.
   const contentRef = useRef<HTMLDivElement | null>(null);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const expansionKey = props.motionKey ?? "dock";
@@ -232,6 +236,17 @@ export function RightDock(props: RightDockProps) {
   const minWidth = props.minWidth;
   const openWidthFraction = props.openWidthFraction ?? 0.5;
   const activePaneKind = activePane?.kind ?? null;
+  const widthStorageKey = props.widthStorageKey;
+  const shouldAcceptWidth = props.shouldAcceptWidth;
+  // Keep persisted-width restoration out of unrelated parent/streaming renders.
+  const resizable = useMemo(
+    () => ({
+      minWidth,
+      shouldAcceptWidth,
+      ...(widthStorageKey ? { storageKey: widthStorageKey } : {}),
+    }),
+    [minWidth, shouldAcceptWidth, widthStorageKey],
+  );
   useEffect(() => {
     if (!props.state.open) {
       return;
@@ -245,12 +260,40 @@ export function RightDock(props: RightDockProps) {
     // stranded in empty space, so kinds that render a fixed-aspect object open
     // at their own comfortable size instead of the even split.
     const preferredWidth = activePaneKind ? RIGHT_DOCK_PREFERRED_WIDTH[activePaneKind] : undefined;
-    const openWidth =
-      preferredWidth ?? Math.round(shell.getBoundingClientRect().width * openWidthFraction);
-    if (openWidth > 0) {
-      wrapper.style.setProperty("--sidebar-width", `${Math.max(minWidth, openWidth)}px`);
-    }
-  }, [props.state.open, minWidth, openWidthFraction, activePaneKind]);
+    const readStoredWidth = () =>
+      widthStorageKey ? getLocalStorageItem(widthStorageKey, Schema.Finite) : null;
+    const updateWidth = (storedWidth: number | null) => {
+      const defaultWidth =
+        preferredWidth ?? Math.round(shell.getBoundingClientRect().width * openWidthFraction);
+      // A resize saved in a larger window must still leave room for the host composer.
+      const savedWidth = storedWidth === null ? null : Math.max(minWidth, storedWidth);
+      let openWidth = defaultWidth;
+      if (
+        savedWidth !== null &&
+        probeSidebarWidth(wrapper, () => shouldAcceptWidth({ nextWidth: savedWidth, wrapper }))
+      ) {
+        openWidth = savedWidth;
+      }
+      if (openWidth > 0) {
+        wrapper.style.setProperty("--sidebar-width", `${Math.max(minWidth, openWidth)}px`);
+      }
+    };
+    updateWidth(readStoredWidth());
+    if (!widthStorageKey) return;
+    const observer = new ResizeObserver(() => {
+      const storedWidth = readStoredWidth();
+      if (storedWidth !== null) updateWidth(storedWidth);
+    });
+    observer.observe(shell);
+    return () => observer.disconnect();
+  }, [
+    props.state.open,
+    minWidth,
+    openWidthFraction,
+    activePaneKind,
+    widthStorageKey,
+    shouldAcceptWidth,
+  ]);
   // Mounted in id order rather than tab order: reordering the tabs must not move a pane's
   // DOM node, which would reload an embedded frame (the panes overlap, so order is unseen).
   const renderedPanes = props.state.panes
@@ -305,10 +348,7 @@ export function RightDock(props: RightDockProps) {
         gapClassName={chromeMotionClass}
         transparentSurface
         rail={!maximized && <SidebarRail />}
-        resizable={{
-          minWidth: props.minWidth,
-          shouldAcceptWidth: props.shouldAcceptWidth,
-        }}
+        resizable={resizable}
       >
         <div
           ref={contentRef}
@@ -323,12 +363,12 @@ export function RightDock(props: RightDockProps) {
             )}
           >
             <SurfaceContentTabs
-              ariaLabel={i18n._("Open panels")}
+              ariaLabel={t("chat:openPanels")}
               activeKey={props.state.activePaneId}
               onMove={props.onMovePane}
               tabs={props.state.panes.map((pane) => ({
                 key: pane.id,
-                title: resolveRightDockPaneLabel(pane, props.paneLabelOverrides),
+                title: resolveRightDockPaneLabel(pane, props.paneLabelOverrides, t),
                 icon: props.paneIconOverrides?.[pane.id] ?? resolveRightDockPaneIcon(pane),
                 onSelect: onSelectPane ? () => onSelectPane(pane.id) : undefined,
                 onClose: () => props.onClosePane(pane.id),
@@ -341,8 +381,8 @@ export function RightDock(props: RightDockProps) {
                         <Button
                           variant="chrome"
                           size="icon-xs"
-                          aria-label={i18n._("Add panel")}
-                          title={i18n._("Add panel")}
+                          aria-label={t("chat:rightDock_addPanel")}
+                          title={t("chat:rightDock_addPanel")}
                           className={DOCK_HEADER_ICON_BUTTON_CLASS}
                         />
                       }
@@ -380,8 +420,8 @@ export function RightDock(props: RightDockProps) {
               <IconButton
                 variant="chrome"
                 size="icon-xs"
-                label={maximized ? i18n._("Restore panel") : i18n._("Maximize panel")}
-                tooltip={maximized ? i18n._("Restore panel") : i18n._("Maximize panel")}
+                label={maximized ? t("chat:restorePanel") : t("chat:maximizePanel")}
+                tooltip={maximized ? t("chat:restorePanel") : t("chat:maximizePanel")}
                 tooltipSide="bottom"
                 aria-pressed={maximized}
                 className={DOCK_HEADER_ICON_BUTTON_CLASS}
@@ -397,8 +437,8 @@ export function RightDock(props: RightDockProps) {
             <IconButton
               variant="chrome"
               size="icon-xs"
-              label={i18n._("Collapse panel")}
-              tooltip={i18n._("Collapse panel")}
+              label={t("chat:rightDock_collapsePanel")}
+              tooltip={t("chat:rightDock_collapsePanel")}
               tooltipSide="bottom"
               className={DOCK_HEADER_ICON_BUTTON_CLASS}
               onClick={props.onCollapse}

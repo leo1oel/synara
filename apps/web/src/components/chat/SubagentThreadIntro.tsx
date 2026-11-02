@@ -21,6 +21,7 @@ import { cn } from "~/lib/utils";
 import { formatClockDuration } from "../../session-logic";
 import ChatMarkdown from "../ChatMarkdown";
 import { ProviderIcon } from "../ProviderIcon";
+import { useTranslation, t } from "~/i18n";
 
 export interface SubagentThreadPresentation {
   parentThreadId: ThreadId;
@@ -47,9 +48,9 @@ export function subagentThreadStateLabel(
   const elapsed = elapsedMs === null ? null : formatClockDuration(elapsedMs);
   switch (statusKind) {
     case "running":
-      return elapsed ? i18n._("Running · {elapsed}", { elapsed }) : i18n._("Running");
+      return elapsed ? t("chat:running2", { value0: elapsed }) : t("chat:runStatus_running");
     case "queued":
-      return i18n._("Starting");
+      return t("chat:runStatus_starting");
     case "completed":
       return elapsed ? i18n._("Done in {elapsed}", { elapsed }) : i18n._("Done");
     case "failed":
@@ -68,6 +69,8 @@ export function SubagentThreadIntro({
   subagent: SubagentThreadPresentation;
   onOpenThread?: ((threadId: ThreadId) => void) | undefined;
 }) {
+  const { t } = useTranslation();
+
   const live = subagent.statusKind === "running";
   const nowMs = useNowMs(live);
   const stateLabel = subagentThreadStateLabel(
@@ -89,7 +92,7 @@ export function SubagentThreadIntro({
         aria-label={i18n._("Open parent thread {title}", { title: subagent.parentTitle })}
       >
         <BackToParentIcon className="size-3 shrink-0" />
-        <span className="shrink-0">{i18n._("Subagent of")}</span>
+        <span className="shrink-0">{t("chat:subagentOf")}</span>
         <span className="min-w-0 truncate font-medium text-foreground/85">
           {subagent.parentTitle}
         </span>
@@ -134,6 +137,8 @@ export function SubagentBriefCard({
   markdownCwd: string | undefined;
   textStyle?: CSSProperties | undefined;
 }) {
+  const { t } = useTranslation();
+
   return (
     <div
       data-testid="subagent-brief-card"
@@ -141,7 +146,7 @@ export function SubagentBriefCard({
     >
       <div className="mb-1 flex min-w-0 items-center gap-1.5 font-system-ui text-ui-sm text-muted-foreground">
         <BotIcon className="size-3.5 shrink-0" />
-        <span className="shrink-0">{i18n._("Brief from")}</span>
+        <span className="shrink-0">{t("chat:briefFrom")}</span>
         <span className="min-w-0 truncate font-medium text-foreground/80">{parentTitle}</span>
         {timestamp ? <span className="ml-auto shrink-0 tabular-nums">{timestamp}</span> : null}
       </div>
@@ -151,6 +156,8 @@ export function SubagentBriefCard({
 }
 
 export function SubagentDeliveredNote({ parentTitle }: { parentTitle: string }) {
+  const { t } = useTranslation();
+
   return (
     <span
       data-testid="subagent-delivered-note"

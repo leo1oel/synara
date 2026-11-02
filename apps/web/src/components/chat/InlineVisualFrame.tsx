@@ -39,6 +39,7 @@ import { cn } from "~/lib/utils";
 import { Button } from "../ui/button";
 import { Dialog, DialogHeader, DialogPopup, DialogTitle } from "../ui/dialog";
 import { IconButton } from "../ui/icon-button";
+import { useTranslation } from "~/i18n";
 
 /** How tall the expanded view lets a page grow before it scrolls the dialog. */
 const EXPANDED_MAX_HEIGHT = 20_000;
@@ -63,12 +64,7 @@ export function InlineVisualFrame(props: {
   return isElectron || isSynaraEmbedMode() ? (
     <SandboxedInlineVisualFrame {...props} />
   ) : (
-    <InlineVisualNotice
-      title={props.visual.title}
-      message={i18n._(
-        "HTML visuals are available in Synara desktop. Use native components in the browser.",
-      )}
-    />
+    <InlineVisualNotice title={props.visual.title} message={t("chat:htmlDesktopOnly")} />
   );
 }
 
@@ -81,6 +77,8 @@ function SandboxedInlineVisualFrame({
   readonly visual: InlineVisualActivityPayload;
   readonly onScrollIntent?: ((upward: boolean) => void) | undefined;
 }) {
+  const { t } = useTranslation();
+
   const theme = useInlineVisualTheme();
   const visualDocument = useQuery(
     inlineVisualQueryOptions({ threadId, visualId: visual.visualId }),
@@ -181,14 +179,14 @@ function SandboxedInlineVisualFrame({
       ) : stopped ? (
         <InlineVisualNotice
           title={visual.title}
-          message={i18n._("This visual stopped because it could not stay isolated.")}
-          action={i18n._("Reload")}
+          message={t("chat:thisVisualStoppedBecauseItCouldNotStayIsolated")}
+          action="Reload"
           onAction={reload}
         />
       ) : visualDocument.isError ? (
         <InlineVisualNotice
           title={visual.title}
-          message={i18n._("Visual unavailable.")}
+          message={t("chat:visualUnavailable")}
           {...(isRetryable(visualDocument.error)
             ? { action: i18n._("Retry"), onAction: () => void visualDocument.refetch() }
             : {})}
@@ -199,7 +197,7 @@ function SandboxedInlineVisualFrame({
           style={{ height: clampInlineVisualHeight(visual.height) }}
           role="status"
         >
-          {i18n._("Loading visual…")}
+          {t("chat:loadingVisual")}
         </div>
       )}
     </figure>

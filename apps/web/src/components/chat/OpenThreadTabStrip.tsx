@@ -45,12 +45,13 @@ import { toastManager } from "../ui/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { DOCK_HEADER_ICON_BUTTON_CLASS } from "./chatHeaderControls";
 import { SurfaceContentTabs } from "./SurfaceContentTabs";
+import { useTranslation } from "~/i18n";
 
 const CLOSE_TABS_MENU_ID_PREFIX = "close-tabs:";
-const CLOSE_TABS_MENU_ROWS: readonly { scope: OpenThreadTabCloseScope; label: string }[] = [
-  { scope: "left", label: "Close Tabs to the Left" },
-  { scope: "right", label: "Close Tabs to the Right" },
-  { scope: "others", label: "Close Other Tabs" },
+const CLOSE_TABS_MENU_ROWS: readonly { scope: OpenThreadTabCloseScope; labelKey: string }[] = [
+  { scope: "left", labelKey: "chat:closeTabsToTheLeft" },
+  { scope: "right", labelKey: "chat:closeTabsToTheRight" },
+  { scope: "others", labelKey: "chat:closeOtherTabs" },
 ];
 
 export function OpenThreadTabStrip(props: {
@@ -64,8 +65,9 @@ export function OpenThreadTabStrip(props: {
    */
   onNewThread: (() => void) | null;
 }) {
+  const { t } = useTranslation();
+
   const { activeThreadId, keybindings } = props;
-  const { i18n } = useLingui();
   useRecordOpenThreadTab(activeThreadId);
   const tabs = useOpenThreadTabs({ activeThreadId });
   const closeThreadTab = useOpenThreadTabsStore((state) => state.closeThreadTab);
@@ -145,7 +147,7 @@ export function OpenThreadTabStrip(props: {
       if (!result.ok) {
         toastManager.add({
           type: "error",
-          title: "Unable to close the tab",
+          title: t("chat:unableToCloseTheTab"),
           description: result.error,
         });
       }
@@ -198,7 +200,7 @@ export function OpenThreadTabStrip(props: {
       (row) => resolveOpenThreadTabsInCloseScope(tabs, tab.threadId, row.scope).length > 0,
     ).map((row, index) => ({
       id: `${CLOSE_TABS_MENU_ID_PREFIX}${row.scope}`,
-      label: row.label,
+      label: t(row.labelKey),
       separatorBefore: index === 0,
     }));
     const onCloseAction = (itemId: string) => {
@@ -225,7 +227,7 @@ export function OpenThreadTabStrip(props: {
 
   return (
     <SurfaceContentTabs
-      ariaLabel="Open threads"
+      ariaLabel={t("chat:openThreads")}
       activeKey={shownThreadId}
       selectionAria="current"
       onMove={moveThreadTab}
@@ -237,7 +239,7 @@ export function OpenThreadTabStrip(props: {
           icon:
             // A running thread spins in place of its glyph, like its sidebar row.
             tab.isRunning ? (
-              <span role="img" aria-label="Working" className="inline-flex">
+              <span role="img" aria-label={t("workspace:status_working")} className="inline-flex">
                 <ThreadRunningSpinner className="size-3.5" />
               </span>
             ) : tab.isTerminal ? (
@@ -263,7 +265,7 @@ export function OpenThreadTabStrip(props: {
                   type="button"
                   variant="chrome"
                   size="icon-xs"
-                  aria-label={i18n._("New thread in this workspace")}
+                  aria-label={t("chat:newThreadInWorkspace")}
                   className={DOCK_HEADER_ICON_BUTTON_CLASS}
                   onClick={() => props.onNewThread?.()}
                 />
@@ -271,7 +273,7 @@ export function OpenThreadTabStrip(props: {
             >
               <PlusSignIcon className="size-3.5" />
             </TooltipTrigger>
-            <TooltipPopup side="bottom">{i18n._("New thread in this workspace")}</TooltipPopup>
+            <TooltipPopup side="bottom">{t("chat:newThreadInWorkspace")}</TooltipPopup>
           </Tooltip>
         ) : null
       }

@@ -1,3 +1,4 @@
+import { useTranslation } from "~/i18n";
 // FILE: ComposerVoiceButton.tsx
 // Purpose: Renders the composer mic control for recording and transcribing a voice note.
 // Layer: Chat composer presentation
@@ -19,15 +20,17 @@ export const ComposerVoiceButton = function ComposerVoiceButton(props: {
   durationLabel: string;
   onClick: () => void;
 }) {
+  const { t } = useTranslation();
+
   const isBusy = props.isTranscribing || props.isStarting === true;
   const circle = props.appearance === "circle";
   const label = props.isTranscribing
-    ? i18n._("Transcribing voice note")
+    ? t("chat:composer_transcribingVoice")
     : props.isStarting
-      ? i18n._("Starting microphone")
+      ? t("chat:startingMicrophone")
       : props.isRecording
-        ? `Stop voice note (${props.durationLabel})`
-        : i18n._("Record voice note");
+        ? t("chat:stopVoiceNote", { value0: props.durationLabel })
+        : t("chat:recordVoiceNote");
 
   return (
     <Button

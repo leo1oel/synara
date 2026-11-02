@@ -16,6 +16,7 @@ import { Menu, MenuItem, MenuSeparator, MenuTrigger } from "../ui/menu";
 import { ComposerPickerMenuPopup } from "./ComposerPickerMenuPopup";
 import { COMPOSER_INLINE_ACTION_PILL_CLASS_NAME } from "./composerPickerStyles";
 import { COMPOSER_NOTICE_CONTENT_CLASS_NAME } from "./composerStackedPanelStyles";
+import { useTranslation } from "~/i18n";
 
 const ACTION_CLASS_NAME = cn(COMPOSER_INLINE_ACTION_PILL_CLASS_NAME, "text-ui-sm");
 
@@ -28,6 +29,8 @@ export function ComposerSnoozeNotice({
   onReturnNow: () => void;
   onReschedule: (duration: SnoozeDuration) => void;
 }) {
+  const { t } = useTranslation();
+
   const [dialogOpen, setDialogOpen] = useState(false);
   return (
     <div
@@ -44,23 +47,23 @@ export function ComposerSnoozeNotice({
         <span className="font-medium text-foreground">
           <SnoozeCountdown snoozedUntil={snoozedUntil} />
         </span>
-        <span className="block">{i18n._("Sending a message cancels the reminder.")}</span>
+        <span className="block">{t("chat:sendingAMessageCancelsTheReminder")}</span>
       </span>
       <button type="button" className={ACTION_CLASS_NAME} onClick={onReturnNow}>
-        {i18n._("Return now")}
+        {t("workspace:returnNow")}
       </button>
       <Menu modal={false}>
         <MenuTrigger render={<button type="button" className={ACTION_CLASS_NAME} />}>
-          {i18n._("Change time")}
+          {t("chat:changeTime")}
         </MenuTrigger>
         <ComposerPickerMenuPopup align="end" side="top" sideOffset={6}>
           {SNOOZE_PRESETS.map((preset) => (
             <MenuItem key={preset.id} onClick={() => onReschedule(preset.duration)}>
-              {preset.label}
+              {t(preset.labelKey)}
             </MenuItem>
           ))}
           <MenuSeparator />
-          <MenuItem onClick={() => setDialogOpen(true)}>{i18n._("Pick date & time…")}</MenuItem>
+          <MenuItem onClick={() => setDialogOpen(true)}>{t("workspace:pickDateTime")}</MenuItem>
         </ComposerPickerMenuPopup>
       </Menu>
       <SnoozeUntilDialog

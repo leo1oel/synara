@@ -16,6 +16,7 @@ import { DiffStatLabel } from "./DiffStatLabel";
 import { FileEntryIcon } from "./FileEntryIcon";
 import { OpenInPicker } from "./OpenInPicker";
 import { resolveEditedFilePathTargets } from "./editedFilePathActions";
+import { useTranslation } from "~/i18n";
 
 interface EditedFileRowProps {
   filePath: string;
@@ -42,6 +43,8 @@ const EDITED_FILE_EDITOR_ORDER: ReadonlyArray<EditorId> = [
 ];
 
 export function EditedFileRow(props: EditedFileRowProps) {
+  const { t } = useTranslation();
+
   const copyPathToClipboard = useCopyPathToClipboard();
   const { absolutePath, relativePath } = resolveEditedFilePathTargets(
     props.filePath,
@@ -98,8 +101,8 @@ export function EditedFileRow(props: EditedFileRowProps) {
         {...(props.availableEditors ? { availableEditors: props.availableEditors } : {})}
         openInTarget={launcherTarget}
         menuEditorOrder={EDITED_FILE_EDITOR_ORDER}
-        groupLabel={i18n._("Open {path}", { path: props.filePath })}
-        menuLabel={i18n._("Open {path} options", { path: props.filePath })}
+        groupLabel={t("workspace:openFileNamed", { file: props.filePath })}
+        menuLabel={t("workspace:openFileOptions", { file: props.filePath })}
         additionalMenuItems={
           <>
             <MenuItem
@@ -109,7 +112,7 @@ export function EditedFileRow(props: EditedFileRowProps) {
               }}
             >
               <CopyIcon className={MENU_ICON_CLASS_NAME} />
-              <span>{i18n._("Copy absolute path")}</span>
+              <span>{t("chat:copyAbsolutePath")}</span>
             </MenuItem>
             <MenuItem
               disabled={relativePath === null}
@@ -118,7 +121,7 @@ export function EditedFileRow(props: EditedFileRowProps) {
               }}
             >
               <CopyIcon className={MENU_ICON_CLASS_NAME} />
-              <span>{i18n._("Copy relative path")}</span>
+              <span>{t("chat:copyRelativePath")}</span>
             </MenuItem>
           </>
         }

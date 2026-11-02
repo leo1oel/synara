@@ -385,6 +385,8 @@ function ToastActions({
   diagnosticId: string | undefined;
   secondaryActionProps: ThreadToastData["secondaryActionProps"];
 }) {
+  const { t } = useTranslation();
+
   const { copyToClipboard, isCopied } = useCopyToClipboard();
 
   if (!actionProps && !copyText && !secondaryActionProps && !copyItems?.length && !diagnosticId)
@@ -395,17 +397,17 @@ function ToastActions({
       {diagnosticId ? <DiagnosticReportAction id={diagnosticId} /> : null}
       {copyText && (
         <Button
-          aria-label={isCopied ? i18n._("Copied error message") : i18n._("Copy error message")}
+          aria-label={isCopied ? t("common:toast_copiedError") : t("common:toast_copyError")}
           className={TOAST_ACTION_BUTTON_CLASS_NAME}
           onClick={() => {
             copyToClipboard(copyText, undefined);
           }}
           size={TOAST_ACTION_BUTTON_SIZE}
-          title={isCopied ? i18n._("Copied error message") : i18n._("Copy error message")}
+          title={isCopied ? t("common:toast_copiedError") : t("common:toast_copyError")}
           variant={TOAST_ACTION_BUTTON_VARIANT}
         >
           {isCopied ? <CheckIcon className="size-3" /> : <CopyIcon className="size-3" />}
-          <span>{isCopied ? i18n._("Copied") : i18n._("Copy")}</span>
+          <span>{isCopied ? t("chat:theme_copied") : t("workspace:share_copy")}</span>
         </Button>
       )}
       {copyItems?.map((item) => (
@@ -447,10 +449,12 @@ function ToastCloseButton({
   disabled?: boolean;
   onClose?: (() => void) | undefined;
 }) {
+  const { t } = useTranslation();
+
   const compact = compactProp ?? false;
   return (
     <Toast.Close
-      aria-label={i18n._("Dismiss toast")}
+      aria-label={t("common:toast_dismissToast")}
       className={cn(
         // pointer-events-auto keeps the X clickable even when a stacked/collapsed
         // toast still gates its content with pointer-events-none.
@@ -462,7 +466,7 @@ function ToastCloseButton({
       onClick={() => {
         onClose?.();
       }}
-      title={i18n._("Dismiss toast")}
+      title={t("common:toast_dismissToast")}
     >
       <XIcon className={compact ? "size-3" : "size-3.5"} />
     </Toast.Close>
@@ -495,6 +499,8 @@ function ArchiveUndoToastSurface({
   hideCollapsedContent: boolean;
   onDismiss: () => void;
 }) {
+  const { t } = useTranslation();
+
   const [undoPending, setUndoPending] = useState(false);
   // A pending Undo owns the next navigation; keep the Settings path idle until it settles.
   const actionsDisabled = undoPending;
@@ -551,19 +557,19 @@ function ArchiveUndoToastSurface({
             disabled={actionsDisabled}
             onClick={handleUndoClick}
           >
-            {i18n._("Undo")}
+            {t("workspace:toast_undo")}
           </button>
           {archiveUndo.onViewArchived ? (
             <>
               {" "}
-              or view archived chats in{" "}
+              {t("common:toast_orViewArchivedIn")}{" "}
               <Toast.Close
                 className={ARCHIVE_UNDO_TOAST_LINK_CLASS_NAME}
                 data-base-ui-swipe-ignore
                 disabled={actionsDisabled}
                 onClick={handleViewArchivedClick}
               >
-                {i18n._("Settings")}
+                {t("workspace:toast_settings")}
               </Toast.Close>
             </>
           ) : null}

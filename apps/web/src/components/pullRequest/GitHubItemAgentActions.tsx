@@ -15,6 +15,7 @@ import { MENU_ICON_CLASS_NAME } from "~/components/chat/composerPickerStyles";
 import { Button } from "~/components/ui/button";
 import { Menu, MenuItem, MenuTrigger } from "~/components/ui/menu";
 import { BotIcon, ChevronDownIcon, LoaderIcon } from "~/lib/icons";
+import { useTranslation } from "~/i18n";
 
 /**
  * On a top bar control's words: once the page's top bar is narrow (the side chat is open) the
@@ -40,7 +41,8 @@ export function SendToAgentMenuItems({
   disabled?: boolean;
   onSendToAgent: (projectId: ProjectId) => void;
 }) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   return sendTargets.map((target) => (
     <MenuItem
       key={target.projectId}
@@ -50,7 +52,7 @@ export function SendToAgentMenuItems({
       <BotIcon className={MENU_ICON_CLASS_NAME} />
       <span className="truncate">
         {sending
-          ? i18n._("Preparing…")
+          ? t("git:preparing")
           : sendTargets.length > 1
             ? i18n._("Send to agent in {project}", { project: target.projectTitle })
             : i18n._("Send to agent")}
@@ -70,8 +72,9 @@ export function GitHubItemAgentActions({
   sending: boolean;
   onSendToAgent: (projectId: ProjectId) => void;
 }) {
-  const { i18n } = useLingui();
-  const sendLabel = sending ? i18n._("Preparing…") : i18n._("Send to agent");
+  const { t } = useTranslation();
+
+  const sendLabel = sending ? t("git:preparing") : t("git:sendToAgent");
   const label = <span className={TOP_BAR_NARROW_LABEL_CLASS_NAME}>{sendLabel}</span>;
   const icon = sending ? <LoaderIcon className="animate-spin" /> : <BotIcon />;
   const [onlyTarget] = sendTargets;
@@ -84,7 +87,7 @@ export function GitHubItemAgentActions({
               variant="outline"
               size="sm"
               disabled={sending}
-              aria-label={i18n._("Send to agent: choose project")}
+              aria-label={t("git:sendToAgentChooseProject")}
             />
           }
         >

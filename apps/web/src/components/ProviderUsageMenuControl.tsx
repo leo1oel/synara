@@ -34,6 +34,7 @@ import { ProviderIcon } from "./ProviderIcon";
 import { ProviderUsagePanelContent } from "./ProviderUsagePanelContent";
 import { Menu, MenuTrigger } from "./ui/menu";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
+import { t, useTranslation } from "~/i18n";
 
 export interface ProviderUsageMenuModel {
   menuTitle: string;
@@ -47,21 +48,26 @@ export interface ProviderUsageMenuModel {
   resetCredits?: ServerCodexResetCredits | undefined;
 }
 
-export function buildProviderUsageMenuModel(input: {
-  provider: ProviderKind;
-  providerSnapshot?: ServerGetProviderUsageSnapshotResult | undefined;
-  usageSummary: ProviderUsageSummaryData & { readonly isLoading: boolean };
-}): ProviderUsageMenuModel {
-  const rows = deriveProviderUsageDisplayRows(input.usageSummary.rateLimits);
+export function buildProviderUsageMenuModel(
+  input: {
+    provider: ProviderKind;
+    providerSnapshot?: ServerGetProviderUsageSnapshotResult | undefined;
+    usageSummary: ProviderUsageSummaryData & { readonly isLoading: boolean };
+  },
+  translate: typeof t = t,
+): ProviderUsageMenuModel {
+  const rows = deriveProviderUsageDisplayRows(input.usageSummary.rateLimits, translate);
 
   return {
-    menuTitle: `${PROVIDER_DISPLAY_NAMES[input.provider]} usage`,
+    menuTitle: translate("common:providerUsageTitle", {
+      provider: PROVIDER_DISPLAY_NAMES[input.provider],
+    }),
     primaryRow: selectPrimaryProviderUsageDisplayRow(rows),
     rows,
     rateLimits: input.usageSummary.rateLimits,
     usageLines: input.usageSummary.usageLines,
     notice: input.usageSummary.usageNotice,
-    emptyMessage: providerUsageEmptyMessage(input.provider, input.providerSnapshot),
+    emptyMessage: providerUsageEmptyMessage(input.provider, input.providerSnapshot, translate),
     isLoading: input.usageSummary.isLoading,
     resetCredits: input.usageSummary.resetCredits,
   };
@@ -74,14 +80,17 @@ const selectAccountRateLimitThreads = createAccountRateLimitThreadsSelector();
 function providerUsageEmptyMessage(
   provider: ProviderKind,
   snapshot: ServerGetProviderUsageSnapshotResult | undefined,
+  translate: typeof t = t,
 ): string | undefined {
   switch (snapshot?.status) {
     case "needs-auth":
-      return snapshot.detail ?? providerUsageNeedsAuthDetail(provider);
+      return snapshot.detail ?? localizedProviderUsageNeedsAuthDetail(provider, translate);
     case "unsupported":
-      return snapshot.detail ?? "Live usage is not available for this provider configuration.";
+      return (
+        snapshot.detail ?? translate("common:liveUsageIsNotAvailableForThisProviderConfiguration")
+      );
     case "error":
-      return snapshot.detail ?? "Usage is currently unavailable.";
+      return snapshot.detail ?? translate("common:usageIsCurrentlyUnavailable");
     default:
       return undefined;
   }
@@ -95,7 +104,7 @@ export function useProviderUsageMenuModel(
     enabled?: boolean | undefined;
   } = {},
 ): ProviderUsageMenuModel {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
   const { settings } = useAppSettings();
   const threads = useStore(selectAccountRateLimitThreads);
   const usageSummary = useProviderUsageSummary({

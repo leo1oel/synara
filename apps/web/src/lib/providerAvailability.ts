@@ -1,3 +1,4 @@
+import { t } from "~/i18n";
 import {
   PROVIDER_DISPLAY_NAMES,
   type ProviderInstanceId,
@@ -6,8 +7,6 @@ import {
 } from "@synara/contracts";
 import { isProviderKind } from "../providerOrdering";
 
-const CUSTOM_BINARY_CONFIRMATION_SUFFIX =
-  "Availability will be confirmed when you start a session.";
 import { getDefaultModel } from "@synara/shared/model";
 
 export interface ProviderSendAvailability {
@@ -80,7 +79,9 @@ export function normalizeProviderStatusForLocalConfig(input: {
     available: true,
     ...(_staleAvailability !== undefined ? { availability: "available" as const } : {}),
     status: "warning",
-    message: `${PROVIDER_DISPLAY_NAMES[input.provider]} uses a custom local binary path in this app. ${CUSTOM_BINARY_CONFIRMATION_SUFFIX}`,
+    message: t("settings:providerCustomBinaryReason", {
+      provider: PROVIDER_DISPLAY_NAMES[input.provider],
+    }),
   };
 }
 
@@ -103,19 +104,19 @@ export function isProviderUsable(status: ServerProviderStatus | null | undefined
 
 export function providerUnavailableReason(status: ServerProviderStatus | null | undefined): string {
   if (!status) {
-    return "Provider status is still loading.";
+    return t("settings:providerStatusLoading");
   }
   const providerLabelFallback = isProviderKind(status.provider)
     ? PROVIDER_DISPLAY_NAMES[status.provider]
     : status.provider;
   const providerLabel = status.displayName?.trim() || providerLabelFallback || status.provider;
   if (status.authStatus === "unauthenticated") {
-    return `${providerLabel} is not authenticated yet.`;
+    return t("settings:providerNotAuthenticated", { provider: providerLabel });
   }
   if (!status.available) {
-    return status.message ?? `${providerLabel} is unavailable right now.`;
+    return status.message ?? t("settings:providerUnavailableNow", { provider: providerLabel });
   }
-  return status.message ?? `${providerLabel} has limited availability right now.`;
+  return status.message ?? t("settings:providerLimitedNow", { provider: providerLabel });
 }
 
 export function findProviderStatus(

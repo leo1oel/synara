@@ -23,7 +23,7 @@ import {
 import { Button } from "~/components/ui/button";
 import { toastManager } from "~/components/ui/toast";
 import { copyTextToClipboard } from "~/hooks/useCopyToClipboard";
-import { i18n } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 export type PullRequestConfirmAction =
   | { kind: "merge"; method: PullRequestMergeMethod }
@@ -32,13 +32,13 @@ export type PullRequestConfirmAction =
 export function copyPullRequestLink(url: string): void {
   void copyTextToClipboard(url)
     .then(() => {
-      toastManager.add({ type: "success", title: i18n._("Link copied") });
+      toastManager.add({ type: "success", title: t("git:linkCopied") });
     })
     .catch((error: unknown) => {
       toastManager.add({
         type: "error",
-        title: i18n._("Could not copy link"),
-        description: error instanceof Error ? error.message : i18n._("Clipboard access failed."),
+        title: t("git:couldNotCopyLink"),
+        description: error instanceof Error ? error.message : t("git:clipboardAccessFailed"),
       });
     });
 }
@@ -56,7 +56,7 @@ function confirmTitle(
   stack: PullRequestStack | null,
   stackMergeTargetCount: number,
 ): string {
-  if (action.kind === "close") return i18n._("Close pull request?");
+  if (action.kind === "close") return t("git:closePullRequest2");
   return stack
     ? i18n._("{count, plural, one {Merge # pull request?} other {Merge # pull requests?}}", {
         count: stackMergeTargetCount,
@@ -112,7 +112,8 @@ export function PullRequestConfirmActionDialog({
   onConfirm: (action: PullRequestConfirmAction) => void;
   onDismiss: () => void;
 }) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   // Keep rendering the last action while the dialog animates out, so the copy does not
   // flip to another action's text once the owner resets `action` to null.
   const [shownAction, setShownAction] = useState(action);
@@ -149,7 +150,7 @@ export function PullRequestConfirmActionDialog({
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogClose render={<Button variant="outline" size="sm" />}>
-                {i18n._("Cancel")}
+                {t("common:form_cancel")}
               </AlertDialogClose>
               <Button
                 size="sm"
@@ -161,10 +162,10 @@ export function PullRequestConfirmActionDialog({
                 }}
               >
                 {shown.kind === "close"
-                  ? i18n._("Close")
+                  ? t("common:app_close")
                   : stack
-                    ? i18n._("Merge stack")
-                    : i18n._("Merge")}
+                    ? t("git:mergeStack")
+                    : t("git:merge")}
               </Button>
             </AlertDialogFooter>
           </>

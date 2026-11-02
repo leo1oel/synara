@@ -35,6 +35,7 @@ import {
   type ComposerMenuPanelRow,
 } from "./ComposerMenuPanel";
 import { useAppSnapWindows } from "./useAppSnapWindows";
+import { t, useTranslation } from "~/i18n";
 
 /** Marks the `+` trigger so the panel's outside-press close does not fight the trigger's toggle. */
 export const COMPOSER_EXTRAS_TRIGGER_ATTRIBUTE = "data-composer-extras-trigger";
@@ -75,7 +76,8 @@ export function ComposerExtrasPanel(props: {
   /** Embedded hosts own modes and window capture; expose file attachments only. */
   attachmentsOnly?: boolean;
 }) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   const inputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -114,22 +116,26 @@ export function ComposerExtrasPanel(props: {
       ? [
           {
             id: "windows",
-            label: i18n._("Attach window"),
+            label: t("chat:attachWindow"),
             rows: [
-              { id: ROW_BACK, icon: <ArrowLeftIcon className={GLYPH} />, title: i18n._("Back") },
-              ...appSnapWindowRows(i18n, appSnap),
+              {
+                id: ROW_BACK,
+                icon: <ArrowLeftIcon className={GLYPH} />,
+                title: t("common:app_back"),
+              },
+              ...appSnapWindowRows(appSnap),
             ],
           },
         ]
       : [
           {
             id: "add",
-            label: i18n._("Add"),
+            label: t("workspace:models_add"),
             rows: [
               {
                 id: ROW_FILES,
                 icon: <PaperclipIcon className={GLYPH} />,
-                title: i18n._("Files and folders"),
+                title: t("chat:filesAndFolders"),
               },
               ...(appSnap.available
                 ? [
@@ -144,7 +150,7 @@ export function ComposerExtrasPanel(props: {
                           trailing: (
                             <button
                               type="button"
-                              aria-label={i18n._("Choose another window")}
+                              aria-label={t("chat:chooseAnotherWindow")}
                               className={cn(
                                 "-mr-1 flex size-5 items-center justify-center rounded-md text-muted-foreground/60 transition-colors",
                                 "hover:bg-[var(--color-background-button-secondary)] hover:text-foreground/80",
@@ -161,8 +167,8 @@ export function ComposerExtrasPanel(props: {
                       : {
                           id: ROW_WINDOW,
                           icon: <WindowIcon className={GLYPH} />,
-                          title: i18n._("Attach window"),
-                          secondary: i18n._("Capture an open app window"),
+                          title: t("chat:attachWindow"),
+                          secondary: "Capture an open app window",
                           trailing: <ChevronRightIcon className="size-3.5" />,
                         },
                   ]
@@ -170,8 +176,8 @@ export function ComposerExtrasPanel(props: {
               {
                 id: ROW_GOAL,
                 icon: <GoalIcon className={GLYPH} />,
-                title: i18n._("Goal"),
-                secondary: i18n._("Set a goal to keep pursuing"),
+                title: t("chat:goal"),
+                secondary: "Set a goal to keep pursuing",
               },
               {
                 id: ROW_PLAN,
@@ -381,13 +387,13 @@ function appSnapWindowRows(
     return [{ id: "extras:window-status", title: appSnap.unavailableMessage, disabled: true }];
   }
   if (appSnap.windows === null) {
-    return [{ id: "extras:window-status", title: i18n._("Loading windows…"), disabled: true }];
+    return [{ id: "extras:window-status", title: t("chat:loadingWindows"), disabled: true }];
   }
   if (appSnap.windows.length === 0) {
     return [
       {
         id: "extras:window-status",
-        title: i18n._("No other app windows are visible."),
+        title: t("chat:noOtherAppWindowsAreVisible"),
         disabled: true,
       },
     ];
@@ -396,7 +402,7 @@ function appSnapWindowRows(
   return appSnap.windows.map((entry) => ({
     id: `${WINDOW_ROW_PREFIX}${entry.windowId}`,
     icon: windowGlyph(entry),
-    title: entry.appName?.trim() || i18n._("Captured app"),
+    title: entry.appName?.trim() || t("chat:capturedApp"),
     secondary: entry.windowTitle?.trim() || null,
     disabled: appSnap.busy,
   }));

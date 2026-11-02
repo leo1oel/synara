@@ -1,6 +1,11 @@
 import { readClaudeLaunchSettings } from "../claudeLaunchSettings";
 import { prepareClaudeSkillsPlugin } from "../claudeSkillsPlugin.ts";
 import { claudeTurnResultUsage, type ClaudeResultUsageBaseline } from "../claudeResultUsage.ts";
+import {
+  claudeUsageLimitWindows,
+  usageLimitResetAt,
+  type UsageLimitWindows,
+} from "../usageLimit.ts";
 import { restoreClaudeImportedCopyDates } from "../claudeImportedCopyDates.ts";
 /**
  * ClaudeAdapterLive - Scoped live implementation for the Claude Agent provider adapter.
@@ -299,6 +304,7 @@ interface ClaudeTurnState {
   readonly assistantTextBlockOrder: Array<AssistantTextBlockState>;
   readonly capturedProposedPlanKeys: Set<string>;
   readonly sawFileChange: boolean;
+  usageLimitWindows?: UsageLimitWindows;
   readonly assistantError?: {
     readonly code: SDKAssistantMessageError;
     readonly message: string;
@@ -1133,8 +1139,8 @@ function readClaudeModelRefusalFallback(message: unknown): ClaudeModelRefusalFal
   };
 }
 
-// VCS state transitions (commit, checkout, rebase) stream as an untyped system
-// message; match structurally so SDK type drift stays inert.
+// VCS transitions and publication notices arrive as untyped system messages;
+// match structurally so SDK type drift stays inert.
 interface ClaudeVcsStateChange {
   readonly kind?: string;
   readonly cwd?: string;
@@ -1150,7 +1156,15 @@ function readClaudeVcsStateChange(message: unknown): ClaudeVcsStateChange | unde
     kind?: unknown;
     cwd?: unknown;
   };
-  if (record.type !== "system" || record.subtype !== "vcs_state_changed") {
+  if (record.type !== "system") {
+    return undefined;
+  }
+  if (record.subtype === "code_change_published") {
+    // The SDK does not model this notice. Invalidate only; the owned workspace
+    // supplies authoritative branch and PR data instead of the publication payload.
+    return { kind: "code_change_published" };
+  }
+  if (record.subtype !== "vcs_state_changed") {
     return undefined;
   }
   const kind = readNonEmptyString(record.kind);
@@ -1813,7 +1827,7 @@ function buildUserMessageEffect(
 
 function turnStatusFromResult(result: SDKResultMessage): ProviderRuntimeTurnStatus {
   if (result.subtype === "success") {
-    return "completed";
+    return result.is_error === true ? "failed" : "completed";
   }
 
   const errors = resultErrorsText(result);
@@ -3033,6 +3047,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
       context: ClaudeSessionContext,
       message: string,
       cause?: unknown,
+      errorCode?: string,
     ): Effect.Effect<void> =>
       Effect.gen(function* () {
         if (cause !== undefined) {
@@ -3050,6 +3065,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           payload: {
             message,
             class: "provider_error",
+            ...(errorCode ? { errorCode } : {}),
             ...(cause !== undefined ? { detail: cause } : {}),
           },
           providerRefs: nativeProviderRefs(context),
@@ -3992,6 +4008,17 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             ...(result?.usage ? { usage: result.usage } : {}),
             ...(turnResultUsage ? { modelUsage: turnResultUsage.modelUsage } : {}),
             claudeResultObserved: result !== undefined,
+            ...(turnState.assistantError ? { errorCode: turnState.assistantError.code } : {}),
+            ...(status === "failed" && turnState.assistantError?.code === "rate_limit"
+              ? {
+                  usageLimit: {
+                    resetAt: usageLimitResetAt(
+                      turnState.usageLimitWindows,
+                      Date.parse(stamp.createdAt),
+                    ),
+                  },
+                }
+              : {}),
             tokenAccountingVersion: 1,
             mainLoopTokens,
             mainLoopCacheReadTokens,
@@ -5053,6 +5080,16 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             },
           };
         }
+        if (message.error === "rate_limit" && context.turnState && "api_error_params" in message) {
+          // The SDK can throttle unchanged rate_limit_event frames; a typed refusal
+          // still carries its current structured limit info on the assistant error.
+          const windows = claudeUsageLimitWindows(
+            context.turnState.usageLimitWindows,
+            message.api_error_params,
+            Date.now(),
+          );
+          if (windows !== undefined) context.turnState.usageLimitWindows = windows;
+        }
         const content = message.message?.content;
         if (Array.isArray(content)) {
           for (const block of content) {
@@ -5281,7 +5318,20 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         }
 
         if (status === "failed") {
-          yield* emitRuntimeError(context, errorMessage ?? "Claude turn failed.");
+          // The terminal failure carries quota evidence atomically with recovery admission.
+          // A preliminary session failure would let completion push outrun that decision.
+          if (assistantError?.code === "rate_limit") {
+            yield* emitRuntimeWarning(context, errorMessage ?? "Claude turn failed.", {
+              errorCode: assistantError.code,
+            });
+          } else {
+            yield* emitRuntimeError(
+              context,
+              errorMessage ?? "Claude turn failed.",
+              undefined,
+              assistantError?.code,
+            );
+          }
         }
 
         // Retry in case the CLI had not yet written the notification at turn start.
@@ -6276,6 +6326,15 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         }
 
         if (message.type === "rate_limit_event") {
+          if (context.turnState) {
+            const windows = claudeUsageLimitWindows(
+              context.turnState.usageLimitWindows,
+              message,
+              Date.parse(stamp.createdAt),
+            );
+            if (windows === undefined) delete context.turnState.usageLimitWindows;
+            else context.turnState.usageLimitWindows = windows;
+          }
           yield* offerRuntimeEvent(context, {
             ...base,
             type: "account.rate-limits.updated",
@@ -8411,30 +8470,76 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             return yield* sendTurn(input);
           }
 
-          // Steering across an interaction-mode change (e.g. a plan follow-up
-          // that starts implementing) must flip the CLI's permission mode even
-          // though no new turn starts.
-          const effectiveInteractionMode = yield* applyInteractionModePermission(
-            context,
-            input.threadId,
-            input.interactionMode,
-          );
-          if (effectiveInteractionMode !== liveTurnState.interactionMode) {
-            context.turnState = {
-              ...liveTurnState,
-              interactionMode: effectiveInteractionMode,
-            };
-          }
-
-          const message = yield* buildUserMessageEffect(input, {
-            fileSystem,
-            attachmentsDir: serverConfig.attachmentsDir,
-            nativeCommandNames: yield* resolveNativeCommandNames(context, input.input),
+          // Controls and attachment preparation can outlive this turn. A late
+          // steer must not resurrect its state or enter a replacement runtime.
+          const originalTurn = () => {
+            const current = context.turnState;
+            return context.stopped ||
+              sessions.get(input.threadId) !== context ||
+              current === undefined ||
+              current.turnId !== liveTurnState.turnId
+              ? undefined
+              : current;
+          };
+          const staleTurnError = () =>
+            new ProviderAdapterValidationError({
+              provider: PROVIDER,
+              operation: "turn/steer.stale",
+              issue:
+                "Claude's original turn ended while your message was preparing. It was not sent.",
+            });
+          const requireOriginalTurn = Effect.suspend(() => {
+            const current = originalTurn();
+            return current ? Effect.succeed(current) : Effect.fail(staleTurnError());
           });
-          yield* Queue.offer(context.promptQueue, {
-            type: "message",
-            message,
-          }).pipe(Effect.mapError((cause) => toRequestError(input.threadId, "turn/steer", cause)));
+
+          const message = yield* Effect.gen(function* () {
+            // Steering across an interaction-mode change (e.g. a plan follow-up
+            // that starts implementing) must flip the CLI's permission mode even
+            // though no new turn starts.
+            const effectiveInteractionMode = yield* applyInteractionModePermission(
+              context,
+              input.threadId,
+              input.interactionMode,
+            );
+            const modeUpdated = yield* Effect.sync(() => {
+              const current = originalTurn();
+              if (!current) return false;
+              if (effectiveInteractionMode !== current.interactionMode) {
+                context.turnState = { ...current, interactionMode: effectiveInteractionMode };
+              }
+              return true;
+            });
+            if (!modeUpdated) return yield* staleTurnError();
+
+            return yield* buildUserMessageEffect(input, {
+              fileSystem,
+              attachmentsDir: serverConfig.attachmentsDir,
+              nativeCommandNames: yield* resolveNativeCommandNames(context, input.input),
+            });
+          }).pipe(
+            // A rejected preparation also belongs to its original turn. Keep
+            // the original failure only while that ownership is still current.
+            Effect.catchCause((cause) =>
+              Cause.hasInterruptsOnly(cause)
+                ? Effect.failCause(cause)
+                : requireOriginalTurn.pipe(Effect.andThen(Effect.failCause(cause))),
+            ),
+          );
+          // The queue is unbounded. Keep ownership validation and admission in
+          // one callback so cooperative yielding cannot admit this steer to T2.
+          const enqueued = yield* Effect.sync(() =>
+            originalTurn()
+              ? Queue.offerUnsafe(context.promptQueue, { type: "message", message })
+              : undefined,
+          );
+          if (enqueued === undefined) return yield* staleTurnError();
+          if (!enqueued)
+            return yield* toRequestError(
+              input.threadId,
+              "turn/steer",
+              new Error("Claude's prompt queue is closed."),
+            );
 
           const steerText = input.input?.trim();
           if (steerText) {
@@ -8579,10 +8684,10 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
       Effect.gen(function* () {
         const context = yield* requireSession(threadId);
         if (!context.subagentRuns.has(providerThreadId)) {
-          return yield* new ProviderAdapterRequestError({
+          return yield* new ProviderAdapterValidationError({
             provider: PROVIDER,
-            method: "turn/steerSubagent",
-            detail: `Subagent '${providerThreadId}' already finished; the message was not delivered.`,
+            operation: "turn/steerSubagent",
+            issue: `Subagent '${providerThreadId}' already finished; the message was not delivered.`,
           });
         }
         // The PreToolUse hook channel is text-only: project every attachment

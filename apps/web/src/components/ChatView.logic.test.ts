@@ -75,6 +75,7 @@ import {
   resolveEmbeddedProjectModelPreference,
   resolveEnvironmentPanelOpen,
   resolveEnvironmentPanelPreferenceAfterFirstSend,
+  resolveComposerHighlightedItemId,
   resolveEnvironmentPanelPreferenceUpdate,
   resolveEnvironmentPanelVisible,
   resolveGitRepoUiState,
@@ -3904,5 +3905,59 @@ describe("hasServerReceivedSentMessage", () => {
   it("treats a missing thread or message as not received", () => {
     expect(hasServerReceivedSentMessage(undefined, messageId)).toBe(false);
     expect(hasServerReceivedSentMessage({ messages: [] }, messageId)).toBe(false);
+  });
+});
+
+describe("resolveComposerHighlightedItemId", () => {
+  const items = [{ id: "slash:compact" }, { id: "slash:review" }];
+
+  it("clears the highlight while the menu is closed", () => {
+    expect(
+      resolveComposerHighlightedItemId({
+        menuOpen: false,
+        highlightedItemId: "slash:review",
+        items,
+      }),
+    ).toBeNull();
+  });
+
+  it("keeps a highlight whose item still exists", () => {
+    expect(
+      resolveComposerHighlightedItemId({
+        menuOpen: true,
+        highlightedItemId: "slash:review",
+        items,
+      }),
+    ).toBe("slash:review");
+  });
+
+  it("falls back to the first item when the highlighted one disappeared", () => {
+    expect(
+      resolveComposerHighlightedItemId({
+        menuOpen: true,
+        highlightedItemId: "slash:missing",
+        items,
+      }),
+    ).toBe("slash:compact");
+  });
+
+  it("highlights the first item when none is highlighted", () => {
+    expect(
+      resolveComposerHighlightedItemId({
+        menuOpen: true,
+        highlightedItemId: null,
+        items,
+      }),
+    ).toBe("slash:compact");
+  });
+
+  it("has nothing to highlight when the menu is open but empty", () => {
+    expect(
+      resolveComposerHighlightedItemId({
+        menuOpen: true,
+        highlightedItemId: null,
+        items: [],
+      }),
+    ).toBeNull();
   });
 });

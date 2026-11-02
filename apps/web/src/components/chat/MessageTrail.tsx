@@ -52,6 +52,7 @@ import {
   type TickStyle,
   type TrailGeometry,
 } from "./messageTrail.logic";
+import { useTranslation } from "~/i18n";
 
 interface MessageTrailProps {
   items: readonly MessageTrailItem[];
@@ -106,6 +107,8 @@ export function MessageTrail({
   subscribeAudioLevel,
   contentInsetRightPx,
 }: MessageTrailProps) {
+  const { t } = useTranslation();
+
   const rootRef = useRef<HTMLElement | null>(null);
   const columnRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);

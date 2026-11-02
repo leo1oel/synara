@@ -5,6 +5,7 @@
 // menu-item-style affordance inside a ComboboxPopup, not a generic action.
 import type { I18n } from "@lingui/core";
 import type { GitBranch, GitStashInfoResult, GitStatusResult, NativeApi } from "@synara/contracts";
+import { pluralize } from "~/i18n/pluralize";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useLingui } from "@lingui/react";
@@ -73,7 +74,7 @@ import {
 } from "./chat/composerPickerStyles";
 import { ELEVATED_HOVER_SURFACE_CLASS_NAME } from "../surfaceStyles";
 import type { ThreadWorkspacePatch } from "../types";
-import { localizeGitText } from "../lib/gitLocalization";
+import { t, useTranslation } from "~/i18n";
 
 /**
  * Where the selector is rendered. `toolbar` keeps the compact composer-footer pill;
@@ -217,7 +218,7 @@ function handleCheckoutError(
     if (!lockError) return;
     const lockFileLabel = lockError.lockPath
       ? lockError.lockPath.split("/").slice(-2).join("/")
-      : ".git/index.lock";
+      : t("common:gitIndexLock");
     addBranchRecoveryToast({
       type: "error",
       title: input.i18n._("Git index is locked."),
@@ -270,8 +271,8 @@ function handleCheckoutError(
     const copyText = errorMessage(error);
     addBranchRecoveryToast({
       type: "warning",
-      title: input.i18n._("Uncommitted changes block checkout."),
-      description: formatDirtyWorktreeDescription(input.i18n, dirtyWorktree.files),
+      title: t("common:uncommittedChangesBlockCheckout"),
+      description: formatDirtyWorktreeDescription(dirtyWorktree.files),
       data: { copyText },
       actionProps: {
         children: input.i18n._("Stash & Switch"),
@@ -347,7 +348,7 @@ function handleCheckoutError(
   addBranchRecoveryToast({
     type: "error",
     title: isUnresolvedIndexError(error)
-      ? input.i18n._("Unresolved conflicts in the repository.")
+      ? t("common:unresolvedConflictsInTheRepository")
       : input.fallbackTitle,
     description: errorMessage(error),
     data: { copyText: errorMessage(error) },
@@ -362,18 +363,18 @@ function getBranchTriggerLabel(input: {
 }): string {
   const { activeWorktreePath, effectiveEnvMode, resolvedActiveBranch } = input;
   if (!resolvedActiveBranch) {
-    return input.isDetachedCheckout ? "Detached HEAD" : "Select branch";
+    return input.isDetachedCheckout ? t("common:detachedHEAD") : t("common:selectBranch");
   }
   if (effectiveEnvMode === "worktree" && !activeWorktreePath) {
-    return `From ${resolvedActiveBranch}`;
+    return t("common:from", { value0: resolvedActiveBranch });
   }
   return resolvedActiveBranch;
 }
 
 function getCreateBranchActionLabel(trimmedBranchQuery: string): string {
   return trimmedBranchQuery.length > 0
-    ? `Create and checkout "${trimmedBranchQuery}"`
-    : "Create and checkout new branch...";
+    ? t("common:createAndCheckout", { value0: trimmedBranchQuery })
+    : t("common:createAndCheckoutNewBranch");
 }
 
 function getCurrentBranchChangeSummary(
@@ -948,7 +949,7 @@ export function BranchToolbarBranchSelector({
               isPanel ? "rounded-md" : "rounded-lg",
             )}
             inputClassName="ring-0"
-            placeholder={i18n._("Search branches...")}
+            placeholder={t("common:searchBranches")}
             showTrigger={false}
             size={isPanel ? "sm" : "default"}
             startAddon={
@@ -962,7 +963,7 @@ export function BranchToolbarBranchSelector({
             onChange={(event) => setBranchQuery(event.target.value)}
           />
         </div>
-        <ComboboxEmpty>{i18n._("No branches found.")}</ComboboxEmpty>
+        <ComboboxEmpty>{t("common:noBranchesFound")}</ComboboxEmpty>
 
         <ComboboxList ref={setBranchListRef} className={cn("max-h-56", isPanel && "max-h-48")}>
           {shouldVirtualizeBranchList ? (
@@ -1024,7 +1025,7 @@ export function BranchToolbarBranchSelector({
       >
         <DialogPopup className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{i18n._("Create Branch")}</DialogTitle>
+            <DialogTitle>{t("common:createBranch")}</DialogTitle>
             <DialogDescription>
               {i18n._("Create and switch to a new branch from {branch}.", {
                 branch: resolvedActiveBranch ?? currentGitBranch ?? i18n._("the current HEAD"),
@@ -1051,7 +1052,7 @@ export function BranchToolbarBranchSelector({
                 <Input
                   autoFocus
                   id="branch-create-name"
-                  placeholder="feature/my-change"
+                  placeholder={t("common:featureMyChange")}
                   value={createBranchName}
                   onChange={(event) => setCreateBranchName(event.target.value)}
                 />
@@ -1071,7 +1072,7 @@ export function BranchToolbarBranchSelector({
                     setCreateBranchName("");
                   }}
                 >
-                  {i18n._("Cancel")}
+                  {t("common:form_cancel")}
                 </Button>
                 <Button
                   type="submit"
@@ -1081,7 +1082,7 @@ export function BranchToolbarBranchSelector({
                     branchByName.has(createBranchName.trim())
                   }
                 >
-                  {i18n._("Create and switch")}
+                  {t("common:createAndSwitch")}
                 </Button>
               </DialogFooter>
             </form>
@@ -1099,11 +1100,9 @@ export function BranchToolbarBranchSelector({
       >
         <DialogPopup className="max-w-xl">
           <DialogHeader>
-            <DialogTitle>{i18n._("Discard saved stash?")}</DialogTitle>
+            <DialogTitle>{t("common:discardSavedStash")}</DialogTitle>
             <DialogDescription>
-              {i18n._(
-                "This will permanently drop the stash entry that preserved your uncommitted changes.",
-              )}
+              {t("common:thisWillPermanentlyDropTheStashEntryThatPreserved")}
             </DialogDescription>
           </DialogHeader>
           <DialogPanel className="space-y-4">
@@ -1117,16 +1116,18 @@ export function BranchToolbarBranchSelector({
               <>
                 <div className="grid gap-2 rounded-lg border border-[color:var(--color-border-light)] bg-[var(--color-background-elevated-secondary)] p-3 text-ui leading-snug">
                   <div className="flex min-w-0 gap-2">
-                    <span className="w-20 shrink-0 text-muted-foreground">{i18n._("Branch")}</span>
+                    <span className="w-20 shrink-0 text-muted-foreground">
+                      {t("common:sessionStatus_branch")}
+                    </span>
                     <span className="min-w-0 truncate font-medium">
                       {stashDiscardDialog.info.branch ??
                         currentGitBranch ??
-                        i18n._("Detached HEAD")}
+                        t("common:detachedHEAD")}
                     </span>
                   </div>
                   <div className="flex min-w-0 gap-2">
                     <span className="w-20 shrink-0 text-muted-foreground">
-                      {i18n._("Worktree")}
+                      {t("common:worktreeMode_worktree")}
                     </span>
                     <span className="min-w-0 truncate font-mono text-ui-xs">
                       {stashDiscardDialog.info.cwd}
@@ -1139,7 +1140,9 @@ export function BranchToolbarBranchSelector({
                     </span>
                   </div>
                   <div className="flex min-w-0 gap-2">
-                    <span className="w-20 shrink-0 text-muted-foreground">{i18n._("Name")}</span>
+                    <span className="w-20 shrink-0 text-muted-foreground">
+                      {t("common:scripts_name")}
+                    </span>
                     <span className="min-w-0 truncate">{stashDiscardDialog.info.message}</span>
                   </div>
                 </div>
@@ -1179,7 +1182,7 @@ export function BranchToolbarBranchSelector({
                 setIsDroppingStash(false);
               }}
             >
-              {i18n._("Keep stash")}
+              {t("common:keepStash")}
             </Button>
             <Button
               variant="destructive"
@@ -1187,7 +1190,7 @@ export function BranchToolbarBranchSelector({
               disabled={!stashDiscardDialog?.info || isDroppingStash}
               onClick={discardStashFromDialog}
             >
-              {isDroppingStash ? i18n._("Discarding...") : i18n._("Discard stash")}
+              {isDroppingStash ? t("common:discarding") : t("common:discardStash")}
             </Button>
           </DialogFooter>
         </DialogPopup>

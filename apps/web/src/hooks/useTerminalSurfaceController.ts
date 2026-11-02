@@ -1,5 +1,6 @@
 // Shared lifecycle and metadata for a single terminal panel.
 
+import { t } from "~/i18n";
 import { type ThreadId } from "@synara/contracts";
 import { type TerminalCliKind } from "@synara/shared/terminalThreads";
 import { useState } from "react";
@@ -144,8 +145,8 @@ export async function closeDockTerminalPane(input: {
   } catch (error: unknown) {
     toastManager.add({
       type: "error",
-      title: i18n._("Unable to close terminal"),
-      description: error instanceof Error ? error.message : i18n._("Please try again."),
+      title: t("chat:unableToCloseTerminal"),
+      description: error instanceof Error ? error.message : t("common:pleaseTryAgain"),
     });
   }
 }

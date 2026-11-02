@@ -46,6 +46,8 @@ import type { SynaraDesktopFlavor } from "@synara/shared/desktopIdentity";
 import { codexAccountInstanceId } from "@synara/shared/providerInstances";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import { isLatticeEmbedDocument } from "./embedMode";
+import { APP_SETTINGS_STORAGE_KEY } from "./appSettingsStorage";
+import { LANGUAGE_PREFERENCES, normalizeLanguagePreference } from "./i18n/locale";
 import { EnvMode } from "./components/BranchToolbar.logic";
 import { normalizeCursorModelVariantBaseId } from "./cursorModelVariants";
 import { formatProviderModelOptionName, type ProviderModelOption } from "./providerModelOptions";
@@ -80,7 +82,6 @@ import {
   normalizeChatWidthMode as normalizeChatWidthModeValue,
 } from "./lib/chatWidth";
 
-const APP_SETTINGS_STORAGE_KEY = "synara:app-settings:v1";
 const SERVER_SETTINGS_MIGRATION_STORAGE_KEY = "synara:server-settings-migrated:v1";
 
 function hasCompletedServerSettingsMigration(): boolean {
@@ -375,6 +376,16 @@ const PersistedHiddenModels = Schema.Array(
 );
 
 export const AppSettingsSchema = Schema.Struct({
+  language: Schema.Unknown.pipe(
+    Schema.decodeTo(
+      Schema.Literals(LANGUAGE_PREFERENCES),
+      SchemaTransformation.transform({
+        decode: normalizeLanguagePreference,
+        encode: (value): unknown => value,
+      }),
+    ),
+    withDefaults(() => "system" as const),
+  ),
   claudeBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   claudeEnableArtifacts: Schema.Boolean.pipe(withDefaults(() => false)),
   claudeConfirmColdCacheResume: Schema.Boolean.pipe(withDefaults(() => false)),

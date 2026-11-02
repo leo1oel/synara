@@ -127,6 +127,7 @@ import {
 import { isShortcutDispatchSuspended, resolveShortcutCommand } from "~/keybindings";
 import { isTerminalFocused } from "~/lib/terminalFocus";
 import { cn } from "~/lib/utils";
+import { useTranslation } from "~/i18n";
 
 const PullRequestDockPane = lazy(() => import("../pullRequest/PullRequestDockPane"));
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
@@ -182,8 +183,14 @@ function shouldAcceptDockWidth({
 }
 
 function RightDockPanePlaceholder(props: { kind: RightDockPaneKind }) {
-  const { label } = getRightDockPaneMeta(props.kind);
-  return <PanelStateMessage>{label} panel is coming soon.</PanelStateMessage>;
+  const { t } = useTranslation();
+
+  const { label } = getRightDockPaneMeta(props.kind, t);
+  return (
+    <PanelStateMessage>
+      {label} {t("chat:panelIsComingSoon")}
+    </PanelStateMessage>
+  );
 }
 
 export function SingleChatSurface(props: {
@@ -192,6 +199,8 @@ export function SingleChatSurface(props: {
   projectId: ProjectId | null;
   embedMode?: boolean;
 }) {
+  const { t } = useTranslation();
+
   const navigate = useNavigate();
   const createSplitView = useSplitViewStore((store) => store.createFromThread);
   const createSplitViewFromDrop = useSplitViewStore((store) => store.createFromDrop);
@@ -759,9 +768,8 @@ export function SingleChatSurface(props: {
     void openEditorProject(projectId).catch((error: unknown) => {
       toastManager.add({
         type: "error",
-        title: i18n._("Unable to open project"),
-        description:
-          error instanceof Error ? error.message : i18n._("The project could not be opened."),
+        title: t("chat:unableToOpenProject"),
+        description: error instanceof Error ? error.message : t("chat:theProjectCouldNotBeOpened"),
       });
     });
   };
@@ -790,8 +798,8 @@ export function SingleChatSurface(props: {
       if (!createSidechat) {
         toastManager.add({
           type: "warning",
-          title: i18n._("Side chat is unavailable"),
-          description: i18n._("Open a server-backed main thread before starting a Side chat."),
+          title: t("chat:sideChatIsUnavailable"),
+          description: t("chat:openAServerBackedMainThreadBeforeStartingA"),
         });
         return;
       }
@@ -799,11 +807,9 @@ export function SingleChatSurface(props: {
     } catch (error) {
       toastManager.add({
         type: "error",
-        title: i18n._("Could not start Side chat"),
+        title: t("chat:couldNotStartSideChat"),
         description:
-          error instanceof Error
-            ? error.message
-            : i18n._("An error occurred while creating Side chat."),
+          error instanceof Error ? error.message : t("chat:anErrorOccurredWhileCreatingSideChat"),
       });
     }
   };
@@ -837,7 +843,7 @@ export function SingleChatSurface(props: {
       case "browser":
         return (
           <Suspense
-            fallback={<PanelStateMessage>{i18n._("Loading browser...")}</PanelStateMessage>}
+            fallback={<PanelStateMessage>{t("computer:loadingBrowser")}</PanelStateMessage>}
           >
             <LazyBrowserPanel
               mode="sidebar"
@@ -850,9 +856,7 @@ export function SingleChatSurface(props: {
         );
       case "device":
         return (
-          <Suspense
-            fallback={<PanelStateMessage>{i18n._("Loading simulator...")}</PanelStateMessage>}
-          >
+          <Suspense fallback={<PanelStateMessage>{t("chat:loadingSimulator")}</PanelStateMessage>}>
             <LazyDevicePanel
               mode="sidebar"
               threadId={props.threadId}
@@ -866,7 +870,7 @@ export function SingleChatSurface(props: {
       case "pullRequest":
         return (
           <Suspense
-            fallback={<PanelStateMessage>{i18n._("Loading pull request...")}</PanelStateMessage>}
+            fallback={<PanelStateMessage>{t("chat:loadingPullRequest")}</PanelStateMessage>}
           >
             <PullRequestDockPane
               pane={pane}
@@ -906,9 +910,7 @@ export function SingleChatSurface(props: {
       case "terminal":
         if (context.runtimeMode === "preview") {
           return (
-            <PanelStateMessage>
-              {i18n._("Terminal is sleeping. Restoring shortly.")}
-            </PanelStateMessage>
+            <PanelStateMessage>{t("chat:terminalIsSleepingRestoringShortly")}</PanelStateMessage>
           );
         }
         // Kept mounted across tab switches; visibility toggles the xterm runtime
@@ -917,9 +919,7 @@ export function SingleChatSurface(props: {
         // mounted (offcanvas is CSS-only), so without this the off-screen terminal
         // would keep WebGL + resize observers alive for nothing.
         return (
-          <Suspense
-            fallback={<PanelStateMessage>{i18n._("Loading terminal...")}</PanelStateMessage>}
-          >
+          <Suspense fallback={<PanelStateMessage>{t("chat:loadingTerminal")}</PanelStateMessage>}>
             <DockTerminalPane
               paneId={pane.id}
               hostThreadId={props.threadId}
@@ -931,7 +931,7 @@ export function SingleChatSurface(props: {
         );
       case "git":
         return (
-          <Suspense fallback={<PanelStateMessage>{i18n._("Loading Git...")}</PanelStateMessage>}>
+          <Suspense fallback={<PanelStateMessage>{t("chat:loadingGit")}</PanelStateMessage>}>
             <GitPanel
               hostThreadId={props.threadId}
               projectId={props.projectId}
@@ -941,9 +941,7 @@ export function SingleChatSurface(props: {
         );
       case "explorer":
         return (
-          <Suspense
-            fallback={<PanelStateMessage>{i18n._("Loading explorer...")}</PanelStateMessage>}
-          >
+          <Suspense fallback={<PanelStateMessage>{t("chat:loadingExplorer")}</PanelStateMessage>}>
             <DockExplorerPane
               threadId={props.threadId}
               workspaceRoot={workspaceRoot}
@@ -956,7 +954,11 @@ export function SingleChatSurface(props: {
         );
       case "file":
         return (
-          <Suspense fallback={<PanelStateMessage>{i18n._("Loading file...")}</PanelStateMessage>}>
+          <Suspense
+            fallback={
+              <PanelStateMessage>{t("workspace:filePreview_loadingFile")}</PanelStateMessage>
+            }
+          >
             <DockFilePane
               workspaceRoot={workspaceRoot}
               filePath={pane.filePath}
@@ -1160,7 +1162,7 @@ export function SingleChatSurface(props: {
               {...(hasDeviceSupport ? { onToggleDevice: handleToggleDevice } : {})}
               onSplitSurface={handleSplitSurface}
               viewModeAction={{
-                label: i18n._("Editor view"),
+                label: t("chat:environment_editorView"),
                 active: false,
                 onClick: handleOpenEditorView,
               }}
@@ -1184,6 +1186,7 @@ export function SingleChatSurface(props: {
             state={presentedDockState}
             minWidth={SINGLE_PANEL_MIN_WIDTH}
             defaultWidth={DIFF_INLINE_DEFAULT_WIDTH}
+            widthStorageKey={`chat_right_dock_width:${props.threadId}`}
             shouldAcceptWidth={shouldAcceptDockWidth}
             addMenuKinds={availableDockPaneKinds}
             launcherItems={dockLauncherItems}

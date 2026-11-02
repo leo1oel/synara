@@ -25,6 +25,8 @@ interface FileLineCommentBoxProps {
 }
 
 export function FileLineCommentBox(props: FileLineCommentBoxProps) {
+  const { t } = useTranslation();
+
   const { onCancel, onSubmit } = props;
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -76,16 +78,18 @@ export function FileLineCommentBox(props: FileLineCommentBoxProps) {
           <span className="editor-file-viewer__comment-badge">
             <SynaraLogo className="size-3 text-[var(--color-text-foreground-secondary)]" />
           </span>
-          {i18n._("Local comment")}
+          {t("chat:fileLineComment_localComment")}
         </span>
-        <span className="text-ui text-muted-foreground">Comment on {props.lineLabel}</span>
+        <span className="text-ui text-muted-foreground">
+          {t("chat:commentOn")} {props.lineLabel}
+        </span>
       </div>
       <textarea
         ref={textareaRef}
         value={value}
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={i18n._("Request change")}
+        placeholder={t("chat:fileLineComment_requestChange")}
         rows={2}
         maxLength={FILE_COMMENT_TEXT_MAX_CHARS}
         className={cn(
@@ -96,7 +100,7 @@ export function FileLineCommentBox(props: FileLineCommentBoxProps) {
       />
       <div className="flex items-center justify-end gap-1">
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          {i18n._("Cancel")}
+          {t("common:form_cancel")}
         </Button>
         <Button
           type="button"
@@ -106,7 +110,7 @@ export function FileLineCommentBox(props: FileLineCommentBoxProps) {
           disabled={!canSubmit}
           onClick={submit}
         >
-          {i18n._("Comment")}
+          {t("workspace:filePreview_comment")}
         </Button>
       </div>
     </div>

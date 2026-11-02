@@ -1,3 +1,4 @@
+import { rateLimitWindowDisplayLabel } from "~/lib/rateLimits";
 // FILE: ProviderUsageLimitRows.tsx
 // Purpose: Shared provider usage limit-row renderer for Settings and compact
 // popovers. Keeps labels, progress tracks, pace details, and tones consistent.
@@ -11,6 +12,7 @@ import { StatusDot } from "~/components/ui/status-chip";
 import { useLingui } from "@lingui/react";
 
 import { UsageProgressTrack } from "./UsageProgressTrack";
+import { useTranslation } from "~/i18n";
 
 export type ProviderUsageLimitRowsSurface = "settings" | "popover";
 
@@ -72,7 +74,8 @@ function ProviderUsageTrack({
 }
 
 function SettingsUsageLimitRow({ row }: { row: ProviderUsageDisplayRow }) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   const trackProps = providerUsageProgressTrackProps(row);
   const localizedText = localizeProviderUsageDisplayText(i18n, row);
 

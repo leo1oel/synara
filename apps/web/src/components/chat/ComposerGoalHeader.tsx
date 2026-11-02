@@ -23,6 +23,7 @@ import {
   COMPOSER_STACKED_PANEL_ICON_CLASS_NAME,
   COMPOSER_STACKED_PANEL_SCROLL_REGION_CLASS_NAME,
 } from "./composerStackedPanelStyles";
+import { useTranslation } from "~/i18n";
 
 /**
  * Elapsed pursuit time for a goal, or null when the thread predates goal timing
@@ -66,6 +67,8 @@ export function ComposerGoalHeader({
   onClear,
   canPause = true,
 }: ComposerGoalHeaderProps) {
+  const { t } = useTranslation();
+
   const paused = (goalPausedAt ?? null) !== null;
   const nowMs = useNowMs(!paused && goalStartedAt != null);
   const elapsedMs = goalElapsedMs({ goalStartedAt, goalPausedAt }, nowMs);
@@ -108,7 +111,7 @@ export function ComposerGoalHeader({
               <IconButton
                 variant="ghost"
                 size="icon-chip"
-                label={i18n._("Edit goal")}
+                label={t("chat:editGoal")}
                 onClick={() => {
                   close();
                   onEdit();
@@ -120,7 +123,7 @@ export function ComposerGoalHeader({
                 <IconButton
                   variant="ghost"
                   size="icon-chip"
-                  label={paused ? i18n._("Resume goal") : i18n._("Pause goal")}
+                  label={paused ? t("chat:resumeGoal") : t("chat:pauseGoal")}
                   onClick={() => void onSetPaused(!paused)}
                 >
                   {paused ? <PlayOutlineIcon /> : <PauseOutlineIcon />}
@@ -129,7 +132,7 @@ export function ComposerGoalHeader({
               <IconButton
                 variant="ghost"
                 size="icon-chip"
-                label={i18n._("Delete goal")}
+                label={t("chat:deleteGoal")}
                 onClick={() => void onClear()}
               >
                 <TrashCanIcon />

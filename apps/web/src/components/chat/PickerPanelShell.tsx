@@ -39,6 +39,8 @@ export function PickerPanelShell(props: {
   bleedParentPadding?: boolean;
   listMaxHeightClassName?: string;
 }) {
+  const { t } = useTranslation();
+
   const {
     variant: variantProp,
     searchInput,

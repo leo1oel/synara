@@ -10,6 +10,7 @@
 
 import { i18n } from "~/i18n";
 import { ThreadId } from "@synara/contracts";
+import { pluralize } from "~/i18n/pluralize";
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { useNowMs } from "~/hooks/useNowMs";
@@ -41,6 +42,7 @@ import {
   type SubagentRunRow,
 } from "./SubagentRunCard.logic";
 import { useSubagentRunContext, type SubagentRunContextValue } from "./subagentRunContext";
+import { useTranslation } from "~/i18n";
 
 const EMPTY_THREADS: SubagentRunContextValue["threads"] = [];
 const EMPTY_IDS: ReadonlySet<string> = new Set();
@@ -48,6 +50,8 @@ const EMPTY_TASK_ENDS: SubagentRunContextValue["taskEndByToolUseId"] = new Map()
 
 /** Name, role, and model of one subagent: the identity line every row shares. */
 export function SubagentIdentityLine({ item }: { item: ComposerSubagentStripItem }) {
+  const { t } = useTranslation();
+
   return (
     <span className="flex min-w-0 items-baseline gap-1.5" title={item.fullLabel}>
       <span className="min-w-0 truncate font-medium text-foreground/88">{item.primaryLabel}</span>
@@ -58,7 +62,7 @@ export function SubagentIdentityLine({ item }: { item: ComposerSubagentStripItem
         <span className="shrink-0 text-ui-sm text-muted-foreground/48">{item.modelLabel}</span>
       ) : null}
       {item.isBackground ? (
-        <span className="shrink-0 text-ui-sm text-muted-foreground/48">background</span>
+        <span className="shrink-0 text-ui-sm text-muted-foreground/48">{t("chat:background")}</span>
       ) : null}
     </span>
   );
@@ -103,6 +107,8 @@ function SubagentRunRowView({
   depth: number;
   context: SubagentRunContextValue | null;
 }) {
+  const { t } = useTranslation();
+
   const [nestedOpen, setNestedOpen] = useState(false);
   const description = describeSubagentRunRow(row, { nowMs, allStopped });
   const live = row.phase === "running" || row.phase === "waiting" || row.phase === "starting";
@@ -156,7 +162,7 @@ function SubagentRunRowView({
               ) : null}
               {description.detail?.kind === "was-running" ? (
                 <span className="flex min-w-0 items-center gap-1.5">
-                  <span className="shrink-0">→ {i18n._("was running")}</span>
+                  <span className="shrink-0">{t("chat:wasRunning")}</span>
                   <ActionText action={description.detail.action} />
                 </span>
               ) : null}
@@ -188,7 +194,7 @@ function SubagentRunRowView({
             onClick={openThread}
           >
             <ChatBubbleIcon className="size-3" />
-            {i18n._("Message")}
+            {t("chat:message")}
           </Button>
         ) : null}
         {live && depth === 0 && !row.item.isBackground && onBackground ? (
@@ -198,8 +204,8 @@ function SubagentRunRowView({
             size="icon-xs"
             className="shrink-0 opacity-0 transition-opacity group-hover/subagent-row:opacity-100 group-focus-within/subagent-row:opacity-100 focus-visible:opacity-100"
             onClick={() => void onBackground(row.item)}
-            aria-label={i18n._("Run in background (ctrl+b)")}
-            title={i18n._("Run in background (ctrl+b)")}
+            aria-label={t("chat:runInBackgroundCtrlB")}
+            title={t("chat:runInBackgroundCtrlB")}
           >
             <BackgroundTrayIcon className="size-3" />
           </Button>
@@ -214,7 +220,7 @@ function SubagentRunRowView({
             aria-label={i18n._("Stop {name}", { name: row.item.primaryLabel })}
           >
             <StopIcon className="size-2.5" />
-            {i18n._("Stop")}
+            {t("chat:stop")}
           </Button>
         ) : null}
         <ChevronRightIcon
@@ -253,6 +259,8 @@ function collectThreadIds(rows: ReadonlyArray<SubagentRunRow>): string[] {
 }
 
 export function SubagentRunCard({ workEntry }: { workEntry: WorkLogEntry }) {
+  const { t } = useTranslation();
+
   const context = useSubagentRunContext();
   const threads = context?.threads ?? EMPTY_THREADS;
   const parentThreadId = context?.parentThreadId ?? null;
@@ -263,6 +271,7 @@ export function SubagentRunCard({ workEntry }: { workEntry: WorkLogEntry }) {
   const card = useMemo(
     () =>
       deriveSubagentRunCard({
+        translate: t,
         subagents: workEntry.subagents ?? [],
         run: workEntry.subagentRun ?? { members: [] },
         threads,
@@ -273,6 +282,7 @@ export function SubagentRunCard({ workEntry }: { workEntry: WorkLogEntry }) {
         runtimeRetired,
       }),
     [
+      t,
       backgrounded,
       launchTurnLive,
       parentThreadId,
@@ -410,7 +420,7 @@ export function SubagentRunCard({ workEntry }: { workEntry: WorkLogEntry }) {
             onClick={() => void Promise.all(liveItems.map((item) => onStop(item)))}
           >
             <StopIcon className="size-2.5" />
-            {i18n._("Stop all")}
+            {t("chat:stopAll")}
           </Button>
         ) : null}
       </div>

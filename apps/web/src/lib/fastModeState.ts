@@ -1,5 +1,5 @@
+import { t } from "~/i18n";
 import type { OrchestrationThreadActivity } from "@synara/contracts";
-import { i18n } from "~/i18n";
 
 /** Why a requested fast mode is not the speed the thread is getting. */
 export interface FastModeNotice {
@@ -14,24 +14,14 @@ export interface FastModeNotice {
 // predates the toggle, so the requested option is still the best signal.
 const NOT_REQUESTED_REASONS = new Set(["sdk_opt_in_required", "preference", "pending"]);
 
-function blockedDetail(reason: string): string | null {
-  switch (reason) {
-    case "extra_usage_disabled":
-      return i18n._("usage credits are turned off for this Claude account");
-    case "free":
-      return i18n._("this Claude plan does not include it");
-    case "not_first_party":
-      return i18n._("it needs a first-party Anthropic account");
-    case "disabled_by_env":
-      return i18n._("it is disabled in this environment");
-    case "model_not_allowed":
-      return i18n._("this model does not support it");
-    case "network_error":
-      return i18n._("Claude could not check its availability");
-    default:
-      return null;
-  }
-}
+const BLOCKED_DETAIL_KEYS: Readonly<Record<string, string>> = {
+  extra_usage_disabled: "chat:fastModeUnavailable_extra_usage_disabled",
+  free: "chat:fastModeUnavailable_free",
+  not_first_party: "chat:fastModeUnavailable_not_first_party",
+  disabled_by_env: "chat:fastModeUnavailable_disabled_by_env",
+  model_not_allowed: "chat:fastModeUnavailable_model_not_allowed",
+  network_error: "chat:fastModeUnavailable_network_error",
+};
 
 export const FAST_MODE_STATE_ACTIVITY_KIND = "fast-mode.state";
 
@@ -39,6 +29,7 @@ export const FAST_MODE_STATE_ACTIVITY_KIND = "fast-mode.state";
 // null when fast mode is serving requests or nothing contradicts the request.
 export function deriveFastModeNotice(
   activities: ReadonlyArray<OrchestrationThreadActivity>,
+  translate: typeof t = t,
 ): FastModeNotice | null {
   for (let index = activities.length - 1; index >= 0; index -= 1) {
     const activity = activities[index]!;
@@ -46,13 +37,14 @@ export function deriveFastModeNotice(
     // may never report its state, so the previous account is no longer evidence.
     if (activity.kind === "provider.handoff") return null;
     if (activity.kind === FAST_MODE_STATE_ACTIVITY_KIND)
-      return fastModeNoticeFromActivity(activity);
+      return fastModeNoticeFromActivity(activity, translate);
   }
   return null;
 }
 
 export function fastModeNoticeFromActivity(
   activity: OrchestrationThreadActivity | null | undefined,
+  translate: typeof t = t,
 ): FastModeNotice | null {
   const payload =
     activity?.payload && typeof activity.payload === "object"
@@ -61,10 +53,8 @@ export function fastModeNoticeFromActivity(
   if (payload?.state === "cooldown") {
     return {
       kind: "cooldown",
-      label: i18n._("Fast paused"),
-      detail: i18n._(
-        "Fast mode is paused after a rate limit. Requests run at standard speed for now.",
-      ),
+      label: translate("chat:fastModePaused"),
+      detail: translate("chat:fastModePausedDescription"),
     };
   }
   if (payload?.state !== "off") {
@@ -74,10 +64,12 @@ export function fastModeNoticeFromActivity(
   if (reason === null || NOT_REQUESTED_REASONS.has(reason)) {
     return null;
   }
-  const cause = blockedDetail(reason) ?? i18n._("Claude reported it as unavailable");
+  const detailKey = Object.hasOwn(BLOCKED_DETAIL_KEYS, reason)
+    ? BLOCKED_DETAIL_KEYS[reason]!
+    : "chat:fastModeUnavailableUnknown";
   return {
     kind: "blocked",
-    label: i18n._("Fast unavailable"),
-    detail: i18n._("Fast mode is not active: {cause}. Requests run at standard speed.", { cause }),
+    label: translate("chat:fastModeUnavailable"),
+    detail: translate(detailKey),
   };
 }

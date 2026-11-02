@@ -6,6 +6,7 @@ import { XIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { Button, dialogActionButtonClassName } from "~/components/ui/button";
 import { ScrollArea } from "~/components/ui/scroll-area";
+import { useTranslation } from "~/i18n";
 
 const DialogCreateHandle = DialogPrimitive.createHandle;
 
@@ -82,6 +83,8 @@ function DialogPopup({
   showCloseButton?: boolean;
   bottomStickOnMobile?: boolean;
 }) {
+  const { t } = useTranslation();
+
   const showCloseButton = showCloseButtonProp ?? true;
   const bottomStickOnMobile = bottomStickOnMobileProp ?? true;
   return (
@@ -103,7 +106,7 @@ function DialogPopup({
           {children}
           {showCloseButton && (
             <DialogPrimitive.Close
-              aria-label={i18n._("Close")}
+              aria-label={t("common:app_close")}
               className="absolute end-2 top-2"
               render={<Button size="icon-sm" variant="ghost" />}
             >

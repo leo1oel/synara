@@ -23,6 +23,7 @@ import {
   type ShortcutSheetSection,
 } from "../shortcutsSheet";
 import type { ProjectScript } from "../types";
+import { useTranslation } from "~/i18n";
 
 export default function ShortcutsDialog(props: {
   open: boolean;
@@ -55,6 +56,8 @@ function ShortcutsDialogContent(props: {
   platform: string;
   context: ShortcutSheetContext;
 }) {
+  const { t } = useTranslation();
+
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -83,7 +86,7 @@ function ShortcutsDialogContent(props: {
       <DialogHeader className="pb-2">
         <DialogTitle className="text-ui-lg">Keybindings</DialogTitle>
         <DialogDescription className="text-ui leading-snug">
-          Reflects the bindings active in your current context.
+          {t("common:reflectsTheBindingsActiveInYourCurrentContext")}
         </DialogDescription>
         <div className="pt-2">
           <SearchInput
@@ -99,7 +102,7 @@ function ShortcutsDialogContent(props: {
               }
             }}
             nativeInput
-            aria-label="Search shortcuts"
+            aria-label={t("common:searchShortcuts")}
           />
         </div>
       </DialogHeader>
@@ -113,7 +116,8 @@ function ShortcutsDialogContent(props: {
           </div>
         ) : (
           <div className="px-6 py-10 text-center text-ui leading-snug text-muted-foreground">
-            No shortcuts match &ldquo;{query}&rdquo;.
+            {t("common:noShortcutsMatch")}
+            {query}&rdquo;.
           </div>
         )}
       </DialogPanel>

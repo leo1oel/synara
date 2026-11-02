@@ -141,6 +141,8 @@ export const ReviewFileTreePanel = function ReviewFileTreePanel(props: {
   onSelectFile: (filePath: string) => void;
   onClose?: () => void;
 }) {
+  const { t } = useTranslation();
+
   const [query, setQuery] = useState("");
   // Default fully expanded (the diff file set is known upfront and usually
   // small), so we track which directories the user has *collapsed* rather than
@@ -185,7 +187,7 @@ export const ReviewFileTreePanel = function ReviewFileTreePanel(props: {
         "flex h-full w-full min-h-0 min-w-0 flex-col border-l border-border bg-[var(--color-background-surface)]",
         props.className,
       )}
-      aria-label="Review files"
+      aria-label={t("common:reviewFiles")}
     >
       <div className="flex shrink-0 items-center gap-1.5 border-b border-border/65 p-2">
         <SearchInput
@@ -193,8 +195,8 @@ export const ReviewFileTreePanel = function ReviewFileTreePanel(props: {
           spellCheck={false}
           autoCorrect="off"
           autoCapitalize="off"
-          placeholder="Filter files..."
-          aria-label="Filter files"
+          placeholder={t("common:filterFiles")}
+          aria-label={t("common:diff_filterFiles")}
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={handleSearchKeyDown}
         />
@@ -203,8 +205,8 @@ export const ReviewFileTreePanel = function ReviewFileTreePanel(props: {
             variant="ghost"
             size="icon-xs"
             className="shrink-0 text-muted-foreground hover:text-foreground"
-            label="Hide file tree"
-            title="Hide file tree"
+            label={t("common:diff_hideFileTree")}
+            title={t("common:diff_hideFileTree")}
             onClick={props.onClose}
           >
             <XIcon className="size-3.5" />
@@ -221,11 +223,11 @@ export const ReviewFileTreePanel = function ReviewFileTreePanel(props: {
           <FileRowsSkeleton label="Loading changed files..." nested className="px-1 py-1.5" />
         ) : !hasFiles ? (
           <PanelStateMessage density="compact" fill="flex">
-            <p>No files in this diff.</p>
+            <p>{t("common:editor_noFilesInDiff")}</p>
           </PanelStateMessage>
         ) : tree.length === 0 ? (
           <PanelStateMessage density="compact" fill="flex">
-            <p>No matching files.</p>
+            <p>{t("common:workspaceExplorer_noMatchingFiles")}</p>
           </PanelStateMessage>
         ) : (
           <ReviewFileTreeNodes

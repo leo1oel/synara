@@ -61,6 +61,7 @@ import {
 } from "./GitRepositorySetup";
 import { type LatticeChangeScope, LatticeGitChanges } from "./LatticeGitChanges";
 import { PanelStateMessage } from "./PanelStateMessage";
+import { useTranslation } from "~/i18n";
 
 type GitPanelSection = "staged" | "unstaged";
 
@@ -254,7 +255,8 @@ export function GitPanel(props: {
   showActions?: boolean;
   title?: ReactNode;
 }) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   const queryClient = useQueryClient();
   const { resolvedTheme } = useTheme();
   const theme = resolvedTheme as "light" | "dark";
@@ -433,13 +435,13 @@ export function GitPanel(props: {
       <DockPaneHeader
         title={props.title ?? i18n._("Source control")}
         onClose={props.onClose}
-        closeLabel={i18n._("Close source control")}
+        closeLabel={t("git:closeSourceControl")}
         actions={
           <IconButton
             size="icon-xs"
             variant="ghost"
-            label={i18n._("Refresh changes")}
-            tooltip={i18n._("Refresh changes")}
+            label={t("git:gitPanel_refreshLabel")}
+            tooltip={t("git:gitPanel_refreshLabel")}
             className={DOCK_HEADER_ICON_BUTTON_CLASS}
             disabled={refreshMutation.isPending}
             aria-busy={refreshMutation.isPending || undefined}

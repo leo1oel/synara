@@ -23,6 +23,7 @@ import {
   type ThreadFindHighlight,
   type ThreadFindMatch,
 } from "./threadFind.logic";
+import { useTranslation } from "~/i18n";
 
 interface ThreadFindBarProps {
   open: boolean;
@@ -48,6 +49,8 @@ export function ThreadFindBar({
   onHighlightChange,
   onActiveMatchChange,
 }: ThreadFindBarProps) {
+  const { t } = useTranslation();
+
   const inputRef = useRef<HTMLInputElement>(null);
   const matchesRef = useRef<ThreadFindMatch[]>([]);
   const activeIndexRef = useRef(0);
@@ -184,8 +187,8 @@ export function ThreadFindBar({
           value={query}
           onChange={(event) => handleQueryChange(event.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={i18n._("Search chat...")}
-          aria-label={i18n._("Find in thread")}
+          placeholder={t("chat:searchChat")}
+          aria-label={t("chat:findInThread")}
           autoComplete="off"
           spellCheck={false}
           // The unlayered utility overrides the global `input { font-family: mono }`
@@ -196,7 +199,7 @@ export function ThreadFindBar({
         <IconButton
           onClick={onClose}
           className={FIND_STEP_BUTTON_CLASS_NAME}
-          label={i18n._("Close find (Esc)")}
+          label={t("chat:closeFindEsc")}
         >
           <XIcon className="size-4" />
         </IconButton>
@@ -208,7 +211,7 @@ export function ThreadFindBar({
               onClick={() => handleStep("previous")}
               disabled={matchCount === 0}
               className={FIND_STEP_BUTTON_CLASS_NAME}
-              label={i18n._("Previous match (Shift+Enter)")}
+              label={t("common:previousMatchShiftEnter")}
             >
               <ArrowUpIcon className="size-4" />
             </IconButton>
@@ -216,7 +219,7 @@ export function ThreadFindBar({
               onClick={() => handleStep("next")}
               disabled={matchCount === 0}
               className={FIND_STEP_BUTTON_CLASS_NAME}
-              label={i18n._("Next match (Enter)")}
+              label={t("common:nextMatchEnter")}
             >
               <ArrowDownIcon className="size-4" />
             </IconButton>
@@ -230,8 +233,11 @@ export function ThreadFindBar({
           >
             {hasQuery
               ? matchCount === 0
-                ? i18n._("No results")
-                : `${safeIndex + 1} / ${matchCount} results`
+                ? t("common:noResults")
+                : t("chat:results", {
+                    value0: safeIndex + 1,
+                    value1: matchCount,
+                  })
               : ""}
           </span>
         </div>

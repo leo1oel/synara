@@ -63,7 +63,7 @@ import {
 } from "./agentActivity.logic";
 import { AutomationCreatedCard } from "./AutomationCreatedCard";
 import { BackgroundTaskRow } from "./BackgroundTaskRow";
-import { INLINE_COMMAND_CHIP_CLASS_NAME } from "./chatTypography";
+import { getChatTranscriptTextStyle, INLINE_COMMAND_CHIP_CLASS_NAME } from "./chatTypography";
 import { SubagentRunCard } from "./SubagentRunCard";
 import { ConnectedComputerSetupRequiredCard } from "./ComputerSetupRequiredCard";
 import { ComputerControlDeniedCard } from "./ComputerControlDeniedCard";
@@ -105,6 +105,7 @@ import { deriveToolFailureSummary } from "../../lib/toolCallDetails";
 import { openWorkspaceFileReference, useWorkspaceFileOpener } from "../../lib/workspaceFileOpener";
 import { DISCLOSURE_CLEANUP_BUFFER_MS, DISCLOSURE_TRANSITION_MS } from "../../lib/disclosureMotion";
 import { MUTED_LABEL_TEXT_CLASS_NAME, MUTED_LABEL_TEXT_COLOR } from "~/surfaceStyles";
+import { t, useTranslation } from "~/i18n";
 
 // Rest tone is the shared quiet-label gray (same one the composer pickers use for
 // their effort/thinking labels) so a tool row and the picker below it read as one
@@ -423,7 +424,8 @@ function capitalizePhrase(value: string): string {
   return `${trimmed.charAt(0).toUpperCase()}${trimmed.slice(1)}`;
 }
 
-function toolWorkEntryHeading(workEntry: TimelineWorkEntry): string {
+function toolWorkEntryHeading(workEntry: TimelineWorkEntry, translate: typeof t): string {
+  if (workEntry.displayToolTitle) return capitalizePhrase(workEntry.displayToolTitle);
   if (computerToolName(workEntry.toolName)) {
     for (const candidate of [workEntry.toolTitle, workEntry.label]) {
       const title = normalizeCompactToolLabel(candidate ?? "");
@@ -442,12 +444,15 @@ function toolWorkEntryHeading(workEntry: TimelineWorkEntry): string {
   ) {
     return capitalizePhrase(workEntry.label);
   }
-  const synaraTitle = deriveSynaraMcpToolTitle({
-    toolName: workEntry.toolName,
-    title: workEntry.toolTitle,
-    fallbackLabel: workEntry.label,
-    status: toolWorkEntryStatus(workEntry),
-  });
+  const synaraTitle = deriveSynaraMcpToolTitle(
+    {
+      toolName: workEntry.toolName,
+      title: workEntry.toolTitle,
+      fallbackLabel: workEntry.label,
+      status: toolWorkEntryStatus(workEntry),
+    },
+    translate,
+  );
   if (synaraTitle) {
     return synaraTitle;
   }
@@ -607,13 +612,15 @@ function commandRowDisplay(
   const readTargets = deriveCommandReadTargets(command);
   if (readTargets) {
     return {
-      heading: running ? "Reading" : "Read",
+      heading: running ? "chat:reading" : "chat:detail_read",
       object: readTargets.join(", "),
       literal: false,
     };
   }
   const literal = deriveLiteralCommand(command);
-  return literal ? { heading: running ? "Running" : "Ran", object: literal, literal: true } : null;
+  return literal
+    ? { heading: running ? "chat:runStatus_running" : "chat:ran", object: literal, literal: true }
+    : null;
 }
 
 export interface WorkEntryDisplayParts {
@@ -643,34 +650,41 @@ export function renderWorkEntrySentence(parts: WorkEntryDisplayParts): ReactNode
 // on ("Read calc.py", "Ran `ls`"). Lifecycle state is never spelled out here —
 // the verb already carries the tense and `liveActivityMetaText` covers the rest.
 // Shared with the live tool-group line, which wears its newest call's sentence.
-export function workEntryDisplayParts(workEntry: TimelineWorkEntry): WorkEntryDisplayParts {
+export function workEntryDisplayParts(
+  workEntry: TimelineWorkEntry,
+  translate: typeof t = t,
+): WorkEntryDisplayParts {
   const commandDisplay = commandRowDisplay(workEntry);
   if (commandDisplay) {
+    const heading = translate(commandDisplay.heading, { context: "command" });
     return {
-      heading: commandDisplay.heading,
+      heading,
       preview: commandDisplay.object,
-      displayText: `${commandDisplay.heading} ${commandDisplay.object}`,
+      displayText: `${heading} ${commandDisplay.object}`,
       commandLiteral: commandDisplay.literal ? commandDisplay.object : null,
     };
   }
   const webFetchUrl = extractWebFetchUrl(workEntry);
-  const heading = toolWorkEntryHeading(workEntry);
+  const heading = toolWorkEntryHeading(workEntry, translate);
   const rawPreview = workEntryPreview(workEntry);
   const preview =
     !isGitHubMcpToolCall(workEntry) &&
     (isSynaraBrowserWorkEntry(workEntry) || isSynaraToolCall(workEntry))
-      ? sanitizeSynaraMcpToolPreview({
-          preview: rawPreview,
-          heading,
-          status: toolWorkEntryStatus(workEntry),
-        })
+      ? sanitizeSynaraMcpToolPreview(
+          {
+            preview: rawPreview,
+            heading,
+            status: toolWorkEntryStatus(workEntry),
+          },
+          translate,
+        )
       : rawPreview;
   const displayText = webFetchUrl
     ? describeLinkChip(webFetchUrl).label
     : (isReasoningUpdateWorkEntry(workEntry) || workEntry.activityKind === "tool.summary") &&
         preview
       ? preview
-      : combineWorkEntryDisplayText(heading, preview);
+      : combineWorkEntryDisplayText(heading, preview, translate);
   return { heading, preview, displayText, commandLiteral: null };
 }
 
@@ -678,16 +692,32 @@ function isFileChangeWorkEntry(workEntry: TimelineWorkEntry): boolean {
   return isFileChangeWorkLogEntry(workEntry);
 }
 
+// Item-scoped reasoning and summaries keep full prose. Legacy reasoning groups
+// only carry a compact preview; their existing opener retains all original updates.
+function isProseWorkEntry(workEntry: TimelineWorkEntry): boolean {
+  return (
+    (isReasoningUpdateWorkEntry(workEntry) && Boolean(workEntry.toolCallId)) ||
+    workEntry.activityKind === "tool.summary"
+  );
+}
+
+function proseWorkEntryText(workEntry: TimelineWorkEntry, displayText: string): string | null {
+  const source = workEntry.detail ?? workEntry.preview ?? displayText;
+  // Codex summaries end in an empty `<!-- -->` block separator.
+  const text = source.replace(/<!--[\s\S]*?-->/gu, "").trim();
+  return text.length > 0 ? text : null;
+}
+
 function commandTooltipContent(command: string, displayText: string) {
   return (
     <div className="max-w-96 whitespace-pre-wrap leading-tight">
       <div className="space-y-2">
         <div className="space-y-0.5">
-          <div className="text-muted-foreground/70">{i18n._("Summary")}</div>
+          <div className="text-muted-foreground/70">{t("chat:timeline_summaryLabel")}</div>
           <div>{displayText}</div>
         </div>
         <div className="space-y-0.5">
-          <div className="text-muted-foreground/70">{i18n._("Raw call")}</div>
+          <div className="text-muted-foreground/70">{t("chat:timeline_rawCall")}</div>
           <code className="block whitespace-pre-wrap break-words font-chat-code text-chat-code text-foreground/92">
             {command}
           </code>
@@ -734,8 +764,10 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   chatMetaFontSizePx: number;
   textFontSizePx?: number;
   density?: "default" | "compact";
+  mutedProse?: boolean;
   fileDiffStatByPath?: ReadonlyMap<string, { additions: number; deletions: number }>;
   markdownCwd: string | undefined;
+  threadId?: string | null | undefined;
   onImageExpand: (preview: ExpandedImagePreview) => void;
   turnId?: TurnId;
   onOpenTurnDiff?: (turnId: TurnId, filePath?: string) => void;
@@ -745,6 +777,8 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   onEnableComputerControl?: () => void;
   timestampFormat: TimestampFormat;
 }) {
+  const { t, formatLocale } = useTranslation();
+
   // Defaults are applied in the body (not in the destructuring pattern): a default
   // value inside a destructuring pattern makes React Compiler bail out on the whole
   // component, silently dropping memoization for every tool-call row.
@@ -753,8 +787,10 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
     chatMetaFontSizePx,
     textFontSizePx: textFontSizePxProp,
     density: densityProp,
+    mutedProse,
     fileDiffStatByPath,
     markdownCwd,
+    threadId,
     onImageExpand,
     turnId,
     onOpenTurnDiff,
@@ -800,7 +836,7 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
             : isMcpToolRow
               ? "mcp"
               : undefined;
-  const displayParts = workEntryDisplayParts(workEntry);
+  const displayParts = workEntryDisplayParts(workEntry, t);
   const { heading, preview, displayText } = displayParts;
   const showInlineAgentTaskPreview =
     workEntry.itemType === "collab_agent_tool_call" &&
@@ -833,8 +869,8 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
     [workEntry],
   );
   const liveActivityNowMs = useLiveActivityNow(workEntry.liveActivity);
-  // A failed call says so explicitly, with its exit code and the first line
-  // that explains it, instead of the generic lifecycle meta.
+  // A failed call says so explicitly, with its exit code, instead of the
+  // generic lifecycle meta. The output itself stays behind the disclosure.
   const failure =
     toolWorkEntryStatus(workEntry) === "failed"
       ? deriveToolFailureSummary(workEntry.toolDetails)
@@ -851,10 +887,6 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
       ? i18n._("Failed · exit {code}", { code: failure.exitCode })
       : i18n._("Failed")
     : null;
-  // Reasoning and progress narration reads as prose: it wraps instead of
-  // being cut to one line.
-  const wrapsFullText =
-    isReasoningUpdateWorkEntry(workEntry) || workEntry.activityKind === "tool.summary";
 
   // A computer-control denial renders as an actionable card (enable + retry)
   // instead of a buried tool-error line. Kept after the hooks above so the
@@ -908,6 +940,28 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
           textFontSizePx={textFontSizePx}
           metaFontSizePx={chatMetaFontSizePx}
           {...(onOpenAutomation ? { onOpen: () => onOpenAutomation(automation.id) } : {})}
+        />
+      </div>
+    );
+  }
+
+  // Narration renders like the assistant's own text: full Markdown in the
+  // transcript type and color, with no glyph or disclosure.
+  const proseText = isProseWorkEntry(workEntry) ? proseWorkEntryText(workEntry, displayText) : null;
+  if (proseText !== null) {
+    return (
+      <div className="py-1" data-work-entry-prose="true">
+        <ChatMarkdown
+          text={proseText}
+          cwd={markdownCwd}
+          threadId={threadId}
+          directionMode="auto-blocks"
+          isStreaming={false}
+          style={{
+            ...getChatTranscriptTextStyle(textFontSizePx),
+            ...(mutedProse ? { color: MUTED_LABEL_TEXT_COLOR } : {}),
+          }}
+          onImageExpand={onImageExpand}
         />
       </div>
     );
@@ -1057,6 +1111,7 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
                     <ChatMarkdown
                       text={preview ?? ""}
                       cwd={markdownCwd}
+                      threadId={threadId}
                       isStreaming={false}
                       className="leading-relaxed"
                       style={{
@@ -1070,7 +1125,7 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
                 ) : (
                   <p
                     className={cn(
-                      wrapsFullText ? "whitespace-pre-wrap break-words" : "truncate",
+                      "truncate",
                       compact ? "leading-5" : "leading-6",
                       // Match the leading icon's tone so the row reads as one muted unit, and
                       // brighten the whole row to foreground on hover/focus instead of a fill.
@@ -1098,20 +1153,6 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
               </div>
             </>
           );
-          // The failure's first explanatory line sits right under the row,
-          // aligned with its text, so it reads without opening the details.
-          const failureExcerpt = failure?.excerpt ? (
-            <p
-              className={cn(
-                "truncate font-chat-code text-chat-code leading-5 text-destructive/85",
-                compact ? "pl-[1.375rem]" : "pl-7",
-              )}
-              data-tool-failure-excerpt="true"
-              title={failure.excerpt}
-            >
-              {failure.excerpt}
-            </p>
-          ) : null;
           if (canOpenToolDetails) {
             return (
               <ToolDetailsDisclosure
@@ -1124,7 +1165,7 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
                         className="text-ui-xs text-muted-foreground"
                         dateTime={workEntry.createdAt}
                       >
-                        {formatTimestamp(workEntry.createdAt, timestampFormat)}
+                        {formatTimestamp(workEntry.createdAt, timestampFormat, formatLocale)}
                       </time>
                       <pre className="whitespace-pre-wrap break-words font-chat-code">
                         {monitorNotification.output}
@@ -1139,14 +1180,13 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
                 compact={compact}
                 timestampFormat={timestampFormat}
                 tooltip={toolRowTooltipContent(rawCommand, displayText, displayText)}
-                afterSummary={failureExcerpt}
               >
                 {rowContentChildren}
               </ToolDetailsDisclosure>
             );
           }
 
-          const rowContent = (
+          return (
             <AgentActivityOpenSurface
               canOpen={canOpenAgentActivity || canOpenReadFile}
               compact={compact}
@@ -1160,13 +1200,6 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
             >
               {rowContentChildren}
             </AgentActivityOpenSurface>
-          );
-
-          return (
-            <>
-              {rowContent}
-              {failureExcerpt}
-            </>
           );
         })()
       )}
@@ -1185,6 +1218,8 @@ export function EditedFileRowContent(props: {
   fontSizePx: number;
   compact: boolean;
 }) {
+  const { t } = useTranslation();
+
   const { filePath, additions, deletions, fontSizePx, compact } = props;
   const hasStat = (additions ?? 0) + (deletions ?? 0) > 0;
   return (
@@ -1203,7 +1238,7 @@ export function EditedFileRowContent(props: {
         className={cn("font-system-ui shrink-0", WORK_ROW_MUTED_HOVER_TONE["file-row"])}
         style={{ fontSize: `${fontSizePx}px` }}
       >
-        {i18n._("Edited")}
+        {t("chat:timeline_edited")}
       </span>
       <span
         className={cn(
@@ -1273,23 +1308,25 @@ function providerContextLifecycleReasonLabel(
 ): string {
   switch (reason) {
     case "conversation-rebuilt":
-      return i18n._("Conversation rebuilt from a summary");
+      return t("chat:conversationRebuiltFromASummary");
     case "fork-from-earlier-turn":
-      return i18n._("Fork rebuilt up to the chosen turn");
+      return t("chat:forkRebuiltUpToTheChosenTurn");
     case "fresh-session":
-      return i18n._("New session started");
+      return t("chat:newSessionStarted");
     case "interrupt-escalation":
-      return i18n._("Turn stop escalated to a session restart");
+      return t("chat:turnStopEscalatedToASessionRestart");
     case "native-history-unavailable":
-      return i18n._("Previous history unavailable");
+      return t("chat:previousHistoryUnavailable");
     case "native-resume-failed":
-      return i18n._("Could not resume the previous session");
+      return t("chat:couldNotResumeThePreviousSession");
   }
 }
 
 function ProviderContextLifecycleDetails(props: {
   info: NonNullable<TimelineWorkEntry["providerContextLifecycle"]>;
 }) {
+  const { t, formatLocale } = useTranslation();
+
   const { info } = props;
   const provider =
     PROVIDER_DESCRIPTORS.find((descriptor) => descriptor.kind === info.provider)?.displayName ??
@@ -1297,31 +1334,31 @@ function ProviderContextLifecycleDetails(props: {
   return (
     <div className="space-y-3" data-provider-context-lifecycle-details="true">
       <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1.5 rounded-lg border border-border/45 bg-background/60 px-3 py-2.5 text-ui-sm">
-        <dt className="text-muted-foreground/56">{i18n._("Provider")}</dt>
+        <dt className="text-muted-foreground/56">{t("workspace:models_customModelProvider")}</dt>
         <dd className="text-foreground/84">{provider}</dd>
-        <dt className="text-muted-foreground/56">{i18n._("Previous history")}</dt>
+        <dt className="text-muted-foreground/56">{t("chat:previousHistory")}</dt>
         <dd className="text-foreground/84">
-          {info.nativeHistory === "available" ? i18n._("Available") : i18n._("Lost")}
+          {info.nativeHistory === "available" ? t("chat:available") : t("chat:lost")}
         </dd>
-        <dt className="text-muted-foreground/56">{i18n._("Session restarted")}</dt>
+        <dt className="text-muted-foreground/56">{t("chat:sessionRestarted")}</dt>
         <dd className="text-foreground/84">
-          {info.sessionRestarted ? i18n._("Yes") : i18n._("No")}
+          {info.sessionRestarted ? t("chat:common_yes") : t("chat:common_no")}
         </dd>
-        <dt className="text-muted-foreground/56">{i18n._("Why")}</dt>
+        <dt className="text-muted-foreground/56">{t("chat:why")}</dt>
         <dd className="text-foreground/84">
           {providerContextLifecycleReasonLabel(info.restartReason)}
         </dd>
-        <dt className="text-muted-foreground/56">{i18n._("Summary included")}</dt>
+        <dt className="text-muted-foreground/56">{t("chat:summaryIncluded")}</dt>
         <dd className="text-foreground/84">
           {info.recapInjected
-            ? i18n._("{count} characters", { count: info.recapCharacters.toLocaleString() })
-            : i18n._("No")}
+            ? t("chat:characters", { value0: info.recapCharacters.toLocaleString(formatLocale) })
+            : t("chat:common_no")}
         </dd>
       </dl>
       {info.recapPreview ? (
         <section className="space-y-2">
           <h3 className="text-ui-sm font-medium text-muted-foreground/56">
-            {i18n._("Summary preview")}
+            {t("chat:summaryPreview")}
           </h3>
           <pre
             className="max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-border/45 bg-background/60 px-3 py-2.5 font-chat-code text-chat-code leading-relaxed text-foreground/84"
@@ -1331,7 +1368,7 @@ function ProviderContextLifecycleDetails(props: {
           </pre>
           {info.recapPreviewTruncated ? (
             <p className="text-ui-xs text-muted-foreground/56">
-              {i18n._("Showing a short preview of the summary sent with your message.")}
+              {t("chat:showingAShortPreviewOfTheSummarySentWith")}
             </p>
           ) : null}
         </section>
@@ -1342,49 +1379,57 @@ function ProviderContextLifecycleDetails(props: {
 
 function providerModelLabel(
   selection: ModelSelection,
-  fastModeNotice?: FastModeNotice | null,
+  fastModeNotice: FastModeNotice | null | undefined,
+  translate: typeof t,
 ): string {
   const displayName =
     PROVIDER_DESCRIPTORS.find((descriptor) => descriptor.kind === selection.provider)
       ?.displayName ?? selection.provider;
-  const summary = resolveThreadModelSummary(selection);
+  const summary = resolveThreadModelSummary(selection, undefined, translate);
   const modelLabel = summary
-    ? `${formatThreadModelSummaryLabel(summary)}${summary.fastMode ? ` · ${fastModeNotice?.label ?? i18n._("Fast")}` : ""}`
+    ? translate("common:symbol6", {
+        value0: formatThreadModelSummaryLabel(summary),
+        value1: summary.fastMode
+          ? ` · ${fastModeNotice?.label ?? translate("chat:traitsPicker_fast")}`
+          : "",
+      })
     : selection.model;
-  return `${displayName} · ${modelLabel}`;
+  return translate("common:symbol9", { value0: displayName, value1: modelLabel });
 }
 
 export function ProviderHandoffDetails(props: {
   info: NonNullable<TimelineWorkEntry["providerHandoff"]>;
 }) {
+  const { t, formatLocale } = useTranslation();
+
   const { info } = props;
   return (
     <div className="space-y-3" data-provider-handoff-details="true">
       <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1.5 rounded-lg border border-border/45 bg-background/60 px-3 py-2.5 text-ui-sm">
-        <dt className="text-muted-foreground/56">{i18n._("From")}</dt>
+        <dt className="text-muted-foreground/56">{t("chat:from")}</dt>
         <dd className="text-foreground/84">
-          {providerModelLabel(info.sourceModelSelection, info.sourceFastModeNotice)}
+          {providerModelLabel(info.sourceModelSelection, info.sourceFastModeNotice, t)}
         </dd>
-        <dt className="text-muted-foreground/56">{i18n._("To")}</dt>
+        <dt className="text-muted-foreground/56">{t("chat:to")}</dt>
         <dd className="text-foreground/84">
-          {providerModelLabel(info.targetModelSelection, info.targetFastModeNotice)}
+          {providerModelLabel(info.targetModelSelection, info.targetFastModeNotice, t)}
         </dd>
         {info.status === "failed" ? (
           <>
-            <dt className="text-muted-foreground/56">{i18n._("Error")}</dt>
+            <dt className="text-muted-foreground/56">{t("chat:providerUsage_error")}</dt>
             <dd className="text-foreground/84">
-              {info.failureDetail ?? i18n._("The session did not start.")}
+              {info.failureDetail ?? t("chat:theSessionDidNotStart")}
             </dd>
           </>
         ) : (
           <>
-            <dt className="text-muted-foreground/56">{i18n._("Context")}</dt>
+            <dt className="text-muted-foreground/56">{t("chat:traitsPicker_context")}</dt>
             <dd className="text-foreground/84">
               {info.contextText
-                ? i18n._("{count} characters", {
-                    count: info.contextText.length.toLocaleString(),
+                ? t("chat:characters", {
+                    value0: info.contextText.length.toLocaleString(formatLocale),
                   })
-                : i18n._("None")}
+                : t("chat:none")}
             </dd>
           </>
         )}
@@ -1392,7 +1437,7 @@ export function ProviderHandoffDetails(props: {
       {info.status === "completed" && info.contextText ? (
         <section className="space-y-2">
           <h3 className="text-ui-sm font-medium text-muted-foreground/56">
-            {i18n._("Transferred context")}
+            {t("chat:transferredContext")}
           </h3>
           <pre
             className="max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-border/45 bg-background/60 px-3 py-2.5 font-chat-code text-chat-code leading-relaxed text-foreground/84"
@@ -1401,7 +1446,7 @@ export function ProviderHandoffDetails(props: {
             {info.contextText}
           </pre>
           <p className="text-ui-xs text-muted-foreground/56">
-            {i18n._("Sent ahead of your next message so the new model can continue this thread.")}
+            {t("chat:sentAheadOfYourNextMessageSoTheNew")}
           </p>
         </section>
       ) : null}
@@ -1419,8 +1464,6 @@ function ToolDetailsDisclosure(props: {
   summaryClassName?: string | undefined;
   timestampFormat: TimestampFormat;
   tooltip?: ReactNode;
-  // Rendered between the summary row and its details (e.g. a failure excerpt).
-  afterSummary?: ReactNode;
 }) {
   const summaryClassName =
     props.summaryClassName ??
@@ -1494,7 +1537,6 @@ function ToolDetailsDisclosure(props: {
   return (
     <div className="group/tool-details min-w-0">
       <ToolRowTooltip content={props.tooltip}>{summaryButton}</ToolRowTooltip>
-      {props.afterSummary}
       {renderDetails ? (
         <DisclosureRegion
           open={motionOpen}

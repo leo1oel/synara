@@ -2087,7 +2087,8 @@ export const WsSubscribeProjectAgentEventsRpc = Rpc.make(WS_METHODS.subscribePro
 
 export const WsBootstrapRpcGroup = RpcGroup.make(WsBootstrapNegotiateRpc);
 
-export const WsFeatureRpcGroup = RpcGroup.make(
+// Keep declaration inference bounded without widening any RPC payload or result.
+const wsOrchestrationRpcGroup = RpcGroup.make(
   WsOrchestrationDispatchCommandRpc,
   WsOrchestrationSettleTurnDispatchRpc,
   WsOrchestrationImportThreadRpc,
@@ -2113,6 +2114,9 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsOrchestrationSubscribeThreadRpc,
   WsOrchestrationUnsubscribeThreadRpc,
   WsOrchestrationSubscribeDomainEventsRpc,
+);
+
+const wsApplicationRpcGroup = RpcGroup.make(
   WsProjectsDiscoverScriptsRpc,
   WsProjectsListDirectoriesRpc,
   WsProjectsSearchEntriesRpc,
@@ -2258,6 +2262,10 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsTodoDeleteRpc,
   WsSubscribeTodoEventsRpc,
 );
+
+export const WsFeatureRpcGroup: RpcGroup.RpcGroup<
+  RpcGroup.Rpcs<typeof wsOrchestrationRpcGroup> | RpcGroup.Rpcs<typeof wsApplicationRpcGroup>
+> = wsOrchestrationRpcGroup.merge(wsApplicationRpcGroup);
 
 // Project-agent RPCs live in a satellite group: folding them into
 // WsFeatureRpcGroup pushes its inferred type past the declaration emit limit.

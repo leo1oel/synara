@@ -30,6 +30,7 @@ import {
   type ProviderModelPickerInstance,
   resolveLiveProviderAvailability,
 } from "./ProviderModelPicker";
+import { useTranslation } from "~/i18n";
 
 function PickerTabButton(props: {
   label: string;
@@ -247,7 +248,8 @@ export function ComposerModelPickerTabs(props: {
   /** Omitted while the thread is locked to its provider. */
   onAddProviders?: (() => void) | undefined;
 }) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   return (
     <div className="flex shrink-0 items-center gap-0.5 border-b border-border p-1.5">
       {/* Many providers and accounts overflow the popup: the strip scrolls sideways, fades
@@ -255,12 +257,12 @@ export function ComposerModelPickerTabs(props: {
           for the open tab's marker, which hangs below the button. */}
       <SurfaceTabStrip
         role="tablist"
-        aria-label={i18n._("Model sources")}
+        aria-label={t("chat:modelSources")}
         activeKey={props.tab}
         className="-my-1 flex-1 gap-0.5 py-1"
       >
         <PickerTabButton
-          label={i18n._("Starred")}
+          label={t("chat:starred")}
           active={props.tab === STARRED_TAB}
           onSelect={() => props.onTabChange(STARRED_TAB)}
         >
@@ -303,7 +305,7 @@ export function ComposerModelPickerTabs(props: {
       {/* Outside the strip, so it stays reachable however far the tabs scroll. */}
       {props.onAddProviders ? (
         <PickerTabButton
-          label={i18n._("Add providers")}
+          label={t("chat:addProviders2")}
           tab={false}
           active={false}
           onSelect={props.onAddProviders}

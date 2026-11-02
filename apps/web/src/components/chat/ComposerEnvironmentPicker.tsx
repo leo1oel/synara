@@ -14,6 +14,7 @@ import {
   EnvironmentRowChevron,
 } from "./environment/EnvironmentRow";
 import { Menu, MenuGroup, MenuGroupLabel, MenuItem, MenuTrigger } from "../ui/menu";
+import { useTranslation } from "~/i18n";
 
 /** Leading glyph treatment shared by every "Work in" menu row (16px, muted). */
 const ENV_MENU_ICON_CLASS_NAME = "size-3.5 text-muted-foreground";
@@ -78,7 +79,8 @@ export function ComposerEnvironmentPicker({
   onOpenChange,
   children,
 }: ComposerEnvironmentPickerProps) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   const envGlyph = (className: string) =>
     environmentPresentation.mode === "local" ? (
       <CentralIcon name="macbook-air" className={className} />
@@ -122,7 +124,7 @@ export function ComposerEnvironmentPicker({
         className="w-60 min-w-60"
       >
         <MenuGroup>
-          <MenuGroupLabel>{i18n._("Work in")}</MenuGroupLabel>
+          <MenuGroupLabel>{t("chat:workIn")}</MenuGroupLabel>
           {environmentPresentation.mode === "local" ? (
             <WorkInMenuItem
               icon={<CentralIcon name="macbook-air" className={ENV_MENU_ICON_CLASS_NAME} />}
@@ -139,7 +141,7 @@ export function ComposerEnvironmentPicker({
           {canSwitchToWorktree ? (
             <WorkInMenuItem
               icon={<WorktreeIcon className={ENV_MENU_ICON_CLASS_NAME} />}
-              label={i18n._("New worktree")}
+              label={t("chat:general_newWorktree")}
               onSelect={() => onEnvModeChange("worktree")}
             />
           ) : null}
@@ -153,7 +155,7 @@ export function ComposerEnvironmentPicker({
           {canHandoffToWorktree && onHandoffToWorktree ? (
             <WorkInMenuItem
               icon={<WorktreeIcon className={ENV_MENU_ICON_CLASS_NAME} />}
-              label={i18n._("Hand off to new worktree")}
+              label={t("chat:handOffToNewWorktree")}
               disabled={handoffBusy}
               onSelect={() => onHandoffToWorktree()}
             />
@@ -161,7 +163,7 @@ export function ComposerEnvironmentPicker({
           {canHandoffToLocal && onHandoffToLocal ? (
             <WorkInMenuItem
               icon={<HandoffIcon className={ENV_MENU_ICON_CLASS_NAME} strokeWidth={1.75} />}
-              label={i18n._("Hand off to local")}
+              label={t("chat:handOffToLocal")}
               disabled={handoffBusy}
               onSelect={() => onHandoffToLocal()}
             />

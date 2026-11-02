@@ -9,6 +9,7 @@ import { cn } from "~/lib/utils";
 import { formatCacheDuration } from "./ClaudeCacheDetails";
 import { ComposerChoiceRow } from "./ComposerChoiceRow";
 import { COMPOSER_INPUT_SURFACE_CLASS_NAME } from "./composerPickerStyles";
+import { useTranslation } from "~/i18n";
 
 // "never" continues like "continue" and turns the review off, as Claude Code's
 // "Don't ask me again" does.
@@ -34,6 +35,8 @@ export function ComposerClaudeCacheReviewPanel({
     decision: ClaudeCacheReviewDecision,
   ) => Promise<void>;
 }) {
+  const { t } = useTranslation();
+
   const submittedReviewRef = useRef<PendingClaudeCacheReview | null>(null);
   const [submittedReview, setSubmittedReview] = useState<PendingClaudeCacheReview | null>(null);
   const reportGenerationRef = useRef(0);
@@ -65,9 +68,9 @@ export function ComposerClaudeCacheReviewPanel({
   // Claude Code's resume prompt wording, so both apps ask the same way.
   const title =
     review.status === "uncertain"
-      ? i18n._("Request status is uncertain")
+      ? t("chat:requestStatusIsUncertain")
       : isCompactionRequest
-        ? i18n._("Compaction will read the expired context")
+        ? t("chat:compactionWillReadTheExpiredContext")
         : idleSeconds !== undefined && contextTokens !== undefined
           ? i18n._("This session is {age} old and {tokens} tokens.", {
               age: formatCacheDuration(idleSeconds),
@@ -89,7 +92,7 @@ export function ComposerClaudeCacheReviewPanel({
       submittedReviewRef.current = null;
       setSubmittedReview(null);
       setDispatchError(
-        error instanceof Error ? error.message : i18n._("Could not submit this choice. Try again."),
+        error instanceof Error ? error.message : t("chat:couldNotSubmitThisChoiceTryAgain"),
       );
       void reportHandledIssue({
         code: "claude.cache.request-failed",
@@ -106,16 +109,14 @@ export function ComposerClaudeCacheReviewPanel({
 
   return (
     <section
-      aria-label={i18n._("Claude cache review")}
+      aria-label={t("chat:claudeCacheReview")}
       aria-busy={submittedReview === review}
       className={cn(COMPOSER_INPUT_SURFACE_CLASS_NAME, "overflow-hidden px-3.5 py-3")}
     >
       <p className="text-ui-lg font-medium leading-snug text-foreground/90">{title}</p>
       <p className="mt-1.5 text-ui leading-relaxed text-muted-foreground">
         {review.status === "uncertain"
-          ? i18n._(
-              "Claude may have accepted the request. Sending is paused until its status can be confirmed.",
-            )
+          ? t("chat:claudeMayHaveAcceptedTheRequestSendingIsPaused")
           : isCompactionRequest
             ? contextTokens === undefined
               ? i18n._(
@@ -142,8 +143,8 @@ export function ComposerClaudeCacheReviewPanel({
         {isCompactionRequest ? (
           <ComposerChoiceRow
             shortcut={null}
-            label={i18n._("Compact this conversation")}
-            description={i18n._("Process the existing history and save its summary")}
+            label={t("chat:compactThisConversation")}
+            description={t("chat:processTheExistingHistoryAndSaveItsSummary")}
             disabled={disabled}
             onSelect={() => respondOnce("continue")}
           />
@@ -151,27 +152,25 @@ export function ComposerClaudeCacheReviewPanel({
           <>
             <ComposerChoiceRow
               shortcut={null}
-              label={i18n._("Resume from summary (recommended)")}
+              label={t("chat:resumeFromSummaryRecommended")}
               tone="primary"
               description={
-                compactDisabledReason ?? i18n._("Summarize this session, then send your message")
+                compactDisabledReason ?? t("chat:summarizeThisSessionThenSendYourMessage")
               }
               disabled={disabled || compactDisabledReason !== null}
               onSelect={() => respondOnce("compact")}
             />
             <ComposerChoiceRow
               shortcut={null}
-              label={i18n._("Resume full session as-is")}
-              description={i18n._("Send your message with the full history")}
+              label={t("chat:resumeFullSessionAsIs")}
+              description={t("chat:sendYourMessageWithTheFullHistory")}
               disabled={disabled}
               onSelect={() => respondOnce("continue")}
             />
             <ComposerChoiceRow
               shortcut={null}
-              label={i18n._("Don't ask me again")}
-              description={i18n._(
-                "Resume as-is now and stop asking. Turn it back on in Settings → Providers",
-              )}
+              label={t("chat:donTAskMeAgain")}
+              description={t("chat:resumeAsIsNowAndStopAskingTurnIt")}
               disabled={disabled}
               onSelect={() => respondOnce("never")}
             />
@@ -179,8 +178,8 @@ export function ComposerClaudeCacheReviewPanel({
         )}
         <ComposerChoiceRow
           shortcut={null}
-          label={i18n._("Cancel this send")}
-          description={i18n._("Keep your message without sending it")}
+          label={t("chat:cancelThisSend")}
+          description={t("chat:keepYourMessageWithoutSendingIt")}
           disabled={disabled}
           onSelect={() => respondOnce("cancel")}
         />

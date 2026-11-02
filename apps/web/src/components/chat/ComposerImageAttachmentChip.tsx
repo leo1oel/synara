@@ -14,6 +14,7 @@ import {
   DraftAttachmentWarningIcon,
 } from "./DraftAttachmentWarning";
 import { buildExpandedImagePreview, type ExpandedImagePreview } from "./ExpandedImagePreview";
+import { useTranslation } from "~/i18n";
 
 interface ComposerImageAttachmentChipProps {
   image: ComposerImageAttachment;
@@ -30,7 +31,8 @@ export function ComposerImageAttachmentChip({
   onExpandImage,
   onRemoveImage,
 }: ComposerImageAttachmentChipProps) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   // Normalize here so a legacy "appshot" provenance still renders as an AppSnap.
   const appSnapSource = normalizeComposerImageSource(image.source) ?? null;
   const previewImage = () => {
@@ -67,7 +69,7 @@ export function ComposerImageAttachmentChip({
             />
           ) : (
             <span className="flex size-full items-center justify-center text-ui-xs font-medium text-muted-foreground/70">
-              IMG
+              {t("chat:iMG")}
             </span>
           )}
 
@@ -128,7 +130,7 @@ export function ComposerImageAttachmentChip({
           <img src={image.previewUrl} alt={image.name} className="size-full object-cover" />
         ) : (
           <span className="flex size-full items-center justify-center text-ui-xs font-medium text-muted-foreground/70">
-            IMG
+            {t("chat:iMG")}
           </span>
         )}
       </button>

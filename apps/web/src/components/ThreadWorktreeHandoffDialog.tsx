@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { Input } from "./ui/input";
+import { useTranslation } from "~/i18n";
 
 interface ThreadWorktreeHandoffDialogProps {
   open: boolean;
@@ -29,7 +30,8 @@ export function ThreadWorktreeHandoffDialog({
   onOpenChange,
   onConfirm,
 }: ThreadWorktreeHandoffDialogProps) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   const busy = busyProp ?? false;
   const worktreeInputRef = useRef<HTMLInputElement>(null);
 
@@ -63,11 +65,9 @@ export function ThreadWorktreeHandoffDialog({
     >
       <DialogPopup className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{i18n._("Hand off to worktree")}</DialogTitle>
+          <DialogTitle>{t("common:worktreeHandoff_title")}</DialogTitle>
           <DialogDescription>
-            {i18n._(
-              "Create a detached worktree from the current branch to continue working in parallel.",
-            )}
+            {t("common:createADetachedWorktreeFromTheCurrentBranchTo")}
           </DialogDescription>
         </DialogHeader>
         <DialogPanel>
@@ -92,17 +92,17 @@ export function ThreadWorktreeHandoffDialog({
                     onOpenChange(false);
                   }
                 }}
-                placeholder="synara/feature-name"
+                placeholder={t("common:synaraFeatureName")}
               />
             </label>
           </form>
         </DialogPanel>
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={busy}>
-            {i18n._("Cancel")}
+            {t("common:form_cancel")}
           </Button>
           <Button size="sm" onClick={handleSubmit} disabled={!canSubmit}>
-            {busy ? i18n._("Handing off...") : i18n._("Hand off")}
+            {busy ? t("common:worktreeHandoff_handingOff") : t("common:header_handOff")}
           </Button>
         </DialogFooter>
       </DialogPopup>

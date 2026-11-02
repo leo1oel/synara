@@ -8,9 +8,8 @@
 //          ToolCallGroupSummary, isSummarizableToolCallEntry,
 //          classifyToolCallSummaryCategory, summarizeToolCallGroup
 
-import type { I18n } from "@lingui/core";
-
-import { i18n as appI18n } from "../../i18n";
+import { pluralize } from "~/i18n/pluralize";
+import { t } from "~/i18n";
 import { isFileChangeWorkLogEntry, type WorkLogEntry } from "../../session-logic";
 import { extractToolArgumentField } from "../../lib/toolArgumentSummary";
 import {
@@ -32,7 +31,7 @@ export function workEntryRowCount(entry: WorkLogEntry): number {
 }
 
 // One-line label for a call that would list several edited-file rows.
-export function multiFileEditLabel(entry: WorkLogEntry): string | null {
+export function multiFileEditLabel(entry: WorkLogEntry, translate: typeof t = t): string | null {
   const rowCount = workEntryRowCount(entry);
   return rowCount > 1 ? capitalizeFirst(summaryPartPhrase(appI18n, "edit", rowCount, true)) : null;
 }
@@ -192,6 +191,7 @@ function summaryPartPhrase(
   category: ToolCallSummaryCategory,
   count: number,
   isSolePart: boolean,
+  translate: typeof t,
 ): string {
   const one = count === 1;
   switch (category) {
@@ -228,12 +228,15 @@ function capitalizeFirst(value: string): string {
   return value.length === 0 ? value : `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
 }
 
-function joinSummaryParts(i18n: I18n, parts: ReadonlyArray<ToolCallGroupSummaryPart>): string {
+function joinSummaryParts(
+  parts: ReadonlyArray<ToolCallGroupSummaryPart>,
+  translate: typeof t,
+): string {
   const named =
     parts.length > MAX_NAMED_SUMMARY_PARTS ? parts.slice(0, NAMED_PARTS_BEFORE_OVERFLOW) : parts;
   const overflowCount = parts.slice(named.length).reduce((total, part) => total + part.count, 0);
   const phrases = named.map((part) =>
-    summaryPartPhrase(i18n, part.category, part.count, parts.length === 1),
+    summaryPartPhrase(part.category, part.count, parts.length === 1, translate),
   );
   if (overflowCount > 0) {
     phrases.push(otherActionsPhrase(i18n, overflowCount));
@@ -243,7 +246,7 @@ function joinSummaryParts(i18n: I18n, parts: ReadonlyArray<ToolCallGroupSummaryP
 
 export function summarizeToolCallGroup(
   entries: ReadonlyArray<WorkLogEntry>,
-  i18n: I18n = appI18n,
+  translate: typeof t = t,
 ): ToolCallGroupSummary | null {
   const summarizable = entries.filter(isSummarizableToolCallEntry);
   const rowCount = summarizable.reduce((total, entry) => total + workEntryRowCount(entry), 0);
@@ -296,10 +299,13 @@ export function summarizeToolCallGroup(
     .map(([category, count]) => ({ category, count }));
 
   return {
-    label: joinSummaryParts(i18n, parts),
+    label: joinSummaryParts(parts, translate),
     parts,
     failedCount,
-    failedLabel: failedCount > 0 ? i18n._("{count} failed", { count: failedCount }) : null,
+    failedLabel:
+      failedCount > 0
+        ? translate("chat:failed", { value0: failedCount, count: failedCount })
+        : null,
     entryCount: summarizable.length,
     hasRunningEntry,
     iconCategory: parts.length === 1 ? parts[0]!.category : "mixed",

@@ -6,11 +6,13 @@
 // Exports: SubagentRunningChip
 
 import { i18n } from "~/i18n";
+import { pluralize } from "~/i18n/pluralize";
 
 import { ArrowDownIcon, ArrowUpIcon } from "~/lib/icons";
 import { subagentStatusTextToneClassName } from "~/lib/subagentPresentation";
 import { cn } from "~/lib/utils";
 import { LiveStatusSpinner } from "../ui/spinner";
+import { useTranslation } from "~/i18n";
 
 export function SubagentRunningChip({
   runningCount,
@@ -24,6 +26,8 @@ export function SubagentRunningChip({
   visible: boolean;
   onClick: () => void;
 }) {
+  const { t } = useTranslation();
+
   const Arrow = direction === "below" ? ArrowDownIcon : ArrowUpIcon;
   return (
     <button

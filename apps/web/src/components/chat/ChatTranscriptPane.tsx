@@ -555,7 +555,7 @@ export function ChatTranscriptPane({
               type="button"
               onClick={onScrollToBottom}
               data-scroll-anchor-ignore
-              aria-label={i18n._("Scroll to bottom")}
+              aria-label={t("common:terminal_scrollToBottom")}
               aria-hidden={!scrollButtonVisible}
               tabIndex={scrollButtonVisible ? 0 : -1}
               className={cn(

@@ -16,6 +16,7 @@ import {
 } from "../projectScripts";
 import { useStore } from "../store";
 import type { Project, ProjectScript, Thread } from "../types";
+import { t, useTranslation } from "~/i18n";
 
 /** Success toast for one handoff. Module scope: its ternaries live outside the caller's `try`. */
 function reportThreadHandoffSuccess(
@@ -26,8 +27,8 @@ function reportThreadHandoffSuccess(
     type: result.conflictsDetected ? "warning" : "success",
     title:
       targetMode === "worktree"
-        ? i18n._("Thread handed off to worktree")
-        : i18n._("Thread handed off to local"),
+        ? t("workspace:threadHandedOffToWorktree")
+        : t("workspace:threadHandedOffToLocal"),
     ...(result.message ? { description: result.message } : {}),
   });
 }
@@ -48,6 +49,8 @@ export function useThreadWorkspaceHandoff(input: {
     options?: ProjectScriptRunOptions,
   ) => Promise<ProjectScriptRunResult | null>;
 }) {
+  const { t } = useTranslation();
+
   const queryClient = useQueryClient();
   const setThreadWorkspace = useStore((store) => store.setThreadWorkspace);
   const handoffThreadMutation = useMutation(
@@ -120,17 +123,15 @@ export function useThreadWorkspaceHandoff(input: {
           type: "error",
           title:
             targetMode === "worktree"
-              ? i18n._("Could not hand off to worktree")
-              : i18n._("Could not hand off to local"),
+              ? t("workspace:couldNotHandOffToWorktree")
+              : t("workspace:couldNotHandOffToLocal"),
           description:
-            error instanceof Error
-              ? error.message
-              : i18n._("An error occurred during the handoff."),
+            error instanceof Error ? error.message : t("workspace:anErrorOccurredDuringTheHandoff"),
         });
         return false;
       }
     },
-    [handoffThreadMutation, input, setThreadWorkspace],
+    [handoffThreadMutation, input, setThreadWorkspace, t],
   );
 
   const onHandoffToWorktree = useCallback(() => {

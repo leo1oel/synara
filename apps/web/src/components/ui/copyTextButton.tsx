@@ -2,6 +2,7 @@ import { i18n } from "~/i18n";
 import { CheckIcon, CopyIcon } from "~/lib/icons";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
 import { Button } from "./button";
+import { useTranslation } from "~/i18n";
 
 /** Shared by toast copy actions and inline diagnostic reports. */
 export function CopyTextButton({
@@ -13,6 +14,8 @@ export function CopyTextButton({
   label: string;
   className?: string;
 }) {
+  const { t } = useTranslation();
+
   const { copyToClipboard, isCopied } = useCopyToClipboard();
   // Callers pass an already localized noun; only the verb is translated here.
   const title = isCopied ? i18n._("Copied {label}", { label }) : i18n._("Copy {label}", { label });

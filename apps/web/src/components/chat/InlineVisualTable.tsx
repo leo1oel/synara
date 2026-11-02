@@ -18,6 +18,7 @@ import {
   type TableSort,
 } from "./inlineVisualBlocks.logic";
 import { InlineVisualSurface } from "./InlineVisualSurface";
+import { useTranslation } from "~/i18n";
 
 type TableBlock = Extract<InlineVisualBlock, { type: "table" }>;
 type ColumnFormat = TableBlock["columns"][number]["format"];
@@ -31,9 +32,11 @@ export function InlineVisualTable({
   readonly block: TableBlock;
   readonly stateKey: string;
 }) {
+  const { t, formatLocale } = useTranslation();
+
   const [sort, setSort] = useInlineVisualState<TableSort>(`${stateKey}:sort`, null);
   const [expanded, setExpanded] = useInlineVisualState(`${stateKey}:expanded`, false);
-  const rows = sortTableRows(block.rows, sort);
+  const rows = sortTableRows(block.rows, sort, formatLocale);
   const foldable = rows.length > FOLDED_ROWS + 2;
   const shown = foldable && !expanded ? rows.slice(0, FOLDED_ROWS) : rows;
   // Numeric columns right-align: declared, or every non-empty cell is a number.
@@ -115,7 +118,7 @@ export function InlineVisualTable({
                       index === 0 ? "text-foreground" : "text-foreground/90",
                     )}
                   >
-                    {formatCell(row.cells[index] ?? null, column.format)}
+                    {formatCell(row.cells[index] ?? null, column.format, formatLocale)}
                   </td>
                 ))}
               </tr>
@@ -140,8 +143,10 @@ export function InlineVisualTable({
   );
 }
 
-function formatCell(cell: TableCell, format: ColumnFormat): string {
+function formatCell(cell: TableCell, format: ColumnFormat, formatLocale: string): string {
   if (cell === null) return "—";
   if (typeof cell === "string") return cell;
-  return format === "percent" ? formatVisualNumber(cell, { unit: "%" }) : formatVisualNumber(cell);
+  return format === "percent"
+    ? formatVisualNumber(cell, { unit: "%" }, formatLocale)
+    : formatVisualNumber(cell, {}, formatLocale);
 }

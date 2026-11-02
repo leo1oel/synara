@@ -4,6 +4,7 @@
 
 import { i18n } from "~/i18n";
 import { useSyncExternalStore } from "react";
+import { t } from "~/i18n";
 
 import type { WorkLogLiveActivity } from "../workLog";
 import { formatClockDuration } from "../session-logic";
@@ -104,21 +105,21 @@ export function formatLiveActivityProgress(progress: number): string {
 export function formatLiveActivityStateLabel(state: WorkLogLiveActivity["state"]): string {
   switch (state) {
     case "starting":
-      return i18n._("Starting");
+      return t("chat:runStatus_starting");
     case "thinking":
-      return i18n._("Thinking");
+      return t("chat:timeline_thinking");
     case "running_tool":
-      return i18n._("Running tool");
+      return t("common:runningTool");
     case "waiting":
-      return i18n._("Waiting");
+      return t("common:waiting");
     case "streaming":
-      return i18n._("Streaming");
+      return t("common:streaming");
     case "completed":
-      return i18n._("Completed");
+      return t("workspace:triageOutcome_completed");
     case "failed":
-      return i18n._("Failed");
+      return t("chat:runStatus_failed");
     case "cancelled":
-      return i18n._("Cancelled");
+      return t("git:runStatus_cancelled");
   }
 }
 
@@ -155,15 +156,15 @@ export function formatLiveActivityMeta(
 
   if (isLiveActivityInProgress(activity)) {
     if (options?.subagent) {
-      parts.push(i18n._("Subagent working"));
+      parts.push(t("common:subagentWorking"));
     } else if (lastActivityAtMs !== null) {
       const idleMs = Math.max(0, nowMs - lastActivityAtMs);
       parts.push(
         idleMs >= NO_ACTIVITY_THRESHOLD_MS
-          ? i18n._("No activity for {duration}", { duration: formatClockDuration(idleMs) })
+          ? t("common:noActivityFor", { duration: formatClockDuration(idleMs) })
           : idleMs < 1_000
-            ? i18n._("Active now")
-            : i18n._("Active {duration} ago", { duration: formatClockDuration(idleMs) }),
+            ? t("common:activeNow")
+            : t("common:activeAgo", { duration: formatClockDuration(idleMs) }),
       );
     }
   } else {
@@ -171,7 +172,7 @@ export function formatLiveActivityMeta(
   }
 
   if (elapsed !== null) {
-    parts.push(i18n._("{duration} elapsed", { duration: elapsed }));
+    parts.push(t("common:elapsed", { duration: elapsed }));
   }
   if (activity.progress !== undefined) {
     parts.push(formatLiveActivityProgress(activity.progress));

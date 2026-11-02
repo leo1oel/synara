@@ -2,6 +2,7 @@ import { i18n } from "~/i18n";
 import type { FastModeNotice } from "~/lib/fastModeState";
 import { FastModeIcon, FastModeOutlineIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
+import { useTranslation } from "~/i18n";
 
 // The fast-mode bolt every read-only model summary shows. A notice means fast mode
 // was requested but is not serving, so the bolt turns into a muted outline that
@@ -10,6 +11,8 @@ export function FastModeBadgeIcon(props: {
   notice?: FastModeNotice | null | undefined;
   className?: string | undefined;
 }) {
+  const { t } = useTranslation();
+
   if (props.notice) {
     return (
       <span className="inline-flex shrink-0" title={props.notice.detail}>
@@ -20,5 +23,5 @@ export function FastModeBadgeIcon(props: {
       </span>
     );
   }
-  return <FastModeIcon aria-label={i18n._("Fast mode")} className={props.className} />;
+  return <FastModeIcon aria-label={t("chat:sessionStatus_fastMode")} className={props.className} />;
 }

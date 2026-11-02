@@ -31,6 +31,7 @@ import {
 import { localizeModelPickerLabel } from "./modelPickerLabels";
 import { defaultAgentForProvider, getAgentOptions, getSelectedAgentValue } from "./TraitsPicker";
 import { useComposerTraitCommit } from "./useComposerTraitCommit";
+import { useTranslation } from "~/i18n";
 
 // Footer row "<Trait> ……… <value> ›" opening a radio submenu. Picking a value closes
 // only the submenu, so the user can compose model + traits and then star the result.
@@ -44,8 +45,9 @@ function TraitRow(props: {
   disabled?: boolean;
   onValueChange: (value: string) => void;
 }) {
+  const { t } = useTranslation();
+
   const [open, setOpen] = useState(false);
-  const { i18n } = useLingui();
   return (
     <MenuSub open={open} onOpenChange={setOpen}>
       <MenuSubTrigger disabled={props.disabled ?? false}>
@@ -92,6 +94,8 @@ export function ComposerModelPickerTraitRows(props: {
   effortControl: ComposerEffortControl;
   fastModeNotice?: FastModeNotice | null | undefined;
 }) {
+  const { t } = useTranslation();
+
   const { provider, threadId, model, modelOptions, prompt } = props;
   const { i18n } = useLingui();
   const localizeLabel = (label: string) => localizeModelPickerLabel(i18n, label);
@@ -101,6 +105,7 @@ export function ComposerModelPickerTraitRows(props: {
     prompt,
     modelOptions,
     props.runtimeModel,
+    t,
   );
   const commitTrait = useComposerTraitCommit({
     threadId,
@@ -126,10 +131,14 @@ export function ComposerModelPickerTraitRows(props: {
         key="thinking"
         label={localizeLabel("Thinking")}
         value={selection.thinkingEnabled ? "on" : "off"}
-        valueLabel={selection.thinkingEnabled ? i18n._("On") : i18n._("Off")}
+        valueLabel={
+          selection.thinkingEnabled
+            ? t("automation:modelEffort_thinkingOn")
+            : t("automation:traitsPicker_off")
+        }
         options={[
-          { value: "on", label: i18n._("On"), isDefault: true },
-          { value: "off", label: i18n._("Off") },
+          { value: "on", label: t("automation:modelEffort_thinkingOn"), isDefault: true },
+          { value: "off", label: t("automation:traitsPicker_off") },
         ]}
         onValueChange={(value) => commitTrait({ thinking: value === "on" })}
       />,
@@ -162,7 +171,9 @@ export function ComposerModelPickerTraitRows(props: {
     rows.push(
       <TraitRow
         key="effort"
-        label={provider === "opencode" ? i18n._("Variant") : i18n._("Effort")}
+        label={
+          provider === "opencode" ? t("chat:traitsPicker_variant") : t("chat:traitsPicker_effort")
+        }
         value={selection.effort ?? ""}
         valueLabel={localizeLabel(resolveComposerTraitStatusLabel(selection) ?? "")}
         // Ultrathink is pinned by the prompt; the ladder is read-only until it is removed.
@@ -188,14 +199,16 @@ export function ComposerModelPickerTraitRows(props: {
     rows.push(
       <TraitRow
         key="speed"
-        label={i18n._("Speed")}
+        label={t("chat:traitsPicker_speed")}
         value={selection.fastModeEnabled ? "on" : "off"}
         valueLabel={
-          selection.fastModeEnabled ? (fastModeNotice?.label ?? i18n._("Fast")) : i18n._("Standard")
+          selection.fastModeEnabled
+            ? (fastModeNotice?.label ?? t("chat:traitsPicker_fast"))
+            : t("chat:standard")
         }
         options={[
-          { value: "off", label: i18n._("Standard"), isDefault: true },
-          { value: "on", label: i18n._("Fast") },
+          { value: "off", label: t("chat:standard"), isDefault: true },
+          { value: "on", label: t("chat:traitsPicker_fast") },
         ]}
         onValueChange={(value) => commitTrait({ fastMode: value === "on" })}
       />,
@@ -205,7 +218,7 @@ export function ComposerModelPickerTraitRows(props: {
     rows.push(
       <TraitRow
         key="agent"
-        label={i18n._("Agent")}
+        label={t("chat:traitsPicker_agent")}
         value={selectedAgent}
         valueLabel={
           agentOptions.find((agent) => agent.name === selectedAgent)?.displayName ?? selectedAgent

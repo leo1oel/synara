@@ -22,6 +22,7 @@ import {
 } from "~/lib/pullRequestContext";
 import { cn } from "~/lib/utils";
 import { AttachmentCard } from "./AttachmentCard";
+import { useTranslation } from "~/i18n";
 
 const SCOPE_ICONS: Record<PullRequestContextScope, ComponentType<{ className?: string }>> = {
   reference: GitPullRequestIcon,
@@ -94,17 +95,15 @@ export function UserMessagePullRequestContextCard({
   subtitle,
   text,
 }: UserMessagePullRequestContextCardProps) {
+  const { t } = useTranslation();
+
   const [expanded, setExpanded] = useState(false);
   return (
     <div className="flex flex-col items-end gap-1">
       <button
         type="button"
         aria-expanded={expanded}
-        title={
-          expanded
-            ? i18n._("Hide the prompt this card sent")
-            : i18n._("Show the prompt this card sent")
-        }
+        title={expanded ? t("git:hideThePromptThisCardSent") : t("git:showThePromptThisCardSent")}
         className="cursor-pointer rounded-xl text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         onClick={() => setExpanded((value) => !value)}
       >

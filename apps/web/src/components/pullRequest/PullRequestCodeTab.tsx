@@ -25,6 +25,7 @@ import { PullRequestDiffStat } from "./PullRequestDiffStat";
 import { PullRequestMetaLine } from "./PullRequestMetaLine";
 import { PR_META_TEXT_CLASS_NAME } from "./pullRequestText";
 import { PullRequestWarningNote } from "./PullRequestWarningNote";
+import { useTranslation } from "~/i18n";
 
 export function PullRequestCodeTab({
   input,
@@ -33,7 +34,8 @@ export function PullRequestCodeTab({
   input: PullRequestDetailInput;
   detail: PullRequestDetail;
 }) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   const { resolvedTheme } = useTheme();
   const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(() => new Set());
   const diffQuery = useQuery(pullRequestDiffQueryOptions(input));
@@ -60,7 +62,7 @@ export function PullRequestCodeTab({
       <div className="flex h-full min-h-0 flex-col">
         {diffQuery.data?.truncated ? (
           <PullRequestWarningNote shape="banner">
-            {i18n._("Diff exceeded 8 MiB and was truncated.")}
+            {t("git:diffExceeded8MiBAndWasTruncated")}
           </PullRequestWarningNote>
         ) : null}
         {patchTotals ? (
@@ -83,7 +85,7 @@ export function PullRequestCodeTab({
           </PullRequestMetaLine>
         ) : null}
         {diffQuery.isPending ? (
-          <DiffPanelLoadingState label={i18n._("Loading pull request diff…")} />
+          <DiffPanelLoadingState label={t("git:loadingPullRequestDiff")} />
         ) : (
           <DiffPanelPatchViewport
             renderablePatch={renderablePatch}
@@ -110,9 +112,9 @@ export function PullRequestCodeTab({
                   : i18n._("Could not load diff.")
                 : null
             }
-            loadingLabel={i18n._("Loading pull request diff…")}
-            emptyLabel={i18n._("This pull request has no file changes.")}
-            unavailableLabel={i18n._("The pull request diff is unavailable.")}
+            loadingLabel={t("git:loadingPullRequestDiff")}
+            emptyLabel="This pull request has no file changes."
+            unavailableLabel="The pull request diff is unavailable."
             viewKind="repo"
           />
         )}

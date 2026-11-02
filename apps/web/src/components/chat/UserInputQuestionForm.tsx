@@ -9,6 +9,7 @@ import { CheckIcon, ChevronLeftIcon, ChevronRightIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { ComposerChoiceRow } from "./ComposerChoiceRow";
 import { COMPOSER_INPUT_SURFACE_CLASS_NAME } from "./composerPickerStyles";
+import { useTranslation } from "~/i18n";
 
 const NAV_BUTTON_CLASS_NAME =
   "flex size-5 items-center justify-center rounded-md text-[var(--color-text-foreground-tertiary)] transition-colors duration-150 hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)] disabled:pointer-events-none disabled:opacity-30";
@@ -40,6 +41,8 @@ export function UserInputQuestionForm({
   keyboardShortcuts?: "global" | "local";
   children?: ReactNode;
 }) {
+  const { t } = useTranslation();
+
   const progress = derivePendingUserInputProgress(questions, answers, questionIndex);
   const activeQuestion = progress.activeQuestion;
   const selectedOptionLabelSet = new Set(progress.selectedOptionLabels);
@@ -140,7 +143,7 @@ export function UserInputQuestionForm({
               disabled={!canGoBack || isResponding}
               onClick={onPrevious}
               className={NAV_BUTTON_CLASS_NAME}
-              aria-label={i18n._("Previous question")}
+              aria-label={t("chat:composerPendingUserInputPanel_previousQuestion")}
             >
               <ChevronLeftIcon className="size-3.5" />
             </button>
@@ -155,7 +158,7 @@ export function UserInputQuestionForm({
               disabled={!canGoForward || isResponding}
               onClick={() => onAdvance()}
               className={NAV_BUTTON_CLASS_NAME}
-              aria-label={i18n._("Next question")}
+              aria-label={t("chat:composerPendingUserInputPanel_nextQuestion")}
             >
               <ChevronRightIcon className="size-3.5" />
             </button>
@@ -163,7 +166,9 @@ export function UserInputQuestionForm({
         ) : null}
       </div>
       {activeQuestion.multiSelect ? (
-        <p className="mt-1 text-ui-sm text-muted-foreground/55">{i18n._("Select one or more.")}</p>
+        <p className="mt-1 text-ui-sm text-muted-foreground/55">
+          {t("chat:composerPendingUserInputPanel_selectOneOrMore")}
+        </p>
       ) : null}
       {activeQuestion.options.length > 0 ? (
         <div className="mt-2.5 space-y-0.5">
@@ -200,7 +205,7 @@ export function UserInputQuestionForm({
               isResponding && "cursor-not-allowed opacity-50",
             )}
           >
-            {i18n._("Cancel")}
+            {t("common:form_cancel")}
           </button>
         </div>
       ) : null}

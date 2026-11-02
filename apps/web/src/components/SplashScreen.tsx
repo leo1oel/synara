@@ -13,6 +13,8 @@ export function SplashScreen({
   errorMessage?: string | null;
   onRetry?: (() => void) | null;
 }) {
+  const { t } = useTranslation();
+
   const showRetry = Boolean(errorMessage && onRetry);
   const hideBrandDuringEmbedStartup = isSynaraEmbedMode() && !errorMessage;
 
@@ -35,7 +37,7 @@ export function SplashScreen({
                   className="rounded-md border border-border/70 px-3 py-1.5 text-sm text-foreground/85 transition-colors hover:bg-[var(--sidebar-accent)]"
                   onClick={onRetry ?? undefined}
                 >
-                  Retry
+                  {t("common:common_retry")}
                 </button>
               ) : null}
             </div>

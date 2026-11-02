@@ -41,6 +41,7 @@ import type { ProviderModelOption } from "../providerModelOptions";
 import { getClaudeArtifactCommandNotice } from "../lib/claudeArtifactCommands";
 import { compareProvidersByOrder } from "../providerOrdering";
 import type { ComposerThreadMentionSource, Project } from "../types";
+import { t, useTranslation } from "~/i18n";
 
 type ComposerPluginSuggestion = {
   plugin: ProviderPluginDescriptor;
@@ -73,14 +74,23 @@ function threadSuggestionTitle(title: string): string {
   return title.trim() || "Untitled thread";
 }
 
-function threadSuggestionContainerName(project: Project | undefined): string {
-  if (!project) return "Unknown project";
-  if (project.kind === "chat") return "Chats";
+function threadSuggestionContainerName(
+  project: Project | undefined,
+  translate?: (message: string) => string,
+): string {
+  // Serialized mention names retain their original source names across language changes.
+  // Only the suggestion description supplies a translator for localized display.
+  if (!project) return translate?.("workspace:list_unknownProject") ?? "Unknown project";
+  if (project.kind === "chat") return translate?.("workspace:general_chats") ?? "Chats";
   // Group containers (legacy "studio" included) use their own title in mentions.
   if (isGroupContainerKind(project.kind)) {
-    return project.name.trim() || "Hubs";
+    return project.name.trim() || (translate?.("common:hubs") ?? "Hubs");
   }
-  return project.name.trim() || project.folderName.trim() || "Untitled project";
+  return (
+    project.name.trim() ||
+    project.folderName.trim() ||
+    (translate?.("workspace:searchPalette_untitledProject") ?? "Untitled project")
+  );
 }
 
 function threadSuggestionRecency(thread: ComposerThreadMentionSource): string {
@@ -225,13 +235,16 @@ export function resolveThreadMentionForThreadId(input: {
   };
 }
 
-export function buildThreadMentionComposerItems(input: {
-  readonly threads: readonly ComposerThreadMentionSource[];
-  readonly projects: readonly Project[];
-  readonly currentThreadId: string | null;
-  readonly scopeProjectId?: string | null;
-  readonly query: string;
-}): ComposerCommandItem[] {
+export function buildThreadMentionComposerItems(
+  input: {
+    readonly threads: readonly ComposerThreadMentionSource[];
+    readonly projects: readonly Project[];
+    readonly currentThreadId: string | null;
+    readonly scopeProjectId?: string | null;
+    readonly query: string;
+  },
+  translate: typeof t = t,
+): ComposerCommandItem[] {
   const candidates = buildThreadMentionCandidates(input);
   const query = normalizeProviderDiscoveryText(input.query);
   const ranked = (
@@ -242,14 +255,17 @@ export function buildThreadMentionComposerItems(input: {
         )
   ).slice(0, THREAD_MENTION_SUGGESTION_LIMIT);
 
-  return ranked.map(({ thread, title, projectName, mentionName }) => ({
+  return ranked.map(({ thread, title, mentionName }) => ({
     id: `thread:${thread.id}`,
     type: "thread" as const,
     threadId: thread.id,
     provider: thread.provider,
     mention: { name: mentionName, path: threadMentionPathForThreadId(thread.id) },
-    label: title,
-    description: projectName,
+    label: thread.title.trim() ? title : translate("workspace:searchPalette_untitledThread"),
+    description: threadSuggestionContainerName(
+      input.projects.find((project) => project.id === thread.projectId),
+      translate,
+    ),
   }));
 }
 
@@ -387,6 +403,8 @@ export function useComposerCommandMenuItems(input: {
   /** Connected connectors this provider's sessions receive. */
   connectors?: readonly McpConnector[];
 }): ComposerCommandItem[] {
+  const { t } = useTranslation();
+
   const {
     composerTrigger,
     provider,
@@ -478,7 +496,7 @@ export function useComposerCommandMenuItems(input: {
               id: "local-root",
               type: "local-root" as const,
               label: `@${LOCAL_FOLDER_MENTION_NAME}`,
-              description: i18n._("Browse folders on this computer"),
+              description: t("common:browseFoldersOnThisComputer"),
             },
           ]
         : [];
@@ -491,10 +509,13 @@ export function useComposerCommandMenuItems(input: {
       description: entry.parentPath ?? "",
     }));
     const threadItems = threadMentionSources
-      ? buildThreadMentionComposerItems({
-          ...threadMentionSources,
-          query: composerTrigger.query,
-        })
+      ? buildThreadMentionComposerItems(
+          {
+            ...threadMentionSources,
+            query: composerTrigger.query,
+          },
+          t,
+        )
       : [];
     const paperItems = buildPaperMentionComposerItems({
       papers: paperMentionSources ?? [],
@@ -537,7 +558,7 @@ export function useComposerCommandMenuItems(input: {
         type: "slash-command" as const,
         command: definition.command,
         label: definition.label,
-        description: definition.description,
+        description: t(definition.description),
         source: definition.source,
       }),
     );
@@ -566,12 +587,15 @@ export function useComposerCommandMenuItems(input: {
       provider,
       command: command.name,
       label: `/${command.name}`,
-      description: command.description ?? `Run ${provider} native command`,
-      notice: getClaudeArtifactCommandNotice({
-        provider,
-        command: command.name,
-        artifacts: providerArtifacts,
-      }),
+      description: command.description ?? t("common:runNativeCommand", { value0: provider }),
+      notice: getClaudeArtifactCommandNotice(
+        {
+          provider,
+          command: command.name,
+          artifacts: providerArtifacts,
+        },
+        t,
+      ),
     }));
     // `/` is the universal picker surface; provider dispatch can adapt the
     // visible slash token to backend-specific skill syntax when needed.

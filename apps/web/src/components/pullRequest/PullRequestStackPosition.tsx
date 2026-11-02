@@ -11,6 +11,7 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { GitForkIcon } from "~/lib/icons";
 import { i18n } from "~/i18n";
 import { cn } from "~/lib/utils";
+import { useTranslation, t } from "~/i18n";
 
 type StackPosition = Pick<PullRequestStackSummary, "number" | "size" | "position" | "baseBranch">;
 
@@ -42,7 +43,8 @@ export function PullRequestStackPosition({
   appearance?: "badge" | "plain";
   className?: string;
 }) {
-  const { i18n } = useLingui();
+  const { t } = useTranslation();
+
   if (appearance === "plain") {
     return (
       <span className={cn("inline-flex items-center gap-1.5", className)} aria-hidden="true">
