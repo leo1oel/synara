@@ -13,12 +13,13 @@ afterEach(() => {
   vi.resetModules();
 });
 
-it.each(["lattice", "synara"])("gates Beta providers for the %s host", async (host) => {
+// Lattice's loopback service has no bundle identity but ships the Stable boundary.
+it.each(["lattice", "synara"])("applies the Stable boundary for the %s host", async (host) => {
   vi.stubEnv("AGENT_HOST_PROFILE", host);
   vi.stubEnv(SYNARA_DESKTOP_BUNDLE_ID_ENV, "");
   vi.resetModules();
   const { isServerBetaFeatureEnabled } = await import("./betaFeatureGate.ts");
-  expect(isServerBetaFeatureEnabled("omp")).toBe(host !== "lattice");
+  expect(isServerBetaFeatureEnabled(CHINESE_UI_BETA_FEATURE)).toBe(host !== "lattice");
   expect(isServerBetaFeatureEnabled("codex")).toBe(true);
 });
 
