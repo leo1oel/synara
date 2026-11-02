@@ -23,7 +23,7 @@ export interface SynaraHarnessCapabilities {
 }
 
 /** Whether this server offers inline visuals; the gateway catalog uses the same gate. */
-const INLINE_VISUALS_ENABLED = isServerBetaFeatureEnabled(INLINE_VISUALS_BETA_FEATURE);
+export const INLINE_VISUALS_ENABLED = isServerBetaFeatureEnabled(INLINE_VISUALS_BETA_FEATURE);
 
 /**
  * Render one truthful policy. Providers without a safely thread-scoped MCP

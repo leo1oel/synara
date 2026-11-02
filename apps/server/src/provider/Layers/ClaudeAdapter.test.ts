@@ -39,7 +39,11 @@ import { TestClock } from "effect/testing";
 import { afterEach, beforeEach, vi } from "vitest";
 
 import { attachmentRelativePath } from "../../attachmentStore.ts";
-import { SYNARA_HARNESS_POLICY_MARKER } from "../../agentGateway/harnessPolicy.ts";
+import {
+  renderSynaraHarnessPolicy,
+  SYNARA_GATEWAY_HARNESS_POLICY,
+  SYNARA_HARNESS_POLICY_MARKER,
+} from "../../agentGateway/harnessPolicy.ts";
 import {
   AgentGatewayCredentials,
   type AgentGatewayCredentialsShape,
@@ -732,6 +736,20 @@ describe("Claude Synara harness policy", () => {
     assert.include(text, "include all decision context");
     assert.include(text, "Use the synara_* tools");
     assert.notInclude(text, "Synara MCP control is unavailable");
+  });
+
+  it("tells Claude about show_visual whenever the gateway policy does", () => {
+    const showVisual = "show_visual";
+    for (const inlineVisuals of [true, false]) {
+      const policy = renderSynaraHarnessPolicy({ gatewayControlAvailable: true, inlineVisuals });
+      const text = buildEmbeddedClaudeSystemPromptAppend(true, false, inlineVisuals);
+      assert.equal(text.includes(showVisual), policy.includes(showVisual));
+    }
+    // By default Claude follows the same server gate as the Codex policy.
+    assert.equal(
+      buildEmbeddedClaudeSystemPromptAppend(true).includes(showVisual),
+      SYNARA_GATEWAY_HARNESS_POLICY.includes(showVisual),
+    );
   });
 
   it("stays truthful when scoped MCP credentials are absent", () => {

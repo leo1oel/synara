@@ -122,7 +122,10 @@ import {
   SYNARA_MCP_SERVER_NAME,
 } from "../../agentGateway/mcpInjection.ts";
 import { mapClaudeMcpServerStatuses } from "../mcpServerStatus.ts";
-import { renderSynaraHarnessPolicy } from "../../agentGateway/harnessPolicy.ts";
+import {
+  INLINE_VISUALS_ENABLED,
+  renderSynaraHarnessPolicy,
+} from "../../agentGateway/harnessPolicy.ts";
 import {
   isSynaraGatewayToolName,
   shouldAllowSynaraComputerProviderTool,
@@ -1595,6 +1598,9 @@ const CLAUDE_INTERRUPT_TIMEOUT = Duration.seconds(10);
 export const buildEmbeddedClaudeSystemPromptAppend = (
   gatewayControlAvailable: boolean,
   enableComputerControl = false,
+  // The gateway offers show_visual under this same gate, so Claude is told
+  // about it exactly when Codex's copy of the policy tells Codex.
+  inlineVisuals = INLINE_VISUALS_ENABLED,
 ) =>
   [
     `You are running inside ${ACTIVE_AGENT_HOST_PROFILE.displayName}, an app that embeds the Claude Agent SDK.`,
@@ -1607,6 +1613,7 @@ export const buildEmbeddedClaudeSystemPromptAppend = (
       gatewayControlAvailable,
       enableComputerControl,
       automationAuthoring: "tool-descriptions",
+      inlineVisuals,
     }),
   ].join("\n");
 
