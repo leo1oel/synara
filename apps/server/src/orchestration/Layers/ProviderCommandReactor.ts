@@ -101,6 +101,7 @@ import {
   resolveThreadWorkspaceCwd,
 } from "../../checkpointing/Utils.ts";
 import { CheckpointStore } from "../../checkpointing/Services/CheckpointStore.ts";
+import { AgentGatewayCredentials } from "../../agentGateway/Services/AgentGatewayCredentials.ts";
 import { AgentGatewayOperationRepository } from "../../agentGateway/Services/AgentGatewayOperationRepository.ts";
 import { AgentQualityTrace } from "../../agentGateway/Services/AgentQualityTrace.ts";
 import { ACTIVE_AGENT_HOST_PROFILE } from "../../agentGateway/hostProfile.ts";
@@ -1035,6 +1036,11 @@ const make = Effect.gen(function* () {
   const providerService = yield* ProviderService;
   const computerService = yield* Effect.serviceOption(ComputerService);
   const gatewaySessions = yield* Effect.serviceOption(AgentGatewaySessionRegistry);
+  // A draft's warm runtime connects to the gateway before its thread exists;
+  // the registration lets that connection succeed (see mcpTransport).
+  const gatewayCredentials = Option.getOrUndefined(
+    yield* Effect.serviceOption(AgentGatewayCredentials),
+  );
   // Resolved at make time: fibers that run turn dispatch do not inherit the
   // layer environment, so per-turn serviceOption lookups would see an empty
   // context.
@@ -2436,7 +2442,11 @@ const make = Effect.gen(function* () {
     },
   ) {
     const prewarmed = prewarmedSessions.get(threadId);
-    if (options?.prewarm !== true) prewarmedSessions.delete(threadId);
+    if (options?.prewarm !== true) {
+      prewarmedSessions.delete(threadId);
+      // The thread exists now, so the gateway resolves it like any other.
+      if (prewarmed?.draft === true) gatewayCredentials?.releaseDraftThread?.(threadId);
+    }
     const thread = yield* resolveThreadShell(threadId);
     if (!thread) {
       return yield* Effect.die(
@@ -10334,6 +10344,7 @@ const make = Effect.gen(function* () {
         if (!record) return;
         prewarmedSessions.delete(threadId);
         if (record.draft) {
+          gatewayCredentials?.releaseDraftThread?.(threadId);
           threadSessionModelSelections.delete(threadId);
           threadSessionComputerControl.delete(threadId);
           threadProviderOptions.delete(threadId);
@@ -10398,19 +10409,28 @@ const make = Effect.gen(function* () {
       threadSessionModelSelections.set(threadId, prewarm.modelSelection);
       threadSessionComputerControl.set(threadId, false);
       setThreadProviderOptions(threadId, providerOptions);
-      yield* providerService.startSession(threadId, {
-        threadId,
-        provider: "claudeAgent",
-        providerInstanceId: instance.instanceId,
-        ...(cwd ? { cwd } : {}),
-        modelSelection: {
-          ...prewarm.modelSelection,
+      // Before the spawn: Claude Code connects to the gateway at startup and
+      // keeps a server that refused it failed for the whole session.
+      gatewayCredentials?.registerDraftThread?.(threadId);
+      yield* providerService
+        .startSession(threadId, {
+          threadId,
           provider: "claudeAgent",
-          instanceId: instance.instanceId,
-        } as ModelSelection,
-        providerOptions,
-        runtimeMode: prewarm.runtimeMode,
-      });
+          providerInstanceId: instance.instanceId,
+          ...(cwd ? { cwd } : {}),
+          modelSelection: {
+            ...prewarm.modelSelection,
+            provider: "claudeAgent",
+            instanceId: instance.instanceId,
+          } as ModelSelection,
+          providerOptions,
+          runtimeMode: prewarm.runtimeMode,
+        })
+        .pipe(
+          Effect.onError(() =>
+            Effect.sync(() => gatewayCredentials?.releaseDraftThread?.(threadId)),
+          ),
+        );
       return { prewarm: "started" as const };
     }).pipe(
       Effect.catchCause((cause) =>

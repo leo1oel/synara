@@ -67,6 +67,10 @@ import { AgentGatewayOperationRepositoryLive } from "../../agentGateway/Layers/A
 import { AgentGatewayOperationRepository } from "../../agentGateway/Services/AgentGatewayOperationRepository.ts";
 import { makeAgentGatewaySessionRegistry } from "../../agentGateway/Layers/AgentGatewaySessionRegistry.ts";
 import {
+  AgentGatewayCredentials,
+  type AgentGatewayCredentialsShape,
+} from "../../agentGateway/Services/AgentGatewayCredentials.ts";
+import {
   AgentGatewaySessionRegistry,
   type AgentGatewaySessionRegistryShape,
 } from "../../agentGateway/Services/AgentGatewaySessionRegistry.ts";
@@ -501,6 +505,7 @@ describe("ProviderCommandReactor", () => {
     readonly generateThreadTitle?: TextGenerationShape["generateThreadTitle"];
     readonly computerService?: ComputerServiceShape;
     readonly gatewaySessions?: AgentGatewaySessionRegistryShape;
+    readonly gatewayCredentials?: Partial<AgentGatewayCredentialsShape>;
     readonly getClaudeCacheObservation?: NonNullable<
       ProviderServiceShape["getClaudeCacheObservation"]
     >;
@@ -964,9 +969,17 @@ describe("ProviderCommandReactor", () => {
           : Layer.empty,
       ),
       Layer.provideMerge(
-        input?.gatewaySessions
-          ? Layer.succeed(AgentGatewaySessionRegistry, input.gatewaySessions)
-          : Layer.empty,
+        Layer.mergeAll(
+          input?.gatewaySessions
+            ? Layer.succeed(AgentGatewaySessionRegistry, input.gatewaySessions)
+            : Layer.empty,
+          input?.gatewayCredentials
+            ? Layer.succeed(
+                AgentGatewayCredentials,
+                input.gatewayCredentials as AgentGatewayCredentialsShape,
+              )
+            : Layer.empty,
+        ),
       ),
       Layer.provideMerge(
         Layer.succeed(AgentQualityTrace, {
@@ -18139,6 +18152,55 @@ describe("ProviderCommandReactor", () => {
       await createAndSend(harness);
       expect(harness.startSession.mock.calls).toHaveLength(1);
       expect(harness.stopSession).not.toHaveBeenCalled();
+    });
+
+    // Claude Code connects to the lattice MCP when the warm runtime spawns,
+    // before the first send creates the thread. Unless the gateway knows the
+    // draft by then, it refuses the connection and the adopted session has no
+    // lattice tools on its first turn.
+    const draftRegistry = () => {
+      const drafts = new Set<string>();
+      return {
+        drafts,
+        credentials: {
+          registerDraftThread: (threadId: ThreadId) => void drafts.add(threadId),
+          releaseDraftThread: (threadId: ThreadId) => void drafts.delete(threadId),
+          isDraftThread: (threadId: string) => drafts.has(threadId),
+        },
+      };
+    };
+
+    it("lets a warm draft's gateway connection succeed until its first send adopts it", async () => {
+      const registry = draftRegistry();
+      const harness = await createHarness({
+        threadModelSelection: claude,
+        gatewayCredentials: registry.credentials,
+      });
+      let draftKnownAtSpawn = false;
+      const startSession = harness.startSession.getMockImplementation()!;
+      harness.startSession.mockImplementationOnce((threadId, input) => {
+        draftKnownAtSpawn = registry.drafts.has(threadId);
+        return startSession(threadId, input);
+      });
+      expect(await prewarm(harness, draftId)).toEqual({ prewarm: "started" });
+      expect(draftKnownAtSpawn).toBe(true);
+
+      await createAndSend(harness);
+      expect(harness.startSession.mock.calls).toHaveLength(1);
+      expect(registry.drafts.has(draftId)).toBe(false);
+    });
+
+    it("forgets a warm draft's gateway registration when the panel moves on", async () => {
+      const registry = draftRegistry();
+      const harness = await createHarness({
+        threadModelSelection: claude,
+        gatewayCredentials: registry.credentials,
+      });
+      await prewarm(harness, draftId);
+      expect(registry.drafts.has(draftId)).toBe(true);
+      await prewarm(harness, null);
+      await waitFor(() => harness.stopSession.mock.calls.length === 1);
+      expect(registry.drafts.has(draftId)).toBe(false);
     });
 
     it("replaces the warm runtime when a spawn-fixed setting changed before the send", async () => {
