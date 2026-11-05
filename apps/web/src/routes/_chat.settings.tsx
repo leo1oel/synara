@@ -4,13 +4,8 @@ import { EditorLanguageReloadNotice } from "~/components/codeEditor/EditorLangua
 // Layer: Route screen
 // Exports: Settings route component for `/settings`
 
-import {
-  type DesktopAudioInputDevice,
-  PROVIDER_DISPLAY_NAMES,
-  type ProviderKind,
-  type SidechatExpiry,
-} from "@synara/contracts";
-import { GROUPS_ON, VISIBLE_PROVIDER_DESCRIPTORS } from "../betaFeatures";
+import { type DesktopAudioInputDevice, type SidechatExpiry } from "@synara/contracts";
+import { GROUPS_ON } from "../betaFeatures";
 import { sameAppSnapShortcut } from "@synara/shared/appSnapShortcut";
 import { desktopFlavorFromProtocol } from "@synara/shared/betaFeatures";
 import { SafariAccessSetupButton } from "../components/SafariAccessOnboarding";
@@ -66,12 +61,12 @@ import {
   NotificationsSettingsPanel,
 } from "~/components/settings/DesktopSettingsPanels";
 import { ComputerSettingsPanel } from "~/components/settings/ComputerSettingsPanel";
+import { DefaultProviderSettingsRow } from "~/components/settings/DefaultProviderSettingsRow";
 import { ModelsSettingsPanel } from "~/components/settings/ModelsSettingsPanel";
 import {
   isProviderInstallSettingsDirty,
   ProvidersSettingsPanel,
 } from "~/components/settings/ProvidersSettingsPanel";
-import { ProviderOptionLabel } from "../components/ProviderIcon";
 import ReleaseHistoryDialog from "../components/ReleaseHistoryDialog";
 import {
   KeyboardShortcutsResetButton,
@@ -207,8 +202,6 @@ const CHAT_WIDTH_OPTIONS = [
   label: string;
   description: string;
 }>;
-
-const PROVIDER_SELECT_OPTIONS = VISIBLE_PROVIDER_DESCRIPTORS.map((descriptor) => descriptor.kind);
 
 const TIMESTAMP_FORMAT_LABELS = {
   locale: "common:theme_systemDefault",
@@ -352,9 +345,6 @@ const VOICE_ENTER_BEHAVIOR_OPTIONS = [
 
 // Shared settings controls live in ~/components/settings/SettingControls.
 
-function isProviderSelectOption(value: string): value is ProviderKind {
-  return PROVIDER_SELECT_OPTIONS.includes(value as ProviderKind);
-}
 // Keys of AppSettings whose value is a plain boolean — the only ones that can be
 // driven by the shared on/off toggle row below.
 type BooleanSettingKey = {
@@ -911,43 +901,10 @@ function SettingsRouteView() {
             }
           />
         )}
-        <SettingsRow
-          id="setting-default-provider"
-          title="settings:changed_defaultProvider"
-          description="settings:providerUsedForNewChatsUntilYouPickA"
-          resetAction={
-            settings.defaultProvider !== defaults.defaultProvider ? (
-              <SettingResetButton
-                label={t("settings:defaultProvider")}
-                onClick={() => updateSettings({ defaultProvider: defaults.defaultProvider })}
-              />
-            ) : null
-          }
-          control={
-            <SettingsSelectControl
-              value={settings.defaultProvider}
-              onValueChange={(value) => {
-                if (!isProviderSelectOption(value)) return;
-                updateSettings({ defaultProvider: value });
-              }}
-              ariaLabel={t("settings:changed_defaultProvider")}
-              valueContent={
-                <ProviderOptionLabel
-                  provider={settings.defaultProvider}
-                  label={PROVIDER_DISPLAY_NAMES[settings.defaultProvider]}
-                />
-              }
-            >
-              {PROVIDER_SELECT_OPTIONS.map((provider) => (
-                <SelectItem key={provider} value={provider}>
-                  <ProviderOptionLabel
-                    provider={provider}
-                    label={PROVIDER_DISPLAY_NAMES[provider]}
-                  />
-                </SelectItem>
-              ))}
-            </SettingsSelectControl>
-          }
+        <DefaultProviderSettingsRow
+          settings={settings}
+          defaults={defaults}
+          updateSettings={updateSettings}
         />
 
         <SettingsRow

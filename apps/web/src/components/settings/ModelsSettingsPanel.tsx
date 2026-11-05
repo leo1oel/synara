@@ -44,6 +44,7 @@ import {
 } from "./SettingControls";
 import { SettingsRow, SettingsSection, SettingsSelectPopup } from "./SettingsPanelPrimitives";
 import { DebouncedSettingTextarea } from "./DebouncedSettingTextInput";
+import { DefaultProviderSettingsRow } from "./DefaultProviderSettingsRow";
 import { t, useTranslation } from "~/i18n";
 
 const SOURCE_CONTROL_WRITING_OPTIONS: readonly {
@@ -357,6 +358,13 @@ export function ModelsSettingsPanel({
   return (
     <div className="space-y-6">
       <SettingsSection title="settings:models_generationDefaults">
+        {/* Lattice shows this page instead of General, so the provider new chats
+            start on is set here. */}
+        <DefaultProviderSettingsRow
+          settings={settings}
+          defaults={defaults}
+          updateSettings={updateSettings}
+        />
         <SettingsRow
           id="setting-source-control-writing-style"
           title="settings:sourceControlWritingStyle"

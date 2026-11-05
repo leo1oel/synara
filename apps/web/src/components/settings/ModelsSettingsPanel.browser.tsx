@@ -35,6 +35,8 @@ vi.mock("~/hooks/useProviderModelCatalog", () => ({
   }),
 }));
 
+import { PROVIDER_DISPLAY_NAMES } from "@synara/contracts";
+
 import { AppSettingsSchema, type AppSettings } from "~/appSettings";
 import { t, setLanguagePreference } from "~/i18n";
 import { ModelsSettingsPanel } from "./ModelsSettingsPanel";
@@ -191,4 +193,22 @@ it("inherits the Git writing model for proofreading until a model is chosen, the
   await picker.click();
   await page.getByRole("option", { name: new RegExp(`^${inherited.replace("(", "\\(")}`) }).click();
   expect(picker.element().textContent).toContain(inherited);
+});
+
+it("sets the provider new chats start on, and resets it, in Lattice's Providers page", async () => {
+  await page.viewport(360, 800);
+  setLanguagePreference("en");
+  await render(<Harness />);
+  const initial = PROVIDER_DISPLAY_NAMES[defaults.defaultProvider];
+  const other =
+    PROVIDER_DISPLAY_NAMES[defaults.defaultProvider === "codex" ? "claudeAgent" : "codex"];
+  const picker = page.getByRole("combobox", { name: "Default provider" });
+  expect(picker.element().textContent).toContain(initial);
+  await picker.click();
+  await page.getByRole("option", { name: other, exact: true }).click();
+  expect(picker.element().textContent).toContain(other);
+  const row = picker.element().closest('[data-slot="settings-row"]')!;
+  expect(row.getBoundingClientRect().right).toBeLessThanOrEqual(360);
+  await page.getByRole("button", { name: "Reset default provider to default" }).click();
+  expect(picker.element().textContent).toContain(initial);
 });
