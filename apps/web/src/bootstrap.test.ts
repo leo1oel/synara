@@ -25,4 +25,14 @@ describe("renderer bootstrap ordering", () => {
 
     expect(MAIN_SOURCE).not.toContain('import "./storageOriginMigration";');
   });
+
+  it("restores the Lattice embed's storage before loading modules that hydrate app stores", () => {
+    const handshakeIndex = BOOTSTRAP_SOURCE.indexOf("initializeEmbedMode();");
+    const restoreIndex = BOOTSTRAP_SOURCE.indexOf("restoreLatticeEmbedStorage()");
+    const appImportIndex = BOOTSTRAP_SOURCE.indexOf('import("./main")');
+    expect(handshakeIndex).toBeGreaterThanOrEqual(0);
+    expect(restoreIndex).toBeGreaterThan(handshakeIndex);
+    expect(appImportIndex).toBeGreaterThan(restoreIndex);
+    expect(MAIN_SOURCE).not.toContain("restoreLatticeEmbedStorage");
+  });
 });

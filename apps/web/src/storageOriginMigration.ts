@@ -4,11 +4,11 @@
 import type { SynaraStorageSnapshot } from "@synara/contracts";
 
 const MAX_SNAPSHOT_ENTRIES = 2_048;
-const MAX_SNAPSHOT_KEY_LENGTH = 512;
+export const MAX_SNAPSHOT_KEY_LENGTH = 512;
 const MAX_SNAPSHOT_VALUE_LENGTH = 16 * 1024 * 1024;
 const MAX_SNAPSHOT_BYTES = 16 * 1024 * 1024;
 
-function isCanonicalStorageKey(key: string): boolean {
+export function isCanonicalStorageKey(key: string): boolean {
   return key.startsWith("synara:") || key.startsWith("synara.");
 }
 
