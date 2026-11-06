@@ -3695,6 +3695,8 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
         });
       }
 
+      yield* Effect.promise(() => configureProviderRuntimes({ baseDir: serverConfig.baseDir }));
+
       yield* serverSettings.streamChanges.pipe(
         Stream.runForEach((settings) =>
           Effect.gen(function* () {
@@ -3723,7 +3725,6 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
 
       // On-demand Pi/OpenCode installs report progress through the provider statuses;
       // once one settles, probe again so an installed provider shows its real state.
-      yield* Effect.promise(() => configureProviderRuntimes({ baseDir: serverConfig.baseDir }));
       const unsubscribeProviderRuntimes = subscribeProviderRuntimeChanges((_runtime, finished) => {
         Effect.runFork(
           finished

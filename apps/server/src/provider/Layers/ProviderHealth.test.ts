@@ -21,7 +21,7 @@ import {
 import { TestClock } from "effect/testing";
 import * as PlatformError from "effect/PlatformError";
 import { ChildProcessSpawner } from "effect/unstable/process";
-import { vi } from "vitest";
+import { beforeAll, vi } from "vitest";
 
 import { SYNARA_CODEX_HOME_OVERLAY_DIR } from "../../codexHomePaths";
 import { CODEX_CLI_UNPARSEABLE_VERSION_MESSAGE } from "../codexCliVersion.ts";
@@ -71,6 +71,9 @@ import {
   MODEL_PROVIDER_API_KEY_ENV_MAPPINGS,
   providerIsolatedHomePath,
 } from "../providerProcessEnv.ts";
+import { refreshProviderRuntimeAvailability } from "../providerRuntimes.ts";
+
+beforeAll(() => refreshProviderRuntimeAvailability());
 
 // ── Test helpers ────────────────────────────────────────────────────
 
