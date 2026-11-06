@@ -2142,6 +2142,10 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("keeps direct PR resolution available during a polling pause", () =>
     Effect.gen(function* () {
+      // A rate limit only pauses polling for a signed-in gh account (7d66ee8d4); a
+      // signed-out runner would read it as an auth failure instead.
+      vi.stubEnv("GH_TOKEN", "test-token");
+      yield* Effect.addFinalizer(() => Effect.sync(() => vi.unstubAllEnvs()));
       const gh = yield* GitHubCli;
       const runProcessSpy = vi
         .spyOn(processRunner, "runProcess")

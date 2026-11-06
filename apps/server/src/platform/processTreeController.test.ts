@@ -116,7 +116,9 @@ describe("POSIX process-tree controller", () => {
       .spyOn(processRuntime, "spawnProcessSync")
       .mockImplementation(() => snapshotResult("101 100 lattice-process:1700000000:42\n") as never);
 
-    expect(createProcessTreeKiller().capture(100)).toEqual({
+    // The host snapshot contract is POSIX; on a Windows runner the synchronous capture
+    // declines by design, so pin the platform this describe block covers.
+    expect(createProcessTreeKiller({ platform: "linux" }).capture(100)).toEqual({
       captureComplete: true,
       descendants: [{ pid: 101, command: "lattice-process:1700000000:42" }],
     });

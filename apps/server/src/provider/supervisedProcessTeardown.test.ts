@@ -92,8 +92,9 @@ describe("teardownProviderProcessTree", () => {
         captureComplete: false,
         remainingDescendantPids: null,
       });
-      expect(signal).toHaveBeenCalledTimes(2);
-      for (const [input] of signal.mock.calls) expect(input.includeRootTree).toBe(false);
+      // An incomplete snapshot fails closed before any signal (48f6f4621): killing now
+      // would destroy the ancestry a safe retry needs, as the sibling cases assert.
+      expect(signal).not.toHaveBeenCalled();
       expect(observer.dispose).not.toHaveBeenCalled();
     } finally {
       signal.mockRestore();
