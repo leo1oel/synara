@@ -49,12 +49,14 @@ describe("describeClaudeProcessExit", () => {
     ).toEqual({ message: `${EXIT_1}: ${reason}`, errorCode });
   });
 
-  it("keeps the generic message without stderr, or for other failures", () => {
+  it("keeps the generic message without stderr, and leaves other failures alone", () => {
     expect(describeClaudeProcessExit({ message: EXIT_1, stderr: "" })).toEqual({
       message: EXIT_1,
+      errorCode: "claude_cli_failed",
     });
     expect(describeClaudeProcessExit({ message: EXIT_1, stderr: undefined })).toEqual({
       message: EXIT_1,
+      errorCode: "claude_cli_failed",
     });
     expect(
       describeClaudeProcessExit({ message: "Claude runtime stream failed.", stderr: "boom" }),

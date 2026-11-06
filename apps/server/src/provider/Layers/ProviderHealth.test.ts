@@ -1978,6 +1978,32 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
   // ── checkClaudeProviderStatus tests ──────────────────────────
 
   describe("checkClaudeProviderStatus", () => {
+    // An outdated CLI passes `--version` but rejects the pinned SDK's launch flags,
+    // so every turn would die at startup; its models must not be selectable.
+    it.effect("reports a Claude Code older than the SDK's flags as unavailable", () =>
+      Effect.gen(function* () {
+        const status = yield* checkClaudeProviderStatus;
+        assert.strictEqual(status.status, "error");
+        assert.strictEqual(status.available, false);
+        assert.strictEqual(status.version, "2.0.62");
+        assert.strictEqual(
+          status.message,
+          "Claude Code 2.0.62 is too old for this app. Run `claude update` (or reinstall Claude Code), then try again.",
+        );
+      }).pipe(
+        Effect.provide(
+          mockSpawnerLayer((args) => {
+            const joined = args.join(" ");
+            if (joined === "--version") {
+              return { stdout: "2.0.62 (Claude Code)\n", stderr: "", code: 0 };
+            }
+            // The gate needs no auth probe, so no credential (keychain) read.
+            throw new Error(`Unexpected args: ${joined}`);
+          }),
+        ),
+      ),
+    );
+
     it.effect("returns ready when claude is installed and authenticated", () =>
       Effect.gen(function* () {
         const status = yield* checkClaudeProviderStatus;
@@ -1989,7 +2015,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         Effect.provide(
           mockSpawnerLayer((args) => {
             const joined = args.join(" ");
-            if (joined === "--version") return { stdout: "1.0.0\n", stderr: "", code: 0 };
+            if (joined === "--version") return { stdout: "2.1.0\n", stderr: "", code: 0 };
             if (joined === "auth status")
               return {
                 stdout: '{"loggedIn":true,"authMethod":"claude.ai"}\n',
@@ -2039,7 +2065,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           mockSpawnerLayer((args, command) => {
             assert.strictEqual(command, "/custom/bin/claude");
             const joined = args.join(" ");
-            if (joined === "--version") return { stdout: "1.0.0\n", stderr: "", code: 0 };
+            if (joined === "--version") return { stdout: "2.1.0\n", stderr: "", code: 0 };
             if (joined === "auth status")
               return {
                 stdout: '{"loggedIn":true,"authMethod":"claude.ai"}\n',
@@ -2077,7 +2103,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
             assert.strictEqual(env?.HOMEPATH, "\\Users\\work\\.claude-work");
             assertProviderInstanceEnv(env, "PROVIDER_TEST_INSTANCE", "claude-work");
             const joined = args.join(" ");
-            if (joined === "--version") return { stdout: "1.0.0\n", stderr: "", code: 0 };
+            if (joined === "--version") return { stdout: "2.1.0\n", stderr: "", code: 0 };
             if (joined === "auth status")
               return {
                 stdout: '{"loggedIn":true,"authMethod":"claude.ai"}\n',
@@ -2153,7 +2179,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
                 assert.strictEqual(env?.CLAUDE_CODE_OAUTH_TOKEN, undefined);
 
                 const joined = args.join(" ");
-                if (joined === "--version") return { stdout: "1.0.0\n", stderr: "", code: 0 };
+                if (joined === "--version") return { stdout: "2.1.0\n", stderr: "", code: 0 };
                 if (joined === "auth status")
                   return {
                     stdout: '{"loggedIn":true,"authMethod":"claude.ai"}\n',
@@ -2210,7 +2236,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
             assert.strictEqual(env?.ANTHROPIC_AUTH_TOKEN, "work-token");
             const joined = args.join(" ");
             if (joined === "--version") {
-              return { stdout: "1.0.0\n", stderr: "", code: 0 };
+              return { stdout: "2.1.0\n", stderr: "", code: 0 };
             }
             if (joined === "auth status") {
               return {
@@ -2515,7 +2541,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         Effect.provide(
           mockSpawnerLayer((args) => {
             const joined = args.join(" ");
-            if (joined === "--version") return { stdout: "1.0.0\n", stderr: "", code: 0 };
+            if (joined === "--version") return { stdout: "2.1.0\n", stderr: "", code: 0 };
             if (joined === "auth status")
               return {
                 stdout: '{"loggedIn":false}\n',
@@ -2539,7 +2565,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         Effect.provide(
           mockSpawnerLayer((args) => {
             const joined = args.join(" ");
-            if (joined === "--version") return { stdout: "1.0.0\n", stderr: "", code: 0 };
+            if (joined === "--version") return { stdout: "2.1.0\n", stderr: "", code: 0 };
             if (joined === "auth status") return { stdout: "Not logged in\n", stderr: "", code: 1 };
             throw new Error(`Unexpected args: ${joined}`);
           }),
@@ -2562,7 +2588,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         Effect.provide(
           mockSpawnerLayer((args) => {
             const joined = args.join(" ");
-            if (joined === "--version") return { stdout: "1.0.0\n", stderr: "", code: 0 };
+            if (joined === "--version") return { stdout: "2.1.0\n", stderr: "", code: 0 };
             if (joined === "auth status")
               return { stdout: "", stderr: "error: unknown command 'auth'", code: 2 };
             throw new Error(`Unexpected args: ${joined}`);

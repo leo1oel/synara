@@ -171,7 +171,8 @@ describe("ThreadErrorBanner for a Claude Code exit", () => {
         />
       </div>,
     );
-    const nextStep = "下一步：在终端运行 `claude update`（或重装 Claude Code），然后重试。";
+    const nextStep =
+      "你安装的 Claude Code 版本太旧，在这里运行不了。请在终端运行 `claude update`（或重装 Claude Code），然后重试。";
     await expect.element(page.getByText(nextStep, { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "复制 错误", exact: true }).click();
     expect(writeText).toHaveBeenCalledExactlyOnceWith(

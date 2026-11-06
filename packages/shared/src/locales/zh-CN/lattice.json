@@ -90,6 +90,7 @@
   "claudeAgentCLIClaudeIsNotInstalled": "没有找到 Claude CLI（`claude`）：可能没装，或不在 PATH 里。",
   "claudeAgentCLIIsInstalledButFailed": "Claude CLI 已安装，但运行超时了。",
   "claudeIsNotAuthenticatedRunClaudeAuth": "Claude 还没登录。请运行 `claude auth login` 后再试。",
+  "claudeCodeIsTooOldRunClaudeUpdate": "你安装的 Claude Code {{version}} 版本太旧，用不了。请在终端运行 `claude update`（或重装 Claude Code），然后重试。",
   "clearSearch": "清除搜索",
   "codeBlock": "代码块",
   "codexAPIKeyAuthHasNoUsage": "Codex API 密钥登录没有用量接口。请使用 ChatGPT 登录以查看用量。",

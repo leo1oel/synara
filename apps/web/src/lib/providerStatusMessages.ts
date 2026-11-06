@@ -57,6 +57,15 @@ export function localizeProviderStatusMessage(translate: typeof t, message: stri
         );
       if (piNotSetUp)
         return translate("lattice:piIsNotSetUpInstallThe", { agentDir: piNotSetUp[1]! });
+      // apps/server/src/provider/claudeCliVersion.ts claudeCliTooOldMessage
+      const claudeTooOld =
+        /^Claude Code (\S+) is too old for this app\. Run `claude update` \(or reinstall Claude Code\), then try again\.$/u.exec(
+          message,
+        );
+      if (claudeTooOld)
+        return translate("lattice:claudeCodeIsTooOldRunClaudeUpdate", {
+          version: claudeTooOld[1]!,
+        });
       const failed = /^Codex usage request failed \((\d+)\)\.$/u.exec(message);
       if (failed) return translate("lattice:codexUsageRequestFailed", { status: failed[1]! });
       return message;

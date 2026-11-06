@@ -79,7 +79,7 @@ function runFailedTurn(binaryPath: string, dir: string) {
 }
 
 describe("Claude Code exiting at startup", () => {
-  it.live("puts an outdated CLI's stderr reason and an update step on the failed turn", () => {
+  it.live("puts an outdated CLI's stderr reason and its help code on the failed turn", () => {
     const { binaryPath, dir } = standInClaude(
       "error: unknown option '--setting-sources=user,project,local'",
     );
@@ -122,14 +122,14 @@ describe("Claude Code exiting at startup", () => {
     });
   });
 
-  it.live("keeps the generic message when Claude Code wrote nothing to stderr", () => {
+  it.live("keeps the generic message, with the generic help code, when stderr is empty", () => {
     const { binaryPath, dir } = standInClaude("");
     return Effect.gen(function* () {
       const { runtimeError } = yield* runFailedTurn(binaryPath, dir);
       assert.equal(runtimeError?.type, "runtime.error");
       if (runtimeError?.type === "runtime.error") {
         assert.equal(runtimeError.payload.message, "Claude Code process exited with code 1");
-        assert.equal(runtimeError.payload.errorCode, undefined);
+        assert.equal(runtimeError.payload.errorCode, "claude_cli_failed");
       }
     });
   });

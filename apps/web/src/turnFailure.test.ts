@@ -284,37 +284,46 @@ describe("Claude Code exit failures", () => {
         cause: reason,
         errorCode: "claude_cli_outdated",
         message: `任务因提供商错误而中断，工作尚未完成。${reason}`,
-        nextStep: "下一步：在终端运行 `claude update`（或重装 Claude Code），然后重试。",
+        nextStep:
+          "你安装的 Claude Code 版本太旧，在这里运行不了。请在终端运行 `claude update`（或重装 Claude Code），然后重试。",
       });
       setLanguagePreference("en");
       const [en] = deriveWorkLogEntries(exitActivities, exitTurnId);
       expect(en?.turnFailure?.nextStep).toBe(
-        "Next step: run `claude update` in Terminal (or reinstall Claude Code), then try again.",
+        "Your Claude Code is too old to run here. Run `claude update` in Terminal (or reinstall Claude Code), then try again.",
       );
     } finally {
       setLanguagePreference("en");
     }
   });
 
-  it("keeps the generic card when the exit has no reason", () => {
+  it("says what to try when Claude Code exited without a reason", () => {
     const generic = "Claude Code process exited with code 1";
-    const [entry] = deriveWorkLogEntries(
-      [
-        makeActivity({
-          id: "claude-exit-generic",
-          turnId: exitTurnId,
-          sequence: 2,
-          kind: "runtime.error",
-          tone: "error",
-          summary: "Provider runtime error",
-          payload: { message: generic, class: "provider_error" },
-        }),
-      ],
-      exitTurnId,
-    );
-    expect(entry?.turnFailure?.message).toBe(
-      `The task was interrupted by a provider error. Work remains incomplete. ${generic}`,
-    );
-    expect(entry?.turnFailure?.nextStep).toBeUndefined();
+    const failure = (errorCode?: string) =>
+      deriveWorkLogEntries(
+        [
+          makeActivity({
+            id: "claude-exit-generic",
+            turnId: exitTurnId,
+            sequence: 2,
+            kind: "runtime.error",
+            tone: "error",
+            summary: "Provider runtime error",
+            payload: {
+              message: generic,
+              class: "provider_error",
+              ...(errorCode ? { errorCode } : {}),
+            },
+          }),
+        ],
+        exitTurnId,
+      )[0]?.turnFailure;
+    expect(failure("claude_cli_failed")).toMatchObject({
+      message: `The task was interrupted by a provider error. Work remains incomplete. ${generic}`,
+      nextStep:
+        "Claude Code stopped unexpectedly. Run `claude -p hi` in Terminal to see why, fix it, then try again.",
+    });
+    // Errors without a code (other providers) keep the card as it was.
+    expect(failure()?.nextStep).toBeUndefined();
   });
 });

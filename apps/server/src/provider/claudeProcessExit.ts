@@ -154,9 +154,10 @@ export interface ClaudeProcessExitDescription {
 }
 
 /**
- * Adds Claude Code's own stderr reason to an SDK process-exit message. Messages
- * that are not process exits, or exits with nothing on stderr, come back
- * unchanged and without a code, so the generic text stays the fallback.
+ * Adds Claude Code's own stderr reason to an SDK process-exit message, with a
+ * code for the card's plain-language help. An exit with nothing on stderr keeps
+ * the generic text (and the generic "stopped unexpectedly" help); a message
+ * that is not a process exit comes back unchanged and without a code.
  */
 export function describeClaudeProcessExit(input: {
   readonly message: string;
@@ -169,7 +170,8 @@ export function describeClaudeProcessExit(input: {
   const reason =
     (input.stderr ? claudeStderrReason(input.stderr, input.homeDir) : undefined) ??
     claudeStderrReason(input.message.split(/\. stderr: /u)[1] ?? "", input.homeDir);
-  if (!reason) return { message: input.message };
+  // Nothing on stderr: keep the generic text, but still say what to try.
+  if (!reason) return { message: input.message, errorCode: CLAUDE_FAILURE_ERROR_CODES.cliFailed };
   return {
     message: `${exit}: ${reason}`,
     errorCode: classifyClaudeFailure(reason) ?? CLAUDE_FAILURE_ERROR_CODES.cliFailed,

@@ -121,7 +121,11 @@ import {
   withOpenCodeMaintenanceVersion,
   type PackageManagedProviderMaintenanceDefinition,
 } from "../providerMaintenance";
-import { isClaudeAutoModeCliVersionSupported } from "../claudeCliVersion.ts";
+import {
+  claudeCliTooOldMessage,
+  isClaudeAutoModeCliVersionSupported,
+  isClaudeCliTooOldForSdk,
+} from "../claudeCliVersion.ts";
 import { collectUint8StreamText } from "../../stream/collectUint8StreamText";
 import { buildCodexProcessEnv } from "../../codexProcessEnv.ts";
 import { readGrokCachedLogin } from "../../providerUsage/providers/grok";
@@ -1456,6 +1460,22 @@ export const makeCheckClaudeProviderStatus = (
     }
     const version = versionProbe.result;
     const parsedVersion = parseGenericCliVersion(`${version.stdout}\n${version.stderr}`);
+    // A Claude Code older than the pinned SDK's flags dies on every launch, so
+    // its models must not be selectable. The version is already in hand: this
+    // adds no process and skips the auth probe (and its keychain read).
+    if (parsedVersion !== null && isClaudeCliTooOldForSdk(parsedVersion)) {
+      return {
+        provider: CLAUDE_AGENT_PROVIDER,
+        instanceId: CLAUDE_AGENT_PROVIDER,
+        driver: CLAUDE_AGENT_PROVIDER,
+        status: "error" as const,
+        available: false,
+        authStatus: "unknown" as const,
+        checkedAt,
+        version: parsedVersion,
+        message: claudeCliTooOldMessage(parsedVersion),
+      };
+    }
     const supportsAutoRuntimeMode = isClaudeAutoModeCliVersionSupported(parsedVersion);
 
     // Probe 2: `claude auth status` — is the user authenticated? The command can
