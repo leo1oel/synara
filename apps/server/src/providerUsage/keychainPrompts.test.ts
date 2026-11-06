@@ -250,6 +250,45 @@ describe("keychain prompts across usage refreshes", () => {
     expect(callsFor(FACTORY_SERVICE)).toBe(2);
   });
 
+  it("retries a refused Factory key once after a re-login rewrites its credential file", async () => {
+    const homeDir = makeHome();
+    writeFactoryLogin(homeDir, randomBytes(32), jwtExpiring(NOW_MS + 24 * 60 * MINUTE_MS));
+    fakeSecurity.items.set(itemKey(FACTORY_SERVICE, FACTORY_ACCOUNT), () => ({ kind: "denied" }));
+
+    await pollRounds(homeDir, 5);
+    expect(callsFor(FACTORY_SERVICE)).toBe(1);
+
+    writeFactoryLogin(homeDir, randomBytes(32), jwtExpiring(NOW_MS + 48 * 60 * MINUTE_MS));
+    await pollRounds(homeDir, 5);
+    expect(callsFor(FACTORY_SERVICE)).toBe(2);
+  });
+
+  it("re-reads the Claude item once after the CLI refreshes an expired token", async () => {
+    const homeDir = makeHome();
+    let stored = JSON.stringify({
+      claudeAiOauth: {
+        accessToken: "expired",
+        expiresAt: NOW_MS - MINUTE_MS,
+        scopes: ["user:profile"],
+      },
+    });
+    fakeSecurity.items.set(itemKey(CLAUDE_SERVICE, "tester"), () => ({
+      kind: "granted",
+      value: stored,
+    }));
+    __setClaudeAuthNudgeDepsForTests({
+      acquireLock: async () => () => {},
+      runAuthStatus: async () => {
+        stored = claudeKeychainValue("rotated");
+      },
+    });
+
+    const snapshots = await pollRounds(homeDir, 5);
+
+    expect(callsFor(CLAUDE_SERVICE)).toBe(2);
+    expect(snapshots.find((snapshot) => snapshot.provider === "claudeAgent")?.status).toBe("ok");
+  });
+
   it("falls back to the service-only Claude item only when the account item is missing", async () => {
     const homeDir = makeHome();
     fakeSecurity.items.set(itemKey(CLAUDE_SERVICE, null), () => ({
