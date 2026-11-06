@@ -531,6 +531,8 @@ describe("teardownProviderProcessTree", () => {
           pollMs: 5,
         },
         {
+          // The root runs until SIGTERM; never probe a real host PID.
+          isRootRunning: async () => true,
           processTreeKiller: {
             capture: () => tree,
             inspect: () => ({
@@ -549,7 +551,7 @@ describe("teardownProviderProcessTree", () => {
           },
         },
       ),
-    ).resolves.toEqual({ escalated: false, signalErrors: [], capturedBeforeRootExit: false });
+    ).resolves.toEqual({ escalated: false, signalErrors: [], capturedBeforeRootExit: true });
     expect(signals).toEqual(["SIGTERM"]);
   });
 
