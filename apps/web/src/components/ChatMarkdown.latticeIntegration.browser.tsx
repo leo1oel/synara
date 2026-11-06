@@ -11,6 +11,21 @@ vi.mock("../lib/linkChips", async (importOriginal) => ({
 vi.mock("../hooks/useTheme", () => ({
   useTheme: () => ({ resolvedTheme: "light" }),
 }));
+// Links go to the host only in an embed session (readEmbedMode, since bcf96ff69), not on
+// the attribute alone; the session follows the attribute this test sets.
+vi.mock("../embedMode", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../embedMode")>()),
+  readEmbedMode: (): import("../embedMode").EmbedModeConfig | null =>
+    document.documentElement.dataset.synaraEmbed === "true"
+      ? {
+          workspaceRoot: "/workspace",
+          theme: "light",
+          surface: "chrome",
+          hostOrigin: null,
+          locale: "en",
+        }
+      : null,
+}));
 
 import ChatMarkdown from "./ChatMarkdown";
 

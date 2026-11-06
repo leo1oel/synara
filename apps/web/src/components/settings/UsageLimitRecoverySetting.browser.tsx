@@ -75,7 +75,8 @@ describe("usage-limit recovery policy", () => {
     await mount();
     const toggle = page.getByRole("switch", { name: "Resume after usage limits" });
     await toggle.click();
-    await vi.waitFor(() => expect(toggle.element().getAttribute("aria-disabled")).toBe("true"));
+    // The fork's switch is a native button (603d82a02), so it is disabled natively.
+    await expect.element(toggle).toBeDisabled();
     expect(toggle.element().getAttribute("aria-checked")).toBe("false");
     expect(harness.update).toHaveBeenCalledOnce();
     resolve?.({ ...DEFAULT_SERVER_SETTINGS_VIEW, autoResumeAfterUsageLimits: true });
