@@ -283,13 +283,9 @@ describe("ProviderModelPicker", () => {
       provider: "codex",
       model: "gpt-5-codex",
       lockedProvider: null,
-      providers: (["codex", "claudeAgent", "cursor", "droid", "pi"] as const).map((provider) => ({
-        provider,
-        status: "ready",
-        available: true,
-        authStatus: "authenticated",
-        checkedAt: "2026-04-10T10:00:00.000Z",
-      })),
+      providers: (["codex", "claudeAgent", "cursor", "droid", "pi"] as const).map((provider) =>
+        providerStatus(provider),
+      ),
       modelOptionsByProvider: { ...MODEL_OPTIONS_BY_PROVIDER, cursor: models },
     });
     try {
@@ -307,7 +303,11 @@ describe("ProviderModelPicker", () => {
       await page.getByRole("menuitemradio", { name: /^Anthropic model 3/ }).hover();
       await new Promise((resolve) => window.setTimeout(resolve, 600));
       await page.getByRole("menuitemradio", { name: /^Anthropic model 3/ }).click();
-      expect(mounted.onProviderModelChange).toHaveBeenCalledWith("cursor", "group-2-model-3");
+      expect(mounted.onProviderModelChange).toHaveBeenCalledWith(
+        "cursor",
+        "group-2-model-3",
+        "cursor",
+      );
       await expect.element(page.getByRole("menu")).not.toBeInTheDocument();
       await page.getByRole("button").click();
       await page.getByRole("menuitem", { name: "Cursor", exact: true }).click();
@@ -318,6 +318,7 @@ describe("ProviderModelPicker", () => {
       expect(mounted.onProviderModelChange).toHaveBeenLastCalledWith(
         "droid",
         "custom:GPT-5.6-Luna-0",
+        "droid",
       );
     } finally {
       await mounted.cleanup();
@@ -330,13 +331,7 @@ describe("ProviderModelPicker", () => {
       provider: "codex",
       model: "gpt-5-codex",
       lockedProvider: null,
-      providers: (["codex", "droid", "pi"] as const).map((provider) => ({
-        provider,
-        status: "ready",
-        available: true,
-        authStatus: "authenticated",
-        checkedAt: "2026-04-10T10:00:00.000Z",
-      })),
+      providers: (["codex", "droid", "pi"] as const).map((provider) => providerStatus(provider)),
     });
     try {
       await page.getByRole("button").click();
@@ -352,7 +347,7 @@ describe("ProviderModelPicker", () => {
       expect(document.body.textContent).not.toContain("GPT-5.6 Luna");
       expect(document.body.textContent).not.toContain("Claude Sonnet 4.5");
       await page.getByRole("menuitemradio", { name: "GPT-5.3 Codex" }).click();
-      expect(mounted.onProviderModelChange).toHaveBeenCalledWith("codex", "gpt-5.3-codex");
+      expect(mounted.onProviderModelChange).toHaveBeenCalledWith("codex", "gpt-5.3-codex", "codex");
     } finally {
       await mounted.cleanup();
     }
@@ -367,15 +362,7 @@ describe("ProviderModelPicker", () => {
       provider: "droid",
       model: models[0]!.slug,
       lockedProvider: null,
-      providers: [
-        {
-          provider: "droid",
-          status: "ready",
-          available: true,
-          authStatus: "authenticated",
-          checkedAt: "2026-04-10T10:00:00.000Z",
-        },
-      ],
+      providers: [providerStatus("droid")],
       modelOptionsByProvider: { ...MODEL_OPTIONS_BY_PROVIDER, droid: models },
     });
     try {
@@ -397,7 +384,11 @@ describe("ProviderModelPicker", () => {
       await page.viewport(viewport.width, viewport.height);
       scrollers[0]!.scrollTop = scrollers[0]!.scrollHeight;
       await page.getByRole("menuitemradio", { name: "Droid Model 39", exact: true }).click();
-      expect(mounted.onProviderModelChange).toHaveBeenCalledWith("droid", "droid-model-39");
+      expect(mounted.onProviderModelChange).toHaveBeenCalledWith(
+        "droid",
+        "droid-model-39",
+        "droid",
+      );
     } finally {
       await mounted.cleanup();
     }
@@ -1396,15 +1387,7 @@ describe("ProviderModelPicker", () => {
       provider: "codex",
       model: "gpt-5-codex",
       lockedProvider: null,
-      providers: [
-        {
-          provider: "codex",
-          status: "ready",
-          available: true,
-          authStatus: "authenticated",
-          checkedAt: "2026-04-10T10:00:00.000Z",
-        },
-      ],
+      providers: [providerStatus("codex")],
     });
 
     try {
@@ -1438,15 +1421,7 @@ describe("ProviderModelPicker", () => {
       provider: "codex",
       model: "gpt-5-codex",
       lockedProvider: null,
-      providers: [
-        {
-          provider: "codex",
-          status: "ready",
-          available: true,
-          authStatus: "authenticated",
-          checkedAt: "2026-04-10T10:00:00.000Z",
-        },
-      ],
+      providers: [providerStatus("codex")],
     });
 
     try {

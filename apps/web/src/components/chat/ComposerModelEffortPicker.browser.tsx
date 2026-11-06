@@ -58,6 +58,8 @@ const GPT_5_4 = "gpt-5.4" as ModelSlug;
 
 const CODEX_PROVIDER_STATUS: ServerProviderStatus = {
   provider: "codex",
+  instanceId: "codex",
+  driver: "codex",
   status: "ready",
   available: true,
   authStatus: "authenticated",
@@ -234,7 +236,7 @@ describe("ComposerModelEffortPicker (effort slider)", () => {
       await page.getByRole("menuitem", { name: /GPT-5\.5/u }).click();
       await page.getByRole("menuitemradio", { name: "GPT-5.4" }).click();
 
-      expect(onProviderModelChange).toHaveBeenCalledWith("codex", GPT_5_4);
+      expect(onProviderModelChange).toHaveBeenCalledWith("codex", GPT_5_4, "codex");
       // Only the model list closes; the card stays up with the slider ready to use.
       await vi.waitFor(() => {
         expect(document.body.querySelector('[role="menuitemradio"]')).toBeNull();
@@ -257,7 +259,7 @@ describe("ComposerModelEffortPicker (effort slider)", () => {
       await page.getByRole("menuitem", { name: "Codex" }).click();
       await page.getByRole("menuitemradio", { name: "GPT-5.4" }).click();
 
-      expect(onProviderModelChange).toHaveBeenCalledWith("codex", GPT_5_4);
+      expect(onProviderModelChange).toHaveBeenCalledWith("codex", GPT_5_4, "codex");
       await vi.waitFor(() => {
         expect(document.body.querySelector('[role="menuitemradio"]')).toBeNull();
         expect(document.body.textContent ?? "").not.toContain("Add Providers");
