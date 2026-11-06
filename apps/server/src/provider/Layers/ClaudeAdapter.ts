@@ -198,8 +198,11 @@ import {
 } from "../claudeMonitorEvents.ts";
 import { buildClaudeInstanceProcessEnv } from "../claudeEnvironment.ts";
 import {
+  CLAUDE_ACCESS_FORBIDDEN_MESSAGE,
+  CLAUDE_FAILURE_ERROR_CODES,
   captureClaudeStderr,
   describeClaudeProcessExit,
+  isClaudeAccessForbidden,
   type ClaudeStderrCapture,
   type ClaudeStderrStream,
 } from "../claudeProcessExit.ts";
@@ -315,6 +318,9 @@ interface ClaudeTurnState {
   readonly assistantError?: {
     readonly code: SDKAssistantMessageError;
     readonly message: string;
+    // A finer code for the card when the SDK's is misleading (a 403 refusal
+    // arrives as authentication_failed); falls back to `code`.
+    readonly errorCode?: string;
   };
   // The picker model this turn was sent with, and the API id it resolved to, so
   // the result can mark that model unavailable to the account (or clear it).
@@ -4032,7 +4038,9 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             ...(result?.usage ? { usage: result.usage } : {}),
             ...(turnResultUsage ? { modelUsage: turnResultUsage.modelUsage } : {}),
             claudeResultObserved: result !== undefined,
-            ...(turnState.assistantError ? { errorCode: turnState.assistantError.code } : {}),
+            ...(turnState.assistantError
+              ? { errorCode: turnState.assistantError.errorCode ?? turnState.assistantError.code }
+              : {}),
             ...(status === "failed" && turnState.assistantError?.code === "rate_limit"
               ? {
                   usageLimit: {
@@ -5096,12 +5104,25 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
 
         yield* ensureSyntheticTurn(context);
         if (message.error && context.turnState) {
+          // Anthropic refusing the account or network (403) is not a sign-in problem,
+          // though the SDK tags it authentication_failed.
+          const forbidden =
+            message.error === "authentication_failed" &&
+            isClaudeAccessForbidden(
+              (message.message?.content ?? []).map(extractContentBlockText).join("\n"),
+            );
           context.turnState = {
             ...context.turnState,
-            assistantError: {
-              code: message.error,
-              message: claudeAssistantErrorMessage(message.error),
-            },
+            assistantError: forbidden
+              ? {
+                  code: message.error,
+                  message: CLAUDE_ACCESS_FORBIDDEN_MESSAGE,
+                  errorCode: CLAUDE_FAILURE_ERROR_CODES.accessForbidden,
+                }
+              : {
+                  code: message.error,
+                  message: claudeAssistantErrorMessage(message.error),
+                },
           };
         }
         if (message.error === "rate_limit" && context.turnState && "api_error_params" in message) {
@@ -5377,7 +5398,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
               context,
               errorMessage ?? "Claude turn failed.",
               undefined,
-              assistantError?.code,
+              assistantError?.errorCode ?? assistantError?.code,
             );
           }
         }

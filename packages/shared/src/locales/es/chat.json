@@ -904,6 +904,7 @@
   "claudeExitNextStepUpdateCli": "Tu Claude Code es demasiado antiguo para funcionar aquí. Ejecuta `claude update` en Terminal (o reinstala Claude Code) y vuelve a intentarlo.",
   "claudeExitNextStepSignIn": "Claude Code no ha iniciado sesión o no se puede leer su sesión. Ejecuta `claude auth login` en Terminal y vuelve a intentarlo.",
   "claudeExitNextStepPickModel": "Tu cuenta de Claude no puede usar este modelo. Elige otro con Cambiar modelo.",
+  "claudeExitNextStepAccessForbidden": "Anthropic rechazó esta cuenta de Claude o esta red (403). Volver a iniciar sesión probablemente no ayude: revisa el estado de la cuenta o usa otro proveedor.",
   "claudeExitNextStepCheckCli": "Claude Code se detuvo de forma inesperada. Ejecuta `claude -p hi` en Terminal para ver por qué, corrígelo y vuelve a intentarlo.",
   "waitForTheCurrentTurnToFinishAndAnswer": "Espera a que termine el turno actual, responde las solicitudes pendientes y vuelve a enviar.",
   "compactionProcessesThisConversationAndConsumesUsageLaterTurns": "La compactación procesa esta conversación y consume uso. Los turnos posteriores utilizan su resumen.",

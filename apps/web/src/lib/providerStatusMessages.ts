@@ -22,6 +22,9 @@ export function localizeProviderStatusMessage(translate: typeof t, message: stri
       return translate("lattice:claudeAgentCLIClaudeIsNotInstalled");
     case "Claude Agent CLI is installed but failed to run. Timed out while running command.":
       return translate("lattice:claudeAgentCLIIsInstalledButFailed");
+    // apps/server/src/provider/claudeProcessExit.ts CLAUDE_ACCESS_FORBIDDEN_MESSAGE
+    case "Anthropic refused this Claude account or network (403 Request not allowed).":
+      return translate("lattice:anthropicRefusedThisClaudeAccount");
     case "Could not verify Claude authentication status. Timed out while running command.":
       return translate("lattice:couldNotVerifyClaudeAuthenticationStatusTimed");
     // Provider runtimes a slim host installs on demand (apps/server/src/provider/providerRuntimes.ts).

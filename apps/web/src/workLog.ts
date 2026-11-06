@@ -1096,6 +1096,7 @@ const CLAUDE_EXIT_NEXT_STEPS = {
   claude_auth_required: "chat:claudeExitNextStepSignIn",
   claude_model_unavailable: "chat:claudeExitNextStepPickModel",
   model_not_found: "chat:claudeExitNextStepPickModel",
+  claude_access_forbidden: "chat:claudeExitNextStepAccessForbidden",
   claude_cli_failed: "chat:claudeExitNextStepCheckCli",
 } as const;
 

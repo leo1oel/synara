@@ -2,6 +2,7 @@
   "aDownloadedPackageDidNotMatchIts": "下载的软件包与预期校验值不符，因此未安装任何内容。请重试。",
   "aNewerMessageHasBeenSentSince": "之后又发过新消息了，只有最新的一条可以编辑。",
   "aNewerVersionIsAvailableButLattice": "有新版本，但 Lattice 没法为这个安装方式找到可以安全一键更新的命令。",
+  "anthropicRefusedThisClaudeAccount": "Anthropic 拒绝了这个 Claude 账号或所在网络（403），请检查账号状态。",
   "aPreviousResetWasnTConfirmedRetry": "上一次重置还没确认结果。点“重试”会核对同一次操作，不会多用。",
   "aPullRequestIsAlreadyOpenFor": "此分支已有打开的 PR。",
   "aResetCanOnlyBeUsedOnce": "只有当 5 小时或每周额度只剩 10% 或更少时，才能使用重置。你现在的额度还多于这个，所以什么都没有用掉。",

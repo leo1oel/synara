@@ -99,6 +99,14 @@ describe("classifyClaudeFailure", () => {
       "claude_model_unavailable",
     ],
     ["error: unknown option '--effort'", "claude_cli_outdated"],
+    // A refused account or network, as Claude Code 2.1.296 prints it (API key) and as
+    // the affected user's `claude -p hi` printed it (OAuth): not a sign-in problem.
+    ["Failed to authenticate. API Error: 403 Request not allowed", "claude_access_forbidden"],
+    [
+      'Failed to authenticate. API Error: 403 {"error":{"type":"forbidden","message":"Request not allowed"}}',
+      "claude_access_forbidden",
+    ],
+    ["Failed to authenticate. API Error: 401 Invalid bearer token", undefined],
     ["Error: Session ID 1 is already in use.", undefined],
   ])("classifies %j", (text, code) => {
     expect(classifyClaudeFailure(text)).toBe(code);

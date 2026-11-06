@@ -335,6 +335,45 @@ describe("Claude Code exit failures", () => {
     }
   });
 
+  it("says Anthropic refused the account, and that signing in again will not help", () => {
+    const refusedTurnId = TurnId.makeUnsafe("claude-access-forbidden-turn");
+    const cause = "Anthropic refused this Claude account or network (403 Request not allowed).";
+    const activities = [
+      makeActivity({
+        id: "claude-forbidden-error",
+        turnId: refusedTurnId,
+        sequence: 2,
+        kind: "runtime.error",
+        tone: "error",
+        summary: "Provider runtime error",
+        payload: { message: cause, class: "provider_error", errorCode: "claude_access_forbidden" },
+      }),
+      makeActivity({
+        id: "claude-forbidden-completion",
+        turnId: refusedTurnId,
+        sequence: 3,
+        kind: "turn.completed",
+        tone: "error",
+        summary: "Turn failed",
+        payload: { state: "failed", errorMessage: cause, errorCode: "claude_access_forbidden" },
+      }),
+    ];
+    try {
+      setLanguagePreference("zh-CN");
+      const [zh] = deriveWorkLogEntries(activities, refusedTurnId);
+      expect(zh?.turnFailure?.nextStep).toBe(
+        "Anthropic 拒绝了这个 Claude 账号或所在网络（403）。重新登录多半没用：请检查账号状态，或换用其他提供商。",
+      );
+      expect(zh?.turnFailure?.nextStep).not.toMatch(/claude auth login/);
+      setLanguagePreference("en");
+      expect(deriveWorkLogEntries(activities, refusedTurnId)[0]?.turnFailure?.nextStep).toBe(
+        "Anthropic refused this Claude account or network (403). Signing in again is unlikely to help: check the account's status, or use another provider.",
+      );
+    } finally {
+      setLanguagePreference("en");
+    }
+  });
+
   it("says what to try when Claude Code exited without a reason", () => {
     const generic = "Claude Code process exited with code 1";
     const failure = (errorCode?: string) =>

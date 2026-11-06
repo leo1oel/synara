@@ -2,6 +2,7 @@
   "aDownloadedPackageDidNotMatchIts": "A downloaded package did not match its expected checksum, so nothing was installed. Try again.",
   "aNewerMessageHasBeenSentSince": "A newer message has been sent since, and only the latest user message can be edited.",
   "aNewerVersionIsAvailableButLattice": "A newer version is available, but Lattice could not identify a safe one-click update command for this installation.",
+  "anthropicRefusedThisClaudeAccount": "Anthropic refused this Claude account or network (403). Check the account's status.",
   "aPreviousResetWasnTConfirmedRetry": "A previous reset wasn't confirmed. Retry checks the same attempt.",
   "aPullRequestIsAlreadyOpenFor": "A pull request is already open for this branch.",
   "aResetCanOnlyBeUsedOnce": "A reset can only be used once your 5-hour or weekly limit has 10% or less left. You still have more than that, so nothing was used.",

@@ -939,6 +939,7 @@
   "claudeExitNextStepUpdateCli": "你安装的 Claude Code 版本太旧，在这里运行不了。请在终端运行 `claude update`（或重装 Claude Code），然后重试。",
   "claudeExitNextStepSignIn": "Claude Code 还没登录，或者读不到它的登录信息。请在终端运行 `claude auth login`，然后重试。",
   "claudeExitNextStepPickModel": "你的 Claude 账号用不了这个模型。请点「更改模型」换一个。",
+  "claudeExitNextStepAccessForbidden": "Anthropic 拒绝了这个 Claude 账号或所在网络（403）。重新登录多半没用：请检查账号状态，或换用其他提供商。",
   "claudeExitNextStepCheckCli": "Claude Code 意外退出了。请在终端运行 `claude -p hi` 看看原因，处理好后重试。",
   "waitForTheCurrentTurnToFinishAndAnswer": "请等待当前轮次结束，并回答所有待处理请求后再次发送。",
   "compactionProcessesThisConversationAndConsumesUsageLaterTurns": "上下文压缩会处理此对话并消耗用量。后续轮次将使用生成的摘要。",

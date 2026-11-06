@@ -6184,7 +6184,10 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
     const emitTurnResult = (
       query: FakeClaudeQuery,
       id: string,
-      outcome: { readonly error?: "model_not_found" | "rate_limit"; readonly text: string },
+      outcome: {
+        readonly error?: "model_not_found" | "rate_limit" | "authentication_failed";
+        readonly text: string;
+      },
     ) => {
       query.emit({
         type: "assistant",
@@ -6274,6 +6277,48 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
           "completed",
         );
         assert.deepEqual(unavailableModelsFor("claude_work"), []);
+      }).pipe(
+        Effect.provideService(Random.Random, makeDeterministicRandomService()),
+        Effect.provide(harness.layer),
+      );
+    });
+
+    it.effect("tells Anthropic's 403 refusal apart from a missing sign-in", () => {
+      const harness = makeHarness();
+      return Effect.gen(function* () {
+        const adapter = yield* ClaudeAdapter;
+        const events = yield* adapter.streamEvents.pipe(
+          Stream.takeUntil((event) => event.type === "turn.completed"),
+          Stream.runCollect,
+          Effect.forkChild,
+        );
+        yield* adapter.startSession({
+          threadId: THREAD_ID,
+          provider: "claudeAgent",
+          runtimeMode: "full-access",
+        });
+        yield* adapter.sendTurn({ threadId: THREAD_ID, input: "hi", attachments: [] });
+        // What Claude Code 2.1.296 emits when the API answers 403 forbidden.
+        emitTurnResult(harness.query, "forbidden", {
+          error: "authentication_failed",
+          text: "Failed to authenticate. API Error: 403 Request not allowed",
+        });
+        const collected = Array.from(yield* Fiber.join(events));
+        const expected =
+          "Anthropic refused this Claude account or network (403 Request not allowed).";
+        const runtimeError = collected.find((event) => event.type === "runtime.error");
+        assert.equal(runtimeError?.type, "runtime.error");
+        if (runtimeError?.type === "runtime.error") {
+          assert.equal(runtimeError.payload.message, expected);
+          assert.equal(runtimeError.payload.errorCode, "claude_access_forbidden");
+        }
+        const completed = collected.find((event) => event.type === "turn.completed");
+        assert.equal(completed?.type, "turn.completed");
+        if (completed?.type === "turn.completed") {
+          assert.equal(completed.payload.state, "failed");
+          assert.equal(completed.payload.errorMessage, expected);
+          assert.equal(completed.payload.errorCode, "claude_access_forbidden");
+        }
       }).pipe(
         Effect.provideService(Random.Random, makeDeterministicRandomService()),
         Effect.provide(harness.layer),

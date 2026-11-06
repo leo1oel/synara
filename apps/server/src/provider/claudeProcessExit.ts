@@ -15,8 +15,27 @@ export const CLAUDE_FAILURE_ERROR_CODES = {
   cliOutdated: "claude_cli_outdated",
   authRequired: "claude_auth_required",
   modelUnavailable: "claude_model_unavailable",
+  accessForbidden: "claude_access_forbidden",
   cliFailed: "claude_cli_failed",
 } as const;
+
+/**
+ * Anthropic answering 403 forbidden ("Request not allowed") refuses the account or
+ * the network it comes from (an organization or region not allowed), whatever the
+ * credentials. Claude Code reports it as "Failed to authenticate. API Error: 403 …"
+ * (with the raw JSON body on the OAuth path) and the Agent SDK tags it
+ * `authentication_failed`, but signing in again does not help, so it is told apart.
+ */
+const ACCESS_FORBIDDEN =
+  /\b403\b[^\n]*(?:forbidden|request not allowed)|request not allowed|"type"\s*:\s*"forbidden"/i;
+
+export function isClaudeAccessForbidden(text: string): boolean {
+  return ACCESS_FORBIDDEN.test(text);
+}
+
+/** Card and status wording for a refused account or network (localized on the web). */
+export const CLAUDE_ACCESS_FORBIDDEN_MESSAGE =
+  "Anthropic refused this Claude account or network (403 Request not allowed).";
 
 export type ClaudeFailureErrorCode =
   (typeof CLAUDE_FAILURE_ERROR_CODES)[keyof typeof CLAUDE_FAILURE_ERROR_CODES];
@@ -124,6 +143,8 @@ export function claudeStderrReason(stderr: string, homeDir?: string): string | u
 
 /** Classifies a Claude failure text (stderr reason or provider message). */
 export function classifyClaudeFailure(text: string): ClaudeFailureErrorCode | undefined {
+  // Before the sign-in check: it also says "Failed to authenticate".
+  if (isClaudeAccessForbidden(text)) return CLAUDE_FAILURE_ERROR_CODES.accessForbidden;
   if (
     /unknown option|unknown command|too many arguments|option '[^']*' argument '[^']*' is invalid/i.test(
       text,
