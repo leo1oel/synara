@@ -317,18 +317,14 @@ function MessageTrailMicrophoneRow({
           triggerClassName="w-full sm:w-64"
           valueContent={valueContent}
         >
-          <SelectItem hideIndicator value={MAC_DEFAULT_MICROPHONE_VALUE}>
-            {macDefaultLabel}
-          </SelectItem>
+          <SelectItem value={MAC_DEFAULT_MICROPHONE_VALUE}>{macDefaultLabel}</SelectItem>
           {devices.map((device) => (
-            <SelectItem hideIndicator key={device.id} value={device.id}>
+            <SelectItem key={device.id} value={device.id}>
               {microphoneLabel(device)}
             </SelectItem>
           ))}
           {value && !selected ? (
-            <SelectItem hideIndicator value={value}>
-              {t("common:toast_notConnected")}
-            </SelectItem>
+            <SelectItem value={value}>{t("common:toast_notConnected")}</SelectItem>
           ) : null}
         </SettingsSelectControl>
       }
@@ -1867,15 +1863,9 @@ function SettingsRouteView() {
               triggerClassName="w-full sm:w-40"
               valueContent={t(GITHUB_LINK_OPEN_TARGET_LABELS[settings.githubLinkOpenTarget])}
             >
-              <SelectItem hideIndicator value="app">
-                {t(GITHUB_LINK_OPEN_TARGET_LABELS.app)}
-              </SelectItem>
-              <SelectItem hideIndicator value="browser">
-                {t(GITHUB_LINK_OPEN_TARGET_LABELS.browser)}
-              </SelectItem>
-              <SelectItem hideIndicator value="external">
-                {t(GITHUB_LINK_OPEN_TARGET_LABELS.external)}
-              </SelectItem>
+              <SelectItem value="app">{t(GITHUB_LINK_OPEN_TARGET_LABELS.app)}</SelectItem>
+              <SelectItem value="browser">{t(GITHUB_LINK_OPEN_TARGET_LABELS.browser)}</SelectItem>
+              <SelectItem value="external">{t(GITHUB_LINK_OPEN_TARGET_LABELS.external)}</SelectItem>
             </SettingsSelectControl>
           }
         />

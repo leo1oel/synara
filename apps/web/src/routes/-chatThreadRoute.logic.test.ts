@@ -9,7 +9,6 @@ import {
   resolveRoutePanelBootstrap,
   resolveSingleProjectId,
   resolveSplitPaneCloseDecision,
-  resolveSplitPaneMaximizeDecision,
   resolveThreadPickerTitle,
   resolveToggledChatPanelPatch,
   stripEditorViewSearchParams,

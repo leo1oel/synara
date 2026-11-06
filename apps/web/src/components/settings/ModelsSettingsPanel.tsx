@@ -396,7 +396,7 @@ export function ModelsSettingsPanel({
               valueContent={t(writingOption.label)}
             >
               {SOURCE_CONTROL_WRITING_OPTIONS.map((option) => (
-                <SelectItem hideIndicator key={option.value} value={option.value}>
+                <SelectItem key={option.value} value={option.value}>
                   {t(option.label)}
                 </SelectItem>
               ))}
@@ -452,7 +452,7 @@ export function ModelsSettingsPanel({
               valueContent={selectedGitTextGenerationModelLabel}
             >
               {gitTextGenerationPickerOptions.map(({ instance, key, option, value }) => (
-                <SelectItem hideIndicator key={key} value={value}>
+                <SelectItem key={key} value={value}>
                   {instance.label} / {option.name}
                 </SelectItem>
               ))}
@@ -502,11 +502,9 @@ export function ModelsSettingsPanel({
               triggerClassName="w-full sm:w-52"
               valueContent={selectedProofreadModelLabel}
             >
-              <SelectItem hideIndicator value={PROOFREAD_INHERIT_VALUE}>
-                {inheritedProofreadLabel}
-              </SelectItem>
+              <SelectItem value={PROOFREAD_INHERIT_VALUE}>{inheritedProofreadLabel}</SelectItem>
               {gitTextGenerationPickerOptions.map(({ instance, key, option, value }) => (
-                <SelectItem hideIndicator key={key} value={value}>
+                <SelectItem key={key} value={value}>
                   {instance.label} / {option.name}
                 </SelectItem>
               ))}

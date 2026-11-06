@@ -170,7 +170,7 @@ describe("rankSettingsSearchEntries", () => {
 describe("SettingsSidebarNav", () => {
   it("renders the soft search input alongside the section list", () => {
     const markup = renderToStaticMarkup(
-      <SettingsSidebarNav activeSection="general" onBack={vi.fn()} onSelectSection={vi.fn()} />,
+      <SettingsSidebarNav activeSection="general" onSelectSection={vi.fn()} />,
     );
 
     expect(markup).toContain('aria-label="Search settings"');
@@ -179,7 +179,7 @@ describe("SettingsSidebarNav", () => {
 
   it("groups settings by user intent instead of implementation ownership", () => {
     const markup = renderToStaticMarkup(
-      <SettingsSidebarNav activeSection="general" onBack={vi.fn()} onSelectSection={vi.fn()} />,
+      <SettingsSidebarNav activeSection="general" onSelectSection={vi.fn()} />,
     );
 
     expect(markup).toContain("Personal");

@@ -82,7 +82,6 @@ describe("createProviderInstallResetPatch", () => {
         "openCodeServerPassword",
         "openCodeServerUrl",
         "piAgentDir",
-        "piBinaryPath",
         "providerInstances",
         "selectedCodexAccountId",
       ].sort(),
@@ -96,6 +95,8 @@ describe("providerUpdateStatusLabel", () => {
     expect(
       providerUpdateStatusLabel({
         provider: "pi",
+        instanceId: "pi",
+        driver: "pi",
         status: "ready",
         available: true,
         authStatus: "unknown",
