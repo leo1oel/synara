@@ -109,4 +109,26 @@ describe("resolveClaudeComposerNotice", () => {
       blocksNextSend: true,
     });
   });
+
+  it("puts a status that blocks sends ahead of an older turn failure", () => {
+    const notice = resolveClaudeComposerNotice({
+      ...base,
+      latestTurnFailure: { errorCode: "claude_access_forbidden", nextStep: "Refused." },
+      providerStatus: {
+        ...ready,
+        status: "error",
+        authStatus: "unauthenticated",
+        message: "Claude is not authenticated. Run `claude auth login` and try again.",
+      },
+    });
+    expect(notice?.kind).toBe("provider-status");
+    // A mere warning status does not hide the turn's own reason.
+    expect(
+      resolveClaudeComposerNotice({
+        ...base,
+        latestTurnFailure: { errorCode: "claude_access_forbidden", nextStep: "Refused." },
+        providerStatus: { ...ready, status: "warning", message: "Could not verify." },
+      })?.kind,
+    ).toBe("turn-failed");
+  });
 });

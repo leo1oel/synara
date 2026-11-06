@@ -72,6 +72,20 @@ export function resolveClaudeComposerNotice(input: {
     };
   }
 
+  // A status that blocks sends right now outranks the last turn's failure.
+  const status = input.providerStatus;
+  const statusNotice =
+    status && status.status !== "ready" && status.message
+      ? {
+          key: `provider-status:${status.instanceId ?? status.provider}:${status.message}`,
+          kind: "provider-status" as const,
+          message: input.translateStatus(status.message),
+          action: "provider-settings" as const,
+          blocksNextSend: status.status === "error",
+        }
+      : null;
+  if (statusNotice?.blocksNextSend) return statusNotice;
+
   const failure = input.latestTurnFailure;
   if (
     failure?.errorCode &&
@@ -93,15 +107,6 @@ export function resolveClaudeComposerNotice(input: {
     };
   }
 
-  const status = input.providerStatus;
-  if (status && status.status !== "ready" && status.message) {
-    return {
-      key: `provider-status:${status.instanceId ?? status.provider}:${status.message}`,
-      kind: "provider-status",
-      message: input.translateStatus(status.message),
-      action: "provider-settings",
-      blocksNextSend: status.status === "error",
-    };
-  }
+  if (statusNotice) return statusNotice;
   return null;
 }
