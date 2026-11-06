@@ -682,6 +682,14 @@ export const ServerConfigStreamEvent = Schema.Union([
 ]);
 export type ServerConfigStreamEvent = typeof ServerConfigStreamEvent.Type;
 
+// `explicit` marks the user's own recheck (Settings → Providers' Refresh, the sign-in
+// window), which also forgets the models an account refused; automatic refreshes
+// (startup, window focus, hourly) leave those in place.
+export const ServerRefreshProvidersInput = Schema.Struct({
+  explicit: Schema.optional(Schema.Boolean),
+});
+export type ServerRefreshProvidersInput = typeof ServerRefreshProvidersInput.Type;
+
 export const ServerRefreshProvidersResult = ServerProviderStatusesUpdatedPayload;
 export type ServerRefreshProvidersResult = typeof ServerRefreshProvidersResult.Type;
 

@@ -1,7 +1,9 @@
 // A model the account refused (a turn failed with model_not_found) travels on the
 // instance's provider status as `unavailableModels`, so the picker can grey it out.
-// These tests check the projection, the immediate republish, and that a status
-// refresh forgets what it re-checked, but not an entry recorded after it began.
+// These tests check the projection and the immediate republish, that an automatic
+// refresh of the same account keeps the entry (or the model would be offered again
+// within seconds), and that a refresh finding another account clears it, except an
+// entry recorded after that refresh began.
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import type { ServerProviderStatus } from "@synara/contracts";
 import { assert, it } from "@effect/vitest";
@@ -20,7 +22,11 @@ import { ProviderHealthLive } from "./ProviderHealth";
 
 const encoder = new TextEncoder();
 
-// Claude answers its probes as a signed-in, current CLI; every other CLI is absent.
+// What `claude auth status` reports; a test switches it to another account.
+let claudeAccount = '{"loggedIn":true,"authMethod":"claude.ai"}';
+
+// Claude answers its probes as a current CLI signed in as `claudeAccount`; every
+// other CLI is absent.
 const spawnerLayer = Layer.succeed(
   ChildProcessSpawner.ChildProcessSpawner,
   ChildProcessSpawner.make((command) => {
@@ -33,7 +39,7 @@ const spawnerLayer = Layer.succeed(
       binary === "claude" && joined === "--version"
         ? { stdout: "2.1.296 (Claude Code)\n", code: 0 }
         : binary === "claude" && joined === "auth status"
-          ? { stdout: '{"loggedIn":true,"authMethod":"claude.ai"}\n', code: 0 }
+          ? { stdout: `${claudeAccount}\n`, code: 0 }
           : { stdout: "", code: 127 };
     return Effect.succeed(
       ChildProcessSpawner.makeHandle({
@@ -54,25 +60,32 @@ const spawnerLayer = Layer.succeed(
 
 const claudeOf = (statuses: ReadonlyArray<ServerProviderStatus>) =>
   statuses.find((status) => status.instanceId === "claudeAgent");
+const refusedModels = (statuses: ReadonlyArray<ServerProviderStatus>) =>
+  claudeOf(statuses)?.unavailableModels?.map((entry) => entry.model);
 
 const reason = "The selected Claude model is unavailable for this account.";
 
+const healthLayer = (baseDir: string) =>
+  ProviderHealthLive.pipe(
+    Layer.provideMerge(ServerSettingsService.layerTest()),
+    Layer.provideMerge(ServerConfig.layerTest(process.cwd(), baseDir)),
+    Layer.provideMerge(spawnerLayer),
+    Layer.provideMerge(NodeServices.layer),
+  );
+
 it.layer(NodeServices.layer)("ProviderHealth unavailable models", (it) => {
-  beforeEach(() => resetUnavailableModelsForTest());
+  beforeEach(() => {
+    resetUnavailableModelsForTest();
+    claudeAccount = '{"loggedIn":true,"authMethod":"claude.ai"}';
+  });
   afterEach(() => resetUnavailableModelsForTest());
 
-  it.effect("publishes a refused model at once and forgets it on the next refresh", () =>
+  it.effect("publishes a refused model at once and keeps it through automatic refreshes", () =>
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
         prefix: "provider-health-unavailable-models-",
       });
-      const layer = ProviderHealthLive.pipe(
-        Layer.provideMerge(ServerSettingsService.layerTest()),
-        Layer.provideMerge(ServerConfig.layerTest(process.cwd(), baseDir)),
-        Layer.provideMerge(spawnerLayer),
-        Layer.provideMerge(NodeServices.layer),
-      );
 
       yield* Effect.gen(function* () {
         const health = yield* ProviderHealth;
@@ -99,47 +112,55 @@ it.layer(NodeServices.layer)("ProviderHealth unavailable models", (it) => {
           // Projection only: the probe result itself is unchanged.
           assert.strictEqual(pushed.value?.status, "ready");
         }
-        assert.deepStrictEqual(
-          claudeOf(yield* health.getStatuses)?.unavailableModels?.map((entry) => entry.model),
-          ["claude-fable-5-1"],
-        );
+        assert.deepStrictEqual(refusedModels(yield* health.getStatuses), ["claude-fable-5-1"]);
 
-        assert.strictEqual(claudeOf(yield* health.refresh)?.unavailableModels, undefined);
-        assert.strictEqual(claudeOf(yield* health.getStatuses)?.unavailableModels, undefined);
-      }).pipe(Effect.provide(layer));
+        // Startup, window focus and the hourly check all land here, with the same account.
+        assert.deepStrictEqual(refusedModels(yield* health.refresh), ["claude-fable-5-1"]);
+        assert.deepStrictEqual(refusedModels(yield* health.refresh), ["claude-fable-5-1"]);
+      }).pipe(Effect.provide(healthLayer(baseDir)));
     }),
   );
 
-  it.effect("keeps an entry recorded after the refresh began", () =>
+  it.effect("forgets the refused models when the refresh finds another account", () =>
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "provider-health-unavailable-models-late-",
+        prefix: "provider-health-unavailable-models-account-",
       });
-      const layer = ProviderHealthLive.pipe(
-        Layer.provideMerge(ServerSettingsService.layerTest()),
-        Layer.provideMerge(ServerConfig.layerTest(process.cwd(), baseDir)),
-        Layer.provideMerge(spawnerLayer),
-        Layer.provideMerge(NodeServices.layer),
-      );
 
       yield* Effect.gen(function* () {
         const health = yield* ProviderHealth;
-        // Stands in for a turn that failed while the probe was running.
+        yield* health.refresh;
+        recordUnavailableModel({ instanceId: "claudeAgent", model: "claude-fable-5-1", reason });
+        // Stands in for a turn that failed while the next probe was running.
         recordUnavailableModel({
           instanceId: "claudeAgent",
-          model: "claude-fable-5-1",
+          model: "claude-opus-5",
           reason,
           recordedAt: new Date(Date.now() + 60_000).toISOString(),
         });
-        recordUnavailableModel({ instanceId: "claude_work", model: "claude-opus-5", reason });
 
-        const refreshed = yield* health.refresh;
-        assert.deepStrictEqual(
-          claudeOf(refreshed)?.unavailableModels?.map((entry) => entry.model),
-          ["claude-fable-5-1"],
-        );
-      }).pipe(Effect.provide(layer));
+        // Signed in with an API key instead of the claude.ai account.
+        claudeAccount = '{"loggedIn":true,"authMethod":"api_key"}';
+        assert.deepStrictEqual(refusedModels(yield* health.refresh), ["claude-opus-5"]);
+      }).pipe(Effect.provide(healthLayer(baseDir)));
+    }),
+  );
+
+  it.effect("forgets them when the account signs out", () =>
+    Effect.gen(function* () {
+      const fileSystem = yield* FileSystem.FileSystem;
+      const baseDir = yield* fileSystem.makeTempDirectoryScoped({
+        prefix: "provider-health-unavailable-models-signout-",
+      });
+
+      yield* Effect.gen(function* () {
+        const health = yield* ProviderHealth;
+        yield* health.refresh;
+        recordUnavailableModel({ instanceId: "claudeAgent", model: "claude-fable-5-1", reason });
+        claudeAccount = "Not logged in · Please run /login";
+        assert.strictEqual(refusedModels(yield* health.refresh), undefined);
+      }).pipe(Effect.provide(healthLayer(baseDir)));
     }),
   );
 });

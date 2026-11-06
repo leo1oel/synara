@@ -8,9 +8,12 @@
  * `unavailableModels`, so the picker greys the row and the composer leaves it.
  *
  * Nothing here probes: entries come only from turn results, so availability
- * costs no CLI process or keychain read. An entry clears when a turn with that
- * model succeeds, or when a status refresh (window focus, Settings, sign-in)
- * re-checks the instance, since the user may have switched accounts meanwhile.
+ * costs no CLI process or keychain read. An entry clears only when a turn with
+ * that model succeeds, when the user rechecks providers themselves (Settings →
+ * Providers' Refresh, the sign-in window), or when a status refresh finds the
+ * instance's account changed. Automatic refreshes (startup, window focus,
+ * hourly) keep it: they would make the model selectable again within seconds,
+ * only to fail the same way.
  *
  * State is per server process, like provider runtime installs; it is not
  * persisted, so a restart forgets every entry.
@@ -60,24 +63,28 @@ export function clearUnavailableModel(input: {
 }
 
 /**
- * Clears an instance's entries recorded before `before` (epoch ms): a status
- * refresh that started then re-checked the account. Entries recorded while the
- * refresh was running stay, because its probe cannot have seen them.
+ * Clears entries recorded before `before` (epoch ms), for one instance or, without
+ * `instanceId`, for all: the account changed, or the user rechecked providers.
+ * An entry recorded after that point stays, because the recheck cannot have seen it.
  */
 export function clearUnavailableModelsRecordedBefore(input: {
-  readonly instanceId: string;
+  readonly instanceId?: string;
   readonly before: number;
 }): boolean {
-  const entries = entriesByInstance.get(input.instanceId);
-  if (!entries) return false;
+  const instanceIds =
+    input.instanceId === undefined ? Array.from(entriesByInstance.keys()) : [input.instanceId];
   let changed = false;
-  for (const [model, entry] of entries) {
-    if (Date.parse(entry.recordedAt) < input.before) {
-      entries.delete(model);
-      changed = true;
+  for (const instanceId of instanceIds) {
+    const entries = entriesByInstance.get(instanceId);
+    if (!entries) continue;
+    for (const [model, entry] of entries) {
+      if (Date.parse(entry.recordedAt) <= input.before) {
+        entries.delete(model);
+        changed = true;
+      }
     }
+    if (entries.size === 0) entriesByInstance.delete(instanceId);
   }
-  if (entries.size === 0) entriesByInstance.delete(input.instanceId);
   if (changed) notify();
   return changed;
 }

@@ -370,6 +370,7 @@ import {
   ServerProviderUpdateInput,
   ServerInstallProviderRuntimeInput,
   ServerProviderUpdateResult,
+  ServerRefreshProvidersInput,
   ServerRefreshProvidersResult,
   ServerStopLocalServerInput,
   ServerStopLocalServerResult,
@@ -1455,7 +1456,7 @@ export const WsServerUpdateSettingsRpc = Rpc.make(WS_METHODS.serverUpdateSetting
 });
 
 export const WsServerRefreshProvidersRpc = Rpc.make(WS_METHODS.serverRefreshProviders, {
-  payload: Schema.Struct({}),
+  payload: ServerRefreshProvidersInput,
   success: ServerRefreshProvidersResult,
   error: WsRpcError,
 });

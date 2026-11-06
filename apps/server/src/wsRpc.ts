@@ -193,6 +193,7 @@ import {
 import { recoverUnregisteredGitHubCheckout } from "./project/githubProjectRegistration";
 import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegistry";
 import { ProviderHealth } from "./provider/Services/ProviderHealth";
+import { clearUnavailableModelsRecordedBefore } from "./provider/providerModelAvailability.ts";
 import { requestProviderRuntimeInstall } from "./provider/providerRuntimes.ts";
 import { ProviderService } from "./provider/Services/ProviderService";
 import { consumeCodexResetCreditEffect, listProviderUsage } from "./providerUsage";
@@ -2477,9 +2478,16 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(serverSettings.getSettingsView, "Failed to load server settings"),
         [WS_METHODS.serverUpdateSettings]: (input) =>
           rpcEffect(serverSettings.updateSettingsView(input), "Failed to update server settings"),
-        [WS_METHODS.serverRefreshProviders]: () =>
+        [WS_METHODS.serverRefreshProviders]: (input) =>
           rpcEffect(
-            providerHealth.refresh.pipe(Effect.map((providers) => ({ providers }))),
+            // The user's own recheck also forgets the models an account refused
+            // (see providerModelAvailability); automatic refreshes keep them.
+            Effect.sync(() => {
+              if (input?.explicit) clearUnavailableModelsRecordedBefore({ before: Date.now() });
+            }).pipe(
+              Effect.andThen(providerHealth.refresh),
+              Effect.map((providers) => ({ providers })),
+            ),
             "Failed to refresh providers",
           ),
         [WS_METHODS.serverUpdateProvider]: (input) => providerHealth.updateProvider(input),

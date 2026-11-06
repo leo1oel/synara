@@ -814,8 +814,8 @@ export function createWsNativeApi(): NativeApi {
       // Claude runs sequential CLI and auth probes, so a refresh can exceed the
       // generic 60-second RPC deadline. Keep this bounded while allowing slow
       // probes to finish; onboarding shows an error if this deadline expires.
-      refreshProviders: () =>
-        transport.request(WS_METHODS.serverRefreshProviders, undefined, { timeoutMs: 180_000 }),
+      refreshProviders: (input) =>
+        transport.request(WS_METHODS.serverRefreshProviders, input, { timeoutMs: 180_000 }),
       // Provider updates run up to 2 minutes server-side; callers wrap this in
       // withProviderUpdateTimeout, which owns the client-side watchdog.
       updateProvider: (input) =>

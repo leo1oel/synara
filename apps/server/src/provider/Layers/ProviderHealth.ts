@@ -2724,6 +2724,20 @@ export function providerStatusesEqual(
   });
 }
 
+// Whether a probe shows a different account than before: signed out or in, or
+// another auth method or subscription. A timed-out probe proves nothing.
+function providerAccountChanged(
+  previous: ServerProviderStatus,
+  next: ServerProviderStatus,
+): boolean {
+  if (next.authStatus === "unknown" || previous.authStatus === "unknown") return false;
+  return (
+    previous.authStatus !== next.authStatus ||
+    (previous.authType ?? null) !== (next.authType ?? null) ||
+    (previous.authLabel ?? null) !== (next.authLabel ?? null)
+  );
+}
+
 function isTransientProviderCommandTimeout(status: ServerProviderStatus): boolean {
   const message = status.message ?? "";
   // Most providers use the shared detail string, but Pi's advisory probe has
@@ -3643,13 +3657,17 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
           }
           const previousRawStatuses = yield* Ref.get(statusesRef);
           const previousStatuses = yield* projectStatusesForCurrentSettings(previousRawStatuses);
-          // A re-checked account may have changed (sign-in, another account), so
-          // forget the models it refused before this refresh began.
+          // Models an account refused belong to that account: forget them when the
+          // probe finds another one signed in (or none). An automatic refresh of the
+          // same account keeps them, so the picker does not offer them again.
           for (const status of loadedStatuses) {
-            clearUnavailableModelsRecordedBefore({
-              instanceId: providerStatusInstanceKey(status),
-              before: refreshStartedAt,
-            });
+            const instanceId = providerStatusInstanceKey(status);
+            const previous = previousRawStatuses.find(
+              (entry) => providerStatusInstanceKey(entry) === instanceId,
+            );
+            if (previous && providerAccountChanged(previous, status)) {
+              clearUnavailableModelsRecordedBefore({ instanceId, before: refreshStartedAt });
+            }
           }
           const stabilizedLoadedStatuses = stabilizeProviderStatusesAgainstTransientTimeouts(
             previousRawStatuses,

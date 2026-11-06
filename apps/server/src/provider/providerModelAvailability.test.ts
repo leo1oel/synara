@@ -68,6 +68,20 @@ describe("providerModelAvailability", () => {
     expect(unavailableModelsFor("claudeAgent").map((entry) => entry.model)).toEqual(["new"]);
   });
 
+  it("clears every account's entries for the user's own recheck", () => {
+    recordUnavailableModel({ instanceId: "claudeAgent", model: "a", reason });
+    recordUnavailableModel({ instanceId: "claude_work", model: "b", reason });
+    recordUnavailableModel({
+      instanceId: "claude_work",
+      model: "late",
+      reason,
+      recordedAt: new Date(Date.now() + 60_000).toISOString(),
+    });
+    expect(clearUnavailableModelsRecordedBefore({ before: Date.now() + 1 })).toBe(true);
+    expect(unavailableModelsFor("claudeAgent")).toEqual([]);
+    expect(unavailableModelsFor("claude_work").map((entry) => entry.model)).toEqual(["late"]);
+  });
+
   it("ignores an empty model or reason", () => {
     recordUnavailableModel({ instanceId: "claudeAgent", model: " ", reason });
     recordUnavailableModel({ instanceId: "claudeAgent", model: "x", reason: "" });
