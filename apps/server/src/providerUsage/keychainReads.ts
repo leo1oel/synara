@@ -5,8 +5,7 @@
 // re-read on every poll. Granted secrets are reused for a long TTL (or until the caller reports
 // the token they carried as expired or rejected, once per secret or explicit refresh); denied and
 // failed reads are remembered until the user explicitly refreshes usage or the caller's
-// credential file changes. Concurrent
-// callers share one in-flight read.
+// credential file changes. Concurrent callers share one in-flight read.
 
 export type KeychainReadOutcome =
   | { readonly kind: "granted"; readonly value: string }
