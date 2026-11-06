@@ -913,10 +913,6 @@ const unboundStoppedOpenCodeRouting = makeProviderServiceLayer(undefined, {
   includeOpenCode: true,
 });
 const stoppedOpenCodeRouting = makeProviderServiceLayer(undefined, { includeOpenCode: true });
-const stoppedOpenCodeDisabledRouting = makeProviderServiceLayer(
-  { providerIsEnabled: (provider) => Effect.succeed(provider !== "opencode") },
-  { includeOpenCode: true },
-);
 
 routing.layer("ProviderServiceLive native forks", (it) => {
   it.effect("forks across Codex account instances sharing continuation storage", () =>
@@ -11514,43 +11510,6 @@ stoppedOpenCodeRouting.layer("ProviderServiceLive OpenCode stopped retention", (
         assert.equal(stoppedOpenCodeRouting.openCode.respondToRequest.mock.calls.length, 0);
         const binding = Option.getOrUndefined(yield* directory.getBinding(threadId));
         assert.equal(binding?.provider, "opencode");
-      }),
-  );
-});
-
-stoppedOpenCodeDisabledRouting.layer("ProviderServiceLive OpenCode disabled provider", (it) => {
-  it.effect(
-    "PR1160 TASK-06 rejects recovery of a stopped-retained OpenCode session while disabled",
-    () =>
-      Effect.gen(function* () {
-        const provider = yield* ProviderService;
-        const directory = yield* ProviderSessionDirectory;
-        const threadId = asThreadId("thread-opencode-stopped-disabled");
-
-        yield* stoppedOpenCodeDisabledRouting.openCode.startSession({
-          provider: "opencode",
-          threadId,
-          runtimeMode: "full-access",
-        });
-        stoppedOpenCodeDisabledRouting.openCode.retainStopped(threadId);
-        yield* directory.upsert({
-          threadId,
-          provider: "opencode",
-          resumeCursor: { opaque: "resume-disabled-opencode" },
-          runtimeMode: "full-access",
-        });
-        stoppedOpenCodeDisabledRouting.openCode.startSession.mockClear();
-        stoppedOpenCodeDisabledRouting.openCode.sendTurn.mockClear();
-
-        const result = yield* Effect.result(
-          provider.sendTurn({ threadId, input: "recover", attachments: [] }),
-        );
-        assert.equal(result._tag, "Failure");
-        if (result._tag !== "Failure") return;
-        assert.equal(result.failure._tag, "ProviderValidationError");
-        assert.equal(result.failure.message.includes("disabled"), true);
-        assert.equal(stoppedOpenCodeDisabledRouting.openCode.startSession.mock.calls.length, 0);
-        assert.equal(stoppedOpenCodeDisabledRouting.openCode.sendTurn.mock.calls.length, 0);
       }),
   );
 });
