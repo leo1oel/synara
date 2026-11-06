@@ -350,6 +350,8 @@ type BooleanSettingKey = {
 // ── Route screen ───────────────────────────────────────────────────────────
 
 function SettingsRouteView() {
+  // The hook's t re-renders the page when the language changes; the module t does not.
+  const { t } = useTranslation();
   const isEmbed = isSynaraEmbedMode();
   const navigate = useNavigate();
   const [defaultDiffRenderMode, setDefaultDiffRenderMode] = useLocalStorage(
