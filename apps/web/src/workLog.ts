@@ -214,7 +214,13 @@ export interface WorkLogEntry {
   providerContextLifecycle?: ProviderContextLifecycleInfo;
   providerHandoff?: ProviderHandoffInfo;
   /** Durable terminal feedback; session readiness never clears a failed turn. */
-  turnFailure?: { cause: string; message: string; errorCode?: string };
+  turnFailure?: {
+    cause: string;
+    message: string;
+    errorCode?: string;
+    /** What the writer can do about it, shown under the (clamped) message. */
+    nextStep?: string;
+  };
   // An answered agent question, paired with the answers the user submitted. It
   // renders as a question/answer exchange that stays visible outside the
   // collapsed turn instead of as two bare "User input" log lines.
@@ -1132,8 +1138,9 @@ function deriveTurnFailureEntries(
     const errorCode = asTrimmedString(payload?.errorCode) ?? previous?.turnFailure?.errorCode;
     const overloaded =
       errorCode === "server_overloaded" || /selected model is at capacity/i.test(cause);
-    // Rendered as the failure banner's body; the provider's cause stays verbatim.
+    // Shown under the banner's body, unclamped, and copied with it.
     const nextStep = claudeExitNextStep(errorCode, translate);
+    // Rendered as the failure banner's body; the provider's cause stays verbatim.
     const message = overloaded
       ? translate("chat:theTaskWasInterruptedBecauseTheModelIsAt")
       : translate("chat:theTaskWasInterruptedByAProviderErrorWork", {
@@ -1142,7 +1149,7 @@ function deriveTurnFailureEntries(
             asTrimmedString(payload?.message) ??
             previous?.turnFailure?.cause ??
             translate("chat:theProviderReportedAnError"),
-        }) + (nextStep ? `\n${nextStep}` : "");
+        });
     failures.set(id, {
       id,
       createdAt: previous?.createdAt ?? activity.createdAt,
@@ -1153,7 +1160,12 @@ function deriveTurnFailureEntries(
       tone: "error",
       label: translate("chat:taskInterrupted"),
       activityKind: activity.kind,
-      turnFailure: { cause, message, ...(errorCode ? { errorCode } : {}) },
+      turnFailure: {
+        cause,
+        message,
+        ...(errorCode ? { errorCode } : {}),
+        ...(nextStep ? { nextStep } : {}),
+      },
     });
   }
   return [...failures.values()];

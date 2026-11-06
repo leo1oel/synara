@@ -139,8 +139,9 @@ describe("ThreadErrorBanner for a Claude Code exit", () => {
   });
 
   // A writer who could only copy "Claude Code process exited with code 1" had
-  // nothing to report. The copied text is the card's text: reason and next step.
-  it("copies Claude Code's stderr reason and the next step", async () => {
+  // nothing to report. The card shows the next step even when its text is
+  // clamped in a narrow panel, and Copy error carries the reason and the step.
+  it("shows the next step in a narrow panel and copies it with the reason", async () => {
     setLanguagePreference("zh-CN");
     const turnId = TurnId.makeUnsafe("claude-exit-turn");
     const reason =
@@ -159,11 +160,22 @@ describe("ThreadErrorBanner for a Claude Code exit", () => {
       ],
       turnId,
     );
+    const failure = entry!.turnFailure!;
     const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue();
-    await render(<ThreadErrorBanner title="任务已中断" error={entry!.turnFailure!.message} />);
+    await render(
+      <div style={{ width: 240 }}>
+        <ThreadErrorBanner
+          title="任务已中断"
+          error={failure.message}
+          nextStep={failure.nextStep!}
+        />
+      </div>,
+    );
+    const nextStep = "下一步：在终端运行 `claude update`（或重装 Claude Code），然后重试。";
+    await expect.element(page.getByText(nextStep, { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "复制 错误", exact: true }).click();
     expect(writeText).toHaveBeenCalledExactlyOnceWith(
-      `任务因提供商错误而中断，工作尚未完成。${reason}\n下一步：在终端运行 \`claude update\`（或重装 Claude Code），然后重试。`,
+      `任务因提供商错误而中断，工作尚未完成。${reason}\n${nextStep}`,
     );
   });
 });

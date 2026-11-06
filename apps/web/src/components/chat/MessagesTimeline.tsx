@@ -1827,6 +1827,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               <ThreadErrorBanner
                 title={t("chat:taskInterrupted")}
                 error={entry.turnFailure.message}
+                {...(entry.turnFailure.nextStep ? { nextStep: entry.turnFailure.nextStep } : {})}
                 {...(entry.turnId && entry.turnId === recoverableTurnId && onContinueFailedTurn
                   ? {
                       onContinue: () => {

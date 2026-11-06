@@ -280,14 +280,16 @@ describe("Claude Code exit failures", () => {
     try {
       setLanguagePreference("zh-CN");
       const [zh] = deriveWorkLogEntries(exitActivities, exitTurnId);
-      expect(zh?.turnFailure).toMatchObject({ cause: reason, errorCode: "claude_cli_outdated" });
-      expect(zh?.turnFailure?.message).toBe(
-        `任务因提供商错误而中断，工作尚未完成。${reason}\n下一步：在终端运行 \`claude update\`（或重装 Claude Code），然后重试。`,
-      );
+      expect(zh?.turnFailure).toEqual({
+        cause: reason,
+        errorCode: "claude_cli_outdated",
+        message: `任务因提供商错误而中断，工作尚未完成。${reason}`,
+        nextStep: "下一步：在终端运行 `claude update`（或重装 Claude Code），然后重试。",
+      });
       setLanguagePreference("en");
       const [en] = deriveWorkLogEntries(exitActivities, exitTurnId);
-      expect(en?.turnFailure?.message).toBe(
-        `The task was interrupted by a provider error. Work remains incomplete. ${reason}\nNext step: run \`claude update\` in Terminal (or reinstall Claude Code), then try again.`,
+      expect(en?.turnFailure?.nextStep).toBe(
+        "Next step: run `claude update` in Terminal (or reinstall Claude Code), then try again.",
       );
     } finally {
       setLanguagePreference("en");
@@ -313,5 +315,6 @@ describe("Claude Code exit failures", () => {
     expect(entry?.turnFailure?.message).toBe(
       `The task was interrupted by a provider error. Work remains incomplete. ${generic}`,
     );
+    expect(entry?.turnFailure?.nextStep).toBeUndefined();
   });
 });
