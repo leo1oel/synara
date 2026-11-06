@@ -9,9 +9,18 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { formatShortTimestamp } from "../../timestampFormat";
 import { makeActivity } from "../../storeTestFixtures";
 import { deriveWorkLogEntries, type WorkLogEntry } from "../../workLog";
+import { FolderIcon, TerminalIcon } from "~/lib/icons";
 import { INLINE_COMMAND_CHIP_CLASS_NAME } from "./chatTypography";
+import { COLLAPSED_USER_MESSAGE_MAX_CHARS } from "./userMessageCollapse";
 
 const TOOLTIP_TRIGGER_MARKER = 'data-base-ui-tooltip-trigger=""';
+// Folder and terminal chips draw Hugeicons glyphs (cc355dc65) rather than masked
+// Central icon files, so a glyph is recognized by its first path.
+function glyphPath(Icon: typeof FolderIcon): string {
+  const path = /\sd="([^"]+)"/u.exec(renderToStaticMarkup(<Icon />))?.[1];
+  if (!path) throw new Error("icon has no path");
+  return path;
+}
 // Every settled turn opens with a header carrying its final state.
 const TURN_HEADER_MARKER = 'data-turn-header="completed"';
 const FORK_SOURCE = {
@@ -725,7 +734,7 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(folderMarkup).toContain("/central-icons-reversed/folder-2.svg");
+    expect(folderMarkup).toContain(glyphPath(FolderIcon));
     expect(folderMarkup).not.toContain("/central-icons-reversed/puzzle.svg");
 
     const tsxMarkup = renderToStaticMarkup(
@@ -749,7 +758,7 @@ describe("MessagesTimeline", () => {
     );
 
     expect(tsxMarkup).toContain("/central-icons-reversed/react.svg");
-    expect(tsxMarkup).not.toContain("/central-icons-reversed/folder-2.svg");
+    expect(tsxMarkup).not.toContain(glyphPath(FolderIcon));
 
     const pluginMarkup = renderToStaticMarkup(
       <MessagesTimeline
@@ -1221,7 +1230,7 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup).toContain("Terminal 1 lines 1-5");
-    expect(markup).toContain("/central-icons-reversed/console.svg");
+    expect(markup).toContain(glyphPath(TerminalIcon));
     expect(markup).toContain("yoo what&#x27;s ");
     expect(markup).toContain("<strong>bold</strong>");
   });
