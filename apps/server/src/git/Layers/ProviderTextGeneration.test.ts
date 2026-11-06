@@ -255,12 +255,13 @@ describe("ProviderTextGenerationLive", () => {
     );
   });
   it("blocks generation when the selected provider is disabled", async () => {
+    // Accounts are disabled per provider instance; the fork has no driver-level switch.
     const { layer, codex, cursor, opencode } = makeProviderTextGenerationTestLayer({
-      providers: {
-        codex: { enabled: false },
-        cursor: { enabled: false },
-        droid: { enabled: false },
-        opencode: { enabled: false },
+      providerInstances: {
+        codex: { driver: "codex", enabled: false },
+        cursor: { driver: "cursor", enabled: false },
+        droid: { driver: "droid", enabled: false },
+        opencode: { driver: "opencode", enabled: false },
       },
     });
 

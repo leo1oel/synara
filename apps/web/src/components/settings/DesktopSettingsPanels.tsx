@@ -31,11 +31,7 @@ import {
   SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME,
   SETTINGS_CARD_ROW_TITLE_CLASS_NAME,
 } from "~/settingsPanelStyles";
-import {
-  APP_SNAP_PERMISSION_PANES,
-  AppSnapPermissionSection,
-  useAppSnapPermissionGuideBridge,
-} from "./AppSnapPermissionSection";
+import { useAppSnapPermissionGuideBridge } from "./AppSnapPermissionSection";
 import { AppSnapShortcutControl } from "./AppSnapShortcutControl";
 import { SettingResetButton } from "./SettingControls";
 import { SettingsCard, SettingsRow, SettingsSection } from "./SettingsPanelPrimitives";

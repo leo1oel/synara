@@ -105,8 +105,10 @@
   * {
     @apply border-border outline-ring/30;
   }
+  /* xterm sizes its hidden helper textarea to the cursor cell inside a zero-width
+     helpers box; clamping it to 100% collapses its input target to 0x0. */
   input,
-  textarea,
+  textarea:where(:not(.xterm-helper-textarea)),
   [contenteditable="true"] {
     box-sizing: border-box;
     max-width: 100%;

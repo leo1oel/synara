@@ -22,7 +22,9 @@ import { useAppSettings } from "../../appSettings";
 import { useComposerDraftStore } from "../../composerDraftStore";
 import type { DiffRouteSearch } from "../../diffRouteSearch";
 import { stripDiffSearchParams } from "../../diffRouteSearch";
+import type { DiffEditBaseRev } from "../../lib/diffEditBaseRev";
 import { editorCenterModeFamily, type EditorCenterMode } from "../../lib/editorCenterMode";
+import type { EditorLeaveGuard } from "../EditorWorkspaceView";
 import { readEditorViewState, storeEditorViewState } from "../../editorViewState";
 import { postOpenFileToLattice, postOpenReviewToLattice, readEmbedMode } from "../../embedMode";
 import { basenameOfPath } from "../../file-icons";
@@ -272,6 +274,12 @@ export function SingleChatSurface(props: {
       ? "file"
       : (readEditorViewState(props.threadId)?.centerMode ?? "diff"),
   );
+  const [editorEditTarget, setEditorEditTarget] = useState<{
+    filePath: string;
+    basePath: string | null;
+    baseRev: DiffEditBaseRev;
+    returnMode: "file" | "diff";
+  } | null>(null);
   // This route component is reused across thread navigations; reload the
   // persisted editor view state when the thread changes.
   const editorViewStateThreadIdRef = useRef(props.threadId);
@@ -459,6 +467,19 @@ export function SingleChatSurface(props: {
     });
   };
 
+  // Chat-owned actions that replace the editor (file links, diff toggles,
+  // turn diffs) run through the editor's own dirty/saving guard, since they
+  // change state on the same route and the router blocker cannot see them.
+  const editorLeaveGuardRef = useRef<EditorLeaveGuard | null>(null);
+  const guardEditorLeave = (run: () => void) => {
+    const guard = editorLeaveGuardRef.current;
+    if (guard) {
+      guard.guardLeavingEdit(run);
+    } else {
+      run();
+    }
+  };
+
   const handleCloseEditorView = () => {
     void navigate({
       to: "/$threadId",
@@ -467,20 +488,22 @@ export function SingleChatSurface(props: {
     });
   };
 
-  const handleSelectEditorFile = (filePath: string, beforeOpen?: () => void) => {
-    beforeOpen?.();
-    setEditorCenterMode("file");
-    void navigate({
-      to: "/$threadId",
-      params: { threadId: props.threadId },
-      replace: true,
-      search: (previous) => ({
-        ...stripDiffSearchParams(previous),
-        view: "editor",
-        editorFilePath: filePath,
-      }),
+  const handleSelectEditorFile = (filePath: string, beforeOpen?: () => void) =>
+    guardEditorLeave(() => {
+      beforeOpen?.();
+      setEditorCenterMode("file");
+      setEditorEditTarget(null);
+      void navigate({
+        to: "/$threadId",
+        params: { threadId: props.threadId },
+        replace: true,
+        search: (previous) => ({
+          ...stripDiffSearchParams(previous),
+          view: "editor",
+          editorFilePath: filePath,
+        }),
+      });
     });
-  };
 
   const handleToggleEditorDirectory = (directoryPath: string) => {
     setEditorExpandedDirectories((previous) => {
@@ -494,20 +517,41 @@ export function SingleChatSurface(props: {
     });
   };
 
-  const handleEditorToggleDiff = () => {
-    setEditorCenterMode((current) =>
-      current === "diff" && props.search.editorFilePath ? "file" : "diff",
-    );
+  const handleEditFileInEditorView = (filePath: string, beforeOpen?: () => void) =>
+    guardEditorLeave(() => {
+      beforeOpen?.();
+      setEditorEditTarget({
+        filePath,
+        basePath: null,
+        baseRev: { rev: "HEAD" },
+        returnMode: "file",
+      });
+      setEditorCenterMode("fileEdit");
+    });
+
+  const handleCloseEditorEdit = () => {
+    setEditorCenterMode(editorEditTarget?.returnMode ?? "file");
+    setEditorEditTarget(null);
   };
 
-  const handleEditorOpenTurnDiff = (turnId: TurnId, filePath?: string) => {
-    setEditorCenterMode("diff");
-    setEditorDiffPanelState({
-      panel: "diff",
-      diffTurnId: turnId,
-      diffFilePath: filePath ?? null,
+  const handleEditorToggleDiff = () =>
+    guardEditorLeave(() => {
+      setEditorEditTarget(null);
+      setEditorCenterMode((current) =>
+        editorCenterModeFamily(current) === "diff" && props.search.editorFilePath ? "file" : "diff",
+      );
     });
-  };
+
+  const handleEditorOpenTurnDiff = (turnId: TurnId, filePath?: string) =>
+    guardEditorLeave(() => {
+      setEditorCenterMode("diff");
+      setEditorEditTarget(null);
+      setEditorDiffPanelState({
+        panel: "diff",
+        diffTurnId: turnId,
+        diffFilePath: filePath ?? null,
+      });
+    });
 
   const handleUpdateEditorDiffPanelState = useCallback(
     (patch: Partial<Pick<SplitViewPanePanelState, "panel" | "diffTurnId" | "diffFilePath">>) => {
@@ -527,14 +571,16 @@ export function SingleChatSurface(props: {
     setEditorDiffFiles(files);
     setEditorDiffFilesLoading(isLoading);
   };
-  const handleSelectEditorDiffFile = (filePath: string) => {
-    setEditorCenterMode("diff");
-    setEditorDiffPanelState((previous) => ({
-      ...previous,
-      panel: "diff",
-      diffFilePath: filePath,
-    }));
-  };
+  const handleSelectEditorDiffFile = (filePath: string) =>
+    guardEditorLeave(() => {
+      setEditorCenterMode("diff");
+      setEditorEditTarget(null);
+      setEditorDiffPanelState((previous) => ({
+        ...previous,
+        panel: "diff",
+        diffFilePath: filePath,
+      }));
+    });
   const handleReferenceInChat = (reference: ChatFileReference) => {
     appendChatFileReference(props.threadId, reference);
   };
@@ -1062,13 +1108,11 @@ export function SingleChatSurface(props: {
               selectedFilePath={selectedEditorFilePath}
               expandedDirectories={editorExpandedDirectories}
               centerMode={editorCenterMode}
-              editFilePath={null}
-              editDiffBaseRev={null}
-              onEditFile={(filePath) => {
-                handleSelectEditorFile(filePath);
-                setEditorCenterMode("fileEdit");
-              }}
-              onCloseEdit={() => setEditorCenterMode(editorCenterModeFamily(editorCenterMode))}
+              editFilePath={editorEditTarget?.filePath ?? null}
+              editDiffBasePath={editorEditTarget?.basePath ?? null}
+              editDiffBaseRev={editorEditTarget?.baseRev ?? null}
+              onEditFile={handleEditFileInEditorView}
+              onCloseEdit={handleCloseEditorEdit}
               diffFiles={editorDiffFiles}
               diffFilesLoading={editorDiffFilesLoading}
               selectedDiffFilePath={editorDiffPanelState.diffFilePath ?? null}
@@ -1082,6 +1126,7 @@ export function SingleChatSurface(props: {
               onAskWhyInChat={handleAskWhyInChat}
               onCommentInChat={handleCommentInChat}
               onSelectProject={handleSelectEditorProject}
+              leaveGuardRef={editorLeaveGuardRef}
               diffPanel={
                 <LazyDiffPanel
                   mode="sidebar"

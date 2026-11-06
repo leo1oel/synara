@@ -446,7 +446,8 @@ describe("GitHubInbox list", () => {
     await page.getByRole("radio", { name: /^Pull requests/ }).click();
     await expectRows([41]);
     await page
-      .getByRole("textbox", { name: "Search pull requests and issues" })
+      // The fork's SearchInput is type="search" (96106d7c9).
+      .getByRole("searchbox", { name: "Search pull requests and issues" })
       .fill("nothing matches");
     await expect.element(page.getByText("No pull requests found")).toBeVisible();
     await page.getByRole("button", { name: "Clear filters", exact: true }).click();

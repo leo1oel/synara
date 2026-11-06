@@ -37,10 +37,8 @@ import {
   getManageableProviderInstances,
   getProviderInstanceOptions,
   getUnsupportedProviderInstanceOptions,
-  getServerDisabledProviders,
   getCustomModelsForProvider,
   getDefaultCustomModelsForProvider,
-  getGitTextGenerationModelOptions,
   isGitTextGenerationSettingsDirty,
   getProviderStartOptions,
   mergeProviderInstanceConfigPatch,
@@ -378,120 +376,6 @@ describe("getAppModelOptions", () => {
     expect(options.some((option) => option.slug === "claude/custom-opus" && option.isCustom)).toBe(
       true,
     );
-  });
-});
-
-describe("getGitTextGenerationModelOptions", () => {
-  it("merges codex and OpenCode model options for git writing settings", () => {
-    const options = getGitTextGenerationModelOptions({
-      customCodexModels: ["custom/codex-model"],
-      customOpenCodeModels: ["openrouter/gpt-oss-120b"],
-      textGenerationModel: "openai/gpt-5",
-      textGenerationProvider: "opencode",
-    });
-
-    expect(options.some((option) => option.slug === "gpt-5.4-mini")).toBe(true);
-    expect(options.some((option) => option.slug === "openai/gpt-5")).toBe(true);
-    expect(options.some((option) => option.slug === "openrouter/gpt-oss-120b")).toBe(true);
-  });
-
-  it("prefers runtime-discovered OpenCode models for git writing settings", () => {
-    const options = getGitTextGenerationModelOptions(
-      {
-        customCodexModels: [],
-        customOpenCodeModels: [],
-        textGenerationModel: "openrouter/custom-model",
-        textGenerationProvider: "opencode",
-      },
-      {
-        opencode: [{ slug: "openrouter/gpt-oss-120b", name: "GPT OSS 120B" }],
-      },
-    );
-
-    expect(options.some((option) => option.slug === "openrouter/gpt-oss-120b")).toBe(true);
-    expect(options.some((option) => option.slug === "openrouter/custom-model")).toBe(true);
-  });
-
-  it("preserves a currently selected transient git writing model", () => {
-    const options = getGitTextGenerationModelOptions({
-      customCodexModels: [],
-      customOpenCodeModels: [],
-      textGenerationModel: "openrouter/custom-model",
-      textGenerationProvider: "opencode",
-    });
-
-    expect(options.at(-1)).toEqual({
-      slug: "openrouter/custom-model",
-      name: "Custom Model",
-      provider: "opencode",
-      isCustom: true,
-    });
-  });
-
-  it("humanizes transient OpenCode git-writing models instead of showing the raw slug", () => {
-    const options = getGitTextGenerationModelOptions({
-      customCodexModels: [],
-      customOpenCodeModels: [],
-      textGenerationModel: "opencode-go/kimi-k2.6",
-      textGenerationProvider: "opencode",
-    });
-
-    expect(options.at(-1)).toEqual({
-      slug: "opencode-go/kimi-k2.6",
-      name: "Kimi K2.6",
-      provider: "opencode",
-      isCustom: true,
-    });
-  });
-
-  it("offers built-in Droid and Cursor models to a user currently on Codex", () => {
-    const options = getGitTextGenerationModelOptions({
-      customCodexModels: [],
-      customOpenCodeModels: [],
-      textGenerationModel: "gpt-5.6-luna",
-      textGenerationProvider: "codex",
-    });
-
-    expect(options.some((option) => option.provider === "droid" && option.slug === "auto")).toBe(
-      true,
-    );
-    expect(
-      options.some((option) => option.provider === "cursor" && option.slug === "composer-2.5"),
-    ).toBe(true);
-    expect(options.some((option) => option.provider === "codex")).toBe(true);
-  });
-
-  it("includes custom Cursor models in the git writing picker", () => {
-    const options = getGitTextGenerationModelOptions({
-      customCodexModels: [],
-      customCursorModels: ["cursor/custom-composer"],
-      customOpenCodeModels: [],
-      textGenerationModel: "gpt-5.6-luna",
-      textGenerationProvider: "codex",
-    });
-
-    expect(
-      options.some(
-        (option) => option.provider === "cursor" && option.slug === "cursor/custom-composer",
-      ),
-    ).toBe(true);
-  });
-
-  it("omits chat-only providers that have no Git text-generation backend", () => {
-    const options = getGitTextGenerationModelOptions({
-      customCodexModels: [],
-      customClaudeModels: ["claude-opus-4-8"],
-      customGrokModels: ["grok-4.6"],
-      customOpenCodeModels: [],
-      textGenerationModel: "gpt-5.6-luna",
-      textGenerationProvider: "codex",
-    });
-
-    expect(options.some((option) => option.provider === "claudeAgent")).toBe(false);
-    expect(options.some((option) => option.provider === "grok")).toBe(false);
-    expect(options.some((option) => option.provider === "antigravity")).toBe(false);
-    expect(options.some((option) => option.provider === "pi")).toBe(false);
-    expect(options.some((option) => option.provider === "devin")).toBe(false);
   });
 });
 

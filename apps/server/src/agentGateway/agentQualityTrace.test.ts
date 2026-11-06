@@ -1023,7 +1023,10 @@ describe("agent quality trace", () => {
     writeFileSync(`${tracePath}.1`, "first");
     writeFileSync(`${tracePath}.2`, "second");
     writeFileSync(`${tracePath}.3`, "must-be-removed");
-    write([
+    // A server started after an upgrade opens the trace again; the extra generation
+    // an older release could leave behind goes then, and the full file rotates.
+    const reopened = createPrivateRotatingWriter(traceDirectory);
+    reopened([
       {
         schemaVersion: 1,
         type: "rotation",

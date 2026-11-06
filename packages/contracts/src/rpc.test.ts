@@ -12,10 +12,12 @@ import { WS_METHODS } from "./ws";
 
 describe("WS RPC contracts", () => {
   it("registers every declared WebSocket method before server handlers are installed", () => {
+    // projectAgent.* lives in its own satellite group (it would push the feature group's
+    // inferred type past the declaration emit limit); server and web register all three.
+    const registeredGroups = [WsBootstrapRpcGroup, WsFeatureRpcGroup, WsProjectAgentRpcGroup];
     expect(
       Object.values(WS_METHODS).filter(
-        (method) =>
-          !WsBootstrapRpcGroup.requests.has(method) && !WsFeatureRpcGroup.requests.has(method),
+        (method) => !registeredGroups.some((group) => group.requests.has(method)),
       ),
     ).toEqual([]);
   });

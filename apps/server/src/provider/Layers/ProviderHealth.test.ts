@@ -21,7 +21,7 @@ import {
 import { TestClock } from "effect/testing";
 import * as PlatformError from "effect/PlatformError";
 import { ChildProcessSpawner } from "effect/unstable/process";
-import { vi } from "vitest";
+import { beforeAll, vi } from "vitest";
 
 import { SYNARA_CODEX_HOME_OVERLAY_DIR } from "../../codexHomePaths";
 import { CODEX_CLI_UNPARSEABLE_VERSION_MESSAGE } from "../codexCliVersion.ts";
@@ -29,7 +29,11 @@ import { claudeIsolatedHomePath } from "../claudeEnvironment";
 import { ServerConfig } from "../../config";
 import { ServerSettingsService } from "../../serverSettings";
 import { ProviderHealth } from "../Services/ProviderHealth";
-import { resolveProviderStatusCachePath, writeProviderStatusCache } from "../providerStatusCache";
+import {
+  readProviderStatusCache,
+  resolveProviderStatusCachePath,
+  writeProviderStatusCache,
+} from "../providerStatusCache";
 import {
   checkClaudeProviderStatus,
   checkAntigravityProviderStatus,
@@ -47,6 +51,7 @@ import {
   makeCheckGrokProviderStatus,
   makeClaudeProbeEnv,
   makeCheckOpenCodeProviderStatus,
+  makeDisabledProviderStatus,
   makeProviderHealthLive,
   parseAuthStatusFromOutput,
   parseClaudeAuthStatusFromOutput,
@@ -66,6 +71,9 @@ import {
   MODEL_PROVIDER_API_KEY_ENV_MAPPINGS,
   providerIsolatedHomePath,
 } from "../providerProcessEnv.ts";
+import { refreshProviderRuntimeAvailability } from "../providerRuntimes.ts";
+
+beforeAll(() => refreshProviderRuntimeAvailability());
 
 // ── Test helpers ────────────────────────────────────────────────────
 
@@ -206,20 +214,34 @@ function withProcessPlatform<T, E, R>(
   );
 }
 
-const allProvidersDisabledSettings = {
-  providers: {
-    codex: { enabled: false },
-    claudeAgent: { enabled: false },
-    cursor: { enabled: false },
-    devin: { enabled: false },
-    antigravity: { enabled: false },
-    grok: { enabled: false },
-    droid: { enabled: false },
-    opencode: { enabled: false },
-    pi: { enabled: false },
-    omp: { enabled: false },
-  },
-} as const;
+const DEFAULT_PROVIDER_INSTANCE_IDS = [
+  "codex",
+  "claudeAgent",
+  "cursor",
+  "devin",
+  "antigravity",
+  "grok",
+  "droid",
+  "opencode",
+  "pi",
+  "omp",
+] as const;
+
+// The fork has no driver-level switch (7eabd821e forces providers.X.enabled on), so a
+// provider is disabled through its default account. A settings patch replaces the
+// whole instance map, so each map lists every account that stays disabled.
+function disabledProviderInstances(
+  ...enabled: ReadonlyArray<(typeof DEFAULT_PROVIDER_INSTANCE_IDS)[number]>
+) {
+  return Object.fromEntries(
+    DEFAULT_PROVIDER_INSTANCE_IDS.filter((id) => !enabled.includes(id)).map((id) => [
+      id,
+      { driver: id, enabled: false },
+    ]),
+  );
+}
+
+const allProvidersDisabledSettings = { providerInstances: disabledProviderInstances() };
 
 const allProvidersDisabledServerSettings = {
   ...DEFAULT_SERVER_SETTINGS,
@@ -695,7 +717,9 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
               .updateProvider({ provider: "codex" })
               .pipe(Effect.forkChild);
             yield* Effect.promise(() => started);
-            yield* serverSettings.updateSettings({ providers: { codex: { enabled: false } } });
+            yield* serverSettings.updateSettings({
+              providerInstances: { codex: { driver: "codex", enabled: false } },
+            });
             return yield* Fiber.join(updateFiber);
           }).pipe(Effect.provide(layer)),
         );
@@ -1014,11 +1038,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           assert.strictEqual(disabledCodex?.message, "Provider is disabled in Synara settings.");
 
           yield* serverSettings.updateSettings({
-            providers: {
-              codex: {
-                enabled: true,
-              },
-            },
+            providerInstances: disabledProviderInstances("codex"),
           });
 
           const currentStatuses = yield* providerHealth.getStatuses;
@@ -1101,14 +1121,10 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         const layer = ProviderHealthLive.pipe(
           Layer.provideMerge(
             ServerSettingsService.layerTest({
-              ...allProvidersDisabledSettings,
               // This race test only exercises refresh serialization. Keep it hermetic so
               // provider-maintenance advisory lookups cannot consume the test deadline.
               enableProviderUpdateChecks: false,
-              providers: {
-                ...allProvidersDisabledSettings.providers,
-                codex: { enabled: true },
-              },
+              providerInstances: disabledProviderInstances("codex"),
             }),
           ),
           Layer.provideMerge(ServerConfig.layerTest(process.cwd(), baseDir)),
@@ -1120,17 +1136,31 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           const serverSettings = yield* ServerSettingsService;
           const firstRefresh = yield* providerHealth.refresh.pipe(Effect.forkChild);
           yield* Effect.promise(() => probeGates[0]!.started);
-          yield* serverSettings.updateSettings({ providers: { opencode: { enabled: true } } });
+          yield* serverSettings.updateSettings({
+            providerInstances: disabledProviderInstances("codex", "opencode"),
+          });
           const joinedRefresh = yield* providerHealth.refresh.pipe(Effect.forkChild);
           probeGates[0]!.release();
           yield* Effect.promise(() => probeGates[1]!.started);
-          yield* serverSettings.updateSettings({ providers: { pi: { enabled: true } } });
+          yield* serverSettings.updateSettings({
+            providerInstances: disabledProviderInstances("codex", "opencode", "pi"),
+          });
           probeGates[1]!.release();
           yield* Effect.promise(() => probeGates[2]!.started);
-          yield* serverSettings.updateSettings({ providers: { grok: { enabled: true } } });
+          yield* serverSettings.updateSettings({
+            providerInstances: disabledProviderInstances("codex", "opencode", "pi", "grok"),
+          });
           probeGates[2]!.release();
           yield* Effect.promise(() => probeGates[3]!.started);
-          yield* serverSettings.updateSettings({ providers: { droid: { enabled: true } } });
+          yield* serverSettings.updateSettings({
+            providerInstances: disabledProviderInstances(
+              "codex",
+              "opencode",
+              "pi",
+              "grok",
+              "droid",
+            ),
+          });
           probeGates[3]!.release();
           yield* Fiber.join(joinedRefresh);
           yield* Fiber.join(firstRefresh);
@@ -1140,7 +1170,8 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           const statuses = yield* providerHealth.refresh;
 
           assert.ok(commands.some((command) => command.includes("opencode")));
-          assert.ok(commands.some((command) => command.includes("pi")));
+          // Pi is probed through its SDK, not a `pi` process (96106d7c9), so its
+          // follow-up refresh shows only in the status asserted below.
           assert.ok(commands.some((command) => command.includes("grok")));
           assert.ok(commands.some((command) => command.includes("droid")));
           assert.notStrictEqual(

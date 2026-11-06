@@ -1,4 +1,4 @@
-import { t, setLanguagePreference } from "~/i18n";
+import { setLanguagePreference } from "~/i18n";
 
 import {
   DEFAULT_MODEL_BY_PROVIDER,
@@ -22,7 +22,9 @@ import {
   resolveAvailableHandoffTargets,
   resolveProviderHandoffOutcome,
   resolveThreadHandoffAvailability,
+  resolveThreadHandoffBadgeLabel,
   resolveThreadHandoffModelSelection,
+  resolveThreadHandoffTitle,
 } from "./threadHandoff";
 import { appendAssistantSelectionsToPrompt } from "./assistantSelections";
 import {
@@ -349,7 +351,7 @@ describe("threadHandoff", () => {
         providerInstances: getProviderInstanceOptions(AppSettingsSchema.makeUnsafe({})),
         providerStatuses: [],
       }),
-    ).toEqual(["claudeAgent"]);
+    ).toEqual([]);
   });
 
   it("preserves the source thread title for the created handoff thread", () => {
@@ -363,18 +365,15 @@ describe("threadHandoff", () => {
     setLanguagePreference("zh-CN");
 
     expect(
-      resolveThreadHandoffBadgeLabel(
-        {
-          handoff: {
-            sourceThreadId: ThreadId.makeUnsafe("source-thread"),
-            sourceProvider: "claudeAgent",
-            importedAt: "2026-08-16T12:00:00.000Z",
-            bootstrapStatus: "completed",
-          },
+      resolveThreadHandoffBadgeLabel({
+        handoff: {
+          sourceThreadId: ThreadId.makeUnsafe("source-thread"),
+          sourceProvider: "claudeAgent",
+          importedAt: "2026-08-16T12:00:00.000Z",
+          bootstrapStatus: "completed",
         },
-        t,
-      ),
-    ).toBe("从 Claude 移交而来");
+      }),
+    ).toBe("从 Claude 移交");
   });
 
   it("does not borrow a default account's health for unavailable or unchecked accounts", () => {

@@ -3,7 +3,7 @@
 // Layer: Web handoff utilities
 // Exports: target-provider, title, transcript, and model-selection helpers.
 
-import { t, i18n } from "~/i18n";
+import { t } from "~/i18n";
 import {
   EventId,
   MessageId,
@@ -102,10 +102,7 @@ export function resolveAvailableHandoffTargets(input: {
     }));
 }
 
-export function resolveThreadHandoffBadgeLabel(
-  thread: Pick<Thread, "handoff">,
-  translator = i18n,
-): string | null {
+export function resolveThreadHandoffBadgeLabel(thread: Pick<Thread, "handoff">): string | null {
   if (!thread.handoff) {
     return null;
   }

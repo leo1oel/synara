@@ -78,6 +78,7 @@ import {
   isProviderUsable,
 } from "../lib/providerAvailability";
 import { resolvePromptEffortFromModelSelection } from "../lib/composerSend";
+import { isProviderKind } from "../providerOrdering";
 import { autoRuntimeModeSelectionIssue } from "@synara/shared/runtimeMode";
 
 export const LAST_INVOKED_SCRIPT_BY_PROJECT_KEY = "synara:last-invoked-script-by-project";
@@ -1283,7 +1284,11 @@ export function resolveEmbeddedNewThreadModelSelection(input: {
   }
 
   const hiddenProviders = new Set(input.hiddenProviders);
-  const statusProviders = input.providerStatuses.map((status) => status.provider);
+  // A status names its driver as an open slug since #1165; only known providers can
+  // be offered as a fallback.
+  const statusProviders = input.providerStatuses
+    .map((status) => status.provider)
+    .filter(isProviderKind);
   const orderedProviders = [...new Set([...input.providerOrder, ...statusProviders])];
   const visibleProviders = orderedProviders.filter((provider) => !hiddenProviders.has(provider));
   const fallbackProvider =

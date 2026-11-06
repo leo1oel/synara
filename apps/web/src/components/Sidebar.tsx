@@ -2415,15 +2415,10 @@ export default function Sidebar() {
         return true;
       }
 
-      return (
-        (await handleNewThread(projectId, {
-          envMode: appSettings.defaultThreadEnvMode,
-        }).catch(() => null)) !== null
-      );
+      return (await handleNewThread(projectId).catch(() => null)) !== null;
     },
     [
       appSettings.sidebarThreadAttentionFirst,
-      appSettings.defaultThreadEnvMode,
       appSettings.sidebarThreadSortOrder,
       handleNewThread,
       navigate,
@@ -2466,15 +2461,10 @@ export default function Sidebar() {
       }
 
       setProjectExpanded(projectId, true);
-      return (
-        (await handleNewThread(projectId, {
-          envMode: appSettings.defaultThreadEnvMode,
-        }).catch(() => null)) !== null
-      );
+      return (await handleNewThread(projectId).catch(() => null)) !== null;
     },
     [
       appSettings.sidebarThreadAttentionFirst,
-      appSettings.defaultThreadEnvMode,
       appSettings.sidebarThreadSortOrder,
       handleNewThread,
       navigate,
@@ -2598,19 +2588,9 @@ export default function Sidebar() {
         return;
       }
 
-      void handleNewThread(typedProjectId, {
-        envMode: resolveSidebarNewThreadEnvMode({
-          defaultEnvMode: appSettings.defaultThreadEnvMode,
-        }),
-      });
+      void handleNewThread(typedProjectId);
     },
-    [
-      appSettings.defaultThreadEnvMode,
-      focusMostRecentThreadForProject,
-      handleNewThread,
-      hideAutomationRunThreads,
-      sidebarThreads,
-    ],
+    [focusMostRecentThreadForProject, handleNewThread, hideAutomationRunThreads, sidebarThreads],
   );
 
   // Shared resolver behind resolveBackToGroupsTarget/resolveBackToThreadsTarget (and the
@@ -2877,9 +2857,7 @@ export default function Sidebar() {
         // snapshot is just slow to catch up, continue with the local new-thread flow
         // instead of surfacing a false-negative sidebar sync error.
         setProjectExpanded(creationResult.projectId, true);
-        const threadId = await handleNewThread(creationResult.projectId, {
-          envMode: appSettings.defaultThreadEnvMode,
-        }).catch(() => null);
+        const threadId = await handleNewThread(creationResult.projectId).catch(() => null);
         if (!threadId) {
           throw new Error("Project creation was superseded before its chat opened.");
         }
@@ -2889,7 +2867,6 @@ export default function Sidebar() {
     },
     [
       appSettings.defaultProvider,
-      appSettings.defaultThreadEnvMode,
       handleNewThread,
       projects,
       recoverExistingProjectFromServer,
@@ -2955,12 +2932,14 @@ export default function Sidebar() {
         projectCwd: project.cwd,
         draftWorktreePath: draftThread?.worktreePath ?? null,
         serverCwd,
-        // Hover-time warm must resolve the same envMode the click will pass so the
-        // warmed cwd keys match the thread ChatView actually mounts (local mode
-        // clears the draft worktree; worktree mode keeps it).
-        envMode: resolveSidebarNewThreadEnvMode({
-          defaultEnvMode: appSettings.defaultThreadEnvMode,
-        }),
+        // Hover-time warm must resolve the envMode new-thread bootstrap will use so
+        // the warmed cwd keys match the thread ChatView actually mounts (local mode
+        // clears the draft worktree; worktree mode keeps it): an existing draft's,
+        // else the project's remembered choice, else the default.
+        envMode:
+          draftThread?.envMode ??
+          useProjectEnvironmentStore.getState().envModeByProjectId[projectId] ??
+          appSettings.defaultThreadEnvMode,
         providerStatuses,
         statusesReconciled: hasReconciledServerProviderStatuses(queryClient),
         providerOrder: appSettings.providerOrder,
@@ -3000,17 +2979,12 @@ export default function Sidebar() {
         : null;
     if (liveTarget) {
       prefetchModelsForProjectNewThread(liveTarget.projectId, { includeDroid: true });
-      void handleNewThread(liveTarget.projectId, {
-        envMode: resolveSidebarNewThreadEnvMode({
-          defaultEnvMode: appSettings.defaultThreadEnvMode,
-        }),
-      });
+      void handleNewThread(liveTarget.projectId);
       return;
     }
 
     handleStartAddProject();
   }, [
-    appSettings.defaultThreadEnvMode,
     handleNewThread,
     handleStartAddProject,
     prefetchModelsForProjectNewThread,

@@ -537,8 +537,9 @@ describe("binaryUploadEffectRouteLayer", () => {
           getByProvider: () => Effect.succeed({ provider: "codex", transcribeVoice } as never),
           listProviders: () => Effect.succeed(["codex"]),
         },
+        // The default Codex account, disabled as a provider instance.
         serverSettingsLayer: ServerSettingsService.layerTest({
-          providers: { codex: { enabled: false } },
+          providerInstances: { codex: { driver: "codex", enabled: false } },
         }),
       },
     );

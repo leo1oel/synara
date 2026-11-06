@@ -552,26 +552,13 @@ forkMigration090Layer("fork migration 090 upgrade", (it) => {
       const lineageThrough090 = yield* trackerRows(sql);
 
       const executed = yield* runMigrations();
-      assert.deepStrictEqual(executed, [
-        [91, "AutomationFailureTolerance"],
-        [92, "BackfillAutomationRunThreadSource"],
-        [93, "BackfillMaxIterationsDisabledReason"],
-        [94, "ProjectionThreadsGoal"],
-        [95, "ProjectionThreadsGoalTiming"],
-        [96, "ProjectionThreadsGoalAchievements"],
-        [97, "ProjectionThreadsSidechatLifecycle"],
-        [98, "MigrateKiloToOpenCode"],
-        [99, "InvalidateProjectionThreadsCursor"],
-        [100, "MessageTextChunks"],
-        [101, "RemoveTranscriptMarkers"],
-        [102, "ProjectionThreadMessagesTurnBoundary"],
-        [103, "ClaudeTokenAccounting"],
-        [104, "ProjectionThreadsClaudeCacheReview"],
-        [105, "AsyncUserInput"],
-        [106, "ProjectImportOrigins"],
-        [107, "ProjectionThreadsHumanMessage"],
-        [108, "GatewayCompletions"],
-      ]);
+      // Every registered migration after 090 runs once, in order. The list is read
+      // from the registry because upstream syncs keep adding to it (109+ arrived in
+      // bcf96ff69 while this list stopped at 108).
+      assert.deepStrictEqual(
+        executed,
+        migrationEntries.filter(([id]) => id > 90).map(([id, name]) => [id, name]),
+      );
 
       const upgradedLineage = yield* trackerRows(sql);
       assert.deepStrictEqual(upgradedLineage.slice(0, lineageThrough090.length), lineageThrough090);

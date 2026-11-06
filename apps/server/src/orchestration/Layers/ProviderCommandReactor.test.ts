@@ -1037,16 +1037,14 @@ describe("ProviderCommandReactor", () => {
                 AgentGatewayCredentials,
                 (input?.gatewayCredentials ?? {}) as AgentGatewayCredentialsShape,
               ),
+          Layer.succeed(AgentQualityTrace, {
+            start: Effect.void,
+            prepareTurnContext,
+            bindTurnContext,
+            failTurnContext,
+            recordCompile: () => Effect.void,
+          }),
         ),
-      ),
-      Layer.provideMerge(
-        Layer.succeed(AgentQualityTrace, {
-          start: Effect.void,
-          prepareTurnContext,
-          bindTurnContext,
-          failTurnContext,
-          recordCompile: () => Effect.void,
-        }),
       ),
       Layer.provideMerge(
         Layer.succeed(ProviderHealth, {
@@ -17485,13 +17483,15 @@ describe("ProviderCommandReactor", () => {
           instanceId: "codex_removed_textgen",
           model: "gpt-5-codex",
         },
-        providers: {
-          codex: { enabled: false },
-          claudeAgent: { enabled: false },
-          cursor: { enabled: false },
-          antigravity: { enabled: false },
-          opencode: { enabled: false },
-          droid: { enabled: false },
+        // Every default account, disabled per provider instance (the fork has no
+        // driver-level switch since 7eabd821e).
+        providerInstances: {
+          codex: { driver: "codex", enabled: false },
+          claudeAgent: { driver: "claudeAgent", enabled: false },
+          cursor: { driver: "cursor", enabled: false },
+          antigravity: { driver: "antigravity", enabled: false },
+          opencode: { driver: "opencode", enabled: false },
+          droid: { driver: "droid", enabled: false },
         },
       },
     });
@@ -18106,12 +18106,14 @@ describe("ProviderCommandReactor", () => {
         model: "claude-opus-4-8",
       },
       serverSettings: {
-        providers: {
-          codex: { enabled: false },
-          claudeAgent: { enabled: false },
-          cursor: { enabled: false },
-          opencode: { enabled: false },
-          droid: { enabled: false },
+        // Every default account, disabled per provider instance (the fork has no
+        // driver-level switch since 7eabd821e).
+        providerInstances: {
+          codex: { driver: "codex", enabled: false },
+          claudeAgent: { driver: "claudeAgent", enabled: false },
+          cursor: { driver: "cursor", enabled: false },
+          opencode: { driver: "opencode", enabled: false },
+          droid: { driver: "droid", enabled: false },
         },
       },
     });

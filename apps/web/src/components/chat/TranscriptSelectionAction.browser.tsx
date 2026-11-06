@@ -8,6 +8,8 @@ import { useRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
+import { t } from "~/i18n";
+
 import { TranscriptSelectionAction } from "./TranscriptSelectionAction";
 import { TranscriptSelectionActionLayer } from "./TranscriptSelectionActionLayer";
 import { useTranscriptAssistantSelectionAction } from "./useTranscriptAssistantSelectionAction";
@@ -83,6 +85,8 @@ async function settleFrames(): Promise<void> {
   await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
 }
 
+// The selection layer portals its toolbar into document.body (df9c90577), outside the
+// rendered container.
 describe("TranscriptSelectionAction", () => {
   afterEach(() => {
     window.getSelection()?.removeAllRanges();
@@ -106,11 +110,9 @@ describe("TranscriptSelectionAction", () => {
     );
     await settleFrames();
 
-    expect(screen.container.querySelector('[data-transcript-selection-action="true"]')).toBeNull();
+    expect(document.querySelector('[data-transcript-selection-action="true"]')).toBeNull();
     await vi.waitFor(() => {
-      expect(
-        screen.container.querySelector('[data-transcript-selection-action="true"]'),
-      ).not.toBeNull();
+      expect(document.querySelector('[data-transcript-selection-action="true"]')).not.toBeNull();
     });
 
     await screen.unmount();
@@ -138,7 +140,7 @@ describe("TranscriptSelectionAction", () => {
     await new Promise<void>((resolve) => window.setTimeout(resolve, 300));
     await settleFrames();
 
-    expect(screen.container.querySelector('[data-transcript-selection-action="true"]')).toBeNull();
+    expect(document.querySelector('[data-transcript-selection-action="true"]')).toBeNull();
 
     await screen.unmount();
   });
@@ -149,7 +151,7 @@ describe("TranscriptSelectionAction", () => {
     );
     const toolbar = screen.container.querySelector<HTMLElement>("[role='toolbar'] > div");
     const button = screen.container.querySelector<HTMLButtonElement>(
-      'button[aria-label="Add to chat"]',
+      `button[aria-label="${t("chat:addToChat")}"]`,
     );
     expect(toolbar).not.toBeNull();
     expect(button).not.toBeNull();

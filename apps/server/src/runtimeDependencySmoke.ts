@@ -10,6 +10,7 @@ import {
   loadProviderRuntimeModule,
   providerRuntimeAvailability,
   ProviderRuntimeMissingError,
+  refreshProviderRuntimeAvailability,
 } from "./provider/providerRuntimes.ts";
 
 // Keep these imports external, just like the server. Running this entrypoint
@@ -18,6 +19,7 @@ await loadAcpSdk();
 await loadClaudeAgentSdk();
 // Pi and OpenCode are optional runtimes: a full install loads them here, while a slim
 // host that leaves them out must report them as installable, not crash.
+await refreshProviderRuntimeAvailability();
 for (const runtime of ["pi", "opencode"] as const) {
   const availability = providerRuntimeAvailability(runtime);
   const specifier =

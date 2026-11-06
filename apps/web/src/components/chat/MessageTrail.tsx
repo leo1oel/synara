@@ -33,6 +33,7 @@ import {
   APP_TOOLTIP_SURFACE_CLASS_NAME,
   CHAT_COLUMN_FRAME_CLASS_NAME,
   CHAT_COLUMN_GUTTER_CLASS_NAME,
+  ENVIRONMENT_CONTENT_INSET_MOTION_CLASS,
 } from "./composerPickerStyles";
 import {
   clampNumber,
@@ -724,6 +725,9 @@ export function MessageTrail({
         className={cn(
           "pointer-events-none invisible absolute inset-x-0 top-0",
           CHAT_COLUMN_GUTTER_CLASS_NAME,
+          // Move with the transcript's animated right inset, so the rail reveals only
+          // once the messages have actually cleared it.
+          ENVIRONMENT_CONTENT_INSET_MOTION_CLASS,
         )}
         style={contentInsetRightPx ? { paddingRight: contentInsetRightPx } : undefined}
       >

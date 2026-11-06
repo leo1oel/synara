@@ -2,6 +2,7 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { dirname } from "node:path";
 import {
   DEFAULT_SERVER_SETTINGS,
+  DEFAULT_DROID_GIT_TEXT_GENERATION_MODEL,
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
   DEFAULT_MODEL_BY_PROVIDER,
   type ServerSettings,
@@ -15,6 +16,7 @@ import { Effect, FileSystem, Layer, Schema } from "effect";
 import { isBetaFeatureEnabled } from "@synara/shared/betaFeatures";
 import { describe, expect, it } from "vitest";
 import { ServerConfig } from "./config";
+import { providerDisabledSettingsMessage } from "./provider/enabledProviderAdapter";
 import {
   gateBetaOnlyProviders,
   resolveProofreadModelSelection,
@@ -192,6 +194,7 @@ describe("ServerSettingsService", () => {
     );
     expect(result.restarted.compileRepairModelSelection).toEqual({
       provider: "claudeAgent",
+      instanceId: "claudeAgent",
       model: "claude-sonnet-4-6",
     });
     expect(result.restarted.textGenerationModelSelection).toEqual(
@@ -463,11 +466,11 @@ describe("ServerSettingsService", () => {
           provider: "codex" as const,
           model: DEFAULT_MODEL_BY_PROVIDER.codex,
         },
-        providers: {
-          codex: { enabled: false },
-          claudeAgent: { enabled: true },
-          cursor: { enabled: false },
-          opencode: { enabled: true },
+        // Lattice has no driver-level enablement (7eabd821e); accounts are disabled
+        // per provider instance, here the default instance of each driver.
+        providerInstances: {
+          codex: { driver: "codex", enabled: false },
+          cursor: { driver: "cursor", enabled: false },
         },
       },
       expectedProvider: "claudeAgent" as const,
@@ -489,12 +492,11 @@ describe("ServerSettingsService", () => {
           provider: "opencode" as const,
           model: DEFAULT_MODEL_BY_PROVIDER.opencode,
         },
-        providers: {
-          codex: { enabled: false },
-          claudeAgent: { enabled: false },
-          cursor: { enabled: false },
-          opencode: { enabled: false },
-          droid: { enabled: true },
+        providerInstances: {
+          codex: { driver: "codex", enabled: false },
+          claudeAgent: { driver: "claudeAgent", enabled: false },
+          cursor: { driver: "cursor", enabled: false },
+          opencode: { driver: "opencode", enabled: false },
         },
       },
       expectedProvider: "droid" as const,
@@ -509,7 +511,9 @@ describe("ServerSettingsService", () => {
 
     expect(settings.textGenerationModelSelection.provider).toBe(expectedProvider);
     expect(settings.textGenerationModelSelection.model).toBe(
-      DEFAULT_MODEL_BY_PROVIDER[expectedProvider],
+      expectedProvider === "droid"
+        ? DEFAULT_DROID_GIT_TEXT_GENERATION_MODEL
+        : DEFAULT_MODEL_BY_PROVIDER[expectedProvider],
     );
   });
 
@@ -621,12 +625,10 @@ describe("ServerSettingsService", () => {
               instanceId: "claude_work",
               model: DEFAULT_MODEL_BY_PROVIDER.claudeAgent,
             },
-            providers: {
-              codex: { enabled: false },
-              claudeAgent: { enabled: false },
-              cursor: { enabled: false },
-            },
             providerInstances: {
+              codex: { driver: "codex", enabled: false },
+              claudeAgent: { driver: "claudeAgent", enabled: false },
+              cursor: { driver: "cursor", enabled: false },
               claude_work: {
                 driver: "claudeAgent",
                 enabled: false,

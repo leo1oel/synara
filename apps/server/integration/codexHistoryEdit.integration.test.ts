@@ -5,6 +5,10 @@ import { ThreadId } from "@synara/contracts";
 import { expect, it, vi } from "vitest";
 
 import { CodexAppServerManager } from "../src/codexAppServerManager";
+import {
+  buildCodexProcessEnv,
+  readCodexSharedContinuationGeneration,
+} from "../src/codexProcessEnv";
 
 // Use the real process/stdio/session boundary with a deterministic Codex peer.
 // Paginated history rejects rollback even for short conversations.
@@ -61,12 +65,19 @@ require("node:readline").createInterface({ input: process.stdin }).on("line", li
     const manager = new CodexAppServerManager();
     const threadId = ThreadId.makeUnsafe("history-edit");
     try {
+      // A native resume is pinned to the verified continuation generation of the
+      // account's shared store (#1165); without it the manager refuses to resume.
+      const env = { SYNARA_HOME: process.env.SYNARA_HOME };
+      await buildCodexProcessEnv({ env, homePath });
+      const generation = readCodexSharedContinuationGeneration({ env, homePath });
+      expect(generation).toBeTruthy();
       await manager.startSession({
         threadId,
         cwd: dir,
         runtimeMode: "full-access",
         agentGatewayCapabilityInput: {},
         resumeCursor: { threadId: "native-thread" },
+        expectedCodexContinuationGeneration: generation!,
         providerOptions: { codex: { binaryPath, homePath } },
       });
       const retained = await manager.rollbackThread(threadId, 2);

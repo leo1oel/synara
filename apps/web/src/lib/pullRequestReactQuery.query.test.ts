@@ -11,8 +11,6 @@ import {
   githubInboxQueryKeys,
   githubInboxReviewBadgeQueryOptions,
   pullRequestDetailQueryOptions,
-  pullRequestDiffQueryOptions,
-  pullRequestReviewRequestCountQueryOptions,
   pullRequestQueryErrorState,
 } from "./pullRequestReactQuery";
 

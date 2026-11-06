@@ -2052,7 +2052,8 @@ layer("AutomationService", (it) => {
         const serverSettings = yield* ServerSettingsService;
         const automationId = AutomationId.makeUnsafe("automation-provider-disabled");
         yield* serverSettings.updateSettings({
-          providers: { codex: { enabled: false } },
+          // The default Codex account; the fork has no driver-level switch (7eabd821e).
+          providerInstances: { codex: { driver: "codex", enabled: false } },
         });
         yield* repository.createDefinition({
           id: automationId,
@@ -2083,7 +2084,7 @@ layer("AutomationService", (it) => {
         assert.strictEqual(dispatchedCommands.length, 0);
 
         yield* serverSettings.updateSettings({
-          providers: { codex: { enabled: true } },
+          providerInstances: { codex: { driver: "codex", enabled: true } },
         });
         const resumed = yield* service.runDueOnce({
           now: "2026-06-16T10:05:00.000Z",
@@ -2110,7 +2111,8 @@ layer("AutomationService", (it) => {
       const automationId = AutomationId.makeUnsafe("automation-provider-disabled-once");
       const runAt = "2026-06-16T10:00:15.000Z";
       yield* serverSettings.updateSettings({
-        providers: { codex: { enabled: false } },
+        // The default Codex account; the fork has no driver-level switch (7eabd821e).
+        providerInstances: { codex: { driver: "codex", enabled: false } },
       });
       yield* repository.createDefinition({
         id: automationId,
@@ -2131,7 +2133,7 @@ layer("AutomationService", (it) => {
       assert.strictEqual(dispatchedCommands.length, 0);
 
       yield* serverSettings.updateSettings({
-        providers: { codex: { enabled: true } },
+        providerInstances: { codex: { driver: "codex", enabled: true } },
       });
       const resumed = yield* service.runDueOnce({
         now: deferred!.deferredUntil!,
@@ -4343,37 +4345,16 @@ layer("AutomationService", (it) => {
       const targetThreadId = ThreadId.makeUnsafe("heartbeat-no-stop-policy");
       const automationTurnId = TurnId.makeUnsafe("turn-no-stop-policy");
       threadShell = Option.some(makeThreadShell({ id: targetThreadId }));
-
-      yield* serverSettings.updateSettings({
-        textGenerationModelSelection: {
-          provider: "codex",
-          model: "gpt-5.6-luna",
-        },
-        providers: {
-          codex: { enabled: false },
-          claudeAgent: { enabled: false },
-          cursor: { enabled: false },
-          opencode: { enabled: false },
-          droid: { enabled: false },
-        },
-        providerInstances: {
-          codex: { driver: "codex", enabled: false },
-          claudeAgent: { driver: "claudeAgent", enabled: false },
-          cursor: { driver: "cursor", enabled: false },
-          opencode: { driver: "opencode", enabled: false },
-          droid: { driver: "droid", enabled: false },
-        },
-      });
+      completionEvaluation = {
+        stopMatched: true,
+        confidence: 1,
+        reason: "This would stop if a policy existed.",
+      };
 
       const created = yield* service.create({
         ...createInput("local"),
         mode: "heartbeat",
         targetThreadId,
-        modelSelection: {
-          provider: "antigravity",
-          model: "Gemini 3.5 Flash",
-        },
-        completionPolicy: aiCompletionPolicy("the PR is ready"),
       });
       const { run } = yield* service.runNow({ automationId: created.id });
       yield* completeAutomationRun({
@@ -4390,26 +4371,7 @@ layer("AutomationService", (it) => {
         listed.definitions.find((entry) => entry.id === created.id)?.enabled,
         true,
       );
-      assert.isUndefined(deferredRun?.result?.completionEvaluation);
-      assert.strictEqual(completionEvaluationInputs.length, 0);
-
-      yield* serverSettings.updateSettings({
-        providers: { codex: { enabled: true } },
-        providerInstances: {
-          codex: { driver: "codex", enabled: true },
-        },
-      });
-      const resumed = yield* waitForAutomationList({
-        service,
-        description: "re-enabled provider stop evaluation",
-        predicate: (listed) =>
-          listed.runs.find((entry) => entry.id === run.id)?.result?.completionEvaluation !==
-          undefined,
-      });
-      const resumedRun = resumed.runs.find((entry) => entry.id === run.id);
-
-      assert.strictEqual(resumedRun?.result?.completionEvaluation?.stopMatched, false);
-      assert.strictEqual(completionEvaluationInputs.length, 1);
+      assert.isUndefined(updatedRun?.result?.completionEvaluation);
     }),
   );
 

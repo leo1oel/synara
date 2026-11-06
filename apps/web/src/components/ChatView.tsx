@@ -72,6 +72,7 @@ import {
   gitGithubRepositoryQueryOptions,
   gitStatusQueryOptions,
   gitBranchPullRequestQueryOptions,
+  branchPullRequestForBranch,
 } from "~/lib/gitReactQuery";
 import {
   CheckboxCheckedIcon,
@@ -6805,11 +6806,10 @@ export default function ChatView({
               <ComposerPullRequestAutoFixHint
                 threadId={threadId}
                 isServerThread={isServerThread}
-                pullRequest={
-                  branchPullRequestQuery.data?.branch === gitStatusQuery.data?.branch
-                    ? (branchPullRequestQuery.data?.pr ?? null)
-                    : null
-                }
+                pullRequest={branchPullRequestForBranch(
+                  branchPullRequestQuery.data,
+                  gitStatusQuery.data?.branch,
+                )}
                 isWorking={isWorking}
               />
             </ComposerCapsuleRow>
