@@ -4342,11 +4342,6 @@ export default function ChatView({
       void onProviderModelSelect(provider, model, { instanceId, focusComposer: false });
     },
   });
-  // A new send retires the "switched models" notice.
-  const activeLatestTurnRunning = activeLatestTurn?.state === "running";
-  useEffect(() => {
-    if (activeLatestTurnRunning) setClaudeModelSwitch(null);
-  }, [activeLatestTurnRunning]);
   // The one Claude problem worth saying next to the composer (see claudeComposerNotice).
   const latestTurnFailure = useMemo(() => {
     if (!activeLatestTurnId) return null;
@@ -5306,6 +5301,8 @@ export default function ChatView({
       if (accepted && switchKeyForSend !== null && args[2] === undefined) {
         setSubmittedClaudeSwitchKey(switchKeyForSend);
       }
+      // The next send retires the "switched models" notice above the composer.
+      if (accepted) setClaudeModelSwitch(null);
       return accepted;
     },
     [claudeSwitchKey, isNativeSubagentMessagingUnavailable, submitComposerTurn],
@@ -5320,7 +5317,9 @@ export default function ChatView({
     !isAwaitingTurnStart &&
     !activePendingApproval &&
     pendingUserInputs.length === 0 &&
-    activeThread?.claudeCacheReview == null;
+    activeThread?.claudeCacheReview == null &&
+    // The "switched models" notice already says the model changed; one notice is enough.
+    visibleClaudeComposerNotice?.kind !== "model-switched";
   const appliedContextWindowSelection = useMemo(
     () => deriveAppliedContextWindowSelection(threadActivities),
     [threadActivities],
