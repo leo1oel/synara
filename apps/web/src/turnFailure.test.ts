@@ -297,6 +297,44 @@ describe("Claude Code exit failures", () => {
     }
   });
 
+  it("tells the user to pick another model when the account cannot use this one", () => {
+    const refusedTurnId = TurnId.makeUnsafe("claude-model-refused-turn");
+    const cause = "The selected Claude model is unavailable for this account.";
+    // Both events carry the Agent SDK's structured code, as the Claude adapter sends them.
+    const activities = [
+      makeActivity({
+        id: "claude-model-refused-error",
+        turnId: refusedTurnId,
+        sequence: 2,
+        kind: "runtime.error",
+        tone: "error",
+        summary: "Provider runtime error",
+        payload: { message: cause, class: "provider_error", errorCode: "model_not_found" },
+      }),
+      makeActivity({
+        id: "claude-model-refused-completion",
+        turnId: refusedTurnId,
+        sequence: 3,
+        kind: "turn.completed",
+        tone: "error",
+        summary: "Turn failed",
+        payload: { state: "failed", errorMessage: cause, errorCode: "model_not_found" },
+      }),
+    ];
+    try {
+      setLanguagePreference("zh-CN");
+      expect(deriveWorkLogEntries(activities, refusedTurnId)[0]?.turnFailure?.nextStep).toBe(
+        "你的 Claude 账号用不了这个模型。请点「更改模型」换一个。",
+      );
+      setLanguagePreference("en");
+      expect(deriveWorkLogEntries(activities, refusedTurnId)[0]?.turnFailure?.nextStep).toBe(
+        "Your Claude account can't use this model. Choose another one with Change model.",
+      );
+    } finally {
+      setLanguagePreference("en");
+    }
+  });
+
   it("says what to try when Claude Code exited without a reason", () => {
     const generic = "Claude Code process exited with code 1";
     const failure = (errorCode?: string) =>

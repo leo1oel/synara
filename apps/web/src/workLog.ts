@@ -1088,11 +1088,14 @@ function isTurnFailureActivity(activity: OrchestrationThreadActivity): boolean {
 
 // Codes the Claude adapter attaches when Claude Code exits nonzero and said
 // why on stderr (apps/server/src/provider/claudeProcessExit.ts). The card shows
-// that reason verbatim and adds the step that fixes it.
+// that reason verbatim and adds the step that fixes it. `model_not_found` is the
+// Agent SDK's own code for a model the account cannot use, which arrives as a
+// structured error rather than an exit; only the Claude adapter emits it.
 const CLAUDE_EXIT_NEXT_STEPS = {
   claude_cli_outdated: "chat:claudeExitNextStepUpdateCli",
   claude_auth_required: "chat:claudeExitNextStepSignIn",
   claude_model_unavailable: "chat:claudeExitNextStepPickModel",
+  model_not_found: "chat:claudeExitNextStepPickModel",
   claude_cli_failed: "chat:claudeExitNextStepCheckCli",
 } as const;
 
