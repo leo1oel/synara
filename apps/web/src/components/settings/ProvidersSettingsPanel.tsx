@@ -61,7 +61,6 @@ import {
 } from "~/appSettings";
 import { isSynaraEmbedMode, postExternalLinkToLattice, readEmbedMode } from "~/embedMode";
 import { useProviderStatusesForLocalConfig } from "~/hooks/useProviderStatusesForLocalConfig";
-import { useRefreshProviderStatusesNow } from "~/hooks/useProviderStatusRefresh";
 import { CentralIcon } from "~/lib/central-icons";
 import {
   CopyIcon,
@@ -2042,9 +2041,6 @@ export function ProvidersSettingsPanel({
   const queryClient = useQueryClient();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const localProviderStatuses = useProviderStatusesForLocalConfig();
-  const refreshProviderStatuses = useRefreshProviderStatusesNow();
-  const [refreshingProviders, setRefreshingProviders] = useState(false);
-  const refreshProvidersInFlightRef = useRef(false);
   const providerStatusesReconciled = hasReconciledServerProviderStatuses(queryClient);
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
   const [openInstallProviders, setOpenInstallProviders] = useState<Record<ProviderKind, boolean>>(
@@ -2222,18 +2218,6 @@ export function ProvidersSettingsPanel({
   );
 
   if (!active) return null;
-
-  const refreshProviders = async () => {
-    if (refreshProvidersInFlightRef.current) return;
-    refreshProvidersInFlightRef.current = true;
-    setRefreshingProviders(true);
-    try {
-      await refreshProviderStatuses();
-    } finally {
-      refreshProvidersInFlightRef.current = false;
-      setRefreshingProviders(false);
-    }
-  };
 
   return (
     // Embedded Lattice stacks this panel under ModelsSettingsPanel on one page.

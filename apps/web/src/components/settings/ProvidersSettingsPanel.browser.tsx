@@ -131,11 +131,18 @@ beforeEach(() => {
   }));
 });
 
-function activityRow(provider: string) {
-  return page
-    .getByRole("switch", { name: `Disable ${provider}`, exact: true })
-    .element()
-    .closest('[data-slot="settings-row"]')!;
+// Lattice lists every provider as a provider-picker row (its installation beside a
+// visibility switch); the fork has no enablement switches (7eabd821e).
+function providerTitle(kind: string) {
+  return PROVIDER_DESCRIPTORS.find((descriptor) => descriptor.kind === kind)!.displayName;
+}
+
+function pickerSwitch(name: string) {
+  return page.getByRole("switch", { name, exact: true });
+}
+
+function pickerRow(name: string) {
+  return pickerSwitch(name).element().parentElement!;
 }
 
 it("saves provider CPU priority opt-out and exposes reset to the default", async () => {
@@ -163,58 +170,42 @@ it("saves provider CPU priority opt-out and exposes reset to the default", async
   );
 });
 
-it("shows installation and auth beside activity switches with visible setup guides", async () => {
+it("shows each provider's installation beside its picker switch", async () => {
   await render(<ProvidersSettingsPanel {...props} />);
-  expect(activityRow("OpenCode").textContent).toContain("Unavailable");
-  expect(activityRow("OpenCode").textContent).toContain("not installed or not on PATH");
-  expect(activityRow("Claude").textContent).toContain("Needs sign-in");
-  expect(activityRow("Codex").textContent).toContain("Connected");
-  await page.getByRole("button", { name: /Disabled providers/u }).click();
-  expect(
-    page
-      .getByRole("switch", { name: "Enable Grok", exact: true })
-      .element()
-      .closest('[data-slot="settings-row"]')?.textContent,
-  ).toContain("Disabled · enable to check setup");
-  // Permission to run remains enabled even if the CLI is missing.
-  await expect
-    .element(page.getByRole("switch", { name: "Disable OpenCode", exact: true }))
-    .toBeChecked();
-  for (const descriptor of PROVIDER_DESCRIPTORS) {
-    const guide = page.getByRole("link", {
-      name: `${descriptor.displayName} setup guide`,
-      exact: true,
-    });
-    await expect.element(guide).toBeVisible();
-    expect(guide.element().getAttribute("href")).toBe(descriptor.setupDocsHref);
-  }
+  const openCode = t("settings:isUnavailableInTheProviderPicker", {
+    value0: providerTitle("opencode"),
+  });
+  expect(pickerRow(openCode).textContent).toContain(t("lattice:cLINotInstalled"));
+  await expect.element(pickerSwitch(openCode)).toBeDisabled();
+  const codex = t("settings:showInTheProviderPicker", { value0: providerTitle("codex") });
+  expect(pickerRow(codex).textContent).toContain(t("settings:installed"));
+  await expect.element(pickerSwitch(codex)).toBeChecked();
 });
 
-it("does not report cached provider health as connected before reconciliation", async () => {
+it("does not report cached provider health as installed before reconciliation", async () => {
   harness.reconciled = false;
   await render(<ProvidersSettingsPanel {...props} />);
-  expect(activityRow("Codex").textContent).toContain("Checking setup");
-  expect(activityRow("Codex").textContent).not.toContain("Connected");
+  await expect.element(page.getByText(t("lattice:checkingInstalledCLIs"))).toBeVisible();
+  expect(document.body.textContent).not.toContain(
+    t("lattice:installed", { availableProviderCount: PROVIDER_DESCRIPTORS.length - 1 }),
+  );
 });
 
-it("allows rechecking setup after installing externally and blocks duplicate refreshes", async () => {
-  let finish!: () => void;
-  harness.refresh.mockImplementation(
-    () =>
-      new Promise<void>((resolve) => {
-        finish = resolve;
-      }),
-  );
-  await render(<ProvidersSettingsPanel {...props} />);
-  await page.getByRole("button", { name: "Refresh status", exact: true }).click();
-  expect(harness.refresh).toHaveBeenCalledOnce();
+it("picks up a provider installed outside Synara once its status refreshes", async () => {
+  const screen = await render(<ProvidersSettingsPanel {...props} />);
+  const title = providerTitle("opencode");
   await expect
-    .element(page.getByRole("button", { name: "Checking setup", exact: true }))
+    .element(pickerSwitch(t("settings:isUnavailableInTheProviderPicker", { value0: title })))
     .toBeDisabled();
-  finish();
-  await expect
-    .element(page.getByRole("button", { name: "Refresh status", exact: true }))
-    .toBeEnabled();
+  harness.statuses = harness.statuses.map((status) =>
+    status.provider === "opencode"
+      ? { ...status, status: "ready", available: true, message: "OpenCode is ready." }
+      : status,
+  );
+  await screen.rerender(<ProvidersSettingsPanel {...props} />);
+  const shown = t("settings:showInTheProviderPicker", { value0: title });
+  await expect.element(pickerSwitch(shown)).toBeEnabled();
+  expect(pickerRow(shown).textContent).toContain(t("settings:installed"));
 });
 
 // --- Accounts: one list per provider, default included, with an editor beside it. ---
