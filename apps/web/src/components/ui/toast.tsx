@@ -200,7 +200,8 @@ function EmbeddedToastBridge({ hostOrigin }: { hostOrigin: string }) {
             if (restored) close(toast.id);
           });
         } else {
-          void Promise.resolve(toast.data.archiveUndo.onViewArchived()).finally(() => {
+          // Snooze and mark-done toasts carry archiveUndo without onViewArchived.
+          void Promise.resolve(toast.data.archiveUndo.onViewArchived?.()).finally(() => {
             close(toast.id);
           });
         }

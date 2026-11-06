@@ -1848,6 +1848,8 @@ describe("resolveEmbeddedNewThreadModelSelection", () => {
     overrides?: { available?: boolean; authStatus?: "authenticated" | "unauthenticated" },
   ) => ({
     provider,
+    instanceId: provider,
+    driver: provider,
     status: overrides?.available === false ? ("warning" as const) : ("ready" as const),
     available: overrides?.available ?? true,
     authStatus: overrides?.authStatus ?? ("authenticated" as const),

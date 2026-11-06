@@ -527,12 +527,20 @@ export function gitBranchPullRequestQueryOptions(cwd: string | null, enabled = t
   });
 }
 
+/** The looked-up PR when it belongs to `branch`; `null` until the lookup lands. */
+export function branchPullRequestForBranch(
+  pullRequest: GitBranchPullRequestResult | null | undefined,
+  branch: GitStatusResult["branch"] | undefined,
+): GitStatusWithPullRequest["pr"] {
+  return pullRequest && pullRequest.branch === branch ? pullRequest.pr : null;
+}
+
 /** Joins local status with the branch PR; the PR reads as `null` until its lookup lands. */
 export function withBranchPullRequest(
   status: GitStatusResult,
   pullRequest: GitBranchPullRequestResult | null | undefined,
 ): GitStatusWithPullRequest {
-  return { ...status, pr: pullRequest?.branch === status.branch ? pullRequest.pr : null };
+  return { ...status, pr: branchPullRequestForBranch(pullRequest, status.branch) };
 }
 
 export function gitGithubRepositoryQueryOptions(cwd: string | null, enabled = true) {
