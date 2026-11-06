@@ -1037,16 +1037,14 @@ describe("ProviderCommandReactor", () => {
                 AgentGatewayCredentials,
                 (input?.gatewayCredentials ?? {}) as AgentGatewayCredentialsShape,
               ),
+          Layer.succeed(AgentQualityTrace, {
+            start: Effect.void,
+            prepareTurnContext,
+            bindTurnContext,
+            failTurnContext,
+            recordCompile: () => Effect.void,
+          }),
         ),
-      ),
-      Layer.provideMerge(
-        Layer.succeed(AgentQualityTrace, {
-          start: Effect.void,
-          prepareTurnContext,
-          bindTurnContext,
-          failTurnContext,
-          recordCompile: () => Effect.void,
-        }),
       ),
       Layer.provideMerge(
         Layer.succeed(ProviderHealth, {

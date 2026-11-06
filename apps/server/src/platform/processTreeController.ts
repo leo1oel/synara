@@ -3,7 +3,6 @@
 // Layer: Server platform runtime
 
 import { execProcessFile, spawnProcessSync } from "@synara/shared/processRuntime";
-import treeKill from "tree-kill";
 
 import { createLogger } from "../logger";
 import { captureWindowsProcessChildrenMap } from "./windowsProcessSnapshot";

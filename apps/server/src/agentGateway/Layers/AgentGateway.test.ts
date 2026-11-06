@@ -97,6 +97,7 @@ import { LatticeBibliographyBrokerLive } from "./LatticeBibliographyBroker.ts";
 import { LatticeSpreadsheetBrokerLive } from "./LatticeSpreadsheetBroker.ts";
 import { LatticeProjectDocumentBrokerLive } from "./LatticeProjectDocumentBroker.ts";
 import { LatticeEditorCommentsBrokerLive } from "./LatticeEditorCommentsBroker.ts";
+import { LatticePresentationBrokerLive } from "./LatticePresentationBroker.ts";
 import { recordCreatedWorktreeInPlan } from "../operationPlan.ts";
 import { makeAgentGatewayInFlightRequestRegistry } from "../inFlightRequestRegistry.ts";
 import { ACTIVE_AGENT_HOST_PROFILE } from "../hostProfile.ts";
@@ -1376,9 +1377,10 @@ function makeHarnessLayer(
         LatticeSpreadsheetBrokerLive,
         LatticeProjectDocumentBrokerLive,
         LatticeEditorCommentsBrokerLive,
+        LatticePresentationBrokerLive,
+        credentialsLayer,
       ),
     ),
-    Layer.provide(credentialsLayer),
     Layer.provide(snapshotLayer),
     Layer.provide(engineLayer),
     Layer.provide(automationLayer),
