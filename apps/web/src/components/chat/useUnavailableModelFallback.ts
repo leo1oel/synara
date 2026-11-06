@@ -24,10 +24,12 @@ export function useUnavailableModelFallback(input: {
   readonly statuses: ReadonlyArray<ServerProviderStatus> | undefined;
   /** The account's model catalog, for when its default model was refused too. */
   readonly options: ReadonlyArray<ProviderModelOption> | undefined;
+  /** `from` is the refused model the composer leaves, so the panel can say so. */
   readonly select: (
     provider: ProviderKind,
     model: ModelSlug,
     instanceId: ProviderInstanceId,
+    from: string,
   ) => void;
 }): void {
   const fallback = input.enabled
@@ -39,9 +41,9 @@ export function useUnavailableModelFallback(input: {
       })
     : null;
   const select = useStableCallback(input.select);
-  const { provider, instanceId } = input;
+  const { provider, instanceId, model } = input;
   useEffect(() => {
     if (fallback === null) return;
-    select(provider, fallback as ModelSlug, instanceId);
-  }, [fallback, provider, instanceId, select]);
+    select(provider, fallback as ModelSlug, instanceId, model);
+  }, [fallback, provider, instanceId, model, select]);
 }

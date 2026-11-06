@@ -56,6 +56,7 @@
   "branchIsBehindUpstreamPullRebaseBefore": "Branch is behind upstream. Pull/rebase before committing and pushing.",
   "branchIsBehindUpstreamPullRebaseBefore2": "Branch is behind upstream. Pull/rebase before pushing.",
   "branchIsUpToDateNoAction": "Branch is up to date. No action needed.",
+  "claudeModelSwitchedToDefault": "Tu cuenta de Claude no puede usar {{from}}, así que este chat cambió a {{to}}.",
   "cLINotInstalled": "CLI not installed",
   "canBeUsedOnceYour5Hour": "Can be used once your 5-hour or weekly limit has 10% or less left.",
   "canMergeWithoutConflicts": "Can merge without conflicts",

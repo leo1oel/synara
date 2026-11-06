@@ -157,6 +157,7 @@ import {
   readLatticeHostContextMessage,
   readLatticePaperLibraryMessage,
   type LatticePaperLibrarySnapshot,
+  openEmbeddedProviderSettings,
 } from "../embedMode";
 import { useFeatureFlags } from "../featureFlags";
 import {
@@ -177,6 +178,13 @@ import { useHandleNewThread } from "../hooks/useHandleNewThread";
 import { useLatticeComposerPrompt } from "./chat/useLatticeComposerPrompt";
 import { useLatticeTurnActivity } from "./chat/useLatticeTurnActivity";
 import { useUnavailableModelFallback } from "./chat/useUnavailableModelFallback";
+import { ComposerClaudeNotice } from "./chat/ComposerClaudeNotice";
+import {
+  type ClaudeComposerModelSwitch,
+  resolveClaudeComposerNotice,
+} from "./chat/claudeComposerNotice";
+import { composerModelDisplayName } from "./chat/ComposerModelPicker.logic";
+import { localizeProviderStatusMessage } from "~/lib/providerStatusMessages";
 import { useTheme } from "../hooks/useTheme";
 import { useThreadHandoff } from "../hooks/useThreadHandoff";
 import { useThreadUnblock } from "../hooks/useThreadUnblock";
@@ -4301,20 +4309,64 @@ export default function ChatView({
     [onProviderModelSelect, selectedModelForPickerWithCustomFallback, selectedProvider],
   );
   // A turn that failed with "model not available to this account" greys that model
-  // in the picker; move the composer to the provider's default before the next send.
+  // in the picker; move the composer to the provider's default before the next send,
+  // and say so above the composer.
+  const [claudeModelSwitch, setClaudeModelSwitch] = useState<ClaudeComposerModelSwitch | null>(
+    null,
+  );
+  const selectedProviderCatalog =
+    modelOptionsByProviderInstance[selectedProviderInstanceId] ??
+    modelOptionsByProvider[selectedProvider];
+  const modelDisplayNameFor = (slug: string) =>
+    composerModelDisplayName(
+      selectedProvider,
+      selectedProviderCatalog?.find((option) => option.slug === slug)?.name ?? slug,
+    );
   useUnavailableModelFallback({
     enabled: activeThread !== undefined,
     provider: selectedProvider,
     instanceId: selectedProviderInstanceId,
     model: selectedModelForPickerWithCustomFallback,
     statuses: providerStatuses,
-    options:
-      modelOptionsByProviderInstance[selectedProviderInstanceId] ??
-      modelOptionsByProvider[selectedProvider],
-    select: (provider, model, instanceId) => {
+    options: selectedProviderCatalog,
+    select: (provider, model, instanceId, from) => {
+      if (activeThread) {
+        setClaudeModelSwitch({
+          threadId: activeThread.id,
+          turnId: activeLatestTurn?.turnId ?? null,
+          fromName: modelDisplayNameFor(from),
+          toModel: model,
+          toName: modelDisplayNameFor(model),
+        });
+      }
       void onProviderModelSelect(provider, model, { instanceId, focusComposer: false });
     },
   });
+  // The one Claude problem worth saying next to the composer (see claudeComposerNotice).
+  const latestTurnFailure = useMemo(() => {
+    if (!activeLatestTurnId) return null;
+    for (let index = workLogEntries.length - 1; index >= 0; index -= 1) {
+      const entry = workLogEntries[index];
+      if (entry?.turnFailure && entry.turnId === activeLatestTurnId) return entry.turnFailure;
+    }
+    return null;
+  }, [activeLatestTurnId, workLogEntries]);
+  const claudeComposerNotice = resolveClaudeComposerNotice({
+    provider: selectedProvider,
+    threadId: activeThread?.id ?? null,
+    selectedModel: selectedModelForPickerWithCustomFallback,
+    latestTurnId: activeLatestTurnId,
+    latestTurnFailure,
+    providerStatus: activeProviderStatus ?? null,
+    modelSwitch: claudeModelSwitch,
+    translateStatus: (message) => localizeProviderStatusMessage(t, message),
+    describeSwitch: (from, to) => t("lattice:claudeModelSwitchedToDefault", { from, to }),
+  });
+  const [dismissedClaudeNoticeKey, setDismissedClaudeNoticeKey] = useState<string | null>(null);
+  const visibleClaudeComposerNotice =
+    claudeComposerNotice && claudeComposerNotice.key !== dismissedClaudeNoticeKey
+      ? claudeComposerNotice
+      : null;
   const openProviderAccountSettings = useCallback(() => {
     void navigate({
       to: "/settings",
@@ -5434,6 +5486,7 @@ export default function ChatView({
       prompt={prompt}
       onPromptChange={setPromptFromTraits}
       onProviderModelChange={handleProviderModelChange}
+      warning={claudeComposerNotice?.blocksNextSend ? claudeComposerNotice.message : null}
       onSelectionCommitted={scheduleComposerFocus}
       open={isComposerModelEffortPickerOpen}
       onOpenChange={handleComposerModelEffortPickerOpenChange}
@@ -6813,6 +6866,18 @@ export default function ChatView({
                 isWorking={isWorking}
               />
             </ComposerCapsuleRow>
+            {visibleClaudeComposerNotice ? (
+              <ComposerClaudeNotice
+                notice={visibleClaudeComposerNotice}
+                onChangeModel={() => handleComposerModelEffortPickerOpenChange(true)}
+                onOpenProviderSettings={() => {
+                  // Inside Lattice the host opens Settings → Agent; in-frame routing would
+                  // replace the panel.
+                  if (!openEmbeddedProviderSettings()) openProviderAccountSettings();
+                }}
+                onDismiss={() => setDismissedClaudeNoticeKey(visibleClaudeComposerNotice.key)}
+              />
+            ) : null}
             {isSidechatExpired ? (
               <ExpiredSidechatNotice onStartNew={startReplacementSidechat} />
             ) : null}
@@ -7371,7 +7436,11 @@ export default function ChatView({
           a toast only fires for a live error on a thread that is not
           currently visible (see `useThreadErrorToast`). */}
       <ProviderHealthBanner
-        status={shouldShowProviderHealthBanner ? visibleActiveProviderStatus : null}
+        status={
+          shouldShowProviderHealthBanner && claudeComposerNotice?.kind !== "provider-status"
+            ? visibleActiveProviderStatus
+            : null
+        }
         onDismiss={dismissActiveProviderHealthBanner}
       />
       <RateLimitBanner

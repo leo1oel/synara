@@ -107,6 +107,8 @@ export type ComposerModelSelectionOptions = {
 
 type ComposerModelPickerProps = {
   dense?: boolean;
+  /** A Claude problem in the way of the next send; the chip shows a warning mark. */
+  warning?: string | null;
   provider: ProviderKind;
   model: ModelSlug;
   lockedProvider: ProviderKind | null;
@@ -577,6 +579,7 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
         isMenuOpen={isMenuOpen}
         openPlaceholderLabel={usesEffortSlider ? t("lattice:selectEffort") : null}
         shortcutLabel={props.shortcutLabel}
+        warning={props.warning}
       />
       <ComposerPickerMenuPopup
         align="start"

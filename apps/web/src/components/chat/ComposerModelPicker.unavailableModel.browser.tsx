@@ -67,6 +67,7 @@ function claudeStatus(refused: ReadonlyArray<string> = []): ServerProviderStatus
 function Harness(props: {
   readonly providers: ReadonlyArray<ServerProviderStatus>;
   readonly onPick: (model: ModelSlug) => void;
+  readonly warning?: string | null;
 }) {
   const [model, setModel] = useState<ModelSlug>(FABLE);
   // ChatView wires the same hook to its own model commit.
@@ -98,6 +99,7 @@ function Harness(props: {
         modelOptions={undefined}
         prompt=""
         onPromptChange={() => undefined}
+        warning={props.warning ?? null}
       />
     </>
   );
@@ -166,6 +168,25 @@ describe("a model the account refused", () => {
       const starStart = Math.round(star!.getBoundingClientRect().left);
       expect({ reasonEnd, starStart, fits: reasonEnd <= starStart }).toMatchObject({ fits: true });
       expect(row.parentElement?.getAttribute("title")).toBe("你的账号用不了");
+    } finally {
+      await screen.unmount();
+    }
+  });
+
+  it("marks the model chip while a Claude problem blocks the next send", async () => {
+    setLanguagePreference("en");
+    const reason = "Anthropic refused this Claude account or network (403).";
+    const screen = await render(
+      <Harness providers={[claudeStatus()]} onPick={vi.fn()} warning={reason} />,
+    );
+    try {
+      await expect.element(page.getByTestId("composer-model-warning")).toBeVisible();
+      const chip = page.getByRole("button", {
+        name: t("chat:modelEffort_changeModelAndReasoning"),
+      });
+      await expect.element(chip).toHaveTextContent(reason);
+      await screen.rerender(<Harness providers={[claudeStatus()]} onPick={vi.fn()} />);
+      expect(page.getByTestId("composer-model-warning").elements()).toHaveLength(0);
     } finally {
       await screen.unmount();
     }

@@ -2,7 +2,7 @@ import type { ProviderKind } from "@synara/contracts";
 import { useState } from "react";
 
 import type { FastModeNotice } from "~/lib/fastModeState";
-import { ChevronDownIcon, SettingsIcon } from "~/lib/icons";
+import { ChevronDownIcon, SettingsIcon, TriangleAlertIcon } from "~/lib/icons";
 import { FastModeBadgeIcon } from "./FastModeBadgeIcon";
 import { cn } from "~/lib/utils";
 import { ProviderAccountDot } from "../ProviderAccountMark";
@@ -49,6 +49,8 @@ export function ComposerModelMenuTrigger(props: {
    *  tuning effort in the open panel cannot resize the trigger and drag the popup sideways. */
   openPlaceholderLabel?: string | null | undefined;
   shortcutLabel?: string | null | undefined;
+  /** A problem in the way of the next send (Claude refused, signed out, too old): marks the chip. */
+  warning?: string | null | undefined;
 }) {
   const { t } = useTranslation();
 
@@ -73,6 +75,7 @@ export function ComposerModelMenuTrigger(props: {
   if (showsPlaceholder && !hasShownPlaceholder) setHasShownPlaceholder(true);
   const ProviderIcon = PROVIDER_ICON_COMPONENT_BY_PROVIDER[props.provider];
   const hiddenTriggerTitle = [
+    props.warning,
     props.accountLabel,
     props.hideModelLabel ? props.modelLabel : null,
     props.hideStatusLabel ? props.statusLabel : null,
@@ -174,6 +177,16 @@ export function ComposerModelMenuTrigger(props: {
           </span>
         ) : null}
       </span>
+      {props.warning ? (
+        <>
+          <TriangleAlertIcon
+            aria-hidden="true"
+            data-testid="composer-model-warning"
+            className="size-3.5 shrink-0 text-warning opacity-100"
+          />
+          <span className="sr-only">{props.warning}</span>
+        </>
+      ) : null}
       <ChevronDownIcon aria-hidden="true" className="ms-0.5 size-3 shrink-0 opacity-60" />
     </span>
   );
