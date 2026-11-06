@@ -59,9 +59,7 @@ export function localizeProviderStatusMessage(translate: typeof t, message: stri
         return translate("lattice:piIsNotSetUpInstallThe", { agentDir: piNotSetUp[1]! });
       // apps/server/src/provider/claudeCliVersion.ts claudeCliTooOldMessage
       const claudeTooOld =
-        /^Claude Code (\S+) is too old for this app\. Run `claude update` \(or reinstall Claude Code\), then try again\.$/u.exec(
-          message,
-        );
+        /^Claude Code (\S+) is too old\. Run `claude update` in Terminal\.$/u.exec(message);
       if (claudeTooOld)
         return translate("lattice:claudeCodeIsTooOldRunClaudeUpdate", {
           version: claudeTooOld[1]!,

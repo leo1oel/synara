@@ -1988,7 +1988,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         assert.strictEqual(status.version, "2.0.62");
         assert.strictEqual(
           status.message,
-          "Claude Code 2.0.62 is too old for this app. Run `claude update` (or reinstall Claude Code), then try again.",
+          "Claude Code 2.0.62 is too old. Run `claude update` in Terminal.",
         );
       }).pipe(
         Effect.provide(

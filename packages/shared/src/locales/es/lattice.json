@@ -90,7 +90,7 @@
   "claudeAgentCLIClaudeIsNotInstalled": "Claude Agent CLI (`claude`) is not installed or not on PATH.",
   "claudeAgentCLIIsInstalledButFailed": "Claude Agent CLI is installed but failed to run. Timed out while running command.",
   "claudeIsNotAuthenticatedRunClaudeAuth": "Claude is not authenticated. Run `claude auth login` and try again.",
-  "claudeCodeIsTooOldRunClaudeUpdate": "Claude Code {{version}} es demasiado antiguo para esta app. Ejecuta `claude update` en Terminal (o reinstala Claude Code) y vuelve a intentarlo.",
+  "claudeCodeIsTooOldRunClaudeUpdate": "Claude Code {{version}} es demasiado antiguo. Ejecuta `claude update` en Terminal.",
   "clearSearch": "Clear search",
   "codeBlock": "Code block",
   "codexAPIKeyAuthHasNoUsage": "Codex API-key auth has no usage endpoint. Sign in with ChatGPT to see usage.",

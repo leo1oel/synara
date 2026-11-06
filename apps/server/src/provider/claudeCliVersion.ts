@@ -22,5 +22,5 @@ export function isClaudeAutoModeCliVersionSupported(version: string | null): boo
 
 /** The provider-status message for an outdated CLI; the web localizes it by shape. */
 export function claudeCliTooOldMessage(version: string): string {
-  return `Claude Code ${version} is too old for this app. Run \`claude update\` (or reinstall Claude Code), then try again.`;
+  return `Claude Code ${version} is too old. Run \`claude update\` in Terminal.`;
 }
