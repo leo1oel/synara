@@ -3,8 +3,9 @@
 // `security find-generic-password` read of an item whose access list lacks `security` raises a
 // SecurityAgent prompt, and "Allow" covers that one read only, so usage refreshes must not
 // re-read on every poll. Granted secrets are reused for a long TTL (or until the caller reports
-// the token they carried as expired or rejected); denied and failed reads are remembered until
-// the user explicitly refreshes usage or the caller's credential file changes. Concurrent
+// the token they carried as expired or rejected, once per secret or explicit refresh); denied and
+// failed reads are remembered until the user explicitly refreshes usage or the caller's
+// credential file changes. Concurrent
 // callers share one in-flight read.
 
 export type KeychainReadOutcome =
@@ -130,11 +131,16 @@ export function readKeychainItemOnce(
   return promise;
 }
 
-/** Explicit user refresh: read denied, failed and absent items again. Granted secrets stay. */
+/**
+ * Explicit user refresh: read denied, failed and absent items again. Granted secrets stay, but a
+ * caller that finds their token expired or rejected may re-read them once more.
+ */
 export function forgetUnavailableKeychainReads(): void {
   for (const [key, remembered] of rememberedReads) {
     if (remembered.outcome.kind !== "granted") {
       rememberedReads.delete(key);
+    } else if (remembered.rereadConfirmed) {
+      rememberedReads.set(key, { ...remembered, rereadConfirmed: false });
     }
   }
 }

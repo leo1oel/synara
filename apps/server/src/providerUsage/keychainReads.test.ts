@@ -1,7 +1,7 @@
 // FILE: providerUsage/keychainReads.test.ts
 // Purpose: Covers the Keychain read memory policy: granted secrets are reused, refusals are
 // remembered until an explicit refresh or a credential-file change, absent items are re-checked
-// after a short TTL, and a re-read for a rejected token runs once per secret.
+// after a short TTL, and a re-read for a rejected token runs once per secret or explicit refresh.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -101,6 +101,24 @@ describe("readKeychainItemOnce", () => {
     await readKeychainItemOnce(ITEM, read, { reread: true });
     await readKeychainItemOnce(ITEM, read, { reread: true });
     expect(read).toHaveBeenCalledTimes(2);
+  });
+
+  it("lets an explicit refresh re-arm one re-read of a confirmed secret, without prompting", async () => {
+    const read = reader(
+      { kind: "granted", value: "old" },
+      { kind: "granted", value: "old" },
+      { kind: "granted", value: "new" },
+    );
+    await readKeychainItemOnce(ITEM, read);
+    await readKeychainItemOnce(ITEM, read, { reread: true });
+    forgetUnavailableKeychainReads();
+    expect(await readKeychainItemOnce(ITEM, read)).toEqual({ kind: "granted", value: "old" });
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(await readKeychainItemOnce(ITEM, read, { reread: true })).toEqual({
+      kind: "granted",
+      value: "new",
+    });
+    expect(read).toHaveBeenCalledTimes(3);
   });
 
   it("shares one in-flight read and remembers a thrown reader as a failure", async () => {
