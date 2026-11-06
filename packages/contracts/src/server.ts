@@ -107,9 +107,12 @@ export const ServerProviderRuntimeInstall = Schema.Struct({
 });
 export type ServerProviderRuntimeInstall = typeof ServerProviderRuntimeInstall.Type;
 
-// A model the account refused at run time (Claude's model_not_found), learned from a
-// failed turn rather than probed. The picker greys it out and the composer leaves it.
-// The entry clears on a successful turn with that model or on the next status refresh.
+// A model the account refused at run time (Claude's model_not_found, or Claude Code's
+// "There's an issue with the selected model" on stderr), learned from a failed turn
+// rather than probed. The picker greys it out and the composer leaves it. The entry
+// clears on a successful turn with that model, the user's own recheck (the sign-in
+// window), a refresh that finds the account changed, or a server restart; automatic
+// refreshes (startup, window focus, hourly) keep it.
 export const ServerProviderUnavailableModel = Schema.Struct({
   model: TrimmedNonEmptyString,
   reason: TrimmedNonEmptyString,
@@ -682,8 +685,8 @@ export const ServerConfigStreamEvent = Schema.Union([
 ]);
 export type ServerConfigStreamEvent = typeof ServerConfigStreamEvent.Type;
 
-// `explicit` marks the user's own recheck (Settings → Providers' Refresh, the sign-in
-// window), which also forgets the models an account refused; automatic refreshes
+// `explicit` marks the user's own recheck (the sign-in window's status check and its
+// close), which also forgets the models an account refused; automatic refreshes
 // (startup, window focus, hourly) leave those in place.
 export const ServerRefreshProvidersInput = Schema.Struct({
   explicit: Schema.optional(Schema.Boolean),

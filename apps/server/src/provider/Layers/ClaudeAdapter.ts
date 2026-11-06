@@ -5334,20 +5334,25 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         yield* updateResumeCursor(context);
       });
 
-    // A model_not_found result is the only signal that the account cannot use a
-    // listed model; record it so the picker stops offering that model. A success
-    // with the model clears it. A rerouted turn (refusal fallback) was served by
-    // another model, so it proves nothing about the requested one either way.
+    // A refused model is the only signal that the account cannot use a listed
+    // model: the SDK's model_not_found result, or Claude Code exiting with "There's
+    // an issue with the selected model" on stderr (claude_model_unavailable). Record
+    // it so the picker stops offering that model; a success with the model clears it.
+    // A rerouted turn (refusal fallback) was served by another model, so it proves
+    // nothing about the requested one either way.
     const noteRequestedModelAvailability = (
       context: ClaudeSessionContext,
       status: ProviderRuntimeTurnStatus,
-      assistantErrorCode: SDKAssistantMessageError | undefined,
+      errorCode: string | undefined,
       errorMessage: string | undefined,
     ) => {
       const requested = context.turnState?.requestedModel;
       if (!requested || context.currentApiModelId !== requested.apiModelId) return;
       const instanceId = context.session.providerInstanceId ?? PROVIDER;
-      if (status === "failed" && assistantErrorCode === "model_not_found") {
+      const refused =
+        errorCode === "model_not_found" ||
+        errorCode === CLAUDE_FAILURE_ERROR_CODES.modelUnavailable;
+      if (status === "failed" && refused) {
         recordUnavailableModel({
           instanceId,
           model: requested.slug,
@@ -6653,6 +6658,8 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
               });
             }
             yield* emitRuntimeError(context, message, Cause.pretty(exit.cause), errorCode);
+            // A refused model can surface only on stderr when Claude Code exits first.
+            noteRequestedModelAvailability(context, "failed", errorCode, message);
             yield* completeTurn(context, "failed", message);
           }
         } else if (context.turnState) {

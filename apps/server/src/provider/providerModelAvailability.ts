@@ -3,17 +3,18 @@
  *
  * The model picker lists Claude's static catalog merged with discovery, so a
  * model the signed-in account cannot use stays selectable until a turn with it
- * fails with `model_not_found`. The provider adapter records that failure here;
+ * fails with `model_not_found` (or Claude Code exits saying "There's an issue with
+ * the selected model"). The provider adapter records that failure here;
  * ProviderHealth projects the entries onto the instance's status as
  * `unavailableModels`, so the picker greys the row and the composer leaves it.
  *
  * Nothing here probes: entries come only from turn results, so availability
  * costs no CLI process or keychain read. An entry clears only when a turn with
- * that model succeeds, when the user rechecks providers themselves (Settings →
- * Providers' Refresh, the sign-in window), or when a status refresh finds the
- * instance's account changed. Automatic refreshes (startup, window focus,
- * hourly) keep it: they would make the model selectable again within seconds,
- * only to fail the same way.
+ * that model succeeds, when the user rechecks providers themselves (the sign-in
+ * window's status check and its close send an explicit refresh), when a status
+ * refresh finds the instance's account changed, or when the server restarts.
+ * Automatic refreshes (startup, window focus, hourly) keep it: they would make
+ * the model selectable again within seconds, only to fail the same way.
  *
  * State is per server process, like provider runtime installs; it is not
  * persisted, so a restart forgets every entry.

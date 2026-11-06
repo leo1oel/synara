@@ -14,6 +14,10 @@ import { afterEach } from "vitest";
 
 import { ServerConfig } from "../../config.ts";
 import { MINIMUM_CLAUDE_AUTO_MODE_CLI_VERSION } from "../claudeCliVersion.ts";
+import {
+  resetUnavailableModelsForTest,
+  unavailableModelsFor,
+} from "../providerModelAvailability.ts";
 import { ClaudeAdapter } from "../Services/ClaudeAdapter.ts";
 import { makeClaudeAdapterLive } from "./ClaudeAdapter.ts";
 
@@ -22,6 +26,7 @@ const tempDirs: Array<string> = [];
 
 afterEach(() => {
   for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+  resetUnavailableModelsForTest();
 });
 
 // Stands in for `claude`: writes `stderr` and exits 1 before reading any input,
@@ -131,6 +136,39 @@ describe("Claude Code exiting at startup", () => {
         assert.equal(runtimeError.payload.message, "Claude Code process exited with code 1");
         assert.equal(runtimeError.payload.errorCode, "claude_cli_failed");
       }
+    });
+  });
+
+  // Claude Code can report a refused model only on stderr when it exits before a
+  // result; the model must still be recorded, so the picker greys it and the
+  // composer moves to the default model (the web side reads the status entry).
+  it.live("records a model refused only on stderr, as the result path does", () => {
+    resetUnavailableModelsForTest();
+    const { binaryPath, dir } = standInClaude(
+      "There's an issue with the selected model (claude-fable-5-1). It may not exist or you may not have access to it.",
+    );
+    return Effect.gen(function* () {
+      const { runtimeError, turnCompleted } = yield* runFailedTurn(binaryPath, dir);
+      assert.equal(runtimeError?.type, "runtime.error");
+      if (runtimeError?.type === "runtime.error") {
+        assert.equal(runtimeError.payload.errorCode, "claude_model_unavailable");
+      }
+      assert.equal(turnCompleted?.type, "turn.completed");
+      assert.deepEqual(
+        unavailableModelsFor("claudeAgent").map((entry) => entry.model),
+        ["claude-fable-5-1"],
+      );
+    });
+  });
+
+  it.live("records nothing for a stderr exit that is not about the model", () => {
+    resetUnavailableModelsForTest();
+    const { binaryPath, dir } = standInClaude(
+      "error: unknown option '--setting-sources=user,project,local'",
+    );
+    return Effect.gen(function* () {
+      yield* runFailedTurn(binaryPath, dir);
+      assert.deepEqual(unavailableModelsFor("claudeAgent"), []);
     });
   });
 });
