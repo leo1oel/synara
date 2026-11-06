@@ -1,9 +1,10 @@
 // FILE: providerUsage/credentials.ts
 // Purpose: Credential resolution helpers for the usage fetchers — JSON files (read + atomic
-// write-back for rotated tokens), remembered macOS Keychain reads (via the `security` CLI), OAuth refresh,
-// JWT expiry decoding, and hex/JSON keychain payload decoding. Read helpers are defensive and
-// resolve to null/false on failure; the write helper throws so callers can react to a stranded
-// rotation (a rotated refresh token that wasn't persisted invalidates the CLI's login).
+// write-back for rotated tokens), remembered macOS Keychain reads (via the `security` CLI),
+// OAuth refresh, JWT expiry decoding, and hex/JSON keychain payload decoding. Read helpers are
+// defensive and resolve to null/false on failure; the write helper throws so callers can react
+// to a stranded rotation (a rotated refresh token that wasn't persisted invalidates the CLI's
+// login).
 
 import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
