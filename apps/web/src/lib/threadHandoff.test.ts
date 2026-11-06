@@ -1,4 +1,4 @@
-import { t, setLanguagePreference } from "~/i18n";
+import { setLanguagePreference } from "~/i18n";
 
 import {
   DEFAULT_MODEL_BY_PROVIDER,
@@ -365,17 +365,14 @@ describe("threadHandoff", () => {
     setLanguagePreference("zh-CN");
 
     expect(
-      resolveThreadHandoffBadgeLabel(
-        {
-          handoff: {
-            sourceThreadId: ThreadId.makeUnsafe("source-thread"),
-            sourceProvider: "claudeAgent",
-            importedAt: "2026-08-16T12:00:00.000Z",
-            bootstrapStatus: "completed",
-          },
+      resolveThreadHandoffBadgeLabel({
+        handoff: {
+          sourceThreadId: ThreadId.makeUnsafe("source-thread"),
+          sourceProvider: "claudeAgent",
+          importedAt: "2026-08-16T12:00:00.000Z",
+          bootstrapStatus: "completed",
         },
-        t,
-      ),
+      }),
     ).toBe("从 Claude 移交");
   });
 
