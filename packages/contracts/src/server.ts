@@ -107,6 +107,16 @@ export const ServerProviderRuntimeInstall = Schema.Struct({
 });
 export type ServerProviderRuntimeInstall = typeof ServerProviderRuntimeInstall.Type;
 
+// A model the account refused at run time (Claude's model_not_found), learned from a
+// failed turn rather than probed. The picker greys it out and the composer leaves it.
+// The entry clears on a successful turn with that model or on the next status refresh.
+export const ServerProviderUnavailableModel = Schema.Struct({
+  model: TrimmedNonEmptyString,
+  reason: TrimmedNonEmptyString,
+  recordedAt: IsoDateTime,
+});
+export type ServerProviderUnavailableModel = typeof ServerProviderUnavailableModel.Type;
+
 const ServerProviderStatusWire = Schema.Struct({
   provider: ProviderDriverKind,
   instanceId: ProviderInstanceId,
@@ -143,6 +153,7 @@ const ServerProviderStatusWire = Schema.Struct({
     }),
   ),
   runtimeInstall: Schema.optionalKey(ServerProviderRuntimeInstall),
+  unavailableModels: Schema.optionalKey(Schema.Array(ServerProviderUnavailableModel)),
   updateState: Schema.optionalKey(
     Schema.Struct({
       status: Schema.Literals(["idle", "queued", "running", "succeeded", "failed", "unchanged"]),
@@ -186,6 +197,7 @@ const ServerProviderStatusSource = Schema.Struct({
     }),
   ),
   runtimeInstall: Schema.optionalKey(ServerProviderRuntimeInstall),
+  unavailableModels: Schema.optionalKey(Schema.Array(ServerProviderUnavailableModel)),
   updateState: Schema.optionalKey(
     Schema.Struct({
       status: Schema.Literals(["idle", "queued", "running", "succeeded", "failed", "unchanged"]),

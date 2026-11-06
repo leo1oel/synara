@@ -143,6 +143,11 @@ import {
   type ProviderRuntimeId,
   subscribeProviderRuntimeChanges,
 } from "../providerRuntimes.ts";
+import {
+  clearUnavailableModelsRecordedBefore,
+  subscribeUnavailableModelChanges,
+  unavailableModelsFor,
+} from "../providerModelAvailability.ts";
 
 // A slim host installs Pi and OpenCode on demand; until then the provider offers the
 // install instead of probing a runtime it does not have.
@@ -2712,7 +2717,9 @@ export function providerStatusesEqual(
       (status.message ?? null) === (next.message ?? null) &&
       JSON.stringify(comparableProviderVersionAdvisory(status.versionAdvisory)) ===
         JSON.stringify(comparableProviderVersionAdvisory(next.versionAdvisory)) &&
-      JSON.stringify(status.updateState ?? null) === JSON.stringify(next.updateState ?? null)
+      JSON.stringify(status.updateState ?? null) === JSON.stringify(next.updateState ?? null) &&
+      JSON.stringify(status.unavailableModels ?? null) ===
+        JSON.stringify(next.unavailableModels ?? null)
     );
   });
 }
@@ -3285,13 +3292,21 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
                       message: runtimeState.message,
                     },
             };
+        // Models a failed turn showed the account cannot use; turn results own
+        // these, never a probe, so they are projected rather than persisted.
+        const unavailableModels = unavailableModelsFor(providerStatusInstanceKey(status));
+        const { unavailableModels: _unavailableModels, ...statusWithoutUnavailableModels } = status;
+        const statusWithModels: ServerProviderStatus =
+          unavailableModels.length > 0
+            ? { ...statusWithoutUnavailableModels, unavailableModels }
+            : statusWithoutUnavailableModels;
         const updateStates = yield* Ref.get(updateStatesRef);
-        const updateState = updateStates.get(providerStatusIdentityKey(status));
+        const updateState = updateStates.get(providerStatusIdentityKey(statusWithModels));
         if (!updateState) {
-          const { updateState: _updateState, ...statusWithoutUpdateState } = status;
+          const { updateState: _updateState, ...statusWithoutUpdateState } = statusWithModels;
           return statusWithoutUpdateState;
         }
-        return { ...status, updateState };
+        return { ...statusWithModels, updateState };
       });
 
       const applyVolatileProviderStates = (
@@ -3609,6 +3624,7 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
           // / logout / add account outside the app) is reflected on the next
           // refresh instead of being pinned to the old account for up to 5 minutes.
           yield* Ref.set(claudeSubscriptionCacheRef, new Map());
+          const refreshStartedAt = Date.now();
           const loadedStatuses = yield* loadProviderStatuses;
           if ((yield* serverSettings.getSnapshot).revision !== refreshRevision) {
             // A caller that joined this refresh expects the settings mutation it
@@ -3627,6 +3643,14 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
           }
           const previousRawStatuses = yield* Ref.get(statusesRef);
           const previousStatuses = yield* projectStatusesForCurrentSettings(previousRawStatuses);
+          // A re-checked account may have changed (sign-in, another account), so
+          // forget the models it refused before this refresh began.
+          for (const status of loadedStatuses) {
+            clearUnavailableModelsRecordedBefore({
+              instanceId: providerStatusInstanceKey(status),
+              before: refreshStartedAt,
+            });
+          }
           const stabilizedLoadedStatuses = stabilizeProviderStatusesAgainstTransientTimeouts(
             previousRawStatuses,
             loadedStatuses,
@@ -3738,6 +3762,13 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
         );
       });
       yield* Effect.addFinalizer(() => Effect.sync(unsubscribeProviderRuntimes));
+
+      // A turn that hit (or cleared) an unavailable model changes the picker now,
+      // not at the next probe.
+      const unsubscribeUnavailableModels = subscribeUnavailableModelChanges(() => {
+        Effect.runFork(publishProjectedStatuses().pipe(Effect.asVoid));
+      });
+      yield* Effect.addFinalizer(() => Effect.sync(unsubscribeUnavailableModels));
 
       const nowIso = Effect.map(DateTime.now, DateTime.formatIso);
 

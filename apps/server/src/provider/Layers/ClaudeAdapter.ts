@@ -203,6 +203,7 @@ import {
   type ClaudeStderrCapture,
   type ClaudeStderrStream,
 } from "../claudeProcessExit.ts";
+import { clearUnavailableModel, recordUnavailableModel } from "../providerModelAvailability.ts";
 import { positiveFiniteNumber } from "../tokenUsage.ts";
 import {
   isClaudeAutoModeCliVersionSupported,
@@ -315,6 +316,9 @@ interface ClaudeTurnState {
     readonly code: SDKAssistantMessageError;
     readonly message: string;
   };
+  // The picker model this turn was sent with, and the API id it resolved to, so
+  // the result can mark that model unavailable to the account (or clear it).
+  readonly requestedModel?: { readonly slug: string; readonly apiModelId: string | undefined };
   nextSyntheticAssistantBlockIndex: number;
   // Offset into assistantTextBlockOrder where the current assistant API
   // message's blocks begin. A turn spans many API messages (tool-use round
@@ -475,6 +479,9 @@ interface ClaudeSessionContext {
   firstTurnSpawnModeAuthoritative: boolean;
   lastInteractionMode: ProviderInteractionMode | undefined;
   currentApiModelId: string | undefined;
+  // The picker slug behind currentApiModelId (the API id can carry a suffix such
+  // as "[1m]"); unset until a model is explicitly selected.
+  currentModelSlug?: string;
   resumeSessionId: string | undefined;
   readonly pendingApprovals: Map<ApprovalRequestId, PendingApproval>;
   // Supervised-mode "Always allow this session": later canUseTool prompts
@@ -5306,6 +5313,30 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         yield* updateResumeCursor(context);
       });
 
+    // A model_not_found result is the only signal that the account cannot use a
+    // listed model; record it so the picker stops offering that model. A success
+    // with the model clears it. A rerouted turn (refusal fallback) was served by
+    // another model, so it proves nothing about the requested one either way.
+    const noteRequestedModelAvailability = (
+      context: ClaudeSessionContext,
+      status: ProviderRuntimeTurnStatus,
+      assistantErrorCode: SDKAssistantMessageError | undefined,
+      errorMessage: string | undefined,
+    ) => {
+      const requested = context.turnState?.requestedModel;
+      if (!requested || context.currentApiModelId !== requested.apiModelId) return;
+      const instanceId = context.session.providerInstanceId ?? PROVIDER;
+      if (status === "failed" && assistantErrorCode === "model_not_found") {
+        recordUnavailableModel({
+          instanceId,
+          model: requested.slug,
+          reason: errorMessage ?? claudeAssistantErrorMessage("model_not_found"),
+        });
+      } else if (status === "completed") {
+        clearUnavailableModel({ instanceId, model: requested.slug });
+      }
+    };
+
     const handleResultMessage = (
       context: ClaudeSessionContext,
       message: SDKMessage,
@@ -5356,6 +5387,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           yield* emitMonitorEvents(context);
         }
 
+        noteRequestedModelAvailability(context, status, assistantError?.code, errorMessage);
         yield* completeTurn(context, status, errorMessage, message);
 
         // Results carry the fast-mode state that actually served the turn. Publish
@@ -7731,6 +7763,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             firstTurnSpawnModeAuthoritative: true,
             lastInteractionMode: undefined,
             currentApiModelId: apiModelId,
+            ...(modelSelection?.model ? { currentModelSlug: modelSelection.model } : {}),
             // A generated id is only a launch option until Claude emits conversation output.
             resumeSessionId: existingResumeSessionId,
             pendingApprovals,
@@ -8115,6 +8148,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             });
           }
           context.currentApiModelId = apiModelId;
+          context.currentModelSlug = modelSelection.model;
           context.rerouteOriginalApiModelId = undefined;
           if (apiModelChanged) {
             context.cacheObservation = claudeCacheForModel(context.cacheObservation, apiModelId);
@@ -8264,6 +8298,14 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           assistantTextBlockOrder: [],
           capturedProposedPlanKeys: new Set(),
           sawFileChange: false,
+          ...(context.currentModelSlug
+            ? {
+                requestedModel: {
+                  slug: context.currentModelSlug,
+                  apiModelId: context.currentApiModelId,
+                },
+              }
+            : {}),
           nextSyntheticAssistantBlockIndex: -1,
           assistantMessageBlockBase: 0,
         };

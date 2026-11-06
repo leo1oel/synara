@@ -77,6 +77,10 @@ import {
   type ClaudeOwnedProcess,
 } from "./ClaudeAdapter.ts";
 import { claudeIsolatedHomePath } from "../claudeEnvironment.ts";
+import {
+  resetUnavailableModelsForTest,
+  unavailableModelsFor,
+} from "../providerModelAvailability.ts";
 
 vi.mock("effect", async (importOriginal) => {
   const actual = await importOriginal<typeof import("effect")>();
@@ -6175,6 +6179,131 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
     });
   }
+
+  describe("model the account cannot use", () => {
+    const emitTurnResult = (
+      query: FakeClaudeQuery,
+      id: string,
+      outcome: { readonly error?: "model_not_found" | "rate_limit"; readonly text: string },
+    ) => {
+      query.emit({
+        type: "assistant",
+        ...(outcome.error ? { error: outcome.error } : {}),
+        session_id: "sdk-session-model-availability",
+        uuid: `assistant-${id}`,
+        parent_tool_use_id: null,
+        message: { id: `assistant-message-${id}`, content: [{ type: "text", text: outcome.text }] },
+      } as unknown as SDKMessage);
+      // The SDK follows a structured assistant error with a nominal success result.
+      query.emit({
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        errors: [],
+        session_id: "sdk-session-model-availability",
+        uuid: `result-${id}`,
+      } as unknown as SDKMessage);
+    };
+
+    const runTurn = (
+      adapter: ClaudeAdapterShape,
+      query: FakeClaudeQuery,
+      id: string,
+      outcome: Parameters<typeof emitTurnResult>[2],
+      model?: string,
+    ) =>
+      Effect.gen(function* () {
+        const completed = yield* Stream.filter(
+          adapter.streamEvents,
+          (event) => event.type === "turn.completed",
+        ).pipe(Stream.runHead, Effect.forkChild);
+        yield* adapter.sendTurn({
+          threadId: THREAD_ID,
+          input: "hi",
+          attachments: [],
+          ...(model ? { modelSelection: { provider: "claudeAgent", model } } : {}),
+        });
+        emitTurnResult(query, id, outcome);
+        const event = yield* Fiber.join(completed);
+        return event._tag === "Some" && event.value.type === "turn.completed"
+          ? event.value.payload.state
+          : undefined;
+      });
+
+    const refusal = {
+      error: "model_not_found",
+      text: "There's an issue with the selected model (claude-fable-5-1). It may not exist or you may not have access to it.",
+    } as const;
+
+    beforeEach(() => resetUnavailableModelsForTest());
+    afterEach(() => resetUnavailableModelsForTest());
+
+    it.effect("records the refused model on its account and clears it after a success", () => {
+      const harness = makeHarness();
+      return Effect.gen(function* () {
+        const adapter = yield* ClaudeAdapter;
+        yield* adapter.startSession({
+          threadId: THREAD_ID,
+          provider: "claudeAgent",
+          runtimeMode: "full-access",
+          providerInstanceId: "claude_work",
+          modelSelection: { provider: "claudeAgent", model: "claude-fable-5-1" },
+        });
+
+        assert.equal(yield* runTurn(adapter, harness.query, "refused", refusal), "failed");
+        assert.deepEqual(
+          unavailableModelsFor("claude_work").map(({ model, reason }) => ({ model, reason })),
+          [
+            {
+              model: "claude-fable-5-1",
+              reason: "The selected Claude model is unavailable for this account.",
+            },
+          ],
+        );
+        assert.deepEqual(unavailableModelsFor("claudeAgent"), []);
+
+        // Another model succeeding says nothing about the refused one.
+        assert.equal(
+          yield* runTurn(adapter, harness.query, "other", { text: "ok" }, "claude-sonnet-4-6"),
+          "completed",
+        );
+        assert.equal(unavailableModelsFor("claude_work").length, 1);
+
+        assert.equal(
+          yield* runTurn(adapter, harness.query, "back", { text: "ok" }, "claude-fable-5-1"),
+          "completed",
+        );
+        assert.deepEqual(unavailableModelsFor("claude_work"), []);
+      }).pipe(
+        Effect.provideService(Random.Random, makeDeterministicRandomService()),
+        Effect.provide(harness.layer),
+      );
+    });
+
+    it.effect("records nothing for a failure that is not about the model", () => {
+      const harness = makeHarness();
+      return Effect.gen(function* () {
+        const adapter = yield* ClaudeAdapter;
+        yield* adapter.startSession({
+          threadId: THREAD_ID,
+          provider: "claudeAgent",
+          runtimeMode: "full-access",
+          modelSelection: { provider: "claudeAgent", model: "claude-fable-5-1" },
+        });
+        assert.equal(
+          yield* runTurn(adapter, harness.query, "limited", {
+            error: "rate_limit",
+            text: "Rate limited",
+          }),
+          "failed",
+        );
+        assert.deepEqual(unavailableModelsFor("claudeAgent"), []);
+      }).pipe(
+        Effect.provideService(Random.Random, makeDeterministicRandomService()),
+        Effect.provide(harness.layer),
+      );
+    });
+  });
 
   it.effect("suppresses Claude ede_diagnostic text emitted during a user interrupt", () => {
     const harness = makeHarness();
