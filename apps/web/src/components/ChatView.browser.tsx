@@ -1360,6 +1360,12 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
       pr: null,
     };
   }
+  // The fork serves the branch PR on its own RPC (bc54a5966); an unanswered lookup
+  // fails and retries with backoff, holding up every git refresh that awaits it.
+  if (tag === WS_METHODS.gitBranchPullRequest) {
+    const cwd = typeof body.cwd === "string" ? body.cwd : null;
+    return { branch: cwd ? (fixture.gitBranchByCwd[cwd] ?? "main") : "main", pr: null };
+  }
   if (tag === WS_METHODS.gitCreateWorktree) {
     const requestedBranch =
       typeof body.newBranch === "string"
