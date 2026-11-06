@@ -165,6 +165,7 @@ describe("a model the account refused", () => {
       const reasonEnd = Math.round(reason!.getBoundingClientRect().right);
       const starStart = Math.round(star!.getBoundingClientRect().left);
       expect({ reasonEnd, starStart, fits: reasonEnd <= starStart }).toMatchObject({ fits: true });
+      expect(row.parentElement?.getAttribute("title")).toBe("你的账号用不了");
     } finally {
       await screen.unmount();
     }

@@ -135,7 +135,8 @@ export function ComposerModelPickerRow(props: {
 
   if (row.selectableModel === null) {
     return (
-      <div className="relative">
+      // A narrow panel truncates the reason; hovering the row shows all of it.
+      <div className="relative" title={row.detail ?? undefined}>
         <MenuItem disabled className="pe-1" closeOnClick={false}>
           {rowContent}
         </MenuItem>
