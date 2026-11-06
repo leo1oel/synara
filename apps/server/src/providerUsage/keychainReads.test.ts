@@ -1,7 +1,8 @@
 // FILE: providerUsage/keychainReads.test.ts
 // Purpose: Covers the Keychain read memory policy: granted secrets are reused, refusals are
-// remembered until an explicit refresh or a credential-file change, absent items are re-checked
-// after a short TTL, and a re-read for a rejected token runs once per secret or explicit refresh.
+// remembered until an explicit refresh, absent items are re-checked after a short TTL or a
+// credential-file change, and a re-read for a rejected token runs once per secret or explicit
+// refresh, never twice within one usage refresh.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -65,16 +66,33 @@ describe("readKeychainItemOnce", () => {
     expect(read).toHaveBeenCalledTimes(2);
   });
 
-  it("retries a remembered failure when the credential file changes", async () => {
-    const read = reader({ kind: "failed" }, { kind: "granted", value: "a" });
+  it.each([["denied" as const], ["failed" as const]])(
+    "keeps a %s read when the credential file changes, until an explicit refresh",
+    async (kind) => {
+      const read = reader({ kind }, { kind: "granted", value: "a" });
+      await readKeychainItemOnce(ITEM, read, { generation: "token-1" });
+      // CLIs rewrite their credential file on every routine token refresh.
+      expect(await readKeychainItemOnce(ITEM, read, { generation: "token-2" })).toEqual({ kind });
+      expect(await readKeychainItemOnce(ITEM, read, { generation: "token-3" })).toEqual({ kind });
+      expect(read).toHaveBeenCalledTimes(1);
+      forgetUnavailableKeychainReads();
+      expect(await readKeychainItemOnce(ITEM, read, { generation: "token-3" })).toEqual({
+        kind: "granted",
+        value: "a",
+      });
+      await readKeychainItemOnce(ITEM, read, { generation: "token-4" });
+      expect(read).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it("re-checks an absent item when the credential file changes", async () => {
+    const read = reader({ kind: "missing" }, { kind: "granted", value: "a" });
     await readKeychainItemOnce(ITEM, read, { generation: "login-1" });
     await readKeychainItemOnce(ITEM, read, { generation: "login-1" });
     expect(await readKeychainItemOnce(ITEM, read, { generation: "login-2" })).toEqual({
       kind: "granted",
       value: "a",
     });
-    // A granted secret survives later file rewrites (token refreshes).
-    await readKeychainItemOnce(ITEM, read, { generation: "login-3" });
     expect(read).toHaveBeenCalledTimes(2);
   });
 
@@ -100,6 +118,28 @@ describe("readKeychainItemOnce", () => {
     });
     await readKeychainItemOnce(ITEM, read, { reread: true });
     await readKeychainItemOnce(ITEM, read, { reread: true });
+    expect(read).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not re-read a secret that was read during the same usage refresh", async () => {
+    const read = reader(
+      { kind: "granted", value: "old" },
+      { kind: "granted", value: "new" },
+      { kind: "granted", value: "newer" },
+    );
+    const firstRefresh = {};
+    await readKeychainItemOnce(ITEM, read, { refresh: firstRefresh });
+    expect(await readKeychainItemOnce(ITEM, read, { reread: true, refresh: firstRefresh })).toEqual(
+      { kind: "granted", value: "old" },
+    );
+    expect(read).toHaveBeenCalledTimes(1);
+
+    const secondRefresh = {};
+    expect(
+      await readKeychainItemOnce(ITEM, read, { reread: true, refresh: secondRefresh }),
+    ).toEqual({ kind: "granted", value: "new" });
+    // The secret the re-read just returned is current for the rest of that refresh.
+    await readKeychainItemOnce(ITEM, read, { reread: true, refresh: secondRefresh });
     expect(read).toHaveBeenCalledTimes(2);
   });
 

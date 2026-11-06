@@ -141,7 +141,7 @@ export async function resolveDroidLocalCredential(
       const contents = await readCredentialFile(path);
       if (!contents) return { credential: null, localLoginPresent: true };
       const source = layout.source;
-      // A rewritten credential file is a new login: a remembered Keychain refusal is retried.
+      // A rewritten credential file may be a new login: a remembered absent key is re-checked.
       const generation = credentialFingerprint(contents);
       const readKey = async (reread: boolean): Promise<Buffer | null> => {
         if (source === "keyfile") {
@@ -149,7 +149,7 @@ export async function resolveDroidLocalCredential(
           return text ? decodeEncryptionKey(text) : null;
         }
         if (options.readSecureKey) return options.readSecureKey(factoryHome, source);
-        const text = await readDroidSecureKey(ctx, source, { generation, reread });
+        const text = await readDroidSecureKey(ctx, source, { generation, reread, refresh: ctx });
         return text ? decodeEncryptionKey(text) : null;
       };
       const decrypt = (key: Buffer | null): DroidCredential | null => {

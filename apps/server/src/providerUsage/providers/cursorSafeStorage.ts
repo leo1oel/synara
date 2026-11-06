@@ -41,7 +41,7 @@ export function isCursorSafeStorageValue(value: string): boolean {
 /**
  * Read the "Cursor Safe Storage" generic-password key from the macOS login keychain.
  * Bounded like readDroidSecureKey: fixed executable, clean environment, no shell. Remembered
- * per process so usage refreshes prompt at most once; a changed sealed cell is a new login.
+ * per process so usage refreshes prompt at most once.
  */
 async function readCursorSafeStorageKey(
   ctx: Pick<ProviderUsageContext, "platform" | "homeDir" | "env">,
@@ -76,7 +76,7 @@ async function readCursorSafeStorageKey(
         );
         child.stdin?.end();
       }),
-    { generation: credentialFingerprint(stored), reread },
+    { generation: credentialFingerprint(stored), reread, refresh: ctx },
   );
   return outcome.kind === "granted" ? outcome.value : null;
 }

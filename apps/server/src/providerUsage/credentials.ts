@@ -190,6 +190,8 @@ export function readKeychainSecret(input: {
   platform: NodeJS.Platform;
   /** The token from the last granted read expired or was rejected; re-read it once. */
   reread?: boolean;
+  /** The usage refresh (context object) this read belongs to; see keychainReads.ts. */
+  refresh?: object;
 }): Promise<KeychainReadOutcome> {
   if (input.platform !== "darwin") {
     return Promise.resolve({ kind: "missing" });
@@ -209,7 +211,7 @@ export function readKeychainSecret(input: {
           (error, stdout) => resolve(classifySecurityResult(error, stdout)),
         );
       }),
-    { reread: input.reread },
+    { reread: input.reread, refresh: input.refresh },
   );
 }
 
@@ -219,6 +221,7 @@ export async function readKeychainPassword(input: {
   account?: string;
   platform: NodeJS.Platform;
   reread?: boolean;
+  refresh?: object;
 }): Promise<string | null> {
   const outcome = await readKeychainSecret(input);
   return outcome.kind === "granted" ? outcome.value : null;

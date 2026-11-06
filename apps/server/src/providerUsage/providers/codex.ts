@@ -137,6 +137,7 @@ async function reloadCodexAuth(
               service: KEYCHAIN_SERVICE,
               platform: ctx.platform,
               reread: true,
+              refresh: ctx,
             })) ?? "",
           ),
         );
@@ -162,6 +163,7 @@ async function resolveCodexAuth(ctx: ProviderUsageContext): Promise<CodexAuth | 
     : await readKeychainPassword({
         service: KEYCHAIN_SERVICE,
         platform: ctx.platform,
+        refresh: ctx,
       });
   if (keychain) {
     const parsed = readCodexAuthRecord(asRecord(decodeKeychainJson(keychain)), {

@@ -4,8 +4,8 @@
 // SecurityAgent prompt, and "Allow" covers that one read only, so usage refreshes must not
 // re-read on every poll. Granted secrets are reused for a long TTL (or until the caller reports
 // the token they carried as expired or rejected, once per secret or explicit refresh); denied and
-// failed reads are remembered until the user explicitly refreshes usage or the caller's
-// credential file changes. Concurrent callers share one in-flight read.
+// failed reads are remembered until the user explicitly refreshes usage. Concurrent callers share
+// one in-flight read.
 
 export type KeychainReadOutcome =
   | { readonly kind: "granted"; readonly value: string }
@@ -22,8 +22,9 @@ export interface KeychainItem {
 
 export interface KeychainReadOptions {
   /**
-   * Fingerprint of the credential file this item unlocks. A change is a re-login, so a
-   * remembered denial, failure or absence is read again; a granted secret is kept.
+   * Fingerprint of the credential file this item unlocks. A change may be a new sign-in, so a
+   * remembered absence is checked again (that never prompts). Denials and failures are kept:
+   * CLIs rewrite these files on routine token refreshes.
    */
   readonly generation?: string | undefined;
   /**
@@ -31,6 +32,11 @@ export interface KeychainReadOptions {
    * the Keychain still returns the same secret, further re-read requests reuse it.
    */
   readonly reread?: boolean | undefined;
+  /**
+   * The usage refresh this read belongs to (its context object). A secret that `security`
+   * already returned during the same refresh satisfies a re-read request without a prompt.
+   */
+  readonly refresh?: object | undefined;
 }
 
 // `security` waits while its SecurityAgent prompt is open. Killing it earlier leaves a prompt
@@ -48,6 +54,7 @@ interface RememberedRead {
   readonly generation: string | undefined;
   /** A re-read returned this same secret; another re-read request cannot change it. */
   readonly rereadConfirmed: boolean;
+  readonly refresh: object | undefined;
 }
 
 const rememberedReads = new Map<string, RememberedRead>();
@@ -84,12 +91,17 @@ function canReuse(
   const ageMs = nowMs - remembered.readAtMs;
   switch (remembered.outcome.kind) {
     case "granted":
-      return ageMs < GRANTED_TTL_MS && !(options.reread && !remembered.rereadConfirmed);
+      return (
+        ageMs < GRANTED_TTL_MS &&
+        (!options.reread ||
+          remembered.rereadConfirmed ||
+          (options.refresh !== undefined && remembered.refresh === options.refresh))
+      );
     case "missing":
       return ageMs < MISSING_TTL_MS && remembered.generation === options.generation;
     case "denied":
     case "failed":
-      return remembered.generation === options.generation;
+      return true;
   }
 }
 
@@ -118,6 +130,7 @@ export function readKeychainItemOnce(
         readAtMs: Date.now(),
         generation: options.generation,
         rereadConfirmed: outcome.kind === "granted" && outcome.value === previousSecret,
+        refresh: options.refresh,
       });
       return outcome;
     })

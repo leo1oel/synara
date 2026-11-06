@@ -250,7 +250,7 @@ describe("keychain prompts across usage refreshes", () => {
     expect(callsFor(FACTORY_SERVICE)).toBe(2);
   });
 
-  it("retries a refused Factory key once after a re-login rewrites its credential file", async () => {
+  it("keeps a refused Factory key when droid rewrites its credential file", async () => {
     const homeDir = makeHome();
     writeFactoryLogin(homeDir, randomBytes(32), jwtExpiring(NOW_MS + 24 * 60 * MINUTE_MS));
     fakeSecurity.items.set(itemKey(FACTORY_SERVICE, FACTORY_ACCOUNT), () => ({ kind: "denied" }));
@@ -258,9 +258,57 @@ describe("keychain prompts across usage refreshes", () => {
     await pollRounds(homeDir, 5);
     expect(callsFor(FACTORY_SERVICE)).toBe(1);
 
+    // A routine token refresh re-encrypts auth.v2.loginkeychain; it is not a reason to prompt.
     writeFactoryLogin(homeDir, randomBytes(32), jwtExpiring(NOW_MS + 48 * 60 * MINUTE_MS));
     await pollRounds(homeDir, 5);
+    expect(callsFor(FACTORY_SERVICE)).toBe(1);
+
+    await refresh(homeDir, NOW_MS + 70 * MINUTE_MS, true);
+    await pollRounds(homeDir, 3);
     expect(callsFor(FACTORY_SERVICE)).toBe(2);
+  });
+
+  it("prompts once per usage refresh for a Factory key that no longer opens the file", async () => {
+    const homeDir = makeHome();
+    writeFactoryLogin(homeDir, randomBytes(32), jwtExpiring(NOW_MS + 24 * 60 * MINUTE_MS));
+    const staleKey = randomBytes(32).toString("base64");
+    fakeSecurity.items.set(itemKey(FACTORY_SERVICE, FACTORY_ACCOUNT), () => ({
+      kind: "granted",
+      value: staleKey,
+    }));
+
+    await refresh(homeDir, NOW_MS);
+    expect(callsFor(FACTORY_SERVICE)).toBe(1);
+
+    // A later refresh re-reads the remembered key once; the Keychain still holds it.
+    await pollRounds(homeDir, 5);
+    expect(callsFor(FACTORY_SERVICE)).toBe(2);
+  });
+
+  it("re-reads a legacy Cursor Keychain token once after it expires", async () => {
+    const homeDir = makeHome();
+    let token = jwtExpiring(NOW_MS - MINUTE_MS);
+    fakeSecurity.items.set(itemKey("cursor-access-token", null), () => ({
+      kind: "granted",
+      value: token,
+    }));
+    const refreshCursor = (nowMs: number) =>
+      collectProviderUsageSnapshots(
+        { homeDir, env: { USER: "tester", HOME: homeDir }, platform: "darwin", nowMs },
+        { providers: ["cursor"] },
+      );
+
+    const [expired] = await refreshCursor(NOW_MS);
+    expect(expired?.status).toBe("needs-auth");
+    expect(callsFor("cursor-access-token")).toBe(1);
+
+    token = jwtExpiring(NOW_MS + 24 * 60 * MINUTE_MS);
+    let snapshots: Awaited<ReturnType<typeof refreshCursor>> = [];
+    for (let round = 1; round <= 5; round += 1) {
+      snapshots = await refreshCursor(NOW_MS + round * 6 * MINUTE_MS);
+    }
+    expect(snapshots[0]?.status).toBe("ok");
+    expect(callsFor("cursor-access-token")).toBe(2);
   });
 
   it("re-reads the Claude item once after the CLI refreshes an expired token", async () => {

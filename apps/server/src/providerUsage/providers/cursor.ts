@@ -37,6 +37,7 @@ const PLAN_KEY = "cursorAuth/stripeMembershipType";
 interface CursorAuth {
   accessToken: string;
   plan?: string;
+  fromKeychain?: true;
 }
 
 export function cursorStateDbPaths(
@@ -69,16 +70,42 @@ async function readCursorStoredAuth(ctx: ProviderUsageContext): Promise<CursorAu
 }
 
 // A sealed or absent cell must not shadow the legacy credential; isolated accounts never use it.
-async function readCursorKeychainAuth(ctx: ProviderUsageContext): Promise<CursorAuth | null> {
+async function readCursorKeychainAuth(
+  ctx: ProviderUsageContext,
+  reread = false,
+): Promise<CursorAuth | null> {
   if (ctx.isolateCredentials) {
     return null;
   }
   const keychain = await readKeychainPassword({
     service: KEYCHAIN_SERVICE,
     platform: ctx.platform,
+    reread,
+    refresh: ctx,
   });
   const token = keychain ? asString(keychain) : undefined;
-  return token ? { accessToken: token } : null;
+  return token ? { accessToken: token, fromKeychain: true } : null;
+}
+
+function isCursorTokenExpired(accessToken: string, nowMs: number): boolean {
+  const expMs = decodeJwtExpMs(accessToken);
+  return expMs !== null && expMs <= nowMs;
+}
+
+// The legacy Keychain token expired or was rejected: re-read the item once for a newer token.
+async function rereadCursorKeychainAuth(
+  ctx: ProviderUsageContext,
+  stale: CursorAuth,
+): Promise<CursorAuth | null> {
+  if (!stale.fromKeychain) {
+    return null;
+  }
+  const next = await readCursorKeychainAuth(ctx, true);
+  return next &&
+    next.accessToken !== stale.accessToken &&
+    !isCursorTokenExpired(next.accessToken, ctx.nowMs)
+    ? next
+    : null;
 }
 
 function cursorHeaders(accessToken: string): Record<string, string> {
@@ -168,23 +195,31 @@ export const cursorUsageFetcher: ProviderUsageFetcher = {
       const unsealed = await unsealCursorSafeStorageValue(ctx, auth.accessToken);
       auth = unsealed ? { ...auth, accessToken: unsealed } : await readCursorKeychainAuth(ctx);
     }
-    if (!auth) {
-      return needsAuthSnapshot("cursor", ctx.nowMs, SOURCE);
+    if (auth && isCursorTokenExpired(auth.accessToken, ctx.nowMs)) {
+      auth = await rereadCursorKeychainAuth(ctx, auth);
     }
-    const expMs = decodeJwtExpMs(auth.accessToken);
-    if (expMs !== null && expMs <= ctx.nowMs) {
+    if (!auth) {
       return needsAuthSnapshot("cursor", ctx.nowMs, SOURCE);
     }
 
     try {
-      const usageResult = await fetchJson({
-        service: "provider-usage-cursor",
-        url: USAGE_URL,
-        allowedOrigins: [new URL(USAGE_URL).origin],
-        method: "POST",
-        headers: cursorHeaders(auth.accessToken),
-        body: {},
-      });
+      const requestUsage = (accessToken: string) =>
+        fetchJson({
+          service: "provider-usage-cursor",
+          url: USAGE_URL,
+          allowedOrigins: [new URL(USAGE_URL).origin],
+          method: "POST",
+          headers: cursorHeaders(accessToken),
+          body: {},
+        });
+      let usageResult = await requestUsage(auth.accessToken);
+      if (isAuthFailureStatus(usageResult.status)) {
+        const reread = await rereadCursorKeychainAuth(ctx, auth);
+        if (reread) {
+          auth = reread;
+          usageResult = await requestUsage(auth.accessToken);
+        }
+      }
       if (isAuthFailureStatus(usageResult.status)) {
         return needsAuthSnapshot("cursor", ctx.nowMs, SOURCE);
       }
