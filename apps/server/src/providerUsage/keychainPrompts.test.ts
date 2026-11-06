@@ -268,21 +268,26 @@ describe("keychain prompts across usage refreshes", () => {
     expect(callsFor(FACTORY_SERVICE)).toBe(2);
   });
 
-  it("prompts once per usage refresh for a Factory key that no longer opens the file", async () => {
+  it("prompts once for a Factory key that does not open an unchanged credential file", async () => {
     const homeDir = makeHome();
     writeFactoryLogin(homeDir, randomBytes(32), jwtExpiring(NOW_MS + 24 * 60 * MINUTE_MS));
-    const staleKey = randomBytes(32).toString("base64");
+    let storedKey = randomBytes(32);
     fakeSecurity.items.set(itemKey(FACTORY_SERVICE, FACTORY_ACCOUNT), () => ({
       kind: "granted",
-      value: staleKey,
+      value: storedKey.toString("base64"),
     }));
 
-    await refresh(homeDir, NOW_MS);
+    await pollRounds(homeDir, 5);
+    await refresh(homeDir, NOW_MS + 70 * MINUTE_MS, true);
     expect(callsFor(FACTORY_SERVICE)).toBe(1);
 
-    // A later refresh re-reads the remembered key once; the Keychain still holds it.
-    await pollRounds(homeDir, 5);
+    // A re-login writes a new key and re-encrypts the file with it: re-read the key once.
+    storedKey = randomBytes(32);
+    writeFactoryLogin(homeDir, storedKey, jwtExpiring(NOW_MS + 48 * 60 * MINUTE_MS));
+    const snapshots = await refresh(homeDir, NOW_MS + 80 * MINUTE_MS);
+    await pollRounds(homeDir, 3);
     expect(callsFor(FACTORY_SERVICE)).toBe(2);
+    expect(snapshots.find((snapshot) => snapshot.provider === "droid")?.status).toBe("ok");
   });
 
   it("re-reads a legacy Cursor Keychain token once after it expires", async () => {

@@ -24,7 +24,8 @@ export interface KeychainReadOptions {
   /**
    * Fingerprint of the credential file this item unlocks. A change may be a new sign-in, so a
    * remembered absence is checked again (that never prompts). Denials and failures are kept:
-   * CLIs rewrite these files on routine token refreshes.
+   * CLIs rewrite these files on routine token refreshes. A re-read request reuses a secret
+   * already read against this same file.
    */
   readonly generation?: string | undefined;
   /**
@@ -95,6 +96,7 @@ function canReuse(
         ageMs < GRANTED_TTL_MS &&
         (!options.reread ||
           remembered.rereadConfirmed ||
+          (options.generation !== undefined && remembered.generation === options.generation) ||
           (options.refresh !== undefined && remembered.refresh === options.refresh))
       );
     case "missing":

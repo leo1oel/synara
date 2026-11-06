@@ -121,6 +121,24 @@ describe("readKeychainItemOnce", () => {
     expect(read).toHaveBeenCalledTimes(2);
   });
 
+  it("re-reads a secret for a rejected token only once the credential file changes", async () => {
+    const read = reader({ kind: "granted", value: "old" }, { kind: "granted", value: "new" });
+    await readKeychainItemOnce(ITEM, read, { generation: "file-1" });
+    await readKeychainItemOnce(ITEM, read, { generation: "file-1", reread: true });
+    forgetUnavailableKeychainReads();
+    expect(await readKeychainItemOnce(ITEM, read, { generation: "file-1", reread: true })).toEqual({
+      kind: "granted",
+      value: "old",
+    });
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(await readKeychainItemOnce(ITEM, read, { generation: "file-2", reread: true })).toEqual({
+      kind: "granted",
+      value: "new",
+    });
+    await readKeychainItemOnce(ITEM, read, { generation: "file-2", reread: true });
+    expect(read).toHaveBeenCalledTimes(2);
+  });
+
   it("does not re-read a secret that was read during the same usage refresh", async () => {
     const read = reader(
       { kind: "granted", value: "old" },
