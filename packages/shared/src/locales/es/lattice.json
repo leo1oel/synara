@@ -384,6 +384,7 @@
   "message": ", ",
   "messageDeliveryCouldNotBeCheckedReconnect": "Message delivery could not be checked. Reconnect and check the conversation before sending again.",
   "messageTrailItem": "Message {{ordinal}}: {{preview}}",
+  "modelNotAvailableToAccount": "No disponible para tu cuenta",
   "modelTraitThinking": "Thinking",
   "modified": "Modified",
   "moreGitActions": "More Git actions",

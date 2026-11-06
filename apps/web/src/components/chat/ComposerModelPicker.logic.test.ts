@@ -231,3 +231,75 @@ describe("composerModelDisplayName", () => {
     expect(composerModelDisplayName("opencode", "GPT-5")).toBe("GPT-5");
   });
 });
+
+describe("models an account refused", () => {
+  const label = (model: string) => (model === "claude-fable-5-1" ? "Not available" : null);
+  const options = [
+    { slug: "claude-fable-5-1", name: "Claude Fable 5.1" },
+    { slug: "claude-sonnet-5", name: "Claude Sonnet 5" },
+  ];
+
+  it("lists a refused model as an unselectable row that says why", () => {
+    const rows = buildProviderTabRows({
+      provider: "claudeAgent",
+      options,
+      query: "",
+      selectedModel: "claude-fable-5-1",
+      unavailableModelLabelFor: label,
+    });
+    expect(
+      rows.map(({ model, selectableModel, detail, selected }) => ({
+        model,
+        selectableModel,
+        detail,
+        selected,
+      })),
+    ).toEqual([
+      {
+        model: "claude-fable-5-1",
+        selectableModel: null,
+        detail: "Not available",
+        selected: false,
+      },
+      {
+        model: "claude-sonnet-5",
+        selectableModel: "claude-sonnet-5",
+        detail: null,
+        selected: false,
+      },
+    ]);
+  });
+
+  it("greys a starred preset of a refused model on that account", () => {
+    const [row] = buildStarredTabRows({
+      starredModels: [
+        {
+          provider: "claudeAgent",
+          model: "claude-fable-5-1",
+          effort: null,
+          fastMode: null,
+          thinking: null,
+        },
+      ],
+      modelOptionsFor: () => options,
+      query: "",
+      current: {
+        provider: "claudeAgent",
+        instanceId: "claudeAgent",
+        model: "claude-fable-5-1",
+        effort: null,
+        fastMode: null,
+        thinking: null,
+      },
+      effortLevelsFor: () => [],
+      unavailableModelLabelFor: (_provider, instanceId, model) =>
+        instanceId === "claudeAgent" ? label(model) : null,
+    });
+    expect(row).toMatchObject({
+      name: "Claude Fable 5.1",
+      selectableModel: null,
+      detail: "Not available",
+      selected: false,
+    });
+  });
+});

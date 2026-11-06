@@ -175,6 +175,7 @@ import { useHandleNewChat } from "../hooks/useHandleNewChat";
 import { useHandleNewThread } from "../hooks/useHandleNewThread";
 import { useLatticeComposerPrompt } from "./chat/useLatticeComposerPrompt";
 import { useLatticeTurnActivity } from "./chat/useLatticeTurnActivity";
+import { useUnavailableModelFallback } from "./chat/useUnavailableModelFallback";
 import { useTheme } from "../hooks/useTheme";
 import { useThreadHandoff } from "../hooks/useThreadHandoff";
 import { useThreadUnblock } from "../hooks/useThreadUnblock";
@@ -4186,8 +4187,10 @@ export default function ChatView({
       selectionOptions?: ComposerModelSelectionOptions,
     ) => {
       if (!activeThread) return;
+      const keepFocus = selectionOptions?.focusComposer === false;
+      const refocusComposer = keepFocus ? () => undefined : scheduleComposerFocus;
       if (lockedProvider !== null && provider !== lockedProvider) {
-        scheduleComposerFocus();
+        refocusComposer();
         return;
       }
       const resolvedInstanceId =
@@ -4203,7 +4206,7 @@ export default function ChatView({
             selectedProviderInstanceId)
           : undefined;
       if (lockedInstanceId && resolvedInstanceId !== lockedInstanceId) {
-        scheduleComposerFocus();
+        refocusComposer();
         return;
       }
       const resolvedModel = resolveCommittedProviderModel({
@@ -4262,10 +4265,10 @@ export default function ChatView({
         },
       });
       if (!didCommitSelection) {
-        scheduleComposerFocus();
+        refocusComposer();
         return;
       }
-      scheduleComposerFocus();
+      refocusComposer();
     },
     [
       activeThread,
@@ -4296,6 +4299,21 @@ export default function ChatView({
     },
     [onProviderModelSelect, selectedModelForPickerWithCustomFallback, selectedProvider],
   );
+  // A turn that failed with "model not available to this account" greys that model
+  // in the picker; move the composer to the provider's default before the next send.
+  useUnavailableModelFallback({
+    enabled: activeThread !== undefined,
+    provider: selectedProvider,
+    instanceId: selectedProviderInstanceId,
+    model: selectedModelForPickerWithCustomFallback,
+    statuses: providerStatuses,
+    options:
+      modelOptionsByProviderInstance[selectedProviderInstanceId] ??
+      modelOptionsByProvider[selectedProvider],
+    select: (provider, model, instanceId) => {
+      void onProviderModelSelect(provider, model, { instanceId, focusComposer: false });
+    },
+  });
   const openProviderAccountSettings = useCallback(() => {
     void navigate({
       to: "/settings",

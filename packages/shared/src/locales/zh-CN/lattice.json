@@ -384,6 +384,7 @@
   "message": "，",
   "messageDeliveryCouldNotBeCheckedReconnect": "无法确认消息是否已送达。请重新连接并检查对话，然后再发送。",
   "messageTrailItem": "第 {{ordinal}} 条消息：{{preview}}",
+  "modelNotAvailableToAccount": "你的账号用不了",
   "modelTraitThinking": "思考",
   "modified": "已修改",
   "moreGitActions": "更多 Git 操作",

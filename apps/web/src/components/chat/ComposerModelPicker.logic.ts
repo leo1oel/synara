@@ -166,6 +166,8 @@ export function buildProviderTabRows(input: {
   options: ReadonlyArray<ProviderModelOption>;
   query: string;
   selectedModel: string | null;
+  /** Label for a model the account refused at run time; null keeps the row usable. */
+  unavailableModelLabelFor?: (model: string) => string | null;
 }): ComposerModelPickerRow[] {
   const { provider, query } = input;
   const filteredOptions =
@@ -179,23 +181,27 @@ export function buildProviderTabRows(input: {
         )
       : input.options;
   return groupProviderModelOptions(filteredOptions).flatMap((group) =>
-    group.options.map((option) => ({
-      key: `${input.instanceId ?? provider}:${option.slug}`,
-      provider,
-      ...(input.instanceId && input.instanceId !== provider
-        ? { instanceId: input.instanceId }
-        : {}),
-      model: option.slug,
-      selectableModel:
-        provider === "omp" && getOmpModelSelectionIssue(option.slug, input.options)
-          ? null
-          : option.slug,
-      name: option.name,
-      detail: null,
-      selected: option.slug === input.selectedModel,
-      groupLabel: group.label,
-      preset: null,
-    })),
+    group.options.map((option) => {
+      const unavailableLabel = input.unavailableModelLabelFor?.(option.slug) ?? null;
+      return {
+        key: `${input.instanceId ?? provider}:${option.slug}`,
+        provider,
+        ...(input.instanceId && input.instanceId !== provider
+          ? { instanceId: input.instanceId }
+          : {}),
+        model: option.slug,
+        selectableModel:
+          unavailableLabel !== null ||
+          (provider === "omp" && getOmpModelSelectionIssue(option.slug, input.options))
+            ? null
+            : option.slug,
+        name: option.name,
+        detail: unavailableLabel,
+        selected: unavailableLabel === null && option.slug === input.selectedModel,
+        groupLabel: group.label,
+        preset: null,
+      };
+    }),
   );
 }
 
@@ -219,18 +225,29 @@ export function buildStarredTabRows(input: {
   ) => ComposerTraitSelection["effortLevels"];
   /** Translates the fixed English words of a row's detail (traits, "Unavailable"). */
   localizeLabel?: (label: string) => string;
+  /** Label for a model its account refused at run time; null keeps the row usable. */
+  unavailableModelLabelFor?: (
+    provider: ProviderKind,
+    instanceId: string,
+    model: string,
+  ) => string | null;
 }): ComposerModelPickerRow[] {
   const localizeLabel = input.localizeLabel ?? ((label: string) => label);
   return input.starredModels.flatMap((entry) => {
     const instanceId = starredModelInstanceId(entry);
     const options = input.modelOptionsFor(entry.provider, instanceId);
     const accountLabel = input.accountLabelFor?.(instanceId);
-    const selectableModel =
+    const catalogModel =
       entry.provider === "omp" && getOmpModelSelectionIssue(entry.model, options)
         ? null
         : resolveSelectableModel(entry.provider, entry.model, options);
+    const refusedLabel =
+      catalogModel === null
+        ? null
+        : (input.unavailableModelLabelFor?.(entry.provider, instanceId, catalogModel) ?? null);
+    const selectableModel = refusedLabel === null ? catalogModel : null;
     const name =
-      options.find((option) => option.slug === selectableModel)?.name ??
+      options.find((option) => option.slug === catalogModel)?.name ??
       formatProviderModelOptionName({ provider: entry.provider, slug: entry.model });
     if (
       input.query.length > 0 &&
@@ -254,9 +271,10 @@ export function buildStarredTabRows(input: {
         selectableModel,
         name,
         detail:
-          selectableModel === null
+          refusedLabel ??
+          (selectableModel === null
             ? localizeLabel("Unavailable")
-            : [accountLabel, traitsLabel].filter(Boolean).join(" · ") || null,
+            : [accountLabel, traitsLabel].filter(Boolean).join(" · ") || null),
         selected:
           selectableModel !== null &&
           entry.provider === input.current.provider &&

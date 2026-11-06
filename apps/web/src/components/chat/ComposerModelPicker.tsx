@@ -77,6 +77,7 @@ import {
   showsComposerFastModeBadge,
 } from "./composerTraits";
 import type { FastModeNotice } from "~/lib/fastModeState";
+import { isModelUnavailable } from "~/lib/unavailableModels";
 import { MENU_NAVIGATION_KEYS } from "./PickerPanelShell";
 import {
   PICKER_PANEL_GROUP_LABEL_CLASS_NAME,
@@ -100,6 +101,8 @@ export type ComposerModelSelectionOptions = {
   modelOptions?: ProviderOptions;
   /** Provider instance (account) the model is committed for. */
   instanceId?: ProviderInstanceId;
+  /** False for a commit the user did not make (a refused model's fallback): keep focus. */
+  focusComposer?: boolean;
 };
 
 type ComposerModelPickerProps = {
@@ -403,6 +406,12 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
     return hasSiblingAccounts || !account.isDefault ? account.label : undefined;
   };
 
+  // A model a failed turn showed the account cannot use stays listed, greyed out.
+  const unavailableModelLabelFor = (provider: ProviderKind, instanceId: string, model: string) =>
+    isModelUnavailable(props.providers, provider, instanceId, model)
+      ? t("lattice:modelNotAvailableToAccount")
+      : null;
+
   const rows =
     setupMessage !== null
       ? []
@@ -420,6 +429,7 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
             },
             effortLevelsFor: (provider, model) => traitSelectionFor(provider, model).effortLevels,
             localizeLabel,
+            unavailableModelLabelFor,
           })
         : buildProviderTabRows({
             provider: tabAccount.provider,
@@ -427,6 +437,8 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
             options: modelOptionsFor(tabAccount.provider, tabAccount.instanceId),
             query: normalizedQuery,
             selectedModel: tabAccount.instanceId === activeInstanceId ? props.model : null,
+            unavailableModelLabelFor: (model) =>
+              unavailableModelLabelFor(tabAccount.provider, tabAccount.instanceId, model),
           });
   const starredModelSlots = new Set(starredModels.map(starredModelSlotKey));
 
