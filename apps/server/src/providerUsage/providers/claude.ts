@@ -590,16 +590,23 @@ export const claudeUsageFetcher: ProviderUsageFetcher = {
     }
 
     // At most one CLI nudge per fetch, shared by the proactive (near-expiry) and reactive (401)
-    // paths; the re-read candidate set is memoized so every source retries against it.
-    let nudgedCandidates: ReadonlyArray<ClaudeCreds> | null | undefined;
-    const nudgeOnce = async (): Promise<ReadonlyArray<ClaudeCreds> | null> => {
-      if (nudgedCandidates !== undefined) {
-        return nudgedCandidates;
+    // paths. Only a stale Keychain token re-reads the Keychain; a stale file re-reads files only.
+    let nudged: Promise<boolean> | undefined;
+    const nudgedCandidates = new Map<boolean, ReadonlyArray<ClaudeCreds> | null>();
+    const nudgeOnce = async (
+      trigger: ClaudeCredSource,
+    ): Promise<ReadonlyArray<ClaudeCreds> | null> => {
+      const reread = trigger.kind === "keychain";
+      const memoized = nudgedCandidates.get(reread);
+      if (memoized !== undefined) {
+        return memoized;
       }
-      nudgedCandidates = (await nudgeClaudeCliAuthRefresh(ctx))
-        ? await resolveClaudeCredCandidates(ctx, { reread: true })
+      nudged ??= nudgeClaudeCliAuthRefresh(ctx);
+      const candidates = (await nudged)
+        ? await resolveClaudeCredCandidates(ctx, reread ? { reread } : {})
         : null;
-      return nudgedCandidates;
+      nudgedCandidates.set(reread, candidates);
+      return candidates;
     };
 
     let inferenceOnlySnapshot: ReturnType<typeof buildSnapshot> | null = null;
@@ -622,7 +629,7 @@ export const claudeUsageFetcher: ProviderUsageFetcher = {
 
       let activeCreds = original;
       if (isStaleClaudeCreds(activeCreds, ctx.nowMs)) {
-        const refreshed = await nudgeOnce();
+        const refreshed = await nudgeOnce(original.source);
         const updated = refreshed?.find((creds) => sameCredSource(creds.source, original.source));
         if (updated) {
           activeCreds = updated;
@@ -645,7 +652,7 @@ export const claudeUsageFetcher: ProviderUsageFetcher = {
         if (isAuthFailureStatus(result.status)) {
           // The stored expiry can lag reality (revocation, clock skew). Let the CLI refresh its
           // credential, re-read, and retry once with a genuinely different token.
-          const refreshed = await nudgeOnce();
+          const refreshed = await nudgeOnce(original.source);
           const updated = refreshed?.find((creds) => sameCredSource(creds.source, original.source));
           if (updated && updated.accessToken !== activeCreds.accessToken) {
             activeCreds = updated;

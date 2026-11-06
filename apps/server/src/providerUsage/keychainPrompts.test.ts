@@ -337,6 +337,33 @@ describe("keychain prompts across usage refreshes", () => {
     expect(snapshots.find((snapshot) => snapshot.provider === "claudeAgent")?.status).toBe("ok");
   });
 
+  it("does not re-read a valid Claude Keychain item for a stale credentials file", async () => {
+    const homeDir = makeHome();
+    mkdirSync(nodePath.join(homeDir, ".claude"), { recursive: true });
+    writeFileSync(
+      nodePath.join(homeDir, ".claude", ".credentials.json"),
+      JSON.stringify({
+        claudeAiOauth: {
+          accessToken: "leftover",
+          expiresAt: NOW_MS - MINUTE_MS,
+          scopes: ["user:profile"],
+        },
+      }),
+      "utf8",
+    );
+    fakeSecurity.items.set(itemKey(CLAUDE_SERVICE, "tester"), () => ({
+      kind: "granted",
+      value: claudeKeychainValue("claude-token"),
+    }));
+
+    await pollRounds(homeDir, 5);
+    await refresh(homeDir, NOW_MS + 70 * MINUTE_MS, true);
+    const snapshots = await refresh(homeDir, NOW_MS + 80 * MINUTE_MS, true);
+
+    expect(callsFor(CLAUDE_SERVICE)).toBe(1);
+    expect(snapshots.find((snapshot) => snapshot.provider === "claudeAgent")?.status).toBe("ok");
+  });
+
   it("falls back to the service-only Claude item only when the account item is missing", async () => {
     const homeDir = makeHome();
     fakeSecurity.items.set(itemKey(CLAUDE_SERVICE, null), () => ({
