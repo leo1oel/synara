@@ -1,6 +1,6 @@
 // FILE: providerUsage/credentials.ts
 // Purpose: Credential resolution helpers for the usage fetchers — JSON files (read + atomic
-// write-back for rotated tokens), macOS Keychain reads (via the `security` CLI), OAuth refresh,
+// write-back for rotated tokens), remembered macOS Keychain reads (via the `security` CLI), OAuth refresh,
 // JWT expiry decoding, and hex/JSON keychain payload decoding. Read helpers are defensive and
 // resolve to null/false on failure; the write helper throws so callers can react to a stranded
 // rotation (a rotated refresh token that wasn't persisted invalidates the CLI's login).
@@ -9,13 +9,15 @@ import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import nodePath from "node:path";
-import { promisify } from "node:util";
 
 import { fetchJson } from "./http";
+import {
+  classifySecurityResult,
+  KEYCHAIN_PROMPT_TIMEOUT_MS,
+  type KeychainReadOutcome,
+  readKeychainItemOnce,
+} from "./keychainReads";
 
-const execFileAsync = promisify(execFile);
-
-const KEYCHAIN_TIMEOUT_MS = 5_000;
 const DEFAULT_OAUTH_REFRESH_TIMEOUT_MS = 15_000;
 
 /** Build a short, non-secret identity for cache partitioning without retaining credentials. */
@@ -177,29 +179,49 @@ export async function refreshOAuthAccessToken(input: {
 }
 
 /**
- * Read a generic-password secret from the macOS Keychain. Returns the raw secret string (the
- * caller decodes hex/JSON as needed), or null on any platform other than darwin / on failure.
- * Read-only: we never call `add-generic-password`.
+ * Read a generic-password secret from the macOS Keychain through the process-wide read memory
+ * (see keychainReads.ts): each item prompts at most once, and a denied or failed read is not
+ * retried until the user explicitly refreshes. Resolves `missing` on platforms other than
+ * darwin. Read-only: we never call `add-generic-password`.
  */
-export async function readKeychainPassword(input: {
+export function readKeychainSecret(input: {
   service: string;
   account?: string;
   platform: NodeJS.Platform;
-}): Promise<string | null> {
+  /** The token from the last granted read expired or was rejected; re-read it once. */
+  reread?: boolean;
+}): Promise<KeychainReadOutcome> {
   if (input.platform !== "darwin") {
-    return null;
+    return Promise.resolve({ kind: "missing" });
   }
   const args = ["find-generic-password", "-s", input.service, "-w"];
   if (input.account) {
     args.push("-a", input.account);
   }
-  try {
-    const { stdout } = await execFileAsync("security", args, { timeout: KEYCHAIN_TIMEOUT_MS });
-    const value = stdout.trim();
-    return value.length > 0 ? value : null;
-  } catch {
-    return null;
-  }
+  return readKeychainItemOnce(
+    { service: input.service, account: input.account },
+    () =>
+      new Promise((resolve) => {
+        execFile(
+          "security",
+          args,
+          { timeout: KEYCHAIN_PROMPT_TIMEOUT_MS, encoding: "utf8" },
+          (error, stdout) => resolve(classifySecurityResult(error, stdout)),
+        );
+      }),
+    { reread: input.reread },
+  );
+}
+
+/** Raw secret string (the caller decodes hex/JSON as needed), or null when not granted. */
+export async function readKeychainPassword(input: {
+  service: string;
+  account?: string;
+  platform: NodeJS.Platform;
+  reread?: boolean;
+}): Promise<string | null> {
+  const outcome = await readKeychainSecret(input);
+  return outcome.kind === "granted" ? outcome.value : null;
 }
 
 /**

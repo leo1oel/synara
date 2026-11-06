@@ -29,9 +29,10 @@ import {
   credentialFingerprint,
   decodeKeychainJson,
   readJsonFile,
-  readKeychainPassword,
+  readKeychainSecret,
 } from "../credentials";
 import { fetchJson, isAuthFailureStatus, isRateLimitStatus, parseRetryAfterMs } from "../http";
+import type { KeychainReadOutcome } from "../keychainReads";
 import {
   asFiniteNumber,
   asRecord,
@@ -115,7 +116,11 @@ function readClaudeCreds(
   };
 }
 
-async function resolveClaudeCredCandidates(ctx: ProviderUsageContext): Promise<ClaudeCreds[]> {
+/** `reread`: the CLI just refreshed an expired or rejected token, so re-read the Keychain once. */
+async function resolveClaudeCredCandidates(
+  ctx: ProviderUsageContext,
+  options: { reread?: boolean } = {},
+): Promise<ClaudeCreds[]> {
   const candidates: ClaudeCreds[] = [];
   const paths: string[] = [];
   const secureStorageDir = ctx.env.CLAUDE_SECURESTORAGE_CONFIG_DIR;
@@ -152,22 +157,26 @@ async function resolveClaudeCredCandidates(ctx: ProviderUsageContext): Promise<C
     ? `${KEYCHAIN_SERVICE}-${createHash("sha256").update(keychainDirectory.normalize("NFC")).digest("hex").slice(0, 8)}`
     : KEYCHAIN_SERVICE;
   const keychainAccount = asString(ctx.env.USER) ?? asString(ctx.env.LOGNAME);
-  const accountKeychain =
+  const reread = options.reread ? { reread: true } : {};
+  const accountKeychain: KeychainReadOutcome =
     keychainAccount === undefined
-      ? null
-      : await readKeychainPassword({
+      ? { kind: "missing" }
+      : await readKeychainSecret({
           service: keychainService,
           account: keychainAccount,
           platform: ctx.platform,
+          ...reread,
         });
+  // The service-only lookup matches the same item when the account item exists, so only an
+  // absent account item falls back; a refused one must not raise a second prompt.
   const keychain =
-    accountKeychain ??
-    (await readKeychainPassword({
-      service: keychainService,
-      platform: ctx.platform,
-    }));
-  if (keychain) {
-    const creds = readClaudeCreds(asRecord(decodeKeychainJson(keychain)), { kind: "keychain" });
+    accountKeychain.kind === "missing"
+      ? await readKeychainSecret({ service: keychainService, platform: ctx.platform, ...reread })
+      : accountKeychain;
+  if (keychain.kind === "granted") {
+    const creds = readClaudeCreds(asRecord(decodeKeychainJson(keychain.value)), {
+      kind: "keychain",
+    });
     if (creds) {
       candidates.push(creds);
     }
@@ -588,7 +597,7 @@ export const claudeUsageFetcher: ProviderUsageFetcher = {
         return nudgedCandidates;
       }
       nudgedCandidates = (await nudgeClaudeCliAuthRefresh(ctx))
-        ? await resolveClaudeCredCandidates(ctx)
+        ? await resolveClaudeCredCandidates(ctx, { reread: true })
         : null;
       return nudgedCandidates;
     };

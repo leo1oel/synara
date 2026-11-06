@@ -40,6 +40,7 @@ import { errorSnapshot } from "./parse";
 import { PROVIDER_USAGE_FETCHERS } from "./registry";
 import type { ProviderUsageContext } from "./types";
 import { credentialFingerprint } from "./credentials";
+import { forgetUnavailableKeychainReads } from "./keychainReads";
 
 // Providers whose live snapshot is enriched with on-disk token-total lines (24h/7d/30d).
 const LOCAL_ARCHIVE_PROVIDERS: ReadonlySet<ProviderKind> = new Set(["codex", "claudeAgent"]);
@@ -290,6 +291,9 @@ export async function collectProviderUsageSnapshots(
       : PROVIDER_USAGE_PROVIDERS.filter(
           (provider) => PROVIDER_USAGE_FETCHERS[provider] !== undefined,
         );
+  if (options.forceRefresh === true) {
+    forgetUnavailableKeychainReads();
+  }
   const settled = await Promise.allSettled(
     providers.map((provider) =>
       getProviderUsageSnapshot(provider, ctx, options.forceRefresh === true),
@@ -450,6 +454,10 @@ export const listProviderUsage = Effect.fn(function* (input: ServerListProviderU
   const selected = input.provider
     ? instances.filter((instance) => instance.driver === input.provider)
     : instances;
+  // Only the explicit refresh button may prompt again for a refused or failed Keychain read.
+  if (input.forceRefresh === true) {
+    forgetUnavailableKeychainReads();
+  }
 
   return yield* Effect.tryPromise({
     try: async () => {

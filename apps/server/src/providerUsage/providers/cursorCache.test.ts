@@ -5,6 +5,7 @@
 import * as childProcess from "node:child_process";
 
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { __resetKeychainReadsForTests } from "../keychainReads";
 import { outboundHttp } from "@synara/shared/outboundHttp";
 
 import { __resetProviderUsageCacheForTests, collectProviderUsageSnapshots } from "../index";
@@ -53,11 +54,12 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  __resetKeychainReadsForTests();
   vi.restoreAllMocks();
   vi.clearAllMocks();
 });
 
-it("unseals once for coalesced requests, skips keychain on cache hits, and refreshes rotated cells", async () => {
+it("unseals once for coalesced requests, skips keychain on cache hits, and reuses the key for rotated cells", async () => {
   const { promise: pending, resolve: release } = Promise.withResolvers<void>();
   const request = vi.spyOn(outboundHttp, "request").mockImplementation(async () => {
     await pending;
@@ -99,7 +101,8 @@ it("unseals once for coalesced requests, skips keychain on cache hits, and refre
     { provider: "cursor" },
   );
   expect(rotated[0]?.status).toBe("ok");
-  expect(childProcess.execFile).toHaveBeenCalledTimes(2);
+  // The remembered Safe Storage key opens the rotated cell without another Keychain prompt.
+  expect(childProcess.execFile).toHaveBeenCalledTimes(1);
   expect(new Headers(request.mock.calls[2]?.[0].headers).get("authorization")).toBe(
     "Bearer fixture-cursor-rotated-token",
   );
