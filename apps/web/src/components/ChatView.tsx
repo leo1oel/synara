@@ -4342,6 +4342,11 @@ export default function ChatView({
       void onProviderModelSelect(provider, model, { instanceId, focusComposer: false });
     },
   });
+  // A new send retires the "switched models" notice.
+  const activeLatestTurnRunning = activeLatestTurn?.state === "running";
+  useEffect(() => {
+    if (activeLatestTurnRunning) setClaudeModelSwitch(null);
+  }, [activeLatestTurnRunning]);
   // The one Claude problem worth saying next to the composer (see claudeComposerNotice).
   const latestTurnFailure = useMemo(() => {
     if (!activeLatestTurnId) return null;

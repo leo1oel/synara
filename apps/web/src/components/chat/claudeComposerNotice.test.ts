@@ -54,13 +54,19 @@ describe("resolveClaudeComposerNotice", () => {
       action: "change-model",
       blocksNextSend: false,
     });
-    // Another model picked, or a new turn, retires it.
+    // Another model picked, or another thread, retires it.
     expect(
       resolveClaudeComposerNotice({ ...base, modelSwitch, selectedModel: "claude-opus-5" })?.kind,
     ).not.toBe("model-switched");
+    expect(resolveClaudeComposerNotice({ ...base, modelSwitch, threadId: "t2" })).toBeNull();
+    // The failed turn may become the latest only after the switch: still the switch.
     expect(
-      resolveClaudeComposerNotice({ ...base, modelSwitch, latestTurnId: "turn-2" }),
-    ).toBeNull();
+      resolveClaudeComposerNotice({
+        ...base,
+        modelSwitch: { ...modelSwitch, turnId: null },
+        latestTurnFailure: failure,
+      })?.kind,
+    ).toBe("model-switched");
   });
 
   it.each([

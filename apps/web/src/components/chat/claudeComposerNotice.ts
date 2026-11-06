@@ -33,7 +33,8 @@ export interface ClaudeComposerNotice {
 
 export interface ClaudeComposerModelSwitch {
   readonly threadId: string;
-  /** The latest turn when the switch happened; a new turn retires the notice. */
+  /** The latest turn when the switch happened (part of the key; the caller retires the
+   *  switch once a new turn starts). */
   readonly turnId: string | null;
   readonly fromName: string;
   readonly toModel: string;
@@ -60,7 +61,6 @@ export function resolveClaudeComposerNotice(input: {
   if (
     modelSwitch &&
     modelSwitch.threadId === input.threadId &&
-    modelSwitch.turnId === input.latestTurnId &&
     modelSwitch.toModel === input.selectedModel
   ) {
     return {
