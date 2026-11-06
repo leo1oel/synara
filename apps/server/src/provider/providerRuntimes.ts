@@ -16,15 +16,15 @@
 // per-platform optional packages), and the install verifies that every entry the
 // server imports loads before it is kept.
 
-import { spawn } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import http from "node:http";
 import https from "node:https";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { gunzipSync } from "node:zlib";
+
+import { spawnProcess } from "@synara/shared/processRuntime";
 
 import openCodeLock from "../../providerRuntimes/opencode/package-lock.json" with { type: "json" };
 import piLock from "../../providerRuntimes/pi/package-lock.json" with { type: "json" };
@@ -133,46 +133,70 @@ function rootPackageNames(id: ProviderRuntimeId): string[] {
 
 let installRoot: string | null = null;
 
-/** Called once the server knows its base directory; installs live beside its state. */
-export function configureProviderRuntimes(input: { readonly baseDir: string }): void {
+/**
+ * Called once the server knows its base directory; installs live beside its state.
+ * Resolves once availability is known, so health checks never touch the disk.
+ */
+export async function configureProviderRuntimes(input: {
+  readonly baseDir: string;
+}): Promise<void> {
   installRoot = path.join(input.baseDir, "provider-runtimes");
+  installed.clear();
+  await refreshProviderRuntimeAvailability();
 }
 
 function installDirectory(id: ProviderRuntimeId): string | null {
   return installRoot ? path.join(installRoot, id, lockHash(id)) : null;
 }
 
+const RUNTIME_IDS = ["pi", "opencode"] as const satisfies ReadonlyArray<ProviderRuntimeId>;
+
 // Whether the server's own install has the packages; it cannot change while it runs.
 const bundled = new Map<ProviderRuntimeId, boolean>();
-function isBundled(id: ProviderRuntimeId): boolean {
-  let result = bundled.get(id);
-  if (result === undefined) {
-    result = findBundledPackages(rootPackageNames(id));
-    bundled.set(id, result);
-  }
-  return result;
+// Whether an on-demand install is present; changes only through `performInstall`.
+const installed = new Map<ProviderRuntimeId, boolean>();
+
+/**
+ * Reads what `providerRuntimeAvailability` reports, off the caller's path: the bundled
+ * probe runs once per process and the install marker once per configured directory.
+ */
+export async function refreshProviderRuntimeAvailability(): Promise<void> {
+  await Promise.all(
+    RUNTIME_IDS.map(async (id) => {
+      if (!bundled.has(id)) bundled.set(id, await findBundledPackages(rootPackageNames(id)));
+      if (!installed.has(id)) installed.set(id, await readInstalledMarker(id));
+    }),
+  );
 }
 
 /**
  * The server's own node_modules, found the way Node resolves a bare specifier: walk up
  * from this module. A full install (or a development checkout) has the packages there.
  */
-function findBundledPackages(names: ReadonlyArray<string>): boolean {
+async function findBundledPackages(names: ReadonlyArray<string>): Promise<boolean> {
   let directory = path.dirname(fileURLToPath(import.meta.url));
   while (true) {
     const modules = path.join(directory, "node_modules");
-    if (names.every((name) => existsSync(path.join(modules, name, "package.json")))) return true;
+    const present = await Promise.all(
+      names.map((name) =>
+        fs.access(path.join(modules, name, "package.json")).then(
+          () => true,
+          () => false,
+        ),
+      ),
+    );
+    if (present.every(Boolean)) return true;
     const parent = path.dirname(directory);
     if (parent === directory) return false;
     directory = parent;
   }
 }
 
-function isInstalled(id: ProviderRuntimeId): boolean {
+async function readInstalledMarker(id: ProviderRuntimeId): Promise<boolean> {
   const directory = installDirectory(id);
   if (!directory) return false;
   try {
-    const marker = JSON.parse(readFileSync(path.join(directory, MARKER_FILE), "utf8"));
+    const marker = JSON.parse(await fs.readFile(path.join(directory, MARKER_FILE), "utf8"));
     return marker?.lockHash === lockHash(id);
   } catch {
     return false;
@@ -181,9 +205,10 @@ function isInstalled(id: ProviderRuntimeId): boolean {
 
 export type ProviderRuntimeAvailability = "bundled" | "installed" | "missing";
 
+/** Reports the availability `refreshProviderRuntimeAvailability` last read. */
 export function providerRuntimeAvailability(id: ProviderRuntimeId): ProviderRuntimeAvailability {
-  if (isBundled(id)) return "bundled";
-  return isInstalled(id) ? "installed" : "missing";
+  if (bundled.get(id)) return "bundled";
+  return installed.get(id) ? "installed" : "missing";
 }
 
 export class ProviderRuntimeMissingError extends Error {
@@ -211,12 +236,13 @@ export async function loadProviderRuntimeModule<S extends ProviderRuntimeSpecifi
   const loaded = loadedModules.get(specifier);
   if (loaded) return loaded as ProviderRuntimeModules[S];
   const id = runtimeOf(specifier);
+  await refreshProviderRuntimeAvailability();
   let module: unknown;
-  if (isBundled(id)) {
+  if (bundled.get(id)) {
     module = await RUNTIMES[id].modules[specifier]!();
   } else {
     const directory = installDirectory(id);
-    if (!directory || !isInstalled(id)) throw new ProviderRuntimeMissingError(id);
+    if (!directory || !installed.get(id)) throw new ProviderRuntimeMissingError(id);
     const entryUrl = pathToFileURL(path.join(directory, ENTRY_FILE)).href;
     let entry = entryModules.get(entryUrl);
     if (!entry) {
@@ -516,14 +542,14 @@ function verifyStagedRuntime(id: ProviderRuntimeId, staging: string): Promise<vo
     `for (const specifier of ${JSON.stringify(Object.keys(RUNTIMES[id].modules))}) await entry.load(specifier);`,
   ].join("\n");
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, ["--input-type=module", "-e", script], {
+    const child = spawnProcess(process.execPath, ["--input-type=module", "-e", script], {
       cwd: staging,
       env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
       stdio: ["ignore", "ignore", "pipe"],
       timeout: VERIFY_TIMEOUT_MS,
     });
     let stderr = "";
-    child.stderr.on("data", (chunk: Buffer) => {
+    child.stderr?.on("data", (chunk: Buffer) => {
       stderr = (stderr + chunk.toString("utf8")).slice(-2_000);
     });
     child.on("error", (error) =>
@@ -599,7 +625,9 @@ async function performInstall(
       `${JSON.stringify({ runtime: id, lockHash: lockHash(id), installedAt: new Date().toISOString() }, null, 2)}\n`,
     );
     await fs.rm(directory, { recursive: true, force: true });
+    installed.set(id, false);
     await fs.rename(staging, directory);
+    installed.set(id, true);
   } catch (error) {
     await fs.rm(staging, { recursive: true, force: true }).catch(() => undefined);
     throw classifyInstallError(error);

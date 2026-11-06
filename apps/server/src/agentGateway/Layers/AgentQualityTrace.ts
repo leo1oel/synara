@@ -1,6 +1,6 @@
-import * as fs from "node:fs";
 import * as path from "node:path";
 
+import { RotatingFileSink } from "@synara/shared/logging";
 import { Layer, Effect, Stream } from "effect";
 
 import { ServerConfig } from "../../config.ts";
@@ -19,38 +19,29 @@ import { AgentQualityTrace, type AgentQualityTraceShape } from "../Services/Agen
 
 const TRACE_FILE_NAME = "agent-quality.ndjson";
 const MAX_TRACE_BYTES = 10 * 1024 * 1024;
-const MAX_TRACE_FILES = 3;
+// Rotated generations kept beside the active file.
+const MAX_TRACE_BACKUPS = 2;
 
 export function createPrivateRotatingWriter(traceDir: string) {
   const tracePath = path.join(traceDir, TRACE_FILE_NAME);
-  const ensurePrivatePath = () => {
-    ensurePrivateDirectorySync(traceDir);
-    ensurePrivateFileSync(tracePath);
-  };
-  const rotate = (incomingBytes: number) => {
-    if (!fs.existsSync(tracePath)) return;
-    if (fs.statSync(tracePath).size + incomingBytes <= MAX_TRACE_BYTES) return;
-    const oldest = `${tracePath}.${MAX_TRACE_FILES - 1}`;
-    if (fs.existsSync(oldest)) fs.rmSync(oldest);
-    // Releases before the retention count included the active file could
-    // leave one extra generation behind. Remove it while rotating so the
-    // tighter active-plus-backups limit also applies after an upgrade.
-    const legacyOldest = `${tracePath}.${MAX_TRACE_FILES}`;
-    if (fs.existsSync(legacyOldest)) fs.rmSync(legacyOldest);
-    for (let index = MAX_TRACE_FILES - 2; index >= 1; index -= 1) {
-      const source = `${tracePath}.${index}`;
-      if (fs.existsSync(source)) fs.renameSync(source, `${tracePath}.${index + 1}`);
-    }
-    fs.renameSync(tracePath, `${tracePath}.1`);
-  };
+  let sink: RotatingFileSink | null = null;
 
   return (records: readonly AgentQualityTraceRecord[]): void => {
     if (records.length === 0) return;
     const lines = `${records.map((record) => JSON.stringify(record)).join("\n")}\n`;
-    const bytes = Buffer.byteLength(lines);
-    rotate(bytes);
-    ensurePrivatePath();
-    fs.appendFileSync(tracePath, lines, { encoding: "utf8", mode: PRIVATE_FILE_MODE });
+    ensurePrivateDirectorySync(traceDir);
+    ensurePrivateFileSync(tracePath);
+    // Opened on the first record. Opening prunes generations beyond the retention
+    // count, including the extra one releases that counted the active file as a
+    // backup could leave behind.
+    sink ??= new RotatingFileSink({
+      filePath: tracePath,
+      maxBytes: MAX_TRACE_BYTES,
+      maxFiles: MAX_TRACE_BACKUPS,
+      mode: PRIVATE_FILE_MODE,
+      throwOnError: true,
+    });
+    sink.write(lines);
   };
 }
 
