@@ -22,7 +22,9 @@ import {
   resolveAvailableHandoffTargets,
   resolveProviderHandoffOutcome,
   resolveThreadHandoffAvailability,
+  resolveThreadHandoffBadgeLabel,
   resolveThreadHandoffModelSelection,
+  resolveThreadHandoffTitle,
 } from "./threadHandoff";
 import { appendAssistantSelectionsToPrompt } from "./assistantSelections";
 import {
@@ -349,7 +351,7 @@ describe("threadHandoff", () => {
         providerInstances: getProviderInstanceOptions(AppSettingsSchema.makeUnsafe({})),
         providerStatuses: [],
       }),
-    ).toEqual(["claudeAgent"]);
+    ).toEqual([]);
   });
 
   it("preserves the source thread title for the created handoff thread", () => {
@@ -374,7 +376,7 @@ describe("threadHandoff", () => {
         },
         t,
       ),
-    ).toBe("从 Claude 移交而来");
+    ).toBe("从 Claude 移交");
   });
 
   it("does not borrow a default account's health for unavailable or unchecked accounts", () => {

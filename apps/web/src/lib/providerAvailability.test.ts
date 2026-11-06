@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ServerProviderStatus } from "@synara/contracts";
 import {
+  findFirstUsableDefaultProvider,
   findProviderStatus,
   isProviderUsable,
   normalizeProviderStatusForLocalConfig,
@@ -35,8 +36,13 @@ describe("findFirstUsableDefaultProvider", () => {
     expect(
       findFirstUsableDefaultProvider(
         [
-          { ...BASE_STATUS, provider: "codex" },
-          { ...READY_STATUS, provider: "claudeAgent" },
+          { ...BASE_STATUS, provider: "codex", driver: "codex", instanceId: "codex" },
+          {
+            ...READY_STATUS,
+            provider: "claudeAgent",
+            driver: "claudeAgent",
+            instanceId: "claudeAgent",
+          },
         ],
         ["codex", "claudeAgent"],
       ),
@@ -47,10 +53,12 @@ describe("findFirstUsableDefaultProvider", () => {
     expect(
       findFirstUsableDefaultProvider(
         [
-          { ...BASE_STATUS, provider: "codex" },
+          { ...BASE_STATUS, provider: "codex", driver: "codex", instanceId: "codex" },
           {
             ...BASE_STATUS,
             provider: "claudeAgent",
+            driver: "claudeAgent",
+            instanceId: "claudeAgent",
             authStatus: "unauthenticated",
           },
         ],
@@ -63,8 +71,14 @@ describe("findFirstUsableDefaultProvider", () => {
     expect(
       findFirstUsableDefaultProvider(
         [
-          { ...BASE_STATUS, provider: "codex" },
-          { ...READY_STATUS, provider: "pi", authStatus: "unknown" },
+          { ...BASE_STATUS, provider: "codex", driver: "codex", instanceId: "codex" },
+          {
+            ...READY_STATUS,
+            provider: "pi",
+            driver: "pi",
+            instanceId: "pi",
+            authStatus: "unknown",
+          },
         ],
         ["codex", "pi"],
       ),
@@ -90,23 +104,22 @@ describe("normalizeProviderStatusForLocalConfig", () => {
   });
 
   it("applies the same custom-path fallback to Claude", () => {
+    const claudeStatus: ServerProviderStatus = {
+      ...BASE_STATUS,
+      provider: "claudeAgent",
+      instanceId: "claudeAgent",
+      driver: "claudeAgent",
+      message: "Claude Code CLI (`claude`) is not installed or not on PATH.",
+    };
     expect(
       normalizeProviderStatusForLocalConfig({
         provider: "claudeAgent",
-        status: {
-          ...READY_STATUS,
-          provider: "opencode",
-          instanceId: "opencode",
-          driver: "opencode",
-          message: "OpenCode is ready.",
-        },
+        status: claudeStatus,
         customBinaryPath: "/opt/homebrew/bin/claude",
       }),
     ).toEqual({
-      provider: "opencode",
-      instanceId: "opencode",
-      driver: "opencode",
-      enabled: false,
+      ...claudeStatus,
+      available: true,
       status: "warning",
       message:
         "Claude uses a custom local binary path in this app. Availability will be confirmed when you start a session.",
