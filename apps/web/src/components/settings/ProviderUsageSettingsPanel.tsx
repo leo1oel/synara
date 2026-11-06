@@ -43,6 +43,7 @@ import {
   serverSettingsQueryOptions,
 } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
+import { isSynaraEmbedMode } from "~/embedMode";
 import { t, useTranslation } from "~/i18n";
 
 const RAIL_USAGE_WINDOW_OPTIONS = [
@@ -258,65 +259,71 @@ export function ProviderUsageSettingsPanel() {
 
   const isRefreshing = usageQuery.isFetching || refreshMutation.isPending;
 
+  // Lattice embeds no Synara rail or sidebar, so these sidebar-only choices would
+  // change nothing there; the embed keeps the popover options, Refresh and the cards.
+  const showSidebarUsageSettings = !isSynaraEmbedMode();
+
   return (
     <>
-      <SettingsSection
-        translateTitle={false}
-        title={t("settings:sidebarUsageAccountLimit", { count: MAX_RAIL_USAGE_ACCOUNTS })}
-      >
-        {railUsageAccounts.map(({ instance, label }) => {
-          const checked = railUsageInstanceIds.includes(instance.instanceId);
-          return (
-            <SettingsListRow
-              key={instance.instanceId}
-              title={
-                <span className="flex items-center gap-2">
-                  <ProviderAccountAvatar
-                    provider={instance.driver}
-                    accentColor={instance.raw.accentColor}
-                    className="size-6"
+      {showSidebarUsageSettings ? (
+        <SettingsSection
+          translateTitle={false}
+          title={t("settings:sidebarUsageAccountLimit", { count: MAX_RAIL_USAGE_ACCOUNTS })}
+        >
+          {railUsageAccounts.map(({ instance, label }) => {
+            const checked = railUsageInstanceIds.includes(instance.instanceId);
+            return (
+              <SettingsListRow
+                key={instance.instanceId}
+                title={
+                  <span className="flex items-center gap-2">
+                    <ProviderAccountAvatar
+                      provider={instance.driver}
+                      accentColor={instance.raw.accentColor}
+                      className="size-6"
+                    />
+                    <span className="truncate">{label}</span>
+                  </span>
+                }
+                actions={
+                  <Switch
+                    checked={checked}
+                    disabled={serverSettingsQuery.isPending || (!checked && railUsageFull)}
+                    onCheckedChange={(next) =>
+                      updateSettings({
+                        railUsageInstanceIds: toggleRailUsageAccount(
+                          savedRailUsageInstanceIds,
+                          instance.instanceId,
+                          Boolean(next),
+                          railUsageAccounts,
+                        ),
+                      })
+                    }
+                    aria-label={t("settings:showUsageAtTheBottomOfTheSidebar", {
+                      value0: label,
+                    })}
                   />
-                  <span className="truncate">{label}</span>
-                </span>
-              }
-              actions={
-                <Switch
-                  checked={checked}
-                  disabled={serverSettingsQuery.isPending || (!checked && railUsageFull)}
-                  onCheckedChange={(next) =>
-                    updateSettings({
-                      railUsageInstanceIds: toggleRailUsageAccount(
-                        savedRailUsageInstanceIds,
-                        instance.instanceId,
-                        Boolean(next),
-                        railUsageAccounts,
-                      ),
-                    })
-                  }
-                  aria-label={t("settings:showUsageAtTheBottomOfTheSidebar", {
-                    value0: label,
-                  })}
-                />
-              }
-            />
-          );
-        })}
-        <SettingsListRow
-          title={t("settings:ring")}
-          description={t("settings:showBothLimitsAsTwoRingsOrASingle")}
-          actions={
-            <SettingsSegmentedControl
-              value={settings.railUsageWindow}
-              onValueChange={(value) => updateSettings({ railUsageWindow: value })}
-              ariaLabel={t("settings:sidebarUsageRing")}
-              options={RAIL_USAGE_WINDOW_OPTIONS.map((option) => ({
-                value: option.value,
-                label: t(option.label),
-              }))}
-            />
-          }
-        />
-      </SettingsSection>
+                }
+              />
+            );
+          })}
+          <SettingsListRow
+            title={t("settings:ring")}
+            description={t("settings:showBothLimitsAsTwoRingsOrASingle")}
+            actions={
+              <SettingsSegmentedControl
+                value={settings.railUsageWindow}
+                onValueChange={(value) => updateSettings({ railUsageWindow: value })}
+                ariaLabel={t("settings:sidebarUsageRing")}
+                options={RAIL_USAGE_WINDOW_OPTIONS.map((option) => ({
+                  value: option.value,
+                  label: t(option.label),
+                }))}
+              />
+            }
+          />
+        </SettingsSection>
+      ) : null}
       <SettingsSection title="settings:usagePopovers">
         <SettingsListRow
           title={t("settings:showDetailsByDefault")}

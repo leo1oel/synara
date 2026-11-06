@@ -20,6 +20,12 @@ vi.mock("~/appSettings", () => ({
   }),
 }));
 
+const embed = vi.hoisted(() => ({ active: false }));
+vi.mock("~/embedMode", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/embedMode")>()),
+  isSynaraEmbedMode: () => embed.active,
+}));
+
 function snapshot(input: Partial<ServerProviderUsageSnapshot>): ServerProviderUsageSnapshot {
   return {
     provider: "codex",
@@ -47,6 +53,25 @@ function render(
 }
 
 describe("ProviderUsageSettingsPanel", () => {
+  it("hides the sidebar-only rows when embedded, keeping Refresh and the usage cards", () => {
+    embed.active = true;
+    try {
+      const markup = render([
+        snapshot({
+          instanceId: "codex",
+          usageLines: [{ label: "Personal allowance", value: "7 credits" }],
+        }),
+      ]);
+
+      expect(markup).not.toContain("Show Codex usage at the bottom of the sidebar");
+      expect(markup).not.toContain("Sidebar usage ring");
+      expect(markup).toContain("Refresh");
+      expect(markup).toContain("Personal allowance");
+    } finally {
+      embed.active = false;
+    }
+  });
+
   it("keeps sidebar account switches alongside account usage cards", () => {
     const markup = render([
       snapshot({
