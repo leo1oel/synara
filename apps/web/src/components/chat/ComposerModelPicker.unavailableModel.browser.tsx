@@ -148,11 +148,23 @@ describe("a model the account refused", () => {
 
   it("says why in Chinese", async () => {
     setLanguagePreference("zh-CN");
+    await page.viewport(240, 700);
     const screen = await render(<Harness providers={[claudeStatus([FABLE])]} onPick={vi.fn()} />);
     try {
       await openPicker();
       await expect.element(fableRow()).toHaveTextContent("你的账号用不了");
       await expect.element(fableRow()).toHaveAttribute("aria-disabled", "true");
+      // In Lattice's narrow panel the reason must end before the row's star button.
+      const row = fableRow().element();
+      const reason = Array.from(row.querySelectorAll("span")).find(
+        (span) => span.textContent === "你的账号用不了",
+      );
+      const star = row.parentElement?.querySelector("button");
+      expect(reason).toBeDefined();
+      expect(star).toBeDefined();
+      const reasonEnd = Math.round(reason!.getBoundingClientRect().right);
+      const starStart = Math.round(star!.getBoundingClientRect().left);
+      expect({ reasonEnd, starStart, fits: reasonEnd <= starStart }).toMatchObject({ fits: true });
     } finally {
       await screen.unmount();
     }

@@ -123,14 +123,20 @@ export function ComposerModelPickerRow(props: {
           className="h-4 min-w-4 shrink-0 text-ui-2xs"
         />
       ) : null}
-      {row.selectableModel !== null ? starButton : null}
+      {row.selectableModel !== null ? (
+        starButton
+      ) : (
+        // The star sits outside the disabled item (which takes no pointer events); keep its
+        // place in the row so a long reason truncates before it instead of running under it.
+        <span aria-hidden="true" className="size-5 shrink-0" />
+      )}
     </>
   );
 
   if (row.selectableModel === null) {
     return (
       <div className="relative">
-        <MenuItem disabled className="pe-8" closeOnClick={false}>
+        <MenuItem disabled className="pe-1" closeOnClick={false}>
           {rowContent}
         </MenuItem>
         <div className="absolute inset-y-0 end-1 flex items-center">{starButton}</div>
