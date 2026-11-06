@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
-import { isBetaFeatureEnabled } from "@synara/shared/betaFeatures";
+import { CHINESE_UI_BETA_FEATURE, isBetaFeatureEnabled } from "@synara/shared/betaFeatures";
 
 import { codeEditorEngine, visibleProviderDescriptors } from "./betaFeatures";
 
@@ -10,11 +10,14 @@ afterEach(() => {
   vi.resetModules();
 });
 
-it.each([true, false])("gates Beta providers for Lattice embeds: %s", async (embedded) => {
+// Lattice embeds read Stable feature gates (4525aedab). Oh My Pi, the Beta-only feature
+// this was written against, ships on Stable since acf63479f, so a feature that is
+// still Beta-only shows the gate.
+it.each([true, false])("keeps Lattice embeds on Stable feature gates: %s", async (embedded) => {
   vi.resetModules();
   vi.doMock("./embedMode", () => ({ isSynaraEmbedMode: () => embedded }));
   const { isBetaFeatureOn } = await import("./betaFeatures");
-  expect(isBetaFeatureOn("omp")).toBe(!embedded);
+  expect(isBetaFeatureOn(CHINESE_UI_BETA_FEATURE)).toBe(!embedded);
   expect(isBetaFeatureOn("codex")).toBe(true);
 });
 

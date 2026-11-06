@@ -67,14 +67,21 @@ describe("embedded Settings field styles", () => {
     expect(EMBEDDED_SETTINGS_CONTROL_LAYOUT_CSS).toContain(
       "width: var(--lattice-settings-control-width)",
     );
-    expect(EMBEDDED_SETTINGS_CONTROL_LAYOUT_CSS).toContain("align-self: flex-start");
-    expect(EMBEDDED_SETTINGS_CONTROL_LAYOUT_CSS).toContain("margin-top: 4px");
+    // Controls center on their row (6a793a031); only a row whose copy runs past its
+    // description keeps the control on the title line.
+    expect(EMBEDDED_SETTINGS_CONTROL_LAYOUT_CSS).toContain(
+      '[data-slot="settings-control"] { width: var(--lattice-settings-control-width); flex: none; align-self: center;',
+    );
+    expect(EMBEDDED_SETTINGS_CONTROL_LAYOUT_CSS).toContain(
+      ':has(> div:first-child > :nth-child(3)) > [data-slot="settings-control"] { align-self: flex-start;',
+    );
     expect(EMBEDDED_SETTINGS_CONTROL_LAYOUT_CSS).not.toContain('[data-slot="settings-actions"]');
     expect(EMBEDDED_SETTINGS_CONTROL_LAYOUT_CSS).not.toContain(":only-child");
   });
 
   it("keeps embedded controls beside their copy whenever the native columns fit", () => {
-    expect(INDEX_CSS).toContain("@media (width >= 30rem)");
+    // Rows stay horizontal down to Lattice's narrowest Settings column (1c5305147).
+    expect(INDEX_CSS).toContain("@media (width >= 25rem)");
     expect(INDEX_CSS).toContain(
       '[data-slot="settings-row-layout"] { flex-direction: row; align-items: center; justify-content: space-between;',
     );
@@ -97,7 +104,7 @@ describe("embedded Settings field styles", () => {
   });
 
   it("matches native settings divider and row spacing", () => {
-    expect(INDEX_CSS).toContain("section.flex.flex-col { gap: 4px;");
+    expect(INDEX_CSS).toContain("section.flex.flex-col { gap: 8px;");
     expect(INDEX_CSS).toContain(
       '[data-slot="settings-row"] { min-height: 40px; padding-block: 4px;',
     );
@@ -109,8 +116,11 @@ describe("embedded Settings field styles", () => {
     );
   });
 
-  it("uses the same 12 to 24 percent border contrast step as Lattice fields", () => {
-    expect(EMBEDDED_SETTINGS_FIELD_CSS).toContain("var(--lattice-settings-text) 12%");
+  it("draws fields with Lattice's strong line and steps to 24 percent on focus", () => {
+    // The resting border is the host's strongBorder token since 1c5305147.
+    expect(EMBEDDED_SETTINGS_FIELD_CSS).toContain(
+      "border-color: var(--lattice-settings-line-strong) !important;",
+    );
     expect(EMBEDDED_SETTINGS_FIELD_CSS).toContain("var(--lattice-settings-text) 24%");
   });
 
