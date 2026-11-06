@@ -1,5 +1,6 @@
 import { EventId, MessageId, TurnId } from "@synara/contracts";
 import { describe, expect, it } from "vitest";
+import { setLanguagePreference } from "~/i18n";
 import { applyOrchestrationEvents } from "./storeEventReducer";
 import { normalizeThreadFromReadModel } from "./storeNormalization";
 import {
@@ -245,5 +246,72 @@ describe("durable turn failure feedback", () => {
     expect(rows.filter((row) => row.kind === "work")).toMatchObject([
       { groupedEntries: [{ turnId, turnFailure: { cause } }] },
     ]);
+  });
+});
+
+describe("Claude Code exit failures", () => {
+  // What the Claude adapter emits when an outdated Claude Code rejects a launch
+  // flag at startup: its stderr reason plus a next-step code.
+  const exitTurnId = TurnId.makeUnsafe("claude-exit-turn");
+  const reason =
+    "Claude Code process exited with code 1: error: unknown option '--setting-sources=user,project,local'";
+  const exitActivities = [
+    makeActivity({
+      id: "claude-exit-error",
+      turnId: exitTurnId,
+      sequence: 2,
+      kind: "runtime.error",
+      tone: "error",
+      summary: "Provider runtime error",
+      payload: { message: reason, class: "provider_error", errorCode: "claude_cli_outdated" },
+    }),
+    makeActivity({
+      id: "claude-exit-completion",
+      turnId: exitTurnId,
+      sequence: 3,
+      kind: "turn.completed",
+      tone: "error",
+      summary: "Turn failed",
+      payload: { state: "failed", errorMessage: reason },
+    }),
+  ];
+
+  it("shows Claude Code's reason and a localized next step on the card", () => {
+    try {
+      setLanguagePreference("zh-CN");
+      const [zh] = deriveWorkLogEntries(exitActivities, exitTurnId);
+      expect(zh?.turnFailure).toMatchObject({ cause: reason, errorCode: "claude_cli_outdated" });
+      expect(zh?.turnFailure?.message).toBe(
+        `任务因提供商错误而中断，工作尚未完成。${reason}\n下一步：在终端运行 \`claude update\`（或重装 Claude Code），然后重试。`,
+      );
+      setLanguagePreference("en");
+      const [en] = deriveWorkLogEntries(exitActivities, exitTurnId);
+      expect(en?.turnFailure?.message).toBe(
+        `The task was interrupted by a provider error. Work remains incomplete. ${reason}\nNext step: run \`claude update\` in Terminal (or reinstall Claude Code), then try again.`,
+      );
+    } finally {
+      setLanguagePreference("en");
+    }
+  });
+
+  it("keeps the generic card when the exit has no reason", () => {
+    const generic = "Claude Code process exited with code 1";
+    const [entry] = deriveWorkLogEntries(
+      [
+        makeActivity({
+          id: "claude-exit-generic",
+          turnId: exitTurnId,
+          sequence: 2,
+          kind: "runtime.error",
+          tone: "error",
+          summary: "Provider runtime error",
+          payload: { message: generic, class: "provider_error" },
+        }),
+      ],
+      exitTurnId,
+    );
+    expect(entry?.turnFailure?.message).toBe(
+      `The task was interrupted by a provider error. Work remains incomplete. ${generic}`,
+    );
   });
 });

@@ -1080,6 +1080,21 @@ function isTurnFailureActivity(activity: OrchestrationThreadActivity): boolean {
   );
 }
 
+// Codes the Claude adapter attaches when Claude Code exits nonzero and said
+// why on stderr (apps/server/src/provider/claudeProcessExit.ts). The card shows
+// that reason verbatim and adds the step that fixes it.
+const CLAUDE_EXIT_NEXT_STEPS = {
+  claude_cli_outdated: "chat:claudeExitNextStepUpdateCli",
+  claude_auth_required: "chat:claudeExitNextStepSignIn",
+  claude_model_unavailable: "chat:claudeExitNextStepPickModel",
+  claude_cli_failed: "chat:claudeExitNextStepCheckCli",
+} as const;
+
+function claudeExitNextStep(errorCode: string | undefined, translate: typeof t): string | null {
+  if (!errorCode || !Object.hasOwn(CLAUDE_EXIT_NEXT_STEPS, errorCode)) return null;
+  return translate(CLAUDE_EXIT_NEXT_STEPS[errorCode as keyof typeof CLAUDE_EXIT_NEXT_STEPS]);
+}
+
 function deriveTurnFailureEntries(
   activities: ReadonlyArray<OrchestrationThreadActivity>,
   translate: typeof t,
@@ -1118,6 +1133,7 @@ function deriveTurnFailureEntries(
     const overloaded =
       errorCode === "server_overloaded" || /selected model is at capacity/i.test(cause);
     // Rendered as the failure banner's body; the provider's cause stays verbatim.
+    const nextStep = claudeExitNextStep(errorCode, translate);
     const message = overloaded
       ? translate("chat:theTaskWasInterruptedBecauseTheModelIsAt")
       : translate("chat:theTaskWasInterruptedByAProviderErrorWork", {
@@ -1126,7 +1142,7 @@ function deriveTurnFailureEntries(
             asTrimmedString(payload?.message) ??
             previous?.turnFailure?.cause ??
             translate("chat:theProviderReportedAnError"),
-        });
+        }) + (nextStep ? `\n${nextStep}` : "");
     failures.set(id, {
       id,
       createdAt: previous?.createdAt ?? activity.createdAt,

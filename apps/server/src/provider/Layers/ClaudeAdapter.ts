@@ -197,6 +197,12 @@ import {
   type ClaudeMonitorEventCursor,
 } from "../claudeMonitorEvents.ts";
 import { buildClaudeInstanceProcessEnv } from "../claudeEnvironment.ts";
+import {
+  captureClaudeStderr,
+  describeClaudeProcessExit,
+  type ClaudeStderrCapture,
+  type ClaudeStderrStream,
+} from "../claudeProcessExit.ts";
 import { positiveFiniteNumber } from "../tokenUsage.ts";
 import {
   isClaudeAutoModeCliVersionSupported,
@@ -724,6 +730,9 @@ export type ClaudeOwnedProcess = ClaudeSpawnedProcess & ProcessExitHandle;
 
 interface ClaudeProcessOwner {
   process?: ClaudeOwnedProcess;
+  // Claude Code's stderr tail for the current process. A CLI that dies at
+  // startup explains itself only there; the SDK never sees our spawn's stderr.
+  stderr?: ClaudeStderrCapture;
 }
 
 function spawnOwnedClaudeCodeProcess(
@@ -736,7 +745,9 @@ function spawnOwnedClaudeCodeProcess(
     ...(options.cwd ? { cwd: options.cwd } : {}),
     env: options.env,
     signal: options.signal,
-    stdio: ["pipe", "pipe", "inherit"],
+    // Piped, not inherited: bindClaudeProcessOwner forwards it to our stderr
+    // (the host's sidecar log) and keeps the tail for the failure card.
+    stdio: ["pipe", "pipe", "pipe"],
   }) as unknown as ClaudeOwnedProcess;
 }
 
@@ -2611,6 +2622,12 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           ? options.spawnClaudeCodeProcess(spawnOptions)
           : spawnOwnedClaudeCodeProcess(spawnOptions, lowerPriority);
         owner.process = process;
+        const stderr = captureClaudeStderr(
+          (process as { readonly stderr?: ClaudeStderrStream | null }).stderr,
+          (chunk) => globalThis.process.stderr.write(chunk),
+        );
+        if (stderr) owner.stderr = stderr;
+        else delete owner.stderr;
         return process;
       };
 
@@ -6505,6 +6522,20 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         Stream.runForEach((message) => handleSdkMessage(context, message)),
       );
 
+    // "Claude Code process exited with code 1" says nothing a writer can act on.
+    // Give it the process's own stderr reason and a next-step code; the generic
+    // message stays when Claude Code wrote nothing.
+    const describeClaudeStreamFailure = (context: ClaudeSessionContext, message: string) =>
+      Effect.promise(async () => {
+        const stderr = context.processOwner.stderr;
+        if (stderr) await stderr.settled();
+        return describeClaudeProcessExit({
+          message,
+          stderr: stderr?.text(),
+          homeDir: serverConfig.homeDir,
+        });
+      });
+
     const handleStreamExit = (
       context: ClaudeSessionContext,
       exit: Exit.Exit<void, Error>,
@@ -6537,9 +6568,9 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
               yield* completeTurn(context, "interrupted", CLAUDE_BENIGN_TERMINATION_MESSAGE);
             }
           } else {
-            const message = messageFromClaudeStreamCause(
-              exit.cause,
-              "Claude runtime stream failed.",
+            const { message, errorCode } = yield* describeClaudeStreamFailure(
+              context,
+              messageFromClaudeStreamCause(exit.cause, "Claude runtime stream failed."),
             );
             if (isClaudeMissingResumeConversationCause(exit.cause)) {
               // The SDK can accept a resumed query and report the missing
@@ -6568,7 +6599,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
                 detail: message,
               });
             }
-            yield* emitRuntimeError(context, message, Cause.pretty(exit.cause));
+            yield* emitRuntimeError(context, message, Cause.pretty(exit.cause), errorCode);
             yield* completeTurn(context, "failed", message);
           }
         } else if (context.turnState) {
