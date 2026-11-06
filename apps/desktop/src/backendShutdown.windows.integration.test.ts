@@ -560,7 +560,7 @@ describeWindows("Windows desktop backend shutdown integration", () => {
     expect(tail.toBuffer()).toEqual(input.subarray(9));
   });
 
-  it("authenticates a real server, deduplicates shutdown, drains its runtime, and clears its finalizer artifact", async () => {
+  it("authenticates a real server, deduplicates shutdown, drains its runtime, and leaves a stale runtime record", async () => {
     const resources = new TestResources();
     try {
       const homeDir = await resources.makeTempDir("synara-windows-shutdown-");
@@ -655,7 +655,19 @@ describeWindows("Windows desktop backend shutdown integration", () => {
           `Real server drained but exited with code ${child.exitCode}.\nstdout:\n${output.stdout}\nstderr:\n${output.stderr}`,
         );
       }
-      expect(Fs.existsSync(runtimeStatePath)).toBe(false);
+      // The server keeps its runtime record on exit so an old finalizer cannot
+      // unlink a fast restart's record; readers reject it because its PID is gone.
+      const staleState = JSON.parse(await FsPromises.readFile(runtimeStatePath, "utf8")) as {
+        readonly pid: number;
+      };
+      expect(staleState.pid).toBe(child.pid);
+      let probeError: unknown = null;
+      try {
+        process.kill(staleState.pid, 0);
+      } catch (error) {
+        probeError = error;
+      }
+      expect(probeError).toMatchObject({ code: "ESRCH" });
     } finally {
       await resources.dispose();
     }
