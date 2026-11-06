@@ -29,9 +29,10 @@ import {
   credentialFingerprint,
   decodeKeychainJson,
   readJsonFile,
-  readKeychainPassword,
+  readKeychainSecret,
 } from "../credentials";
 import { fetchJson, isAuthFailureStatus, isRateLimitStatus, parseRetryAfterMs } from "../http";
+import type { KeychainReadOutcome } from "../keychainReads";
 import {
   asFiniteNumber,
   asRecord,
@@ -115,7 +116,11 @@ function readClaudeCreds(
   };
 }
 
-async function resolveClaudeCredCandidates(ctx: ProviderUsageContext): Promise<ClaudeCreds[]> {
+/** `reread`: the CLI just refreshed an expired or rejected token, so re-read the Keychain once. */
+async function resolveClaudeCredCandidates(
+  ctx: ProviderUsageContext,
+  options: { reread?: boolean } = {},
+): Promise<ClaudeCreds[]> {
   const candidates: ClaudeCreds[] = [];
   const paths: string[] = [];
   const secureStorageDir = ctx.env.CLAUDE_SECURESTORAGE_CONFIG_DIR;
@@ -152,22 +157,26 @@ async function resolveClaudeCredCandidates(ctx: ProviderUsageContext): Promise<C
     ? `${KEYCHAIN_SERVICE}-${createHash("sha256").update(keychainDirectory.normalize("NFC")).digest("hex").slice(0, 8)}`
     : KEYCHAIN_SERVICE;
   const keychainAccount = asString(ctx.env.USER) ?? asString(ctx.env.LOGNAME);
-  const accountKeychain =
+  const reread = options.reread ? { reread: true } : {};
+  const accountKeychain: KeychainReadOutcome =
     keychainAccount === undefined
-      ? null
-      : await readKeychainPassword({
+      ? { kind: "missing" }
+      : await readKeychainSecret({
           service: keychainService,
           account: keychainAccount,
           platform: ctx.platform,
+          ...reread,
         });
+  // The service-only lookup matches the same item when the account item exists, so only an
+  // absent account item falls back; a refused one must not raise a second prompt.
   const keychain =
-    accountKeychain ??
-    (await readKeychainPassword({
-      service: keychainService,
-      platform: ctx.platform,
-    }));
-  if (keychain) {
-    const creds = readClaudeCreds(asRecord(decodeKeychainJson(keychain)), { kind: "keychain" });
+    accountKeychain.kind === "missing"
+      ? await readKeychainSecret({ service: keychainService, platform: ctx.platform, ...reread })
+      : accountKeychain;
+  if (keychain.kind === "granted") {
+    const creds = readClaudeCreds(asRecord(decodeKeychainJson(keychain.value)), {
+      kind: "keychain",
+    });
     if (creds) {
       candidates.push(creds);
     }
@@ -581,16 +590,23 @@ export const claudeUsageFetcher: ProviderUsageFetcher = {
     }
 
     // At most one CLI nudge per fetch, shared by the proactive (near-expiry) and reactive (401)
-    // paths; the re-read candidate set is memoized so every source retries against it.
-    let nudgedCandidates: ReadonlyArray<ClaudeCreds> | null | undefined;
-    const nudgeOnce = async (): Promise<ReadonlyArray<ClaudeCreds> | null> => {
-      if (nudgedCandidates !== undefined) {
-        return nudgedCandidates;
+    // paths. Only a stale Keychain token re-reads the Keychain; a stale file re-reads files only.
+    let nudged: Promise<boolean> | undefined;
+    const nudgedCandidates = new Map<boolean, ReadonlyArray<ClaudeCreds> | null>();
+    const nudgeOnce = async (
+      trigger: ClaudeCredSource,
+    ): Promise<ReadonlyArray<ClaudeCreds> | null> => {
+      const reread = trigger.kind === "keychain";
+      const memoized = nudgedCandidates.get(reread);
+      if (memoized !== undefined) {
+        return memoized;
       }
-      nudgedCandidates = (await nudgeClaudeCliAuthRefresh(ctx))
-        ? await resolveClaudeCredCandidates(ctx)
+      nudged ??= nudgeClaudeCliAuthRefresh(ctx);
+      const candidates = (await nudged)
+        ? await resolveClaudeCredCandidates(ctx, reread ? { reread } : {})
         : null;
-      return nudgedCandidates;
+      nudgedCandidates.set(reread, candidates);
+      return candidates;
     };
 
     let inferenceOnlySnapshot: ReturnType<typeof buildSnapshot> | null = null;
@@ -613,7 +629,7 @@ export const claudeUsageFetcher: ProviderUsageFetcher = {
 
       let activeCreds = original;
       if (isStaleClaudeCreds(activeCreds, ctx.nowMs)) {
-        const refreshed = await nudgeOnce();
+        const refreshed = await nudgeOnce(original.source);
         const updated = refreshed?.find((creds) => sameCredSource(creds.source, original.source));
         if (updated) {
           activeCreds = updated;
@@ -636,7 +652,7 @@ export const claudeUsageFetcher: ProviderUsageFetcher = {
         if (isAuthFailureStatus(result.status)) {
           // The stored expiry can lag reality (revocation, clock skew). Let the CLI refresh its
           // credential, re-read, and retry once with a genuinely different token.
-          const refreshed = await nudgeOnce();
+          const refreshed = await nudgeOnce(original.source);
           const updated = refreshed?.find((creds) => sameCredSource(creds.source, original.source));
           if (updated && updated.accessToken !== activeCreds.accessToken) {
             activeCreds = updated;

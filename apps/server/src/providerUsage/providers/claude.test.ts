@@ -43,9 +43,13 @@ vi.mock("node:fs/promises", async (importOriginal) => {
   };
 });
 
+// The fixtures return the raw secret or null; null stands for an absent Keychain item.
 vi.mock("../credentials", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../credentials")>()),
-  readKeychainPassword: readKeychainPasswordMock,
+  readKeychainSecret: async (input: unknown) => {
+    const value = (await readKeychainPasswordMock(input)) as string | null;
+    return value ? { kind: "granted", value } : { kind: "missing" };
+  },
 }));
 
 const NOW_MS = 1_780_000_000_000;

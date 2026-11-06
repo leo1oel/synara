@@ -7,6 +7,13 @@ import nodePath from "node:path";
 
 import { execProcessFile } from "@synara/shared/processRuntime";
 
+import { credentialFingerprint } from "../credentials";
+import {
+  classifySecurityResult,
+  KEYCHAIN_PROMPT_TIMEOUT_MS,
+  type KeychainReadOutcome,
+  readKeychainItemOnce,
+} from "../keychainReads";
 import type { ProviderUsageContext } from "../types";
 
 const SEALED_MARK = "cursor-safe-storage:";
@@ -33,36 +40,45 @@ export function isCursorSafeStorageValue(value: string): boolean {
 
 /**
  * Read the "Cursor Safe Storage" generic-password key from the macOS login keychain.
- * Bounded like readDroidSecureKey: fixed executable, clean environment, no shell.
+ * Bounded like readDroidSecureKey: fixed executable, clean environment, no shell. Remembered
+ * per process so usage refreshes prompt at most once.
  */
-function readCursorSafeStorageKey(
+async function readCursorSafeStorageKey(
   ctx: Pick<ProviderUsageContext, "platform" | "homeDir" | "env">,
+  stored: string,
+  reread: boolean,
 ): Promise<string | null> {
   if (ctx.platform !== "darwin") {
-    return Promise.resolve(null);
+    return null;
   }
   const executable = "/usr/bin/security";
   const args = ["find-generic-password", "-s", "Cursor Safe Storage", "-a", "Cursor", "-w"];
-  return new Promise<string | null>((resolve) => {
-    const child = execProcessFile(
-      executable,
-      args,
-      {
-        env: { HOME: ctx.homeDir, PATH: "/usr/bin:/bin" },
-        cwd: nodePath.parse(executable).root || undefined,
-        encoding: "utf8",
-        timeout: 3_000,
-        killSignal: "SIGKILL",
-        maxBuffer: 4_096,
-        platform: ctx.platform,
-      },
-      (error, stdout) => {
-        // Never propagate child errors: they can contain stdout/stderr and therefore the key.
-        resolve(error ? null : stdout.trim());
-      },
-    );
-    child.stdin?.end();
-  }).catch(() => null);
+  const outcome = await readKeychainItemOnce(
+    { service: "Cursor Safe Storage", account: "Cursor", scope: ctx.homeDir },
+    () =>
+      new Promise<KeychainReadOutcome>((resolve) => {
+        const child = execProcessFile(
+          executable,
+          args,
+          {
+            env: { HOME: ctx.homeDir, PATH: "/usr/bin:/bin" },
+            cwd: nodePath.parse(executable).root || undefined,
+            encoding: "utf8",
+            timeout: KEYCHAIN_PROMPT_TIMEOUT_MS,
+            killSignal: "SIGKILL",
+            maxBuffer: 4_096,
+            platform: ctx.platform,
+          },
+          (error, stdout) => {
+            // Never propagate child errors: they can contain stdout/stderr and therefore the key.
+            resolve(classifySecurityResult(error, stdout));
+          },
+        );
+        child.stdin?.end();
+      }),
+    { generation: credentialFingerprint(stored), reread, refresh: ctx },
+  );
+  return outcome.kind === "granted" ? outcome.value : null;
 }
 
 // Validate the supported envelope before requesting OS consent or allocating its payload.
@@ -125,9 +141,15 @@ export async function unsealCursorSafeStorageValue(
   if (!ciphertext) {
     return null;
   }
-  const password = await readCursorSafeStorageKey(ctx);
+  const password = await readCursorSafeStorageKey(ctx, stored, false);
   if (!password) {
     return null;
   }
-  return decryptCursorSafeStorageToken(ciphertext, password);
+  const token = decryptCursorSafeStorageToken(ciphertext, password);
+  if (token) {
+    return token;
+  }
+  // A remembered key that no longer opens the cell was replaced; re-read it once.
+  const reread = await readCursorSafeStorageKey(ctx, stored, true);
+  return reread && reread !== password ? decryptCursorSafeStorageToken(ciphertext, reread) : null;
 }
