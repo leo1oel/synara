@@ -397,9 +397,11 @@ describe("listProviderUsage account routing", () => {
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         const settings = yield* ServerSettingsService;
+        // The fork has no driver-level switch (7eabd821e); the default account is
+        // disabled as its own provider instance.
         yield* settings.updateSettings({
-          providers: { codex: { enabled: false } },
           providerInstances: {
+            codex: { driver: "codex", enabled: false },
             codex_work: { driver: "codex", config: { homePath: "/accounts/work" } },
           },
         });
