@@ -5,6 +5,7 @@ import { ThreadId } from "@synara/contracts";
 import { expect, it, vi } from "vitest";
 
 import { CodexAppServerManager } from "../src/codexAppServerManager";
+import { readCodexSharedContinuationGeneration } from "../src/codexProcessEnv";
 import { teardownProviderProcessTree } from "../src/platform/supervisedProcessTeardown";
 
 // Exercise the real CLI, stdio transport, replacement barrier and resume path.
@@ -70,12 +71,22 @@ require("node:readline").createInterface({ input: process.stdin }).on("line", (l
       install(1);
       const original = await manager.startSession(input);
       expect((await manager.sendTurn({ threadId, input: "before update" })).turnId).toBe("turn-v1");
+      // Resumes are pinned to the account's verified continuation generation (#1165),
+      // which the first start prepared.
+      const resume = {
+        ...input,
+        resumeCursor: original.resumeCursor,
+        expectedCodexContinuationGeneration: readCodexSharedContinuationGeneration({
+          env: { SYNARA_HOME: process.env.SYNARA_HOME },
+          homePath,
+        })!,
+      };
 
       install(2);
       writeFileSync(failedScanMarker, "");
-      await expect(
-        manager.startSession({ ...input, resumeCursor: original.resumeCursor }),
-      ).rejects.toThrow("Failed to prove Codex app-server process-tree exit");
+      await expect(manager.startSession(resume)).rejects.toThrow(
+        "Failed to prove Codex app-server process-tree exit",
+      );
       expect(manager.hasSession(threadId)).toBe(false);
       // Keep ancestry observable rather than killing the root after a failed
       // snapshot and stranding its descendants before the user's retry.
@@ -83,7 +94,7 @@ require("node:readline").createInterface({ input: process.stdin }).on("line", (l
       expect(() => process.kill(rootPid!, 0)).not.toThrow();
 
       rmSync(failedScanMarker);
-      const resumed = await manager.startSession({ ...input, resumeCursor: original.resumeCursor });
+      const resumed = await manager.startSession(resume);
       expect(resumed.resumeCursor).toEqual(original.resumeCursor);
       expect((await manager.sendTurn({ threadId, input: "after update" })).turnId).toBe("turn-v2");
     } finally {
