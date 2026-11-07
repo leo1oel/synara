@@ -65,7 +65,7 @@ export function CommandLine({
         className={cn(
           "text-ui",
           "min-w-0 flex-1 font-mono text-foreground",
-          wrap ? "break-all whitespace-pre-wrap" : "truncate",
+          wrap ? "whitespace-pre-wrap [overflow-wrap:anywhere]" : "truncate",
         )}
       >
         {command}
@@ -77,13 +77,16 @@ export function CommandLine({
           copied && "text-emerald-600 dark:text-emerald-400",
         )}
       >
+        {/* A wrapped command keeps the width for itself; the icon says it all there. */}
         {copied ? (
           <>
-            <CheckIcon className="size-3" /> {t("chat:theme_copied")}
+            <CheckIcon className="size-3" />{" "}
+            <span className={cn(wrap && "sr-only")}>{t("chat:theme_copied")}</span>
           </>
         ) : (
           <>
-            <CopyIcon className="size-3" /> {t("workspace:share_copy")}
+            <CopyIcon className="size-3" />{" "}
+            <span className={cn(wrap && "sr-only")}>{t("workspace:share_copy")}</span>
           </>
         )}
       </span>
