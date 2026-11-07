@@ -1441,7 +1441,7 @@ function ComposerPromptEditorInner({
           contentEditable={
             <ContentEditable
               className={cn(
-                "block max-h-[200px] w-full overflow-y-auto whitespace-pre-wrap break-words bg-transparent text-foreground focus:outline-none",
+                "block max-h-[var(--composer-editor-max-height,200px)] w-full overflow-y-auto whitespace-pre-wrap break-words bg-transparent text-foreground focus:outline-none",
                 COMPOSER_EDITOR_TYPOGRAPHY_CLASS_NAME,
                 COMPOSER_EDITOR_MIN_HEIGHT_CLASS_NAME,
                 COMPOSER_EDITOR_CONTENT_RESET_CLASS_NAME,

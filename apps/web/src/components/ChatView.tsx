@@ -367,6 +367,7 @@ import { ComposerActiveTaskListCard } from "./chat/ComposerActiveTaskListCard";
 import { ComposerBranchMismatchBanner } from "./chat/ComposerBranchMismatchBanner";
 import { ComposerCapsuleRow } from "./chat/ComposerCapsule";
 import { ComposerColumnFrame } from "./chat/ComposerColumnFrame";
+import { useComposerEditorRoom } from "./chat/composerEditorRoom";
 import { ComposerCommandItem, ComposerCommandMenu } from "./chat/ComposerCommandMenu";
 import { ComposerBlockedHandoffNotice } from "./chat/ComposerBlockedHandoffNotice";
 import { ComposerExpiredUserInputNotice } from "./chat/ComposerExpiredUserInputNotice";
@@ -6164,6 +6165,13 @@ export default function ChatView({
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
+  // The floating composer grows upward; its editor scrolls inside itself before the
+  // composer would leave this column (composerEditorRoom.ts).
+  useComposerEditorRoom({
+    enabled: shouldRenderChatPaneContent && !isCenteredEmptyLanding,
+    boundsRef: mainContentRef,
+    formRef: composerFormRef,
+  });
   const composerEffortOptionId = composerTraitSelection.primarySelectDescriptor?.id ?? "effort";
   const applyComputerControlEffortHint = useCallback(() => {
     setComposerDraftProviderModelOptions(
@@ -7488,7 +7496,11 @@ export default function ChatView({
         />
       ) : null}
       {/* Main content area with optional plan sidebar */}
-      <div ref={mainContentRef} className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
+      <div
+        ref={mainContentRef}
+        className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden"
+        data-chat-main-content=""
+      >
         {/* Chat column */}
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
           <div
