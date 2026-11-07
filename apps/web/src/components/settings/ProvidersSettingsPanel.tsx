@@ -2023,9 +2023,12 @@ function ProviderToolRow(props: {
 export type ProvidersSettingsPanelProps = AppSettingsBinding & {
   readonly updateSettingsAndWait: (patch: Partial<AppSettings>) => Promise<void>;
   readonly active: boolean;
-  readonly providerTarget?: ProviderKind | null;
+  /** Provider tools rows a deep link opens (`resolveSettingsTarget`). */
+  readonly providerTargets?: ReadonlyArray<ProviderKind>;
   readonly resetEpoch: number;
 };
+
+const NO_PROVIDER_TARGETS: ReadonlyArray<ProviderKind> = [];
 
 export function ProvidersSettingsPanel({
   settings,
@@ -2033,7 +2036,7 @@ export function ProvidersSettingsPanel({
   updateSettings,
   updateSettingsAndWait,
   active,
-  providerTarget = null,
+  providerTargets = NO_PROVIDER_TARGETS,
   resetEpoch,
 }: ProvidersSettingsPanelProps) {
   const { t } = useTranslation();
@@ -2046,7 +2049,7 @@ export function ProvidersSettingsPanel({
   const [openInstallProviders, setOpenInstallProviders] = useState<Record<ProviderKind, boolean>>(
     () => ({
       ...createProviderInstallDisclosureState(settings),
-      ...(providerTarget ? { [providerTarget]: true } : {}),
+      ...Object.fromEntries(providerTargets.map((provider) => [provider, true])),
     }),
   );
   const [updatingProviders, setUpdatingProviders] = useState<ReadonlySet<ProviderInstanceId>>(
@@ -2131,10 +2134,12 @@ export function ProvidersSettingsPanel({
     setOpenInstallProviders(createClosedProviderInstallDisclosureState());
   });
 
+  const providerTargetsKey = providerTargets.join(",");
   useEffect(() => {
-    if (!active || !providerTarget) return;
-    setOpenInstallProviders((current) => ({ ...current, [providerTarget]: true }));
-  }, [active, providerTarget]);
+    if (!active || !providerTargetsKey) return;
+    const opened = Object.fromEntries(providerTargetsKey.split(",").map((key) => [key, true]));
+    setOpenInstallProviders((current) => ({ ...current, ...opened }));
+  }, [active, providerTargetsKey]);
 
   const handleProviderOrderDragEnd = useCallback(
     (event: DragEndEvent) => {

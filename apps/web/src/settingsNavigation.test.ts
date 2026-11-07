@@ -4,8 +4,10 @@ import { describe, expect, it } from "vitest";
 import {
   isSettingsSectionAvailable,
   normalizeSettingsSection,
+  resolveSettingsTarget,
   SETTINGS_NAV_ITEMS,
   SETTINGS_SECTION_IDS,
+  SETTINGS_TARGETS,
 } from "./settingsNavigation";
 
 describe("settings sections", () => {
@@ -36,5 +38,22 @@ describe("settings sections", () => {
   it("falls back to General for unknown sections", () => {
     expect(normalizeSettingsSection("nope")).toBe("general");
     expect(normalizeSettingsSection(undefined)).toBe("general");
+  });
+});
+
+describe("resolveSettingsTarget", () => {
+  it("opens Claude Code's and Codex's tool rows for the binary paths, at Provider tools", () => {
+    expect(resolveSettingsTarget(SETTINGS_TARGETS.providerBinaryPaths, null)).toEqual({
+      elementId: SETTINGS_TARGETS.providerInstalls,
+      openProviders: ["claudeAgent", "codex"],
+    });
+  });
+
+  it("keeps any other target as an element id, opening the named provider's row", () => {
+    expect(resolveSettingsTarget(SETTINGS_TARGETS.providerInstalls, "cursor")).toEqual({
+      elementId: SETTINGS_TARGETS.providerInstalls,
+      openProviders: ["cursor"],
+    });
+    expect(resolveSettingsTarget(null, null)).toEqual({ elementId: null, openProviders: [] });
   });
 });

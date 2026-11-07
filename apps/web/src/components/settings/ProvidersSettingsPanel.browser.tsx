@@ -229,7 +229,7 @@ function accountProps(settings: Partial<typeof defaults> = {}) {
     props: {
       ...props,
       updateSettings,
-      providerTarget: "codex" as const,
+      providerTargets: ["codex"] as const,
       settings: {
         ...defaults,
         providerInstances: {
@@ -297,7 +297,7 @@ it("shows a Claude usage authentication failure beside a locally signed-in accou
   const { props: panelProps } = accountProps({
     providerInstances: { claude_work: { driver: "claudeAgent", displayName: "Work", config: {} } },
   });
-  await render(<ProvidersSettingsPanel {...panelProps} providerTarget="claudeAgent" />);
+  await render(<ProvidersSettingsPanel {...panelProps} providerTargets={["claudeAgent"]} />);
   const editor = page.getByRole("group", { name: "Claude account", exact: true });
   await expect.element(editor.getByText("Usage needs attention", { exact: true })).toBeVisible();
   await expect
@@ -384,7 +384,7 @@ it("leaves Artifacts to the default Claude account and keeps another account's b
       },
     },
   });
-  await render(<ProvidersSettingsPanel {...panelProps} providerTarget="claudeAgent" />);
+  await render(<ProvidersSettingsPanel {...panelProps} providerTargets={["claudeAgent"]} />);
 
   await page.getByRole("button", { name: "Select Work", exact: true }).click();
   const editor = page.getByRole("group", { name: "Work account", exact: true });
@@ -513,7 +513,7 @@ it("sends Pi's login selector only after startup and keeps cancellation failures
   const instanceId = "pi_work";
   const panelProps = {
     ...props,
-    providerTarget: "pi" as const,
+    providerTargets: ["pi"] as const,
     settings: {
       ...defaults,
       providerInstances: { [instanceId]: { driver: "pi", displayName: "Pi work", config: {} } },

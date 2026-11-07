@@ -830,5 +830,13 @@
   "yourMessageIsSavedAndOnHold": "你的消息已保存并暂缓发送。继续可能会重新处理对话的上下文。",
   "yourMessageIsSavedAndOnHold2": "你的消息已保存并暂缓发送。继续可能会重新处理约 {{tokens}} 个 token。",
   "yourSkillLibrary": "你的 Skills 库",
-  "yours": "你的"
+  "yours": "你的",
+  "agentSetup_title": "Lattice 找不到 Claude Code 或 Codex",
+  "agentSetup_intro": "AI 面板要用你 Mac 上装的其中一个，并登录你自己的账号。请在终端中安装：",
+  "agentSetup_claudeSignIn": "然后用 <command>claude auth login</command> 登录。",
+  "agentSetup_codexSignIn": "也可以用 <command>brew install --cask codex</command> 安装。然后用 <command>codex login</command> 登录。",
+  "agentSetup_alreadyInstalled": "已经装好了？Lattice 会在登录 shell 的 PATH 和常见安装位置里找。装在别处的话，请设置它的路径。",
+  "agentSetup_setPath": "设置路径…",
+  "agentSetup_checking": "正在检查…",
+  "agentSetup_stillNotFound": "还是没有找到。"
 }

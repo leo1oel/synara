@@ -58,6 +58,12 @@ export const SYNARA_SETTINGS_CONTENT_HEIGHT = "synara:settings-content-height";
 export const SYNARA_SETTINGS_WHEEL = "synara:settings-wheel";
 export const SYNARA_SETTINGS_NAVIGATION = "synara:settings-navigation";
 export const SYNARA_SETTINGS_SECTION_READY = "synara:settings-section-ready";
+/**
+ * `{ section, top, contentHeight }`: the place a section request's `target` named, `top`
+ * CSS pixels from the top of this page, now laid out and open. The frame has no scrolling
+ * of its own, so Lattice scrolls its Settings viewport there.
+ */
+export const SYNARA_SETTINGS_REVEAL = "synara:settings-reveal";
 export const SYNARA_OPEN_SETTINGS = "synara:open-settings";
 export const SYNARA_OPEN_EXTERNAL = "synara:open-external";
 export const SYNARA_SHOW_IN_FOLDER = "synara:show-in-folder";
@@ -300,6 +306,8 @@ export interface LatticeSettingsSectionMessage {
   section: string;
   /** Echoed by `synara:settings-section-ready`, so the host can tell which request it answers. */
   request?: number;
+  /** A `SETTINGS_TARGETS` place to open and reveal, as `synara:open-settings` asked for it. */
+  target?: string;
 }
 
 export function readLatticeAgentPanelOpenedMessage(
@@ -1162,11 +1170,12 @@ export function readLatticeSettingsSectionMessage(
   ) {
     return null;
   }
-  const request = event.data.request;
+  const { request, target } = event.data;
   return {
     type: LATTICE_SETTINGS_SECTION_SET,
     section: event.data.section,
     ...(typeof request === "number" && Number.isSafeInteger(request) ? { request } : {}),
+    ...(typeof target === "string" && /^[a-z-]{1,64}$/.test(target) ? { target } : {}),
   };
 }
 
@@ -1226,6 +1235,24 @@ export function postSettingsSectionReadyToLattice(
       type: SYNARA_SETTINGS_SECTION_READY,
       section,
       ...(request === undefined ? {} : { request }),
+    },
+    config.hostOrigin,
+  );
+}
+
+export function postSettingsRevealToLattice(
+  config: EmbedModeConfig,
+  reveal: { section: string; top: number; contentHeight: number | null },
+): void {
+  if (!config.hostOrigin || !reveal.section || !Number.isFinite(reveal.top)) return;
+  window.parent.postMessage(
+    {
+      type: SYNARA_SETTINGS_REVEAL,
+      section: reveal.section,
+      top: Math.max(0, Math.round(reveal.top)),
+      ...(reveal.contentHeight !== null && Number.isFinite(reveal.contentHeight)
+        ? { contentHeight: Math.ceil(reveal.contentHeight) }
+        : {}),
     },
     config.hostOrigin,
   );
@@ -1344,19 +1371,35 @@ export function postOpenReviewToLattice(
   );
 }
 
-export function postOpenSettingsToLattice(config: EmbedModeConfig, section: "providers"): boolean {
+/**
+ * `target` names a place on the section's page (a `SETTINGS_TARGETS` value, such as the
+ * Claude Code and Codex binary paths); Lattice hands it to the Settings frame with the
+ * section (`lattice:set-settings-section`), which opens and reveals it. A Lattice that
+ * predates it opens the section's top.
+ */
+export function postOpenSettingsToLattice(
+  config: EmbedModeConfig,
+  section: "providers",
+  target?: string,
+): boolean {
   // A missing hostOrigin still means we are inside Lattice's iframe. Falling
   // back to in-frame `/settings` is what made "Add providers" replace the Agent
   // panel; `*` is safe because Lattice authenticates the sender origin.
-  window.parent.postMessage({ type: SYNARA_OPEN_SETTINGS, section }, config.hostOrigin ?? "*");
+  window.parent.postMessage(
+    { type: SYNARA_OPEN_SETTINGS, section, ...(target ? { target } : {}) },
+    config.hostOrigin ?? "*",
+  );
   return true;
 }
 
-export function openEmbeddedProviderSettings(): boolean {
+export function openEmbeddedProviderSettings(target?: string): boolean {
   const config = readEmbedMode();
-  if (config) return postOpenSettingsToLattice(config, "providers");
+  if (config) return postOpenSettingsToLattice(config, "providers", target);
   if (typeof window === "undefined" || window.parent === window) return false;
-  window.parent.postMessage({ type: SYNARA_OPEN_SETTINGS, section: "providers" }, "*");
+  window.parent.postMessage(
+    { type: SYNARA_OPEN_SETTINGS, section: "providers", ...(target ? { target } : {}) },
+    "*",
+  );
   return true;
 }
 

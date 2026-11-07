@@ -19,6 +19,7 @@ import {
   postSettingsNavigationToLattice,
   postSettingsSectionReadyToLattice,
   readLatticeSettingsSectionMessage,
+  postSettingsRevealToLattice,
   postSettingsWheelToLattice,
   postHostContextRequestToLattice,
   postHostContextSelectionClearToLattice,
@@ -61,6 +62,7 @@ import {
   SYNARA_OPEN_REVIEW,
   SYNARA_OPEN_SETTINGS,
   SYNARA_SETTINGS_CONTENT_HEIGHT,
+  SYNARA_SETTINGS_REVEAL,
   SYNARA_SETTINGS_SECTION_READY,
   LATTICE_SETTINGS_SECTION_SET,
   SYNARA_SETTINGS_NAVIGATION,
@@ -554,6 +556,53 @@ describe("Lattice embed mode", () => {
     );
     expect(postMessage).toHaveBeenCalledWith(
       { type: SYNARA_SETTINGS_SECTION_READY, section: "providers" },
+      "http://localhost:1420",
+    );
+  });
+
+  it("carries a place to reveal from Set path… to the Settings frame and back", () => {
+    const { postMessage } = installBrowserStubs();
+    initializeEmbedMode();
+    const config = readEmbedMode();
+    expect(config).not.toBeNull();
+
+    expect(openEmbeddedProviderSettings("provider-binary-paths")).toBe(true);
+    expect(postMessage).toHaveBeenCalledWith(
+      { type: SYNARA_OPEN_SETTINGS, section: "providers", target: "provider-binary-paths" },
+      "http://localhost:1420",
+    );
+
+    const request = (target: unknown) =>
+      readLatticeSettingsSectionMessage(
+        {
+          source: window.parent,
+          origin: "http://localhost:1420",
+          data: { type: LATTICE_SETTINGS_SECTION_SET, section: "providers", request: 3, target },
+        } as MessageEvent,
+        config!,
+      );
+    expect(request("provider-binary-paths")).toEqual({
+      type: LATTICE_SETTINGS_SECTION_SET,
+      section: "providers",
+      request: 3,
+      target: "provider-binary-paths",
+    });
+    // Only an id-shaped target reaches the route's search params.
+    expect(request("../providers?x=1")).not.toHaveProperty("target");
+    expect(request(42)).not.toHaveProperty("target");
+
+    postSettingsRevealToLattice(config!, {
+      section: "providers",
+      top: 812.6,
+      contentHeight: 2400.2,
+    });
+    postSettingsRevealToLattice(config!, { section: "providers", top: -4, contentHeight: null });
+    expect(postMessage).toHaveBeenCalledWith(
+      { type: SYNARA_SETTINGS_REVEAL, section: "providers", top: 813, contentHeight: 2401 },
+      "http://localhost:1420",
+    );
+    expect(postMessage).toHaveBeenCalledWith(
+      { type: SYNARA_SETTINGS_REVEAL, section: "providers", top: 0 },
       "http://localhost:1420",
     );
   });
