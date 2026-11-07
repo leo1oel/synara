@@ -45,6 +45,7 @@ import { DiffStat } from "../ui/diff-stat";
 import { IconButton } from "../ui/icon-button";
 import { Menu, MenuGroup, MenuGroupLabel, MenuItem, MenuSeparator, MenuTrigger } from "../ui/menu";
 import { ComposerPickerMenuPopup } from "./ComposerPickerMenuPopup";
+import { FolderSessionsMenuGroup } from "./FolderSessionsMenuGroup";
 import { OpenInPicker } from "./OpenInPicker";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { SidebarHeaderNavigationControls } from "../SidebarHeaderNavigationControls";
@@ -189,9 +190,10 @@ function EditorChatHistoryMenu(props: {
     settings.sidebarThreadSortOrder,
     { attentionFirst: settings.sidebarThreadAttentionFirst },
   ).slice(0, EDITOR_CHAT_HISTORY_LIMIT);
+  const [open, setOpen] = useState(false);
 
   return (
-    <Menu modal={false}>
+    <Menu modal={false} open={open} onOpenChange={setOpen}>
       <MenuTrigger
         render={
           props.triggerTitle ? (
@@ -287,6 +289,11 @@ function EditorChatHistoryMenu(props: {
             </MenuItem>
           ))
         )}
+        <FolderSessionsMenuGroup
+          projectId={props.projectId}
+          open={open}
+          onOpenThread={props.onNavigateToThread}
+        />
       </ComposerPickerMenuPopup>
     </Menu>
   );

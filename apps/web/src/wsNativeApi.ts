@@ -905,6 +905,10 @@ export function createWsNativeApi(): NativeApi {
       listProjectImports: (input) =>
         transport.request(ORCHESTRATION_WS_METHODS.listProjectImports, input),
       importProject: (input) => transport.request(ORCHESTRATION_WS_METHODS.importProject, input),
+      listFolderSessions: (input) =>
+        transport.request(ORCHESTRATION_WS_METHODS.listFolderSessions, input),
+      openFolderSession: (input) =>
+        transport.request(ORCHESTRATION_WS_METHODS.openFolderSession, input),
       loadProjectImportHistory: (input) =>
         transport.request(ORCHESTRATION_WS_METHODS.loadProjectImportHistory, input),
       regenerateThreadTitle: (input) =>

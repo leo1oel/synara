@@ -838,5 +838,8 @@
   "agentSetup_alreadyInstalled": "已经装好了？Lattice 会在 shell 的 PATH 和常见安装位置里找。装在别处的话，请设置它的路径。",
   "agentSetup_setPath": "设置路径…",
   "agentSetup_checking": "正在检查…",
-  "agentSetup_stillNotFound": "还是没有找到。"
+  "agentSetup_stillNotFound": "还是没有找到。",
+  "couldNotOpenThisSession": "无法打开这个会话",
+  "fromOtherEditors": "来自其他编辑器",
+  "untitledSession": "未命名会话"
 }

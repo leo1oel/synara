@@ -838,5 +838,8 @@
   "agentSetup_alreadyInstalled": "Already installed? Lattice looks on your shell's PATH and in the usual install folders. Somewhere else? Set its path.",
   "agentSetup_setPath": "Set path…",
   "agentSetup_checking": "Checking…",
-  "agentSetup_stillNotFound": "Still not found."
+  "agentSetup_stillNotFound": "Still not found.",
+  "couldNotOpenThisSession": "Could not open this session",
+  "fromOtherEditors": "From other editors",
+  "untitledSession": "Untitled session"
 }

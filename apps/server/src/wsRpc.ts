@@ -172,6 +172,7 @@ import { sanitizeOrchestrationEventProviderOptions } from "./orchestration/provi
 import { prepareQuitResume } from "./orchestration/quitResume";
 import { makeImportThreadHandler } from "./orchestration/importThreadRoute";
 import { makeProjectImportHandlers } from "./orchestration/projectImportRoute";
+import { makeFolderSessionHandlers } from "./orchestration/folderSessionsRoute";
 import { makeProjectImportRepository } from "./persistence/projectImportRepository";
 import { OrchestrationEngineService } from "./orchestration/Services/OrchestrationEngine";
 import { ProviderCommandReactor } from "./orchestration/Services/ProviderCommandReactor";
@@ -923,12 +924,21 @@ const makeWsRpcHandlersLayer = () =>
         serverConfig: config,
         serverSettings,
       });
+      const projectImportRepository = yield* makeProjectImportRepository;
       const projectImports = makeProjectImportHandlers({
-        repository: yield* makeProjectImportRepository,
+        repository: projectImportRepository,
         orchestrationEngine,
         providerService,
         providerAdapterRegistry,
         serverSettings,
+        homeDir: config.homeDir,
+        stateDir: config.stateDir,
+      });
+      const folderSessions = makeFolderSessionHandlers({
+        repository: projectImportRepository,
+        orchestrationEngine,
+        serverSettings,
+        importThread,
         homeDir: config.homeDir,
         stateDir: config.stateDir,
       });
@@ -1436,6 +1446,13 @@ const makeWsRpcHandlersLayer = () =>
           ),
         [ORCHESTRATION_WS_METHODS.importProject]: (input) =>
           rpcEffect(projectImports.importProject(input), "Failed to import project"),
+        [ORCHESTRATION_WS_METHODS.listFolderSessions]: (input) =>
+          rpcEffect(
+            folderSessions.listFolderSessions(input),
+            "Failed to find this folder's sessions",
+          ),
+        [ORCHESTRATION_WS_METHODS.openFolderSession]: (input) =>
+          rpcEffect(folderSessions.openFolderSession(input), "Failed to open the session"),
         [ORCHESTRATION_WS_METHODS.regenerateThreadTitle]: (input) =>
           rpcEffect(
             providerCommandReactor.regenerateThreadTitle(input),

@@ -6,6 +6,10 @@ import {
   ImportProjectResult,
   ListProjectImportsInput,
   ListProjectImportsResult,
+  ListFolderSessionsInput,
+  ListFolderSessionsResult,
+  OpenFolderSessionInput,
+  OpenFolderSessionResult,
 } from "./projectImport";
 import {
   AntigravityModelOptions,
@@ -63,6 +67,8 @@ export const ORCHESTRATION_WS_METHODS = {
   listProjectImports: "orchestration.listProjectImports",
   importProject: "orchestration.importProject",
   loadProjectImportHistory: "orchestration.loadProjectImportHistory",
+  listFolderSessions: "orchestration.listFolderSessions",
+  openFolderSession: "orchestration.openFolderSession",
   regenerateThreadTitle: "orchestration.regenerateThreadTitle",
   showPanelThread: "orchestration.showPanelThread",
   repairState: "orchestration.repairState",
@@ -3338,6 +3344,8 @@ export const OrchestrationRpcSchemas = {
   },
   listProjectImports: { input: ListProjectImportsInput, output: ListProjectImportsResult },
   importProject: { input: ImportProjectInput, output: ImportProjectResult },
+  listFolderSessions: { input: ListFolderSessionsInput, output: ListFolderSessionsResult },
+  openFolderSession: { input: OpenFolderSessionInput, output: OpenFolderSessionResult },
   loadProjectImportHistory: {
     input: LoadProjectImportHistoryInput,
     output: LoadProjectImportHistoryResult,
