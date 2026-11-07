@@ -351,6 +351,12 @@ type BooleanSettingKey = {
 
 // ── Route screen ───────────────────────────────────────────────────────────
 
+/** A deep link's place: a field's whole label (its name above the control), else the element. */
+function settingsTargetPlace(elementId: string): HTMLElement | null {
+  const element = document.getElementById(elementId);
+  return element?.closest("label") ?? element;
+}
+
 function SettingsRouteView() {
   // The hook's t re-renders the page when the language changes; the module t does not.
   const { t } = useTranslation();
@@ -598,7 +604,7 @@ function SettingsRouteView() {
         // scrolling of its own, so Lattice scrolls its viewport to the place.
         revealFrame = window.requestAnimationFrame(() => {
           revealFrame = null;
-          const element = document.getElementById(targetElementId);
+          const element = settingsTargetPlace(targetElementId);
           if (!element) return;
           postSettingsRevealToLattice(embedConfig, {
             section: activeSection,
@@ -646,7 +652,7 @@ function SettingsRouteView() {
     const elementId = resolvedSettingsTarget.elementId;
     if (!elementId) return;
     const frame = window.requestAnimationFrame(() => {
-      document.getElementById(elementId)?.scrollIntoView({ block: "start", behavior: "smooth" });
+      settingsTargetPlace(elementId)?.scrollIntoView({ block: "start", behavior: "smooth" });
     });
     return () => window.cancelAnimationFrame(frame);
   }, [activeSection, resolvedSettingsTarget.elementId]);
