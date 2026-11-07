@@ -130,6 +130,40 @@ describe("discoverClaudeFolderSessions", () => {
     ).toBe(true);
   });
 
+  it("takes the typed prompt after VS Code's IDE context in the same message", async () => {
+    const configDir = path.join(root, "home", ".claude");
+    const projectDir = path.join(configDir, "projects", claudeProjectDirectoryName(folder));
+    const id = randomUUID();
+    await writeAt(
+      path.join(projectDir, `${id}.jsonl`),
+      jsonl([
+        {
+          type: "user",
+          cwd: folder,
+          isSidechain: false,
+          entrypoint: "claude-vscode",
+          message: {
+            role: "user",
+            content: [
+              { type: "text", text: "<ide_opened_file>The user opened main.tex</ide_opened_file>" },
+              { type: "text", text: "Shorten the conclusion" },
+            ],
+          },
+        },
+      ]),
+      1,
+    );
+    const sessions = await discoverClaudeFolderSessions({
+      configDir,
+      folders: [folder],
+      sameFolder,
+      limit: 10,
+    });
+    expect(sessions.map((session) => [session.externalId, session.title])).toEqual([
+      [id, "Shorten the conclusion"],
+    ]);
+  });
+
   it("honours the limit and finds nothing when the folder has no Claude directory", async () => {
     const configDir = path.join(root, "home", ".claude");
     const projectDir = path.join(configDir, "projects", claudeProjectDirectoryName(folder));
@@ -259,6 +293,41 @@ describe("discoverCodexFolderSessions", () => {
     expect(
       sessions.every((session) => session.provider === "codex" && session.cwd === folder),
     ).toBe(true);
+  });
+
+  it("falls back to the rollout's input_text user message when no user_message event exists", async () => {
+    const codexHome = path.join(root, "home", ".codex");
+    const id = randomUUID();
+    await writeAt(
+      file(codexHome, "2026/11/02", id),
+      jsonl([
+        {
+          type: "session_meta",
+          payload: { id, cwd: folder, originator: "codex_vscode", source: "vscode" },
+        },
+        {
+          type: "response_item",
+          payload: {
+            type: "message",
+            role: "user",
+            content: [
+              { type: "input_text", text: "<environment_context>…</environment_context>" },
+              { type: "input_text", text: "Rename the lemma labels" },
+            ],
+          },
+        },
+      ]),
+      1,
+    );
+    const sessions = await discoverCodexFolderSessions({
+      codexHome,
+      folders: [folder],
+      sameFolder,
+      limit: 10,
+    });
+    expect(sessions.map((session) => [session.externalId, session.title])).toEqual([
+      [id, "Rename the lemma labels"],
+    ]);
   });
 
   it("finds nothing without a sessions directory", async () => {

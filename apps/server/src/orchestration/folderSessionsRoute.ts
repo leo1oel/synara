@@ -44,6 +44,11 @@ export const FOLDER_SESSIONS_LIMIT = 20;
 
 const PROVIDERS: ReadonlyArray<ProjectImportProvider> = ["claudeAgent", "codex"];
 
+const UNTITLED_SESSION_TITLE: Record<ProjectImportProvider, string> = {
+  claudeAgent: "Claude Code session",
+  codex: "Codex session",
+};
+
 export interface FolderSessionDiscoverInput {
   readonly source: ProjectImportSource;
   readonly folders: ReadonlyArray<string>;
@@ -224,7 +229,9 @@ export function makeFolderSessionHandlers(options: FolderSessionsRouteOptions) {
           commandId: CommandId.makeUnsafe(crypto.randomUUID()),
           threadId,
           projectId: project.id,
-          title: session.title,
+          // Chat titles cannot be empty; a session listed as "Untitled session" (no
+          // name, and its first prompt past the bounded read) still opens.
+          title: session.title || UNTITLED_SESSION_TITLE[session.provider],
           modelSelection,
           runtimeMode: "approval-required",
           interactionMode: "default",
