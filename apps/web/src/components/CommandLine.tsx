@@ -12,7 +12,14 @@ import { CheckIcon, CopyIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 
 /** A single copyable terminal command — the `brew install gh` / `gh auth login` affordances. */
-export function CommandLine({ command }: { command: string }) {
+export function CommandLine({
+  command,
+  wrap = false,
+}: {
+  command: string;
+  /** Break a long command across lines instead of cutting it off (narrow panels). */
+  wrap?: boolean;
+}) {
   const { t } = useTranslation();
 
   const [copied, setCopied] = useState(false);
@@ -54,7 +61,13 @@ export function CommandLine({ command }: { command: string }) {
       title={t("chat:messageCopy_copyToClipboard")}
       className="group flex w-full items-center gap-2 rounded-lg border border-border/60 bg-[var(--color-background-elevated-secondary)] px-3 py-2 text-left transition-colors hover:border-border"
     >
-      <code className={cn("text-ui", "min-w-0 flex-1 truncate font-mono text-foreground")}>
+      <code
+        className={cn(
+          "text-ui",
+          "min-w-0 flex-1 font-mono text-foreground",
+          wrap ? "break-all whitespace-pre-wrap" : "truncate",
+        )}
+      >
         {command}
       </code>
       <span

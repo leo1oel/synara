@@ -42,9 +42,9 @@ describe("settings sections", () => {
 });
 
 describe("resolveSettingsTarget", () => {
-  it("opens Claude Code's and Codex's tool rows for the binary paths, at Provider tools", () => {
+  it("opens Claude Code's and Codex's tool rows for the binary paths, at Claude's field", () => {
     expect(resolveSettingsTarget(SETTINGS_TARGETS.providerBinaryPaths, null)).toEqual({
-      elementId: SETTINGS_TARGETS.providerInstalls,
+      elementId: "provider-install-claudeBinaryPath",
       openProviders: ["claudeAgent", "codex"],
     });
   });

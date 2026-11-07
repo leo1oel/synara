@@ -47,15 +47,21 @@ export const SETTINGS_TARGETS = {
 /**
  * Where a deep link's `target` (and `provider`) lands: the element to bring into view and
  * the Provider tools rows to open. The binary-path target opens Claude Code's and Codex's
- * rows, whose first field is the binary path.
+ * rows and lands on Claude Code's binary path field (Lattice's default agent); Codex's sits
+ * in the row above.
  */
+/** The DOM id of a Provider tools field (`claudeBinaryPath`, `codexHomePath`, …). */
+export function providerInstallFieldId(settingsKey: string): string {
+  return `provider-install-${settingsKey}`;
+}
+
 export function resolveSettingsTarget(
   target: string | null,
   provider: ProviderKind | null,
 ): { readonly elementId: string | null; readonly openProviders: ReadonlyArray<ProviderKind> } {
   if (target === SETTINGS_TARGETS.providerBinaryPaths) {
     return {
-      elementId: SETTINGS_TARGETS.providerInstalls,
+      elementId: providerInstallFieldId("claudeBinaryPath"),
       openProviders: ["claudeAgent", "codex"],
     };
   }

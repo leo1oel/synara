@@ -93,7 +93,8 @@ describe("ComposerClaudeNotice", () => {
 
   it("says which agents to install and how, with Set path… and Check again, in Chinese", async () => {
     setLanguagePreference("zh-CN");
-    await page.viewport(320, 900);
+    // As short as Lattice's agent panel when it shares its column with the paper library.
+    await page.viewport(320, 420);
     const onSetPath = vi.fn();
     let finishCheck: () => void = () => {};
     const onRecheck = vi.fn(
@@ -124,9 +125,18 @@ describe("ComposerClaudeNotice", () => {
       await expect.element(page.getByText("npm install -g @openai/codex")).toBeVisible();
       await expect.element(page.getByText("claude auth login")).toBeVisible();
       await expect.element(page.getByText("codex login")).toBeVisible();
-      // Nothing spills out of the narrow panel.
+      // Nothing spills out of the narrow panel, and the commands wrap instead of being cut.
       const box = notice.element() as HTMLElement;
       expect(box.scrollWidth).toBeLessThanOrEqual(box.clientWidth + 1);
+      const command = page.getByText("curl -fsSL https://claude.ai/install.sh | bash").element();
+      expect(command.scrollWidth).toBeLessThanOrEqual(command.clientWidth + 1);
+      // In a short panel the steps scroll; the title and both actions stay on screen.
+      const title = page.getByText("Lattice 找不到 Claude Code 或 Codex").element();
+      const recheckButton = page.getByRole("button", { name: "再次检查" }).element();
+      expect(title.getBoundingClientRect().top).toBeGreaterThanOrEqual(0);
+      expect(recheckButton.getBoundingClientRect().bottom).toBeLessThanOrEqual(420);
+      const steps = page.getByTestId("agent-setup-steps").element() as HTMLElement;
+      expect(steps.scrollHeight).toBeGreaterThan(steps.clientHeight);
 
       await page.getByRole("button", { name: "设置路径…" }).click();
       expect(onSetPath).toHaveBeenCalledOnce();

@@ -101,7 +101,7 @@ import {
   withProviderUpdateTimeout,
 } from "~/providerUpdates";
 import { providerStatusInstanceKey } from "~/lib/providerAvailability";
-import { SETTINGS_TARGETS } from "~/settingsNavigation";
+import { providerInstallFieldId, SETTINGS_TARGETS } from "~/settingsNavigation";
 import {
   SETTINGS_INSET_LIST_CLASS_NAME,
   SETTINGS_INSET_RADIUS_CLASS_NAME,
@@ -852,7 +852,7 @@ function ProviderInstallFieldControl(props: {
 }) {
   const { t } = useTranslation();
 
-  const id = `provider-install-${props.field.settingsKey}`;
+  const id = providerInstallFieldId(props.field.settingsKey);
   if (props.field.kind === "boolean") {
     return (
       <label
