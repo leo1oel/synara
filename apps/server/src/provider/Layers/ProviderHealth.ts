@@ -64,6 +64,7 @@ import {
 } from "../codexCliVersion";
 import { buildClaudeInstanceProcessEnv } from "../claudeEnvironment";
 import { ServerConfig } from "../../config";
+import { addCliInstallDirectoriesToPath } from "../../os-jank.ts";
 import {
   buildProviderChildEnvironment,
   type ProviderChildKind,
@@ -3631,6 +3632,11 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
         );
 
       const refreshNow = Effect.gen(function* () {
+        // A CLI installed since the last probe may sit in a well-known folder that did
+        // not exist then (Claude Code's native installer creates ~/.local/bin): put it on
+        // PATH first, so Recheck, a focus refresh or the hourly one finds it without a
+        // restart.
+        yield* Effect.sync(() => addCliInstallDirectoriesToPath());
         let revisionRetries = 0;
         while (true) {
           const refreshRevision = (yield* serverSettings.getSnapshot).revision;

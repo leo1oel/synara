@@ -135,6 +135,7 @@ import {
   isSynaraEmbedMode,
   postEmbedReadyToLattice,
   postSettingsContentHeightToLattice,
+  postSettingsRevealToLattice,
   postSettingsSectionReadyToLattice,
   postSettingsWheelToLattice,
   readEmbedMode,
@@ -145,6 +146,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { isProviderKind, sameProviderOrder } from "../providerOrdering";
 import {
   normalizeSettingsSection,
+  resolveSettingsTarget,
   SETTINGS_NAV_ITEMS,
   SETTINGS_TARGETS,
   settingRowAnchorId,
@@ -349,6 +351,12 @@ type BooleanSettingKey = {
 
 // ── Route screen ───────────────────────────────────────────────────────────
 
+/** A deep link's place: a field's whole label (its name above the control), else the element. */
+function settingsTargetPlace(elementId: string): HTMLElement | null {
+  const element = document.getElementById(elementId);
+  return element?.closest("label") ?? element;
+}
+
 function SettingsRouteView() {
   // The hook's t re-renders the page when the language changes; the module t does not.
   const { t } = useTranslation();
@@ -377,6 +385,10 @@ function SettingsRouteView() {
     typeof routeSearch.provider === "string" && isProviderKind(routeSearch.provider)
       ? routeSearch.provider
       : null;
+  const resolvedSettingsTarget = useMemo(
+    () => resolveSettingsTarget(settingsTarget, settingsProviderTarget),
+    [settingsProviderTarget, settingsTarget],
+  );
   const activeSectionItem = SETTINGS_NAV_ITEMS.find((item) => item.id === activeSection)!;
 
   const {
@@ -492,7 +504,7 @@ function SettingsRouteView() {
       setSectionRequest({ id: message.request });
       void navigate({
         to: "/settings",
-        search: { section: message.section },
+        search: { section: message.section, ...(message.target ? { target: message.target } : {}) },
         replace: true,
       });
     };
@@ -581,12 +593,39 @@ function SettingsRouteView() {
     if (!isEmbed || !embedUiReady) return;
     const embedConfig = readEmbedMode();
     if (!embedConfig?.hostOrigin) return;
-    return watchEmbeddedSettingsSectionReady({
+    const targetElementId = resolvedSettingsTarget.elementId;
+    let revealFrame: number | null = null;
+    const stopWatching = watchEmbeddedSettingsSectionReady({
       queryClient,
-      onReady: () =>
-        postSettingsSectionReadyToLattice(embedConfig, activeSection, sectionRequest.id),
+      onReady: () => {
+        postSettingsSectionReadyToLattice(embedConfig, activeSection, sectionRequest.id);
+        if (!targetElementId) return;
+        // A frame later, once the rows the target opened have laid out. This page has no
+        // scrolling of its own, so Lattice scrolls its viewport to the place.
+        revealFrame = window.requestAnimationFrame(() => {
+          revealFrame = null;
+          const element = settingsTargetPlace(targetElementId);
+          if (!element) return;
+          postSettingsRevealToLattice(embedConfig, {
+            section: activeSection,
+            top: element.getBoundingClientRect().top + window.scrollY,
+            contentHeight: embeddedSettingsHeightReporterRef.current?.flush() ?? null,
+          });
+        });
+      },
     });
-  }, [activeSection, embedUiReady, isEmbed, queryClient, sectionRequest]);
+    return () => {
+      stopWatching();
+      if (revealFrame !== null) window.cancelAnimationFrame(revealFrame);
+    };
+  }, [
+    activeSection,
+    embedUiReady,
+    isEmbed,
+    queryClient,
+    resolvedSettingsTarget.elementId,
+    sectionRequest,
+  ]);
 
   useEffect(() => {
     if (!isEmbed) return;
@@ -610,14 +649,13 @@ function SettingsRouteView() {
 
   // Deep links and sidebar search targets all resolve to stable DOM ids in the active panel.
   useEffect(() => {
-    if (!settingsTarget) return;
+    const elementId = resolvedSettingsTarget.elementId;
+    if (!elementId) return;
     const frame = window.requestAnimationFrame(() => {
-      document
-        .getElementById(settingsTarget)
-        ?.scrollIntoView({ block: "start", behavior: "smooth" });
+      settingsTargetPlace(elementId)?.scrollIntoView({ block: "start", behavior: "smooth" });
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [activeSection, settingsTarget]);
+  }, [activeSection, resolvedSettingsTarget.elementId]);
 
   const changedSettingLabels = [
     ...(settings.language !== defaults.language ? ["common:general_languageAria"] : []),
@@ -2060,7 +2098,7 @@ function SettingsRouteView() {
                 />
                 <ProvidersSettingsPanel
                   active={activeSection === "providers"}
-                  providerTarget={settingsProviderTarget}
+                  providerTargets={resolvedSettingsTarget.openProviders}
                   settings={settings}
                   defaults={defaults}
                   updateSettings={updateSettings}

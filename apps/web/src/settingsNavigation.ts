@@ -3,6 +3,7 @@
 // Layer: Route/UI support
 // Exports: section ids, nav items, and search normalization helper
 
+import type { ProviderKind } from "@synara/contracts";
 import { MCP_CONNECTORS_BETA_FEATURE } from "@synara/shared/betaFeatures";
 
 import { isBetaFeatureOn } from "~/betaFeatures";
@@ -38,8 +39,34 @@ export type SettingsNavGroupId = "personal" | "integrations" | "coding" | "syste
 export const SETTINGS_TARGETS = {
   providerUpdates: "provider-updates",
   providerInstalls: "provider-installs",
+  /** Provider tools with the Claude Code and Codex rows open on their binary path fields. */
+  providerBinaryPaths: "provider-binary-paths",
   environmentPanel: "environment-panel",
 } as const;
+
+/**
+ * Where a deep link's `target` (and `provider`) lands: the element to bring into view and
+ * the Provider tools rows to open. The binary-path target opens Claude Code's and Codex's
+ * rows and lands on Claude Code's binary path field (Lattice's default agent); Codex's sits
+ * in the row above.
+ */
+/** The DOM id of a Provider tools field (`claudeBinaryPath`, `codexHomePath`, …). */
+export function providerInstallFieldId(settingsKey: string): string {
+  return `provider-install-${settingsKey}`;
+}
+
+export function resolveSettingsTarget(
+  target: string | null,
+  provider: ProviderKind | null,
+): { readonly elementId: string | null; readonly openProviders: ReadonlyArray<ProviderKind> } {
+  if (target === SETTINGS_TARGETS.providerBinaryPaths) {
+    return {
+      elementId: providerInstallFieldId("claudeBinaryPath"),
+      openProviders: ["claudeAgent", "codex"],
+    };
+  }
+  return { elementId: target, openProviders: provider ? [provider] : [] };
+}
 
 /**
  * The two fields that reach the screen are descriptors, not finished strings:

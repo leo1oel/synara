@@ -1,7 +1,7 @@
 import type { ServerProviderStatus } from "@synara/contracts";
 import { describe, expect, it } from "vitest";
 
-import { resolveClaudeComposerNotice } from "./claudeComposerNotice";
+import { needsAgentCliSetup, resolveClaudeComposerNotice } from "./claudeComposerNotice";
 
 const ready: ServerProviderStatus = {
   provider: "claudeAgent",
@@ -136,5 +136,77 @@ describe("resolveClaudeComposerNotice", () => {
         providerStatus: { ...ready, status: "warning", message: "Could not verify." },
       })?.kind,
     ).toBe("turn-failed");
+  });
+});
+
+describe("needsAgentCliSetup", () => {
+  const claudeMissing: ServerProviderStatus = {
+    ...ready,
+    status: "error",
+    available: false,
+    authStatus: "unknown",
+    message: "Claude Agent CLI (`claude`) is not installed or not on PATH.",
+  };
+  const codexMissing: ServerProviderStatus = {
+    ...claudeMissing,
+    provider: "codex",
+    driver: "codex",
+    instanceId: "codex" as ServerProviderStatus["instanceId"],
+    message: "Codex CLI (`codex`) is not installed or not on PATH.",
+  };
+  const cursor = (status: "ready" | "error"): ServerProviderStatus => ({
+    ...ready,
+    provider: "cursor",
+    driver: "cursor",
+    instanceId: "cursor" as ServerProviderStatus["instanceId"],
+    status,
+    available: status === "ready",
+  });
+
+  it("holds when neither Claude Code nor Codex is found and nothing else is ready", () => {
+    expect(needsAgentCliSetup([claudeMissing, codexMissing, cursor("error")])).toBe(true);
+    // A disabled provider is out of the picture either way.
+    expect(needsAgentCliSetup([claudeMissing, { ...codexMissing, enabled: false }])).toBe(true);
+  });
+
+  it("does not hold once one agent is found, signed in or not, or another one is ready", () => {
+    expect(
+      needsAgentCliSetup([
+        claudeMissing,
+        { ...codexMissing, status: "ready", available: true, message: undefined },
+      ]),
+    ).toBe(false);
+    const signedOut = {
+      ...ready,
+      status: "error" as const,
+      available: false,
+      message: "Claude is not authenticated. Run `claude auth login` and try again.",
+    };
+    expect(needsAgentCliSetup([signedOut, codexMissing])).toBe(false);
+    expect(needsAgentCliSetup([claudeMissing, codexMissing, cursor("ready")])).toBe(false);
+    // Statuses not loaded yet.
+    expect(needsAgentCliSetup([])).toBe(false);
+  });
+
+  it("outranks every other notice, whichever provider is selected", () => {
+    const setup = { message: "Lattice can't find Claude Code or Codex" };
+    const failure = { errorCode: "claude_cli_failed", nextStep: "Run `claude -p hi`." };
+    for (const provider of ["claudeAgent", "codex"]) {
+      expect(
+        resolveClaudeComposerNotice({
+          ...base,
+          provider,
+          providerStatus: claudeMissing,
+          latestTurnFailure: failure,
+          agentCliSetupNeeded: setup,
+        }),
+      ).toEqual({
+        key: "agent-setup",
+        kind: "agent-setup",
+        message: setup.message,
+        action: "set-path",
+        blocksNextSend: true,
+      });
+    }
   });
 });

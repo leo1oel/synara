@@ -1,6 +1,7 @@
 // The Claude notice above the composer must stay readable in Lattice's narrow agent
 // panel: the whole reason shows (it wraps, never truncates), with its next step and a
-// dismiss, in English and Chinese.
+// dismiss, in English and Chinese. With no agent CLI found it lists what to install and
+// offers Set path… and Check again.
 import "../../index.css";
 
 import { page } from "vitest/browser";
@@ -34,6 +35,8 @@ describe("ComposerClaudeNotice", () => {
           notice={forbidden}
           onChangeModel={onChangeModel}
           onOpenProviderSettings={vi.fn()}
+          onSetPath={vi.fn()}
+          onRecheck={vi.fn(async () => null)}
           onDismiss={onDismiss}
         />
       </div>,
@@ -67,12 +70,103 @@ describe("ComposerClaudeNotice", () => {
         }}
         onChangeModel={vi.fn()}
         onOpenProviderSettings={onOpenProviderSettings}
+        onSetPath={vi.fn()}
+        onRecheck={vi.fn(async () => null)}
         onDismiss={vi.fn()}
       />,
     );
     try {
       await page.getByRole("button", { name: "Provider settings" }).click();
       expect(onOpenProviderSettings).toHaveBeenCalledOnce();
+    } finally {
+      await screen.unmount();
+    }
+  });
+
+  const agentSetup = (message: string): Notice => ({
+    key: "agent-setup",
+    kind: "agent-setup",
+    message,
+    action: "set-path",
+    blocksNextSend: true,
+  });
+
+  it("says which agents to install and how, with Set path… and Check again, in Chinese", async () => {
+    setLanguagePreference("zh-CN");
+    // As short as Lattice's agent panel when it shares its column with the paper library.
+    await page.viewport(320, 420);
+    const onSetPath = vi.fn();
+    let finishCheck: () => void = () => {};
+    const onRecheck = vi.fn(
+      () =>
+        new Promise<null>((resolve) => {
+          finishCheck = () => resolve(null);
+        }),
+    );
+    const screen = await render(
+      <div style={{ width: 300 }}>
+        <ComposerClaudeNotice
+          notice={agentSetup("Lattice 找不到 Claude Code 或 Codex")}
+          onChangeModel={vi.fn()}
+          onOpenProviderSettings={vi.fn()}
+          onSetPath={onSetPath}
+          onRecheck={onRecheck}
+          onDismiss={vi.fn()}
+        />
+      </div>,
+    );
+    try {
+      const notice = page.getByTestId("composer-claude-notice");
+      await expect.element(notice).toHaveAttribute("data-notice-kind", "agent-setup");
+      await expect.element(page.getByText("Lattice 找不到 Claude Code 或 Codex")).toBeVisible();
+      await expect
+        .element(page.getByText("curl -fsSL https://claude.ai/install.sh | bash"))
+        .toBeVisible();
+      await expect.element(page.getByText("npm install -g @openai/codex")).toBeVisible();
+      await expect.element(page.getByText("claude auth login")).toBeVisible();
+      await expect.element(page.getByText("codex login")).toBeVisible();
+      // Nothing spills out of the narrow panel, and the commands wrap instead of being cut.
+      const box = notice.element() as HTMLElement;
+      expect(box.scrollWidth).toBeLessThanOrEqual(box.clientWidth + 1);
+      const command = page.getByText("curl -fsSL https://claude.ai/install.sh | bash").element();
+      expect(command.scrollWidth).toBeLessThanOrEqual(command.clientWidth + 1);
+      // In a short panel the steps scroll; the title and both actions stay on screen.
+      const title = page.getByText("Lattice 找不到 Claude Code 或 Codex").element();
+      const recheckButton = page.getByRole("button", { name: "再次检查" }).element();
+      expect(title.getBoundingClientRect().top).toBeGreaterThanOrEqual(0);
+      expect(recheckButton.getBoundingClientRect().bottom).toBeLessThanOrEqual(420);
+      const steps = page.getByTestId("agent-setup-steps").element() as HTMLElement;
+      expect(steps.scrollHeight).toBeGreaterThan(steps.clientHeight);
+
+      await page.getByRole("button", { name: "设置路径…" }).click();
+      expect(onSetPath).toHaveBeenCalledOnce();
+
+      await page.getByRole("button", { name: "再次检查" }).click();
+      expect(onRecheck).toHaveBeenCalledOnce();
+      await expect.element(page.getByRole("button", { name: "正在检查…" })).toBeDisabled();
+      finishCheck();
+      await expect.element(page.getByRole("button", { name: "再次检查" })).toBeEnabled();
+      await expect.element(page.getByText(/还是没有找到。/)).toBeVisible();
+    } finally {
+      await screen.unmount();
+    }
+  });
+
+  it("reads the same setup in English", async () => {
+    const screen = await render(
+      <ComposerClaudeNotice
+        notice={agentSetup("Lattice can't find Claude Code or Codex")}
+        onChangeModel={vi.fn()}
+        onOpenProviderSettings={vi.fn()}
+        onSetPath={vi.fn()}
+        onRecheck={vi.fn(async () => null)}
+        onDismiss={vi.fn()}
+      />,
+    );
+    try {
+      await expect.element(page.getByText("Lattice can't find Claude Code or Codex")).toBeVisible();
+      await expect.element(page.getByRole("button", { name: "Set path…" })).toBeVisible();
+      await expect.element(page.getByRole("button", { name: "Check again" })).toBeVisible();
     } finally {
       await screen.unmount();
     }

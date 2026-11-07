@@ -94,7 +94,11 @@ import { resolveAuxiliaryTextGenerationSelection } from "~/lib/textGenerationCap
 import { resolveInheritedThreadContext } from "~/lib/threadBootstrap";
 import { cn, isMacNavigatorPlatform, newCommandId, newThreadId, randomUUID } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
-import { setPanelShownByHost, usePanelThreadWarmth } from "~/hooks/usePanelThreadWarmth";
+import {
+  setPanelShownByHost,
+  usePanelShownByHost,
+  usePanelThreadWarmth,
+} from "~/hooks/usePanelThreadWarmth";
 import { dispatchThreadSnoozedUntil, resolveSnoozeDeadline } from "~/lib/threadSnooze";
 import {
   ChatLinkActionsContext,
@@ -181,6 +185,7 @@ import { useUnavailableModelFallback } from "./chat/useUnavailableModelFallback"
 import { ComposerClaudeNotice } from "./chat/ComposerClaudeNotice";
 import {
   type ClaudeComposerModelSwitch,
+  needsAgentCliSetup,
   resolveClaudeComposerNotice,
 } from "./chat/claudeComposerNotice";
 import { composerModelDisplayName } from "./chat/ComposerModelPicker.logic";
@@ -4351,7 +4356,10 @@ export default function ChatView({
     }
     return null;
   }, [activeLatestTurnId, workLogEntries]);
+  // Only Lattice's panel says it: it runs the writer's own CLIs and has no onboarding.
+  const agentCliSetupNeeded = isEmbed && needsAgentCliSetup(providerStatuses);
   const claudeComposerNotice = resolveClaudeComposerNotice({
+    agentCliSetupNeeded: agentCliSetupNeeded ? { message: t("lattice:agentSetup_title") } : null,
     provider: selectedProvider,
     threadId: activeThread?.id ?? null,
     selectedModel: selectedModelForPickerWithCustomFallback,
@@ -4363,6 +4371,16 @@ export default function ChatView({
     describeSwitch: (from, to) => t("lattice:claudeModelSwitchedToDefault", { from, to }),
   });
   const [dismissedClaudeNoticeKey, setDismissedClaudeNoticeKey] = useState<string | null>(null);
+  // A CLI installed while the panel was away is found when the writer comes back to it:
+  // the server re-adds the usual install folders to PATH before every probe.
+  const panelShownByHost = usePanelShownByHost();
+  const panelWasShownRef = useRef(false);
+  useEffect(() => {
+    // Only on the panel being shown, not on every status change while it is.
+    const becameShown = panelShownByHost && !panelWasShownRef.current;
+    panelWasShownRef.current = panelShownByHost;
+    if (becameShown && agentCliSetupNeeded) void refreshProviderStatuses({ silent: true });
+  }, [agentCliSetupNeeded, panelShownByHost, refreshProviderStatuses]);
   const visibleClaudeComposerNotice =
     claudeComposerNotice && claudeComposerNotice.key !== dismissedClaudeNoticeKey
       ? claudeComposerNotice
@@ -6879,6 +6897,12 @@ export default function ChatView({
                   // replace the panel.
                   if (!openEmbeddedProviderSettings()) openProviderAccountSettings();
                 }}
+                onSetPath={() => {
+                  if (!openEmbeddedProviderSettings(SETTINGS_TARGETS.providerBinaryPaths)) {
+                    openProviderAccountSettings();
+                  }
+                }}
+                onRecheck={() => refreshProviderStatuses({ explicit: true, silent: true })}
                 onDismiss={() => setDismissedClaudeNoticeKey(visibleClaudeComposerNotice.key)}
               />
             ) : null}
@@ -7441,7 +7465,9 @@ export default function ChatView({
           currently visible (see `useThreadErrorToast`). */}
       <ProviderHealthBanner
         status={
-          shouldShowProviderHealthBanner && claudeComposerNotice?.kind !== "provider-status"
+          shouldShowProviderHealthBanner &&
+          claudeComposerNotice?.kind !== "provider-status" &&
+          claudeComposerNotice?.kind !== "agent-setup"
             ? visibleActiveProviderStatus
             : null
         }

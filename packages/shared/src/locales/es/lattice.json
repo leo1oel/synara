@@ -830,5 +830,13 @@
   "yourMessageIsSavedAndOnHold": "Your message is saved and on hold. Continuing may reprocess the conversation's context.",
   "yourMessageIsSavedAndOnHold2": "Your message is saved and on hold. Continuing may reprocess about {{tokens}} tokens.",
   "yourSkillLibrary": "Your skill library",
-  "yours": "Yours"
+  "yours": "Yours",
+  "agentSetup_title": "Lattice no encuentra Claude Code ni Codex",
+  "agentSetup_intro": "Lattice usa uno de ellos en tu Mac, con tu propia cuenta. Instala uno en Terminal:",
+  "agentSetup_claudeSignIn": "Inicia sesión: <command>claude auth login</command>",
+  "agentSetup_codexSignIn": "O <command>brew install --cask codex</command>. Inicia sesión: <command>codex login</command>",
+  "agentSetup_alreadyInstalled": "¿Ya lo instalaste? Lattice busca en el PATH de tu shell y en las carpetas de instalación habituales. ¿Está en otro lugar? Indica su ruta.",
+  "agentSetup_setPath": "Indicar ruta…",
+  "agentSetup_checking": "Comprobando…",
+  "agentSetup_stillNotFound": "Sigue sin encontrarse."
 }

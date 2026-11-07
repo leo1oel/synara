@@ -9,7 +9,7 @@ import type {
   RuntimeMode,
   ThreadId,
 } from "@synara/contracts";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { randomUUID } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
 
@@ -66,6 +66,11 @@ const hostPanelVisibility: HostPanelVisibility = {
     return () => hostVisibilityListeners.delete(listener);
   },
 };
+
+/** Whether the host shows the panel, as React state. */
+export function usePanelShownByHost(): boolean {
+  return useSyncExternalStore(hostPanelVisibility.subscribe, hostPanelVisibility.shown);
+}
 
 /**
  * While the panel is on screen (the host shows it and the window is visible),
