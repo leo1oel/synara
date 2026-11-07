@@ -616,7 +616,13 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
     });
   });
 
-  return Effect.fnUntraced(function* (body: ImportThreadRequest) {
+  // Lattice: `continueInPlace` resumes a Codex thread instead of forking it, so a
+  // session continued from another editor keeps one native identity (Claude always
+  // resumes in place) and its folder listing can recognise it as already open.
+  return Effect.fnUntraced(function* (
+    body: ImportThreadRequest,
+    importOptions?: { readonly continueInPlace?: boolean },
+  ) {
     const threadOption = yield* options.projectionSnapshotQuery.getThreadDetailById(body.threadId);
     if (Option.isNone(threadOption)) {
       return yield* Effect.fail(importMessagesError(`Thread '${body.threadId}' was not found.`));
@@ -754,7 +760,7 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
         ? { cwd: importedProviderContext?.runtimeCwd ?? cwd }
         : {}),
       modelSelection: effectiveModelSelection,
-      ...(provider === "codex"
+      ...(provider === "codex" && importOptions?.continueInPlace !== true
         ? { forkSourceResumeCursor: importResumeCursor }
         : { resumeCursor: importResumeCursor }),
       runtimeMode: thread.runtimeMode,

@@ -13,6 +13,10 @@ import type {
   LoadProjectImportHistoryResult,
   ImportProjectInput,
   ImportProjectResult,
+  ListFolderSessionsInput,
+  ListFolderSessionsResult,
+  OpenFolderSessionInput,
+  OpenFolderSessionResult,
   ListProjectImportsInput,
   ListProjectImportsResult,
 } from "./projectImport";
@@ -1499,6 +1503,8 @@ export interface NativeApi {
     ) => Promise<OrchestrationImportThreadResult>;
     listProjectImports: (input: ListProjectImportsInput) => Promise<ListProjectImportsResult>;
     importProject: (input: ImportProjectInput) => Promise<ImportProjectResult>;
+    listFolderSessions: (input: ListFolderSessionsInput) => Promise<ListFolderSessionsResult>;
+    openFolderSession: (input: OpenFolderSessionInput) => Promise<OpenFolderSessionResult>;
     loadProjectImportHistory: (
       input: LoadProjectImportHistoryInput,
     ) => Promise<LoadProjectImportHistoryResult>;

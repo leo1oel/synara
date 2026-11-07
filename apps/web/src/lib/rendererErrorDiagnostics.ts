@@ -34,8 +34,10 @@ export function rendererRpcActivity(
         return "chat.open";
       case ORCHESTRATION_WS_METHODS.importThread:
       case ORCHESTRATION_WS_METHODS.importProject:
+      case ORCHESTRATION_WS_METHODS.openFolderSession:
         return "project.import";
       case ORCHESTRATION_WS_METHODS.listProjectImports:
+      case ORCHESTRATION_WS_METHODS.listFolderSessions:
         return "project.import.catalog";
       case ORCHESTRATION_WS_METHODS.loadProjectImportHistory:
         return "project.import.preview";
