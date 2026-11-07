@@ -88,6 +88,30 @@ async function readRange(file: string, start: number, end: number): Promise<stri
   return chunks.join("");
 }
 
+/** The file's first line, or its first `maxBytes` when the line is longer. */
+async function readFirstLine(file: string, maxBytes: number): Promise<string> {
+  if (maxBytes <= 0) return "";
+  let line = "";
+  const stream = createReadStream(file, {
+    encoding: "utf8",
+    start: 0,
+    end: maxBytes - 1,
+    highWaterMark: 16 * 1024,
+  });
+  try {
+    for await (const chunk of stream) {
+      const newline = (chunk as string).indexOf("\n");
+      if (newline !== -1) return line + (chunk as string).slice(0, newline + 1);
+      line += chunk as string;
+    }
+  } catch (error) {
+    if (!isMissing(error)) throw error;
+  } finally {
+    stream.destroy();
+  }
+  return line;
+}
+
 /** Complete JSON lines of a bounded read; the cut-off first or last line is dropped. */
 function jsonLines(chunk: string, options: { dropFirst: boolean; dropLast: boolean }): Row[] {
   const lines = chunk.split("\n");
@@ -111,16 +135,19 @@ function oneLine(value: string): string {
     : collapsed;
 }
 
-// Harness-injected turns (slash-command echoes, caveats, IDE context) start with a tag.
+// Harness-injected text (slash-command echoes, caveats, IDE context, environment
+// context) starts with a tag. A message's parts can mix both: Claude Code's VS Code
+// extension sends the open file or selection (`<ide_opened_file>`) ahead of what the
+// user typed, so the first untagged part is the prompt. Claude names a text part
+// `text`, Codex `input_text`.
 function promptText(content: unknown): string | undefined {
-  const value =
-    text(content) ??
-    (Array.isArray(content)
-      ? content
-          .map((part) => (object(part)?.type === "text" ? text(object(part)?.text) : undefined))
-          .find((part) => part !== undefined)
-      : undefined);
-  return value && !value.startsWith("<") ? value : undefined;
+  const parts = Array.isArray(content)
+    ? content.flatMap((part) => {
+        const entry = object(part);
+        return entry?.type === "text" || entry?.type === "input_text" ? [text(entry.text)] : [];
+      })
+    : [text(content)];
+  return parts.find((part) => part !== undefined && !part.startsWith("<"));
 }
 
 // ── Claude Code ──────────────────────────────────────────────────────────────
@@ -352,10 +379,11 @@ export async function discoverCodexFolderSessions(
     scanned += 1;
     const info = await fs.stat(file).catch(() => null);
     if (!info || info.size === 0) continue;
-    const head = await readRange(file, 0, Math.min(info.size, HEAD_BYTES));
-    const meta = readCodexMeta(head);
+    // Only the first record of another folder's rollout is read.
+    const meta = readCodexMeta(await readFirstLine(file, Math.min(info.size, HEAD_BYTES)));
     if (!meta || seen.has(meta.id) || !(await input.sameFolder(meta.cwd))) continue;
     seen.add(meta.id);
+    const head = await readRange(file, 0, Math.min(info.size, HEAD_BYTES));
     const prompt = codexFirstPrompt(head, info.size);
     // An empty session (opened, never sent) has nothing to continue; a prompt past the
     // head read (long base instructions) still counts.

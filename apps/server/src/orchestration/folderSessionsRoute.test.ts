@@ -3,13 +3,13 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import {
   DEFAULT_SERVER_SETTINGS,
+  OrchestrationCommand,
   ProjectId,
   ProviderInstanceId,
   ThreadId,
-  type OrchestrationCommand,
   type OrchestrationReadModel,
 } from "@synara/contracts";
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ProjectImportRepository } from "../persistence/projectImportRepository";
@@ -170,6 +170,22 @@ describe("folder sessions route", () => {
       { threadId, externalId: "x-1" },
       { continueInPlace: true },
     );
+  });
+
+  it("gives an untitled session's chat a non-empty title", async () => {
+    const { handlers, commands } = harness({ sessions: [{ ...codex("x-2"), title: "" }] });
+    await Effect.runPromise(
+      handlers.openFolderSession({
+        projectId: PROJECT_ID,
+        provider: "codex",
+        providerInstanceId: ProviderInstanceId.makeUnsafe("codex"),
+        externalId: "x-2",
+      }),
+    );
+    const create = commands.find((command) => command.type === "thread.create");
+    expect(create).toMatchObject({ title: "Codex session" });
+    // The real command schema refuses an empty title.
+    expect(Schema.decodeUnknownExit(OrchestrationCommand)(create)._tag).toBe("Success");
   });
 
   it("returns the chat that already continues the session instead of opening another", async () => {
