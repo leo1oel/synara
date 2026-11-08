@@ -1582,14 +1582,23 @@ html[data-synara-embed="true"] .lattice-git-clean {
   flex-direction: column;
   min-height: 0;
 }
+/* An empty state is centred in the height its column leaves it (the auto margins share the free
+   space, and fall to zero rather than clip when the panel is too short, so it still scrolls from
+   its top), a little above the middle where it reads as centred. Every Changes and Pull requests
+   empty state shares this; above a list (closed pull requests under "No open pull requests") it
+   keeps its place at the top instead. */
 html[data-synara-embed="true"] .lattice-git-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  margin: 24px auto 16px;
+  margin: auto;
+  padding-block: 16px 32px;
   max-width: 38ch;
   text-align: center;
+}
+html[data-synara-embed="true"] .lattice-git-empty:not(:only-child, .lattice-git-clean > *) {
+  margin-block: 8px 0;
 }
 html[data-synara-embed="true"] .lattice-git-empty .research-art {
   margin-bottom: 10px;

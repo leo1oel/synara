@@ -88,6 +88,46 @@ describe("GitRepositorySetup", () => {
     }
   });
 
+  it("centres Lattice's empty Changes state in a tall panel and keeps it scrollable in a short one", async () => {
+    document.documentElement.setAttribute("data-synara-embed", "true");
+    try {
+      const screen = await renderWithQueryClient(
+        <div data-testid="panel" style={{ width: 300, height: 900 }}>
+          <LatticeGitInitializationState cwd="/tmp/research-writer" />
+        </div>,
+      );
+      await expect.element(page.getByText("Start version control")).toBeVisible();
+      const panel = document
+        .querySelector<HTMLElement>('[data-testid="panel"]')!
+        .getBoundingClientRect();
+      const empty = document
+        .querySelector<HTMLElement>(".lattice-git-empty")!
+        .getBoundingClientRect();
+      // Regression: it sat 24px from the top, leaving two thirds of the panel empty below it.
+      // Centred, a little above the middle, its free space splits nearly evenly.
+      const above = empty.top - panel.top;
+      const below = panel.bottom - empty.bottom;
+      expect(above).toBeGreaterThan(200);
+      expect(Math.abs(above - below)).toBeLessThanOrEqual(32);
+
+      // Too short for it, it starts at the top and scrolls rather than clipping its drawing.
+      await screen.rerender(
+        <QueryClientProvider client={new QueryClient()}>
+          <div data-testid="panel" style={{ width: 300, height: 200 }}>
+            <LatticeGitInitializationState cwd="/tmp/research-writer" />
+          </div>
+        </QueryClientProvider>,
+      );
+      const scroll = document.querySelector<HTMLElement>(".lattice-git-scroll")!;
+      expect(scroll.scrollHeight).toBeGreaterThan(scroll.clientHeight);
+      expect(
+        document.querySelector<HTMLElement>(".lattice-git-empty")!.getBoundingClientRect().top,
+      ).toBeGreaterThanOrEqual(scroll.getBoundingClientRect().top);
+    } finally {
+      document.documentElement.removeAttribute("data-synara-embed");
+    }
+  });
+
   it("opens a styled publish dialog with private visibility selected by default", async () => {
     await page.viewport(451, 552);
     await renderWithQueryClient(<GitHubRemoteSetupCard cwd="/tmp/research writer" />);
