@@ -1881,8 +1881,9 @@ const make = Effect.fnUntraced(function* (options?: CheckpointReactorLiveOptions
     // text synced from Overleaf, the user's own typing, files this thread never
     // touched — and the host would upload that rollback as an ordinary change.
     // Diffing the target against the latest snapshot is not enough either: it
-    // would sweep up edits made between turns. Turns without file changes (or
-    // whose files were already undone) have nothing to reverse.
+    // would sweep up edits made between turns. A ready turn without file
+    // changes (or whose files were already undone) has nothing to reverse; a
+    // turn whose capture went wrong is reversed from whatever snapshots exist.
     const revertSegments: Array<{
       readonly turnCount: number;
       readonly turnId: TurnId;
@@ -1897,7 +1898,8 @@ const make = Effect.fnUntraced(function* (options?: CheckpointReactorLiveOptions
     for (const checkpoint of thread.checkpoints
       .filter(
         (candidate) =>
-          candidate.checkpointTurnCount > event.payload.turnCount && candidate.files.length > 0,
+          candidate.checkpointTurnCount > event.payload.turnCount &&
+          (candidate.files.length > 0 || candidate.status !== "ready"),
       )
       .toSorted((left, right) => right.checkpointTurnCount - left.checkpointTurnCount)) {
       const turnStartRef =
@@ -1931,6 +1933,9 @@ const make = Effect.fnUntraced(function* (options?: CheckpointReactorLiveOptions
         .hasCheckpointRef({ cwd: checkpointCwd, checkpointRef: checkpoint.checkpointRef })
         .pipe(Effect.catch(() => Effect.succeed(false)));
       if (!fromCheckpointRef || !toExists) {
+        // A failed capture recorded no snapshot to reverse; leaving its edits
+        // in place loses nothing. A ready turn's missing snapshot is a fault.
+        if (checkpoint.status !== "ready") continue;
         missingSegmentDetail = `Filesystem checkpoints for turn ${checkpoint.checkpointTurnCount} are unavailable, so its changes cannot be reversed.`;
         break;
       }

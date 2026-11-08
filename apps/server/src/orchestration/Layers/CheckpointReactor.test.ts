@@ -583,6 +583,9 @@ describe("CheckpointReactor", () => {
       deleteCheckpointRefs?: (
         input: Parameters<CheckpointStoreShape["deleteCheckpointRefs"]>[0],
       ) => CheckpointStoreError | null;
+      reverseCheckpointDiff?: (
+        input: Parameters<CheckpointStoreShape["reverseCheckpointDiff"]>[0],
+      ) => CheckpointStoreError | null;
     } = {};
     const orchestrationLayer = OrchestrationEngineLive.pipe(
       Layer.provide(OrchestrationProjectionPipelineLive),
@@ -606,6 +609,11 @@ describe("CheckpointReactor", () => {
             Effect.suspend(() => {
               const failure = failures.deleteCheckpointRefs?.(input) ?? null;
               return failure === null ? store.deleteCheckpointRefs(input) : Effect.fail(failure);
+            }),
+          reverseCheckpointDiff: (input) =>
+            Effect.suspend(() => {
+              const failure = failures.reverseCheckpointDiff?.(input) ?? null;
+              return failure === null ? store.reverseCheckpointDiff(input) : Effect.fail(failure);
             }),
         } satisfies CheckpointStoreShape;
       }),
@@ -925,6 +933,22 @@ describe("CheckpointReactor", () => {
     "recovers persisted revert intents according to adoption and claim evidence: %s",
     async (mode) => {
       const harness = await createHarness({ startReactor: false });
+      for (const turnCount of [1, 2] as const) {
+        await Effect.runPromise(
+          harness.engine.dispatch({
+            type: "thread.turn.diff.complete",
+            commandId: CommandId.makeUnsafe(`upgrade-historical-diff-${turnCount}`),
+            threadId: ThreadId.makeUnsafe("thread-1"),
+            turnId: asTurnId(`turn-${turnCount}`),
+            completedAt: new Date().toISOString(),
+            checkpointRef: checkpointRefForThreadTurn(ThreadId.makeUnsafe("thread-1"), turnCount),
+            status: "ready",
+            files: [{ path: "README.md", kind: "modified", additions: 1, deletions: 1 }],
+            checkpointTurnCount: turnCount,
+            createdAt: new Date().toISOString(),
+          }),
+        );
+      }
       const beforeRequest = await Effect.runPromise(harness.engine.getEventHighWaterSequence);
       const now = new Date().toISOString();
       await Effect.runPromise(
@@ -958,8 +982,10 @@ describe("CheckpointReactor", () => {
       await harness.start();
       await settleCheckpointWork(harness.reactor.drain);
       const canApply = mode === "post-adoption unclaimed";
-      expect(restore).toHaveBeenCalledTimes(canApply ? 1 : 0);
-      expect(reverse).not.toHaveBeenCalled();
+      // A thread revert reverses each later turn's own diff; it never restores
+      // a snapshot over the workspace.
+      expect(restore).not.toHaveBeenCalled();
+      expect(reverse).toHaveBeenCalledTimes(canApply ? 2 : 0);
       expect(fs.readFileSync(path.join(harness.cwd, "README.md"), "utf8")).toBe(
         canApply ? "v1\n" : "v3\n",
       );
@@ -1899,8 +1925,12 @@ describe("CheckpointReactor", () => {
         (event) => event.type === "thread.reverted" && event.aggregateId === peer,
         1000,
       );
-      expect(restore).toHaveBeenCalled();
-      expect(fs.readFileSync(path.join(harness.cwd, "README.md"), "utf8")).toBe("v1\n");
+      // The peer made no turns, so its revert reverses nothing and keeps the
+      // edit no turn of it made; only a failed revert reaches the rescue restore.
+      expect(restore).not.toHaveBeenCalled();
+      expect(fs.readFileSync(path.join(harness.cwd, "README.md"), "utf8")).toBe(
+        "peer edit before Undo\n",
+      );
 
       // The peer has advanced this physical workspace while its alias is still
       // unknown. Keep the source reader behind the old head: the next turn is
@@ -3777,13 +3807,15 @@ describe("CheckpointReactor", () => {
       const threadId = ThreadId.makeUnsafe("thread-1");
       const order: string[] = [];
       const capture = harness.checkpointStore.captureCheckpoint;
-      const restore = harness.checkpointStore.restoreCheckpoint;
       let nativeCaptures = 0;
       const firstStarted = Deferred.makeUnsafe<void>();
       const releaseFirst = Deferred.makeUnsafe<void>();
       vi.spyOn(harness.checkpointStore, "captureCheckpoint").mockImplementation((input) => {
         if (input.checkpointRef === checkpointRefForThreadTurn(threadId, 1))
           order.push(++nativeCaptures === 1 ? "native-before" : "native-after");
+        // Every applied thread revert first snapshots the workspace it is about
+        // to change, whether or not any turn has file changes to reverse.
+        if (input.checkpointRef.includes("/revert-rescue/")) order.push("undo");
         return mode === "active" &&
           nativeCaptures === 1 &&
           input.checkpointRef === checkpointRefForThreadTurn(threadId, 1)
@@ -3792,10 +3824,6 @@ describe("CheckpointReactor", () => {
               Effect.andThen(capture(input)),
             )
           : capture(input);
-      });
-      vi.spyOn(harness.checkpointStore, "restoreCheckpoint").mockImplementation((input) => {
-        order.push("undo");
-        return restore(input);
       });
       if (mode === "active") await harness.start();
       const before = await Effect.runPromise(
@@ -6883,7 +6911,9 @@ describe("CheckpointReactor", () => {
     await waitForEvent(harness.engine, (event) => event.type === "thread.reverted");
     expect(fs.existsSync(path.join(harness.cwd, "one.txt"))).toBe(false);
     expect(fs.existsSync(path.join(harness.cwd, "two.txt"))).toBe(false);
-    expect(fs.existsSync(path.join(harness.cwd, "later.txt"))).toBe(false);
+    // No turn wrote later.txt, so reverting the thread keeps it: the revert
+    // reverses the thread's own changes rather than restoring a snapshot.
+    expect(fs.readFileSync(path.join(harness.cwd, "later.txt"), "utf8")).toBe("later\n");
     expect(harness.provider.rollbackConversation).toHaveBeenCalledTimes(1);
   });
 
@@ -7786,7 +7816,7 @@ describe("CheckpointReactor", () => {
             createdAt,
           }),
         );
-      const initialText = revertScope === "files" ? "v3\n" : "peer's live edits\n";
+      const initialText = "v3\n";
       fs.writeFileSync(path.join(harness.cwd, "README.md"), initialText, "utf8");
       await Effect.runPromise(
         harness.engine.dispatch({
@@ -7846,7 +7876,7 @@ describe("CheckpointReactor", () => {
         completedAt: createdAt,
         checkpointRef: checkpointRefForThreadTurn(ThreadId.makeUnsafe("thread-1"), 1),
         status: "ready",
-        files: [],
+        files: [{ path: "README.md", kind: "modified", additions: 1, deletions: 1 }],
         checkpointTurnCount: 1,
         createdAt,
       }),
@@ -7860,7 +7890,7 @@ describe("CheckpointReactor", () => {
         completedAt: createdAt,
         checkpointRef: checkpointRefForThreadTurn(ThreadId.makeUnsafe("thread-1"), 2),
         status: "ready",
-        files: [],
+        files: [{ path: "README.md", kind: "modified", additions: 1, deletions: 1 }],
         checkpointTurnCount: 2,
         createdAt,
       }),
@@ -7918,7 +7948,7 @@ describe("CheckpointReactor", () => {
           completedAt: createdAt,
           checkpointRef: checkpointRefForThreadTurn(ThreadId.makeUnsafe("thread-1"), turnCount),
           status: "ready",
-          files: [],
+          files: [{ path: "README.md", kind: "modified", additions: 1, deletions: 1 }],
           checkpointTurnCount: turnCount,
           createdAt,
         }),
@@ -7981,7 +8011,7 @@ describe("CheckpointReactor", () => {
           completedAt: createdAt,
           checkpointRef: checkpointRefForThreadTurn(ThreadId.makeUnsafe("thread-1"), turnCount),
           status: "ready",
-          files: [],
+          files: [{ path: "README.md", kind: "modified", additions: 1, deletions: 1 }],
           checkpointTurnCount: turnCount,
           createdAt,
         }),
@@ -8061,7 +8091,7 @@ describe("CheckpointReactor", () => {
           completedAt: createdAt,
           checkpointRef: checkpointRefForThreadTurn(ThreadId.makeUnsafe("thread-1"), turnCount),
           status: "ready",
-          files: [],
+          files: [{ path: "README.md", kind: "modified", additions: 1, deletions: 1 }],
           checkpointTurnCount: turnCount,
           createdAt,
         }),
@@ -8085,12 +8115,12 @@ describe("CheckpointReactor", () => {
     fs.writeFileSync(untrackedPath, "preserve\n", "utf8");
     const createdAt = await seedRevertableThread(harness, "cmd-partial-restore");
 
-    // A restore is not atomic: it can rewrite part of the tree and then fail.
+    // A reversal is not atomic: it can rewrite part of the tree and then fail.
     // Nothing observable distinguishes that from "the checkpoint was missing and
     // nothing was touched", so the saga has to treat a failure as destructive.
-    const targetCheckpointRef = checkpointRefForThreadTurn(threadId, 2);
-    harness.failures.restoreCheckpoint = (input) => {
-      if (input.checkpointRef !== targetCheckpointRef) {
+    const reversedCheckpointRef = checkpointRefForThreadTurn(threadId, 2);
+    harness.failures.reverseCheckpointDiff = (input) => {
+      if (input.toCheckpointRef !== reversedCheckpointRef) {
         return null;
       }
       fs.writeFileSync(path.join(harness.cwd, "README.md"), "half-restored\n", "utf8");
@@ -8103,7 +8133,7 @@ describe("CheckpointReactor", () => {
         type: "thread.checkpoint.revert",
         commandId: CommandId.makeUnsafe("cmd-partial-restore-revert"),
         threadId,
-        turnCount: 2,
+        turnCount: 1,
         scope: "thread",
         createdAt,
       }),
@@ -8137,15 +8167,14 @@ describe("CheckpointReactor", () => {
     // Every restore fails: the target one leaves the tree half-written, and the
     // compensating one cannot undo it. The snapshot is now the only copy of the
     // pre-revert workspace in existence.
-    harness.failures.restoreCheckpoint = (input) => {
-      if (input.checkpointRef === checkpointRefForThreadTurn(threadId, 1)) {
-        fs.writeFileSync(path.join(harness.cwd, "README.md"), "half-restored\n", "utf8");
-        return simulatedRestoreFailure(harness.cwd, "simulated mid-restore failure");
-      }
-      return input.checkpointRef.includes("/revert-rescue/")
+    harness.failures.reverseCheckpointDiff = () => {
+      fs.writeFileSync(path.join(harness.cwd, "README.md"), "half-restored\n", "utf8");
+      return simulatedRestoreFailure(harness.cwd, "simulated mid-restore failure");
+    };
+    harness.failures.restoreCheckpoint = (input) =>
+      input.checkpointRef.includes("/revert-rescue/")
         ? simulatedRestoreFailure(harness.cwd, "simulated compensation failure")
         : null;
-    };
 
     await Effect.runPromise(
       harness.engine.dispatch({
@@ -8175,10 +8204,10 @@ describe("CheckpointReactor", () => {
     const harness = await createHarness();
     const threadId = ThreadId.makeUnsafe("thread-1");
     const createdAt = await seedRevertableThread(harness, "cmd-rescue-cleanup-failure");
-    const targetCheckpointRef = checkpointRefForThreadTurn(threadId, 2);
+    const reversedCheckpointRef = checkpointRefForThreadTurn(threadId, 2);
 
-    harness.failures.restoreCheckpoint = (input) =>
-      input.checkpointRef === targetCheckpointRef
+    harness.failures.reverseCheckpointDiff = (input) =>
+      input.toCheckpointRef === reversedCheckpointRef
         ? simulatedRestoreFailure(harness.cwd, "simulated target restore failure")
         : null;
     harness.failures.deleteCheckpointRefs = (input) =>
@@ -8196,7 +8225,7 @@ describe("CheckpointReactor", () => {
         type: "thread.checkpoint.revert",
         commandId: CommandId.makeUnsafe("cmd-rescue-cleanup-failure-revert"),
         threadId,
-        turnCount: 2,
+        turnCount: 1,
         scope: "thread",
         createdAt,
       }),
@@ -8228,7 +8257,6 @@ describe("CheckpointReactor", () => {
     runGit(harness.cwd, ["add", "."]);
     runGit(harness.cwd, ["commit", "-m", "Second"]);
     runGit(harness.cwd, ["update-ref", historicalTurnOneRef, "HEAD"]);
-    fs.writeFileSync(path.join(harness.cwd, "README.md"), "v3\n", "utf8");
 
     await Effect.runPromise(
       harness.engine.dispatch({
@@ -8256,7 +8284,7 @@ describe("CheckpointReactor", () => {
         completedAt: createdAt,
         checkpointRef: historicalTurnOneRef,
         status: "ready",
-        files: [],
+        files: [{ path: "README.md", kind: "modified", additions: 1, deletions: 1 }],
         checkpointTurnCount: 1,
         createdAt,
       }),
