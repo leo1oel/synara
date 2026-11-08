@@ -59,6 +59,23 @@ export interface ReverseCheckpointDiffInput {
   readonly maxOutputBytes?: number;
 }
 
+/**
+ * A reverse patch that ran. `conflictedPaths` lists the files where the
+ * workspace had changed the very lines the patch reverses: each keeps the rest
+ * of the undo and carries diff3 conflict markers (ours = the current text,
+ * base = the checkpoint's text, theirs = the text before the checkpoint) for
+ * just those spots, for the user to resolve.
+ */
+export interface ReverseCheckpointDiffResult {
+  readonly conflictedPaths: ReadonlyArray<string>;
+}
+
+export interface HostWritesInput {
+  readonly cwd: string;
+  /** From `checkpointRefForThreadTurnHostWrites`. */
+  readonly ref: CheckpointRef;
+}
+
 export interface DeleteCheckpointRefsInput {
   readonly cwd: string;
   readonly checkpointRefs: ReadonlyArray<CheckpointRef>;
@@ -120,10 +137,28 @@ export interface CheckpointStoreShape {
 
   /**
    * Reverse only the changes between two checkpoints onto the current workspace.
+   *
+   * Edits made since the checkpoint are kept: a hunk they overlap becomes a
+   * conflict in that file (see `ReverseCheckpointDiffResult`) rather than
+   * refusing the whole undo. Resolves `false` when a checkpoint ref is missing.
    */
   readonly reverseCheckpointDiff: (
     input: ReverseCheckpointDiffInput,
-  ) => Effect.Effect<boolean, CheckpointStoreError>;
+  ) => Effect.Effect<ReverseCheckpointDiffResult | false, CheckpointStoreError>;
+
+  /**
+   * Add workspace-relative paths to the set the host wrote during a turn.
+   */
+  readonly recordHostWrites: (
+    input: HostWritesInput & { readonly paths: ReadonlyArray<string> },
+  ) => Effect.Effect<void, CheckpointStoreError>;
+
+  /**
+   * Paths the host wrote during a turn; empty when none were recorded.
+   */
+  readonly readHostWrites: (
+    input: HostWritesInput,
+  ) => Effect.Effect<ReadonlyArray<string>, CheckpointStoreError>;
 
   /**
    * Delete the provided checkpoint refs.

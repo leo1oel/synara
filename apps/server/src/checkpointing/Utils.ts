@@ -87,6 +87,20 @@ export function checkpointRefForThreadTurnStartInManagedFamily(
   );
 }
 
+// Paths the host (Lattice) wrote while this turn ran: a co-author's synced or
+// realtime edit, or the user's own save. Those edits land inside the turn's
+// diff, so file Undo refuses to reverse them. The ref points at a blob of
+// newline-separated workspace-relative paths, not a commit, and sits outside
+// the managed ref kinds so no checkpoint code mistakes it for a snapshot.
+export function checkpointRefForThreadTurnHostWrites(
+  threadId: ThreadId,
+  turnId: TurnId,
+): CheckpointRef {
+  return CheckpointRef.makeUnsafe(
+    `${CHECKPOINT_REFS_PREFIX}/${Encoding.encodeBase64Url(threadId)}/turn-host-writes/${Encoding.encodeBase64Url(turnId)}`,
+  );
+}
+
 // A tool-completion revision keeps each published live preview immutable. The
 // latest ref remains until the next revision or terminal checkpoint is published.
 export function checkpointRefForThreadTurnLive(
