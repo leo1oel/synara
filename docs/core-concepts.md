@@ -483,6 +483,17 @@ baseline, mismatched patch, compacted payload or older event without integrity m
 unavailable until a fresh complete update or final checkpoint. **All turns** still uses completed
 checkpoints; a live preview is not proof that a turn finished.
 
+File Undo and thread revert reverse only the thread's own changes. File Undo reverses one turn's
+diff (its turn-start snapshot to its turn-end snapshot); thread revert reverses each later turn's
+diff, newest first, rather than restoring the target snapshot. Both apply the reverse patch to the
+current text with a three-way fallback, so edits made since, by the user, another tool or a
+co-author, stay in place, including untracked files and files the thread never touched. Where such
+an edit changed the very lines being reversed, that file keeps the rest of the undo and marks just
+those spots with diff3 conflict markers; the timeline says which files need resolving. A turn whose
+diff swallowed an edit the host reported writing while the turn ran (Lattice sends
+`lattice:host-file-writes`) cannot tell that edit from the agent's, so Undo refuses to reverse that
+file rather than delete it.
+
 File Undo and thread revert refuse to change a workspace while another thread has an active or
 pending turn in that same Git checkout. Symlinks and nested folders share this protection;
 separate Git worktrees remain independent. Stop the active turn before retrying Undo.

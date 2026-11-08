@@ -771,7 +771,7 @@
   "thisUses1OfYourSavedResets": "会从你剩下的 {{count}} 次重置中用掉 1 次，让 Codex 额度马上恢复。用掉的重置无法撤销，也不会退回。",
   "thisVisualNeedsANewer": "这个可视化内容需要更新版本的 {{app}}。",
   "thisWillAtomicallyMergeEveryOpenPull": "这会以{{method}}方式，把直到 #{{number}} 的所有打开的 PR 一次性合并到 {{branch}}。",
-  "thisWillDiscardNewerMessagesAndTurn": "这会丢弃此对话中该检查点之后的消息和轮次差异记录。",
+  "thisWillDiscardNewerMessagesAndTurn": "这会丢弃此对话中该检查点之后的消息，并撤销 Agent 在那之后对文件的修改。你和合作者的修改会保留；与 Agent 修改重叠的地方，两个版本都会标成冲突，等你处理。",
   "thisWillMergeIntoUsing": "这会以{{method}}方式把 #{{number}} 合并到 {{branch}}。",
   "thisWillMergeUsing": "这会以{{method}}方式合并 #{{number}}。",
   "toWorkOnASinglePassageSelect": "只想改其中一段？在编辑器里选中它即可",

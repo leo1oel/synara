@@ -50,6 +50,7 @@ import {
   checkpointRefForThreadTurnLive,
   checkpointRefForThreadTurnStart,
   checkpointRefForThreadTurnStartInManagedFamily,
+  checkpointRefForThreadTurnHostWrites,
   isManagedCheckpointRefForThread,
   resolveThreadWorkspaceCwd,
 } from "../../checkpointing/Utils.ts";
@@ -68,6 +69,12 @@ import { TurnCheckpointCoordinator } from "../Services/TurnCheckpointCoordinator
 import { CheckpointInvariantError, type CheckpointStoreError } from "../../checkpointing/Errors.ts";
 import { OrchestrationDispatchError } from "../Errors.ts";
 import {
+  hostWriteUndoBlockDetail,
+  hostWrittenUndoPaths,
+  revertConflictDetail,
+} from "../checkpointUndoNotices.ts";
+import {
+  CHECKPOINT_REVERT_CONFLICTS_ACTIVITY_KIND,
   CHECKPOINT_REVERT_FAILED_ACTIVITY_KIND,
   checkpointRevertActiveTurnDetail,
   threadHasInFlightTurn,
@@ -377,6 +384,70 @@ const make = Effect.fnUntraced(function* (options?: CheckpointReactorLiveOptions
         ),
       );
   }, catchNoticeFailure);
+
+  // A conflicted Undo still succeeded, so this is a notice rather than a
+  // failure: the files keep the rest of the undo and mark the overlapping spots.
+  const appendRevertConflictActivity = (input: {
+    readonly threadId: ThreadId;
+    readonly turnCount: number;
+    readonly turnId: TurnId | null;
+    readonly conflictedPaths: ReadonlyArray<string>;
+    readonly createdAt: string;
+  }) =>
+    orchestrationEngine
+      .dispatch({
+        type: "thread.activity.append",
+        commandId: serverCommandId("checkpoint-revert-conflicts"),
+        threadId: input.threadId,
+        activity: {
+          id: EventId.makeUnsafe(crypto.randomUUID()),
+          tone: "info",
+          kind: CHECKPOINT_REVERT_CONFLICTS_ACTIVITY_KIND,
+          summary: "Undo left conflicts to resolve",
+          payload: {
+            turnCount: input.turnCount,
+            conflictedPaths: [...input.conflictedPaths],
+            detail: revertConflictDetail(input.conflictedPaths),
+          },
+          turnId: input.turnId,
+          createdAt: input.createdAt,
+        },
+        createdAt: input.createdAt,
+      })
+      .pipe(
+        Effect.catch((error) =>
+          Effect.logWarning("checkpoint revert conflict notice failed", {
+            threadId: input.threadId,
+            detail: error.message,
+          }),
+        ),
+      );
+
+  // Edits the host reported writing while a turn ran sit inside that turn's
+  // diff (its snapshots cannot tell them from the agent's lines), so Undo
+  // refuses to reverse such a file rather than delete them. Null when clear.
+  const hostWriteUndoBlock = (
+    cwd: string,
+    threadId: ThreadId,
+    turns: ReadonlyArray<{ readonly turnId: TurnId; readonly files: ReadonlyArray<string> }>,
+  ) =>
+    Effect.gen(function* () {
+      const blocked = new Set<string>();
+      for (const turn of turns) {
+        const hostWrites = yield* checkpointStore.readHostWrites({
+          cwd,
+          ref: checkpointRefForThreadTurnHostWrites(threadId, turn.turnId),
+        });
+        for (const file of hostWrittenUndoPaths(turn.files, hostWrites)) blocked.add(file);
+      }
+      return blocked.size > 0 ? hostWriteUndoBlockDetail([...blocked]) : null;
+    }).pipe(
+      Effect.catch((error) =>
+        Effect.succeed(
+          `Undo could not check for edits made while the agent was working, so it was refused: ${error.message}`,
+        ),
+      ),
+    );
 
   const appendCheckpointIssueActivity = (input: {
     readonly threadId: ThreadId;
@@ -1647,6 +1718,26 @@ const make = Effect.fnUntraced(function* (options?: CheckpointReactorLiveOptions
         return;
       }
 
+      const filesUndoHostWriteBlock = yield* hostWriteUndoBlock(
+        checkpointCwd,
+        event.payload.threadId,
+        [
+          {
+            turnId: targetCheckpoint.turnId,
+            files: targetCheckpoint.files.map((file) => file.path),
+          },
+        ],
+      );
+      if (filesUndoHostWriteBlock !== null) {
+        yield* appendRevertFailureActivity({
+          threadId: event.payload.threadId,
+          turnCount: event.payload.turnCount,
+          detail: filesUndoHostWriteBlock,
+          createdAt: now,
+        }).pipe(Effect.catch(() => Effect.void));
+        return;
+      }
+
       const reversed = yield* checkpointStore.reverseCheckpointDiff({
         cwd: checkpointCwd,
         fromCheckpointRef,
@@ -1713,6 +1804,15 @@ const make = Effect.fnUntraced(function* (options?: CheckpointReactorLiveOptions
         checkpointRevertTurnCount: event.payload.turnCount,
         createdAt: now,
       });
+      if (reversed.conflictedPaths.length > 0) {
+        yield* appendRevertConflictActivity({
+          threadId: event.payload.threadId,
+          turnCount: event.payload.turnCount,
+          turnId: targetCheckpoint.turnId,
+          conflictedPaths: reversed.conflictedPaths,
+          createdAt: now,
+        });
+      }
       return;
     }
 
@@ -1773,6 +1873,107 @@ const make = Effect.fnUntraced(function* (options?: CheckpointReactorLiveOptions
       return;
     }
 
+    // The revert undoes this thread's own edits, not the workspace's history:
+    // each later turn's diff (its turn-start snapshot to its turn-end
+    // snapshot) is reversed onto the current text, newest first, with the same
+    // three-way fallback as file Undo. Restoring the target snapshot wholesale
+    // would also drop every edit that landed since it was taken — a co-author's
+    // text synced from Overleaf, the user's own typing, files this thread never
+    // touched — and the host would upload that rollback as an ordinary change.
+    // Diffing the target against the latest snapshot is not enough either: it
+    // would sweep up edits made between turns. A ready turn without file
+    // changes (or whose files were already undone) has nothing to reverse; a
+    // turn whose capture went wrong is reversed from whatever snapshots exist.
+    const revertSegments: Array<{
+      readonly turnCount: number;
+      readonly turnId: TurnId;
+      readonly files: ReadonlyArray<string>;
+      readonly fromCheckpointRef: CheckpointRef;
+      readonly toCheckpointRef: CheckpointRef;
+    }> = [];
+    const checkpointsByTurnCount = new Map(
+      thread.checkpoints.map((checkpoint) => [checkpoint.checkpointTurnCount, checkpoint]),
+    );
+    let missingSegmentDetail: string | null = null;
+    for (const checkpoint of thread.checkpoints
+      .filter(
+        (candidate) =>
+          candidate.checkpointTurnCount > event.payload.turnCount &&
+          (candidate.files.length > 0 || candidate.status !== "ready"),
+      )
+      .toSorted((left, right) => right.checkpointTurnCount - left.checkpointTurnCount)) {
+      const turnStartRef =
+        checkpointRefForThreadTurnStartInManagedFamily(
+          checkpoint.checkpointRef,
+          event.payload.threadId,
+          checkpoint.turnId,
+        ) ?? checkpointRefForThreadTurnStart(event.payload.threadId, checkpoint.turnId);
+      // Older turns predate turn-start snapshots; their previous checkpoint is
+      // the closest baseline available.
+      const previousRef =
+        checkpoint.checkpointTurnCount === 1
+          ? (checkpointRefForThreadTurnInManagedFamily(
+              checkpoint.checkpointRef,
+              event.payload.threadId,
+              0,
+            ) ?? checkpointRefForThreadTurn(event.payload.threadId, 0))
+          : checkpointsByTurnCount.get(checkpoint.checkpointTurnCount - 1)?.checkpointRef;
+      const candidates = [turnStartRef, ...(previousRef ? [previousRef] : [])];
+      let fromCheckpointRef: CheckpointRef | null = null;
+      for (const candidate of candidates) {
+        const exists = yield* checkpointStore
+          .hasCheckpointRef({ cwd: checkpointCwd, checkpointRef: candidate })
+          .pipe(Effect.catch(() => Effect.succeed(false)));
+        if (exists) {
+          fromCheckpointRef = candidate;
+          break;
+        }
+      }
+      const toExists = yield* checkpointStore
+        .hasCheckpointRef({ cwd: checkpointCwd, checkpointRef: checkpoint.checkpointRef })
+        .pipe(Effect.catch(() => Effect.succeed(false)));
+      if (!fromCheckpointRef || !toExists) {
+        // A failed capture recorded no snapshot to reverse; leaving its edits
+        // in place loses nothing. A ready turn's missing snapshot is a fault.
+        if (checkpoint.status !== "ready") continue;
+        missingSegmentDetail = `Filesystem checkpoints for turn ${checkpoint.checkpointTurnCount} are unavailable, so its changes cannot be reversed.`;
+        break;
+      }
+      revertSegments.push({
+        turnCount: checkpoint.checkpointTurnCount,
+        turnId: checkpoint.turnId,
+        files: checkpoint.files.map((file) => file.path),
+        fromCheckpointRef,
+        toCheckpointRef: checkpoint.checkpointRef,
+      });
+    }
+    if (missingSegmentDetail !== null) {
+      yield* appendRevertFailureActivity({
+        threadId: event.payload.threadId,
+        turnCount: event.payload.turnCount,
+        detail: missingSegmentDetail,
+        createdAt: now,
+      }).pipe(Effect.catch(() => Effect.void));
+      return;
+    }
+
+    // Fail closed on edits the host wrote while one of these turns ran: they
+    // are inside that turn's diff and reversing it would delete them.
+    const hostWriteBlock = yield* hostWriteUndoBlock(
+      checkpointCwd,
+      event.payload.threadId,
+      revertSegments.map((segment) => ({ turnId: segment.turnId, files: segment.files })),
+    );
+    if (hostWriteBlock !== null) {
+      yield* appendRevertFailureActivity({
+        threadId: event.payload.threadId,
+        turnCount: event.payload.turnCount,
+        detail: hostWriteBlock,
+        createdAt: now,
+      }).pipe(Effect.catch(() => Effect.void));
+      return;
+    }
+
     // A revert mutates two systems that cannot be committed together: the
     // worktree and the provider's conversation. Snapshot the pre-revert
     // worktree first so failures can restore it.
@@ -1821,23 +2022,35 @@ const make = Effect.fnUntraced(function* (options?: CheckpointReactorLiveOptions
         Effect.catch((error) => Effect.succeed(error.message)),
       );
 
-    // Three outcomes, not two: `restoreCheckpoint` resolves the target commit
-    // with a read-only lookup before it issues a single writing command, so
-    // `false` is proof that the workspace was never touched, while a failure can
-    // land anywhere — including halfway through rewriting the tree. Collapsing
-    // them into one string made the caller discard the rescue snapshot in both
-    // cases, destroying the only copy of a workspace it had just half-rewritten.
-    const restoreOutcome = yield* checkpointStore
-      .restoreCheckpoint({
-        cwd: checkpointCwd,
-        checkpointRef: targetCheckpointRef,
-      })
-      .pipe(
-        Effect.map((restored) =>
-          restored ? ({ kind: "restored" } as const) : ({ kind: "unavailable" } as const),
-        ),
-        Effect.catch((error) => Effect.succeed({ kind: "failed", detail: error.message } as const)),
-      );
+    // Three outcomes, not two: `reverseCheckpointDiff` resolves both commits
+    // with read-only lookups before it issues a single writing command, so
+    // `false` from the first segment is proof that the workspace was never
+    // touched, while a failure (or a later segment going missing) can land
+    // anywhere — including halfway through the reversal. Collapsing them into
+    // one string made the caller discard the rescue snapshot in both cases,
+    // destroying the only copy of a workspace it had just half-rewritten.
+    const restoreOutcome = yield* Effect.gen(function* () {
+      const conflictedPaths = new Set<string>();
+      for (const [index, segment] of revertSegments.entries()) {
+        const reversed = yield* checkpointStore.reverseCheckpointDiff({
+          cwd: checkpointCwd,
+          fromCheckpointRef: segment.fromCheckpointRef,
+          toCheckpointRef: segment.toCheckpointRef,
+        });
+        if (!reversed) {
+          return index === 0
+            ? ({ kind: "unavailable" } as const)
+            : ({
+                kind: "failed",
+                detail: `Filesystem checkpoints for turn ${segment.turnCount} became unavailable.`,
+              } as const);
+        }
+        for (const conflictedPath of reversed.conflictedPaths) conflictedPaths.add(conflictedPath);
+      }
+      return { kind: "restored", conflictedPaths: [...conflictedPaths] } as const;
+    }).pipe(
+      Effect.catch((error) => Effect.succeed({ kind: "failed", detail: error.message } as const)),
+    );
 
     if (restoreOutcome.kind === "unavailable") {
       yield* discardRescueCheckpoint;
@@ -1957,6 +2170,16 @@ const make = Effect.fnUntraced(function* (options?: CheckpointReactorLiveOptions
           }),
         ),
       );
+
+    if (restoreOutcome.conflictedPaths.length > 0) {
+      yield* appendRevertConflictActivity({
+        threadId: event.payload.threadId,
+        turnCount: event.payload.turnCount,
+        turnId: null,
+        conflictedPaths: restoreOutcome.conflictedPaths,
+        createdAt: now,
+      });
+    }
   });
 
   const handleRevertRequested = (

@@ -771,7 +771,7 @@
   "thisUses1OfYourSavedResets": "This uses 1 of your {{count}} saved resets to restore your Codex usage limits right away. A used reset can't be undone or given back.",
   "thisVisualNeedsANewer": "This visual needs a newer {{app}}.",
   "thisWillAtomicallyMergeEveryOpenPull": "This will atomically merge every open pull request through #{{number}} into {{branch}} using {{method}}.",
-  "thisWillDiscardNewerMessagesAndTurn": "This will discard newer messages and turn diffs in this thread.",
+  "thisWillDiscardNewerMessagesAndTurn": "This will discard newer messages in this thread and undo the file changes the agent made since then. Edits by you or your co-authors are kept; where they overlap the agent's changes, both versions are marked as a conflict to resolve.",
   "thisWillMergeIntoUsing": "This will merge #{{number}} into {{branch}} using {{method}}.",
   "thisWillMergeUsing": "This will merge #{{number}} using {{method}}.",
   "toWorkOnASinglePassageSelect": "To work on a single passage, select it in the editor",

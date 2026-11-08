@@ -1355,9 +1355,11 @@ function shouldKeepActivityForWorkLog(
   }
 
   // Failed Undo and skipped baseline feedback can precede a provider turn id,
-  // or refer to a turn that Undo rolled out of view. Keep this feedback visible.
+  // or refer to a turn that Undo rolled out of view. Keep this feedback visible,
+  // and the notice of an Undo that left conflicts to resolve with it.
   if (
     activity.kind === CHECKPOINT_REVERT_FAILED_ACTIVITY_KIND ||
+    activity.kind === "checkpoint.revert.conflicts" ||
     activity.kind === "checkpoint.baseline.skipped"
   ) {
     return true;

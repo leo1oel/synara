@@ -46,6 +46,7 @@ const makeCheckpointStore = Effect.gen(function* () {
   const path = yield* Path.Path;
   const git = yield* GitCore;
   const captureLock = yield* Semaphore.make(1);
+  const hostWritesLock = yield* Semaphore.make(1);
   const inFlightCaptures = new Map<string, Deferred.Deferred<void, CheckpointStoreError>>();
 
   // Normalize the cwd so captures for the same repo reached via differently
@@ -544,6 +545,13 @@ const makeCheckpointStore = Effect.gen(function* () {
   // plain `git apply --reverse` is all-or-nothing, so any unrelated edit in a
   // touched hunk aborts the whole undo.
   //
+  // When the drift rewrote the very lines being reversed (a co-author edited
+  // the agent's sentence), git writes conflict markers for just those hunks
+  // and applies everything else. Those markers are kept: refusing the whole
+  // undo left every other agent change in place, and restoring the file would
+  // drop the co-author's words. diff3 style records the checkpoint's text as
+  // the base, which Lattice's conflict resolver shows as the common version.
+  //
   // `git apply --3way` implies `--index` and therefore refuses to run while the
   // working tree differs from the index. Point it at a throwaway index that
   // mirrors the current working tree so the merge can run; the repository index
@@ -590,12 +598,43 @@ const makeCheckpointStore = Effect.gen(function* () {
       const applied = yield* git.execute({
         operation,
         cwd: input.cwd,
-        args: ["apply", "--reverse", "--3way", "--whitespace=nowarn", "--", input.patchPath],
+        args: [
+          "-c",
+          "merge.conflictStyle=diff3",
+          "apply",
+          "--reverse",
+          "--3way",
+          "--whitespace=nowarn",
+          "--",
+          input.patchPath,
+        ],
         env: mergeIndexEnv,
         allowNonZeroExit: true,
       });
       if (applied.code === 0) {
-        return;
+        return { conflictedPaths: [] };
+      }
+
+      // A conflicted merge records the file's three stages in the throwaway
+      // index; any other failure (a file deleted since, a binary hunk) leaves
+      // none and still refuses the undo below.
+      const unmerged = yield* git.execute({
+        operation,
+        cwd: input.cwd,
+        args: ["ls-files", "--unmerged", "-z"],
+        env: mergeIndexEnv,
+        allowNonZeroExit: true,
+      });
+      const conflictedPaths = [
+        ...new Set(
+          unmerged.stdout
+            .split("\0")
+            .map((entry) => entry.slice(entry.indexOf("\t") + 1))
+            .filter((entry) => entry.length > 0),
+        ),
+      ];
+      if (unmerged.code === 0 && conflictedPaths.length > 0) {
+        return { conflictedPaths };
       }
 
       if (preAttemptTreeOid.length > 0) {
@@ -661,7 +700,7 @@ const makeCheckpointStore = Effect.gen(function* () {
         maxOutputBytes: input.maxOutputBytes ?? CHECKPOINT_DIFF_MAX_OUTPUT_BYTES,
       });
       if (diff.stdout.length === 0) {
-        return true;
+        return { conflictedPaths: [] };
       }
 
       const changedPaths = yield* git.execute({
@@ -684,15 +723,16 @@ const makeCheckpointStore = Effect.gen(function* () {
               args: ["apply", "--reverse", "--whitespace=nowarn", "--", patchPath],
               allowNonZeroExit: true,
             });
-            if (strictApply.code !== 0) {
-              yield* applyReverseWithThreeWayMerge({
-                cwd: input.cwd,
-                tempDir,
-                patchPath,
-                affectedPaths,
-                strictApplyStderr: strictApply.stderr,
-              });
-            }
+            const merged =
+              strictApply.code === 0
+                ? { conflictedPaths: [] }
+                : yield* applyReverseWithThreeWayMerge({
+                    cwd: input.cwd,
+                    tempDir,
+                    patchPath,
+                    affectedPaths,
+                    strictApplyStderr: strictApply.stderr,
+                  });
             if (affectedPaths.length > 0) {
               const resetExit = yield* Effect.exit(
                 git.execute({
@@ -710,7 +750,7 @@ const makeCheckpointStore = Effect.gen(function* () {
                 return yield* Effect.failCause(resetExit.cause);
               }
             }
-            return true;
+            return merged;
           }),
         (tempDir) => fs.remove(tempDir, { recursive: true }),
       ).pipe(
@@ -725,6 +765,61 @@ const makeCheckpointStore = Effect.gen(function* () {
         ),
       );
     });
+
+  const readHostWrites: CheckpointStoreShape["readHostWrites"] = (input) =>
+    git
+      .execute({
+        operation: "CheckpointStore.readHostWrites",
+        cwd: input.cwd,
+        args: ["cat-file", "blob", input.ref],
+        allowNonZeroExit: true,
+      })
+      .pipe(
+        Effect.map((result) =>
+          result.code === 0 ? result.stdout.split("\n").filter((entry) => entry.length > 0) : [],
+        ),
+      );
+
+  // Serialized: two reports for one turn must not both read the old set and
+  // race to replace the ref, losing one report's paths.
+  const recordHostWrites: CheckpointStoreShape["recordHostWrites"] = (input) =>
+    hostWritesLock.withPermits(1)(
+      Effect.gen(function* () {
+        const operation = "CheckpointStore.recordHostWrites";
+        const existing = yield* readHostWrites(input);
+        const paths = [...new Set([...existing, ...input.paths])].toSorted();
+        if (paths.length === existing.length) return;
+        yield* Effect.acquireUseRelease(
+          fs.makeTempDirectory({ prefix: "synara-host-writes-" }),
+          (tempDir) =>
+            Effect.gen(function* () {
+              const listPath = path.join(tempDir, "paths");
+              yield* fs.writeFileString(listPath, `${paths.join("\n")}\n`);
+              const blob = yield* git.execute({
+                operation,
+                cwd: input.cwd,
+                args: ["hash-object", "-w", "--", listPath],
+              });
+              yield* git.execute({
+                operation,
+                cwd: input.cwd,
+                args: ["update-ref", input.ref, blob.stdout.trim()],
+              });
+            }),
+          (tempDir) => fs.remove(tempDir, { recursive: true }).pipe(Effect.orDie),
+        ).pipe(
+          Effect.catchTag("PlatformError", (error) =>
+            Effect.fail(
+              new CheckpointInvariantError({
+                operation,
+                detail: "Failed to record the files the host wrote during a turn.",
+                cause: error,
+              }),
+            ),
+          ),
+        );
+      }),
+    );
 
   const deleteCheckpointRefs: CheckpointStoreShape["deleteCheckpointRefs"] = (input) =>
     Effect.gen(function* () {
@@ -789,6 +884,8 @@ const makeCheckpointStore = Effect.gen(function* () {
     restoreCheckpoint,
     diffCheckpoints,
     reverseCheckpointDiff,
+    recordHostWrites,
+    readHostWrites,
     deleteCheckpointRefs,
   } satisfies CheckpointStoreShape;
 });
