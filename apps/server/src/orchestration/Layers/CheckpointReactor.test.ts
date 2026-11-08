@@ -103,6 +103,7 @@ import {
   checkpointRefForThreadTurn,
   checkpointRefForThreadTurnLive,
   checkpointRefForThreadTurnStart,
+  checkpointRefForThreadTurnHostWrites,
 } from "../../checkpointing/Utils.ts";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import * as Statement from "effect/unstable/sql/Statement";
@@ -8521,5 +8522,276 @@ describe("CheckpointReactor", () => {
       detail: "Checkpoint turn count 1 exceeds current turn count 0.",
     });
     expect(harness.provider.rollbackConversation).not.toHaveBeenCalled();
+  });
+
+  // Lattice's undo investigation: Undo must reverse only the agent's own
+  // lines. Every other edit — a co-author's text synced from Overleaf, the
+  // user's typing, files the thread never touched — is kept, an overlap
+  // becomes a conflict for just that spot, and an edit that landed inside a
+  // turn's diff while it ran blocks Undo instead of being deleted with it.
+  describe("Undo keeps edits that are not the agent's", () => {
+    const BASE = [
+      "\\section{Intro}",
+      "",
+      "P: The old opening paragraph says one thing.",
+      "",
+      "Q: The second paragraph stays as written.",
+      "",
+      "End.",
+      "",
+    ].join("\n");
+    const OLD_P = "P: The old opening paragraph says one thing.";
+    const AGENT_P = "P: The agent rewrote the opening paragraph completely.";
+    const OLD_Q = "Q: The second paragraph stays as written.";
+    const COAUTHOR_Q = "Q: The second paragraph stays as written, with a co-author clause.";
+    const threadId = ThreadId.makeUnsafe("thread-1");
+
+    type Harness = Awaited<ReturnType<typeof createHarness>>;
+    const read = (harness: Harness, file: string) =>
+      fs.readFileSync(path.join(harness.cwd, file), "utf8");
+    const edit = (harness: Harness, file: string, from: string, to: string) =>
+      fs.writeFileSync(path.join(harness.cwd, file), read(harness, file).replace(from, to), "utf8");
+
+    /**
+     * Run agent turns against real snapshots: each takes a turn-start
+     * snapshot, lets `during` land (an edit while the agent works), applies the
+     * agent's edits, then takes the turn-end snapshot and publishes the turn.
+     */
+    async function seedTurns(
+      harness: Harness,
+      turns: ReadonlyArray<{
+        readonly before?: () => void;
+        readonly during?: () => void;
+        readonly agent: () => void;
+        readonly files: ReadonlyArray<string>;
+      }>,
+    ) {
+      const createdAt = new Date().toISOString();
+      fs.writeFileSync(path.join(harness.cwd, "main.tex"), BASE, "utf8");
+      fs.writeFileSync(path.join(harness.cwd, "other.tex"), "Other file, as before.\n", "utf8");
+      await Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.session.set",
+          commandId: CommandId.makeUnsafe("coauthor-session-set"),
+          threadId,
+          session: {
+            threadId,
+            status: "ready",
+            providerName: "codex",
+            runtimeMode: "approval-required",
+            activeTurnId: null,
+            lastError: null,
+            updatedAt: createdAt,
+          },
+          createdAt,
+        }),
+      );
+      await Effect.runPromise(
+        harness.checkpointStore.captureCheckpoint({
+          cwd: harness.cwd,
+          checkpointRef: checkpointRefForThreadTurn(threadId, 0),
+        }),
+      );
+      for (const [index, turn] of turns.entries()) {
+        const turnCount = index + 1;
+        const turnId = asTurnId(`turn-${turnCount}`);
+        turn.before?.();
+        await harness.prepareBaseline(turnId);
+        turn.during?.();
+        turn.agent();
+        await Effect.runPromise(
+          harness.checkpointStore.captureCheckpoint({
+            cwd: harness.cwd,
+            checkpointRef: checkpointRefForThreadTurn(threadId, turnCount),
+          }),
+        );
+        await Effect.runPromise(
+          harness.engine.dispatch({
+            type: "thread.turn.diff.complete",
+            commandId: CommandId.makeUnsafe(`coauthor-diff-${turnCount}`),
+            threadId,
+            turnId,
+            completedAt: createdAt,
+            checkpointRef: checkpointRefForThreadTurn(threadId, turnCount),
+            status: "ready",
+            files: turn.files.map((file) => ({
+              path: file,
+              kind: "modified",
+              additions: 1,
+              deletions: 1,
+            })),
+            checkpointTurnCount: turnCount,
+            createdAt,
+          }),
+        );
+      }
+      return createdAt;
+    }
+
+    const revert = (harness: Harness, turnCount: number, scope: "thread" | "files") =>
+      Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.checkpoint.revert",
+          commandId: CommandId.makeUnsafe(`coauthor-revert-${scope}-${turnCount}`),
+          threadId,
+          turnCount,
+          scope,
+          createdAt: new Date().toISOString(),
+        }),
+      );
+    const agentRewritesP = (harness: Harness) => () => edit(harness, "main.tex", OLD_P, AGENT_P);
+    const activityDetail = (
+      thread: { activities: ReadonlyArray<{ kind: string; payload?: unknown }> },
+      kind: string,
+    ) =>
+      (thread.activities.find((activity) => activity.kind === kind)?.payload ?? {}) as {
+        detail?: string;
+        conflictedPaths?: ReadonlyArray<string>;
+      };
+
+    it("S0: reverting the thread with no other edits puts the original text back", async () => {
+      const harness = await createHarness({ seedFilesystemCheckpoints: false });
+      await seedTurns(harness, [{ agent: agentRewritesP(harness), files: ["main.tex"] }]);
+      await revert(harness, 0, "thread");
+      await waitForEvent(harness.engine, (event) => event.type === "thread.reverted");
+      expect(read(harness, "main.tex")).toBe(BASE);
+      await harness.drain();
+      expect(listRevertRescueRefs(harness.cwd)).toEqual([]);
+    });
+
+    it("S1: reverting the thread keeps a co-author's later edit to the next paragraph", async () => {
+      const harness = await createHarness({ seedFilesystemCheckpoints: false });
+      await seedTurns(harness, [{ agent: agentRewritesP(harness), files: ["main.tex"] }]);
+      edit(harness, "main.tex", OLD_Q, COAUTHOR_Q);
+      await revert(harness, 0, "thread");
+      await waitForEvent(harness.engine, (event) => event.type === "thread.reverted");
+      expect(read(harness, "main.tex")).toBe(BASE.replace(OLD_Q, COAUTHOR_Q));
+    });
+
+    it("S5: reverting the thread keeps a co-author's edit to a file the agent never touched", async () => {
+      const harness = await createHarness({ seedFilesystemCheckpoints: false });
+      await seedTurns(harness, [{ agent: agentRewritesP(harness), files: ["main.tex"] }]);
+      fs.writeFileSync(path.join(harness.cwd, "other.tex"), "Other file, co-author edit.\n");
+      fs.writeFileSync(path.join(harness.cwd, "coauthor-new.tex"), "New co-author file.\n");
+      await revert(harness, 0, "thread");
+      await waitForEvent(harness.engine, (event) => event.type === "thread.reverted");
+      expect(read(harness, "main.tex")).toBe(BASE);
+      expect(read(harness, "other.tex")).toBe("Other file, co-author edit.\n");
+      expect(read(harness, "coauthor-new.tex")).toBe("New co-author file.\n");
+    });
+
+    it("keeps an edit made between two reverted turns", async () => {
+      const harness = await createHarness({ seedFilesystemCheckpoints: false });
+      await seedTurns(harness, [
+        { agent: agentRewritesP(harness), files: ["main.tex"] },
+        {
+          // Synced before the second turn's start snapshot: it belongs to no
+          // turn, so diffing turn 0 against the last turn would sweep it up.
+          before: () => edit(harness, "main.tex", OLD_Q, COAUTHOR_Q),
+          agent: () => edit(harness, "main.tex", "End.", "End. Agent footnote."),
+          files: ["main.tex"],
+        },
+      ]);
+      await revert(harness, 0, "thread");
+      await waitForEvent(harness.engine, (event) => event.type === "thread.reverted");
+      expect(read(harness, "main.tex")).toBe(BASE.replace(OLD_Q, COAUTHOR_Q));
+    });
+
+    it("S2: file Undo marks only the overlapping spot as a conflict and reports it", async () => {
+      const harness = await createHarness({ seedFilesystemCheckpoints: false });
+      await seedTurns(harness, [
+        {
+          agent: () => {
+            edit(harness, "main.tex", OLD_P, AGENT_P);
+            fs.writeFileSync(path.join(harness.cwd, "other.tex"), "Other file, agent edit.\n");
+          },
+          files: ["main.tex", "other.tex"],
+        },
+      ]);
+      edit(harness, "main.tex", AGENT_P, `${AGENT_P} Co-author sentence.`);
+      await revert(harness, 1, "files");
+      const thread = await waitForThread(harness.engine, (entry) =>
+        entry.activities.some((activity) => activity.kind === "checkpoint.revert.conflicts"),
+      );
+      expect(activityDetail(thread, "checkpoint.revert.conflicts").conflictedPaths).toEqual([
+        "main.tex",
+      ]);
+      expect(thread.activities.some((activity) => activity.kind === "checkpoint.revert.failed")).toBe(
+        false,
+      );
+      expect(thread.checkpoints.find((entry) => entry.checkpointTurnCount === 1)?.files).toEqual(
+        [],
+      );
+      // The clean file is undone; the overlapping sentence keeps both versions.
+      expect(read(harness, "other.tex")).toBe("Other file, as before.\n");
+      expect(read(harness, "main.tex")).toContain(
+        `<<<<<<< ours\n${AGENT_P} Co-author sentence.\n||||||| base\n${AGENT_P}\n=======\n${OLD_P}\n>>>>>>> theirs\n`,
+      );
+    });
+
+    it("S2: reverting the thread keeps an overlapping edit as a conflict", async () => {
+      const harness = await createHarness({ seedFilesystemCheckpoints: false });
+      await seedTurns(harness, [{ agent: agentRewritesP(harness), files: ["main.tex"] }]);
+      edit(harness, "main.tex", AGENT_P, `${AGENT_P} Co-author sentence.`);
+      await revert(harness, 0, "thread");
+      await waitForEvent(harness.engine, (event) => event.type === "thread.reverted");
+      const thread = await waitForThread(harness.engine, (entry) =>
+        entry.activities.some((activity) => activity.kind === "checkpoint.revert.conflicts"),
+      );
+      expect(activityDetail(thread, "checkpoint.revert.conflicts").conflictedPaths).toEqual([
+        "main.tex",
+      ]);
+      expect(read(harness, "main.tex")).toContain(`${AGENT_P} Co-author sentence.`);
+      expect(read(harness, "main.tex")).toContain(`=======\n${OLD_P}\n>>>>>>> theirs`);
+    });
+
+    it.each(["files", "thread"] as const)(
+      "S4: %s Undo refuses a turn whose file the host wrote while the agent worked",
+      async (scope) => {
+        const harness = await createHarness({ seedFilesystemCheckpoints: false });
+        await seedTurns(harness, [
+          {
+            during: () => edit(harness, "main.tex", OLD_Q, COAUTHOR_Q),
+            agent: agentRewritesP(harness),
+            files: ["main.tex"],
+          },
+        ]);
+        await Effect.runPromise(
+          harness.checkpointStore.recordHostWrites({
+            cwd: harness.cwd,
+            ref: checkpointRefForThreadTurnHostWrites(threadId, asTurnId("turn-1")),
+            paths: ["main.tex"],
+          }),
+        );
+        const before = read(harness, "main.tex");
+        await revert(harness, scope === "files" ? 1 : 0, scope);
+        const thread = await waitForThread(harness.engine, (entry) =>
+          entry.activities.some((activity) => activity.kind === "checkpoint.revert.failed"),
+        );
+        expect(activityDetail(thread, "checkpoint.revert.failed").detail).toContain(
+          "landed in main.tex while the agent was working",
+        );
+        expect(read(harness, "main.tex")).toBe(before);
+        expect(harness.provider.rollbackConversation).not.toHaveBeenCalled();
+      },
+    );
+
+    it("S4: a host write to a file the turn did not change does not block Undo", async () => {
+      const harness = await createHarness({ seedFilesystemCheckpoints: false });
+      await seedTurns(harness, [{ agent: agentRewritesP(harness), files: ["main.tex"] }]);
+      await Effect.runPromise(
+        harness.checkpointStore.recordHostWrites({
+          cwd: harness.cwd,
+          ref: checkpointRefForThreadTurnHostWrites(threadId, asTurnId("turn-1")),
+          paths: ["other.tex"],
+        }),
+      );
+      await revert(harness, 1, "files");
+      await waitForThread(
+        harness.engine,
+        (entry) => entry.checkpoints.find((c) => c.checkpointTurnCount === 1)?.files?.length === 0,
+      );
+      expect(read(harness, "main.tex")).toBe(BASE);
+    });
   });
 });
