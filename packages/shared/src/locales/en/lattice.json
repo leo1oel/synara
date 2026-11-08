@@ -105,6 +105,7 @@
   "codexRejectedTheResetRequest": "Codex rejected the reset request.",
   "codexReturnedAnUnexpectedResultRetryTo": "Codex returned an unexpected result. Retry to check the same attempt.",
   "codexStoppedDuringTheResetRequestRetry": "Codex stopped during the reset request. Retry to check the same attempt.",
+  "codexUpdateForAstra": "Update Codex to {{version}}+ to use GPT-6 Astra",
   "codexUsageLimitsDonTNeedA": "Codex usage limits don't need a reset right now. No reset was used.",
   "codexUsageLimitsWereReset": "Codex usage limits were reset.",
   "codexUsageRequestFailed": "Codex usage request failed ({{status}}).",

@@ -47,6 +47,32 @@ export function composerModelDisplayName(provider: ProviderKind, name: string): 
 /** Marks the open picker so global mod+digit handlers (thread jump) yield to its rows. */
 export const MODEL_PICKER_POPUP_ATTRIBUTE = "data-model-picker-popup";
 
+// Codex's own catalog gates GPT-6 Astra on `minimal_client_version: 0.153.0`, so
+// an older installed Codex leaves it out of `model/list`. The picker shows Codex's
+// list as-is (an old client lacks the tool modes Astra needs), and says why instead.
+export const CODEX_ASTRA_MINIMUM_VERSION = "0.153.0";
+
+function parseCodexVersionCore(version: string): readonly [number, number, number] | null {
+  const match = /(\d+)\.(\d+)\.(\d+)/u.exec(version);
+  if (!match) return null;
+  return [Number(match[1]), Number(match[2]), Number(match[3])];
+}
+
+/** True only for a known Codex version below the one that can list GPT-6 Astra. */
+export function codexNeedsUpdateForAstra(
+  provider: ProviderKind,
+  version: string | null | undefined,
+): boolean {
+  if (provider !== "codex" || !version) return false;
+  const installed = parseCodexVersionCore(version);
+  const minimum = parseCodexVersionCore(CODEX_ASTRA_MINIMUM_VERSION);
+  if (!installed || !minimum) return false;
+  for (let index = 0; index < 3; index += 1) {
+    if (installed[index]! !== minimum[index]!) return installed[index]! < minimum[index]!;
+  }
+  return false;
+}
+
 export function isModelPickerShortcutScopeActive(): boolean {
   return (
     typeof document !== "undefined" &&

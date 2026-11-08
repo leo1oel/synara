@@ -105,6 +105,7 @@
   "codexRejectedTheResetRequest": "Codex 拒绝了这次重置请求。",
   "codexReturnedAnUnexpectedResultRetryTo": "Codex 返回了意外的结果。点重试会核对同一次操作。",
   "codexStoppedDuringTheResetRequestRetry": "重置过程中 Codex 停止了。点重试会核对同一次操作。",
+  "codexUpdateForAstra": "将 Codex 升级到 {{version}}+ 以使用 GPT-6 Astra",
   "codexUsageLimitsDonTNeedA": "Codex 额度现在还不需要重置，没有用掉重置次数。",
   "codexUsageLimitsWereReset": "Codex 额度已重置。",
   "codexUsageRequestFailed": "Codex 用量请求失败（{{status}}）。",
