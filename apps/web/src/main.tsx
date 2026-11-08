@@ -12,6 +12,7 @@ import { getRouter } from "./router";
 import { APP_DISPLAY_NAME } from "./branding";
 import { initializeEmbedMode } from "./embedMode";
 import { startLatticeAgentQualityRelay } from "./latticeAgentQualityRelay";
+import { startLatticeHostWritesRelay } from "./latticeHostWritesRelay";
 import { answerLatticeBibliographyRequest } from "./latticeBibliographyRelay";
 import { answerLatticeCanvasRequest } from "./latticeCanvasRelay";
 import { answerLatticeSpreadsheetRequest } from "./latticeSpreadsheetRelay";
@@ -36,6 +37,7 @@ if (import.meta.hot) import.meta.hot.dispose(disposeI18n);
 const disposeRendererDiagnostics = installRendererErrorDiagnostics();
 if (import.meta.hot) import.meta.hot.dispose(() => disposeRendererDiagnostics?.());
 startLatticeAgentQualityRelay();
+startLatticeHostWritesRelay();
 startLatticeHostToolRelay({
   bibliography: answerLatticeBibliographyRequest,
   canvas: answerLatticeCanvasRequest,
