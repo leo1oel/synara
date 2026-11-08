@@ -11,6 +11,7 @@ import {
   buildProviderTabRows,
   buildStarredModelOptionsPatch,
   buildStarredTabRows,
+  codexNeedsUpdateForAstra,
   composerModelDisplayName,
   modelPickerShortcutRowIndex,
 } from "./ComposerModelPicker.logic";
@@ -301,5 +302,22 @@ describe("models an account refused", () => {
       detail: "Not available",
       selected: false,
     });
+  });
+});
+
+describe("codexNeedsUpdateForAstra", () => {
+  it("flags only a known Codex version older than 0.153.0", () => {
+    expect(codexNeedsUpdateForAstra("codex", "0.152.9")).toBe(true);
+    expect(codexNeedsUpdateForAstra("codex", "0.99.0")).toBe(true);
+    expect(codexNeedsUpdateForAstra("codex", "0.153.0")).toBe(false);
+    expect(codexNeedsUpdateForAstra("codex", "0.167.0")).toBe(false);
+    expect(codexNeedsUpdateForAstra("codex", "1.0.0")).toBe(false);
+  });
+
+  it("stays quiet without a parseable version or for other providers", () => {
+    expect(codexNeedsUpdateForAstra("codex", null)).toBe(false);
+    expect(codexNeedsUpdateForAstra("codex", undefined)).toBe(false);
+    expect(codexNeedsUpdateForAstra("codex", "unknown")).toBe(false);
+    expect(codexNeedsUpdateForAstra("claudeAgent", "0.100.0")).toBe(false);
   });
 });
