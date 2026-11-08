@@ -137,10 +137,9 @@ describe("CheckpointStoreLive file Undo keeps edits that are not the agent's", (
         yield* store.captureCheckpoint({ cwd, checkpointRef: endRef });
         writeFileSync(
           join(cwd, "main.tex"),
-          agentText.replace(AGENT_P, coauthorP).replace(
-            "Q: The second paragraph stays as written.",
-            coauthorQ,
-          ),
+          agentText
+            .replace(AGENT_P, coauthorP)
+            .replace("Q: The second paragraph stays as written.", coauthorQ),
         );
         return yield* store.reverseCheckpointDiff({
           cwd,
@@ -178,9 +177,9 @@ describe("CheckpointStoreLive file Undo keeps edits that are not the agent's", (
 
   it("still refuses, and changes nothing, when the file was deleted since", async () => {
     const { cwd, read } = workspace();
-    await expect(
-      agentTurnThenUndo(cwd, () => rmSync(join(cwd, "main.tex"))),
-    ).rejects.toThrow(/workspace changed since this checkpoint/);
+    await expect(agentTurnThenUndo(cwd, () => rmSync(join(cwd, "main.tex")))).rejects.toThrow(
+      /workspace changed since this checkpoint/,
+    );
     expect(() => read("main.tex")).toThrow();
     expect(read("other.tex")).toBe("Other file, as before.\n");
   });

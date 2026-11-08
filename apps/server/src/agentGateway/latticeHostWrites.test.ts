@@ -18,9 +18,12 @@ const report = (writes: Array<{ path: string; writtenAt: string }>, workspaceRoo
 
 describe("parseLatticeHostFileWrites", () => {
   it("accepts workspace-relative paths with timestamps", () => {
-    expect(parseLatticeHostFileWrites(report([{ path: "sec/main.tex", writtenAt: at(0) }]))).toEqual(
-      { workspaceRoot: "/paper", writes: [{ path: "sec/main.tex", writtenAt: Date.parse(at(0)) }] },
-    );
+    expect(
+      parseLatticeHostFileWrites(report([{ path: "sec/main.tex", writtenAt: at(0) }])),
+    ).toEqual({
+      workspaceRoot: "/paper",
+      writes: [{ path: "sec/main.tex", writtenAt: Date.parse(at(0)) }],
+    });
   });
 
   it.each(["/etc/passwd", "../outside.tex", "a/../b.tex", "a//b.tex", "C:/x.tex", "a\\b.tex", ""])(

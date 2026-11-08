@@ -8716,9 +8716,9 @@ describe("CheckpointReactor", () => {
       expect(activityDetail(thread, "checkpoint.revert.conflicts").conflictedPaths).toEqual([
         "main.tex",
       ]);
-      expect(thread.activities.some((activity) => activity.kind === "checkpoint.revert.failed")).toBe(
-        false,
-      );
+      expect(
+        thread.activities.some((activity) => activity.kind === "checkpoint.revert.failed"),
+      ).toBe(false);
       expect(thread.checkpoints.find((entry) => entry.checkpointTurnCount === 1)?.files).toEqual(
         [],
       );

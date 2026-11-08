@@ -1,4 +1,4 @@
-import { realpathSync } from "node:fs";
+import { realpath } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { Effect } from "effect";
@@ -6,7 +6,10 @@ import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstab
 
 import { authErrorResponse } from "../auth/effectHttp.ts";
 import { CheckpointStore } from "../checkpointing/Services/CheckpointStore.ts";
-import { checkpointRefForThreadTurnHostWrites } from "../checkpointing/Utils.ts";
+import {
+  checkpointRefForThreadTurnHostWrites,
+  resolveThreadWorkspaceCwd,
+} from "../checkpointing/Utils.ts";
 import { OrchestrationEngineService } from "../orchestration/Services/OrchestrationEngine.ts";
 import { readMcpJsonBody } from "./httpRoute.ts";
 import { attributeHostWrites, parseLatticeHostFileWrites } from "./latticeHostWrites.ts";
@@ -15,13 +18,8 @@ import { authenticateLatticeRelayRequest } from "./latticeRelayAuthentication.ts
 export const LATTICE_HOST_FILE_WRITES_PATH = "/api/lattice/host-file-writes";
 export const LATTICE_HOST_FILE_WRITES_MAX_BODY_BYTES = 512 * 1024;
 
-const canonical = (value: string) => {
-  try {
-    return realpathSync(value);
-  } catch {
-    return resolve(value);
-  }
-};
+const canonical = (value: string) =>
+  Effect.tryPromise(() => realpath(value)).pipe(Effect.catch(() => Effect.succeed(resolve(value))));
 
 export const latticeHostWritesRouteLayer = HttpRouter.add(
   "POST",
@@ -40,12 +38,19 @@ export const latticeHostWritesRouteLayer = HttpRouter.add(
     const engine = yield* OrchestrationEngineService;
     const checkpointStore = yield* CheckpointStore;
     const readModel = yield* engine.getReadModel();
-    const root = canonical(report.workspaceRoot);
+    const root = yield* canonical(report.workspaceRoot);
+    // Only threads with a turn can own a write; resolve just their folders.
+    const canonicalCwds = new Map<string, string>();
+    for (const thread of readModel.threads) {
+      if (!thread.latestTurn || thread.deletedAt) continue;
+      const cwd = resolveThreadWorkspaceCwd({ thread, projects: readModel.projects });
+      if (cwd && !canonicalCwds.has(cwd)) canonicalCwds.set(cwd, yield* canonical(cwd));
+    }
     const attributions = attributeHostWrites({
       report,
       threads: readModel.threads,
       projects: readModel.projects,
-      sameWorkspace: (cwd) => cwd === report.workspaceRoot || canonical(cwd) === root,
+      sameWorkspace: (cwd) => cwd === report.workspaceRoot || canonicalCwds.get(cwd) === root,
     });
     // Recording is the fail-closed half of Undo: a lost report lets Undo delete
     // the edit. Report a failure so the host can retry rather than answer 204.
