@@ -151,6 +151,7 @@ const PI_DEFAULT_SUPPORTED_THINKING_LEVELS = new Set<ThinkingLevel>([
   "high",
 ]);
 const PI_ANTHROPIC_ENSURED_MODEL_IDS = [
+  "claude-fable-5-2",
   "claude-fable-5-1",
   "claude-fable-5",
   "claude-opus-4-8",
@@ -159,8 +160,9 @@ type PiAnthropicEnsuredModelId = (typeof PI_ANTHROPIC_ENSURED_MODEL_IDS)[number]
 
 /**
  * Metadata used when an OAuth/extension Anthropic catalog replaced Pi's built-ins
- * and omitted Fable 5.1 / Fable 5 / Opus 4.8. Values mirror `@earendil-works/pi-ai`
- * Anthropic models; Fable 5.1 follows Anthropic's published pricing until pi-ai ships it.
+ * and omitted Fable 5.2 / Fable 5.1 / Fable 5 / Opus 4.8. Values mirror `@earendil-works/pi-ai`
+ * Anthropic models; Fable 5.2 and 5.1 follow Anthropic's published pricing until pi-ai
+ * ships them (5.2: $8 / $40 per MTok, $10 5-minute cache write, $0.20 cache read).
  */
 const PI_ANTHROPIC_ENSURED_MODEL_TEMPLATES: Record<
   PiAnthropicEnsuredModelId,
@@ -176,6 +178,17 @@ const PI_ANTHROPIC_ENSURED_MODEL_TEMPLATES: Record<
     readonly maxTokens: number;
   }
 > = {
+  "claude-fable-5-2": {
+    id: "claude-fable-5-2",
+    name: "Claude Fable 5.2",
+    reasoning: true,
+    thinkingLevelMap: { off: null, xhigh: "xhigh", max: "max" },
+    compat: { forceAdaptiveThinking: true },
+    input: ["text", "image"],
+    cost: { input: 8, output: 40, cacheRead: 0.2, cacheWrite: 10 },
+    contextWindow: 1_000_000,
+    maxTokens: 128_000,
+  },
   "claude-fable-5-1": {
     id: "claude-fable-5-1",
     name: "Claude Fable 5.1",
