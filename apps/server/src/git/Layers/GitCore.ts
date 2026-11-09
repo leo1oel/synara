@@ -42,6 +42,14 @@ import { decodeJsonResult } from "@synara/shared/schemaJson";
 import { GitCheckoutDirtyWorktreeError, GitCommandError } from "../Errors.ts";
 import { parseGitBlamePorcelain } from "../gitBlameParsing.ts";
 import {
+  excludeLiteralPathspec,
+  planUntrackedHashing,
+  SCRATCH_OBJECT_STORE_GIT_CONFIG_ARGS,
+  scratchObjectStoreEnv,
+  type MoveAwareHashLimits,
+  type UntrackedFileSize,
+} from "../scratchObjectStore.ts";
+import {
   countTextFileLines,
   normalizeConfiguredMergeBranch,
   parseGitNameStatus,
@@ -152,6 +160,15 @@ const UNTRACKED_NUMSTAT_READ_CHUNK_BYTES = 64 * 1024;
 const CHECK_ATTR_ARGUMENT_BUDGET_BYTES = 16 * 1024;
 const MAX_QUEUED_REPOSITORY_MUTATIONS = 64;
 const MOVE_AWARE_WORKING_TREE_STATUS_TIMEOUT_MS = 15_000;
+// The rename-aware status hashes untracked files into a scratch object store.
+// At compression 0 Git hashes roughly 300 MB/s, so this budget keeps a refresh
+// well under a second; bigger files are counted as binary without hashing.
+const MOVE_AWARE_STATUS_LIMITS: MoveAwareStatusLimits = {
+  timeoutMs: MOVE_AWARE_WORKING_TREE_STATUS_TIMEOUT_MS,
+  largeFileBytes: 16 * 1024 * 1024,
+  hashBudgetBytes: 128 * 1024 * 1024,
+};
+const MOVE_AWARE_UNTRACKED_STAT_CONCURRENCY = 16;
 const AUTO_DETACHED_WORKTREE_DIRNAME = "synara";
 const WORKTREE_OWNERSHIP_MARKER = "synara-agent-gateway-owner.json";
 const WORKTREE_TRANSFER_MAX_OUTPUT_BYTES = 64 * 1024 * 1024;
@@ -885,7 +902,13 @@ export const collectGitOutput = Effect.fn(function* <E>(
   return { text, truncated };
 });
 
-export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"] }) =>
+type MoveAwareStatusLimits = MoveAwareHashLimits & { readonly timeoutMs: number };
+
+export const makeGitCore = (options?: {
+  executeOverride?: GitCoreShape["execute"];
+  /** Tests lower these to exercise the size guards and the timeout with small files. */
+  moveAwareStatusLimits?: Partial<MoveAwareStatusLimits>;
+}) =>
   Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
@@ -1199,24 +1222,104 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
         );
       });
 
+    const moveAwareStatusLimits: MoveAwareStatusLimits = {
+      ...MOVE_AWARE_STATUS_LIMITS,
+      ...options?.moveAwareStatusLimits,
+    };
+
+    // Returns the environment that sends a temporary index's object writes into a
+    // scratch object store under `scratchDirectory` (see scratchObjectStore.ts).
+    // The caller owns `scratchDirectory` as a scoped temporary directory: it is
+    // removed when that scope closes, and `execute` kills and awaits its Git
+    // child before its own scope settles, so even a timed-out add cannot write
+    // into the store after the removal. Any failure here fails the caller instead
+    // of falling back to the repository's own object database.
+    const makeScratchObjectStoreEnv = (
+      cwd: string,
+      operation: string,
+      scratchDirectory: string,
+      objectDirectoryRaw: string,
+    ) =>
+      Effect.gen(function* () {
+        if (objectDirectoryRaw.length === 0) {
+          return yield* createGitCommandError(
+            operation,
+            cwd,
+            ["rev-parse", "--git-path", "objects"],
+            "Git did not report the repository's object directory.",
+          );
+        }
+        const scratchObjectDirectory = nodePath.join(scratchDirectory, "objects");
+        yield* Effect.tryPromise(async () => {
+          await nodeFs.mkdir(nodePath.join(scratchObjectDirectory, "pack"), { recursive: true });
+          await nodeFs.mkdir(nodePath.join(scratchObjectDirectory, "info"), { recursive: true });
+        }).pipe(
+          Effect.mapError((cause) =>
+            createGitCommandError(
+              operation,
+              cwd,
+              ["add"],
+              `failed to create a scratch object directory: ${String(cause)}`,
+            ),
+          ),
+        );
+        return scratchObjectStoreEnv({
+          scratchObjectDirectory,
+          repositoryObjectDirectory: resolveGitPath(cwd, objectDirectoryRaw),
+          inheritedAlternates: process.env.GIT_ALTERNATE_OBJECT_DIRECTORIES,
+        });
+      });
+
     const readMoveAwareWorkingTreeSummary = (
       cwd: string,
     ): Effect.Effect<WorkingTreeStatSummary | null, never> =>
       Effect.scoped(
         Effect.gen(function* () {
-          const indexPathRaw = yield* runGitStdout(
-            "GitCore.statusDetails.moveAwareIndexPath",
+          const { timeoutMs } = moveAwareStatusLimits;
+          const [topLevel = "", indexPathRaw = "", objectDirectoryRaw = ""] = yield* runGitStdout(
+            "GitCore.statusDetails.moveAwarePaths",
             cwd,
-            ["rev-parse", "--git-path", "index"],
-          ).pipe(Effect.map((stdout) => stdout.trim()));
-          if (indexPathRaw.length === 0) {
+            ["rev-parse", "--show-toplevel", "--git-path", "index", "--git-path", "objects"],
+          ).pipe(Effect.map((stdout) => stdout.split("\n").map((line) => line.trim())));
+          if (topLevel.length === 0 || indexPathRaw.length === 0) {
             return null;
           }
 
-          const tempIndexDir = yield* fileSystem.makeTempDirectoryScoped({
+          // Size every untracked file before hashing any of them, so a worktree
+          // holding multi-GiB artifacts neither stalls status nor fills a disk.
+          const untrackedListing = yield* runGitNulMetadata(
+            "GitCore.statusDetails.moveAwareUntracked",
+            cwd,
+            ["ls-files", "--others", "--exclude-standard", "--full-name", "-z", "--", ":/"],
+            { timeoutMs },
+          );
+          const untrackedFiles = yield* Effect.forEach(
+            untrackedListing.split("\0").filter((entry) => entry.length > 0),
+            (filePath) =>
+              Effect.promise(() =>
+                nodeFs.lstat(nodePath.join(topLevel, filePath)).then(
+                  (stats): UntrackedFileSize => ({
+                    path: filePath,
+                    size: stats.isFile() ? stats.size : null,
+                  }),
+                  (): UntrackedFileSize => ({ path: filePath, size: null }),
+                ),
+              ),
+            { concurrency: MOVE_AWARE_UNTRACKED_STAT_CONCURRENCY },
+          );
+          const plan = planUntrackedHashing(untrackedFiles, moveAwareStatusLimits);
+          if (plan.kind === "over-budget") {
+            yield* Effect.logDebug(
+              "GitCore.statusDetails: untracked files exceed the move-aware hash budget",
+              { cwd, hashedBytes: plan.hashedBytes },
+            );
+            return null;
+          }
+
+          const scratchDirectory = yield* fileSystem.makeTempDirectoryScoped({
             prefix: `synara-git-status-index-${process.pid}-`,
           });
-          const tempIndexPath = nodePath.join(tempIndexDir, "index");
+          const tempIndexPath = nodePath.join(scratchDirectory, "index");
           yield* Effect.tryPromise(() =>
             nodeFs.copyFile(resolveGitPath(cwd, indexPathRaw), tempIndexPath),
           ).pipe(
@@ -1224,17 +1327,42 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
               hasNodeErrorCode(cause, "ENOENT") ? Effect.void : Effect.fail(cause),
             ),
           );
+          const tempIndexEnv = {
+            GIT_INDEX_FILE: tempIndexPath,
+            ...(yield* makeScratchObjectStoreEnv(
+              cwd,
+              "GitCore.statusDetails.moveAwareObjects",
+              scratchDirectory,
+              objectDirectoryRaw,
+            )),
+          };
 
-          const tempIndexEnv = { GIT_INDEX_FILE: tempIndexPath };
-          // Stage into a copied index only; this lets Git detect directory refactors
-          // without touching the user's real staging area.
+          // Stage into a copied index and a scratch object store only; this lets
+          // Git detect directory refactors without touching the user's staging
+          // area or object database. A pathspec file keeps any number of
+          // excluded large files off the command line.
+          const pathspecPath = nodePath.join(scratchDirectory, "pathspec");
+          yield* Effect.tryPromise(() =>
+            nodeFs.writeFile(
+              pathspecPath,
+              [":/", ...plan.excludedPaths.map(excludeLiteralPathspec)]
+                .map((pathspec) => `${pathspec}\0`)
+                .join(""),
+            ),
+          );
           yield* executeGit(
             "GitCore.statusDetails.moveAwareAddAll",
             cwd,
-            ["add", "-A", "--", ":/"],
+            [
+              ...SCRATCH_OBJECT_STORE_GIT_CONFIG_ARGS,
+              "add",
+              "-A",
+              `--pathspec-from-file=${pathspecPath}`,
+              "--pathspec-file-nul",
+            ],
             {
               env: tempIndexEnv,
-              timeoutMs: MOVE_AWARE_WORKING_TREE_STATUS_TIMEOUT_MS,
+              timeoutMs,
               fallbackErrorMessage: "git add -A failed while summarizing working tree status",
             },
           );
@@ -1246,11 +1374,27 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
             {
               env: tempIndexEnv,
               allowNonZeroExit: true,
-              timeoutMs: MOVE_AWARE_WORKING_TREE_STATUS_TIMEOUT_MS,
+              timeoutMs,
             },
           );
 
-          return summarizeGitNumstatOutputs([numstatStdout]);
+          // Git reports a binary file's numstat as `-\t-`, which counts as zero
+          // lines; an unhashed large file is reported the same way.
+          const summary = summarizeGitNumstatOutputs([numstatStdout]);
+          if (plan.excludedPaths.length === 0) {
+            return summary;
+          }
+          return {
+            ...summary,
+            files: [
+              ...summary.files,
+              ...plan.excludedPaths.map((filePath) => ({
+                path: filePath,
+                insertions: 0,
+                deletions: 0,
+              })),
+            ].toSorted((left, right) => left.path.localeCompare(right.path)),
+          };
         }),
       ).pipe(
         Effect.catch((cause) =>
@@ -3070,8 +3214,9 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
         };
       });
 
-    // Stages into a copied index only, so a message can be drafted before committing without
-    // moving the user's staged and unstaged files.
+    // Stages into a copied index and a scratch object store only, so a message can be drafted
+    // before committing without moving the user's staged and unstaged files or writing the
+    // preview's blobs (and, on a timeout, a temporary pack) into the repository.
     const previewCommitContext: GitCoreShape["previewCommitContext"] = (cwd, filePaths) =>
       Effect.scoped(
         Effect.gen(function* () {
@@ -3084,11 +3229,11 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
               "Selected file paths cannot contain NUL characters.",
             );
           }
-          const indexPathRaw = yield* runGitStdout(`${operation}.indexPath`, cwd, [
-            "rev-parse",
-            "--git-path",
-            "index",
-          ]).pipe(Effect.map((stdout) => stdout.trim()));
+          const [indexPathRaw = "", objectDirectoryRaw = ""] = yield* runGitStdout(
+            `${operation}.indexPath`,
+            cwd,
+            ["rev-parse", "--git-path", "index", "--git-path", "objects"],
+          ).pipe(Effect.map((stdout) => stdout.split("\n").map((line) => line.trim())));
           const tempIndexDir = yield* fileSystem
             .makeTempDirectoryScoped({ prefix: `synara-commit-preview-${process.pid}-` })
             .pipe(
@@ -3115,7 +3260,15 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
               ),
             );
           }
-          const env = { GIT_INDEX_FILE: tempIndexPath };
+          const env = {
+            GIT_INDEX_FILE: tempIndexPath,
+            ...(yield* makeScratchObjectStoreEnv(
+              cwd,
+              `${operation}.objects`,
+              tempIndexDir,
+              objectDirectoryRaw,
+            )),
+          };
           if (filePaths && filePaths.length > 0) {
             // Mirrors prepareCommitContext: a selection commits exactly those paths.
             yield* executeGit(`${operation}.reset`, cwd, ["reset"], { env }).pipe(
@@ -3137,11 +3290,22 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
             yield* executeGit(
               `${operation}.addSelected`,
               cwd,
-              ["add", "-A", `--pathspec-from-file=${pathspec}`, "--pathspec-file-nul"],
+              [
+                ...SCRATCH_OBJECT_STORE_GIT_CONFIG_ARGS,
+                "add",
+                "-A",
+                `--pathspec-from-file=${pathspec}`,
+                "--pathspec-file-nul",
+              ],
               { env },
             );
           } else {
-            yield* executeGit(`${operation}.addAll`, cwd, ["add", "-A"], { env });
+            yield* executeGit(
+              `${operation}.addAll`,
+              cwd,
+              [...SCRATCH_OBJECT_STORE_GIT_CONFIG_ARGS, "add", "-A"],
+              { env },
+            );
           }
           const stagedSummary = yield* executeGit(
             `${operation}.stagedSummary`,
