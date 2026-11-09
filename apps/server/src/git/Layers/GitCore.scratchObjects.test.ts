@@ -217,7 +217,11 @@ it.layer(TestLayer)("GitCore scratch object store", (it) => {
           let addFailure: string | undefined;
           const core = yield* makeCore(
             (input) => {
-              if (input.operation !== ADD_OPERATION) return realCore.execute(input);
+              // The lowered limit is for the add; a loaded machine must not
+              // time out the untracked listing before the add even starts.
+              if (input.operation !== ADD_OPERATION) {
+                return realCore.execute({ ...input, timeoutMs: 30_000 });
+              }
               scratch = scratchDirectoryOf(input);
               return realCore.execute(input).pipe(
                 Effect.tapError((error) =>
