@@ -11,6 +11,7 @@ import {
   buildProviderTabRows,
   buildStarredModelOptionsPatch,
   buildStarredTabRows,
+  claudeCliVersionNeededFor,
   codexNeedsUpdateForAstra,
   composerModelDisplayName,
   modelPickerShortcutRowIndex,
@@ -319,5 +320,27 @@ describe("codexNeedsUpdateForAstra", () => {
     expect(codexNeedsUpdateForAstra("codex", undefined)).toBe(false);
     expect(codexNeedsUpdateForAstra("codex", "unknown")).toBe(false);
     expect(codexNeedsUpdateForAstra("claudeAgent", "0.100.0")).toBe(false);
+  });
+});
+
+describe("claudeCliVersionNeededFor", () => {
+  it("names 2.1.321 for Fable 5.2 only on a known older Claude Code", () => {
+    expect(claudeCliVersionNeededFor("claudeAgent", "claude-fable-5-2", "2.1.319")).toBe("2.1.321");
+    expect(claudeCliVersionNeededFor("claudeAgent", "claude-fable-5-2[1m]", "2.0.63")).toBe(
+      "2.1.321",
+    );
+    expect(claudeCliVersionNeededFor("claudeAgent", "claude-fable-5-2", "2.1.321")).toBeNull();
+    expect(claudeCliVersionNeededFor("claudeAgent", "claude-fable-5-2", "2.2.0")).toBeNull();
+    expect(
+      claudeCliVersionNeededFor("claudeAgent", "claude-fable-5-2", "2.1.322 (Claude Code)"),
+    ).toBeNull();
+  });
+
+  it("stays quiet for other models, other providers, or an unknown version", () => {
+    expect(claudeCliVersionNeededFor("claudeAgent", "claude-fable-5-1", "2.1.200")).toBeNull();
+    expect(claudeCliVersionNeededFor("claudeAgent", "claude-fable-5-2", null)).toBeNull();
+    expect(claudeCliVersionNeededFor("claudeAgent", "claude-fable-5-2", undefined)).toBeNull();
+    expect(claudeCliVersionNeededFor("claudeAgent", "claude-fable-5-2", "unknown")).toBeNull();
+    expect(claudeCliVersionNeededFor("cursor", "claude-fable-5-2", "2.1.0")).toBeNull();
   });
 });

@@ -50,6 +50,7 @@ import {
   buildProviderTabRows,
   buildStarredModelOptionsPatch,
   buildStarredTabRows,
+  claudeCliVersionNeededFor,
   CODEX_ASTRA_MINIMUM_VERSION,
   codexNeedsUpdateForAstra,
   type ComposerModelPickerRow as PickerRow,
@@ -384,18 +385,17 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
   const openProviderTab = providerTabs.find((providerTab) => providerTab.instanceId === tab);
   const tabAccount = tab === STARRED_TAB ? null : (openProviderTab ?? providerTabs[0] ?? null);
   const setupMessage = tab === STARRED_TAB ? null : (tabAccount?.setupMessage ?? null);
+  const installedVersionFor = (provider: ProviderKind, instanceId: string) =>
+    findProviderStatusForInstance({ providers: props.providers, provider, instanceId })?.version;
+  const tabVersion =
+    tabAccount === null
+      ? undefined
+      : installedVersionFor(tabAccount.provider, tabAccount.instanceId);
   // An installed Codex too old to list GPT-6 Astra leaves it out of the tab; say so.
   const codexAstraUpdateHint =
     setupMessage === null &&
     tabAccount !== null &&
-    codexNeedsUpdateForAstra(
-      tabAccount.provider,
-      findProviderStatusForInstance({
-        providers: props.providers,
-        provider: tabAccount.provider,
-        instanceId: tabAccount.instanceId,
-      })?.version,
-    )
+    codexNeedsUpdateForAstra(tabAccount.provider, tabVersion)
       ? t("lattice:codexUpdateForAstra", { version: CODEX_ASTRA_MINIMUM_VERSION })
       : null;
   const openProviderSettings = () => {
@@ -424,11 +424,36 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
     return hasSiblingAccounts || !account.isDefault ? account.label : undefined;
   };
 
-  // A model a failed turn showed the account cannot use stays listed, greyed out.
-  const unavailableModelLabelFor = (provider: ProviderKind, instanceId: string, model: string) =>
-    isModelUnavailable(props.providers, provider, instanceId, model)
+  // A model the installed Claude Code is too old to run, or that a failed turn showed
+  // the account cannot use, stays listed, greyed out with the reason.
+  const unavailableModelLabelFor = (provider: ProviderKind, instanceId: string, model: string) => {
+    const neededVersion = claudeCliVersionNeededFor(
+      provider,
+      model,
+      installedVersionFor(provider, instanceId),
+    );
+    if (neededVersion !== null) {
+      return t("lattice:modelNeedsNewerClaudeCode", { version: neededVersion });
+    }
+    return isModelUnavailable(props.providers, provider, instanceId, model)
       ? t("lattice:modelNotAvailableToAccount")
       : null;
+  };
+  // The Claude tab names the first model its Claude Code is too old for, as Codex's does.
+  const claudeModelUpdateHint = (() => {
+    if (setupMessage !== null || tabAccount === null) return null;
+    for (const option of modelOptionsFor(tabAccount.provider, tabAccount.instanceId)) {
+      const neededVersion = claudeCliVersionNeededFor(tabAccount.provider, option.slug, tabVersion);
+      if (neededVersion !== null) {
+        return t("lattice:claudeCodeUpdateForModel", {
+          version: neededVersion,
+          model: composerModelDisplayName(tabAccount.provider, option.name),
+        });
+      }
+    }
+    return null;
+  })();
+  const providerUpdateHint = codexAstraUpdateHint ?? claudeModelUpdateHint;
 
   const rows =
     setupMessage !== null
@@ -699,12 +724,12 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
                 {discoveryError}
               </div>
             ) : null}
-            {codexAstraUpdateHint !== null ? (
+            {providerUpdateHint !== null ? (
               <div
                 role="status"
                 className="px-2 py-1.5 text-ui-sm leading-snug text-muted-foreground [overflow-wrap:anywhere]"
               >
-                {codexAstraUpdateHint}
+                {providerUpdateHint}
               </div>
             ) : null}
             {setupMessage !== null ? null : isTabLoading ? (

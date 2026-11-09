@@ -1157,9 +1157,9 @@ describe("getModelCapabilities Claude capability flags", () => {
     const fable52 = getModelCapabilities("claudeAgent", "claude-fable-5-2");
     const fable51 = getModelCapabilities("claudeAgent", "claude-fable-5-1");
     expect(fable52.reasoningEffortLevels).toEqual(fable51.reasoningEffortLevels);
-    expect(
-      fable52.reasoningEffortLevels.find((level) => level.isDefault === true)?.value,
-    ).toBe("high");
+    expect(fable52.reasoningEffortLevels.find((level) => level.isDefault === true)?.value).toBe(
+      "high",
+    );
     expect(fable52.supportsThinkingToggle).toBe(false);
     expect(fable52.contextWindowTokens).toBe(1_000_000);
     expect(fable52.supportsFastMode).toBe(true);
