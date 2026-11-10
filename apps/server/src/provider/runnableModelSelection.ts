@@ -15,7 +15,7 @@ import {
   type ResolvedProviderInstance,
 } from "@synara/shared/providerInstances";
 
-import { Duration, Effect } from "effect";
+import { Duration, Effect, Option } from "effect";
 
 import { GIT_TEXT_GENERATION_PROVIDER_ORDER } from "../git/textGenerationSelection.ts";
 import { commandExistsOnPath } from "./providerBinaryResolution.ts";
@@ -200,9 +200,13 @@ export const providerCliFound: ProviderCliFound = (instance) => {
  */
 export const FIRST_PROBE_WAIT = Duration.seconds(3);
 
+/**
+ * `cliFound` is set only when the first probe was still running at the wait's
+ * bound; a finished probe's statuses decide on their own.
+ */
 export type AuxiliaryProviderHealth = {
   readonly statuses: ReadonlyArray<ServerProviderStatus>;
-  readonly cliFound: ProviderCliFound;
+  readonly cliFound?: ProviderCliFound | undefined;
 };
 
 /**
@@ -253,14 +257,19 @@ export function readProviderHealthForAuxiliaryModel(input: {
   readonly cliFound?: ProviderCliFound | undefined;
 }): Effect.Effect<AuxiliaryProviderHealth> {
   const { providerHealth, settings, preferences, purpose } = input;
-  const cliFound = input.cliFound ?? providerCliFound;
   return Effect.gen(function* () {
     const statuses = yield* providerHealth.getStatuses;
     if (!dependsOnUnprobedHealth({ settings, preferences, statuses, purpose })) {
-      return { statuses, cliFound };
+      return { statuses };
     }
     // Interrupting the join at the bound leaves the shared refresh fiber running.
-    yield* providerHealth.refresh.pipe(Effect.timeoutOption(input.wait ?? FIRST_PROBE_WAIT));
-    return { statuses: yield* providerHealth.getStatuses, cliFound };
+    const probed = yield* providerHealth.refresh.pipe(
+      Effect.timeoutOption(input.wait ?? FIRST_PROBE_WAIT),
+    );
+    if (Option.isSome(probed)) return { statuses: probed.value };
+    return {
+      statuses: yield* providerHealth.getStatuses,
+      cliFound: input.cliFound ?? providerCliFound,
+    };
   });
 }

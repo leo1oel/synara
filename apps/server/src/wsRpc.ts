@@ -544,7 +544,7 @@ const makeWsRpcHandlersLayer = () =>
                 preferences,
                 purpose: "text-generation",
               })
-            : { statuses: [], cliFound: undefined };
+            : { statuses: [] };
           const routing = resolveTextGenerationRouting(
             settings,
             health.statuses,
