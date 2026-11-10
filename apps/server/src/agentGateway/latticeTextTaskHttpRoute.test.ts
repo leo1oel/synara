@@ -294,7 +294,7 @@ describe("Lattice text task HTTP lifecycle", () => {
     await withTextTaskServer(
       async ({ request, calls }) => {
         await start(request);
-        expect(calls.map((call) => call.modelSelection.provider)).toEqual(["claudeAgent"]);
+        expect(calls.map((call) => call.modelSelection?.provider)).toEqual(["claudeAgent"]);
       },
       {},
       [providerStatus("codex", "signed-out"), providerStatus("claudeAgent", "ready")],

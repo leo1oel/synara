@@ -36,12 +36,10 @@ import {
   type GitRemoveWorktreeInput,
   type GitHubProjectProvisionProgressEvent,
   type GitWorktreeSetupProgressEvent,
-  type ModelSelection,
   type OrchestrationCommand,
   type OrchestrationEvent,
   type OrchestrationProject,
   type ProjectDevServerEvent,
-  type ProviderStartOptions,
   type OrchestrationShellStreamEvent,
   type OrchestrationShellStreamItem,
   type ProjectId,
@@ -51,7 +49,6 @@ import {
   type ServerConfigStreamEvent,
   type ServerDiagnosticsResult,
   type ServerLifecycleStreamEvent,
-  type ServerSettings,
 } from "@synara/contracts";
 import { clamp } from "effect/Number";
 import { Effect, FileSystem, Layer, Option, Path, Queue, Schema, Scope, Stream } from "effect";
@@ -108,9 +105,7 @@ import { PROJECT_FOLDERS_WORKTREE_ISSUE } from "@synara/shared/projectFolders";
 import { workspaceRootsEqual } from "@synara/shared/threadWorkspace";
 import { WORKSPACE_FILE_WRITE_CONFLICT_CODE } from "@synara/shared/workspaceFileWrite";
 import {
-  mergeProviderStartOptions,
   providerStartOptionsFromInstance,
-  resolveModelSelectionInstanceId,
   resolveProviderInstance,
 } from "@synara/shared/providerInstances";
 import {
@@ -137,6 +132,7 @@ import { GitManager } from "./git/Services/GitManager";
 import { GitHubCliError } from "./git/Errors";
 import { GitStatusBroadcaster } from "./git/Services/GitStatusBroadcaster";
 import { TextGeneration } from "./git/Services/TextGeneration";
+import { resolveTextGenerationRouting } from "./git/textGenerationRouting";
 import {
   beginGitHandoff,
   completeGitHandoff,
@@ -442,47 +438,6 @@ export function toWsRpcError(cause: unknown, fallbackMessage: string) {
 // subscriber inside the tracker — see makeResnapshotEscalationTracker.
 const resnapshotEscalationTracker = makeResnapshotEscalationTracker();
 
-// Legacy/native callers may pin a text-generation model via the model-only
-// `textGenerationModel` field. Downstream routing prefers a model selection
-// over the raw model, so the global settings selection must only be injected
-// when the caller supplied neither — injecting it alongside an explicit model
-// would silently reroute the request to the globally configured model.
-function resolveTextGenerationRouting(
-  settings: ServerSettings,
-  input: {
-    readonly textGenerationModel?: string | undefined;
-    readonly textGenerationModelSelection?: ModelSelection | undefined;
-    readonly providerOptions?: ProviderStartOptions | undefined;
-  },
-): {
-  readonly model: string;
-  readonly modelSelection: ModelSelection | undefined;
-  readonly providerOptions: ProviderStartOptions | undefined;
-} {
-  const explicitModel = input.textGenerationModel?.trim();
-  if (!input.textGenerationModelSelection && explicitModel) {
-    return {
-      model: explicitModel,
-      modelSelection: undefined,
-      providerOptions: input.providerOptions,
-    };
-  }
-  const modelSelection =
-    input.textGenerationModelSelection ?? settings.textGenerationModelSelection;
-  const instance = resolveProviderInstance(settings, {
-    provider: modelSelection.provider,
-    instanceId: resolveModelSelectionInstanceId(modelSelection),
-  });
-  return {
-    model: explicitModel || modelSelection.model,
-    modelSelection,
-    providerOptions: mergeProviderStartOptions(
-      input.providerOptions,
-      instance ? providerStartOptionsFromInstance(instance) : undefined,
-    ),
-  };
-}
-
 const failLiveUiStreamForSnapshotResync = (report: LiveUiStreamDropReport) =>
   Effect.fail(
     new WsRpcError({
@@ -571,6 +526,19 @@ const makeWsRpcHandlersLayer = () =>
       const terminalManager = yield* TerminalManager;
       const textGeneration = yield* TextGeneration;
       const workspaceEntries = yield* WorkspaceEntries;
+      // Git writing and the other auxiliary text calls run on the requested model
+      // only while its provider is usable, else on the first ready provider.
+      const routeTextGeneration = (input: Parameters<typeof resolveTextGenerationRouting>[2]) =>
+        Effect.gen(function* () {
+          const routing = resolveTextGenerationRouting(
+            yield* serverSettings.getSettings,
+            yield* providerHealth.getStatuses,
+            input,
+          );
+          if ("unavailable" in routing)
+            return yield* new WsRpcError({ message: routing.unavailable, retryable: false });
+          return routing;
+        });
       const workspaceFileSystem = yield* WorkspaceFileSystem;
       const threadDiagnostics = yield* ThreadDiagnosticsQuery;
       const eventStore = yield* OrchestrationEventStore;
@@ -601,8 +569,7 @@ const makeWsRpcHandlersLayer = () =>
       );
       const runGitAction = yield* makeGitActionRunner((input, publish) =>
         Effect.gen(function* () {
-          const settings = yield* serverSettings.getSettings;
-          const routing = resolveTextGenerationRouting(settings, input);
+          const routing = yield* routeTextGeneration(input);
           yield* gitManager.runStackedAction(
             {
               ...input,
@@ -2157,8 +2124,7 @@ const makeWsRpcHandlersLayer = () =>
         [WS_METHODS.gitSummarizeDiff]: (input) =>
           rpcEffect(
             Effect.gen(function* () {
-              const settings = yield* serverSettings.getSettings;
-              const routing = resolveTextGenerationRouting(settings, input);
+              const routing = yield* routeTextGeneration(input);
               return yield* gitManager.summarizeDiff({
                 ...input,
                 ...(routing.modelSelection
@@ -2172,8 +2138,7 @@ const makeWsRpcHandlersLayer = () =>
         [WS_METHODS.gitGenerateCommitMessage]: (input) =>
           rpcEffect(
             Effect.gen(function* () {
-              const settings = yield* serverSettings.getSettings;
-              const routing = resolveTextGenerationRouting(settings, input);
+              const routing = yield* routeTextGeneration(input);
               return yield* gitManager.generateCommitMessage({
                 ...input,
                 ...(routing.modelSelection
@@ -2692,8 +2657,7 @@ const makeWsRpcHandlersLayer = () =>
         [WS_METHODS.serverGenerateThreadRecap]: (input) =>
           rpcEffect(
             Effect.gen(function* () {
-              const settings = yield* serverSettings.getSettings;
-              const routing = resolveTextGenerationRouting(settings, input);
+              const routing = yield* routeTextGeneration(input);
               return yield* textGeneration.generateThreadRecap({
                 cwd: input.cwd,
                 newMaterial: input.newMaterial,
@@ -2710,8 +2674,7 @@ const makeWsRpcHandlersLayer = () =>
         [WS_METHODS.serverGenerateAutomationIntent]: (input) =>
           rpcEffect(
             Effect.gen(function* () {
-              const settings = yield* serverSettings.getSettings;
-              const routing = resolveTextGenerationRouting(settings, input);
+              const routing = yield* routeTextGeneration(input);
               return yield* textGeneration.generateAutomationIntent({
                 cwd: input.cwd,
                 message: input.message,

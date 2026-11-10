@@ -35,14 +35,18 @@ export const CONNECT_PROVIDERS_LOCATION = "Agent panel → Settings → Provider
 /**
  * The model an auxiliary call actually runs on.
  *
- * - `selected`: the Settings choice, whose instance is enabled and not known
- *   to be unready.
- * - `fallback`: the Settings choice cannot run (not installed, signed out or
+ * - `selected`: the first Settings choice in `preferences` whose instance is
+ *   enabled and not known to be unready; `preference` is its index.
+ * - `fallback`: no Settings choice can run (not installed, signed out or
  *   disabled), so the first ready provider runs instead on its default model.
  * - `unavailable`: nothing can run; `message` names what to connect and where.
  */
 export type RunnableModelSelection =
-  | { readonly kind: "selected"; readonly selection: ModelSelection }
+  | {
+      readonly kind: "selected";
+      readonly selection: ModelSelection;
+      readonly preference: number;
+    }
   | { readonly kind: "fallback"; readonly selection: ModelSelection }
   | { readonly kind: "unavailable"; readonly message: string };
 
@@ -80,38 +84,41 @@ function joinNames(names: ReadonlyArray<string>): string {
  * health, so a writer who connected only Claude is not sent to Codex because
  * Codex is the settings default.
  *
- * The Settings choice wins whenever its instance is enabled and health does
+ * `preferences` are the Settings choices in priority order (for example the
+ * proofreading override, then the Git writing model it inherits). A choice
+ * wins whenever its instance is enabled, can serve `purpose`, and health does
  * not say it is unusable; a missing status (health not probed yet) keeps the
  * choice rather than failing a provider that may well work. Fallback
  * candidates must be confirmed usable, because nobody chose them.
  */
 export function resolveRunnableModelSelection(input: {
   readonly settings: ServerSettings;
-  readonly selection: ModelSelection;
+  readonly preferences: ReadonlyArray<ModelSelection>;
   readonly statuses: ReadonlyArray<ServerProviderStatus>;
   readonly purpose: AuxiliaryModelPurpose;
 }): RunnableModelSelection {
-  const { settings, selection, statuses, purpose } = input;
+  const { settings, preferences, statuses, purpose } = input;
   const order = PROVIDER_ORDER_BY_PURPOSE[purpose];
   const instances = deriveProviderInstances(settings);
 
-  const selectionInstanceId = resolveModelSelectionInstanceId(selection);
-  const selected = instances.find((instance) => instance.instanceId === selectionInstanceId);
-  if (selected?.enabled && order.includes(selected.driver)) {
+  for (const [preference, selection] of preferences.entries()) {
+    const selectionInstanceId = resolveModelSelectionInstanceId(selection);
+    const selected = instances.find((instance) => instance.instanceId === selectionInstanceId);
+    if (!selected?.enabled || !order.includes(selected.driver)) continue;
     const status = statusForInstance(statuses, selected);
-    if (!status || isProviderUsable(status)) {
-      return {
-        kind: "selected",
-        selection:
-          selected.driver === selection.provider
-            ? selection
-            : ({
-                provider: selected.driver,
-                instanceId: selected.instanceId,
-                model: selection.model,
-              } as ModelSelection),
-      };
-    }
+    if (status && !isProviderUsable(status)) continue;
+    return {
+      kind: "selected",
+      preference,
+      selection:
+        selected.driver === selection.provider
+          ? selection
+          : ({
+              provider: selected.driver,
+              instanceId: selected.instanceId,
+              model: selection.model,
+            } as ModelSelection),
+    };
   }
 
   for (const driver of order) {

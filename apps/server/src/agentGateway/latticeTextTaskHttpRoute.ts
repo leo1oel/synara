@@ -79,16 +79,26 @@ export function textTaskModel(
 ):
   | { readonly selection: ModelSelection; readonly model: TextTaskModel }
   | { readonly unavailable: string } {
+  // An override that cannot run still falls back to the Git writing model it
+  // would inherit before any provider nobody chose.
   const preferred = resolveProofreadModelSelection(settings);
   const runnable = resolveRunnableModelSelection({
     settings,
-    selection: preferred.selection,
+    preferences:
+      preferred.source === "proofreading"
+        ? [preferred.selection, settings.textGenerationModelSelection]
+        : [preferred.selection],
     statuses,
     purpose: "text-generation",
   });
   if (runnable.kind === "unavailable") return { unavailable: runnable.message };
   const selection = runnable.selection;
-  const source = runnable.kind === "fallback" ? "fallback" : preferred.source;
+  const source =
+    runnable.kind === "fallback"
+      ? "fallback"
+      : runnable.preference === 0
+        ? preferred.source
+        : "git-writing";
   const instanceId = resolveModelSelectionInstanceId(selection);
   const providerName =
     deriveProviderInstances(settings).find((instance) => instance.instanceId === instanceId)
