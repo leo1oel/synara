@@ -24,7 +24,11 @@ import {
   type ServerProviderStatus,
   type ThreadId as ThreadIdType,
 } from "@synara/contracts";
-import { getDefaultModel, normalizeModelSlug } from "@synara/shared/model";
+import {
+  getDefaultModel,
+  getDefaultModelForClaudeCliVersion,
+  normalizeModelSlug,
+} from "@synara/shared/model";
 import { approvalSessionGrantWidensSessionPolicy } from "@synara/shared/approvalSessionGrant";
 import { buildSynaraBranchName } from "@synara/shared/git";
 import { isGenericChatThreadTitle } from "@synara/shared/chatThreads";
@@ -1252,7 +1256,8 @@ export function resolveComposerDefaultModelSelection(input: {
  * Lattice starts a new embedded chat with the last model the user actually used.
  * A legacy project bootstrap default is ignored by the resolver above; if there
  * is no chat history yet, start on Claude's default model, the Claude Code
- * harness Lattice users compare the panel with. Once provider health
+ * harness Lattice users compare the panel with (stepped down to one the installed
+ * Claude Code can run, when its status names an older version). Once provider health
  * is authoritative, fall back to the first visible authenticated provider so a
  * stale Codex default cannot strand the new draft on an unusable subscription.
  */
@@ -1269,12 +1274,23 @@ export function resolveEmbeddedNewThreadModelSelection(input: {
   providerOrder: readonly ProviderKind[];
   hiddenProviders: readonly ProviderKind[];
 }): ModelSelection {
+  const runnableDefaultModel = (provider: ProviderKind) =>
+    getDefaultModelForClaudeCliVersion(
+      provider,
+      provider === "claudeAgent"
+        ? findProviderStatus(input.providerStatuses, provider)?.version
+        : undefined,
+    );
   const preferredSelection =
     resolveComposerDefaultModelSelection({
       embedded: true,
       projectSelection: input.projectSelection,
       threadSummaries: input.threadSummaries,
-    }) ?? makeModelSelection("claudeAgent", DEFAULT_MODEL_BY_PROVIDER.claudeAgent);
+    }) ??
+    makeModelSelection(
+      "claudeAgent",
+      runnableDefaultModel("claudeAgent") ?? DEFAULT_MODEL_BY_PROVIDER.claudeAgent,
+    );
 
   if (
     !input.providerStatusesReconciled ||
@@ -1294,7 +1310,7 @@ export function resolveEmbeddedNewThreadModelSelection(input: {
   const fallbackProvider =
     findFirstUsableDefaultProvider(input.providerStatuses, visibleProviders) ??
     findFirstUsableDefaultProvider(input.providerStatuses, orderedProviders);
-  const fallbackModel = fallbackProvider ? getDefaultModel(fallbackProvider) : null;
+  const fallbackModel = fallbackProvider ? runnableDefaultModel(fallbackProvider) : null;
   return fallbackProvider && fallbackModel
     ? makeModelSelection(fallbackProvider, fallbackModel)
     : preferredSelection;

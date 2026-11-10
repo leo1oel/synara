@@ -26,6 +26,7 @@ const status = (instanceId: string, models: ReadonlyArray<string>): ServerProvid
 
 const OPTIONS = [
   { slug: "claude-fable-5-1", name: "Claude Fable 5.1" },
+  { slug: "claude-sonnet-5-5", name: "Claude Sonnet 5.5" },
   { slug: "claude-sonnet-5", name: "Claude Sonnet 5" },
   { slug: "claude-opus-5", name: "Claude Opus 5" },
 ];
@@ -51,9 +52,9 @@ describe("unavailable models", () => {
       });
     expect(fallback("claude-fable-5-1", [])).toBeNull();
     expect(fallback("claude-opus-5", ["claude-fable-5-1"])).toBeNull();
-    expect(fallback("claude-fable-5-1", ["claude-fable-5-1"])).toBe("claude-sonnet-5");
-    expect(fallback("claude-sonnet-5", ["claude-sonnet-5", "claude-fable-5-1"])).toBe(
-      "claude-opus-5",
+    expect(fallback("claude-fable-5-1", ["claude-fable-5-1"])).toBe("claude-sonnet-5-5");
+    expect(fallback("claude-sonnet-5-5", ["claude-sonnet-5-5", "claude-fable-5-1"])).toBe(
+      "claude-sonnet-5",
     );
     expect(
       fallback(
@@ -61,5 +62,19 @@ describe("unavailable models", () => {
         OPTIONS.map((option) => option.slug),
       ),
     ).toBeNull();
+  });
+
+  it("moves to a default the installed Claude Code can run", () => {
+    const fallback = (claudeCliVersion: string | null) =>
+      resolveUnavailableModelFallback({
+        provider: "claudeAgent",
+        model: "claude-fable-5-1",
+        unavailableModels: [refused("claude-fable-5-1")],
+        options: OPTIONS,
+        claudeCliVersion,
+      });
+    expect(fallback("2.1.283")).toBe("claude-sonnet-5");
+    expect(fallback("2.1.284")).toBe("claude-sonnet-5-5");
+    expect(fallback(null)).toBe("claude-sonnet-5-5");
   });
 });

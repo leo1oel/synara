@@ -1020,7 +1020,7 @@ describe("store projection", () => {
 
     const next = syncServerReadModel(initialState, readModel);
 
-    expect(threadsOf(next)[0]?.modelSelection.model).toBe("claude-sonnet-5");
+    expect(threadsOf(next)[0]?.modelSelection.model).toBe("claude-sonnet-5-5");
   });
 
   it("preserves OpenCode as the active session provider", () => {

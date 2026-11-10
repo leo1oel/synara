@@ -1845,9 +1845,14 @@ describe("resolveComposerDefaultModelSelection", () => {
 describe("resolveEmbeddedNewThreadModelSelection", () => {
   const providerStatus = (
     provider: "codex" | "claudeAgent" | "cursor",
-    overrides?: { available?: boolean; authStatus?: "authenticated" | "unauthenticated" },
+    overrides?: {
+      available?: boolean;
+      authStatus?: "authenticated" | "unauthenticated";
+      version?: string;
+    },
   ) => ({
     provider,
+    ...(overrides?.version ? { version: overrides.version } : {}),
     instanceId: provider,
     driver: provider,
     status: overrides?.available === false ? ("warning" as const) : ("ready" as const),
@@ -1866,7 +1871,23 @@ describe("resolveEmbeddedNewThreadModelSelection", () => {
         providerOrder: ["codex", "claudeAgent"],
         hiddenProviders: [],
       }),
-    ).toEqual({ provider: "claudeAgent", model: "claude-sonnet-5" });
+    ).toEqual({ provider: "claudeAgent", model: "claude-sonnet-5-5" });
+  });
+
+  it.each([
+    ["2.1.284", "claude-sonnet-5-5"],
+    ["2.1.283", "claude-sonnet-5"],
+  ])("starts a first chat on Claude Code %s on %s", (version, model) => {
+    expect(
+      resolveEmbeddedNewThreadModelSelection({
+        projectSelection: null,
+        threadSummaries: [],
+        providerStatuses: [providerStatus("claudeAgent", { version })],
+        providerStatusesReconciled: true,
+        providerOrder: ["claudeAgent"],
+        hiddenProviders: [],
+      }),
+    ).toEqual({ provider: "claudeAgent", model });
   });
 
   it("keeps the model of the user's last chat, Codex included", () => {
