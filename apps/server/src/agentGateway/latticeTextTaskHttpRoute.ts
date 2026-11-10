@@ -20,7 +20,11 @@ import { authErrorResponse } from "../auth/effectHttp.ts";
 import { TextGenerationError } from "../git/Errors.ts";
 import { TextGeneration } from "../git/Services/TextGeneration.ts";
 import { ProviderHealth } from "../provider/Services/ProviderHealth.ts";
-import { resolveRunnableModelSelection } from "../provider/runnableModelSelection.ts";
+import {
+  readProviderHealthForAuxiliaryModel,
+  resolveRunnableModelSelection,
+  type ProviderCliFound,
+} from "../provider/runnableModelSelection.ts";
 import { resolveProofreadModelSelection, ServerSettingsService } from "../serverSettings.ts";
 import { readMcpJsonBody } from "./httpRoute.ts";
 import { authenticateLatticeRelayRequest } from "./latticeRelayAuthentication.ts";
@@ -73,23 +77,32 @@ export type TextTaskModel = {
   readonly source: "proofreading" | "git-writing" | "fallback";
 };
 
+/**
+ * The Settings choices a text task tries in order: an override that cannot run
+ * still falls back to the Git writing model it would inherit before any
+ * provider nobody chose.
+ */
+export function textTaskPreferences(settings: ServerSettings): ReadonlyArray<ModelSelection> {
+  const preferred = resolveProofreadModelSelection(settings);
+  return preferred.source === "proofreading"
+    ? [preferred.selection, settings.textGenerationModelSelection]
+    : [preferred.selection];
+}
+
 export function textTaskModel(
   settings: ServerSettings,
   statuses: ReadonlyArray<ServerProviderStatus>,
+  cliFound?: ProviderCliFound,
 ):
   | { readonly selection: ModelSelection; readonly model: TextTaskModel }
   | { readonly unavailable: string } {
-  // An override that cannot run still falls back to the Git writing model it
-  // would inherit before any provider nobody chose.
   const preferred = resolveProofreadModelSelection(settings);
   const runnable = resolveRunnableModelSelection({
     settings,
-    preferences:
-      preferred.source === "proofreading"
-        ? [preferred.selection, settings.textGenerationModelSelection]
-        : [preferred.selection],
+    preferences: textTaskPreferences(settings),
     statuses,
     purpose: "text-generation",
+    cliFound,
   });
   if (runnable.kind === "unavailable") return { unavailable: runnable.message };
   const selection = runnable.selection;
@@ -231,10 +244,14 @@ export const latticeTextTaskRouteLayer = Effect.gen(function* () {
       const providerHealth = yield* ProviderHealth;
       const textGeneration = yield* TextGeneration;
       return yield* Effect.gen(function* () {
-        const resolved = textTaskModel(
-          yield* settings.getSettings,
-          yield* providerHealth.getStatuses,
-        );
+        const currentSettings = yield* settings.getSettings;
+        const health = yield* readProviderHealthForAuxiliaryModel({
+          providerHealth,
+          settings: currentSettings,
+          preferences: textTaskPreferences(currentSettings),
+          purpose: "text-generation",
+        });
+        const resolved = textTaskModel(currentSettings, health.statuses, health.cliFound);
         // Answered at start, not as a failed task, so no provider process is
         // spawned; Lattice shows the error text in the proofread card.
         if ("unavailable" in resolved)
