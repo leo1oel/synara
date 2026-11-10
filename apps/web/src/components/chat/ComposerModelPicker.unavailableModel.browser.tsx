@@ -25,10 +25,13 @@ const THREAD_ID = ThreadId.makeUnsafe("thread-unavailable-model");
 const CLAUDE = "claudeAgent" as ProviderInstanceId;
 const FABLE = "claude-fable-5-1" as ModelSlug;
 // The provider's default model, where the composer goes.
-const SONNET = "claude-sonnet-5" as ModelSlug;
+const SONNET = "claude-sonnet-5-5" as ModelSlug;
+// Where it goes instead when Claude Code is too old for Sonnet 5.5 (before 2.1.284).
+const OLDER_SONNET = "claude-sonnet-5" as ModelSlug;
 const CLAUDE_MODELS: ReadonlyArray<ProviderModelOption> = [
   { slug: FABLE, name: "Claude Fable 5.1" },
-  { slug: SONNET, name: "Claude Sonnet 5" },
+  { slug: SONNET, name: "Claude Sonnet 5.5" },
+  { slug: OLDER_SONNET, name: "Claude Sonnet 5" },
 ];
 const MODEL_OPTIONS_BY_PROVIDER = {
   claudeAgent: CLAUDE_MODELS,
@@ -43,8 +46,9 @@ const MODEL_OPTIONS_BY_PROVIDER = {
   pi: [],
 } satisfies Record<ProviderKind, ReadonlyArray<ProviderModelOption>>;
 
-function claudeStatus(refused: ReadonlyArray<string> = []): ServerProviderStatus {
+function claudeStatus(refused: ReadonlyArray<string> = [], version?: string): ServerProviderStatus {
   return {
+    ...(version ? { version } : {}),
     provider: "claudeAgent",
     instanceId: CLAUDE,
     driver: "claudeAgent",
@@ -130,7 +134,7 @@ describe("a model the account refused", () => {
       await expect.element(fableRow()).toHaveAttribute("aria-disabled", "true");
       await expect.element(fableRow()).toHaveTextContent("Not available to your account");
       await expect
-        .element(page.getByRole("menuitem", { name: /Sonnet 5/u }))
+        .element(page.getByRole("menuitem", { name: /Sonnet 5\.5/u }))
         .toHaveAttribute("aria-current", "true");
       await fableRow().click({ force: true });
       expect(onPick).not.toHaveBeenCalled();
@@ -143,6 +147,19 @@ describe("a model the account refused", () => {
       await expect.element(page.getByTestId("composer-model")).toHaveTextContent(SONNET);
       await fableRow().click();
       expect(onPick).toHaveBeenCalledExactlyOnceWith(FABLE);
+    } finally {
+      await screen.unmount();
+    }
+  });
+
+  it("moves to Sonnet 5 when Claude Code is too old for the Sonnet 5.5 default", async () => {
+    setLanguagePreference("en");
+    const screen = await render(
+      <Harness providers={[claudeStatus([FABLE], "2.1.283")]} onPick={vi.fn()} />,
+    );
+    try {
+      await expect.element(page.getByTestId("composer-model")).toHaveTextContent(OLDER_SONNET);
+      expect(page.getByTestId("composer-model").element().textContent).toBe(OLDER_SONNET);
     } finally {
       await screen.unmount();
     }
