@@ -231,7 +231,10 @@ export const latticeTextTaskRouteLayer = Effect.gen(function* () {
       const providerHealth = yield* ProviderHealth;
       const textGeneration = yield* TextGeneration;
       return yield* Effect.gen(function* () {
-        const resolved = textTaskModel(yield* settings.getSettings, yield* providerHealth.getStatuses);
+        const resolved = textTaskModel(
+          yield* settings.getSettings,
+          yield* providerHealth.getStatuses,
+        );
         // Answered at start, not as a failed task, so no provider process is
         // spawned; Lattice shows the error text in the proofread card.
         if ("unavailable" in resolved)
