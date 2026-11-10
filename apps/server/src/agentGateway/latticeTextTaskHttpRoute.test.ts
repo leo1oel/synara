@@ -13,7 +13,7 @@ import {
 } from "@synara/contracts";
 import { Deferred, Effect, Exit, Layer, Scope } from "effect";
 import { HttpRouter } from "effect/unstable/http";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { AuthError, ServerAuth, type ServerAuthShape } from "../auth/Services/ServerAuth.ts";
 import { ServerConfig, type ServerConfigShape } from "../config.ts";
 import { TextGenerationError } from "../git/Errors.ts";
@@ -66,6 +66,8 @@ async function withTextTaskServer(
   baseSettings: Partial<ServerSettings> = {
     textGenerationModelSelection: { provider: "claudeAgent", model: "claude-sonnet-4-6" },
   },
+  // A probe that finds nothing new; `Effect.never` is one still running.
+  refresh: Effect.Effect<ReadonlyArray<ServerProviderStatus>> = Effect.succeed(statuses),
 ) {
   const scope = await Effect.runPromise(Scope.make("sequential"));
   const root = await realpath(await mkdtemp(join(tmpdir(), "text-task-")));
@@ -115,6 +117,7 @@ async function withTextTaskServer(
               Layer.succeed(TextGeneration, textGeneration),
               Layer.succeed(ProviderHealth, {
                 getStatuses: Effect.succeed(statuses),
+                refresh,
               } as unknown as ProviderHealthShape),
               Layer.succeed(ServerSettingsService, {
                 getSettings: Effect.succeed({
@@ -317,6 +320,36 @@ describe("Lattice text task HTTP lifecycle", () => {
       {},
     );
   });
+
+  it("proofreads on Claude right after launch, before any provider probe, when Codex is not installed", async () => {
+    // No status yet and the first probe still running past the wait: only a
+    // `claude` executable is on PATH, so the default Codex choice is dropped.
+    const bin = await mkdtemp(join(tmpdir(), "text-task-bin-"));
+    await writeFile(join(bin, "claude"), "#!/bin/sh\n", { mode: 0o755 });
+    const path = process.env.PATH;
+    process.env.PATH = bin;
+    try {
+      await withTextTaskServer(
+        async ({ request, calls }) => {
+          const started = await request();
+          expect(started.status).toBe(202);
+          const { model } = (await started.json()) as { model: unknown };
+          expect(model).toMatchObject({ provider: "claudeAgent", source: "fallback" });
+          // The task fiber starts after the answer; give it a turn.
+          await vi.waitFor(() =>
+            expect(calls.map((call) => call.modelSelection?.provider)).toEqual(["claudeAgent"]),
+          );
+        },
+        {},
+        [],
+        {},
+        Effect.never,
+      );
+    } finally {
+      process.env.PATH = path;
+      await rm(bin, { recursive: true, force: true });
+    }
+  }, 10_000);
 
   it("names the providers to connect, and where, when none is ready", async () => {
     await withTextTaskServer(

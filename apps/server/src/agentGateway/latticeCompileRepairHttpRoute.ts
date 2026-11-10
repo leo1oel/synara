@@ -17,7 +17,10 @@ import { authErrorResponse } from "../auth/effectHttp.ts";
 import { OrchestrationEngineService } from "../orchestration/Services/OrchestrationEngine.ts";
 import { ProjectionSnapshotQuery } from "../orchestration/Services/ProjectionSnapshotQuery.ts";
 import { ProviderHealth } from "../provider/Services/ProviderHealth.ts";
-import { resolveRunnableModelSelection } from "../provider/runnableModelSelection.ts";
+import {
+  readProviderHealthForAuxiliaryModel,
+  resolveRunnableModelSelection,
+} from "../provider/runnableModelSelection.ts";
 import { ServerSettingsService } from "../serverSettings.ts";
 import { readMcpJsonBody } from "./httpRoute.ts";
 import { authenticateLatticeRelayRequest } from "./latticeRelayAuthentication.ts";
@@ -212,11 +215,17 @@ const createRepair = HttpRouter.add(
       const currentSettings = yield* settings.getSettings;
       // The compile-repair model defaults to Codex; a writer who connected only
       // another provider repairs on that one instead of a thread that cannot start.
+      const preferences = [currentSettings.compileRepairModelSelection];
       const runnable = resolveRunnableModelSelection({
         settings: currentSettings,
-        preferences: [currentSettings.compileRepairModelSelection],
-        statuses: yield* providerHealth.getStatuses,
+        preferences,
         purpose: "agent-turn",
+        ...(yield* readProviderHealthForAuxiliaryModel({
+          providerHealth,
+          settings: currentSettings,
+          preferences,
+          purpose: "agent-turn",
+        })),
       });
       if (runnable.kind === "unavailable")
         return HttpServerResponse.jsonUnsafe({ error: runnable.message }, { status: 503 });

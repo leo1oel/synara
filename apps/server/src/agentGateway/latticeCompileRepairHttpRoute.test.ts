@@ -150,6 +150,7 @@ async function withRepairServer(
               Layer.succeed(OrchestrationEngineService, engine),
               Layer.succeed(ProviderHealth, {
                 getStatuses: Effect.succeed(statuses),
+                refresh: Effect.succeed(statuses),
               } as unknown as ProviderHealthShape),
               Layer.succeed(ServerSettingsService, {
                 getSettings: Effect.suspend(() =>

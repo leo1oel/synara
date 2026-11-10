@@ -132,7 +132,11 @@ import { GitManager } from "./git/Services/GitManager";
 import { GitHubCliError } from "./git/Errors";
 import { GitStatusBroadcaster } from "./git/Services/GitStatusBroadcaster";
 import { TextGeneration } from "./git/Services/TextGeneration";
-import { resolveTextGenerationRouting } from "./git/textGenerationRouting";
+import {
+  resolveTextGenerationRouting,
+  textGenerationPreferences,
+  type TextGenerationRoutingInput,
+} from "./git/textGenerationRouting";
 import {
   beginGitHandoff,
   completeGitHandoff,
@@ -192,6 +196,7 @@ import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegi
 import { ProviderHealth } from "./provider/Services/ProviderHealth";
 import { clearUnavailableModelsRecordedBefore } from "./provider/providerModelAvailability.ts";
 import { requestProviderRuntimeInstall } from "./provider/providerRuntimes.ts";
+import { readProviderHealthForAuxiliaryModel } from "./provider/runnableModelSelection.ts";
 import { ProviderService } from "./provider/Services/ProviderService";
 import { consumeCodexResetCreditEffect, listProviderUsage } from "./providerUsage";
 import { getProviderUsageSnapshot } from "./providerUsageSnapshot";
@@ -528,12 +533,23 @@ const makeWsRpcHandlersLayer = () =>
       const workspaceEntries = yield* WorkspaceEntries;
       // Git writing and the other auxiliary text calls run on the requested model
       // only while its provider is usable, else on the first ready provider.
-      const routeTextGeneration = (input: Parameters<typeof resolveTextGenerationRouting>[2]) =>
+      const routeTextGeneration = (input: TextGenerationRoutingInput) =>
         Effect.gen(function* () {
+          const settings = yield* serverSettings.getSettings;
+          const preferences = textGenerationPreferences(settings, input);
+          const health = preferences
+            ? yield* readProviderHealthForAuxiliaryModel({
+                providerHealth,
+                settings,
+                preferences,
+                purpose: "text-generation",
+              })
+            : { statuses: [] };
           const routing = resolveTextGenerationRouting(
-            yield* serverSettings.getSettings,
-            yield* providerHealth.getStatuses,
+            settings,
+            health.statuses,
             input,
+            health.cliFound,
           );
           if ("unavailable" in routing)
             return yield* new WsRpcError({ message: routing.unavailable, retryable: false });

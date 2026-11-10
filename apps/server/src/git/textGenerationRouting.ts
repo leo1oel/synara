@@ -11,7 +11,10 @@ import {
   resolveProviderInstance,
 } from "@synara/shared/providerInstances";
 
-import { resolveRunnableModelSelection } from "../provider/runnableModelSelection.ts";
+import {
+  resolveRunnableModelSelection,
+  type ProviderCliFound,
+} from "../provider/runnableModelSelection.ts";
 
 export type TextGenerationRouting =
   | {
@@ -20,6 +23,34 @@ export type TextGenerationRouting =
       readonly providerOptions: ProviderStartOptions | undefined;
     }
   | { readonly unavailable: string };
+
+export type TextGenerationRoutingInput = {
+  readonly textGenerationModel?: string | undefined;
+  readonly textGenerationModelSelection?: ModelSelection | undefined;
+  readonly providerOptions?: ProviderStartOptions | undefined;
+};
+
+function pinnedModel(input: TextGenerationRoutingInput): string | undefined {
+  if (input.textGenerationModelSelection) return undefined;
+  return input.textGenerationModel?.trim() || undefined;
+}
+
+/**
+ * The Settings choices a Git writing request tries in order, or null when the
+ * caller pinned a model-only `textGenerationModel`, which bypasses provider
+ * health. A caller selection on a provider without a text-generation path (a
+ * Grok thread's recap, say) has always been written by the Git writing model.
+ */
+export function textGenerationPreferences(
+  settings: ServerSettings,
+  input: TextGenerationRoutingInput,
+): ReadonlyArray<ModelSelection> | null {
+  if (pinnedModel(input)) return null;
+  return [
+    ...(input.textGenerationModelSelection ? [input.textGenerationModelSelection] : []),
+    settings.textGenerationModelSelection,
+  ];
+}
 
 /**
  * Route a Git writing (or other auxiliary text) request from the client.
@@ -38,30 +69,20 @@ export type TextGenerationRouting =
 export function resolveTextGenerationRouting(
   settings: ServerSettings,
   statuses: ReadonlyArray<ServerProviderStatus>,
-  input: {
-    readonly textGenerationModel?: string | undefined;
-    readonly textGenerationModelSelection?: ModelSelection | undefined;
-    readonly providerOptions?: ProviderStartOptions | undefined;
-  },
+  input: TextGenerationRoutingInput,
+  cliFound?: ProviderCliFound,
 ): TextGenerationRouting {
-  const explicitModel = input.textGenerationModel?.trim();
-  if (!input.textGenerationModelSelection && explicitModel) {
-    return {
-      model: explicitModel,
-      modelSelection: undefined,
-      providerOptions: input.providerOptions,
-    };
+  const pinned = pinnedModel(input);
+  if (pinned) {
+    return { model: pinned, modelSelection: undefined, providerOptions: input.providerOptions };
   }
-  // A caller selection on a provider without a text-generation path (a Grok
-  // thread's recap, say) has always been written by the Git writing model.
+  const explicitModel = input.textGenerationModel?.trim();
   const runnable = resolveRunnableModelSelection({
     settings,
-    preferences: [
-      ...(input.textGenerationModelSelection ? [input.textGenerationModelSelection] : []),
-      settings.textGenerationModelSelection,
-    ],
+    preferences: textGenerationPreferences(settings, input) ?? [],
     statuses,
     purpose: "text-generation",
+    cliFound,
   });
   if (runnable.kind === "unavailable") return { unavailable: runnable.message };
   const modelSelection = runnable.selection;
