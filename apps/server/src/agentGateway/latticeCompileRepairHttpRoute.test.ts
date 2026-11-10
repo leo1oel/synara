@@ -5,9 +5,12 @@ import { join } from "node:path";
 import * as NodeHttpServer from "@effect/platform-node/NodeHttpServer";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import {
+  DEFAULT_MODEL_BY_PROVIDER,
   DEFAULT_SERVER_SETTINGS,
   type OrchestrationCommand,
   type OrchestrationThread,
+  type ProviderKind,
+  type ServerProviderStatus,
 } from "@synara/contracts";
 import { Effect, Exit, Layer, Option, Scope } from "effect";
 import { HttpRouter } from "effect/unstable/http";
@@ -22,6 +25,7 @@ import {
   ProjectionSnapshotQuery,
   type ProjectionSnapshotQueryShape,
 } from "../orchestration/Services/ProjectionSnapshotQuery.ts";
+import { ProviderHealth, type ProviderHealthShape } from "../provider/Services/ProviderHealth.ts";
 import { ServerSettingsService, type ServerSettingsShape } from "../serverSettings.ts";
 
 import {
@@ -29,6 +33,19 @@ import {
   compileRepairStatus,
   latticeCompileRepairRouteLayer,
 } from "./latticeCompileRepairHttpRoute.ts";
+
+function readyStatus(provider: ProviderKind): ServerProviderStatus {
+  return {
+    provider,
+    driver: provider,
+    instanceId: provider,
+    enabled: true,
+    status: "ready",
+    available: true,
+    authStatus: "authenticated",
+    checkedAt: "2026-01-01T00:00:00.000Z",
+  } as ServerProviderStatus;
+}
 
 async function withRepairServer(
   run: (h: {
@@ -48,6 +65,10 @@ async function withRepairServer(
       entered: (() => void) | null;
     };
   }) => Promise<void>,
+  statuses: ReadonlyArray<ServerProviderStatus> = [
+    readyStatus("codex"),
+    readyStatus("claudeAgent"),
+  ],
 ) {
   const scope = await Effect.runPromise(Scope.make("sequential"));
   const root = await mkdtemp(join(tmpdir(), "compile-repair-"));
@@ -127,6 +148,9 @@ async function withRepairServer(
               } as unknown as ServerAuthShape),
               Layer.succeed(ProjectionSnapshotQuery, snapshots),
               Layer.succeed(OrchestrationEngineService, engine),
+              Layer.succeed(ProviderHealth, {
+                getStatuses: Effect.succeed(statuses),
+              } as unknown as ProviderHealthShape),
               Layer.succeed(ServerSettingsService, {
                 getSettings: Effect.suspend(() =>
                   state.failSettings
@@ -182,6 +206,36 @@ async function withRepairServer(
 }
 
 describe("compile repair HTTP lifecycle", () => {
+  it("repairs on the ready provider when the chosen one is not installed", async () => {
+    await withRepairServer(
+      async ({ request, commands }) => {
+        expect((await request()).status).toBe(202);
+        const selection = {
+          provider: "codex",
+          instanceId: "codex",
+          model: DEFAULT_MODEL_BY_PROVIDER.codex,
+        };
+        expect(commands[1]).toMatchObject({ type: "thread.create", modelSelection: selection });
+        expect(commands[2]).toMatchObject({ type: "thread.turn.start", modelSelection: selection });
+      },
+      [readyStatus("codex"), { ...readyStatus("claudeAgent"), available: false }],
+    );
+  });
+
+  it("names the providers to connect instead of starting a thread when none is ready", async () => {
+    await withRepairServer(
+      async ({ request, commands }) => {
+        const response = await request();
+        expect(response.status).toBe(503);
+        expect(((await response.json()) as { error: string }).error).toContain(
+          "in the Agent panel → Settings → Providers.",
+        );
+        expect(commands).toEqual([]);
+      },
+      [{ ...readyStatus("claudeAgent"), authStatus: "unauthenticated" }],
+    );
+  });
+
   it.each([undefined, null, "", "FULL-ACCESS", "invalid", 1, {}, ["full-access"]])(
     "rejects invalid or missing runtimeMode %j without dispatch",
     async (runtimeMode) => {

@@ -7,6 +7,8 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import {
   DEFAULT_SERVER_SETTINGS,
   PROVIDER_SEND_TURN_MAX_INPUT_CHARS,
+  type ProviderKind,
+  type ServerProviderStatus,
   type ServerSettings,
 } from "@synara/contracts";
 import { Deferred, Effect, Exit, Layer, Scope } from "effect";
@@ -20,11 +22,30 @@ import {
   type TextGenerationShape,
   type TextTaskGenerationInput,
 } from "../git/Services/TextGeneration.ts";
+import { ProviderHealth, type ProviderHealthShape } from "../provider/Services/ProviderHealth.ts";
 import { ServerSettingsService, type ServerSettingsShape } from "../serverSettings.ts";
 
 import { latticeTextTaskRouteLayer, parseTextTaskInput } from "./latticeTextTaskHttpRoute.ts";
 
 type Outcome = { text: string } | { error: string };
+
+function providerStatus(
+  provider: ProviderKind,
+  health: "ready" | "missing" | "signed-out",
+): ServerProviderStatus {
+  return {
+    provider,
+    driver: provider,
+    instanceId: provider,
+    enabled: true,
+    status: health === "ready" ? "ready" : "error",
+    available: health !== "missing",
+    authStatus: health === "signed-out" ? "unauthenticated" : "authenticated",
+    checkedAt: "2026-01-01T00:00:00.000Z",
+  } as ServerProviderStatus;
+}
+
+const allReady = [providerStatus("codex", "ready"), providerStatus("claudeAgent", "ready")];
 
 async function withTextTaskServer(
   run: (h: {
@@ -41,6 +62,10 @@ async function withTextTaskServer(
     interrupted: () => number;
   }) => Promise<void>,
   settingsOverrides: Partial<ServerSettings> = {},
+  statuses: ReadonlyArray<ServerProviderStatus> = allReady,
+  baseSettings: Partial<ServerSettings> = {
+    textGenerationModelSelection: { provider: "claudeAgent", model: "claude-sonnet-4-6" },
+  },
 ) {
   const scope = await Effect.runPromise(Scope.make("sequential"));
   const root = await realpath(await mkdtemp(join(tmpdir(), "text-task-")));
@@ -48,7 +73,6 @@ async function withTextTaskServer(
   const calls: TextTaskGenerationInput[] = [];
   const pending: Deferred.Deferred<Outcome>[] = [];
   let interrupted = 0;
-  const modelSelection = { provider: "claudeAgent" as const, model: "claude-sonnet-4-6" };
   const textGeneration = {
     generateTextTask: (input: TextTaskGenerationInput) =>
       Effect.gen(function* () {
@@ -89,10 +113,13 @@ async function withTextTaskServer(
                   Effect.fail(new AuthError({ message: "Unauthorized", status: 401 })),
               } as unknown as ServerAuthShape),
               Layer.succeed(TextGeneration, textGeneration),
+              Layer.succeed(ProviderHealth, {
+                getStatuses: Effect.succeed(statuses),
+              } as unknown as ProviderHealthShape),
               Layer.succeed(ServerSettingsService, {
                 getSettings: Effect.succeed({
                   ...DEFAULT_SERVER_SETTINGS,
-                  textGenerationModelSelection: modelSelection,
+                  ...baseSettings,
                   ...settingsOverrides,
                 }),
               } as unknown as ServerSettingsShape),
@@ -229,6 +256,82 @@ describe("Lattice text task HTTP lifecycle", () => {
           codex: { ...DEFAULT_SERVER_SETTINGS.providers.codex, enabled: false },
         },
       } as Partial<ServerSettings>,
+    );
+  });
+
+  // The reported bug: a writer who connected only Claude, on default settings
+  // (Git writing model = Codex), got "Codex CLI (codex) is required but not
+  // available." from Proofread.
+  it("proofreads with the ready provider when the default Codex is not installed", async () => {
+    await withTextTaskServer(
+      async ({ request, calls }) => {
+        const started = await request();
+        expect(started.status).toBe(202);
+        const { taskId: id, model } = (await started.json()) as { taskId: string; model: unknown };
+        const fallbackModel = {
+          provider: "claudeAgent",
+          instanceId: "claudeAgent",
+          slug: "claude-sonnet-5-5",
+          label: "Claude / Claude Sonnet 5.5",
+          source: "fallback",
+        };
+        expect(model).toEqual(fallbackModel);
+        expect(calls.map((call) => call.modelSelection)).toEqual([
+          { provider: "claudeAgent", instanceId: "claudeAgent", model: "claude-sonnet-5-5" },
+        ]);
+        expect(await (await request(`/${id}`, "GET")).json()).toEqual({
+          status: "running",
+          model: fallbackModel,
+        });
+      },
+      {},
+      [providerStatus("codex", "missing"), providerStatus("claudeAgent", "ready")],
+      {},
+    );
+  });
+
+  it("falls back past a signed-out proofreading provider", async () => {
+    await withTextTaskServer(
+      async ({ request, calls }) => {
+        await start(request);
+        expect(calls.map((call) => call.modelSelection?.provider)).toEqual(["claudeAgent"]);
+      },
+      {},
+      [providerStatus("codex", "signed-out"), providerStatus("claudeAgent", "ready")],
+      {},
+    );
+  });
+
+  it("keeps the Settings choice when its provider is ready, even with others connected", async () => {
+    await withTextTaskServer(
+      async ({ request, calls }) => {
+        const started = await request();
+        const { model } = (await started.json()) as { model: { source: string } };
+        expect(model.source).toBe("git-writing");
+        expect(calls.map((call) => call.modelSelection)).toEqual([
+          { provider: "codex", instanceId: "codex", model: "gpt-6-luna" },
+        ]);
+      },
+      {},
+      allReady,
+      {},
+    );
+  });
+
+  it("names the providers to connect, and where, when none is ready", async () => {
+    await withTextTaskServer(
+      async ({ request, calls }) => {
+        const response = await request();
+        expect(response.status).toBe(503);
+        expect(await response.json()).toEqual({
+          error:
+            "No AI provider is connected. Connect Codex, Claude, Cursor, OpenCode or Droid in the Agent panel → Settings → Providers.",
+        });
+        expect(calls).toEqual([]);
+      },
+      {},
+      [providerStatus("codex", "missing"), providerStatus("claudeAgent", "signed-out")],
+      {},
     );
   });
 

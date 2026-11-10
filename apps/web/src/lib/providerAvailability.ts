@@ -8,6 +8,7 @@ import {
 import { isProviderKind } from "../providerOrdering";
 
 import { getDefaultModel } from "@synara/shared/model";
+import { isProviderUsable } from "@synara/shared/providerInstances";
 
 export interface ProviderSendAvailability {
   readonly provider: ProviderKind;
@@ -91,16 +92,9 @@ export function providerStatusInstanceKey(
   return status.instanceId ?? status.provider;
 }
 
-// Advisory warnings the health layer marks available (Pi bundled SDK, Cursor
-// model-discovery warnings, unconfirmed custom binaries) stay sendable; only
-// unavailable or unauthenticated statuses block sends.
-export function isProviderUsable(status: ServerProviderStatus | null | undefined): boolean {
-  if (!status) {
-    // Missing status means the health check has not confirmed an installed provider yet.
-    return false;
-  }
-  return status.available && status.authStatus !== "unauthenticated";
-}
+// The readiness rule lives in shared so the server's auxiliary model
+// resolution (proofreading, compile repair, Git writing) agrees with it.
+export { isProviderUsable };
 
 export function providerUnavailableReason(status: ServerProviderStatus | null | undefined): string {
   if (!status) {
