@@ -2574,7 +2574,9 @@ it.effect(
     }),
 );
 
-routing.layer("ProviderServiceLive routing", (it) => {
+// Its own layer: sessions started here must not leak into the shared routing fixture.
+const threadNaming = makeProviderServiceLayer();
+threadNaming.layer("ProviderServiceLive thread names", (it) => {
   it.effect("names only a live Codex thread and never a Claude session", () =>
     Effect.gen(function* () {
       const provider = yield* ProviderService;
@@ -2590,21 +2592,23 @@ routing.layer("ProviderServiceLive routing", (it) => {
         threadId: claudeThread,
         runtimeMode: "full-access",
       });
-      routing.codex.setThreadName.mockClear();
-      routing.claude.setThreadName.mockClear();
+      threadNaming.codex.setThreadName.mockClear();
+      threadNaming.claude.setThreadName.mockClear();
 
       assert.isTrue(yield* provider.setThreadName({ threadId: codexThread, name: "Chapter 2" }));
-      assert.deepEqual(routing.codex.setThreadName.mock.calls, [[codexThread, "Chapter 2"]]);
+      assert.deepEqual(threadNaming.codex.setThreadName.mock.calls, [[codexThread, "Chapter 2"]]);
 
       assert.isFalse(yield* provider.setThreadName({ threadId: claudeThread, name: "Chapter 3" }));
       assert.isFalse(
         yield* provider.setThreadName({ threadId: asThreadId("thread-name-none"), name: "x" }),
       );
-      assert.equal(routing.claude.setThreadName.mock.calls.length, 0);
-      assert.equal(routing.codex.setThreadName.mock.calls.length, 1);
+      assert.equal(threadNaming.claude.setThreadName.mock.calls.length, 0);
+      assert.equal(threadNaming.codex.setThreadName.mock.calls.length, 1);
     }),
   );
+});
 
+routing.layer("ProviderServiceLive routing", (it) => {
   it.effect("does not stop a replacement runtime even when its createdAt is unchanged", () =>
     Effect.gen(function* () {
       const provider = yield* ProviderService;
