@@ -460,6 +460,12 @@ Create PR can include uncommitted changes and create a feature branch from the d
 When you supply a PR title, Synara also uses it as the commit message unless a separate commit
 message was supplied. Providing both the title and description skips text generation for this flow.
 
+Commit messages, PR text, Lattice proofreading and Lattice compile repair run on the model chosen in
+Settings → Models while its provider is enabled, installed and signed in. When it is not (Codex is
+the default, but you may have connected only Claude), the first ready provider runs the request on
+its default model instead, and Lattice proofreading reports that model as a fallback. With no ready
+provider the request fails with the providers you can connect in Settings → Providers.
+
 Failed commit, push, and PR actions show the failed step and a copyable error until dismissed.
 Each action keeps its own error details when you switch workspaces and start another action.
 Codex text generation stops on a terminal `ERROR: ... 401 Unauthorized` diagnostic; transport
