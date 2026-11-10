@@ -5,6 +5,7 @@ import {
   PROVIDER_DISPLAY_NAMES,
   PROVIDER_SEND_TURN_MAX_INPUT_CHARS,
   type ModelSelection,
+  type ServerProviderStatus,
   type ServerSettings,
 } from "@synara/contracts";
 import { getModelOptions } from "@synara/shared/model";
@@ -18,6 +19,8 @@ import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstab
 import { authErrorResponse } from "../auth/effectHttp.ts";
 import { TextGenerationError } from "../git/Errors.ts";
 import { TextGeneration } from "../git/Services/TextGeneration.ts";
+import { ProviderHealth } from "../provider/Services/ProviderHealth.ts";
+import { resolveRunnableModelSelection } from "../provider/runnableModelSelection.ts";
 import { resolveProofreadModelSelection, ServerSettingsService } from "../serverSettings.ts";
 import { readMcpJsonBody } from "./httpRoute.ts";
 import { authenticateLatticeRelayRequest } from "./latticeRelayAuthentication.ts";
@@ -36,7 +39,10 @@ import { authenticateLatticeRelayRequest } from "./latticeRelayAuthentication.ts
  *
  * The task runs on Settings -> Models -> Proofreading model, which inherits the
  * Git writing model until the writer picks one, and every answer names that
- * model so Lattice can show the writer what is proofreading.
+ * model so Lattice can show the writer what is proofreading. When that choice
+ * cannot run (Codex is the settings default, but a writer may have connected
+ * only Claude), the first ready provider proofreads instead and the answer says
+ * so; with nothing ready the start fails with what to connect and where.
  */
 export const LATTICE_TEXT_TASK_PATH = "/api/lattice/text-task";
 const MAX_BODY_BYTES = 1024 * 1024;
@@ -55,22 +61,34 @@ export type TextTaskStatus =
 
 /**
  * The model a task runs on, fixed when it starts: `source` says whether it is
- * the proofreading override or the inherited Git writing model, and `label` is
- * the "Provider / Model" name Settings shows.
+ * the proofreading override, the inherited Git writing model, or a fallback
+ * because neither could run, and `label` is the "Provider / Model" name
+ * Settings shows.
  */
 export type TextTaskModel = {
   readonly provider: ModelSelection["provider"];
   readonly instanceId: string;
   readonly slug: string;
   readonly label: string;
-  readonly source: "proofreading" | "git-writing";
+  readonly source: "proofreading" | "git-writing" | "fallback";
 };
 
-export function textTaskModel(settings: ServerSettings): {
-  readonly selection: ModelSelection;
-  readonly model: TextTaskModel;
-} {
-  const { selection, source } = resolveProofreadModelSelection(settings);
+export function textTaskModel(
+  settings: ServerSettings,
+  statuses: ReadonlyArray<ServerProviderStatus>,
+):
+  | { readonly selection: ModelSelection; readonly model: TextTaskModel }
+  | { readonly unavailable: string } {
+  const preferred = resolveProofreadModelSelection(settings);
+  const runnable = resolveRunnableModelSelection({
+    settings,
+    selection: preferred.selection,
+    statuses,
+    purpose: "text-generation",
+  });
+  if (runnable.kind === "unavailable") return { unavailable: runnable.message };
+  const selection = runnable.selection;
+  const source = runnable.kind === "fallback" ? "fallback" : preferred.source;
   const instanceId = resolveModelSelectionInstanceId(selection);
   const providerName =
     deriveProviderInstances(settings).find((instance) => instance.instanceId === instanceId)
@@ -200,9 +218,18 @@ export const latticeTextTaskRouteLayer = Effect.gen(function* () {
         );
 
       const settings = yield* ServerSettingsService;
+      const providerHealth = yield* ProviderHealth;
       const textGeneration = yield* TextGeneration;
       return yield* Effect.gen(function* () {
-        const { selection: modelSelection, model } = textTaskModel(yield* settings.getSettings);
+        const resolved = textTaskModel(yield* settings.getSettings, yield* providerHealth.getStatuses);
+        // Answered at start, not as a failed task, so no provider process is
+        // spawned; Lattice shows the error text in the proofread card.
+        if ("unavailable" in resolved)
+          return HttpServerResponse.jsonUnsafe(
+            { error: resolved.unavailable },
+            { status: 503, headers: noStore },
+          );
+        const { selection: modelSelection, model } = resolved;
         const id = randomUUID();
         tasks.set(id, { status: { status: "running" }, model, fiber: null, settledAt: null });
         const fiber = yield* textGeneration
