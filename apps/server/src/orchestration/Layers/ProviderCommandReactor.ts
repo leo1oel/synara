@@ -8654,6 +8654,29 @@ const make = Effect.gen(function* () {
     });
   });
 
+  // Lattice: Codex's own clients (`codex resume`, VS Code, the desktop app) list a thread
+  // by its native name, so a chat's title is pushed to its live Codex thread. Titles that
+  // came from Codex itself arrive through provider ingestion (`provider:` commands) and are
+  // not echoed back. Naming is a courtesy: a failure is logged and never fails the chat.
+  const pushThreadTitleToProvider = (event: ProviderIntentEvent) =>
+    Effect.gen(function* () {
+      if (event.type !== "thread.meta-updated" || event.payload.title === undefined) return;
+      if (event.commandId?.startsWith("provider:")) return;
+      yield* providerService
+        .setThreadName({ threadId: event.payload.threadId, name: event.payload.title })
+        .pipe(
+          Effect.catchCause((cause) =>
+            Cause.hasInterruptsOnly(cause)
+              ? Effect.failCause(cause)
+              : Effect.logWarning("could not give the provider thread the chat's title", {
+                  threadId: event.payload.threadId,
+                  cause: Cause.pretty(cause),
+                }),
+          ),
+          Effect.forkScoped,
+        );
+    });
+
   const processDomainEvent = (event: ProviderIntentEvent) =>
     Effect.gen(function* () {
       switch (event.type) {
@@ -8742,6 +8765,7 @@ const make = Effect.gen(function* () {
             );
           return;
         case "thread.meta-updated": {
+          yield* pushThreadTitleToProvider(event);
           const thread = yield* resolveThreadShell(event.payload.threadId);
           const startsOrResumesGoal =
             event.payload.goalPausedAt == null && event.payload.goalStartedAt != null;

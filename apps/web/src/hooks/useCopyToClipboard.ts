@@ -241,3 +241,16 @@ export function useCopyThreadIdToClipboard(): (threadId: string) => void {
       errorTitle: t("common:failedToCopyThreadID"),
     });
 }
+
+/** Copy a shell command to paste into a terminal, with the shared copy toasts. */
+export function useCopyTerminalCommandToClipboard(): (command: string) => void {
+  const { t } = useTranslation();
+
+  const copy = useCopyWithToasts();
+  return (command: string) =>
+    copy(command, {
+      successTitle: t("lattice:terminalCommandCopied"),
+      successDescription: command,
+      errorTitle: t("lattice:couldNotCopyTerminalCommand"),
+    });
+}

@@ -1420,6 +1420,11 @@ const makeWsRpcHandlersLayer = () =>
           ),
         [ORCHESTRATION_WS_METHODS.openFolderSession]: (input) =>
           rpcEffect(folderSessions.openFolderSession(input), "Failed to open the session"),
+        [ORCHESTRATION_WS_METHODS.getNativeSessionHandoff]: (input) =>
+          rpcEffect(
+            folderSessions.getNativeSessionHandoff(input),
+            "Failed to prepare the terminal command",
+          ),
         [ORCHESTRATION_WS_METHODS.regenerateThreadTitle]: (input) =>
           rpcEffect(
             providerCommandReactor.regenerateThreadTitle(input),

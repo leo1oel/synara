@@ -480,6 +480,15 @@ export const WsOpenFolderSessionRpc = Rpc.make(ORCHESTRATION_WS_METHODS.openFold
   error: WsRpcError,
 });
 
+export const WsGetNativeSessionHandoffRpc = Rpc.make(
+  ORCHESTRATION_WS_METHODS.getNativeSessionHandoff,
+  {
+    payload: OrchestrationRpcSchemas.getNativeSessionHandoff.input,
+    success: OrchestrationRpcSchemas.getNativeSessionHandoff.output,
+    error: WsRpcError,
+  },
+);
+
 export const WsImportProjectRpc = Rpc.make(ORCHESTRATION_WS_METHODS.importProject, {
   payload: OrchestrationRpcSchemas.importProject.input,
   success: OrchestrationRpcSchemas.importProject.output,
@@ -2110,6 +2119,7 @@ const wsOrchestrationRpcGroup = RpcGroup.make(
   WsLoadProjectImportHistoryRpc,
   WsListFolderSessionsRpc,
   WsOpenFolderSessionRpc,
+  WsGetNativeSessionHandoffRpc,
   WsOrchestrationRegenerateThreadTitleRpc,
   WsOrchestrationShowPanelThreadRpc,
   WsOrchestrationGetSnapshotRpc,

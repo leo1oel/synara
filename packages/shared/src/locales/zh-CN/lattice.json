@@ -854,5 +854,10 @@
   "agentSetup_stillNotFound": "还是没有找到。",
   "couldNotOpenThisSession": "无法打开这个会话",
   "fromOtherEditors": "来自其他编辑器",
-  "untitledSession": "未命名会话"
+  "untitledSession": "未命名会话",
+  "continueInTerminal": "在终端中继续",
+  "continueInTerminalOutsideLattice": "在 Lattice 之外，参考文献保护和撤销不会生效。",
+  "continueInTerminalNoSession": "还没有 Codex 或 Claude Code 会话，请先发送一条消息。",
+  "terminalCommandCopied": "命令已复制，粘贴到终端即可。",
+  "couldNotCopyTerminalCommand": "无法复制命令"
 }

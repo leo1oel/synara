@@ -7,6 +7,7 @@ import {
   ListProjectImportsInput,
   ListFolderSessionsInput,
   OpenFolderSessionInput,
+  GetNativeSessionHandoffInput,
 } from "./projectImport";
 import { NonNegativeInt, ProjectId, ThreadId, TrimmedNonEmptyString } from "./baseSchemas";
 
@@ -497,6 +498,7 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(ORCHESTRATION_WS_METHODS.loadProjectImportHistory, LoadProjectImportHistoryInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.listFolderSessions, ListFolderSessionsInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.openFolderSession, OpenFolderSessionInput),
+  tagRequestBody(ORCHESTRATION_WS_METHODS.getNativeSessionHandoff, GetNativeSessionHandoffInput),
   tagRequestBody(
     ORCHESTRATION_WS_METHODS.regenerateThreadTitle,
     OrchestrationRegenerateThreadTitleInput,

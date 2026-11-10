@@ -7,11 +7,15 @@
 // chat in the project and hands it to upstream's import path, which resumes the native
 // session by id and shows its history; nothing is copied into the agents' own stores.
 
+import { homedir } from "node:os";
+
 import {
   CommandId,
   DEFAULT_MODEL_BY_PROVIDER,
   ThreadId,
   type FolderSession,
+  type GetNativeSessionHandoffInput,
+  type NativeSessionHandoff,
   type ListFolderSessionsInput,
   type ListFolderSessionsResult,
   type ModelSelection,
@@ -20,7 +24,10 @@ import {
   type ProjectImportProvider,
   type ServerSettings,
 } from "@synara/contracts";
-import { deriveProviderInstances } from "@synara/shared/providerInstances";
+import {
+  deriveProviderInstances,
+  resolveModelSelectionInstanceId,
+} from "@synara/shared/providerInstances";
 import { Effect } from "effect";
 
 import type { ProjectImportRepository } from "../persistence/projectImportRepository";
@@ -30,6 +37,7 @@ import {
   type FolderSession as DiscoveredFolderSession,
 } from "../provider/folderSessionDiscovery";
 import { resolveBaseCodexHomePath } from "../codexHomePaths";
+import { resolveThreadWorkspaceCwd } from "../checkpointing/Utils";
 import { makeKeyedLock } from "../provider/keyedLock";
 import type { ServerSettingsShape } from "../serverSettings";
 import { makeProjectImportDestinations } from "./projectImportDestinations";
@@ -38,6 +46,7 @@ import { canonicalImportPath, importPathIdentity } from "./projectImportPaths";
 import { type ProjectImportSource, resolveProjectImportSources } from "./projectImportSources";
 import type { OrchestrationEngineShape } from "./Services/OrchestrationEngine";
 import type { makeImportThreadHandler } from "./importThreadRoute";
+import { buildNativeSessionResumeCommand, defaultNativeSessionStore } from "./nativeSessionHandoff";
 
 /** Per provider; the panel's history menu lists at most this many. */
 export const FOLDER_SESSIONS_LIMIT = 20;
@@ -63,6 +72,8 @@ interface FolderSessionsRouteOptions {
   readonly importThread: ReturnType<typeof makeImportThreadHandler>;
   readonly homeDir?: string;
   readonly stateDir?: string;
+  /** Shell flavour of the copied terminal command; defaults to this host's. */
+  readonly platform?: NodeJS.Platform;
   /** Injected by tests; defaults to the agents' on-disk stores. */
   readonly discover?: (
     input: FolderSessionDiscoverInput,
@@ -261,5 +272,95 @@ export function makeFolderSessionHandlers(options: FolderSessionsRouteOptions) {
       }),
     );
 
-  return { listFolderSessions, openFolderSession };
+  /**
+   * "Continue in terminal": the command that resumes this chat's own native session.
+   * It reads the same provider binding that marks a folder session as open, so the id
+   * is the one Lattice resumes on its next turn.
+   */
+  const getNativeSessionHandoff = Effect.fn(function* (input: GetNativeSessionHandoffInput) {
+    const model = yield* options.orchestrationEngine.getReadModel();
+    const thread = model.threads.find(
+      (entry) => entry.id === input.threadId && entry.deletedAt === null,
+    );
+    const project = thread
+      ? model.projects.find((entry) => entry.id === thread.projectId && entry.deletedAt === null)
+      : undefined;
+    if (!thread || !project)
+      return yield* new ProjectImportError({ message: "This chat is no longer open." });
+
+    const binding = (yield* options.repository.listNativeBindings()).find(
+      (entry) => entry.threadId === thread.id,
+    );
+    // A chat switched to another agent keeps its last binding until the new one starts.
+    const provider = binding?.provider ?? thread.modelSelection.provider;
+    if (provider !== "codex" && provider !== "claudeAgent")
+      return {
+        status: "unavailable",
+        reason: "unsupportedProvider",
+      } satisfies NativeSessionHandoff;
+    let cursor: unknown = null;
+    try {
+      cursor = JSON.parse(binding?.cursor ?? "null");
+    } catch {
+      cursor = null;
+    }
+    const nativeId = nativeImportId(provider, cursor);
+    if (!nativeId)
+      return { status: "unavailable", reason: "noNativeSession" } satisfies NativeSessionHandoff;
+
+    const cwd =
+      resolveThreadWorkspaceCwd({ thread, projects: model.projects }) ?? project.workspaceRoot;
+    const storeOverride = yield* nativeSessionStoreOverride({
+      provider,
+      instanceId:
+        binding?.providerInstanceId ??
+        (thread.modelSelection.provider === provider
+          ? resolveModelSelectionInstanceId(thread.modelSelection)
+          : provider),
+    });
+    return {
+      status: "available",
+      provider,
+      nativeId,
+      cwd,
+      command: buildNativeSessionResumeCommand({
+        provider,
+        nativeId,
+        cwd,
+        storeOverride,
+        platform: options.platform ?? process.platform,
+      }),
+    } satisfies NativeSessionHandoff;
+  });
+
+  /**
+   * The account's store, only when a plain terminal would not read it by default: an
+   * account with its own CLAUDE_CONFIG_DIR or CODEX_HOME. The default account on a
+   * default install needs no variable, so the command stays short.
+   */
+  const nativeSessionStoreOverride = Effect.fn(function* (input: {
+    readonly provider: ProjectImportProvider;
+    readonly instanceId: string;
+  }) {
+    const settings = yield* options.serverSettings.getSettings;
+    const source = resolveProjectImportSources(settings, [input.provider], sourcePaths).find(
+      (candidate) => candidate.instanceId === input.instanceId,
+    );
+    // A deleted account leaves nothing to point at; the default store is the best guess.
+    if (!source) return undefined;
+    const store =
+      source.provider === "codex"
+        ? resolveBaseCodexHomePath(source.environment, source.codexHomePath)
+        : source.claudeConfigDir;
+    if (!store) return undefined;
+    const defaultStore = defaultNativeSessionStore(input.provider, options.homeDir ?? homedir());
+    const [storeIdentity, defaultIdentity] = yield* projectImportPromise(() =>
+      Promise.all([canonicalImportPath(store), canonicalImportPath(defaultStore)]),
+    );
+    return importPathIdentity(storeIdentity) === importPathIdentity(defaultIdentity)
+      ? undefined
+      : store;
+  });
+
+  return { listFolderSessions, openFolderSession, getNativeSessionHandoff };
 }

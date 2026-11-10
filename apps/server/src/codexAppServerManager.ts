@@ -2876,6 +2876,22 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     return { ...snapshot, turns };
   }
 
+  /**
+   * Names the native thread so `codex resume`, VS Code and the desktop app list it
+   * under the chat's title. Only a live session can carry the request; returns
+   * whether one did.
+   */
+  async setThreadName(threadId: ThreadId, name: string): Promise<boolean> {
+    const context = this.sessions.get(threadId);
+    if (!context) return false;
+    const providerThreadId = readResumeThreadId({
+      resumeCursor: context.session.resumeCursor,
+    });
+    if (!providerThreadId) return false;
+    await this.sendRequest(context, "thread/name/set", { threadId: providerThreadId, name });
+    return true;
+  }
+
   async compactThread(threadId: ThreadId): Promise<void> {
     const context = this.requireSession(threadId);
     const providerThreadId = readResumeThreadId({

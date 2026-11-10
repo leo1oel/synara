@@ -17,6 +17,8 @@ import type {
   ListFolderSessionsResult,
   OpenFolderSessionInput,
   OpenFolderSessionResult,
+  GetNativeSessionHandoffInput,
+  NativeSessionHandoff,
   ListProjectImportsInput,
   ListProjectImportsResult,
 } from "./projectImport";
@@ -1505,6 +1507,7 @@ export interface NativeApi {
     importProject: (input: ImportProjectInput) => Promise<ImportProjectResult>;
     listFolderSessions: (input: ListFolderSessionsInput) => Promise<ListFolderSessionsResult>;
     openFolderSession: (input: OpenFolderSessionInput) => Promise<OpenFolderSessionResult>;
+    getNativeSessionHandoff: (input: GetNativeSessionHandoffInput) => Promise<NativeSessionHandoff>;
     loadProjectImportHistory: (
       input: LoadProjectImportHistoryInput,
     ) => Promise<LoadProjectImportHistoryResult>;

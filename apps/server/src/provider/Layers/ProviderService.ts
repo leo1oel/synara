@@ -5597,6 +5597,14 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
         );
       });
 
+    const setThreadName: ProviderServiceShape["setThreadName"] = (input) =>
+      Effect.gen(function* () {
+        // Naming is a courtesy to other clients: it never starts or recovers a session.
+        const live = yield* findLiveSession(input.threadId);
+        if (!live?.adapter.setThreadName) return false;
+        return yield* live.adapter.setThreadName(input.threadId, input.name);
+      });
+
     const runStopAll = () =>
       Effect.gen(function* () {
         const stoppedAt = new Date().toISOString();
@@ -5768,6 +5776,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
       cancelClaudeCompactionDiscovery,
       rollbackConversation,
       compactThread,
+      setThreadName,
       closeRuntimeEvents,
       getRuntimeEventPumpHealth: () => Effect.sync(runtimeEventPumpHealth.snapshot),
       // Each access creates a fresh PubSub subscription so that multiple

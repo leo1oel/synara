@@ -68,6 +68,16 @@ const SYNARA_SHARED_CONTINUATION_LOCK_POLL_MS = 25;
 const SYNARA_SHARED_CONTINUATION_ORPHAN_LOCK_GRACE_MS = 2_000;
 const REQUIRED_SHARED_CONTINUATION_DIRECTORIES = ["sessions", "archived_sessions"] as const;
 const REQUIRED_SHARED_CONTINUATION_FILES = ["history.jsonl", "session_index.jsonl"] as const;
+// Codex's one-writer-per-thread lock (codex-rs/rollout/src/writer_lock.rs) lives in
+// <CODEX_HOME>/thread-writer-locks. The overlay must take the same locks as VS Code, the
+// CLI and the desktop app, or two of them could append to one rollout at once. These
+// directories are shared like the ones above but kept apart from them: they hold no
+// session state, so they may always be created in the source home (Codex creates them
+// lazily anyway) and are not part of the identity a persisted thread is pinned to.
+const SHARED_CONTINUATION_LOCK_DIRECTORIES = ["thread-writer-locks"] as const;
+// Codex keeps this file for its whole home; each thread lock is `<thread id>.lock`.
+const CODEX_WRITER_COORDINATION_LOCK_FILE = ".coordination.lock";
+const RETIRED_OVERLAY_LOCK_DIRECTORY_INFIX = ".retired-";
 const SYNARA_MANAGED_MCP_TABLE_HEADER = `[mcp_servers.${SYNARA_MCP_SERVER_NAME}]`;
 export const SYNARA_COMPETING_BROWSER_PLUGIN_SECTION_HEADERS = [
   '[plugins."browser@openai-bundled"]',
@@ -1479,6 +1489,95 @@ function isSharedContinuationEntry(entryName: string): boolean {
   );
 }
 
+function isSharedContinuationLockDirectory(entryName: string): boolean {
+  return SHARED_CONTINUATION_LOCK_DIRECTORIES.includes(
+    entryName as (typeof SHARED_CONTINUATION_LOCK_DIRECTORIES)[number],
+  );
+}
+
+// "deferred": the overlay still has its own lock directory; a later launch retries.
+export type CodexOverlayLockDirectoryOutcome = "linked" | "already-linked" | "deferred" | "failed";
+
+/**
+ * Points the overlay's Codex lock directories at the source home's, creating the
+ * source directory when no Codex client has made it yet.
+ *
+ * An overlay that already has a real lock directory (Lattice's Codex ran before any
+ * other client created one in the source home) is replaced only when it holds no
+ * thread lock: a `<thread id>.lock` file may be held by a running Codex process, so it
+ * is never deleted or moved, and the directory waits for Codex's own stale-lock sweep.
+ * An empty directory is removed (rmdir fails if a lock appears meanwhile); one holding
+ * only Codex's coordination file is renamed aside, never deleted, because an acquiring
+ * process may have that file open.
+ *
+ * Best effort: a failure keeps today's split namespace and must not stop a launch.
+ */
+export async function shareCodexOverlayLockDirectories(input: {
+  readonly sourceHomePath: string;
+  readonly overlayHomePath: string;
+  readonly overlayEntryLinker?: CodexOverlayEntryLinker;
+}): Promise<Record<string, CodexOverlayLockDirectoryOutcome>> {
+  const outcomes: Record<string, CodexOverlayLockDirectoryOutcome> = {};
+  for (const entryName of SHARED_CONTINUATION_LOCK_DIRECTORIES) {
+    outcomes[entryName] = await shareCodexOverlayLockDirectory({ ...input, entryName }).catch(
+      () => "failed" as const,
+    );
+  }
+  return outcomes;
+}
+
+async function shareCodexOverlayLockDirectory(input: {
+  readonly entryName: string;
+  readonly sourceHomePath: string;
+  readonly overlayHomePath: string;
+  readonly overlayEntryLinker?: CodexOverlayEntryLinker;
+}): Promise<CodexOverlayLockDirectoryOutcome> {
+  const sourcePath = path.join(input.sourceHomePath, input.entryName);
+  const targetPath = path.join(input.overlayHomePath, input.entryName);
+  await fs.mkdir(sourcePath, { recursive: true });
+  if (!(await fs.stat(sourcePath)).isDirectory()) return "failed";
+
+  const targetStat = await lstatIfExists(targetPath);
+  if (targetStat?.isSymbolicLink()) {
+    if (codexPathsReferenceSameLocation(await resolvedSymlinkTarget(targetPath), sourcePath)) {
+      return "already-linked";
+    }
+    // Unlinking a stale link removes no lock file.
+    await fs.unlink(targetPath);
+  } else if (targetStat) {
+    if (!targetStat.isDirectory()) return "failed";
+    const entries = await readDirectoryEntries(targetPath);
+    if (entries.some((entry) => entry !== CODEX_WRITER_COORDINATION_LOCK_FILE)) {
+      return "deferred";
+    }
+    try {
+      if (entries.length === 0) {
+        await fs.rmdir(targetPath);
+      } else {
+        await fs.rename(
+          targetPath,
+          `${targetPath}${RETIRED_OVERLAY_LOCK_DIRECTORY_INFIX}${randomUUID()}`,
+        );
+      }
+    } catch (error) {
+      if (errorCode(error) === "ENOTEMPTY" || errorCode(error) === "EEXIST") return "deferred";
+      throw error;
+    }
+  }
+
+  try {
+    await linkOrCopyCodexOverlayEntry(
+      { entryName: input.entryName, sourcePath, targetPath, type: "dir" },
+      input.overlayEntryLinker,
+    );
+  } catch (error) {
+    // Codex recreated its own directory in between; the next launch retries.
+    if (errorCode(error) === "EEXIST") return "deferred";
+    throw error;
+  }
+  return "linked";
+}
+
 function isSharedContinuationLockEntry(entryName: string): boolean {
   return (
     entryName === SYNARA_SHARED_CONTINUATION_LOCK_DIRECTORY ||
@@ -2694,6 +2793,11 @@ async function prepareSynaraCodexHomeOverlayUnlocked(input: {
       : {}),
   });
   await removeLegacyCodexOverlaySqliteLinks(overlayHomePath);
+  await shareCodexOverlayLockDirectories({
+    sourceHomePath,
+    overlayHomePath,
+    ...(input.overlayEntryLinker ? { overlayEntryLinker: input.overlayEntryLinker } : {}),
+  });
 
   try {
     // Auth must get a best-effort link/copy before optional entries whose
@@ -2704,6 +2808,7 @@ async function prepareSynaraCodexHomeOverlayUnlocked(input: {
         entry === LEGACY_SYNARA_SHARED_CONTINUATION_MARKER_FILE ||
         entry === SYNARA_SHARED_CONTINUATION_MARKER_FILE ||
         isSharedContinuationLockEntry(entry) ||
+        isSharedContinuationLockDirectory(entry) ||
         isCodexSqliteStateEntry(entry) ||
         isSharedContinuationEntry(entry)
       ) {

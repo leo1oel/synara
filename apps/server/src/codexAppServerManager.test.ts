@@ -4988,6 +4988,42 @@ describe("thread checkpoint control", () => {
   });
 });
 
+describe("setThreadName", () => {
+  it("names the live session's native thread", async () => {
+    const { manager, context, sendRequest } = createThreadControlHarness();
+    context.session.resumeCursor = { threadId: "native-thread-7" };
+    (manager as unknown as { sessions: Map<string, unknown> }).sessions.set("thread_1", context);
+    sendRequest.mockResolvedValue({});
+
+    await expect(manager.setThreadName(asThreadId("thread_1"), "Chapter 2 rewrite")).resolves.toBe(
+      true,
+    );
+
+    expect(sendRequest).toHaveBeenCalledWith(context, "thread/name/set", {
+      threadId: "native-thread-7",
+      name: "Chapter 2 rewrite",
+    });
+  });
+
+  it("sends nothing without a live session", async () => {
+    const { manager, sendRequest } = createThreadControlHarness();
+
+    await expect(manager.setThreadName(asThreadId("thread_1"), "Unused")).resolves.toBe(false);
+
+    expect(sendRequest).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a rejected request to its caller", async () => {
+    const { manager, context, sendRequest } = createThreadControlHarness();
+    (manager as unknown as { sessions: Map<string, unknown> }).sessions.set("thread_1", context);
+    sendRequest.mockRejectedValue(new Error("thread not loaded"));
+
+    await expect(manager.setThreadName(asThreadId("thread_1"), "Title")).rejects.toThrow(
+      "thread not loaded",
+    );
+  });
+});
+
 describe("respondToRequest", () => {
   it("keeps acceptForSession active for later Codex turns", async () => {
     const { manager, context, requireSession, writeMessage, emitEvent, sendRequest } =
