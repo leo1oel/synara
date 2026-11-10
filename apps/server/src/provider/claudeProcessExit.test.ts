@@ -7,6 +7,7 @@ import {
   classifyClaudeFailure,
   claudeStderrReason,
   describeClaudeProcessExit,
+  describeClaudeModelRefusalOnOutdatedCli,
 } from "./claudeProcessExit.ts";
 
 const EXIT_1 = "Claude Code process exited with code 1";
@@ -110,6 +111,51 @@ describe("classifyClaudeFailure", () => {
     ["Error: Session ID 1 is already in use.", undefined],
   ])("classifies %j", (text, code) => {
     expect(classifyClaudeFailure(text)).toBe(code);
+  });
+});
+
+describe("describeClaudeModelRefusalOnOutdatedCli", () => {
+  it("names the Claude Code a refused model needs instead of blaming the account", () => {
+    for (const errorCode of ["model_not_found", "claude_model_unavailable"]) {
+      expect(
+        describeClaudeModelRefusalOnOutdatedCli({
+          errorCode,
+          modelName: "Claude Fable 5.2",
+          neededVersion: "2.1.321",
+          installedVersion: "2.1.300",
+        }),
+      ).toEqual({
+        message:
+          "Claude Fable 5.2 needs Claude Code 2.1.321 or later; the installed one is 2.1.300. Run `claude update` in Terminal, then try again.",
+        errorCode: "claude_model_needs_newer_cli",
+      });
+    }
+  });
+
+  it("keeps other failures, and refusals on a new enough or unknown CLI, as they are", () => {
+    const base = { modelName: "Claude Fable 5.2", installedVersion: "2.1.300" };
+    expect(
+      describeClaudeModelRefusalOnOutdatedCli({
+        ...base,
+        errorCode: "claude_auth_required",
+        neededVersion: "2.1.321",
+      }),
+    ).toBeNull();
+    expect(
+      describeClaudeModelRefusalOnOutdatedCli({
+        ...base,
+        errorCode: "model_not_found",
+        neededVersion: null,
+      }),
+    ).toBeNull();
+    expect(
+      describeClaudeModelRefusalOnOutdatedCli({
+        ...base,
+        errorCode: "model_not_found",
+        neededVersion: "2.1.321",
+        installedVersion: null,
+      }),
+    ).toBeNull();
   });
 });
 

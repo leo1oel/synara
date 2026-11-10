@@ -73,6 +73,7 @@ describe("resolveClaudeComposerNotice", () => {
     ["claude_access_forbidden", "change-model"],
     ["claude_auth_required", "provider-settings"],
     ["claude_cli_outdated", "provider-settings"],
+    ["claude_model_needs_newer_cli", "change-model"],
     ["model_not_found", "change-model"],
   ])("brings a %s turn's next step to the composer", (errorCode, action) => {
     expect(

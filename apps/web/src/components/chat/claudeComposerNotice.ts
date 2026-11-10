@@ -15,10 +15,16 @@ const CLAUDE_TURN_FAILURE_CODES = new Set([
   "claude_auth_required",
   "claude_access_forbidden",
   "claude_model_unavailable",
+  "claude_model_needs_newer_cli",
   "model_not_found",
   "claude_cli_failed",
 ]);
-const MODEL_FAILURE_CODES = new Set(["claude_model_unavailable", "model_not_found"]);
+// A model the installed Claude Code is too old for counts here too: another model works now.
+const MODEL_FAILURE_CODES = new Set([
+  "claude_model_unavailable",
+  "claude_model_needs_newer_cli",
+  "model_not_found",
+]);
 
 /** ProviderHealth's status line when the `claude` / `codex` executable is not found. */
 const AGENT_CLI_MISSING_MESSAGES = new Set([
