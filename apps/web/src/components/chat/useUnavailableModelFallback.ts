@@ -15,6 +15,7 @@ import { useEffect } from "react";
 import { useStableCallback } from "~/hooks/useStableCallback";
 import { resolveUnavailableModelFallback, unavailableModelsFor } from "~/lib/unavailableModels";
 import type { ProviderModelOption } from "../../providerModelOptions";
+import { findProviderStatusForInstance } from "./ProviderModelPicker";
 
 export function useUnavailableModelFallback(input: {
   readonly enabled: boolean;
@@ -38,6 +39,14 @@ export function useUnavailableModelFallback(input: {
         model: input.model,
         unavailableModels: unavailableModelsFor(input.statuses, input.provider, input.instanceId),
         options: input.options ?? [],
+        claudeCliVersion:
+          input.provider === "claudeAgent"
+            ? findProviderStatusForInstance({
+                providers: input.statuses,
+                provider: input.provider,
+                instanceId: input.instanceId,
+              })?.version
+            : undefined,
       })
     : null;
   const select = useStableCallback(input.select);

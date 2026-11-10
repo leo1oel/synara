@@ -10,7 +10,7 @@ import type {
   ServerProviderStatus,
   ServerProviderUnavailableModel,
 } from "@synara/contracts";
-import { getDefaultModel } from "@synara/shared/model";
+import { getDefaultModelForClaudeCliVersion } from "@synara/shared/model";
 
 import type { ProviderModelOption } from "../providerModelOptions";
 
@@ -57,10 +57,12 @@ export function resolveUnavailableModelFallback(input: {
   readonly model: string;
   readonly unavailableModels: ReadonlyArray<ServerProviderUnavailableModel>;
   readonly options: ReadonlyArray<ProviderModelOption>;
+  /** The instance's installed Claude Code version, so Claude's default is one it can run. */
+  readonly claudeCliVersion?: string | null | undefined;
 }): string | null {
   const refused = new Set(input.unavailableModels.map((entry) => entry.model));
   if (!refused.has(input.model)) return null;
-  const defaultModel = getDefaultModel(input.provider);
+  const defaultModel = getDefaultModelForClaudeCliVersion(input.provider, input.claudeCliVersion);
   if (defaultModel !== null && !refused.has(defaultModel)) return defaultModel;
   return input.options.find((option) => !refused.has(option.slug))?.slug ?? null;
 }

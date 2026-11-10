@@ -22,6 +22,7 @@ import * as Schema from "effect/Schema";
 
 import {
   getDefaultModel,
+  getDefaultModelForClaudeCliVersion,
   normalizeClaudeModelSlugForCliVersion,
   normalizeGrokModelOptions,
   normalizeModelSlug,
@@ -797,8 +798,9 @@ export function deriveEffectiveComposerModelState(rawInput: {
   /** The selected Claude instance's installed Claude Code version, when known. */
   claudeCliVersion?: string | null | undefined;
 }): EffectiveComposerModelState {
-  // A saved bare `fable` resolves to the newest Fable the installed Claude Code can
-  // run (Fable 5.1 before 2.1.321), as Claude Code's own alias does; full ids stay.
+  // A saved bare alias resolves to the newest model of its family the installed Claude
+  // Code can run (`fable` is Fable 5.1 before 2.1.321, `sonnet` Sonnet 5 before 2.1.284,
+  // `haiku` Haiku 4.5 before 2.1.293), as Claude Code's own alias does; full ids stay.
   const withClaudeAliasResolved = (
     selection: ModelSelection | null | undefined,
   ): ModelSelection | null | undefined =>
@@ -838,7 +840,8 @@ export function deriveEffectiveComposerModelState(rawInput: {
       (selectionMatchesSelectedInstance(input.projectModelSelection)
         ? input.projectModelSelection.model
         : null) ??
-      getDefaultModel(input.selectedProvider),
+      // Claude's default steps down to a model the installed Claude Code can run.
+      getDefaultModelForClaudeCliVersion(input.selectedProvider, input.claudeCliVersion),
   );
   const persistedThreadModel = selectionMatchesSelectedInstance(input.threadModelSelection)
     ? (normalizeModelSlug(input.threadModelSelection.model, input.selectedProvider) ??
