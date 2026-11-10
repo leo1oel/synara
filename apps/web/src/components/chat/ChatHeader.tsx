@@ -45,6 +45,7 @@ import { DiffStat } from "../ui/diff-stat";
 import { IconButton } from "../ui/icon-button";
 import { Menu, MenuGroup, MenuGroupLabel, MenuItem, MenuSeparator, MenuTrigger } from "../ui/menu";
 import { ComposerPickerMenuPopup } from "./ComposerPickerMenuPopup";
+import { ContinueInTerminalMenuItem } from "./ContinueInTerminalMenuItem";
 import { FolderSessionsMenuGroup } from "./FolderSessionsMenuGroup";
 import { OpenInPicker } from "./OpenInPicker";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
@@ -289,6 +290,7 @@ function EditorChatHistoryMenu(props: {
             </MenuItem>
           ))
         )}
+        <ContinueInTerminalMenuItem threadId={props.activeThreadId} open={open} />
         <FolderSessionsMenuGroup
           projectId={props.projectId}
           open={open}

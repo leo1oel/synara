@@ -854,5 +854,10 @@
   "agentSetup_stillNotFound": "Still not found.",
   "couldNotOpenThisSession": "Could not open this session",
   "fromOtherEditors": "From other editors",
-  "untitledSession": "Untitled session"
+  "untitledSession": "Untitled session",
+  "continueInTerminal": "Continue in terminal",
+  "continueInTerminalOutsideLattice": "Outside Lattice, the bibliography guard and undo don't apply.",
+  "continueInTerminalNoSession": "No Codex or Claude Code session yet. Send a message first.",
+  "terminalCommandCopied": "Command copied. Paste it into a terminal.",
+  "couldNotCopyTerminalCommand": "Could not copy the command"
 }
