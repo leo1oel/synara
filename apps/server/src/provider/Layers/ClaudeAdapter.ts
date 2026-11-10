@@ -207,7 +207,6 @@ import {
   describeClaudeModelRefusalOnOutdatedCli,
   describeClaudeProcessExit,
   isClaudeAccessForbidden,
-  type ClaudeProcessExitDescription,
   type ClaudeStderrCapture,
   type ClaudeStderrStream,
 } from "../claudeProcessExit.ts";
@@ -5365,7 +5364,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
     const describeRefusalOnOutdatedCli = (
       context: ClaudeSessionContext,
       errorCode: string | undefined,
-    ): Effect.Effect<ClaudeProcessExitDescription | null> => {
+    ): Effect.Effect<ReturnType<typeof describeClaudeModelRefusalOnOutdatedCli>> => {
       const requested = context.turnState?.requestedModel;
       const refused =
         errorCode === "model_not_found" ||

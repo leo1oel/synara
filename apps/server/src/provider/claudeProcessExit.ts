@@ -214,7 +214,7 @@ export function describeClaudeModelRefusalOnOutdatedCli(input: {
   readonly modelName: string;
   readonly neededVersion: string | null;
   readonly installedVersion: string | null;
-}): ClaudeProcessExitDescription | null {
+}): (ClaudeProcessExitDescription & { readonly errorCode: ClaudeFailureErrorCode }) | null {
   const refused =
     input.errorCode === "model_not_found" ||
     input.errorCode === CLAUDE_FAILURE_ERROR_CODES.modelUnavailable;
