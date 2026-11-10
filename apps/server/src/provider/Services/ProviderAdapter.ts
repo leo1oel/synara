@@ -361,6 +361,12 @@ export interface ProviderAdapterShape<TError> {
    */
   readonly compactThread?: (threadId: ThreadId) => Effect.Effect<void, TError>;
 
+  /**
+   * Give the native thread the chat's title, for clients outside Synara (Codex only).
+   * Succeeds with whether a live session carried the request.
+   */
+  readonly setThreadName?: (threadId: ThreadId, name: string) => Effect.Effect<boolean, TError>;
+
   /** Queue native Claude compaction; terminal events report whether it actually compacted. */
   readonly startClaudeCompaction?: (input: {
     readonly threadId: ThreadId;

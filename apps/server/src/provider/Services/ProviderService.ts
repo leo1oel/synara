@@ -351,6 +351,16 @@ export interface ProviderServiceShape {
   }) => Effect.Effect<void, ProviderServiceError>;
 
   /**
+   * Give a live session's native thread the chat's title, so the provider's own
+   * clients list it by that name. Only providers that can name a thread (Codex)
+   * do anything; without a live session nothing is sent. Reports whether it was.
+   */
+  readonly setThreadName: (input: {
+    readonly threadId: ThreadId;
+    readonly name: string;
+  }) => Effect.Effect<boolean, ProviderServiceError>;
+
+  /**
    * Stop provider event producers, drain the lossless fan-out while subscribers
    * are still live, and then close the publication bus. Safe to call repeatedly.
    */

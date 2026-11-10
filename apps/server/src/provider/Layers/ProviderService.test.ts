@@ -481,6 +481,11 @@ function makeFakeCodexAdapter(
     (_threadId: ThreadId): Effect.Effect<void, ProviderAdapterError> => Effect.void,
   );
 
+  const setThreadName = vi.fn(
+    (_threadId: ThreadId, _name: string): Effect.Effect<boolean, ProviderAdapterError> =>
+      Effect.succeed(true),
+  );
+
   const forkThread = vi.fn(
     (
       input: ProviderAdapterForkThreadInput,
@@ -534,6 +539,8 @@ function makeFakeCodexAdapter(
     readThread,
     rollbackThread,
     compactThread,
+    // Like the real adapters: only Codex can name a native thread.
+    ...(provider === "codex" ? { setThreadName } : {}),
     forkThread,
     stopAll,
     streamEvents: Stream.fromPubSub(runtimeEventPubSub),
@@ -583,6 +590,7 @@ function makeFakeCodexAdapter(
     readThread,
     rollbackThread,
     compactThread,
+    setThreadName,
     forkThread,
     stopAll,
     retainStopped: (threadId: ThreadId): void => {
@@ -2567,6 +2575,36 @@ it.effect(
 );
 
 routing.layer("ProviderServiceLive routing", (it) => {
+  it.effect("names only a live Codex thread and never a Claude session", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const codexThread = asThreadId("thread-name-codex");
+      const claudeThread = asThreadId("thread-name-claude");
+      yield* provider.startSession(codexThread, {
+        provider: "codex",
+        threadId: codexThread,
+        runtimeMode: "full-access",
+      });
+      yield* provider.startSession(claudeThread, {
+        provider: "claudeAgent",
+        threadId: claudeThread,
+        runtimeMode: "full-access",
+      });
+      routing.codex.setThreadName.mockClear();
+      routing.claude.setThreadName.mockClear();
+
+      assert.isTrue(yield* provider.setThreadName({ threadId: codexThread, name: "Chapter 2" }));
+      assert.deepEqual(routing.codex.setThreadName.mock.calls, [[codexThread, "Chapter 2"]]);
+
+      assert.isFalse(yield* provider.setThreadName({ threadId: claudeThread, name: "Chapter 3" }));
+      assert.isFalse(
+        yield* provider.setThreadName({ threadId: asThreadId("thread-name-none"), name: "x" }),
+      );
+      assert.equal(routing.claude.setThreadName.mock.calls.length, 0);
+      assert.equal(routing.codex.setThreadName.mock.calls.length, 1);
+    }),
+  );
+
   it.effect("does not stop a replacement runtime even when its createdAt is unchanged", () =>
     Effect.gen(function* () {
       const provider = yield* ProviderService;

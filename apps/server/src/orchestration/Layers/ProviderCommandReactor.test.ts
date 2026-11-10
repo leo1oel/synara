@@ -553,6 +553,7 @@ describe("ProviderCommandReactor", () => {
     readonly gatewayOperationCompletionWaitTimeout?: Duration.Duration;
     readonly gatewayOperationCompletionNegativeCacheTtl?: Duration.Duration;
     readonly logMessages?: string[];
+    readonly setThreadName?: ProviderServiceShape["setThreadName"];
     readonly gatewayOperationId?: string;
     readonly gitWritingModelSelection?: ModelSelection;
     readonly omitStopRuntimeSession?: boolean;
@@ -796,6 +797,9 @@ describe("ProviderCommandReactor", () => {
     const rollbackConversation = vi.fn<ProviderServiceShape["rollbackConversation"]>(
       () => Effect.void,
     );
+    const setThreadName = vi.fn<ProviderServiceShape["setThreadName"]>(
+      input?.setThreadName ?? (() => Effect.succeed(true)),
+    );
     const restoreCheckpoint = vi.fn<CheckpointStoreShape["restoreCheckpoint"]>(() =>
       Effect.succeed(true),
     );
@@ -976,6 +980,7 @@ describe("ProviderCommandReactor", () => {
         }),
       rollbackConversation,
       compactThread: () => unsupported(),
+      setThreadName,
       ...(input?.getClaudeCacheObservation
         ? { getClaudeCacheObservation: input.getClaudeCacheObservation }
         : {}),
@@ -1287,6 +1292,7 @@ describe("ProviderCommandReactor", () => {
       respondToRequest,
       respondToUserInput,
       rollbackConversation,
+      setThreadName,
       isGitRepository,
       captureCheckpoint,
       restoreCheckpoint,
@@ -17765,6 +17771,66 @@ describe("ProviderCommandReactor", () => {
       associatedWorktreePath: "/tmp/provider-project/.worktrees/cb661f0d",
       associatedWorktreeBranch: "synara/app-startup-crash",
       associatedWorktreeRef: "synara/app-startup-crash",
+    });
+  });
+
+  describe("chat title push to the native thread", () => {
+    const threadId = ThreadId.makeUnsafe("thread-1");
+    const rename = (
+      harness: Awaited<ReturnType<typeof createHarness>>,
+      commandId: string,
+      title: string,
+    ) =>
+      Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.meta.update",
+          commandId: CommandId.makeUnsafe(commandId),
+          threadId,
+          title,
+        }),
+      );
+
+    it("names the provider thread after a chat title set in Synara", async () => {
+      const harness = await createHarness();
+      await rename(harness, "rename-by-writer", "Literature review for chapter 2");
+      await waitFor(() => harness.setThreadName.mock.calls.length === 1);
+      expect(harness.setThreadName).toHaveBeenCalledWith({
+        threadId,
+        name: "Literature review for chapter 2",
+      });
+    });
+
+    it("does not echo a title that came from the provider itself", async () => {
+      const harness = await createHarness();
+      await rename(harness, "provider:event-1:thread-meta-update:thread-1", "Named in Codex");
+      await rename(harness, "rename-after-echo", "Renamed in Lattice");
+      await waitFor(() => harness.setThreadName.mock.calls.length >= 1);
+      await harness.drain();
+      expect(harness.setThreadName.mock.calls.map(([call]) => call.name)).toEqual([
+        "Renamed in Lattice",
+      ]);
+    });
+
+    it("logs a failed push and keeps the chat's title and later renames working", async () => {
+      const messages: string[] = [];
+      const harness = await createHarness({
+        logMessages: messages,
+        setThreadName: () =>
+          Effect.fail(
+            new ProviderAdapterRequestError({
+              provider: "codex",
+              method: "thread/name/set",
+              detail: "thread not loaded",
+            }),
+          ),
+      });
+      await rename(harness, "rename-fails-1", "First title");
+      await waitFor(() =>
+        messages.some((message) => message.includes("could not give the provider thread")),
+      );
+      await rename(harness, "rename-fails-2", "Second title");
+      await waitFor(() => harness.setThreadName.mock.calls.length === 2);
+      await waitFor(async () => (await readHarnessThread(harness))?.title === "Second title");
     });
   });
 
