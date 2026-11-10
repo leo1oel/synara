@@ -6067,10 +6067,13 @@ html[data-synara-embed="true"] :is(.chat-composer-surface, .chat-composer-menu-s
   max-width: 1120px;
 }
 
+/* No overscroll-behavior here: in WebKit a wide table with horizontal
+   containment claims every trackpad swipe whose first movement leans toward
+   an edge it is resting on (the left one, until it is scrolled), so the rest
+   of a vertical swipe over it scrolled nothing. Code blocks never had it. */
 .chat-markdown-table-scroll {
   width: 100%;
   overflow-x: auto;
-  overscroll-behavior-x: contain;
 }
 
 html[data-synara-embed="true"] .chat-markdown-table-scroll {
