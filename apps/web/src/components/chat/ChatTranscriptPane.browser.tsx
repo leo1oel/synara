@@ -316,6 +316,93 @@ describe("ChatTranscriptPane", () => {
     }
   });
 
+  it("schedules no animation frames on an idle empty thread and attaches the overlay to its first message", async () => {
+    // The Agent iframe stays mounted while hidden and WebKit keeps servicing its rAF, so any
+    // per-frame loop on an empty thread (new chat, no messages, signed out) burns CPU for the
+    // whole app lifetime. The overlay scrollbar used to poll for the missing list every frame.
+    const host = document.createElement("div");
+    host.style.cssText = "display:flex;width:600px;height:520px;";
+    document.body.append(host);
+
+    const transcript = (entries: typeof TIMELINE_ENTRIES | []) => (
+      <ChatTranscriptPane
+        activeThreadId="thread-empty-idle"
+        activeTurnInProgress={false}
+        activeTurnStartedAt={null}
+        chatFontSizePx={15}
+        emptyStateProjectName={undefined}
+        hasMessages={entries.length > 0}
+        isLocalDraft
+        isRevertingCheckpoint={false}
+        isWorking={false}
+        worktreeSetup={null}
+        followLiveOutput={false}
+        listRef={{ current: null }}
+        markdownCwd={undefined}
+        onExpandTimelineImage={NOOP}
+        onMessagesClickCapture={NOOP}
+        onMessagesMouseUp={NOOP}
+        onMessagesPointerCancel={NOOP}
+        onMessagesPointerDown={NOOP}
+        onMessagesPointerUp={NOOP}
+        onMessagesScroll={NOOP}
+        onMessagesTouchEnd={NOOP}
+        onMessagesTouchMove={NOOP}
+        onMessagesTouchStart={NOOP}
+        onMessagesWheel={NOOP}
+        onIsAtEndChange={NOOP}
+        onOpenTurnDiff={NOOP}
+        onOpenThread={NOOP}
+        onRevertUserMessage={NOOP}
+        onScrollToBottom={NOOP}
+        resolvedTheme="dark"
+        revertTurnCountByUserMessageId={EMPTY_REVERT_COUNTS}
+        scrollButtonVisible={false}
+        terminalWorkspaceTerminalTabActive={false}
+        timelineEntries={entries}
+        timestampFormat="locale"
+        turnDiffSummaryByAssistantMessageId={EMPTY_TURN_DIFFS}
+        workspaceRoot={undefined}
+      />
+    );
+    const screen = await render(transcript([]), { container: host });
+    const overlayHeight = () =>
+      screen.container.querySelector<HTMLElement>(".external-scrollbar")?.style.height;
+    try {
+      expect(screen.container.querySelector('[data-chat-scroll-container="true"]')).toBeNull();
+      await settleLayout();
+      await settleLayout();
+
+      const nativeRequestFrame = window.requestAnimationFrame.bind(window);
+      let requestedFrames = 0;
+      const frameSpy = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+        requestedFrames += 1;
+        return nativeRequestFrame(callback);
+      });
+      try {
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, 250);
+        });
+      } finally {
+        frameSpy.mockRestore();
+      }
+      expect(requestedFrames).toBe(0);
+      expect(overlayHeight()).toBe("0px");
+
+      // The first message mounts the list after the overlay; it must attach without polling.
+      await screen.rerender(transcript(TIMELINE_ENTRIES));
+      await vi.waitFor(() => {
+        expect(
+          screen.container.querySelector('[data-chat-scroll-container="true"]'),
+        ).not.toBeNull();
+        expect(overlayHeight()).not.toBe("0px");
+      });
+    } finally {
+      await screen.unmount();
+      host.remove();
+    }
+  });
+
   it("lets the inline thread error Dismiss and Unblock controls receive clicks", async () => {
     // The overlay wrapper is pointer-events-none so its margins do not swallow
     // transcript clicks; the banner must re-enable events itself or the

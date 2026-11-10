@@ -27,6 +27,10 @@ import {
 } from "./external-scrollbar-geometry";
 
 type ExternalScrollbarProps = {
+  /**
+   * Finds the scroll owner. It must live under this overlay's parent element:
+   * the overlay re-runs it when that subtree changes, never on a timer.
+   */
   getViewport: () => HTMLElement | null;
   /** Keep the track above a floating surface without resizing its scroll owner. */
   bottomInsetPx?: number;
@@ -83,10 +87,9 @@ export function ExternalScrollbar({ getViewport, bottomInsetPx = 0 }: ExternalSc
   }, [measure]);
 
   useEffect(() => {
-    let cancelled = false;
-    let retryFrame: number | null = null;
     let resizeObserver: ResizeObserver | null = null;
     let viewport: HTMLElement | null = null;
+    const surface = trackRef.current?.parentElement ?? null;
 
     const markScrolling = () => {
       scheduleMeasure();
@@ -98,34 +101,65 @@ export function ExternalScrollbar({ getViewport, bottomInsetPx = 0 }: ExternalSc
       }, SCROLLING_HIDE_DELAY_MS);
     };
 
-    const attach = () => {
-      if (cancelled) return;
-      viewport = getViewport();
-      if (!viewport) {
-        // The virtualized list mounts a frame later than this overlay.
-        retryFrame = requestAnimationFrame(attach);
-        return;
-      }
+    const detach = () => {
+      viewport?.removeEventListener("scroll", markScrolling);
+      resizeObserver?.disconnect();
+      resizeObserver = null;
+      viewport = null;
+      viewportRef.current = null;
+    };
 
-      viewportRef.current = viewport;
-      viewport.addEventListener("scroll", markScrolling, { passive: true });
+    const attach = (next: HTMLElement) => {
+      viewport = next;
+      viewportRef.current = next;
+      next.addEventListener("scroll", markScrolling, { passive: true });
       if (typeof ResizeObserver !== "undefined") {
         resizeObserver = new ResizeObserver(scheduleMeasure);
-        resizeObserver.observe(viewport);
+        resizeObserver.observe(next);
         // Streamed rows grow the content without resizing the viewport, so the
         // thumb proportion must track the inner container too.
-        const content = viewport.firstElementChild;
+        const content = next.firstElementChild;
         if (content instanceof HTMLElement) resizeObserver.observe(content);
-        const surface = trackRef.current?.parentElement;
         if (surface) resizeObserver.observe(surface);
       }
+    };
+
+    // The scroll owner can be absent for the whole life of this overlay: an
+    // empty thread (new chat, no messages, signed out) renders the timeline's
+    // empty state instead of LegendList, and the virtualized list may also
+    // mount after this overlay. It can be replaced too, when a thread empties
+    // and refills. Polling for it every frame kept the hidden Agent iframe
+    // busy for the whole app lifetime (WebKit does not throttle rAF there), so
+    // react to DOM changes under the shared surface instead. While attached
+    // the callback only re-queries when the owner left the DOM or lost the
+    // attribute that marks it (React can reuse the element for another state).
+    const sync = (records?: MutationRecord[]) => {
+      if (
+        viewport?.isConnected &&
+        !records?.some((record) => record.type === "attributes" && record.target === viewport)
+      ) {
+        return;
+      }
+      const next = getViewport();
+      if (next === viewport) return;
+      if (viewport) detach();
+      if (next) attach(next);
       scheduleMeasure();
     };
 
-    attach();
+    let mutationObserver: MutationObserver | null = null;
+    if (surface && typeof MutationObserver !== "undefined") {
+      mutationObserver = new MutationObserver(sync);
+      mutationObserver.observe(surface, {
+        attributeFilter: ["data-chat-scroll-container"],
+        childList: true,
+        subtree: true,
+      });
+    }
+    sync();
+
     return () => {
-      cancelled = true;
-      if (retryFrame != null) cancelAnimationFrame(retryFrame);
+      mutationObserver?.disconnect();
       if (frameRef.current != null) {
         cancelAnimationFrame(frameRef.current);
         frameRef.current = null;
@@ -134,9 +168,7 @@ export function ExternalScrollbar({ getViewport, bottomInsetPx = 0 }: ExternalSc
         clearTimeout(scrollingTimerRef.current);
         scrollingTimerRef.current = null;
       }
-      viewport?.removeEventListener("scroll", markScrolling);
-      resizeObserver?.disconnect();
-      viewportRef.current = null;
+      detach();
     };
   }, [getViewport, scheduleMeasure]);
 
