@@ -321,39 +321,35 @@ describe("Lattice text task HTTP lifecycle", () => {
     );
   });
 
-  it(
-    "proofreads on Claude right after launch, before any provider probe, when Codex is not installed",
-    async () => {
-      // No status yet and the first probe still running past the wait: only a
-      // `claude` executable is on PATH, so the default Codex choice is dropped.
-      const bin = await mkdtemp(join(tmpdir(), "text-task-bin-"));
-      await writeFile(join(bin, "claude"), "#!/bin/sh\n", { mode: 0o755 });
-      const path = process.env.PATH;
-      process.env.PATH = bin;
-      try {
-        await withTextTaskServer(
-          async ({ request, calls }) => {
-            const started = await request();
-            expect(started.status).toBe(202);
-            const { model } = (await started.json()) as { model: unknown };
-            expect(model).toMatchObject({ provider: "claudeAgent", source: "fallback" });
-            // The task fiber starts after the answer; give it a turn.
-            await vi.waitFor(() =>
-              expect(calls.map((call) => call.modelSelection?.provider)).toEqual(["claudeAgent"]),
-            );
-          },
-          {},
-          [],
-          {},
-          Effect.never,
-        );
-      } finally {
-        process.env.PATH = path;
-        await rm(bin, { recursive: true, force: true });
-      }
-    },
-    10_000,
-  );
+  it("proofreads on Claude right after launch, before any provider probe, when Codex is not installed", async () => {
+    // No status yet and the first probe still running past the wait: only a
+    // `claude` executable is on PATH, so the default Codex choice is dropped.
+    const bin = await mkdtemp(join(tmpdir(), "text-task-bin-"));
+    await writeFile(join(bin, "claude"), "#!/bin/sh\n", { mode: 0o755 });
+    const path = process.env.PATH;
+    process.env.PATH = bin;
+    try {
+      await withTextTaskServer(
+        async ({ request, calls }) => {
+          const started = await request();
+          expect(started.status).toBe(202);
+          const { model } = (await started.json()) as { model: unknown };
+          expect(model).toMatchObject({ provider: "claudeAgent", source: "fallback" });
+          // The task fiber starts after the answer; give it a turn.
+          await vi.waitFor(() =>
+            expect(calls.map((call) => call.modelSelection?.provider)).toEqual(["claudeAgent"]),
+          );
+        },
+        {},
+        [],
+        {},
+        Effect.never,
+      );
+    } finally {
+      process.env.PATH = path;
+      await rm(bin, { recursive: true, force: true });
+    }
+  }, 10_000);
 
   it("names the providers to connect, and where, when none is ready", async () => {
     await withTextTaskServer(

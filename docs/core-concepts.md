@@ -465,6 +465,9 @@ Settings → Models while its provider is enabled, installed and signed in. When
 the default, but you may have connected only Claude), the first ready provider runs the request on
 its default model instead, and Lattice proofreading reports that model as a fallback. With no ready
 provider the request fails with the providers you can connect in Settings → Providers.
+Right after launch, before the first provider check has finished, such a request waits up to 3
+seconds for it; if the check is still running then, a provider whose CLI (`codex`, `claude`) is not
+found counts as not ready, so a Claude-only setup proofreads on Claude rather than failing on Codex.
 
 Failed commit, push, and PR actions show the failed step and a copyable error until dismissed.
 Each action keeps its own error details when you switch workspaces and start another action.

@@ -8,7 +8,10 @@ import {
 } from "@synara/contracts";
 import { describe, expect, it } from "vitest";
 
-import { resolveTextGenerationRouting } from "./textGenerationRouting.ts";
+import {
+  resolveTextGenerationRouting,
+  textGenerationPreferences,
+} from "./textGenerationRouting.ts";
 
 function status(provider: ProviderKind, available = true): ServerProviderStatus {
   return {
@@ -97,5 +100,22 @@ describe("resolveTextGenerationRouting", () => {
       unavailable:
         "No AI provider is connected. Connect Codex, Claude, Cursor, OpenCode or Droid in the Agent panel → Settings → Providers.",
     });
+  });
+
+  it("writes on Claude before the first probe when the codex CLI is not found", () => {
+    const routing = resolveTextGenerationRouting(
+      settings,
+      [],
+      { textGenerationModelSelection: codexFromClient },
+      (instance) => instance.driver === "claudeAgent",
+    );
+    expect(routing).toMatchObject({ modelSelection: { provider: "claudeAgent" } });
+  });
+
+  it("asks nothing of provider health for a model-only pin", () => {
+    expect(textGenerationPreferences(settings, { textGenerationModel: "gpt-5.4" })).toBeNull();
+    expect(textGenerationPreferences(settings, {})).toEqual([
+      settings.textGenerationModelSelection,
+    ]);
   });
 });
