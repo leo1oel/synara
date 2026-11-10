@@ -540,9 +540,17 @@ const CLAUDE_NO_FAST_XHIGH_CAPABILITIES: ModelCapabilities = {
 const CLAUDE_FABLE_CAPABILITIES: ModelCapabilities = CLAUDE_NO_FAST_XHIGH_CAPABILITIES;
 
 // Opus 5 and 5.5 keep the Claude 5 ladder (thinking is adaptive, so no ultrathink prompt
-// mode) but stays on the Opus fast-mode lane that Fable and Sonnet lack.
+// mode) but stays on the Opus fast-mode lane that Fable 5/5.1 and Sonnet lack.
 const CLAUDE_OPUS_5_CAPABILITIES: ModelCapabilities = {
   ...CLAUDE_NO_FAST_XHIGH_CAPABILITIES,
+  supportsFastMode: true,
+};
+
+// Fable 5.2 keeps the Fable ladder (adaptive thinking always on, low..max, 1M context)
+// and is the first Fable on the fast-mode lane: Claude Code's /fast supports it from
+// v2.1.321, the release that added the model.
+const CLAUDE_FABLE_5_2_CAPABILITIES: ModelCapabilities = {
+  ...CLAUDE_FABLE_CAPABILITIES,
   supportsFastMode: true,
 };
 
@@ -656,6 +664,11 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
     },
   ],
   claudeAgent: [
+    {
+      slug: "claude-fable-5-2",
+      name: "Claude Fable 5.2",
+      capabilities: CLAUDE_FABLE_5_2_CAPABILITIES,
+    },
     {
       slug: "claude-fable-5-1",
       name: "Claude Fable 5.1",
@@ -1224,7 +1237,10 @@ export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string,
     "gpt-5.3-spark": "gpt-5.3-codex-spark",
   },
   claudeAgent: {
-    fable: "claude-fable-5-1",
+    fable: "claude-fable-5-2",
+    "fable-5.2": "claude-fable-5-2",
+    "claude-fable-5.2": "claude-fable-5-2",
+    "claude-fable-5-2": "claude-fable-5-2",
     "fable-5.1": "claude-fable-5-1",
     "claude-fable-5.1": "claude-fable-5-1",
     "claude-fable-5-1": "claude-fable-5-1",

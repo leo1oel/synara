@@ -137,6 +137,27 @@ describe("collapseCursorModelVariants", () => {
     ]);
   });
 
+  it("restores the same fallback context choices for Fable 5.2 variants", () => {
+    const [fable] = collapseCursorModelVariants([
+      {
+        slug: "claude-fable-5-2-high",
+        name: "Fable 5.2 1M",
+        upstreamProviderId: "anthropic",
+        upstreamProviderName: "Anthropic",
+        supportedReasoningEfforts: [{ value: "high", label: "High" }],
+        defaultReasoningEffort: "high",
+      },
+    ]);
+    expect(fable).toMatchObject({
+      slug: "claude-fable-5-2",
+      contextWindowOptions: [
+        { value: "300k", label: "300K", isDefault: true },
+        { value: "1m", label: "1M" },
+      ],
+      defaultContextWindow: "300k",
+    });
+  });
+
   it("defaults collapsed Cursor Grok variants to high and keeps fast as a toggle", () => {
     expect(
       collapseCursorModelVariants([

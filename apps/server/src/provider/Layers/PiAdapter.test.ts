@@ -1354,7 +1354,7 @@ describe("getPiDiscoverableModels", () => {
 });
 
 describe("ensurePiAnthropicCatalogModels", () => {
-  it("restores Fable 5.1, Fable 5, and Opus 4.8 when an oauth catalog omitted them", () => {
+  it("restores Fable 5.2, Fable 5.1, Fable 5, and Opus 4.8 when an oauth catalog omitted them", () => {
     const peer = {
       id: "claude-opus-4-7",
       name: "Claude Opus 4.7",
@@ -1371,10 +1371,19 @@ describe("ensurePiAnthropicCatalogModels", () => {
 
     expect(models.map((model) => model.id)).toEqual([
       "claude-opus-4-7",
+      "claude-fable-5-2",
       "claude-fable-5-1",
       "claude-fable-5",
       "claude-opus-4-8",
     ]);
+    expect(models.find((model) => model.id === "claude-fable-5-2")).toMatchObject({
+      provider: "anthropic",
+      name: "Claude Fable 5.2",
+      reasoning: true,
+      cost: { input: 8, output: 40, cacheRead: 0.2, cacheWrite: 10 },
+      contextWindow: 1_000_000,
+      maxTokens: 128_000,
+    });
     expect(models.find((model) => model.id === "claude-fable-5-1")).toMatchObject({
       provider: "anthropic",
       name: "Claude Fable 5.1",

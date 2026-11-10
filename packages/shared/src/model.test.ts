@@ -181,7 +181,12 @@ describe("resolveModelSlug", () => {
       DEFAULT_MODEL_BY_PROVIDER.claudeAgent,
     );
     expect(resolveModelSlugForProvider("claudeAgent", "sonnet")).toBe("claude-sonnet-5");
-    expect(resolveModelSlugForProvider("claudeAgent", "fable")).toBe("claude-fable-5-1");
+    expect(resolveModelSlugForProvider("claudeAgent", "fable")).toBe("claude-fable-5-2");
+    expect(resolveModelSlugForProvider("claudeAgent", "fable-5.2")).toBe("claude-fable-5-2");
+    expect(resolveModelSlugForProvider("claudeAgent", "claude-fable-5.2")).toBe("claude-fable-5-2");
+    expect(resolveModelSlugForProvider("claudeAgent", "claude-fable-5-2[1m]")).toBe(
+      "claude-fable-5-2",
+    );
     expect(resolveModelSlugForProvider("claudeAgent", "claude-opus-5-5[1m]")).toBe(
       "claude-opus-5-5",
     );
@@ -1148,12 +1153,27 @@ describe("getModelCapabilities Claude capability flags", () => {
     }
   });
 
+  it("gives Fable 5.2 the Fable ladder plus the fast-mode lane Fable 5.1 lacks", () => {
+    const fable52 = getModelCapabilities("claudeAgent", "claude-fable-5-2");
+    const fable51 = getModelCapabilities("claudeAgent", "claude-fable-5-1");
+    expect(fable52.reasoningEffortLevels).toEqual(fable51.reasoningEffortLevels);
+    expect(fable52.reasoningEffortLevels.find((level) => level.isDefault === true)?.value).toBe(
+      "high",
+    );
+    expect(fable52.supportsThinkingToggle).toBe(false);
+    expect(fable52.contextWindowTokens).toBe(1_000_000);
+    expect(fable52.supportsFastMode).toBe(true);
+    expect(fable51.supportsFastMode).toBe(false);
+    expect(getModelCapabilities("claudeAgent", "claude-fable-5-2[1m]")).toBe(fable52);
+  });
+
   it("gives uncatalogued newer Claude releases their family's newest capabilities", () => {
     const caps = (slug: string) => getModelCapabilities("claudeAgent", slug);
     expect(caps("claude-opus-6")).toBe(caps("claude-opus-5-5"));
     expect(caps("claude-opus-6[1m]")).toBe(caps("claude-opus-5-5"));
     expect(caps("claude-opus-5-6")).toBe(caps("claude-opus-5-5"));
-    expect(caps("claude-fable-6")).toBe(caps("claude-fable-5-1"));
+    expect(caps("claude-fable-6")).toBe(caps("claude-fable-5-2"));
+    expect(caps("claude-fable-5-3")).toBe(caps("claude-fable-5-2"));
     expect(caps("claude-sonnet-5-1")).toBe(caps("claude-sonnet-5"));
     expect(caps("claude-haiku-5")).toBe(caps("claude-haiku-4-5"));
     expect(resolveNewestKnownClaudeFamilyModel("claude-opus-6[1m]")).toBe("claude-opus-5-5");
