@@ -82,11 +82,15 @@ describe("ChatMarkdown table layout", () => {
         />
       </div>,
     );
-    await vi.waitFor(() => expect(document.querySelector(".katex-display")).not.toBeNull());
+    // Highlighting replaces the plain code fallback; measure the final block.
+    await vi.waitFor(() => {
+      expect(document.querySelector(".katex-display")).not.toBeNull();
+      expect(document.querySelector(".chat-markdown pre.shiki")).not.toBeNull();
+    });
     const transcript = document.querySelector<HTMLElement>("[data-testid='transcript']")!;
     const scrollers = [
       document.querySelector<HTMLElement>(".chat-markdown-table-scroll")!,
-      document.querySelector<HTMLElement>(".chat-markdown pre")!,
+      document.querySelector<HTMLElement>(".chat-markdown pre.shiki")!,
       document.querySelector<HTMLElement>(".chat-markdown .katex-display")!,
     ];
 
