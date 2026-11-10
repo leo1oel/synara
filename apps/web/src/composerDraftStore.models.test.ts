@@ -352,10 +352,7 @@ describe("a saved bare sonnet or haiku, and Claude's default", () => {
       { slug: "claude-haiku-4-5", name: "Claude Haiku 4.5" },
     ],
   };
-  const selectedModelFor = (
-    saved: string | null,
-    claudeCliVersion: string | null | undefined,
-  ) =>
+  const selectedModelFor = (saved: string | null, claudeCliVersion: string | null | undefined) =>
     deriveEffectiveComposerModelState({
       draft: null,
       selectedProvider: "claudeAgent",
