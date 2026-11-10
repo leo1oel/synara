@@ -218,6 +218,16 @@ class FakeClaudeQuery implements AsyncIterable<SDKMessage> {
       {
         value: "claude-sonnet-5",
         displayName: "Claude Sonnet 5",
+        description: "Supported test model",
+        supportsEffort: true,
+        supportsAdaptiveThinking: true,
+        supportsFastMode: false,
+        supportsAutoMode: true,
+      },
+      {
+        // Synara's Claude default, which a session without a model selection checks.
+        value: "claude-sonnet-5-5",
+        displayName: "Claude Sonnet 5.5",
         description: "Default supported test model",
         supportsEffort: true,
         supportsAdaptiveThinking: true,

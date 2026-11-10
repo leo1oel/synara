@@ -207,6 +207,11 @@ const listDefaultTestModels: (typeof ProviderDiscoveryService)["Service"]["listM
     ],
     claudeAgent: [
       {
+        // Synara's Claude default, which a Claude target without a model resolves to.
+        slug: "claude-sonnet-5-5",
+        name: "Claude Sonnet 5.5",
+      },
+      {
         slug: "claude-sonnet-5",
         name: "Claude Sonnet 5",
       },
