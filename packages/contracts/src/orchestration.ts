@@ -10,6 +10,8 @@ import {
   ListFolderSessionsResult,
   OpenFolderSessionInput,
   OpenFolderSessionResult,
+  GetNativeSessionHandoffInput,
+  NativeSessionHandoff,
 } from "./projectImport";
 import {
   AntigravityModelOptions,
@@ -69,6 +71,7 @@ export const ORCHESTRATION_WS_METHODS = {
   loadProjectImportHistory: "orchestration.loadProjectImportHistory",
   listFolderSessions: "orchestration.listFolderSessions",
   openFolderSession: "orchestration.openFolderSession",
+  getNativeSessionHandoff: "orchestration.getNativeSessionHandoff",
   regenerateThreadTitle: "orchestration.regenerateThreadTitle",
   showPanelThread: "orchestration.showPanelThread",
   repairState: "orchestration.repairState",
@@ -3346,6 +3349,7 @@ export const OrchestrationRpcSchemas = {
   importProject: { input: ImportProjectInput, output: ImportProjectResult },
   listFolderSessions: { input: ListFolderSessionsInput, output: ListFolderSessionsResult },
   openFolderSession: { input: OpenFolderSessionInput, output: OpenFolderSessionResult },
+  getNativeSessionHandoff: { input: GetNativeSessionHandoffInput, output: NativeSessionHandoff },
   loadProjectImportHistory: {
     input: LoadProjectImportHistoryInput,
     output: LoadProjectImportHistoryResult,

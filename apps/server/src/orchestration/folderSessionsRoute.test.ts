@@ -16,6 +16,7 @@ import type { ProjectImportRepository } from "../persistence/projectImportReposi
 import type { FolderSession } from "../provider/folderSessionDiscovery";
 import type { ServerSettingsShape } from "../serverSettings";
 import { makeFolderSessionHandlers, type FolderSessionDiscoverInput } from "./folderSessionsRoute";
+import { buildNativeSessionResumeCommand } from "./nativeSessionHandoff";
 import { ProjectImportError } from "./projectImportHistory";
 import type { makeImportThreadHandler } from "./importThreadRoute";
 import type { OrchestrationEngineShape } from "./Services/OrchestrationEngine";
@@ -39,16 +40,29 @@ afterEach(async () => {
 
 function harness(input: {
   sessions: ReadonlyArray<FolderSession>;
-  bindings?: ReadonlyArray<{ threadId: string; provider: string; cursor: string }>;
+  bindings?: ReadonlyArray<{
+    threadId: string;
+    provider: string;
+    cursor: string;
+    providerInstanceId?: string;
+  }>;
+  /** Chats with no native binding yet, on the named agent. */
+  unboundThreads?: ReadonlyArray<{ threadId: string; provider: string }>;
   importFails?: boolean;
+  platform?: NodeJS.Platform;
 }) {
-  const threads: { id: ThreadId; projectId: ProjectId; deletedAt: string | null }[] = (
-    input.bindings ?? []
-  ).map((binding) => ({
-    id: ThreadId.makeUnsafe(binding.threadId),
+  const chat = (threadId: string, provider: string) => ({
+    id: ThreadId.makeUnsafe(threadId),
     projectId: PROJECT_ID,
-    deletedAt: null,
-  }));
+    deletedAt: null as string | null,
+    modelSelection: { provider, model: "test-model" },
+    envMode: "local",
+    worktreePath: null,
+  });
+  const threads: { id: ThreadId; projectId: ProjectId; deletedAt: string | null }[] = [
+    ...(input.bindings ?? []).map((binding) => chat(binding.threadId, binding.provider)),
+    ...(input.unboundThreads ?? []).map((thread) => chat(thread.threadId, thread.provider)),
+  ];
   const projects = [
     {
       id: PROJECT_ID,
@@ -88,6 +102,7 @@ function harness(input: {
             threadId: ThreadId.makeUnsafe(binding.threadId),
             projectId: PROJECT_ID,
             provider: binding.provider,
+            providerInstanceId: binding.providerInstanceId ?? null,
             cursor: binding.cursor,
           })),
         )) as unknown as FolderSessionsRepository["listNativeBindings"],
@@ -97,6 +112,8 @@ function harness(input: {
       getSettings: Effect.succeed(DEFAULT_SERVER_SETTINGS),
     } as unknown as ServerSettingsShape,
     importThread: importThread as unknown as ReturnType<typeof makeImportThreadHandler>,
+    homeDir: root,
+    ...(input.platform ? { platform: input.platform } : {}),
     discover: async (discoverInput) => {
       discoveries.push(discoverInput);
       return input.sessions.filter((session) => session.provider === discoverInput.source.provider);
@@ -236,5 +253,175 @@ describe("folder sessions route", () => {
       "thread.create",
       "thread.delete",
     ]);
+  });
+});
+
+describe("continue in terminal", () => {
+  // A plain terminal reads ~/.claude and ~/.codex; the test home stands in for ~.
+  beforeEach(() => {
+    vi.stubEnv("HOME", root);
+    vi.stubEnv("CLAUDE_CONFIG_DIR", undefined);
+    vi.stubEnv("CODEX_HOME", undefined);
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  const handoff = (h: ReturnType<typeof harness>, threadId: string) =>
+    Effect.runPromise(
+      h.handlers.getNativeSessionHandoff({ threadId: ThreadId.makeUnsafe(threadId) }),
+    );
+
+  it("copies codex resume with the chat's native Codex thread id", async () => {
+    const h = harness({
+      sessions: [],
+      bindings: [
+        {
+          threadId: "chat-codex",
+          provider: "codex",
+          cursor: JSON.stringify({ threadId: "019a-x" }),
+        },
+      ],
+      platform: "darwin",
+    });
+    expect(await handoff(h, "chat-codex")).toEqual({
+      status: "available",
+      provider: "codex",
+      nativeId: "019a-x",
+      cwd: folder,
+      command: `cd '${folder}' && codex resume 019a-x`,
+    });
+  });
+
+  it("copies claude --resume with the chat's Claude session id", async () => {
+    const h = harness({
+      sessions: [],
+      bindings: [
+        {
+          threadId: "chat-claude",
+          provider: "claudeAgent",
+          cursor: JSON.stringify({ resume: "5f0c-claude" }),
+        },
+      ],
+      platform: "darwin",
+    });
+    const result = await handoff(h, "chat-claude");
+    expect(result).toMatchObject({ status: "available", provider: "claudeAgent" });
+    expect(result.status === "available" && result.command).toBe(
+      `cd '${folder}' && claude --resume 5f0c-claude`,
+    );
+  });
+
+  it("names the account's config dir only when Claude ran outside ~/.claude", async () => {
+    const configDir = path.join(root, "claude-work");
+    vi.stubEnv("CLAUDE_CONFIG_DIR", configDir);
+    const h = harness({
+      sessions: [],
+      bindings: [
+        {
+          threadId: "chat-claude",
+          provider: "claudeAgent",
+          cursor: JSON.stringify({ resume: "5f0c-claude" }),
+        },
+      ],
+      platform: "darwin",
+    });
+    const result = await handoff(h, "chat-claude");
+    expect(result.status === "available" && result.command).toBe(
+      `cd '${folder}' && CLAUDE_CONFIG_DIR='${configDir}' claude --resume 5f0c-claude`,
+    );
+  });
+
+  it("names CODEX_HOME only when Codex ran on a home other than ~/.codex", async () => {
+    const codexHome = path.join(root, "codex-alt");
+    const bindings = [
+      { threadId: "chat-codex", provider: "codex", cursor: JSON.stringify({ threadId: "019a-x" }) },
+    ];
+    vi.stubEnv("CODEX_HOME", path.join(root, ".codex"));
+    const atDefault = await handoff(
+      harness({ sessions: [], bindings, platform: "darwin" }),
+      "chat-codex",
+    );
+    expect(atDefault.status === "available" && atDefault.command).toBe(
+      `cd '${folder}' && codex resume 019a-x`,
+    );
+    vi.stubEnv("CODEX_HOME", codexHome);
+    const elsewhere = await handoff(
+      harness({ sessions: [], bindings, platform: "darwin" }),
+      "chat-codex",
+    );
+    expect(elsewhere.status === "available" && elsewhere.command).toBe(
+      `cd '${folder}' && CODEX_HOME='${codexHome}' codex resume 019a-x`,
+    );
+  });
+
+  it("is unavailable, with a reason, when the chat has no native session", async () => {
+    const h = harness({
+      sessions: [],
+      bindings: [{ threadId: "chat-starting", provider: "codex", cursor: "null" }],
+      unboundThreads: [
+        { threadId: "chat-new", provider: "claudeAgent" },
+        { threadId: "chat-cursor", provider: "cursor" },
+      ],
+    });
+    expect(await handoff(h, "chat-starting")).toEqual({
+      status: "unavailable",
+      reason: "noNativeSession",
+    });
+    expect(await handoff(h, "chat-new")).toEqual({
+      status: "unavailable",
+      reason: "noNativeSession",
+    });
+    expect(await handoff(h, "chat-cursor")).toEqual({
+      status: "unavailable",
+      reason: "unsupportedProvider",
+    });
+    await expect(handoff(h, "chat-gone")).rejects.toThrow("no longer open");
+  });
+
+  it("quotes a folder with spaces and quotes for the host's shell", async () => {
+    folder = path.join(root, "Dr O'Neil $HOME paper");
+    const bindings = [
+      { threadId: "chat-codex", provider: "codex", cursor: JSON.stringify({ threadId: "019a-x" }) },
+    ];
+    const posix = await handoff(
+      harness({ sessions: [], bindings, platform: "linux" }),
+      "chat-codex",
+    );
+    expect(posix.status === "available" && posix.command).toBe(
+      `cd '${root}/Dr O'\\''Neil $HOME paper' && codex resume 019a-x`,
+    );
+    const powerShell = await handoff(
+      harness({ sessions: [], bindings, platform: "win32" }),
+      "chat-codex",
+    );
+    expect(powerShell.status === "available" && powerShell.command).toBe(
+      `Set-Location -LiteralPath '${root}/Dr O''Neil $HOME paper' -ErrorAction Stop; codex resume 019a-x`,
+    );
+  });
+});
+
+describe("buildNativeSessionResumeCommand", () => {
+  it("quotes an unexpected native id and the store override", () => {
+    expect(
+      buildNativeSessionResumeCommand({
+        provider: "codex",
+        nativeId: "id; rm -rf ~",
+        cwd: "/papers/thesis",
+        storeOverride: "/Users/me/codex alt",
+        platform: "darwin",
+      }),
+    ).toBe(`cd '/papers/thesis' && CODEX_HOME='/Users/me/codex alt' codex resume 'id; rm -rf ~'`);
+    expect(
+      buildNativeSessionResumeCommand({
+        provider: "claudeAgent",
+        nativeId: "5f0c",
+        cwd: "C:\\Papers\\thesis",
+        storeOverride: "C:\\Users\\me\\.claude-work",
+        platform: "win32",
+      }),
+    ).toBe(
+      `Set-Location -LiteralPath 'C:\\Papers\\thesis' -ErrorAction Stop; $env:CLAUDE_CONFIG_DIR = 'C:\\Users\\me\\.claude-work'; claude --resume 5f0c`,
+    );
   });
 });
