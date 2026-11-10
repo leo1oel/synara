@@ -1,5 +1,6 @@
 import {
   copyFileSync,
+  readdirSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -1459,6 +1460,128 @@ describe("buildCodexProcessEnv account overlays", () => {
       }
     } finally {
       rmSync(fixture.root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("buildCodexProcessEnv thread writer locks", () => {
+  // A disposable CODEX_HOME: the overlay must share Codex's writer-lock namespace with
+  // it, or Lattice and another Codex client could write one rollout at once.
+  async function launch(root: string) {
+    const env = await buildCodexProcessEnv({
+      env: { SYNARA_HOME: path.join(root, "runtime") },
+      homePath: path.join(root, "codex-home"),
+      platform: "win32",
+    });
+    return { overlay: env.CODEX_HOME!, source: path.join(root, "codex-home") };
+  }
+
+  function makeHome() {
+    const root = mkdtempSync(path.join(os.tmpdir(), "synara-codex-writer-locks-"));
+    mkdirSync(path.join(root, "codex-home"), { recursive: true });
+    writeFileSync(path.join(root, "codex-home", "config.toml"), "", "utf8");
+    return root;
+  }
+
+  it("creates and links the lock directory when no Codex client has made it yet", async () => {
+    const root = makeHome();
+    try {
+      expect(existsSync(path.join(root, "codex-home", "thread-writer-locks"))).toBe(false);
+      const { overlay, source } = await launch(root);
+      const overlayLocks = path.join(overlay, "thread-writer-locks");
+      expect(lstatSync(path.join(source, "thread-writer-locks")).isDirectory()).toBe(true);
+      expect(lstatSync(overlayLocks).isSymbolicLink()).toBe(true);
+      writeFileSync(path.join(overlayLocks, "thread-a.lock"), "", "utf8");
+      expect(existsSync(path.join(source, "thread-writer-locks", "thread-a.lock"))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("replaces an idle real overlay lock directory without deleting Codex's files", async () => {
+    const root = makeHome();
+    try {
+      const { overlay, source } = await launch(root);
+      const overlayLocks = path.join(overlay, "thread-writer-locks");
+      // The split an earlier build could leave: a real directory with Codex's
+      // coordination file, made before the source home had one.
+      unlinkSync(overlayLocks);
+      mkdirSync(overlayLocks);
+      writeFileSync(path.join(overlayLocks, ".coordination.lock"), "", "utf8");
+
+      await launch(root);
+
+      expect(lstatSync(overlayLocks).isSymbolicLink()).toBe(true);
+      expect(path.resolve(readlinkSync(overlayLocks))).toBe(
+        path.resolve(path.join(source, "thread-writer-locks")),
+      );
+      const retired = readdirSync(overlay).filter((entry) =>
+        entry.startsWith("thread-writer-locks.retired-"),
+      );
+      expect(retired).toHaveLength(1);
+      expect(existsSync(path.join(overlay, retired[0]!, ".coordination.lock"))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("removes an empty real overlay lock directory and links it", async () => {
+    const root = makeHome();
+    try {
+      const { overlay } = await launch(root);
+      const overlayLocks = path.join(overlay, "thread-writer-locks");
+      unlinkSync(overlayLocks);
+      mkdirSync(overlayLocks);
+
+      await launch(root);
+
+      expect(lstatSync(overlayLocks).isSymbolicLink()).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("leaves a real overlay lock directory that holds a thread lock untouched", async () => {
+    const root = makeHome();
+    try {
+      const { overlay } = await launch(root);
+      const overlayLocks = path.join(overlay, "thread-writer-locks");
+      unlinkSync(overlayLocks);
+      mkdirSync(overlayLocks);
+      writeFileSync(path.join(overlayLocks, ".coordination.lock"), "", "utf8");
+      // A running Codex process may hold this lock; it must stay where it is.
+      writeFileSync(path.join(overlayLocks, "thread-busy.lock"), "", "utf8");
+
+      await launch(root);
+
+      expect(lstatSync(overlayLocks).isDirectory()).toBe(true);
+      expect(lstatSync(overlayLocks).isSymbolicLink()).toBe(false);
+      expect(existsSync(path.join(overlayLocks, "thread-busy.lock"))).toBe(true);
+      expect(existsSync(path.join(overlayLocks, ".coordination.lock"))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("repoints a stale overlay lock link at the source home", async () => {
+    const root = makeHome();
+    try {
+      const { overlay, source } = await launch(root);
+      const overlayLocks = path.join(overlay, "thread-writer-locks");
+      const elsewhere = path.join(root, "old-home-locks");
+      mkdirSync(elsewhere);
+      writeFileSync(path.join(elsewhere, "thread-old.lock"), "", "utf8");
+      unlinkSync(overlayLocks);
+      symlinkSync(elsewhere, overlayLocks, "dir");
+
+      await launch(root);
+
+      expect(path.resolve(readlinkSync(overlayLocks))).toBe(
+        path.resolve(path.join(source, "thread-writer-locks")),
+      );
+      expect(existsSync(path.join(elsewhere, "thread-old.lock"))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
     }
   });
 });
