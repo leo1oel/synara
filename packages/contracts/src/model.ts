@@ -588,6 +588,23 @@ const CLAUDE_EXTENDED_THINKING_CAPABILITIES: ModelCapabilities = {
 // Sonnet 5 adds xhigh for long agentic work, while staying in the Sonnet no-fast-mode lane.
 const CLAUDE_SONNET_5_CAPABILITIES: ModelCapabilities = CLAUDE_NO_FAST_XHIGH_CAPABILITIES;
 
+// Sonnet 5.5 and Haiku 5.5 keep that ladder (adaptive thinking that cannot be turned
+// off, low..max, 1M context, no fast mode: Anthropic's fast mode covers only Fable 5.2,
+// Opus 5.5, Opus 5 and Opus 4.8), but Claude Code runs them at medium by default
+// ("Fable 5.2, Opus 5.5, Sonnet 5.5, and Haiku 5.5 default to medium"), so medium is the
+// level the picker shows and leaves unsent.
+const CLAUDE_MEDIUM_DEFAULT_NO_FAST_XHIGH_CAPABILITIES: ModelCapabilities = {
+  ...CLAUDE_NO_FAST_XHIGH_CAPABILITIES,
+  reasoningEffortLevels: [
+    claudeApiEffortOption("low", "Low"),
+    claudeApiEffortOption("medium", "Medium", { isDefault: true }),
+    claudeApiEffortOption("high", "High"),
+    claudeApiEffortOption("xhigh", "Extra High"),
+    claudeApiEffortOption("max", "Max"),
+    claudeCodeModeOption("ultracode", "Ultracode", "xhigh", "xhigh + workflows"),
+  ],
+};
+
 type ModelDefinition = {
   readonly slug: string;
   readonly name: string;
@@ -721,6 +738,11 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
       },
     },
     {
+      slug: "claude-sonnet-5-5",
+      name: "Claude Sonnet 5.5",
+      capabilities: CLAUDE_MEDIUM_DEFAULT_NO_FAST_XHIGH_CAPABILITIES,
+    },
+    {
       slug: "claude-sonnet-5",
       name: "Claude Sonnet 5",
       capabilities: CLAUDE_SONNET_5_CAPABILITIES,
@@ -729,6 +751,11 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
       slug: "claude-sonnet-4-6",
       name: "Claude Sonnet 4.6",
       capabilities: { ...CLAUDE_EXTENDED_THINKING_CAPABILITIES, supportsFastMode: false },
+    },
+    {
+      slug: "claude-haiku-5-5",
+      name: "Claude Haiku 5.5",
+      capabilities: CLAUDE_MEDIUM_DEFAULT_NO_FAST_XHIGH_CAPABILITIES,
     },
     {
       slug: "claude-haiku-4-5",
@@ -1265,12 +1292,18 @@ export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string,
     "claude-opus-4.5": "claude-opus-4-5",
     "claude-opus-4-5-20250120": "claude-opus-4-5",
     sonnet: "claude-sonnet-5",
+    "sonnet-5.5": "claude-sonnet-5-5",
+    "claude-sonnet-5.5": "claude-sonnet-5-5",
+    "claude-sonnet-5-5": "claude-sonnet-5-5",
     "sonnet-5": "claude-sonnet-5",
     "claude-sonnet-5": "claude-sonnet-5",
     "sonnet-4.6": "claude-sonnet-4-6",
     "claude-sonnet-4.6": "claude-sonnet-4-6",
     "claude-sonnet-4-6-20251117": "claude-sonnet-4-6",
     haiku: "claude-haiku-4-5",
+    "haiku-5.5": "claude-haiku-5-5",
+    "claude-haiku-5.5": "claude-haiku-5-5",
+    "claude-haiku-5-5": "claude-haiku-5-5",
     "haiku-4.5": "claude-haiku-4-5",
     "claude-haiku-4.5": "claude-haiku-4-5",
     "claude-haiku-4-5-20251001": "claude-haiku-4-5",

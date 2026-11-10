@@ -902,6 +902,7 @@
   "theTaskWasInterruptedByAProviderErrorWork": "The task was interrupted by a provider error. Work remains incomplete. {{value0}}",
   "theTaskWasInterruptedBecauseTheModelIsAt": "The task was interrupted because the model is at capacity. Work remains incomplete.",
   "claudeExitNextStepUpdateCli": "Your Claude Code is too old to run here. Run `claude update` in Terminal (or reinstall Claude Code), then try again.",
+  "claudeExitNextStepUpdateCliForModel": "This model needs a newer Claude Code than the one installed. Run `claude update` in Terminal, then try again, or choose another model with Change model.",
   "claudeExitNextStepSignIn": "Claude Code isn't signed in, or its sign-in can't be read. Run `claude auth login` in Terminal, then try again.",
   "claudeExitNextStepPickModel": "Your Claude account can't use this model. Choose another one with Change model.",
   "claudeExitNextStepAccessForbidden": "Anthropic refused this Claude account or network (403). Signing in again is unlikely to help: check the account's status, or use another provider.",

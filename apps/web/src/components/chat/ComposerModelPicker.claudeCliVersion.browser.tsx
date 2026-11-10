@@ -1,4 +1,5 @@
-// Claude Code learns each new Claude model in a release (Fable 5.2 needs 2.1.321),
+// Claude Code learns each new Claude model in a release (Fable 5.2 needs 2.1.321,
+// Sonnet 5.5 2.1.284, Haiku 5.5 2.1.293),
 // while the Claude tab lists Synara's static catalog whatever Claude Code is
 // installed. On an older Claude Code the picker must grey that model's row with
 // the version it needs, say so above the list, and leave every other row usable.
@@ -24,10 +25,14 @@ const CLAUDE = "claudeAgent" as ProviderInstanceId;
 const FABLE_5_2 = "claude-fable-5-2" as ModelSlug;
 const FABLE_5_1 = "claude-fable-5-1" as ModelSlug;
 const SONNET = "claude-sonnet-5" as ModelSlug;
+const SONNET_5_5 = "claude-sonnet-5-5" as ModelSlug;
+const HAIKU_5_5 = "claude-haiku-5-5" as ModelSlug;
 const CLAUDE_MODELS: ReadonlyArray<ProviderModelOption> = [
   { slug: FABLE_5_2, name: "Claude Fable 5.2" },
   { slug: FABLE_5_1, name: "Claude Fable 5.1" },
+  { slug: SONNET_5_5, name: "Claude Sonnet 5.5" },
   { slug: SONNET, name: "Claude Sonnet 5" },
+  { slug: HAIKU_5_5, name: "Claude Haiku 5.5" },
 ];
 const MODEL_OPTIONS_BY_PROVIDER = {
   claudeAgent: CLAUDE_MODELS,
@@ -82,6 +87,8 @@ const openPicker = () =>
   page.getByRole("button", { name: t("chat:modelEffort_changeModelAndReasoning") }).click();
 const fable52Row = () => page.getByRole("menuitem", { name: /Fable 5\.2/u });
 const fable51Row = () => page.getByRole("menuitem", { name: /Fable 5\.1/u });
+const sonnet55Row = () => page.getByRole("menuitem", { name: /Sonnet 5\.5/u });
+const haiku55Row = () => page.getByRole("menuitem", { name: /Haiku 5\.5/u });
 
 describe("a Claude model the installed Claude Code is too old for", () => {
   afterEach(() => {
@@ -128,6 +135,33 @@ describe("a Claude model the installed Claude Code is too old for", () => {
 
       await fable52Row().click();
       expect(onPick).toHaveBeenCalledWith(FABLE_5_2);
+    } finally {
+      await screen.unmount();
+    }
+  });
+
+  it("greys Haiku 5.5 below 2.1.293 and Sonnet 5.5 below 2.1.284, each with its own version", async () => {
+    setLanguagePreference("en");
+    const onPick = vi.fn();
+    const screen = await render(<Picker version="2.1.290" onPick={onPick} />);
+    try {
+      await openPicker();
+      await expect.element(haiku55Row()).toHaveAttribute("aria-disabled", "true");
+      await expect.element(haiku55Row()).toHaveTextContent("Needs Claude Code 2.1.293+");
+      await expect.element(sonnet55Row()).not.toHaveAttribute("aria-disabled", "true");
+      await sonnet55Row().click();
+      expect(onPick).toHaveBeenCalledWith(SONNET_5_5);
+
+      await screen.rerender(<Picker version="2.1.280" onPick={onPick} />);
+      await openPicker();
+      await expect.element(sonnet55Row()).toHaveAttribute("aria-disabled", "true");
+      await expect.element(sonnet55Row()).toHaveTextContent("Needs Claude Code 2.1.284+");
+
+      await screen.rerender(<Picker version="2.1.321" onPick={onPick} />);
+      await expect.element(sonnet55Row()).not.toHaveAttribute("aria-disabled", "true");
+      await expect.element(haiku55Row()).not.toHaveAttribute("aria-disabled", "true");
+      await haiku55Row().click();
+      expect(onPick).toHaveBeenCalledWith(HAIKU_5_5);
     } finally {
       await screen.unmount();
     }

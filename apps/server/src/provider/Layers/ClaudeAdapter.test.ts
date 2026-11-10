@@ -460,6 +460,7 @@ function makeHarness(config?: {
   readonly baseDir?: string;
   readonly workflowRuntimePollIntervalMs?: number;
   readonly onCreate?: (options: ClaudeQueryOptions) => void;
+  readonly readClaudeCliVersion?: ClaudeAdapterLiveOptions["readClaudeCliVersion"];
 }) {
   const query = new FakeClaudeQuery();
   let createInput:
@@ -490,6 +491,7 @@ function makeHarness(config?: {
           workflowRuntimePollIntervalMs: config.workflowRuntimePollIntervalMs,
         }
       : {}),
+    ...(config?.readClaudeCliVersion ? { readClaudeCliVersion: config.readClaudeCliVersion } : {}),
   };
 
   return {
@@ -6324,6 +6326,96 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         Effect.provide(harness.layer),
       );
     });
+
+    const collectRefusedTurn = (input: {
+      readonly installedVersion: string | null;
+      readonly model: string;
+    }) => {
+      let versionReads = 0;
+      const harness = makeHarness({
+        readClaudeCliVersion: async () => {
+          versionReads += 1;
+          return input.installedVersion;
+        },
+      });
+      return Effect.gen(function* () {
+        const adapter = yield* ClaudeAdapter;
+        yield* adapter.startSession({
+          threadId: THREAD_ID,
+          provider: "claudeAgent",
+          runtimeMode: "full-access",
+          providerInstanceId: "claude_work",
+          modelSelection: { provider: "claudeAgent", model: input.model },
+        });
+        const readsBeforeTurn = versionReads;
+        const events = yield* adapter.streamEvents.pipe(
+          Stream.takeUntil((event) => event.type === "turn.completed"),
+          Stream.runCollect,
+          Effect.forkChild,
+        );
+        yield* adapter.sendTurn({ threadId: THREAD_ID, input: "hi", attachments: [] });
+        emitTurnResult(harness.query, "refused", refusal);
+        const collected = Array.from(yield* Fiber.join(events));
+        const runtimeError = collected.find((event) => event.type === "runtime.error");
+        const completed = collected.find((event) => event.type === "turn.completed");
+        return {
+          error: runtimeError?.type === "runtime.error" ? runtimeError.payload : undefined,
+          completed: completed?.type === "turn.completed" ? completed.payload : undefined,
+          versionReadsDuringTurn: versionReads - readsBeforeTurn,
+        };
+      }).pipe(
+        Effect.provideService(Random.Random, makeDeterministicRandomService()),
+        Effect.provide(harness.layer),
+      );
+    };
+
+    it.effect("says which Claude Code a refused Fable 5.2 needs, not that the account can't", () =>
+      Effect.gen(function* () {
+        const { error, completed, versionReadsDuringTurn } = yield* collectRefusedTurn({
+          installedVersion: "2.1.300",
+          model: "claude-fable-5-2",
+        });
+        const expected =
+          "Claude Fable 5.2 needs Claude Code 2.1.321 or later; the installed one is 2.1.300. Run `claude update` in Terminal, then try again.";
+        assert.equal(error?.message, expected);
+        assert.equal(error?.errorCode, "claude_model_needs_newer_cli");
+        assert.equal(completed?.state, "failed");
+        assert.equal(completed?.errorMessage, expected);
+        assert.equal(completed?.errorCode, "claude_model_needs_newer_cli");
+        assert.equal(versionReadsDuringTurn, 1);
+        // No account record: the picker keeps its version label and the chat is not
+        // switched to another model with the "your account can't use" notice.
+        assert.deepEqual(unavailableModelsFor("claude_work"), []);
+      }),
+    );
+
+    it.effect("keeps the account record for a refused Fable 5.2 on a new enough CLI", () =>
+      Effect.gen(function* () {
+        const { error } = yield* collectRefusedTurn({
+          installedVersion: "2.1.321",
+          model: "claude-fable-5-2",
+        });
+        assert.notEqual(error?.errorCode, "claude_model_needs_newer_cli");
+        assert.deepEqual(
+          unavailableModelsFor("claude_work").map(({ model }) => model),
+          ["claude-fable-5-2"],
+        );
+      }),
+    );
+
+    it.effect("reads no Claude Code version for a refused model with no minimum", () =>
+      Effect.gen(function* () {
+        const { versionReadsDuringTurn } = yield* collectRefusedTurn({
+          installedVersion: "2.1.100",
+          model: "claude-fable-5-1",
+        });
+        assert.equal(versionReadsDuringTurn, 0);
+        assert.deepEqual(
+          unavailableModelsFor("claude_work").map(({ model }) => model),
+          ["claude-fable-5-1"],
+        );
+      }),
+    );
 
     it.effect("records nothing for a failure that is not about the model", () => {
       const harness = makeHarness();

@@ -15,6 +15,8 @@ export const CLAUDE_FAILURE_ERROR_CODES = {
   cliOutdated: "claude_cli_outdated",
   authRequired: "claude_auth_required",
   modelUnavailable: "claude_model_unavailable",
+  // A refused model that names a newer minimum Claude Code than the installed one.
+  modelNeedsNewerCli: "claude_model_needs_newer_cli",
   accessForbidden: "claude_access_forbidden",
   cliFailed: "claude_cli_failed",
 } as const;
@@ -196,5 +198,29 @@ export function describeClaudeProcessExit(input: {
   return {
     message: `${exit}: ${reason}`,
     errorCode: classifyClaudeFailure(reason) ?? CLAUDE_FAILURE_ERROR_CODES.cliFailed,
+  };
+}
+
+/**
+ * Claude Code too old for a model fails the turn the way a refused account does
+ * (model_not_found, or "There's an issue with the selected model"). When the model
+ * names a minimum Claude Code (see CLAUDE_MODEL_MINIMUM_CLI_VERSIONS) and the installed
+ * one is known to be older, the refusal is the CLI's age: this says which release the
+ * model needs instead. Null for any other failure, and when the version is unknown or
+ * new enough, so a real account refusal keeps its account message.
+ */
+export function describeClaudeModelRefusalOnOutdatedCli(input: {
+  readonly errorCode: string | undefined;
+  readonly modelName: string;
+  readonly neededVersion: string | null;
+  readonly installedVersion: string | null;
+}): ClaudeProcessExitDescription | null {
+  const refused =
+    input.errorCode === "model_not_found" ||
+    input.errorCode === CLAUDE_FAILURE_ERROR_CODES.modelUnavailable;
+  if (!refused || input.neededVersion === null || input.installedVersion === null) return null;
+  return {
+    message: `${input.modelName} needs Claude Code ${input.neededVersion} or later; the installed one is ${input.installedVersion}. Run \`claude update\` in Terminal, then try again.`,
+    errorCode: CLAUDE_FAILURE_ERROR_CODES.modelNeedsNewerCli,
   };
 }

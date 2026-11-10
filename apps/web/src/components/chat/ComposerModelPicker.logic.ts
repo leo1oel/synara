@@ -4,7 +4,11 @@
 // Depends on: composer trait resolution and the starred model storage shape.
 
 import type { ModelSlug, ProviderInstanceId, ProviderKind } from "@synara/contracts";
-import { resolveSelectableModel } from "@synara/shared/model";
+import {
+  claudeCliVersionNeededForModel,
+  isKnownVersionBelow,
+  resolveSelectableModel,
+} from "@synara/shared/model";
 
 import { type StarredModel, starredModelInstanceId, starredModelKey } from "~/lib/starredModels";
 import {
@@ -52,24 +56,6 @@ export const MODEL_PICKER_POPUP_ATTRIBUTE = "data-model-picker-popup";
 // list as-is (an old client lacks the tool modes Astra needs), and says why instead.
 export const CODEX_ASTRA_MINIMUM_VERSION = "0.153.0";
 
-function parseVersionCore(version: string): readonly [number, number, number] | null {
-  const match = /(\d+)\.(\d+)\.(\d+)/u.exec(version);
-  if (!match) return null;
-  return [Number(match[1]), Number(match[2]), Number(match[3])];
-}
-
-// True only when both versions parse and `version` is below `minimum`.
-function isKnownVersionBelow(version: string | null | undefined, minimum: string): boolean {
-  if (!version) return false;
-  const installed = parseVersionCore(version);
-  const required = parseVersionCore(minimum);
-  if (!installed || !required) return false;
-  for (let index = 0; index < 3; index += 1) {
-    if (installed[index]! !== required[index]!) return installed[index]! < required[index]!;
-  }
-  return false;
-}
-
 /** True only for a known Codex version below the one that can list GPT-6 Astra. */
 export function codexNeedsUpdateForAstra(
   provider: ProviderKind,
@@ -78,26 +64,17 @@ export function codexNeedsUpdateForAstra(
   return provider === "codex" && isKnownVersionBelow(version, CODEX_ASTRA_MINIMUM_VERSION);
 }
 
-// The Claude tab lists Synara's static catalog whatever Claude Code is installed, but
-// Claude Code learns each new model in a release and an older one cannot run it.
-// Anthropic's Claude Code docs name that release ("Fable 5.2 requires Claude Code
-// v2.1.321 or later"), so the picker greys the row on an older CLI and says why.
-export const CLAUDE_MODEL_MINIMUM_CLI_VERSIONS: Readonly<Record<string, string>> = {
-  "claude-fable-5-2": "2.1.321",
-};
-
 /**
  * The Claude Code version `model` needs when the installed one is known to be older;
- * null when it can run the model, the version is unknown, or no minimum applies.
+ * null for other providers, or when it can run the model, the version is unknown, or no
+ * minimum applies. The table lives in shared/model, beside the alias resolution.
  */
 export function claudeCliVersionNeededFor(
   provider: ProviderKind,
   model: string,
   version: string | null | undefined,
 ): string | null {
-  if (provider !== "claudeAgent") return null;
-  const minimum = CLAUDE_MODEL_MINIMUM_CLI_VERSIONS[model.replace(/\[[^\]]+\]$/u, "")];
-  return minimum !== undefined && isKnownVersionBelow(version, minimum) ? minimum : null;
+  return provider === "claudeAgent" ? claudeCliVersionNeededForModel(model, version) : null;
 }
 
 export function isModelPickerShortcutScopeActive(): boolean {

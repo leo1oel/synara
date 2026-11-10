@@ -265,6 +265,72 @@ describe("OMP role-era persisted selections", () => {
   });
 });
 
+describe("a saved bare fable", () => {
+  const customModelsByProvider = {
+    codex: [],
+    claudeAgent: [],
+    cursor: [],
+    devin: [],
+    antigravity: [],
+    grok: [],
+    droid: [],
+    opencode: [],
+    pi: [],
+    omp: [],
+  };
+  const claudeCatalog = {
+    claudeAgent: [
+      { slug: "claude-fable-5-2", name: "Claude Fable 5.2" },
+      { slug: "claude-fable-5-1", name: "Claude Fable 5.1" },
+      { slug: "claude-opus-5-5", name: "Claude Opus 5.5" },
+    ],
+  };
+  const selectedModelFor = (input: {
+    readonly saved: string;
+    readonly source: "thread" | "project";
+    readonly claudeCliVersion: string | null | undefined;
+  }) =>
+    deriveEffectiveComposerModelState({
+      draft: null,
+      selectedProvider: "claudeAgent",
+      threadModelSelection:
+        input.source === "thread" ? modelSelection("claudeAgent", input.saved) : null,
+      projectModelSelection:
+        input.source === "project" ? modelSelection("claudeAgent", input.saved) : null,
+      customModelsByProvider,
+      availableModelOptionsByProvider: claudeCatalog,
+      claudeCliVersion: input.claudeCliVersion,
+    }).selectedModel;
+
+  it.each(["thread", "project"] as const)(
+    "runs as Fable 5.1 from a %s selection when Claude Code is older than 2.1.321",
+    (source) => {
+      expect(selectedModelFor({ saved: "fable", source, claudeCliVersion: "2.1.300" })).toBe(
+        "claude-fable-5-1",
+      );
+    },
+  );
+
+  it.each(["2.1.321", "2.1.322 (Claude Code)", null, undefined])(
+    "runs as Fable 5.2 on Claude Code %s",
+    (claudeCliVersion) => {
+      expect(selectedModelFor({ saved: "fable", source: "thread", claudeCliVersion })).toBe(
+        "claude-fable-5-2",
+      );
+    },
+  );
+
+  it("leaves an explicit Fable 5.2 alone on an old Claude Code, so its row can say why", () => {
+    expect(
+      selectedModelFor({
+        saved: "claude-fable-5-2",
+        source: "thread",
+        claudeCliVersion: "2.1.300",
+      }),
+    ).toBe("claude-fable-5-2");
+  });
+});
+
 describe("composerDraftStore modelSelection", () => {
   const threadId = ThreadId.makeUnsafe("thread-model-options");
 

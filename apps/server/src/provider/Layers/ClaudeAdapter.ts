@@ -75,9 +75,12 @@ import {
   type ProviderListAgentsResult,
   type ProviderListModelsResult,
   getAgentMentionAliases,
+  MODEL_OPTIONS_BY_PROVIDER,
 } from "@synara/contracts";
 import {
   applyClaudePromptEffortPrefix,
+  CLAUDE_MODEL_MINIMUM_CLI_VERSIONS,
+  claudeCliVersionNeededForModel,
   getClaudeContextWindowSuffix,
   getDefaultModel,
   getEffectiveClaudeCodeEffort,
@@ -201,8 +204,10 @@ import {
   CLAUDE_ACCESS_FORBIDDEN_MESSAGE,
   CLAUDE_FAILURE_ERROR_CODES,
   captureClaudeStderr,
+  describeClaudeModelRefusalOnOutdatedCli,
   describeClaudeProcessExit,
   isClaudeAccessForbidden,
+  type ClaudeProcessExitDescription,
   type ClaudeStderrCapture,
   type ClaudeStderrStream,
 } from "../claudeProcessExit.ts";
@@ -461,6 +466,8 @@ interface ClaudeSessionContext {
   readonly accountDiscoveryKey: string;
   readonly messageStream?: AsyncIterable<SDKMessage>;
   readonly processOwner: ClaudeProcessOwner;
+  // This session's `claude --version`, read once and only when a turn's model is refused.
+  readonly readInstalledCliVersion: () => Promise<string | null>;
   readonly stoppedSignal: Deferred.Deferred<void>;
   readonly pendingCompactionPreparations: Set<Deferred.Deferred<void>>;
   stopDeferred?: Deferred.Deferred<void, ProviderAdapterProcessError>;
@@ -790,6 +797,21 @@ async function readInstalledClaudeCliVersion(input: {
       },
     );
   });
+}
+
+/** The catalog's display name for a Claude model ("Claude Fable 5.2"), else the slug. */
+function claudeCatalogModelName(slug: string): string {
+  const base = stripClaudeContextWindowSuffix(slug);
+  return MODEL_OPTIONS_BY_PROVIDER.claudeAgent.find((option) => option.slug === base)?.name ?? base;
+}
+
+// One read per session; a failed read is not retried and counts as unknown.
+function memoizeCliVersionRead(read: () => Promise<string | null>): () => Promise<string | null> {
+  let pending: Promise<string | null> | undefined;
+  return () => {
+    pending ??= read().catch(() => null);
+    return pending;
+  };
 }
 
 export interface ClaudeAdapterLiveOptions {
@@ -4116,6 +4138,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             : { lifecycleGeneration: context.lifecycleGeneration }),
           promptQueue: context.promptQueue,
           query: context.query,
+          readInstalledCliVersion: context.readInstalledCliVersion,
           artifactsEnabled: context.artifactsEnabled,
           processOwner: context.processOwner,
           cacheProcessId: context.cacheProcessId,
@@ -5334,6 +5357,40 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         yield* updateResumeCursor(context);
       });
 
+    // A refused model that names a minimum Claude Code (Fable 5.2, Sonnet 5.5, Haiku
+    // 5.5) on a Claude Code known to be older is the CLI's age, not the account: say
+    // which release the model needs, and let noteRequestedModelAvailability skip the
+    // account record that would grey the row and switch the chat to another model.
+    // `claude --version` runs only on such a refusal, once per session.
+    const describeRefusalOnOutdatedCli = (
+      context: ClaudeSessionContext,
+      errorCode: string | undefined,
+    ): Effect.Effect<ClaudeProcessExitDescription | null> => {
+      const requested = context.turnState?.requestedModel;
+      const refused =
+        errorCode === "model_not_found" ||
+        errorCode === CLAUDE_FAILURE_ERROR_CODES.modelUnavailable;
+      if (
+        !requested ||
+        !refused ||
+        context.currentApiModelId !== requested.apiModelId ||
+        CLAUDE_MODEL_MINIMUM_CLI_VERSIONS[stripClaudeContextWindowSuffix(requested.slug)] ===
+          undefined
+      ) {
+        return Effect.succeed(null);
+      }
+      return Effect.promise(() => context.readInstalledCliVersion()).pipe(
+        Effect.map((installedVersion) =>
+          describeClaudeModelRefusalOnOutdatedCli({
+            errorCode,
+            modelName: claudeCatalogModelName(requested.slug),
+            neededVersion: claudeCliVersionNeededForModel(requested.slug, installedVersion),
+            installedVersion,
+          }),
+        ),
+      );
+    };
+
     // A refused model is the only signal that the account cannot use a listed
     // model: the SDK's model_not_found result, or Claude Code exiting with "There's
     // an issue with the selected model" on stderr (claude_model_unavailable). Record
@@ -5390,6 +5447,27 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         } else if (message.subtype !== "success") {
           errorMessage = normalizeClaudeUserVisibleErrorMessage(message.errors[0], status);
         }
+        let failureCode = assistantError?.errorCode ?? assistantError?.code;
+        let availabilityCode: string | undefined = assistantError?.code;
+        if (status === "failed") {
+          const outdatedCli = yield* describeRefusalOnOutdatedCli(context, availabilityCode);
+          if (outdatedCli) {
+            errorMessage = outdatedCli.message;
+            failureCode = outdatedCli.errorCode;
+            availabilityCode = outdatedCli.errorCode;
+            // turn.completed reads its code from the turn's assistant error.
+            if (context.turnState?.assistantError) {
+              context.turnState = {
+                ...context.turnState,
+                assistantError: {
+                  ...context.turnState.assistantError,
+                  message: outdatedCli.message,
+                  errorCode: outdatedCli.errorCode,
+                },
+              };
+            }
+          }
+        }
 
         if (status === "failed") {
           // The terminal failure carries quota evidence atomically with recovery admission.
@@ -5403,7 +5481,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
               context,
               errorMessage ?? "Claude turn failed.",
               undefined,
-              assistantError?.errorCode ?? assistantError?.code,
+              failureCode,
             );
           }
         }
@@ -5413,7 +5491,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           yield* emitMonitorEvents(context);
         }
 
-        noteRequestedModelAvailability(context, status, assistantError?.code, errorMessage);
+        noteRequestedModelAvailability(context, status, availabilityCode, errorMessage);
         yield* completeTurn(context, status, errorMessage, message);
 
         // Results carry the fast-mode state that actually served the turn. Publish
@@ -6626,10 +6704,13 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
               yield* completeTurn(context, "interrupted", CLAUDE_BENIGN_TERMINATION_MESSAGE);
             }
           } else {
-            const { message, errorCode } = yield* describeClaudeStreamFailure(
+            const streamFailure = yield* describeClaudeStreamFailure(
               context,
               messageFromClaudeStreamCause(exit.cause, "Claude runtime stream failed."),
             );
+            const { message, errorCode } =
+              (yield* describeRefusalOnOutdatedCli(context, streamFailure.errorCode)) ??
+              streamFailure;
             if (isClaudeMissingResumeConversationCause(exit.cause)) {
               // The SDK can accept a resumed query and report the missing
               // native conversation only after the prompt is queued. Drop the
@@ -7778,6 +7859,13 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             accountDiscoveryKey,
             messageStream,
             processOwner,
+            readInstalledCliVersion: memoizeCliVersionRead(() =>
+              readClaudeCliVersion({
+                binaryPath: providerOptions?.binaryPath ?? "claude",
+                ...(input.cwd ? { cwd: input.cwd } : {}),
+                env: claudeSdkEnv,
+              }),
+            ),
             cacheProcessId,
             stoppedSignal: Deferred.makeUnsafe<void>(),
             pendingCompactionPreparations: new Set(),

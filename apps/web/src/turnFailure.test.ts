@@ -335,6 +335,39 @@ describe("Claude Code exit failures", () => {
     }
   });
 
+  it("tells the user to update Claude Code when it is too old for the model", () => {
+    const turnId = TurnId.makeUnsafe("claude-model-needs-newer-cli-turn");
+    const cause =
+      "Claude Fable 5.2 needs Claude Code 2.1.321 or later; the installed one is 2.1.300. Run `claude update` in Terminal, then try again.";
+    const errorCode = "claude_model_needs_newer_cli";
+    const activities = [
+      makeActivity({
+        id: "claude-model-needs-newer-cli-error",
+        turnId,
+        sequence: 2,
+        kind: "runtime.error",
+        tone: "error",
+        summary: "Provider runtime error",
+        payload: { message: cause, class: "provider_error", errorCode },
+      }),
+      makeActivity({
+        id: "claude-model-needs-newer-cli-completion",
+        turnId,
+        sequence: 3,
+        kind: "turn.completed",
+        tone: "error",
+        summary: "Turn failed",
+        payload: { state: "failed", errorMessage: cause, errorCode },
+      }),
+    ];
+    expect(deriveWorkLogEntries(activities, turnId)[0]?.turnFailure).toMatchObject({
+      cause,
+      errorCode,
+      nextStep:
+        "This model needs a newer Claude Code than the one installed. Run `claude update` in Terminal, then try again, or choose another model with Change model.",
+    });
+  });
+
   it("says Anthropic refused the account, and that signing in again will not help", () => {
     const refusedTurnId = TurnId.makeUnsafe("claude-access-forbidden-turn");
     const cause = "Anthropic refused this Claude account or network (403 Request not allowed).";

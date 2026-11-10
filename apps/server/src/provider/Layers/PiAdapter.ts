@@ -155,14 +155,20 @@ const PI_ANTHROPIC_ENSURED_MODEL_IDS = [
   "claude-fable-5-1",
   "claude-fable-5",
   "claude-opus-4-8",
+  "claude-sonnet-5-5",
+  "claude-haiku-5-5",
 ] as const;
 type PiAnthropicEnsuredModelId = (typeof PI_ANTHROPIC_ENSURED_MODEL_IDS)[number];
 
 /**
  * Metadata used when an OAuth/extension Anthropic catalog replaced Pi's built-ins
- * and omitted Fable 5.2 / Fable 5.1 / Fable 5 / Opus 4.8. Values mirror `@earendil-works/pi-ai`
- * Anthropic models; Fable 5.2 and 5.1 follow Anthropic's published pricing until pi-ai
- * ships them (5.2: $8 / $40 per MTok, $10 5-minute cache write, $0.20 cache read).
+ * and omitted Fable 5.2 / Fable 5.1 / Fable 5 / Opus 4.8 / Sonnet 5.5 / Haiku 5.5. Values
+ * mirror `@earendil-works/pi-ai` Anthropic models; Fable 5.2 and 5.1 follow Anthropic's
+ * published pricing until pi-ai ships them (5.2: $8 / $40 per MTok, $10 5-minute cache
+ * write, $0.20 cache read). Sonnet 5.5 and Haiku 5.5 copy pi-ai 1.4.0's own entries, which
+ * match Anthropic's pricing page (Haiku 5.5 bills prompts over 100K tokens at the higher
+ * tier), except that Haiku 5.5 also maps `off` to null: Claude Code's docs say thinking
+ * cannot be turned off on it, as on Sonnet 5.5.
  */
 const PI_ANTHROPIC_ENSURED_MODEL_TEMPLATES: Record<
   PiAnthropicEnsuredModelId,
@@ -219,6 +225,52 @@ const PI_ANTHROPIC_ENSURED_MODEL_TEMPLATES: Record<
     compat: { forceAdaptiveThinking: true, supportsTemperature: false },
     input: ["text", "image"],
     cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 },
+    contextWindow: 1_000_000,
+    maxTokens: 128_000,
+  },
+  "claude-sonnet-5-5": {
+    id: "claude-sonnet-5-5",
+    name: "Claude Sonnet 5.5",
+    reasoning: true,
+    thinkingLevelMap: {
+      off: null,
+      minimal: null,
+      low: "low",
+      medium: "medium",
+      high: "high",
+      xhigh: "xhigh",
+      max: "max",
+    },
+    compat: { forceAdaptiveThinking: true, supportsTemperature: false },
+    input: ["text", "image"],
+    cost: { input: 2, output: 10, cacheRead: 0.1, cacheWrite: 2.5 },
+    contextWindow: 1_000_000,
+    maxTokens: 128_000,
+  },
+  "claude-haiku-5-5": {
+    id: "claude-haiku-5-5",
+    name: "Claude Haiku 5.5",
+    reasoning: true,
+    thinkingLevelMap: {
+      off: null,
+      minimal: null,
+      low: "low",
+      medium: "medium",
+      high: "high",
+      xhigh: "xhigh",
+      max: "max",
+    },
+    compat: { forceAdaptiveThinking: true, supportsTemperature: false },
+    input: ["text", "image"],
+    cost: {
+      input: 0.1,
+      output: 0.5,
+      cacheRead: 0.01,
+      cacheWrite: 0.125,
+      tiers: [
+        { inputTokensAbove: 100_000, input: 0.5, output: 2.5, cacheRead: 0.05, cacheWrite: 0.625 },
+      ],
+    },
     contextWindow: 1_000_000,
     maxTokens: 128_000,
   },
@@ -778,8 +830,8 @@ export function getPiSupportedThinkingOptions(
 }
 
 /**
- * When Anthropic is already authenticated, ensure Fable 5.1, Fable 5, and Opus 4.8
- * appear even if an older pi-anthropic-oauth extension replaced the built-in
+ * When Anthropic is already authenticated, ensure the Fables, Opus 4.8, Sonnet 5.5 and
+ * Haiku 5.5 appear even if an older pi-anthropic-oauth extension replaced the built-in
  * Anthropic catalog.
  */
 export function ensurePiAnthropicCatalogModels(

@@ -1093,6 +1093,7 @@ function isTurnFailureActivity(activity: OrchestrationThreadActivity): boolean {
 // structured error rather than an exit; only the Claude adapter emits it.
 const CLAUDE_EXIT_NEXT_STEPS = {
   claude_cli_outdated: "chat:claudeExitNextStepUpdateCli",
+  claude_model_needs_newer_cli: "chat:claudeExitNextStepUpdateCliForModel",
   claude_auth_required: "chat:claudeExitNextStepSignIn",
   claude_model_unavailable: "chat:claudeExitNextStepPickModel",
   model_not_found: "chat:claudeExitNextStepPickModel",
