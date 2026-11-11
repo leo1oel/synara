@@ -60,6 +60,33 @@ describe("resolveRunnableModelSelection", () => {
     });
   });
 
+  it("runs Git writing on a chosen Pi model when Pi is the only ready provider", () => {
+    const piOnly: ServerSettings = {
+      ...settings,
+      providers: { ...settings.providers, pi: { ...settings.providers.pi, enabled: true } },
+    };
+    const piModel: ModelSelection = { provider: "pi", model: "endpoint/endpoint-model" };
+    const statuses = [status("codex", "missing"), status("claudeAgent", "missing"), status("pi")];
+
+    expect(
+      resolveRunnableModelSelection({
+        settings: piOnly,
+        preferences: [piModel, codexDefault],
+        statuses,
+        purpose: "text-generation",
+      }),
+    ).toEqual({ kind: "selected", preference: 0, selection: piModel });
+    // Pi has no default model, so a ready Pi is never chosen on its own.
+    expect(
+      resolveRunnableModelSelection({
+        settings: piOnly,
+        preferences: [codexDefault],
+        statuses,
+        purpose: "text-generation",
+      }).kind,
+    ).toBe("unavailable");
+  });
+
   it("keeps a ready Settings choice even when an earlier provider is also ready", () => {
     expect(
       resolveRunnableModelSelection({
@@ -143,7 +170,7 @@ describe("resolveRunnableModelSelection", () => {
     ).toEqual({
       kind: "unavailable",
       message:
-        "No AI provider is connected. Connect Codex, Claude, Cursor, OpenCode or Droid in the Agent panel → Settings → Providers.",
+        "No AI provider is connected. Connect Codex, Claude, Cursor, OpenCode, Droid or Pi in the Agent panel → Settings → Providers.",
     });
   });
 });

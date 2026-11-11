@@ -128,7 +128,7 @@ export function buildPiTurnPrompt(
 
 export const resolvePiStartInstanceId = resolveProviderSessionInstanceId;
 
-const DEFAULT_PI_THINKING_LEVEL: ThinkingLevel = "medium";
+export const DEFAULT_PI_THINKING_LEVEL: ThinkingLevel = "medium";
 const PI_THINKING_OPTIONS: ReadonlyArray<{
   readonly value: ThinkingLevel;
   readonly label: string;
@@ -460,7 +460,7 @@ export function makePiBashProcessSupervisor(
 // a native clipboard module, so importing it during Synara startup can bloat the
 // desktop backend before any Pi session exists. A slim host installs Pi on demand
 // (providerRuntimes.ts); until then this rejects with ProviderRuntimeMissingError.
-async function loadPiCodingAgentModule(): Promise<PiCodingAgentModule> {
+export async function loadPiCodingAgentModule(): Promise<PiCodingAgentModule> {
   const [sdk] = await Promise.all([
     loadProviderRuntimeModule("@earendil-works/pi-coding-agent"),
     loadProviderRuntimeModule("@earendil-works/pi-ai/compat"),
@@ -791,7 +791,9 @@ function isPiThinkingLevel(value: string | null | undefined): value is ThinkingL
   );
 }
 
-function normalizePiThinkingLevel(value: string | null | undefined): ThinkingLevel | undefined {
+export function normalizePiThinkingLevel(
+  value: string | null | undefined,
+): ThinkingLevel | undefined {
   return isPiThinkingLevel(value) ? value : undefined;
 }
 
@@ -1966,6 +1968,37 @@ function modelRegistryFacade(
   piSdk: Pick<PiCodingAgentModule, "ModelRegistry">,
 ): ModelRegistry {
   return new piSdk.ModelRegistry(modelRuntime);
+}
+
+/**
+ * Resolves the model a Pi session will run. Chat sessions and Pi text
+ * generation share it so a model id names the same model in both places,
+ * including OpenRouter models discovered on demand and provider-qualified
+ * custom slugs. Returns undefined only when no model id was requested, so the
+ * SDK picks its default.
+ */
+export async function resolvePiSessionModel(input: {
+  readonly modelRuntime: ModelRuntime;
+  readonly piSdk: Pick<PiCodingAgentModule, "ModelRegistry">;
+  readonly modelId: string | undefined;
+  readonly environment?: Readonly<Record<string, string>> | undefined;
+  readonly instanceId?: string | undefined;
+}): Promise<Model<Api> | undefined> {
+  const registry = modelRegistryFacade(input.modelRuntime, input.piSdk);
+  const requested = parseModelReference(input.modelId);
+  if (requested?.provider === "openrouter" && !registry.find(requested.provider, requested.id)) {
+    await refreshPiOpenRouterModels(input.modelRuntime, {
+      environment: input.environment,
+      instanceId: input.instanceId,
+    });
+  }
+  const model = findModelInRegistry(registry, input.modelId);
+  if (input.modelId && !model) {
+    throw new Error(
+      `Pi model '${input.modelId}' is not available. Use a discovered model or a provider-qualified custom model slug like 'openai/gpt-5.5'.`,
+    );
+  }
+  return model;
 }
 
 function extensionDisplayName(extension: {
@@ -3357,23 +3390,13 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           modelRuntime,
           ...(input.noExtensions ? { resourceLoaderOptions: { noExtensions: true } } : {}),
         });
-        const registry = modelRegistryFacade(services.modelRuntime, input.sdk);
-        const requested = parseModelReference(input.modelId);
-        if (
-          requested?.provider === "openrouter" &&
-          !registry.find(requested.provider, requested.id)
-        ) {
-          await refreshPiOpenRouterModels(services.modelRuntime, {
-            environment: input.environment,
-            instanceId: input.instanceId,
-          });
-        }
-        const model = findModelInRegistry(registry, input.modelId);
-        if (input.modelId && !model) {
-          throw new Error(
-            `Pi model '${input.modelId}' is not available. Use a discovered model or a provider-qualified custom model slug like 'openai/gpt-5.5'.`,
-          );
-        }
+        const model = await resolvePiSessionModel({
+          modelRuntime: services.modelRuntime,
+          piSdk: input.sdk,
+          modelId: input.modelId,
+          environment: input.environment,
+          instanceId: input.instanceId,
+        });
         const shellPath = services.settingsManager.getShellPath();
         const commandPrefix = services.settingsManager.getShellCommandPrefix();
         input.processSupervisor.setShellPath(shellPath);

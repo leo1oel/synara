@@ -7,7 +7,7 @@ import {
 } from "./textGenerationCapabilities";
 
 describe("auxiliary text-generation capabilities", () => {
-  it.each(["antigravity", "grok", "pi", "devin"] satisfies ProviderKind[])(
+  it.each(["antigravity", "grok", "devin"] satisfies ProviderKind[])(
     "falls back to configured text generation for unsupported %s chats",
     (provider) => {
       const modelSelection = {
@@ -20,7 +20,7 @@ describe("auxiliary text-generation capabilities", () => {
     },
   );
 
-  it.each(["codex", "claudeAgent", "cursor", "droid", "opencode"] satisfies ProviderKind[])(
+  it.each(["codex", "claudeAgent", "cursor", "droid", "opencode", "pi"] satisfies ProviderKind[])(
     "preserves the exact %s instance override",
     (provider) => {
       const modelSelection = {
