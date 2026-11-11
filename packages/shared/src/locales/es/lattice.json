@@ -497,6 +497,7 @@
   "pendingChecks_other": "{{count}} pending checks",
   "permissions": "Permissions: {{permissions}}",
   "piIsNotInstalledInstallPiIn": "Pi is not installed. Install Pi in provider settings to use it.",
+  "piIsNotSetUpConnectAModelEndpoint": "Pi is not set up. Connect a model endpoint in Settings → Agent → Model endpoint to use the Pi provider.",
   "piIsNotSetUpInstallThe": "Pi is not set up. Install the Pi CLI (`pi`) or add Pi credentials to {{agentDir}} to use the Pi provider.",
   "pin": "Pin {{target}}",
   "plainTextWorksMarkdownFormattingIsOptional": "Plain text works. Markdown formatting is optional, and everything wraps inside the editor.",

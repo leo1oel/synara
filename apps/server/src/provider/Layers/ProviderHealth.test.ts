@@ -44,6 +44,7 @@ import {
   checkOpenCodeProviderStatus,
   checkOmpProviderStatus,
   checkPiProviderStatus,
+  piNotSetUpMessage,
   makeCheckClaudeProviderStatus,
   makeCheckCodexProviderStatus,
   makeCheckCursorProviderStatus,
@@ -2790,6 +2791,18 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           rmSync(agentDir, { recursive: true, force: true });
         }
       }).pipe(Effect.provide(failingSpawnerLayer("spawn pi ENOENT")));
+    });
+
+    it("points Lattice writers at the Model endpoint pane instead of a Pi CLI", () => {
+      const agentDir = "/tmp/pi-agent";
+      assert.strictEqual(
+        piNotSetUpMessage(agentDir, "lattice"),
+        "Pi is not set up. Connect a model endpoint in Settings → Agent → Model endpoint to use the Pi provider.",
+      );
+      assert.strictEqual(
+        piNotSetUpMessage(agentDir, "synara"),
+        `Pi is not set up. Install the Pi CLI (\`pi\`) or add Pi credentials to ${agentDir} to use the Pi provider.`,
+      );
     });
 
     it.effect("does not mistake SDK-created empty or invalid files for Pi setup", () => {

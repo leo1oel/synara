@@ -53,6 +53,10 @@ import {
 import { ChildProcessSpawner } from "effect/unstable/process";
 import { makeEffectProcessCommand } from "../../platform/effectProcessRuntime.ts";
 import { isServerBetaFeatureEnabled } from "../../betaFeatureGate.ts";
+import {
+  ACTIVE_AGENT_HOST_PROFILE,
+  type AgentHostProfileId,
+} from "../../agentGateway/hostProfile.ts";
 
 import {
   CODEX_CLI_UNPARSEABLE_VERSION_MESSAGE,
@@ -1955,6 +1959,20 @@ export const checkOpenCodeProviderStatus = makeCheckOpenCodeProviderStatus();
 
 // ── Pi health check ─────────────────────────────────────────────
 
+/**
+ * Lattice runs Pi only through the bundled SDK and writes its endpoint config
+ * from its own Settings pane, so a Lattice writer has no Pi CLI to install and
+ * no agent dir to edit by hand. Upstream hosts keep the CLI/credentials hint.
+ */
+export function piNotSetUpMessage(
+  agentDir: string,
+  hostProfileId: AgentHostProfileId = ACTIVE_AGENT_HOST_PROFILE.id,
+): string {
+  return hostProfileId === "lattice"
+    ? "Pi is not set up. Connect a model endpoint in Settings → Agent → Model endpoint to use the Pi provider."
+    : `Pi is not set up. Install the Pi CLI (\`pi\`) or add Pi credentials to ${agentDir} to use the Pi provider.`;
+}
+
 const PI_SDK_SETUP_FILE_NAMES = ["auth.json", "models.json"] as const;
 // Additional credential names supported by the installed Pi SDK; these are not
 // all plain API-key overrides, so do not add them to the runtime override mapping.
@@ -2124,7 +2142,7 @@ export const checkPiProviderStatus = (
         available: false,
         authStatus: "unknown" as const,
         checkedAt,
-        message: `Pi is not set up. Install the Pi CLI (\`pi\`) or add Pi credentials to ${sdkSetup.agentDir} to use the Pi provider.`,
+        message: piNotSetUpMessage(sdkSetup.agentDir),
       } satisfies ServerProviderStatus;
     }
     const configuredAgentDir = nonEmptyTrimmed(agentDir);

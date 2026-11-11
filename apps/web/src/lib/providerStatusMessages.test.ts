@@ -31,4 +31,16 @@ describe("localizeProviderStatusMessage", () => {
       "Anthropic refused this Claude account or network (403). Check the account's status.",
     );
   });
+
+  // Lattice's Pi health message points at its own Model endpoint pane, not a Pi CLI.
+  it("localizes the Lattice Pi set-up hint", () => {
+    const notSetUp =
+      "Pi is not set up. Connect a model endpoint in Settings → Agent → Model endpoint to use the Pi provider.";
+    setLanguagePreference("zh-CN");
+    expect(localizeProviderStatusMessage(t, notSetUp)).toBe(
+      "Pi 还没有配置好。请在“设置 → AI 助手 → 模型端点”中连接模型端点，然后再使用 Pi。",
+    );
+    setLanguagePreference("en");
+    expect(localizeProviderStatusMessage(t, notSetUp)).toBe(notSetUp);
+  });
 });

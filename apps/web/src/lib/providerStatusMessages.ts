@@ -30,6 +30,9 @@ export function localizeProviderStatusMessage(translate: typeof t, message: stri
     // Provider runtimes a slim host installs on demand (apps/server/src/provider/providerRuntimes.ts).
     case "Pi is not installed. Install Pi in provider settings to use it.":
       return translate("lattice:piIsNotInstalledInstallPiIn");
+    // apps/server/src/provider/Layers/ProviderHealth.ts piNotSetUpMessage (Lattice host profile).
+    case "Pi is not set up. Connect a model endpoint in Settings → Agent → Model endpoint to use the Pi provider.":
+      return translate("lattice:piIsNotSetUpConnectAModelEndpoint");
     case "OpenCode is not installed. Install OpenCode in provider settings to use it.":
       return translate("lattice:openCodeIsNotInstalledInstallOpenCodeIn");
     case "Cursor Agent is not authenticated. Run `cursor-agent login` and try again.":

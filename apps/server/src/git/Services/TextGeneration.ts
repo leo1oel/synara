@@ -347,6 +347,13 @@ export class DroidTextGeneration extends ServiceMap.Service<
 >()("synara/git/Services/TextGeneration/DroidTextGeneration") {}
 
 /**
+ * PiTextGeneration - Provider-specific Pi SDK implementation for git text generation.
+ */
+export class PiTextGeneration extends ServiceMap.Service<PiTextGeneration, TextGenerationShape>()(
+  "synara/git/Services/TextGeneration/PiTextGeneration",
+) {}
+
+/**
  * TextGeneration - Service tag for commit and PR text generation.
  */
 export class TextGeneration extends ServiceMap.Service<TextGeneration, TextGenerationShape>()(

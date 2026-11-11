@@ -9,6 +9,7 @@ import { CodexTextGenerationServiceLive } from "./Layers/CodexTextGeneration";
 import { CursorTextGenerationServiceLive } from "./Layers/CursorTextGeneration";
 import { DroidTextGenerationServiceLive } from "./Layers/DroidTextGeneration";
 import { makeOpenCodeTextGenerationServiceLive } from "./Layers/OpenCodeTextGeneration";
+import { PiTextGenerationServiceLive } from "./Layers/PiTextGeneration";
 import { ProviderTextGenerationLive } from "./Layers/ProviderTextGeneration";
 import { OpenCodeRuntimeLive } from "../provider/opencodeRuntime";
 import { ServerSettingsLive } from "../serverSettings";
@@ -31,6 +32,7 @@ export const TextGenerationLayerLive = ProviderTextGenerationLive.pipe(
   Layer.provide(CodexTextGenerationServiceLive),
   Layer.provide(CursorTextGenerationServiceLive),
   Layer.provide(DroidTextGenerationServiceLive),
+  Layer.provide(PiTextGenerationServiceLive),
   Layer.provide(textGenerationProviderLayers),
   Layer.provide(ServerSettingsLive),
   Layer.provide(GitCoreLive),

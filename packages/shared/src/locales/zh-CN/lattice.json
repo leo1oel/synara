@@ -497,6 +497,7 @@
   "pendingChecks_other": "{{count}} 项检查进行中",
   "permissions": "权限：{{permissions}}",
   "piIsNotInstalledInstallPiIn": "Pi 尚未安装。请在提供方设置中安装 Pi 后使用。",
+  "piIsNotSetUpConnectAModelEndpoint": "Pi 还没有配置好。请在“设置 → AI 助手 → 模型端点”中连接模型端点，然后再使用 Pi。",
   "piIsNotSetUpInstallThe": "Pi 还没有配置好。请安装 Pi CLI（`pi`），或在 {{agentDir}} 中添加 Pi 凭据，然后再使用 Pi。",
   "pin": "固定{{target}}",
   "plainTextWorksMarkdownFormattingIsOptional": "可以使用纯文本。Markdown 格式为可选，所有内容都会在编辑框内自动换行。",

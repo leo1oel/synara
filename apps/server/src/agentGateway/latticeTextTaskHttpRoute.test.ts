@@ -358,7 +358,7 @@ describe("Lattice text task HTTP lifecycle", () => {
         expect(response.status).toBe(503);
         expect(await response.json()).toEqual({
           error:
-            "No AI provider is connected. Connect Codex, Claude, Cursor, OpenCode or Droid in the Agent panel → Settings → Providers.",
+            "No AI provider is connected. Connect Codex, Claude, Cursor, OpenCode, Droid or Pi in the Agent panel → Settings → Providers.",
         });
         expect(calls).toEqual([]);
       },

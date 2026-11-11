@@ -1245,9 +1245,15 @@ export const DEFAULT_GIT_TEXT_GENERATION_REASONING_EFFORT = "high" as const;
 /**
  * Providers with a dedicated Git text-generation backend. Keep the Settings
  * picker in sync with this list — do not add chat-only agents (Grok,
- * Antigravity, Pi, Devin). Those CLIs have no one-shot git-writing path, and
+ * Antigravity, Devin). Those CLIs have no one-shot git-writing path, and
  * driving them as coding agents for commit/PR text can run with write access
  * or violate provider terms.
+ *
+ * Pi qualifies because its backend runs the Pi SDK in-process with no tools,
+ * no extensions and an empty working directory (PiTextGeneration.ts), so it
+ * can serve writing tasks on a custom model endpoint without a CLI. It is
+ * last, and has no default model, so it is never picked automatically: it
+ * runs only when the writer selects a Pi model.
  */
 export const GIT_TEXT_GENERATION_PROVIDERS = [
   "codex",
@@ -1255,6 +1261,7 @@ export const GIT_TEXT_GENERATION_PROVIDERS = [
   "cursor",
   "opencode",
   "droid",
+  "pi",
 ] as const satisfies readonly ProviderKind[];
 export type GitTextGenerationProvider = (typeof GIT_TEXT_GENERATION_PROVIDERS)[number];
 

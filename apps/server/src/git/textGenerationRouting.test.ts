@@ -98,7 +98,7 @@ describe("resolveTextGenerationRouting", () => {
       }),
     ).toEqual({
       unavailable:
-        "No AI provider is connected. Connect Codex, Claude, Cursor, OpenCode or Droid in the Agent panel → Settings → Providers.",
+        "No AI provider is connected. Connect Codex, Claude, Cursor, OpenCode, Droid or Pi in the Agent panel → Settings → Providers.",
     });
   });
 
