@@ -860,5 +860,9 @@
   "continueInTerminalOutsideLattice": "Outside Lattice, the bibliography guard and undo don't apply.",
   "continueInTerminalNoSession": "No Codex or Claude Code session yet. Send a message first.",
   "terminalCommandCopied": "Command copied. Paste it into a terminal.",
-  "couldNotCopyTerminalCommand": "Could not copy the command"
+  "couldNotCopyTerminalCommand": "Could not copy the command",
+  "undoTheFileChangesShownInThisCard": "Undo the file changes shown in this card?",
+  "earlierFileChangesWillRemainAvailableToUndo": "Earlier file changes will remain available to undo.",
+  "messagesAndProviderConversationHistoryWillBeKept": "Messages and provider conversation history will be kept.",
+  "interruptTheCurrentTurnBeforeUndoingFileChanges": "Interrupt the current turn before undoing file changes."
 }

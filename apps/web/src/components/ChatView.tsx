@@ -4758,15 +4758,18 @@ export default function ChatView({
       if (!api || !activeThread || isRevertingCheckpoint || turnCounts.length === 0) return;
 
       if (hasLiveTurn || isSendBusy || isConnecting) {
-        setThreadError(activeThread.id, "Interrupt the current turn before undoing file changes.");
+        setThreadError(
+          activeThread.id,
+          t("lattice:interruptTheCurrentTurnBeforeUndoingFileChanges"),
+        );
         return;
       }
       const confirmed = await api.dialogs.confirm(
         [
-          "Undo the file changes shown in this card?",
-          "Earlier file changes will remain available to undo.",
-          "Messages and provider conversation history will be kept.",
-          "This action cannot be undone.",
+          t("lattice:undoTheFileChangesShownInThisCard"),
+          t("lattice:earlierFileChangesWillRemainAvailableToUndo"),
+          t("lattice:messagesAndProviderConversationHistoryWillBeKept"),
+          t("chat:checkpoint_revertConfirmWarning"),
         ].join("\n"),
       );
       if (!confirmed) return;

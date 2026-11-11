@@ -860,5 +860,9 @@
   "continueInTerminalOutsideLattice": "在 Lattice 之外，参考文献保护和撤销不会生效。",
   "continueInTerminalNoSession": "还没有 Codex 或 Claude Code 会话，请先发送一条消息。",
   "terminalCommandCopied": "命令已复制，粘贴到终端即可。",
-  "couldNotCopyTerminalCommand": "无法复制命令"
+  "couldNotCopyTerminalCommand": "无法复制命令",
+  "undoTheFileChangesShownInThisCard": "撤销这张卡片里的文件改动？",
+  "earlierFileChangesWillRemainAvailableToUndo": "更早的文件改动仍可撤销。",
+  "messagesAndProviderConversationHistoryWillBeKept": "消息和提供商的对话记录会保留。",
+  "interruptTheCurrentTurnBeforeUndoingFileChanges": "请先中断当前这一轮，再撤销文件改动。"
 }
