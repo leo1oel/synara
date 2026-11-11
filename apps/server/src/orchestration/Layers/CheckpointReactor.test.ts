@@ -1881,9 +1881,12 @@ describe("CheckpointReactor", () => {
         );
       }
       if (workspaceLookups > 2) return originalDetail(id);
+      // Keep the lookup gated until release even if real Git I/O outlasts
+      // the reactor's bounded retry deadline.
       return Deferred.succeed(retryStarted, undefined).pipe(
         Effect.andThen(Deferred.await(releaseRetry)),
         Effect.andThen(originalDetail(id)),
+        Effect.uninterruptible,
       );
     });
     const repository = await runtime!.runPromise(Effect.service(ProviderRuntimeEventRepository));
@@ -1925,7 +1928,6 @@ describe("CheckpointReactor", () => {
       await waitForEvent(
         harness.engine,
         (event) => event.type === "thread.reverted" && event.aggregateId === peer,
-        1000,
       );
       // The peer made no turns, so its revert reverses nothing and keeps the
       // edit no turn of it made; only a failed revert reaches the rescue restore.

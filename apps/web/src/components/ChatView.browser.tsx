@@ -3,6 +3,7 @@ import {
   buildStalePendingRequestFailureDetail,
   pendingRequestInstanceKey,
 } from "@synara/shared/threadSummary";
+import { applyServerSettingsPatch } from "@synara/shared/serverSettings";
 // Production CSS is part of the behavior under test because row height depends on it.
 import "../index.css";
 
@@ -15,7 +16,9 @@ import {
   DEFAULT_AUTOMATION_STOP_AFTER_CONSECUTIVE_FAILURES,
   DEFAULT_MODEL_BY_PROVIDER,
   EventId,
+  type ExecutionEnvironmentDescriptor,
   MessageId,
+  type McpConnectorProposal,
   DEVICE_WS_METHODS,
   COMPUTER_WS_METHODS,
   ORCHESTRATION_WS_METHODS,
@@ -24,6 +27,8 @@ import {
   type ProjectId,
   type ProjectAgentOverview,
   type ServerConfig,
+  type ServerSettingsPatch,
+  type ServerSettingsView,
   SpaceId,
   ThreadId,
   TurnId,
@@ -70,7 +75,6 @@ import { extractTrailingBrowserAnnotations } from "../lib/browserAnnotations";
 import { isMacNavigatorPlatform } from "../lib/utils";
 import { STARRED_MODELS_STORAGE_KEY } from "../lib/starredModels";
 import { readNativeApi } from "../nativeApi";
-import { setLanguagePreference } from "~/i18n";
 import { DEFAULT_THEME_STATE, getCodeThemeSeed } from "~/theme/theme.logic";
 import { emitWsTransportState } from "../wsTransportEvents";
 import { dispatchKanbanDraftThread } from "../lib/kanbanDispatch";
@@ -116,6 +120,16 @@ import { useTemporaryThreadStore } from "../temporaryThreadStore";
 import { useTerminalStateStore } from "../terminalStateStore";
 import { resetRetainedThreadDetailSubscriptionsForTests } from "../threadDetailSubscriptionRetention";
 import { useWorkspacePathsStore } from "../workspacePathsStore";
+import { readExecutionContext } from "../lib/hosts/executionContext";
+import {
+  addWorkspaceSession,
+  removeWorkspaceSession,
+  updateWorkspaceSession,
+} from "../lib/hosts/workspaceSessions";
+import { WorkspacePanels } from "./hosts/WorkspacePanels";
+
+vi.mock("../lib/hosts/executionContext", { spy: true });
+vi.mock("./hosts/WorkspacePanels", { spy: true });
 import { getWorkspaceEditorSession } from "../lib/workspaceEditorSession";
 import { resetWsNativeApiForTest } from "../wsNativeApi";
 import { trackWsTurnSettlement } from "../wsTransportEvents";
@@ -168,11 +182,13 @@ interface WsRequestEnvelope {
 interface TestFixture {
   snapshot: OrchestrationReadModel;
   serverConfig: ServerConfig;
+  serverSettings: ServerSettingsView;
   providerStatusesSnapshot: ServerConfig["providers"] | null;
   welcome: WsWelcomePayload;
   gitBranchByCwd: Record<string, string>;
   projectAgentOverviews: Record<string, unknown>;
   projectAgentSummariesPending?: boolean;
+  connectorProposals: McpConnectorProposal[];
 }
 
 let fixture: TestFixture;
@@ -317,6 +333,8 @@ function createSnapshotForTargetUser(options: {
   targetText: string;
   targetAttachmentCount?: number;
   sessionStatus?: OrchestrationSessionStatus;
+  // The selection stored on the thread, which a started chat's composer shows.
+  modelSelection?: OrchestrationReadModel["threads"][number]["modelSelection"];
 }): OrchestrationReadModel {
   const messages: Array<OrchestrationReadModel["threads"][number]["messages"][number]> = [];
 
@@ -376,7 +394,7 @@ function createSnapshotForTargetUser(options: {
         id: THREAD_ID,
         projectId: PROJECT_ID,
         title: THREAD_TITLE,
-        modelSelection: {
+        modelSelection: options.modelSelection ?? {
           provider: "codex",
           model: "gpt-5",
         },
@@ -547,9 +565,11 @@ function buildFixture(snapshot: OrchestrationReadModel): TestFixture {
   return {
     snapshot,
     serverConfig: createBaseServerConfig(),
+    serverSettings: createBrowserTestServerSettings(NOW_ISO),
     providerStatusesSnapshot: null,
     gitBranchByCwd: {},
     projectAgentOverviews: {},
+    connectorProposals: [],
     welcome: {
       cwd: "/repo/project",
       projectName: "Project",
@@ -1293,7 +1313,34 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
     return createAutomationDefinitionFromCreateRequest(body);
   }
   if (tag === WS_METHODS.serverGetSettings) {
-    return createBrowserTestServerSettings(NOW_ISO);
+    return fixture.serverSettings;
+  }
+  if (tag === WS_METHODS.serverUpdateSettings) {
+    // Answers like the server: the stored settings with the patch applied, so the
+    // shared new-chat defaults a mount migrates are not read back as empty.
+    const { _tag: _updateTag, ...patch } = body;
+    fixture = {
+      ...fixture,
+      serverSettings: applyServerSettingsPatch(
+        fixture.serverSettings,
+        patch as ServerSettingsPatch,
+      ),
+    };
+    return fixture.serverSettings;
+  }
+  if (tag === WS_METHODS.serverListMcpConnectorProposals) {
+    return fixture.connectorProposals;
+  }
+  if (tag === WS_METHODS.serverResolveMcpConnectorProposal) {
+    const proposal = fixture.connectorProposals.find(
+      (candidate) => candidate.proposalId === body.proposalId,
+    );
+    if (!proposal || body.resolution !== "dismissed") return null;
+    const dismissed = { ...proposal, state: "dismissed" as const };
+    fixture.connectorProposals = fixture.connectorProposals.map((candidate) =>
+      candidate === proposal ? dismissed : candidate,
+    );
+    return { proposal: dismissed, authorizationUrl: null };
   }
   if (tag === WS_METHODS.serverGetConfig) {
     return fixture.serverConfig;
@@ -4103,13 +4150,15 @@ describe("ChatView transcript geometry (full app)", () => {
       await page.getByRole("button", { name: "Toggle thread sidebar", exact: true }).click();
       const rail = page.getByRole("navigation", { name: "Primary" });
       await expect.element(rail.getByRole("button", { name: "Home", exact: true })).toBeVisible();
-      await expect
-        .element(rail.getByRole("button", { name: "Settings", exact: true }))
-        .toBeVisible();
       // Customize has no shell slot to anchor to on phones; it opens beside the sheet's rail.
       await rail.getByRole("button", { name: "More", exact: true }).click();
       await page.getByRole("menuitem", { name: "Customize…", exact: true }).click();
       await expect.element(page.getByRole("button", { name: "Done", exact: true })).toBeVisible();
+      await page.getByRole("button", { name: "Done", exact: true }).click();
+      // Settings remains available from the account menu while using the local-only mode.
+      await rail.getByRole("button", { name: "Sign in", exact: true }).click();
+      await page.getByRole("menuitem", { name: /^Settings\b/ }).click();
+      await expect.poll(() => mounted.router.state.location.pathname).toBe("/settings");
     } finally {
       await mounted.cleanup();
     }
@@ -5792,6 +5841,7 @@ describe("ChatView transcript geometry (full app)", () => {
         const clamp = row.querySelector<HTMLElement>('[data-user-message-clamp="true"]')!;
         expect(clamp).toBeTruthy();
         const text = clamp.querySelector<HTMLElement>(".chat-markdown--user")!;
+        expect(text?.textContent).toBe(userText);
         const lineHeightPx = Number.parseFloat(getComputedStyle(text).lineHeight);
         expect(lineHeightPx).toBeGreaterThan(0);
         expect(clamp.scrollHeight).toBeGreaterThan(clamp.clientHeight);
@@ -8826,14 +8876,17 @@ describe("ChatView transcript geometry (full app)", () => {
         { provider: "codex", model: "gpt-5.4", effort: "medium", fastMode: true, thinking: null },
       ]),
     );
-    useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
+    // A started chat's composer shows the selection stored on the thread.
+    const storedSelection = {
       provider: "codex",
       model: "gpt-5.4",
       options: { reasoningEffort: "medium", fastMode: true },
-    });
+    } as const;
+    useComposerDraftStore.getState().setModelSelection(THREAD_ID, storedSelection);
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot: createSnapshotForTargetUser({
+        modelSelection: storedSelection,
         targetMessageId: "msg-user-target-hotkey" as MessageId,
         targetText: "hotkey target",
       }),
@@ -8924,14 +8977,17 @@ describe("ChatView transcript geometry (full app)", () => {
 
   it("keeps the model picker open for 1500ms after the latest Shift+Tab press", async () => {
     localStorage.setItem("synara:app-settings:v1", JSON.stringify({ composerEffortSlider: true }));
-    useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
+    // A started chat's composer shows the selection stored on the thread.
+    const storedSelection = {
       provider: "codex",
       model: "gpt-5.4",
       options: { reasoningEffort: "low" },
-    });
+    } as const;
+    useComposerDraftStore.getState().setModelSelection(THREAD_ID, storedSelection);
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot: createSnapshotForTargetUser({
+        modelSelection: storedSelection,
         targetMessageId: "msg-user-effort-preview-timer" as MessageId,
         targetText: "effort preview timer",
       }),
@@ -8977,14 +9033,17 @@ describe("ChatView transcript geometry (full app)", () => {
 
   it("keeps a manually opened model picker open after the effort shortcut timer expires", async () => {
     localStorage.setItem("synara:app-settings:v1", JSON.stringify({ composerEffortSlider: true }));
-    useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
+    // A started chat's composer shows the selection stored on the thread.
+    const storedSelection = {
       provider: "codex",
       model: "gpt-5.4",
       options: { reasoningEffort: "medium" },
-    });
+    } as const;
+    useComposerDraftStore.getState().setModelSelection(THREAD_ID, storedSelection);
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot: createSnapshotForTargetUser({
+        modelSelection: storedSelection,
         targetMessageId: "msg-user-effort-preview-manual-picker" as MessageId,
         targetText: "manual model picker",
       }),
@@ -9021,14 +9080,17 @@ describe("ChatView transcript geometry (full app)", () => {
 
   it("keeps the existing slider menu open when choosing another model after Shift+Tab", async () => {
     localStorage.setItem("synara:app-settings:v1", JSON.stringify({ composerEffortSlider: true }));
-    useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
+    // A started chat's composer shows the selection stored on the thread.
+    const storedSelection = {
       provider: "codex",
       model: "gpt-5.4",
       options: { reasoningEffort: "medium" },
-    });
+    } as const;
+    useComposerDraftStore.getState().setModelSelection(THREAD_ID, storedSelection);
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot: createSnapshotForTargetUser({
+        modelSelection: storedSelection,
         targetMessageId: "msg-user-effort-shortcut-model-selection" as MessageId,
         targetText: "choose model from effort shortcut",
       }),
@@ -9080,14 +9142,17 @@ describe("ChatView transcript geometry (full app)", () => {
 
   it("opens the existing model picker effort menu when its slider setting is disabled", async () => {
     localStorage.setItem("synara:app-settings:v1", JSON.stringify({ composerEffortSlider: false }));
-    useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
+    // A started chat's composer shows the selection stored on the thread.
+    const storedSelection = {
       provider: "codex",
       model: "gpt-5.4",
       options: { reasoningEffort: "medium" },
-    });
+    } as const;
+    useComposerDraftStore.getState().setModelSelection(THREAD_ID, storedSelection);
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot: createSnapshotForTargetUser({
+        modelSelection: storedSelection,
         targetMessageId: "msg-user-effort-shortcut-menu-setting" as MessageId,
         targetText: "effort menu setting",
       }),
@@ -12511,7 +12576,7 @@ describe("ChatView transcript geometry (full app)", () => {
 
       await page.getByRole("button", { name: "New space", exact: true }).click();
       await expect.element(page.getByRole("heading", { name: "New space" })).toBeInTheDocument();
-      await page.getByLabelText("Name").fill("Focus");
+      await page.getByLabelText("Name", { exact: true }).fill("Focus");
       await page.getByRole("button", { name: "Create space", exact: true }).click();
 
       // The nested editor closes, the space.create command is dispatched, and
@@ -13232,17 +13297,11 @@ describe("ChatView transcript geometry (full app)", () => {
   );
 
   it.each([
-    { language: "en", variant: "dark", reset: "Restore defaults", label: "Dark theme pack" },
-    {
-      language: "es",
-      variant: "light",
-      reset: "Restaurar valores predeterminados",
-      label: "Paquete de tema claro",
-    },
-    { language: "zh-CN", variant: "dark", reset: "恢复默认设置", label: "深色主题包" },
+    { variant: "dark", reset: "Restore defaults", label: "Dark theme pack" },
+    { variant: "light", reset: "Restore defaults", label: "Light theme pack" },
   ] as const)(
-    "names the customized theme pack in the localized reset confirmation ($language)",
-    async ({ language, variant, reset, label }) => {
+    "names the customized theme pack in the reset confirmation ($variant)",
+    async ({ variant, reset, label }) => {
       const previousTheme = localStorage.getItem("synara:theme");
       localStorage.setItem(
         "synara:theme",
@@ -13274,13 +13333,11 @@ describe("ChatView transcript geometry (full app)", () => {
           .poll(() => document.documentElement.getAttribute("data-theme-variant"))
           .toBe(variant);
         await mounted.router.navigate({ to: "/settings", search: { section: "appearance" } });
-        setLanguagePreference(language);
         await page.getByRole("button", { name: reset, exact: true }).click();
         await expect.poll(() => confirm.mock.calls.length).toBe(1);
         expect(confirm).toHaveBeenCalledWith(expect.stringContaining(label));
         expect(confirm).not.toHaveBeenCalledWith(expect.stringContaining("settings:"));
       } finally {
-        setLanguagePreference("en");
         Object.defineProperty(window, "nativeApi", {
           configurable: true,
           value: previousNativeApi,
@@ -13292,6 +13349,63 @@ describe("ChatView transcript geometry (full app)", () => {
       }
     },
   );
+
+  it("counts the system-font preference and the inactive theme pack toward Restore defaults", async () => {
+    const previousTheme = localStorage.getItem("synara:theme");
+    // Stay in System mode so only the inactive pack and the font switch differ from defaults.
+    const inactiveVariant = window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "light"
+      : "dark";
+    localStorage.setItem(
+      "synara:theme",
+      JSON.stringify({
+        ...DEFAULT_THEME_STATE,
+        systemUiFont: false,
+        codeThemeIds: { ...DEFAULT_THEME_STATE.codeThemeIds, [inactiveVariant]: "codex" },
+        chromeThemes: {
+          ...DEFAULT_THEME_STATE.chromeThemes,
+          [inactiveVariant]: getCodeThemeSeed("codex", inactiveVariant),
+        },
+      }),
+    );
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: addThreadToSnapshot(createDraftOnlySnapshot(), THREAD_ID),
+    });
+    window.dispatchEvent(new StorageEvent("storage", { key: "synara:theme" }));
+    const previousNativeApi = window.nativeApi;
+    const api = readNativeApi()!;
+    const confirm = vi.fn(async () => false);
+    Object.defineProperty(window, "nativeApi", {
+      configurable: true,
+      value: { ...api, dialogs: { ...api.dialogs, confirm } },
+    });
+    try {
+      await mounted.router.navigate({ to: "/settings", search: { section: "appearance" } });
+      await expect
+        .element(page.getByRole("switch", { name: "Use system UI font", exact: true }))
+        .not.toBeChecked();
+      const restoreDefaults = page.getByRole("button", { name: "Restore defaults", exact: true });
+      await expect.element(restoreDefaults).toBeEnabled();
+      await restoreDefaults.click();
+      await expect.poll(() => confirm.mock.calls.length).toBe(1);
+      expect(confirm).toHaveBeenCalledWith(
+        expect.stringContaining(
+          inactiveVariant === "dark" ? "Dark theme pack" : "Light theme pack",
+        ),
+      );
+      expect(confirm).toHaveBeenCalledWith(expect.stringContaining("Use system UI font"));
+    } finally {
+      Object.defineProperty(window, "nativeApi", {
+        configurable: true,
+        value: previousNativeApi,
+      });
+      if (previousTheme === null) localStorage.removeItem("synara:theme");
+      else localStorage.setItem("synara:theme", previousTheme);
+      window.dispatchEvent(new StorageEvent("storage", { key: "synara:theme" }));
+      await mounted.cleanup();
+    }
+  });
 
   it("disables the ASCII landing decoration from Appearance and releases it on the terminal tab", async () => {
     const snapshot = addThreadToSnapshot(createDraftOnlySnapshot(), THREAD_ID);
@@ -14403,6 +14517,134 @@ describe("ChatView transcript geometry (full app)", () => {
       await mounted.cleanup();
     }
   });
+
+  it.each(["shortcut", "palette", "native terminal"] as const)(
+    "keeps the selected remote owner for the outer %s action",
+    async (action) => {
+      const controller = {
+        environmentId: "controller-test",
+        label: "This computer",
+        channel: "dev",
+        capabilities: { remoteConnections: true },
+      } as ExecutionEnvironmentDescriptor;
+      vi.mocked(readExecutionContext).mockReturnValue({
+        controller,
+        execution: controller,
+        remote: null,
+      });
+      // Keep the real controlling shell and router; the remote execution boundary is
+      // represented by its registered owner actions instead of loading a second app.
+      vi.mocked(WorkspacePanels).mockReturnValue(null);
+      const menuListeners = new Set<(action: string) => void>();
+      const previousBridge = Object.getOwnPropertyDescriptor(window, "desktopBridge");
+      let restored = false;
+      const restoreBridges = () => {
+        if (restored) return;
+        restored = true;
+        vi.mocked(readExecutionContext).mockRestore();
+        vi.mocked(WorkspacePanels).mockRestore();
+        if (previousBridge) Object.defineProperty(window, "desktopBridge", previousBridge);
+        else delete window.desktopBridge;
+      };
+      onTestFinished(restoreBridges);
+      const snapshot = createSnapshotForTargetUser({
+        targetMessageId: MessageId.makeUnsafe("remote-owner-action"),
+        targetText: "Preserve the selected computer",
+      });
+      const mounted = await mountChatView({
+        viewport: DEFAULT_VIEWPORT,
+        snapshot,
+        configureFixture: (nextFixture) => {
+          nextFixture.serverConfig = {
+            ...nextFixture.serverConfig,
+            keybindings: [
+              {
+                command: "chat.new",
+                shortcut: {
+                  key: "o",
+                  metaKey: false,
+                  ctrlKey: false,
+                  shiftKey: true,
+                  altKey: false,
+                  modKey: true,
+                },
+              },
+            ],
+          };
+        },
+      });
+      const navigation = {
+        newChat: vi.fn().mockResolvedValue("/remote-draft"),
+        createChat: vi.fn().mockResolvedValue(undefined),
+        openTerminal: vi.fn(),
+        browseFolders: vi.fn(),
+        createProject: vi.fn(),
+        openProject: vi.fn(),
+        navigate: vi.fn(),
+        recover: vi.fn(),
+      };
+      try {
+        await waitForServerConfigToApply();
+        Object.defineProperty(window, "desktopBridge", {
+          configurable: true,
+          value: {
+            ...window.desktopBridge,
+            getWsUrl: () => "",
+            setTheme: async () => {},
+            browser: { ...window.desktopBridge?.browser },
+            onMenuAction: (listener: (action: string) => void) => {
+              menuListeners.add(listener);
+              return () => menuListeners.delete(listener);
+            },
+          },
+        });
+        addWorkspaceSession({
+          hostId: "remote-owner-test",
+          hostName: "Remote computer",
+          wsPath: "/ws/remote/owner-test",
+          executionScope: {
+            environmentId: "remote-owner-test",
+            accountAuthority: "https://account.example",
+            userId: "alice",
+            organizationId: "org",
+            channel: "dev",
+          },
+        });
+        updateWorkspaceSession("remote-owner-test", {
+          navigation,
+          summary: { state: "open", path: "/remote-thread", projects: [], threads: [] },
+        });
+        await mounted.router.navigate({
+          to: "/remote",
+          search: { environment: "remote-owner-test", path: "/remote-thread" },
+        });
+        await waitForLayout();
+        if (action === "shortcut") {
+          document.querySelector<HTMLElement>('[data-testid="new-thread-button"]')!.focus();
+          await dispatchConfiguredShortcutWhenReady(window, { key: "o", shiftKey: true });
+        } else if (action === "palette") {
+          await page.getByRole("button", { name: "Search", exact: true }).click();
+          await page.getByPlaceholder("Search chats or run a command").fill("New chat");
+          await page.getByRole("option", { name: /^New chat/ }).click();
+        } else {
+          for (const listener of menuListeners) listener("new-terminal-tab");
+        }
+        await vi.waitFor(() => {
+          expect(mounted.router.state.location.pathname).toBe("/remote");
+          if (action === "native terminal") expect(navigation.openTerminal).toHaveBeenCalledOnce();
+          else
+            expect(navigation.createChat).toHaveBeenCalledWith(
+              action === "shortcut" ? "chat.new" : "chat.newChat",
+            );
+        });
+        expect(useComposerDraftStore.getState().draftThreadsByThreadId).toEqual({});
+      } finally {
+        await mounted.cleanup();
+        removeWorkspaceSession("remote-owner-test");
+        restoreBridges();
+      }
+    },
+  );
 
   it("creates a new thread from the global chat.new shortcut", async () => {
     const mounted = await mountChatView({
@@ -16533,6 +16775,108 @@ describe("ChatView transcript geometry (full app)", () => {
         },
         { timeout: 8_000, interval: 16 },
       );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("keeps the MCP proposal in the transcript recap after its final answer", async () => {
+    const base = createSnapshotWithInlineToolOverflow({ active: false });
+    const createdAt = isoAt(1_107);
+    const proposal: McpConnectorProposal = {
+      proposalId: "paper-proposal",
+      threadId: THREAD_ID,
+      action: "add",
+      state: "pending",
+      connector: {
+        connectorId: "pending-paper",
+        presetId: null,
+        name: "Paper",
+        transport: "stdio",
+        command: "/opt/example/paper",
+        args: ["mcp"],
+        envKeys: [],
+        serverName: "paper_connector",
+        authKind: "none",
+        status: "unreachable",
+        createdAt,
+        updatedAt: createdAt,
+      },
+    };
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: {
+        ...base,
+        threads: base.threads.map((thread) =>
+          thread.id === THREAD_ID
+            ? {
+                ...thread,
+                activities: [
+                  ...thread.activities,
+                  {
+                    id: EventId.makeUnsafe("paper-proposed"),
+                    kind: "mcp.connector.proposed",
+                    tone: "info",
+                    summary: "Add connector: Paper",
+                    createdAt,
+                    turnId: null,
+                    payload: { proposalId: proposal.proposalId },
+                  },
+                ],
+              }
+            : thread,
+        ),
+      },
+      configureFixture: (fixture) => {
+        fixture.connectorProposals = [
+          proposal,
+          {
+            ...proposal,
+            proposalId: "other-proposal",
+            threadId: OTHER_THREAD_ID,
+            connector: { ...proposal.connector, name: "Other connector" },
+          },
+        ];
+      },
+    });
+    try {
+      const card = page.getByRole("region", { name: "Paper connector proposal", exact: true });
+      const answer = page.getByText("Wrapped up the inline tool review.", { exact: true });
+      const assertRecapPlacement = async () => {
+        await expect.element(card).toBeVisible();
+        await expect.element(answer).toBeVisible();
+        const cardElement = card.element();
+        const answerElement = answer.element();
+        const answerRow = answerElement.closest("[data-timeline-row-kind='message']");
+        expect(answerRow?.getAttribute("data-message-id")).toBe("msg-assistant-inline-tools");
+        expect(cardElement.closest("[data-timeline-row-kind='message']")).toBe(answerRow);
+        expect(
+          answerElement.compareDocumentPosition(cardElement) & Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+        expect(cardElement.closest("[data-chat-composer-form='true']")).toBeNull();
+        expect(
+          page.getByRole("region", { name: "Other connector connector proposal" }).query(),
+        ).toBeNull();
+      };
+
+      await vi.waitFor(() =>
+        expect(findInlineToolsTurnDisclosure()?.getAttribute("aria-expanded")).toBe("false"),
+      );
+      await assertRecapPlacement();
+      expect(document.body.textContent).not.toContain("Used 6 tools");
+
+      findInlineToolsTurnDisclosure()!.click();
+      await vi.waitFor(() => expect(document.body.textContent).toContain("Used 6 tools"));
+      await assertRecapPlacement();
+      findInlineToolsTurnDisclosure()!.click();
+      await vi.waitFor(() =>
+        expect(findInlineToolsTurnDisclosure()?.getAttribute("aria-expanded")).toBe("false"),
+      );
+      await assertRecapPlacement();
+
+      await card.getByRole("button", { name: "Dismiss", exact: true }).click();
+      await expect.element(card.getByText("Dismissed", { exact: true })).toBeVisible();
+      await assertRecapPlacement();
     } finally {
       await mounted.cleanup();
     }

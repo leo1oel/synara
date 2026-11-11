@@ -7,6 +7,7 @@ import {
   type ServerSettings,
   type ServerSettingsPatch,
 } from "@synara/contracts";
+import * as Equal from "effect/Equal";
 import { deepMerge, type DeepPartial } from "./Struct";
 import { defaultInstanceIdForProvider, deriveProviderInstances } from "./providerInstances";
 
@@ -34,10 +35,26 @@ export function applyServerSettingsPatch(
   const selectionPatch = patch.textGenerationModelSelection;
   const repairSelectionPatch = patch.compileRepairModelSelection;
   const merged = deepMerge(current, patch as DeepPartial<ServerSettings>);
-  let next: ServerSettings =
+  const withInstances: ServerSettings =
     patch.providerInstances !== undefined
       ? { ...merged, providerInstances: patch.providerInstances }
       : merged;
+  const newThreadSelections = patch.newThreadDefaults?.modelSelectionByProvider;
+  // A deep merge would keep options the client just cleared (fast mode off, an
+  // effort reset), so each patched provider's selection replaces the stored one.
+  let next: ServerSettings =
+    newThreadSelections !== undefined
+      ? {
+          ...withInstances,
+          newThreadDefaults: {
+            ...withInstances.newThreadDefaults,
+            modelSelectionByProvider: {
+              ...current.newThreadDefaults.modelSelectionByProvider,
+              ...newThreadSelections,
+            },
+          },
+        }
+      : withInstances;
   if (repairSelectionPatch) {
     const provider = repairSelectionPatch.provider ?? current.compileRepairModelSelection.provider;
     const options = shouldReplaceTextGenerationModelSelection(repairSelectionPatch)
@@ -97,6 +114,19 @@ export function applyServerSettingsPatch(
       ...(options !== undefined ? { options } : {}),
     } as ModelSelection,
   };
+}
+
+/**
+ * Whether a change touched more than the shared new-chat defaults. Those change
+ * with every composer pick on any client and matter only to clients, so work
+ * that follows settings (provider probes, refetches) can skip them.
+ */
+export function settingsChangedBeyondNewThreadDefaults<
+  Settings extends { readonly newThreadDefaults: unknown },
+>(previous: Settings, next: Settings): boolean {
+  const { newThreadDefaults: _previousDefaults, ...previousRest } = previous;
+  const { newThreadDefaults: _nextDefaults, ...nextRest } = next;
+  return !Equal.equals(previousRest, nextRest);
 }
 
 /** Server-owned launch options derived from the persisted non-secret settings snapshot. */

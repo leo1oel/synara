@@ -1346,9 +1346,17 @@ describe("classifyCodexStderrLine", () => {
     expect(classifyCodexStderrLine("   ")).toBeNull();
   });
 
-  it("ignores non-error structured codex logs", () => {
-    const line =
-      "2026-02-08T04:24:19.241256Z  WARN codex_core::features: unknown feature key in config: skills";
+  it.each([
+    "2026-02-08T04:24:19.241256Z  WARN codex_core::features: unknown feature key in config: skills",
+    JSON.stringify({
+      timestamp: "2026-10-15T20:05:38.509122Z",
+      level: "WARN",
+      fields: {
+        message: "ignoring interface.icon_small: icon path must resolve under plugin assets/",
+      },
+      target: "codex_skills::interface",
+    }),
+  ])("ignores non-error structured codex logs: %s", (line) => {
     expect(classifyCodexStderrLine(line)).toBeNull();
   });
 
@@ -1368,6 +1376,16 @@ describe("classifyCodexStderrLine", () => {
     for (const server of ["stripe", "polar"]) {
       const line = `\u001b[2m2026-10-14T10:40:19.340108Z\u001b[0m \u001b[31mERROR\u001b[0m \u001b[2mcodex_rmcp_client::oauth::refresh_transaction\u001b[0m: error=failed to refresh OAuth tokens for server ${server}: OAuth refresh token was rejected: Server returned error response: invalid_grant`;
       expect(classifyCodexStderrLine(line)).toBeNull();
+      expect(
+        classifyCodexStderrLine(
+          JSON.stringify({
+            timestamp: "2026-10-15T20:05:42.503791Z",
+            level: "ERROR",
+            fields: { error: `failed to refresh OAuth tokens for server ${server}: invalid_grant` },
+            target: "codex_rmcp_client::oauth::refresh_transaction",
+          }),
+        ),
+      ).toBeNull();
     }
   });
 
@@ -1375,6 +1393,17 @@ describe("classifyCodexStderrLine", () => {
     for (const server of ["synara", "supabase_connector"]) {
       const line = `2026-10-14T10:40:19.340108Z ERROR codex_rmcp_client::oauth::refresh_transaction: error=failed to refresh OAuth tokens for server ${server}: invalid_grant`;
       expect(classifyCodexStderrLine(line)).toEqual({ message: line });
+      const message = `failed to refresh OAuth tokens for server ${server}: invalid_grant`;
+      expect(
+        classifyCodexStderrLine(
+          JSON.stringify({
+            timestamp: "2026-10-15T20:05:42.503791Z",
+            level: "ERROR",
+            fields: { error: message },
+            target: "codex_rmcp_client::oauth::refresh_transaction",
+          }),
+        ),
+      ).toEqual({ message });
     }
   });
 
@@ -1383,6 +1412,16 @@ describe("classifyCodexStderrLine", () => {
     expect(classifyCodexStderrLine(line)).toEqual({
       message: line,
     });
+    expect(
+      classifyCodexStderrLine(
+        JSON.stringify({
+          timestamp: "2026-10-15T20:05:42.503791Z",
+          level: "ERROR",
+          fields: { message: "Permission denied opening the working directory" },
+          target: "codex_core::runtime",
+        }),
+      ),
+    ).toEqual({ message: "Permission denied opening the working directory" });
   });
 
   it("keeps plain stderr messages", () => {
@@ -2315,6 +2354,62 @@ describe("resolveCodexModelForAccount", () => {
 });
 
 describe("startSession", () => {
+  it("keeps mirrored user-config notices out of stderr warnings while retaining real project warnings", async () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "synara-codex-config-notice-"));
+    const configPath = path.join(root, "config.toml");
+    writeFileSync(configPath, 'notify = ["echo"]\n');
+    const authTracking = prepareCodexAuthTracking({ env: { ...process.env }, homePath: root });
+    const fake = createSyntheticCodexAppServer();
+    const { manager } = createSyntheticCodexManager(fake);
+    vi.spyOn(
+      manager as unknown as { buildSessionProcessEnv: () => Promise<unknown> },
+      "buildSessionProcessEnv",
+    ).mockResolvedValue({
+      env: {},
+      authTracking,
+      authFingerprint: readCodexPreparedAuthTrackingFingerprint(authTracking),
+    });
+    try {
+      await manager.startSession({
+        threadId: asThreadId("config-notice-thread"),
+        provider: "codex",
+        providerOptions: { codex: { homePath: root } },
+        cwd: root,
+        runtimeMode: "full-access",
+        agentGatewayCapabilityInput: AGENT_GATEWAY_NO_CAPABILITIES,
+      });
+      const warnings: string[] = [];
+      manager.on("event", (event) => {
+        if (event.method === "process/stderr" && event.message) warnings.push(event.message);
+      });
+      const notice = (file: string) =>
+        `Ignored unsupported project-local config keys in ${file}: notify. If you want these settings to apply, manually set them in your user-level config.toml.`;
+      const stderr = fake.children[0]!.stderr;
+      const emit = (message: string) =>
+        stderr.emit(
+          "data",
+          Buffer.from(
+            `${JSON.stringify({
+              timestamp: "2026-11-07T20:10:07.720750Z",
+              level: "ERROR",
+              target: "codex_app_server",
+              fields: { message },
+            })}\n`,
+          ),
+        );
+      emit(notice(configPath));
+      const projectWarning = notice(path.join(root, "project", ".codex", "config.toml"));
+      emit(projectWarning);
+      const invalidConfig = `Cannot parse ${configPath}: invalid TOML`;
+      emit(invalidConfig);
+      expect(warnings).toEqual([projectWarning, invalidConfig]);
+      expect(readFileSync(configPath, "utf8")).toBe('notify = ["echo"]\n');
+    } finally {
+      await manager.stopAll();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("resumes a synthetic large-history thread across restart without replay or payload exposure", async () => {
     const fake = createSyntheticCodexAppServer();
     const cwd = mkdtempSync(path.join(os.tmpdir(), "synara-codex-large-resume-"));

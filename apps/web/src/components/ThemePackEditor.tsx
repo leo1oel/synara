@@ -48,6 +48,7 @@ import {
   resolveThemePack,
 } from "../theme/theme.logic";
 import { useTranslation } from "~/i18n";
+import { Translation } from "~/i18n/Translation";
 
 type ThemePackEditorProps = {
   isActive?: boolean;
@@ -428,16 +429,18 @@ function ThemeRow({ label, children }: { label: string; children: React.ReactNod
 
 // ── Color pill ────────────────────────────────────────────────────────────
 
-function ColorPill({
+export function ColorPill({
   color,
   ariaLabel,
   onChange,
   onReset,
+  immediate = false,
 }: {
   color: string;
   ariaLabel: string;
   onChange: (next: string) => void;
   onReset?: (() => void) | undefined;
+  immediate?: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -500,7 +503,8 @@ function ColorPill({
   const handleValidDraft = (next: string) => {
     const normalized = next.trim().toLowerCase();
     setDraftHex(normalized);
-    scheduleCommit(normalized);
+    if (immediate) commitColor(normalized);
+    else scheduleCommit(normalized);
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -755,8 +759,13 @@ function ImportThemeDialog({
             })}
           </DialogTitle>
           <p className="text-ui leading-snug text-muted-foreground">
-            {t("common:pasteAThemeShareStringBeginningWith")}{" "}
-            <code className="rounded bg-muted px-1 py-0.5 font-chat-code">codex-theme-v1:</code>.{" "}
+            <Translation
+              message="common:pasteAThemeShareStringBeginningWith"
+              values={{ prefix: "codex-theme-v1:" }}
+              components={{
+                code: <code className="rounded bg-muted px-1 py-0.5 font-chat-code" />,
+              }}
+            />{" "}
             {t("common:theEmbeddedVariantMustMatchAndTheSelectedCode", {
               variant: t(
                 variant === "dark"

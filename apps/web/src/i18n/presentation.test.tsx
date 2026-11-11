@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { setLanguagePreference } from ".";
+import { i18n } from ".";
 import { formatDayAwareTimestamp } from "../timestampFormat";
 import {
   PullRequestStateGlyph,
@@ -12,38 +12,23 @@ import {
   resolveIssueStatePresentation,
 } from "../components/pullRequest/pullRequestStatePresentation";
 
-afterEach(() => setLanguagePreference("system"));
-
 describe("locale-aware presentation", () => {
-  it("changes weekday names immediately and keeps formatter caches separate", () => {
+  it("names weekdays", () => {
     const now = new Date(2026, 2, 17, 12, 0);
     const monday = new Date(2026, 2, 16, 9, 5).toISOString();
-    setLanguagePreference("en");
-    expect(formatDayAwareTimestamp(monday, "24-hour", now)).toMatch(/^Monday /);
-    setLanguagePreference("zh-CN");
-    expect(formatDayAwareTimestamp(monday, "24-hour", now)).toMatch(/^星期一 /);
-    setLanguagePreference("en");
     expect(formatDayAwareTimestamp(monday, "24-hour", now)).toMatch(/^Monday /);
   });
 
-  it("keeps source PR and issue states stable for agent context while localizing glyphs", () => {
-    setLanguagePreference("zh-CN");
+  it("keeps source PR and issue states stable for agent context", () => {
     expect(resolvePrStatePresentation({ state: "open", isDraft: true }).label).toBe("PR draft");
     expect(
       resolveIssueStatePresentation({ state: "closed", stateReason: "completed" }).shortLabel,
     ).toBe("Closed");
-    expect(renderToStaticMarkup(<PullRequestStateGlyph state="open" isDraft={true} />)).toContain(
-      'aria-label="PR 草稿"',
-    );
-    expect(
-      renderToStaticMarkup(<IssueStateGlyph state="closed" stateReason="completed" />),
-    ).toContain('aria-label="议题已关闭"');
   });
 });
 
 it("keeps project names that match translation keys unchanged in settings groups", async () => {
   const { SettingsSection } = await import("../components/settings/SettingsPanelPrimitives");
-  setLanguagePreference("zh-CN");
   expect(
     renderToStaticMarkup(
       <SettingsSection title="workspace:toast_settings" translateTitle={false}>
@@ -57,5 +42,21 @@ it("keeps project names that match translation keys unchanged in settings groups
         <span>data</span>
       </SettingsSection>,
     ),
-  ).toContain(">设置</h2>");
+  ).toContain(">Settings</h2>");
+});
+
+// Lattice's embedded panel reads in Chinese when Lattice does, with Lattice's own terms.
+describe("Lattice's Chinese panel", () => {
+  afterEach(() => void i18n.changeLanguage("en"));
+
+  it("localizes PR and issue glyphs while source states stay stable for agent context", () => {
+    void i18n.changeLanguage("zh-CN");
+    expect(resolvePrStatePresentation({ state: "open", isDraft: true }).label).toBe("PR draft");
+    expect(renderToStaticMarkup(<PullRequestStateGlyph state="open" isDraft={true} />)).toContain(
+      'aria-label="PR 草稿"',
+    );
+    expect(
+      renderToStaticMarkup(<IssueStateGlyph state="closed" stateReason="completed" />),
+    ).toContain('aria-label="议题已关闭"');
+  });
 });

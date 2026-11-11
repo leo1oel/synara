@@ -1,3 +1,5 @@
+import { RemoteHostTrustRepositoryLive } from "./persistence/Layers/RemoteHostTrust";
+import { RemoteDeviceTrustRepositoryLive } from "./persistence/Layers/RemoteDeviceTrust";
 import { ProjectionThreadMessageRepositoryLive } from "./persistence/Layers/ProjectionThreadMessages";
 import { OrchestrationCommandReceiptRepositoryLive } from "./persistence/Layers/OrchestrationCommandReceipts";
 import { QueuedTurnPromotionRepositoryLive } from "./persistence/Layers/QueuedTurnPromotions";
@@ -85,6 +87,8 @@ import { PullRequestAutoFixServiceLive } from "./pullRequestAutoFix/Layers/PullR
 import { GitHubInboxServiceLive } from "./githubInbox/Layers/GitHubInboxService";
 import { ProviderHealthLive } from "./provider/Layers/ProviderHealth";
 import { makeServerProviderLayer } from "./provider/runtimeLayer";
+import { RemoteSessionRegistryLive } from "./remoteSessions/sessionRegistry";
+import { HostConnectionRegistryLive } from "./hostConnections/registry";
 
 export { makeServerProviderLayer } from "./provider/runtimeLayer";
 
@@ -227,6 +231,7 @@ export function makeServerRuntimeServicesLayer(
     Layer.provide(sessionCredentialLayer),
   );
   const serverAuthLayer = ServerAuthLive.pipe(
+    Layer.provide(RemoteSessionRegistryLive),
     Layer.provide(ServerAuthPolicyLive),
     Layer.provide(BootstrapCredentialServiceLive),
     Layer.provide(sessionCredentialLayer),
@@ -273,6 +278,9 @@ export function makeServerRuntimeServicesLayer(
     Layer.provideMerge(agentGatewayCredentialsLayer),
   );
   const agentGatewayLayer = AgentGatewayLive.pipe(
+    Layer.provideMerge(mcpConnectorsLayer),
+    Layer.provideMerge(ServerEnvironmentLive),
+    Layer.provideMerge(HostConnectionRegistryLive),
     Layer.provideMerge(
       Layer.mergeAll(
         ProjectionThreadMessageRepositoryLive,
@@ -287,11 +295,8 @@ export function makeServerRuntimeServicesLayer(
         HubWorkRepositoryLive,
         ProjectAgentRepositoryLive,
         ManagedAttachmentRepositoryLive,
-      ),
-    ),
-    // Lattice's host brokers, merged so the chain stays within pipe's 20-argument limit.
-    Layer.provideMerge(
-      Layer.mergeAll(
+        // Lattice's host brokers, merged here so the chain stays within pipe's
+        // 20-argument limit.
         LatticeCanvasBrokerLive,
         LatticeBibliographyBrokerLive,
         LatticeSpreadsheetBrokerLive,
@@ -395,6 +400,10 @@ export function makeServerRuntimeServicesLayer(
     ServerRuntimeStartupLive,
     WorkspaceLayerLive,
     ProjectFaviconResolverLive,
+    RemoteSessionRegistryLive,
+    RemoteDeviceTrustRepositoryLive,
+    RemoteHostTrustRepositoryLive,
+    HostConnectionRegistryLive,
   ).pipe(Layer.provideMerge(serverSettingsLayer), Layer.provideMerge(NodeServices.layer));
 }
 

@@ -4,8 +4,8 @@
 // Depends on: SettingsSidebarNav, the settings search index, and React server rendering.
 
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { setLanguagePreference, t } from "../i18n";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { i18n, t } from "../i18n";
 import { SettingsRow } from "./settings/SettingsPanelPrimitives";
 
 import { SettingsSidebarNav } from "./SettingsSidebarNav";
@@ -16,11 +16,33 @@ import {
   settingsSearchEntryTarget,
 } from "../settingsSearchIndex";
 
-afterEach(() => setLanguagePreference("system"));
+describe("settings labels", () => {
+  it("renders catalog labels while retaining explicit navigation targets", () => {
+    const html = renderToStaticMarkup(
+      <SettingsRow
+        id="setting-default-provider"
+        title="settings:changed_defaultProvider"
+        description="settings:chooseTheProviderUsedForNewChatsAgentCodex"
+      />,
+    );
+    expect(html).toContain('id="setting-default-provider"');
+    expect(html).toContain("Default provider");
+    expect(html).toContain("Choose the provider used for new chats");
+  });
 
-describe("localized settings", () => {
+  it("finds English settings with stable links", () => {
+    const [result] = rankSettingsSearchEntries("default provider", 12);
+    expect(result?.id).toBe("general:default-provider");
+    expect(settingsSearchEntryTarget(result!)).toBe("setting-default-provider");
+  });
+});
+
+// Lattice's embedded panel keeps reading in Chinese when Lattice does.
+describe("Chinese settings in Lattice's panel", () => {
+  afterEach(() => void i18n.changeLanguage("en"));
+
   it("renders Chinese labels while retaining explicit navigation targets", () => {
-    setLanguagePreference("zh-CN");
+    void i18n.changeLanguage("zh-CN");
     const html = renderToStaticMarkup(
       <SettingsRow
         id="setting-default-provider"
@@ -33,28 +55,17 @@ describe("localized settings", () => {
     expect(html).toContain("选择新聊天使用的提供商");
   });
 
-  it("finds English settings in every interface locale and Chinese settings in Chinese with stable links", () => {
-    for (const language of ["en", "zh-CN", "es"] as const) {
-      setLanguagePreference(language);
-      const queries =
-        language === "zh-CN" ? ["default provider", "默认提供商"] : ["default provider"];
-      for (const query of queries) {
-        const [result] = rankSettingsSearchEntries(query, 12);
-        expect(result?.id).toBe("general:default-provider");
-        expect(settingsSearchEntryTarget(result!)).toBe("setting-default-provider");
-      }
-      const languageQueries = language === "zh-CN" ? ["language", "语言"] : ["language"];
-      for (const query of languageQueries) {
-        const [result] = rankSettingsSearchEntries(query, 12);
-        expect(result?.id).toBe("general:language");
-        expect(settingsSearchEntryTarget(result!)).toBe("setting-language");
-      }
+  it("finds settings by their English and Chinese names", () => {
+    void i18n.changeLanguage("zh-CN");
+    for (const query of ["default provider", "默认提供商"]) {
+      const [result] = rankSettingsSearchEntries(query, 12);
+      expect(result?.id).toBe("general:default-provider");
+      expect(settingsSearchEntryTarget(result!)).toBe("setting-default-provider");
     }
   });
 });
 
 describe("rankSettingsSearchEntries", () => {
-  beforeEach(() => setLanguagePreference("en"));
   it("returns nothing for an empty query", () => {
     expect(rankSettingsSearchEntries("", 12)).toHaveLength(0);
     expect(rankSettingsSearchEntries("   ", 12)).toHaveLength(0);

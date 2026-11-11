@@ -9,7 +9,7 @@ import { i18n, useTranslation } from "~/i18n";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
 import { FILE_COMMENT_TEXT_MAX_CHARS, normalizeFileCommentText } from "~/lib/fileComments";
-import { SynaraLogo } from "../SynaraLogo";
+import { SynaraLogo } from "@synara/profile-ui/logo";
 import { Button } from "../ui/button";
 import { FIELD_CONTROL_CLASS_NAME, FIELD_MULTILINE_CONTENT_CLASS_NAME } from "../ui/field-styles";
 import { cn } from "~/lib/utils";

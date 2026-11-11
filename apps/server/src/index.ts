@@ -11,6 +11,9 @@ import { ServerLive } from "./effectServer";
 import { NetService } from "@synara/shared/Net";
 import { FetchHttpClient } from "effect/unstable/http";
 import { startDesktopParentMonitor } from "./desktopParentMonitor";
+import { initializeDesktopUpdateBridge } from "./desktopUpdateBridge";
+
+initializeDesktopUpdateBridge();
 
 const RuntimeLayer = Layer.empty.pipe(
   Layer.provideMerge(CliConfig.layer),

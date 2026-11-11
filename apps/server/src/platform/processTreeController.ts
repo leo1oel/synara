@@ -5,7 +5,7 @@
 import { execProcessFile, spawnProcessSync } from "@synara/shared/processRuntime";
 
 import { createLogger } from "../logger";
-import { captureWindowsProcessChildrenMap } from "./windowsProcessSnapshot";
+import { captureWindowsProcessChildrenMap } from "./windowsProcessSnapshot.ts";
 
 const log = createLogger("process-tree");
 const PROCESS_TREE_SYNC_SCAN_TIMEOUT_MS = 1_000;

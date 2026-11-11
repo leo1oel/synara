@@ -41,7 +41,7 @@ export function resolveAgentHostProfile(
 export const ACTIVE_AGENT_HOST_PROFILE = resolveAgentHostProfile();
 
 export function isThreadControlWithinActiveHostBoundary(
-  callerProjectId: string,
+  callerProjectId: string | undefined,
   targetProjectId: string,
 ): boolean {
   return ACTIVE_AGENT_HOST_PROFILE.id !== "lattice" || callerProjectId === targetProjectId;

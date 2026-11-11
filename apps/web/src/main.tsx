@@ -23,16 +23,17 @@ import { startLatticeHostToolRelay } from "./latticeHostToolRelay";
 import { startLatticeHostThemeRelay } from "./latticeHostThemeRelay";
 import { startLatticePopupDismissal } from "./latticePopupDismissal";
 import { startLatticeHostShortcuts } from "./latticeHostShortcuts";
-import { isElectron } from "./env";
+import { isDesktopPresentation } from "~/lib/hosts/workspacePresentation";
+import { readWorkspaceFrame } from "./lib/hosts/workspaceFrame";
 import { readDesktopWindowTranslucency } from "./lib/desktopWindowTranslucency";
 import { installGlassOverlayCutout } from "./lib/glassOverlayCutout";
+import { trackProductNavigation } from "./lib/productAnalytics";
 import { installRendererErrorDiagnostics } from "./lib/rendererErrorDiagnostics";
-import { initializeI18n } from "./i18n";
+import { applyHostLocale } from "./i18n";
 
-// The embed handshake carries Lattice's language, so it is read before i18n starts.
+// The embed handshake carries Lattice's language, so it is applied before the first render.
 initializeEmbedMode();
-const disposeI18n = initializeI18n();
-if (import.meta.hot) import.meta.hot.dispose(disposeI18n);
+applyHostLocale();
 
 const disposeRendererDiagnostics = installRendererErrorDiagnostics();
 if (import.meta.hot) import.meta.hot.dispose(() => disposeRendererDiagnostics?.());
@@ -53,11 +54,16 @@ startLatticeHostShortcuts();
 // Before the first render: settings hooks read the stored rail on mount.
 revealHubsRailItemOnce();
 const router = getRouter(appHistory);
+const disposeProductNavigation = router.subscribe("onResolved", ({ toLocation, pathChanged }) => {
+  if (pathChanged) trackProductNavigation(toLocation.pathname);
+});
+if (import.meta.hot) import.meta.hot.dispose(disposeProductNavigation);
 const rootElement = document.getElementById("root") as HTMLElement;
 
 document.title = APP_DISPLAY_NAME;
+if (readWorkspaceFrame()) document.documentElement.dataset.workspaceFrame = "true";
 
-if (isElectron) {
+if (isDesktopPresentation) {
   document.documentElement.dataset.runtime = "electron";
   // Desktop windows backed by macOS vibrancy or the Hyprland compositor blur are transparent
   // (see getWindowMaterialOptions in apps/desktop). A `backdrop-filter` cannot hide page

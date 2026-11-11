@@ -1,24 +1,34 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
-import { CHINESE_UI_BETA_FEATURE, isBetaFeatureEnabled } from "@synara/shared/betaFeatures";
+import { isBetaFeatureEnabled } from "@synara/shared/betaFeatures";
 
 import { codeEditorEngine, visibleProviderDescriptors } from "./betaFeatures";
 
 afterEach(() => {
   vi.doUnmock("./embedMode");
+  vi.doUnmock("@synara/shared/betaFeatures");
   vi.resetModules();
 });
 
-// Lattice embeds read Stable feature gates (4525aedab). Oh My Pi, the Beta-only feature
-// this was written against, ships on Stable since acf63479f, so a feature that is
-// still Beta-only shows the gate.
+// Lattice embeds read Stable feature gates (4525aedab). Upstream 1.5 has no Beta-only
+// feature left to show the gate, so the test checks the flavor each gate is asked with.
 it.each([true, false])("keeps Lattice embeds on Stable feature gates: %s", async (embedded) => {
   vi.resetModules();
   vi.doMock("./embedMode", () => ({ isSynaraEmbedMode: () => embedded }));
+  const flavors: string[] = [];
+  vi.doMock("@synara/shared/betaFeatures", async (importOriginal) => ({
+    ...(await importOriginal<typeof import("@synara/shared/betaFeatures")>()),
+    isBetaFeatureEnabled: (_feature: string, flavor: string) => {
+      flavors.push(flavor);
+      return true;
+    },
+  }));
   const { isBetaFeatureOn } = await import("./betaFeatures");
-  expect(isBetaFeatureOn(CHINESE_UI_BETA_FEATURE)).toBe(!embedded);
+  flavors.length = 0;
   expect(isBetaFeatureOn("codex")).toBe(true);
+  expect(flavors.length).toBe(1);
+  expect(flavors[0] === "production").toBe(embedded);
 });
 
 describe("visibleProviderDescriptors", () => {

@@ -1,6 +1,5 @@
 import { MessageId, TurnId, type OrchestrationThreadActivity } from "@synara/contracts";
 import { describe, expect, it } from "vitest";
-import { setLanguagePreference } from "~/i18n";
 
 import {
   deriveSubagentTaskEnds,
@@ -14,6 +13,12 @@ import type { ChatMessage } from "./types";
 import { makeActivity } from "./storeTestFixtures";
 import { isComputerToolName } from "./lib/computerToolPresentation";
 import { isPlainRuntimeNoticeWorkEntry } from "./components/chat/agentActivity.logic";
+
+const diagnostic = (
+  level: string,
+  fields: Record<string, unknown>,
+  target = "codex_skills::interface",
+) => JSON.stringify({ timestamp: "2026-10-15T20:05:38.509122Z", level, fields, target });
 
 describe("deriveSubagentTaskEnds", () => {
   it("preserves settled invocations while a resumed task waits for its own completion", () => {
@@ -120,7 +125,7 @@ describe("deriveWorkLogEntries", () => {
     }
   });
 
-  it("localizes cached generated task and agent summaries without translating provider or user data", () => {
+  it("derives generated task and agent summaries without rewriting provider or user data", () => {
     const activities = [
       makeActivity({
         id: "localized-tasks",
@@ -195,76 +200,42 @@ describe("deriveWorkLogEntries", () => {
       }),
     ];
     const sourceSnapshot = structuredClone(activities);
-    try {
-      setLanguagePreference("en");
-      expect(
-        deriveWorkLogEntries(activities, undefined).find((entry) => entry.id === "localized-tasks")
-          ?.label,
-      ).toBe("1 of 2 tasks");
-      expect(
-        deriveWorkLogEntries(activities, undefined).find(
-          (entry) => entry.id === "localized-file-default",
-        ),
-      ).toMatchObject({ toolTitle: "Read", detail: "/repo/Settings" });
-      setLanguagePreference("zh-CN");
-      const entries = deriveWorkLogEntries(activities, undefined);
-      const computer = makeActivity({
-        id: "localized-computer",
-        kind: "tool.completed",
-        summary: "Computer Click",
-        payload: {
-          itemType: "mcp_tool_call",
-          title: "computer_click",
-          data: {
-            item: { tool: "computer_click", arguments: { label: "Save", app: "Settings" } },
-          },
+    const entries = deriveWorkLogEntries(activities, undefined);
+    const computer = makeActivity({
+      id: "localized-computer",
+      kind: "tool.completed",
+      summary: "Computer Click",
+      payload: {
+        itemType: "mcp_tool_call",
+        title: "computer_click",
+        data: {
+          item: { tool: "computer_click", arguments: { label: "Save", app: "Settings" } },
         },
-      });
-      expect(deriveWorkLogEntries([computer], undefined)).toMatchObject([
-        {
-          toolTitle: "Click on “Save” in Settings",
-          displayToolTitle: "在 Settings 的“Save”上点击",
-        },
-      ]);
-      expect(entries.find((entry) => entry.id === "localized-tasks")).toMatchObject({
-        label: "1 / 2 项任务",
-        detail: "Open",
-      });
-      expect(entries.find((entry) => entry.id === "localized-agent")).toMatchObject({
-        toolTitle: "Spawn agent",
-        subagentAction: {
-          tool: "spawnAgent",
-          summaryText: "正在启动 2 个智能体",
-          prompt: "Settings",
-        },
-        subagents: [{ nickname: "Open" }, { nickname: "Save" }],
-      });
-      expect(entries.find((entry) => entry.id === "localized-read")).toMatchObject({
-        toolTitle: "Read",
-        command: "cat Settings",
-      });
-      expect(entries.find((entry) => entry.id === "localized-file-default")).toMatchObject({
-        toolTitle: "Read",
-        displayToolTitle: "已读取",
-        detail: "/repo/Settings",
-      });
-      expect(entries.find((entry) => entry.id === "localized-answer")?.userInputExchange).toEqual([
-        { id: "choice", header: "Settings", question: "Open", options: ["Save"], answer: "Save" },
-      ]);
-      expect(activities).toEqual(sourceSnapshot);
-      setLanguagePreference("en");
-      expect(
-        deriveWorkLogEntries(activities, undefined).find((entry) => entry.id === "localized-tasks")
-          ?.label,
-      ).toBe("1 of 2 tasks");
-      const defaultFileEntry = deriveWorkLogEntries(activities, undefined).find(
-        (entry) => entry.id === "localized-file-default",
-      );
-      expect(defaultFileEntry).toMatchObject({ toolTitle: "Read", detail: "/repo/Settings" });
-      expect(defaultFileEntry?.displayToolTitle).toBeUndefined();
-    } finally {
-      setLanguagePreference("en");
-    }
+      },
+    });
+    expect(deriveWorkLogEntries([computer], undefined)).toMatchObject([
+      { toolTitle: "Click on “Save” in Settings" },
+    ]);
+    expect(entries.find((entry) => entry.id === "localized-tasks")).toMatchObject({
+      label: "1 of 2 tasks",
+      detail: "Open",
+    });
+    expect(entries.find((entry) => entry.id === "localized-agent")).toMatchObject({
+      toolTitle: "Spawn agent",
+      subagentAction: { tool: "spawnAgent", prompt: "Settings" },
+      subagents: [{ nickname: "Open" }, { nickname: "Save" }],
+    });
+    expect(entries.find((entry) => entry.id === "localized-read")).toMatchObject({
+      toolTitle: "Read",
+      command: "cat Settings",
+    });
+    const defaultFileEntry = entries.find((entry) => entry.id === "localized-file-default");
+    expect(defaultFileEntry).toMatchObject({ toolTitle: "Read", detail: "/repo/Settings" });
+    expect(defaultFileEntry?.displayToolTitle).toBeUndefined();
+    expect(entries.find((entry) => entry.id === "localized-answer")?.userInputExchange).toEqual([
+      { id: "choice", header: "Settings", question: "Open", options: ["Save"], answer: "Save" },
+    ]);
+    expect(activities).toEqual(sourceSnapshot);
   });
 
   it("pairs an answered question with its answers in one exchange row", () => {
@@ -530,21 +501,8 @@ describe("deriveWorkLogEntries", () => {
     expect(second).toEqual(first);
     second.forEach((entry, index) => expect(entry).toBe(first[index]));
     expect(first[0]).not.toHaveProperty("collapseKey");
-    try {
-      setLanguagePreference("zh-CN");
-      const localized = derive();
-      expect(localized[1]).not.toBe(first[1]);
-      expect(localized[1]).toMatchObject({
-        toolTitle: "Ran",
-        displayToolTitle: "已运行",
-        command: "bun run lint",
-      });
-      derive().forEach((entry, index) => expect(entry).toBe(localized[index]));
-      setLanguagePreference("en");
-      expect(derive()[1]?.displayToolTitle).toBeUndefined();
-    } finally {
-      setLanguagePreference("en");
-    }
+    expect(first[1]).toMatchObject({ toolTitle: "Ran", command: "bun run lint" });
+    expect(first[1]?.displayToolTitle).toBeUndefined();
   });
 
   it("omits routine approval resolutions between tool lifecycle updates", () => {
@@ -2184,6 +2142,26 @@ describe("deriveWorkLogEntries", () => {
     });
   });
 
+  it("keeps connector approval cards visible when later turns have messages", () => {
+    const entries = deriveWorkLogEntries(
+      [
+        makeActivity({
+          id: "connector",
+          kind: "mcp.connector.proposed",
+          tone: "info",
+          summary: "Add connector: Paper",
+          payload: { proposalId: "proposal-1" },
+        }),
+        makeActivity({ id: "newer", turnId: "turn-2", kind: "tool.started", summary: "Working" }),
+      ],
+      TurnId.makeUnsafe("turn-2"),
+      { visibleTurnIds: new Set([TurnId.makeUnsafe("turn-2")]) },
+    );
+    expect(entries.find((entry) => entry.id === "connector")?.connectorProposalId).toBe(
+      "proposal-1",
+    );
+  });
+
   it("exposes a provider-independent Synara thread creation recap", () => {
     const activities: OrchestrationThreadActivity[] = [
       makeActivity({
@@ -2243,6 +2221,43 @@ describe("deriveWorkLogEntries", () => {
         },
       ],
     });
+  });
+
+  it("keeps the owning computer of a remote Synara thread creation recap", () => {
+    const thread = {
+      threadId: "remote-thread",
+      title: "Say hi",
+      provider: "codex",
+      model: "gpt-5.6-terra",
+      environment: "local",
+      status: "task_dispatched",
+    };
+    const recap = (payload: Record<string, unknown>) =>
+      deriveWorkLogEntries(
+        [
+          makeActivity({
+            id: "synara-created-remote-thread",
+            createdAt: "2026-02-23T00:00:05.000Z",
+            turnId: "turn-1",
+            kind: "synara.threads.created",
+            summary: "Created 1 Synara thread",
+            tone: "info",
+            payload: { operationId: "gateway:create:remote", threads: [thread], ...payload },
+          }),
+        ],
+        TurnId.makeUnsafe("turn-1"),
+      )[0]?.synaraThreadCreation;
+
+    expect(recap({ environmentId: "mini", hostName: " Mac mini " })).toEqual({
+      operationId: "gateway:create:remote",
+      requestedCount: 1,
+      createdCount: 1,
+      threads: [thread],
+      environmentId: "mini",
+      hostName: "Mac mini",
+    });
+    expect(recap({ environmentId: "mini" })).not.toHaveProperty("hostName");
+    expect(recap({ hostName: "Mac mini" })).not.toHaveProperty("hostName");
   });
 
   it("exposes deterministic worker monitor notices for coordinator rows", () => {
@@ -2395,6 +2410,51 @@ describe("deriveWorkLogEntries", () => {
 
     const entries = deriveWorkLogEntries(activities, undefined);
     expect(entries.map((entry) => entry.id)).toEqual(["tool-complete"]);
+  });
+
+  it("omits persisted Codex diagnostic noise while retaining errors and retry notices", () => {
+    const warning = (id: string, message: string, extra: Record<string, unknown> = {}) =>
+      makeActivity({
+        id,
+        kind: "runtime.warning",
+        summary: "Runtime warning",
+        tone: "info",
+        payload: { message, ...extra },
+      });
+    const noise = diagnostic("WARN", { message: "ignoring interface.icon_small" });
+    const entries = deriveWorkLogEntries(
+      [
+        warning("old-skill-warning", noise),
+        warning(
+          "old-oauth-warning",
+          diagnostic(
+            "ERROR",
+            { error: "failed to refresh OAuth tokens for server stripe: invalid_grant" },
+            "codex_rmcp_client::oauth::refresh_transaction",
+          ),
+        ),
+        warning(
+          "real-error",
+          diagnostic(
+            "ERROR",
+            { message: "Permission denied opening the working directory" },
+            "codex_core::runtime",
+          ),
+        ),
+        warning("retry", noise, { willRetry: true }),
+        warning("json-not-log", '{"level":"WARN","message":"Check the project configuration"}'),
+      ],
+      undefined,
+    );
+    expect(entries.map((entry) => entry.id).toSorted()).toEqual([
+      "json-not-log",
+      "real-error",
+      "retry",
+    ]);
+    expect(entries.find((entry) => entry.id === "real-error")).toMatchObject({
+      label: "Permission denied opening the working directory",
+      detail: "Permission denied opening the working directory",
+    });
   });
 
   it("shows runtime warning messages and collapses repeated identical warning rows", () => {

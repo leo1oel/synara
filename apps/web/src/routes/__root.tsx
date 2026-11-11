@@ -1,3 +1,6 @@
+import { readWorkspaceFrame } from "../lib/hosts/workspaceFrame";
+import { subscribeWorkspaceKeybindings } from "../lib/hosts/workspaceKeybindings";
+import { onControllerStateChange } from "../lib/hosts/connectionClients";
 import { EditorDirtyRouteGuard } from "../components/EditorDirtyRouteGuard";
 import {
   ORCHESTRATION_STREAM_OVERFLOW_CODE,
@@ -9,6 +12,7 @@ import {
   type OrchestrationThread,
   type ServerConfig,
   type ServerProviderStatus,
+  type ServerSettings,
   type WsCompatibilityError,
 } from "@synara/contracts";
 import { defaultTerminalTitleForCliKind } from "@synara/shared/terminalThreads";
@@ -44,10 +48,15 @@ import { AppSnapWelcomeDialog } from "../components/AppSnapWelcomeDialog";
 import { BetaWelcomeDialog } from "../components/BetaWelcomeDialog";
 import { useOnboarding } from "../onboarding/useOnboarding";
 import { ProjectImportAnnouncementDialog } from "../projectImport/ProjectImportAnnouncementDialog";
+import { RemoteConnectionsAnnouncement } from "../components/hosts/RemoteConnectionsAnnouncement";
 import { useProjectImportDialogStore } from "../projectImport/projectImportDialogStore";
 import { FeatureTourDialog } from "../components/FeatureTourDialog";
 import { SafariAccessOnboarding } from "../components/SafariAccessOnboarding";
+import { NewThreadDefaultsSyncCoordinator } from "../components/NewThreadDefaultsSyncCoordinator";
+import { settingsChangedBeyondNewThreadDefaults } from "@synara/shared/serverSettings";
 import { QueuedComposerDrainCoordinator } from "../components/QueuedComposerDrainCoordinator";
+import { GlobalAccountDialogs } from "../components/account/GlobalAccountDialogs";
+import { HostDiscoverabilityPrompt } from "../components/hosts/HostDiscoverabilityPrompt";
 import { FeedbackDialog } from "../components/FeedbackDialog";
 import { SETTINGS_TARGETS } from "../settingsNavigation";
 import ShortcutsDialog from "../components/ShortcutsDialog";
@@ -63,6 +72,7 @@ import { useFeatureFlags } from "../featureFlags";
 import { useFocusedChatContext } from "../focusedChatContext";
 import { useFeedbackDialogStore } from "../feedbackDialogStore";
 import type { FeedbackThreadContext } from "../feedback";
+import { invalidateAccountStatus } from "../lib/accountReactQuery";
 import { isTerminalFocused } from "../lib/terminalFocus";
 import {
   reconcileServerProviderStatuses,
@@ -372,20 +382,33 @@ function RootRouteView() {
           <GlobalShortcutsDialog />
           <BrowserVaultDialog />
           <GlobalFeedbackDialog />
-          {!embedded && <GlobalWhatsNewSurface />}
+          {/* Lattice's embed has no Synara account, Remote hosts or release notes. */}
+          {!embedded && <GlobalAccountDialogs />}
+          {/* Mounted globally because the host it asks about registers itself
+              at sign-in, wherever the user happens to be in the app. */}
+          {!embedded && !readWorkspaceFrame() && <HostDiscoverabilityPrompt />}
+          {!embedded && !readWorkspaceFrame() && <GlobalWhatsNewSurface />}
           <TaskCompletionNotifications />
           <QueuedComposerDrainCoordinator />
-          {/* Beta welcome must resolve the first-run gate even while Safari is queued. */}
-          {!embedded && <BetaWelcomeDialog />}
-          <SafariAccessOnboarding startup>
-            {!embedded && (
-              <AppSnapWelcomeDialog>
-                <FeatureTourDialog />
-              </AppSnapWelcomeDialog>
-            )}
-          </SafariAccessOnboarding>
-          <GlobalOnboardingDialog />
-          <ProjectImportAnnouncementDialog />
+          <NewThreadDefaultsSyncCoordinator />
+          {!readWorkspaceFrame() && (
+            <>
+              {/* Beta welcome resolves the first-run gate while Safari is queued. */}
+              {!embedded && <BetaWelcomeDialog />}
+              <SafariAccessOnboarding startup>
+                {!embedded && (
+                  <AppSnapWelcomeDialog>
+                    <FeatureTourDialog />
+                  </AppSnapWelcomeDialog>
+                )}
+              </SafariAccessOnboarding>
+              {/* Upstream's full-window first-run onboarding would cover Lattice's panel. */}
+              {!embedded && <GlobalOnboardingDialog />}
+              <ProjectImportAnnouncementDialog />
+              {/* Lattice embeds no Synara rail or account, so Remote is never announced there. */}
+              {!embedded && <RemoteConnectionsAnnouncement />}
+            </>
+          )}
           <GlobalProjectImportDialog />
           <AppSnapCoordinator />
           <DesktopProjectBootstrap />
@@ -689,6 +712,7 @@ async function runProviderUpdateAll(params: {
         manualCommands.length > 0
           ? t("common:copyTheCommandsBelowToUpdateManuallyInA", {
               failures: failureLines,
+              count: manualCommands.length,
             })
           : failureLines,
       data: {
@@ -2717,6 +2741,10 @@ function EventRouter() {
     // onServerConfigUpdated replays the latest cached value synchronously
     // during subscribe. Skip the toast for that replay so effect re-runs
     // don't produce duplicate toasts.
+    const unsubWorkspaceKeybindings = subscribeWorkspaceKeybindings(
+      queryClient,
+      serverQueryKeys.config(),
+    );
     let subscribed = false;
     const unsubServerConfigUpdated = onServerConfigUpdated((payload) => {
       void queryClient.invalidateQueries({ queryKey: serverQueryKeys.config() });
@@ -2802,11 +2830,22 @@ function EventRouter() {
         });
       }
     });
+    const unsubControllerState = onControllerStateChange((state) => {
+      if (state === "open") void invalidateAccountStatus(queryClient).catch(() => undefined);
+    });
     const unsubServerSettingsUpdated = onServerSettingsUpdated((payload) => {
+      const previousSettings = queryClient.getQueryData<ServerSettings>(serverQueryKeys.settings());
       queryClient.setQueryData(serverQueryKeys.settings(), payload.settings);
-      void queryClient.invalidateQueries({
-        queryKey: serverSettingsQueryOptions().queryKey,
-      });
+      // A composer pick only moves the shared new-chat defaults, which the push
+      // already carries whole; refetching on each one would only add load.
+      if (
+        previousSettings === undefined ||
+        settingsChangedBeyondNewThreadDefaults(previousSettings, payload.settings)
+      ) {
+        void queryClient.invalidateQueries({
+          queryKey: serverSettingsQueryOptions().queryKey,
+        });
+      }
     });
     subscribed = true;
     void ensureScopedSubscriptions();
@@ -2948,8 +2987,10 @@ function EventRouter() {
       unsubDevServerEvent();
       unsubWelcome();
       unsubServerConfigUpdated();
+      unsubWorkspaceKeybindings?.();
       unsubProviderStatusesUpdated();
       unsubWsTransportState();
+      unsubControllerState();
       unsubTransportOpenCount();
       unsubServerSettingsUpdated();
     };

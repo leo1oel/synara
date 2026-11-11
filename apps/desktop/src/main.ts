@@ -1,15 +1,12 @@
 import "./httpRuntime";
+import {
+  attachDesktopUpdateControl,
+  DESKTOP_UPDATE_IPC_ENV,
+  supportsDesktopUpdateControl,
+} from "./desktopUpdateControl";
+import { registerRemoteResourceBroker, REMOTE_RESOURCE_SCHEME } from "./remoteResourceBroker";
 import { showDiagnosticStartupDialog } from "./startupDiagnosticDialog";
-import {
-  initializeDesktopI18n,
-  setDesktopLanguagePreference,
-  t,
-  translateNativeMenuRoles,
-} from "./i18n";
-import {
-  applyDesktopLanguagePreference,
-  readDesktopLanguagePreference,
-} from "./desktopPreferences";
+import { t } from "./i18n";
 import { BackendIssueDetector } from "./backendIssueDetector";
 import { attachAppSubframeNavigationGuard } from "./subframeNavigationGuard";
 import { CuaDriverHost, sweepOrphanedCuaDrivers } from "./cuaDriverHost";
@@ -17,6 +14,8 @@ import { createLinuxCuaDriverHost } from "./linuxCuaDriverHost";
 import { LinuxEscapeKillSwitchMonitor, linuxEscapeSession } from "./linuxEscapeKillSwitchMonitor";
 import { ComputerFrameTap } from "./computerFrameTap";
 import { ComputerShield } from "./computerShield";
+import { ProductAnalytics } from "./productAnalytics";
+import { attachProductAnalyticsIpc } from "./productAnalyticsIpc";
 import { createDesktopNotificationRetainer } from "./notificationRetention";
 import { registerComputerDesktopLifecycle } from "./computerDesktopLifecycle";
 import { COMPUTER_PERMISSION_KINDS } from "@synara/shared/computerGrants";
@@ -39,9 +38,9 @@ import * as OriginalFS from "original-fs";
 
 import {
   app,
+  autoUpdater as nativeAutoUpdater,
   BrowserWindow,
   clipboard,
-  crashReporter,
   dialog,
   globalShortcut,
   ipcMain,
@@ -51,6 +50,7 @@ import {
   nativeTheme,
   protocol,
   powerMonitor,
+  powerSaveBlocker,
   screen,
   safeStorage,
   session,
@@ -58,6 +58,7 @@ import {
   systemPreferences,
 } from "electron";
 import { configureElectronNetwork } from "betterwright/electron";
+import { getBetterwrightNetworkGuard } from "./browserAutomation/betterwrightNetworkGuard";
 import type {
   BrowserWindowConstructorOptions,
   FileFilter,
@@ -91,6 +92,7 @@ import {
   canOverrideDesktopSmokeUserData,
   resolveSynaraDesktopRuntimeFlavor,
   synaraDesktopIdentity,
+  synaraSourceDesktopIdentity,
 } from "@synara/shared/desktopIdentity";
 import { NetService } from "@synara/shared/Net";
 import { applyShellEnvironmentHydrationMarker } from "@synara/shared/shell";
@@ -126,12 +128,7 @@ import {
 } from "./backendStartupReadiness";
 import { DesktopBetaChannel, readBetaImportResult, resolveBetaHomeDir } from "./betaChannel";
 import type { ExpectedTeamId } from "./betaInstaller";
-import {
-  BetaDiagnostics,
-  readLogTail,
-  resolveBetaDiagnosticsEndpoint,
-  type BetaDiagnosticsEventName,
-} from "./betaDiagnostics";
+import { BetaDiagnostics, type BetaDiagnosticsEventName } from "./betaDiagnostics";
 import { attachBetaRendererDiagnostics } from "./betaRendererDiagnostics";
 import { guardDesktopWindowClose, showDesktopConfirmDialog } from "./confirmDialog";
 import {
@@ -234,6 +231,7 @@ import {
 } from "./rendererCrashRecovery";
 import {
   type DownloadProgressSample,
+  canCheckForDesktopUpdates,
   getAutoUpdateDisabledReason,
   getDownloadStallTimeoutMessage,
   hasDownloadProgressAdvanced,
@@ -294,6 +292,7 @@ import {
 } from "./updateArtifactIdentity";
 import { buildGitHubReleasesPageUrl, resolveGitHubUpdateSource } from "./githubUpdateFeed";
 import { isArm64HostRunningIntelBuild, resolveDesktopRuntimeInfo } from "./runtimeArch";
+import { MacUpdateInstallHandoff } from "./macUpdateInstallHandoff";
 import { BROWSER_SESSION_PARTITION, DesktopBrowserManager } from "./browserManager";
 import { BrowserSessionRestore } from "./browserAutomation/browserSessionRestore";
 import { createCookieSessionBackend } from "./browserAutomation/electronCookieSession";
@@ -334,6 +333,12 @@ import {
   readAgentCursorPreference,
   writeAgentCursorPreference,
 } from "./agentCursorPreference";
+import {
+  createKeepAwakeController,
+  type KeepAwakeController,
+  readKeepAwakePreference,
+  writeKeepAwakePreference,
+} from "./keepAwake";
 import {
   readDesktopWindowState,
   resolveVisibleWindowBounds,
@@ -412,13 +417,17 @@ const desktopFlavor = resolveSynaraDesktopRuntimeFlavor({
   requestedFlavor: process.env.SYNARA_DESKTOP_FLAVOR,
   allowDevelopmentOverride: isSourceDesktopBuild,
 });
-const desktopIdentity = synaraDesktopIdentity(desktopFlavor);
-// Beta never honors SYNARA_HOME: a globally exported stable home would make
-// beta open (and migrate) stable's database.
+const desktopIdentity = isSourceDesktopBuild
+  ? synaraSourceDesktopIdentity(synaraDesktopIdentity(desktopFlavor))
+  : synaraDesktopIdentity(desktopFlavor);
+// Beta and Remote ignore SYNARA_HOME so a globally exported Stable home
+// cannot make a parallel app open (and migrate) Stable's database.
 const BASE_DIR =
-  (desktopFlavor === "beta"
-    ? process.env.SYNARA_BETA_HOME?.trim()
-    : process.env.SYNARA_HOME?.trim()) ||
+  (desktopFlavor === "remote"
+    ? process.env.SYNARA_REMOTE_HOME?.trim()
+    : desktopFlavor === "beta"
+      ? process.env.SYNARA_BETA_HOME?.trim()
+      : process.env.SYNARA_HOME?.trim()) ||
   Path.join(OS.homedir(), desktopIdentity.defaultHomeDirectoryName);
 const STATE_DIR = Path.join(BASE_DIR, "userdata");
 const DESKTOP_WINDOW_STATE_PATH = Path.join(STATE_DIR, "desktop-window-state.json");
@@ -441,6 +450,7 @@ function translateAutoUpdateDisabledReason(reason: string): string {
 // Written by the renderer-mirrored agent cursor colors; read at each driver
 // session open so a persisted custom cursor survives app restarts.
 const AGENT_CURSOR_PREFERENCE_PATH = Path.join(STATE_DIR, "agent-cursor-colors.json");
+const KEEP_AWAKE_PREFERENCE_PATH = Path.join(STATE_DIR, "keep-awake.json");
 const DESKTOP_SCHEME = desktopIdentity.scheme;
 const ROOT_DIR = Path.resolve(__dirname, "../../..");
 const APP_DISPLAY_NAME = desktopIdentity.displayName;
@@ -453,6 +463,7 @@ const BACKEND_LOG_FILE_NAME = "server-child.log";
 const LOG_FILE_MAX_BYTES = 10 * 1024 * 1024;
 const LOG_FILE_MAX_FILES = 10;
 const APP_RUN_ID = Crypto.randomBytes(6).toString("hex");
+const PRODUCT_ANALYTICS_STARTUP_AT = performance.now();
 const DESKTOP_BACKEND_SHUTDOWN_TOKEN = Crypto.randomBytes(32).toString("hex");
 const DESKTOP_BROWSER_HOST_CAPABILITY = Crypto.randomBytes(32).toString("base64url");
 const DESKTOP_BROWSER_HOST_CAPABILITY_FD = 3;
@@ -461,25 +472,29 @@ const DESKTOP_BROWSER_HOST_CAPABILITY_FD = 3;
 // for the same lock even when they use the same Electron executable.
 const userDataPath = resolveUserDataPath();
 app.setPath("userData", userDataPath);
-// Match the renderer storage profile, including isolated source-build profiles.
-const DESKTOP_LANGUAGE_PREFERENCE_PATH = Path.join(userDataPath, "desktop-language.json");
-initializeDesktopI18n(
-  readDesktopLanguagePreference(DESKTOP_LANGUAGE_PREFERENCE_PATH),
-  () =>
-    app.isReady()
-      ? app.getPreferredSystemLanguages()
-      : [new Intl.DateTimeFormat().resolvedOptions().locale],
-  desktopFlavor,
-);
 
-// Beta-only diagnostics: constructed solely when the baked build flavor is
-// "beta", so production binaries never run a collection path. The payload
-// schema is an allowlist; error text may still contain fragments of user data,
-// and Electron crash dumps are raw process memory.
+// Remote shares usage and diagnostics by default; Settings turns both off.
+// Stable stays opt-in for product events and never runs diagnostics.
+const productAnalytics = new ProductAnalytics({
+  homeDir: BASE_DIR,
+  channel: desktopFlavor === "beta" ? "beta" : desktopFlavor === "remote" ? "remote" : "stable",
+  appVersion: app.getVersion(),
+  platform: process.platform,
+  defaultEnabled: desktopFlavor === "remote",
+});
+
+// Diagnostics are constructed only for the Beta and Remote build flavors, so
+// production binaries never run a collection path. The payload schema is an
+// allowlist; error text may still contain fragments of user data. Remote follows
+// the sharing switch and never uploads raw crash dumps (process memory).
 const betaDiagnostics =
-  desktopFlavor === "beta"
+  desktopFlavor === "beta" || desktopFlavor === "remote"
     ? new BetaDiagnostics({
         homeDir: BASE_DIR,
+        flavor: desktopFlavor,
+        ...(desktopFlavor === "remote"
+          ? { isEnabled: () => productAnalytics.getState().enabled }
+          : {}),
         appVersion: app.getVersion(),
         platform: process.platform,
         arch: process.arch,
@@ -506,21 +521,11 @@ const betaDiagnostics =
         },
       })
     : null;
-
-if (betaDiagnostics) {
-  crashReporter.start({
-    productName: APP_DISPLAY_NAME,
-    companyName: "Synara",
-    submitURL: `${resolveBetaDiagnosticsEndpoint(process.env)}/v1/crash`,
-    uploadToServer: true,
-    compress: true,
-    globalExtra: {
-      installId: betaDiagnostics.installId,
-      flavor: "beta",
-      appVersion: app.getVersion(),
-    },
-  });
-}
+productAnalytics.onChange((enabled) => {
+  if (enabled) betaDiagnostics?.resumeSharing();
+  else betaDiagnostics?.discardQueue();
+});
+// Raw process dumps can contain work content; no flavor starts an upload-capable reporter.
 
 const trackBetaDiagnostics = (
   event: BetaDiagnosticsEventName,
@@ -538,6 +543,7 @@ process.stderr.on("error", handleDesktopStdioError);
 // Node's exit behavior — the POSIX EPIPE filter and the default crash path
 // stay exactly as before.
 process.on("uncaughtExceptionMonitor", (error: unknown) => {
+  if (!isBrokenPipeError(error)) productAnalytics.track({ event: "app.crash", outcome: "failed" });
   betaDiagnostics?.trackError("main", error);
 });
 
@@ -573,7 +579,7 @@ const POSIX_BACKEND_TERMINATE_DELAY_MS = 15_000;
 const POSIX_BACKEND_FORCE_KILL_DELAY_MS = 18_000;
 const POSIX_BACKEND_SHUTDOWN_TIMEOUT_MS = 20_000;
 const BACKEND_MAX_OLD_SPACE_ENV_KEYS = ["SYNARA_BACKEND_MAX_OLD_SPACE_MB"] as const;
-const DESKTOP_UPDATE_ALLOW_PRERELEASE = desktopFlavor === "beta";
+const DESKTOP_UPDATE_ALLOW_PRERELEASE = desktopFlavor === "beta" || desktopFlavor === "remote";
 const BROWSER_PERF_SAMPLE_INTERVAL_MS = 5_000;
 const DESKTOP_MENU_ZOOM_FACTOR_STEP = 1.1;
 // User keybindings mirrored onto View menu items. Every window reports the same
@@ -1097,6 +1103,16 @@ let downloadedUpdateArtifact: {
 let downloadedUpdateIdentityTask: Promise<void> | null = null;
 let activeUpdateInstallHandoff: UpdateInstallHandoffExpectation | null = null;
 const pendingUpdateCacheClearQueue = new PendingUpdateCacheClearQueue();
+const macUpdateInstallHandoff =
+  process.platform === "darwin"
+    ? new MacUpdateInstallHandoff(nativeAutoUpdater, (error) =>
+        autoUpdater.emit("error", error instanceof Error ? error : new Error(String(error))),
+      )
+    : null;
+
+function getUpdaterInstallBlockedReason(): string | null {
+  return macUpdateInstallHandoff?.blockedReason ?? null;
+}
 
 function resolveUpdaterErrorContext(): DesktopUpdateErrorContext {
   if (isUpdaterInstallPreparing || isUpdaterQuitAndInstallInFlight) return "install";
@@ -1108,6 +1124,7 @@ function resolveUpdaterErrorContext(): DesktopUpdateErrorContext {
 function clearUpdaterInstallInFlightAfterError(input?: {
   readonly preservePendingPreparation?: boolean;
 }): boolean {
+  macUpdateInstallHandoff?.cancel();
   const preparationCancelled = updateInstallPreparation.cancel();
   if (preparationCancelled && input?.preservePendingPreparation) {
     return true;
@@ -1259,6 +1276,16 @@ function armInstallWatchdog(): void {
 }
 
 protocol.registerSchemesAsPrivileged([
+  {
+    scheme: REMOTE_RESOURCE_SCHEME,
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+      stream: true,
+    },
+  },
   {
     scheme: DESKTOP_SCHEME,
     privileges: {
@@ -2069,9 +2096,7 @@ function configureApplicationMenu(): void {
     },
   );
 
-  const applicationMenu = Menu.buildFromTemplate(template);
-  translateNativeMenuRoles(applicationMenu, APP_DISPLAY_NAME);
-  Menu.setApplicationMenu(applicationMenu);
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
 function resolveResourcePath(fileName: string): string | null {
@@ -3029,7 +3054,10 @@ function scheduleUpdatePoll(): void {
 
 function isExplicitUpdateCheckReason(reason: string): boolean {
   return (
-    reason === "menu" || reason === "renderer" || reason === UPDATE_CHECK_REASON_MIGRATION_RECOVERY
+    reason === "menu" ||
+    reason === "renderer" ||
+    reason === "remote" ||
+    reason === UPDATE_CHECK_REASON_MIGRATION_RECOVERY
   );
 }
 
@@ -3043,6 +3071,18 @@ function emitUpdateState(): void {
 function setUpdateState(patch: Partial<DesktopUpdateState>): void {
   const previous = updateState;
   updateState = { ...updateState, ...patch };
+  const blockedReason = getUpdaterInstallBlockedReason();
+  if (
+    blockedReason !== null &&
+    (updateState.status === "downloaded" || updateState.status === "error")
+  ) {
+    updateState = {
+      ...updateState,
+      message: blockedReason,
+      errorContext: "install",
+      canRetry: false,
+    };
+  }
   emitUpdateState();
   betaDiagnostics?.trackUpdateStateChange(previous, updateState);
 }
@@ -3379,7 +3419,14 @@ function beginActiveUpdateCheck(): () => void {
 }
 
 async function checkForUpdates(reason: string): Promise<void> {
-  if (isQuitting || isUpdaterInstallPreparing || !updaterConfigured || updateCheckInFlight) return;
+  if (
+    isQuitting ||
+    isUpdaterInstallPreparing ||
+    !updaterConfigured ||
+    updateCheckInFlight ||
+    updateDownloadInFlight
+  )
+    return;
   if (automaticUpdateActivitySuppressed) {
     if (!isExplicitUpdateCheckReason(reason)) {
       console.info(
@@ -3393,11 +3440,7 @@ async function checkForUpdates(reason: string): Promise<void> {
     );
     scheduleUpdatePoll();
   }
-  if (
-    updateState.status === "checking" ||
-    updateState.status === "downloading" ||
-    updateState.status === "downloaded"
-  ) {
+  if (!canCheckForDesktopUpdates(updateState)) {
     console.info(
       `[desktop-updater] Skipping update check (${reason}) while status=${updateState.status}.`,
     );
@@ -3438,7 +3481,13 @@ async function downloadAvailableUpdate(): Promise<{
     await checkForUpdates("renderer");
     return { accepted: true, completed: false };
   }
-  if (!updaterConfigured || updateDownloadInFlight || updateState.status !== "available") {
+  if (
+    isQuitting ||
+    isUpdaterInstallPreparing ||
+    !updaterConfigured ||
+    updateDownloadInFlight ||
+    updateState.status !== "available"
+  ) {
     return { accepted: false, completed: false };
   }
   if (!isAcceptableUpdateVersion(updateState.availableVersion)) {
@@ -3487,6 +3536,9 @@ async function downloadAvailableUpdate(): Promise<{
     const identityTask = downloadedUpdateIdentityTask;
     if (identityTask) {
       await identityTask;
+    }
+    if (downloadedUpdateArtifact === null) {
+      throw new Error("The update download did not produce a verified update. Try again.");
     }
     return {
       accepted: true,
@@ -3706,7 +3758,11 @@ async function runDownloadedUpdateInstall(
     }
     activeUpdateInstallHandoff = handoffExpectation;
     isUpdaterQuitAndInstallInFlight = true;
-    autoUpdater.quitAndInstall();
+    if (macUpdateInstallHandoff !== null) {
+      macUpdateInstallHandoff.start();
+    } else {
+      autoUpdater.quitAndInstall();
+    }
     updateInstallPreparation.requireActive(preparationAttempt);
     armInstallWatchdog();
     return { accepted: true, completed: false };
@@ -3732,7 +3788,19 @@ async function installDownloadedUpdate(): Promise<{
   accepted: boolean;
   completed: boolean;
 }> {
-  if (isQuitting || !updaterConfigured || updateState.status !== "downloaded") {
+  const blockedReason = getUpdaterInstallBlockedReason();
+  if (blockedReason !== null) {
+    setUpdateState({ message: blockedReason, errorContext: "install", canRetry: false });
+    return { accepted: false, completed: false };
+  }
+  // A recheck can replace electron-updater's selected payload before its transfer starts.
+  if (
+    isQuitting ||
+    !updaterConfigured ||
+    updateCheckInFlight ||
+    updateDownloadInFlight ||
+    updateState.status !== "downloaded"
+  ) {
     return { accepted: false, completed: false };
   }
   const preparationAttempt = updateInstallPreparation.begin();
@@ -3757,6 +3825,18 @@ async function installDownloadedUpdate(): Promise<{
 }
 
 async function recordDownloadedUpdateIdentity(info: UpdateDownloadedEvent): Promise<void> {
+  const cancellationToken = updateDownloadCancellationToken;
+  const ownsDownload = () =>
+    !isQuitting &&
+    !isUpdaterInstallPreparing &&
+    updateDownloadInFlight &&
+    cancellationToken !== null &&
+    !cancellationToken.cancelled &&
+    updateDownloadCancellationToken === cancellationToken &&
+    updateState.status === "downloading" &&
+    updateState.availableVersion === info.version;
+  // Ignore late events without touching the newer transfer's watchdog, artifact, or cache.
+  if (!ownsDownload()) return;
   clearUpdateDownloadStallTimer();
   if (!isAcceptableUpdateVersion(info.version)) {
     downloadedUpdateArtifact = null;
@@ -3772,6 +3852,7 @@ async function recordDownloadedUpdateIdentity(info: UpdateDownloadedEvent): Prom
 
   try {
     const identity = await fingerprintUpdateArtifact(info.downloadedFile);
+    if (!ownsDownload()) return;
     if (!isAcceptableUpdateVersion(info.version)) {
       downloadedUpdateArtifact = null;
       clearPendingUpdateCacheWhenSafe(
@@ -3786,6 +3867,7 @@ async function recordDownloadedUpdateIdentity(info: UpdateDownloadedEvent): Prom
       `[desktop-updater] Update downloaded and fingerprinted: ${info.version} (${identity.size} bytes, sha512=${identity.sha512.slice(0, 16)}…).`,
     );
   } catch (error) {
+    if (!ownsDownload()) return;
     downloadedUpdateArtifact = null;
     clearPendingUpdateCacheWhenSafe("downloaded artifact fingerprint failed");
     const message = t("desktop:theDownloadedUpdateCouldNotBeVerified", {
@@ -3863,13 +3945,17 @@ function configureAutoUpdater(): void {
     console.info("[desktop-updater] Looking for updates...");
   });
   autoUpdater.on("update-available", (info) => {
+    if (isQuitting || isUpdaterInstallPreparing || updateDownloadInFlight) return;
     clearUpdateCheckTimeoutTimer();
-    downloadedUpdateArtifact = null;
     if (!isAcceptableUpdateVersion(info.version)) {
-      void clearPendingUpdateCache(
-        `available update rejected: ${describeRejectedUpdateVersion(info.version)}`,
-      );
-      setUpdateState(reduceDesktopUpdateStateOnNoUpdate(updateState, new Date().toISOString()));
+      const nextState = reduceDesktopUpdateStateOnNoUpdate(updateState, new Date().toISOString());
+      if (nextState.downloadedVersion === null) {
+        downloadedUpdateArtifact = null;
+        void clearPendingUpdateCache(
+          `available update rejected: ${describeRejectedUpdateVersion(info.version)}`,
+        );
+      }
+      setUpdateState(nextState);
       lastLoggedDownloadMilestone = -1;
       console.info(
         `[desktop-updater] Ignoring available update: ${describeRejectedUpdateVersion(info.version)}.`,
@@ -3883,15 +3969,24 @@ function configureAutoUpdater(): void {
         new Date().toISOString(),
       ),
     );
+    if (updateState.downloadedVersion !== null) {
+      console.info("[desktop-updater] Keeping newer or already downloaded pending update.");
+      return;
+    }
+    downloadedUpdateArtifact = null;
     lastLoggedDownloadMilestone = -1;
     console.info(`[desktop-updater] Update available: ${info.version}`);
     prepareAvailableUpdateInBackground(`available ${info.version}`);
   });
   autoUpdater.on("update-not-available", () => {
+    if (isQuitting || isUpdaterInstallPreparing || updateDownloadInFlight) return;
     clearUpdateCheckTimeoutTimer();
-    downloadedUpdateArtifact = null;
-    void clearPendingUpdateCache("no newer update available");
-    setUpdateState(reduceDesktopUpdateStateOnNoUpdate(updateState, new Date().toISOString()));
+    const nextState = reduceDesktopUpdateStateOnNoUpdate(updateState, new Date().toISOString());
+    if (nextState.downloadedVersion === null) {
+      downloadedUpdateArtifact = null;
+      void clearPendingUpdateCache("no newer update available");
+    }
+    setUpdateState(nextState);
     lastLoggedDownloadMilestone = -1;
     console.info("[desktop-updater] No updates available.");
   });
@@ -3938,6 +4033,12 @@ function configureAutoUpdater(): void {
     }
   });
   autoUpdater.on("download-progress", (progress) => {
+    if (
+      !updateDownloadInFlight ||
+      updateDownloadCancellationToken?.cancelled ||
+      updateState.status !== "downloading"
+    )
+      return;
     const percent = Math.floor(progress.percent);
     updateDownloadStallTimerOnProgress(progress);
     if (
@@ -3953,6 +4054,7 @@ function configureAutoUpdater(): void {
     }
   });
   autoUpdater.on("update-downloaded", (info) => {
+    if (!updateDownloadInFlight || updateState.availableVersion !== info.version) return;
     const task = recordDownloadedUpdateIdentity(info);
     downloadedUpdateIdentityTask = task;
     const clearTask = () => {
@@ -4171,10 +4273,18 @@ async function startCuaHost(): Promise<void> {
   }
 }
 
+declare const __SYNARA_STABLE_ACCOUNT_URL__: string;
+
 function backendEnv(): NodeJS.ProcessEnv {
   const servedStaticRoot = resolveServedStaticRoot();
   const migrationSourceDigest = embeddedDesktopMigrationRuntimeSourceDigest();
   const migrationDivergenceConsent = migrationConsentHandoff.take();
+  const stableAccountUrl =
+    app.isPackaged && !isSourceDesktopBuild && desktopFlavor === "production"
+      ? __SYNARA_STABLE_ACCOUNT_URL__
+      : "";
+  const accountUrl =
+    process.env.SYNARA_ACCOUNT_URL?.trim() || stableAccountUrl || desktopIdentity.defaultAccountUrl;
   const env: NodeJS.ProcessEnv = {
     ...resolveBrowserHostPipeBackendEnv(
       process.env,
@@ -4201,6 +4311,22 @@ function backendEnv(): NodeJS.ProcessEnv {
     SYNARA_HOME: BASE_DIR,
     SYNARA_AUTH_TOKEN: backendAuthToken,
     SYNARA_DESKTOP_SHUTDOWN_TOKEN: DESKTOP_BACKEND_SHUTDOWN_TOKEN,
+    // Packaged launches supply their account authority without shell setup.
+    ...(accountUrl ? { SYNARA_ACCOUNT_URL: accountUrl } : {}),
+    ...(stableAccountUrl && process.env.SYNARA_REMOTE_CONNECTIONS === undefined
+      ? { SYNARA_REMOTE_CONNECTIONS: "1" }
+      : {}),
+    ...(app.isPackaged
+      ? {
+          SYNARA_CLOUDFLARED_PATH: Path.join(
+            process.resourcesPath,
+            "cloudflared",
+            process.platform === "win32" ? "cloudflared.exe" : "cloudflared",
+          ),
+        }
+      : process.env.SYNARA_CLOUDFLARED_PATH
+        ? { SYNARA_CLOUDFLARED_PATH: process.env.SYNARA_CLOUDFLARED_PATH }
+        : {}),
   };
   // The backend runs the same login-shell probe at startup and does not begin listening
   // until it returns, so an unmarked child serializes a second ~1s hydration behind ours.
@@ -4671,7 +4797,9 @@ async function restartBackendAfterCrash(
   // when the renderer window survived the crash.
   backendInitialWindowOpenInFlight = null;
   try {
-    await reserveBackendEndpoint("backend restart");
+    // Existing renderer transports pin this endpoint. Keep it across restarts
+    // so they reconnect without reloading the window or losing drafts.
+    if (backendPort === 0) await reserveBackendEndpoint("backend restart");
   } catch (error) {
     scheduleBackendRestart(
       `failed to reserve restart port after ${reason}: ${formatErrorMessage(error)}`,
@@ -4737,15 +4865,21 @@ function startBackend(trigger: BackendStartTrigger = "lifecycle"): void {
     // Run the child in Node mode so this backend process does not become a GUI app instance.
     env: {
       ...backendEnv(),
+      // A file read stuck behind a macOS privacy prompt holds a libuv worker. More
+      // workers keep DNS and crypto, and so remote authorization, moving meanwhile.
+      UV_THREADPOOL_SIZE: process.env.UV_THREADPOOL_SIZE || "16",
       ELECTRON_RUN_AS_NODE: "1",
       SYNARA_SERVER_ENTRY: backendEntry,
       SYNARA_DESKTOP_PARENT_STDIN: "1",
+      [DESKTOP_UPDATE_IPC_ENV]: supportsDesktopUpdateControl(app.isPackaged, process.platform)
+        ? "1"
+        : "0",
     },
     // Keep output piped in every environment so startup blockers and readiness
     // are observable even when packaged log setup is unavailable. The fourth
     // pipe carries the browser-host capability and must never be inherited.
     // Leave stdin open: EOF lets the backend clean up if this main process dies.
-    stdio: ["pipe", "pipe", "pipe", "pipe"],
+    stdio: ["pipe", "pipe", "pipe", "pipe", "ipc"],
   });
   const capabilityPipe = child.stdio[DESKTOP_BROWSER_HOST_CAPABILITY_FD];
   if (capabilityPipe && "end" in capabilityPipe) {
@@ -4765,6 +4899,17 @@ function startBackend(trigger: BackendStartTrigger = "lifecycle"): void {
   const outputTailDetector = new BackendOutputTailDetector();
   backendListeningDetector = listeningDetector;
   backendProcess = child;
+  attachDesktopUpdateControl(child, {
+    isPackaged: app.isPackaged,
+    platform: process.platform,
+    isCurrentChild: () => backendProcess === child && !isQuitting,
+    supported: () => updaterConfigured,
+    getState: () => updateState,
+    getInstallBlockedReason: getUpdaterInstallBlockedReason,
+    check: () => checkForUpdates("remote"),
+    download: downloadAvailableUpdate,
+    install: installDownloadedUpdate,
+  });
   cuaDriverHost?.resume();
   const backendBaseUrl = backendHttpUrl;
   let backendSessionClosed = false;
@@ -4863,17 +5008,14 @@ function startBackend(trigger: BackendStartTrigger = "lifecycle"): void {
       }
       const reason = `code=${code ?? "null"} signal=${signal ?? "null"}`;
       lastBackendFailureDetail = outputTailDetector.read();
-      if (!expectedExit)
+      if (!expectedExit) {
+        productAnalytics.track({ event: "app.crash", outcome: "failed" });
         trackBetaDiagnostics("app.child-process-crash", {
           kind: "crash",
           processType: "backend",
           reason,
-          // Guarded explicitly: on stable builds betaDiagnostics is null and the
-          // log file must not be touched at all.
-          logTail: betaDiagnostics
-            ? readLogTail(Path.join(LOG_DIR, BACKEND_LOG_FILE_NAME))
-            : undefined,
         });
+      }
       scheduleBackendRestart(reason);
     });
   });
@@ -4991,18 +5133,25 @@ async function shutdownDesktopRuntime(reason: string): Promise<void> {
       cancelBackendReadinessWait();
       appSnapManager?.dispose();
       appSnapManager = null;
-      await shutdownBrowserServices({
-        revokeHost: () => disposeBrowserHostPipeServerForShutdown(reason),
-        closePages: () => browserManager.dispose(),
-        stopCapture: () => browserVaultCapture.dispose(),
-        clearKeys: () => browserVault.dispose(),
-      });
+      try {
+        await shutdownBrowserServices({
+          revokeHost: () => disposeBrowserHostPipeServerForShutdown(reason),
+          closePages: () => browserManager.dispose(),
+          stopCapture: () => browserVaultCapture.dispose(),
+          clearKeys: () => browserVault.dispose(),
+        });
+      } finally {
+        await getBetterwrightNetworkGuard(
+          session.fromPartition(BROWSER_SESSION_PARTITION),
+        ).dispose();
+      }
       await browserSessionRestore?.shutdown();
       restoreStdIoCapture?.();
       if (betaDiagnostics) {
         trackBetaDiagnostics("app.exit", { kind: "lifecycle" });
         await betaDiagnostics.dispose().catch(() => undefined);
       }
+      productAnalytics.dispose();
       desktopShutdownComplete = true;
       writeDesktopLogHeader(`${reason} shutdown complete`);
       // Release the persistent log descriptors. close() is idempotent and a
@@ -5145,10 +5294,12 @@ function requestGracefulAppQuit(reason: string): void {
 function registerIpcHandlers(): void {
   const storageSnapshotPath = resolveSynaraStorageSnapshotPath(app.getPath("userData"));
 
+  attachProductAnalyticsIpc(productAnalytics, () => mainWindow?.webContents ?? null);
+
   ipcMain.removeAllListeners(IPC.betaDiagnostics.enabled);
   ipcMain.on(IPC.betaDiagnostics.enabled, (event: IpcMainEvent) => {
     event.returnValue = Boolean(
-      betaDiagnostics &&
+      betaDiagnostics?.isCollecting() &&
       event.sender === mainWindow?.webContents &&
       event.senderFrame === event.sender.mainFrame,
     );
@@ -5248,26 +5399,6 @@ function registerIpcHandlers(): void {
   });
 
   ipcMain.removeHandler(IPC.setTheme);
-  ipcMain.removeAllListeners(IPC.getSystemLanguages);
-  ipcMain.on(IPC.getSystemLanguages, (event: IpcMainEvent) => {
-    event.returnValue =
-      event.sender === mainWindow?.webContents && event.senderFrame === event.sender.mainFrame
-        ? app.getPreferredSystemLanguages()
-        : [];
-  });
-  ipcMain.removeHandler(IPC.setLanguagePreference);
-  ipcMain.handle(IPC.setLanguagePreference, (event, rawPreference: unknown) => {
-    applyDesktopLanguagePreference(rawPreference, {
-      flavor: desktopFlavor,
-      isTrustedSender:
-        event.sender === mainWindow?.webContents && event.senderFrame === event.sender.mainFrame,
-      preferencePath: DESKTOP_LANGUAGE_PREFERENCE_PATH,
-      onPreference: (language) => {
-        setDesktopLanguagePreference(language);
-        if (app.isReady()) configureApplicationMenu();
-      },
-    });
-  });
   ipcMain.handle(IPC.setTheme, async (_event, rawTheme: unknown) => {
     const theme = getSafeTheme(rawTheme);
     if (!theme) {
@@ -5463,6 +5594,23 @@ function registerIpcHandlers(): void {
     return getDesktopCustomTitleBarState();
   });
 
+  ipcMain.removeHandler(IPC.keepAwake.getState);
+  ipcMain.handle(IPC.keepAwake.getState, async () => getKeepAwakeController().getState());
+
+  ipcMain.removeHandler(IPC.keepAwake.setEnabled);
+  ipcMain.handle(IPC.keepAwake.setEnabled, async (_event, rawEnabled: unknown) =>
+    typeof rawEnabled === "boolean"
+      ? getKeepAwakeController().setEnabled(rawEnabled)
+      : getKeepAwakeController().getState(),
+  );
+
+  ipcMain.removeHandler(IPC.keepAwake.setRemoteAccessAllowed);
+  ipcMain.handle(IPC.keepAwake.setRemoteAccessAllowed, async (_event, rawAllowed: unknown) =>
+    typeof rawAllowed === "boolean"
+      ? getKeepAwakeController().setRemoteAccessAllowed(rawAllowed)
+      : getKeepAwakeController().getState(),
+  );
+
   ipcMain.removeHandler(IPC.customTitleBarRelaunch);
   ipcMain.handle(IPC.customTitleBarRelaunch, async () => {
     app.relaunch();
@@ -5578,14 +5726,7 @@ function registerIpcHandlers(): void {
     platform: process.platform,
     homeDir: OS.homedir(),
     betaHomeDir: resolveBetaHomeDir(),
-    flavor:
-      desktopFlavor === "beta"
-        ? "beta"
-        : desktopFlavor === "canary"
-          ? "canary"
-          : desktopFlavor === "cua"
-            ? "cua"
-            : "production",
+    flavor: desktopFlavor === "development" ? "production" : desktopFlavor,
     feedUrlOverride: process.env.SYNARA_BETA_FEED_URL,
     installDirOverride: process.env.SYNARA_BETA_INSTALL_DIR,
     expectedTeamId: ownAppTeamId(),
@@ -5828,6 +5969,20 @@ function getTitleBarOptions(): BrowserWindowConstructorOptions {
   return frameOptions;
 }
 
+let keepAwakeController: KeepAwakeController | undefined;
+
+/** Created on first use after `app` is ready, which `powerMonitor` requires. */
+function getKeepAwakeController(): KeepAwakeController {
+  keepAwakeController ??= createKeepAwakeController({
+    monitor: powerMonitor,
+    blocker: powerSaveBlocker,
+    load: () => readKeepAwakePreference(KEEP_AWAKE_PREFERENCE_PATH),
+    save: (preference) => writeKeepAwakePreference(KEEP_AWAKE_PREFERENCE_PATH, preference),
+    onError: (error) => safeConsoleError("[desktop] keep-awake preference write failed", error),
+  });
+  return keepAwakeController;
+}
+
 function getDesktopCustomTitleBarState() {
   return resolveDesktopCustomTitleBarState({
     platform: process.platform,
@@ -5931,9 +6086,7 @@ function createWindow(): BrowserWindow {
       { role: "selectAll", enabled: params.editFlags.canSelectAll },
     );
 
-    const menu = Menu.buildFromTemplate(menuTemplate);
-    translateNativeMenuRoles(menu, APP_DISPLAY_NAME);
-    menu.popup({ window });
+    Menu.buildFromTemplate(menuTemplate).popup({ window });
   });
 
   window.webContents.setWindowOpenHandler(({ url }) => {
@@ -6066,6 +6219,8 @@ function attachRendererCrashRecovery(window: BrowserWindow): void {
     // the pending ask and count it as quitting for the crash policy.
     const quitAskPending = runningChatsQuitGuard.hasPendingAsk();
     runningChatsQuitGuard.allowPending();
+    if (!isQuitting && ["crashed", "oom", "abnormal-exit"].includes(details.reason))
+      productAnalytics.track({ event: "app.crash", outcome: "failed" });
     // A pending quit ask has not started shutdown: an unexpected crash while
     // that ask is open still belongs in diagnostics, even though recovery quits.
     if (!isQuitting && details.reason !== "clean-exit")
@@ -6073,11 +6228,6 @@ function attachRendererCrashRecovery(window: BrowserWindow): void {
         kind: "crash",
         processType: "renderer",
         reason: details.reason,
-        // Guarded explicitly: on stable builds betaDiagnostics is null and the
-        // log file must not be touched at all.
-        logTail: betaDiagnostics
-          ? readLogTail(Path.join(LOG_DIR, DESKTOP_LOG_FILE_NAME))
-          : undefined,
       });
 
     const response = rendererCrashPolicy.respondToCrash({
@@ -6325,6 +6475,21 @@ async function bootstrap(): Promise<void> {
   }
 
   registerIpcHandlers();
+  // Apply the saved keep-awake preference at launch, before any window reports.
+  getKeepAwakeController();
+  app.once("will-quit", () => {
+    keepAwakeController?.dispose();
+    keepAwakeController = undefined;
+  });
+  const disposeRemoteResources = registerRemoteResourceBroker({
+    trustedRenderer: () =>
+      mainWindow && !mainWindow.isDestroyed() ? mainWindow.webContents : null,
+    trustedOrigin: () =>
+      isDevelopment ? process.env.VITE_DEV_SERVER_URL! : desktopIdentity.entryUrl,
+    backendWsUrl: () =>
+      normalizeDesktopWsUrl(backendWsUrl) ?? resolveDesktopWsUrlFromEnv(process.env),
+  });
+  app.once("will-quit", disposeRemoteResources);
   writeDesktopLogHeader("bootstrap ipc handlers registered");
   try {
     await ensureBrowserHostPipeServer();
@@ -6423,8 +6588,22 @@ app.on("before-quit", (event) => {
 if (hasSingleInstanceLock) {
   app
     .whenReady()
-    .then(() => {
+    .then(async () => {
+      // Install the session-owned proxy before bootstrap can create or navigate browser pages.
+      await getBetterwrightNetworkGuard(
+        session.fromPartition(BROWSER_SESSION_PARTITION),
+      ).initialize();
       writeDesktopLogHeader("app ready");
+      productAnalytics.start();
+      productAnalytics.track({ event: "app.open", outcome: "succeeded" });
+      productAnalytics.track({
+        event: "performance.startup",
+        outcome: "succeeded",
+        durationMs: Math.min(
+          86_400_000,
+          Math.round(performance.now() - PRODUCT_ANALYTICS_STARTUP_AT),
+        ),
+      });
       if (betaDiagnostics) {
         betaDiagnostics.start();
         const previousLaunchVersion = parseLastLaunchVersion(readLaunchVersionRecordContents());
@@ -6484,7 +6663,6 @@ if (hasSingleInstanceLock) {
             kind: "crash",
             processType: details.type,
             reason: details.reason,
-            logTail: readLogTail(Path.join(LOG_DIR, DESKTOP_LOG_FILE_NAME)),
           });
         });
       }

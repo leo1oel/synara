@@ -1,3 +1,4 @@
+import { readExecutionContext } from "~/lib/hosts/executionContext";
 import {
   type AutomationDefinition,
   type AutomationRun,
@@ -468,6 +469,10 @@ function AutomationDetailView() {
                 disabled={!editable}
                 title={editDisabledTitle}
               />
+              <p className="text-ui-sm text-muted-foreground">
+                Run on {readExecutionContext()?.execution.label ?? "this computer"}. Keep Synara
+                running on that computer.
+              </p>
               <AutomationSaveStatus
                 saving={updateMutation.isPending}
                 failed={updateMutation.isError}
@@ -816,7 +821,7 @@ function AutomationDetailView() {
                         value={String(schedule.dayOfWeek)}
                         options={[0, 1, 2, 3, 4, 5, 6].map((day) => ({
                           value: String(day),
-                          label: weekdayLabel(day, formatLocale),
+                          label: weekdayLabel(day),
                         }))}
                         disabled={!editable}
                         title={editDisabledTitle}

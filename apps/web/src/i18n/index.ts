@@ -2,97 +2,32 @@ import { useMemo } from "react";
 import { createInstance } from "i18next";
 import { initReactI18next, useTranslation as useReactTranslation } from "react-i18next";
 
-import { APP_SETTINGS_STORAGE_KEY } from "../appSettingsStorage";
-import {
-  type LanguagePreference,
-  type SupportedLocale,
-  readLanguagePreference,
-  resolveLanguagePreference,
-  resolveLocale,
-  UI_LOCALES,
-} from "./locale";
 import { uiLocalizationResources } from "@synara/shared/uiLocalizationResources";
+import { UI_LOCALES, isUiMessageKey } from "@synara/shared/uiLocale";
 import { readEmbedMode } from "../embedMode";
 import latticeZhOverrides from "./latticeZhOverrides.json";
-import {
-  UI_LOCALES as UI_LOCALE_IDS,
-  UI_LOCALE_REGISTRY,
-  isUiMessageKey,
-} from "@synara/shared/uiLocale";
 
-function browserLanguages(): readonly string[] {
-  try {
-    const nativeLanguages =
-      typeof window === "undefined" ? undefined : window.desktopBridge?.getSystemLanguages?.();
-    if (nativeLanguages?.length) return nativeLanguages;
-  } catch {
-    // An older or unavailable native bridge must not prevent the renderer from booting.
-  }
-  return globalThis.navigator?.languages?.length
-    ? globalThis.navigator.languages
-    : globalThis.navigator?.language
-      ? [globalThis.navigator.language]
-      : [];
-}
-
-// Lattice's embedded panel follows the language Lattice passes in the handshake, so the
-// panel matches the host regardless of the OS language or a preference saved earlier.
-// Upstream gates Chinese by desktop flavor; an explicit host choice is not a flavor.
-function hostLanguagePreference(): SupportedLocale | null {
+// Upstream's interface is English-only. Lattice's embedded panel keeps reading in the
+// language Lattice puts in the handshake (`?locale=`), whatever the OS language says;
+// the zh-CN catalogs exist only for it. A language change in Lattice loads a new frame.
+function hostLocale(): (typeof UI_LOCALES)[number] | null {
   try {
     return readEmbedMode()?.locale ?? null;
   } catch {
-    // Storage access can fail before the handshake exists; the app then follows its own setting.
+    // Storage access can fail before the handshake exists; the app then reads English.
     return null;
   }
 }
 
-function storedPreference(): LanguagePreference {
-  return hostLanguagePreference() ?? readLanguagePreference();
-}
-
-let preference = storedPreference();
-let synchronizedDesktopPreference:
-  | {
-      setter: NonNullable<NonNullable<Window["desktopBridge"]>["setLanguagePreference"]>;
-      preference: LanguagePreference;
-    }
-  | undefined;
-
-function syncDesktopLanguage(force = false): void {
-  if (typeof window === "undefined") return;
-  const bridge = window.desktopBridge;
-  const setter = bridge?.setLanguagePreference;
-  if (typeof setter !== "function") return;
-  const nativePreference = resolveLanguagePreference(preference);
-  if (
-    !force &&
-    synchronizedDesktopPreference?.setter === setter &&
-    synchronizedDesktopPreference.preference === nativePreference
-  )
-    return;
-  const pending = { setter, preference: nativePreference };
-  synchronizedDesktopPreference = pending;
-  const synchronize = async () => {
-    try {
-      await setter.call(bridge, pending.preference);
-    } catch (error) {
-      if (synchronizedDesktopPreference === pending) synchronizedDesktopPreference = undefined;
-      console.warn("[i18n] Could not synchronize the native language preference.", error);
-    }
-  };
-  void synchronize();
-}
+// Boot code can import this module before main.tsx reads the handshake, so main applies
+// the host language again (applyHostLocale) before the first render.
+let activeHostLocale = hostLocale();
 
 export const i18n = createInstance();
 void i18n.use(initReactI18next).init({
-  lng: resolveLocale(
-    preference,
-    resolveLanguagePreference(preference) === "system" ? browserLanguages() : [],
-  ),
+  lng: activeHostLocale ?? "en",
   fallbackLng: "en",
-  // Every catalog loads; availability is decided by the preference resolution above.
-  supportedLngs: [...UI_LOCALE_IDS],
+  supportedLngs: [...UI_LOCALES],
   resources: uiLocalizationResources,
   ns: Object.keys(uiLocalizationResources.en),
   defaultNS: "common",
@@ -103,10 +38,23 @@ void i18n.use(initReactI18next).init({
   react: { useSuspense: false, transSupportBasicHtmlNodes: false },
 });
 
-// Lattice keeps its own wording where upstream's Chinese contradicts Lattice's terminology
+// Lattice keeps its own wording where the Chinese catalogs contradict Lattice's terminology
 // (PR, AI/助手, 工作树, Skills) or the meaning in context. See latticeZhOverrides.json.
 for (const [namespace, entries] of Object.entries(latticeZhOverrides)) {
   i18n.addResourceBundle("zh-CN", namespace, entries, true, true);
+}
+
+/** Switches to the language in Lattice's handshake; standalone Synara stays English. */
+export function applyHostLocale(): void {
+  activeHostLocale = hostLocale();
+  if (!activeHostLocale) return;
+  if (i18n.language !== activeHostLocale) void i18n.changeLanguage(activeHostLocale);
+  if (typeof document !== "undefined") document.documentElement.lang = activeHostLocale;
+}
+
+/** Switches the runtime language directly (tests); "system" reads English, as upstream does. */
+export function setLanguagePreference(locale: "system" | (typeof UI_LOCALES)[number]): void {
+  void i18n.changeLanguage(locale === "system" ? "en" : locale);
 }
 
 export function t(message: string, values?: Record<string, unknown>): string {
@@ -115,7 +63,7 @@ export function t(message: string, values?: Record<string, unknown>): string {
 }
 
 // A factory call ties identity to the subscription value without closing over its old
-// language. An unused useCallback dependency is removed by React Compiler.
+// state. An unused useCallback dependency is removed by React Compiler.
 function createTranslationSnapshot(_subscription: unknown): { t: typeof t; formatLocale: string } {
   return {
     t: (message, values) => t(message, values),
@@ -125,8 +73,6 @@ function createTranslationSnapshot(_subscription: unknown): { t: typeof t; forma
 
 export function useTranslation(): { t: typeof t; locale: string; formatLocale: string } {
   const { t: reactiveTranslator, i18n: instance } = useReactTranslation(undefined, { i18n });
-  // React Compiler needs a new identity on a language change. Delegating to the current
-  // runtime also keeps callbacks already installed in native menus/event listeners current.
   const snapshot = useMemo(
     () => createTranslationSnapshot(reactiveTranslator),
     [reactiveTranslator],
@@ -134,63 +80,13 @@ export function useTranslation(): { t: typeof t; locale: string; formatLocale: s
   return { ...snapshot, locale: instance.language };
 }
 
+// Resolved once, like the formatters that used an unspecified `Intl` locale before.
+const SYSTEM_FORMAT_LOCALE = new Intl.DateTimeFormat().resolvedOptions().locale;
+
+/**
+ * Dates and numbers follow the system locale, as an unspecified `Intl` locale does; in
+ * Lattice's panel they follow the host language, so a Chinese panel reads Chinese dates.
+ */
 export function getFormatLocale(): string {
-  return i18n.language;
-}
-
-function updateDocumentLanguage(locale: SupportedLocale): void {
-  if (typeof document !== "undefined") {
-    document.documentElement.lang = locale;
-    document.documentElement.dir = UI_LOCALE_REGISTRY[locale].direction;
-  }
-}
-
-/** Changes only the runtime; the existing app-settings hook owns persistence. */
-export function setLanguagePreference(requested: LanguagePreference): void {
-  const host = hostLanguagePreference();
-  const next = host ?? requested;
-  const locale =
-    host ??
-    resolveLocale(next, resolveLanguagePreference(next) === "system" ? browserLanguages() : []);
-  if (preference !== next || i18n.language !== locale) {
-    preference = next;
-    void i18n.changeLanguage(locale);
-  }
-  updateDocumentLanguage(locale);
-  syncDesktopLanguage();
-}
-
-/** Install before the first render; app settings already broadcasts same-tab writes. */
-export function initializeI18n(): () => void {
-  setLanguagePreference(storedPreference());
-  if (typeof window === "undefined") return () => {};
-
-  const syncPreference = () => setLanguagePreference(storedPreference());
-  const onLanguageChange = () => {
-    if (hostLanguagePreference() || resolveLanguagePreference(preference) !== "system") return;
-    // Refresh native candidates once: preload values would otherwise stay frozen at launch.
-    const locale = resolveLocale(preference, browserLanguages());
-    void i18n.changeLanguage(locale);
-    updateDocumentLanguage(locale);
-    syncDesktopLanguage(true);
-  };
-  const onStorageChange = (event: StorageEvent) => {
-    if (event.key === null || event.key === APP_SETTINGS_STORAGE_KEY) {
-      syncPreference();
-    }
-  };
-  const onLocalChange = (event: Event) => {
-    if ((event as CustomEvent<{ key: string }>).detail?.key === APP_SETTINGS_STORAGE_KEY) {
-      syncPreference();
-    }
-  };
-
-  window.addEventListener("languagechange", onLanguageChange);
-  window.addEventListener("storage", onStorageChange);
-  window.addEventListener("synara:local_storage_change", onLocalChange);
-  return () => {
-    window.removeEventListener("languagechange", onLanguageChange);
-    window.removeEventListener("storage", onStorageChange);
-    window.removeEventListener("synara:local_storage_change", onLocalChange);
-  };
+  return activeHostLocale ?? SYSTEM_FORMAT_LOCALE;
 }

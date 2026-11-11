@@ -20,6 +20,7 @@ import {
 import {
   type ComposerThreadDraftState,
   type DraftThreadState,
+  resolveNewThreadRuntimeMode,
   resolvePreferredComposerModelSelection,
   useComposerDraftStore,
 } from "../composerDraftStore";
@@ -421,6 +422,7 @@ export function useHandleNewThread() {
         entryPoint,
         options,
         defaultEnvMode: isSynaraEmbedMode() ? "local" : defaultEnvMode,
+        defaultRuntimeMode: resolveNewThreadRuntimeMode(),
       });
       const containerDefaults = await resolveGroupContainerThreadDefaults({
         projectId,

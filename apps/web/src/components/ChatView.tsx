@@ -124,6 +124,7 @@ import {
   stripComposerTriggerText,
 } from "../composer-logic";
 import {
+  resolveNewThreadRuntimeMode,
   useComposerDraftStore,
   type ComposerImageAttachment,
   type DraftThreadEnvMode,
@@ -140,7 +141,7 @@ import {
   resolveComposerSlashRootBranch,
 } from "../composerSlashCommands";
 import { stripDiffSearchParams } from "../diffRouteSearch";
-import { isElectron } from "../env";
+import { isDesktopPresentation } from "~/lib/hosts/workspacePresentation";
 import {
   LATTICE_AGENT_PERMISSION_MODE_REQUEST,
   LATTICE_AGENT_PERMISSION_MODE_SET,
@@ -351,7 +352,7 @@ import { PullRequestThreadDialog } from "./PullRequestThreadDialog";
 import { RenameThreadDialog } from "./RenameThreadDialog";
 import { hasUnseenSnoozeReturn } from "./Sidebar.logic";
 import { SidebarHeaderNavigationControls } from "./SidebarHeaderNavigationControls";
-import { SynaraLogo } from "./SynaraLogo";
+import { SynaraLogo } from "@synara/profile-ui/logo";
 import { AsciiWaveBackground } from "./chat/AsciiWaveBackground";
 import { SponsorLandingBanner } from "./SponsorLandingBanner";
 import TerminalWorkspaceTabs from "./TerminalWorkspaceTabs";
@@ -433,6 +434,7 @@ import {
   buildTurnDiffSummaryByAssistantMessageId,
   deriveTurnTimingByTurnId,
 } from "./chat/MessagesTimeline.logic";
+import { NewChatComputerPicker } from "./hosts/ComputerPicker";
 import { ProjectPicker } from "./chat/ProjectPicker";
 import { ProviderHealthBanner } from "./chat/ProviderHealthBanner";
 import { resolveProviderModelLabel } from "./chat/ProviderModelPicker";
@@ -527,6 +529,7 @@ import { useChatProviderModels } from "./chat/useChatProviderModels";
 import { useChatProviderStatus } from "./chat/useChatProviderStatus";
 import { useChatQueuedTurns } from "./chat/useChatQueuedTurns";
 import { useChatRuntimeModes } from "./chat/useChatRuntimeModes";
+import { useLiveThreadModelSelection } from "./chat/useLiveThreadModelSelection";
 import { useChatTerminalController } from "./chat/useChatTerminalController";
 import { useChatTimelineMessages } from "./chat/useChatTimelineMessages";
 import { useChatTranscriptScroll } from "./chat/useChatTranscriptScroll";
@@ -1443,7 +1446,7 @@ export default function ChatView({
       setProjectDraftThreadId(activeProject.id, nextThreadId, {
         ...draftThreadContext,
         createdAt: new Date().toISOString(),
-        runtimeMode: DEFAULT_RUNTIME_MODE,
+        runtimeMode: resolveNewThreadRuntimeMode(),
         interactionMode: DEFAULT_INTERACTION_MODE,
       });
       await navigate({
@@ -1574,6 +1577,11 @@ export default function ChatView({
     projectId: activeProjectId,
     modelSelection: selectedModelSelection,
     runtimeMode,
+  });
+  useLiveThreadModelSelection({
+    threadId,
+    serverModelSelection: serverThread?.modelSelection,
+    composerModelSelection: selectedModelSelection,
   });
   const selectedProviderInstances = useMemo(
     () => providerInstances.filter((instance) => instance.provider === selectedProvider),
@@ -3204,6 +3212,16 @@ export default function ChatView({
   });
 
   const focusComposer = useCallback(() => {
+    // A newly focused workspace can still have a deferred composer focus request.
+    // Once the user opens a picker/dialog, that interaction owns focus instead.
+    const focused = document.activeElement;
+    if (
+      focused instanceof HTMLElement &&
+      focused.closest('[role="menu"], [role="listbox"], [role="dialog"], [aria-expanded="true"]')
+    ) {
+      pendingComposerFocusRef.current = false;
+      return;
+    }
     // A disabled editor (dispatch connecting, pending approval) cannot
     // take focus either. Never ask the renderer to focus while another app owns
     // the desktop; on macOS that can activate Synara and switch Spaces.
@@ -6255,7 +6273,7 @@ export default function ChatView({
           CHAT_BACKGROUND_CLASS_NAME,
         )}
       >
-        {!isElectron && (
+        {!isDesktopPresentation && (
           <header className={cn(CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME, "px-3 py-2 md:hidden")}>
             <div className="flex items-center gap-2">
               <SidebarHeaderTrigger className="size-7 shrink-0" />
@@ -6265,7 +6283,7 @@ export default function ChatView({
             </div>
           </header>
         )}
-        {isElectron && (
+        {isDesktopPresentation && (
           <div
             className={cn(
               CHAT_SURFACE_HEADER_ROW_CLASS_NAME,
@@ -6490,6 +6508,7 @@ export default function ChatView({
       // behind the composer's translucent corners reads as a visible cut along the seam.
       className="chat-composer-shell squircle mx-auto flex min-h-8 w-full min-w-0 flex-nowrap items-center gap-x-1.5 overflow-hidden !rounded-b-none !rounded-t-[var(--composer-radius)] px-1.5 py-1 transition-colors duration-150 ease-out motion-reduce:transition-none sm:min-h-7"
     >
+      {isLocalDraftThread ? <NewChatComputerPicker /> : null}
       {showContainerChatWorkspacePicker ? (
         <ProjectPicker
           align="start"
@@ -7324,7 +7343,7 @@ export default function ChatView({
           !isEditorRail && CHAT_SURFACE_HEADER_PADDING_X_CLASS,
           "flex items-center",
           isEditorRail ? "h-10" : CHAT_SURFACE_HEADER_HEIGHT_CLASS,
-          isElectron && "drag-region",
+          isDesktopPresentation && "drag-region",
           // The editor-rail chat header sits in the editor's second row (inside the
           // right-side chat pane), not flush against the window edges — the editor's
           // own top bar already reserves both desktop window-control gutters. Applying

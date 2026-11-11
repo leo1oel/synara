@@ -657,6 +657,7 @@ export type MessagesTimelineRow =
       inlineWorkEntries?: WorkLogEntry[];
       inlineWorkGroupId?: string;
       collapsedTurnItems?: CollapsedTurnItem[];
+      connectorProposalIds?: string[];
       // Set on the terminal assistant, or the request if an interrupted turn
       // produced no assistant/work rows.
       turnHeader?: TurnHeader;
@@ -1045,11 +1046,12 @@ export function deriveTerminalAssistantMessageIds(
   return terminalAssistantMessageIds;
 }
 
-// Thread-scoped notices and provider handoff boundaries keep their own row:
-// they are not turn work, so they never merge into or fold with a turn.
+// Notices, handoff boundaries, and connector proposals stay visible in their
+// own rows when a turn's work is grouped or folded.
 export function isStandaloneWorkEntry(
   entry: Pick<
     WorkLogEntry,
+    | "connectorProposalId"
     | "synaraWorkerNotice"
     | "providerHandoff"
     | "turnFailure"
@@ -1060,6 +1062,7 @@ export function isStandaloneWorkEntry(
   >,
 ): boolean {
   return Boolean(
+    entry.connectorProposalId ||
     entry.synaraWorkerNotice ||
     entry.providerHandoff ||
     entry.turnFailure ||
@@ -1632,6 +1635,8 @@ function collapseSettledTurns(
     // mini-turns can have distinct turnIds inside one assistant answer, so the
     // user message boundary is the stable UI grouping point.
     const foldIndices: number[] = [];
+    const recapIndices: number[] = [];
+    const connectorProposalIds: string[] = [];
     // Scanning backwards, so this ends as the earliest visual the turn keeps.
     let firstKeptVisual: Extract<MessagesTimelineRow, { kind: "inline-visual" }> | null = null;
     let wokenAt: string | null = null;
@@ -1648,9 +1653,13 @@ function collapseSettledTurns(
         break;
       }
       if (prev.kind === "work") {
-        // Coordinator monitor rows are server-posted system pills, not turn
-        // work — folding them into a collapsed turn would hide them on
-        // conversation-only surfaces.
+        const connectorProposalId = prev.groupedEntries[0]?.connectorProposalId;
+        if (connectorProposalId) {
+          recapIndices.push(scan);
+          connectorProposalIds.push(connectorProposalId);
+          continue;
+        }
+        // Standalone rows stay visible without stopping the fold of nearby work.
         if (prev.groupedEntries.some(isStandaloneWorkEntry)) continue;
         foldIndices.push(scan);
         continue;
@@ -1831,6 +1840,10 @@ function collapseSettledTurns(
       }
     }
 
+    if (connectorProposalIds.length > 0) {
+      row.connectorProposalIds = [...new Set(connectorProposalIds.reverse())];
+    }
+
     if (!options.collapseWork) {
       const firstAssistant = foldIndices
         .map((index) => rows[index]!)
@@ -1839,27 +1852,28 @@ function collapseSettledTurns(
         );
       if (firstAssistant?.kind === "message") firstAssistant.turnHeader = header;
       else row.turnHeader = header;
-      continue;
-    }
-    row.turnHeader = header;
-    if (firstKeptVisual) {
-      // The header opens the whole response; kept visuals belong to the answer
-      // below it. Their row renders it, so a live frame never changes parent.
-      row.turnHeaderRowId = firstKeptVisual.id;
-      firstKeptVisual.turnHeaderSource = row;
-    }
-    if (collapsedItems.length > 0) {
-      row.collapsedTurnItems = collapsedItems;
-      delete row.leadingWorkEntries;
-      delete row.leadingWorkGroupId;
-      delete row.inlineWorkEntries;
-      delete row.inlineWorkGroupId;
-
-      for (const index of foldIndices.toSorted((a, b) => b - a)) {
-        rows.splice(index, 1);
+    } else {
+      row.turnHeader = header;
+      if (firstKeptVisual) {
+        // The header opens the whole response; kept visuals belong to the answer
+        // below it. Their row renders it, so a live frame never changes parent.
+        row.turnHeaderRowId = firstKeptVisual.id;
+        firstKeptVisual.turnHeaderSource = row;
       }
-      pass -= foldIndices.length;
+      if (collapsedItems.length > 0) {
+        row.collapsedTurnItems = collapsedItems;
+        delete row.leadingWorkEntries;
+        delete row.leadingWorkGroupId;
+        delete row.inlineWorkEntries;
+        delete row.inlineWorkGroupId;
+        recapIndices.push(...foldIndices);
+      }
     }
+
+    for (const index of recapIndices.toSorted((a, b) => b - a)) {
+      rows.splice(index, 1);
+    }
+    pass -= recapIndices.length;
   }
 
   if (consumedCompletions.size === 0) return;
@@ -2034,6 +2048,8 @@ function workLogSynaraThreadCreationsEqual(
     a.operationId !== b.operationId ||
     a.requestedCount !== b.requestedCount ||
     a.createdCount !== b.createdCount ||
+    a.environmentId !== b.environmentId ||
+    a.hostName !== b.hostName ||
     a.threads.length !== b.threads.length
   ) {
     return false;
@@ -2140,6 +2156,7 @@ function workLogEntryContentEqual(a: WorkLogEntry, b: WorkLogEntry): boolean {
     workLogSubagentsEqual(a.subagents, b.subagents) &&
     workLogSubagentRunsEqual(a.subagentRun, b.subagentRun) &&
     workLogAutomationsEqual(a.automation, b.automation) &&
+    a.connectorProposalId === b.connectorProposalId &&
     workLogSynaraThreadCreationsEqual(a.synaraThreadCreation, b.synaraThreadCreation) &&
     workLogLiveActivitiesEqual(a.liveActivity, b.liveActivity) &&
     workLogToolDetailsEqual(a.toolDetails, b.toolDetails) &&
@@ -2298,6 +2315,7 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
         workLogEntryArraysEqual(a.inlineWorkEntries, bm.inlineWorkEntries) &&
         a.inlineWorkGroupId === bm.inlineWorkGroupId &&
         collapsedTurnItemsEqual(a.collapsedTurnItems, bm.collapsedTurnItems) &&
+        stringArraysEqual(a.connectorProposalIds, bm.connectorProposalIds) &&
         turnHeadersEqual(a.turnHeader, bm.turnHeader) &&
         a.turnHeaderRowId === bm.turnHeaderRowId &&
         turnEndMarkersEqual(a.turnEndMarker, bm.turnEndMarker) &&
