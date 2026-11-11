@@ -4,7 +4,7 @@
 // the handler map, so a newly added account RPC is covered by construction.
 import { WS_METHODS, type SavedInboxRecap } from "@synara/contracts";
 import { Effect } from "effect";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AccountSession } from "./accountSession";
 import { provideWsConnectionSession } from "./wsConnectionSessions";
@@ -209,5 +209,48 @@ describe("account RPC owner boundary", () => {
     );
 
     expect(calls().length).toBeGreaterThan(0);
+  });
+});
+
+// Lattice embeds the panel without a Synara account: no account request may run
+// from it, and the status read still answers (signed out) for shared UI.
+describe("account RPCs under the Lattice host profile", () => {
+  const methodNames = Object.keys(handlersFor(spySession().session)).filter(
+    (method) => method !== WS_METHODS.accountStatus,
+  );
+  afterEach(() => vi.unstubAllEnvs());
+
+  it.each(methodNames)("refuses %s without touching the session", async (method) => {
+    vi.stubEnv("AGENT_HOST_PROFILE", "lattice");
+    const { session, calls } = spySession();
+    const openBrowser = vi.fn(() => Effect.void);
+    const handlers = handlersFor(session, openBrowser) as unknown as Record<
+      string,
+      (input?: unknown) => Effect.Effect<unknown, { message: string }>
+    >;
+    const handler = handlers[method];
+    if (!handler) throw new Error(`no handler for ${method}`);
+
+    const result = await Effect.runPromise(
+      provideWsConnectionSession(handler(SAMPLE_INPUTS[method]).pipe(Effect.flip), OWNER_SESSION),
+    );
+
+    expect(result.message).toBe("Synara accounts and Remote connections are not part of Lattice.");
+    expect(calls()).toEqual([]);
+    expect(openBrowser).not.toHaveBeenCalled();
+  });
+
+  it("still reads the signed-out status", async () => {
+    vi.stubEnv("AGENT_HOST_PROFILE", "lattice");
+    const { session, calls } = spySession();
+    const handlers = handlersFor(session) as unknown as Record<
+      string,
+      (input?: unknown) => Effect.Effect<unknown, unknown>
+    >;
+    const result = await Effect.runPromise(
+      provideWsConnectionSession(handlers[WS_METHODS.accountStatus]!(), OWNER_SESSION),
+    );
+    expect(result).toEqual({ state: "signed-out" });
+    expect(calls()).toEqual(["status"]);
   });
 });
