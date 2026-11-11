@@ -53,7 +53,10 @@ import {
 import { ChildProcessSpawner } from "effect/unstable/process";
 import { makeEffectProcessCommand } from "../../platform/effectProcessRuntime.ts";
 import { isServerBetaFeatureEnabled } from "../../betaFeatureGate.ts";
-import { ACTIVE_AGENT_HOST_PROFILE, type AgentHostProfileId } from "../../agentGateway/hostProfile.ts";
+import {
+  ACTIVE_AGENT_HOST_PROFILE,
+  type AgentHostProfileId,
+} from "../../agentGateway/hostProfile.ts";
 
 import {
   CODEX_CLI_UNPARSEABLE_VERSION_MESSAGE,
