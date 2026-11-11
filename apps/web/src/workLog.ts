@@ -2617,8 +2617,11 @@ function shouldCollapseRuntimeWarningEntries(
   if (previous.turnId !== next.turnId) {
     return false;
   }
+  // Upstream 1.5 labels a runtime warning with its message, so the label carries
+  // Codex's retry timestamp too.
   return (
-    normalizeToolTextForComparison(previous.label) === normalizeToolTextForComparison(next.label) &&
+    normalizeToolTextForComparison(normalizeRuntimeWarningForComparison(previous.label)) ===
+      normalizeToolTextForComparison(normalizeRuntimeWarningForComparison(next.label)) &&
     normalizeRuntimeWarningForComparison(
       previous.runtimeWarningMessage ?? previous.detail ?? previous.preview ?? "",
     ) ===

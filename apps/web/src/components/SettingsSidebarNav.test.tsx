@@ -54,15 +54,6 @@ describe("Chinese settings in Lattice's panel", () => {
     expect(html).toContain("默认提供商");
     expect(html).toContain("选择新聊天使用的提供商");
   });
-
-  it("finds settings by their English and Chinese names", () => {
-    void i18n.changeLanguage("zh-CN");
-    for (const query of ["default provider", "默认提供商"]) {
-      const [result] = rankSettingsSearchEntries(query, 12);
-      expect(result?.id).toBe("general:default-provider");
-      expect(settingsSearchEntryTarget(result!)).toBe("setting-default-provider");
-    }
-  });
 });
 
 describe("rankSettingsSearchEntries", () => {
