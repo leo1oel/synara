@@ -22,7 +22,7 @@ import { useAppSettings } from "../../appSettings";
 import { useComposerDraftStore } from "../../composerDraftStore";
 import type { DiffRouteSearch } from "../../diffRouteSearch";
 import { stripDiffSearchParams } from "../../diffRouteSearch";
-import type { DiffEditBaseRev } from "../../lib/diffEditBaseRev";
+import type { DiffEditBaseRev, DiffFileEditRequest } from "../../lib/diffEditBaseRev";
 import { editorCenterModeFamily, type EditorCenterMode } from "../../lib/editorCenterMode";
 import type { EditorLeaveGuard } from "../EditorWorkspaceView";
 import { readEditorViewState, storeEditorViewState } from "../../editorViewState";
@@ -54,6 +54,7 @@ import { requestComposerFocus } from "../../composerFocusRequestStore";
 import {
   prefetchWorkspaceFile,
   resolveDockFileOpenTarget,
+  resolveWorkspaceDirectoryOpenTarget,
   resolveWorkspaceFileOpenTarget,
   WorkspaceFileOpenerContext,
   type WorkspaceFileOpener,
@@ -325,6 +326,7 @@ export function SingleChatSurface(props: {
   const [editorDiffFiles, setEditorDiffFiles] = useState<ReadonlyArray<FileDiffMetadata>>([]);
   const [editorDiffFilesLoading, setEditorDiffFilesLoading] = useState(false);
   const [editorDiffOptionsControl, setEditorDiffOptionsControl] = useState<ReactNode | null>(null);
+  const [editorDiffVisibleFilePath, setEditorDiffVisibleFilePath] = useState<string | null>(null);
   const [searchPaletteOpen, setSearchPaletteOpen] = useState(false);
   const [searchPaletteMode, setSearchPaletteMode] = useState<WorkspaceSearchPaletteMode>("files");
   const floatingBrowserRequested = useFloatingBrowserRequestStore(
@@ -529,9 +531,32 @@ export function SingleChatSurface(props: {
       setEditorCenterMode("fileEdit");
     });
 
+  const handleEditDiffFileInEditorView = (request: DiffFileEditRequest) =>
+    guardEditorLeave(() => {
+      setEditorEditTarget({
+        filePath: request.filePath,
+        basePath: request.basePath ?? null,
+        baseRev: request.baseRev,
+        returnMode: "diff",
+      });
+      setEditorCenterMode(request.mode === "diff" ? "diffEdit" : "fileEdit");
+    });
+
   const handleCloseEditorEdit = () => {
     setEditorCenterMode(editorEditTarget?.returnMode ?? "file");
     setEditorEditTarget(null);
+  };
+
+  const handleEditDiffFileFromDock = (request: DiffFileEditRequest) => {
+    handleEditDiffFileInEditorView(request);
+    void navigate({
+      to: "/$threadId",
+      params: { threadId: props.threadId },
+      search: (previous) => ({
+        ...stripDiffSearchParams(previous),
+        view: "editor",
+      }),
+    });
   };
 
   const handleEditorToggleDiff = () =>
@@ -571,6 +596,9 @@ export function SingleChatSurface(props: {
     setEditorDiffFiles(files);
     setEditorDiffFilesLoading(isLoading);
   };
+  const handleEditorDiffVisibleFileChange = (filePath: string | null) => {
+    setEditorDiffVisibleFilePath(filePath);
+  };
   const handleSelectEditorDiffFile = (filePath: string) =>
     guardEditorLeave(() => {
       setEditorCenterMode("diff");
@@ -595,7 +623,7 @@ export function SingleChatSurface(props: {
   // the React Query cache and the matching Shiki highlighter loads, so the
   // preview paints instantly on click.
   const prefetchOpenerFile = (path: string) => {
-    if (!workspaceRoot) {
+    if (!workspaceRoot || resolveWorkspaceDirectoryOpenTarget(path, workspaceRoot) !== null) {
       return;
     }
     const relativePath = resolveWorkspaceFileOpenTarget(path, workspaceRoot);
@@ -603,11 +631,24 @@ export function SingleChatSurface(props: {
       prefetchWorkspaceFile(queryClient, workspaceRoot, relativePath);
     }
   };
-  // Chat surface: file references open in the right-dock file pane. References
-  // outside the workspace report unhandled so chips fall back to the external
-  // editor.
+  // Chat surface: file references open in the right-dock file pane, while the
+  // workspace root and explicit directory references open in Explorer.
+  // Other references retain the existing dock file preview and external-editor
+  // fallback behavior.
   const dockFileOpener: WorkspaceFileOpener = {
     openFile: (path, beforeOpen) => {
+      // Lattice's embedded dock holds only the simulator, so directories stay
+      // with the host there like any other path.
+      const directoryPath = props.embedMode
+        ? null
+        : resolveWorkspaceDirectoryOpenTarget(path, workspaceRoot);
+      if (directoryPath !== null) {
+        beforeOpen?.();
+        requestImmediateDockHydration("explorer");
+        openPane(props.threadId, { kind: "explorer" });
+        requestExplorerReveal(props.threadId, directoryPath);
+        return true;
+      }
       // In-workspace references map to relative paths for the file-read RPC;
       // binary previews in a session's scratch workspace (outside the chat
       // workspace) open by absolute path through the local-image route.
@@ -948,6 +989,7 @@ export function SingleChatSurface(props: {
               })
             }
             onClosePanel={() => closePane(props.threadId, pane.id)}
+            onEditFile={handleEditDiffFileFromDock}
             liveRefreshEnabled={context.isActive && dockState.open}
             queriesEnabled={context.isActive && dockState.open}
           />
@@ -1086,7 +1128,7 @@ export function SingleChatSurface(props: {
   }, [workspaceRoot, queryClient, selectedEditorFilePath]);
 
   const editorChatPanelState: SplitViewPanePanelState = {
-    panel: editorCenterMode === "diff" ? "diff" : null,
+    panel: editorCenterModeFamily(editorCenterMode) === "diff" ? "diff" : null,
     diffTurnId: editorDiffPanelState.diffTurnId,
     diffFilePath: editorDiffPanelState.diffFilePath,
     hasOpenedPanel: true,
@@ -1115,7 +1157,9 @@ export function SingleChatSurface(props: {
               onCloseEdit={handleCloseEditorEdit}
               diffFiles={editorDiffFiles}
               diffFilesLoading={editorDiffFilesLoading}
-              selectedDiffFilePath={editorDiffPanelState.diffFilePath ?? null}
+              selectedDiffFilePath={
+                editorDiffVisibleFilePath ?? editorDiffPanelState.diffFilePath ?? null
+              }
               diffOptionsControl={editorDiffOptionsControl}
               onSelectDiffFile={handleSelectEditorDiffFile}
               onSelectFile={handleSelectEditorFile}
@@ -1134,12 +1178,14 @@ export function SingleChatSurface(props: {
                   panelState={editorDiffPanelState}
                   onUpdatePanelState={handleUpdateEditorDiffPanelState}
                   liveRefreshEnabled={editorCenterMode === "diff"}
+                  onEditFile={handleEditDiffFileInEditorView}
                   // Keep diff data warm while browsing files so switching to the
                   // diff tab renders instantly instead of cold-fetching.
                   queriesEnabled
                   hideHeader
                   onRenderableFilesChange={handleEditorDiffFilesChange}
                   onEditorDiffOptionsChange={setEditorDiffOptionsControl}
+                  onVisibleFileChange={handleEditorDiffVisibleFileChange}
                 />
               }
               chatPanel={
