@@ -589,7 +589,10 @@ const makeServerProgram = (input: CliInput) =>
     // Start the retention loop after the server is live so startup can serve
     // existing history first, then hide inactive threads from the app in the background.
     yield* startThreadRetentionJob(orchestrationEngine, projectionSnapshotQuery);
-    if (isServerBetaFeatureEnabled(ACCOUNT_INBOX_BETA_FEATURE) && !synaraAccountUnavailableInHost()) {
+    if (
+      isServerBetaFeatureEnabled(ACCOUNT_INBOX_BETA_FEATURE) &&
+      !synaraAccountUnavailableInHost()
+    ) {
       const inboxReporter = createAccountInboxReporter({
         sql: yield* SqlClient.SqlClient,
         recapQuery: yield* RecapStatsQuery,
