@@ -7,8 +7,8 @@
 
 import type { ProviderKind } from "@synara/contracts";
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { useQuery } from "@tanstack/react-query";
 
-import { useAppSettings } from "~/appSettings";
 import { APP_BASE_NAME } from "~/branding";
 import { ProfileSetupForm } from "~/components/account/OnboardingDialog";
 import { useAnnouncementSheetSlot } from "~/components/announcementSheetSlot";
@@ -26,6 +26,7 @@ import { findProviderStatus } from "~/lib/providerAvailability";
 import { cn, isMacNavigatorPlatform } from "~/lib/utils";
 import { useProjectImportDialogStore } from "~/projectImport/projectImportDialogStore";
 import { VISIBLE_PROVIDER_DESCRIPTORS } from "../betaFeatures";
+import { serverSettingsQueryOptions } from "~/lib/serverReactQuery";
 import {
   classifyProviderSetup,
   isOnboardingSetupStep,
@@ -72,9 +73,9 @@ function OnboardingFlow(props: {
   projectBusy: boolean;
   onProjectBusyChange: (busy: boolean) => void;
 }) {
-  const { settings } = useAppSettings();
   const account = useAccount();
   const statuses = useProviderStatusesForLocalConfig();
+  const serverSettings = useQuery(serverSettingsQueryOptions()).data;
   const providerDetection = useProviderDetection();
   const openProjectImport = useProjectImportDialogStore((store) => store.openDialog);
   const markEngaged = useOnboardingDialogStore((store) => store.markEngaged);
@@ -121,7 +122,7 @@ function OnboardingFlow(props: {
     provider: descriptor.kind,
     state: classifyProviderSetup({
       status: findProviderStatus(statuses, descriptor.kind),
-      disabled: settings.disabledProviders.includes(descriptor.kind),
+      disabled: serverSettings?.providers[descriptor.kind].enabled === false,
       detecting: providerDetection.detecting,
       detectionFailed: providerDetection.failed,
     }),

@@ -1,18 +1,16 @@
 "use client";
 
+import { i18n, useTranslation } from "~/i18n";
 import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
 import { CheckIcon, ChevronsUpDownIcon, XIcon } from "~/lib/icons";
 import * as React from "react";
 
 import { cn } from "~/lib/utils";
-import { Input } from "~/components/ui/input";
+import { Input, type InputProps } from "~/components/ui/input";
 import { ScrollArea } from "~/components/ui/scroll-area";
-import {
-  APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME,
-  COMPOSER_PICKER_OPTION_RADIUS_CLASS_NAME,
-  COMPOSER_PICKER_RADIUS_CLASS_NAME,
-} from "../chat/composerPickerStyles";
-import { useTranslation } from "~/i18n";
+import { FluidHoverSurface } from "./fluid-hover-surface";
+import { APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME } from "../chat/composerPickerStyles";
+import { observeHostDismissiblePopup } from "~/latticePopupDismissal";
 
 const ComboboxContext = React.createContext<{
   chipsRef: React.RefObject<Element | null> | null;
@@ -47,7 +45,7 @@ function ComboboxChipsInput({
   return (
     <ComboboxPrimitive.Input
       className={cn(
-        "font-system-ui min-w-12 flex-1 text-ui outline-none sm:text-ui [[data-slot=combobox-chip]+&]:ps-0.5",
+        "min-w-12 flex-1 text-ui-lg outline-none sm:text-ui [[data-slot=combobox-chip]+&]:ps-0.5",
         sizeValue === "sm" ? "ps-1.5" : "ps-2",
         className,
       )}
@@ -67,6 +65,7 @@ function ComboboxInput({
   startAddon,
   size,
   unstyled: unstyledProp,
+  variant,
   ...props
 }: Omit<ComboboxPrimitive.Input.Props, "size"> & {
   inputClassName?: string;
@@ -74,8 +73,8 @@ function ComboboxInput({
   showClear?: boolean;
   startAddon?: React.ReactNode;
   size?: "sm" | "default" | "lg" | number;
-  /** Drops the field chrome (border, fill, ring) — for search rows that are only a divider. */
   unstyled?: boolean;
+  variant?: InputProps["variant"];
   ref?: React.Ref<HTMLInputElement>;
 }) {
   const showTrigger = showTriggerProp ?? true;
@@ -110,6 +109,7 @@ function ComboboxInput({
             nativeInput
             size={sizeValue}
             unstyled={unstyled}
+            {...(variant ? { variant } : {})}
           />
         }
         {...props}
@@ -173,6 +173,7 @@ function ComboboxPopup({
   return (
     <ComboboxPrimitive.Portal>
       <ComboboxPrimitive.Positioner
+        ref={observeHostDismissiblePopup}
         align={align}
         alignOffset={alignOffset}
         anchor={anchor}
@@ -184,8 +185,7 @@ function ComboboxPopup({
         <span
           className={cn(
             APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME,
-            "relative flex max-h-full min-w-(--anchor-width) max-w-(--available-width) origin-(--transform-origin) not-dark:bg-clip-padding shadow-lg/5 transition-[scale,opacity]",
-            COMPOSER_PICKER_RADIUS_CLASS_NAME,
+            "relative flex max-h-full min-w-(--anchor-width) max-w-(--available-width) origin-(--transform-origin) rounded-lg not-dark:bg-clip-padding shadow-lg/5 transition-[scale,opacity]",
             className,
           )}
         >
@@ -194,6 +194,7 @@ function ComboboxPopup({
             data-slot="combobox-popup"
             {...props}
           >
+            <FluidHoverSurface selector='[role="option"]' />
             {children}
           </ComboboxPrimitive.Popup>
         </span>
@@ -202,7 +203,6 @@ function ComboboxPopup({
   );
 }
 
-// Match Input and Select sizing, including changes to the app typography setting.
 function ComboboxItem({
   className,
   children,
@@ -215,7 +215,7 @@ function ComboboxItem({
   return (
     <ComboboxPrimitive.Item
       className={cn(
-        `grid min-h-[1.625rem] in-data-[side=none]:min-w-[calc(var(--anchor-width)+1.25rem)] cursor-default grid-cols-[1fr_auto] items-center gap-3 ${COMPOSER_PICKER_OPTION_RADIUS_CLASS_NAME} px-2.5 py-px text-ui text-[var(--color-text-foreground)] outline-none data-disabled:pointer-events-none data-highlighted:bg-[var(--color-background-button-secondary-hover)] data-highlighted:text-[var(--color-text-foreground)] data-disabled:opacity-64 sm:min-h-6 sm:text-ui [&_svg:not([class*='size-'])]:size-3 [&_svg]:pointer-events-none [&_svg]:shrink-0`,
+        "grid min-h-[1.625rem] in-data-[side=none]:min-w-[calc(var(--anchor-width)+1.25rem)] cursor-default grid-cols-[1fr_auto] items-center gap-3 rounded-lg px-2.5 py-px text-ui-lg text-[var(--color-text-foreground)] outline-none data-disabled:pointer-events-none data-highlighted:bg-[var(--color-background-button-secondary-hover)] data-highlighted:text-[var(--color-text-foreground)] data-disabled:opacity-64 sm:min-h-6 sm:text-ui [&_svg:not([class*='size-'])]:size-3 [&_svg]:pointer-events-none [&_svg]:shrink-0",
         className,
       )}
       data-slot="combobox-item"
@@ -267,7 +267,7 @@ function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
   return (
     <ComboboxPrimitive.Empty
       className={cn(
-        "not-empty:p-2 text-center text-ui text-muted-foreground sm:text-ui",
+        "not-empty:p-2 text-center text-ui-lg text-muted-foreground sm:text-ui",
         className,
       )}
       data-slot="combobox-empty"
@@ -330,7 +330,7 @@ function ComboboxChips({
   return (
     <ComboboxPrimitive.Chips
       className={cn(
-        "relative inline-flex min-h-9 w-full flex-wrap gap-1 rounded-lg border border-[color:var(--color-border)] bg-[var(--color-background-control-opaque)] p-[calc(--spacing(1)-1px)] text-ui text-[var(--color-text-foreground)] outline-none ring-[color:var(--color-border-focus)]/24 *:min-h-(--combobox-chip-min-h) [--combobox-chip-min-h:--spacing(7)] focus-within:border-[color:var(--color-border-focus)] focus-within:ring-[3px] has-disabled:pointer-events-none has-data-[size=lg]:min-h-10 has-data-[size=sm]:min-h-8 has-aria-invalid:border-destructive/36 has-autofill:bg-foreground/4 has-disabled:opacity-64 focus-within:has-aria-invalid:border-destructive/64 focus-within:has-aria-invalid:ring-destructive/16 has-data-[size=lg]:[--combobox-chip-min-h:--spacing(8)] has-data-[size=sm]:[--combobox-chip-min-h:--spacing(6)] sm:min-h-8 sm:text-ui sm:has-data-[size=lg]:min-h-9 sm:has-data-[size=sm]:min-h-7 sm:[--combobox-chip-min-h:--spacing(6)] sm:has-data-[size=lg]:[--combobox-chip-min-h:--spacing(7)] sm:has-data-[size=sm]:[--combobox-chip-min-h:--spacing(5)] dark:has-autofill:bg-foreground/8 dark:has-aria-invalid:ring-destructive/24",
+        "relative inline-flex min-h-9 w-full flex-wrap gap-1 rounded-lg border border-[color:var(--color-border)] bg-[var(--color-background-control-opaque)] p-[calc(--spacing(1)-1px)] text-ui-lg text-[var(--color-text-foreground)] outline-none ring-[color:var(--color-border-focus)]/24 *:min-h-(--combobox-chip-min-h) [--combobox-chip-min-h:--spacing(7)] focus-within:border-[color:var(--color-border-focus)] focus-within:ring-[3px] has-disabled:pointer-events-none has-data-[size=lg]:min-h-10 has-data-[size=sm]:min-h-8 has-aria-invalid:border-destructive/36 has-autofill:bg-foreground/4 has-disabled:opacity-64 focus-within:has-aria-invalid:border-destructive/64 focus-within:has-aria-invalid:ring-destructive/16 has-data-[size=lg]:[--combobox-chip-min-h:--spacing(8)] has-data-[size=sm]:[--combobox-chip-min-h:--spacing(6)] sm:min-h-8 sm:text-ui sm:has-data-[size=lg]:min-h-9 sm:has-data-[size=sm]:min-h-7 sm:[--combobox-chip-min-h:--spacing(6)] sm:has-data-[size=lg]:[--combobox-chip-min-h:--spacing(7)] sm:has-data-[size=sm]:[--combobox-chip-min-h:--spacing(5)] dark:has-autofill:bg-foreground/8 dark:has-aria-invalid:ring-destructive/24",
         className,
       )}
       data-slot="combobox-chips"
@@ -354,7 +354,7 @@ function ComboboxChips({
 function ComboboxChip({ children, ...props }: ComboboxPrimitive.Chip.Props) {
   return (
     <ComboboxPrimitive.Chip
-      className="flex items-center rounded-[calc(var(--radius-md)-1px)] bg-[var(--color-background-elevated-secondary)] ps-2 font-medium text-[var(--color-text-foreground)] text-ui outline-none sm:text-ui-sm [&_svg:not([class*='size-'])]:size-4 sm:[&_svg:not([class*='size-'])]:size-3.5"
+      className="flex items-center rounded-[calc(var(--radius-md)-1px)] bg-[var(--color-background-elevated-secondary)] ps-2 font-medium text-[var(--color-text-foreground)] text-ui outline-none sm:text-ui-xs/(--text-xs--line-height) [&_svg:not([class*='size-'])]:size-4 sm:[&_svg:not([class*='size-'])]:size-3.5"
       data-slot="combobox-chip"
       {...props}
     >

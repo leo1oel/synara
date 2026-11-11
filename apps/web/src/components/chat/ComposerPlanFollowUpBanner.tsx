@@ -1,4 +1,4 @@
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 export const ComposerPlanFollowUpBanner = function ComposerPlanFollowUpBanner({
   planTitle,
 }: {
@@ -16,8 +16,8 @@ export const ComposerPlanFollowUpBanner = function ComposerPlanFollowUpBanner({
           </span>
         ) : null}
       </div>
-      {/* <div className="mt-2 text-xs text-muted-foreground">
-        Review the plan
+      {/* <div className="mt-2 text-ui-xs text-muted-foreground">
+        {i18n._("Review the plan")}
       </div> */}
     </div>
   );

@@ -27,9 +27,10 @@ import {
   showsComposerFastModeBadge,
   supportsComposerFastModeControl,
 } from "./composerTraits";
+import { localizeModelPickerLabel } from "./modelPickerLabels";
 import { defaultAgentForProvider, getAgentOptions, getSelectedAgentValue } from "./TraitsPicker";
 import { useComposerTraitCommit } from "./useComposerTraitCommit";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 // Footer row "<Trait> ……… <value> ›" opening a radio submenu. Picking a value closes
 // only the submenu, so the user can compose model + traits and then star the result.
@@ -66,8 +67,7 @@ function TraitRow(props: {
         >
           {props.options.map((option) => (
             <MenuRadioItem key={option.value} value={option.value} onClick={() => setOpen(false)}>
-              {option.label}
-              {option.isDefault ? t("chat:traitsPicker_defaultSuffix") : ""}
+              {option.isDefault ? t("lattice:default2", { option: option.label }) : option.label}
             </MenuRadioItem>
           ))}
         </MenuRadioGroup>
@@ -94,6 +94,7 @@ export function ComposerModelPickerTraitRows(props: {
   const { t } = useTranslation();
 
   const { provider, threadId, model, modelOptions, prompt } = props;
+  const localizeLabel = (label: string) => localizeModelPickerLabel(t, label);
   const selection = getComposerTraitSelection(
     provider,
     model,
@@ -124,7 +125,7 @@ export function ComposerModelPickerTraitRows(props: {
     rows.push(
       <TraitRow
         key="thinking"
-        label={t("chat:timeline_thinking")}
+        label={localizeLabel("Thinking")}
         value={selection.thinkingEnabled ? "on" : "off"}
         valueLabel={
           selection.thinkingEnabled
@@ -143,15 +144,19 @@ export function ComposerModelPickerTraitRows(props: {
     rows.push(
       <TraitRow
         key="context"
-        label={selection.contextWindowDescriptor?.label ?? t("chat:traitsPicker_context")}
-        value={contextWindowValue}
-        valueLabel={
-          selection.contextWindowOptions.find((option) => option.value === contextWindowValue)
-            ?.label ?? contextWindowValue
+        label={
+          selection.contextWindowDescriptor
+            ? localizeLabel(selection.contextWindowDescriptor.label)
+            : t("chat:traitsPicker_context")
         }
+        value={contextWindowValue}
+        valueLabel={localizeLabel(
+          selection.contextWindowOptions.find((option) => option.value === contextWindowValue)
+            ?.label ?? contextWindowValue,
+        )}
         options={selection.contextWindowOptions.map((option) => ({
           value: option.value,
-          label: option.label,
+          label: localizeLabel(option.label),
           isDefault: option.value === selection.defaultContextWindow,
         }))}
         onValueChange={(value) => commitTrait({ [contextWindowTraitId]: value })}
@@ -166,12 +171,12 @@ export function ComposerModelPickerTraitRows(props: {
           provider === "opencode" ? t("chat:traitsPicker_variant") : t("chat:traitsPicker_effort")
         }
         value={selection.effort ?? ""}
-        valueLabel={resolveComposerTraitStatusLabel(selection, t) ?? ""}
+        valueLabel={localizeLabel(resolveComposerTraitStatusLabel(selection) ?? "")}
         // Ultrathink is pinned by the prompt; the ladder is read-only until it is removed.
         disabled={selection.ultrathinkPromptControlled}
         options={selection.effortLevels.map((option) => ({
           value: option.value,
-          label: option.label,
+          label: localizeLabel(option.label),
           isDefault: option.value === selection.defaultEffort,
         }))}
         onValueChange={(value) => {

@@ -481,6 +481,15 @@ Create PR can include uncommitted changes and create a feature branch from the d
 When you supply a PR title, Synara also uses it as the commit message unless a separate commit
 message was supplied. Providing both the title and description skips text generation for this flow.
 
+Commit messages, PR text, Lattice proofreading and Lattice compile repair run on the model chosen in
+Settings → Models while its provider is enabled, installed and signed in. When it is not (Codex is
+the default, but you may have connected only Claude), the first ready provider runs the request on
+its default model instead, and Lattice proofreading reports that model as a fallback. With no ready
+provider the request fails with the providers you can connect in Settings → Providers.
+Right after launch, before the first provider check has finished, such a request waits up to 3
+seconds for it; if the check is still running then, a provider whose CLI (`codex`, `claude`) is not
+found counts as not ready, so a Claude-only setup proofreads on Claude rather than failing on Codex.
+
 Failed commit, push, and PR actions show the failed step and a copyable error until dismissed.
 Each action keeps its own error details when you switch workspaces and start another action.
 Codex text generation stops on a terminal `ERROR: ... 401 Unauthorized` diagnostic; transport
@@ -503,6 +512,17 @@ a private Git index, preserving Ignore whitespace without reading later checkout
 baseline, mismatched patch, compacted payload or older event without integrity metadata remains
 unavailable until a fresh complete update or final checkpoint. **All turns** still uses completed
 checkpoints; a live preview is not proof that a turn finished.
+
+File Undo and thread revert reverse only the thread's own changes. File Undo reverses one turn's
+diff (its turn-start snapshot to its turn-end snapshot); thread revert reverses each later turn's
+diff, newest first, rather than restoring the target snapshot. Both apply the reverse patch to the
+current text with a three-way fallback, so edits made since, by the user, another tool or a
+co-author, stay in place, including untracked files and files the thread never touched. Where such
+an edit changed the very lines being reversed, that file keeps the rest of the undo and marks just
+those spots with diff3 conflict markers; the timeline says which files need resolving. A turn whose
+diff swallowed an edit the host reported writing while the turn ran (Lattice sends
+`lattice:host-file-writes`) cannot tell that edit from the agent's, so Undo refuses to reverse that
+file rather than delete it.
 
 File Undo and thread revert refuse to change a workspace while another thread has an active or
 pending turn in that same Git checkout. Symlinks and nested folders share this protection;

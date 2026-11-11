@@ -691,7 +691,7 @@ export function makeAgentGatewayDeviceTools(
       definition: {
         name: "device_open_url",
         description: approvalRequiredDeviceDescription(
-          "Open a URL on the device through its deep-link handlers and return the settled screen; this always requires explicit user approval. For Expo Go, boot with device_boot and then use exp://127.0.0.1:8081; if Metro is needed, start it detached in the background so it does not block the turn. Never run expo start --ios, expo run:ios, or npm run ios: they open Simulator.app outside the pane, and on Xcode 27+, where DeviceHub replaced it, they fail outright. For a development build, build the native ios/ project with xcodebuild and use device_install and device_launch. When the user asks to see the app working, finish with it visible in the streamed pane.",
+          "Open a URL on the device through its deep-link handlers and return the settled screen; this requires explicit user approval unless the session is in Full Access mode. For Expo Go, boot with device_boot and then use exp://127.0.0.1:8081; if Metro is needed, start it detached in the background so it does not block the turn. Never run expo start --ios, expo run:ios, or npm run ios: they open Simulator.app outside the pane, and on Xcode 27+, where DeviceHub replaced it, they fail outright. For a development build, build the native ios/ project with xcodebuild and use device_install and device_launch. When the user asks to see the app working, finish with it visible in the streamed pane.",
         ),
         inputSchema: {
           type: "object",

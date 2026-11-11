@@ -187,52 +187,47 @@ function entryFileKeys(entry: WorkLogEntry): ReadonlyArray<string> {
 const MAX_NAMED_SUMMARY_PARTS = 3;
 const NAMED_PARTS_BEFORE_OVERFLOW = 2;
 
-function countPhrase(count: number, noun: string): string {
-  return `${count} ${pluralize(count, noun)}`;
-}
-
-function searchPhrase(count: number, translate: typeof t): string {
-  if (count === 1) return translate("chat:searchedOnce");
-  if (count === 2) return translate("chat:searchedTwice");
-  return translate("chat:searchedTimes", { value0: count });
-}
-
-// Lowercase verb phrase; the label capitalizes only its first part.
+// Lowercase verb phrase; the label capitalizes only its first part. Each count
+// is its own catalog entry so translations need no English plural or case rules.
 function summaryPartPhrase(
   category: ToolCallSummaryCategory,
   count: number,
   isSolePart: boolean,
   translate: typeof t,
 ): string {
+  const one = count === 1;
   switch (category) {
     case "read":
-      return translate("chat:read", { value0: countPhrase(count, "file") });
+      return one ? translate("lattice:read1File") : translate("lattice:readFiles", { count });
     case "edit":
-      return translate("chat:edited", { value0: countPhrase(count, "file") });
+      return one ? translate("lattice:edited1File2") : translate("lattice:editedFiles2", { count });
     case "search":
-      return searchPhrase(count, translate);
+      if (one) return translate("chat:searchedOnce");
+      if (count === 2) return translate("chat:searchedTwice");
+      return translate("chat:searchedTimes", { value0: count });
     case "command":
-      return translate("chat:ran2", { value0: countPhrase(count, "command") });
+      return one ? translate("lattice:ran1Command") : translate("lattice:ranCommands", { count });
     case "fetch":
-      return translate("chat:fetched", { value0: countPhrase(count, "page") });
+      return one ? translate("lattice:fetched1Page") : translate("lattice:fetchedPages", { count });
     case "agent":
-      return translate("chat:ranAgent", {
-        value0: count,
-        value1: pluralize(count, "task"),
-      });
+      return one
+        ? translate("lattice:ran1AgentTask")
+        : translate("lattice:ranAgentTasks", { count });
     case "tool":
-      return translate("chat:used", { value0: countPhrase(count, "tool") });
+      return one ? translate("lattice:used1Tool") : translate("lattice:usedTools", { count });
     case "other":
       return isSolePart
-        ? translate("chat:ranTool", {
-            value0: count,
-            value1: pluralize(count, "call"),
-          })
-        : translate("chat:other2", {
-            value0: count,
-            value1: pluralize(count, "action"),
-          });
+        ? one
+          ? translate("lattice:ran1ToolCall")
+          : translate("lattice:ranToolCalls", { count })
+        : otherActionsPhrase(translate, count);
   }
+}
+
+function otherActionsPhrase(translate: typeof t, count: number): string {
+  return count === 1
+    ? translate("lattice:n1OtherAction")
+    : translate("lattice:otherActions", { count });
 }
 
 function capitalizeFirst(value: string): string {
@@ -250,14 +245,9 @@ function joinSummaryParts(
     summaryPartPhrase(part.category, part.count, parts.length === 1, translate),
   );
   if (overflowCount > 0) {
-    phrases.push(
-      translate("chat:other2", {
-        value0: overflowCount,
-        value1: pluralize(overflowCount, "action"),
-      }),
-    );
+    phrases.push(otherActionsPhrase(translate, overflowCount));
   }
-  return capitalizeFirst(phrases.join(", "));
+  return capitalizeFirst(phrases.join(t("lattice:message")));
 }
 
 export function summarizeToolCallGroup(

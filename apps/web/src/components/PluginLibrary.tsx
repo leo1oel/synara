@@ -20,7 +20,6 @@ import {
 } from "~/lib/brandIcons";
 import { useStore } from "~/store";
 import { DEFAULT_PROVIDER_ORDER } from "~/providerOrdering";
-import { useAppSettings } from "~/appSettings";
 import {
   buildPluginSearchFields,
   buildSkillSearchFields,
@@ -39,17 +38,10 @@ import {
 } from "~/lib/providerDiscoveryReactQuery";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { useFocusedChatContext } from "~/focusedChatContext";
-import {
-  CheckIcon,
-  CircleAlertIcon,
-  HammerIcon,
-  ListChecksIcon,
-  PluginIcon,
-  SearchIcon,
-} from "~/lib/icons";
+import { CheckIcon, CircleAlertIcon, HammerIcon, ListChecksIcon, PluginIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
-import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "./ui/input-group";
 import { CHAT_BACKGROUND_CLASS_NAME } from "./chat/composerPickerStyles";
+import { SearchInput } from "./ui/search-input";
 import { SidebarInset } from "./ui/sidebar";
 import { SidebarHeaderNavigationControls } from "./SidebarHeaderNavigationControls";
 import {
@@ -364,10 +356,8 @@ export function PluginLibrary(props?: {
   const providerThreadId = focusedThreadId;
 
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
-  const { settings } = useAppSettings();
-  const enabledProviderOrder = DEFAULT_PROVIDER_ORDER.filter(
-    (provider) => !settings.disabledProviders.includes(provider),
-  );
+  // Lattice has no provider enablement gate, so every provider stays eligible.
+  const enabledProviderOrder = DEFAULT_PROVIDER_ORDER;
   const codexCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("codex"));
   const claudeCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("claudeAgent"));
   const cursorCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("cursor"));
@@ -429,16 +419,13 @@ export function PluginLibrary(props?: {
   // tabs never renders an unsupported frame, and the user's own selection
   // resurfaces if its provider becomes capable again.
   const supportsSelectedTab =
-    !settings.disabledProviders.includes(selectedProvider) &&
-    (selectedTab === "plugins"
+    selectedTab === "plugins"
       ? providerCapabilities[selectedProvider].plugins
-      : providerCapabilities[selectedProvider].skills);
+      : providerCapabilities[selectedProvider].skills;
   const providerFallbackOrder =
     selectedTab === "plugins"
       ? enabledProviderOrder
-      : [preferredProvider, ...enabledProviderOrder.filter((p) => p !== preferredProvider)].filter(
-          (provider) => !settings.disabledProviders.includes(provider),
-        );
+      : [preferredProvider, ...enabledProviderOrder.filter((p) => p !== preferredProvider)];
   const effectiveProvider = supportsSelectedTab
     ? selectedProvider
     : (providerFallbackOrder.find((provider) =>
@@ -460,12 +447,8 @@ export function PluginLibrary(props?: {
   const providerLabel = enabledProviderOrder.includes(effectiveProvider)
     ? PROVIDER_DISPLAY_NAMES[effectiveProvider]
     : null;
-  const canListPlugins =
-    !settings.disabledProviders.includes(effectiveProvider) &&
-    providerCapabilities[effectiveProvider].plugins;
-  const canListSkills =
-    !settings.disabledProviders.includes(effectiveProvider) &&
-    providerCapabilities[effectiveProvider].skills;
+  const canListPlugins = providerCapabilities[effectiveProvider].plugins;
+  const canListSkills = providerCapabilities[effectiveProvider].skills;
 
   const pluginsQuery = useQuery(
     providerPluginsQueryOptions({
@@ -590,25 +573,20 @@ export function PluginLibrary(props?: {
 
       {/* Search */}
       <div className="mx-auto max-w-2xl px-6 pb-6">
-        <InputGroup className="rounded-xl bg-background/70 shadow-xs">
-          <InputGroupAddon>
-            <InputGroupText>
-              <SearchIcon className="size-4 text-muted-foreground/60" />
-            </InputGroupText>
-          </InputGroupAddon>
-          <InputGroupInput
-            disabled={enabledProviderOrder.length === 0}
-            value={selectedTab === "plugins" ? pluginSearch : skillSearch}
-            onChange={(e) => {
-              if (selectedTab === "plugins") setPluginSearch(e.target.value);
-              else setSkillSearch(e.target.value);
-            }}
-            placeholder={
-              selectedTab === "plugins" ? t("common:searchPlugins") : t("common:searchSkills")
-            }
-            className="text-ui leading-snug"
-          />
-        </InputGroup>
+        <SearchInput
+          disabled={enabledProviderOrder.length === 0}
+          value={selectedTab === "plugins" ? pluginSearch : skillSearch}
+          onChange={(e) => {
+            if (selectedTab === "plugins") setPluginSearch(e.target.value);
+            else setSkillSearch(e.target.value);
+          }}
+          placeholder={
+            selectedTab === "plugins" ? t("common:searchPlugins") : t("common:searchSkills")
+          }
+          aria-label={
+            selectedTab === "plugins" ? t("common:searchPlugins") : t("common:searchSkills")
+          }
+        />
       </div>
 
       {/* Warnings */}

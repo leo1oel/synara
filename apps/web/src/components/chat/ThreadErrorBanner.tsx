@@ -22,6 +22,11 @@ import { useTranslation } from "~/i18n";
 type ThreadErrorBannerProps = {
   error: string | null;
   title?: string;
+  /**
+   * The step that fixes the error. It stays visible below the clamped text in
+   * a narrow panel, and Copy error includes it.
+   */
+  nextStep?: string;
   onContinue?: () => void;
   onChangeModel?: () => void;
   recoveryDisabled?: boolean;
@@ -41,6 +46,7 @@ export function ThreadErrorBanner(props: ThreadErrorBannerProps) {
 function ThreadErrorBannerContent({
   error,
   title,
+  nextStep,
   onContinue,
   onChangeModel,
   recoveryDisabled,
@@ -82,6 +88,7 @@ function ThreadErrorBannerContent({
         >
           {error}
         </p>
+        {nextStep ? <p className="font-medium [overflow-wrap:anywhere]">{nextStep}</p> : null}
         <div className="flex flex-wrap items-center gap-1">
           {clamped || expanded ? (
             <Button
@@ -95,7 +102,10 @@ function ThreadErrorBannerContent({
               {expanded ? t("chat:hideDetails") : t("chat:showDetails")}
             </Button>
           ) : null}
-          <CopyTextButton text={error} label={t("common:error")} />
+          <CopyTextButton
+            text={nextStep ? `${error}\n${nextStep}` : error}
+            label={t("common:error")}
+          />
           {onContinue ? (
             <Button
               size="xs"

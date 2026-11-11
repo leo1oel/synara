@@ -1,6 +1,7 @@
 import { readWorkspaceFrame } from "./lib/hosts/workspaceFrame";
 import { executionNamespace } from "./lib/hosts/executionContext";
 import { executionSessionStorage } from "./lib/hosts/executionStorage";
+import { isSynaraEmbedMode } from "./embedMode";
 // FILE: appNavigation.ts
 // Purpose: Owns the TanStack history instance and browser-style app navigation controls.
 // Layer: Web app routing utility
@@ -41,7 +42,12 @@ function createAppHistory(): RouterHistory {
   history.replace = (href, state, options) =>
     replace(href, { ...state, synaraExecution: scope }, options);
   const previousScope = history.location.state.synaraExecution;
-  const remembered = executionSessionStorage.getItem("last-route:v1");
+  // Lattice embeds several frames of this app in one tab (the Agent panel, the Git
+  // drawer's views, Settings pages), and they share one sessionStorage. One frame's
+  // last route must not replace the route another frame was opened on: in an embed
+  // each frame's own URL (its route and Lattice handshake) is the one to keep.
+  const embedded = isSynaraEmbedMode();
+  const remembered = embedded ? null : executionSessionStorage.getItem("last-route:v1");
   if (previousScope !== scope && remembered?.startsWith("/") && !remembered.startsWith("//"))
     history.replace(remembered);
   else history.replace(previousScope && previousScope !== scope ? "/" : history.location.href);
@@ -51,7 +57,7 @@ function createAppHistory(): RouterHistory {
       history.replace("/");
       return;
     }
-    executionSessionStorage.setItem("last-route:v1", history.location.href);
+    if (!embedded) executionSessionStorage.setItem("last-route:v1", history.location.href);
   });
   return history;
 }

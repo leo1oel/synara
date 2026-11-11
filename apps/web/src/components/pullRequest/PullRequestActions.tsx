@@ -1,15 +1,3 @@
-// FILE: PullRequestActions.tsx
-// Purpose: The action controls of a pull request's detail, shared by its two hosts (the chat
-//          dock's compact header and the code review page's top bar): the primary pill (Ready
-//          for review, or Merge / Merge stack, inert with a reason while blocked), the Draft /
-//          Ready state items, and the entries of the actions menu (merge method, hand-offs to a
-//          thread, close / reopen). Every glyph that names a pull request state or the merge
-//          comes from the state presentation map, so a control and the state it leads to look
-//          alike. Presentation only: PullRequestDetailPanel owns the queries and runs the actions.
-// Layer: Pull request presentation
-// Exports: PullRequestPrimaryAction, resolvePullRequestPrimaryAction, PullRequestPrimaryButton,
-//          PullRequestDraftStateItems, PullRequestActionMenuItems
-
 import type { PullRequestDetail, PullRequestMergeMethod, ProjectId } from "@synara/contracts";
 import type { ComponentProps } from "react";
 
@@ -22,13 +10,25 @@ import { cn } from "~/lib/utils";
 import { SendToAgentMenuItems, type GitHubItemSendTarget } from "./GitHubItemAgentActions";
 import { copyPullRequestLink } from "./PullRequestConfirmActionDialog";
 import { PR_STATE_PRESENTATION_ICONS } from "./pullRequestStatePresentation";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 const MergeIcon = PR_STATE_PRESENTATION_ICONS["merged-simple"];
 const OpenIcon = PR_STATE_PRESENTATION_ICONS["pull-request"];
 const DraftIcon = PR_STATE_PRESENTATION_ICONS.draft;
 const ClosedIcon = PR_STATE_PRESENTATION_ICONS["pull-request-closed"];
 const ConflictIcon = PR_STATE_PRESENTATION_ICONS["merge-conflict"];
+
+/** A merge method as the actions menu names it. */
+function mergeMethodLabel(translate: typeof t, method: PullRequestMergeMethod): string {
+  switch (method) {
+    case "merge":
+      return translate("git:merge");
+    case "squash":
+      return translate("lattice:squash");
+    case "rebase":
+      return translate("lattice:rebase");
+  }
+}
 
 /** What the primary pill offers; null when an open pull request has nothing to do next. */
 export type PullRequestPrimaryAction =
@@ -262,7 +262,7 @@ export function PullRequestActionMenuItems({
             {mergeMethods.map((method) => (
               <MenuRadioItem key={method} value={method} disabled={actionPending}>
                 <MergeIcon className={MENU_ICON_CLASS_NAME} />
-                <span className="capitalize">{method}</span>
+                <span>{mergeMethodLabel(t, method)}</span>
               </MenuRadioItem>
             ))}
           </MenuRadioGroup>

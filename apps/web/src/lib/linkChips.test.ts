@@ -1,11 +1,35 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   describeLinkChip,
   normalizeComposerLinkUrl,
+  openExternalLink,
   parseBareComposerLink,
   trimTrailingLinkPunctuation,
 } from "./linkChips";
+
+const embedMode = vi.hoisted(() => ({
+  postExternalLinkToLattice: vi.fn(),
+  readEmbedMode: vi.fn(),
+}));
+const nativeApi = vi.hoisted(() => ({ readNativeApi: vi.fn() }));
+
+vi.mock("../embedMode", () => embedMode);
+vi.mock("~/nativeApi", () => nativeApi);
+
+const windowOpen = vi.fn();
+
+beforeEach(() => {
+  embedMode.postExternalLinkToLattice.mockReset();
+  embedMode.readEmbedMode.mockReset();
+  nativeApi.readNativeApi.mockReset();
+  windowOpen.mockReset();
+  vi.stubGlobal("window", { open: windowOpen });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe("parseBareComposerLink", () => {
   it("ignores surrounding whitespace and trailing punctuation", () => {
@@ -37,6 +61,45 @@ describe("normalizeComposerLinkUrl", () => {
   it("avoids uncommon single-token dotted prose unless it has a path", () => {
     expect(normalizeComposerLinkUrl("foo.bar")).toBeNull();
     expect(normalizeComposerLinkUrl("foo.bar/docs")).toBe("https://foo.bar/docs");
+  });
+});
+
+describe("openExternalLink", () => {
+  it("routes links through the Lattice host when Synara is embedded", () => {
+    embedMode.readEmbedMode.mockReturnValue({
+      workspaceRoot: "/repo",
+      theme: "light",
+      surface: "chrome",
+      hostOrigin: "http://localhost:1420",
+      locale: "en",
+    });
+    embedMode.postExternalLinkToLattice.mockReturnValue(true);
+
+    openExternalLink("https://example.com/paper");
+
+    expect(embedMode.postExternalLinkToLattice).toHaveBeenCalledWith(
+      {
+        workspaceRoot: "/repo",
+        theme: "light",
+        surface: "chrome",
+        hostOrigin: "http://localhost:1420",
+        locale: "en",
+      },
+      "https://example.com/paper",
+    );
+    expect(windowOpen).not.toHaveBeenCalled();
+  });
+
+  it("keeps using the native shell outside an embed", () => {
+    const openExternal = vi.fn().mockResolvedValue(undefined);
+    embedMode.readEmbedMode.mockReturnValue(null);
+    nativeApi.readNativeApi.mockReturnValue({ shell: { openExternal } });
+
+    openExternalLink("https://example.com/paper");
+
+    expect(openExternal).toHaveBeenCalledWith("https://example.com/paper");
+    expect(embedMode.postExternalLinkToLattice).not.toHaveBeenCalled();
+    expect(windowOpen).not.toHaveBeenCalled();
   });
 });
 

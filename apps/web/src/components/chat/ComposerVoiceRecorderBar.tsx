@@ -3,13 +3,13 @@
 // Layer: Chat composer presentation
 // Depends on: live waveform samples and caller-owned record/cancel/send actions.
 
+import { i18n, useTranslation } from "~/i18n";
 import { useEffect, useRef, useState } from "react";
 
 import { Loader2Icon, XIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { MAX_WAVEFORM_SAMPLES } from "~/lib/voiceRecorder";
 import { Button } from "../ui/button";
-import { useTranslation } from "~/i18n";
 
 interface ComposerVoiceRecorderBarProps {
   disabled?: boolean;
@@ -68,7 +68,11 @@ export function ComposerVoiceRecorderBar(props: ComposerVoiceRecorderBarProps) {
 
   return (
     <div className="flex min-w-0 flex-1 items-center gap-2.5">
-      <div ref={trackRef} className="relative flex h-7 min-w-0 flex-1 items-center overflow-hidden">
+      <div
+        ref={trackRef}
+        data-voice-waveform-track="true"
+        className="relative flex h-7 min-w-0 flex-1 items-center overflow-hidden"
+      >
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 border-t border-dashed border-zinc-300 dark:border-zinc-700"

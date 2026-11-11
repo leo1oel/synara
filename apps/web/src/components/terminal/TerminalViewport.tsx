@@ -1,3 +1,4 @@
+import { selectionActionDelayForClickCount } from "~/lib/selectionActions";
 // FILE: TerminalViewport.tsx
 // Purpose: Shared interactive terminal viewport for chat and provider authentication.
 // Layer: Chat terminal workspace UI
@@ -17,7 +18,6 @@ import {
   resolveTerminalSelectionActionPosition,
   resolveTerminalSelectionContextMenuItems,
   shouldHandleTerminalSelectionMouseUp,
-  terminalSelectionActionDelayForClickCount,
 } from "./terminalSelectionActions";
 import { buildTerminalRuntimeKey, terminalRuntimeRegistry } from "./terminalRuntimeRegistry";
 import type {
@@ -418,7 +418,7 @@ export default function TerminalViewport({
         return;
       }
       selectionPointerRef.current = { x: event.clientX, y: event.clientY };
-      const delay = terminalSelectionActionDelayForClickCount(event.detail);
+      const delay = selectionActionDelayForClickCount(event.detail);
       selectionActionTimerRef.current = window.setTimeout(() => {
         selectionActionTimerRef.current = null;
         window.requestAnimationFrame(() => {

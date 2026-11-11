@@ -225,14 +225,16 @@ import {
 } from "./githubProjectProvisioning";
 import { StudioListThreadOutputsInput, StudioListThreadOutputsResult } from "./studio";
 import {
-  GitCheckoutInput,
-  GitActionProgressEvent,
   GitBlameLineInput,
   GitBlameLineResult,
-  GitReadFileAtRevInput,
-  GitReadFileAtRevResult,
+  GitCheckoutInput,
+  GitActionProgressEvent,
+  GitConnectGitHubRemoteInput,
+  GitConnectGitHubRemoteResult,
   GitCreateBranchInput,
   GitCreateDetachedWorktreeInput,
+  GitCreateGitHubRepositoryInput,
+  GitCreateGitHubRepositoryResult,
   GitCreateWorktreeInput,
   GitCreateWorktreeResult,
   GitHubRepositoryInput,
@@ -241,8 +243,8 @@ import {
   GitHandoffThreadResult,
   GitInitInput,
   GitListBranchesInput,
-  GitListRecentCommitsInput,
   GitListBranchesResult,
+  GitListRecentCommitsInput,
   GitListRecentCommitsResult,
   GitPreparePullRequestThreadInput,
   GitPreparePullRequestThreadResult,
@@ -251,6 +253,8 @@ import {
   GitPullRequestSnapshotInput,
   GitPullRequestSnapshotResult,
   GitPullResult,
+  GitReadFileAtRevInput,
+  GitReadFileAtRevResult,
   GitReadWorkingTreeDiffInput,
   GitReadWorkingTreeDiffResult,
   GitWorkingTreeDiffStatsResult,
@@ -266,8 +270,12 @@ import {
   GitStashInfoResult,
   GitStatusInput,
   GitStatusResult,
+  GitBranchPullRequestInput,
+  GitBranchPullRequestResult,
   GitSummarizeDiffInput,
   GitSummarizeDiffResult,
+  GitGenerateCommitMessageInput,
+  GitGenerateCommitMessageResult,
   GitUnstageFilesInput,
   GitWorktreeSetupProgressEvent,
   GitUnstageFilesResult,
@@ -319,6 +327,10 @@ import {
   ProviderListAgentsResult,
   ProviderListCommandsInput,
   ProviderListCommandsResult,
+  ProviderListMcpServersInput,
+  ProviderListMcpServersResult,
+  ProviderMcpServerActionInput,
+  ProviderMcpServerActionResult,
   ProviderListModelsInput,
   ProviderListModelsResult,
   ProviderListPluginsInput,
@@ -327,6 +339,18 @@ import {
   ProviderListSkillsResult,
   ProviderSkillsCatalogInput,
   ProviderSkillsCatalogResult,
+  ProviderImportSkillInput,
+  ProviderImportSkillResult,
+  ProviderReadManagedSkillInput,
+  ProviderManagedSkillDetail,
+  ProviderSaveManagedSkillInput,
+  ProviderSaveManagedSkillResult,
+  ProviderDuplicateManagedSkillInput,
+  ProviderDuplicateManagedSkillResult,
+  ProviderRemoveManagedSkillInput,
+  ProviderRemoveManagedSkillResult,
+  ProviderRestoreManagedSkillInput,
+  ProviderRestoreManagedSkillResult,
   ProviderReadPluginInput,
   ProviderReadPluginResult,
 } from "./providerDiscovery";
@@ -387,7 +411,9 @@ import {
   ServerListWorktreesResult,
   ServerProviderUpdateError,
   ServerProviderUpdateInput,
+  ServerInstallProviderRuntimeInput,
   ServerProviderUpdateResult,
+  ServerRefreshProvidersInput,
   ServerRefreshProvidersResult,
   ServerStopLocalServerInput,
   ServerStopLocalServerResult,
@@ -507,6 +533,27 @@ export const WsLoadProjectImportHistoryRpc = Rpc.make(
   },
 );
 
+export const WsListFolderSessionsRpc = Rpc.make(ORCHESTRATION_WS_METHODS.listFolderSessions, {
+  payload: OrchestrationRpcSchemas.listFolderSessions.input,
+  success: OrchestrationRpcSchemas.listFolderSessions.output,
+  error: WsRpcError,
+});
+
+export const WsOpenFolderSessionRpc = Rpc.make(ORCHESTRATION_WS_METHODS.openFolderSession, {
+  payload: OrchestrationRpcSchemas.openFolderSession.input,
+  success: OrchestrationRpcSchemas.openFolderSession.output,
+  error: WsRpcError,
+});
+
+export const WsGetNativeSessionHandoffRpc = Rpc.make(
+  ORCHESTRATION_WS_METHODS.getNativeSessionHandoff,
+  {
+    payload: OrchestrationRpcSchemas.getNativeSessionHandoff.input,
+    success: OrchestrationRpcSchemas.getNativeSessionHandoff.output,
+    error: WsRpcError,
+  },
+);
+
 export const WsImportProjectRpc = Rpc.make(ORCHESTRATION_WS_METHODS.importProject, {
   payload: OrchestrationRpcSchemas.importProject.input,
   success: OrchestrationRpcSchemas.importProject.output,
@@ -518,6 +565,15 @@ export const WsOrchestrationRegenerateThreadTitleRpc = Rpc.make(
   {
     payload: OrchestrationRpcSchemas.regenerateThreadTitle.input,
     success: OrchestrationRpcSchemas.regenerateThreadTitle.output,
+    error: WsRpcError,
+  },
+);
+
+export const WsOrchestrationShowPanelThreadRpc = Rpc.make(
+  ORCHESTRATION_WS_METHODS.showPanelThread,
+  {
+    payload: OrchestrationRpcSchemas.showPanelThread.input,
+    success: OrchestrationRpcSchemas.showPanelThread.output,
     error: WsRpcError,
   },
 );
@@ -1158,6 +1214,12 @@ export const WsGitStatusRpc = Rpc.make(WS_METHODS.gitStatus, {
   error: WsRpcError,
 });
 
+export const WsGitBranchPullRequestRpc = Rpc.make(WS_METHODS.gitBranchPullRequest, {
+  payload: GitBranchPullRequestInput,
+  success: GitBranchPullRequestResult,
+  error: WsRpcError,
+});
+
 export const WsGitGithubRepositoryRpc = Rpc.make(WS_METHODS.gitGithubRepository, {
   payload: GitHubRepositoryInput,
   success: GitHubRepositoryResult,
@@ -1182,6 +1244,12 @@ export const WsGitReadFileAtRevRpc = Rpc.make(WS_METHODS.gitReadFileAtRev, {
   error: WsRpcError,
 });
 
+export const WsGitListRecentCommitsRpc = Rpc.make(WS_METHODS.gitListRecentCommits, {
+  payload: GitListRecentCommitsInput,
+  success: GitListRecentCommitsResult,
+  error: WsRpcError,
+});
+
 export const WsGitWorkingTreeDiffStatsRpc = Rpc.make(WS_METHODS.gitWorkingTreeDiffStats, {
   payload: GitReadWorkingTreeDiffInput,
   success: GitWorkingTreeDiffStatsResult,
@@ -1191,6 +1259,12 @@ export const WsGitWorkingTreeDiffStatsRpc = Rpc.make(WS_METHODS.gitWorkingTreeDi
 export const WsGitSummarizeDiffRpc = Rpc.make(WS_METHODS.gitSummarizeDiff, {
   payload: GitSummarizeDiffInput,
   success: GitSummarizeDiffResult,
+  error: WsRpcError,
+});
+
+export const WsGitGenerateCommitMessageRpc = Rpc.make(WS_METHODS.gitGenerateCommitMessage, {
+  payload: GitGenerateCommitMessageInput,
+  success: GitGenerateCommitMessageResult,
   error: WsRpcError,
 });
 
@@ -1295,12 +1369,6 @@ export const WsGitListBranchesRpc = Rpc.make(WS_METHODS.gitListBranches, {
   error: WsRpcError,
 });
 
-export const WsGitListRecentCommitsRpc = Rpc.make(WS_METHODS.gitListRecentCommits, {
-  payload: GitListRecentCommitsInput,
-  success: GitListRecentCommitsResult,
-  error: WsRpcError,
-});
-
 export const WsGitCreateWorktreeRpc = Rpc.make(WS_METHODS.gitCreateWorktree, {
   payload: GitCreateWorktreeInput,
   success: GitCreateWorktreeResult,
@@ -1361,6 +1429,18 @@ export const WsGitRemoveIndexLockRpc = Rpc.make(WS_METHODS.gitRemoveIndexLock, {
 export const WsGitInitRpc = Rpc.make(WS_METHODS.gitInit, {
   payload: GitInitInput,
   success: Schema.Void,
+  error: WsRpcError,
+});
+
+export const WsGitConnectGitHubRemoteRpc = Rpc.make(WS_METHODS.gitConnectGitHubRemote, {
+  payload: GitConnectGitHubRemoteInput,
+  success: GitConnectGitHubRemoteResult,
+  error: WsRpcError,
+});
+
+export const WsGitCreateGitHubRepositoryRpc = Rpc.make(WS_METHODS.gitCreateGitHubRepository, {
+  payload: GitCreateGitHubRepositoryInput,
+  success: GitCreateGitHubRepositoryResult,
   error: WsRpcError,
 });
 
@@ -1474,13 +1554,19 @@ export const WsServerUpdateSettingsRpc = Rpc.make(WS_METHODS.serverUpdateSetting
 });
 
 export const WsServerRefreshProvidersRpc = Rpc.make(WS_METHODS.serverRefreshProviders, {
-  payload: Schema.Struct({}),
+  payload: ServerRefreshProvidersInput,
   success: ServerRefreshProvidersResult,
   error: WsRpcError,
 });
 
 export const WsServerUpdateProviderRpc = Rpc.make(WS_METHODS.serverUpdateProvider, {
   payload: ServerProviderUpdateInput,
+  success: ServerProviderUpdateResult,
+  error: ServerProviderUpdateError,
+});
+
+export const WsServerInstallProviderRuntimeRpc = Rpc.make(WS_METHODS.serverInstallProviderRuntime, {
+  payload: ServerInstallProviderRuntimeInput,
   success: ServerProviderUpdateResult,
   error: ServerProviderUpdateError,
 });
@@ -1738,6 +1824,18 @@ export const WsProviderListCommandsRpc = Rpc.make(WS_METHODS.providerListCommand
   error: WsRpcError,
 });
 
+export const WsProviderListMcpServersRpc = Rpc.make(WS_METHODS.providerListMcpServers, {
+  payload: ProviderListMcpServersInput,
+  success: ProviderListMcpServersResult,
+  error: WsRpcError,
+});
+
+export const WsProviderRunMcpServerActionRpc = Rpc.make(WS_METHODS.providerRunMcpServerAction, {
+  payload: ProviderMcpServerActionInput,
+  success: ProviderMcpServerActionResult,
+  error: WsRpcError,
+});
+
 export const WsProviderListSkillsRpc = Rpc.make(WS_METHODS.providerListSkills, {
   payload: ProviderListSkillsInput,
   success: ProviderListSkillsResult,
@@ -1747,6 +1845,45 @@ export const WsProviderListSkillsRpc = Rpc.make(WS_METHODS.providerListSkills, {
 export const WsProviderListSkillsCatalogRpc = Rpc.make(WS_METHODS.providerListSkillsCatalog, {
   payload: ProviderSkillsCatalogInput,
   success: ProviderSkillsCatalogResult,
+  error: WsRpcError,
+});
+
+export const WsProviderImportSkillRpc = Rpc.make(WS_METHODS.providerImportSkill, {
+  payload: ProviderImportSkillInput,
+  success: ProviderImportSkillResult,
+  error: WsRpcError,
+});
+
+export const WsProviderReadManagedSkillRpc = Rpc.make(WS_METHODS.providerReadManagedSkill, {
+  payload: ProviderReadManagedSkillInput,
+  success: ProviderManagedSkillDetail,
+  error: WsRpcError,
+});
+
+export const WsProviderSaveManagedSkillRpc = Rpc.make(WS_METHODS.providerSaveManagedSkill, {
+  payload: ProviderSaveManagedSkillInput,
+  success: ProviderSaveManagedSkillResult,
+  error: WsRpcError,
+});
+
+export const WsProviderDuplicateManagedSkillRpc = Rpc.make(
+  WS_METHODS.providerDuplicateManagedSkill,
+  {
+    payload: ProviderDuplicateManagedSkillInput,
+    success: ProviderDuplicateManagedSkillResult,
+    error: WsRpcError,
+  },
+);
+
+export const WsProviderRemoveManagedSkillRpc = Rpc.make(WS_METHODS.providerRemoveManagedSkill, {
+  payload: ProviderRemoveManagedSkillInput,
+  success: ProviderRemoveManagedSkillResult,
+  error: WsRpcError,
+});
+
+export const WsProviderRestoreManagedSkillRpc = Rpc.make(WS_METHODS.providerRestoreManagedSkill, {
+  payload: ProviderRestoreManagedSkillInput,
+  success: ProviderRestoreManagedSkillResult,
   error: WsRpcError,
 });
 
@@ -2522,7 +2659,26 @@ export type WsFeatureRpc =
   | typeof WsTodoCreateRpc
   | typeof WsTodoUpdateRpc
   | typeof WsTodoDeleteRpc
-  | typeof WsSubscribeTodoEventsRpc;
+  | typeof WsSubscribeTodoEventsRpc
+  // Lattice's embedded panel: Git and pull-request views, skills, /mcp, panel warmth,
+  // folder sessions, Continue in terminal and on-demand provider runtimes.
+  | typeof WsGetNativeSessionHandoffRpc
+  | typeof WsGitBranchPullRequestRpc
+  | typeof WsGitConnectGitHubRemoteRpc
+  | typeof WsGitCreateGitHubRepositoryRpc
+  | typeof WsGitGenerateCommitMessageRpc
+  | typeof WsListFolderSessionsRpc
+  | typeof WsOpenFolderSessionRpc
+  | typeof WsOrchestrationShowPanelThreadRpc
+  | typeof WsProviderDuplicateManagedSkillRpc
+  | typeof WsProviderImportSkillRpc
+  | typeof WsProviderListMcpServersRpc
+  | typeof WsProviderReadManagedSkillRpc
+  | typeof WsProviderRemoveManagedSkillRpc
+  | typeof WsProviderRestoreManagedSkillRpc
+  | typeof WsProviderRunMcpServerActionRpc
+  | typeof WsProviderSaveManagedSkillRpc
+  | typeof WsServerInstallProviderRuntimeRpc;
 
 // Partition construction while the explicit union bounds the exported declaration.
 const wsOrchestrationRpcGroup = RpcGroup.make(
@@ -2533,7 +2689,11 @@ const wsOrchestrationRpcGroup = RpcGroup.make(
   WsListProjectImportsRpc,
   WsImportProjectRpc,
   WsLoadProjectImportHistoryRpc,
+  WsListFolderSessionsRpc,
+  WsOpenFolderSessionRpc,
+  WsGetNativeSessionHandoffRpc,
   WsOrchestrationRegenerateThreadTitleRpc,
+  WsOrchestrationShowPanelThreadRpc,
   WsOrchestrationGetSnapshotRpc,
   WsOrchestrationGetShellSnapshotRpc,
   WsOrchestrationGetThreadDetailSnapshotRpc,
@@ -2580,11 +2740,14 @@ const wsApplicationRpcGroup = RpcGroup.make(
   WsShellOpenInEditorRpc,
   WsGitGithubRepositoryRpc,
   WsGitStatusRpc,
+  WsGitBranchPullRequestRpc,
   WsGitReadWorkingTreeDiffRpc,
   WsGitBlameLineRpc,
   WsGitReadFileAtRevRpc,
+  WsGitListRecentCommitsRpc,
   WsGitWorkingTreeDiffStatsRpc,
   WsGitSummarizeDiffRpc,
+  WsGitGenerateCommitMessageRpc,
   WsGitPullRpc,
   WsGitRunStackedActionRpc,
   WsGitResolvePullRequestRpc,
@@ -2601,7 +2764,6 @@ const wsApplicationRpcGroup = RpcGroup.make(
   WsPullRequestsGetAutoFixRpc,
   WsPullRequestsSetAutoFixRpc,
   WsGitListBranchesRpc,
-  WsGitListRecentCommitsRpc,
   WsGitCreateWorktreeRpc,
   WsGitCreateDetachedWorktreeRpc,
   WsGitRemoveWorktreeRpc,
@@ -2612,6 +2774,8 @@ const wsApplicationRpcGroup = RpcGroup.make(
   WsGitStashInfoRpc,
   WsGitRemoveIndexLockRpc,
   WsGitInitRpc,
+  WsGitConnectGitHubRemoteRpc,
+  WsGitCreateGitHubRepositoryRpc,
   WsGitStageFilesRpc,
   WsGitUnstageFilesRpc,
   WsGitHandoffThreadRpc,
@@ -2632,6 +2796,7 @@ const wsApplicationRpcGroup = RpcGroup.make(
   WsServerUpdateSettingsRpc,
   WsServerRefreshProvidersRpc,
   WsServerUpdateProviderRpc,
+  WsServerInstallProviderRuntimeRpc,
   WsServerListExternalMcpIntegrationsRpc,
   WsServerCreateExternalMcpIntegrationRpc,
   WsServerRevokeExternalMcpIntegrationRpc,
@@ -2668,8 +2833,16 @@ const wsApplicationRpcGroup = RpcGroup.make(
   WsProviderCompactThreadRpc,
   WsProviderPrewarmThreadRpc,
   WsProviderListCommandsRpc,
+  WsProviderListMcpServersRpc,
+  WsProviderRunMcpServerActionRpc,
   WsProviderListSkillsRpc,
   WsProviderListSkillsCatalogRpc,
+  WsProviderImportSkillRpc,
+  WsProviderReadManagedSkillRpc,
+  WsProviderSaveManagedSkillRpc,
+  WsProviderDuplicateManagedSkillRpc,
+  WsProviderRemoveManagedSkillRpc,
+  WsProviderRestoreManagedSkillRpc,
   WsProviderListPluginsRpc,
   WsProviderReadPluginRpc,
   WsProviderListModelsRpc,

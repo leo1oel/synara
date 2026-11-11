@@ -1,10 +1,9 @@
 import type {
+  GitBranchPullRequest,
   GitStatusLocalResult,
   GitStatusRemoteResult,
   GitStatusResult,
 } from "@synara/contracts";
-
-import type { GitStatusDetails } from "./Services/GitCore";
 
 export interface CachedValue<T> {
   readonly fingerprint: string;
@@ -17,14 +16,27 @@ export interface CachedGitStatus {
   readonly remote: CachedValue<GitStatusRemoteResult | null> | null;
 }
 
-export const REMOTE_STATUS_CACHE_TTL_MS = 30_000;
+/**
+ * A resolved branch pull request, valid only for the branch/upstream it was looked up for.
+ */
+export interface CachedBranchPullRequest {
+  readonly branchKey: string;
+  readonly updatedAt: number;
+  readonly pr: GitBranchPullRequest | null;
+}
+
+/**
+ * How long a branch's pull request lookup is reused. Every lookup is several `gh` network
+ * round trips, and many surfaces (and several clients) poll the same checkout.
+ */
+export const BRANCH_PULL_REQUEST_CACHE_TTL_MS = 30_000;
 
 /**
  * Upper bound on cached working directories.
  *
  * Synara creates a git worktree per thread, so `cwd` keys are effectively
- * thread-scoped and unbounded over a long-lived server. The cache is a pure
- * optimization behind a 30 s TTL — a miss just re-runs git — so evicting the least
+ * thread-scoped and unbounded over a long-lived server. The caches are pure
+ * optimizations — a miss just re-runs git or gh — so evicting the least
  * recently written directory is always safe, and it keeps the copy-on-write update
  * below O(limit) instead of O(directories ever seen).
  */
@@ -35,12 +47,12 @@ export const GIT_STATUS_CACHE_MAX_ENTRIES = 64;
  * moves it to the end of `Map` iteration order, so the first key is always the
  * coldest entry.
  */
-export function setCachedGitStatus(
-  cache: ReadonlyMap<string, CachedGitStatus>,
+export function setBoundedCacheEntry<T>(
+  cache: ReadonlyMap<string, T>,
   cwd: string,
-  next: CachedGitStatus,
+  next: T,
   maxEntries: number = GIT_STATUS_CACHE_MAX_ENTRIES,
-): Map<string, CachedGitStatus> {
+): Map<string, T> {
   const nextCache = new Map(cache);
   nextCache.delete(cwd);
   nextCache.set(cwd, next);
@@ -70,14 +82,6 @@ export function splitLocalStatus(status: GitStatusResult): GitStatusLocalResult 
   };
 }
 
-export function splitLocalStatusDetails(status: GitStatusDetails): GitStatusLocalResult {
-  return {
-    branch: status.branch,
-    hasWorkingTreeChanges: status.hasWorkingTreeChanges,
-    workingTree: status.workingTree,
-  };
-}
-
 export function splitRemoteStatus(status: GitStatusResult): GitStatusRemoteResult {
   return {
     hasUpstream: status.hasUpstream,
@@ -85,48 +89,25 @@ export function splitRemoteStatus(status: GitStatusResult): GitStatusRemoteResul
     configuredPrBaseBranch: status.configuredPrBaseBranch,
     aheadCount: status.aheadCount,
     behindCount: status.behindCount,
-    pr: status.pr,
   };
 }
 
-export function splitRemoteStatusDetails(
-  status: GitStatusDetails,
-  cachedRemote: GitStatusRemoteResult | null,
-): GitStatusRemoteResult {
-  return {
-    hasUpstream: status.hasUpstream,
-    upstreamBranch: status.upstreamBranch,
-    configuredPrBaseBranch: status.configuredPrBaseBranch,
-    aheadCount: status.aheadCount,
-    behindCount: status.behindCount,
-    pr: cachedRemote?.pr ?? null,
-  };
+/** Identity of the branch a pull request lookup was made for. */
+export function branchPullRequestCacheKey(input: {
+  readonly branch: string;
+  readonly upstreamRef: string | null;
+}): string {
+  return JSON.stringify([input.branch, input.upstreamRef]);
 }
 
-/**
- * The half of the reuse decision that depends only on the cache.
- *
- * Callers check this *before* fetching fresh status details: when the cached remote
- * metadata is absent or expired the details can never be reused, so probing git for
- * them would only be thrown away and repeated by the full status load.
- */
-export function isCachedRemoteStatusFresh(input: {
-  readonly cached: CachedGitStatus;
+export function readFreshBranchPullRequest(input: {
+  readonly cached: CachedBranchPullRequest | undefined;
+  readonly branchKey: string;
   readonly now?: number;
   readonly ttlMs?: number;
-}): boolean {
-  const remote = input.cached.remote;
-  if (!input.cached.local || !remote?.value) return false;
-  return (input.now ?? Date.now()) - remote.updatedAt < (input.ttlMs ?? REMOTE_STATUS_CACHE_TTL_MS);
-}
-
-export function canReuseCachedRemoteStatus(input: {
-  readonly cached: CachedGitStatus;
-  readonly details: GitStatusDetails;
-  readonly now?: number;
-  readonly ttlMs?: number;
-}): boolean {
-  if (!isCachedRemoteStatusFresh(input)) return false;
-  if (input.details.branch !== input.cached.local?.value.branch) return false;
-  return input.details.upstreamBranch === input.cached.remote?.value?.upstreamBranch;
+}): CachedBranchPullRequest | null {
+  const cached = input.cached;
+  if (!cached || cached.branchKey !== input.branchKey) return null;
+  const age = (input.now ?? Date.now()) - cached.updatedAt;
+  return age < (input.ttlMs ?? BRANCH_PULL_REQUEST_CACHE_TTL_MS) ? cached : null;
 }

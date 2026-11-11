@@ -1,19 +1,10 @@
-// FILE: pullRequestDetail.logic.ts
-// Purpose: Pure helpers shared by every host of the pull request detail surface (the inbox
-//          route's detail pane and the chat right-dock pane): the canonical
-//          pane identity key, the "PR #n" tab chip label, the plain-language state
-//          descriptor, and the flattened chronological timeline event list.
-// Layer: Web domain helpers (no React)
-// Exports: pullRequestDetailInputKey, pullRequestPaneTabLabel, pullRequestDetailInputFromPane,
-//          describePullRequestState, stripHtmlComments, PullRequestTimelineEvent,
-//          buildPullRequestTimelineEvents
-
 import type {
   PullRequestDetail,
   PullRequestDetailInput,
   PullRequestState,
 } from "@synara/contracts";
 
+import { t } from "~/i18n";
 import type { RightDockPane } from "~/rightDockStore.logic";
 
 import { pullRequestMarkdownPreview } from "./pullRequestMarkdown.logic";
@@ -52,10 +43,10 @@ export function pullRequestDetailInputFromPane(pane: RightDockPane): PullRequest
 // already conveyed by the PullRequestStateGlyph in the header, so this stays neutral text.
 // State only, matching git: conflicts are a merge signal and render as their own row.
 export function describePullRequestState(state: PullRequestState, isDraft: boolean): string {
-  if (isDraft && state === "open") return "Draft";
-  if (state === "open") return "Ready for review";
-  if (state === "merged") return "Merged";
-  return "Closed";
+  if (isDraft && state === "open") return t("git:column_draft");
+  if (state === "open") return t("git:readyForReview");
+  if (state === "merged") return t("git:merged");
+  return t("chat:closed");
 }
 
 // stripHtmlComments now lives with the rest of the markdown preprocessing.
@@ -91,14 +82,17 @@ export function buildPullRequestTimelineEvents(
   detail: GitHubItemTimelineSource,
   noun?: "pull request" | "issue",
 ): PullRequestTimelineEvent[] {
-  const itemNoun = noun ?? "pull request";
-  const ItemNoun = itemNoun === "issue" ? "Issue" : "Pull request";
+  const isIssue = noun === "issue";
   const mergedAt = detail.mergedAt ?? null;
+  const someone = t("lattice:someone");
+  const opener = githubActorName(detail.author) ?? someone;
   const events: PullRequestTimelineEvent[] = [
     {
       id: "created",
       at: detail.createdAt,
-      title: `${githubActorName(detail.author) ?? "Someone"} opened this ${itemNoun}`,
+      title: isIssue
+        ? t("lattice:openedThisIssue", { name: opener })
+        : t("lattice:openedThisPullRequest", { name: opener }),
       body: null,
     },
     ...(detail.commits ?? []).map((commit) => {
@@ -107,21 +101,40 @@ export function buildPullRequestTimelineEvents(
         id: commit.oid,
         at: commit.committedDate,
         title: authorLabel
-          ? `Commit ${commit.oid.slice(0, 7)} by ${authorLabel}`
-          : `Commit ${commit.oid.slice(0, 7)}`,
-        body: commit.messageHeadline || "No commit message.",
+          ? t("lattice:commitBy", { sha: commit.oid.slice(0, 7), name: authorLabel })
+          : t("lattice:commit2", { sha: commit.oid.slice(0, 7) }),
+        body: commit.messageHeadline || t("lattice:noCommitMessage"),
       };
     }),
     ...detail.comments.map((comment) => ({
       id: comment.id,
       at: comment.createdAt,
-      title: `${githubActorName(comment.author) ?? "Someone"} ${comment.kind === "review" ? "reviewed" : "commented"}`,
+      title:
+        comment.kind === "review"
+          ? t("lattice:reviewed", { name: githubActorName(comment.author) ?? someone })
+          : t("lattice:commented", { name: githubActorName(comment.author) ?? someone }),
       // Timeline previews are plain text, so raw markdown/HTML would print literally.
       body: pullRequestMarkdownPreview(comment.body) || null,
     })),
-    ...(mergedAt ? [{ id: "merged", at: mergedAt, title: `${ItemNoun} merged`, body: null }] : []),
+    ...(mergedAt
+      ? [
+          {
+            id: "merged",
+            at: mergedAt,
+            title: isIssue ? t("lattice:issueMerged") : t("lattice:pullRequestMerged"),
+            body: null,
+          },
+        ]
+      : []),
     ...(detail.closedAt && !mergedAt
-      ? [{ id: "closed", at: detail.closedAt, title: `${ItemNoun} closed`, body: null }]
+      ? [
+          {
+            id: "closed",
+            at: detail.closedAt,
+            title: isIssue ? t("git:issueClosed") : t("lattice:pullRequestClosed"),
+            body: null,
+          },
+        ]
       : []),
   ];
   return events.toSorted((left, right) => left.at.localeCompare(right.at));
@@ -133,17 +146,22 @@ export type PullRequestMergeStatusTone = "success" | "conflict" | "muted";
 export function describePullRequestMergeStatus(
   detail: Pick<PullRequestDetail, "state" | "isDraft" | "mergeability" | "baseBranch">,
 ): { tone: PullRequestMergeStatusTone; label: string } {
-  if (detail.state === "merged") return { tone: "muted", label: "Merged" };
-  if (detail.state === "closed") return { tone: "muted", label: "Closed" };
-  if (detail.isDraft) return { tone: "muted", label: "Draft" };
+  if (detail.state === "merged") return { tone: "muted", label: t("git:merged") };
+  if (detail.state === "closed") return { tone: "muted", label: t("chat:closed") };
+  if (detail.isDraft) return { tone: "muted", label: t("git:column_draft") };
   if (detail.mergeability === "conflicting") {
-    return { tone: "conflict", label: `Conflicts with ${detail.baseBranch}` };
+    return {
+      tone: "conflict",
+      label: t("lattice:conflictsWith", { branch: detail.baseBranch }),
+    };
   }
   if (detail.mergeability === "mergeable") {
-    return { tone: "success", label: "Can merge without conflicts" };
+    return { tone: "success", label: t("lattice:canMergeWithoutConflicts") };
   }
-  return { tone: "muted", label: "Merge status unknown" };
+  return { tone: "muted", label: t("lattice:mergeStatusUnknown") };
 }
+
+const LIST_SEPARATOR = "lattice:checksSummarySeparator";
 
 /** "24 successful", "2 failing, 22 successful": the checks row's one-line summary. */
 export function describePullRequestChecksBrief(
@@ -151,18 +169,21 @@ export function describePullRequestChecksBrief(
     status: PullRequestDetail["checks"][number]["status"];
   }>,
 ): { tone: "success" | "failure" | "pending" | "none"; label: string } {
-  if (checks.length === 0) return { tone: "none", label: "No checks" };
+  if (checks.length === 0) return { tone: "none", label: t("git:noChecks") };
   const count = (...statuses: string[]) =>
     checks.filter((check) => statuses.includes(check.status)).length;
   const failing = count("failure", "cancelled");
   const pending = count("pending");
   const successful = count("success");
   const parts = [
-    failing > 0 ? `${failing} failing` : null,
-    pending > 0 ? `${pending} pending` : null,
-    successful > 0 ? `${successful} successful` : null,
+    failing > 0 ? t("lattice:failing", { count: failing }) : null,
+    pending > 0 ? t("lattice:pending", { count: pending }) : null,
+    successful > 0 ? t("lattice:successful", { count: successful }) : null,
   ].filter((part) => part !== null);
-  const label = parts.length > 0 ? parts.join(", ") : `${checks.length} skipped`;
+  const label =
+    parts.length > 0
+      ? parts.join(t(LIST_SEPARATOR))
+      : t("lattice:skipped", { count: checks.length });
   return {
     tone: failing > 0 ? "failure" : pending > 0 ? "pending" : successful > 0 ? "success" : "none",
     label,

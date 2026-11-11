@@ -587,6 +587,31 @@ layer("reconcileMigrationLineage", (it) => {
   );
 });
 
+const forkMigration090Layer = it.layer(Layer.mergeAll(NodeSqliteClient.layerMemory()));
+
+forkMigration090Layer("fork migration 090 upgrade", (it) => {
+  it.effect("applies all later migrations without replaying 090 or rewriting valid lineage", () =>
+    Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      yield* runMigrations({ toMigrationInclusive: 90 });
+      const lineageThrough090 = yield* trackerRows(sql);
+
+      const executed = yield* runMigrations();
+      // Every registered migration after 090 runs once, in order. The list is read
+      // from the registry because upstream syncs keep adding to it (109+ arrived in
+      // bcf96ff69 while this list stopped at 108).
+      assert.deepStrictEqual(
+        executed,
+        migrationEntries.filter(([id]) => id > 90).map(([id, name]) => [id, name]),
+      );
+
+      const upgradedLineage = yield* trackerRows(sql);
+      assert.deepStrictEqual(upgradedLineage.slice(0, lineageThrough090.length), lineageThrough090);
+      assert.strictEqual(upgradedLineage.filter((row) => row.migration_id === 90).length, 1);
+    }),
+  );
+});
+
 const providerDeliveryCutoverLayer = it.layer(Layer.mergeAll(NodeSqliteClient.layerMemory()));
 
 providerDeliveryCutoverLayer(

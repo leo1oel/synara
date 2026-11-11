@@ -14,7 +14,7 @@ import {
   type MentionChipKind,
 } from "~/lib/composerMentions";
 import { CentralIcon, createCentralIconElement } from "~/lib/central-icons";
-import { MessageCircleIcon, PluginIcon, FolderIcon } from "~/lib/icons";
+import { MessageCircleIcon, PAPER_ICON_NAME, PaperIcon, PluginIcon, FolderIcon } from "~/lib/icons";
 import { COMPOSER_INLINE_MENTION_CHIP_ICON_CLASS_NAME } from "../composerInlineChip";
 import type { ProviderMentionReference } from "@synara/contracts";
 import { threadIdFromThreadMentionPath } from "@synara/shared/threadMentions";
@@ -32,6 +32,13 @@ function composerMentionChipCentralIconName(
 ): string | null {
   if (kind === "plugin" || path.startsWith("plugin://")) {
     return "puzzle";
+  }
+  if (
+    kind === "paper" ||
+    (path.startsWith(".research/papers/") &&
+      (path.endsWith("/paper.md") || path.endsWith("/blog.md")))
+  ) {
+    return PAPER_ICON_NAME;
   }
   if (inferEntryKindFromPath(path) === "directory") {
     return null;
@@ -78,6 +85,9 @@ export const MentionChipIcon = function MentionChipIcon(props: {
   }
   if (resolvedKind === "plugin") {
     return <PluginIcon className={className} />;
+  }
+  if (resolvedKind === "paper") {
+    return <PaperIcon className={className} />;
   }
   if (resolvedKind === "connector") {
     return <ConnectorIcon name={props.path} className={className} />;

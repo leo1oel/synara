@@ -45,7 +45,10 @@ import {
   type ProviderAdapterError,
 } from "../Errors.ts";
 import { CodexAdapter, type CodexAdapterShape } from "../Services/CodexAdapter.ts";
-import { PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY } from "../Services/ProviderAdapter.ts";
+import {
+  PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
+  type ProviderMcpAdapterInput,
+} from "../Services/ProviderAdapter.ts";
 import {
   CodexAppServerManager,
   CodexSessionAuthInvalidatedError,
@@ -92,7 +95,7 @@ import {
 } from "../usageLimit.ts";
 import { extractProposedPlanMarkdown } from "../planMode.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
-import { synaraSkillsDir } from "../skillsCatalog.ts";
+import { bundledSkillsDir, synaraSkillsDir } from "../skillsCatalog.ts";
 import { makeBoundedCallbackIngress } from "../boundedCallbackIngress.ts";
 import { assignDerivedProviderRuntimeEventIds } from "../providerRuntimeEventIdentity.ts";
 import {
@@ -110,6 +113,20 @@ import {
   sanitizeUnmappedProviderNativeType,
 } from "../unmappedProviderEvents.ts";
 import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
+
+function codexMcpOptions(input: Omit<ProviderMcpAdapterInput, "serverName" | "forceReload">) {
+  return {
+    ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
+    ...(input.threadId !== undefined ? { threadId: input.threadId } : {}),
+    codexOptions: {
+      ...(input.binaryPath ? { binaryPath: input.binaryPath } : {}),
+      ...(input.homePath ? { homePath: input.homePath } : {}),
+      ...(input.shadowHomePath ? { shadowHomePath: input.shadowHomePath } : {}),
+      ...(input.accountId ? { accountId: input.accountId } : {}),
+      ...(input.environment ? { environment: input.environment } : {}),
+    },
+  };
+}
 
 const PROVIDER = "codex" as const;
 const CODEX_RUNTIME_WARNING_METHODS = new Set(["guardianWarning", "warning"]);
@@ -1167,6 +1184,11 @@ const DIAGNOSTIC_ONLY_CODEX_METHODS = new Set([
   "remoteControl/status/changed",
   "skills/changed",
   "session/threadOpenRequested",
+  "session/threadOpenResolved",
+  "thread/settings/updated",
+  "thread/goal/cleared",
+  // The checkpoint reactor emits the authoritative revert outcome separately.
+  "thread/reverted",
 ]);
 
 function mapUnmappedCodexEvent(
@@ -2111,6 +2133,7 @@ function mapToRuntimeEvents(
 const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
   Effect.gen(function* () {
     const serverConfig = yield* Effect.service(ServerConfig);
+    const packagedSkillsDir = bundledSkillsDir();
     // Optional so adapter tests can run without the gateway layer; when
     // present, every session gets the synara_* MCP tools.
     const agentGatewayCredentials = Option.getOrUndefined(
@@ -2134,6 +2157,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
           options?.makeManager?.(services) ??
           new CodexAppServerManager(services, {
             synaraSkillsDir: synaraSkillsDir(serverConfig.baseDir),
+            ...(packagedSkillsDir ? { bundledSkillsDir: packagedSkillsDir } : {}),
             ...(agentGatewayCredentials
               ? {
                   agentGatewayMcp: {
@@ -2490,6 +2514,12 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
         catch: (cause) => toRequestError(threadId, "thread/compact/start", cause),
       });
 
+    const setThreadName: NonNullable<CodexAdapterShape["setThreadName"]> = (threadId, name) =>
+      Effect.tryPromise({
+        try: () => manager.setThreadName(threadId, name),
+        catch: (cause) => toRequestError(threadId, "thread/name/set", cause),
+      });
+
     const forkThread: CodexAdapterShape["forkThread"] = (input) =>
       Effect.tryPromise({
         try: (signal) => manager.forkThread(input, signal),
@@ -2624,6 +2654,40 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
             cause,
           }),
       }).pipe(Effect.map((result) => result satisfies ProviderListPluginsResult));
+
+    const listMcpServers: NonNullable<CodexAdapterShape["listMcpServers"]> = (input) =>
+      Effect.tryPromise({
+        try: () =>
+          manager.listMcpServers({
+            ...codexMcpOptions(input),
+            ...(input.serverName ? { serverName: input.serverName } : {}),
+            ...(input.forceReload ? { forceReload: true } : {}),
+          }),
+        catch: (cause) =>
+          new ProviderAdapterRequestError({
+            provider: PROVIDER,
+            method: "mcpServerStatus/list",
+            detail: toMessage(cause, "mcpServerStatus/list failed"),
+            cause,
+          }),
+      });
+
+    const runMcpServerAction: NonNullable<CodexAdapterShape["runMcpServerAction"]> = (input) =>
+      Effect.tryPromise({
+        try: () =>
+          manager.runMcpServerAction({
+            ...codexMcpOptions(input),
+            serverName: input.serverName,
+            action: input.action,
+          }),
+        catch: (cause) =>
+          new ProviderAdapterRequestError({
+            provider: PROVIDER,
+            method: `mcp ${input.action}`,
+            detail: toMessage(cause, `Could not ${input.action} ${input.serverName}.`),
+            cause,
+          }),
+      });
 
     const readPlugin: NonNullable<CodexAdapterShape["readPlugin"]> = (input) =>
       Effect.tryPromise({
@@ -2911,6 +2975,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
       readExternalThreadPage,
       rollbackThread,
       compactThread,
+      setThreadName,
       forkThread,
       respondToRequest,
       respondToUserInput,
@@ -2929,6 +2994,8 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
       getComposerCapabilities,
       listSkills,
       listPlugins,
+      listMcpServers,
+      runMcpServerAction,
       readPlugin,
       listModels,
       prewarmVoice,

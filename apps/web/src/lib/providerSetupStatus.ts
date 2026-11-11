@@ -1,4 +1,5 @@
 import { t } from "~/i18n";
+import { localizeProviderUsageNotice } from "~/lib/providerUsageDisplay";
 import type { ServerProviderStatus, ServerProviderUsageSnapshot } from "@synara/contracts";
 
 /** Installation/auth health is independent of permission to run background work. */
@@ -51,7 +52,11 @@ export function providerAccountStatusSummary(
   }
   const status = input.status;
   if (!status) {
-    return { tone: "idle", headline: translate("settings:accountCheckingStatus"), detail: null };
+    return { tone: "idle", headline: t("settings:accountCheckingStatus"), detail: null };
+  }
+  // The provider row above offers the install of a runtime the host left out.
+  if (status.runtimeInstall) {
+    return { tone: "error", headline: t("onboarding:notInstalled"), detail: null };
   }
   const detail = status.message?.trim() || null;
   if (!status.available) {
@@ -72,8 +77,10 @@ export function providerAccountStatusSummary(
     if (claude && usage && (usage.status === "needs-auth" || usage.status === "error")) {
       return {
         tone: "warning",
-        headline: translate("settings:accountUsageNeedsAttention"),
-        detail: usage.detail ?? translate("settings:accountClaudeUsageUnverified"),
+        headline: t("settings:accountUsageNeedsAttention"),
+        detail: usage.detail
+          ? localizeProviderUsageNotice(t, usage.detail)
+          : t("settings:accountClaudeUsageUnverified"),
       };
     }
     const authLabel = status.authLabel?.trim() || status.authType?.trim();
@@ -82,7 +89,7 @@ export function providerAccountStatusSummary(
       : translate("settings:accountAuthenticated");
     return {
       tone: "ready",
-      headline: authLabel ? `${headline} · ${authLabel}` : headline,
+      headline: authLabel ? t("common:symbol9", { value0: headline, value1: authLabel }) : headline,
       detail,
     };
   }

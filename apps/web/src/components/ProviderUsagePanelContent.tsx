@@ -4,12 +4,9 @@
 // The limit rows are the point of the popover, so reset credits and usage lines
 // sit behind a "Details" toggle whose state persists in app settings.
 
-import {
-  PROVIDER_DISPLAY_NAMES,
-  type ProviderKind,
-  type ServerCodexResetCredits,
-} from "@synara/contracts";
-import { providerUsageLabel } from "@synara/shared/providerUsage";
+import { localizeProviderStatusMessage } from "~/lib/providerStatusMessages";
+import type { ProviderKind, ServerCodexResetCredits } from "@synara/contracts";
+import { providerUsageDisplayName, providerUsageLabel } from "@synara/shared/providerUsage";
 
 import { useAppSettings } from "~/appSettings";
 import { ExternalLinkIcon, TriangleAlertIcon } from "~/lib/icons";
@@ -19,7 +16,10 @@ import {
   deriveRateLimitLearnMoreHref,
   type ProviderRateLimit,
 } from "~/lib/rateLimits";
-import { deriveProviderUsageDisplayRows } from "~/lib/providerUsageDisplay";
+import {
+  deriveProviderUsageDisplayRows,
+  localizeProviderUsageNotice,
+} from "~/lib/providerUsageDisplay";
 import { cn } from "~/lib/utils";
 
 import { ProviderUsageLimitRows } from "./ProviderUsageLimitRows";
@@ -27,7 +27,7 @@ import { ProviderUsageLineList } from "./ProviderUsageLineList";
 import { ProviderUsageResetCredits } from "./ProviderUsageResetCredits";
 import { DisclosureChevron } from "./ui/DisclosureChevron";
 import { DisclosureRegion } from "./ui/DisclosureRegion";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 export { providerUsageLabel };
 
@@ -80,15 +80,13 @@ export function ProviderUsagePanelContent(props: {
     <div className={cn("space-y-2", props.className)}>
       {props.showTitle !== false ? (
         <div className="text-chat-meta font-medium text-muted-foreground">
-          {props.provider
-            ? t("common:providerUsageTitle", { provider: PROVIDER_DISPLAY_NAMES[props.provider] })
-            : t("chat:general_usage")}
+          {t("common:providerUsageTitle", { provider: providerUsageDisplayName(props.provider) })}
         </div>
       ) : null}
       {props.notice ? (
         <p className="flex items-start gap-1.5 text-chat-meta leading-relaxed text-amber-600 dark:text-amber-300/90">
           <TriangleAlertIcon className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
-          <span>{props.notice}</span>
+          <span>{localizeProviderUsageNotice(t, props.notice)}</span>
         </p>
       ) : null}
       <ProviderUsageLimitRows rows={visibleRows} surface="popover" />
@@ -120,7 +118,9 @@ export function ProviderUsagePanelContent(props: {
               </p>
             ) : (
               <p className="text-chat-meta leading-relaxed text-muted-foreground">
-                {props.emptyMessage ??
+                {(props.emptyMessage
+                  ? localizeProviderStatusMessage(t, props.emptyMessage)
+                  : null) ??
                   (props.provider
                     ? t("common:noLocalUsageDataWasFoundYetForThe")
                     : t("common:noLocalUsageDataWasFoundYet"))}

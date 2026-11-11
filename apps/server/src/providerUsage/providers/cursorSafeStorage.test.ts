@@ -7,6 +7,7 @@ import * as childProcess from "node:child_process";
 import { createCipheriv, pbkdf2Sync } from "node:crypto";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { __resetKeychainReadsForTests, KEYCHAIN_PROMPT_TIMEOUT_MS } from "../keychainReads";
 
 import { isCursorSafeStorageValue, unsealCursorSafeStorageValue } from "./cursorSafeStorage";
 
@@ -27,6 +28,7 @@ const FIXTURE_JWT = `${"a".repeat(20)}.${Buffer.from(
 ).toString("base64url")}.${"b".repeat(20)}`;
 
 afterEach(() => {
+  __resetKeychainReadsForTests();
   vi.restoreAllMocks();
   vi.clearAllMocks();
   vi.unstubAllEnvs();
@@ -92,7 +94,7 @@ describe("unsealCursorSafeStorageValue", () => {
       "/usr/bin/security",
       ["find-generic-password", "-s", "Cursor Safe Storage", "-a", "Cursor", "-w"],
       expect.objectContaining({
-        timeout: 3000,
+        timeout: KEYCHAIN_PROMPT_TIMEOUT_MS,
         killSignal: "SIGKILL",
         maxBuffer: 4096,
         shell: false,

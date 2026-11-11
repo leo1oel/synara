@@ -235,6 +235,14 @@
       "unlinkSync": 1
     }
   },
+  "packages/shared/src/cliInstallDirectories.ts": {
+    "reason": "Agent CLI install-folder lookup for PATH hydration: about a dozen stats plus ~/.npmrc, nvm's default alias and its versions folder, read synchronously inside fixPath (before the server listens) and once per provider status refresh.",
+    "references": {
+      "statSync": 1,
+      "readFileSync": 1,
+      "readdirSync": 1
+    }
+  },
   "packages/shared/src/codexConfig.ts": {
     "reason": "Shared Codex config compatibility reader; existing references frozen pending profiling.",
     "references": {

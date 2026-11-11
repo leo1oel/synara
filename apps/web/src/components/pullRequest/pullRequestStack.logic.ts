@@ -1,5 +1,7 @@
 import type { PullRequestDetail, PullRequestStack, PullRequestStackEntry } from "@synara/contracts";
 
+import { t } from "~/i18n";
+
 export type PullRequestStackAssessment = {
   readonly label:
     | "Ready to merge"
@@ -12,6 +14,22 @@ export type PullRequestStackAssessment = {
   readonly canAttemptMerge: boolean;
   readonly blocker: string | null;
 };
+
+/** An assessment's label in the UI language. */
+export function localizeStackAssessmentLabel(label: PullRequestStackAssessment["label"]): string {
+  switch (label) {
+    case "Ready to merge":
+      return t("lattice:readyToMerge");
+    case "Stack needs attention":
+      return t("lattice:stackNeedsAttention");
+    case "Merge status pending":
+      return t("lattice:mergeStatusPending");
+    case "Mergeable with failing checks":
+      return t("lattice:mergeableWithFailingChecks");
+    case "Stack merged":
+      return t("git:stackMerged");
+  }
+}
 
 /** Entries affected by merging the selected PR, ordered from the base branch upwards. */
 export function pullRequestStackTargetEntries(
@@ -41,7 +59,7 @@ export function assessPullRequestStack(stack: PullRequestStack): PullRequestStac
       tone: "blocked",
       mergeTargetCount: targets.length,
       canAttemptMerge: false,
-      blocker: `#${closed.number} is closed without being merged.`,
+      blocker: t("lattice:isClosedWithoutBeingMerged", { number: closed.number }),
     };
   }
 
@@ -52,7 +70,7 @@ export function assessPullRequestStack(stack: PullRequestStack): PullRequestStac
       tone: "blocked",
       mergeTargetCount: targets.length,
       canAttemptMerge: false,
-      blocker: `#${draft.number} is still a draft.`,
+      blocker: t("lattice:isStillADraft", { number: draft.number }),
     };
   }
 
@@ -67,7 +85,7 @@ export function assessPullRequestStack(stack: PullRequestStack): PullRequestStac
       tone: "blocked",
       mergeTargetCount: targets.length,
       canAttemptMerge: false,
-      blocker: `#${conflicting.number} is not ready to merge.`,
+      blocker: t("lattice:isNotReadyToMerge", { number: conflicting.number }),
     };
   }
 
@@ -111,10 +129,12 @@ export function pullRequestMergeBlocker(
   stackAssessment: PullRequestStackAssessment | null,
 ): string | null {
   if (detail.stackMetadataIncomplete === true) {
-    return "Stack details are temporarily unavailable. Refresh before merging.";
+    return t("lattice:stackDetailsAreTemporarilyUnavailableRefreshBefore");
   }
   if (stackAssessment?.canAttemptMerge === false) {
-    return stackAssessment.blocker ?? "This stack is not ready to merge.";
+    return stackAssessment.blocker ?? t("lattice:thisStackIsNotReadyToMerge");
   }
-  return detail.mergeability === "conflicting" ? "Resolve merge conflicts before merging" : null;
+  return detail.mergeability === "conflicting"
+    ? t("lattice:resolveMergeConflictsBeforeMerging")
+    : null;
 }

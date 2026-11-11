@@ -1,9 +1,20 @@
 // FILE: os-jank.test.ts
-// Purpose: Verifies PATH hydration keeps inherited entries and macOS fallbacks.
+// Purpose: Verifies PATH hydration keeps inherited entries and macOS fallbacks, and appends
+//          the agent CLI install folders last.
 
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { fixPath } from "./os-jank";
+import { listCliInstallDirectories } from "@synara/shared/cliInstallDirectories";
+import { addCliInstallDirectoriesToPath, fixPath } from "./os-jank";
+
+// The real list reads this machine's folders; each test names the ones that exist.
+vi.mock("@synara/shared/cliInstallDirectories", () => ({
+  listCliInstallDirectories: vi.fn(() => []),
+}));
+
+beforeEach(() => {
+  vi.mocked(listCliInstallDirectories).mockReturnValue([]);
+});
 
 describe("fixPath", () => {
   it("hydrates PATH on linux using the resolved login shell", () => {
@@ -139,6 +150,71 @@ describe("fixPath", () => {
     });
 
     expect(readPath).not.toHaveBeenCalled();
+    expect(env.PATH).toBe("C:/Windows/System32");
+  });
+
+  it("appends the agent CLI folders after the login-shell PATH and the inherited one", () => {
+    vi.mocked(listCliInstallDirectories).mockReturnValue([
+      "/Users/test/.local/bin",
+      "/opt/homebrew/bin",
+    ]);
+    const env: NodeJS.ProcessEnv = { SHELL: "/bin/zsh", PATH: "/usr/bin:/bin" };
+
+    fixPath({ env, platform: "darwin", readPath: () => "/usr/local/bin:/usr/bin" });
+
+    // Already-present entries keep their place; the user's order always wins.
+    expect(env.PATH).toBe("/usr/local/bin:/usr/bin:/bin:/Users/test/.local/bin:/opt/homebrew/bin");
+  });
+
+  it("appends the agent CLI folders when the probe times out", () => {
+    vi.mocked(listCliInstallDirectories).mockReturnValue(["/Users/test/.local/bin"]);
+    const env: NodeJS.ProcessEnv = { SHELL: "/bin/zsh", PATH: "/usr/bin:/bin" };
+
+    fixPath({
+      env,
+      platform: "darwin",
+      readPath: () => {
+        throw new Error("spawnSync /bin/zsh ETIMEDOUT");
+      },
+      readLaunchctlPath: () => undefined,
+      logWarning: () => {},
+    });
+
+    expect(env.PATH).toBe("/usr/bin:/bin:/Users/test/.local/bin");
+  });
+
+  it("appends the agent CLI folders to a PATH a parent already hydrated", () => {
+    vi.mocked(listCliInstallDirectories).mockReturnValue(["/Users/test/.claude/local"]);
+    const env: NodeJS.ProcessEnv = {
+      PATH: "/opt/homebrew/bin:/usr/bin",
+      SYNARA_PATH_HYDRATED: "1",
+    };
+    const readPath = vi.fn(() => "/should/not/run");
+
+    fixPath({ env, platform: "darwin", readPath });
+
+    expect(readPath).not.toHaveBeenCalled();
+    expect(env.PATH).toBe("/opt/homebrew/bin:/usr/bin:/Users/test/.claude/local");
+  });
+});
+
+describe("addCliInstallDirectoriesToPath", () => {
+  it("adds a folder that appeared since the last call, and nothing twice", () => {
+    const env: NodeJS.ProcessEnv = { PATH: "/usr/bin:/bin" };
+    addCliInstallDirectoriesToPath({ env, platform: "darwin" });
+    expect(env.PATH).toBe("/usr/bin:/bin");
+
+    // Claude Code's native installer created ~/.local/bin while Synara was running.
+    vi.mocked(listCliInstallDirectories).mockReturnValue(["/Users/test/.local/bin"]);
+    addCliInstallDirectoriesToPath({ env, platform: "darwin" });
+    addCliInstallDirectoriesToPath({ env, platform: "darwin" });
+    expect(env.PATH).toBe("/usr/bin:/bin:/Users/test/.local/bin");
+  });
+
+  it("leaves Windows PATH alone", () => {
+    vi.mocked(listCliInstallDirectories).mockReturnValue(["/Users/test/.local/bin"]);
+    const env: NodeJS.ProcessEnv = { PATH: "C:/Windows/System32" };
+    addCliInstallDirectoriesToPath({ env, platform: "win32" });
     expect(env.PATH).toBe("C:/Windows/System32");
   });
 });

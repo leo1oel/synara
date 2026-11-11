@@ -1,12 +1,3 @@
-// FILE: GitHubItemInfo.tsx
-// Purpose: The status facts of a GitHub item's detail page, in two shapes of the same data: a
-//          right-hand column of titled sections (wide panes) and compact label/value rows under
-//          the header (narrow panes, or whenever the side chat dock takes the room). Pull
-//          requests show Merge status, Comments, Reviews, Checks; issues show Assignees, Labels,
-//          Comments. Either can lead with Threads, the item's side chats.
-// Layer: Pull request presentation
-// Exports: PullRequestInfo, IssueInfo, GitHubItemInfoThread, GitHubItemInfoVariant
-
 import type { GitHubIssueDetail, PullRequestDetail, ThreadId } from "@synara/contracts";
 import { useState, type ReactNode } from "react";
 
@@ -37,7 +28,7 @@ import { PullRequestStateGlyph } from "./PullRequestStateGlyph";
 import { PullRequestMetaRow } from "./PullRequestMetaRow";
 import { PullRequestConflictIcon } from "./pullRequestStatePresentation";
 import { PR_META_TEXT_CLASS_NAME, PR_FINE_TEXT_CLASS_NAME } from "./pullRequestText";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 export interface GitHubItemInfoThread {
   id: ThreadId;
@@ -142,12 +133,7 @@ function CommentsSection({ variant, count }: { variant: InfoVariant; count: numb
       icon={<ChatBubbleIcon className="size-4" />}
     >
       <span className={count === 0 ? "text-muted-foreground" : undefined}>
-        {count === 0
-          ? t("git:noComments")
-          : t("chat:symbol7", {
-              value0: count,
-              value1: count === 1 ? t("chat:comment") : t("git:comments2"),
-            })}
+        {count === 0 ? t("git:noComments") : t("lattice:comments3", { count })}
       </span>
     </InfoSection>
   );
@@ -181,9 +167,9 @@ function ReviewsSection({ variant, detail }: { variant: InfoVariant; detail: Pul
   const hasReviews = detail.reviewers.length > 0 || reviewCount > 0 || detail.reviewDecision;
   const decision =
     detail.reviewDecision === "APPROVED"
-      ? "Approved"
+      ? t("lattice:approved")
       : detail.reviewDecision === "CHANGES_REQUESTED"
-        ? "Changes requested"
+        ? t("lattice:changesRequested")
         : null;
   // GitHub has no request-review action here; its pull request page is where reviewers are picked.
   const request = requestable ? <RequestChip url={detail.url} /> : null;
@@ -275,13 +261,15 @@ function ChecksSection({ variant, detail }: { variant: InfoVariant; detail: Pull
             type="button"
             aria-expanded={open}
             onClick={() => setOpen((current) => !current)}
-            className="flex w-fit items-center gap-1.5 rounded-md text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            title={brief.label}
+            className="flex w-fit max-w-full items-center gap-1.5 rounded-md text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             {brief.tone === "success" ? (
-              <CircleCheckIcon className="size-4 text-status-success" aria-hidden />
+              <CircleCheckIcon className="size-4 shrink-0 text-status-success" aria-hidden />
             ) : null}
-            {brief.label}
-            <DisclosureChevron open={open} />
+            {/* One line, ellipsized in the narrowest panel rather than spilling past it. */}
+            <span className="min-w-0 truncate">{brief.label}</span>
+            <DisclosureChevron open={open} className="shrink-0" />
           </button>
           <DisclosureRegion open={open}>
             <div className="pt-1.5">

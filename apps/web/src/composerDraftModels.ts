@@ -22,6 +22,8 @@ import * as Schema from "effect/Schema";
 
 import {
   getDefaultModel,
+  getDefaultModelForClaudeCliVersion,
+  normalizeClaudeModelSlugForCliVersion,
   normalizeGrokModelOptions,
   normalizeModelSlug,
   normalizeOmpModelOptions,
@@ -780,7 +782,7 @@ export function legacyToModelSelectionByProvider(
   return result;
 }
 
-export function deriveEffectiveComposerModelState(input: {
+export function deriveEffectiveComposerModelState(rawInput: {
   draft:
     | Pick<ComposerThreadDraftState, "modelSelectionByProvider" | "activeProvider">
     | null
@@ -793,7 +795,28 @@ export function deriveEffectiveComposerModelState(input: {
   availableModelOptionsByProvider?: Partial<
     Record<ProviderKind, ReadonlyArray<{ slug: string; name: string }>>
   >;
+  /** The selected Claude instance's installed Claude Code version, when known. */
+  claudeCliVersion?: string | null | undefined;
 }): EffectiveComposerModelState {
+  // A saved bare alias resolves to the newest model of its family the installed Claude
+  // Code can run (`fable` is Fable 5.1 before 2.1.321, `sonnet` Sonnet 5 before 2.1.284,
+  // `haiku` Haiku 4.5 before 2.1.293), as Claude Code's own alias does; full ids stay.
+  const withClaudeAliasResolved = (
+    selection: ModelSelection | null | undefined,
+  ): ModelSelection | null | undefined =>
+    selection?.provider === "claudeAgent"
+      ? {
+          ...selection,
+          model:
+            normalizeClaudeModelSlugForCliVersion(selection.model, rawInput.claudeCliVersion) ??
+            selection.model,
+        }
+      : selection;
+  const input = {
+    ...rawInput,
+    threadModelSelection: withClaudeAliasResolved(rawInput.threadModelSelection),
+    projectModelSelection: withClaudeAliasResolved(rawInput.projectModelSelection),
+  };
   const selectionMatchesSelectedInstance = (
     selection: ModelSelection | null | undefined,
   ): selection is ModelSelection =>
@@ -817,7 +840,8 @@ export function deriveEffectiveComposerModelState(input: {
       (selectionMatchesSelectedInstance(input.projectModelSelection)
         ? input.projectModelSelection.model
         : null) ??
-      getDefaultModel(input.selectedProvider),
+      // Claude's default steps down to a model the installed Claude Code can run.
+      getDefaultModelForClaudeCliVersion(input.selectedProvider, input.claudeCliVersion),
   );
   const persistedThreadModel = selectionMatchesSelectedInstance(input.threadModelSelection)
     ? (normalizeModelSlug(input.threadModelSelection.model, input.selectedProvider) ??

@@ -4,7 +4,10 @@ import { Cause, Deferred, Effect, Exit, Fiber, Option } from "effect";
 import type { ProjectionSnapshotQueryShape } from "../orchestration/Services/ProjectionSnapshotQuery.ts";
 import type { AgentGatewayShape } from "./Services/AgentGateway.ts";
 import type { AgentGatewayCredentialsShape } from "./Services/AgentGatewayCredentials.ts";
-import type { AgentGatewayCapability } from "./Services/AgentGatewaySessionRegistry.ts";
+import type {
+  AgentGatewayCapability,
+  AgentGatewaySessionIdentity,
+} from "./Services/AgentGatewaySessionRegistry.ts";
 import { extractBearerToken } from "./bearerToken.ts";
 import {
   buildMcpInitializeResult,
@@ -27,6 +30,7 @@ import {
   type ToolEntry,
 } from "./toolRuntime.ts";
 import { errorText } from "./toolInput.ts";
+import { ACTIVE_AGENT_HOST_PROFILE } from "./hostProfile.ts";
 
 const MCP_MAX_BATCH_MESSAGES = 50;
 
@@ -134,7 +138,11 @@ export function makeAgentGatewayMcpTransport(input: {
       inputSchema: sanitizeToolInputSchema(tool.definition.inputSchema) as Record<string, unknown>,
     });
   }
-  const handleRequest = (request: JsonRpcRequest, context: Omit<ToolContext, "jsonRpcRequestId">) =>
+  const handleRequest = (
+    request: JsonRpcRequest,
+    context: Omit<ToolContext, "jsonRpcRequestId">,
+    callerThreadPending: boolean,
+  ) =>
     Effect.gen(function* () {
       switch (request.method) {
         case "initialize":
@@ -150,9 +158,14 @@ export function makeAgentGatewayMcpTransport(input: {
           return jsonRpcResult(request.id, {});
         case "tools/list":
           return jsonRpcResult(request.id, {
-            tools: filterToolsByCapability(input.tools, context.callerCapabilities)
-              // Discovery-only tools stay callable by exact name — toolsByName
-              // is built from the unfiltered catalog — but do not advertise.
+            // The catalog itself is an authority boundary. In particular, an
+            // embedding host that did not grant device control must not teach
+            // the model that device_* tools exist and then rely only on a
+            // later tools/call refusal.
+            tools: input.tools
+              .filter((tool) => context.callerCapabilities.has(tool.requiredCapability))
+              // Keep exact-name dispatch available without advertising large
+              // specialist families in every provider prompt.
               .filter((tool) => tool.discoveryOnly !== true)
               .map(
                 (tool) =>
@@ -169,6 +182,21 @@ export function makeAgentGatewayMcpTransport(input: {
           const toolName = request.params.name;
           if (typeof toolName !== "string") {
             return jsonRpcError(request.id, JSON_RPC_INVALID_PARAMS, "Missing tool name.");
+          }
+          // A pre-warmed draft has no thread for any tool to act on yet. Its
+          // first send creates the thread before the turn that can call tools,
+          // so this answers only a call that raced ahead of that send.
+          if (callerThreadPending) {
+            return jsonRpcResult(
+              request.id,
+              gatewayToolErrorResult(
+                new GatewayToolError(
+                  "caller_thread_pending",
+                  "This chat has not been created yet. Tools become available once its first message is sent.",
+                  { callerThreadId: context.callerThreadId },
+                ),
+              ),
+            );
           }
           const readCallerAuthorityError = () =>
             context.assertCallerTurnActive().pipe(
@@ -264,6 +292,169 @@ export function makeAgentGatewayMcpTransport(input: {
 
   return (requestInput) =>
     Effect.gen(function* () {
+      // Every authorized request, pending draft or live thread, is served by
+      // the same batch handling; only the context and the pending flag differ.
+      const serveMessages = ({
+        callerSession,
+        context,
+        callerThreadPending,
+      }: {
+        readonly callerSession: AgentGatewaySessionIdentity;
+        readonly context: Omit<ToolContext, "jsonRpcRequestId">;
+        readonly callerThreadPending: boolean;
+      }) =>
+        Effect.gen(function* () {
+          const rawMessages = Array.isArray(requestInput.body)
+            ? requestInput.body
+            : [requestInput.body];
+          if (rawMessages.length === 0) {
+            return invalidRequestResponse(400, "Empty JSON-RPC batch.");
+          }
+          if (rawMessages.length > MCP_MAX_BATCH_MESSAGES) {
+            return invalidRequestResponse(
+              400,
+              `JSON-RPC batches may contain at most ${MCP_MAX_BATCH_MESSAGES} messages.`,
+            );
+          }
+          const parsedMessages = rawMessages.map(parseMcpMessage);
+          const requestIds = new Set<string>();
+          for (const parsed of parsedMessages) {
+            if (parsed.kind !== "request") continue;
+            const key = requestIdKey(parsed.request.id);
+            if (requestIds.has(key)) {
+              return invalidRequestResponse(
+                400,
+                `Duplicate JSON-RPC request id ${JSON.stringify(parsed.request.id)} in one batch.`,
+                parsed.request.id,
+              );
+            }
+            requestIds.add(key);
+          }
+          const responseSlots: McpResponseSlot[] = [];
+          const cancellationRequestIds: Array<string | number> = [];
+
+          // Start every request before awaiting any of them. Apart from avoiding
+          // head-of-line blocking for ordinary batches, this guarantees that a
+          // cancellation notification in the same batch can see its target even
+          // when the notification appears first.
+          for (const parsed of parsedMessages) {
+            switch (parsed.kind) {
+              case "request": {
+                const registered = yield* Deferred.make<void>();
+                let unregister: () => void = () => undefined;
+                let requestStarted = false;
+                let cancellationRequested = false;
+                const requestEffect = Deferred.await(registered).pipe(
+                  Effect.andThen(handleRequest(parsed.request, context, callerThreadPending)),
+                  Effect.catch((error) =>
+                    Effect.succeed(
+                      jsonRpcResult(parsed.request.id, mcpToolResultError(errorText(error))),
+                    ),
+                  ),
+                  Effect.ensuring(
+                    Effect.sync(() => {
+                      unregister();
+                    }),
+                  ),
+                );
+                const fiber = yield* requestEffect.pipe(
+                  Effect.forkChild({ startImmediately: true }),
+                );
+                unregister = input.credentials.registerInFlightRequest({
+                  sessionKey: callerSession.sessionKey,
+                  turnId: context.callerTurnId,
+                  requestId: parsed.request.id,
+                  cancel: () => {
+                    cancellationRequested = true;
+                    if (!requestStarted) return Promise.resolve();
+                    return new Promise<void>((resolve) => {
+                      // Avoid interrupting re-entrantly while an async Effect is
+                      // still installing its AbortController finalizer. The fiber
+                      // observer is the cleanup barrier returned to Stop.
+                      queueMicrotask(() => {
+                        if (fiber.pollUnsafe() !== undefined) {
+                          resolve();
+                          return;
+                        }
+                        fiber.addObserver(() => resolve());
+                        fiber.interruptUnsafe();
+                      });
+                    });
+                  },
+                });
+                if (cancellationRequested) {
+                  // A terminal-turn tombstone cancelled this request during
+                  // registration. The handler is still fenced behind `registered`,
+                  // so a direct interruption is safe and no browser work can start.
+                  fiber.interruptUnsafe();
+                } else {
+                  requestStarted = true;
+                  yield* Deferred.succeed(registered, undefined);
+                }
+                responseSlots.push({ kind: "request", fiber });
+                break;
+              }
+              case "notification": {
+                if (parsed.notification.method === "notifications/cancelled") {
+                  const cancelledId = parsed.notification.params.requestId;
+                  if (typeof cancelledId === "string" || typeof cancelledId === "number") {
+                    cancellationRequestIds.push(cancelledId);
+                  }
+                }
+                responseSlots.push({ kind: "none" });
+                break;
+              }
+              case "response":
+                responseSlots.push({ kind: "none" });
+                break;
+              case "invalid":
+                responseSlots.push({
+                  kind: "immediate",
+                  response: jsonRpcError(
+                    parsed.id,
+                    JSON_RPC_INVALID_REQUEST,
+                    "Invalid JSON-RPC message.",
+                  ),
+                });
+                break;
+            }
+          }
+
+          for (const cancelledId of cancellationRequestIds) {
+            input.credentials.cancelInFlightRequests({
+              sessionKey: callerSession.sessionKey,
+              requestId: cancelledId,
+            });
+          }
+
+          const resolvedResponses = yield* Effect.forEach(
+            responseSlots,
+            (slot) => {
+              if (slot.kind === "none") return Effect.succeed(null);
+              if (slot.kind === "immediate") return Effect.succeed(slot.response);
+              return Fiber.await(slot.fiber).pipe(
+                Effect.map((exit) =>
+                  Exit.match(exit, {
+                    onFailure: (cause) =>
+                      Cause.hasInterruptsOnly(cause)
+                        ? null
+                        : jsonRpcResult(null, mcpToolResultError(Cause.pretty(cause))),
+                    onSuccess: (response) => response,
+                  }),
+                ),
+              );
+            },
+            { concurrency: "unbounded" },
+          );
+          const responses = resolvedResponses.filter(
+            (response): response is McpJsonRpcResponse => response !== null,
+          );
+          if (responses.length === 0) return { status: 202 };
+          return {
+            status: 200,
+            body: Array.isArray(requestInput.body) ? responses : responses[0],
+          };
+        });
       const token = extractBearerToken(requestInput.authorizationHeader);
       const callerSession = token ? input.credentials.verifySession(token) : null;
       if (!token || !callerSession) {
@@ -277,6 +468,43 @@ export function makeAgentGatewayMcpTransport(input: {
       const callerThread = yield* input.snapshotQuery
         .getThreadShellById(ThreadId.makeUnsafe(callerThreadId))
         .pipe(Effect.catch(() => Effect.succeed(Option.none())));
+      // A panel pre-warms Claude for a draft chat before its first send creates
+      // the thread, and Claude Code connects to this gateway once, at startup:
+      // a 401 then marks the server failed for the whole session, which the
+      // first send adopts. So the draft's own bearer may initialize and list
+      // its catalog before the thread exists; tool calls still wait for it.
+      // The registration names one thread, so no other session gains anything.
+      const callerThreadPending =
+        Option.isNone(callerThread) && input.credentials.isDraftThread?.(callerThreadId) === true;
+      if (callerThreadPending) {
+        return yield* serveMessages({
+          callerSession,
+          context: {
+            principal: {
+              kind: "provider-session",
+              sessionKey: callerSession.sessionKey,
+              threadId: callerThreadId,
+              provider: callerSession.provider,
+              turnId: null,
+            },
+            callerThreadId,
+            callerThreadLabel: null,
+            callerSessionKey: callerSession.sessionKey,
+            callerProvider: callerSession.provider,
+            callerCapabilities: callerSession.capabilities,
+            callerTurnId: null,
+            assertCallerTurnActive: () =>
+              Effect.fail(
+                new GatewayToolError(
+                  "caller_turn_inactive",
+                  `This ${ACTIVE_AGENT_HOST_PROFILE.displayName} write was rejected because its chat has not been created yet.`,
+                  { callerThreadId },
+                ),
+              ),
+          },
+          callerThreadPending,
+        });
+      }
       if (Option.isNone(callerThread)) {
         return invalidSessionResponse(
           "thread-gone",
@@ -302,7 +530,7 @@ export function makeAgentGatewayMcpTransport(input: {
             return yield* Effect.fail(
               new GatewayToolError(
                 "caller_turn_inactive",
-                "This Synara write was rejected because this credential had no write authority for the exact active turn when the MCP request arrived.",
+                `This ${ACTIVE_AGENT_HOST_PROFILE.displayName} write was rejected because this credential had no write authority for the exact active turn when the MCP request arrived.`,
                 {
                   callerThreadId,
                   latestTurnId: callerThread.value.latestTurn?.turnId ?? null,
@@ -314,7 +542,7 @@ export function makeAgentGatewayMcpTransport(input: {
             return yield* Effect.fail(
               new GatewayToolError(
                 "caller_session_inactive",
-                "This Synara write was rejected because its provider-session authority is no longer active.",
+                `This ${ACTIVE_AGENT_HOST_PROFILE.displayName} write was rejected because its provider-session authority is no longer active.`,
                 { callerThreadId },
               ),
             );
@@ -326,7 +554,7 @@ export function makeAgentGatewayMcpTransport(input: {
                 (error) =>
                   new GatewayToolError(
                     "caller_turn_inactive",
-                    "This Synara write was rejected because the caller thread could no longer be verified.",
+                    `This ${ACTIVE_AGENT_HOST_PROFILE.displayName} write was rejected because the caller thread could no longer be verified.`,
                     { callerThreadId, error: errorText(error) },
                   ),
               ),
@@ -338,7 +566,7 @@ export function makeAgentGatewayMcpTransport(input: {
             return yield* Effect.fail(
               new GatewayToolError(
                 "caller_turn_inactive",
-                "This Synara write was rejected because the turn that received this MCP request is no longer active. In-flight requests cannot inherit authority from a later turn.",
+                `This ${ACTIVE_AGENT_HOST_PROFILE.displayName} write was rejected because the turn that received this MCP request is no longer active. In-flight requests cannot inherit authority from a later turn.`,
                 {
                   callerThreadId,
                   authorizedTurnId: callerWriteAuthority.turnId,
@@ -363,158 +591,13 @@ export function makeAgentGatewayMcpTransport(input: {
         callerThreadLabel: callerThread.value.subagentNickname ?? callerThread.value.title ?? null,
         callerSessionKey: callerSession.sessionKey,
         callerProvider: callerSession.provider,
+        callerRuntimeMode:
+          callerThread.value.session?.runtimeMode ?? callerThread.value.runtimeMode,
         callerCapabilities: callerSession.capabilities,
         callerTurnId: callerWriteAuthority?.turnId ?? null,
         assertCallerTurnActive,
       };
 
-      const rawMessages = Array.isArray(requestInput.body)
-        ? requestInput.body
-        : [requestInput.body];
-      if (rawMessages.length === 0) {
-        return invalidRequestResponse(400, "Empty JSON-RPC batch.");
-      }
-      if (rawMessages.length > MCP_MAX_BATCH_MESSAGES) {
-        return invalidRequestResponse(
-          400,
-          `JSON-RPC batches may contain at most ${MCP_MAX_BATCH_MESSAGES} messages.`,
-        );
-      }
-      const parsedMessages = rawMessages.map(parseMcpMessage);
-      const requestIds = new Set<string>();
-      for (const parsed of parsedMessages) {
-        if (parsed.kind !== "request") continue;
-        const key = requestIdKey(parsed.request.id);
-        if (requestIds.has(key)) {
-          return invalidRequestResponse(
-            400,
-            `Duplicate JSON-RPC request id ${JSON.stringify(parsed.request.id)} in one batch.`,
-            parsed.request.id,
-          );
-        }
-        requestIds.add(key);
-      }
-      const responseSlots: McpResponseSlot[] = [];
-      const cancellationRequestIds: Array<string | number> = [];
-
-      // Start every request before awaiting any of them. Apart from avoiding
-      // head-of-line blocking for ordinary batches, this guarantees that a
-      // cancellation notification in the same batch can see its target even
-      // when the notification appears first.
-      for (const parsed of parsedMessages) {
-        switch (parsed.kind) {
-          case "request": {
-            const registered = yield* Deferred.make<void>();
-            let unregister: () => void = () => undefined;
-            let requestStarted = false;
-            let cancellationRequested = false;
-            const requestEffect = Deferred.await(registered).pipe(
-              Effect.andThen(handleRequest(parsed.request, context)),
-              Effect.catch((error) =>
-                Effect.succeed(
-                  jsonRpcResult(parsed.request.id, mcpToolResultError(errorText(error))),
-                ),
-              ),
-              Effect.ensuring(
-                Effect.sync(() => {
-                  unregister();
-                }),
-              ),
-            );
-            const fiber = yield* requestEffect.pipe(Effect.forkChild({ startImmediately: true }));
-            unregister = input.credentials.registerInFlightRequest({
-              sessionKey: callerSession.sessionKey,
-              turnId: context.callerTurnId,
-              requestId: parsed.request.id,
-              cancel: () => {
-                cancellationRequested = true;
-                if (!requestStarted) return Promise.resolve();
-                return new Promise<void>((resolve) => {
-                  // Avoid interrupting re-entrantly while an async Effect is
-                  // still installing its AbortController finalizer. The fiber
-                  // observer is the cleanup barrier returned to Stop.
-                  queueMicrotask(() => {
-                    if (fiber.pollUnsafe() !== undefined) {
-                      resolve();
-                      return;
-                    }
-                    fiber.addObserver(() => resolve());
-                    fiber.interruptUnsafe();
-                  });
-                });
-              },
-            });
-            if (cancellationRequested) {
-              // A terminal-turn tombstone cancelled this request during
-              // registration. The handler is still fenced behind `registered`,
-              // so a direct interruption is safe and no browser work can start.
-              fiber.interruptUnsafe();
-            } else {
-              requestStarted = true;
-              yield* Deferred.succeed(registered, undefined);
-            }
-            responseSlots.push({ kind: "request", fiber });
-            break;
-          }
-          case "notification": {
-            if (parsed.notification.method === "notifications/cancelled") {
-              const cancelledId = parsed.notification.params.requestId;
-              if (typeof cancelledId === "string" || typeof cancelledId === "number") {
-                cancellationRequestIds.push(cancelledId);
-              }
-            }
-            responseSlots.push({ kind: "none" });
-            break;
-          }
-          case "response":
-            responseSlots.push({ kind: "none" });
-            break;
-          case "invalid":
-            responseSlots.push({
-              kind: "immediate",
-              response: jsonRpcError(
-                parsed.id,
-                JSON_RPC_INVALID_REQUEST,
-                "Invalid JSON-RPC message.",
-              ),
-            });
-            break;
-        }
-      }
-
-      for (const cancelledId of cancellationRequestIds) {
-        input.credentials.cancelInFlightRequests({
-          sessionKey: callerSession.sessionKey,
-          requestId: cancelledId,
-        });
-      }
-
-      const resolvedResponses = yield* Effect.forEach(
-        responseSlots,
-        (slot) => {
-          if (slot.kind === "none") return Effect.succeed(null);
-          if (slot.kind === "immediate") return Effect.succeed(slot.response);
-          return Fiber.await(slot.fiber).pipe(
-            Effect.map((exit) =>
-              Exit.match(exit, {
-                onFailure: (cause) =>
-                  Cause.hasInterruptsOnly(cause)
-                    ? null
-                    : jsonRpcResult(null, mcpToolResultError(Cause.pretty(cause))),
-                onSuccess: (response) => response,
-              }),
-            ),
-          );
-        },
-        { concurrency: "unbounded" },
-      );
-      const responses = resolvedResponses.filter(
-        (response): response is McpJsonRpcResponse => response !== null,
-      );
-      if (responses.length === 0) return { status: 202 };
-      return {
-        status: 200,
-        body: Array.isArray(requestInput.body) ? responses : responses[0],
-      };
+      return yield* serveMessages({ callerSession, context, callerThreadPending: false });
     });
 }

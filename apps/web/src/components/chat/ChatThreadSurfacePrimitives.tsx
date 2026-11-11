@@ -1,3 +1,4 @@
+import { i18n, useTranslation } from "~/i18n";
 import type { FileDiffMetadata } from "@pierre/diffs/react";
 import type { ThreadId, TurnId } from "@synara/contracts";
 import { lazy, type ReactNode, Suspense, useEffect, useState } from "react";
@@ -17,7 +18,6 @@ import { DelayedLoaderFade } from "./DelayedLoaderFade";
 import { Spinner } from "../ui/spinner";
 import { cn } from "~/lib/utils";
 import { scheduleDeferredChatMount } from "./deferredChatMount";
-import { useTranslation } from "~/i18n";
 
 const DiffPanel = lazy(() => import("../DiffPanel"));
 export const LazyBrowserPanel = lazy(() => import("../BrowserPanel"));
@@ -112,7 +112,7 @@ export function DeferredChatView(props: {
   paneScopeId: string;
   deferMount: boolean;
   surfaceMode: "single" | "split";
-  presentationMode?: "default" | "editor";
+  presentationMode?: "default" | "editor" | "embed";
   isFocusedPane: boolean;
   panelState: SplitViewPanePanelState;
   onToggleDiff: () => void;

@@ -5,6 +5,7 @@
 // Layer: Header action control
 // Depends on: GitActionsControl.logic resolvers and the shared git dialog chrome.
 
+import { localizeGitText } from "../lib/gitLocalization";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -26,7 +27,7 @@ import {
   GitDialogShell,
 } from "./GitDialogChrome";
 import { cn } from "~/lib/utils";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 export interface GitCommitDialogSubmission {
   action: GitCommitDialogAction["action"];
@@ -116,13 +117,13 @@ export function GitCommitDialog({
   return (
     <GitDialogShell open={open} onOpenChange={onOpenChange} onSubmitShortcut={submitPrimary}>
       <GitDialogHeading
-        eyebrow="Commit"
+        eyebrow={t("lattice:commit")}
         eyebrowTrailing={
           context.isDefaultBranch ? (
             <span className="text-warning">{t("git:defaultBranch")}</span>
           ) : null
         }
-        subject={gitStatus?.branch ?? "(detached HEAD)"}
+        subject={gitStatus?.branch ?? t("lattice:detachedHEAD")}
       />
       <GitDialogBody>
         <textarea
@@ -149,7 +150,7 @@ export function GitCommitDialog({
               />
             ) : null}
             <span className="min-w-0 flex-1 truncate text-muted-foreground">
-              {summarizeSelection(allFiles.length, selectedFiles.length, allSelected)}
+              {summarizeSelection(t, allFiles.length, selectedFiles.length, allSelected)}
             </span>
             <DiffStat
               className="shrink-0 font-mono text-ui leading-snug"
@@ -191,9 +192,11 @@ export function GitCommitDialog({
             key={action.id}
             highlighted={action.id === "commit"}
             disabled={action.disabled}
-            disabledReason={action.disabledReason}
+            disabledReason={
+              action.disabledReason ? localizeGitText(t, action.disabledReason) : null
+            }
             icon={<GitActionGlyph name={action.icon} className="size-4" />}
-            label={action.label}
+            label={localizeGitText(t, action.label)}
             {...(action.id === "commit"
               ? {
                   trailing: <SubmitShortcutKbd />,
@@ -208,10 +211,17 @@ export function GitCommitDialog({
   );
 }
 
-function summarizeSelection(total: number, selected: number, allSelected: boolean): string {
-  if (total === 0) return "No local changes";
-  if (allSelected) return `${total} ${total === 1 ? "file" : "files"}`;
-  return `${selected} of ${total} files`;
+function summarizeSelection(
+  translate: typeof t,
+  total: number,
+  selected: number,
+  allSelected: boolean,
+): string {
+  if (total === 0) return translate("lattice:noLocalChanges");
+  if (allSelected) {
+    return translate("lattice:files", { count: total });
+  }
+  return translate("lattice:ofFiles", { selected, total });
 }
 
 function ChangedFileRow({

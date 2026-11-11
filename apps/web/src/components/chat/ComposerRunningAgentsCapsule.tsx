@@ -1,12 +1,10 @@
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 // FILE: ComposerRunningAgentsCapsule.tsx
 // Purpose: Compact "N agents running" capsule above the composer while any of the
 // thread's subagents is still at work, during the turn and after it settles. A
 // click brings the newest running agent's transcript card into view.
 // Layer: Chat composer UI
 // Exports: ComposerRunningAgentsCapsule
-
-import { pluralize } from "@synara/shared/text";
 
 import { BotIcon } from "~/lib/icons";
 import { ComposerCapsule } from "./ComposerCapsule";
@@ -27,7 +25,7 @@ export function ComposerRunningAgentsCapsule({ count, onShow }: ComposerRunningA
       onClick={onShow}
       testId="running-agents-capsule"
     >
-      {count} {pluralize(count, "agent")} {t("chat:running")}
+      {count === 1 ? t("lattice:n1AgentRunning") : t("lattice:agentsRunning", { count })}
     </ComposerCapsule>
   );
 }

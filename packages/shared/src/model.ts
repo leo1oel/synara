@@ -69,7 +69,7 @@ export const EMPTY_MODEL_CAPABILITIES: ModelCapabilities = {
   contextWindowOptions: [],
 };
 
-function isClaudeCodeEffort(value: string): value is ClaudeCodeEffort {
+export function isClaudeCodeEffort(value: string): value is ClaudeCodeEffort {
   return CLAUDE_CODE_EFFORT_SET.has(value);
 }
 
@@ -578,6 +578,120 @@ export function resolveNewestKnownClaudeFamilyModel(
   return version && newest && compareClaudeFamilyModelVersions(version, newest.version) > 0
     ? newest.slug
     : null;
+}
+
+function parseVersionCore(version: string): readonly [number, number, number] | null {
+  const match = /(\d+)\.(\d+)\.(\d+)/u.exec(version);
+  if (!match) return null;
+  return [Number(match[1]), Number(match[2]), Number(match[3])];
+}
+
+/** True only when both versions parse and `version` is below `minimum`. */
+export function isKnownVersionBelow(version: string | null | undefined, minimum: string): boolean {
+  if (!version) return false;
+  const installed = parseVersionCore(version);
+  const required = parseVersionCore(minimum);
+  if (!installed || !required) return false;
+  for (let index = 0; index < 3; index += 1) {
+    if (installed[index]! !== required[index]!) return installed[index]! < required[index]!;
+  }
+  return false;
+}
+
+// Synara lists its static Claude catalog whatever Claude Code is installed, but Claude
+// Code learns each new model in a release and an older one cannot run it. Anthropic's
+// Claude Code model docs name that release for each model: "Fable 5.2 requires Claude
+// Code v2.1.321 or later", "Sonnet 5.5 requires Claude Code v2.1.284 or later", "Use
+// v2.1.293 or later with Haiku 5.5". The picker, the bare-alias resolution and the
+// adapter's failed-turn message all read this one table.
+export const CLAUDE_MODEL_MINIMUM_CLI_VERSIONS: Readonly<Record<string, string>> = {
+  "claude-fable-5-2": "2.1.321",
+  "claude-sonnet-5-5": "2.1.284",
+  "claude-haiku-5-5": "2.1.293",
+};
+
+/**
+ * The Claude Code version `model` needs when the installed one is known to be older;
+ * null when it can run the model, the version is unknown, or no minimum applies.
+ */
+export function claudeCliVersionNeededForModel(
+  model: string,
+  installedVersion: string | null | undefined,
+): string | null {
+  const minimum = CLAUDE_MODEL_MINIMUM_CLI_VERSIONS[stripClaudeContextWindowSuffix(model.trim())];
+  return minimum !== undefined && isKnownVersionBelow(installedVersion, minimum) ? minimum : null;
+}
+
+/**
+ * `target` when the installed Claude Code can run it (or its version is unknown),
+ * else the newest older catalog model of the same Claude family that it can run,
+ * keeping a `[1m]` suffix. Falls back to `target` when no older model qualifies.
+ */
+function resolveRunnableClaudeFamilyModel(
+  target: ModelSlug,
+  installedVersion: string | null | undefined,
+): ModelSlug {
+  const base = stripClaudeContextWindowSuffix(target);
+  const targetVersion = parseClaudeFamilyModelVersion(base);
+  if (!targetVersion || claudeCliVersionNeededForModel(base, installedVersion) === null) {
+    return target;
+  }
+  let runnable: { readonly slug: ModelSlug; readonly version: ClaudeFamilyModelVersion } | null =
+    null;
+  for (const option of MODEL_OPTIONS_BY_PROVIDER.claudeAgent) {
+    const version = parseClaudeFamilyModelVersion(option.slug);
+    if (
+      version?.family === targetVersion.family &&
+      compareClaudeFamilyModelVersions(version, targetVersion) < 0 &&
+      claudeCliVersionNeededForModel(option.slug, installedVersion) === null &&
+      (runnable === null || compareClaudeFamilyModelVersions(version, runnable.version) > 0)
+    ) {
+      runnable = { slug: option.slug, version };
+    }
+  }
+  if (!runnable) return target;
+  return (
+    getClaudeContextWindowSuffix(target) === "1m" ? `${runnable.slug}[1m]` : runnable.slug
+  ) as ModelSlug;
+}
+
+/**
+ * Normalizes a Claude model like `normalizeModelSlug`, except that a bare family
+ * alias (`fable`, `opus`, `sonnet`, `haiku`) whose catalog target the installed
+ * Claude Code is too old for resolves to the newest catalog model of that family it
+ * can run (`fable` on Claude Code 2.1.300 is Fable 5.1, not Fable 5.2; `sonnet`
+ * below 2.1.284 is Sonnet 5; `haiku` below 2.1.293 is Haiku 4.5), as Claude Code's
+ * own alias does. A full model id is never moved: an explicit Fable 5.2 stays
+ * Fable 5.2 so the picker and the failed turn can say which Claude Code it needs. An
+ * unknown version keeps the catalog target.
+ */
+export function normalizeClaudeModelSlugForCliVersion(
+  model: string | null | undefined,
+  installedVersion: string | null | undefined,
+): ModelSlug | null {
+  const normalized = normalizeModelSlug(model, "claudeAgent");
+  if (!normalized || typeof model !== "string") return normalized;
+  const alias = stripClaudeContextWindowSuffix(model.trim()).toLowerCase();
+  if (parseClaudeFamilyModelVersion(stripClaudeContextWindowSuffix(normalized))?.family !== alias) {
+    return normalized;
+  }
+  return resolveRunnableClaudeFamilyModel(normalized, installedVersion);
+}
+
+/**
+ * The provider's default model, where Claude's default (Sonnet 5.5, which needs
+ * Claude Code 2.1.284) steps down to the newest model of its family the installed
+ * Claude Code can run (Sonnet 5 on an older one), so a chat that never picked a model
+ * does not start on one the CLI refuses. An unknown version keeps the catalog default;
+ * if that CLI turns out too old, the failed turn names the release it needs.
+ */
+export function getDefaultModelForClaudeCliVersion(
+  provider: ProviderKind,
+  claudeCliVersion: string | null | undefined,
+): ModelSlug | null {
+  const defaultModel = getDefaultModel(provider);
+  if (provider !== "claudeAgent" || defaultModel === null) return defaultModel;
+  return resolveRunnableClaudeFamilyModel(defaultModel, claudeCliVersion);
 }
 
 export function resolveGrokEffortFamily(model: string): "build" | "4.5" | "4.6" {

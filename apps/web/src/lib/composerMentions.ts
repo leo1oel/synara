@@ -35,19 +35,24 @@ export function extractComposerMentionPath(match: RegExpExecArray | RegExpMatchA
   return match[2] === undefined ? (match[3] ?? "") : decodeComposerMentionQuotedPath(match[2]);
 }
 
-export function composerMentionQuotedPathHasClosingQuote(path: string): boolean {
+export function composerMentionQuotedPathClosingQuoteIndex(path: string): number {
   let precedingBackslashes = 0;
-  for (const character of path) {
+  for (let index = 0; index < path.length; index += 1) {
+    const character = path[index] ?? "";
     if (character === "\\") {
       precedingBackslashes += 1;
       continue;
     }
     if (character === '"' && precedingBackslashes % 2 === 0) {
-      return true;
+      return index;
     }
     precedingBackslashes = 0;
   }
-  return false;
+  return -1;
+}
+
+export function composerMentionQuotedPathHasClosingQuote(path: string): boolean {
+  return composerMentionQuotedPathClosingQuoteIndex(path) !== -1;
 }
 
 function encodeComposerMentionQuotedPath(path: string): string {
@@ -148,7 +153,7 @@ export function providerMentionMatchesToken(
   );
 }
 
-export type MentionChipKind = "path" | "plugin" | "thread" | "connector";
+export type MentionChipKind = "path" | "paper" | "plugin" | "thread" | "connector";
 
 export function isPluginProviderMentionReference(mention: ProviderMentionReference): boolean {
   return mention.path.startsWith("plugin://");
@@ -156,6 +161,13 @@ export function isPluginProviderMentionReference(mention: ProviderMentionReferen
 
 export function isThreadProviderMentionReference(mention: ProviderMentionReference): boolean {
   return isThreadMentionPath(mention.path);
+}
+
+export function isPaperProviderMentionReference(mention: ProviderMentionReference): boolean {
+  return (
+    mention.path.startsWith(".research/papers/") &&
+    (mention.path.endsWith("/paper.md") || mention.path.endsWith("/blog.md"))
+  );
 }
 
 export function isConnectorProviderMentionReference(mention: ProviderMentionReference): boolean {
@@ -204,6 +216,13 @@ export function resolveMentionChipKind(
   if (options?.kind === "plugin" || path.startsWith("plugin://")) {
     return "plugin";
   }
+  if (
+    options?.kind === "paper" ||
+    (path.startsWith(".research/papers/") &&
+      (path.endsWith("/paper.md") || path.endsWith("/blog.md")))
+  ) {
+    return "paper";
+  }
   if (findThreadProviderMentionReferenceForToken(path, options?.mentionReferences)) {
     return "thread";
   }
@@ -217,6 +236,14 @@ export function resolveMentionChipKind(
     )
   ) {
     return "plugin";
+  }
+  if (
+    options?.mentionReferences?.some(
+      (mention) =>
+        isPaperProviderMentionReference(mention) && providerMentionMatchesToken(mention, path),
+    )
+  ) {
+    return "paper";
   }
   return "path";
 }

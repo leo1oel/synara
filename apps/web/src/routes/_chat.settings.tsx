@@ -3,19 +3,14 @@
 // Layer: Route screen
 // Exports: Settings route component for `/settings`
 
-import {
-  type DesktopAudioInputDevice,
-  PROVIDER_DISPLAY_NAMES,
-  type ProviderKind,
-  type SidechatExpiry,
-} from "@synara/contracts";
-import { GROUPS_ON, VISIBLE_PROVIDER_DESCRIPTORS } from "../betaFeatures";
+import { type DesktopAudioInputDevice, type SidechatExpiry } from "@synara/contracts";
+import { GROUPS_ON } from "../betaFeatures";
 import { sameAppSnapShortcut } from "@synara/shared/appSnapShortcut";
 import { desktopFlavorFromProtocol } from "@synara/shared/betaFeatures";
 import { SafariAccessSetupButton } from "../components/SafariAccessOnboarding";
-import { createFileRoute, useSearch } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { useTranslation } from "~/i18n";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { t, useTranslation, getFormatLocale } from "~/i18n";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import {
   DEFAULT_DIFF_RENDER_MODE,
@@ -59,17 +54,18 @@ import {
   NotificationsSettingsPanel,
 } from "~/components/settings/DesktopSettingsPanels";
 import { ComputerSettingsPanel } from "~/components/settings/ComputerSettingsPanel";
+import { DefaultProviderSettingsRow } from "~/components/settings/DefaultProviderSettingsRow";
 import { ModelsSettingsPanel } from "~/components/settings/ModelsSettingsPanel";
 import {
   isProviderInstallSettingsDirty,
   ProvidersSettingsPanel,
 } from "~/components/settings/ProvidersSettingsPanel";
-import { ProviderOptionLabel } from "../components/ProviderIcon";
 import ReleaseHistoryDialog from "../components/ReleaseHistoryDialog";
 import {
   KeyboardShortcutsResetButton,
   KeyboardShortcutsSettingsPanel,
 } from "../components/settings/KeyboardShortcutsSettingsPanel";
+import { useOnboardingDialogStore } from "../onboarding/onboardingDialogStore";
 import { ProfileSettingsPanel } from "../components/settings/ProfileSettingsPanel";
 import { BillingSettingsPanel } from "../components/settings/BillingSettingsPanel";
 import { ACCOUNT_BILLING_ENABLED } from "~/lib/accountBilling";
@@ -108,7 +104,6 @@ import {
 } from "../components/ui/autocomplete";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { useOnboardingDialogStore } from "../onboarding/onboardingDialogStore";
 import { Input } from "../components/ui/input";
 import { SelectItem } from "../components/ui/select";
 import { Switch } from "../components/ui/switch";
@@ -123,7 +118,7 @@ import { useTheme } from "../hooks/useTheme";
 import { isUiDensity } from "../lib/appDensity";
 import { isChatWidthMode, type ChatWidthMode } from "../lib/chatWidth";
 import { isElectron } from "../env";
-import { ResetIcon } from "../lib/icons";
+import { ResetIcon, RotateCcwIcon } from "../lib/icons";
 import {
   cn,
   getNavigatorPlatform,
@@ -132,15 +127,33 @@ import {
   isWindowsPlatform,
 } from "../lib/utils";
 import { ensureNativeApi, readNativeApi } from "../nativeApi";
+import {
+  isSynaraEmbedMode,
+  postEmbedReadyToLattice,
+  postSettingsContentHeightToLattice,
+  postSettingsRevealToLattice,
+  postSettingsSectionReadyToLattice,
+  postSettingsWheelToLattice,
+  readEmbedMode,
+  readLatticeSettingsLayoutMessage,
+  readLatticeSettingsSectionMessage,
+} from "../embedMode";
+import { useQueryClient } from "@tanstack/react-query";
 import { isProviderKind, sameProviderOrder } from "../providerOrdering";
 import {
   normalizeSettingsSection,
+  resolveSettingsTarget,
   SETTINGS_NAV_ITEMS,
   SETTINGS_TARGETS,
   settingRowAnchorId,
 } from "../settingsNavigation";
 import { SETTINGS_PAGE_BACKGROUND_CLASS_NAME } from "../settingsPanelStyles";
 import { isAudioLevelAvailable } from "../lib/audioLevel";
+import {
+  createEmbeddedSettingsHeightReporter,
+  measureEmbeddedSettingsHeight,
+} from "../embeddedSettingsHeight";
+import { watchEmbeddedSettingsSectionReady } from "../embeddedSettingsSectionReady";
 
 // ── Settings taxonomy ──────────────────────────────────────────────────────
 
@@ -187,8 +200,6 @@ const CHAT_WIDTH_OPTIONS = [
   label: string;
   description: string;
 }>;
-
-const PROVIDER_SELECT_OPTIONS = VISIBLE_PROVIDER_DESCRIPTORS.map((descriptor) => descriptor.kind);
 
 const TIMESTAMP_FORMAT_LABELS = {
   locale: "common:theme_systemDefault",
@@ -304,18 +315,14 @@ function MessageTrailMicrophoneRow({
           triggerClassName="w-full sm:w-64"
           valueContent={valueContent}
         >
-          <SelectItem hideIndicator value={MAC_DEFAULT_MICROPHONE_VALUE}>
-            {macDefaultLabel}
-          </SelectItem>
+          <SelectItem value={MAC_DEFAULT_MICROPHONE_VALUE}>{macDefaultLabel}</SelectItem>
           {devices.map((device) => (
-            <SelectItem hideIndicator key={device.id} value={device.id}>
+            <SelectItem key={device.id} value={device.id}>
               {microphoneLabel(device)}
             </SelectItem>
           ))}
           {value && !selected ? (
-            <SelectItem hideIndicator value={value}>
-              {t("common:toast_notConnected")}
-            </SelectItem>
+            <SelectItem value={value}>{t("common:toast_notConnected")}</SelectItem>
           ) : null}
         </SettingsSelectControl>
       }
@@ -332,9 +339,6 @@ const VOICE_ENTER_BEHAVIOR_OPTIONS = [
 
 // Shared settings controls live in ~/components/settings/SettingControls.
 
-function isProviderSelectOption(value: string): value is ProviderKind {
-  return PROVIDER_SELECT_OPTIONS.includes(value as ProviderKind);
-}
 // Keys of AppSettings whose value is a plain boolean — the only ones that can be
 // driven by the shared on/off toggle row below.
 type BooleanSettingKey = {
@@ -343,8 +347,17 @@ type BooleanSettingKey = {
 
 // ── Route screen ───────────────────────────────────────────────────────────
 
+/** A deep link's place: a field's whole label (its name above the control), else the element. */
+function settingsTargetPlace(elementId: string): HTMLElement | null {
+  const element = document.getElementById(elementId);
+  return element?.closest("label") ?? element;
+}
+
 function SettingsRouteView() {
+  // The hook's t re-renders the page when the language changes; the module t does not.
   const { t } = useTranslation();
+  const isEmbed = isSynaraEmbedMode();
+  const navigate = useNavigate();
   const [defaultDiffRenderMode, setDefaultDiffRenderMode] = useLocalStorage(
     DIFF_RENDER_MODE_STORAGE_KEY,
     DEFAULT_DIFF_RENDER_MODE,
@@ -352,11 +365,26 @@ function SettingsRouteView() {
   );
   const routeSearch = useSearch({ strict: false }) as Record<string, unknown>;
   const activeSection = normalizeSettingsSection(routeSearch.section);
+  const [embedUiReady, setEmbedUiReady] = useState(!isEmbed);
+  // The latest section request from Lattice; every request is answered, even
+  // one for the section already shown.
+  const [sectionRequest, setSectionRequest] = useState<{ id: number | undefined }>({
+    id: undefined,
+  });
+  const queryClient = useQueryClient();
+  const embeddedSettingsHeightReporterRef = useRef<{
+    flush: () => number | null;
+    schedule: () => void;
+  } | null>(null);
   const settingsTarget = typeof routeSearch.target === "string" ? routeSearch.target : null;
   const settingsProviderTarget =
     typeof routeSearch.provider === "string" && isProviderKind(routeSearch.provider)
       ? routeSearch.provider
       : null;
+  const resolvedSettingsTarget = useMemo(
+    () => resolveSettingsTarget(settingsTarget, settingsProviderTarget),
+    [settingsProviderTarget, settingsTarget],
+  );
   const activeSectionItem = SETTINGS_NAV_ITEMS.find((item) => item.id === activeSection)!;
 
   const {
@@ -454,26 +482,175 @@ function SettingsRouteView() {
   const isGitTextGenerationModelDirty = isGitTextGenerationSettingsDirty(settings, defaults);
   const isInstallSettingsDirty = isProviderInstallSettingsDirty(settings, defaults);
   const hiddenProviderCount = new Set(settings.hiddenProviders).size;
-  const enabledProviderSelectOptions = PROVIDER_SELECT_OPTIONS.filter(
-    (provider) => !settings.disabledProviders.includes(provider),
-  );
   const isProviderOrderDirty = !sameProviderOrder(settings.providerOrder, defaults.providerOrder);
-  const isProviderActivityDirty =
-    settings.disabledProviders.length !== defaults.disabledProviders.length ||
-    settings.disabledProviders.some(
-      (provider, index) => provider !== defaults.disabledProviders[index],
-    );
+
+  useEffect(() => {
+    if (!isEmbed) return;
+    const embedConfig = readEmbedMode();
+    if (!embedConfig?.hostOrigin) return;
+    const receiveHostMessage = (event: MessageEvent) => {
+      const layout = readLatticeSettingsLayoutMessage(event, embedConfig);
+      if (layout) {
+        document.documentElement.toggleAttribute("data-lattice-settings-compact", layout.compact);
+        return;
+      }
+      const message = readLatticeSettingsSectionMessage(event, embedConfig);
+      if (!message || !SETTINGS_NAV_ITEMS.some((item) => item.id === message.section)) return;
+      setSectionRequest({ id: message.request });
+      void navigate({
+        to: "/settings",
+        search: { section: message.section, ...(message.target ? { target: message.target } : {}) },
+        replace: true,
+      });
+    };
+    window.addEventListener("message", receiveHostMessage);
+    return () => window.removeEventListener("message", receiveHostMessage);
+  }, [isEmbed, navigate]);
+
+  useEffect(() => {
+    if (!isEmbed) return;
+    const embedConfig = readEmbedMode();
+    if (!embedConfig?.hostOrigin) return;
+    let cancelled = false;
+    const settleEmbeddedUi = async () => {
+      const fonts = (document as Document & { fonts?: FontFaceSet }).fonts;
+      if (fonts && typeof fonts.load === "function") {
+        try {
+          await Promise.all([
+            fonts.load('400 12px "Inter Variable"'),
+            fonts.load('600 18px "Inter Variable"'),
+          ]);
+        } catch {
+          // A missing FontFaceSet or failed font request must not strand Settings.
+        }
+      }
+      if (cancelled) return;
+      document.documentElement.dataset.synaraSettingsReady = "true";
+      setEmbedUiReady(true);
+      postEmbedReadyToLattice(embedConfig);
+    };
+    document.documentElement.dataset.synaraSettingsReady = "false";
+    void settleEmbeddedUi();
+    return () => {
+      cancelled = true;
+      delete document.documentElement.dataset.synaraSettingsReady;
+    };
+  }, [isEmbed]);
+
+  useLayoutEffect(() => {
+    if (!isEmbed || !embedUiReady) return;
+    const embedConfig = readEmbedMode();
+    const content = document.querySelector<HTMLElement>(".synara-settings-content");
+    if (!embedConfig?.hostOrigin || !content) return;
+    const reporter = createEmbeddedSettingsHeightReporter({
+      measure: () => measureEmbeddedSettingsHeight(content),
+      publish: (height) => postSettingsContentHeightToLattice(embedConfig, height, activeSection),
+    });
+    embeddedSettingsHeightReporterRef.current = reporter;
+    reporter.flush();
+
+    const resizeObserver = new ResizeObserver(reporter.schedule);
+    resizeObserver.observe(content);
+    const mutationObserver = new MutationObserver(reporter.schedule);
+    mutationObserver.observe(content, {
+      attributes: true,
+      attributeFilter: ["aria-expanded", "class", "data-state", "hidden", "style"],
+      characterData: true,
+      childList: true,
+      subtree: true,
+    });
+    const fontSet = (document as Document & { fonts?: FontFaceSet }).fonts;
+    const reportAfterFonts = () => reporter.schedule();
+    void fontSet?.ready.then(reportAfterFonts);
+    fontSet?.addEventListener?.("loadingdone", reportAfterFonts);
+    content.addEventListener("load", reporter.schedule, true);
+    content.addEventListener("transitionend", reporter.schedule, true);
+    window.addEventListener("resize", reporter.schedule);
+    return () => {
+      if (embeddedSettingsHeightReporterRef.current === reporter) {
+        embeddedSettingsHeightReporterRef.current = null;
+      }
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
+      fontSet?.removeEventListener?.("loadingdone", reportAfterFonts);
+      content.removeEventListener("load", reporter.schedule, true);
+      content.removeEventListener("transitionend", reporter.schedule, true);
+      window.removeEventListener("resize", reporter.schedule);
+      reporter.dispose();
+    };
+  }, [activeSection, embedUiReady, isEmbed]);
+
+  useEffect(() => {
+    // Lattice keeps this frame hidden from a section request until the section
+    // answers it: switching sections otherwise showed the previous section, then
+    // empty rows ("No projects are available", a Skills page without its library)
+    // that filled in a moment later.
+    if (!isEmbed || !embedUiReady) return;
+    const embedConfig = readEmbedMode();
+    if (!embedConfig?.hostOrigin) return;
+    const targetElementId = resolvedSettingsTarget.elementId;
+    let revealFrame: number | null = null;
+    const stopWatching = watchEmbeddedSettingsSectionReady({
+      queryClient,
+      onReady: () => {
+        postSettingsSectionReadyToLattice(embedConfig, activeSection, sectionRequest.id);
+        if (!targetElementId) return;
+        // A frame later, once the rows the target opened have laid out. This page has no
+        // scrolling of its own, so Lattice scrolls its viewport to the place.
+        revealFrame = window.requestAnimationFrame(() => {
+          revealFrame = null;
+          const element = settingsTargetPlace(targetElementId);
+          if (!element) return;
+          postSettingsRevealToLattice(embedConfig, {
+            section: activeSection,
+            top: element.getBoundingClientRect().top + window.scrollY,
+            contentHeight: embeddedSettingsHeightReporterRef.current?.flush() ?? null,
+          });
+        });
+      },
+    });
+    return () => {
+      stopWatching();
+      if (revealFrame !== null) window.cancelAnimationFrame(revealFrame);
+    };
+  }, [
+    activeSection,
+    embedUiReady,
+    isEmbed,
+    queryClient,
+    resolvedSettingsTarget.elementId,
+    sectionRequest,
+  ]);
+
+  useEffect(() => {
+    if (!isEmbed) return;
+    const embedConfig = readEmbedMode();
+    if (!embedConfig) return;
+    const forwardWheel = (event: WheelEvent) => {
+      // Include the current height in the wheel message itself. Sending height
+      // and wheel as separate postMessage tasks let the host clamp the first
+      // gesture against the previous section's stale scroll range.
+      const height = embeddedSettingsHeightReporterRef.current?.flush();
+      postSettingsWheelToLattice(
+        embedConfig,
+        event,
+        height === null || height === undefined ? undefined : { height, section: activeSection },
+      );
+      event.preventDefault();
+    };
+    window.addEventListener("wheel", forwardWheel, { capture: true, passive: false });
+    return () => window.removeEventListener("wheel", forwardWheel, { capture: true });
+  }, [activeSection, isEmbed]);
 
   // Deep links and sidebar search targets all resolve to stable DOM ids in the active panel.
   useEffect(() => {
-    if (!settingsTarget) return;
+    const elementId = resolvedSettingsTarget.elementId;
+    if (!elementId) return;
     const frame = window.requestAnimationFrame(() => {
-      document
-        .getElementById(settingsTarget)
-        ?.scrollIntoView({ block: "start", behavior: "smooth" });
+      settingsTargetPlace(elementId)?.scrollIntoView({ block: "start", behavior: "smooth" });
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [activeSection, settingsTarget]);
+  }, [activeSection, resolvedSettingsTarget.elementId]);
 
   const changedSettingLabels = [
     ...(theme !== "system" ? ["onboarding:changed_theme"] : []),
@@ -594,6 +771,9 @@ function SettingsRouteView() {
     ...(settings.diffWordWrap !== defaults.diffWordWrap
       ? ["settings:changed_diffLineWrapping"]
       : []),
+    ...(settings.claudeLoadUserMcpServers !== defaults.claudeLoadUserMcpServers
+      ? ["lattice:loadMyMCPServersInClaude"]
+      : []),
     ...(settings.githubLinkOpenTarget !== defaults.githubLinkOpenTarget
       ? ["settings:openPullRequestsAndIssues"]
       : []),
@@ -617,6 +797,11 @@ function SettingsRouteView() {
     settings.sourceControlCustomInstructions !== defaults.sourceControlCustomInstructions
       ? ["settings:sourceControlWritingStyle"]
       : []),
+    ...(settings.proofreadModel !== undefined ? ["lattice:proofreadingModel"] : []),
+    ...(settings.compileRepairProvider !== defaults.compileRepairProvider ||
+    settings.compileRepairModel !== defaults.compileRepairModel
+      ? ["lattice:compileRepairModel"]
+      : []),
     ...(settings.customCodexModels.length > 0 ||
     settings.customClaudeModels.length > 0 ||
     settings.customCursorModels.length > 0 ||
@@ -628,7 +813,6 @@ function SettingsRouteView() {
       ? ["settings:changed_customModels"]
       : []),
     ...(isInstallSettingsDirty ? ["settings:changed_providerInstalls"] : []),
-    ...(isProviderActivityDirty ? ["settings:providerActivity"] : []),
     ...(hiddenProviderCount > 0 ? ["settings:changed_providerVisibility"] : []),
     ...(isProviderOrderDirty ? ["settings:changed_providerOrder"] : []),
   ].map((label) => t(label));
@@ -641,7 +825,7 @@ function SettingsRouteView() {
       [
         t("settings:restoreDefaultSettings"),
         t("settings:thisWillReset", {
-          settings: changedSettingLabels.join(", "),
+          settings: new Intl.ListFormat(getFormatLocale()).format(changedSettingLabels),
         }),
       ].join("\n"),
     );
@@ -705,56 +889,13 @@ function SettingsRouteView() {
   const renderGeneralPanel = () => (
     <div className="space-y-6">
       <SafariAccessSetupButton />
-      <BetaChannelSettingsPanel active={true} />
-      <ProductAnalyticsSettingsPanel />
+      {!isEmbed && <BetaChannelSettingsPanel active={true} />}
+      {!isEmbed && <ProductAnalyticsSettingsPanel />}
       <SettingsSection title="settings:general_coreDefaults">
-        <SettingsRow
-          id="setting-default-provider"
-          title="settings:changed_defaultProvider"
-          description="settings:providerUsedForNewChatsUntilYouPickA"
-          resetAction={
-            settings.defaultProvider !== defaults.defaultProvider ? (
-              <SettingResetButton
-                label={t("settings:defaultProvider")}
-                onClick={() => updateSettings({ defaultProvider: defaults.defaultProvider })}
-              />
-            ) : null
-          }
-          control={
-            <SettingsSelectControl
-              value={
-                settings.disabledProviders.includes(settings.defaultProvider)
-                  ? null
-                  : settings.defaultProvider
-              }
-              disabled={enabledProviderSelectOptions.length === 0}
-              onValueChange={(value) => {
-                if (!isProviderSelectOption(value) || settings.disabledProviders.includes(value))
-                  return;
-                updateSettings({ defaultProvider: value });
-              }}
-              ariaLabel={t("settings:changed_defaultProvider")}
-              valueContent={
-                settings.disabledProviders.includes(settings.defaultProvider) ? (
-                  "Choose an enabled provider"
-                ) : (
-                  <ProviderOptionLabel
-                    provider={settings.defaultProvider}
-                    label={PROVIDER_DISPLAY_NAMES[settings.defaultProvider]}
-                  />
-                )
-              }
-            >
-              {enabledProviderSelectOptions.map((provider) => (
-                <SelectItem hideIndicator key={provider} value={provider}>
-                  <ProviderOptionLabel
-                    provider={provider}
-                    label={PROVIDER_DISPLAY_NAMES[provider]}
-                  />
-                </SelectItem>
-              ))}
-            </SettingsSelectControl>
-          }
+        <DefaultProviderSettingsRow
+          settings={settings}
+          defaults={defaults}
+          updateSettings={updateSettings}
         />
 
         <SettingsRow
@@ -789,16 +930,11 @@ function SettingsRouteView() {
                   : t("computer:worktreeMode_local")
               }
             >
-              <SelectItem hideIndicator value="local">
-                {t("computer:worktreeMode_local")}
-              </SelectItem>
-              <SelectItem hideIndicator value="worktree">
-                {t("chat:general_newWorktree")}
-              </SelectItem>
+              <SelectItem value="local">{t("computer:worktreeMode_local")}</SelectItem>
+              <SelectItem value="worktree">{t("chat:general_newWorktree")}</SelectItem>
             </SettingsSelectControl>
           }
         />
-
         {renderBooleanSettingRow({
           id: "setting-delete-worktree-on-archive",
           settingKey: "archiveDeletesOrphanedWorktree",
@@ -870,15 +1006,13 @@ function SettingsRouteView() {
               ariaLabel={t("settings:changed_projectSortOrder")}
               valueContent={t(SIDEBAR_PROJECT_SORT_ORDER_LABELS[settings.sidebarProjectSortOrder])}
             >
-              <SelectItem hideIndicator value="updated_at">
-                {t(SIDEBAR_PROJECT_SORT_ORDER_LABELS.updated_at)}
+              <SelectItem value="updated_at">
+                {SIDEBAR_PROJECT_SORT_ORDER_LABELS.updated_at}
               </SelectItem>
-              <SelectItem hideIndicator value="created_at">
-                {t(SIDEBAR_PROJECT_SORT_ORDER_LABELS.created_at)}
+              <SelectItem value="created_at">
+                {SIDEBAR_PROJECT_SORT_ORDER_LABELS.created_at}
               </SelectItem>
-              <SelectItem hideIndicator value="manual">
-                {t(SIDEBAR_PROJECT_SORT_ORDER_LABELS.manual)}
-              </SelectItem>
+              <SelectItem value="manual">{SIDEBAR_PROJECT_SORT_ORDER_LABELS.manual}</SelectItem>
             </SettingsSelectControl>
           }
         />
@@ -911,11 +1045,11 @@ function SettingsRouteView() {
               ariaLabel={t("settings:changed_threadSortOrder")}
               valueContent={t(SIDEBAR_THREAD_SORT_ORDER_LABELS[settings.sidebarThreadSortOrder])}
             >
-              <SelectItem hideIndicator value="updated_at">
-                {t(SIDEBAR_THREAD_SORT_ORDER_LABELS.updated_at)}
+              <SelectItem value="updated_at">
+                {SIDEBAR_THREAD_SORT_ORDER_LABELS.updated_at}
               </SelectItem>
-              <SelectItem hideIndicator value="created_at">
-                {t(SIDEBAR_THREAD_SORT_ORDER_LABELS.created_at)}
+              <SelectItem value="created_at">
+                {SIDEBAR_THREAD_SORT_ORDER_LABELS.created_at}
               </SelectItem>
             </SettingsSelectControl>
           }
@@ -1422,7 +1556,7 @@ function SettingsRouteView() {
                   showClear={settings.terminalFontFamily.length > 0}
                   spellCheck={false}
                   autoComplete="off"
-                  placeholder={t("settings:defaultJetBrainsMono")}
+                  placeholder={t("lattice:defaultMonospaceFont")}
                   className="w-full sm:w-56"
                   aria-label={t("settings:terminalFontFamily")}
                 />
@@ -1495,15 +1629,9 @@ function SettingsRouteView() {
               triggerClassName="w-full sm:w-40"
               valueContent={t(TIMESTAMP_FORMAT_LABELS[settings.timestampFormat])}
             >
-              <SelectItem hideIndicator value="locale">
-                {t(TIMESTAMP_FORMAT_LABELS.locale)}
-              </SelectItem>
-              <SelectItem hideIndicator value="12-hour">
-                {t(TIMESTAMP_FORMAT_LABELS["12-hour"])}
-              </SelectItem>
-              <SelectItem hideIndicator value="24-hour">
-                {t(TIMESTAMP_FORMAT_LABELS["24-hour"])}
-              </SelectItem>
+              <SelectItem value="locale">{TIMESTAMP_FORMAT_LABELS.locale}</SelectItem>
+              <SelectItem value="12-hour">{TIMESTAMP_FORMAT_LABELS["12-hour"]}</SelectItem>
+              <SelectItem value="24-hour">{TIMESTAMP_FORMAT_LABELS["24-hour"]}</SelectItem>
             </SettingsSelectControl>
           }
         />
@@ -1730,15 +1858,9 @@ function SettingsRouteView() {
               triggerClassName="w-full sm:w-40"
               valueContent={t(GITHUB_LINK_OPEN_TARGET_LABELS[settings.githubLinkOpenTarget])}
             >
-              <SelectItem hideIndicator value="app">
-                {t(GITHUB_LINK_OPEN_TARGET_LABELS.app)}
-              </SelectItem>
-              <SelectItem hideIndicator value="browser">
-                {t(GITHUB_LINK_OPEN_TARGET_LABELS.browser)}
-              </SelectItem>
-              <SelectItem hideIndicator value="external">
-                {t(GITHUB_LINK_OPEN_TARGET_LABELS.external)}
-              </SelectItem>
+              <SelectItem value="app">{t(GITHUB_LINK_OPEN_TARGET_LABELS.app)}</SelectItem>
+              <SelectItem value="browser">{t(GITHUB_LINK_OPEN_TARGET_LABELS.browser)}</SelectItem>
+              <SelectItem value="external">{t(GITHUB_LINK_OPEN_TARGET_LABELS.external)}</SelectItem>
             </SettingsSelectControl>
           }
         />
@@ -1851,22 +1973,25 @@ function SettingsRouteView() {
           content (hence absolute, not a layout-occupying header row). The strip stays a
           drag-region so the Windows frameless window can be moved by its top edge; the
           caption buttons themselves are a separate fixed cluster (see root route). */}
-        <div
-          className={cn(
-            "drag-region absolute inset-x-0 top-0 z-10 flex items-center",
-            CHAT_SURFACE_HEADER_PADDING_X_CLASS,
-            CHAT_SURFACE_HEADER_HEIGHT_CLASS,
-            desktopTopBarTrafficLightGutterClassName,
-          )}
-        >
-          <div className="pointer-events-auto">
-            <SidebarHeaderNavigationControls />
+        {!isEmbed ? (
+          <div
+            className={cn(
+              "drag-region absolute inset-x-0 top-0 z-10 flex items-center",
+              CHAT_SURFACE_HEADER_PADDING_X_CLASS,
+              CHAT_SURFACE_HEADER_HEIGHT_CLASS,
+              desktopTopBarTrafficLightGutterClassName,
+            )}
+          >
+            <div className="pointer-events-auto">
+              <SidebarHeaderNavigationControls />
+            </div>
           </div>
-        </div>
-        <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
-          <div className="flex-1 overflow-y-auto">
+        ) : null}
+        <div className="synara-settings-shell flex h-full min-h-0 min-w-0 flex-1 flex-col">
+          <div className="synara-settings-scroll flex-1 overflow-y-auto">
             <div
               className={cn(
+                "synara-settings-content",
                 "mx-auto w-full px-6 py-8",
                 activeSection === "connectors"
                   ? "max-w-4xl"
@@ -1876,37 +2001,31 @@ function SettingsRouteView() {
               )}
             >
               {activeSection !== "profile" ? (
-                <div className="mb-8 flex items-start justify-between gap-4">
+                <div className="synara-settings-heading mb-8 flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <h1 className="flex items-center gap-2 text-xl font-medium tracking-tight text-foreground">
+                    <h1 className="text-xl font-medium tracking-tight text-foreground">
                       {t(activeSectionItem.label)}
-                      {activeSectionItem.badge ? (
-                        <Badge
-                          variant="outline"
-                          className="rounded-full px-2 font-normal tracking-normal text-muted-foreground"
-                        >
-                          {t(activeSectionItem.badge)}
-                        </Badge>
-                      ) : null}
                     </h1>
                     <p className="mt-1.5 text-ui leading-relaxed text-muted-foreground">
                       {t(activeSectionItem.description)}
                     </p>
                   </div>
-                  {activeSection === "shortcuts" ? (
-                    <KeyboardShortcutsResetButton />
-                  ) : (
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      className="shrink-0"
-                      disabled={changedSettingLabels.length === 0}
-                      onClick={() => void restoreDefaults()}
-                    >
-                      <ResetIcon className="size-3.5" />
-                      {t("settings:advanced_restoreDefaults")}
-                    </Button>
-                  )}
+                  {!isEmbed ? (
+                    activeSection === "shortcuts" ? (
+                      <KeyboardShortcutsResetButton />
+                    ) : (
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        className="shrink-0"
+                        disabled={changedSettingLabels.length === 0}
+                        onClick={() => void restoreDefaults()}
+                      >
+                        <ResetIcon className="size-3.5" />
+                        {t("settings:advanced_restoreDefaults")}
+                      </Button>
+                    )
+                  ) : null}
                 </div>
               ) : null}
 
@@ -1935,7 +2054,7 @@ function SettingsRouteView() {
                 <WorktreesSettingsPanel active={activeSection === "worktrees"} />
                 <ArchivedSettingsPanel active={activeSection === "archived"} />
                 <ModelsSettingsPanel
-                  active={activeSection === "models"}
+                  active={isEmbed && activeSection === "providers"}
                   settings={settings}
                   defaults={defaults}
                   updateSettings={updateSettings}
@@ -1943,7 +2062,7 @@ function SettingsRouteView() {
                 />
                 <ProvidersSettingsPanel
                   active={activeSection === "providers"}
-                  providerTarget={settingsProviderTarget}
+                  providerTargets={resolvedSettingsTarget.openProviders}
                   settings={settings}
                   defaults={defaults}
                   updateSettings={updateSettings}

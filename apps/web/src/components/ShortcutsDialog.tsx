@@ -13,7 +13,7 @@ import {
   DialogPopup,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { Input } from "~/components/ui/input";
+import { SearchInput } from "~/components/ui/search-input";
 import { cn } from "~/lib/utils";
 import { ShortcutKbd } from "./ui/kbd";
 import {
@@ -23,7 +23,7 @@ import {
   type ShortcutSheetSection,
 } from "../shortcutsSheet";
 import type { ProjectScript } from "../types";
-import { useTranslation } from "~/i18n";
+import { useTranslation, t } from "~/i18n";
 
 export default function ShortcutsDialog(props: {
   open: boolean;
@@ -84,15 +84,13 @@ function ShortcutsDialogContent(props: {
   return (
     <>
       <DialogHeader className="pb-2">
-        <DialogTitle className="text-base">{t("common:advanced_keybindings")}</DialogTitle>
+        <DialogTitle className="text-ui-lg">{t("common:advanced_keybindings")}</DialogTitle>
         <DialogDescription className="text-ui leading-snug">
           {t("common:reflectsTheBindingsActiveInYourCurrentContext")}
         </DialogDescription>
         <div className="pt-2">
-          <Input
+          <SearchInput
             ref={inputRef}
-            type="search"
-            size="sm"
             placeholder={t("common:shortcuts_searchPlaceholder")}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -103,7 +101,6 @@ function ShortcutsDialogContent(props: {
                 setQuery("");
               }
             }}
-            className="rounded-md"
             nativeInput
             aria-label={t("common:searchShortcuts")}
           />

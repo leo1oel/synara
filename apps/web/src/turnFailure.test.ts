@@ -1,5 +1,6 @@
 import { EventId, MessageId, TurnId } from "@synara/contracts";
 import { describe, expect, it } from "vitest";
+import { setLanguagePreference } from "~/i18n";
 import { applyOrchestrationEvents } from "./storeEventReducer";
 import { normalizeThreadFromReadModel } from "./storeNormalization";
 import {
@@ -245,5 +246,194 @@ describe("durable turn failure feedback", () => {
     expect(rows.filter((row) => row.kind === "work")).toMatchObject([
       { groupedEntries: [{ turnId, turnFailure: { cause } }] },
     ]);
+  });
+});
+
+describe("Claude Code exit failures", () => {
+  // What the Claude adapter emits when an outdated Claude Code rejects a launch
+  // flag at startup: its stderr reason plus a next-step code.
+  const exitTurnId = TurnId.makeUnsafe("claude-exit-turn");
+  const reason =
+    "Claude Code process exited with code 1: error: unknown option '--setting-sources=user,project,local'";
+  const exitActivities = [
+    makeActivity({
+      id: "claude-exit-error",
+      turnId: exitTurnId,
+      sequence: 2,
+      kind: "runtime.error",
+      tone: "error",
+      summary: "Provider runtime error",
+      payload: { message: reason, class: "provider_error", errorCode: "claude_cli_outdated" },
+    }),
+    makeActivity({
+      id: "claude-exit-completion",
+      turnId: exitTurnId,
+      sequence: 3,
+      kind: "turn.completed",
+      tone: "error",
+      summary: "Turn failed",
+      payload: { state: "failed", errorMessage: reason },
+    }),
+  ];
+
+  it("shows Claude Code's reason and a localized next step on the card", () => {
+    try {
+      setLanguagePreference("zh-CN");
+      const [zh] = deriveWorkLogEntries(exitActivities, exitTurnId);
+      expect(zh?.turnFailure).toEqual({
+        cause: reason,
+        errorCode: "claude_cli_outdated",
+        message: `任务因提供商错误而中断，工作尚未完成。${reason}`,
+        nextStep:
+          "你安装的 Claude Code 版本太旧，在这里运行不了。请在终端运行 `claude update`（或重装 Claude Code），然后重试。",
+      });
+      setLanguagePreference("en");
+      const [en] = deriveWorkLogEntries(exitActivities, exitTurnId);
+      expect(en?.turnFailure?.nextStep).toBe(
+        "Your Claude Code is too old to run here. Run `claude update` in Terminal (or reinstall Claude Code), then try again.",
+      );
+    } finally {
+      setLanguagePreference("en");
+    }
+  });
+
+  it("tells the user to pick another model when the account cannot use this one", () => {
+    const refusedTurnId = TurnId.makeUnsafe("claude-model-refused-turn");
+    const cause = "The selected Claude model is unavailable for this account.";
+    // Both events carry the Agent SDK's structured code, as the Claude adapter sends them.
+    const activities = [
+      makeActivity({
+        id: "claude-model-refused-error",
+        turnId: refusedTurnId,
+        sequence: 2,
+        kind: "runtime.error",
+        tone: "error",
+        summary: "Provider runtime error",
+        payload: { message: cause, class: "provider_error", errorCode: "model_not_found" },
+      }),
+      makeActivity({
+        id: "claude-model-refused-completion",
+        turnId: refusedTurnId,
+        sequence: 3,
+        kind: "turn.completed",
+        tone: "error",
+        summary: "Turn failed",
+        payload: { state: "failed", errorMessage: cause, errorCode: "model_not_found" },
+      }),
+    ];
+    try {
+      setLanguagePreference("zh-CN");
+      expect(deriveWorkLogEntries(activities, refusedTurnId)[0]?.turnFailure?.nextStep).toBe(
+        "你的 Claude 账号用不了这个模型。请点「更改模型」换一个。",
+      );
+      setLanguagePreference("en");
+      expect(deriveWorkLogEntries(activities, refusedTurnId)[0]?.turnFailure?.nextStep).toBe(
+        "Your Claude account can't use this model. Choose another one with Change model.",
+      );
+    } finally {
+      setLanguagePreference("en");
+    }
+  });
+
+  it("tells the user to update Claude Code when it is too old for the model", () => {
+    const turnId = TurnId.makeUnsafe("claude-model-needs-newer-cli-turn");
+    const cause =
+      "Claude Fable 5.2 needs Claude Code 2.1.321 or later; the installed one is 2.1.300. Run `claude update` in Terminal, then try again.";
+    const errorCode = "claude_model_needs_newer_cli";
+    const activities = [
+      makeActivity({
+        id: "claude-model-needs-newer-cli-error",
+        turnId,
+        sequence: 2,
+        kind: "runtime.error",
+        tone: "error",
+        summary: "Provider runtime error",
+        payload: { message: cause, class: "provider_error", errorCode },
+      }),
+      makeActivity({
+        id: "claude-model-needs-newer-cli-completion",
+        turnId,
+        sequence: 3,
+        kind: "turn.completed",
+        tone: "error",
+        summary: "Turn failed",
+        payload: { state: "failed", errorMessage: cause, errorCode },
+      }),
+    ];
+    expect(deriveWorkLogEntries(activities, turnId)[0]?.turnFailure).toMatchObject({
+      cause,
+      errorCode,
+      nextStep:
+        "This model needs a newer Claude Code than the one installed. Run `claude update` in Terminal, then try again, or choose another model with Change model.",
+    });
+  });
+
+  it("says Anthropic refused the account, and that signing in again will not help", () => {
+    const refusedTurnId = TurnId.makeUnsafe("claude-access-forbidden-turn");
+    const cause = "Anthropic refused this Claude account or network (403 Request not allowed).";
+    const activities = [
+      makeActivity({
+        id: "claude-forbidden-error",
+        turnId: refusedTurnId,
+        sequence: 2,
+        kind: "runtime.error",
+        tone: "error",
+        summary: "Provider runtime error",
+        payload: { message: cause, class: "provider_error", errorCode: "claude_access_forbidden" },
+      }),
+      makeActivity({
+        id: "claude-forbidden-completion",
+        turnId: refusedTurnId,
+        sequence: 3,
+        kind: "turn.completed",
+        tone: "error",
+        summary: "Turn failed",
+        payload: { state: "failed", errorMessage: cause, errorCode: "claude_access_forbidden" },
+      }),
+    ];
+    try {
+      setLanguagePreference("zh-CN");
+      const [zh] = deriveWorkLogEntries(activities, refusedTurnId);
+      expect(zh?.turnFailure?.nextStep).toBe(
+        "Anthropic 拒绝了这个 Claude 账号或所在网络（403）。重新登录多半没用：请检查账号状态，或换用其他提供商。",
+      );
+      expect(zh?.turnFailure?.nextStep).not.toMatch(/claude auth login/);
+      setLanguagePreference("en");
+      expect(deriveWorkLogEntries(activities, refusedTurnId)[0]?.turnFailure?.nextStep).toBe(
+        "Anthropic refused this Claude account or network (403). Signing in again is unlikely to help: check the account's status, or use another provider.",
+      );
+    } finally {
+      setLanguagePreference("en");
+    }
+  });
+
+  it("says what to try when Claude Code exited without a reason", () => {
+    const generic = "Claude Code process exited with code 1";
+    const failure = (errorCode?: string) =>
+      deriveWorkLogEntries(
+        [
+          makeActivity({
+            id: "claude-exit-generic",
+            turnId: exitTurnId,
+            sequence: 2,
+            kind: "runtime.error",
+            tone: "error",
+            summary: "Provider runtime error",
+            payload: {
+              message: generic,
+              class: "provider_error",
+              ...(errorCode ? { errorCode } : {}),
+            },
+          }),
+        ],
+        exitTurnId,
+      )[0]?.turnFailure;
+    expect(failure("claude_cli_failed")).toMatchObject({
+      message: `The task was interrupted by a provider error. Work remains incomplete. ${generic}`,
+      nextStep:
+        "Claude Code stopped unexpectedly. Run `claude -p hi` in Terminal to see why, fix it, then try again.",
+    });
+    // Errors without a code (other providers) keep the card as it was.
+    expect(failure()?.nextStep).toBeUndefined();
   });
 });

@@ -76,6 +76,7 @@ import { Schema } from "effect";
 import { showConfirmDialogFallback } from "./confirmDialogFallback";
 import { TASKS_OFFERED_BY_BUILD } from "./tasksSurface";
 import { showContextMenuFallback } from "./contextMenuFallback";
+import { postShowInFolderToLattice, readEmbedMode } from "./embedMode";
 import { requireHttpExternalUrl } from "./lib/externalUrl";
 import { withNativeMenuIcons } from "./lib/nativeMenuIcons";
 import { isMacNavigatorPlatform } from "./lib/utils";
@@ -695,20 +696,30 @@ export function createWsNativeApi(): NativeApi {
         if (remoteExecution) throw new Error(REMOTE_NATIVE_UNAVAILABLE);
         if (window.desktopBridge) {
           await window.desktopBridge.showInFolder(path);
+          return;
         }
-        // No-op in browser - this is a desktop-only feature
+        const embedMode = readEmbedMode();
+        if (embedMode && postShowInFolderToLattice(embedMode, path)) {
+          return;
+        }
+        throw new Error("Opening folders is available in the desktop app.");
       },
     },
     git: {
       githubRepository: (input) => executionRequest(WS_METHODS.gitGithubRepository, input),
       pull: (input) => executionRequest(WS_METHODS.gitPull, input),
       status: (input) => executionRequest(WS_METHODS.gitStatus, input),
+      branchPullRequest: (input) => executionRequest(WS_METHODS.gitBranchPullRequest, input),
       readWorkingTreeDiff: (input) => executionRequest(WS_METHODS.gitReadWorkingTreeDiff, input),
       readFileAtRev: (input) => executionRequest(WS_METHODS.gitReadFileAtRev, input),
       workingTreeDiffStats: (input) => executionRequest(WS_METHODS.gitWorkingTreeDiffStats, input),
       blameLine: (input) => executionRequest(WS_METHODS.gitBlameLine, input),
       summarizeDiff: (input) =>
         executionRequest(WS_METHODS.gitSummarizeDiff, input, {
+          timeoutMs: null,
+        }),
+      generateCommitMessage: (input) =>
+        executionRequest(WS_METHODS.gitGenerateCommitMessage, input, {
           timeoutMs: null,
         }),
       runStackedAction: (input) =>
@@ -732,6 +743,11 @@ export function createWsNativeApi(): NativeApi {
       stashInfo: (input) => executionRequest(WS_METHODS.gitStashInfo, input),
       removeIndexLock: (input) => executionRequest(WS_METHODS.gitRemoveIndexLock, input),
       init: (input) => executionRequest(WS_METHODS.gitInit, input),
+      connectGitHubRemote: (input) => executionRequest(WS_METHODS.gitConnectGitHubRemote, input),
+      createGitHubRepository: (input) =>
+        executionRequest(WS_METHODS.gitCreateGitHubRepository, input, {
+          timeoutMs: null,
+        }),
       stageFiles: (input) => executionRequest(WS_METHODS.gitStageFiles, input),
       unstageFiles: (input) => executionRequest(WS_METHODS.gitUnstageFiles, input),
       handoffThread: (input) => executionRequest(WS_METHODS.gitHandoffThread, input),
@@ -837,12 +853,15 @@ export function createWsNativeApi(): NativeApi {
       // Claude runs sequential CLI and auth probes, so a refresh can exceed the
       // generic 60-second RPC deadline. Keep this bounded while allowing slow
       // probes to finish; onboarding shows an error if this deadline expires.
-      refreshProviders: () =>
-        executionRequest(WS_METHODS.serverRefreshProviders, undefined, { timeoutMs: 180_000 }),
+      refreshProviders: (input) =>
+        executionRequest(WS_METHODS.serverRefreshProviders, input, { timeoutMs: 180_000 }),
       // Provider updates run up to 2 minutes server-side; callers wrap this in
       // withProviderUpdateTimeout, which owns the client-side watchdog.
       updateProvider: (input) =>
         executionRequest(WS_METHODS.serverUpdateProvider, input, { timeoutMs: null }),
+      // Answers at once; install progress arrives with the provider statuses.
+      installProviderRuntime: (input) =>
+        executionRequest(WS_METHODS.serverInstallProviderRuntime, input),
       listWorktrees: () => executionRequest(WS_METHODS.serverListWorktrees),
       listLocalServers: () => executionRequest(WS_METHODS.serverListLocalServers),
       stopLocalServer: (input) => executionRequest(WS_METHODS.serverStopLocalServer, input),
@@ -890,8 +909,20 @@ export function createWsNativeApi(): NativeApi {
       compactThread: (input) =>
         executionRequest(WS_METHODS.providerCompactThread, input, { timeoutMs: null }),
       listCommands: (input) => executionRequest(WS_METHODS.providerListCommands, input),
+      listMcpServers: (input) => executionRequest(WS_METHODS.providerListMcpServers, input),
+      // Actions can wait on Claude Code starting and on the server's own handshake.
+      runMcpServerAction: (input) =>
+        executionRequest(WS_METHODS.providerRunMcpServerAction, input, { timeoutMs: 120_000 }),
       listSkills: (input) => executionRequest(WS_METHODS.providerListSkills, input),
       listSkillsCatalog: (input) => executionRequest(WS_METHODS.providerListSkillsCatalog, input),
+      importSkill: (input) => executionRequest(WS_METHODS.providerImportSkill, input),
+      readManagedSkill: (input) => executionRequest(WS_METHODS.providerReadManagedSkill, input),
+      saveManagedSkill: (input) => executionRequest(WS_METHODS.providerSaveManagedSkill, input),
+      duplicateManagedSkill: (input) =>
+        executionRequest(WS_METHODS.providerDuplicateManagedSkill, input),
+      removeManagedSkill: (input) => executionRequest(WS_METHODS.providerRemoveManagedSkill, input),
+      restoreManagedSkill: (input) =>
+        executionRequest(WS_METHODS.providerRestoreManagedSkill, input),
       listPlugins: (input) => executionRequest(WS_METHODS.providerListPlugins, input),
       readPlugin: (input) => executionRequest(WS_METHODS.providerReadPlugin, input),
       listModels: (input) => executionRequest(WS_METHODS.providerListModels, input),
@@ -912,12 +943,19 @@ export function createWsNativeApi(): NativeApi {
       listProjectImports: (input) =>
         executionRequest(ORCHESTRATION_WS_METHODS.listProjectImports, input),
       importProject: (input) => executionRequest(ORCHESTRATION_WS_METHODS.importProject, input),
+      listFolderSessions: (input) =>
+        executionRequest(ORCHESTRATION_WS_METHODS.listFolderSessions, input),
+      openFolderSession: (input) =>
+        executionRequest(ORCHESTRATION_WS_METHODS.openFolderSession, input),
+      getNativeSessionHandoff: (input) =>
+        executionRequest(ORCHESTRATION_WS_METHODS.getNativeSessionHandoff, input),
       loadProjectImportHistory: (input) =>
         executionRequest(ORCHESTRATION_WS_METHODS.loadProjectImportHistory, input),
       regenerateThreadTitle: (input) =>
         executionRequest(ORCHESTRATION_WS_METHODS.regenerateThreadTitle, input, {
           timeoutMs: null,
         }),
+      showPanelThread: (input) => executionRequest(ORCHESTRATION_WS_METHODS.showPanelThread, input),
       repairState: () => executionRequest(ORCHESTRATION_WS_METHODS.repairState),
       getTurnDiff: (input) => executionRequest(ORCHESTRATION_WS_METHODS.getTurnDiff, input),
       getInlineVisual: (input) => executionRequest(ORCHESTRATION_WS_METHODS.getInlineVisual, input),

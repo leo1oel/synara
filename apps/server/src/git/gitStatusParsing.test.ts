@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   countTextFileLines,
   normalizeConfiguredMergeBranch,
+  parseGitNameStatus,
   parseGitStatusPorcelain,
   summarizeGitNumstatOutputs,
 } from "./gitStatusParsing.ts";
@@ -92,5 +93,35 @@ describe("git status parsing", () => {
     expect(countTextFileLines(encode("unterminated"))).toBe(1);
     expect(countTextFileLines(new Uint8Array([0xff, 10, 0xfe]))).toBe(2);
     expect(countTextFileLines(new Uint8Array([65, 0, 66, 10]))).toBe(0);
+  });
+
+  it("reads name-status records with raw paths, rename pairs and copies", () => {
+    const entries = parseGitNameStatus(
+      [
+        "M",
+        'notes/中文 "draft".tex',
+        "A",
+        "tab\tname.tex",
+        "D",
+        "back\\slash.tex",
+        "R087",
+        "old name.tex",
+        "new\nname.tex",
+        "C100",
+        "source.tex",
+        "copy.tex",
+        "T",
+        "link",
+        "",
+      ].join("\0"),
+    );
+    expect(entries).toEqual([
+      { path: 'notes/中文 "draft".tex', status: "modified" },
+      { path: "tab\tname.tex", status: "added" },
+      { path: "back\\slash.tex", status: "deleted" },
+      { path: "new\nname.tex", previousPath: "old name.tex", status: "renamed" },
+      { path: "copy.tex", status: "added" },
+      { path: "link", status: "modified" },
+    ]);
   });
 });

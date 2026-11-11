@@ -31,6 +31,7 @@ import { shouldRenderTerminalWorkspace } from "../components/ChatView.logic";
 import ThreadSidebar from "../components/Sidebar";
 import { isElectron } from "../env";
 import { matchesFixedShortcut } from "../fixedShortcuts";
+import { isSynaraEmbedMode } from "../embedMode";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
 import { useIsMobile } from "../hooks/useMediaQuery";
 import { useHandleNewGroupChat } from "../hooks/useHandleNewGroupChat";
@@ -605,6 +606,7 @@ function ChatRouteGlobalShortcuts() {
 }
 
 function ChatRouteLayout() {
+  const isEmbed = isSynaraEmbedMode();
   const workspaceSidebarControls = useWorkspaceSidebarControls();
   const isEditorView = useLocation({
     select: (location) => (location.search as { view?: unknown }).view === "editor",
@@ -618,7 +620,7 @@ function ChatRouteLayout() {
   const railPanelView = useRailShellStore((store) => store.panelView);
   const selectRailPanelItem = useRailShellStore((store) => store.selectPanelItem);
   const railHidesPanel = !railItemShowsPanel(railActiveItem);
-  const resolvedSidebarOpen = isEditorView || railHidesPanel ? false : sidebarOpen;
+  const resolvedSidebarOpen = isEditorView || isEmbed || railHidesPanel ? false : sidebarOpen;
   // Toggling the panel open on a full-width route brings back the current panel item.
   const handleSidebarOpenChange = useCallback(
     (open: boolean) => {
@@ -659,8 +661,8 @@ function ChatRouteLayout() {
   // `data-sidebar-side` on the provider selects the seam geometry.
   const mainContentShell = (
     <div ref={setRouteColumn} className="relative flex h-svh min-h-0 min-w-0 flex-1">
-      <div aria-hidden className="app-rail-header-divider" />
-      {isEditorView ? null : (
+      {isEmbed ? null : <div aria-hidden className="app-rail-header-divider" />}
+      {isEditorView || isEmbed ? null : (
         <SidebarInstanceProvider side="left" resizable={THREAD_SIDEBAR_RESIZABLE}>
           <SidebarRail placement="content-seam" />
         </SidebarInstanceProvider>
@@ -691,26 +693,30 @@ function ChatRouteLayout() {
     <ChatShell defaultOpen open={resolvedSidebarOpen} onOpenChange={handleSidebarOpenChange}>
       <ThreadRetentionMaintenanceToast />
       <ChatRouteGlobalShortcuts />
-      <AppRailSlotProvider value={railSlot}>
-        <SidebarLeadingControlsDock routeColumn={routeColumn} railSlot={railSlot}>
-          {isMobile ? (
-            // Phones show the sidebar as a sheet that carries its own rail (see ThreadSidebar),
-            // so the shell keeps no left column.
-            sidebarElement
-          ) : (
-            <div className="flex min-h-0 shrink-0 flex-col">
-              <AppShellTopStrip />
-              <div className="flex min-h-0 flex-1">
-                <div ref={setRailSlot} className="flex shrink-0" />
-                <div className="app-rail-panel relative flex shrink-0 overflow-hidden [contain:paint]">
-                  {sidebarElement}
+      {isEmbed ? (
+        mainContentShell
+      ) : (
+        <AppRailSlotProvider value={railSlot}>
+          <SidebarLeadingControlsDock routeColumn={routeColumn} railSlot={railSlot}>
+            {isMobile ? (
+              // Phones show the sidebar as a sheet that carries its own rail (see ThreadSidebar),
+              // so the shell keeps no left column.
+              sidebarElement
+            ) : (
+              <div className="flex min-h-0 shrink-0 flex-col">
+                <AppShellTopStrip />
+                <div className="flex min-h-0 flex-1">
+                  <div ref={setRailSlot} className="flex shrink-0" />
+                  <div className="app-rail-panel relative flex shrink-0 overflow-hidden [contain:paint]">
+                    {sidebarElement}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-          {mainContentShell}
-        </SidebarLeadingControlsDock>
-      </AppRailSlotProvider>
+            )}
+            {mainContentShell}
+          </SidebarLeadingControlsDock>
+        </AppRailSlotProvider>
+      )}
     </ChatShell>
   );
 }

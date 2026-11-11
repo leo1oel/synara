@@ -4,6 +4,7 @@
 // Exports: module declarations only
 
 declare module "@fontsource-variable/jetbrains-mono";
+declare module "@fontsource-variable/inter";
 
 // The engine ships its language definitions (`{ conf, language }`) without
 // declarations; only the language configuration is consumed (editorHighlighting.ts).

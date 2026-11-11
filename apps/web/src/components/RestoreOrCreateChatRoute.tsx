@@ -11,6 +11,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
 import { SplashScreen } from "./SplashScreen";
+import { withLatticeEmbedSearch } from "../embedMode";
 import {
   type EmptyRouteRestoreRecoveryState,
   type LastThreadRoute,
@@ -140,9 +141,9 @@ export function RestoreOrCreateChatRoute({
           to: "/$threadId",
           params: { threadId: ThreadId.makeUnsafe(restorableRoute.threadId) },
           replace: true,
-          search: () => ({
+          search: withLatticeEmbedSearch(() => ({
             splitViewId: restorableRoute.splitViewId,
-          }),
+          })),
         });
         return;
       }

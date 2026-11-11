@@ -4,14 +4,14 @@ import { rateLimitWindowDisplayLabel } from "~/lib/rateLimits";
 // popovers. Keeps labels, progress tracks, pace details, and tones consistent.
 
 import {
-  providerUsagePaceDetails,
+  localizeProviderUsageDisplayText,
   providerUsageProgressTrackProps,
   type ProviderUsageDisplayRow,
 } from "~/lib/providerUsageDisplay";
 import { StatusDot } from "~/components/ui/status-chip";
 
 import { UsageProgressTrack } from "./UsageProgressTrack";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 export type ProviderUsageLimitRowsSurface = "settings" | "popover";
 
@@ -22,7 +22,7 @@ function ProviderUsagePaceLine({
   row: ProviderUsageDisplayRow;
   surface: ProviderUsageLimitRowsSurface;
 }) {
-  const paceDetails = providerUsagePaceDetails(row);
+  const paceDetails = localizeProviderUsageDisplayText(t, row).paceDetails;
   if (!paceDetails) return null;
 
   if (surface === "popover") {
@@ -58,10 +58,12 @@ function ProviderUsageTrack({
   surface: ProviderUsageLimitRowsSurface;
 }) {
   const trackProps = providerUsageProgressTrackProps(row);
+  const localizedText = localizeProviderUsageDisplayText(t, row);
 
   return (
     <UsageProgressTrack
       {...trackProps}
+      label={localizedText.progressLabel}
       className={surface === "popover" ? "h-1.5 bg-muted/80" : undefined}
       markerGapClassName={surface === "popover" ? "bg-popover" : undefined}
     />
@@ -72,23 +74,24 @@ function SettingsUsageLimitRow({ row }: { row: ProviderUsageDisplayRow }) {
   const { t } = useTranslation();
 
   const trackProps = providerUsageProgressTrackProps(row);
+  const localizedText = localizeProviderUsageDisplayText(t, row);
 
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-1.5">
         <span className="text-ui leading-snug font-medium text-foreground">
-          {rateLimitWindowDisplayLabel(row.label, t)}
+          {localizedText.label}
         </span>
         <StatusDot
           className={trackProps.markerClassName}
-          title={row.pace ? t("common:usagePace", { value0: row.pace.status }) : undefined}
+          title={localizedText.paceTitle}
           aria-hidden
         />
       </div>
       <ProviderUsageTrack row={row} surface="settings" />
       <div className="flex items-center justify-between text-ui-sm tabular-nums text-muted-foreground">
-        <span>{row.leftText}</span>
-        {row.resetText ? <span>{row.resetText}</span> : null}
+        <span>{localizedText.leftText}</span>
+        {localizedText.resetText ? <span>{localizedText.resetText}</span> : null}
       </div>
       <ProviderUsagePaceLine row={row} surface="settings" />
     </div>
@@ -96,18 +99,23 @@ function SettingsUsageLimitRow({ row }: { row: ProviderUsageDisplayRow }) {
 }
 
 function PopoverUsageLimitRow({ row }: { row: ProviderUsageDisplayRow }) {
-  const { t } = useTranslation();
+  const localizedText = localizeProviderUsageDisplayText(t, row);
+
   return (
     <div className="space-y-1 text-chat-meta leading-tight">
       <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-baseline gap-x-3">
         <div className="flex min-w-0 items-baseline gap-1.5">
           <span className="shrink-0 text-ui-sm font-medium text-foreground">
-            {rateLimitWindowDisplayLabel(row.label, t)}
+            {localizedText.label}
           </span>
-          <span className="min-w-0 truncate tabular-nums text-foreground">{row.leftText}</span>
+          <span className="min-w-0 truncate tabular-nums text-foreground">
+            {localizedText.leftText}
+          </span>
         </div>
         <div className="min-w-0 text-right text-muted-foreground">
-          {row.resetText ? <div className="truncate tabular-nums">{row.resetText}</div> : null}
+          {localizedText.resetText ? (
+            <div className="truncate tabular-nums">{localizedText.resetText}</div>
+          ) : null}
         </div>
       </div>
       <ProviderUsageTrack row={row} surface="popover" />

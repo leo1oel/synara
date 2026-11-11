@@ -558,7 +558,7 @@ describe("availability", () => {
       steps: [
         { id: "install-xcode", label: "Install Xcode", done: true },
         { id: "install-ios-runtime", label: "Install an iOS runtime", done: true },
-        { id: "build-device-helper", label: "Build the Synara device helper", done: false },
+        { id: "build-device-helper", label: "Build the device helper", done: false },
       ],
     });
     expect(view).toEqual({ kind: "ready" });
@@ -572,7 +572,7 @@ describe("availability", () => {
       steps: [
         { id: "install-xcode", label: "Install Xcode", done: true },
         { id: "install-ios-runtime", label: "Install an iOS runtime", done: false },
-        { id: "build-device-helper", label: "Build the Synara device helper", done: false },
+        { id: "build-device-helper", label: "Build the device helper", done: false },
       ],
     });
     expect(view.kind).toBe("blocked");

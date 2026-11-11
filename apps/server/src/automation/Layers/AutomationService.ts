@@ -1,3 +1,4 @@
+import { providerDisabledSettingsMessage } from "../../provider/enabledProviderAdapter.ts";
 import { randomUUID } from "node:crypto";
 
 import {
@@ -54,7 +55,6 @@ import {
 } from "../../git/textGenerationSelection.ts";
 import { OrchestrationEngineService } from "../../orchestration/Services/OrchestrationEngine.ts";
 import { ProjectionSnapshotQuery } from "../../orchestration/Services/ProjectionSnapshotQuery.ts";
-import { providerDisabledSettingsMessage } from "../../provider/enabledProviderAdapter.ts";
 import { threadHasInFlightTurn } from "../../orchestration/commandInvariants.ts";
 import {
   AutomationRepository,
@@ -2019,23 +2019,6 @@ export const AutomationServiceLive = Layer.effect(
       }).pipe(
         Effect.catch((error) =>
           Effect.gen(function* () {
-            const disabledReason = yield* completionEvaluationProviderDisabledReason(
-              definition,
-            ).pipe(
-              Effect.catch((settingsError) =>
-                Effect.logWarning(
-                  "automation completion evaluation provider state could not be rechecked",
-                  {
-                    automationId: definition.id,
-                    runId: run.id,
-                    error: errorMessage(settingsError),
-                  },
-                ).pipe(Effect.as(null)),
-              ),
-            );
-            if (disabledReason) {
-              return false;
-            }
             const reason = completionFailureReason(error);
             yield* Effect.logWarning("automation completion evaluation failed", {
               automationId: definition.id,
@@ -2137,17 +2120,7 @@ export const AutomationServiceLive = Layer.effect(
               if (!runUsesCurrentCompletionPolicy(run, definition)) {
                 return Effect.void;
               }
-              return completionEvaluationProviderDisabledReason(definition).pipe(
-                Effect.flatMap((disabledReason) =>
-                  disabledReason
-                    ? Effect.void
-                    : enqueueCompletionEvaluationJob({
-                        definition,
-                        run,
-                        policy,
-                      }),
-                ),
-              );
+              return enqueueCompletionEvaluationJob({ definition, run, policy });
             },
           }),
         ),

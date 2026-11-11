@@ -12,6 +12,7 @@ import {
 } from "react";
 
 import { Checkbox } from "~/components/ui/checkbox";
+import { FIELD_CONTROL_CLASS_NAME } from "~/components/ui/field-styles";
 import { IconButton } from "~/components/ui/icon-button";
 import { XIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
@@ -160,7 +161,10 @@ export function EnvironmentEditableChecklistRow({
           onBlur={handleInputBlur}
           onKeyDown={handleInputKeyDown}
           placeholder={editPlaceholder}
-          className="min-w-0 flex-1 rounded border border-input bg-background px-1 py-0.5 text-ui text-foreground outline-none focus-visible:border-ring"
+          className={cn(
+            FIELD_CONTROL_CLASS_NAME,
+            "min-w-0 flex-1 rounded-lg px-1.5 py-0.5 text-ui text-foreground outline-none",
+          )}
         />
       ) : (
         <button

@@ -1,10 +1,3 @@
-// FILE: PullRequestCodeTab.tsx
-// Purpose: The Code tab of the pull request detail surface — owns the diff query and the
-//          patch viewport. Lazy-loaded by PullRequestDetailPanel so the diff renderer and its
-//          worker infrastructure never ship to users who only read the list or Summary.
-// Layer: Pull request presentation
-// Exports: PullRequestCodeTab (default export for React.lazy)
-
 import type { PullRequestDetail, PullRequestDetailInput } from "@synara/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -24,7 +17,7 @@ import { PullRequestDiffStat } from "./PullRequestDiffStat";
 import { PullRequestMetaLine } from "./PullRequestMetaLine";
 import { PR_META_TEXT_CLASS_NAME } from "./pullRequestText";
 import { PullRequestWarningNote } from "./PullRequestWarningNote";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 export function PullRequestCodeTab({
   input,
@@ -71,9 +64,7 @@ export function PullRequestCodeTab({
               "border-b border-border/60 px-3 py-2 text-muted-foreground",
             )}
           >
-            <span>
-              {patchTotals.fileCount} {t("chat:files")}
-            </span>
+            <span>{t("lattice:files", { count: patchTotals.fileCount })}</span>
             <PullRequestDiffStat
               additions={patchTotals.additions}
               deletions={patchTotals.deletions}
@@ -106,7 +97,7 @@ export function PullRequestCodeTab({
               diffQuery.isError
                 ? diffQuery.error instanceof Error
                   ? diffQuery.error.message
-                  : "Could not load diff."
+                  : t("lattice:couldNotLoadDiff")
                 : null
             }
             loadingLabel={t("git:loadingPullRequestDiff")}

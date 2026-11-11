@@ -3,6 +3,7 @@
 // Layer: Web Sidebar controller hook
 // Exports: useSidebarThreadActions
 
+import { i18n, t, useTranslation } from "~/i18n";
 import { type ProjectId, ThreadId } from "@synara/contracts";
 import { pluralize } from "~/i18n/pluralize";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -11,7 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { AppSettings } from "../appSettings";
 import { useComposerDraftStore } from "../composerDraftStore";
-import { showConfirmDialogFallback } from "../confirmDialogFallback";
+import { showConfirmDialog } from "../confirmDialogFallback";
 import {
   getFallbackThreadIdAfterDelete,
   getFallbackThreadIdAfterSnooze,
@@ -70,7 +71,6 @@ import { useTemporaryThreadStore } from "../temporaryThreadStore";
 import { getThreadFromState } from "../threadDerivation";
 import { useThreadSelectionStore } from "../threadSelectionStore";
 import type { Project, SidebarThreadSummary } from "../types";
-import { t, useTranslation } from "~/i18n";
 
 /**
  * How long a confirmed settle override may outlive its projection push. Well
@@ -787,7 +787,7 @@ export function useSidebarThreadActions(input: {
         ].join("\n");
         const confirmed = api
           ? await api.dialogs.confirm(confirmationMessage)
-          : await showConfirmDialogFallback(confirmationMessage);
+          : await showConfirmDialog(confirmationMessage);
         if (!confirmed) return;
       }
       await deleteThread(threadId);
@@ -971,7 +971,7 @@ export function useSidebarThreadActions(input: {
         ].join("\n");
         const confirmed = api
           ? await api.dialogs.confirm(confirmationMessage)
-          : await showConfirmDialogFallback(confirmationMessage);
+          : await showConfirmDialog(confirmationMessage);
         if (!confirmed) return;
       }
       if (isAvailable && !isAvailable())
@@ -1010,7 +1010,7 @@ export function useSidebarThreadActions(input: {
       ];
       const confirmed = api
         ? await api.dialogs.confirm(archiveLines.join("\n"))
-        : await showConfirmDialogFallback(archiveLines.join("\n"));
+        : await showConfirmDialog(archiveLines.join("\n"));
       if (!confirmed) return;
 
       let archivedCount = 0;

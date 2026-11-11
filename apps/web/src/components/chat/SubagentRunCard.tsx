@@ -8,6 +8,7 @@
 // Layer: Chat transcript UI
 // Exports: SubagentRunCard, SubagentIdentityLine
 
+import { t, useTranslation } from "~/i18n";
 import { ThreadId } from "@synara/contracts";
 import { pluralize } from "~/i18n/pluralize";
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -41,7 +42,6 @@ import {
   type SubagentRunRow,
 } from "./SubagentRunCard.logic";
 import { useSubagentRunContext, type SubagentRunContextValue } from "./subagentRunContext";
-import { useTranslation } from "~/i18n";
 
 const EMPTY_THREADS: SubagentRunContextValue["threads"] = [];
 const EMPTY_IDS: ReadonlySet<string> = new Set();
@@ -177,10 +177,9 @@ function SubagentRunRowView({
             aria-expanded={nestedOpen}
             onClick={() => setNestedOpen((open) => !open)}
           >
-            {t("chat:launched", {
-              value0: row.nested.length,
-              value1: pluralize(row.nested.length, "subagent"),
-            })}
+            {row.nested.length === 1
+              ? t("lattice:launched1Subagent")
+              : t("lattice:launchedSubagents", { count: row.nested.length })}
             <DisclosureChevron open={nestedOpen} className="size-3" />
           </Button>
         ) : null}

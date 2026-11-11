@@ -13,13 +13,11 @@ import type {
   AgentSessionEvent,
   CreateAgentSessionRuntimeFactory,
   ExtensionUIContext,
+  InlineExtension,
   ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import type { AgentToolResult, ThinkingLevel } from "@earendil-works/pi-agent-core";
 import type { Api, ImageContent, Model, TextContent } from "@earendil-works/pi-ai";
-import { azureProvider } from "@earendil-works/pi-ai/providers/azure";
-import { isModelType } from "@earendil-works/pi-ai/utils/model-operations";
-import { resetApiProviders } from "@earendil-works/pi-ai/compat";
 import {
   ApprovalRequestId,
   type ChatAttachment,
@@ -52,6 +50,7 @@ import {
   type SynaraHarnessPolicyDeliveryState,
   takeSynaraHarnessPolicyForProviderSession,
 } from "../../agentGateway/harnessPolicy.ts";
+import { ACTIVE_AGENT_HOST_PROFILE } from "../../agentGateway/hostProfile.ts";
 import {
   callAgentGatewayMcpTool,
   listAgentGatewayMcpTools,
@@ -73,7 +72,6 @@ import {
 } from "../../agentGateway/sessionLease.ts";
 import { resolveProviderAttachmentPath } from "../providerAttachmentPaths.ts";
 import { ServerConfig } from "../../config.ts";
-import { lazyModule } from "../../lazyModule.ts";
 import { buildProviderChildEnvironment } from "../../providerChildEnvironment.ts";
 import {
   ProviderAdapterRequestError,
@@ -93,12 +91,21 @@ import { makeKeyedLock } from "../keyedLock.ts";
 import { settleConcurrentTeardowns } from "../settleConcurrentTeardowns.ts";
 import { classifyPiTurnFailure } from "../piTurnFailure.ts";
 import { fetchOpenRouterModels, OPENROUTER_BASE_URL } from "../OpenRouterDiscovery.ts";
-import { openrouterProvider } from "@earendil-works/pi-ai/providers/openrouter";
 import {
   buildProviderProcessEnv,
   MODEL_PROVIDER_API_KEY_ENV_MAPPINGS,
 } from "../providerProcessEnv.ts";
 import { makePiStoragePaths } from "../piStoragePaths.ts";
+import {
+  makePiApprovalGate,
+  type PiApprovalGate,
+  type PiApprovalRequestOpened,
+  type PiApprovalRequestResolved,
+} from "../piApprovalGate.ts";
+import {
+  loadProviderRuntimeModule,
+  loadedProviderRuntimeModuleIfAny,
+} from "../providerRuntimes.ts";
 import {
   compactProviderRuntimeEventForIngress,
   isTerminalProviderRuntimeEvent,
@@ -128,7 +135,7 @@ export function buildPiTurnPrompt(
 
 export const resolvePiStartInstanceId = resolveProviderSessionInstanceId;
 
-const DEFAULT_PI_THINKING_LEVEL: ThinkingLevel = "medium";
+export const DEFAULT_PI_THINKING_LEVEL: ThinkingLevel = "medium";
 const PI_THINKING_OPTIONS: ReadonlyArray<{
   readonly value: ThinkingLevel;
   readonly label: string;
@@ -151,16 +158,24 @@ const PI_DEFAULT_SUPPORTED_THINKING_LEVELS = new Set<ThinkingLevel>([
   "high",
 ]);
 const PI_ANTHROPIC_ENSURED_MODEL_IDS = [
+  "claude-fable-5-2",
   "claude-fable-5-1",
   "claude-fable-5",
   "claude-opus-4-8",
+  "claude-sonnet-5-5",
+  "claude-haiku-5-5",
 ] as const;
 type PiAnthropicEnsuredModelId = (typeof PI_ANTHROPIC_ENSURED_MODEL_IDS)[number];
 
 /**
  * Metadata used when an OAuth/extension Anthropic catalog replaced Pi's built-ins
- * and omitted Fable 5.1 / Fable 5 / Opus 4.8. Values mirror `@earendil-works/pi-ai`
- * Anthropic models; Fable 5.1 follows Anthropic's published pricing until pi-ai ships it.
+ * and omitted Fable 5.2 / Fable 5.1 / Fable 5 / Opus 4.8 / Sonnet 5.5 / Haiku 5.5. Values
+ * mirror `@earendil-works/pi-ai` Anthropic models; Fable 5.2 and 5.1 follow Anthropic's
+ * published pricing until pi-ai ships them (5.2: $8 / $40 per MTok, $10 5-minute cache
+ * write, $0.20 cache read). Sonnet 5.5 and Haiku 5.5 copy pi-ai 1.4.0's own entries, which
+ * match Anthropic's pricing page (Haiku 5.5 bills prompts over 100K tokens at the higher
+ * tier), except that Haiku 5.5 also maps `off` to null: Claude Code's docs say thinking
+ * cannot be turned off on it, as on Sonnet 5.5.
  */
 const PI_ANTHROPIC_ENSURED_MODEL_TEMPLATES: Record<
   PiAnthropicEnsuredModelId,
@@ -176,6 +191,17 @@ const PI_ANTHROPIC_ENSURED_MODEL_TEMPLATES: Record<
     readonly maxTokens: number;
   }
 > = {
+  "claude-fable-5-2": {
+    id: "claude-fable-5-2",
+    name: "Claude Fable 5.2",
+    reasoning: true,
+    thinkingLevelMap: { off: null, xhigh: "xhigh", max: "max" },
+    compat: { forceAdaptiveThinking: true },
+    input: ["text", "image"],
+    cost: { input: 8, output: 40, cacheRead: 0.2, cacheWrite: 10 },
+    contextWindow: 1_000_000,
+    maxTokens: 128_000,
+  },
   "claude-fable-5-1": {
     id: "claude-fable-5-1",
     name: "Claude Fable 5.1",
@@ -206,6 +232,52 @@ const PI_ANTHROPIC_ENSURED_MODEL_TEMPLATES: Record<
     compat: { forceAdaptiveThinking: true, supportsTemperature: false },
     input: ["text", "image"],
     cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 },
+    contextWindow: 1_000_000,
+    maxTokens: 128_000,
+  },
+  "claude-sonnet-5-5": {
+    id: "claude-sonnet-5-5",
+    name: "Claude Sonnet 5.5",
+    reasoning: true,
+    thinkingLevelMap: {
+      off: null,
+      minimal: null,
+      low: "low",
+      medium: "medium",
+      high: "high",
+      xhigh: "xhigh",
+      max: "max",
+    },
+    compat: { forceAdaptiveThinking: true, supportsTemperature: false },
+    input: ["text", "image"],
+    cost: { input: 2, output: 10, cacheRead: 0.1, cacheWrite: 2.5 },
+    contextWindow: 1_000_000,
+    maxTokens: 128_000,
+  },
+  "claude-haiku-5-5": {
+    id: "claude-haiku-5-5",
+    name: "Claude Haiku 5.5",
+    reasoning: true,
+    thinkingLevelMap: {
+      off: null,
+      minimal: null,
+      low: "low",
+      medium: "medium",
+      high: "high",
+      xhigh: "xhigh",
+      max: "max",
+    },
+    compat: { forceAdaptiveThinking: true, supportsTemperature: false },
+    input: ["text", "image"],
+    cost: {
+      input: 0.1,
+      output: 0.5,
+      cacheRead: 0.01,
+      cacheWrite: 0.125,
+      tiers: [
+        { inputTokensAbove: 100_000, input: 0.5, output: 2.5, cacheRead: 0.05, cacheWrite: 0.625 },
+      ],
+    },
     contextWindow: 1_000_000,
     maxTokens: 128_000,
   },
@@ -393,10 +465,21 @@ export function makePiBashProcessSupervisor(
 
 // Loads the Pi SDK only when the Pi provider is actually used. The SDK brings in
 // a native clipboard module, so importing it during Synara startup can bloat the
-// desktop backend before any Pi session exists.
-const loadPiCodingAgentModule: () => Promise<PiCodingAgentModule> = lazyModule(
-  () => import("@earendil-works/pi-coding-agent"),
-);
+// desktop backend before any Pi session exists. A slim host installs Pi on demand
+// (providerRuntimes.ts); until then this rejects with ProviderRuntimeMissingError.
+export async function loadPiCodingAgentModule(): Promise<PiCodingAgentModule> {
+  const [sdk] = await Promise.all([
+    loadProviderRuntimeModule("@earendil-works/pi-coding-agent"),
+    loadProviderRuntimeModule("@earendil-works/pi-ai/compat"),
+  ]);
+  return sdk;
+}
+
+// Clears API providers that pi-ai registered. Before pi-ai has loaded none exist,
+// so there is nothing to clear.
+function resetApiProviders(): void {
+  loadedProviderRuntimeModuleIfAny("@earendil-works/pi-ai/compat")?.resetApiProviders();
+}
 
 interface PiSessionContext {
   harnessPolicyDelivered?: boolean;
@@ -446,6 +529,8 @@ interface PiSessionContext {
   activeReasoningItemId: RuntimeItemId | undefined;
   activeToolItems: Map<string, PiTrackedToolCall>;
   pendingUserInputs: Map<ApprovalRequestId, PiPendingUserInput>;
+  /** Present only when the session is not full-access; see piApprovalGate.ts. */
+  readonly approvalGate: PiApprovalGate | undefined;
   stopped: boolean;
   lastKnownTokenUsage: ThreadTokenUsageSnapshot | undefined;
   unsubscribe: (() => void) | undefined;
@@ -583,7 +668,7 @@ function piGatewayToolResult(result: unknown): AgentToolResult<unknown> {
           )
           .join("\n")
       : "";
-    throw new Error(message || "Synara gateway tool failed.");
+    throw new Error(message || `${ACTIVE_AGENT_HOST_PROFILE.displayName} gateway tool failed.`);
   }
   const content =
     isRecord(result) && Array.isArray(result.content)
@@ -640,7 +725,7 @@ export async function buildPiAgentGatewayCustomTools(input: {
     ...(input.fetch === undefined ? {} : { fetch: input.fetch }),
   });
   if (tools.length === 0) {
-    throw new Error("Synara MCP returned an empty tool catalog.");
+    throw new Error(`${ACTIVE_AGENT_HOST_PROFILE.displayName} MCP returned an empty tool catalog.`);
   }
   const catalog = new Map(tools.map((tool) => [tool.name, tool]));
   if (input.enableComputerControl === true) {
@@ -715,7 +800,9 @@ function isPiThinkingLevel(value: string | null | undefined): value is ThinkingL
   );
 }
 
-function normalizePiThinkingLevel(value: string | null | undefined): ThinkingLevel | undefined {
+export function normalizePiThinkingLevel(
+  value: string | null | undefined,
+): ThinkingLevel | undefined {
   return isPiThinkingLevel(value) ? value : undefined;
 }
 
@@ -754,8 +841,8 @@ export function getPiSupportedThinkingOptions(
 }
 
 /**
- * When Anthropic is already authenticated, ensure Fable 5.1, Fable 5, and Opus 4.8
- * appear even if an older pi-anthropic-oauth extension replaced the built-in
+ * When Anthropic is already authenticated, ensure the Fables, Opus 4.8, Sonnet 5.5 and
+ * Haiku 5.5 appear even if an older pi-anthropic-oauth extension replaced the built-in
  * Anthropic catalog.
  */
 export function ensurePiAnthropicCatalogModels(
@@ -974,12 +1061,16 @@ function makeSessionSnapshot(
   };
 }
 
-function normalizeTokenUsage(
+export function normalizePiTokenUsage(
   stats: ReturnType<PiAgentSession["getSessionStats"]>,
   contextWindow?: number | null,
 ): ThreadTokenUsageSnapshot | undefined {
   const inputTokens = stats.tokens.input;
-  const cachedInputTokens = stats.tokens.cacheRead;
+  const cacheReadInputTokens = stats.tokens.cacheRead;
+  const cacheWriteInputTokens = stats.tokens.cacheWrite;
+  // Preserve the existing UI-facing cached-input meaning (cache reads).
+  // Cache writes are exposed separately for quality telemetry.
+  const cachedInputTokens = cacheReadInputTokens;
   const outputTokens = stats.tokens.output;
   const totalProcessedTokens = stats.tokens.total;
   const contextUsage = stats.contextUsage;
@@ -1022,11 +1113,15 @@ function normalizeTokenUsage(
     ...(totalProcessedTokens > usedTokens ? { totalProcessedTokens } : {}),
     inputTokens,
     cachedInputTokens,
+    cacheReadInputTokens,
+    cacheWriteInputTokens,
     outputTokens,
     ...(maxTokens !== undefined ? { maxTokens } : {}),
     lastUsedTokens: usedTokens,
     lastInputTokens: inputTokens,
     lastCachedInputTokens: cachedInputTokens,
+    lastCacheReadInputTokens: cacheReadInputTokens,
+    lastCacheWriteInputTokens: cacheWriteInputTokens,
     lastOutputTokens: outputTokens,
   };
 }
@@ -1813,6 +1908,9 @@ export async function createPiModelRuntime(
 
   // Pi renamed Azure in 1.0.3. Keep saved profiles, credentials and session model IDs
   // working under their original key; models.json and extensions still compose on top.
+  const { azureProvider } = await loadProviderRuntimeModule(
+    "@earendil-works/pi-ai/providers/azure",
+  );
   const azure = azureProvider();
   const legacyAzureModels = azure
     .getModels()
@@ -1851,6 +1949,10 @@ export async function refreshPiOpenRouterModels(
     return;
   const live = await fetchOpenRouterModels();
   if (live.length === 0) return;
+  const [{ openrouterProvider }, { isModelType }] = await Promise.all([
+    loadProviderRuntimeModule("@earendil-works/pi-ai/providers/openrouter"),
+    loadProviderRuntimeModule("@earendil-works/pi-ai/utils/model-operations"),
+  ]);
   const base = openrouterProvider();
   const models = new Map(base.getModels().map((model) => [model.id, model]));
   for (const model of live) models.set(model.id, model);
@@ -1875,6 +1977,37 @@ function modelRegistryFacade(
   piSdk: Pick<PiCodingAgentModule, "ModelRegistry">,
 ): ModelRegistry {
   return new piSdk.ModelRegistry(modelRuntime);
+}
+
+/**
+ * Resolves the model a Pi session will run. Chat sessions and Pi text
+ * generation share it so a model id names the same model in both places,
+ * including OpenRouter models discovered on demand and provider-qualified
+ * custom slugs. Returns undefined only when no model id was requested, so the
+ * SDK picks its default.
+ */
+export async function resolvePiSessionModel(input: {
+  readonly modelRuntime: ModelRuntime;
+  readonly piSdk: Pick<PiCodingAgentModule, "ModelRegistry">;
+  readonly modelId: string | undefined;
+  readonly environment?: Readonly<Record<string, string>> | undefined;
+  readonly instanceId?: string | undefined;
+}): Promise<Model<Api> | undefined> {
+  const registry = modelRegistryFacade(input.modelRuntime, input.piSdk);
+  const requested = parseModelReference(input.modelId);
+  if (requested?.provider === "openrouter" && !registry.find(requested.provider, requested.id)) {
+    await refreshPiOpenRouterModels(input.modelRuntime, {
+      environment: input.environment,
+      instanceId: input.instanceId,
+    });
+  }
+  const model = findModelInRegistry(registry, input.modelId);
+  if (input.modelId && !model) {
+    throw new Error(
+      `Pi model '${input.modelId}' is not available. Use a discovered model or a provider-qualified custom model slug like 'openai/gpt-5.5'.`,
+    );
+  }
+  return model;
 }
 
 function extensionDisplayName(extension: {
@@ -2115,6 +2248,48 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         },
       } satisfies ProviderRuntimeEvent);
     };
+
+    // Projects approval-gate requests onto Synara's approval events. The item id
+    // matches the tool item tool_execution_start already opened for this call.
+    const makePiApprovalGateSink = (context: PiSessionContext) => ({
+      opened: (request: PiApprovalRequestOpened) => {
+        offerRuntimeEvent({
+          ...makeEventBase(context),
+          type: "request.opened",
+          requestId: RuntimeRequestId.makeUnsafe(request.requestId),
+          itemId: RuntimeItemId.makeUnsafe(`pi-tool-${request.toolCallId}`),
+          providerRefs: { providerItemId: ProviderItemId.makeUnsafe(request.toolCallId) },
+          payload: {
+            requestType: request.requestType,
+            ...(request.detail ? { detail: request.detail } : {}),
+            args: {
+              toolName: request.toolName,
+              input: request.input,
+              sessionApprovalAvailable: true,
+            },
+          },
+          raw: {
+            source: "pi.sdk.event",
+            method: "tool_call/approval-requested",
+            payload: { requestId: request.requestId, toolCallId: request.toolCallId },
+          },
+        } satisfies ProviderRuntimeEvent);
+      },
+      resolved: (request: PiApprovalRequestResolved) => {
+        offerRuntimeEvent({
+          ...makeEventBase(context),
+          type: "request.resolved",
+          requestId: RuntimeRequestId.makeUnsafe(request.requestId),
+          itemId: RuntimeItemId.makeUnsafe(`pi-tool-${request.toolCallId}`),
+          payload: { requestType: request.requestType, decision: request.decision },
+          raw: {
+            source: "pi.sdk.event",
+            method: "tool_call/approval-resolved",
+            payload: { requestId: request.requestId, decision: request.decision },
+          },
+        } satisfies ProviderRuntimeEvent);
+      },
+    });
 
     const resolvePiExtensionUserInput = (
       context: PiSessionContext,
@@ -2536,7 +2711,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         payload: cause ?? {},
       };
       const stats = context.runtime.session.getSessionStats();
-      const usage = normalizeTokenUsage(stats, context.runtime.session.model?.contextWindow);
+      const usage = normalizePiTokenUsage(stats, context.runtime.session.model?.contextWindow);
       context.lastKnownTokenUsage = usage;
       const failure = errorMessage ? classifyPiTurnFailure(errorMessage) : undefined;
       const leafId = context.runtime.session.sessionManager.getLeafId();
@@ -2907,6 +3082,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           pending.resolve({});
         }
         context.pendingUserInputs.clear();
+        context.approvalGate?.cancelAll();
         context.stopped = true;
         let runtimeFailure: unknown;
         try {
@@ -3244,6 +3420,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
       gatewayTools?: ReadonlyArray<ToolDefinition>;
       signal?: AbortSignal;
       noExtensions?: boolean;
+      extensionFactories?: ReadonlyArray<InlineExtension>;
     }) => {
       const modelRuntime = await createPiModelRuntime(
         input.agentDir,
@@ -3264,25 +3441,22 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           cwd,
           agentDir,
           modelRuntime,
-          ...(input.noExtensions ? { resourceLoaderOptions: { noExtensions: true } } : {}),
+          // Inline factories load even with noExtensions, so the approval gate
+          // also guards isolated sessions.
+          resourceLoaderOptions: {
+            ...(input.noExtensions ? { noExtensions: true } : {}),
+            ...(input.extensionFactories?.length
+              ? { extensionFactories: [...input.extensionFactories] }
+              : {}),
+          },
         });
-        const registry = modelRegistryFacade(services.modelRuntime, input.sdk);
-        const requested = parseModelReference(input.modelId);
-        if (
-          requested?.provider === "openrouter" &&
-          !registry.find(requested.provider, requested.id)
-        ) {
-          await refreshPiOpenRouterModels(services.modelRuntime, {
-            environment: input.environment,
-            instanceId: input.instanceId,
-          });
-        }
-        const model = findModelInRegistry(registry, input.modelId);
-        if (input.modelId && !model) {
-          throw new Error(
-            `Pi model '${input.modelId}' is not available. Use a discovered model or a provider-qualified custom model slug like 'openai/gpt-5.5'.`,
-          );
-        }
+        const model = await resolvePiSessionModel({
+          modelRuntime: services.modelRuntime,
+          piSdk: input.sdk,
+          modelId: input.modelId,
+          environment: input.environment,
+          instanceId: input.instanceId,
+        });
         const shellPath = services.settingsManager.getShellPath();
         const commandPrefix = services.settingsManager.getShellCommandPrefix();
         input.processSupervisor.setShellPath(shellPath);
@@ -3439,6 +3613,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         if (!gatewayControlAvailable) {
           agentGatewaySessionLease?.release();
         }
+        const approvalGate = input.runtimeMode === "full-access" ? undefined : makePiApprovalGate();
         const { runtime, modelRegistry } = yield* releaseAgentGatewaySessionLeaseOnInterrupt(
           agentGatewaySessionLease,
           Effect.tryPromise({
@@ -3452,6 +3627,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
                 ...(providerInstanceId !== undefined ? { instanceId: providerInstanceId } : {}),
                 sessionManager,
                 ...(noExtensions ? { noExtensions: true } : {}),
+                ...(approvalGate ? { extensionFactories: [approvalGate.extension] } : {}),
                 ...(modelId ? { modelId } : {}),
                 ...(thinkingLevel ? { thinkingLevel } : {}),
                 processSupervisor,
@@ -3517,6 +3693,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           activeReasoningItemId: undefined,
           activeToolItems: new Map(),
           pendingUserInputs: new Map(),
+          approvalGate,
           stopped: false,
           lastKnownTokenUsage: undefined,
           unsubscribe: undefined,
@@ -3525,6 +3702,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         context.unsubscribe = runtime.session.subscribe((event) =>
           handleSessionEvent(context, event),
         );
+        approvalGate?.bind(makePiApprovalGateSink(context));
         sessions.set(input.threadId, context);
         yield* Effect.tryPromise({
           try: () =>
@@ -3598,7 +3776,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           type: "thread.started",
           payload: { providerThreadId: runtime.session.sessionId },
         } satisfies ProviderRuntimeEvent);
-        const initialUsage = normalizeTokenUsage(
+        const initialUsage = normalizePiTokenUsage(
           runtime.session.getSessionStats(),
           runtime.session.model?.contextWindow,
         );
@@ -3843,14 +4021,17 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         );
       });
 
-    const respondUnsupported = (threadId: ThreadId, method: string) =>
-      Effect.fail(
-        new ProviderAdapterRequestError({
-          provider: PROVIDER,
-          method,
-          detail: `Pi does not expose Synara approval/user-input requests for thread ${threadId}.`,
-        }),
-      );
+    const respondToRequest: PiAdapterShape["respondToRequest"] = (threadId, requestId, decision) =>
+      Effect.gen(function* () {
+        const context = yield* requireSession(threadId);
+        if (!context.approvalGate?.respond(requestId, decision)) {
+          return yield* new ProviderAdapterRequestError({
+            provider: PROVIDER,
+            method: "request/respond",
+            detail: `Unknown pending Pi approval request: ${requestId}`,
+          });
+        }
+      });
 
     const respondToUserInput: PiAdapterShape["respondToUserInput"] = (
       threadId,
@@ -4235,7 +4416,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
       sendTurn,
       steerTurn,
       interruptTurn,
-      respondToRequest: (threadId) => respondUnsupported(threadId, "request/respond"),
+      respondToRequest,
       respondToUserInput,
       stopSession,
       listSessions,

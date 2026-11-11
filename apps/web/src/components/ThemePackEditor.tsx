@@ -18,6 +18,7 @@ import {
   DialogTrigger,
 } from "./ui/dialog";
 import { Input } from "./ui/input";
+import { FIELD_CONTROL_CLASS_NAME } from "./ui/field-styles";
 import { Popover, PopoverPopup, PopoverTrigger } from "./ui/popover";
 import { Select, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { DisclosureRegion } from "./ui/DisclosureRegion";
@@ -193,7 +194,6 @@ export function ThemePackEditor({
             <SettingsSelectPopup align="end" alignItemWithTrigger={false} className="p-1.5">
               {codeThemes.map((option) => (
                 <SelectItem
-                  hideIndicator
                   key={option.id}
                   value={option.id}
                   className={cn(SETTINGS_CONTROL_RADIUS_CLASS_NAME, "px-2 py-2")}
@@ -584,8 +584,9 @@ export function ColorPill({
               spellCheck={false}
               maxLength={7}
               className={cn(
+                FIELD_CONTROL_CLASS_NAME,
                 SETTINGS_CONTROL_RADIUS_CLASS_NAME,
-                "h-8 border border-[color:var(--color-border-light)] bg-[var(--color-background-elevated-secondary)] px-2 text-center font-chat-code text-ui leading-snug uppercase outline-none focus:border-[color:var(--color-border-focus)]",
+                "h-8 px-2 text-center font-chat-code text-ui-xs uppercase outline-none",
               )}
               aria-label={t("common:hexValue", { value0: ariaLabel })}
             />

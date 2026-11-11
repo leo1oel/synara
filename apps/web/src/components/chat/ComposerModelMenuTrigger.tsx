@@ -1,14 +1,8 @@
-// FILE: ComposerModelMenuTrigger.tsx
-// Purpose: The composer footer's "provider icon · model · effort" menu trigger, shared by
-//   every picker that opens from it so label degradation and the shortcut tooltip stay identical.
-// Layer: Chat composer presentation
-// Depends on: menu/tooltip primitives, provider icons, and composer picker text tokens.
-
 import type { ProviderKind } from "@synara/contracts";
 import { useState } from "react";
 
 import type { FastModeNotice } from "~/lib/fastModeState";
-import { ChevronDownIcon, SettingsIcon } from "~/lib/icons";
+import { ChevronDownIcon, SettingsIcon, TriangleAlertIcon } from "~/lib/icons";
 import { FastModeBadgeIcon } from "./FastModeBadgeIcon";
 import { cn } from "~/lib/utils";
 import { ProviderAccountDot } from "../ProviderAccountMark";
@@ -22,7 +16,7 @@ import {
   COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME,
 } from "./composerPickerStyles";
 import { getProviderIconClassName } from "./ProviderModelPicker";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 // Effort and context window ("High", "1M") share one muted tone after the model name.
 const TRIGGER_TRAIT_LABEL_CLASS_NAME = cn(
@@ -33,6 +27,7 @@ const TRIGGER_TRAIT_LABEL_CLASS_NAME = cn(
 // Must render inside a `Menu`. `hideModelLabel` / `hideStatusLabel` are the narrow-composer
 // degradation steps: the text moves to title/sr-only so assistive tech keeps it.
 export function ComposerModelMenuTrigger(props: {
+  dense?: boolean | undefined;
   provider: ProviderKind;
   /** Set while the provider has several accounts, to tell which one the composer runs in. */
   accountLabel?: string | null | undefined;
@@ -54,6 +49,8 @@ export function ComposerModelMenuTrigger(props: {
    *  tuning effort in the open panel cannot resize the trigger and drag the popup sideways. */
   openPlaceholderLabel?: string | null | undefined;
   shortcutLabel?: string | null | undefined;
+  /** A problem in the way of the next send (Claude refused, signed out, too old): marks the chip. */
+  warning?: string | null | undefined;
 }) {
   const { t } = useTranslation();
 
@@ -78,6 +75,7 @@ export function ComposerModelMenuTrigger(props: {
   if (showsPlaceholder && !hasShownPlaceholder) setHasShownPlaceholder(true);
   const ProviderIcon = PROVIDER_ICON_COMPONENT_BY_PROVIDER[props.provider];
   const hiddenTriggerTitle = [
+    props.warning,
     props.accountLabel,
     props.hideModelLabel ? props.modelLabel : null,
     props.hideStatusLabel ? props.statusLabel : null,
@@ -94,6 +92,7 @@ export function ComposerModelMenuTrigger(props: {
       className={cn(
         "min-w-0 shrink-0 justify-start gap-1.5 whitespace-nowrap px-2 sm:px-2.5 [&_svg]:mx-0",
         COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME,
+        props.dense ? "!h-8 shrink-0" : "shrink-0",
       )}
       aria-label={t("chat:modelEffort_changeModelAndReasoning")}
       {...(hiddenTriggerTitle.length > 0 ? { title: hiddenTriggerTitle } : {})}
@@ -178,6 +177,16 @@ export function ComposerModelMenuTrigger(props: {
           </span>
         ) : null}
       </span>
+      {props.warning ? (
+        <>
+          <TriangleAlertIcon
+            aria-hidden="true"
+            data-testid="composer-model-warning"
+            className="size-3.5 shrink-0 text-warning opacity-100"
+          />
+          <span className="sr-only">{props.warning}</span>
+        </>
+      ) : null}
       <ChevronDownIcon aria-hidden="true" className="ms-0.5 size-3 shrink-0 opacity-60" />
     </span>
   );

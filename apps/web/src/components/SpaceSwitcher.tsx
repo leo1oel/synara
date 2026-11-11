@@ -43,6 +43,7 @@ import {
   SidebarContextMenuIcon,
 } from "./sidebarContextMenuStyles";
 import { Menu, MenuGroup, MenuItem } from "./ui/menu";
+import { FIELD_CONTROL_CLASS_NAME } from "./ui/field-styles";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 import { useTranslation } from "~/i18n";
 
@@ -381,8 +382,9 @@ function SpaceNameLabel(props: {
         }
       }}
       className={cn(
-        "-mx-0.5 w-full min-w-0 rounded-sm bg-transparent px-0.5 outline-hidden ring-1",
-        isValid ? "ring-ring/40" : "ring-destructive/60",
+        FIELD_CONTROL_CLASS_NAME,
+        "-mx-0.5 w-full min-w-0 rounded-lg px-1.5 outline-hidden",
+        !isValid && "border-destructive/60",
       )}
     />
   );

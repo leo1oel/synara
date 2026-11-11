@@ -14,6 +14,7 @@ import { XIcon } from "~/lib/icons";
 import { IconButton } from "../ui/icon-button";
 import {
   CHAT_SURFACE_HEADER_ROW_CLASS_NAME,
+  CHAT_SURFACE_HEADER_TITLE_CLASS_NAME,
   DOCK_HEADER_ICON_BUTTON_CLASS,
 } from "./chatHeaderControls";
 import { useTranslation } from "~/i18n";
@@ -43,9 +44,7 @@ export function DockPaneHeader(props: {
           {props.leadingIcon}
         </span>
       ) : null}
-      <div className="min-w-0 truncate text-ui-lg font-medium tracking-[-0.01em] text-foreground">
-        {props.title}
-      </div>
+      <div className={cn("min-w-0", CHAT_SURFACE_HEADER_TITLE_CLASS_NAME)}>{props.title}</div>
       <div className="ml-auto flex shrink-0 items-center gap-0.5">
         {props.actions}
         {props.onClose ? (

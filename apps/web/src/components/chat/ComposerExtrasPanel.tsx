@@ -25,6 +25,7 @@ import {
   WindowIcon,
 } from "~/lib/icons";
 import { cn } from "~/lib/utils";
+import { useTrackedOpenPopup } from "~/latticePopupDismissal";
 import {
   COMPOSER_MENU_PANEL_GLYPH_CLASS_NAME,
   ComposerMenuPanel,
@@ -50,10 +51,6 @@ const WINDOW_ROW_PREFIX = "extras:window:";
 
 const CHECK = <CheckIcon className="size-3.5 text-foreground/70" />;
 
-function toggleSecondary(label: string, enabled: boolean): string {
-  return `Turn ${label} ${enabled ? "off" : "on"}`;
-}
-
 function windowGlyph(entry: DesktopAppSnapWindowEntry): ReactNode {
   return entry.appIconDataUrl ? (
     <img src={entry.appIconDataUrl} alt="" className="size-4 shrink-0 rounded-[4px]" />
@@ -74,6 +71,8 @@ export function ComposerExtrasPanel(props: {
   onInsertGoal: () => void;
   onClose: () => void;
   panelId: string;
+  /** Embedded hosts own modes and window capture; expose file attachments only. */
+  attachmentsOnly?: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -82,6 +81,8 @@ export function ComposerExtrasPanel(props: {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [view, setView] = useState<"root" | "windows">("root");
   const [activeRowId, setActiveRowId] = useState<string | null>(ROW_FILES);
+  // Its outside-press listener below also closes it on the press Lattice relays.
+  useTrackedOpenPopup();
 
   // Listed while the panel is open (not only in the window view) so the root row can
   // name the frontmost app and capture it in one click.
@@ -120,7 +121,7 @@ export function ComposerExtrasPanel(props: {
                 icon: <ArrowLeftIcon className={GLYPH} />,
                 title: t("common:app_back"),
               },
-              ...appSnapWindowRows(appSnap),
+              ...appSnapWindowRows(t, appSnap),
             ],
           },
         ]
@@ -140,9 +141,9 @@ export function ComposerExtrasPanel(props: {
                       ? {
                           id: ROW_WINDOW,
                           icon: windowGlyph(frontmostWindow),
-                          title: t("chat:attach", {
-                            value0: frontmostWindow.appName?.trim() || t("chat:window"),
-                          }),
+                          title: frontmostWindow.appName?.trim()
+                            ? t("chat:attach", { value0: frontmostWindow.appName.trim() })
+                            : t("chat:attachWindow"),
                           disabled: appSnap.busy,
                           trailing: (
                             <button
@@ -180,14 +181,20 @@ export function ComposerExtrasPanel(props: {
                 id: ROW_PLAN,
                 icon: <ListTodoIcon className={GLYPH} />,
                 title: t("chat:composerExtras_planMode"),
-                secondary: toggleSecondary("plan mode", props.interactionMode === "plan"),
+                secondary:
+                  props.interactionMode === "plan"
+                    ? t("lattice:turnPlanModeOff")
+                    : t("lattice:turnPlanModeOn"),
                 trailing: props.interactionMode === "plan" ? CHECK : null,
               },
               {
                 id: ROW_DEBUG,
                 icon: <BugIcon className={GLYPH} />,
                 title: t("chat:debugMode2"),
-                secondary: toggleSecondary("debug mode", props.interactionMode === "debug"),
+                secondary:
+                  props.interactionMode === "debug"
+                    ? t("lattice:turnDebugModeOff")
+                    : t("lattice:turnDebugModeOn"),
                 trailing: props.interactionMode === "debug" ? CHECK : null,
               },
               ...(props.supportsFastMode
@@ -196,7 +203,9 @@ export function ComposerExtrasPanel(props: {
                       id: ROW_FAST,
                       icon: <FastModeIcon className={GLYPH} />,
                       title: t("chat:sessionStatus_fastMode"),
-                      secondary: toggleSecondary("fast mode", props.fastModeEnabled),
+                      secondary: props.fastModeEnabled
+                        ? t("lattice:turnFastModeOff")
+                        : t("lattice:turnFastModeOn"),
                       trailing: props.fastModeEnabled ? CHECK : null,
                     },
                   ]
@@ -205,7 +214,10 @@ export function ComposerExtrasPanel(props: {
           },
         ];
 
-  const selectableRowIds = groups.flatMap((group) =>
+  const visibleGroups = props.attachmentsOnly
+    ? groups.map((group) => ({ ...group, rows: group.rows.filter((row) => row.id === ROW_FILES) }))
+    : groups;
+  const selectableRowIds = visibleGroups.flatMap((group) =>
     group.rows.filter((row) => !row.disabled).map((row) => row.id),
   );
   // Keep the highlight on a row that still exists after navigating between views.
@@ -356,7 +368,7 @@ export function ComposerExtrasPanel(props: {
         onChange={handleFileInputChange}
       />
       <ComposerMenuPanel
-        groups={groups}
+        groups={visibleGroups}
         activeRowId={highlightedRowId}
         onHighlightRow={setActiveRowId}
         onSelectRow={selectRow}
@@ -365,7 +377,10 @@ export function ComposerExtrasPanel(props: {
   );
 }
 
-function appSnapWindowRows(appSnap: ReturnType<typeof useAppSnapWindows>): ComposerMenuPanelRow[] {
+function appSnapWindowRows(
+  translate: typeof t,
+  appSnap: ReturnType<typeof useAppSnapWindows>,
+): ComposerMenuPanelRow[] {
   if (appSnap.unavailableMessage) {
     return [{ id: "extras:window-status", title: appSnap.unavailableMessage, disabled: true }];
   }

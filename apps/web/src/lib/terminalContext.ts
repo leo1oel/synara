@@ -10,6 +10,7 @@ import {
 } from "./browserAnnotations";
 import { extractTrailingFileComments, type ParsedFileCommentEntry } from "./fileComments";
 import { extractTrailingPastedTexts, type ParsedPastedTextEntry } from "./composerPastedText";
+import { extractTrailingLatticeHostContext } from "./latticeHostContext";
 import {
   extractTrailingPullRequestContexts,
   type ParsedPullRequestContextEntry,
@@ -168,7 +169,9 @@ function buildTerminalContextBodyLines(selection: TerminalContextSelection): str
     .map((line, index) => `  ${selection.lineStart + index} | ${line}`);
 }
 
-function buildTerminalContextBlock(contexts: ReadonlyArray<TerminalContextSelection>): string {
+export function buildTerminalContextBlock(
+  contexts: ReadonlyArray<TerminalContextSelection>,
+): string {
   const normalizedContexts = contexts
     .map((context) => normalizeTerminalContextSelection(context))
     .filter((context): context is TerminalContextSelection => context !== null);
@@ -187,7 +190,7 @@ function buildTerminalContextBlock(contexts: ReadonlyArray<TerminalContextSelect
   return ["<terminal_context>", ...lines, "</terminal_context>"].join("\n");
 }
 
-function materializeInlineTerminalContextPrompt(
+export function materializeInlineTerminalContextPrompt(
   prompt: string,
   contexts: ReadonlyArray<{
     terminalLabel: string;
@@ -233,7 +236,7 @@ export function appendOriginalComposerPromptBlocks(input: {
   originalPrompt: string;
   messageId?: MessageId;
 }): string {
-  let remainingPrompt = input.originalPrompt;
+  let remainingPrompt = extractTrailingLatticeHostContext(input.originalPrompt).promptText;
   const originalBlocks: string[] = [];
   if (input.messageId) {
     const extractedBrowserAnnotations = extractTrailingBrowserAnnotations(
@@ -304,13 +307,13 @@ export function deriveDisplayedUserMessageState(
   options: DisplayedUserMessageOptions,
 ): DisplayedUserMessageState {
   // Trailing blocks are serialized in order: assistant selections, terminal
-  // contexts, file comments, pasted text, pull request contexts, then browser
-  // annotations (outermost). Strip them in reverse so each extractor sees its
-  // block at the end.
+  // contexts, file comments, pasted text, then browser annotations (outermost).
+  // Strip them in reverse so each extractor sees its block at the end.
+  const extractedLatticeContext = extractTrailingLatticeHostContext(prompt);
   const extractedBrowserAnnotations =
     options.messageId === undefined
-      ? { promptText: prompt, annotations: [] }
-      : extractTrailingBrowserAnnotations(prompt, options.messageId);
+      ? { promptText: extractedLatticeContext.promptText, annotations: [] }
+      : extractTrailingBrowserAnnotations(extractedLatticeContext.promptText, options.messageId);
   const extractedPullRequestContexts = extractTrailingPullRequestContexts(
     extractedBrowserAnnotations.promptText,
   );

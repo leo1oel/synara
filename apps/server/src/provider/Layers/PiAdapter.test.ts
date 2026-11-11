@@ -27,6 +27,7 @@ import {
   makePiExtensionModeCoordinator,
   makePiRuntimeEventBase,
   makePiUserInputOptions,
+  normalizePiTokenUsage,
   toPiProviderModelDescriptor,
   resolvePiStartInstanceId,
   resolvePiExtensionMode,
@@ -1353,7 +1354,7 @@ describe("getPiDiscoverableModels", () => {
 });
 
 describe("ensurePiAnthropicCatalogModels", () => {
-  it("restores Fable 5.1, Fable 5, and Opus 4.8 when an oauth catalog omitted them", () => {
+  it("restores the Fables, Opus 4.8, Sonnet 5.5 and Haiku 5.5 when an oauth catalog omitted them", () => {
     const peer = {
       id: "claude-opus-4-7",
       name: "Claude Opus 4.7",
@@ -1370,10 +1371,45 @@ describe("ensurePiAnthropicCatalogModels", () => {
 
     expect(models.map((model) => model.id)).toEqual([
       "claude-opus-4-7",
+      "claude-fable-5-2",
       "claude-fable-5-1",
       "claude-fable-5",
       "claude-opus-4-8",
+      "claude-sonnet-5-5",
+      "claude-haiku-5-5",
     ]);
+    expect(models.find((model) => model.id === "claude-sonnet-5-5")).toMatchObject({
+      provider: "anthropic",
+      name: "Claude Sonnet 5.5",
+      reasoning: true,
+      thinkingLevelMap: { off: null, xhigh: "xhigh", max: "max" },
+      cost: { input: 2, output: 10, cacheRead: 0.1, cacheWrite: 2.5 },
+      contextWindow: 1_000_000,
+      maxTokens: 128_000,
+    });
+    expect(models.find((model) => model.id === "claude-haiku-5-5")).toMatchObject({
+      provider: "anthropic",
+      name: "Claude Haiku 5.5",
+      reasoning: true,
+      thinkingLevelMap: { off: null, xhigh: "xhigh", max: "max" },
+      cost: {
+        input: 0.1,
+        output: 0.5,
+        cacheRead: 0.01,
+        cacheWrite: 0.125,
+        tiers: [{ inputTokensAbove: 100_000, input: 0.5, output: 2.5 }],
+      },
+      contextWindow: 1_000_000,
+      maxTokens: 128_000,
+    });
+    expect(models.find((model) => model.id === "claude-fable-5-2")).toMatchObject({
+      provider: "anthropic",
+      name: "Claude Fable 5.2",
+      reasoning: true,
+      cost: { input: 8, output: 40, cacheRead: 0.2, cacheWrite: 10 },
+      contextWindow: 1_000_000,
+      maxTokens: 128_000,
+    });
     expect(models.find((model) => model.id === "claude-fable-5-1")).toMatchObject({
       provider: "anthropic",
       name: "Claude Fable 5.1",

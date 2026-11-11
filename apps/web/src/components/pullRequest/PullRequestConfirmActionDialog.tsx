@@ -1,10 +1,3 @@
-// FILE: PullRequestConfirmActionDialog.tsx
-// Purpose: The one confirmation dialog for the irreversible pull request actions (merge,
-//          close), shared by the PR detail panel and the Environment panel's PR menu, plus the
-//          "copy PR link" helper both surfaces expose next to those actions.
-// Layer: Pull request UI
-// Depends on: the shared alert dialog, toast manager, and clipboard helper.
-
 import type { PullRequestMergeMethod, PullRequestStack } from "@synara/contracts";
 import { useState } from "react";
 
@@ -40,41 +33,48 @@ export function copyPullRequestLink(url: string): void {
     });
 }
 
+/** A merge method as the confirmation sentence names it ("using squash"). */
+const MERGE_METHOD_NAMES = {
+  merge: "lattice:mergeMethodMerge",
+  squash: "lattice:mergeMethodSquash",
+  rebase: "lattice:mergeMethodRebase",
+} as const;
+
 function confirmTitle(
+  translate: typeof t,
   action: PullRequestConfirmAction,
   stack: PullRequestStack | null,
   stackMergeTargetCount: number,
 ): string {
   if (action.kind === "close") return t("git:closePullRequest2");
   return stack
-    ? t("git:merge2", {
-        value0: stackMergeTargetCount,
-        value1: stackMergeTargetCount === 1 ? t("chat:pullRequest") : t("git:pullRequests2"),
-      })
-    : t("git:mergePullRequest");
+    ? translate("lattice:mergePullRequests", { count: stackMergeTargetCount })
+    : translate("git:mergePullRequest");
 }
 
 function confirmDescription(
+  translate: typeof t,
   action: PullRequestConfirmAction,
   number: number,
   baseBranch: string | null,
   stack: PullRequestStack | null,
 ): string {
-  if (action.kind === "close") return t("git:thisWillCloseWithoutMergingIt", { value0: number });
+  if (action.kind === "close")
+    return translate("git:thisWillCloseWithoutMergingIt", { value0: number });
+  const method = translate(MERGE_METHOD_NAMES[action.method]);
   if (stack) {
-    return t("git:thisWillAtomicallyMergeEveryOpenPullRequestThrough", {
-      value0: number,
-      value1: stack.baseBranch,
-      value2: action.method,
-      value3:
-        stack.position < stack.size ? t("git:pullRequestsAboveItWillRemainOpenAndGitHub") : "",
+    const merge = translate("lattice:thisWillAtomicallyMergeEveryOpenPull", {
+      number,
+      branch: stack.baseBranch,
+      method,
     });
+    return stack.position < stack.size
+      ? `${merge} ${translate("git:pullRequestsAboveItWillRemainOpenAndGitHub")}`
+      : merge;
   }
-  return t("git:thisWillMergeUsing", {
-    value0: number,
-    value1: baseBranch ? ` into ${baseBranch}` : "",
-    value2: action.method,
-  });
+  return baseBranch
+    ? translate("lattice:thisWillMergeIntoUsing", { number, branch: baseBranch, method })
+    : translate("lattice:thisWillMergeUsing", { number, method });
 }
 
 export function PullRequestConfirmActionDialog({
@@ -127,10 +127,10 @@ export function PullRequestConfirmActionDialog({
           <>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {confirmTitle(shown, stack, stackMergeTargetCount)}
+                {confirmTitle(t, shown, stack, stackMergeTargetCount)}
               </AlertDialogTitle>
               <AlertDialogDescription>
-                {confirmDescription(shown, number, baseBranch, stack)}
+                {confirmDescription(t, shown, number, baseBranch, stack)}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

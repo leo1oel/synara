@@ -29,9 +29,10 @@ import {
   credentialFingerprint,
   decodeKeychainJson,
   readJsonFile,
-  readKeychainPassword,
+  readKeychainSecret,
 } from "../credentials";
 import { fetchJson, isAuthFailureStatus, isRateLimitStatus, parseRetryAfterMs } from "../http";
+import type { KeychainReadOutcome } from "../keychainReads";
 import {
   asFiniteNumber,
   asRecord,
@@ -47,11 +48,18 @@ import {
 } from "../parse";
 import { createRateLimitResilience } from "../rateLimitResilience";
 import type { ProviderUsageContext, ProviderUsageFetcher } from "../types";
+import {
+  __resetClaudeCliUsageCooldownForTests,
+  readClaudeCliUsageThroughSdk,
+  readClaudeUsageFromCli,
+  type ReadClaudeCliUsage,
+} from "./claudeCliUsage";
 
 const execFileAsync = promisify(execProcessFile);
 const log = createLogger("provider-usage:claude");
 
 const SOURCE = "claude-oauth-usage";
+const CLI_SOURCE = "claude-cli-usage";
 const USAGE_URL = "https://api.anthropic.com/api/oauth/usage";
 const KEYCHAIN_SERVICE = "Claude Code-credentials";
 const REFRESH_BUFFER_MS = 5 * 60 * 1000;
@@ -108,7 +116,11 @@ function readClaudeCreds(
   };
 }
 
-async function resolveClaudeCredCandidates(ctx: ProviderUsageContext): Promise<ClaudeCreds[]> {
+/** `reread`: the CLI just refreshed an expired or rejected token, so re-read the Keychain once. */
+async function resolveClaudeCredCandidates(
+  ctx: ProviderUsageContext,
+  options: { reread?: boolean } = {},
+): Promise<ClaudeCreds[]> {
   const candidates: ClaudeCreds[] = [];
   const paths: string[] = [];
   const secureStorageDir = ctx.env.CLAUDE_SECURESTORAGE_CONFIG_DIR;
@@ -145,22 +157,26 @@ async function resolveClaudeCredCandidates(ctx: ProviderUsageContext): Promise<C
     ? `${KEYCHAIN_SERVICE}-${createHash("sha256").update(keychainDirectory.normalize("NFC")).digest("hex").slice(0, 8)}`
     : KEYCHAIN_SERVICE;
   const keychainAccount = asString(ctx.env.USER) ?? asString(ctx.env.LOGNAME);
-  const accountKeychain =
+  const reread = options.reread ? { reread: true } : {};
+  const accountKeychain: KeychainReadOutcome =
     keychainAccount === undefined
-      ? null
-      : await readKeychainPassword({
+      ? { kind: "missing" }
+      : await readKeychainSecret({
           service: keychainService,
           account: keychainAccount,
           platform: ctx.platform,
+          ...reread,
         });
+  // The service-only lookup matches the same item when the account item exists, so only an
+  // absent account item falls back; a refused one must not raise a second prompt.
   const keychain =
-    accountKeychain ??
-    (await readKeychainPassword({
-      service: keychainService,
-      platform: ctx.platform,
-    }));
-  if (keychain) {
-    const creds = readClaudeCreds(asRecord(decodeKeychainJson(keychain)), { kind: "keychain" });
+    accountKeychain.kind === "missing"
+      ? await readKeychainSecret({ service: keychainService, platform: ctx.platform, ...reread })
+      : accountKeychain;
+  if (keychain.kind === "granted") {
+    const creds = readClaudeCreds(asRecord(decodeKeychainJson(keychain.value)), {
+      kind: "keychain",
+    });
     if (creds) {
       candidates.push(creds);
     }
@@ -373,6 +389,8 @@ interface ClaudeAuthNudgeDeps {
     homeDir: string;
     env: NodeJS.ProcessEnv;
   }) => Promise<void>;
+  /** Ask the CLI for `/usage` when its login is out of this process's reach. */
+  readCliUsage: ReadClaudeCliUsage;
 }
 
 const defaultAuthNudgeDeps: ClaudeAuthNudgeDeps = {
@@ -390,6 +408,7 @@ const defaultAuthNudgeDeps: ClaudeAuthNudgeDeps = {
       }),
     });
   },
+  readCliUsage: readClaudeCliUsageThroughSdk,
 };
 
 let authNudgeDeps: ClaudeAuthNudgeDeps = defaultAuthNudgeDeps;
@@ -429,10 +448,14 @@ async function nudgeClaudeCliAuthRefresh(ctx: ProviderUsageContext): Promise<boo
   }
 }
 
-/** Test-only: replace the CLI nudge (lock + exec) and clear its cooldown memory. */
+/** Test-only: replace the CLI nudge and usage read (lock + exec) and clear their cooldowns. */
 export function __setClaudeAuthNudgeDepsForTests(deps: Partial<ClaudeAuthNudgeDeps> | null): void {
-  authNudgeDeps = { ...defaultAuthNudgeDeps, ...(deps ?? {}) };
+  // A stubbed test never starts the real CLI for usage unless it asks to.
+  authNudgeDeps = deps
+    ? { ...defaultAuthNudgeDeps, readCliUsage: async () => null, ...deps }
+    : defaultAuthNudgeDeps;
   authNudgeNotBeforeMs.clear();
+  __resetClaudeCliUsageCooldownForTests();
 }
 
 export function parseClaudeUsage(input: { json: unknown; nowMs: number; planName?: string }) {
@@ -555,6 +578,10 @@ export const claudeUsageFetcher: ProviderUsageFetcher = {
     }
     const candidates = await resolveClaudeCredCandidates(ctx);
     if (candidates.length === 0) {
+      const cliSnapshot = await claudeCliUsageSnapshot(ctx);
+      if (cliSnapshot) {
+        return cliSnapshot;
+      }
       return {
         ...needsAuthSnapshot("claudeAgent", ctx.nowMs, SOURCE),
         detail:
@@ -563,16 +590,23 @@ export const claudeUsageFetcher: ProviderUsageFetcher = {
     }
 
     // At most one CLI nudge per fetch, shared by the proactive (near-expiry) and reactive (401)
-    // paths; the re-read candidate set is memoized so every source retries against it.
-    let nudgedCandidates: ReadonlyArray<ClaudeCreds> | null | undefined;
-    const nudgeOnce = async (): Promise<ReadonlyArray<ClaudeCreds> | null> => {
-      if (nudgedCandidates !== undefined) {
-        return nudgedCandidates;
+    // paths. Only a stale Keychain token re-reads the Keychain; a stale file re-reads files only.
+    let nudged: Promise<boolean> | undefined;
+    const nudgedCandidates = new Map<boolean, ReadonlyArray<ClaudeCreds> | null>();
+    const nudgeOnce = async (
+      trigger: ClaudeCredSource,
+    ): Promise<ReadonlyArray<ClaudeCreds> | null> => {
+      const reread = trigger.kind === "keychain";
+      const memoized = nudgedCandidates.get(reread);
+      if (memoized !== undefined) {
+        return memoized;
       }
-      nudgedCandidates = (await nudgeClaudeCliAuthRefresh(ctx))
-        ? await resolveClaudeCredCandidates(ctx)
+      nudged ??= nudgeClaudeCliAuthRefresh(ctx);
+      const candidates = (await nudged)
+        ? await resolveClaudeCredCandidates(ctx, reread ? { reread } : {})
         : null;
-      return nudgedCandidates;
+      nudgedCandidates.set(reread, candidates);
+      return candidates;
     };
 
     let inferenceOnlySnapshot: ReturnType<typeof buildSnapshot> | null = null;
@@ -595,7 +629,7 @@ export const claudeUsageFetcher: ProviderUsageFetcher = {
 
       let activeCreds = original;
       if (isStaleClaudeCreds(activeCreds, ctx.nowMs)) {
-        const refreshed = await nudgeOnce();
+        const refreshed = await nudgeOnce(original.source);
         const updated = refreshed?.find((creds) => sameCredSource(creds.source, original.source));
         if (updated) {
           activeCreds = updated;
@@ -618,7 +652,7 @@ export const claudeUsageFetcher: ProviderUsageFetcher = {
         if (isAuthFailureStatus(result.status)) {
           // The stored expiry can lag reality (revocation, clock skew). Let the CLI refresh its
           // credential, re-read, and retry once with a genuinely different token.
-          const refreshed = await nudgeOnce();
+          const refreshed = await nudgeOnce(original.source);
           const updated = refreshed?.find((creds) => sameCredSource(creds.source, original.source));
           if (updated && updated.accessToken !== activeCreds.accessToken) {
             activeCreds = updated;
@@ -680,10 +714,30 @@ export const claudeUsageFetcher: ProviderUsageFetcher = {
     return (
       inferenceOnlySnapshot ??
       lastErrorSnapshot ??
+      // Every stored credential was rejected: one left behind by an earlier login, while the
+      // CLI's own login lives where only it can read.
+      (await claudeCliUsageSnapshot(ctx)) ??
       needsAuthSnapshot("claudeAgent", ctx.nowMs, SOURCE)
     );
   },
 };
+
+async function claudeCliUsageSnapshot(
+  ctx: ProviderUsageContext,
+): Promise<ServerProviderUsageSnapshot | null> {
+  const usage = await readClaudeUsageFromCli(ctx, {
+    acquireLock: authNudgeDeps.acquireLock,
+    readUsage: authNudgeDeps.readCliUsage,
+  });
+  if (!usage) {
+    return null;
+  }
+  const planName = usage.subscriptionType ? titleCase(usage.subscriptionType) : undefined;
+  return {
+    ...parseClaudeUsage({ json: usage.json, nowMs: ctx.nowMs, ...(planName ? { planName } : {}) }),
+    source: CLI_SOURCE,
+  };
+}
 
 function fetchClaudeUsage(accessToken: string) {
   return fetchJson({

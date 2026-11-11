@@ -57,7 +57,8 @@ export default function ProviderSignInDialog(props: {
     if (checkInFlight.current) return;
     checkInFlight.current = true;
     setChecking(true);
-    const statuses = await refreshRef.current({ silent: true });
+    // After a sign-in the account may differ: an explicit recheck.
+    const statuses = await refreshRef.current({ silent: true, explicit: true });
     checkInFlight.current = false;
     if (!alive.current) return;
     setChecking(false);
@@ -95,7 +96,7 @@ export default function ProviderSignInDialog(props: {
           .then(() => {
             void queryClient.invalidateQueries({ queryKey: serverQueryKeys.settings() });
             void queryClient.invalidateQueries({ queryKey: serverQueryKeys.allProviderUsage() });
-            void refreshRef.current({ silent: true });
+            void refreshRef.current({ silent: true, explicit: true });
           });
       });
     };

@@ -25,8 +25,9 @@ import {
 } from "../chat/chatHeaderControls";
 import { OpenInPicker } from "../chat/OpenInPicker";
 import { Badge } from "../ui/badge";
+import { FIELD_CONTROL_CLASS_NAME } from "../ui/field-styles";
 import { Menu, MenuRadioGroup, MenuRadioItem, MenuSeparator, MenuTrigger } from "../ui/menu";
-import { useTranslation } from "~/i18n";
+import { useTranslation, t } from "~/i18n";
 
 interface PdfViewerToolbarProps {
   fileName: string;
@@ -212,7 +213,10 @@ function PdfPageIndicator({
         value={draft}
         inputMode="numeric"
         aria-label={t("common:currentPage")}
-        className="h-6 w-8 rounded-sm border border-border/60 bg-transparent text-center text-ui-sm text-foreground tabular-nums outline-none focus-visible:border-[color:var(--color-border-focus)]"
+        className={cn(
+          FIELD_CONTROL_CLASS_NAME,
+          "h-6 w-8 rounded-lg text-center text-ui-sm text-foreground tabular-nums outline-none",
+        )}
         onChange={(event) => setDraft(event.target.value.replace(/[^0-9]/g, ""))}
         onBlur={commit}
         onKeyDown={(event) => {

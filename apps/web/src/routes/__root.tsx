@@ -12,7 +12,7 @@ import {
   type OrchestrationThread,
   type ServerConfig,
   type ServerProviderStatus,
-  type ServerSettingsView,
+  type ServerSettings,
   type WsCompatibilityError,
 } from "@synara/contracts";
 import { defaultTerminalTitleForCliKind } from "@synara/shared/terminalThreads";
@@ -39,6 +39,7 @@ import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Throttler } from "@tanstack/react-pacer";
 
 import { APP_DISPLAY_NAME, APP_VERSION } from "../branding";
+import { isSynaraEmbedMode } from "../embedMode";
 import { isBetaFeatureOn } from "../betaFeatures";
 import { DesktopWindowControls } from "../components/DesktopWindowControls";
 import { RunningChatsQuitCoordinator } from "../components/RunningChatsQuitCoordinator";
@@ -74,7 +75,6 @@ import type { FeedbackThreadContext } from "../feedback";
 import { invalidateAccountStatus } from "../lib/accountReactQuery";
 import { isTerminalFocused } from "../lib/terminalFocus";
 import {
-  invalidateProviderUsageQueries,
   reconcileServerProviderStatuses,
   refreshServerConfigAfterTransportOpen,
   serverConfigQueryOptions,
@@ -194,12 +194,7 @@ import {
   providerDiscoveryQueryKeys,
   providerModelsQueryOptions,
 } from "../lib/providerDiscoveryReactQuery";
-import {
-  didProviderCommandDiscoverySettingsChange,
-  didProviderEnablementChange,
-  useAppSettings,
-} from "../appSettings";
-
+import { useAppSettings } from "../appSettings";
 import { getNavigatorPlatform } from "../lib/utils";
 import {
   getNotifiableProviderUpdateStatuses,
@@ -316,6 +311,7 @@ function RootRouteView() {
   useNativeFontSmoothing();
   useSyncDesktopTopBarTrafficLightGutterZoom();
   useTheme();
+  const embedded = isSynaraEmbedMode();
   const [compatibilityIssue, setCompatibilityIssue] = useState<WsCompatibilityError | null>(() =>
     readLatestWsCompatibilityIssue(),
   );
@@ -386,26 +382,31 @@ function RootRouteView() {
           <GlobalShortcutsDialog />
           <BrowserVaultDialog />
           <GlobalFeedbackDialog />
-          <GlobalAccountDialogs />
+          {/* Lattice's embed has no Synara account, Remote hosts or release notes. */}
+          {!embedded && <GlobalAccountDialogs />}
           {/* Mounted globally because the host it asks about registers itself
               at sign-in, wherever the user happens to be in the app. */}
-          {!readWorkspaceFrame() && <HostDiscoverabilityPrompt />}
-          {!readWorkspaceFrame() && <GlobalWhatsNewSurface />}
+          {!embedded && !readWorkspaceFrame() && <HostDiscoverabilityPrompt />}
+          {!embedded && !readWorkspaceFrame() && <GlobalWhatsNewSurface />}
           <TaskCompletionNotifications />
           <QueuedComposerDrainCoordinator />
           <NewThreadDefaultsSyncCoordinator />
           {!readWorkspaceFrame() && (
             <>
               {/* Beta welcome resolves the first-run gate while Safari is queued. */}
-              <BetaWelcomeDialog />
+              {!embedded && <BetaWelcomeDialog />}
               <SafariAccessOnboarding startup>
-                <AppSnapWelcomeDialog>
-                  <FeatureTourDialog />
-                </AppSnapWelcomeDialog>
+                {!embedded && (
+                  <AppSnapWelcomeDialog>
+                    <FeatureTourDialog />
+                  </AppSnapWelcomeDialog>
+                )}
               </SafariAccessOnboarding>
-              <GlobalOnboardingDialog />
+              {/* Upstream's full-window first-run onboarding would cover Lattice's panel. */}
+              {!embedded && <GlobalOnboardingDialog />}
               <ProjectImportAnnouncementDialog />
-              <RemoteConnectionsAnnouncement />
+              {/* Lattice embeds no Synara rail or account, so Remote is never announced there. */}
+              {!embedded && <RemoteConnectionsAnnouncement />}
             </>
           )}
           <GlobalProjectImportDialog />
@@ -741,8 +742,7 @@ function ProviderUpdateNotifications({
 }: {
   readonly liveVersionCheckCompleted: boolean;
 }) {
-  const { t } = useTranslation();
-
+  const isEmbed = isSynaraEmbedMode();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { settings } = useAppSettings();
@@ -787,6 +787,7 @@ function ProviderUpdateNotifications({
     }
 
     if (
+      isEmbed ||
       outdatedProviders.length === 0 ||
       oneClickProviders.length === 0 ||
       !notificationKey ||
@@ -853,6 +854,7 @@ function ProviderUpdateNotifications({
     });
     activeToastRef.current = { kind: "prompt", key: notificationKey, toastId };
   }, [
+    isEmbed,
     isUpdatingAll,
     navigate,
     notificationKey,
@@ -1073,7 +1075,7 @@ function RootRouteErrorView({ error, reset }: ErrorComponentProps) {
             <span className="group-open:hidden">{t("common:common_showErrorDetails")}</span>
             <span className="hidden group-open:inline">{t("common:common_hideErrorDetails")}</span>
           </summary>
-          <pre className="max-h-56 overflow-auto border-t border-border/70 bg-background/80 px-3 py-2 text-xs text-foreground/85">
+          <pre className="max-h-56 overflow-auto border-t border-border/70 bg-background/80 px-3 py-2 text-ui-xs text-foreground/85">
             {details}
           </pre>
         </details>
@@ -2557,7 +2559,7 @@ function EventRouter() {
         description: t("common:theUpdateStreamCouldNotKeepUpAfterRepeated"),
         timeout: 0,
         actionProps: {
-          children: "Retry updates",
+          children: t("lattice:retryUpdates"),
           onClick: () => {
             toastManager.close(toastId);
             if (disposed) return;
@@ -2607,7 +2609,7 @@ function EventRouter() {
           timeout: 0,
           data: { threadId },
           actionProps: {
-            children: "Retry updates",
+            children: t("lattice:retryUpdates"),
             onClick: () => {
               toastManager.close(toastId);
               if (disposed || !subscribedThreadIds.has(threadId)) return;
@@ -2782,6 +2784,19 @@ function EventRouter() {
         },
       });
     });
+    // Both subscriptions can replay synchronously on mount. Register the transport
+    // boundary first so the authoritative provider replay is the final projection;
+    // reversing them marks an already-delivered snapshot unreconciled and strands
+    // provider controls in "Checking" until another status event happens.
+    const unsubWsTransportState = addWsTransportStateListener(
+      (state) => {
+        if (state !== "open") return;
+        // Reopening the socket is a projection boundary. React Query otherwise
+        // keeps the previous infinite-stale config and can strand "Checking".
+        void refreshServerConfigAfterTransportOpen(queryClient).catch(() => undefined);
+      },
+      { replayCurrent: true },
+    );
     const unsubProviderStatusesUpdated = onServerProviderStatusesUpdated((payload) => {
       const nextProviderDiscoveryFingerprint = providerModelDiscoveryInvalidationFingerprint(
         payload.providers,
@@ -2818,27 +2833,9 @@ function EventRouter() {
     const unsubControllerState = onControllerStateChange((state) => {
       if (state === "open") void invalidateAccountStatus(queryClient).catch(() => undefined);
     });
-    const unsubWsTransportState = addWsTransportStateListener(
-      (state) => {
-        if (state !== "open") return;
-        // Reopening the socket is a projection boundary. React Query otherwise
-        // keeps the previous infinite-stale config and can strand "Checking".
-        void refreshServerConfigAfterTransportOpen(queryClient).catch(() => undefined);
-      },
-      { replayCurrent: true },
-    );
     const unsubServerSettingsUpdated = onServerSettingsUpdated((payload) => {
-      const previousSettings = queryClient.getQueryData<ServerSettingsView>(
-        serverQueryKeys.settings(),
-      );
+      const previousSettings = queryClient.getQueryData<ServerSettings>(serverQueryKeys.settings());
       queryClient.setQueryData(serverQueryKeys.settings(), payload.settings);
-      if (didProviderEnablementChange(previousSettings, payload.settings)) {
-        void queryClient.invalidateQueries({ queryKey: providerDiscoveryQueryKeys.all });
-        void invalidateProviderUsageQueries(queryClient);
-      } else if (didProviderCommandDiscoverySettingsChange(previousSettings, payload.settings)) {
-        // Another window toggled it; the local patch path already invalidates its own.
-        void queryClient.invalidateQueries({ queryKey: providerDiscoveryQueryKeys.all });
-      }
       // A composer pick only moves the shared new-chat defaults, which the push
       // already carries whole; refetching on each one would only add load.
       if (

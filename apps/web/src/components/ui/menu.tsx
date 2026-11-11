@@ -6,6 +6,7 @@ import * as React from "react";
 
 import { cn } from "~/lib/utils";
 import { observeNativeSurfaceOverlay } from "~/lib/nativeSurfaceOcclusion";
+import { FluidHoverSurface } from "./fluid-hover-surface";
 import {
   APP_TRANSLUCENT_POPUP_SURFACE_CLASS_NAME,
   COMPOSER_PICKER_MENU_OPTION_CLASS_NAME,
@@ -19,8 +20,19 @@ import {
 } from "./checkbox";
 import { ShortcutKbd } from "./kbd";
 import { SWITCH_THUMB_CLASS_NAME, SWITCH_TRACK_CLASS_NAME } from "./switch";
+import { observeHostDismissiblePopup } from "~/latticePopupDismissal";
 
 const MenuCreateHandle = MenuPrimitive.createHandle;
+
+/** Stable, so React does not detach and reattach both observers on every render. */
+function observeMenuPositioner(element: HTMLElement | null): (() => void) | undefined {
+  const stopOcclusion = observeNativeSurfaceOverlay(element);
+  const stopDismissal = observeHostDismissiblePopup(element);
+  return () => {
+    stopOcclusion?.();
+    stopDismissal?.();
+  };
+}
 
 type MenuProps = MenuPrimitive.Root.Props & {
   /** Keep a controlled menu open while one of its portalled submenus is being entered. */
@@ -103,7 +115,7 @@ function MenuPopupBase({
   return (
     <MenuPrimitive.Portal>
       <MenuPrimitive.Positioner
-        ref={observeNativeSurfaceOverlay}
+        ref={observeMenuPositioner}
         align={align}
         alignOffset={alignOffset}
         anchor={anchor}
@@ -133,10 +145,14 @@ function MenuPopupBase({
               data-picker-size={pickerSize}
               data-slot="menu-popup-body"
             >
+              <FluidHoverSurface selector='[role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"]' />
               {children}
             </div>
           ) : (
-            <div className="max-h-(--available-height) w-full overflow-y-auto p-1">{children}</div>
+            <div className="max-h-(--available-height) w-full overflow-y-auto p-1">
+              <FluidHoverSurface selector='[role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"]' />
+              {children}
+            </div>
           )}
         </MenuPrimitive.Popup>
       </MenuPrimitive.Positioner>
@@ -226,6 +242,7 @@ function MenuCheckboxItem({
               SWITCH_TRACK_CLASS_NAME,
               "inset-shadow-[0_1px_--theme(--color-black/4%)] [--thumb-size:--spacing(4)] focus-visible:ring-1 sm:[--thumb-size:--spacing(3)]",
             )}
+            data-slot="menu-checkbox-switch"
             keepMounted
           >
             <span
@@ -233,6 +250,7 @@ function MenuCheckboxItem({
                 SWITCH_THUMB_CLASS_NAME,
                 "in-[[data-slot=menu-checkbox-item][data-checked]]:origin-[var(--thumb-size)_50%] in-[[data-slot=menu-checkbox-item][data-checked]]:translate-x-[calc(var(--thumb-size)-4px)] in-[[data-slot=menu-checkbox-item]:active]:not-data-disabled:scale-x-110 in-[[data-slot=menu-checkbox-item]:active]:rounded-[var(--thumb-size)/calc(var(--thumb-size)*1.10)]",
               )}
+              data-slot="menu-checkbox-switch-thumb"
             />
           </MenuPrimitive.CheckboxItemIndicator>
         </>

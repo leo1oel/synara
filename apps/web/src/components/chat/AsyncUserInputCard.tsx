@@ -1,5 +1,6 @@
 import type { AsyncUserInput, MessageId, UserInputQuestion } from "@synara/contracts";
 import { useMemo, useRef, useState } from "react";
+import { isSynaraEmbedMode } from "~/embedMode";
 import { CircleQuestionIcon, CheckIcon } from "~/lib/icons";
 import {
   buildPendingUserInputAnswers,
@@ -12,7 +13,7 @@ import { Button } from "../ui/button";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
 import { Textarea } from "../ui/textarea";
 import { UserInputQuestionForm } from "./UserInputQuestionForm";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 export function AsyncUserInputCard({
   messageId,
@@ -30,12 +31,12 @@ export function AsyncUserInputCard({
     () =>
       input.questions.map((question, index) => ({
         id: `question-${index}`,
-        header: "Question",
+        header: t("lattice:question"),
         question: question.title,
         options: (question.options ?? []).map((label) => ({ label, description: label })),
         multiSelect: false,
       })),
-    [input.questions],
+    [t, input.questions],
   );
   const [answers, setAnswers] = useState<Record<string, PendingUserInputDraftAnswer>>(() =>
     Object.fromEntries(
@@ -47,7 +48,10 @@ export function AsyncUserInputCard({
       ]),
     ),
   );
-  const [open, setOpen] = useState(false);
+  // Upstream keeps a question folded into its chip. Lattice's narrow panel shows
+  // one that still waits for an answer open, so it can be answered without a
+  // click first; an answered one folds back into its chip like upstream's.
+  const [open, setOpen] = useState(() => isSynaraEmbedMode() && !input.response);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submission, setSubmission] = useState<{
@@ -96,7 +100,9 @@ export function AsyncUserInputCard({
     <Collapsible open={open} onOpenChange={setOpen} className="my-2">
       <CollapsibleTrigger className="inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-ui leading-snug text-muted-foreground hover:bg-muted/50 hover:text-foreground">
         <CircleQuestionIcon className="size-3.5" aria-hidden="true" />
-        {questions.length} {questions.length === 1 ? t("chat:question") : t("chat:questions")}
+        {questions.length === 1
+          ? t("lattice:n1Question")
+          : t("lattice:questions", { count: questions.length })}
         {answered && (
           <>
             <CheckIcon className="size-3" aria-hidden="true" />

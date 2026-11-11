@@ -14,6 +14,69 @@ import {
 
 const decodeProviderSessionStartInput = Schema.decodeUnknownSync(ProviderSessionStartInput);
 
+describe("compile repair selection patches", () => {
+  it("keeps options on empty patches, accepts options-only patches, and drops options on model/provider changes", () => {
+    const current = {
+      ...DEFAULT_SERVER_SETTINGS,
+      compileRepairModelSelection: {
+        provider: "codex" as const,
+        model: "gpt-5.4",
+        options: { reasoningEffort: "high" as const },
+      },
+    };
+    expect(
+      applyServerSettingsPatch(current, { compileRepairModelSelection: {} })
+        .compileRepairModelSelection,
+    ).toEqual(current.compileRepairModelSelection);
+    expect(
+      applyServerSettingsPatch(current, {
+        compileRepairModelSelection: { options: { reasoningEffort: "low" } },
+      }).compileRepairModelSelection,
+    ).toEqual({ provider: "codex", model: "gpt-5.4", options: { reasoningEffort: "low" } });
+    expect(
+      applyServerSettingsPatch(current, { compileRepairModelSelection: { model: "gpt-other" } })
+        .compileRepairModelSelection,
+    ).toEqual({ provider: "codex", model: "gpt-other" });
+    expect(
+      applyServerSettingsPatch(current, {
+        compileRepairModelSelection: { provider: "claudeAgent", model: "claude-sonnet-4-6" },
+      }).compileRepairModelSelection,
+    ).toEqual({ provider: "claudeAgent", model: "claude-sonnet-4-6" });
+    expect(current.textGenerationModelSelection).toEqual(
+      DEFAULT_SERVER_SETTINGS.textGenerationModelSelection,
+    );
+  });
+});
+
+describe("proofreading selection patches", () => {
+  it("inherits by default, replaces the override whole, and clears it with null", () => {
+    expect(DEFAULT_SERVER_SETTINGS.proofreadModelSelection).toBeNull();
+    const current = {
+      ...DEFAULT_SERVER_SETTINGS,
+      proofreadModelSelection: {
+        provider: "codex" as const,
+        model: "gpt-5.4",
+        options: { reasoningEffort: "high" as const },
+      },
+    };
+    expect(applyServerSettingsPatch(current, {}).proofreadModelSelection).toEqual(
+      current.proofreadModelSelection,
+    );
+    expect(
+      applyServerSettingsPatch(current, {
+        proofreadModelSelection: { provider: "claudeAgent", model: "claude-sonnet-4-6" },
+      }).proofreadModelSelection,
+    ).toEqual({ provider: "claudeAgent", model: "claude-sonnet-4-6" });
+    expect(
+      applyServerSettingsPatch(current, { proofreadModelSelection: null }).proofreadModelSelection,
+    ).toBeNull();
+    expect(
+      applyServerSettingsPatch(current, { textGenerationModelSelection: { model: "gpt-other" } })
+        .proofreadModelSelection,
+    ).toEqual(current.proofreadModelSelection);
+  });
+});
+
 describe("providerStartOptionsFromServerSettings", () => {
   it("omits blank launch settings from provider session input", () => {
     const settings = {

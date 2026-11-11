@@ -139,6 +139,7 @@ export const makeAgentGatewayCredentials = Effect.gen(function* () {
   const config = yield* ServerConfig;
   const sessionRegistry = yield* AgentGatewaySessionRegistry;
   const inFlightRequests = makeAgentGatewayInFlightRequestRegistry();
+  const draftThreadIds = new Set<string>();
 
   const endpoint = makeAgentGatewayEndpoint(config.host, config.port);
   const stdioProxyScriptPath = yield* ensureAgentGatewayStdioProxyScript(config.stateDir);
@@ -215,6 +216,13 @@ export const makeAgentGatewayCredentials = Effect.gen(function* () {
     retireSessionTurn,
     listRetiredWriteAuthorities: sessionRegistry.listRetiredWriteAuthorities,
     revokeSessionToken,
+    registerDraftThread: (threadId) => {
+      draftThreadIds.add(threadId);
+    },
+    releaseDraftThread: (threadId) => {
+      draftThreadIds.delete(threadId);
+    },
+    isDraftThread: (threadId) => draftThreadIds.has(threadId),
     connectionForThread: (threadId, provider, options) => {
       const bearerToken = issueSessionToken(threadId, provider, options);
       const granted = connectors.grant(bearerToken, provider).map((registration) => ({

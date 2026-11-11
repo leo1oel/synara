@@ -4,6 +4,7 @@
 // Layer: Header action control
 // Depends on: GitActionsControl.logic resolvers and the shared git dialog chrome.
 
+import { localizeGitText } from "../lib/gitLocalization";
 import { useEffect, useMemo, useState } from "react";
 import { Checkbox } from "~/components/ui/checkbox";
 import { DiffStat } from "~/components/ui/diff-stat";
@@ -25,7 +26,7 @@ import {
 } from "./GitDialogChrome";
 import { CreatePullRequestIcon, ExternalLinkIcon, GitPullRequestDraftIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 export interface GitCreatePrDialogSubmission {
   action: "create_pr" | "commit_push_pr";
@@ -95,11 +96,14 @@ export function GitCreatePrDialog({
   return (
     <GitDialogShell open={open} onOpenChange={onOpenChange} onSubmitShortcut={() => submit(false)}>
       <GitDialogHeading
-        eyebrow={`${view.isNewBranch ? "New branch" : "Branch"} → ${view.baseBranchName}`}
+        eyebrow={t("chat:symbol9", {
+          value0: view.isNewBranch ? t("lattice:newBranch") : t("common:sessionStatus_branch"),
+          value1: view.baseBranchName,
+        })}
         subject={
           view.willCreateFeatureBranch
-            ? "Auto-named feature branch"
-            : (view.branchName ?? "(detached HEAD)")
+            ? t("lattice:autoNamedFeatureBranch")
+            : (view.branchName ?? t("lattice:detachedHEAD"))
         }
         subjectMuted={view.willCreateFeatureBranch}
       />
@@ -137,7 +141,7 @@ export function GitCreatePrDialog({
           </label>
         )}
         {unavailableHint && (
-          <p className="py-1 text-warning text-ui leading-snug">{unavailableHint}</p>
+          <p className="py-1 text-warning text-ui-xs">{localizeGitText(t, unavailableHint)}</p>
         )}
       </GitDialogBody>
       <GitDialogActionList>

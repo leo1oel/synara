@@ -481,6 +481,11 @@ function makeFakeCodexAdapter(
     (_threadId: ThreadId): Effect.Effect<void, ProviderAdapterError> => Effect.void,
   );
 
+  const setThreadName = vi.fn(
+    (_threadId: ThreadId, _name: string): Effect.Effect<boolean, ProviderAdapterError> =>
+      Effect.succeed(true),
+  );
+
   const forkThread = vi.fn(
     (
       input: ProviderAdapterForkThreadInput,
@@ -534,6 +539,8 @@ function makeFakeCodexAdapter(
     readThread,
     rollbackThread,
     compactThread,
+    // Like the real adapters: only Codex can name a native thread.
+    ...(provider === "codex" ? { setThreadName } : {}),
     forkThread,
     stopAll,
     streamEvents: Stream.fromPubSub(runtimeEventPubSub),
@@ -583,6 +590,7 @@ function makeFakeCodexAdapter(
     readThread,
     rollbackThread,
     compactThread,
+    setThreadName,
     forkThread,
     stopAll,
     retainStopped: (threadId: ThreadId): void => {
@@ -913,10 +921,6 @@ const unboundStoppedOpenCodeRouting = makeProviderServiceLayer(undefined, {
   includeOpenCode: true,
 });
 const stoppedOpenCodeRouting = makeProviderServiceLayer(undefined, { includeOpenCode: true });
-const stoppedOpenCodeDisabledRouting = makeProviderServiceLayer(
-  { providerIsEnabled: (provider) => Effect.succeed(provider !== "opencode") },
-  { includeOpenCode: true },
-);
 
 routing.layer("ProviderServiceLive native forks", (it) => {
   it.effect("forks across Codex account instances sharing continuation storage", () =>
@@ -2569,6 +2573,40 @@ it.effect(
       assert.equal(claude.stopSession.mock.calls.length, 0);
     }),
 );
+
+// Its own layer: sessions started here must not leak into the shared routing fixture.
+const threadNaming = makeProviderServiceLayer();
+threadNaming.layer("ProviderServiceLive thread names", (it) => {
+  it.effect("names only a live Codex thread and never a Claude session", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const codexThread = asThreadId("thread-name-codex");
+      const claudeThread = asThreadId("thread-name-claude");
+      yield* provider.startSession(codexThread, {
+        provider: "codex",
+        threadId: codexThread,
+        runtimeMode: "full-access",
+      });
+      yield* provider.startSession(claudeThread, {
+        provider: "claudeAgent",
+        threadId: claudeThread,
+        runtimeMode: "full-access",
+      });
+      threadNaming.codex.setThreadName.mockClear();
+      threadNaming.claude.setThreadName.mockClear();
+
+      assert.isTrue(yield* provider.setThreadName({ threadId: codexThread, name: "Chapter 2" }));
+      assert.deepEqual(threadNaming.codex.setThreadName.mock.calls, [[codexThread, "Chapter 2"]]);
+
+      assert.isFalse(yield* provider.setThreadName({ threadId: claudeThread, name: "Chapter 3" }));
+      assert.isFalse(
+        yield* provider.setThreadName({ threadId: asThreadId("thread-name-none"), name: "x" }),
+      );
+      assert.equal(threadNaming.claude.setThreadName.mock.calls.length, 0);
+      assert.equal(threadNaming.codex.setThreadName.mock.calls.length, 1);
+    }),
+  );
+});
 
 routing.layer("ProviderServiceLive routing", (it) => {
   it.effect("does not stop a replacement runtime even when its createdAt is unchanged", () =>
@@ -9467,6 +9505,60 @@ idleCleanup.layer("ProviderServiceLive idle cleanup", (it) => {
     }),
   );
 
+  it.effect("never idle-stops the thread a panel shows, and resumes once it is hidden", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const visible = asThreadId("thread-idle-visible-in-panel");
+      const background = asThreadId("thread-idle-background-in-panel");
+
+      idleCleanup.claude.stopSession.mockClear();
+      for (const threadId of [visible, background]) {
+        yield* provider.startSession(threadId, {
+          provider: "claudeAgent",
+          threadId,
+          runtimeMode: "full-access",
+        });
+      }
+      yield* idleCleanup.claude.waitForRuntimeSubscribers();
+      assert.deepEqual(
+        yield* provider.setPanelVisibleThread!({ panelId: "panel-1", threadId: visible }),
+        { previousThreadId: null },
+      );
+      for (const threadId of [visible, background]) {
+        idleCleanup.claude.emit({
+          type: "turn.completed",
+          eventId: asEventId(`runtime-${threadId}-completed`),
+          provider: "claudeAgent",
+          createdAt: "2026-11-01T20:00:00.000Z",
+          threadId,
+          payload: { state: "completed" },
+        });
+      }
+
+      // The background thread keeps its idle stop; the visible one survives it.
+      yield* waitUntil(
+        () => idleCleanup.claude.stopSession.mock.calls.some(([id]) => id === background),
+        500,
+        20,
+        "idle stop of the background thread",
+      );
+      yield* sleep(250);
+      assert.isFalse(idleCleanup.claude.stopSession.mock.calls.some(([id]) => id === visible));
+
+      // Showing another thread reports the old one and puts it back on the timer.
+      assert.deepEqual(
+        yield* provider.setPanelVisibleThread!({ panelId: "panel-1", threadId: background }),
+        { previousThreadId: visible },
+      );
+      yield* waitUntil(
+        () => idleCleanup.claude.stopSession.mock.calls.some(([id]) => id === visible),
+        500,
+        20,
+        "idle stop once the thread is no longer visible",
+      );
+    }),
+  );
+
   it.effect("keeps the runtime alive until background tasks settle", () =>
     Effect.gen(function* () {
       const provider = yield* ProviderService;
@@ -11176,107 +11268,6 @@ validation.layer("ProviderServiceLive validation", (it) => {
   );
 });
 
-const disabledProviderStart = makeProviderServiceLayer({
-  providerIsEnabled: (provider) => Effect.succeed(provider !== "codex"),
-});
-disabledProviderStart.layer("ProviderServiceLive enablement", (it) => {
-  it.effect("rejects native imports for disabled providers before touching the source", () =>
-    Effect.gen(function* () {
-      const provider = yield* ProviderService;
-      const result = yield* Effect.result(
-        provider.importExternalThread!({
-          threadId: asThreadId("disabled-import"),
-          provider: "codex",
-          externalThreadId: "source",
-          sourceCwd: "/repo/source",
-          modelSelection: { provider: "codex", model: "gpt-5.4" },
-          runtimeMode: "full-access",
-        }),
-      );
-      assert.equal(result._tag, "Failure");
-      assert.equal(disabledProviderStart.codex.forkThread.mock.calls.length, 0);
-    }),
-  );
-  it.effect("rejects session starts for disabled providers before reaching the adapter", () =>
-    Effect.gen(function* () {
-      const provider = yield* ProviderService;
-      const failure = yield* Effect.result(
-        provider.startSession(asThreadId("thread-disabled-provider"), {
-          provider: "codex",
-          threadId: asThreadId("thread-disabled-provider"),
-          runtimeMode: "full-access",
-        }),
-      );
-
-      assert.equal(failure._tag, "Failure");
-      if (failure._tag !== "Failure") return;
-      assert.equal(failure.failure._tag, "ProviderValidationError");
-      assert.equal(failure.failure.message.includes("disabled"), true);
-      assert.equal(disabledProviderStart.codex.startSession.mock.calls.length, 0);
-    }),
-  );
-
-  it.effect("rejects recovery-triggered provider starts while disabled", () =>
-    Effect.gen(function* () {
-      const provider = yield* ProviderService;
-      const directory = yield* ProviderSessionDirectory;
-      const threadId = asThreadId("thread-disabled-provider-recovery");
-      disabledProviderStart.codex.startSession.mockClear();
-      disabledProviderStart.codex.compactThread.mockClear();
-      yield* directory.upsert({
-        threadId,
-        provider: "codex",
-        status: "stopped",
-        resumeCursor: { opaque: "resume-disabled-provider" },
-        runtimeMode: "full-access",
-      });
-
-      const failure = yield* Effect.result(provider.compactThread({ threadId }));
-
-      assert.equal(failure._tag, "Failure");
-      if (failure._tag !== "Failure") return;
-      assert.equal(failure.failure._tag, "ProviderValidationError");
-      assert.equal(failure.failure.message.includes("disabled"), true);
-      assert.equal(disabledProviderStart.codex.startSession.mock.calls.length, 0);
-      assert.equal(disabledProviderStart.codex.compactThread.mock.calls.length, 0);
-    }),
-  );
-});
-
-let providerEnabledDuringStart = true;
-const providerDisabledAfterInitialCheck = makeProviderServiceLayer({
-  providerIsEnabled: () =>
-    Effect.sync(() => {
-      const enabled = providerEnabledDuringStart;
-      providerEnabledDuringStart = false;
-      return enabled;
-    }),
-});
-providerDisabledAfterInitialCheck.layer("ProviderServiceLive enablement race", (it) => {
-  it.effect("rechecks provider enablement immediately before adapter startup", () =>
-    Effect.gen(function* () {
-      providerEnabledDuringStart = true;
-      providerDisabledAfterInitialCheck.codex.startSession.mockClear();
-      const provider = yield* ProviderService;
-      const threadId = asThreadId("thread-disabled-during-start");
-
-      const failure = yield* Effect.result(
-        provider.startSession(threadId, {
-          provider: "codex",
-          threadId,
-          runtimeMode: "full-access",
-        }),
-      );
-
-      assert.equal(failure._tag, "Failure");
-      if (failure._tag !== "Failure") return;
-      assert.equal(failure.failure._tag, "ProviderValidationError");
-      assert.equal(failure.failure.message.includes("disabled"), true);
-      assert.equal(providerDisabledAfterInitialCheck.codex.startSession.mock.calls.length, 0);
-    }),
-  );
-});
-
 const boundedFanout = makeProviderServiceLayer({ runtimeEventBufferCapacity: 1 });
 it.effect("ProviderServiceLive starts independent provider teardown concurrently", () =>
   Effect.gen(function* () {
@@ -11666,43 +11657,6 @@ stoppedOpenCodeRouting.layer("ProviderServiceLive OpenCode stopped retention", (
         assert.equal(stoppedOpenCodeRouting.openCode.respondToRequest.mock.calls.length, 0);
         const binding = Option.getOrUndefined(yield* directory.getBinding(threadId));
         assert.equal(binding?.provider, "opencode");
-      }),
-  );
-});
-
-stoppedOpenCodeDisabledRouting.layer("ProviderServiceLive OpenCode disabled provider", (it) => {
-  it.effect(
-    "PR1160 TASK-06 rejects recovery of a stopped-retained OpenCode session while disabled",
-    () =>
-      Effect.gen(function* () {
-        const provider = yield* ProviderService;
-        const directory = yield* ProviderSessionDirectory;
-        const threadId = asThreadId("thread-opencode-stopped-disabled");
-
-        yield* stoppedOpenCodeDisabledRouting.openCode.startSession({
-          provider: "opencode",
-          threadId,
-          runtimeMode: "full-access",
-        });
-        stoppedOpenCodeDisabledRouting.openCode.retainStopped(threadId);
-        yield* directory.upsert({
-          threadId,
-          provider: "opencode",
-          resumeCursor: { opaque: "resume-disabled-opencode" },
-          runtimeMode: "full-access",
-        });
-        stoppedOpenCodeDisabledRouting.openCode.startSession.mockClear();
-        stoppedOpenCodeDisabledRouting.openCode.sendTurn.mockClear();
-
-        const result = yield* Effect.result(
-          provider.sendTurn({ threadId, input: "recover", attachments: [] }),
-        );
-        assert.equal(result._tag, "Failure");
-        if (result._tag !== "Failure") return;
-        assert.equal(result.failure._tag, "ProviderValidationError");
-        assert.equal(result.failure.message.includes("disabled"), true);
-        assert.equal(stoppedOpenCodeDisabledRouting.openCode.startSession.mock.calls.length, 0);
-        assert.equal(stoppedOpenCodeDisabledRouting.openCode.sendTurn.mock.calls.length, 0);
       }),
   );
 });

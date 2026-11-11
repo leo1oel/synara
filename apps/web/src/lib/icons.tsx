@@ -130,6 +130,9 @@ export const SortIcon: LucideIcon = centralIconWrapper("arrow-top-bottom");
 export const AGENT_ROBOT_ICON_NAME = "robot-3";
 export const BotIcon: LucideIcon = centralIconWrapper(AGENT_ROBOT_ICON_NAME);
 export const BookOpenIcon: LucideIcon = centralIconWrapper("newspaper-2");
+export const BookIcon: LucideIcon = centralIconWrapper("book-simple");
+export const PAPER_ICON_NAME = "file-text";
+export const PaperIcon: LucideIcon = centralIconWrapper(PAPER_ICON_NAME);
 export const BugIcon = adaptIcon(IconBug);
 export const CameraIcon = adaptIcon(IconCamera);
 export const CheckIcon = adaptIcon(IconCheck);
@@ -346,7 +349,6 @@ export {
   Folder02Icon as FolderOpenIcon,
   FolderAddIcon,
   FolderClosedIcon as FolderIcon,
-  BookOpen01Icon as BookIcon,
   // Transcript file reads (rows and collapsed read groups) wear the open book.
   BookOpen01Icon as FileReadIcon,
   GiftIcon,

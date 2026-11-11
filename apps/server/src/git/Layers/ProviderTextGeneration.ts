@@ -39,6 +39,7 @@ const makeProviderTextGeneration = Effect.gen(function* () {
   const cursorTextGeneration = yield* TextGen.CursorTextGeneration;
   const droidTextGeneration = yield* TextGen.DroidTextGeneration;
   const openCodeTextGeneration = yield* TextGen.OpenCodeTextGeneration;
+  const piTextGeneration = yield* TextGen.PiTextGeneration;
   const serverSettings = yield* ServerSettingsService;
   const gitCore = yield* GitCore;
   const gitHubCli = yield* GitHubCli;
@@ -94,6 +95,7 @@ const makeProviderTextGeneration = Effect.gen(function* () {
     cursor: cursorTextGeneration,
     droid: droidTextGeneration,
     opencode: openCodeTextGeneration,
+    pi: piTextGeneration,
   } satisfies Record<Selection.GitTextGenerationProvider, TextGen.TextGenerationShape>;
 
   const implementationForDriver = (
@@ -261,6 +263,10 @@ const makeProviderTextGeneration = Effect.gen(function* () {
     evaluateAutomationCompletion: (input) =>
       dispatch("evaluateAutomationCompletion", input, (service, routedInput) =>
         service.evaluateAutomationCompletion(routedInput),
+      ),
+    generateTextTask: (input) =>
+      dispatch("generateTextTask", input, (service, routedInput) =>
+        service.generateTextTask(routedInput),
       ),
   } satisfies TextGen.TextGenerationShape;
 });

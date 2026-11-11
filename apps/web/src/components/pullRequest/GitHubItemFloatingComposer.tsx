@@ -1,12 +1,3 @@
-// FILE: GitHubItemFloatingComposer.tsx
-// Purpose: The composer that floats at the bottom of a GitHub item's detail page, on the chat
-//          composer's own shell and send control: a one-line question box with a "+" menu, the
-//          project and environment chips above it, and mic and send at its end. Submitting hands the question to the host (the inbox puts it into the
-//          item's side chat). Purely a text box: model, approvals, and context live in the side
-//          chat it opens.
-// Layer: Pull request presentation
-// Exports: GitHubItemFloatingComposer
-
 import type { ProjectId, ThreadId } from "@synara/contracts";
 import { useMemo, useRef, useState, type ReactNode } from "react";
 
@@ -33,11 +24,10 @@ import {
   PlusIcon,
 } from "~/lib/icons";
 import { resolveVoiceTranscriptionTarget } from "~/lib/providerAvailability";
-import { resolveThreadEnvironmentPresentation } from "~/lib/threadEnvironment";
 import { cn } from "~/lib/utils";
 import { newThreadId } from "~/lib/utils";
 import { useStore } from "~/store";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 // The context chips above the question: the composer toolbar's own picker trigger (project,
 // environment), on the secondary ink because here they frame the question rather than lead it.
@@ -45,7 +35,6 @@ const CHIP_CLASS_NAME = cn(
   COMPOSER_TOOLBAR_PICKER_TRIGGER_CLASS_NAME,
   "max-w-full cursor-default text-muted-foreground hover:bg-transparent",
 );
-const LOCAL_ENVIRONMENT = resolveThreadEnvironmentPresentation({ envMode: "local" });
 
 export function GitHubItemFloatingComposer({
   placeholder,
@@ -142,14 +131,18 @@ export function GitHubItemFloatingComposer({
               </ComposerPickerMenuPopup>
             </Menu>
           ) : (
-            <span className={CHIP_CLASS_NAME} title={t("chat:detail_project")}>
+            <span className={cn(CHIP_CLASS_NAME, "min-w-0")} title={t("chat:detail_project")}>
               <FolderIcon aria-hidden className="size-3.5 shrink-0" />
               <span className="truncate">{projectTitle}</span>
             </span>
           )}
-          <span className={CHIP_CLASS_NAME} title={t("git:runsInThisProjectSLocalCheckout")}>
+          {/* Never shrinks: a CJK word would otherwise break between its characters. */}
+          <span
+            className={cn(CHIP_CLASS_NAME, "shrink-0 whitespace-nowrap")}
+            title={t("git:runsInThisProjectSLocalCheckout")}
+          >
             <CentralIcon name="macbook-air" className="size-3.5 shrink-0" />
-            {LOCAL_ENVIRONMENT.shortLabel}
+            {t("computer:worktreeMode_local")}
           </span>
         </div>
         <div className="flex items-end gap-1.5">

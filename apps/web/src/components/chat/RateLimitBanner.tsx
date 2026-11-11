@@ -8,7 +8,7 @@ import { Alert, AlertAction, AlertDescription } from "../ui/alert";
 import { IconButton } from "../ui/icon-button";
 import { CircleAlertIcon, XIcon } from "~/lib/icons";
 import { ChatColumnBannerFrame } from "./ChatColumnBannerFrame";
-import { useTranslation } from "~/i18n";
+import { type t, useTranslation } from "~/i18n";
 
 export type RateLimitStatus = {
   status: "rejected" | "allowed_warning";
@@ -45,13 +45,64 @@ export function deriveLatestRateLimitStatus(
   return null;
 }
 
-function formatResetsAt(resetsAt: string): string {
-  const ms = Date.parse(resetsAt);
-  if (Number.isNaN(ms)) return "";
-  const secondsLeft = Math.max(0, Math.ceil((ms - Date.now()) / 1000));
-  if (secondsLeft < 60) return ` Resets in ${secondsLeft}s.`;
-  const minutesLeft = Math.ceil(secondsLeft / 60);
-  return ` Resets in ${minutesLeft}m.`;
+const MINUTE_MS = 60_000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
+
+export type RateLimitResetDuration = { unit: "minutes" | "hours" | "days"; count: number };
+
+/** Rounds the time left to the unit a person would say: whole minutes under an hour
+ *  (never "0"), about N hours under two days, about N days beyond. Claude's weekly
+ *  windows put the reset days away, where raw minutes ("2822m") read as noise. */
+export function describeRateLimitReset(msLeft: number): RateLimitResetDuration {
+  const ms = Math.max(0, msLeft);
+  if (ms < HOUR_MS) return { unit: "minutes", count: Math.max(1, Math.ceil(ms / MINUTE_MS)) };
+  if (ms < 2 * DAY_MS) return { unit: "hours", count: Math.round(ms / HOUR_MS) };
+  return { unit: "days", count: Math.round(ms / DAY_MS) };
+}
+
+function formatResetSentence(
+  translate: typeof t,
+  resetsAt: string | undefined,
+  nowMs: number,
+): string | null {
+  if (!resetsAt) return null;
+  const resetMs = Date.parse(resetsAt);
+  if (Number.isNaN(resetMs)) return null;
+  const { unit, count } = describeRateLimitReset(resetMs - nowMs);
+  switch (unit) {
+    case "minutes":
+      return translate("lattice:rateLimitResetsInMinutes", { count });
+    case "hours":
+      return translate("lattice:rateLimitResetsInAboutHours", { count });
+    case "days":
+      return translate("lattice:rateLimitResetsInAboutDays", { count });
+  }
+}
+
+/** The whole notice in the interface language. The status and reset sentences are
+ *  joined by a catalog entry so each locale owns its spacing (none between Chinese
+ *  sentences, a space in English). */
+export function formatRateLimitNotice(
+  translate: typeof t,
+  { status, resetsAt, utilization }: RateLimitStatus,
+  nowMs: number,
+): string {
+  const statusSentence =
+    status === "rejected"
+      ? translate("lattice:rateLimitReached")
+      : utilization !== undefined
+        ? translate("lattice:rateLimitApproachingUsed", {
+            percent: Math.round(utilization * 100),
+          })
+        : translate("lattice:rateLimitApproaching");
+  const resetSentence = formatResetSentence(translate, resetsAt, nowMs);
+  return resetSentence
+    ? translate("lattice:rateLimitNoticeWithReset", {
+        status: statusSentence,
+        reset: resetSentence,
+      })
+    : statusSentence;
 }
 
 export const RateLimitBanner = function RateLimitBanner({
@@ -65,15 +116,8 @@ export const RateLimitBanner = function RateLimitBanner({
 
   if (!rateLimitStatus) return null;
 
-  const { status, resetsAt, utilization } = rateLimitStatus;
-  const isRejected = status === "rejected";
-
-  const message = isRejected
-    ? t("chat:rateLimitReached", { value0: resetsAt ? formatResetsAt(resetsAt) : "" })
-    : t("chat:approachingRateLimit", {
-        value0: utilization !== undefined ? ` (${Math.round(utilization * 100)}% used)` : "",
-        value1: resetsAt ? formatResetsAt(resetsAt) : "",
-      });
+  const isRejected = rateLimitStatus.status === "rejected";
+  const message = formatRateLimitNotice(t, rateLimitStatus, Date.now());
 
   return (
     <ChatColumnBannerFrame>
@@ -81,8 +125,14 @@ export const RateLimitBanner = function RateLimitBanner({
         <CircleAlertIcon />
         <AlertDescription>{message}</AlertDescription>
         {onDismiss ? (
-          <AlertAction>
+          // The shared AlertAction drops below the text under the 640px breakpoint and
+          // centers on the whole text otherwise. The embedded panel's viewport is the
+          // panel itself, so in a narrow panel the X sat alone on a row of its own.
+          // Keep it in the third column at every width, on a box one line tall, so it
+          // stays beside the first line however far the message wraps.
+          <AlertAction className="row-start-1 h-lh items-center self-start max-sm:col-start-3 max-sm:mt-0 sm:self-start">
             <IconButton
+              className="size-6 sm:size-6"
               label={t("chat:rateLimit_dismissStatus")}
               title={t("chat:rateLimit_dismissStatus")}
               onClick={onDismiss}

@@ -116,10 +116,12 @@ export const makeProjectImportRepository = Effect.gen(function* () {
     readonly threadId: ThreadId;
     readonly projectId: ProjectId;
     readonly provider: string;
+    readonly providerInstanceId: string | null;
     readonly cursor: string | null;
   }>`
     SELECT r.thread_id AS "threadId", t.project_id AS "projectId",
-      r.provider_name AS provider, r.resume_cursor_json AS cursor
+      r.provider_name AS provider, r.provider_instance_id AS "providerInstanceId",
+      r.resume_cursor_json AS cursor
     FROM provider_session_runtime r JOIN projection_threads t ON t.thread_id = r.thread_id
   `;
   return {

@@ -20,4 +20,6 @@ export const BUILT_IN_COMPOSER_SLASH_COMMANDS = [
   "rename",
   "feedback",
   "automation",
+  // Lattice: lists the MCP servers the chat's agent can reach.
+  "mcp",
 ] as const;

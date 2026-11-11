@@ -11,10 +11,12 @@ import type {
   ProviderModelDescriptor,
   ThreadId,
 } from "@synara/contracts";
+import { type ReactNode, useState } from "react";
 
-import { ResetIcon } from "~/lib/icons";
+import { ChevronRightIcon, ResetIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import type { ProviderOptions } from "../../providerModelOptions";
+import { MenuSub, MenuSubTriggerBase } from "../ui/menu";
 import { Slider } from "../ui/slider";
 import type { FastModeNotice } from "~/lib/fastModeState";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
@@ -25,19 +27,22 @@ import {
   resolveComposerTraitStatusLabel,
   supportsComposerFastModeControl,
 } from "./composerTraits";
+import { localizeModelPickerLabel } from "./modelPickerLabels";
 import { FastModeToggle } from "./TraitsPicker";
 import { useComposerTraitCommit } from "./useComposerTraitCommit";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 type ComposerEffortSliderCardProps = {
   provider: ProviderKind;
   providerInstanceId?: ProviderInstanceId | null | undefined;
   threadId: ThreadId;
   model: string | null | undefined;
+  modelLabel?: string;
   runtimeModel?: ProviderModelDescriptor | undefined;
   modelOptions: ProviderOptions | null | undefined;
   prompt: string;
   onPromptChange: (prompt: string) => void;
+  renderModelSubmenuPopup?: (onAfterSelection: () => void) => ReactNode;
   fastModeNotice?: FastModeNotice | null | undefined;
 };
 
@@ -52,6 +57,7 @@ export function ComposerEffortSliderCard(props: ComposerEffortSliderCardProps) {
   const { t } = useTranslation();
 
   const { provider, threadId, model, modelOptions, prompt, onPromptChange } = props;
+  const [modelListOpen, setModelListOpen] = useState(false);
   const selection = getComposerTraitSelection(
     provider,
     model,
@@ -73,10 +79,12 @@ export function ComposerEffortSliderCard(props: ComposerEffortSliderCardProps) {
 
   const ladderIndex = resolveComposerEffortLadderIndex(selection);
   const activeLevel = effortLevels[ladderIndex];
-  const statusLabel =
-    resolveComposerTraitStatusLabel(selection, t) ??
-    activeLevel?.label ??
-    t("chat:traitsPicker_effort");
+  const statusLabel = localizeModelPickerLabel(
+    t,
+    resolveComposerTraitStatusLabel(selection) ??
+      activeLevel?.label ??
+      t("chat:traitsPicker_effort"),
+  );
   const effortIsDefault = ultrathinkPromptControlled || effort === defaultEffort;
   const canReset = fastModeEnabled || !effortIsDefault;
 
@@ -119,9 +127,30 @@ export function ComposerEffortSliderCard(props: ComposerEffortSliderCardProps) {
         ) : (
           <span aria-hidden="true" className="size-6" />
         )}
-        <span className="truncate text-center font-medium text-ui text-[var(--color-text-accent)]">
-          {statusLabel}
-        </span>
+        {props.modelLabel && props.renderModelSubmenuPopup ? (
+          <MenuSub open={modelListOpen} onOpenChange={setModelListOpen}>
+            <MenuSubTriggerBase
+              openOnHover={false}
+              className="flex min-w-0 cursor-default select-none flex-col items-center justify-center rounded-lg px-2 py-0.5 text-center leading-snug outline-none transition-colors data-highlighted:bg-[var(--color-background-button-secondary-hover)] data-popup-open:bg-[var(--color-background-button-secondary-hover)]"
+            >
+              <span className="relative inline-block whitespace-nowrap font-medium text-ui text-[var(--color-text-accent)]">
+                {statusLabel}
+                <ChevronRightIcon
+                  aria-hidden="true"
+                  className="absolute top-1/2 left-full ml-0.5 size-3.5 -translate-y-1/2 text-muted-foreground"
+                />
+              </span>
+              <span className="max-w-full truncate text-ui-sm text-muted-foreground">
+                {props.modelLabel}
+              </span>
+            </MenuSubTriggerBase>
+            {props.renderModelSubmenuPopup(() => setModelListOpen(false))}
+          </MenuSub>
+        ) : (
+          <span className="truncate text-center font-medium text-ui text-[var(--color-text-accent)]">
+            {statusLabel}
+          </span>
+        )}
         <Tooltip>
           <TooltipTrigger
             render={
@@ -155,7 +184,10 @@ export function ComposerEffortSliderCard(props: ComposerEffortSliderCardProps) {
           magnetic
           disabled={ultrathinkPromptControlled}
           aria-label={t("chat:reasoningEffort")}
-          getAriaValueText={(index) => effortLevels[index]?.label ?? String(index)}
+          getAriaValueText={(index) => {
+            const label = effortLevels[index]?.label;
+            return label === undefined ? String(index) : localizeModelPickerLabel(t, label);
+          }}
           onValueChange={handleSliderChange}
         />
       </div>

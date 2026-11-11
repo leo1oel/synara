@@ -221,7 +221,7 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
         return [
           provider,
           {
-            enabled: serverSettings.providers[provider].enabled,
+            enabled: true,
             instances: instances.map((instance) =>
               providerInstanceAvailability(
                 instance,

@@ -26,6 +26,8 @@ export const ExecutionEnvironmentCapabilities = Schema.Struct({
   remoteResources: Schema.optional(Schema.Boolean),
   remoteUnavailableReason: Schema.optional(TrimmedNonEmptyString),
   repositoryIdentity: Schema.Boolean.pipe(Schema.withDecodingDefault(() => false)),
+  // Lattice's fork: the server may drive the iOS Simulator (absent means it may not).
+  deviceControl: Schema.optional(Schema.Boolean),
 });
 export type ExecutionEnvironmentCapabilities = typeof ExecutionEnvironmentCapabilities.Type;
 

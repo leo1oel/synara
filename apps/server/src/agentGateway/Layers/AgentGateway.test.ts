@@ -98,8 +98,15 @@ import { AgentGatewayLive } from "./AgentGateway.ts";
 import { ComputerService } from "../../computer/Services/ComputerService.ts";
 import { makeComputerServiceLayer } from "../../computer/Layers/ComputerService.ts";
 import { FakeComputerBackend } from "../../computer/FakeComputerBackend.ts";
+import { LatticeCanvasBrokerLive } from "./LatticeCanvasBroker.ts";
+import { LatticeBibliographyBrokerLive } from "./LatticeBibliographyBroker.ts";
+import { LatticeSpreadsheetBrokerLive } from "./LatticeSpreadsheetBroker.ts";
+import { LatticeProjectDocumentBrokerLive } from "./LatticeProjectDocumentBroker.ts";
+import { LatticeEditorCommentsBrokerLive } from "./LatticeEditorCommentsBroker.ts";
+import { LatticePresentationBrokerLive } from "./LatticePresentationBroker.ts";
 import { recordCreatedWorktreeInPlan } from "../operationPlan.ts";
 import { makeAgentGatewayInFlightRequestRegistry } from "../inFlightRequestRegistry.ts";
+import { ACTIVE_AGENT_HOST_PROFILE } from "../hostProfile.ts";
 
 const NOW = "2026-03-01T10:00:00.000Z";
 const PROJECT_ID = ProjectId.makeUnsafe("project-1");
@@ -205,6 +212,11 @@ const listDefaultTestModels: (typeof ProviderDiscoveryService)["Service"]["listM
       },
     ],
     claudeAgent: [
+      {
+        // Synara's Claude default, which a Claude target without a model resolves to.
+        slug: "claude-sonnet-5-5",
+        name: "Claude Sonnet 5.5",
+      },
       {
         slug: "claude-sonnet-5",
         name: "Claude Sonnet 5",
@@ -517,6 +529,9 @@ function makeHarnessLayer(
                       "thread:write",
                       "automation:write",
                       "diagnostics:read",
+                      "browser:control",
+                      "literature:read",
+                      "literature:write",
                     ] as const),
           }
         : null;
@@ -1389,7 +1404,17 @@ function makeHarnessLayer(
           })
         : Layer.empty,
     ),
-    Layer.provide(credentialsLayer),
+    Layer.provide(
+      Layer.mergeAll(
+        LatticeCanvasBrokerLive,
+        LatticeBibliographyBrokerLive,
+        LatticeSpreadsheetBrokerLive,
+        LatticeProjectDocumentBrokerLive,
+        LatticeEditorCommentsBrokerLive,
+        LatticePresentationBrokerLive,
+        credentialsLayer,
+      ),
+    ),
     Layer.provide(snapshotLayer),
     Layer.provide(engineLayer),
     Layer.provide(automationLayer),
@@ -1873,6 +1898,32 @@ describe("AgentGateway", () => {
         body: { jsonrpc: "2.0", id: 1, method: "tools/list" },
       });
       assert.equal(invalid.status, 401);
+    }).pipe(Effect.provide(gatewayLayer));
+  });
+
+  it.effect("serves Lattice no Synara-named or remote discovery tool", () => {
+    // Run under AGENT_HOST_PROFILE=lattice. Lattice has no Remote connections, so
+    // even a remote-capable environment adds no synara_list_connections.
+    if (ACTIVE_AGENT_HOST_PROFILE.id !== "lattice") return Effect.void;
+    const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads, [], {
+      remoteEnvironment: true,
+      remoteConnections: new HostConnectionRegistry(),
+    });
+    return Effect.gen(function* () {
+      const harness = yield* makeHarness;
+      const response = yield* harness.postRaw({
+        authorizationHeader: "Bearer token-parent",
+        body: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      assert.equal(response.status, 200);
+      const tools =
+        (response.body as { result?: { tools?: Array<{ name: string; description?: string }> } })
+          ?.result?.tools ?? [];
+      assert.isAbove(tools.length, 0);
+      assert.deepEqual(
+        tools.filter((tool) => /synara/i.test(`${tool.name} ${tool.description ?? ""}`)),
+        [],
+      );
     }).pipe(Effect.provide(gatewayLayer));
   });
 
@@ -2541,6 +2592,45 @@ describe("AgentGateway", () => {
     }).pipe(Effect.provide(gatewayLayer));
   });
 
+  it.effect("publishes the complete adapted Lattice catalog without upstream identity", () => {
+    if (ACTIVE_AGENT_HOST_PROFILE.id !== "lattice") return Effect.void;
+
+    const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads);
+    return Effect.gen(function* () {
+      const harness = yield* makeHarness;
+      const response = yield* harness.postRaw({
+        authorizationHeader: "Bearer token-parent",
+        body: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      const tools = (response.body as { result: { tools: ReadonlyArray<{ name: string }> } }).result
+        .tools;
+      const names = tools.map((tool) => tool.name);
+
+      assert.includeMembers(names, [
+        "context",
+        "agent_capabilities",
+        "list_tasks",
+        "create_tasks",
+        "set_task_goal",
+        "create_automation",
+        "list_automations",
+        "view_automation",
+        "update_automation",
+        "cancel_automation",
+        "update_automation_memory",
+        "report_automation_result",
+        "search_literature",
+        "cite",
+        "list_canvas_shapes",
+        "create_canvas_shapes",
+        "spreadsheet_read",
+        "spreadsheet_batch_update",
+      ]);
+      assert.notInclude(names, "browser_open");
+      assert.notMatch(JSON.stringify(tools), /synara/i);
+    }).pipe(Effect.provide(gatewayLayer));
+  });
+
   it.effect("lists only ordinary projects, excluding system-managed containers", () => {
     // ServerConfig.layerTest canonicalizes the home dir via realpath, so the legacy
     // Home row must use the same canonical form for the workspace-root match to hold.
@@ -2620,7 +2710,9 @@ describe("AgentGateway", () => {
       assert.deepEqual(
         (targetConstruction.claudeAgent?.exampleTarget as { options?: unknown } | undefined)
           ?.options,
-        { effort: "low" },
+        {
+          effort: "low",
+        },
       );
       const antigravity = targetConstruction.antigravity as {
         providerOptions: Array<{
@@ -6685,6 +6777,43 @@ describe("AgentGateway", () => {
         threadId: "thread-child",
         goal: "",
       });
+    }).pipe(Effect.provide(gatewayLayer));
+  });
+
+  it.effect("keeps Lattice goal and automation writes inside the caller project", () => {
+    // Synara intentionally supports cross-project coordination. This case is
+    // also run explicitly under AGENT_HOST_PROFILE=lattice so the production
+    // Lattice aliases and shared drive-thread guard execute end to end.
+    if (ACTIVE_AGENT_HOST_PROFILE.id !== "lattice") return Effect.void;
+
+    const otherProjectId = ProjectId.makeUnsafe("project-other");
+    const { gatewayLayer, makeHarness } = makeHarnessLayer([
+      ...baseThreads,
+      makeThreadShell("thread-other-project", { projectId: otherProjectId }),
+    ]);
+    return Effect.gen(function* () {
+      const harness = yield* makeHarness;
+      const goal = yield* harness.callTool({
+        token: "token-parent",
+        name: "set_task_goal",
+        args: { threadId: "thread-other-project", goal: "Mutate another project" },
+      });
+      const automation = yield* harness.callTool({
+        token: "token-parent",
+        name: "create_automation",
+        args: {
+          name: "Cross-project monitor",
+          prompt: "Drive the other project.",
+          targetThreadId: "thread-other-project",
+        },
+      });
+
+      assert.isTrue(isToolError(goal.result));
+      assert.include(toolErrorText(goal.result), "different Lattice project");
+      assert.isTrue(isToolError(automation.result));
+      assert.include(toolErrorText(automation.result), "different Lattice project");
+      assert.equal(harness.dispatched.length, 0);
+      assert.equal(harness.automationCreates.length, 0);
     }).pipe(Effect.provide(gatewayLayer));
   });
 

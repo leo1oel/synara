@@ -1,8 +1,9 @@
+import { i18n, useTranslation } from "~/i18n";
+import { flushWorkspaceEditors } from "~/lib/workspaceEditorSession";
 import type { FileDiffMetadata } from "@pierre/diffs/react";
 import { isWorkspaceRelativePathSafe } from "@synara/shared/path";
 import type { ProjectId, ResolvedKeybindingsConfig, ThreadId, TurnId } from "@synara/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { flushWorkspaceEditors } from "~/lib/workspaceEditorSession";
 import { useNavigate } from "@tanstack/react-router";
 import {
   lazy,
@@ -15,14 +16,18 @@ import {
   useRef,
   useState,
 } from "react";
-import type { EditorLeaveGuard } from "../EditorWorkspaceView";
 
 import { closeDockTerminalPane } from "../../hooks/useTerminalSurfaceController";
 import { useAppSettings } from "../../appSettings";
 import { useComposerDraftStore } from "../../composerDraftStore";
 import type { DiffRouteSearch } from "../../diffRouteSearch";
 import { stripDiffSearchParams } from "../../diffRouteSearch";
+import type { DiffEditBaseRev, DiffFileEditRequest } from "../../lib/diffEditBaseRev";
+import { editorCenterModeFamily, type EditorCenterMode } from "../../lib/editorCenterMode";
+import type { EditorLeaveGuard } from "../EditorWorkspaceView";
 import { readEditorViewState, storeEditorViewState } from "../../editorViewState";
+import { postOpenFileToLattice, postOpenReviewToLattice, readEmbedMode } from "../../embedMode";
+import { basenameOfPath } from "../../file-icons";
 import { useBrowserPanelDesktopBridge } from "../../hooks/useBrowserPanelDesktopBridge";
 import { useDockPaneRuntimeActivation } from "../../hooks/useDockPaneRuntimeActivation";
 import { useHandleNewThread } from "../../hooks/useHandleNewThread";
@@ -39,8 +44,6 @@ import {
 import { EDITOR_CHAT_PANE_SCOPE_ID, SINGLE_CHAT_PANE_SCOPE_ID } from "../../lib/chatPaneScope";
 import type { DockPaneRuntimeMode } from "../../lib/dockPaneActivation";
 import type { FileCommentSelection } from "../../lib/fileComments";
-import type { DiffEditBaseRev, DiffFileEditRequest } from "../../lib/diffEditBaseRev";
-import { editorCenterModeFamily, type EditorCenterMode } from "../../lib/editorCenterMode";
 import { gitBranchesQueryOptions } from "../../lib/gitReactQuery";
 import { canComposerHandlePanelWidth } from "../../lib/panelResize";
 import { projectListDirectoriesQueryOptions } from "../../lib/projectReactQuery";
@@ -60,6 +63,7 @@ import { requestExplorerReveal } from "../../explorerRevealRequestStore";
 import { selectRightDockState, useRightDockStore } from "../../rightDockStore";
 import {
   resolveActivePane,
+  restrictRightDockStateToKinds,
   type RightDockPane,
   type RightDockPaneKind,
 } from "../../rightDockStore.logic";
@@ -126,7 +130,6 @@ import {
 import { isShortcutDispatchSuspended, resolveShortcutCommand } from "~/keybindings";
 import { isTerminalFocused } from "~/lib/terminalFocus";
 import { cn } from "~/lib/utils";
-import { useTranslation } from "~/i18n";
 
 const PullRequestDockPane = lazy(() => import("../pullRequest/PullRequestDockPane"));
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
@@ -150,6 +153,7 @@ const DockFilePane = lazy(() =>
 
 const DIFF_INLINE_DEFAULT_WIDTH = "max(28rem, calc(50vw - 8rem))";
 const SINGLE_PANEL_MIN_WIDTH = 26 * 16;
+const EMBEDDED_DOCK_PANE_KINDS = new Set<RightDockPaneKind>(["device"]);
 
 const allowAnySplitDirection = (_direction: SplitDirection) => true;
 
@@ -195,6 +199,7 @@ export function SingleChatSurface(props: {
   threadId: ThreadId;
   search: DiffRouteSearch;
   projectId: ProjectId | null;
+  embedMode?: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -240,16 +245,22 @@ export function SingleChatSurface(props: {
     isGitRepo: hasGitRepository,
   });
   const hasDeviceSupport = useDeviceSupport();
-  const dockLauncherItems = resolveRightDockLauncherItems(
-    {
-      hasWorkspace: workspaceRoot !== null,
-      hasGitRepository,
-      hasReview: dockDiffTotals.fileCount > 0,
-      hasDeviceSupport,
-    },
-    t,
-  );
+  const allDockLauncherItems = resolveRightDockLauncherItems({
+    hasWorkspace: workspaceRoot !== null,
+    hasGitRepository,
+    hasReview: dockDiffTotals.fileCount > 0,
+    hasDeviceSupport,
+  });
+  // Lattice owns files, review, and project navigation around the embedded chat.
+  // Keep its dock restricted to the one upstream surface the host does not have:
+  // the simulator pane. Standalone Synara retains the complete dock.
+  const dockLauncherItems = props.embedMode
+    ? allDockLauncherItems.filter(({ kind }) => kind === "device")
+    : allDockLauncherItems;
   const availableDockPaneKinds = dockLauncherItems.map(({ kind }) => kind);
+  const presentedDockState = props.embedMode
+    ? restrictRightDockStateToKinds(dockState, EMBEDDED_DOCK_PANE_KINDS)
+    : dockState;
   const projects = useStore((store) => store.projects);
   const threadsHydrated = useStore((store) => store.threadsHydrated);
   const { settings: appSettings } = useAppSettings();
@@ -327,12 +338,14 @@ export function SingleChatSurface(props: {
     dismissFloatingBrowserForThread(props.threadId);
   }, [dismissFloatingBrowserForThread, props.threadId]);
 
-  const activePane = resolveActivePane(dockState);
-  const floatingBrowserVisible = shouldRenderFloatingBrowserPanel({
-    hostThreadId: props.threadId,
-    floatingThreadId: floatingBrowserRequested ? props.threadId : null,
-    dockBrowserVisible: dockState.open && activePane?.kind === "browser",
-  });
+  const activePane = resolveActivePane(presentedDockState);
+  const floatingBrowserVisible =
+    !props.embedMode &&
+    shouldRenderFloatingBrowserPanel({
+      hostThreadId: props.threadId,
+      floatingThreadId: floatingBrowserRequested ? props.threadId : null,
+      dockBrowserVisible: presentedDockState.open && activePane?.kind === "browser",
+    });
   const {
     activePaneRuntimeMode,
     requestActivePaneLive: requestActiveDockPaneLive,
@@ -375,6 +388,20 @@ export function SingleChatSurface(props: {
     openPane(props.threadId, { kind: "browser" });
   };
   const handleOpenTurnDiff = (turnId: TurnId, filePath?: string) => {
+    // Lattice owns review UI around the embedded chat, whose dock is reserved
+    // for the simulator. File rows open in the host editor and the Review
+    // button opens the host's changes drawer.
+    if (props.embedMode) {
+      if (
+        postOpenReviewToLattice(readEmbedMode(), {
+          threadId: props.threadId,
+          turnId,
+          filePath,
+        })
+      ) {
+        return;
+      }
+    }
     requestImmediateDockHydration("diff");
     openPane(props.threadId, {
       kind: "diff",
@@ -610,7 +637,11 @@ export function SingleChatSurface(props: {
   // fallback behavior.
   const dockFileOpener: WorkspaceFileOpener = {
     openFile: (path, beforeOpen) => {
-      const directoryPath = resolveWorkspaceDirectoryOpenTarget(path, workspaceRoot);
+      // Lattice's embedded dock holds only the simulator, so directories stay
+      // with the host there like any other path.
+      const directoryPath = props.embedMode
+        ? null
+        : resolveWorkspaceDirectoryOpenTarget(path, workspaceRoot);
       if (directoryPath !== null) {
         beforeOpen?.();
         requestImmediateDockHydration("explorer");
@@ -624,6 +655,15 @@ export function SingleChatSurface(props: {
       const targetPath = resolveDockFileOpenTarget(path, workspaceRoot);
       if (!targetPath) {
         return false;
+      }
+      // The embedded dock is reserved for the simulator. Lattice already has
+      // the editor, so hand workspace files to the host instead.
+      if (props.embedMode && workspaceRoot) {
+        const relativePath = resolveWorkspaceFileOpenTarget(path, workspaceRoot);
+        if (relativePath && postOpenFileToLattice(readEmbedMode(), relativePath)) {
+          beforeOpen?.();
+          return true;
+        }
       }
       beforeOpen?.();
       requestImmediateDockHydration("file");
@@ -797,12 +837,18 @@ export function SingleChatSurface(props: {
       return;
     }
 
-    await handleNewThread(projectId, undefined, {
-      search: (previous) => ({
-        ...stripEditorViewSearchParams(stripDiffSearchParams(previous)),
-        view: "editor",
-      }),
-    });
+    await handleNewThread(
+      projectId,
+      {
+        envMode: appSettings.defaultThreadEnvMode,
+      },
+      {
+        search: (previous) => ({
+          ...stripEditorViewSearchParams(stripDiffSearchParams(previous)),
+          view: "editor",
+        }),
+      },
+    );
   };
   const handleSelectEditorProject = (projectId: ProjectId) => {
     void openEditorProject(projectId).catch((error: unknown) => {
@@ -1195,6 +1241,7 @@ export function SingleChatSurface(props: {
               paneScopeId={SINGLE_CHAT_PANE_SCOPE_ID}
               deferMount={isDraftThread}
               surfaceMode="single"
+              {...(props.embedMode ? { presentationMode: "embed" as const } : {})}
               isFocusedPane
               panelState={chatPanelState}
               onToggleDiff={handleToggleDiff}
@@ -1224,47 +1271,49 @@ export function SingleChatSurface(props: {
             ) : null}
           </ChatPaneBody>
         </KeptChatPane>
-        <RightDock
-          state={dockState}
-          minWidth={SINGLE_PANEL_MIN_WIDTH}
-          defaultWidth={DIFF_INLINE_DEFAULT_WIDTH}
-          widthStorageKey={`chat_right_dock_width:${props.threadId}`}
-          shouldAcceptWidth={shouldAcceptDockWidth}
-          addMenuKinds={availableDockPaneKinds}
-          launcherItems={dockLauncherItems}
-          motionKey={props.threadId}
-          activePaneRuntimeMode={
-            floatingBrowserVisible && activePane?.kind === "browser"
-              ? "preview"
-              : activePaneRuntimeMode
-          }
-          browserRuntimeMode={floatingBrowserVisible ? "preview" : "live"}
-          {...(paneLabelOverrides ? { paneLabelOverrides } : {})}
-          {...(paneIconOverrides ? { paneIconOverrides } : {})}
-          onSelectPane={handleSelectDockPane}
-          onClosePane={(paneId) => {
-            if (dockState.panes.find((pane) => pane.id === paneId)?.kind === "terminal") {
-              void closeDockTerminalPane({
-                hostThreadId: props.threadId,
-                paneId,
-                confirmationEnabled: appSettings.confirmTerminalTabClose,
+        {props.embedMode && !hasDeviceSupport ? null : (
+          <RightDock
+            state={presentedDockState}
+            minWidth={SINGLE_PANEL_MIN_WIDTH}
+            defaultWidth={DIFF_INLINE_DEFAULT_WIDTH}
+            widthStorageKey={`chat_right_dock_width:${props.threadId}`}
+            shouldAcceptWidth={shouldAcceptDockWidth}
+            addMenuKinds={availableDockPaneKinds}
+            launcherItems={dockLauncherItems}
+            motionKey={props.threadId}
+            activePaneRuntimeMode={
+              floatingBrowserVisible && activePane?.kind === "browser"
+                ? "preview"
+                : activePaneRuntimeMode
+            }
+            browserRuntimeMode={floatingBrowserVisible ? "preview" : "live"}
+            {...(paneLabelOverrides ? { paneLabelOverrides } : {})}
+            {...(paneIconOverrides ? { paneIconOverrides } : {})}
+            onSelectPane={handleSelectDockPane}
+            onClosePane={(paneId) => {
+              if (dockState.panes.find((pane) => pane.id === paneId)?.kind === "terminal") {
+                void closeDockTerminalPane({
+                  hostThreadId: props.threadId,
+                  paneId,
+                  confirmationEnabled: appSettings.confirmTerminalTabClose,
+                });
+                return;
+              }
+              if (dockState.panes.find((pane) => pane.id === paneId)?.kind !== "explorer") {
+                closePane(props.threadId, paneId);
+                return;
+              }
+              void flushWorkspaceEditors(queryClient, workspaceRoot).then((saved) => {
+                if (saved) closePane(props.threadId, paneId);
               });
-              return;
-            }
-            if (dockState.panes.find((pane) => pane.id === paneId)?.kind !== "explorer") {
-              closePane(props.threadId, paneId);
-              return;
-            }
-            void flushWorkspaceEditors(queryClient, workspaceRoot).then((saved) => {
-              if (saved) closePane(props.threadId, paneId);
-            });
-          }}
-          onMovePane={(paneId, overPaneId) => movePane(props.threadId, paneId, overPaneId)}
-          onCollapse={() => setDockOpen(props.threadId, false)}
-          onOpenChange={(open) => setDockOpen(props.threadId, open)}
-          onAddPane={handleAddDockPane}
-          renderPane={renderDockPane}
-        />
+            }}
+            onMovePane={(paneId, overPaneId) => movePane(props.threadId, paneId, overPaneId)}
+            onCollapse={() => setDockOpen(props.threadId, false)}
+            onOpenChange={(open) => setDockOpen(props.threadId, open)}
+            onAddPane={handleAddDockPane}
+            renderPane={renderDockPane}
+          />
+        )}
         <WorkspaceSearchPalette
           open={searchPaletteOpen}
           mode={searchPaletteMode}

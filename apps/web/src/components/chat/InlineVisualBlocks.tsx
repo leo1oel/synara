@@ -17,6 +17,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useRef, type CSSProperties, type ReactNode } from "react";
 
 import { useTheme } from "~/hooks/useTheme";
+import { t, useTranslation } from "~/i18n";
+import { isSynaraEmbedMode } from "~/embedMode";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -42,7 +44,6 @@ import { InlineVisualSurface, toneColor, toneTextClassName } from "./InlineVisua
 import { InlineVisualTable } from "./InlineVisualTable";
 import { decodeInlineVisualSpec, useInlineVisualState } from "./inlineVisualBlocks.logic";
 import { InlineVisualEmbedContext } from "./inlineVisualEmbedContext";
-import { useTranslation } from "~/i18n";
 
 export interface InlineVisualBlocksActions {
   /** Markdown links and file paths resolve against this. */
@@ -98,7 +99,14 @@ export function InlineVisualBlocks({
     );
   }
   if (spec === null) {
-    return <BlocksNotice title={visual.title} message={t("chat:thisVisualNeedsANewerSynara")} />;
+    return (
+      <BlocksNotice
+        title={visual.title}
+        message={t("lattice:thisVisualNeedsANewer", {
+          app: isSynaraEmbedMode() ? "Lattice" : "Synara",
+        })}
+      />
+    );
   }
   return (
     <figure

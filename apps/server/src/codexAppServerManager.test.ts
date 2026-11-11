@@ -4651,6 +4651,41 @@ describe("thread checkpoint control", () => {
     });
   });
 
+  it.each([1, 2, 3])(
+    "returns complete retained paginated history after reverting %i turns",
+    async (numTurns) => {
+      const { manager, context, sendRequest, updateSession } = createThreadControlHarness();
+      const original = [
+        { id: "native-a", items: [{ type: "userMessage", text: "keep first" }] },
+        { id: "native-b", items: [{ type: "userMessage", text: "edit middle" }] },
+        { id: "native-c", items: [{ type: "userMessage", text: "discard last" }] },
+      ];
+      const retained = original.slice(0, 3 - numTurns);
+      sendRequest.mockImplementation(
+        async (_context: unknown, method: unknown, params: unknown) => {
+          if (method === "thread/turns/list") {
+            const page = params as { itemsView: string; cursor?: string };
+            if (page.itemsView === "notLoaded") return { data: original.toReversed() };
+            return page.cursor
+              ? { data: retained.slice(1), nextCursor: null }
+              : { data: retained.slice(0, 1), nextCursor: retained.length > 1 ? "page-2" : null };
+          }
+          return { thread: { id: "thread_1", historyMode: "paginated", turns: [] } };
+        },
+      );
+      const result = await manager.rollbackThread(asThreadId("thread_1"), numTurns);
+      expect(sendRequest).toHaveBeenCalledWith(context, "thread/revert", {
+        threadId: "thread_1",
+        beforeTurnId: original[3 - numTurns]!.id,
+      });
+      expect(result.turns).toEqual(retained);
+      expect(updateSession).toHaveBeenCalledWith(context, {
+        status: "ready",
+        activeTurnId: undefined,
+      });
+    },
+  );
+
   it("pages history to find the revert boundary", async () => {
     const { manager, context, sendRequest } = createThreadControlHarness();
     sendRequest.mockImplementation(async (_context: unknown, method: unknown, params: unknown) => {
@@ -5044,6 +5079,42 @@ describe("thread checkpoint control", () => {
           state: "compacting",
         },
       }),
+    );
+  });
+});
+
+describe("setThreadName", () => {
+  it("names the live session's native thread", async () => {
+    const { manager, context, sendRequest } = createThreadControlHarness();
+    context.session.resumeCursor = { threadId: "native-thread-7" };
+    (manager as unknown as { sessions: Map<string, unknown> }).sessions.set("thread_1", context);
+    sendRequest.mockResolvedValue({});
+
+    await expect(manager.setThreadName(asThreadId("thread_1"), "Chapter 2 rewrite")).resolves.toBe(
+      true,
+    );
+
+    expect(sendRequest).toHaveBeenCalledWith(context, "thread/name/set", {
+      threadId: "native-thread-7",
+      name: "Chapter 2 rewrite",
+    });
+  });
+
+  it("sends nothing without a live session", async () => {
+    const { manager, sendRequest } = createThreadControlHarness();
+
+    await expect(manager.setThreadName(asThreadId("thread_1"), "Unused")).resolves.toBe(false);
+
+    expect(sendRequest).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a rejected request to its caller", async () => {
+    const { manager, context, sendRequest } = createThreadControlHarness();
+    (manager as unknown as { sessions: Map<string, unknown> }).sessions.set("thread_1", context);
+    sendRequest.mockRejectedValue(new Error("thread not loaded"));
+
+    await expect(manager.setThreadName(asThreadId("thread_1"), "Title")).rejects.toThrow(
+      "thread not loaded",
     );
   });
 });

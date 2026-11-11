@@ -1,8 +1,4 @@
-// FILE: MessagesTimeline.logic.ts
-// Purpose: Owns row derivation and localized labels used by the transcript hot path.
-// Layer: Web chat presentation helpers
-// Exports: row derivation, structural sharing, copy/timer helpers
-
+import { t } from "../../i18n";
 import {
   type InlineVisualActivityPayload,
   type MessageId,
@@ -11,7 +7,7 @@ import {
   type TurnId,
 } from "@synara/contracts";
 import { readInlineVisualEmbedIds } from "@synara/shared/inlineVisual";
-import { t } from "~/i18n";
+import { type TailUserMessageEditTarget } from "@synara/shared/conversationEdit";
 import { type TimelineEntry, type WorkLogEntry, formatElapsed } from "../../session-logic";
 import { isCodexRuntimeWarningType, type WorkLogUserInputExchangeItem } from "../../workLog";
 import { normalizeCompactToolLabel as normalizeCompactToolLabelValue } from "../../lib/toolCallLabel";
@@ -51,6 +47,31 @@ export function canSubmitUserMessageEdit(input: {
   disabled: boolean;
 }): boolean {
   return (input.allowEmpty || input.draft.trim().length > 0) && !input.disabled;
+}
+
+// Shown when a message edit stops being possible — the edit affordance and the
+// submit validators sample thread state at different moments, so the composer
+// can outlive its target's editability. The generic "latest rollbackable"
+// phrasing hid which of these actually happened.
+export function userMessageEditRejectionCopy(
+  reason: Extract<TailUserMessageEditTarget, { editable: false }>["reason"],
+  translate: typeof t = t,
+): string {
+  switch (reason) {
+    case "missing-message":
+      return translate("lattice:thisMessageIsNoLongerPartOf");
+    case "not-latest-native-user-message":
+      return translate("lattice:aNewerMessageHasBeenSentSince");
+    case "spans-multiple-turns":
+      return translate("lattice:theConversationHasMovedOnAcrossNewer");
+    case "missing-turn-metadata":
+      return translate("lattice:thisMessageSTurnCanNoLonger");
+    case "not-user-message":
+    case "non-native-message":
+      return translate("lattice:onlyYourOwnChatMessagesCanBe");
+    case "structured-answer":
+      return translate("lattice:structuredAnswersCanTBeEditedAnd");
+  }
 }
 
 // Ordered item folded into a settled turn's single turn header disclosure.
@@ -536,6 +557,7 @@ export function formatTurnResumedBy(
       description: only.description ?? translate("chat:backgroundTask"),
     });
   }
+  const count = resumedBy.length;
   const outcomes = new Set(resumedBy.map((item) => item.outcome));
   return translate(
     outcomes.size === 1

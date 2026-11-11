@@ -20,8 +20,8 @@ import {
 import { ProviderIcon } from "~/components/ProviderIcon";
 import { MenuTrigger } from "~/components/ui/menu";
 import {
-  serverAllProviderUsageQueryOptions,
   serverSettingsQueryOptions,
+  serverAllProviderUsageQueryOptions,
 } from "~/lib/serverReactQuery";
 
 import { resolveEnvironmentProviderUsageSummary } from "./EnvironmentUsageSection.logic";

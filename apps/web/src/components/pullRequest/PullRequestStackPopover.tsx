@@ -1,9 +1,4 @@
-// FILE: PullRequestStackPopover.tsx
-// Purpose: Compact stack position control plus a full bottom-to-top stack navigator for the
-//          pull request detail header. GitHub stack state stays visible without duplicating a
-//          second pull request surface.
-// Layer: Pull request presentation
-// Exports: PullRequestStackPopover
+import { t, useTranslation } from "~/i18n";
 
 import type { PullRequestStack } from "@synara/contracts";
 import { useState } from "react";
@@ -16,8 +11,7 @@ import { cn } from "~/lib/utils";
 
 import { PullRequestStateGlyph } from "./PullRequestStateGlyph";
 import { PullRequestStackPosition } from "./PullRequestStackPosition";
-import { assessPullRequestStack } from "./pullRequestStack.logic";
-import { useTranslation } from "~/i18n";
+import { assessPullRequestStack, localizeStackAssessmentLabel } from "./pullRequestStack.logic";
 
 const ASSESSMENT_COLOR_CLASS = {
   ready: "text-status-open",
@@ -69,11 +63,10 @@ export function PullRequestStackPopover({
       >
         <div className="border-b border-border px-4 py-3">
           <div className={cn("text-ui-lg font-medium", ASSESSMENT_COLOR_CLASS[assessment.tone])}>
-            {assessment.label}
+            {localizeStackAssessmentLabel(assessment.label)}
           </div>
           <div className="mt-0.5 text-ui leading-snug text-muted-foreground">
-            {t("git:stack")}
-            {stack.number} {t("git:targets")} {stack.baseBranch}
+            {t("lattice:stackTargets", { number: stack.number, branch: stack.baseBranch })}
           </div>
         </div>
 

@@ -12,6 +12,7 @@ import {
 import { type CSSProperties, type ReactNode } from "react";
 
 import { PlusIcon, StarFilledIcon } from "~/lib/icons";
+import { localizeProviderStatusMessage } from "~/lib/providerStatusMessages";
 import { cn } from "~/lib/utils";
 import { PROVIDER_ICON_COMPONENT_BY_PROVIDER } from "../ProviderIcon";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
@@ -27,7 +28,7 @@ import {
   type ProviderModelPickerInstance,
   resolveLiveProviderAvailability,
 } from "./ProviderModelPicker";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 function PickerTabButton(props: {
   label: string;
@@ -98,45 +99,71 @@ export type ComposerModelPickerProviderTab = {
   blocked: boolean;
   /** Shown in place of the model list when the account still has to be signed in or fixed. */
   setupMessage: string | null;
+  /** The account's status while its provider runtime still has to be installed. */
+  runtimeInstallStatus: ServerProviderStatus | null;
 };
 
 // Why an enabled account cannot run, phrased for its tab tooltip.
-function describeUnavailableAccount(label: string, status: ServerProviderStatus): string {
-  const reason =
+function describeUnavailableAccount(
+  translate: typeof t,
+  label: string,
+  status: ServerProviderStatus,
+  message: string | undefined,
+): string {
+  const summary =
     status.status === "error" || !status.available
-      ? "Unavailable"
+      ? translate("lattice:unavailable", { account: label })
       : status.status === "warning"
-        ? "Limited"
-        : "Not ready";
-  return [`${label} — ${reason}.`, status.message?.trim()].filter(Boolean).join(" ");
+        ? translate("lattice:limited", { account: label })
+        : translate("lattice:notReady", { account: label });
+  return [summary, message].filter(Boolean).join(" ");
 }
 
 function resolveAccountTabState(input: {
+  translate: typeof t;
   label: string;
   status: ServerProviderStatus | undefined;
   lockedToSibling: boolean;
-}): Pick<ComposerModelPickerProviderTab, "unavailableLabel" | "blocked" | "setupMessage"> {
-  const { label, status } = input;
+}): Pick<
+  ComposerModelPickerProviderTab,
+  "unavailableLabel" | "blocked" | "setupMessage" | "runtimeInstallStatus"
+> {
+  const { translate, label, status } = input;
   if (input.lockedToSibling) {
     return {
-      unavailableLabel: `${label} is unavailable in this thread. Start a new thread to switch accounts.`,
+      unavailableLabel: t("lattice:isUnavailableInThisThreadStartA", { account: label }),
       blocked: true,
       setupMessage: null,
+      runtimeInstallStatus: null,
     };
   }
   if (!resolveLiveProviderAvailability(status).disabled) {
-    return { unavailableLabel: null, blocked: false, setupMessage: null };
+    return {
+      unavailableLabel: null,
+      blocked: false,
+      setupMessage: null,
+      runtimeInstallStatus: null,
+    };
   }
   if (!status) {
-    return { unavailableLabel: `${label} — Checking.`, blocked: true, setupMessage: null };
+    return {
+      unavailableLabel: t("lattice:checking", { account: label }),
+      blocked: true,
+      setupMessage: null,
+      runtimeInstallStatus: null,
+    };
   }
+  const trimmedMessage = status.message?.trim();
+  const message =
+    trimmedMessage === undefined ? undefined : localizeProviderStatusMessage(t, trimmedMessage);
   return {
-    unavailableLabel: describeUnavailableAccount(label, status),
+    unavailableLabel: describeUnavailableAccount(t, label, status, message),
     blocked: false,
     setupMessage:
       status.authStatus === "unauthenticated"
-        ? "Open provider setup to sign in to this account."
-        : (status.message?.trim() ?? `${label} is unavailable right now.`),
+        ? t("lattice:openProviderSetupToSignInTo")
+        : (message ?? t("settings:providerUnavailableNow", { provider: label })),
+    runtimeInstallStatus: status.runtimeInstall ? status : null,
   };
 }
 
@@ -144,6 +171,7 @@ function resolveAccountTabState(input: {
 // another provider. A started thread stays on its account: siblings are listed but closed.
 // An account that still needs signing in stays openable and invites the user to set it up.
 export function resolveComposerModelPickerProviderTabs(input: {
+  translate: typeof t;
   options: ReadonlyArray<{ value: ProviderKind; label: string }>;
   providers: ReadonlyArray<ServerProviderStatus> | undefined;
   providerInstances?: ReadonlyArray<ProviderModelPickerInstance> | undefined;
@@ -180,6 +208,7 @@ export function resolveComposerModelPickerProviderTabs(input: {
           ];
     return tabs.map((tab) => {
       const state = resolveAccountTabState({
+        translate: input.translate,
         label: tab.label,
         status: findProviderStatusForInstance({
           providers: input.providers,
@@ -201,6 +230,7 @@ export function resolveComposerModelPickerProviderTabs(input: {
         unavailableLabel: state.unavailableLabel,
         blocked: state.blocked,
         setupMessage: state.setupMessage,
+        runtimeInstallStatus: state.runtimeInstallStatus,
       };
     });
   });

@@ -21,6 +21,12 @@ import type {
   LoadProjectImportHistoryResult,
   ImportProjectInput,
   ImportProjectResult,
+  ListFolderSessionsInput,
+  ListFolderSessionsResult,
+  OpenFolderSessionInput,
+  OpenFolderSessionResult,
+  GetNativeSessionHandoffInput,
+  NativeSessionHandoff,
   ListProjectImportsInput,
   ListProjectImportsResult,
 } from "./projectImport";
@@ -161,10 +167,14 @@ import type {
 import type {
   GitCheckoutInput,
   GitActionProgressEvent,
+  GitConnectGitHubRemoteInput,
+  GitConnectGitHubRemoteResult,
   GitWorktreeSetupProgressEvent,
   GitCreateBranchInput,
   GitCreateDetachedWorktreeInput,
   GitCreateDetachedWorktreeResult,
+  GitCreateGitHubRepositoryInput,
+  GitCreateGitHubRepositoryResult,
   GitHubRepositoryInput,
   GitHubRepositoryResult,
   GitHandoffThreadInput,
@@ -203,8 +213,12 @@ import type {
   GitStashInfoResult,
   GitStatusInput,
   GitStatusResult,
+  GitBranchPullRequestInput,
+  GitBranchPullRequestResult,
   GitSummarizeDiffInput,
   GitSummarizeDiffResult,
+  GitGenerateCommitMessageInput,
+  GitGenerateCommitMessageResult,
   GitUnstageFilesInput,
   GitUnstageFilesResult,
 } from "./git";
@@ -347,7 +361,9 @@ import type {
   ServerListLocalServersResult,
   ServerListWorktreesResult,
   ServerProviderUpdateInput,
+  ServerInstallProviderRuntimeInput,
   ServerProviderUpdateResult,
+  ServerRefreshProvidersInput,
   ServerRefreshProvidersResult,
   ServerStopLocalServerInput,
   ServerStopLocalServerResult,
@@ -385,6 +401,8 @@ import type {
   OrchestrationImportThreadResult,
   OrchestrationRegenerateThreadTitleInput,
   OrchestrationRegenerateThreadTitleResult,
+  OrchestrationShowPanelThreadInput,
+  OrchestrationShowPanelThreadResult,
   OrchestrationListProviderDeliveryBlockersInput,
   OrchestrationListProviderDeliveryBlockersResult,
   OrchestrationReconcileProviderDeliveryInput,
@@ -410,6 +428,10 @@ import type {
   ProviderListAgentsResult,
   ProviderListCommandsInput,
   ProviderListCommandsResult,
+  ProviderListMcpServersInput,
+  ProviderListMcpServersResult,
+  ProviderMcpServerActionInput,
+  ProviderMcpServerActionResult,
   ProviderListModelsInput,
   ProviderListModelsResult,
   ProviderListPluginsInput,
@@ -418,6 +440,18 @@ import type {
   ProviderListSkillsResult,
   ProviderSkillsCatalogInput,
   ProviderSkillsCatalogResult,
+  ProviderImportSkillInput,
+  ProviderImportSkillResult,
+  ProviderReadManagedSkillInput,
+  ProviderManagedSkillDetail,
+  ProviderSaveManagedSkillInput,
+  ProviderSaveManagedSkillResult,
+  ProviderDuplicateManagedSkillInput,
+  ProviderDuplicateManagedSkillResult,
+  ProviderRemoveManagedSkillInput,
+  ProviderRemoveManagedSkillResult,
+  ProviderRestoreManagedSkillInput,
+  ProviderRestoreManagedSkillResult,
   ProviderReadPluginInput,
   ProviderReadPluginResult,
 } from "./providerDiscovery";
@@ -1351,6 +1385,12 @@ export interface NativeApi {
     stashInfo: (input: GitStashInfoInput) => Promise<GitStashInfoResult>;
     removeIndexLock: (input: GitRemoveIndexLockInput) => Promise<void>;
     init: (input: GitInitInput) => Promise<void>;
+    connectGitHubRemote: (
+      input: GitConnectGitHubRemoteInput,
+    ) => Promise<GitConnectGitHubRemoteResult>;
+    createGitHubRepository: (
+      input: GitCreateGitHubRepositoryInput,
+    ) => Promise<GitCreateGitHubRepositoryResult>;
     stageFiles: (input: GitStageFilesInput) => Promise<GitStageFilesResult>;
     unstageFiles: (input: GitUnstageFilesInput) => Promise<GitUnstageFilesResult>;
     handoffThread: (input: GitHandoffThreadInput) => Promise<GitHandoffThreadResult>;
@@ -1364,6 +1404,7 @@ export interface NativeApi {
     // Stacked action API
     pull: (input: GitPullInput) => Promise<GitPullResult>;
     status: (input: GitStatusInput) => Promise<GitStatusResult>;
+    branchPullRequest: (input: GitBranchPullRequestInput) => Promise<GitBranchPullRequestResult>;
     readWorkingTreeDiff: (
       input: GitReadWorkingTreeDiffInput,
     ) => Promise<GitReadWorkingTreeDiffResult>;
@@ -1373,6 +1414,9 @@ export interface NativeApi {
     ) => Promise<GitWorkingTreeDiffStatsResult>;
     blameLine: (input: GitBlameLineInput) => Promise<GitBlameLineResult>;
     summarizeDiff: (input: GitSummarizeDiffInput) => Promise<GitSummarizeDiffResult>;
+    generateCommitMessage: (
+      input: GitGenerateCommitMessageInput,
+    ) => Promise<GitGenerateCommitMessageResult>;
     runStackedAction: (input: GitRunStackedActionInput) => Promise<GitRunStackedActionResult>;
     onActionProgress: (callback: (event: GitActionProgressEvent) => void) => () => void;
     onWorktreeSetupProgress: (
@@ -1437,8 +1481,13 @@ export interface NativeApi {
       input: McpConnectorDisconnectInput,
     ) => Promise<McpConnectorDisconnectResult>;
     getMcpConnectorSetup: () => Promise<McpConnectorSetup>;
-    refreshProviders: () => Promise<ServerRefreshProvidersResult>;
+    refreshProviders: (
+      input?: ServerRefreshProvidersInput,
+    ) => Promise<ServerRefreshProvidersResult>;
     updateProvider: (input: ServerProviderUpdateInput) => Promise<ServerProviderUpdateResult>;
+    installProviderRuntime: (
+      input: ServerInstallProviderRuntimeInput,
+    ) => Promise<ServerProviderUpdateResult>;
     listWorktrees: () => Promise<ServerListWorktreesResult>;
     listLocalServers: () => Promise<ServerListLocalServersResult>;
     stopLocalServer: (input: ServerStopLocalServerInput) => Promise<ServerStopLocalServerResult>;
@@ -1481,8 +1530,26 @@ export interface NativeApi {
     ) => Promise<ProviderComposerCapabilities>;
     compactThread: (input: ProviderCompactThreadInput) => Promise<void>;
     listCommands: (input: ProviderListCommandsInput) => Promise<ProviderListCommandsResult>;
+    listMcpServers: (input: ProviderListMcpServersInput) => Promise<ProviderListMcpServersResult>;
+    runMcpServerAction: (
+      input: ProviderMcpServerActionInput,
+    ) => Promise<ProviderMcpServerActionResult>;
     listSkills: (input: ProviderListSkillsInput) => Promise<ProviderListSkillsResult>;
     listSkillsCatalog: (input: ProviderSkillsCatalogInput) => Promise<ProviderSkillsCatalogResult>;
+    importSkill: (input: ProviderImportSkillInput) => Promise<ProviderImportSkillResult>;
+    readManagedSkill: (input: ProviderReadManagedSkillInput) => Promise<ProviderManagedSkillDetail>;
+    saveManagedSkill: (
+      input: ProviderSaveManagedSkillInput,
+    ) => Promise<ProviderSaveManagedSkillResult>;
+    duplicateManagedSkill: (
+      input: ProviderDuplicateManagedSkillInput,
+    ) => Promise<ProviderDuplicateManagedSkillResult>;
+    removeManagedSkill: (
+      input: ProviderRemoveManagedSkillInput,
+    ) => Promise<ProviderRemoveManagedSkillResult>;
+    restoreManagedSkill: (
+      input: ProviderRestoreManagedSkillInput,
+    ) => Promise<ProviderRestoreManagedSkillResult>;
     listPlugins: (input: ProviderListPluginsInput) => Promise<ProviderListPluginsResult>;
     readPlugin: (input: ProviderReadPluginInput) => Promise<ProviderReadPluginResult>;
     listModels: (input: ProviderListModelsInput) => Promise<ProviderListModelsResult>;
@@ -1503,12 +1570,18 @@ export interface NativeApi {
     ) => Promise<OrchestrationImportThreadResult>;
     listProjectImports: (input: ListProjectImportsInput) => Promise<ListProjectImportsResult>;
     importProject: (input: ImportProjectInput) => Promise<ImportProjectResult>;
+    listFolderSessions: (input: ListFolderSessionsInput) => Promise<ListFolderSessionsResult>;
+    openFolderSession: (input: OpenFolderSessionInput) => Promise<OpenFolderSessionResult>;
+    getNativeSessionHandoff: (input: GetNativeSessionHandoffInput) => Promise<NativeSessionHandoff>;
     loadProjectImportHistory: (
       input: LoadProjectImportHistoryInput,
     ) => Promise<LoadProjectImportHistoryResult>;
     regenerateThreadTitle: (
       input: OrchestrationRegenerateThreadTitleInput,
     ) => Promise<OrchestrationRegenerateThreadTitleResult>;
+    showPanelThread: (
+      input: OrchestrationShowPanelThreadInput,
+    ) => Promise<OrchestrationShowPanelThreadResult>;
     repairState: () => Promise<OrchestrationReadModel>;
     getTurnDiff: (input: OrchestrationGetTurnDiffInput) => Promise<OrchestrationGetTurnDiffResult>;
     getFullThreadDiff: (

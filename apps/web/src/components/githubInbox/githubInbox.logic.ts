@@ -557,10 +557,3 @@ export function inboxErrorsInScope(
 ): GitHubInboxListError[] {
   return errors.filter((error) => inProjectScope([error.projectId], filters.projectIds));
 }
-
-/** How the list names what it holds, for empty states and notes. */
-export function githubInboxItemNoun(kind: GitHubInboxKindFilter): string {
-  if (kind === "pullRequest") return "pull requests";
-  if (kind === "issue") return "issues";
-  return "pull requests and issues";
-}

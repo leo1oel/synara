@@ -4,6 +4,7 @@ import {
   type MessageId,
   type ModelSelection,
   type OrchestrationShellSnapshot,
+  type ProviderInstanceId,
   type ProviderInteractionMode,
   type ProviderKind,
   type ProviderNativeCommandDescriptor,
@@ -29,8 +30,10 @@ import {
   parseFastSlashCommandAction,
   parseForkSlashCommandArgs,
   parseGoalSlashCommandArgs,
+  parseMcpSlashCommandArgs,
   parseSideSlashCommandArgs,
   type ForkSlashCommandTarget,
+  type McpSlashCommandAction,
 } from "../composerSlashCommands";
 import { resolveThreadHandoffModelSelection } from "../lib/threadHandoff";
 import { toastManager } from "../components/ui/toast";
@@ -98,6 +101,7 @@ export function useComposerSlashCommands(input: {
   providerNativeCommands: readonly ProviderNativeCommandDescriptor[];
   providerCommandDiscoveryCwd: string | null;
   selectedProvider: ProviderKind;
+  selectedProviderInstanceId: ProviderInstanceId | null;
   currentProviderModelOptions: ProviderModelOptions[ProviderKind] | undefined;
   selectedModelSelection: ModelSelection;
   environmentMode: string | null;
@@ -136,6 +140,7 @@ export function useComposerSlashCommands(input: {
   const { t, formatLocale } = useTranslation();
 
   const [isSlashStatusDialogOpen, setIsSlashStatusDialogOpen] = useState(false);
+  const [isMcpDialogOpen, setIsMcpDialogOpen] = useState(false);
   const openGlobalFeedbackDialog = useFeedbackDialogStore((state) => state.openDialog);
   const {
     activeProject,
@@ -153,6 +158,7 @@ export function useComposerSlashCommands(input: {
     providerNativeCommands,
     providerCommandDiscoveryCwd,
     selectedProvider,
+    selectedProviderInstanceId,
     currentProviderModelOptions,
     selectedModelSelection,
     environmentMode,
@@ -896,6 +902,89 @@ export function useComposerSlashCommands(input: {
     selectedProvider,
   ]);
 
+  // The app runs `/mcp reconnect|enable|disable` itself: Claude Code drops a
+  // slash command's arguments in a Synara session (it answers `"" isn't a
+  // recognized /mcp action`), and Codex has no `/mcp`. Without a server name
+  // the action applies to every server that offers it, as Claude Code's own
+  // `/mcp` does.
+  const runMcpSlashServerAction = useCallback(
+    async (action: Extract<McpSlashCommandAction, { kind: "server-action" }>) => {
+      const api = readNativeApi();
+      if (!api || !providerCommandDiscoveryCwd) {
+        setIsMcpDialogOpen(true);
+        return;
+      }
+      const target = {
+        provider: selectedProvider,
+        ...(selectedProviderInstanceId ? { instanceId: selectedProviderInstanceId } : {}),
+        cwd: providerCommandDiscoveryCwd,
+        threadId,
+      };
+      let failure: unknown = null;
+      let serverNames: string[] = action.serverName === null ? [] : [action.serverName];
+      if (action.serverName === null) {
+        try {
+          const listed = await api.provider.listMcpServers(target);
+          serverNames = listed.servers
+            .filter((server) => server.actions.includes(action.action))
+            .map((server) => server.name);
+        } catch (error) {
+          failure = error;
+        }
+      }
+      const count = serverNames.length;
+      // Codex reloads every server in one request.
+      const requests =
+        selectedProvider === "codex" && action.action === "reconnect"
+          ? serverNames.slice(0, 1)
+          : serverNames;
+      for (const serverName of requests) {
+        try {
+          await api.provider.runMcpServerAction({ ...target, serverName, action: action.action });
+        } catch (error) {
+          failure = error;
+        }
+      }
+      const server = action.serverName ?? "";
+      const doneTitle =
+        action.serverName === null
+          ? action.action === "reconnect"
+            ? t("lattice:reconnectedMCPServers", { count })
+            : action.action === "enable"
+              ? t("lattice:enabledMCPServers", { count })
+              : t("lattice:disabledMCPServers", { count })
+          : action.action === "reconnect"
+            ? t("lattice:reconnected", { server })
+            : action.action === "enable"
+              ? t("lattice:enabled", { server })
+              : t("lattice:disabled", { server });
+      if (failure !== null) {
+        toastManager.add({
+          type: "error",
+          title:
+            action.serverName === null
+              ? t("lattice:couldNotUpdateEveryMCPServer")
+              : t("settings:couldNotUpdate", { value0: server }),
+          description:
+            failure instanceof Error
+              ? failure.message
+              : t("lattice:theAgentDidNotAcceptTheRequest"),
+        });
+        return;
+      }
+      if (count === 0) {
+        toastManager.add({
+          type: "info",
+          title: t("lattice:noMCPServerToChange"),
+          description: t("lattice:sendMcpToSeeThisAgentS"),
+        });
+        return;
+      }
+      toastManager.add({ type: "success", title: doneTitle });
+    },
+    [providerCommandDiscoveryCwd, selectedProvider, selectedProviderInstanceId, t, threadId],
+  );
+
   const handleStandaloneSlashCommand = useCallback(
     async (trimmed: string): Promise<boolean> => {
       const fastSlashAction = parseFastSlashCommandAction(trimmed);
@@ -946,6 +1035,25 @@ export function useComposerSlashCommands(input: {
       if (slashInvocation.command === "status") {
         editorActions.clearComposerSlashDraft();
         setIsSlashStatusDialogOpen(true);
+        return true;
+      }
+      if (slashInvocation.command === "mcp") {
+        const mcpAction = parseMcpSlashCommandArgs(slashInvocation.args);
+        if (mcpAction.kind === "invalid") {
+          // Keep the draft so the action can be corrected in place.
+          toastManager.add({
+            type: "warning",
+            title: t("lattice:unknownMcpAction"),
+            description: t("lattice:isNotAnMcpActionSendMcp", { action: mcpAction.action }),
+          });
+          return true;
+        }
+        editorActions.clearComposerSlashDraft();
+        if (mcpAction.kind === "view") {
+          setIsMcpDialogOpen(true);
+        } else {
+          await runMcpSlashServerAction(mcpAction);
+        }
         return true;
       }
       if (slashInvocation.command === "goal") {
@@ -1140,6 +1248,7 @@ export function useComposerSlashCommands(input: {
       runExportSlashCommand,
       runFastSlashCommand,
       runGoalSlashCommand,
+      runMcpSlashServerAction,
       runRenameSlashCommand,
       t,
     ],
@@ -1249,11 +1358,15 @@ export function useComposerSlashCommands(input: {
         return;
       }
 
-      if (item.command === "status") {
+      if (item.command === "status" || item.command === "mcp") {
         const applied = clearSlashCommandFromComposer();
         if (wasPromptReplacementApplied(applied)) {
           editorActions.setComposerHighlightedItemId(null);
-          setIsSlashStatusDialogOpen(true);
+          if (item.command === "status") {
+            setIsSlashStatusDialogOpen(true);
+          } else {
+            setIsMcpDialogOpen(true);
+          }
           editorActions.scheduleComposerFocus();
         }
         return;
@@ -1380,6 +1493,8 @@ export function useComposerSlashCommands(input: {
     handleReviewTargetSelection,
     isSlashStatusDialogOpen,
     setIsSlashStatusDialogOpen,
+    isMcpDialogOpen,
+    setIsMcpDialogOpen,
     handleStandaloneSlashCommand,
     handleSlashCommandSelection,
     clearThreadGoal,

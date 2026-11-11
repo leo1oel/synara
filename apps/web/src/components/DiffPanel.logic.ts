@@ -1,3 +1,4 @@
+import { t } from "~/i18n";
 // FILE: DiffPanel.logic.ts
 // Purpose: Resolve the thread context the diff panel should use across server-backed and local draft chats.
 // Exports: resolveDiffPanelThread, diff view source helpers
@@ -175,6 +176,23 @@ export function resolveDiffPanelViewSource(input: {
     return { kind: "turn", turnId: input.selectedTurnId };
   }
   return { kind: "repo", scope: input.repoDiffScope };
+}
+
+// The scope labels are English data (comparisons, lower-casing); translate them only for display.
+const DIFF_SCOPE_LABEL_KEYS: Readonly<Record<string, string>> = {
+  "Turn diff": "lattice:turnDiff",
+  "Last turn": "common:diff_lastTurn",
+  "All turns": "common:diff_allTurns",
+  "Working tree": "lattice:workingTree",
+  Unstaged: "lattice:unstaged",
+  Staged: "git:gitPanel_staged",
+  Branch: "common:sessionStatus_branch",
+  "Compare with": "common:compareWith",
+};
+
+export function localizeDiffScopeLabel(label: string, translate: typeof t = t): string {
+  const key = DIFF_SCOPE_LABEL_KEYS[label];
+  return key ? translate(key) : label;
 }
 
 export function resolveDiffPanelPickerLabel(

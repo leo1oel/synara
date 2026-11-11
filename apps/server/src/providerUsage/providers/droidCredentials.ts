@@ -140,30 +140,37 @@ export async function resolveDroidLocalCredential(
       if (!(await fileExists(path))) continue;
       const contents = await readCredentialFile(path);
       if (!contents) return { credential: null, localLoginPresent: true };
-      let key: Buffer | null;
-      if (layout.source === "keyfile") {
-        const text = await readCredentialFile(nodePath.join(factoryHome, "auth.v2.key"));
-        key = text ? decodeEncryptionKey(text) : null;
-      } else {
-        const text = options.readSecureKey ? null : await readDroidSecureKey(ctx, layout.source);
-        key = options.readSecureKey
-          ? await options.readSecureKey(factoryHome, layout.source)
-          : text
-            ? decodeEncryptionKey(text)
-            : null;
+      const source = layout.source;
+      // A rewritten credential file may be a new login: a remembered absent key is re-checked.
+      const generation = credentialFingerprint(contents);
+      const readKey = async (reread: boolean): Promise<Buffer | null> => {
+        if (source === "keyfile") {
+          const text = await readCredentialFile(nodePath.join(factoryHome, "auth.v2.key"));
+          return text ? decodeEncryptionKey(text) : null;
+        }
+        if (options.readSecureKey) return options.readSecureKey(factoryHome, source);
+        const text = await readDroidSecureKey(ctx, source, { generation, reread, refresh: ctx });
+        return text ? decodeEncryptionKey(text) : null;
+      };
+      const decrypt = (key: Buffer | null): DroidCredential | null => {
+        if (!key) return null;
+        try {
+          return parseDroidCredential(decryptDroidCredentialFile(contents, key), source);
+        } finally {
+          key.fill(0);
+        }
+      };
+      let credential = decrypt(await readKey(false));
+      // A remembered Keychain key that no longer opens the file was replaced by a re-login.
+      if (
+        !credential &&
+        ctx.platform === "darwin" &&
+        source !== "keyfile" &&
+        !options.readSecureKey
+      ) {
+        credential = decrypt(await readKey(true));
       }
-      if (!key) return { credential: null, localLoginPresent: true };
-      try {
-        return {
-          credential: parseDroidCredential(
-            decryptDroidCredentialFile(contents, key),
-            layout.source,
-          ),
-          localLoginPresent: true,
-        };
-      } finally {
-        key.fill(0);
-      }
+      return { credential, localLoginPresent: true };
     } catch {
       return { credential: null, localLoginPresent: true };
     }

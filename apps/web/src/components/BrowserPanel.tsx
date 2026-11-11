@@ -98,7 +98,7 @@ import { Menu, MenuItem, MenuSeparator, MenuTrigger } from "./ui/menu";
 import { Skeleton } from "./ui/skeleton";
 import { toastManager } from "./ui/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
-import { useTranslation } from "~/i18n";
+import { useTranslation, t } from "~/i18n";
 
 interface BrowserPanelProps {
   mode: DiffPanelMode;
@@ -547,7 +547,7 @@ function BrowserLocalServersHome({
             {loading ? (
               <>
                 <RefreshCwIcon className="mb-4 size-12 animate-spin text-white/20" />
-                <p className="text-base font-semibold text-white">
+                <p className="text-ui-lg font-semibold text-white">
                   {t("computer:panel_scanningLocalServers")}
                 </p>
                 <p className="mt-2 text-ui leading-snug text-white/35">
@@ -557,7 +557,7 @@ function BrowserLocalServersHome({
             ) : (
               <>
                 <GlobeIcon className="mb-4 size-16 stroke-[1.5] text-white/30" />
-                <p className="text-base font-semibold text-white">
+                <p className="text-ui-lg font-semibold text-white">
                   {t("computer:panel_noLocalServers")}
                 </p>
                 <p className="mt-2 text-ui leading-snug text-white/35">

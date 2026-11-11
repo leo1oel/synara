@@ -90,6 +90,7 @@ import {
   type DiffPanelRepoScopeOption,
   type DiffPanelTurnScopeIntent,
   type DiffViewKind,
+  localizeDiffScopeLabel,
 } from "./DiffPanel.logic";
 import { resolveDraftFallbackModelSelection } from "./ChatView.logic";
 import { DiffPanelChangeMarkers } from "./DiffPanelChangeMarkers";
@@ -230,7 +231,9 @@ function EditorDiffOptionsMenu(props: {
           >
             {DIFF_PANEL_PICKER_SCOPE_OPTIONS.map((scope) => (
               <MenuRadioItem key={scope} value={scope}>
-                <span className="min-w-0 flex-1 truncate">{REPO_DIFF_SCOPE_LABELS[scope]}</span>
+                <span className="min-w-0 flex-1 truncate">
+                  {localizeDiffScopeLabel(REPO_DIFF_SCOPE_LABELS[scope])}
+                </span>
                 <EditorDiffOptionsCountBadge count={props.scopeFileCounts[scope]} />
               </MenuRadioItem>
             ))}

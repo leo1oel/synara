@@ -1,10 +1,14 @@
 import "../../index.css";
 
+import { TurnId } from "@synara/contracts";
 import { formatProviderDeliveryBlockDetail } from "@synara/shared/providerDeliveryBlock";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
+import { setLanguagePreference } from "~/i18n";
+import { makeActivity } from "~/storeTestFixtures";
+import { deriveWorkLogEntries } from "~/workLog";
 import { ThreadErrorBanner } from "./ThreadErrorBanner";
 
 const LONG_ERROR = [
@@ -125,5 +129,54 @@ describe("ThreadErrorBanner", () => {
     await page.getByRole("button", { name: "Dismiss error" }).click();
     expect(onDismiss).toHaveBeenCalledTimes(1);
     expect(onUnblock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("ThreadErrorBanner for a Claude Code exit", () => {
+  afterEach(() => {
+    setLanguagePreference("en");
+    vi.restoreAllMocks();
+  });
+
+  // A writer who could only copy "Claude Code process exited with code 1" had
+  // nothing to report. The card shows the next step even when its text is
+  // clamped in a narrow panel, and Copy error carries the reason and the step.
+  it("shows the next step in a narrow panel and copies it with the reason", async () => {
+    setLanguagePreference("zh-CN");
+    const turnId = TurnId.makeUnsafe("claude-exit-turn");
+    const reason =
+      "Claude Code process exited with code 1: error: unknown option '--setting-sources=user,project,local'";
+    const [entry] = deriveWorkLogEntries(
+      [
+        makeActivity({
+          id: "claude-exit-error",
+          turnId,
+          sequence: 2,
+          kind: "runtime.error",
+          tone: "error",
+          summary: "Provider runtime error",
+          payload: { message: reason, class: "provider_error", errorCode: "claude_cli_outdated" },
+        }),
+      ],
+      turnId,
+    );
+    const failure = entry!.turnFailure!;
+    const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue();
+    await render(
+      <div style={{ width: 240 }}>
+        <ThreadErrorBanner
+          title="任务已中断"
+          error={failure.message}
+          nextStep={failure.nextStep!}
+        />
+      </div>,
+    );
+    const nextStep =
+      "你安装的 Claude Code 版本太旧，在这里运行不了。请在终端运行 `claude update`（或重装 Claude Code），然后重试。";
+    await expect.element(page.getByText(nextStep, { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "复制 错误", exact: true }).click();
+    expect(writeText).toHaveBeenCalledExactlyOnceWith(
+      `任务因提供商错误而中断，工作尚未完成。${reason}\n${nextStep}`,
+    );
   });
 });

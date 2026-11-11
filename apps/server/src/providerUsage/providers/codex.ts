@@ -132,8 +132,13 @@ async function reloadCodexAuth(
       ? asRecord(await readJsonFile(source.path))
       : asRecord(
           decodeKeychainJson(
-            (await readKeychainPassword({ service: KEYCHAIN_SERVICE, platform: ctx.platform })) ??
-              "",
+            // Only reached for a stale or rejected token: re-read the Keychain once.
+            (await readKeychainPassword({
+              service: KEYCHAIN_SERVICE,
+              platform: ctx.platform,
+              reread: true,
+              refresh: ctx,
+            })) ?? "",
           ),
         );
   const parsed = readCodexAuthRecord(record, source);
@@ -158,6 +163,7 @@ async function resolveCodexAuth(ctx: ProviderUsageContext): Promise<CodexAuth | 
     : await readKeychainPassword({
         service: KEYCHAIN_SERVICE,
         platform: ctx.platform,
+        refresh: ctx,
       });
   if (keychain) {
     const parsed = readCodexAuthRecord(asRecord(decodeKeychainJson(keychain)), {

@@ -1,0 +1,8 @@
+{
+  "name": "@synara/provider-runtime-opencode",
+  "private": true,
+  "dependencies": {
+    "@opencode-ai/sdk": "1.18.31",
+    "@opencode/client": "2.0.25"
+  }
+}

@@ -32,6 +32,16 @@ export interface ComposerSlashInvocation {
 
 export type FastSlashCommandAction = "toggle" | "on" | "off" | "status" | "invalid";
 export type ForkSlashCommandTarget = "local" | "worktree";
+export type McpSlashCommandServerAction = "reconnect" | "enable" | "disable";
+export type McpSlashCommandAction =
+  | { readonly kind: "view" }
+  // A null server applies the action to every server, as Claude Code's own `/mcp` does.
+  | {
+      readonly kind: "server-action";
+      readonly action: McpSlashCommandServerAction;
+      readonly serverName: string | null;
+    }
+  | { readonly kind: "invalid"; readonly action: string };
 export type GoalSlashCommandAction =
   | { readonly action: "show" }
   | { readonly action: "clear" }
@@ -107,6 +117,9 @@ function shouldKeepBuiltInSlashCommandDespiteNativeCollision(
     // "fork" text command cannot do.
     command === "fork" ||
     command === "goal" ||
+    // Claude Code's headless `/mcp` has no server view and loses its arguments
+    // in a Synara session, so the app runs the view and the subcommands.
+    command === "mcp" ||
     command === "rename" ||
     (providerUsesAppOwnedReviewSlashCommand(provider) && command === "review")
   );
@@ -128,6 +141,7 @@ export function shouldHideProviderNativeCommandFromComposerMenu(
     (normalizedCommand === "feedback" && appCommandIsAvailable) ||
     (normalizedCommand === "fork" && appCommandIsAvailable) ||
     (normalizedCommand === "goal" && appCommandIsAvailable) ||
+    (normalizedCommand === "mcp" && appCommandIsAvailable) ||
     (normalizedCommand === "rename" && appCommandIsAvailable) ||
     (providerUsesAppOwnedReviewSlashCommand(provider) && normalizedCommand === "review")
   );
@@ -270,7 +284,44 @@ const COMPOSER_SLASH_COMMAND_DEFINITIONS: Record<
     description: "Create a scheduled automation from this prompt",
     source: "app",
   },
+  mcp: {
+    command: "mcp",
+    label: "/mcp",
+    description: "Show this agent's MCP servers, sign in, reconnect, or turn them off",
+    source: "app",
+  },
 };
+
+/** Providers whose runtime reports and manages its own MCP servers. */
+export function providerSupportsMcpSlashCommand(provider: ProviderKind): boolean {
+  return provider === "claudeAgent" || provider === "codex";
+}
+
+const MCP_SLASH_COMMAND_SERVER_ACTIONS: ReadonlySet<string> = new Set([
+  "reconnect",
+  "enable",
+  "disable",
+]);
+
+// `/mcp` alone (or with only whitespace) opens the server view; the
+// subcommands match Claude Code's own `/mcp [reconnect|enable|disable [<server>|all]]`.
+export function parseMcpSlashCommandArgs(args: string): McpSlashCommandAction {
+  const trimmed = args.trim();
+  if (!trimmed) {
+    return { kind: "view" };
+  }
+  const [first = "", ...rest] = trimmed.split(/\s+/);
+  const action = first.toLowerCase();
+  if (!MCP_SLASH_COMMAND_SERVER_ACTIONS.has(action)) {
+    return { kind: "invalid", action: first };
+  }
+  const target = rest.join(" ").trim();
+  return {
+    kind: "server-action",
+    action: action as McpSlashCommandServerAction,
+    serverName: target && target.toLowerCase() !== "all" ? target : null,
+  };
+}
 
 export function isBuiltInComposerSlashCommand(value: string): value is ComposerSlashCommand {
   return isBuiltInComposerSlashCommandName(value);
@@ -520,6 +571,7 @@ export function getAvailableComposerSlashCommands(input: {
           "rename",
           "feedback",
           "automation",
+          ...(providerSupportsMcpSlashCommand(input.provider) ? (["mcp"] as const) : []),
         ]
       : [
           // Claude owns most slash-command UX natively; sidechat remains app-level because it
@@ -538,6 +590,7 @@ export function getAvailableComposerSlashCommands(input: {
           "default",
           "feedback",
           "automation",
+          "mcp",
         ];
   return availableCommands.filter((command) => !collidingNativeCommandNames.has(command));
 }

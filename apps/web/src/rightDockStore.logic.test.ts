@@ -9,6 +9,7 @@ import {
   movePaneInState,
   openPaneInState,
   resolveVisibleDockSidechatThreadIds,
+  restrictRightDockStateToKinds,
   sanitizeRightDockStateByThreadId,
   sanitizeRightDockThreadState,
   setDockOpenInState,
@@ -22,6 +23,33 @@ describe("isRightDockPaneKind", () => {
     expect(isRightDockPaneKind(undefined)).toBe(false);
     expect(isRightDockPaneKind(null)).toBe(false);
     expect(isRightDockPaneKind(42)).toBe(false);
+  });
+});
+
+describe("restrictRightDockStateToKinds", () => {
+  it("keeps only the embedded host's allowed device pane", () => {
+    const withFile = openPaneInState(createDefaultRightDockState(), {
+      paneId: "file-1",
+      kind: "file",
+      filePath: "src/page.tsx",
+    });
+    const withDevice = openPaneInState(withFile, { paneId: "device-1", kind: "device" });
+    const restricted = restrictRightDockStateToKinds(withDevice, new Set(["device"]));
+
+    expect(restricted.open).toBe(true);
+    expect(restricted.panes.map((pane) => pane.kind)).toEqual(["device"]);
+    expect(restricted.activePaneId).toBe("device-1");
+  });
+
+  it("retains an open empty launcher when every persisted pane is forbidden", () => {
+    const withFile = openPaneInState(createDefaultRightDockState(), {
+      paneId: "file-1",
+      kind: "file",
+      filePath: "src/page.tsx",
+    });
+    const restricted = restrictRightDockStateToKinds(withFile, new Set(["device"]));
+
+    expect(restricted).toMatchObject({ open: true, panes: [], activePaneId: null });
   });
 });
 

@@ -164,6 +164,8 @@ export function resolveExecutionResource(resource: RemoteResource): string {
 // relative path never reaches the server. We mirror the WS host and forward the legacy token
 // query param so authenticated GET routes (attachments, local-image, …) can authorize the
 // request without touching cookies.
+import { readEmbeddedHostWsUrl } from "../embedMode";
+
 export function resolveWsHttpUrl(
   rawPath: string,
   options: { readonly requireBackend?: boolean } = {},
@@ -172,13 +174,16 @@ export function resolveWsHttpUrl(
   if (readExecutionContext()?.remote)
     throw new Error("Remote execution resources must use a typed reference");
   const bridgeWsUrl = window.desktopBridge?.getWsUrl?.();
+  const embeddedHostWsUrl = readEmbeddedHostWsUrl();
   const envWsUrl = import.meta.env.VITE_WS_URL as string | undefined;
   const wsCandidate =
     typeof bridgeWsUrl === "string" && bridgeWsUrl.length > 0
       ? bridgeWsUrl
-      : typeof envWsUrl === "string" && envWsUrl.length > 0
-        ? envWsUrl
-        : null;
+      : embeddedHostWsUrl
+        ? embeddedHostWsUrl
+        : typeof envWsUrl === "string" && envWsUrl.length > 0
+          ? envWsUrl
+          : null;
   // A mutation must not POST to the packaged app document when its backend
   // disappears. GET callers can still render while that backend reconnects;
   // the desktop protocol refuses their API paths instead of serving the SPA.

@@ -203,3 +203,44 @@ export function countTextFileLines(contents: Uint8Array): number {
 
   return contents.at(-1) === 10 ? lineFeeds : lineFeeds + 1;
 }
+
+export interface GitNameStatusEntry {
+  readonly path: string;
+  readonly previousPath?: string;
+  readonly status: "added" | "modified" | "deleted" | "renamed";
+}
+
+/**
+ * Parse `git diff --name-status -z`. Paths arrive raw (never C-quoted), so a filename with
+ * non-ASCII text, quotes, tabs or backslashes stays the name Git will accept back.
+ */
+export function parseGitNameStatus(stdout: string): Array<GitNameStatusEntry> {
+  const entries: Array<GitNameStatusEntry> = [];
+  const records = stdout.split("\0");
+  for (let index = 0; index < records.length; index += 1) {
+    const code = records[index] ?? "";
+    if (code.length === 0) continue;
+    const kind = code[0];
+    if (kind === "R" || kind === "C") {
+      const source = records[index + 1] ?? "";
+      const destination = records[index + 2] ?? "";
+      index += 2;
+      if (destination.length === 0) continue;
+      // A copy leaves its source untouched, so only the new file is part of the change.
+      entries.push(
+        kind === "R" && source.length > 0
+          ? { path: destination, previousPath: source, status: "renamed" }
+          : { path: destination, status: "added" },
+      );
+      continue;
+    }
+    const filePath = records[index + 1] ?? "";
+    index += 1;
+    if (filePath.length === 0) continue;
+    entries.push({
+      path: filePath,
+      status: kind === "A" ? "added" : kind === "D" ? "deleted" : "modified",
+    });
+  }
+  return entries;
+}

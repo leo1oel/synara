@@ -3,6 +3,13 @@ import { execFile } from "node:child_process";
 import nodePath from "node:path";
 import { tmpdir } from "node:os";
 
+import {
+  classifySecurityResult,
+  KEYCHAIN_PROMPT_TIMEOUT_MS,
+  type KeychainReadOptions,
+  type KeychainReadOutcome,
+  readKeychainItemOnce,
+} from "../keychainReads";
 import type { ProviderUsageContext } from "../types";
 
 // keytar stores a generic credential named service/account with a UTF-8 blob on Windows.
@@ -46,24 +53,31 @@ public static class FactoryKeyReader {
 [Console]::Write([FactoryKeyReader]::Get())
 `;
 
-export function readDroidSecureKey(
+export async function readDroidSecureKey(
   ctx: Pick<ProviderUsageContext, "platform" | "homeDir" | "env">,
   source: "keyring" | "login-keychain",
+  keychainOptions: KeychainReadOptions = {},
 ): Promise<string | null> {
   let executable: string;
   let args: string[];
   // Do not inherit loader injection variables, shell profiles, API keys, or a user PATH.
   const env: NodeJS.ProcessEnv = { HOME: ctx.homeDir, PATH: "/usr/bin:/bin" };
   if (ctx.platform === "darwin") {
-    executable = "/usr/bin/security";
-    args = [
-      "find-generic-password",
-      "-s",
-      "Factory CLI",
-      "-a",
-      source === "login-keychain" ? "auth-encryption-key-security-cli" : "auth-encryption-key",
-      "-w",
-    ];
+    // Each read can raise a Keychain prompt; remember it instead of re-prompting every refresh.
+    const account =
+      source === "login-keychain" ? "auth-encryption-key-security-cli" : "auth-encryption-key";
+    const outcome = await readKeychainItemOnce(
+      { service: "Factory CLI", account, scope: ctx.homeDir },
+      () =>
+        runSecureKeyReader(
+          "/usr/bin/security",
+          ["find-generic-password", "-s", "Factory CLI", "-a", account, "-w"],
+          env,
+          KEYCHAIN_PROMPT_TIMEOUT_MS,
+        ),
+      keychainOptions,
+    );
+    return outcome.kind === "granted" ? outcome.value : null;
   } else if (ctx.platform === "linux" && source === "keyring") {
     executable = "/usr/bin/secret-tool";
     args = ["lookup", "service", "Factory CLI", "account", "auth-encryption-key"];
@@ -73,7 +87,7 @@ export function readDroidSecureKey(
   } else if (ctx.platform === "win32" && source === "keyring") {
     // SystemRoot comes from the server's OS environment, never provider settings or credential data.
     const systemRoot = process.env.SystemRoot;
-    if (!systemRoot || !nodePath.win32.isAbsolute(systemRoot)) return Promise.resolve(null);
+    if (!systemRoot || !nodePath.win32.isAbsolute(systemRoot)) return null;
     executable = nodePath.win32.join(
       systemRoot,
       "System32",
@@ -87,8 +101,24 @@ export function readDroidSecureKey(
     env.TMP = tmpdir();
     env.PATH = nodePath.win32.join(systemRoot, "System32");
   } else {
-    return Promise.resolve(null);
+    return null;
   }
+  // Windows must start PowerShell and compile the fixed interop declaration on a cold run.
+  const outcome = await runSecureKeyReader(
+    executable,
+    args,
+    env,
+    ctx.platform === "win32" ? 20_000 : 3_000,
+  );
+  return outcome.kind === "granted" ? outcome.value : null;
+}
+
+function runSecureKeyReader(
+  executable: string,
+  args: string[],
+  env: NodeJS.ProcessEnv,
+  timeout: number,
+): Promise<KeychainReadOutcome> {
   return new Promise((resolve) => {
     const child = execFile(
       executable,
@@ -97,15 +127,14 @@ export function readDroidSecureKey(
         env,
         cwd: nodePath.parse(executable).root || undefined,
         encoding: "utf8",
-        // Windows must start PowerShell and compile the fixed interop declaration on a cold run.
-        timeout: ctx.platform === "win32" ? 20_000 : 3_000,
+        timeout,
         killSignal: "SIGKILL",
         maxBuffer: 4_096,
         windowsHide: true,
       },
       (error, stdout) => {
         // Never propagate child errors: they can contain stdout/stderr and therefore the key.
-        resolve(error ? null : stdout.trim());
+        resolve(classifySecurityResult(error, stdout));
       },
     );
     child.stdin?.end();

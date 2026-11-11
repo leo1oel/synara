@@ -11,7 +11,6 @@ import { serverQueryKeys } from "~/lib/serverReactQuery";
 import { ProviderUsageSettingsPanel } from "./ProviderUsageSettingsPanel";
 
 const appSettings = vi.hoisted(() => ({
-  disabledProviders: [] as string[],
   railUsageProviders: [] as string[],
 }));
 vi.mock("~/appSettings", () => ({
@@ -19,6 +18,12 @@ vi.mock("~/appSettings", () => ({
     settings: appSettings,
     updateSettings: vi.fn(),
   }),
+}));
+
+const embed = vi.hoisted(() => ({ active: false }));
+vi.mock("~/embedMode", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/embedMode")>()),
+  isSynaraEmbedMode: () => embed.active,
 }));
 
 function snapshot(input: Partial<ServerProviderUsageSnapshot>): ServerProviderUsageSnapshot {
@@ -48,34 +53,22 @@ function render(
 }
 
 describe("ProviderUsageSettingsPanel", () => {
-  it("does not let globally disabled saved accounts use the visible account limit", () => {
-    appSettings.disabledProviders = ["codex", "claudeAgent"];
-    appSettings.railUsageProviders = ["codex", "claudeAgent"];
-    try {
-      const markup = render([]);
-      const switchMarkup = markup.match(
-        /<[^>]+aria-label="Show OpenCode usage at the bottom of the sidebar"[^>]*>/u,
-      )?.[0];
-      expect(switchMarkup).toBeDefined();
-      expect(switchMarkup).not.toMatch(/\sdata-disabled=/u);
-      expect(appSettings.railUsageProviders).toEqual(["codex", "claudeAgent"]);
-    } finally {
-      appSettings.disabledProviders = [];
-      appSettings.railUsageProviders = [];
-    }
-  });
-
-  it("hides globally disabled accounts' switches and cached cards", () => {
-    appSettings.disabledProviders = ["codex"];
+  it("hides the sidebar-only rows when embedded, keeping Refresh and the usage cards", () => {
+    embed.active = true;
     try {
       const markup = render([
-        snapshot({ usageLines: [{ label: "Disabled usage", value: "7 credits" }] }),
+        snapshot({
+          instanceId: "codex",
+          usageLines: [{ label: "Personal allowance", value: "7 credits" }],
+        }),
       ]);
+
       expect(markup).not.toContain("Show Codex usage at the bottom of the sidebar");
-      expect(markup).not.toContain("Disabled usage");
-      expect(markup).toContain("Show Claude usage at the bottom of the sidebar");
+      expect(markup).not.toContain("Sidebar usage ring");
+      expect(markup).toContain("Refresh");
+      expect(markup).toContain("Personal allowance");
     } finally {
-      appSettings.disabledProviders = [];
+      embed.active = false;
     }
   });
 

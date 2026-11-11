@@ -1,15 +1,8 @@
-// FILE: PullRequestRow.tsx
-// Purpose: One row of the code review list, for a pull request or an issue, in two lines: the
-//          title (up to two lines, full title on hover), then a kind/state glyph, the author (the
-//          same label as the detail header), the relative time, and the number muted at the
-//          end. A sibling pin control never opens the detail.
-// Layer: Pull request presentation
-// Exports: PullRequestRow, githubInboxItemLabel
-
 import type { GitHubInboxItem, GitHubInboxSort } from "@synara/contracts";
 import { pullRequestListProjectContexts } from "@synara/shared/githubRepository";
 import type { ReactNode } from "react";
 
+import { t, useTranslation } from "~/i18n";
 import { PinStatusIcon, pinActionLabel } from "~/lib/pin";
 import { formatRelativeTime } from "~/lib/relativeTime";
 import { cn } from "~/lib/utils";
@@ -22,14 +15,12 @@ import {
 import { PullRequestActorLabel } from "./PullRequestActorLabel";
 import { GitHubItemStateGlyph } from "./PullRequestStateGlyph";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
-import { useTranslation, t } from "~/i18n";
 
 /** How a row names its item in accessible labels: "pull request #42", "issue #7". */
 export function githubInboxItemLabel(item: Pick<GitHubInboxItem, "kind" | "number">): string {
-  return t("git:symbol2", {
-    value0: item.kind === "issue" ? t("settings:issue") : t("chat:pullRequest"),
-    value1: item.number,
-  });
+  return item.kind === "issue"
+    ? t("lattice:issue", { number: item.number })
+    : t("lattice:pullRequest", { number: item.number });
 }
 
 export const PullRequestRow = function PullRequestRow({
@@ -64,7 +55,7 @@ export const PullRequestRow = function PullRequestRow({
   const projectTitle = projectContexts.map((context) => context.projectTitle).join(", ");
   const itemLabel = githubInboxItemLabel(entry);
   const pinLabel = pinActionLabel(
-    showProjectTitle ? `${itemLabel} in ${projectLabel}` : itemLabel,
+    showProjectTitle ? t("workspace:in2", { value0: itemLabel, value1: projectLabel }) : itemLabel,
     isPinned,
   );
   return (

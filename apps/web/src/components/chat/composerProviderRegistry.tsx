@@ -14,6 +14,7 @@ import {
   getDefaultEffort,
   hasContextWindowOption,
   hasEffortLevel,
+  isClaudeCodeEffort,
   isClaudeUltrathinkPrompt,
   normalizeAntigravityModelOptions,
   normalizeClaudeModelOptions,
@@ -26,6 +27,7 @@ import {
   trimOrNull,
 } from "@synara/shared/model";
 import { classifyCodexReasoningEffortSupport } from "../../lib/codexReasoningEffort";
+import { getComposerTraitSelection } from "./composerTraits";
 import { getRuntimeAwareModelCapabilities } from "./runtimeModelCapabilities";
 
 export type ComposerProviderStateInput = {
@@ -81,7 +83,25 @@ export function getComposerProviderState(input: ComposerProviderStateInput): Com
     case "claudeAgent": {
       const providerOptions = modelOptions?.claudeAgent;
       rawEffort = trimOrNull(providerOptions?.effort);
-      normalizedOptions = normalizeClaudeModelOptions(model, providerOptions, caps);
+      const claudeOptions = normalizeClaudeModelOptions(model, providerOptions, caps);
+      // Claude Code resolves an omitted effort from the user's settings.json
+      // `effortLevel`, not from the catalog default the picker shows, so
+      // dropping a "default" effort made the label lie (High shown, xhigh run).
+      // Dispatch exactly the effort the trait picker displays.
+      const displayedEffort = getComposerTraitSelection(
+        provider,
+        model,
+        prompt,
+        providerOptions,
+        runtimeModel,
+      ).effort;
+      normalizedOptions =
+        displayedEffort &&
+        !claudeOptions?.effort &&
+        isClaudeCodeEffort(displayedEffort) &&
+        hasEffortLevel(caps, displayedEffort)
+          ? { ...claudeOptions, effort: displayedEffort }
+          : claudeOptions;
       break;
     }
     case "cursor": {

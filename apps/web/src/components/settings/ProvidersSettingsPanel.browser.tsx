@@ -10,8 +10,8 @@ import {
 import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
 import { page, userEvent } from "vitest/browser";
 import { beforeEach, expect, it, vi } from "vitest";
-import { render } from "vitest-browser-react";
-import { StrictMode, useState } from "react";
+import { render as renderInBrowser } from "vitest-browser-react";
+import { StrictMode, type ReactNode, useState } from "react";
 
 const harness = vi.hoisted(() => ({
   statuses: [] as ServerProviderStatus[],
@@ -38,11 +38,13 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
   return {
     ...(await importOriginal<typeof import("@tanstack/react-query")>()),
     useQueryClient: () => queryClient,
+    // One payload answers both the server config and the server settings query;
+    // `providerInstances` lets the settings read find no per-instance overrides.
     useQuery: (options: { queryKey?: readonly string[] }) => ({
       data:
         options.queryKey?.[1] === "allProviderUsage"
           ? harness.usage
-          : { providers: harness.statuses, cwd: "/tmp" },
+          : { providers: harness.statuses, providerInstances: {}, cwd: "/tmp" },
       isPending: false,
     }),
   };
@@ -73,6 +75,7 @@ vi.mock("~/nativeApi", () => ({
 }));
 
 import { AppSettingsSchema, type AppSettings } from "~/appSettings";
+import { t, setLanguagePreference } from "~/i18n";
 import { ProvidersSettingsPanel } from "./ProvidersSettingsPanel";
 import TerminalViewport from "../terminal/TerminalViewport";
 import { terminalRuntimeRegistry } from "../terminal/terminalRuntimeRegistry";
@@ -80,14 +83,20 @@ import { terminalRuntimeRegistry } from "../terminal/terminalRuntimeRegistry";
 const defaults = AppSettingsSchema.makeUnsafe({});
 const props = {
   defaults,
-  settings: { ...defaults, disabledProviders: ["grok" as const] },
+  settings: defaults,
   updateSettings: vi.fn(),
   updateSettingsAndWait: vi.fn(async () => {}),
   active: true,
   resetEpoch: 0,
 };
 
+// The panel reads its copy through Lingui, so every render needs the provider.
+function render(ui: ReactNode) {
+  return renderInBrowser(<>{ui}</>);
+}
+
 beforeEach(() => {
+  setLanguagePreference("en");
   harness.usage = [];
   harness.reconciled = true;
   harness.refresh.mockReset();
@@ -122,11 +131,18 @@ beforeEach(() => {
   }));
 });
 
-function activityRow(provider: string) {
-  return page
-    .getByRole("switch", { name: `Disable ${provider}`, exact: true })
-    .element()
-    .closest('[data-slot="settings-row"]')!;
+// Lattice lists every provider as a provider-picker row (its installation beside a
+// visibility switch); the fork has no enablement switches (7eabd821e).
+function providerTitle(kind: string) {
+  return PROVIDER_DESCRIPTORS.find((descriptor) => descriptor.kind === kind)!.displayName;
+}
+
+function pickerSwitch(name: string) {
+  return page.getByRole("switch", { name, exact: true });
+}
+
+function pickerRow(name: string) {
+  return pickerSwitch(name).element().parentElement!;
 }
 
 it("saves provider CPU priority opt-out and exposes reset to the default", async () => {
@@ -139,11 +155,13 @@ it("saves provider CPU priority opt-out and exposes reset to the default", async
   await control.click();
   expect(updateSettings).toHaveBeenCalledWith({ lowerProviderProcessPriority: false });
   await result.rerender(
-    <ProvidersSettingsPanel
-      {...props}
-      settings={{ ...props.settings, lowerProviderProcessPriority: false }}
-      updateSettings={updateSettings}
-    />,
+    <>
+      <ProvidersSettingsPanel
+        {...props}
+        settings={{ ...props.settings, lowerProviderProcessPriority: false }}
+        updateSettings={updateSettings}
+      />
+    </>,
   );
   await page.getByRole("button", { name: "Reset Keep Synara responsive to default" }).click();
   expect(updateSettings).toHaveBeenLastCalledWith({ lowerProviderProcessPriority: true });
@@ -152,133 +170,42 @@ it("saves provider CPU priority opt-out and exposes reset to the default", async
   );
 });
 
-it("shows installation and auth beside activity switches with visible setup guides", async () => {
+it("shows each provider's installation beside its picker switch", async () => {
   await render(<ProvidersSettingsPanel {...props} />);
-  expect(activityRow("OpenCode").textContent).toContain("Unavailable");
-  expect(activityRow("OpenCode").textContent).toContain("not installed or not on PATH");
-  expect(activityRow("Claude").textContent).toContain("Needs sign-in");
-  expect(activityRow("Codex").textContent).toContain("Connected");
-  await page.getByRole("button", { name: /Disabled providers/u }).click();
-  expect(
-    page
-      .getByRole("switch", { name: "Enable Grok", exact: true })
-      .element()
-      .closest('[data-slot="settings-row"]')?.textContent,
-  ).toContain("Disabled · enable to check setup");
-  // Permission to run remains enabled even if the CLI is missing.
-  await expect
-    .element(page.getByRole("switch", { name: "Disable OpenCode", exact: true }))
-    .toBeChecked();
-  for (const descriptor of PROVIDER_DESCRIPTORS) {
-    const guide = page.getByRole("link", {
-      name: `${descriptor.displayName} setup guide`,
-      exact: true,
-    });
-    await expect.element(guide).toBeVisible();
-    expect(guide.element().getAttribute("href")).toBe(descriptor.setupDocsHref);
-  }
+  const openCode = t("settings:isUnavailableInTheProviderPicker", {
+    value0: providerTitle("opencode"),
+  });
+  expect(pickerRow(openCode).textContent).toContain(t("lattice:cLINotInstalled"));
+  await expect.element(pickerSwitch(openCode)).toBeDisabled();
+  const codex = t("settings:showInTheProviderPicker", { value0: providerTitle("codex") });
+  expect(pickerRow(codex).textContent).toContain(t("settings:installed"));
+  await expect.element(pickerSwitch(codex)).toBeChecked();
 });
 
-it("keeps disabled providers only in a collapsed recovery list", async () => {
-  await render(<ProvidersSettingsPanel {...props} />);
-  expect(page.getByRole("switch", { name: "Enable Grok", exact: true }).elements()).toHaveLength(0);
-  expect(page.getByRole("button", { name: "Reorder Grok", exact: true }).elements()).toHaveLength(
-    0,
-  );
-  expect(page.getByRole("button", { name: "Grok", exact: true }).elements()).toHaveLength(0);
-  const recovery = page.getByRole("button", { name: /Disabled providers/u });
-  await expect.element(recovery).toHaveAttribute("aria-expanded", "false");
-  await recovery.click();
-  await expect
-    .element(page.getByRole("switch", { name: "Enable Grok", exact: true }))
-    .toBeVisible();
-  expect(page.getByRole("button", { name: "Reorder Grok", exact: true }).elements()).toHaveLength(
-    0,
-  );
-  expect(page.getByRole("button", { name: "Grok", exact: true }).elements()).toHaveLength(0);
-});
-
-it("restores provider options and saved configuration after re-enabling", async () => {
-  function Harness() {
-    const [settings, setSettings] = useState<AppSettings>({
-      ...defaults,
-      codexBinaryPath: "/custom/codex",
-      hiddenProviders: ["codex"],
-    });
-    const updateSettings = (patch: Partial<AppSettings>) =>
-      setSettings((current) => ({ ...current, ...patch }));
-    return (
-      <ProvidersSettingsPanel
-        {...props}
-        settings={settings}
-        updateSettings={updateSettings}
-        updateSettingsAndWait={async (patch) => updateSettings(patch)}
-      />
-    );
-  }
-  await render(<Harness />);
-  await page.getByRole("switch", { name: "Disable Codex", exact: true }).click();
-  expect(page.getByRole("button", { name: "Reorder Codex", exact: true }).elements()).toHaveLength(
-    0,
-  );
-  expect(page.getByRole("button", { name: /Codex Custom/u }).elements()).toHaveLength(0);
-  await page.getByRole("button", { name: /Disabled providers/u }).click();
-  await page.getByRole("switch", { name: "Enable Codex", exact: true }).click();
-  await expect
-    .element(page.getByRole("button", { name: "Reorder Codex", exact: true }))
-    .toBeVisible();
-  await expect
-    .element(page.getByRole("switch", { name: "Show Codex in the provider picker", exact: true }))
-    .not.toBeChecked();
-  await expect
-    .element(page.getByRole("button", { name: /Codex Custom/u }))
-    .toHaveAttribute("aria-expanded", "true");
-  const binaryPath = page
-    .getByRole("group", { name: "Codex account", exact: true })
-    .getByRole("textbox", { name: /^Codex binary path/u });
-  await expect.element(binaryPath).toHaveValue("/custom/codex");
-});
-
-it("allows recovering after every provider is disabled", async () => {
-  await render(
-    <ProvidersSettingsPanel
-      {...props}
-      settings={{ ...defaults, disabledProviders: [...defaults.providerOrder] }}
-    />,
-  );
-  expect(page.getByRole("button", { name: /^Reorder /u }).elements()).toHaveLength(0);
-  expect(page.getByRole("switch", { name: /^Disable /u }).elements()).toHaveLength(0);
-  await page.getByRole("button", { name: /Disabled providers/u }).click();
-  await expect
-    .element(page.getByRole("switch", { name: "Enable Codex", exact: true }))
-    .toBeVisible();
-});
-
-it("does not report cached provider health as connected before reconciliation", async () => {
+it("does not report cached provider health as installed before reconciliation", async () => {
   harness.reconciled = false;
   await render(<ProvidersSettingsPanel {...props} />);
-  expect(activityRow("Codex").textContent).toContain("Checking setup");
-  expect(activityRow("Codex").textContent).not.toContain("Connected");
+  await expect.element(page.getByText(t("lattice:checkingInstalledCLIs"))).toBeVisible();
+  expect(document.body.textContent).not.toContain(
+    t("lattice:installed", { availableProviderCount: PROVIDER_DESCRIPTORS.length - 1 }),
+  );
 });
 
-it("allows rechecking setup after installing externally and blocks duplicate refreshes", async () => {
-  let finish!: () => void;
-  harness.refresh.mockImplementation(
-    () =>
-      new Promise<void>((resolve) => {
-        finish = resolve;
-      }),
-  );
-  await render(<ProvidersSettingsPanel {...props} />);
-  await page.getByRole("button", { name: "Refresh status", exact: true }).click();
-  expect(harness.refresh).toHaveBeenCalledOnce();
+it("picks up a provider installed outside Synara once its status refreshes", async () => {
+  const screen = await render(<ProvidersSettingsPanel {...props} />);
+  const title = providerTitle("opencode");
   await expect
-    .element(page.getByRole("button", { name: "Checking setup", exact: true }))
+    .element(pickerSwitch(t("settings:isUnavailableInTheProviderPicker", { value0: title })))
     .toBeDisabled();
-  finish();
-  await expect
-    .element(page.getByRole("button", { name: "Refresh status", exact: true }))
-    .toBeEnabled();
+  harness.statuses = harness.statuses.map((status) =>
+    status.provider === "opencode"
+      ? { ...status, status: "ready", available: true, message: "OpenCode is ready." }
+      : status,
+  );
+  await screen.rerender(<ProvidersSettingsPanel {...props} />);
+  const shown = t("settings:showInTheProviderPicker", { value0: title });
+  await expect.element(pickerSwitch(shown)).toBeEnabled();
+  expect(pickerRow(shown).textContent).toContain(t("settings:installed"));
 });
 
 // --- Accounts: one list per provider, default included, with an editor beside it. ---
@@ -302,7 +229,7 @@ function accountProps(settings: Partial<typeof defaults> = {}) {
     props: {
       ...props,
       updateSettings,
-      providerTarget: "codex" as const,
+      providerTargets: ["codex"] as const,
       settings: {
         ...defaults,
         providerInstances: {
@@ -370,7 +297,7 @@ it("shows a Claude usage authentication failure beside a locally signed-in accou
   const { props: panelProps } = accountProps({
     providerInstances: { claude_work: { driver: "claudeAgent", displayName: "Work", config: {} } },
   });
-  await render(<ProvidersSettingsPanel {...panelProps} providerTarget="claudeAgent" />);
+  await render(<ProvidersSettingsPanel {...panelProps} providerTargets={["claudeAgent"]} />);
   const editor = page.getByRole("group", { name: "Claude account", exact: true });
   await expect.element(editor.getByText("Usage needs attention", { exact: true })).toBeVisible();
   await expect
@@ -457,7 +384,7 @@ it("leaves Artifacts to the default Claude account and keeps another account's b
       },
     },
   });
-  await render(<ProvidersSettingsPanel {...panelProps} providerTarget="claudeAgent" />);
+  await render(<ProvidersSettingsPanel {...panelProps} providerTargets={["claudeAgent"]} />);
 
   await page.getByRole("button", { name: "Select Work", exact: true }).click();
   const editor = page.getByRole("group", { name: "Work account", exact: true });
@@ -586,7 +513,7 @@ it("sends Pi's login selector only after startup and keeps cancellation failures
   const instanceId = "pi_work";
   const panelProps = {
     ...props,
-    providerTarget: "pi" as const,
+    providerTargets: ["pi"] as const,
     settings: {
       ...defaults,
       providerInstances: { [instanceId]: { driver: "pi", displayName: "Pi work", config: {} } },
@@ -696,3 +623,39 @@ it.each(["ready", "error", "exited"] as const)(
     }
   },
 );
+
+it("insets each Provider updates row from its outlined list and divides the rows", async () => {
+  const behindLatest = {
+    status: "behind_latest" as const,
+    currentVersion: "1.0.0",
+    latestVersion: "1.1.0",
+    updateCommand: "npm install -g provider@latest",
+    canUpdate: true,
+    checkedAt: "2026-09-16T21:46:18.000Z",
+    message: "Update available.",
+  };
+  harness.statuses = harness.statuses.map((status) =>
+    status.provider === "codex" || status.provider === "claudeAgent"
+      ? { ...status, version: "1.0.0", versionAdvisory: behindLatest }
+      : status,
+  );
+  await render(<ProvidersSettingsPanel {...props} />);
+
+  const updatesRow = page
+    .getByRole("heading", { name: "Provider updates", exact: true })
+    .element()
+    .closest('[data-slot="settings-row"]')!;
+  const list = updatesRow.querySelector<HTMLElement>(":scope > div:last-child")!;
+  const rows = [...list.querySelectorAll<HTMLElement>(':scope > [data-slot="settings-row"]')];
+  expect(rows).toHaveLength(2);
+
+  const listBox = list.getBoundingClientRect();
+  for (const row of rows) {
+    const title = row.querySelector('[data-slot="settings-row-title"]')!.getBoundingClientRect();
+    expect(title.left - listBox.left).toBeGreaterThanOrEqual(12);
+    const action = row.querySelector('[data-slot="settings-actions"]')!.getBoundingClientRect();
+    expect(listBox.right - action.right).toBeGreaterThanOrEqual(12);
+  }
+  expect(getComputedStyle(rows[0]!).borderTopWidth).toBe("0px");
+  expect(getComputedStyle(rows[1]!).borderTopWidth).toBe("1px");
+});

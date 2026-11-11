@@ -1,3 +1,4 @@
+import { readEmbedMode } from "../embedMode";
 // FILE: ChatMarkdown.tsx
 // Purpose: Renders assistant and plan markdown with syntax highlighting and local file links.
 // Layer: Web chat presentation component
@@ -13,15 +14,11 @@ import {
   TriangleAlertIcon,
   type LucideIcon,
 } from "~/lib/icons";
-import {
-  INLINE_VISUAL_EMBED_FENCE,
-  ThreadId,
-  type ProviderMentionReference,
-} from "@synara/contracts";
+import { ThreadId, type ProviderMentionReference } from "@synara/contracts";
 import { isLocalAbsolutePath } from "@synara/shared/path";
 import type { ChatAttachment } from "~/types";
 import "katex/dist/katex.min.css";
-import { matchWikiLinkAt, remarkWikiLinks } from "../lib/remarkWikiLinks";
+import { remarkWikiLinks } from "../lib/remarkWikiLinks";
 import { remarkGithubAlerts, type GithubAlertKind } from "../lib/remarkGithubAlerts";
 import { remarkHtmlBreaks } from "../lib/remarkHtmlBreaks";
 import React, {
@@ -89,12 +86,14 @@ import {
 } from "./composerInlineChip";
 import { LinkChipIcon } from "./LinkChipIcon";
 import { InlineAgentChip } from "./chat/InlineAgentChip";
-import { readInlineVisualEmbedId } from "@synara/shared/inlineVisual";
+import { isInlineVisualEmbedFence, readInlineVisualEmbedId } from "@synara/shared/inlineVisual";
 import { InlineVisualEmbedContext } from "./chat/inlineVisualEmbedContext";
 import { InlineLinkChip } from "./InlineLinkChip";
 import { InlineMentionChip } from "./chat/InlineMentionChip";
 import { InlineSkillChip } from "./chat/InlineSkillChip";
 import { InlineSlashCommandChip } from "./chat/InlineSlashCommandChip";
+import { openExternalLink } from "../lib/linkChips";
+import { createCodexFileCitationsRemarkPlugin } from "../lib/remarkCodexFileCitations";
 import {
   COMPOSER_CHIP_SEGMENT_ATTRIBUTE,
   COMPOSER_CHIP_TAG_NAME,
@@ -312,9 +311,10 @@ const ParsedMarkdown = memo(function ParsedMarkdown({
 
 const MARKDOWN_REMARK_PLUGINS: MarkdownRemarkPlugins = [
   remarkGfm,
-  [remarkMath, { singleDollarTextMath: true }],
   remarkGithubAlerts,
+  [remarkMath, { singleDollarTextMath: true }],
   remarkHtmlBreaks,
+  remarkRestoreLatexMathPlaceholders,
 ];
 // User prompts are casual typing, not authored markdown: hard-break single
 // newlines and skip math entirely (the composer chip plugin is appended per
@@ -323,12 +323,71 @@ const USER_MARKDOWN_REMARK_PLUGINS: MarkdownRemarkPlugins = [remarkGfm, remarkBr
 const USER_MARKDOWN_REHYPE_PLUGINS: MarkdownRehypePlugins = [];
 const LITERAL_DOLLAR_PLACEHOLDER = "\uE000";
 // `\$` is two source characters that render as a single `$`. Collapsing it to one placeholder used
-// to shorten the protected string, which shifted every downstream source offset (find positions
+// to shorten the protected string, which shifted every downstream offset (thread-marker positions
 // are resolved against the raw text but applied against the parsed mdast positions). A two-character
 // placeholder keeps `protectLiteralMarkdownDollars` length-preserving so those offsets stay aligned;
 // it is restored ahead of the single-char placeholder (the two share no characters, so order is
 // only for clarity).
 const ESCAPED_DOLLAR_PLACEHOLDER = "\uE001\uE002";
+// remark-math only understands dollar delimiters, while assistants commonly emit
+// LaTeX's `\( ... \)` and `\[ ... \]` forms. Each two-character delimiter is
+// rewritten to a dollar plus a one-character marker, preserving source length
+// (and therefore thread-marker offsets); the remark transformer below removes
+// the markers from the parsed formula and promotes bracketed formulas to display.
+const LATEX_INLINE_MATH_OPEN_PLACEHOLDER = "\uE003";
+const LATEX_INLINE_MATH_CLOSE_PLACEHOLDER = "\uE004";
+const LATEX_DISPLAY_MATH_OPEN_PLACEHOLDER = "\uE005";
+const LATEX_DISPLAY_MATH_CLOSE_PLACEHOLDER = "\uE006";
+const LATEX_MATH_PLACEHOLDERS = [
+  LATEX_INLINE_MATH_OPEN_PLACEHOLDER,
+  LATEX_INLINE_MATH_CLOSE_PLACEHOLDER,
+  LATEX_DISPLAY_MATH_OPEN_PLACEHOLDER,
+  LATEX_DISPLAY_MATH_CLOSE_PLACEHOLDER,
+];
+
+type MarkdownMathNode = {
+  type?: string;
+  value?: string;
+  data?: {
+    hProperties?: Record<string, unknown>;
+    hChildren?: Array<{ type?: string; value?: string }>;
+  };
+  children?: MarkdownMathNode[];
+};
+
+function restoreLatexMathPlaceholders(node: MarkdownMathNode): void {
+  if (node.type === "inlineMath" && typeof node.value === "string") {
+    const inline =
+      node.value.startsWith(LATEX_INLINE_MATH_OPEN_PLACEHOLDER) &&
+      node.value.endsWith(LATEX_INLINE_MATH_CLOSE_PLACEHOLDER);
+    const display =
+      node.value.startsWith(LATEX_DISPLAY_MATH_OPEN_PLACEHOLDER) &&
+      node.value.endsWith(LATEX_DISPLAY_MATH_CLOSE_PLACEHOLDER);
+    if (inline || display) {
+      const formula = node.value.slice(1, -1).trim();
+      node.value = formula;
+      const renderedText = node.data?.hChildren?.find((child) => child.type === "text");
+      if (renderedText) {
+        renderedText.value = formula;
+      }
+      if (display) {
+        const data = node.data ?? (node.data = {});
+        const properties = data.hProperties ?? (data.hProperties = {});
+        properties.className = ["language-math", "math-display"];
+      }
+    }
+  }
+
+  for (const child of node.children ?? []) {
+    restoreLatexMathPlaceholders(child);
+  }
+}
+
+function remarkRestoreLatexMathPlaceholders() {
+  return (tree: unknown) => {
+    restoreLatexMathPlaceholders(tree as MarkdownMathNode);
+  };
+}
 
 function restoreLiteralDollarPlaceholders(value: string): string {
   return value
@@ -454,6 +513,11 @@ type MarkdownParentNode = {
 type MarkdownNode = MarkdownTextNode | MarkdownParentNode | Record<string, unknown>;
 const CHAT_FIND_TEXT_TAG_NAME = "chat-find-text";
 const CHAT_FIND_TEXT_START_ATTRIBUTE = "data-chat-find-text-start";
+type TextRangeFragmentContinuity = {
+  readonly continuesBefore: boolean;
+  readonly continuesAfter: boolean;
+};
+
 // Keep the renderer's generated metadata through the authored-HTML sanitizer.
 // KaTeX runs afterward so its generated MathML/styles do not widen this allowlist.
 const AUTHORED_HTML_SCHEMA = {
@@ -472,9 +536,46 @@ const AUTHORED_HTML_SCHEMA = {
     href: [...(defaultSchema.protocols?.href ?? []), "file", "thread", "synara"],
   },
 };
-function remarkFindableText() {
-  return (tree: MarkdownNode) => wrapFindableTextNodes(tree);
+
+type MarkdownRangeDecoration = {
+  startOffset: number;
+  endOffset: number;
+  nodeType: string;
+  classNameFor: (continuity: TextRangeFragmentContinuity) => string;
+  properties: Record<string, string>;
+};
+
+function collapseOverlappingDecorations(
+  decorations: readonly MarkdownRangeDecoration[],
+): MarkdownRangeDecoration[] {
+  const result: MarkdownRangeDecoration[] = [];
+  let previousEnd = -1;
+  for (const decoration of decorations.toSorted(
+    (left, right) => left.startOffset - right.startOffset || right.endOffset - left.endOffset,
+  )) {
+    if (decoration.startOffset < previousEnd) {
+      continue;
+    }
+    if (decoration.endOffset <= decoration.startOffset) {
+      continue;
+    }
+    result.push(decoration);
+    previousEnd = decoration.endOffset;
+  }
+  return result;
 }
+
+function createTextRangeRemarkPlugin(decorations: readonly MarkdownRangeDecoration[]) {
+  const usable = collapseOverlappingDecorations(decorations);
+  return () => (tree: MarkdownNode) => {
+    if (usable.length > 0) {
+      applyRangeDecorationsToNode(tree, usable);
+    }
+    wrapFindableTextNodes(tree);
+  };
+}
+
+const remarkFindableText = createTextRangeRemarkPlugin([]);
 
 function wrapFindableTextNodes(node: MarkdownNode): void {
   if (!node || typeof node !== "object" || !("children" in node) || !Array.isArray(node.children)) {
@@ -505,6 +606,109 @@ function wrapFindableTextNode(node: MarkdownTextNode): MarkdownNode {
   };
 }
 
+function applyRangeDecorationsToNode(
+  node: MarkdownNode,
+  decorations: readonly MarkdownRangeDecoration[],
+) {
+  if (!node || typeof node !== "object" || !("children" in node) || !Array.isArray(node.children)) {
+    return;
+  }
+
+  const parent = node as MarkdownParentNode;
+  // The guard above already proved `children` is an array; `?? []` only satisfies the optional type.
+  parent.children = (parent.children ?? []).flatMap((child) => {
+    if (child && typeof child === "object" && "type" in child && child.type === "text") {
+      return splitTextNodeWithRangeDecorations(child as MarkdownTextNode, decorations);
+    }
+    applyRangeDecorationsToNode(child, decorations);
+    return [child];
+  });
+}
+
+function splitTextNodeWithRangeDecorations(
+  node: MarkdownTextNode,
+  decorations: readonly MarkdownRangeDecoration[],
+): MarkdownNode[] {
+  const startOffset = node.position?.start?.offset;
+  const endOffset = node.position?.end?.offset;
+  if (startOffset === undefined || endOffset === undefined) {
+    return [node];
+  }
+  const overlapping: MarkdownRangeDecoration[] = [];
+  for (const decoration of decorations) {
+    if (decoration.endOffset <= startOffset) {
+      continue;
+    }
+    if (decoration.startOffset >= endOffset) {
+      break;
+    }
+    overlapping.push(decoration);
+  }
+  if (overlapping.length === 0) {
+    return [node];
+  }
+
+  const nodes: MarkdownNode[] = [];
+  let cursor = 0;
+  for (const decoration of overlapping) {
+    const rangeStart = Math.max(0, decoration.startOffset - startOffset);
+    const rangeEnd = Math.min(node.value.length, decoration.endOffset - startOffset);
+    if (rangeStart < cursor || rangeEnd > node.value.length) {
+      continue;
+    }
+    const absoluteFragmentStart = startOffset + rangeStart;
+    const absoluteFragmentEnd = startOffset + rangeEnd;
+    if (rangeStart > cursor) {
+      nodes.push(
+        createPositionedTextNode(
+          node.value.slice(cursor, rangeStart),
+          startOffset + cursor,
+          absoluteFragmentStart,
+        ),
+      );
+    }
+    nodes.push({
+      type: decoration.nodeType,
+      data: {
+        hName: "span",
+        hProperties: {
+          className: decoration.classNameFor({
+            continuesBefore: absoluteFragmentStart > decoration.startOffset,
+            continuesAfter: absoluteFragmentEnd < decoration.endOffset,
+          }),
+          ...decoration.properties,
+        },
+      },
+      children: [
+        createPositionedTextNode(
+          node.value.slice(rangeStart, rangeEnd),
+          absoluteFragmentStart,
+          absoluteFragmentEnd,
+        ),
+      ],
+    });
+    cursor = rangeEnd;
+  }
+  if (cursor < node.value.length) {
+    nodes.push(createPositionedTextNode(node.value.slice(cursor), startOffset + cursor, endOffset));
+  }
+  return nodes.length > 0 ? nodes : [node];
+}
+
+function createPositionedTextNode(
+  value: string,
+  startOffset: number,
+  endOffset: number,
+): MarkdownTextNode {
+  return {
+    type: "text",
+    value,
+    position: {
+      start: { offset: startOffset },
+      end: { offset: endOffset },
+    },
+  };
+}
 type SourcePoint = { line: number; column: number; offset?: number | undefined };
 type SourcePositionedNode = {
   position?: { start: SourcePoint; end: SourcePoint } | undefined;
@@ -553,6 +757,7 @@ function withSourcePositionOffset(
 }
 
 const INLINE_MATH_HINT_REGEX = /[\\^_=+\-*/<>()[\]{}]/;
+const DECIMAL_INLINE_MATH_REGEX = /^(?:\d+\.\d*|\.\d+)$/;
 const ALL_CAPS_DOLLAR_IDENTIFIER_REGEX = /^[A-Z][A-Z0-9_]{1,31}$/;
 
 function isLineStart(value: string, index: number): boolean {
@@ -641,13 +846,16 @@ function looksLikeInlineMath(content: string): boolean {
   if (trimmed.length === 0) {
     return false;
   }
-  if (ALL_CAPS_DOLLAR_IDENTIFIER_REGEX.test(trimmed)) {
-    return false;
-  }
   if (INLINE_MATH_HINT_REGEX.test(trimmed)) {
     return true;
   }
-  return /^(?:\d+(?:\.\d+)?)?[A-Za-z][A-Za-z0-9]{0,15}$/.test(trimmed);
+  if (ALL_CAPS_DOLLAR_IDENTIFIER_REGEX.test(trimmed)) {
+    return false;
+  }
+  if (DECIMAL_INLINE_MATH_REGEX.test(trimmed)) {
+    return true;
+  }
+  return /^[A-Za-z][A-Za-z0-9]{0,15}$/.test(trimmed);
 }
 
 // Reject obvious literal/currency dollars before searching for a closing math delimiter.
@@ -655,16 +863,6 @@ function canOpenInlineMath(value: string, index: number): boolean {
   const next = value[index + 1];
   if (!next || /\s/.test(next)) {
     return false;
-  }
-  if (/\d/.test(next)) {
-    const closingIndex = findInlineMathClosingDollar(value, index + 1);
-    if (closingIndex === -1 || /\d/.test(value[closingIndex + 1] ?? "")) {
-      return false;
-    }
-    // A numeric prefix can be a coefficient. Require a complete expression
-    // on this line; do not pair prices across lines or consume `$5-$10`.
-    const content = value.slice(index + 1, closingIndex);
-    return !/[\r\n]/.test(content) && looksLikeInlineMath(content);
   }
   return true;
 }
@@ -685,16 +883,6 @@ function findInlineMathClosingDollar(value: string, index: number): number {
       cursor += 2;
       continue;
     }
-    const linkEnd = findInlineMarkdownLinkEnd(value, cursor);
-    if (linkEnd !== -1) {
-      // Dollars in Markdown links/images cannot close preceding literal text.
-      // Dollar-free [f](x) remains valid inside a TeX expression.
-      if (value.slice(cursor, linkEnd).includes("$")) {
-        return -1;
-      }
-      cursor = linkEnd;
-      continue;
-    }
     if (value[cursor] === "$") {
       return canCloseInlineMath(value, cursor) ? cursor : -1;
     }
@@ -703,24 +891,80 @@ function findInlineMathClosingDollar(value: string, index: number): number {
   return -1;
 }
 
-function protectLiteralDollarsInMarkdownLinks(value: string): string {
+function isEscapedAt(value: string, index: number): boolean {
+  let backslashes = 0;
+  for (let cursor = index - 1; cursor >= 0 && value[cursor] === "\\"; cursor -= 1) {
+    backslashes += 1;
+  }
+  return backslashes % 2 === 1;
+}
+
+function findUnescapedLatexDelimiter(
+  value: string,
+  delimiter: "\\)" | "\\]",
+  index: number,
+): number {
+  let cursor = value.indexOf(delimiter, index);
+  while (cursor >= 0) {
+    if (!isEscapedAt(value, cursor)) {
+      return cursor;
+    }
+    cursor = value.indexOf(delimiter, cursor + delimiter.length);
+  }
+  return -1;
+}
+
+function latexMathAt(value: string, index: number): { value: string; end: number } | null {
+  const delimiter = value.slice(index, index + 2);
+  const inline = delimiter === "\\(";
+  const display = delimiter === "\\[";
+  if ((!inline && !display) || isEscapedAt(value, index)) {
+    return null;
+  }
+
+  const closingDelimiter = inline ? "\\)" : "\\]";
+  const closingIndex = findUnescapedLatexDelimiter(value, closingDelimiter, index + 2);
+  const formula = closingIndex < 0 ? "" : value.slice(index + 2, closingIndex);
+  if (
+    closingIndex < 0 ||
+    formula.trim().length === 0 ||
+    formula.includes("$") ||
+    (inline && formula.includes("\n")) ||
+    LATEX_MATH_PLACEHOLDERS.some((placeholder) => formula.includes(placeholder))
+  ) {
+    return null;
+  }
+
+  const openPlaceholder = inline
+    ? LATEX_INLINE_MATH_OPEN_PLACEHOLDER
+    : LATEX_DISPLAY_MATH_OPEN_PLACEHOLDER;
+  const closePlaceholder = inline
+    ? LATEX_INLINE_MATH_CLOSE_PLACEHOLDER
+    : LATEX_DISPLAY_MATH_CLOSE_PLACEHOLDER;
+  return {
+    value:
+      display && formula.includes("\n")
+        ? `$$${formula}$$`
+        : `$${openPlaceholder}${formula}${closePlaceholder}$`,
+    end: closingIndex + closingDelimiter.length,
+  };
+}
+
+function protectLiteralDollarsInPlainText(value: string): string {
   let result = "";
   let cursor = 0;
 
   while (cursor < value.length) {
-    if (value[cursor] === "\\" && value[cursor + 1] === "$") {
-      result += ESCAPED_DOLLAR_PLACEHOLDER;
-      cursor += 2;
+    const latexMath = latexMathAt(value, cursor);
+    if (latexMath) {
+      result += latexMath.value;
+      cursor = latexMath.end;
       continue;
     }
 
-    // Scan links and math together: splitting at every `[` breaks TeX such as
-    // \left[...\right] before its closing dollars can be found. A math span is
-    // consumed whole below, so brackets inside it never enter link detection.
-    const linkEnd = findInlineMarkdownLinkEnd(value, cursor);
-    if (linkEnd !== -1) {
-      result += value.slice(cursor, linkEnd).replaceAll("$", LITERAL_DOLLAR_PLACEHOLDER);
-      cursor = linkEnd;
+    if (value[cursor] === "\\" && value[cursor + 1] === "$") {
+      result += ESCAPED_DOLLAR_PLACEHOLDER;
+      cursor += 2;
       continue;
     }
 
@@ -812,8 +1056,6 @@ function findMarkdownParenEnd(value: string, startIndex: number): number {
 }
 
 function findInlineMarkdownLinkEnd(value: string, index: number): number {
-  const wikiLink = matchWikiLinkAt(value, index);
-  if (wikiLink) return index + wikiLink[0].length;
   const bracketStart = value[index] === "!" && value[index + 1] === "[" ? index + 1 : index;
   if (value[bracketStart] !== "[") {
     return -1;
@@ -828,7 +1070,58 @@ function findInlineMarkdownLinkEnd(value: string, index: number): number {
   return parenEnd === -1 ? -1 : parenEnd + 1;
 }
 
-// Tighten single-dollar math so currency and escaped dollars stay literal without touching code spans.
+function findNextInlineMarkdownLink(
+  value: string,
+  index: number,
+): { start: number; end: number } | null {
+  let bracketStart = value.indexOf("[", index);
+  while (bracketStart >= 0) {
+    if (!isEscapedAt(value, bracketStart)) {
+      const imageStart =
+        bracketStart > 0 && value[bracketStart - 1] === "!" && !isEscapedAt(value, bracketStart - 1)
+          ? bracketStart - 1
+          : bracketStart;
+      const end = findInlineMarkdownLinkEnd(value, imageStart);
+      if (end >= 0) {
+        return { start: imageStart, end };
+      }
+    }
+    bracketStart = value.indexOf("[", bracketStart + 1);
+  }
+  return null;
+}
+
+function protectLiteralDollarsInMarkdownLinks(value: string): string {
+  let result = "";
+  let cursor = 0;
+
+  while (cursor < value.length) {
+    const isLinkStart =
+      value[cursor] === "[" || (value[cursor] === "!" && value[cursor + 1] === "[");
+    if (!isLinkStart) {
+      const nextLink = findNextInlineMarkdownLink(value, cursor);
+      const nextIndex = nextLink?.start ?? value.length;
+      result += protectLiteralDollarsInPlainText(value.slice(cursor, nextIndex));
+      cursor = nextIndex;
+      continue;
+    }
+
+    const linkEnd = findInlineMarkdownLinkEnd(value, cursor);
+    if (linkEnd === -1) {
+      result += protectLiteralDollarsInPlainText(value[cursor] ?? "");
+      cursor += 1;
+      continue;
+    }
+
+    // Inline links are parsed after math, so protect route params like `_chat.$threadId.tsx`.
+    result += value.slice(cursor, linkEnd).replaceAll("$", LITERAL_DOLLAR_PLACEHOLDER);
+    cursor = linkEnd;
+  }
+
+  return result;
+}
+
+// Normalize assistant math and protect literal dollars without touching code spans.
 function protectLiteralMarkdownDollars(value: string): string {
   let result = "";
   let cursor = 0;
@@ -1414,6 +1707,11 @@ const MARKDOWN_COMPONENTS: Components = {
                 // A plain click on a pull request or issue follows the user's setting (in
                 // the app by default); cmd/ctrl-click keeps the default external open.
                 onClick: (event: React.MouseEvent) => {
+                  if (readEmbedMode()) {
+                    event.preventDefault();
+                    openExternalLink(restoredHref);
+                    return;
+                  }
                   if (event.metaKey || event.ctrlKey) return;
                   const openGitHubItem = resolveGitHubItemClickOpener(restoredHref, linkActions);
                   if (!openGitHubItem) return;
@@ -1446,7 +1744,11 @@ const MARKDOWN_COMPONENTS: Components = {
           targetPath={targetPath}
           theme={resolvedTheme}
           label={
-            usesAutomaticBlockDirection ? <bdi dir="auto">{linkedChildren}</bdi> : linkedChildren
+            usesAutomaticBlockDirection ? (
+              <bdi dir="auto">{nodeToPlainText(linkedChildren)}</bdi>
+            ) : (
+              nodeToPlainText(linkedChildren)
+            )
           }
           {...(restoredHref ? { href: restoredHref } : {})}
         />
@@ -1466,7 +1768,7 @@ const MARKDOWN_COMPONENTS: Components = {
     const rawFenceInfo = extractRawFenceInfo(codeBlock.className);
     // An agent places a visual in its reply with a fence naming the visual id.
     // Only this transcript's own visuals render; anything else stays code.
-    if (rawFenceInfo === INLINE_VISUAL_EMBED_FENCE && renderInlineVisual && !isUserVariant) {
+    if (isInlineVisualEmbedFence(rawFenceInfo) && renderInlineVisual && !isUserVariant) {
       const visualId = readInlineVisualEmbedId(codeBlock.code);
       const visual = visualId === null ? null : renderInlineVisual(visualId);
       if (visual !== null) return <div className="my-4 first:mt-0 last:mb-0">{visual}</div>;
@@ -1509,6 +1811,13 @@ const MARKDOWN_COMPONENTS: Components = {
           </CodeHighlightErrorBoundary>
         )}
       </MarkdownCodeBlock>
+    );
+  },
+  table: function MarkdownTable({ node: _node, children, ...props }) {
+    return (
+      <div className="chat-markdown-table-scroll">
+        <table {...props}>{children}</table>
+      </div>
     );
   },
   code: function MarkdownInlineCode({ node, className, children, ...props }) {
@@ -1794,16 +2103,21 @@ function ChatMarkdown({
         : null,
     [isUserVariant, mentionReferences, terminalContexts],
   );
+  const codexFileCitationsRemarkPlugin = useMemo(
+    () => createCodexFileCitationsRemarkPlugin(cwd),
+    [cwd],
+  );
   const remarkPlugins = useMemo<MarkdownRemarkPlugins>(() => {
     if (composerChipsRemarkPlugin) {
       return [...USER_MARKDOWN_REMARK_PLUGINS, composerChipsRemarkPlugin, remarkFindableText];
     }
     return [
       ...MARKDOWN_REMARK_PLUGINS,
+      codexFileCitationsRemarkPlugin,
       [remarkWikiLinks, { root: wikiLinkRoot ?? cwd }],
       remarkFindableText,
     ];
-  }, [composerChipsRemarkPlugin, wikiLinkRoot, cwd]);
+  }, [codexFileCitationsRemarkPlugin, composerChipsRemarkPlugin, cwd, wikiLinkRoot]);
   const rehypePlugins = useMemo<MarkdownRehypePlugins>(() => {
     // Raw HTML is only enabled for authored local-file previews. Sanitize
     // immediately after parsing so scripts, event handlers, and unsafe URL

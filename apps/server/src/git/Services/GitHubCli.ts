@@ -34,8 +34,8 @@ import type { GitHubCliError } from "../Errors.ts";
  * {@link GitHubPullRequestSummary} — one source so call sites and tests cannot drift.
  *
  * Note: `mergeable` is computed lazily by GitHub (it answers UNKNOWN while recomputing),
- * so list calls may pay a small extra API cost for it. The remote-status cache bounds
- * that cost; if status polling ever feels slow, this field is the first suspect.
+ * so list calls may pay a small extra API cost for it. The branch-PR cache bounds
+ * that cost; local git status is served independently of this lookup.
  */
 export const PULL_REQUEST_SUMMARY_JSON_FIELDS =
   "number,title,url,baseRefName,headRefName,state,mergedAt,isDraft,mergeable,additions,deletions,changedFiles,isCrossRepository,headRepository,headRepositoryOwner,updatedAt";
@@ -95,6 +95,8 @@ export interface GitHubPullRequestListItem {
 export interface GitHubInboxPullRequest extends GitHubPullRequestListItem {
   readonly commentCount: number;
   readonly assignees: ReadonlyArray<PullRequestActor>;
+  /** The head commit's combined check state; null without checks. */
+  readonly checksState?: "pending" | "success" | "failure" | null;
 }
 
 export interface GitHubInboxIssue {
@@ -156,6 +158,8 @@ export interface GitHubRepositoryInboxInvolvement {
   readonly items: ReadonlyArray<GitHubInboxRemoteItem>;
   /** Every matched number, including any whose node could not be decoded into `items`. */
   readonly involvedNumbers: ReadonlyArray<number>;
+  readonly totalCount?: number;
+  readonly nextCursor?: string | null;
   readonly rateLimit: GitHubGraphQlRateLimit | null;
 }
 
@@ -259,6 +263,8 @@ export interface GitHubCliShape {
     readonly repository: string;
     readonly state: GitHubInboxState;
     readonly sort?: GitHubInboxSort;
+    readonly exactInvolvement?: "authored" | "reviewRequested";
+    readonly cursor?: string;
   }) => Effect.Effect<GitHubRepositoryInboxInvolvement, GitHubCliError>;
 
   /**
@@ -324,7 +330,7 @@ export interface GitHubCliShape {
     readonly cwd: string;
     readonly repository: string;
     readonly number: number;
-    readonly action: "merge" | "ready" | "draft" | "close" | "reopen";
+    readonly action: "merge" | "ready" | "draft" | "close" | "reopen" | "approve";
     readonly mergeMethod?: PullRequestMergeMethod;
   }) => Effect.Effect<{ readonly mergeOutcome: "merged" | "enqueued" | null }, GitHubCliError>;
 

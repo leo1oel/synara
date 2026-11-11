@@ -2,6 +2,7 @@
 // Purpose: Single source of truth for provider usage rows shown in Settings,
 // the chat header usage chip, and compact environment/Local popovers.
 
+import { localizeProviderStatusMessage } from "./providerStatusMessages";
 import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
 import { t } from "~/i18n";
 import {
@@ -37,6 +38,15 @@ export interface ProviderUsageProgressTrackProps {
 export interface ProviderUsagePaceDetails {
   amountText: string | null;
   etaText: string | null;
+}
+
+export interface LocalizedProviderUsageDisplayText {
+  label: string;
+  leftText: string;
+  resetText: string | null;
+  progressLabel: string;
+  paceTitle: string | undefined;
+  paceDetails: ProviderUsagePaceDetails | null;
 }
 
 export const PROVIDER_USAGE_TONE_CLASS_NAME: Record<ProviderUsageTone, string> = {
@@ -108,6 +118,122 @@ export function providerUsagePaceDetails(
     amountText: row.pace.amountText,
     etaText: row.pace.etaText,
   };
+}
+
+function localizeProviderUsageWindowLabel(translate: typeof t, label: string): string {
+  switch (label) {
+    case "5h":
+      return translate("common:5h");
+    case "Weekly":
+      return translate("common:schedule_weekly");
+    case "Weekly (overage)":
+      return translate("lattice:weeklyOverage");
+    case "Current":
+      return translate("common:list_currentSection");
+    default:
+      // Model names such as Sonnet and Opus, plus provider-defined future labels,
+      // should remain intact instead of being guessed at in the presentation layer.
+      return label;
+  }
+}
+
+function localizeCompactDuration(translate: typeof t, duration: string): string {
+  if (duration === "<1m") {
+    return translate("settings:usageDurationUnderMinute");
+  }
+  return duration
+    .split(" ")
+    .map((part) => {
+      const match = /^(\d+)([dhm])$/u.exec(part);
+      if (!match) return part;
+      const count = match[1]!;
+      switch (match[2]) {
+        case "d":
+          return translate("automation:intentDays", { count });
+        case "h":
+          return translate("automation:intentHours", { count });
+        case "m":
+          return translate("automation:intentMinutes", { count });
+        default:
+          return part;
+      }
+    })
+    .join(" ");
+}
+
+function localizeResetText(translate: typeof t, resetText: string | null): string | null {
+  if (!resetText) return null;
+  if (resetText === "Resets soon") {
+    return translate("settings:usageResetsSoon");
+  }
+  const match = /^Resets in (.+)$/u.exec(resetText);
+  if (!match) return resetText;
+  return translate("lattice:resetsIn", { duration: localizeCompactDuration(translate, match[1]!) });
+}
+
+function localizePaceDetails(
+  translate: typeof t,
+  details: ProviderUsagePaceDetails | null,
+): ProviderUsagePaceDetails | null {
+  if (!details) return null;
+
+  let amountText = details.amountText;
+  const amountMatch = amountText ? /^(\d+)% in (reserve|deficit)$/u.exec(amountText) : null;
+  if (amountMatch?.[2] === "reserve") {
+    amountText = translate("settings:usageReserve", { percent: amountMatch[1]! });
+  } else if (amountMatch?.[2] === "deficit") {
+    amountText = translate("settings:usageDeficit", { percent: amountMatch[1]! });
+  }
+
+  let etaText = details.etaText;
+  if (etaText === "Lasts until reset") {
+    etaText = translate("settings:usageLastsUntilReset");
+  } else if (etaText === "Limit reached") {
+    etaText = translate("settings:usageLimitReached");
+  } else if (etaText) {
+    const runOutMatch = /^Runs out in (.+)$/u.exec(etaText);
+    if (runOutMatch) {
+      etaText = translate("settings:usageRunsOut", {
+        duration: localizeCompactDuration(translate, runOutMatch[1]!),
+      });
+    }
+  }
+
+  return { amountText, etaText };
+}
+
+/** Translate the provider-owned usage vocabulary only at the final web display boundary. */
+export function localizeProviderUsageDisplayText(
+  translate: typeof t,
+  row: ProviderUsageDisplayRow,
+): LocalizedProviderUsageDisplayText {
+  const label = localizeProviderUsageWindowLabel(translate, row.label);
+  const paceStatus = row.pace
+    ? row.pace.status === "ahead"
+      ? translate("lattice:ahead")
+      : row.pace.status === "on-track"
+        ? translate("lattice:onTrack")
+        : translate("lattice:behind")
+    : null;
+  return {
+    label,
+    leftText: translate("common:left2", { duration: row.remainingLabel }),
+    resetText: localizeResetText(translate, row.resetText),
+    progressLabel: translate("settings:usageRemaining", { window: label }),
+    paceTitle: paceStatus ? translate("common:usagePace", { value0: paceStatus }) : undefined,
+    paceDetails: localizePaceDetails(translate, providerUsagePaceDetails(row)),
+  };
+}
+
+export function localizeProviderUsageNotice(translate: typeof t, notice: string): string {
+  const anthropicThrottleMatch =
+    /^Anthropic is rate-limiting usage checks — showing your last values, retrying in ~(\d+)m\. Manual refreshes only extend the limit\.$/u.exec(
+      notice,
+    );
+  if (!anthropicThrottleMatch) return localizeProviderStatusMessage(translate, notice);
+  return translate("lattice:anthropicIsRateLimitingUsageChecksShowing", {
+    minutes: anthropicThrottleMatch[1]!,
+  });
 }
 
 export function deriveProviderUsageDisplayRow(

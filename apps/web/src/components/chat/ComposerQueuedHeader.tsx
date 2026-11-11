@@ -7,6 +7,7 @@
 // Layer: Chat composer UI
 // Exports: ComposerQueuedHeader
 
+import { t, useTranslation } from "~/i18n";
 import type { QueuedComposerTurn } from "../../composerDraftStore";
 import type { QueuedComposerPause, QueuedComposerPauseReason } from "~/lib/queuedComposerPause";
 import { PauseIcon, SteerIcon } from "~/lib/icons";
@@ -26,13 +27,17 @@ import {
 } from "./composerStackedPanelStyles";
 import { COMPOSER_INLINE_ACTION_PILL_CLASS_NAME } from "./composerPickerStyles";
 import { QueuedComposerActions } from "./QueuedComposerActions";
-import { useTranslation } from "~/i18n";
 
-const PAUSE_DETAIL_BY_REASON: Record<QueuedComposerPauseReason, string> = {
-  stopped: "Paused after you stopped the turn",
-  error: "Paused after an error",
-  "usage-limit": "Paused: usage limit",
-};
+function pauseDetail(reason: QueuedComposerPauseReason): string {
+  switch (reason) {
+    case "stopped":
+      return t("lattice:pausedAfterYouStoppedTheTurn");
+    case "error":
+      return t("lattice:pausedAfterAnError");
+    case "usage-limit":
+      return t("lattice:pausedUsageLimit");
+  }
+}
 
 const PAUSE_ACTION_CLASS_NAME = cn(COMPOSER_INLINE_ACTION_PILL_CLASS_NAME, "text-ui-sm");
 
@@ -68,7 +73,7 @@ function QueuedComposerPausedNotice({
         <span className="min-w-0 truncate text-ui-sm text-muted-foreground">
           <span className="font-medium text-foreground">{t("chat:queuePaused")}</span>
           <span aria-hidden> · </span>
-          {PAUSE_DETAIL_BY_REASON[pause.reason]}
+          {pauseDetail(pause.reason)}
         </span>
       </ComposerStackedPanelRowMain>
       <div className="flex shrink-0 items-center gap-1.5">
@@ -104,10 +109,10 @@ function firstNonEmptyLine(value: string): string {
 export function compactQueuedComposerPreviewMarkdown(value: string): string {
   const firstLine = firstNonEmptyLine(value);
   if (firstLine.length === 0) {
-    return "Queued follow-up";
+    return t("lattice:queuedFollowUp");
   }
   if (/^(?:`{3,}|~{3,})/.test(firstLine)) {
-    return "Code block";
+    return t("lattice:codeBlock");
   }
   const normalized = firstLine
     .replace(/^#{1,6}\s+/, "")
@@ -116,7 +121,7 @@ export function compactQueuedComposerPreviewMarkdown(value: string): string {
     .replace(/^[-*+]\s+/, "")
     .replace(/^\d+[.)]\s+/, "")
     .trim();
-  return normalized.length > 0 ? normalized : "Queued follow-up";
+  return normalized.length > 0 ? normalized : t("lattice:queuedFollowUp");
 }
 
 interface ComposerQueuedHeaderProps {

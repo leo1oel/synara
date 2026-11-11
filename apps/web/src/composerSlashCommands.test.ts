@@ -18,12 +18,81 @@ import {
   parseFastSlashCommandAction,
   parseForkSlashCommandArgs,
   parseGoalSlashCommandArgs,
+  parseMcpSlashCommandArgs,
   parseSideSlashCommandArgs,
   providerSupportsTextNativeReviewCommand,
   shouldHideProviderNativeCommandFromComposerMenu,
 } from "./composerSlashCommands";
 
 describe("composerSlashCommands", () => {
+  describe("/mcp", () => {
+    const availableFor = (
+      provider: "claudeAgent" | "codex" | "opencode",
+      providerNativeCommandNames: string[] = [],
+    ) =>
+      getAvailableComposerSlashCommands({
+        provider,
+        supportsFastSlashCommand: false,
+        canOfferCompactCommand: false,
+        canOfferReviewCommand: false,
+        canOfferForkCommand: false,
+        canOfferSideCommand: false,
+        canOfferExportCommand: false,
+        providerNativeCommandNames,
+      });
+
+    it.each(["", "   ", "\n\t "])("opens the server view for bare /mcp (%j)", (args) => {
+      expect(parseMcpSlashCommandArgs(args)).toEqual({ kind: "view" });
+      expect(parseComposerSlashInvocation(`/mcp${args}`)).toEqual({ command: "mcp", args: "" });
+    });
+
+    it("keeps Claude Code's subcommands, with or without a server", () => {
+      expect(parseMcpSlashCommandArgs("reconnect linear")).toEqual({
+        kind: "server-action",
+        action: "reconnect",
+        serverName: "linear",
+      });
+      expect(parseMcpSlashCommandArgs("DISABLE  my server ")).toEqual({
+        kind: "server-action",
+        action: "disable",
+        serverName: "my server",
+      });
+      expect(parseMcpSlashCommandArgs("enable")).toEqual({
+        kind: "server-action",
+        action: "enable",
+        serverName: null,
+      });
+      expect(parseMcpSlashCommandArgs("reconnect all")).toEqual({
+        kind: "server-action",
+        action: "reconnect",
+        serverName: null,
+      });
+    });
+
+    it("reports an unknown action by name instead of an empty one", () => {
+      expect(parseMcpSlashCommandArgs("list")).toEqual({ kind: "invalid", action: "list" });
+      expect(parseMcpSlashCommandArgs("Login linear")).toEqual({
+        kind: "invalid",
+        action: "Login",
+      });
+    });
+
+    it("is app-owned for Claude even though Claude lists a native /mcp", () => {
+      expect(availableFor("claudeAgent", ["mcp", "compact"])).toContain("mcp");
+      expect(shouldHideProviderNativeCommandFromComposerMenu("claudeAgent", "mcp")).toBe(true);
+      expect(
+        shouldHideProviderNativeCommandFromComposerMenu("claudeAgent", "mcp", {
+          availableAppCommands: new Set(),
+        }),
+      ).toBe(false);
+    });
+
+    it("is offered for Codex but not for providers without an MCP status API", () => {
+      expect(availableFor("codex")).toContain("mcp");
+      expect(availableFor("opencode")).not.toContain("mcp");
+    });
+  });
+
   it.each(["codex"] as const)(
     "offers one Synara Computer invocation for %s despite a native name collision",
     (provider) => {
@@ -422,6 +491,7 @@ describe("composerSlashCommands", () => {
       "default",
       "feedback",
       "automation",
+      "mcp",
     ]);
   });
 

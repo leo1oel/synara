@@ -9,6 +9,7 @@ import {
   accountProfileSyncUnavailableReason,
   remoteConnectionsUnavailableReason,
   requireAccountProfileSync,
+  synaraAccountUnavailableInHost,
 } from "./remoteFeaturePolicy";
 
 afterEach(() => vi.unstubAllEnvs());
@@ -81,5 +82,32 @@ describe("account profile activation", () => {
     vi.stubEnv("SYNARA_DESKTOP_BUNDLE_ID", SYNARA_PRODUCTION_BUNDLE_ID);
     vi.stubEnv("SYNARA_ACCOUNT_PROFILE_SYNC", "1");
     expect(requireAccountProfileSync).not.toThrow();
+  });
+});
+
+// Lattice embeds the agent panel without a Synara account, even when the
+// environment would otherwise opt in to every account feature.
+describe("Lattice host profile", () => {
+  it("keeps Remote, live activity and profile sync off whatever the environment says", () => {
+    vi.stubEnv("AGENT_HOST_PROFILE", "lattice");
+    vi.stubEnv("SYNARA_DESKTOP_BUNDLE_ID", SYNARA_REMOTE_BUNDLE_ID);
+    vi.stubEnv("SYNARA_REMOTE_CONNECTIONS", "1");
+    vi.stubEnv("SYNARA_ACCOUNT_PROFILE_SYNC", "1");
+    vi.stubEnv("SYNARA_ACCOUNT_URL", "https://account.example.test");
+    const reason = "Synara accounts and Remote connections are not part of Lattice.";
+    expect(synaraAccountUnavailableInHost()).toBe(reason);
+    expect(remoteConnectionsUnavailableReason()).toBe(reason);
+    expect(accountProfileSyncUnavailableReason()).toBe(reason);
+    expect(accountLiveActivityEnabled()).toBe(false);
+    expect(() => requireAccountProfileSync()).toThrow(reason);
+  });
+
+  it("leaves the upstream policy to the standalone host", () => {
+    vi.stubEnv("AGENT_HOST_PROFILE", undefined);
+    vi.stubEnv("SYNARA_HOST_PROFILE", undefined);
+    vi.stubEnv("SYNARA_DESKTOP_BUNDLE_ID", SYNARA_REMOTE_BUNDLE_ID);
+    vi.stubEnv("SYNARA_ACCOUNT_PROFILE_SYNC", undefined);
+    expect(synaraAccountUnavailableInHost()).toBeUndefined();
+    expect(accountProfileSyncUnavailableReason()).toBeUndefined();
   });
 });

@@ -1,4 +1,6 @@
 import type {
+  GitBranchPullRequestInput,
+  GitBranchPullRequestResult,
   GitStatusInput,
   GitStatusLocalResult,
   GitStatusResult,
@@ -12,6 +14,13 @@ export interface GitStatusBroadcasterShape {
   readonly getStatus: (
     input: GitStatusInput,
   ) => Effect.Effect<GitStatusResult, GitManagerServiceError>;
+  /**
+   * The current branch's pull request, served apart from status because it needs GitHub
+   * round trips. Lookup failures (gh missing, signed out, offline) resolve to `pr: null`.
+   */
+  readonly getBranchPullRequest: (
+    input: GitBranchPullRequestInput,
+  ) => Effect.Effect<GitBranchPullRequestResult, GitManagerServiceError>;
   readonly refreshLocalStatus: (
     cwd: string,
   ) => Effect.Effect<GitStatusLocalResult, GitManagerServiceError>;

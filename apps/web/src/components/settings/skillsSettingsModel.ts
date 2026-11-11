@@ -3,6 +3,7 @@
 // Layer: Settings UI logic
 // Exports: origin metadata, canonical skill grouping, and section ordering helpers.
 
+import { t } from "~/i18n";
 import type { ProviderKind, ProviderSkillDescriptor } from "@synara/contracts";
 import { PROVIDER_DISPLAY_NAMES } from "@synara/contracts";
 import { DEFAULT_PROVIDER_ORDER } from "~/providerOrdering";
@@ -21,7 +22,7 @@ export interface SettingsSkillSource {
 export interface SettingsSkillGroup {
   readonly key: string;
   readonly displayName: string;
-  readonly description: string;
+  readonly description?: string;
   readonly primarySkill: ProviderSkillDescriptor;
   readonly providers: ReadonlyArray<ProviderKind>;
   readonly sources: ReadonlyArray<SettingsSkillSource>;
@@ -37,12 +38,14 @@ export interface SettingsSkillSection {
 const SHARED_SKILLS_SECTION = "shared";
 const PERSONAL_ORIGIN = "personal";
 export const ORIGIN_SECTION_ORDER = [
+  "bundled",
   "synara",
   "codex",
   "claude",
   "cursor",
   "antigravity",
   "grok",
+  "factory",
   "droid",
   "opencode",
   "pi",
@@ -53,8 +56,10 @@ export const ORIGIN_SECTION_ORDER = [
 ] as const;
 export function skillOriginInfo(scope: string | undefined): SkillOriginInfo {
   switch (scope) {
+    case "bundled":
+      return { label: t("lattice:includedWithLattice"), provider: null };
     case "synara":
-      return { label: "Synara", provider: null };
+      return { label: t("lattice:installedByYou"), provider: null };
     case "codex":
       return { label: PROVIDER_DISPLAY_NAMES.codex, provider: "codex" };
     case "claude":
@@ -67,6 +72,7 @@ export function skillOriginInfo(scope: string | undefined): SkillOriginInfo {
       return { label: PROVIDER_DISPLAY_NAMES.antigravity, provider: "antigravity" };
     case "grok":
       return { label: PROVIDER_DISPLAY_NAMES.grok, provider: "grok" };
+    case "factory":
     case "droid":
       return { label: PROVIDER_DISPLAY_NAMES.droid, provider: "droid" };
     case "opencode":
@@ -117,10 +123,13 @@ function sourceSortKey(source: SettingsSkillSource): string {
 }
 
 function sectionTitle(section: string): string {
-  if (section === SHARED_SKILLS_SECTION) {
-    return "Shared skills";
+  if (section === "bundled") {
+    return t("lattice:includedWithLattice");
   }
-  return `From ${skillOriginInfo(section).label}`;
+  if (section === SHARED_SKILLS_SECTION || section === "synara") {
+    return section === "synara" ? t("lattice:installedByYou") : t("lattice:sharedAcrossAgents");
+  }
+  return skillOriginInfo(section).label;
 }
 
 function sectionRank(section: string): number {
@@ -161,14 +170,16 @@ export function buildSettingsSkillGroups(
           .flatMap((source) => providersForSkillOrigin(source.origin))
           .filter((provider, index, all) => all.indexOf(provider) === index),
       );
+      const sourceLabels = new Set(sources.map((source) => source.originInfo.label));
       const section =
-        sources.length > 1 ? SHARED_SKILLS_SECTION : (sources[0]?.origin ?? PERSONAL_ORIGIN);
-      const description =
-        primarySkill.interface?.shortDescription ?? primarySkill.description ?? "No description.";
+        sourceLabels.size > 1 ? SHARED_SKILLS_SECTION : (sources[0]?.origin ?? PERSONAL_ORIGIN);
+      const description = (
+        primarySkill.interface?.shortDescription ?? primarySkill.description
+      )?.trim();
       return {
         key,
         displayName: skillDisplayName(primarySkill),
-        description,
+        ...(description ? { description } : {}),
         primarySkill,
         providers,
         sources,
@@ -179,8 +190,7 @@ export function buildSettingsSkillGroups(
     .sort((left, right) => left.displayName.localeCompare(right.displayName));
 }
 
-/** Sections from already-built groups, so callers that need both do not run the grouping twice. */
-export function buildSettingsSkillSectionsFromGroups(
+export function groupSettingsSkillsBySection(
   groups: ReadonlyArray<SettingsSkillGroup>,
 ): SettingsSkillSection[] {
   const sections = new Map<string, SettingsSkillGroup[]>();
@@ -196,3 +206,12 @@ export function buildSettingsSkillSectionsFromGroups(
     }))
     .sort((left, right) => sectionRank(left.key) - sectionRank(right.key));
 }
+
+export function buildSettingsSkillSections(
+  skills: ReadonlyArray<ProviderSkillDescriptor>,
+): SettingsSkillSection[] {
+  return groupSettingsSkillsBySection(buildSettingsSkillGroups(skills));
+}
+
+/** Upstream-compatible name for callers that already built the canonical groups. */
+export const buildSettingsSkillSectionsFromGroups = groupSettingsSkillsBySection;

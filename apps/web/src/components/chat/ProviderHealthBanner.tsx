@@ -1,10 +1,9 @@
-// FILE: ProviderHealthBanner.tsx
-// Purpose: Surfaces provider availability warnings above the active chat.
-// Layer: Chat status presentation
-// Exports: ProviderHealthBanner
+import { t } from "~/i18n";
 
+import { localizeProviderStatusMessage } from "~/lib/providerStatusMessages";
 import { PROVIDER_DISPLAY_NAMES, type ServerProviderStatus } from "@synara/contracts";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "../ui/alert";
+import { Button } from "../ui/button";
 import { IconButton } from "../ui/icon-button";
 import {
   EXPANDED_NOTIFICATION_SURFACE_CLASS_NAME,
@@ -14,56 +13,87 @@ import { CircleAlertIcon, TriangleAlertIcon, XIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { ChatColumnBannerFrame } from "./ChatColumnBannerFrame";
 import { isProviderKind } from "../../providerOrdering";
-import { useTranslation } from "~/i18n";
+import {
+  ProviderRuntimeInstallButton,
+  providerRuntimeInstallFailureMessage,
+  providerRuntimeInstallOf,
+} from "../ProviderRuntimeInstall";
 
 export const ProviderHealthBanner = function ProviderHealthBanner({
+  needsProviderSetup = false,
+  onConfigure,
   onDismiss,
   status,
 }: {
+  needsProviderSetup?: boolean;
+  onConfigure?: () => void;
   onDismiss?: () => void;
   status: ServerProviderStatus | null;
 }) {
-  const { t } = useTranslation();
-
-  if (!status || status.status === "ready") {
+  if (!needsProviderSetup && (!status || status.status === "ready")) {
     return null;
   }
 
-  const providerLabelFallback = isProviderKind(status.provider)
-    ? PROVIDER_DISPLAY_NAMES[status.provider]
-    : status.provider;
-  const providerLabel = status.displayName?.trim() || providerLabelFallback || status.provider;
-  const defaultMessage =
-    status.status === "error"
+  const providerLabelFallback =
+    status && isProviderKind(status.provider)
+      ? PROVIDER_DISPLAY_NAMES[status.provider]
+      : status?.provider;
+  const providerLabel = status?.displayName?.trim() || providerLabelFallback || status?.provider;
+  const defaultMessage = needsProviderSetup
+    ? t("lattice:installOrSignInToAtLeast")
+    : status?.status === "error"
       ? t("chat:providerIsUnavailable", { value0: providerLabel })
       : t("chat:providerHasLimitedAvailability", { value0: providerLabel });
-  const title = t("chat:providerStatus", { value0: providerLabel });
-  const Icon = status.status === "error" ? CircleAlertIcon : TriangleAlertIcon;
+  // A provider runtime the host left out installs right from the banner.
+  const runtimeInstall = needsProviderSetup ? null : providerRuntimeInstallOf(status);
+  const hasAction = Boolean(onConfigure || runtimeInstall);
+  const message = needsProviderSetup
+    ? defaultMessage
+    : runtimeInstall?.status === "failed"
+      ? providerRuntimeInstallFailureMessage(t, runtimeInstall)
+      : status?.message
+        ? localizeProviderStatusMessage(t, status.message)
+        : defaultMessage;
+  const title = needsProviderSetup
+    ? t("lattice:setUpAnAgentProvider")
+    : t("chat:providerStatus", { value0: providerLabel });
+  const isError = status?.status === "error";
+  const Icon = isError ? CircleAlertIcon : TriangleAlertIcon;
 
   return (
     <ChatColumnBannerFrame>
       <Alert
-        className={cn(EXPANDED_NOTIFICATION_SURFACE_CLASS_NAME, "pr-10")}
-        variant={status.status === "error" ? "error" : "warning"}
+        className={cn(
+          "provider-health-banner",
+          EXPANDED_NOTIFICATION_SURFACE_CLASS_NAME,
+          !hasAction && onDismiss && "pr-10",
+        )}
+        variant={needsProviderSetup ? "info" : isError ? "error" : "warning"}
       >
         <Icon className={NOTIFICATION_ICON_CLASS_NAME} />
         <AlertTitle className="font-normal text-[var(--notification-fg)]">{title}</AlertTitle>
-        <AlertDescription
-          className="line-clamp-3 text-[var(--notification-fg)]/72"
-          title={status.message ?? defaultMessage}
-        >
-          {status.message ?? defaultMessage}
+        <AlertDescription className="line-clamp-3 text-[var(--notification-fg)]/72" title={message}>
+          {message}
         </AlertDescription>
-        {onDismiss ? (
-          <AlertAction className="absolute top-2 right-2">
-            <IconButton
-              className="size-6 rounded-full text-[var(--notification-fg)]/65 hover:bg-[var(--notification-fg)]/10 hover:text-[var(--notification-fg)] focus-visible:ring-[var(--notification-fg)]/35 sm:size-6"
-              label={t("chat:providerHealthBanner_dismissLabel")}
-              title={t("chat:providerHealthBanner_dismissLabel")}
-              onClick={onDismiss}
-            >
-              <XIcon className="size-3.5" />
-            </IconButton>
+        {hasAction || onDismiss ? (
+          <AlertAction className={cn("items-center", !hasAction && "absolute top-2 right-2")}>
+            {runtimeInstall && status ? (
+              <ProviderRuntimeInstallButton status={status} />
+            ) : onConfigure ? (
+              <Button size="xs" variant="outline" onClick={onConfigure}>
+                {t("lattice:providerSettings")}
+              </Button>
+            ) : null}
+            {onDismiss ? (
+              <IconButton
+                className="size-6 rounded-full text-[var(--notification-fg)]/65 hover:bg-[var(--notification-fg)]/10 hover:text-[var(--notification-fg)] focus-visible:ring-[var(--notification-fg)]/35 sm:size-6"
+                label={t("chat:providerHealthBanner_dismissLabel")}
+                title={t("chat:providerHealthBanner_dismissLabel")}
+                onClick={onDismiss}
+              >
+                <XIcon className="size-3.5" />
+              </IconButton>
+            ) : null}
           </AlertAction>
         ) : null}
       </Alert>

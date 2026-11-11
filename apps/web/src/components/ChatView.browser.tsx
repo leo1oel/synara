@@ -1407,6 +1407,12 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
       pr: null,
     };
   }
+  // The fork serves the branch PR on its own RPC (bc54a5966); an unanswered lookup
+  // fails and retries with backoff, holding up every git refresh that awaits it.
+  if (tag === WS_METHODS.gitBranchPullRequest) {
+    const cwd = typeof body.cwd === "string" ? body.cwd : null;
+    return { branch: cwd ? (fixture.gitBranchByCwd[cwd] ?? "main") : "main", pr: null };
+  }
   if (tag === WS_METHODS.gitCreateWorktree) {
     const requestedBranch =
       typeof body.newBranch === "string"
@@ -9267,6 +9273,50 @@ describe("ChatView transcript geometry (full app)", () => {
         .toBeVisible();
       await page.getByRole("option", { name: "Plan mode Turn plan mode on", exact: true }).click();
       await expect.element(page.getByRole("button", { name: "Plan", exact: true })).toBeVisible();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  // Issue leo1oel/lattice#672: Lattice's Agent panel is often shorter than the composer's
+  // full height. The editor's fixed 200px cap let the floating composer grow out of the top
+  // of the chat column until the prompt being typed was clipped away; it now scrolls inside
+  // the editor at whatever height the column leaves it.
+  it("keeps a long draft's composer inside a short chat column", async () => {
+    const mounted = await mountChatView({
+      viewport: { name: "short", width: 640, height: 340 },
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: MessageId.makeUnsafe("msg-composer-room"),
+        targetText: "Composer room",
+      }),
+    });
+    try {
+      await waitForComposerEditor();
+      const sentence =
+        "Rewrite the related-work paragraph so each cited system is compared on the same axis. ";
+      await userEvent.fill(page.getByTestId("composer-editor"), sentence.repeat(14));
+      await waitForLayout();
+      const column = document.querySelector<HTMLElement>("[data-chat-main-content]")!;
+      const form = document.querySelector<HTMLElement>('[data-chat-composer-form="true"]')!;
+      const editor = document.querySelector<HTMLElement>('[data-testid="composer-editor"]')!;
+      await vi.waitFor(() => {
+        expect(form.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+          column.getBoundingClientRect().top,
+        );
+      });
+      expect(editor.clientHeight).toBeLessThan(200);
+      expect(editor.clientHeight).toBeGreaterThanOrEqual(44);
+      expect(editor.scrollHeight).toBeGreaterThan(editor.clientHeight);
+      expect(editor.getBoundingClientRect().bottom).toBeLessThanOrEqual(window.innerHeight);
+
+      // Given its height back, the column lets the editor grow to its own 200px cap again.
+      await mounted.setViewport({ name: "tall", width: 640, height: 1_000 });
+      await vi.waitFor(() => {
+        expect(editor.clientHeight).toBe(200);
+      });
+      expect(form.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+        column.getBoundingClientRect().top,
+      );
     } finally {
       await mounted.cleanup();
     }

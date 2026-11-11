@@ -10,6 +10,7 @@ import { Option, Schema, SchemaTransformation } from "effect";
 import {
   type AssistantDeliveryMode,
   CodexAccountConfig,
+  type ModelSelection,
   DesktopAppIcon,
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
   DEFAULT_CODEX_ACCOUNT_ID,
@@ -45,6 +46,7 @@ import {
 import type { SynaraDesktopFlavor } from "@synara/shared/desktopIdentity";
 import { codexAccountInstanceId } from "@synara/shared/providerInstances";
 import { useLocalStorage } from "./hooks/useLocalStorage";
+import { isLatticeEmbedDocument } from "./embedMode";
 import { APP_SETTINGS_STORAGE_KEY } from "./appSettingsStorage";
 import { EnvMode } from "./components/BranchToolbar.logic";
 import { normalizeCursorModelVariantBaseId } from "./cursorModelVariants";
@@ -131,6 +133,10 @@ export const DEFAULT_TERMINAL_FONT_SIZE_PX = 12;
 export const DEFAULT_TERMINAL_FONT_FAMILY = "";
 
 export const TERMINAL_FONT_FAMILY_SUGGESTIONS: ReadonlyArray<string> = [
+  "TX-02 Variable",
+  "TX-02",
+  "Berkeley Mono Variable",
+  "Berkeley Mono",
   "JetBrains Mono",
   "Fira Code",
   "Cascadia Code",
@@ -373,6 +379,7 @@ export const AppSettingsSchema = Schema.Struct({
   claudeBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   claudeEnableArtifacts: Schema.Boolean.pipe(withDefaults(() => false)),
   claudeConfirmColdCacheResume: Schema.Boolean.pipe(withDefaults(() => false)),
+  claudeLoadUserMcpServers: Schema.Boolean.pipe(withDefaults(() => false)),
   // Server-backed first-run marker; see ServerSettings.onboardingCompletedAt.
   onboardingCompletedAt: Schema.NullOr(Schema.String).pipe(withDefaults((): string | null => null)),
   claudeHomePath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
@@ -609,15 +616,22 @@ export const AppSettingsSchema = Schema.Struct({
     withDefaults(() => "repository" as const),
   ),
   sourceControlCustomInstructions: SourceControlCustomInstructions.pipe(withDefaults(() => "")),
+  compileRepairProvider: PersistedProviderKind.pipe(withDefaults(() => "codex" as const)),
+  compileRepairModel: Schema.optional(TrimmedNonEmptyString),
+  // Lattice proofreading override; no model inherits the Git writing model.
+  proofreadProvider: Schema.optional(PersistedProviderKind),
+  proofreadProviderInstanceId: Schema.optional(ProviderInstanceId),
+  proofreadModel: Schema.optional(TrimmedNonEmptyString),
   uiFontFamily: Schema.String.check(Schema.isMaxLength(256)).pipe(withDefaults(() => "")),
-  defaultProvider: PersistedProviderKind.pipe(withDefaults(() => "codex" as const)),
+  // Lattice's agent panel is a Claude-first writing surface; elsewhere Codex
+  // stays the default. A stored choice always wins over this default.
+  defaultProvider: PersistedProviderKind.pipe(
+    withDefaults(() => (isLatticeEmbedDocument() ? "claudeAgent" : "codex")),
+  ),
   // Local-only UI preference: providers explicitly hidden from the composer picker.
   // The active/locked provider for a thread is always shown regardless, so users
   // never get stuck on a thread whose provider they later chose to hide.
   hiddenProviders: PersistedProviderKindList.pipe(withDefaults(() => [])),
-  // Server-backed provider shutdown policy. Unlike `hiddenProviders`, entries here
-  // cannot run discovery, health checks, updates, or new turns until re-enabled.
-  disabledProviders: PersistedProviderKindList.pipe(withDefaults(() => [])),
   // Local-only UI preference: top-level provider order in Settings and the composer picker.
   providerOrder: PersistedProviderKindList.pipe(withDefaults(() => [...DEFAULT_PROVIDER_ORDER])),
   // Deprecated local-only preference kept for backward-compatible decoding.
@@ -1038,8 +1052,7 @@ export function getProviderInstanceOptions(
   settings: Pick<
     AppSettings,
     "codexAccounts" | "codexHomePath" | "providerInstances" | "selectedCodexAccountId"
-  > &
-    Partial<Pick<AppSettings, "disabledProviders">>,
+  >,
 ): ProviderInstanceOption[] {
   const optionsById = new Map<ProviderInstanceId, ProviderInstanceOption>();
 
@@ -1097,23 +1110,18 @@ export function getProviderInstanceOptions(
     });
   }
 
-  return Array.from(optionsById.values())
-    .map((option) => ({
-      ...option,
-      enabled: option.enabled && !settings.disabledProviders?.includes(option.provider),
-    }))
-    .toSorted((left, right) => {
-      const providerDelta =
-        PROVIDER_INSTANCE_PROVIDER_ORDER.indexOf(left.provider) -
-        PROVIDER_INSTANCE_PROVIDER_ORDER.indexOf(right.provider);
-      if (providerDelta !== 0) {
-        return providerDelta;
-      }
-      if (left.isDefault !== right.isDefault) {
-        return left.isDefault ? -1 : 1;
-      }
-      return left.label.localeCompare(right.label);
-    });
+  return Array.from(optionsById.values()).toSorted((left, right) => {
+    const providerDelta =
+      PROVIDER_INSTANCE_PROVIDER_ORDER.indexOf(left.provider) -
+      PROVIDER_INSTANCE_PROVIDER_ORDER.indexOf(right.provider);
+    if (providerDelta !== 0) {
+      return providerDelta;
+    }
+    if (left.isDefault !== right.isDefault) {
+      return left.isDefault ? -1 : 1;
+    }
+    return left.label.localeCompare(right.label);
+  });
 }
 
 export function getUnsupportedProviderInstanceOptions(
@@ -1526,7 +1534,6 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     customPiModels: normalizeCustomModelSlugs(settings.customPiModels, "pi"),
     customOmpModels: normalizeCustomModelSlugs(settings.customOmpModels, "omp"),
     hiddenProviders: normalizeHiddenProviders(settings.hiddenProviders),
-    disabledProviders: normalizeHiddenProviders(settings.disabledProviders),
     providerOrder: normalizeProviderOrder(settings.providerOrder),
     railItemOrder: normalizeRailItemOrder(settings.railItemOrder),
     hiddenRailItems: normalizeHiddenRailItems(settings.hiddenRailItems),
@@ -1534,25 +1541,6 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
   };
 }
 
-export function getServerDisabledProviders(
-  settings: Pick<ServerSettingsView, "providers">,
-): ProviderKind[] {
-  return DEFAULT_PROVIDER_ORDER.filter((provider) => !settings.providers[provider].enabled);
-}
-
-export function didProviderEnablementChange(
-  previous: Pick<ServerSettingsView, "providers"> | undefined,
-  next: Pick<ServerSettingsView, "providers">,
-): boolean {
-  return (
-    previous === undefined ||
-    DEFAULT_PROVIDER_ORDER.some(
-      (provider) => previous.providers[provider].enabled !== next.providers[provider].enabled,
-    )
-  );
-}
-
-/** Server settings that change which native commands a provider reports. */
 export function didProviderCommandDiscoverySettingsChange(
   previous: Pick<ServerSettingsView, "providers"> | undefined,
   next: Pick<ServerSettingsView, "providers">,
@@ -1568,6 +1556,7 @@ export function serverSettingsToAppSettings(settings: ServerSettingsView): Parti
     claudeBinaryPath: settings.providers.claudeAgent.binaryPath,
     claudeEnableArtifacts: settings.providers.claudeAgent.enableArtifacts,
     claudeConfirmColdCacheResume: settings.providers.claudeAgent.confirmColdCacheResume,
+    claudeLoadUserMcpServers: settings.providers.claudeAgent.loadUserMcpServers,
     claudeHomePath: settings.providers.claudeAgent.homePath,
     codexBinaryPath: settings.providers.codex.binaryPath,
     codexHomePath: settings.providers.codex.homePath,
@@ -1604,13 +1593,17 @@ export function serverSettingsToAppSettings(settings: ServerSettingsView): Parti
     customOpenCodeModels: settings.providers.opencode.customModels,
     customPiModels: settings.providers.pi.customModels,
     customOmpModels: settings.providers.omp.customModels,
-    disabledProviders: getServerDisabledProviders(settings),
     providerInstances: settings.providerInstances,
     textGenerationProvider: settings.textGenerationModelSelection.provider,
     textGenerationProviderInstanceId: settings.textGenerationModelSelection.instanceId,
     textGenerationModel: settings.textGenerationModelSelection.model,
     sourceControlWritingStyle: settings.sourceControlWritingStyle,
     sourceControlCustomInstructions: settings.sourceControlCustomInstructions,
+    compileRepairProvider: settings.compileRepairModelSelection.provider,
+    compileRepairModel: settings.compileRepairModelSelection.model,
+    proofreadProvider: settings.proofreadModelSelection?.provider,
+    proofreadProviderInstanceId: settings.proofreadModelSelection?.instanceId,
+    proofreadModel: settings.proofreadModelSelection?.model,
     onboardingCompletedAt: settings.onboardingCompletedAt ?? null,
   };
 }
@@ -1646,8 +1639,7 @@ function touchesProviderDiscoverySettings(patch: Partial<AppSettings>): boolean 
     hasOwn(patch, "openCodeServerUrl") ||
     hasOwn(patch, "piAgentDir") ||
     hasOwn(patch, "ompBinaryPath") ||
-    hasOwn(patch, "ompAgentDir") ||
-    hasOwn(patch, "disabledProviders")
+    hasOwn(patch, "ompAgentDir")
   );
 }
 
@@ -1769,6 +1761,39 @@ export function appSettingsPatchToServerSettingsPatch(
       model,
     };
   }
+  if (hasOwn(patch, "compileRepairModel") || hasOwn(patch, "compileRepairProvider")) {
+    const model = patch.compileRepairModel ?? DEFAULT_GIT_TEXT_GENERATION_MODEL;
+    serverPatch.compileRepairModelSelection = {
+      provider: resolveTextGenerationProvider({
+        ...(patch.compileRepairProvider !== undefined
+          ? { provider: patch.compileRepairProvider }
+          : {}),
+        model,
+      }),
+      model,
+    };
+  }
+  if (
+    hasOwn(patch, "proofreadModel") ||
+    hasOwn(patch, "proofreadProvider") ||
+    hasOwn(patch, "proofreadProviderInstanceId")
+  ) {
+    // A patch without a model returns proofreading to the Git writing model.
+    const model = patch.proofreadModel;
+    if (model) {
+      const provider = resolveTextGenerationProvider({
+        ...(patch.proofreadProvider !== undefined ? { provider: patch.proofreadProvider } : {}),
+        model,
+      });
+      serverPatch.proofreadModelSelection = {
+        provider,
+        instanceId: patch.proofreadProviderInstanceId?.trim() || provider,
+        model,
+      } as ModelSelection;
+    } else {
+      serverPatch.proofreadModelSelection = null;
+    }
+  }
   if (
     hasOwn(patch, "codexBinaryPath") ||
     hasOwn(patch, "codexHomePath") ||
@@ -1796,6 +1821,7 @@ export function appSettingsPatchToServerSettingsPatch(
     hasOwn(patch, "claudeBinaryPath") ||
     hasOwn(patch, "claudeEnableArtifacts") ||
     hasOwn(patch, "claudeConfirmColdCacheResume") ||
+    hasOwn(patch, "claudeLoadUserMcpServers") ||
     hasOwn(patch, "claudeHomePath") ||
     hasOwn(patch, "customClaudeModels")
   ) {
@@ -1806,6 +1832,9 @@ export function appSettingsPatchToServerSettingsPatch(
         : {}),
       ...(hasOwn(patch, "claudeConfirmColdCacheResume")
         ? { confirmColdCacheResume: Boolean(patch.claudeConfirmColdCacheResume) }
+        : {}),
+      ...(hasOwn(patch, "claudeLoadUserMcpServers")
+        ? { loadUserMcpServers: Boolean(patch.claudeLoadUserMcpServers) }
         : {}),
       ...(hasOwn(patch, "claudeHomePath") ? { homePath: patch.claudeHomePath ?? "" } : {}),
       ...(hasOwn(patch, "customClaudeModels")
@@ -1894,20 +1923,6 @@ export function appSettingsPatchToServerSettingsPatch(
       ...(hasOwn(patch, "customPiModels") ? { customModels: patch.customPiModels ?? [] } : {}),
     };
   }
-  if (hasOwn(patch, "disabledProviders")) {
-    const disabledProviders = new Set(normalizeHiddenProviders(patch.disabledProviders ?? []));
-    for (const provider of DEFAULT_PROVIDER_ORDER) {
-      const enabled = !disabledProviders.has(provider);
-      if (currentSettings?.providers[provider].enabled === enabled) {
-        continue;
-      }
-      providers[provider] = {
-        ...providers[provider],
-        enabled,
-      };
-    }
-  }
-
   if (currentSettings) {
     pruneProviderPatchAgainstCurrentSettings(providers, currentSettings);
   }
@@ -2053,22 +2068,16 @@ function redactAppSettingsSecretsForClient(settings: AppSettings): AppSettings {
 }
 
 export function normalizeStoredAppSettings(settings: AppSettings): AppSettings {
-  return redactAppSettingsSecretsForClient({
-    ...normalizeAppSettings(settings),
-    // Provider enablement belongs to the connected server. Scrub legacy values
-    // so a browser profile cannot project one server's shutdown state onto another.
-    disabledProviders: [],
-  });
+  return redactAppSettingsSecretsForClient(normalizeAppSettings(settings));
 }
 
 export function applyLocalAppSettingsPatch(
   settings: AppSettings,
   patch: Partial<AppSettings>,
 ): AppSettings {
-  const { disabledProviders: _disabledProviders, ...localPatch } = patch;
   return normalizeStoredAppSettings({
     ...settings,
-    ...localPatch,
+    ...patch,
     ...(hasOwn(patch, "openCodeServerPassword")
       ? {
           openCodeServerPasswordConfigured: Boolean(patch.openCodeServerPassword?.trim()),
@@ -2850,9 +2859,7 @@ export function useAppSettings() {
             .invalidateQueries({ queryKey: githubInboxQueryKeys.all })
             .catch(() => undefined);
         }
-        if (hasOwn(patch, "disabledProviders")) {
-          await refreshProvidersAfterEnablementChange();
-        } else if (touchesProviderDiscoverySettings(patch)) {
+        if (touchesProviderDiscoverySettings(patch)) {
           await queryClient
             .invalidateQueries({ queryKey: providerDiscoveryQueryKeys.all })
             .catch(() => undefined);

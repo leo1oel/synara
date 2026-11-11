@@ -1,7 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
+import { i18n } from ".";
 import { formatDayAwareTimestamp } from "../timestampFormat";
+import {
+  PullRequestStateGlyph,
+  IssueStateGlyph,
+} from "../components/pullRequest/PullRequestStateGlyph";
 import {
   resolvePrStatePresentation,
   resolveIssueStatePresentation,
@@ -38,4 +43,20 @@ it("keeps project names that match translation keys unchanged in settings groups
       </SettingsSection>,
     ),
   ).toContain(">Settings</h2>");
+});
+
+// Lattice's embedded panel reads in Chinese when Lattice does, with Lattice's own terms.
+describe("Lattice's Chinese panel", () => {
+  afterEach(() => void i18n.changeLanguage("en"));
+
+  it("localizes PR and issue glyphs while source states stay stable for agent context", () => {
+    void i18n.changeLanguage("zh-CN");
+    expect(resolvePrStatePresentation({ state: "open", isDraft: true }).label).toBe("PR draft");
+    expect(renderToStaticMarkup(<PullRequestStateGlyph state="open" isDraft={true} />)).toContain(
+      'aria-label="PR 草稿"',
+    );
+    expect(
+      renderToStaticMarkup(<IssueStateGlyph state="closed" stateReason="completed" />),
+    ).toContain('aria-label="议题已关闭"');
+  });
 });

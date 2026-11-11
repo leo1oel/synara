@@ -1,13 +1,3 @@
-// FILE: PullRequestDetailPanel.tsx
-// Purpose: Orchestrator for the pull request detail surface — owns the queries, gh-backed
-//          actions (merge/ready/draft/close/reopen, fix findings, resolve conflicts, Send to
-//          agent), the tab state, and the confirm dialogs. Two hosts: the chat thread's right dock
-//          (a compact tab header, the default) and the code review page (`layout="page"`: the
-//          GitHub item page shell shared with issues). The action controls themselves live in
-//          PullRequestActions; Summary, Timeline, and Changes render in their own tab components.
-// Layer: Pull request presentation
-// Exports: PullRequestDetailPanel
-
 import type {
   PullRequestAction,
   PullRequestDetailInput,
@@ -51,6 +41,7 @@ import {
   type GitHubItemSendTarget,
 } from "./GitHubItemAgentActions";
 import { GitHubItemHeader } from "./GitHubItemHeader";
+import { LatticePullRequestPaper } from "./LatticePullRequestPaper";
 import { PullRequestInfo } from "./GitHubItemInfo";
 import {
   DETACHED_GITHUB_ITEM_PAGE_HOST,
@@ -84,17 +75,27 @@ import { PullRequestTimelineTab } from "./PullRequestTimelineTab";
 import { PullRequestsUnavailableState } from "./PullRequestsUnavailableState";
 import { PullRequestWarningNote } from "./PullRequestWarningNote";
 import { assessPullRequestStack, pullRequestMergeBlocker } from "./pullRequestStack.logic";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
-type DetailTab = "summary" | "timeline" | "code";
+// `paper` is Lattice's "In the paper" reading (LatticePullRequestPaper), shown only there.
+type DetailTab = "summary" | "timeline" | "code" | "paper";
 
-const ACTION_SUCCESS_LABELS: Record<PullRequestAction, string> = {
-  merge: "Pull request merged",
-  ready: "Marked ready for review",
-  draft: "Converted to draft",
-  close: "Pull request closed",
-  reopen: "Pull request reopened",
-};
+function actionSuccessLabel(translate: typeof t, action: PullRequestAction): string {
+  switch (action) {
+    case "merge":
+      return translate("lattice:pullRequestMerged");
+    case "ready":
+      return translate("lattice:markedReadyForReview");
+    case "draft":
+      return translate("lattice:convertedToDraft");
+    case "close":
+      return translate("lattice:pullRequestClosed");
+    case "reopen":
+      return translate("lattice:pullRequestReopened");
+    case "approve":
+      return translate("lattice:pullRequestApproved");
+  }
+}
 
 // The dock's tab row; the page names the diff "Changes" and puts it before Timeline.
 const DOCK_TABS: ReadonlyArray<{ value: DetailTab; labelKey: string }> = [
@@ -136,6 +137,7 @@ export function PullRequestDetailPanel({
   onAsk,
   askPending,
   pageHost,
+  lattice: latticeProp,
 }: {
   input: PullRequestDetailInput;
   initialTab?: DetailTab;
@@ -154,10 +156,11 @@ export function PullRequestDetailPanel({
   askPending?: boolean;
   /** Page layout: pin, side chat threads, and the floating composer, from the code review page. */
   pageHost?: GitHubItemPageHost;
+  /** Lattice's embed: the page opens on "In the paper", with Files and Conversation beside it. */
+  lattice?: boolean;
 }) {
-  const { t } = useTranslation();
-
-  const initialTab = initialTabProp ?? "summary";
+  const lattice = latticeProp ?? false;
+  const initialTab = initialTabProp ?? (lattice ? "paper" : "summary");
   const layout = layoutProp ?? "dock";
   const pollingEnabled = pollingEnabledProp ?? true;
   const queryClient = useQueryClient();
@@ -231,7 +234,7 @@ export function PullRequestDetailPanel({
               : t("git:pullRequestAddedToMergeQueue")
             : action === "merge" && detail?.stack
               ? t("git:stackMerged")
-              : ACTION_SUCCESS_LABELS[action];
+              : actionSuccessLabel(t, action);
         toastManager.add({ type: "success", title });
       })
       .catch((error: unknown) => {
@@ -301,7 +304,7 @@ export function PullRequestDetailPanel({
       scope: "conflicts",
       pr: detail,
       title: t("git:mergeConflicts"),
-      subtitle: `Conflicts with ${detail.baseBranch}`,
+      subtitle: t("lattice:conflictsWith", { branch: detail.baseBranch }),
       text: buildResolveConflictsPrompt({
         prNumber: detail.number,
         prUrl: detail.url,
@@ -435,23 +438,29 @@ export function PullRequestDetailPanel({
         onSendToAgent={sendToAgent}
       />
     ) : null;
-    const pageTabs: ReadonlyArray<GitHubItemTabOption<DetailTab>> = [
-      { value: "summary", label: t("chat:timeline_summaryLabel") },
-      {
-        value: "code",
-        label: t("git:panel_changes"),
-        trailing: detail ? (
-          <PullRequestDiffStat
-            additions={detail.additions}
-            deletions={detail.deletions}
-            tone="diff"
-            // Dropped with the other top bar words once the bar is narrow.
-            className="text-ui-xs @max-[46rem]/topbar:hidden"
-          />
-        ) : null,
-      },
-      { value: "timeline", label: t("git:timeline") },
-    ];
+    const pageTabs: ReadonlyArray<GitHubItemTabOption<DetailTab>> = lattice
+      ? [
+          { value: "paper", label: t("lattice:inThePaper") },
+          { value: "code", label: t("workspace:toolCallDetails_filesSection") },
+          { value: "timeline", label: t("settings:conversation") },
+        ]
+      : [
+          { value: "summary", label: t("chat:timeline_summaryLabel") },
+          {
+            value: "code",
+            label: t("git:panel_changes"),
+            trailing: detail ? (
+              <PullRequestDiffStat
+                additions={detail.additions}
+                deletions={detail.deletions}
+                tone="diff"
+                // Dropped with the other top bar words once the bar is narrow.
+                className="text-ui-xs @max-[46rem]/topbar:hidden"
+              />
+            ) : null,
+          },
+          { value: "timeline", label: t("git:timeline") },
+        ];
     // Merge and its options are one split control: the label acts, the chevron opens the menu.
     // With no primary action the menu hangs off a quiet "…" instead.
     const menuTrigger = (children: ReactNode, className: string) => (
@@ -459,7 +468,7 @@ export function PullRequestDetailPanel({
         render={
           <Button
             size="sm"
-            variant={primaryAction ? (primaryBlocked ? "subtle" : "default") : "ghost"}
+            variant={primaryAction && !lattice ? (primaryBlocked ? "subtle" : "default") : "ghost"}
             aria-label={t("workspace:workspaceFilePreviewHeader_moreActions")}
             title={t("workspace:workspaceFilePreviewHeader_moreActions")}
             className={className}
@@ -474,7 +483,7 @@ export function PullRequestDetailPanel({
         {stackPopover}
         <GitHubItemPageIconActions
           url={detail.url}
-          itemLabel={`pull request #${detail.number}`}
+          itemLabel={t("lattice:pullRequest", { number: detail.number })}
           pin={host.pin}
         />
         <GitHubItemAgentActions
@@ -483,7 +492,8 @@ export function PullRequestDetailPanel({
           onSendToAgent={sendToAgent}
         />
         <Menu>
-          {primaryAction ? (
+          {/* Lattice's paper puts Merge at its foot; the top bar keeps only the menu. */}
+          {primaryAction && !lattice ? (
             <ChatHeaderSplitGroup label={t("git:mergeActions")}>
               {primaryButton(
                 "sm",
@@ -535,7 +545,19 @@ export function PullRequestDetailPanel({
         banners={banners}
         overlay={confirmDialog}
       >
-        {!detail ? null : tab === "summary" ? (
+        {!detail ? null : tab === "paper" ? (
+          <LatticePullRequestPaper
+            input={input}
+            detail={detail}
+            primaryAction={primaryAction}
+            actionPending={actionPending}
+            pendingAction={pendingAction}
+            onMerge={() => setConfirmAction("merge")}
+            onReady={() => void runAction("ready")}
+            onApprove={() => void runAction("approve")}
+            onOpenFiles={() => setTab("code")}
+          />
+        ) : tab === "summary" ? (
           <GitHubItemPageBody
             header={
               <GitHubItemHeader

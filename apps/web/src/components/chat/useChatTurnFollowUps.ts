@@ -10,6 +10,12 @@ import { readNativeApi } from "~/nativeApi";
 import { ProviderHandoffBackgroundTasksError } from "~/lib/threadHandoff";
 import { useComposerDraftStore } from "../../composerDraftStore";
 import { formatOutgoingComposerPrompt } from "../../lib/composerSend";
+import {
+  appendLatticeHostContextToPrompt,
+  consumeDispatchedLatticeHostSelection,
+  getLiveLatticeHostContext,
+} from "../../lib/latticeHostContext";
+import { userMessageEditRejectionCopy } from "./MessagesTimeline.logic";
 import { reconcileDeletedThreadFromClient } from "../../lib/deletedThreadClientReconciliation";
 import {
   armQueuedComposerSteerGate,
@@ -202,12 +208,15 @@ export function useChatTurnFollowUps({
         : undefined);
     const messageIdForSend = newMessageId();
     let messageCreatedAt = new Date().toISOString();
-    const outgoingMessageText = formatOutgoingComposerPrompt({
-      provider: queuedTurn?.selectedProvider ?? selectedProvider,
-      model: queuedTurn?.selectedModel ?? selectedModel,
-      effort: queuedTurn?.selectedPromptEffort ?? selectedPromptEffort,
-      text: trimmed,
-    });
+    const outgoingMessageText = appendLatticeHostContextToPrompt(
+      formatOutgoingComposerPrompt({
+        provider: queuedTurn?.selectedProvider ?? selectedProvider,
+        model: queuedTurn?.selectedModel ?? selectedModel,
+        effort: queuedTurn?.selectedPromptEffort ?? selectedPromptEffort,
+        text: trimmed,
+      }),
+      getLiveLatticeHostContext(),
+    );
 
     sendInFlightRef.current = true;
     beginLocalDispatch({ expectedUserMessageId: messageIdForSend });
@@ -330,6 +339,7 @@ export function useChatTurnFollowUps({
 
     try {
       await dispatchPlanFollowUpTurn();
+      consumeDispatchedLatticeHostSelection(outgoingMessageText);
       armLocalDispatchAckFallback(threadIdForSend);
       sendInFlightRef.current = false;
       if (resumeQueueAfterSend) resumeQueueAfterSend();
@@ -356,7 +366,16 @@ export function useChatTurnFollowUps({
   const onEditUserMessage = useCallback(
     async (messageId: MessageId, text: string): Promise<boolean> => {
       const api = readNativeApi();
-      if (!api || !activeThread || !isServerThread || isRevertingCheckpoint) {
+      if (!activeThread) return false;
+      if (!api || !isServerThread) {
+        setThreadError(
+          activeThread.id,
+          "The agent connection is still getting ready. Try again in a moment.",
+        );
+        return false;
+      }
+      if (isRevertingCheckpoint) {
+        setThreadError(activeThread.id, "The previous edit is still being applied.");
         return false;
       }
       const editTarget = resolveTailUserMessageEditTarget({
@@ -366,14 +385,15 @@ export function useChatTurnFollowUps({
           activeThread.session?.orchestrationStatus === "running"
             ? (activeThread.session.activeTurnId ?? null)
             : null,
+        latestTurn: activeThread.latestTurn,
       });
       if (!editTarget.editable) {
-        setThreadError(activeThread.id, "Only the latest rollbackable user message can be edited.");
+        setThreadError(activeThread.id, userMessageEditRejectionCopy(editTarget.reason));
         return false;
       }
       const originalMessage = activeThread.messages[editTarget.messageIndex];
       if (!originalMessage || originalMessage.role !== "user") {
-        setThreadError(activeThread.id, "Only the latest rollbackable user message can be edited.");
+        setThreadError(activeThread.id, userMessageEditRejectionCopy("missing-message"));
         return false;
       }
       if (isSendBusy || isConnecting || sendInFlightRef.current) {
@@ -390,12 +410,15 @@ export function useChatTurnFollowUps({
         originalPrompt: originalMessage.text,
         messageId,
       });
-      const outgoingMessageText = formatOutgoingComposerPrompt({
-        provider: selectedProvider,
-        model: selectedModel,
-        effort: selectedPromptEffort,
-        text: editedTextWithOriginalContext,
-      });
+      const outgoingMessageText = appendLatticeHostContextToPrompt(
+        formatOutgoingComposerPrompt({
+          provider: selectedProvider,
+          model: selectedModel,
+          effort: selectedPromptEffort,
+          text: editedTextWithOriginalContext,
+        }),
+        getLiveLatticeHostContext(),
+      );
       return await (async () => {
         await persistThreadSettingsForNextTurn({
           ...threadSettingsDispatchFields(turnDispatchSettings),
@@ -411,12 +434,7 @@ export function useChatTurnFollowUps({
           ...editAndResendDispatchFields(turnDispatchSettings),
           createdAt: messageCreatedAt,
         });
-        if (
-          turnDispatchSettings.computerControlMode === "request" &&
-          computerControlChangeSequence.current === computerControlSequenceForEdit
-        ) {
-          setComposerDraftComputerControlMode(activeThread.id, "off");
-        }
+        consumeDispatchedLatticeHostSelection(outgoingMessageText);
         return true;
       })()
         .catch((err: unknown) => {
@@ -563,12 +581,15 @@ export function useChatTurnFollowUps({
     const nextThreadId = newThreadId();
     const planMarkdown = activeProposedPlan.planMarkdown;
     const implementationPrompt = buildPlanImplementationPrompt(planMarkdown);
-    const outgoingImplementationPrompt = formatOutgoingComposerPrompt({
-      provider: selectedProvider,
-      model: selectedModel,
-      effort: selectedPromptEffort,
-      text: implementationPrompt,
-    });
+    const outgoingImplementationPrompt = appendLatticeHostContextToPrompt(
+      formatOutgoingComposerPrompt({
+        provider: selectedProvider,
+        model: selectedModel,
+        effort: selectedPromptEffort,
+        text: implementationPrompt,
+      }),
+      getLiveLatticeHostContext(),
+    );
     const nextThreadTitle = truncateTitle(buildPlanImplementationThreadTitle(planMarkdown));
     const computerControlSequenceForImplementation = computerControlChangeSequence.current;
     const implementationDispatchSettings = planImplementationDispatchSettings(turnDispatchSettings);
@@ -641,6 +662,7 @@ export function useChatTurnFollowUps({
         }
         // The turn RPC resolved for a thread this view never made active, so
         // arm the watchdog marker with that exact thread id before navigation.
+        consumeDispatchedLatticeHostSelection(outgoingImplementationPrompt);
         markPendingTurnDispatch(nextThreadId);
         return api.orchestration.getShellSnapshot();
       })

@@ -24,6 +24,8 @@ import { RouteInsetSurface } from "~/components/RouteInsetSurface";
 import { RouteSurfaceHeader } from "~/components/RouteSurface";
 import { WorkspaceSurfaceComputerPicker } from "~/components/hosts/ComputerPicker";
 import { useGitHubInboxSidechat } from "~/components/githubInbox/useGitHubInboxSidechat";
+import { useEmbedReadySignal } from "~/hooks/useEmbedReadySignal";
+import { useEmbeddedWorkspaceProject } from "~/hooks/useEmbeddedWorkspaceProject";
 import { cn } from "~/lib/utils";
 
 export const Route = createFileRoute("/_chat/pull-requests/")({
@@ -33,17 +35,32 @@ export const Route = createFileRoute("/_chat/pull-requests/")({
 
 function GitHubInboxRouteView() {
   const search = Route.useSearch();
+  const { embedMode, projectId: embeddedProjectId, bindingError } = useEmbeddedWorkspaceProject();
+  useEmbedReadySignal(embedMode);
+  const scopedSearch: GitHubInboxSearch = embedMode
+    ? { ...search, ...(embeddedProjectId ? { projectId: embeddedProjectId } : {}) }
+    : search;
   const navigate = useNavigate({ from: Route.fullPath });
   const updateSearch = (patch: GitHubInboxSearchPatch) =>
     void navigate({
-      search: (previous) => mergeGitHubInboxSearch(previous, patch),
+      search: (previous) =>
+        mergeGitHubInboxSearch(
+          previous,
+          embedMode ? { ...patch, projectId: embeddedProjectId ?? undefined } : patch,
+        ),
       replace: true,
     });
-  const selection = githubInboxSelection(search);
+  const selection = githubInboxSelection(scopedSearch);
   const sidechat = useGitHubInboxSidechat(selection);
 
   return (
-    <div className={cn(CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME, CHAT_MAIN_CONTENT_SURFACE_CLASS_NAME)}>
+    <div
+      className={cn(
+        CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME,
+        CHAT_MAIN_CONTENT_SURFACE_CLASS_NAME,
+        "font-system-ui text-[var(--color-text-foreground)]",
+      )}
+    >
       <RouteInsetSurface surfaceClassName="bg-transparent">
         <div
           className={cn(
@@ -51,16 +68,26 @@ function GitHubInboxRouteView() {
             CHAT_BACKGROUND_CLASS_NAME,
           )}
         >
-          {/* Review filters and project IDs stay inside their owning computer's workspace. */}
-          <RouteSurfaceHeader
-            divider={false}
-            className="app-top-bar shrink-0"
-            rowClassName="h-[var(--app-top-strip-height)]"
-          >
-            <WorkspaceSurfaceComputerPicker path="/pull-requests" />
-          </RouteSurfaceHeader>
+          {/* Like Settings: the title lives at the top of the list column, so this strip only
+              holds the sidebar toggle (shown while the sidebar is collapsed) and stays a drag
+              region. Review filters and project IDs stay inside their owning computer's
+              workspace. */}
+          {!embedMode ? (
+            <RouteSurfaceHeader
+              divider={false}
+              className="app-top-bar shrink-0"
+              // Keeps the shell band's height even though the strip holds only the toggle.
+              rowClassName="h-[var(--app-top-strip-height)]"
+            >
+              <WorkspaceSurfaceComputerPicker path="/pull-requests" />
+            </RouteSurfaceHeader>
+          ) : null}
           <GitHubInbox
-            search={search}
+            search={scopedSearch}
+            embedded={Boolean(embedMode)}
+            scopedProjectId={embeddedProjectId}
+            bindingError={bindingError}
+            workspaceRoot={embedMode?.workspaceRoot ?? null}
             onSearchChange={updateSearch}
             sidechat={sidechat}
             dockOpen={selection !== null && sidechat.dockState.open}

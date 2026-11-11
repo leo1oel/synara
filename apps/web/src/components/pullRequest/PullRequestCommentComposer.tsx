@@ -12,10 +12,11 @@ import type { PullRequestDetailInput } from "@synara/contracts";
 import { useRef, useState } from "react";
 
 import { toastManager } from "~/components/ui/toast";
+import { FIELD_CONTROL_CLASS_NAME } from "~/components/ui/field-styles";
 import { ArrowUpIcon, GitHubIcon } from "~/lib/icons";
 import { PR_BODY_TEXT_CLASS_NAME } from "./pullRequestText";
 import { cn } from "~/lib/utils";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 /** The item a comment goes to. Pull requests and issues share one number space per repository. */
 export type GitHubCommentTarget = Pick<
@@ -75,7 +76,11 @@ export function PullRequestCommentComposer({
 
   return (
     <div
-      className={`${GLASS_RAISED_SURFACE_CLASS_NAME} flex items-center gap-2 rounded-3xl border border-border/60 bg-background py-1 pl-3 pr-1.5 shadow-sm`}
+      className={cn(
+        FIELD_CONTROL_CLASS_NAME,
+        GLASS_RAISED_SURFACE_CLASS_NAME,
+        "flex items-center gap-2 rounded-lg py-1 pl-3 pr-1.5",
+      )}
     >
       <span
         className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--color-background-elevated-secondary)] text-muted-foreground"

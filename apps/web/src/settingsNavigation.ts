@@ -3,6 +3,7 @@
 // Layer: Route/UI support
 // Exports: section ids, nav items, and search normalization helper
 
+import type { ProviderKind } from "@synara/contracts";
 import { MCP_CONNECTORS_BETA_FEATURE } from "@synara/shared/betaFeatures";
 
 import { isBetaFeatureOn } from "~/betaFeatures";
@@ -19,7 +20,6 @@ export const SETTINGS_SECTION_IDS = [
   "shortcuts",
   "worktrees",
   "archived",
-  "models",
   "providers",
   "skills",
   "usage",
@@ -40,9 +40,40 @@ export type SettingsNavGroupId = "personal" | "integrations" | "coding" | "syste
 export const SETTINGS_TARGETS = {
   providerUpdates: "provider-updates",
   providerInstalls: "provider-installs",
+  /** Provider tools with the Claude Code and Codex rows open on their binary path fields. */
+  providerBinaryPaths: "provider-binary-paths",
   environmentPanel: "environment-panel",
 } as const;
 
+/**
+ * Where a deep link's `target` (and `provider`) lands: the element to bring into view and
+ * the Provider tools rows to open. The binary-path target opens Claude Code's and Codex's
+ * rows and lands on Claude Code's binary path field (Lattice's default agent); Codex's sits
+ * in the row above.
+ */
+/** The DOM id of a Provider tools field (`claudeBinaryPath`, `codexHomePath`, …). */
+export function providerInstallFieldId(settingsKey: string): string {
+  return `provider-install-${settingsKey}`;
+}
+
+export function resolveSettingsTarget(
+  target: string | null,
+  provider: ProviderKind | null,
+): { readonly elementId: string | null; readonly openProviders: ReadonlyArray<ProviderKind> } {
+  if (target === SETTINGS_TARGETS.providerBinaryPaths) {
+    return {
+      elementId: providerInstallFieldId("claudeBinaryPath"),
+      openProviders: ["claudeAgent", "codex"],
+    };
+  }
+  return { elementId: target, openProviders: provider ? [provider] : [] };
+}
+
+/**
+ * The two fields that reach the screen are descriptors, not finished strings:
+ * this table is module state built once at import, so a locale switch would
+ * never reach it. Every consumer resolves them through `i18n._`.
+ */
 export type SettingsNavItem = {
   id: SettingsSectionId;
   group: SettingsNavGroupId;
@@ -114,7 +145,7 @@ const ALL_SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     id: "notifications",
     group: "personal",
     label: "settings:nav_notifications",
-    description: "settings:chooseHowSynaraTellsYouWhenWorkFinishesOr",
+    description: "lattice:chooseHowLatticeTellsYouWhenWork",
     icon: "bell",
     eyebrow: "Alerts",
   },
@@ -130,7 +161,7 @@ const ALL_SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     id: "shortcuts",
     group: "personal",
     label: "common:advanced_keybindings",
-    description: "settings:changeAddOrRemoveTheShortcutForEverySynara",
+    description: "lattice:captureCustomizeAndAddShortcutsForEvery",
     icon: KEYBINDINGS_ICON_NAME,
     eyebrow: "Key bindings",
   },
@@ -171,7 +202,7 @@ const ALL_SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     id: "integrations",
     group: "integrations",
     label: "settings:mCPConnections",
-    description: "settings:giveCodexClaudeAndOtherLocalAgentsScopedAccess",
+    description: "lattice:giveCodexClaudeAndOtherLocalAgents",
     icon: "plugin-1",
     eyebrow: "External agents",
   },
@@ -188,23 +219,15 @@ const ALL_SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     id: "providers",
     group: "coding",
     label: "settings:agentProviders",
-    description: "settings:chooseVisibleCodingAgentsAndManageTheirInstalledCLI",
+    description: "lattice:chooseCodingAgentsTheirInstalledToolsAnd",
     icon: "puzzle",
-    eyebrow: "Coding agents",
-  },
-  {
-    id: "models",
-    group: "coding",
-    label: "settings:modelsWriting",
-    description: "settings:chooseTheSourceControlWritingStyleGitWritingModel",
-    icon: "brain",
-    eyebrow: "Model configuration",
+    eyebrow: "Agents & models",
   },
   {
     id: "skills",
     group: "coding",
     label: "settings:nav_skillsEyebrow",
-    description: "settings:reviewReusableWorkflowsDiscoveredAcrossAllConfiguredProviders",
+    description: "lattice:createImportAndManageTheSkillsLattice",
     icon: "building-blocks",
     eyebrow: "Reusable workflows",
   },
@@ -212,7 +235,7 @@ const ALL_SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     id: "worktrees",
     group: "coding",
     label: "onboarding:managedWorktrees",
-    description: "settings:reviewAndCleanUpIsolatedWorkspacesCreatedBySynara",
+    description: "lattice:reviewAndCleanUpIsolatedWorkspacesCreated",
     icon: "branch-simple",
     eyebrow: "Workspace management",
   },
@@ -253,6 +276,11 @@ export function settingRowAnchorId(title: string): string {
 }
 
 export function normalizeSettingsSection(value: unknown): SettingsSectionId {
+  // Models & writing was folded into Agent providers. Keep old bookmarks and
+  // host messages working instead of dropping them on General.
+  if (value === "models") {
+    return "providers";
+  }
   if (typeof value !== "string") {
     return "general";
   }
