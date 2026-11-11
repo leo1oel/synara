@@ -45,6 +45,7 @@ import {
 import { cn } from "~/lib/utils";
 import { isSynaraEmbedMode } from "~/embedMode";
 import { t, useTranslation } from "~/i18n";
+import { localizeProviderStatusMessage } from "~/lib/providerStatusMessages";
 
 const RAIL_USAGE_WINDOW_OPTIONS = [
   { value: "both", label: "settings:both" },
@@ -113,7 +114,10 @@ function localizeUsageDetail(translate: typeof t, snapshot: ServerProviderUsageS
   if (unreachableMatch) {
     return translate("lattice:couldNotReachThe", { destination: unreachableMatch[1]! });
   }
-  return detail || translate("settings:usageSignInProviderCli");
+  // Claude credential notices share the provider status table (Lattice catalog).
+  return detail
+    ? localizeProviderStatusMessage(translate, detail)
+    : translate("settings:usageSignInProviderCli");
 }
 
 function ProviderUsageCard({
