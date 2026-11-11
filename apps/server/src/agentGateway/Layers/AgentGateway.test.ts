@@ -1901,6 +1901,32 @@ describe("AgentGateway", () => {
     }).pipe(Effect.provide(gatewayLayer));
   });
 
+  it.effect("serves Lattice no Synara-named or remote discovery tool", () => {
+    // Run under AGENT_HOST_PROFILE=lattice. Lattice has no Remote connections, so
+    // even a remote-capable environment adds no synara_list_connections.
+    if (ACTIVE_AGENT_HOST_PROFILE.id !== "lattice") return Effect.void;
+    const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads, [], {
+      remoteEnvironment: true,
+      remoteConnections: new HostConnectionRegistry(),
+    });
+    return Effect.gen(function* () {
+      const harness = yield* makeHarness;
+      const response = yield* harness.postRaw({
+        authorizationHeader: "Bearer token-parent",
+        body: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      assert.equal(response.status, 200);
+      const tools =
+        (response.body as { result?: { tools?: Array<{ name: string; description?: string }> } })
+          ?.result?.tools ?? [];
+      assert.isAbove(tools.length, 0);
+      assert.deepEqual(
+        tools.filter((tool) => /synara/i.test(`${tool.name} ${tool.description ?? ""}`)),
+        [],
+      );
+    }).pipe(Effect.provide(gatewayLayer));
+  });
+
   it.effect("covers every served tool under the auto-approve matcher", () => {
     const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads);
     return Effect.gen(function* () {

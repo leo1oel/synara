@@ -1760,8 +1760,12 @@ export const makeAgentGateway = Effect.gen(function* () {
       .filter((tool) => tool.requiredCapability === COMPUTER_CONTROL_CAPABILITY)
       .map((tool) => tool.definition.name),
   );
+  // Lattice has no Remote connections, so its catalog offers no other computers:
+  // no synara_list_connections discovery tool (whose name would also break the
+  // profile's no-Synara naming) and no remote calls into this server's tools.
+  const remoteToolsAvailable = ACTIVE_AGENT_HOST_PROFILE.id !== "lattice";
   return {
-    ...(environment
+    ...(environment && remoteToolsAvailable
       ? {
           handleRemoteTool: (call, peerOwnerId) =>
             receiveRemoteTool({ call, peerOwnerId, environment, tools }),
@@ -1771,7 +1775,7 @@ export const makeAgentGateway = Effect.gen(function* () {
       credentials,
       snapshotQuery,
       tools:
-        environment && connections
+        environment && connections && remoteToolsAvailable
           ? makeRemoteAwareTools({
               tools,
               environment,
