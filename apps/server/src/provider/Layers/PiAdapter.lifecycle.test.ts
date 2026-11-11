@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -17,7 +17,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import { Effect, Layer, Schema, Stream } from "effect";
 import { ApprovalRequestId, ThreadId, ProviderRuntimeEvent, type TurnId } from "@synara/contracts";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   AgentGatewayCredentials,
   type AgentGatewayCredentialsShape,
@@ -54,7 +54,13 @@ vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => {
     ) =>
       sdk.createAgentSessionServices({
         ...options,
-        resourceLoaderOptions: { extensionFactories: captured.extensions },
+        resourceLoaderOptions: {
+          ...options.resourceLoaderOptions,
+          extensionFactories: [
+            ...(options.resourceLoaderOptions?.extensionFactories ?? []),
+            ...captured.extensions,
+          ],
+        },
       }),
     createAgentSessionFromServices: async (
       input: Parameters<typeof sdk.createAgentSessionFromServices>[0],
@@ -81,7 +87,14 @@ afterEach(() => {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
-type ResponseKind = "success" | "error" | "overflow" | "partial-error" | "tool" | "until-abort";
+type ResponseKind =
+  | "success"
+  | "error"
+  | "overflow"
+  | "partial-error"
+  | "tool"
+  | "write"
+  | "until-abort";
 function responses(...kinds: ResponseKind[]) {
   let calls = 0;
   captured.stream = (model, context, options) => {
@@ -137,6 +150,15 @@ function responses(...kinds: ResponseKind[]) {
         });
         message.stopReason = "toolUse";
         stream.push({ type: "done", reason: "toolUse", message });
+      } else if (kind === "write") {
+        message.content.push({
+          type: "toolCall",
+          id: "write-notes",
+          name: "write",
+          arguments: { path: "notes.txt", content: "approved text" },
+        });
+        message.stopReason = "toolUse";
+        stream.push({ type: "done", reason: "toolUse", message });
       } else if (kind === "until-abort") {
         const abort = () => {
           message.stopReason = "aborted";
@@ -163,7 +185,10 @@ async function withAdapter(
   run: (adapter: PiAdapterShape, events: ProviderRuntimeEvent[], cwd: string) => Promise<void>,
   delayMs = 100,
   credentials?: AgentGatewayCredentialsShape,
-  startSessionOverrides?: { readonly enableComputerControl?: boolean },
+  startSessionOverrides?: {
+    readonly enableComputerControl?: boolean;
+    readonly runtimeMode?: "approval-required" | "full-access";
+  },
   gatewayFetchOverride?: AgentGatewayMcpFetch,
 ) {
   vi.stubEnv("PI_OFFLINE", "1");
@@ -224,7 +249,7 @@ async function withAdapter(
       yield* adapter.startSession({
         threadId,
         cwd,
-        runtimeMode: "full-access",
+        runtimeMode: startSessionOverrides?.runtimeMode ?? "full-access",
         providerOptions: { pi: { agentDir: cwd } },
         modelSelection: { provider: "pi", model: "openai/gpt-4o" },
         ...(startSessionOverrides?.enableComputerControl !== undefined
@@ -1417,5 +1442,99 @@ it("separates assistant and reasoning messages across a real SDK tool loop", asy
         ).toHaveLength(1);
       }
     }
+  });
+});
+
+describe("approval-required Pi sessions", () => {
+  const approvalRequests = (events: ProviderRuntimeEvent[]) =>
+    events.filter((event) => event.type === "request.opened");
+  const toolResults = () =>
+    captured.sessions[0]!.messages.filter((message) => message.role === "toolResult");
+
+  it("asks before a write and runs it unchanged once approved", async () => {
+    responses("write", "success");
+    await withAdapter(
+      async (adapter, events, cwd) => {
+        await send(adapter);
+        await waitFor(() => expect(approvalRequests(events)).toHaveLength(1));
+        const opened = approvalRequests(events)[0]!;
+        expect(opened).toMatchObject({
+          itemId: "pi-tool-write-notes",
+          payload: {
+            requestType: "file_change_approval",
+            detail: "notes.txt",
+            args: { toolName: "write", sessionApprovalAvailable: true },
+          },
+        });
+        // Nothing runs while the request is pending.
+        expect(existsSync(path.join(cwd, "notes.txt"))).toBe(false);
+
+        await Effect.runPromise(
+          adapter.respondToRequest(
+            threadId,
+            ApprovalRequestId.makeUnsafe(opened.requestId!),
+            "accept",
+          ),
+        );
+        await waitFor(() => expect(completions(events)).toHaveLength(1));
+        expect(readFileSync(path.join(cwd, "notes.txt"), "utf8")).toBe("approved text");
+        expect(events.find((event) => event.type === "request.resolved")).toMatchObject({
+          requestId: opened.requestId,
+          payload: { requestType: "file_change_approval", decision: "accept" },
+        });
+        expect(toolResults()[0]).toMatchObject({ isError: false });
+      },
+      100,
+      undefined,
+      { runtimeMode: "approval-required" },
+    );
+  });
+
+  it("blocks a declined write with a tool error the model sees", async () => {
+    responses("write", "success");
+    await withAdapter(
+      async (adapter, events, cwd) => {
+        await send(adapter);
+        await waitFor(() => expect(approvalRequests(events)).toHaveLength(1));
+        const opened = approvalRequests(events)[0]!;
+        await Effect.runPromise(
+          adapter.respondToRequest(
+            threadId,
+            ApprovalRequestId.makeUnsafe(opened.requestId!),
+            "decline",
+          ),
+        );
+        await waitFor(() => expect(completions(events)).toHaveLength(1));
+        expect(existsSync(path.join(cwd, "notes.txt"))).toBe(false);
+        const [result] = toolResults();
+        expect(result).toMatchObject({ isError: true });
+        expect(JSON.stringify(result)).toContain("The user declined this write call");
+        expect(events.find((event) => event.type === "request.resolved")).toMatchObject({
+          payload: { decision: "decline" },
+        });
+        // A settled request cannot be answered twice.
+        const exit = await Effect.runPromiseExit(
+          adapter.respondToRequest(
+            threadId,
+            ApprovalRequestId.makeUnsafe(opened.requestId!),
+            "accept",
+          ),
+        );
+        expect(exit._tag).toBe("Failure");
+      },
+      100,
+      undefined,
+      { runtimeMode: "approval-required" },
+    );
+  });
+
+  it("raises no approval request in full-access mode", async () => {
+    responses("write", "success");
+    await withAdapter(async (adapter, events, cwd) => {
+      await send(adapter);
+      await waitFor(() => expect(completions(events)).toHaveLength(1));
+      expect(approvalRequests(events)).toHaveLength(0);
+      expect(readFileSync(path.join(cwd, "notes.txt"), "utf8")).toBe("approved text");
+    });
   });
 });

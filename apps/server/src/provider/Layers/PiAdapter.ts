@@ -13,6 +13,7 @@ import type {
   AgentSessionEvent,
   CreateAgentSessionRuntimeFactory,
   ExtensionUIContext,
+  InlineExtension,
   ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import type { AgentToolResult, ThinkingLevel } from "@earendil-works/pi-agent-core";
@@ -95,6 +96,12 @@ import {
   MODEL_PROVIDER_API_KEY_ENV_MAPPINGS,
 } from "../providerProcessEnv.ts";
 import { makePiStoragePaths } from "../piStoragePaths.ts";
+import {
+  makePiApprovalGate,
+  type PiApprovalGate,
+  type PiApprovalRequestOpened,
+  type PiApprovalRequestResolved,
+} from "../piApprovalGate.ts";
 import {
   loadProviderRuntimeModule,
   loadedProviderRuntimeModuleIfAny,
@@ -522,6 +529,8 @@ interface PiSessionContext {
   activeReasoningItemId: RuntimeItemId | undefined;
   activeToolItems: Map<string, PiTrackedToolCall>;
   pendingUserInputs: Map<ApprovalRequestId, PiPendingUserInput>;
+  /** Present only when the session is not full-access; see piApprovalGate.ts. */
+  readonly approvalGate: PiApprovalGate | undefined;
   stopped: boolean;
   lastKnownTokenUsage: ThreadTokenUsageSnapshot | undefined;
   unsubscribe: (() => void) | undefined;
@@ -2240,6 +2249,48 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
       } satisfies ProviderRuntimeEvent);
     };
 
+    // Projects approval-gate requests onto Synara's approval events. The item id
+    // matches the tool item tool_execution_start already opened for this call.
+    const makePiApprovalGateSink = (context: PiSessionContext) => ({
+      opened: (request: PiApprovalRequestOpened) => {
+        offerRuntimeEvent({
+          ...makeEventBase(context),
+          type: "request.opened",
+          requestId: RuntimeRequestId.makeUnsafe(request.requestId),
+          itemId: RuntimeItemId.makeUnsafe(`pi-tool-${request.toolCallId}`),
+          providerRefs: { providerItemId: ProviderItemId.makeUnsafe(request.toolCallId) },
+          payload: {
+            requestType: request.requestType,
+            ...(request.detail ? { detail: request.detail } : {}),
+            args: {
+              toolName: request.toolName,
+              input: request.input,
+              sessionApprovalAvailable: true,
+            },
+          },
+          raw: {
+            source: "pi.sdk.event",
+            method: "tool_call/approval-requested",
+            payload: { requestId: request.requestId, toolCallId: request.toolCallId },
+          },
+        } satisfies ProviderRuntimeEvent);
+      },
+      resolved: (request: PiApprovalRequestResolved) => {
+        offerRuntimeEvent({
+          ...makeEventBase(context),
+          type: "request.resolved",
+          requestId: RuntimeRequestId.makeUnsafe(request.requestId),
+          itemId: RuntimeItemId.makeUnsafe(`pi-tool-${request.toolCallId}`),
+          payload: { requestType: request.requestType, decision: request.decision },
+          raw: {
+            source: "pi.sdk.event",
+            method: "tool_call/approval-resolved",
+            payload: { requestId: request.requestId, decision: request.decision },
+          },
+        } satisfies ProviderRuntimeEvent);
+      },
+    });
+
     const resolvePiExtensionUserInput = (
       context: PiSessionContext,
       requestId: ApprovalRequestId,
@@ -3031,6 +3082,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           pending.resolve({});
         }
         context.pendingUserInputs.clear();
+        context.approvalGate?.cancelAll();
         context.stopped = true;
         let runtimeFailure: unknown;
         try {
@@ -3368,6 +3420,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
       gatewayTools?: ReadonlyArray<ToolDefinition>;
       signal?: AbortSignal;
       noExtensions?: boolean;
+      extensionFactories?: ReadonlyArray<InlineExtension>;
     }) => {
       const modelRuntime = await createPiModelRuntime(
         input.agentDir,
@@ -3388,7 +3441,14 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           cwd,
           agentDir,
           modelRuntime,
-          ...(input.noExtensions ? { resourceLoaderOptions: { noExtensions: true } } : {}),
+          // Inline factories load even with noExtensions, so the approval gate
+          // also guards isolated sessions.
+          resourceLoaderOptions: {
+            ...(input.noExtensions ? { noExtensions: true } : {}),
+            ...(input.extensionFactories?.length
+              ? { extensionFactories: [...input.extensionFactories] }
+              : {}),
+          },
         });
         const model = await resolvePiSessionModel({
           modelRuntime: services.modelRuntime,
@@ -3553,6 +3613,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         if (!gatewayControlAvailable) {
           agentGatewaySessionLease?.release();
         }
+        const approvalGate = input.runtimeMode === "full-access" ? undefined : makePiApprovalGate();
         const { runtime, modelRegistry } = yield* releaseAgentGatewaySessionLeaseOnInterrupt(
           agentGatewaySessionLease,
           Effect.tryPromise({
@@ -3566,6 +3627,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
                 ...(providerInstanceId !== undefined ? { instanceId: providerInstanceId } : {}),
                 sessionManager,
                 ...(noExtensions ? { noExtensions: true } : {}),
+                ...(approvalGate ? { extensionFactories: [approvalGate.extension] } : {}),
                 ...(modelId ? { modelId } : {}),
                 ...(thinkingLevel ? { thinkingLevel } : {}),
                 processSupervisor,
@@ -3631,6 +3693,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           activeReasoningItemId: undefined,
           activeToolItems: new Map(),
           pendingUserInputs: new Map(),
+          approvalGate,
           stopped: false,
           lastKnownTokenUsage: undefined,
           unsubscribe: undefined,
@@ -3639,6 +3702,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         context.unsubscribe = runtime.session.subscribe((event) =>
           handleSessionEvent(context, event),
         );
+        approvalGate?.bind(makePiApprovalGateSink(context));
         sessions.set(input.threadId, context);
         yield* Effect.tryPromise({
           try: () =>
@@ -3957,14 +4021,17 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         );
       });
 
-    const respondUnsupported = (threadId: ThreadId, method: string) =>
-      Effect.fail(
-        new ProviderAdapterRequestError({
-          provider: PROVIDER,
-          method,
-          detail: `Pi does not expose Synara approval/user-input requests for thread ${threadId}.`,
-        }),
-      );
+    const respondToRequest: PiAdapterShape["respondToRequest"] = (threadId, requestId, decision) =>
+      Effect.gen(function* () {
+        const context = yield* requireSession(threadId);
+        if (!context.approvalGate?.respond(requestId, decision)) {
+          return yield* new ProviderAdapterRequestError({
+            provider: PROVIDER,
+            method: "request/respond",
+            detail: `Unknown pending Pi approval request: ${requestId}`,
+          });
+        }
+      });
 
     const respondToUserInput: PiAdapterShape["respondToUserInput"] = (
       threadId,
@@ -4349,7 +4416,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
       sendTurn,
       steerTurn,
       interruptTurn,
-      respondToRequest: (threadId) => respondUnsupported(threadId, "request/respond"),
+      respondToRequest,
       respondToUserInput,
       stopSession,
       listSessions,
