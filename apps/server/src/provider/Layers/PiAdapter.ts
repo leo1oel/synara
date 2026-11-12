@@ -72,6 +72,7 @@ import {
 } from "../../agentGateway/sessionLease.ts";
 import { resolveProviderAttachmentPath } from "../providerAttachmentPaths.ts";
 import { ServerConfig } from "../../config.ts";
+import { toolResultImagesRoot } from "../toolResultImages.ts";
 import { buildProviderChildEnvironment } from "../../providerChildEnvironment.ts";
 import {
   ProviderAdapterRequestError,
@@ -2097,6 +2098,7 @@ const PLAIN_PI_EXTENSION_THEME = {
 const makePiAdapter = (options?: PiAdapterLiveOptions) =>
   Effect.gen(function* () {
     const serverConfig = yield* ServerConfig;
+    const toolImagesRoot = toolResultImagesRoot(serverConfig.stateDir);
     const fileSystem = yield* FileSystem.FileSystem;
     const agentGatewayCredentials = Option.getOrUndefined(
       yield* Effect.serviceOption(AgentGatewayCredentials),
@@ -2195,7 +2197,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
     const makeEventBase = makePiRuntimeEventBase;
 
     const offerRuntimeEvent = (event: ProviderRuntimeEvent) => {
-      runtimeEventIngress.offer(compactProviderRuntimeEventForIngress(event));
+      runtimeEventIngress.offer(compactProviderRuntimeEventForIngress(event, { toolImagesRoot }));
     };
 
     const offerRuntimeError = (

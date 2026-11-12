@@ -97,3 +97,23 @@ export function extractToolArgumentField(
   const fallback = fieldPattern.exec(detail)?.[1]?.trim();
   return fallback && fallback.length > 0 ? fallback : null;
 }
+
+/**
+ * Try to extract a clean file path from a detail string that may contain JSON.
+ * Handles patterns like:
+ *   Read {"file_path":"/Users/foo/bar.ts","offset":10}
+ *   {"file_path":"/path/to/file.ts"}
+ */
+export function extractFilePathFromDetail(detail: string): string | null {
+  const plainPathMatch = /^(.+?\.[A-Za-z0-9][A-Za-z0-9._-]*)(?::\d+)?(?::\d+)?$/u.exec(
+    detail.trim(),
+  );
+  if (plainPathMatch?.[1]?.includes("/")) {
+    return plainPathMatch[1].trim();
+  }
+  // "path" is generic enough that a nested match (e.g. inside a config object)
+  // may not be the file the tool acted on — only regex-scan truncated JSON.
+  return extractToolArgumentField(detail, ["file_path", "filePath", "path", "filename"], {
+    fallbackScan: "whenUnparsed",
+  });
+}

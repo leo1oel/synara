@@ -37,6 +37,46 @@ afterEach(() => {
 });
 
 describe("resolveAllowedLocalPreviewFile", () => {
+  it("serves tool-result image snapshots from the configured root, and only images", async () => {
+    // Outside the temp directory, which is allowlisted on its own.
+    const toolImagesRoot = path.join(
+      process.cwd(),
+      `.test-tool-images-${process.pid}-${Date.now()}`,
+    );
+    tempDirs.push(toolImagesRoot);
+    const threadDir = path.join(toolImagesRoot, "thread-1");
+    mkdirSync(threadDir, { recursive: true });
+    const imagePath = path.join(threadDir, "0123abcd.png");
+    const pdfPath = path.join(threadDir, "paper.pdf");
+    writeFileSync(imagePath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+    writeFileSync(pdfPath, "%PDF-1.7");
+
+    const allowed = await resolveAllowedLocalPreviewFile({
+      requestedPath: imagePath,
+      cwd: null,
+      codexHomePaths: [],
+      toolImagesRoot,
+    });
+    assert.equal(allowed?.path, realpathSync(imagePath));
+    assert.equal(
+      await resolveAllowedLocalPreviewFile({
+        requestedPath: imagePath,
+        cwd: null,
+        codexHomePaths: [],
+      }),
+      null,
+    );
+    assert.equal(
+      await resolveAllowedLocalPreviewFile({
+        requestedPath: pdfPath,
+        cwd: null,
+        codexHomePaths: [],
+        toolImagesRoot,
+      }),
+      null,
+    );
+  });
+
   it("does not fall back to ambient Codex homes when the allowlist is intentionally empty", async () => {
     const fakeRoot = path.join(
       process.cwd(),

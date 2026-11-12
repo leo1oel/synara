@@ -677,6 +677,12 @@ host reconnects. Retrying renews an expired file grant when needed. Image previe
 do not poll in the background. A missing original cannot be recovered when no
 snapshot was retained; older replies may therefore still need the original file.
 
+When the agent reads an image or a tool returns one, such as a screenshot or a rendered figure, the tool row shows a thumbnail that opens the image full size.
+Synara keeps a private copy of each returned image in its data directory on the conversation's computer, so the row keeps showing the version the agent saw after the file changes.
+In the full-size viewer, the arrow keys step through the images tools returned in that conversation, in order, which lets you compare successive versions of a figure.
+An image file the agent writes with a file edit appears once that edit completes; an image a shell command writes appears only after the agent reads it.
+A finished turn shows its images under a collapsed **Worked for** header.
+
 ### Terminal panels
 
 Each chat has one main-view terminal panel and can have multiple independent

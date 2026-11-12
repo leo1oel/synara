@@ -86,6 +86,7 @@ function makeServerConfig(overrides: Partial<ServerConfigShape> = {}): ServerCon
     studioWorkspaceRoot: resolveDefaultStudioWorkspaceRoot({ homeDir: os.homedir() }),
     groupsWorkspaceRoot: resolveDefaultGroupsWorkspaceRoot({ homeDir: os.homedir() }),
     baseDir,
+    stateDir: baseDir,
     keybindingsConfigPath: path.join(baseDir, "keybindings.json"),
     serverRuntimeStatePath: path.join(baseDir, "runtime.json"),
     serverSettingsPath: path.join(baseDir, "settings.json"),

@@ -11,6 +11,7 @@ import { type TailUserMessageEditTarget } from "@synara/shared/conversationEdit"
 import { type TimelineEntry, type WorkLogEntry, formatElapsed } from "../../session-logic";
 import { isCodexRuntimeWarningType, type WorkLogUserInputExchangeItem } from "../../workLog";
 import { normalizeCompactToolLabel as normalizeCompactToolLabelValue } from "../../lib/toolCallLabel";
+import { workEntryImagesEqual } from "../../lib/workEntryImages";
 import { isCodexActivityStatusWorkEntry } from "./agentActivity.logic";
 import {
   isSummarizableToolCallEntry,
@@ -2160,6 +2161,7 @@ function workLogEntryContentEqual(a: WorkLogEntry, b: WorkLogEntry): boolean {
     workLogSynaraThreadCreationsEqual(a.synaraThreadCreation, b.synaraThreadCreation) &&
     workLogLiveActivitiesEqual(a.liveActivity, b.liveActivity) &&
     workLogToolDetailsEqual(a.toolDetails, b.toolDetails) &&
+    workEntryImagesEqual(a.images, b.images) &&
     workLogBackgroundTasksEqual(a.backgroundTask, b.backgroundTask) &&
     a.userInputExchange === b.userInputExchange
   );

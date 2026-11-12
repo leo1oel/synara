@@ -92,6 +92,9 @@ import { buildExpandedImagePreview, ExpandedImagePreview } from "./ExpandedImage
 import { ProposedPlanCard } from "./ProposedPlanCard";
 import { InlineVisual } from "./InlineVisual";
 import { InlineVisualEmbedContext } from "./inlineVisualEmbedContext";
+import { ThreadImageSequenceContext } from "./threadImageSequenceContext";
+import { SettledTurnImageStrip } from "./WorkEntryImageStrip";
+import { collectThreadImageSequence, threadImageSequencesEqual } from "../../lib/workEntryImages";
 import { DiffStatLabel } from "./DiffStatLabel";
 import { ReviewChangesButton } from "./ReviewChangesButton";
 import { FileEntryIcon } from "./FileEntryIcon";
@@ -1469,6 +1472,16 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     [timelineEntries],
   );
   const inlineVisualOwners = useStableValue(derivedInlineVisualOwners, mapsEqual);
+  // Only image thumbnails read this, through context, so a new snapshot re-renders
+  // them alone; identity stays stable while the sequence is unchanged.
+  const derivedThreadImageSequence = useMemo(
+    () =>
+      collectThreadImageSequence(
+        timelineEntries.flatMap((entry) => (entry.kind === "work" ? [entry.entry] : [])),
+      ),
+    [timelineEntries],
+  );
+  const threadImageSequence = useStableValue(derivedThreadImageSequence, threadImageSequencesEqual);
   // Replies place visuals in their text with an embed fence; the markdown asks
   // for the visual by id and draws it right there, as part of the answer.
   const renderInlineVisual = useCallback(
@@ -1748,6 +1761,17 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     </div>
                   </CollapsiblePanel>
                   <div className="h-px w-full bg-border" />
+                  {/* Expanded, the rows carry their own thumbnails. */}
+                  {!isCollapsedWorkExpanded ? (
+                    <SettledTurnImageStrip
+                      entries={collapsedTurnItems!.flatMap((item) =>
+                        item.kind === "work" ? [item.entry] : [],
+                      )}
+                      cwd={markdownCwd}
+                      threadId={threadId}
+                      onImageExpand={onImageExpand}
+                    />
+                  ) : null}
                 </Collapsible>
               ) : row.turnHeader.outcome !== "completed" ? (
                 <TurnHeaderLine
@@ -3273,74 +3297,76 @@ export const MessagesTimeline = memo(function MessagesTimeline({
 
   return (
     <BackgroundTaskStopContext.Provider value={onStopBackgroundTask ?? null}>
-      <InlineVisualEmbedContext.Provider value={null}>
-        <div ref={timelineRootRef} className="contents" data-messages-timeline-root="true">
-          <LegendList<MessagesTimelineRow>
-            ref={resolvedListRef}
-            data={rows}
-            keyExtractor={(row) => row.id}
-            renderItem={({ item }) => renderRowContent(item)}
-            estimatedItemSize={90}
-            getEstimatedItemSize={rowHeightHints.getEstimatedItemSize}
-            onItemSizeChanged={rowHeightHints.onItemSizeChanged}
-            // LegendList caches rendered rows, so every local expansion map that changes row content
-            // has to be surfaced through extraData.
-            extraData={timelineExtraData}
-            // Deliberately keyed off the *inherited* anchor rather than
-            // `tailAnchorSlideInFlight`: LegendList re-targets the end on every data
-            // change while this is true, which would yank a live post-send anchor
-            // out of its hold. A remount that inherits an already-settled anchor has
-            // no slide to preserve, so bootstrapping at the end is what we want.
-            initialScrollAtEnd={tailAnchorMessageId === null || hasInheritedTailAnchor}
-            {...(anchoredEndSpace ? { anchoredEndSpace } : {})}
-            maintainScrollAtEnd={followLiveOutput && !tailAnchorSlideInFlight}
-            maintainScrollAtEndThreshold={
-              followLiveOutput && !tailAnchorSlideInFlight ? Number.POSITIVE_INFINITY : 0.1
-            }
-            {...(tailAnchorMessageId !== null
-              ? { maintainVisibleContentPosition: false }
-              : !followLiveOutput
-                ? { maintainVisibleContentPosition: true }
+      <ThreadImageSequenceContext.Provider value={threadImageSequence}>
+        <InlineVisualEmbedContext.Provider value={null}>
+          <div ref={timelineRootRef} className="contents" data-messages-timeline-root="true">
+            <LegendList<MessagesTimelineRow>
+              ref={resolvedListRef}
+              data={rows}
+              keyExtractor={(row) => row.id}
+              renderItem={({ item }) => renderRowContent(item)}
+              estimatedItemSize={90}
+              getEstimatedItemSize={rowHeightHints.getEstimatedItemSize}
+              onItemSizeChanged={rowHeightHints.onItemSizeChanged}
+              // LegendList caches rendered rows, so every local expansion map that changes row content
+              // has to be surfaced through extraData.
+              extraData={timelineExtraData}
+              // Deliberately keyed off the *inherited* anchor rather than
+              // `tailAnchorSlideInFlight`: LegendList re-targets the end on every data
+              // change while this is true, which would yank a live post-send anchor
+              // out of its hold. A remount that inherits an already-settled anchor has
+              // no slide to preserve, so bootstrapping at the end is what we want.
+              initialScrollAtEnd={tailAnchorMessageId === null || hasInheritedTailAnchor}
+              {...(anchoredEndSpace ? { anchoredEndSpace } : {})}
+              maintainScrollAtEnd={followLiveOutput && !tailAnchorSlideInFlight}
+              maintainScrollAtEndThreshold={
+                followLiveOutput && !tailAnchorSlideInFlight ? Number.POSITIVE_INFINITY : 0.1
+              }
+              {...(tailAnchorMessageId !== null
+                ? { maintainVisibleContentPosition: false }
+                : !followLiveOutput
+                  ? { maintainVisibleContentPosition: true }
+                  : {})}
+              onClickCapture={onMessagesClickCapture}
+              onMouseUp={onMessagesMouseUp}
+              onPointerCancel={handleMessagesPointerCancel}
+              onPointerDown={handleMessagesPointerDown}
+              onPointerUp={onMessagesPointerUp}
+              onScroll={handleListScroll}
+              {...(onTrailHighlightsChange
+                ? {
+                    onViewableItemsChanged: handleViewableItemsChanged,
+                    viewabilityConfig: TRAIL_VIEWABILITY_CONFIG,
+                  }
                 : {})}
-            onClickCapture={onMessagesClickCapture}
-            onMouseUp={onMessagesMouseUp}
-            onPointerCancel={handleMessagesPointerCancel}
-            onPointerDown={handleMessagesPointerDown}
-            onPointerUp={onMessagesPointerUp}
-            onScroll={handleListScroll}
-            {...(onTrailHighlightsChange
-              ? {
-                  onViewableItemsChanged: handleViewableItemsChanged,
-                  viewabilityConfig: TRAIL_VIEWABILITY_CONFIG,
-                }
-              : {})}
-            onTouchEnd={onMessagesTouchEnd}
-            onTouchMove={handleMessagesTouchMove}
-            onTouchStart={handleMessagesTouchStart}
-            onWheel={handleMessagesWheel}
-            data-chat-scroll-container="true"
-            // LegendList sets overflow inline, so a CSS class cannot keep this
-            // vertical transcript from gaining a horizontal scrollbar.
-            showsHorizontalScrollIndicator={false}
-            ListFooterComponent={listFooter}
-            ListHeaderComponent={historyHeader}
-            // `scroll-edge-fade` (index.css) dissolves rows under the chat header and toward
-            // the composer instead of cutting them. It is scroll-aware via
-            // `animation-timeline: scroll()` and paint-only, so each edge clears once nothing
-            // is scrolled past it (a pinned or non-scrollable transcript stays crisp) without
-            // feeding back into auto-follow or list measurement. With the floating composer,
-            // `listScrollStyle` moves the bottom fade up to the composer's top edge and
-            // intersects the footer-controls dissolve.
-            // Native scrollbars are hidden; ChatTranscriptPane draws the host overlay.
-            className={cn(
-              "scroll-edge-fade h-full overflow-x-hidden overscroll-y-contain py-3 [-ms-overflow-style:none] [scrollbar-width:none] sm:py-4 [&::-webkit-scrollbar]:hidden",
-              ENVIRONMENT_CONTENT_INSET_MOTION_CLASS,
-              CHAT_COLUMN_GUTTER_CLASS_NAME,
-            )}
-            {...(listScrollStyle ? { style: listScrollStyle } : {})}
-          />
-        </div>
-      </InlineVisualEmbedContext.Provider>
+              onTouchEnd={onMessagesTouchEnd}
+              onTouchMove={handleMessagesTouchMove}
+              onTouchStart={handleMessagesTouchStart}
+              onWheel={handleMessagesWheel}
+              data-chat-scroll-container="true"
+              // LegendList sets overflow inline, so a CSS class cannot keep this
+              // vertical transcript from gaining a horizontal scrollbar.
+              showsHorizontalScrollIndicator={false}
+              ListFooterComponent={listFooter}
+              ListHeaderComponent={historyHeader}
+              // `scroll-edge-fade` (index.css) dissolves rows under the chat header and toward
+              // the composer instead of cutting them. It is scroll-aware via
+              // `animation-timeline: scroll()` and paint-only, so each edge clears once nothing
+              // is scrolled past it (a pinned or non-scrollable transcript stays crisp) without
+              // feeding back into auto-follow or list measurement. With the floating composer,
+              // `listScrollStyle` moves the bottom fade up to the composer's top edge and
+              // intersects the footer-controls dissolve.
+              // Native scrollbars are hidden; ChatTranscriptPane draws the host overlay.
+              className={cn(
+                "scroll-edge-fade h-full overflow-x-hidden overscroll-y-contain py-3 [-ms-overflow-style:none] [scrollbar-width:none] sm:py-4 [&::-webkit-scrollbar]:hidden",
+                ENVIRONMENT_CONTENT_INSET_MOTION_CLASS,
+                CHAT_COLUMN_GUTTER_CLASS_NAME,
+              )}
+              {...(listScrollStyle ? { style: listScrollStyle } : {})}
+            />
+          </div>
+        </InlineVisualEmbedContext.Provider>
+      </ThreadImageSequenceContext.Provider>
     </BackgroundTaskStopContext.Provider>
   );
 });

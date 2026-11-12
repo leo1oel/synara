@@ -1,6 +1,7 @@
 // FILE: GeneratedMarkdownImage.tsx
 // Purpose: Renders Codex-generated images embedded in assistant markdown with
 //          loading skeleton, hover overlay (expand/download), and inline error card.
+//          The thumbnail size serves the image previews under tool-call rows.
 // Layer: Web chat presentation component
 // Exports: GeneratedMarkdownImage
 // Notes: Pure UI; loading state and the error card are shared with the editor
@@ -36,6 +37,8 @@ export interface GeneratedMarkdownImageProps {
   threadId?: string | null | undefined;
   attachmentId?: string | undefined;
   isLinked?: boolean;
+  /** `thumbnail` is the smaller frame used under tool-call rows. */
+  size?: "prose" | "thumbnail";
   onImageExpand?: ((preview: ExpandedImagePreview) => void) | undefined;
 }
 
@@ -238,7 +241,11 @@ function GeneratedMarkdownImageContent(
   }
 
   return (
-    <span className="chat-generated-image" data-status={resolvingGrant ? "loading" : status}>
+    <span
+      className="chat-generated-image"
+      data-size={props.size === "thumbnail" ? "thumbnail" : undefined}
+      data-status={resolvingGrant ? "loading" : status}
+    >
       <button
         type="button"
         className="chat-generated-image__frame"

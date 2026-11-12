@@ -343,6 +343,34 @@ function activityDataField(data: unknown): { readonly data?: unknown } {
   return data === undefined ? {} : { data: boundActivityData(data) };
 }
 
+// Image snapshots (see provider/toolResultImages.ts) ride on the payload's top level:
+// inside `data` they would compete with the raw tool result for the size bound and
+// could be truncated away, taking the transcript's thumbnail with them.
+const MAX_ACTIVITY_TOOL_IMAGES = 8;
+
+function toolLifecycleDataFields(data: unknown): {
+  readonly data?: unknown;
+  readonly toolImages?: ReadonlyArray<{ path: string; mimeType: string; byteLength: number }>;
+} {
+  if (!isJsonObject(data) || !Array.isArray(data.toolImages)) return activityDataField(data);
+  const { toolImages: rawToolImages, ...rest } = data;
+  const toolImages = (rawToolImages as unknown[])
+    .flatMap((entry) =>
+      isJsonObject(entry) &&
+      typeof entry.path === "string" &&
+      entry.path.length > 0 &&
+      typeof entry.mimeType === "string" &&
+      typeof entry.byteLength === "number"
+        ? [{ path: entry.path, mimeType: entry.mimeType, byteLength: entry.byteLength }]
+        : [],
+    )
+    .slice(0, MAX_ACTIVITY_TOOL_IMAGES);
+  return {
+    ...activityDataField(rest),
+    ...(toolImages.length > 0 ? { toolImages } : {}),
+  };
+}
+
 // Keep MCP progress payloads available to the web timeline so it can render the specific tool call.
 function buildToolProgressActivityPayload(
   event: Extract<ProviderRuntimeEvent, { type: "tool.progress" }>,
@@ -1266,7 +1294,7 @@ export function projectProviderRuntimeActivities(
             ...(event.payload.status ? { status: event.payload.status } : {}),
             ...(itemTitle ? { title: itemTitle } : {}),
             ...(event.payload.detail ? { detail: truncateDetail(event.payload.detail) } : {}),
-            ...activityDataField(event.payload.data),
+            ...toolLifecycleDataFields(event.payload.data),
           }),
           turnId: toTurnId(event.turnId) ?? null,
           ...maybeSequence,

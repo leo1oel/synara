@@ -72,8 +72,8 @@ export interface ToolCallGroupSummary {
 }
 
 // Rich rows (subagent strips, automation cards, thread-creation recaps,
-// background tasks) and non-tool tones (errors, approvals, info) must stay
-// individually visible, so they never fold into a summary group.
+// background tasks, image previews) and non-tool tones (errors, approvals,
+// info) must stay individually visible, so they never fold into a summary group.
 export function isSummarizableToolCallEntry(entry: WorkLogEntry): boolean {
   return (
     (entry.tone === "tool" ||
@@ -86,6 +86,7 @@ export function isSummarizableToolCallEntry(entry: WorkLogEntry): boolean {
     !entry.connectorProposalId &&
     !entry.subagentAction &&
     !entry.backgroundTask &&
+    (entry.images?.length ?? 0) === 0 &&
     (entry.subagents?.length ?? 0) === 0
   );
 }

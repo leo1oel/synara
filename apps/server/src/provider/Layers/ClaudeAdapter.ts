@@ -154,6 +154,11 @@ import {
 import { resolveProviderAttachmentPath } from "../providerAttachmentPaths.ts";
 import { settleConcurrentTeardowns } from "../settleConcurrentTeardowns.ts";
 import { stripDiagnosticImages } from "../stripDiagnosticImages.ts";
+import {
+  mayCarryToolResultImages,
+  snapshotToolResultImages,
+  toolResultImagesRoot,
+} from "../toolResultImages.ts";
 import { ServerConfig } from "../../config.ts";
 import { buildFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { loadClaudeAgentSdk } from "../claudeAgentSdk.ts";
@@ -2737,19 +2742,31 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         ),
       );
 
+    // Tool results that returned images (Read of a PNG, an MCP screenshot) keep a
+    // thread-scoped copy so the transcript can show what the agent saw; the
+    // bytes themselves are still stripped from the event below.
+    const toolImagesRoot = toolResultImagesRoot(serverConfig.stateDir);
     const offerRuntimeEvent = (
       context: ClaudeSessionContext,
       event: ProviderRuntimeEvent,
     ): Effect.Effect<void> =>
-      Queue.offer(runtimeEventQueue, {
-        ...(stripDiagnosticImages(event) as ProviderRuntimeEvent),
-        ...(event.providerInstanceId === undefined && context.session.providerInstanceId
-          ? { providerInstanceId: context.session.providerInstanceId }
-          : {}),
-        ...(context.lifecycleGeneration !== undefined
-          ? { lifecycleGeneration: context.lifecycleGeneration }
-          : {}),
-      }).pipe(Effect.asVoid);
+      (mayCarryToolResultImages(event)
+        ? Effect.promise(() => snapshotToolResultImages(event, toolImagesRoot))
+        : Effect.succeed(event)
+      ).pipe(
+        Effect.flatMap((snapshotted) =>
+          Queue.offer(runtimeEventQueue, {
+            ...(stripDiagnosticImages(snapshotted) as ProviderRuntimeEvent),
+            ...(event.providerInstanceId === undefined && context.session.providerInstanceId
+              ? { providerInstanceId: context.session.providerInstanceId }
+              : {}),
+            ...(context.lifecycleGeneration !== undefined
+              ? { lifecycleGeneration: context.lifecycleGeneration }
+              : {}),
+          }),
+        ),
+        Effect.asVoid,
+      );
 
     const logNativeSdkMessage = (
       context: ClaudeSessionContext,
