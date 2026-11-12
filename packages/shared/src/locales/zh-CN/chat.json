@@ -1011,6 +1011,7 @@
   "removePastedText": "移除粘贴的文本（{{countLabel}}）",
   "rateLimitReachedNoReset": "已达到用量限制。",
   "rateLimitReachedReset": "已达到用量限制，将于 {{resetAt}} 重置。",
+  "checkpointBaselineUnavailable": "本轮的检查点差异和文件撤销不可用。",
   "rateLimitApproaching": "即将达到用量限制。",
   "rateLimitApproachingReset": "即将达到用量限制，将于 {{resetAt}} 重置。",
   "rateLimitApproachingUsage": "即将达到用量限制（已使用 {{usage}}）。",

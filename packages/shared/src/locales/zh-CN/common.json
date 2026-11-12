@@ -1219,6 +1219,7 @@
   "task_quickAddPlaceholder": "添加任务，或按 Tab 将其交给智能体",
   "closeNamedItem": "关闭{{title}}",
   "image_retryPreview": "重试图片预览",
+  "appSnapHeroAddedToChat": "已添加到聊天",
   "updatesAvailableForAndMoreProviders_one": "{{provider}} 和另外 {{count}} 个提供商有可用更新。",
   "updatesAvailableForAndMoreProviders_other": "{{provider}} 和另外 {{count}} 个提供商有可用更新。",
   "copyTheCommandsBelowToUpdateManuallyInA_one": "{{failures}}\n\n复制下方命令，在终端中手动更新。",
