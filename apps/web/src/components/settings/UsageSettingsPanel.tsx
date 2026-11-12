@@ -7,6 +7,8 @@
 
 import { useState } from "react";
 
+import { useTranslation } from "~/i18n";
+
 import { SegmentedPicker } from "../SegmentedPicker";
 import { BillingSettingsPanel, SYNARA_PLAN_SECTION_ID } from "./BillingSettingsPanel";
 import { ProviderUsageSettingsPanel } from "./ProviderUsageSettingsPanel";
@@ -25,20 +27,23 @@ export function UsageSettingsPanel({
   billingEnabled: boolean;
   target: string | null;
 }) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<UsageTab>(() =>
     billingEnabled && target === SYNARA_PLAN_SECTION_ID ? "billing" : "overview",
   );
   return (
     <div className="space-y-6">
       <SegmentedPicker<UsageTab>
-        ariaLabel="Usage"
+        ariaLabel={t("lattice:usageTabsLabel")}
         variant="buttons"
         value={tab}
         onValueChange={setTab}
         options={[
-          { value: "overview", label: "Overview" },
-          { value: "analytics", label: "Analytics" },
-          ...(billingEnabled ? [{ value: "billing" as const, label: "Billing" }] : []),
+          { value: "overview", label: t("lattice:usageTabOverview") },
+          { value: "analytics", label: t("lattice:usageTabAnalytics") },
+          ...(billingEnabled
+            ? [{ value: "billing" as const, label: t("lattice:usageTabBilling") }]
+            : []),
         ]}
       />
       <div>
