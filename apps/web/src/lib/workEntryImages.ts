@@ -9,6 +9,8 @@
 
 import { isSupportedLocalImagePath } from "@synara/shared/localPreviewFiles";
 
+import { extractFilePathFromDetail } from "./toolArgumentSummary";
+
 export interface WorkEntryImage {
   /** Path the local preview route serves: absolute, or relative to the thread's cwd. */
   readonly path: string;
@@ -112,16 +114,13 @@ interface ImageNamingEntry {
 
 /**
  * Caption for an image in the expanded viewer. A snapshot's file name is a content
- * hash, so it borrows the file the call read when the row names one (Claude's Read),
- * and the call's own title otherwise (a screenshot or figure-preview tool).
+ * hash, so it borrows the image file the call read when the row names one (Claude's
+ * Read), and the call's own title otherwise (a screenshot or figure-preview tool).
  */
 export function workEntryImageName(entry: ImageNamingEntry, image: WorkEntryImage): string {
   if (!image.snapshot) return basename(image.path);
-  const detail = entry.detail?.trim();
-  // A plain path, not a `Tool: {json}` argument dump that merely ends in `.png`.
-  if (detail && isSupportedLocalImagePath(detail) && !detail.includes("{")) {
-    return basename(detail);
-  }
+  const readPath = entry.detail ? extractFilePathFromDetail(entry.detail) : null;
+  if (readPath && isSupportedLocalImagePath(readPath)) return basename(readPath);
   return entry.toolTitle?.trim() || entry.label;
 }
 

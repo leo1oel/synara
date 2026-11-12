@@ -93,6 +93,7 @@ import { ProposedPlanCard } from "./ProposedPlanCard";
 import { InlineVisual } from "./InlineVisual";
 import { InlineVisualEmbedContext } from "./inlineVisualEmbedContext";
 import { ThreadImageSequenceContext } from "./threadImageSequenceContext";
+import { SettledTurnImageStrip } from "./WorkEntryImageStrip";
 import { collectThreadImageSequence, threadImageSequencesEqual } from "../../lib/workEntryImages";
 import { DiffStatLabel } from "./DiffStatLabel";
 import { ReviewChangesButton } from "./ReviewChangesButton";
@@ -1760,6 +1761,17 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     </div>
                   </CollapsiblePanel>
                   <div className="h-px w-full bg-border" />
+                  {/* Expanded, the rows carry their own thumbnails. */}
+                  {!isCollapsedWorkExpanded ? (
+                    <SettledTurnImageStrip
+                      entries={collapsedTurnItems!.flatMap((item) =>
+                        item.kind === "work" ? [item.entry] : [],
+                      )}
+                      cwd={markdownCwd}
+                      threadId={threadId}
+                      onImageExpand={onImageExpand}
+                    />
+                  ) : null}
                 </Collapsible>
               ) : row.turnHeader.outcome !== "completed" ? (
                 <TurnHeaderLine

@@ -118,6 +118,15 @@ describe("thread image sequence", () => {
     ]);
   });
 
+  it("names a snapshot after the image file a Read call names in its arguments", () => {
+    expect(
+      workEntryImageName(
+        { label: "Read", detail: 'Read: {"file_path":"/work/figs/loss.png","offset":0}' },
+        { path: SNAPSHOT, snapshot: true },
+      ),
+    ).toBe("loss.png");
+  });
+
   it("names a disk image by its file and an argument dump by the call", () => {
     expect(workEntryImageName(wrote, wrote.images[0]!)).toBe("diagram.svg");
     expect(
