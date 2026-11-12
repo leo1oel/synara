@@ -9,9 +9,13 @@
 // through GitCore; on settle we invalidate the per-cwd git caches so both lists stay in sync.
 
 import { type FileDiffMetadata } from "@pierre/diffs/react";
-import { type ProjectId, type ThreadId } from "@synara/contracts";
+import {
+  type GitReadWorkingTreeDiffResult,
+  type ProjectId,
+  type ThreadId,
+} from "@synara/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 
 import { useTheme } from "~/hooks/useTheme";
 import {
@@ -24,26 +28,40 @@ import {
   summarizeFileDiffStats,
 } from "~/lib/diffRendering";
 import {
+  gitBranchesQueryOptions,
   gitQueryKeys,
   gitStageFilesMutationOptions,
+  gitStatusQueryOptions,
   gitUnstageFilesMutationOptions,
   gitWorkingTreeDiffQueryOptions,
 } from "~/lib/gitReactQuery";
-import { PlusIcon, RefreshCwIcon, ResetIcon } from "~/lib/icons";
+import { PlusIcon, RefreshCwIcon, RotateCcwIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { useStore } from "~/store";
 import { createProjectSelector, createThreadWorkspaceMetadataSelector } from "~/storeSelectors";
 import { Alert } from "../ui/alert";
 import { Button } from "../ui/button";
 import { IconButton } from "../ui/icon-button";
-import { DiffTruncationWarning } from "../DiffTruncationWarning";
-import { DOCK_HEADER_ICON_BUTTON_CLASS } from "./chatHeaderControls";
+import { ScrollArea } from "../ui/scroll-area";
+import { Skeleton } from "../ui/skeleton";
+import {
+  CHAT_SURFACE_HEADER_ACTION_ICON_CLASS_NAME,
+  DOCK_HEADER_ICON_BUTTON_CLASS,
+} from "./chatHeaderControls";
 import { DiffStat } from "./DiffStatLabel";
 import { DockPaneHeader } from "./DockPaneHeader";
-import { FileDiffCard, FileDiffSurface } from "./FileDiffView";
+import { FileDiffHeader } from "./FileDiffHeader";
+import { SingleFileDiffBody } from "./FileDiffView";
 import { FileEntryIcon } from "./FileEntryIcon";
+import { FileRowsSkeleton } from "./FileRowsSkeleton";
+import {
+  GitHubRemoteSetupCard,
+  GitInitializationState,
+  LatticeGitInitializationState,
+} from "./GitRepositorySetup";
+import { type LatticeChangeScope, LatticeGitChanges } from "./LatticeGitChanges";
 import { PanelStateMessage } from "./PanelStateMessage";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 type GitPanelSection = "staged" | "unstaged";
 
@@ -63,6 +81,16 @@ function parsePatchToSortedFiles(
   return renderable?.kind === "files" ? sortFileDiffsByPath(renderable.files) : [];
 }
 
+function toLatticeChangeScope(
+  result: GitReadWorkingTreeDiffResult | undefined,
+): LatticeChangeScope {
+  return {
+    files: result?.files ?? [],
+    patch: result?.patch ?? "",
+    truncated: result?.truncated ?? false,
+  };
+}
+
 function GitFileRow(props: {
   fileDiff: FileDiffMetadata;
   theme: "light" | "dark";
@@ -79,16 +107,12 @@ function GitFileRow(props: {
   return (
     <div
       className={cn(
-        "group flex items-center gap-1.5 rounded-md px-1.5 py-1 text-left",
+        "group flex cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-1 text-left",
         props.isSelected ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60",
       )}
+      onClick={() => props.onSelect(props.fileDiff)}
     >
-      <button
-        type="button"
-        className="flex min-w-0 flex-1 items-center gap-1.5"
-        onClick={() => props.onSelect(props.fileDiff)}
-        title={filePath}
-      >
+      <button type="button" className="flex min-w-0 flex-1 items-center gap-1.5" title={filePath}>
         <FileEntryIcon pathValue={filePath} kind="file" theme={props.theme} className="size-4" />
         <span className="min-w-0 truncate text-ui text-foreground">
           {dir ? <span className="text-muted-foreground/70">{dir}</span> : null}
@@ -107,12 +131,15 @@ function GitFileRow(props: {
         label={props.actionLabel}
         tooltip={props.actionLabel}
         disabled={props.actionDisabled}
-        onClick={() => props.onAction([props.fileDiff])}
+        onClick={(event) => {
+          event.stopPropagation();
+          props.onAction([props.fileDiff]);
+        }}
       >
         {props.actionIcon === "stage" ? (
           <PlusIcon className="size-3.5" />
         ) : (
-          <ResetIcon className="size-3.5" />
+          <RotateCcwIcon className="size-3.5" />
         )}
       </IconButton>
     </div>
@@ -137,8 +164,10 @@ function GitFileSection(props: {
   return (
     <section className="min-w-0">
       <header className="flex items-center gap-2 px-1.5 py-1">
-        <span className="text-ui-sm font-semibold text-muted-foreground">{props.title}</span>
-        <span className="rounded-full bg-muted px-1.5 text-ui-xs font-medium text-muted-foreground">
+        <span className="text-ui-sm font-semibold text-[var(--color-text-foreground-secondary)]">
+          {props.title}
+        </span>
+        <span className="rounded-full bg-muted px-1.5 text-ui-xs font-medium text-[var(--color-text-foreground-secondary)]">
           {props.files.length}
         </span>
         <DiffStat additions={stat.additions} deletions={stat.deletions} className="text-ui-xs" />
@@ -156,7 +185,9 @@ function GitFileSection(props: {
         ) : null}
       </header>
       {props.files.length === 0 ? (
-        <p className="px-1.5 py-1 text-ui-sm text-muted-foreground/70">{props.emptyLabel}</p>
+        <p className="px-1.5 py-1 text-ui-sm text-[var(--color-text-foreground-tertiary)]">
+          {props.emptyLabel}
+        </p>
       ) : (
         <div className="flex flex-col gap-0.5">
           {props.files.map((file) => {
@@ -182,20 +213,46 @@ function GitFileSection(props: {
   );
 }
 
+// Mirrors GitFileSection's header and rows so the loaded list replaces it in place.
+function GitFileSectionSkeleton(props: { label: string }) {
+  return (
+    <section className="flex min-w-0 flex-col gap-1">
+      <div className="flex items-center gap-2 px-1.5 py-1" aria-hidden>
+        <Skeleton className="h-3 w-16 rounded-full" />
+        <Skeleton className="h-3.5 w-5 rounded-full" />
+      </div>
+      <FileRowsSkeleton label={props.label} showStats className="px-1.5" />
+    </section>
+  );
+}
+
 function SelectedFileDiff(props: { fileDiff: FileDiffMetadata; theme: "light" | "dark" }) {
   return (
-    <FileDiffSurface className="h-full min-h-0 overflow-auto px-2 py-2">
-      <div className="diff-render-file rounded-md">
-        <FileDiffCard fileDiff={props.fileDiff} theme={props.theme} />
+    <div className="h-full min-h-0 p-2">
+      <div className="diff-render-file grid max-h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-md">
+        <div className="border-b border-border bg-background">
+          <FileDiffHeader fileDiff={props.fileDiff} theme={props.theme} />
+        </div>
+        <ScrollArea
+          className="min-h-0 min-w-0"
+          data-git-diff-scroll=""
+          scrollbarGutter
+          viewportClassName="min-h-0 min-w-0"
+        >
+          <SingleFileDiffBody fileDiff={props.fileDiff} theme={props.theme} />
+        </ScrollArea>
       </div>
-    </FileDiffSurface>
+    </div>
   );
 }
 
 export function GitPanel(props: {
-  hostThreadId: ThreadId;
+  hostThreadId?: ThreadId | null;
   projectId: ProjectId | null;
+  cwdOverride?: string | null;
   onClose?: () => void;
+  showActions?: boolean;
+  title?: ReactNode;
 }) {
   const { t } = useTranslation();
 
@@ -210,25 +267,58 @@ export function GitPanel(props: {
   const project = useStore(
     useMemo(() => createProjectSelector(props.projectId), [props.projectId]),
   );
-  const cwd = threadWorkspace.worktreePath ?? project?.cwd ?? null;
+  const cwd = props.cwdOverride ?? threadWorkspace.worktreePath ?? project?.cwd ?? null;
 
   const [selected, setSelected] = useState<SelectedFile | null>(null);
+  const branchQuery = useQuery(gitBranchesQueryOptions(cwd));
+  const repositoryReady = branchQuery.isSuccess && branchQuery.data.isRepo;
+  const repositoryMissing = branchQuery.isSuccess && !branchQuery.data.isRepo;
+  const repositoryPending = !branchQuery.isSuccess;
+  // Status and both diffs start alongside the branch probe rather than after it, so the
+  // file lists can land in the same round trip; only a confirmed non-repository stops them.
+  const gitReadsEnabled = !repositoryMissing;
+  const statusQuery = useQuery(gitStatusQueryOptions(cwd, gitReadsEnabled));
 
   // No fixed polling: turn-driven file changes already push-invalidate the
   // working-tree-diff cache (see __root.tsx), and focus + the Refresh button +
   // post-mutation invalidation cover the rest. This keeps the pane cheap.
-  const stagedQuery = useQuery(gitWorkingTreeDiffQueryOptions({ cwd, scope: "staged" }));
-  const unstagedQuery = useQuery(gitWorkingTreeDiffQueryOptions({ cwd, scope: "unstaged" }));
+  const stagedQuery = useQuery(
+    gitWorkingTreeDiffQueryOptions({ cwd, scope: "staged", enabled: gitReadsEnabled }),
+  );
+  const unstagedQuery = useQuery(
+    gitWorkingTreeDiffQueryOptions({ cwd, scope: "unstaged", enabled: gitReadsEnabled }),
+  );
+  const refreshMutation = useMutation({
+    mutationFn: async () => {
+      if (!cwd) return;
+      const refreshes = [queryClient.invalidateQueries({ queryKey: gitQueryKeys.branches(cwd) })];
+      if (repositoryReady) {
+        refreshes.push(
+          queryClient.invalidateQueries({ queryKey: gitQueryKeys.status(cwd) }),
+          queryClient.invalidateQueries({ queryKey: gitQueryKeys.branchPullRequest(cwd) }),
+          queryClient.invalidateQueries({
+            queryKey: gitQueryKeys.workingTreeDiff(cwd, "staged"),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: gitQueryKeys.workingTreeDiff(cwd, "unstaged"),
+          }),
+        );
+      }
+      await Promise.all(refreshes);
+    },
+  });
 
   const stagedPatch = stagedQuery.data?.patch;
   const unstagedPatch = unstagedQuery.data?.patch;
+  // Lattice's Changes view lists from the scopes' file lists instead, so it skips this parse.
+  const latticeView = props.showActions === true;
   const stagedFiles = useMemo(
-    () => parsePatchToSortedFiles(stagedPatch, `git-pane:staged:${theme}`),
-    [stagedPatch, theme],
+    () => (latticeView ? [] : parsePatchToSortedFiles(stagedPatch, `git-pane:staged:${theme}`)),
+    [latticeView, stagedPatch, theme],
   );
   const unstagedFiles = useMemo(
-    () => parsePatchToSortedFiles(unstagedPatch, `git-pane:unstaged:${theme}`),
-    [theme, unstagedPatch],
+    () => (latticeView ? [] : parsePatchToSortedFiles(unstagedPatch, `git-pane:unstaged:${theme}`)),
+    [latticeView, theme, unstagedPatch],
   );
 
   const stageMutation = useMutation(gitStageFilesMutationOptions({ cwd, queryClient }));
@@ -246,20 +336,22 @@ export function GitPanel(props: {
     if (!cwd || paths.length === 0) return;
     unstageMutation.mutate(paths);
   };
+  // Lattice's Changes view lists Git's own file list and already names both
+  // sides of a rename, so it stages and unstages by path.
+  const stagePaths = (paths: string[]) => {
+    if (!cwd || paths.length === 0) return;
+    stageMutation.mutate(paths);
+  };
+  const unstagePaths = (paths: string[]) => {
+    if (!cwd || paths.length === 0) return;
+    unstageMutation.mutate(paths);
+  };
 
   const selectStaged = (file: FileDiffMetadata) => {
     setSelected({ section: "staged", path: resolveFileDiffPath(file) });
   };
   const selectUnstaged = (file: FileDiffMetadata) => {
     setSelected({ section: "unstaged", path: resolveFileDiffPath(file) });
-  };
-
-  const refresh = () => {
-    if (!cwd) return;
-    void queryClient.invalidateQueries({ queryKey: gitQueryKeys.workingTreeDiff(cwd, "staged") });
-    void queryClient.invalidateQueries({
-      queryKey: gitQueryKeys.workingTreeDiff(cwd, "unstaged"),
-    });
   };
 
   // Resolve the selected file by path, preferring its stored section but falling
@@ -281,26 +373,75 @@ export function GitPanel(props: {
     }
   }
   const selectedFileDiff = selectedResolved?.file ?? null;
+  const selectedFileRenderKey = selectedResolved
+    ? `${selectedResolved.section}:${buildFileDiffRenderKey(selectedResolved.file)}`
+    : null;
   const selectedPath = selected?.path ?? null;
 
-  const isLoading = stagedQuery.isLoading || unstagedQuery.isLoading;
-  const truncated = stagedQuery.data?.truncated === true || unstagedQuery.data?.truncated === true;
-  const error =
-    stagedQuery.error instanceof Error
+  // Diffs can finish before status (upstream/ahead counts) or the repository probe. Do
+  // not present a clean repository until all initial reads have resolved.
+  const isLoading =
+    repositoryPending || stagedQuery.isPending || unstagedQuery.isPending || statusQuery.isPending;
+  const branchError = branchQuery.error instanceof Error ? branchQuery.error.message : null;
+  // Read errors wait for the repository probe: a folder that is not a repository fails
+  // these reads too, and it gets the initialization state rather than an error flash.
+  const error = !repositoryReady
+    ? null
+    : stagedQuery.error instanceof Error
       ? stagedQuery.error.message
       : unstagedQuery.error instanceof Error
         ? unstagedQuery.error.message
-        : null;
+        : !statusQuery.data && statusQuery.error instanceof Error
+          ? statusQuery.error.message
+          : null;
   const hasChanges = stagedFiles.length > 0 || unstagedFiles.length > 0;
+  const showCleanState = !error && !isLoading && !hasChanges;
+  const unpushedCommitCount = statusQuery.data?.hasUpstream ? statusQuery.data.aheadCount : 0;
 
   if (!cwd) {
     return <PanelStateMessage>{t("git:gitPanel_unavailableForThread")}</PanelStateMessage>;
   }
 
+  if (props.showActions && repositoryMissing) {
+    return <LatticeGitInitializationState cwd={cwd} />;
+  }
+
+  // Lattice's Changes view: its own layout over the same reads and index mutations. It mounts
+  // with the repository probe still pending, so changed files land as soon as the diffs do.
+  if (props.showActions && !repositoryMissing && !branchError) {
+    return (
+      <LatticeGitChanges
+        cwd={cwd}
+        theme={theme}
+        staged={toLatticeChangeScope(stagedQuery.data)}
+        unstaged={toLatticeChangeScope(unstagedQuery.data)}
+        statusHasChanges={statusQuery.data?.hasWorkingTreeChanges === true}
+        isLoading={isLoading}
+        error={error}
+        mutating={mutating}
+        onStage={stagePaths}
+        onUnstage={unstagePaths}
+        refreshing={refreshMutation.isPending}
+        onRefresh={() => refreshMutation.mutate()}
+        remoteSetup={
+          repositoryReady && !branchQuery.data.hasOriginRemote ? (
+            <GitHubRemoteSetupCard cwd={cwd} />
+          ) : null
+        }
+        loadingRows={<GitFileSectionSkeleton label={t("git:gitPanel_loading")} />}
+      />
+    );
+  }
+
   return (
-    <div className="flex h-full min-h-0 w-full flex-col">
+    <div
+      className={cn(
+        "flex h-full min-h-0 w-full flex-col text-[var(--color-text-foreground)]",
+        props.showActions && "lattice-source-control",
+      )}
+    >
       <DockPaneHeader
-        title={t("git:gitPanel_title")}
+        title={props.title ?? t("git:gitPanel_title")}
         onClose={props.onClose}
         closeLabel={t("git:closeSourceControl")}
         actions={
@@ -310,81 +451,118 @@ export function GitPanel(props: {
             label={t("git:gitPanel_refreshLabel")}
             tooltip={t("git:gitPanel_refreshLabel")}
             className={DOCK_HEADER_ICON_BUTTON_CLASS}
-            onClick={refresh}
+            disabled={refreshMutation.isPending}
+            aria-busy={refreshMutation.isPending || undefined}
+            onClick={() => refreshMutation.mutate()}
           >
-            <RefreshCwIcon className="size-3.5" />
+            <RefreshCwIcon
+              className={cn(
+                CHAT_SURFACE_HEADER_ACTION_ICON_CLASS_NAME,
+                refreshMutation.isPending && "animate-spin",
+              )}
+            />
           </IconButton>
         }
       />
 
-      <div className="flex max-h-[48%] min-h-0 shrink-0 flex-col gap-2 overflow-auto px-1.5 py-2">
-        {truncated ? (
-          <DiffTruncationWarning>
-            {t("git:synaraStoppedReadingSourceControlChangesAtTheDiff")}
-          </DiffTruncationWarning>
-        ) : null}
-        {error ? (
+      {branchError ? (
+        <div className="p-2">
           <Alert variant="error" size="sm" className="text-destructive">
-            {error}
+            {branchError}
           </Alert>
-        ) : null}
-        {!error && isLoading && !hasChanges ? (
-          <p className="px-1.5 py-1 text-ui-sm text-muted-foreground/70">
-            {t("git:gitPanel_loading")}
-          </p>
-        ) : null}
-        {!error && !isLoading && !hasChanges ? (
-          <p className="px-1.5 py-2 text-center text-ui text-muted-foreground/70">
-            {t("git:gitPanel_noChanges")}
-          </p>
-        ) : null}
-        {hasChanges ? (
-          <>
-            <GitFileSection
-              title={t("git:gitPanel_staged")}
-              emptyLabel="No staged changes."
-              files={stagedFiles}
-              theme={theme}
-              section="staged"
-              selectedPath={selectedResolved?.section === "staged" ? selectedPath : null}
-              actionLabel="Unstage file"
-              actionAllLabel="Unstage all"
-              actionIcon="unstage"
-              actionDisabled={mutating}
-              onSelect={selectStaged}
-              onAction={unstage}
-            />
-            <GitFileSection
-              title={t("git:panel_changes")}
-              emptyLabel="No unstaged changes."
-              files={unstagedFiles}
-              theme={theme}
-              section="unstaged"
-              selectedPath={selectedResolved?.section === "unstaged" ? selectedPath : null}
-              actionLabel="Stage file"
-              actionAllLabel="Stage all"
-              actionIcon="stage"
-              actionDisabled={mutating}
-              onSelect={selectUnstaged}
-              onAction={stage}
-            />
-          </>
-        ) : null}
-      </div>
+        </div>
+      ) : repositoryMissing ? (
+        <GitInitializationState cwd={cwd} />
+      ) : (
+        <>
+          {repositoryReady && !branchQuery.data.hasOriginRemote ? (
+            <GitHubRemoteSetupCard cwd={cwd} />
+          ) : null}
 
-      <div className="diff-panel-viewport min-h-0 min-w-0 flex-1 overflow-hidden border-t border-border/70">
-        {selectedFileDiff ? (
-          <SelectedFileDiff
-            key={`${buildFileDiffRenderKey(selectedFileDiff)}:${theme}`}
-            fileDiff={selectedFileDiff}
-            theme={theme}
-          />
-        ) : (
-          <PanelStateMessage density="compact">
-            {t("git:gitPanel_selectFileDiff")}
-          </PanelStateMessage>
-        )}
-      </div>
+          {showCleanState ? (
+            <PanelStateMessage density="compact" fill="flex" className="flex-col gap-1 py-6">
+              <span>{t("lattice:noUncommittedChanges")}</span>
+              {unpushedCommitCount > 0 ? (
+                <span>
+                  {t("lattice:localCommitsHaveNotBeenPushed", { count: unpushedCommitCount })}
+                </span>
+              ) : null}
+            </PanelStateMessage>
+          ) : (
+            <>
+              <div className="flex max-h-[48%] min-h-0 shrink-0 overflow-hidden">
+                <ScrollArea className="min-h-0 flex-1" scrollFade>
+                  <div
+                    className={cn(
+                      "flex flex-col gap-2 py-2",
+                      props.showActions ? "px-2" : "px-1.5",
+                    )}
+                  >
+                    {error ? (
+                      <Alert variant="error" size="sm" className="text-destructive">
+                        {error}
+                      </Alert>
+                    ) : null}
+                    {!error && isLoading && !hasChanges ? (
+                      <GitFileSectionSkeleton label={t("git:gitPanel_loading")} />
+                    ) : null}
+                    {hasChanges ? (
+                      <>
+                        <GitFileSection
+                          title={t("git:gitPanel_staged")}
+                          emptyLabel={t("lattice:noStagedChanges")}
+                          files={stagedFiles}
+                          theme={theme}
+                          section="staged"
+                          selectedPath={
+                            selectedResolved?.section === "staged" ? selectedPath : null
+                          }
+                          actionLabel={t("lattice:unstageFile")}
+                          actionAllLabel={t("lattice:unstageAll")}
+                          actionIcon="unstage"
+                          actionDisabled={mutating}
+                          onSelect={selectStaged}
+                          onAction={unstage}
+                        />
+                        <GitFileSection
+                          title={t("git:panel_changes")}
+                          emptyLabel={t("lattice:noUnstagedChanges")}
+                          files={unstagedFiles}
+                          theme={theme}
+                          section="unstaged"
+                          selectedPath={
+                            selectedResolved?.section === "unstaged" ? selectedPath : null
+                          }
+                          actionLabel={t("lattice:stageFile")}
+                          actionAllLabel={t("lattice:stageAll")}
+                          actionIcon="stage"
+                          actionDisabled={mutating}
+                          onSelect={selectUnstaged}
+                          onAction={stage}
+                        />
+                      </>
+                    ) : null}
+                  </div>
+                </ScrollArea>
+              </div>
+
+              <div className="diff-panel-viewport min-h-0 min-w-0 flex-1 overflow-hidden border-t border-border/70">
+                {selectedFileDiff && selectedFileRenderKey ? (
+                  <SelectedFileDiff
+                    key={selectedFileRenderKey}
+                    fileDiff={selectedFileDiff}
+                    theme={theme}
+                  />
+                ) : (
+                  <PanelStateMessage density="compact">
+                    {t("git:gitPanel_selectFileDiff")}
+                  </PanelStateMessage>
+                )}
+              </div>
+            </>
+          )}
+        </>
+      )}
     </div>
   );
 }

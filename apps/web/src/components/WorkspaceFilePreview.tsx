@@ -1128,7 +1128,7 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
                     wikiLinkRoot={props.workspaceRoot ?? undefined}
                     isStreaming={false}
                     parseHtml
-                    className="editor-markdown-preview__body text-sm leading-relaxed"
+                    className="editor-markdown-preview__body text-ui leading-relaxed"
                     {...(canToggleTasks ? { onTaskToggle: handleTaskToggle } : {})}
                   />
                 </div>

@@ -3,6 +3,7 @@
 // Layer: Chat presentation helpers
 // Exports: agent activity detection, formatting, and timeline compaction
 
+import { t } from "~/i18n";
 import { normalizeCompactToolLabel } from "../../lib/toolCallLabel";
 import type { WorkLogEntry } from "../../session-logic";
 
@@ -31,7 +32,7 @@ export function isSubagentProgressWorkEntry(
 }
 
 function subagentProgressTitle(entry: Pick<WorkLogEntry, "subagentProgress">): string {
-  return entry.subagentProgress?.title ?? "Subagent";
+  return entry.subagentProgress?.title ?? t("chat:subagent");
 }
 
 export function isReasoningUpdateWorkEntry(
@@ -167,8 +168,8 @@ export function deriveAgentActivityTimelineState(
     const displayPreview =
       updateCount > 1
         ? latestPreview
-          ? `${updateCount} updates - ${latestPreview}`
-          : `${updateCount} updates`
+          ? `${t("lattice:updates", { count: updateCount })} - ${latestPreview}`
+          : t("lattice:updates", { count: updateCount })
         : latestPreview;
     // The group row sits where the trace started, so it carries the first
     // entry's ordering keys (time and sequence) and the latest entry's content.
@@ -212,8 +213,8 @@ export function deriveAgentActivityTimelineState(
     const displayPreview =
       groupEntries.length > 1
         ? latestPreview
-          ? `${groupEntries.length} updates - ${latestPreview}`
-          : `${groupEntries.length} updates`
+          ? `${t("lattice:updates", { count: groupEntries.length })} - ${latestPreview}`
+          : t("lattice:updates", { count: groupEntries.length })
         : latestPreview;
     const title = subagentProgressTitle(entry);
     const displayEntry: WorkLogEntry = {

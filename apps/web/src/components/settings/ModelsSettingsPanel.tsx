@@ -19,6 +19,7 @@ import {
   CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS,
   type AppSettingsBinding,
   MAX_CUSTOM_MODEL_LENGTH,
+  getAppModelOptions,
   getCustomModelsForProvider,
   getDefaultCustomModelsForProvider,
   getProviderInstanceOptions,
@@ -30,10 +31,7 @@ import { PlusIcon, XIcon } from "~/lib/icons";
 import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
-import {
-  SETTINGS_CARD_ROW_DIVIDER_CLASS_NAME,
-  SETTINGS_INSET_LIST_CLASS_NAME,
-} from "~/settingsPanelStyles";
+import { SETTINGS_INSET_LIST_CLASS_NAME } from "~/settingsPanelStyles";
 
 import { Button } from "../ui/button";
 import { DisclosureRegion } from "../ui/DisclosureRegion";
@@ -46,7 +44,8 @@ import {
 } from "./SettingControls";
 import { SettingsRow, SettingsSection, SettingsSelectPopup } from "./SettingsPanelPrimitives";
 import { DebouncedSettingTextarea } from "./DebouncedSettingTextInput";
-import { useTranslation } from "~/i18n";
+import { DefaultProviderSettingsRow } from "./DefaultProviderSettingsRow";
+import { t, useTranslation } from "~/i18n";
 
 const SOURCE_CONTROL_WRITING_OPTIONS: readonly {
   value: SourceControlWritingStyle;
@@ -69,6 +68,10 @@ const SOURCE_CONTROL_WRITING_OPTIONS: readonly {
     description: "settings:useYourInstructionsForChangeDescriptionsAndChangeRequests",
   },
 ];
+
+// Picker values are "instance:provider:model"; this one has no colon, so it
+// never collides with a model choice.
+const PROOFREAD_INHERIT_VALUE = "inherit";
 
 type CustomModelValidationResult =
   | { readonly model: string; readonly error?: never }
@@ -118,13 +121,8 @@ export function ModelsSettingsPanel({
     Partial<Record<ProviderKind, string | null>>
   >({});
   const [showAllCustomModels, setShowAllCustomModels] = useState(false);
-  const enabledCustomModelProviderSettings = useMemo(
-    () =>
-      CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.filter(
-        (config) => !settings.disabledProviders.includes(config.provider),
-      ),
-    [settings.disabledProviders],
-  );
+  // Lattice has no provider enablement gate, so every custom-model provider stays editable.
+  const enabledCustomModelProviderSettings = CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS;
 
   useSettingsRestoreSignal(resetEpoch, () => {
     setSelectedCustomModelProvider("codex");
@@ -139,6 +137,9 @@ export function ModelsSettingsPanel({
   const currentGitTextGenerationInstanceId =
     textGenerationProviderInstanceId ?? currentGitTextGenerationProvider;
   const currentGitTextGenerationModel = textGenerationModel ?? DEFAULT_GIT_TEXT_GENERATION_MODEL;
+  const currentCompileRepairProvider = settings.compileRepairProvider ?? "codex";
+  const currentCompileRepairModel =
+    settings.compileRepairModel ?? DEFAULT_GIT_TEXT_GENERATION_MODEL;
   const gitWritingModelHintByProvider = useMemo<Partial<Record<ProviderKind, string | null>>>(
     () => ({ [currentGitTextGenerationProvider]: currentGitTextGenerationModel }),
     [currentGitTextGenerationModel, currentGitTextGenerationProvider],
@@ -161,7 +162,6 @@ export function ModelsSettingsPanel({
   const gitTextGenerationPickerOptions = useMemo(
     () =>
       providerInstanceOptions.flatMap((instance) =>
-        !settings.disabledProviders.includes(instance.provider) &&
         (instance.enabled || instance.instanceId === currentGitTextGenerationInstanceId) &&
         GIT_TEXT_GENERATION_PROVIDERS.includes(instance.provider as GitTextGenerationProvider)
           ? (gitWritingCatalogOptionsByInstance[instance.instanceId] ?? []).map((option) => ({
@@ -176,10 +176,36 @@ export function ModelsSettingsPanel({
       currentGitTextGenerationInstanceId,
       gitWritingCatalogOptionsByInstance,
       providerInstanceOptions,
-      settings.disabledProviders,
     ],
   );
   const currentGitTextGenerationValue = `${currentGitTextGenerationInstanceId}:${currentGitTextGenerationProvider}:${currentGitTextGenerationModel}`;
+  const repairProviders = useMemo(
+    () => CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.map((config) => config.provider),
+    [],
+  );
+  const repairModelHintByProvider = useMemo(
+    () => ({ [currentCompileRepairProvider]: currentCompileRepairModel }),
+    [currentCompileRepairProvider, currentCompileRepairModel],
+  );
+  const { modelOptionsByProvider: repairCatalogOptionsByProvider } = useProviderModelCatalog({
+    selectedProvider: currentCompileRepairProvider,
+    discoveryEnabled: active,
+    cwd: providerModelDiscoveryCwd,
+    modelHintByProvider: repairModelHintByProvider,
+    prefetchProviders: repairProviders,
+  });
+  const compileRepairModelOptions = repairProviders.flatMap((provider) => {
+    const options = repairCatalogOptionsByProvider[provider];
+    const fallback = getAppModelOptions(
+      provider,
+      getCustomModelsForProvider(settings, provider),
+      provider === currentCompileRepairProvider ? currentCompileRepairModel : null,
+    );
+    return [
+      ...options.map((option) => ({ ...option, provider })),
+      ...fallback.filter((option) => !options.some((known) => known.slug === option.slug)),
+    ];
+  });
   const isGitTextGenerationModelDirty = isGitTextGenerationSettingsDirty(settings, defaults);
   const selectedGitTextGenerationPickerOption = gitTextGenerationPickerOptions.find(
     (entry) => entry.value === currentGitTextGenerationValue,
@@ -204,6 +230,22 @@ export function ModelsSettingsPanel({
           value1: selectedGitTextGenerationModelName,
         })
       : selectedGitTextGenerationModelName;
+  // Proofreading offers the Git writing choices, since both run on the same
+  // tool-free text-generation path, plus inheriting whatever Git writing uses.
+  const proofreadOverrideValue = settings.proofreadModel
+    ? `${settings.proofreadProviderInstanceId ?? settings.proofreadProvider ?? "codex"}:${settings.proofreadProvider ?? "codex"}:${settings.proofreadModel}`
+    : null;
+  const selectedProofreadPickerOption = proofreadOverrideValue
+    ? gitTextGenerationPickerOptions.find((entry) => entry.value === proofreadOverrideValue)
+    : undefined;
+  const inheritedProofreadLabel = t("lattice:sameAsGitWriting", {
+    model: selectedGitTextGenerationModelLabel,
+  });
+  const selectedProofreadModelLabel = !proofreadOverrideValue
+    ? inheritedProofreadLabel
+    : selectedProofreadPickerOption
+      ? `${selectedProofreadPickerOption.instance.label} / ${selectedProofreadPickerOption.option.name}`
+      : (settings.proofreadModel ?? "");
   const selectedCustomModelProviderSettings =
     enabledCustomModelProviderSettings.find(
       (config) => config.provider === selectedCustomModelProvider,
@@ -247,7 +289,7 @@ export function ModelsSettingsPanel({
       setCustomModelInputByProvider((existing) => ({ ...existing, [provider]: "" }));
       setCustomModelErrorByProvider((existing) => ({ ...existing, [provider]: null }));
     },
-    [customModelInputByProvider, settings, updateSettings],
+    [customModelInputByProvider, t, settings, updateSettings],
   );
 
   const removeCustomModel = useCallback(
@@ -316,6 +358,13 @@ export function ModelsSettingsPanel({
   return (
     <div className="space-y-6">
       <SettingsSection title="settings:models_generationDefaults">
+        {/* Lattice shows this page instead of General, so the provider new chats
+            start on is set here. */}
+        <DefaultProviderSettingsRow
+          settings={settings}
+          defaults={defaults}
+          updateSettings={updateSettings}
+        />
         <SettingsRow
           id="setting-source-control-writing-style"
           title="settings:sourceControlWritingStyle"
@@ -347,7 +396,7 @@ export function ModelsSettingsPanel({
               valueContent={t(writingOption.label)}
             >
               {SOURCE_CONTROL_WRITING_OPTIONS.map((option) => (
-                <SelectItem hideIndicator key={option.value} value={option.value}>
+                <SelectItem key={option.value} value={option.value}>
                   {t(option.label)}
                 </SelectItem>
               ))}
@@ -369,7 +418,7 @@ export function ModelsSettingsPanel({
         <SettingsRow
           id="setting-git-writing-model"
           title="settings:changed_gitWritingModel"
-          description="settings:usedForGeneratedCommitMessagesPRTitlesAndBranch"
+          description={t("lattice:usedForGeneratedCommitMessagesPRTitles")}
           resetAction={
             isGitTextGenerationModelDirty ? (
               <SettingResetButton
@@ -403,8 +452,109 @@ export function ModelsSettingsPanel({
               valueContent={selectedGitTextGenerationModelLabel}
             >
               {gitTextGenerationPickerOptions.map(({ instance, key, option, value }) => (
-                <SelectItem hideIndicator key={key} value={value}>
+                <SelectItem key={key} value={value}>
                   {instance.label} / {option.name}
+                </SelectItem>
+              ))}
+            </SettingsSelectControl>
+          }
+        />
+        <SettingsRow
+          title={t("lattice:proofreadingModel")}
+          description={t("lattice:usedByLatticeToProofreadASelection")}
+          resetAction={
+            proofreadOverrideValue ? (
+              <SettingResetButton
+                label={t("lattice:proofreadingModelResetLabel")}
+                onClick={() =>
+                  updateSettings({
+                    proofreadProvider: undefined,
+                    proofreadProviderInstanceId: undefined,
+                    proofreadModel: undefined,
+                  })
+                }
+              />
+            ) : null
+          }
+          control={
+            <SettingsSelectControl
+              value={proofreadOverrideValue ?? PROOFREAD_INHERIT_VALUE}
+              onValueChange={(value) => {
+                if (!value) return;
+                if (value === PROOFREAD_INHERIT_VALUE) {
+                  updateSettings({
+                    proofreadProvider: undefined,
+                    proofreadProviderInstanceId: undefined,
+                    proofreadModel: undefined,
+                  });
+                  return;
+                }
+                const [instanceId, provider, ...modelParts] = value.split(":");
+                const model = modelParts.join(":");
+                if (!instanceId || !provider || !model) return;
+                updateSettings({
+                  proofreadProvider: provider as ProviderKind,
+                  proofreadProviderInstanceId: instanceId,
+                  proofreadModel: model,
+                });
+              }}
+              ariaLabel={t("lattice:proofreadingModel")}
+              triggerClassName="w-full sm:w-52"
+              valueContent={selectedProofreadModelLabel}
+            >
+              <SelectItem value={PROOFREAD_INHERIT_VALUE}>{inheritedProofreadLabel}</SelectItem>
+              {gitTextGenerationPickerOptions.map(({ instance, key, option, value }) => (
+                <SelectItem key={key} value={value}>
+                  {instance.label} / {option.name}
+                </SelectItem>
+              ))}
+            </SettingsSelectControl>
+          }
+        />
+        <SettingsRow
+          title={t("lattice:compileRepairModel")}
+          description={t("lattice:usedByLatticeToRepairOneCompile")}
+          resetAction={
+            settings.compileRepairProvider !== defaults.compileRepairProvider ||
+            settings.compileRepairModel !== defaults.compileRepairModel ? (
+              <SettingResetButton
+                label={t("lattice:compileRepairModelResetLabel")}
+                onClick={() =>
+                  updateSettings({
+                    compileRepairProvider: defaults.compileRepairProvider,
+                    compileRepairModel: defaults.compileRepairModel,
+                  })
+                }
+              />
+            ) : null
+          }
+          control={
+            <SettingsSelectControl
+              value={`${currentCompileRepairProvider}:${currentCompileRepairModel}`}
+              onValueChange={(value) => {
+                if (!value) return;
+                const separatorIndex = value.indexOf(":");
+                const provider = value.slice(0, separatorIndex) as ProviderKind;
+                const model = value.slice(separatorIndex + 1);
+                if (!provider || !model) return;
+                updateSettings({ compileRepairProvider: provider, compileRepairModel: model });
+              }}
+              ariaLabel={t("lattice:compileRepairModel")}
+              triggerClassName="w-full sm:w-52"
+              valueContent={
+                compileRepairModelOptions.find(
+                  (option) =>
+                    option.provider === currentCompileRepairProvider &&
+                    option.slug === currentCompileRepairModel,
+                )?.name ?? currentCompileRepairModel
+              }
+            >
+              {compileRepairModelOptions.map((option) => (
+                <SelectItem
+                  key={`${option.provider}:${option.slug}`}
+                  value={`${option.provider}:${option.slug}`}
+                >
+                  {PROVIDER_DISPLAY_NAMES[option.provider]} / {option.name}
                 </SelectItem>
               ))}
             </SettingsSelectControl>
@@ -415,15 +565,15 @@ export function ModelsSettingsPanel({
       <SettingsSection title="settings:changed_customModels">
         <SettingsRow
           id="setting-saved-model-slugs"
-          title="settings:models_savedModelSlugs"
-          description="settings:addCustomModelSlugsForSupportedProviders"
+          title={t("lattice:addModelsManually")}
+          description={t("lattice:ifAModelDoesNotAppearAutomatically")}
           resetAction={
             savedCustomModelRows.length > 0 ? (
               <SettingResetButton label={t("settings:customModels")} onClick={resetCustomModels} />
             ) : null
           }
         >
-          <div className={cn("mt-4 pt-4", SETTINGS_CARD_ROW_DIVIDER_CLASS_NAME)}>
+          <div className="mt-4">
             {selectedCustomModelProviderSettings ? (
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <Select
@@ -443,7 +593,7 @@ export function ModelsSettingsPanel({
                   </SelectTrigger>
                   <SettingsSelectPopup align="start">
                     {enabledCustomModelProviderSettings.map((config) => (
-                      <SelectItem hideIndicator key={config.provider} value={config.provider}>
+                      <SelectItem key={config.provider} value={config.provider}>
                         {config.title}
                       </SelectItem>
                     ))}

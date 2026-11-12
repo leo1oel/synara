@@ -18,6 +18,7 @@ import type {
 import { cn } from "~/lib/utils";
 import {
   ISSUE_STATE_PRESENTATION_ICONS,
+  localizeGitHubStateLabel,
   PR_STATE_PRESENTATION_ICONS,
   ISSUE_STATE_LABEL_KEYS,
   ISSUE_STATE_SHORT_LABEL_KEYS,
@@ -34,7 +35,8 @@ const SIZE_CLASS_NAME = {
 
 type GlyphSize = keyof typeof SIZE_CLASS_NAME;
 
-/** Short visible state word for a pull request ("Draft", "Merged"), as badges and tooltips say it. */
+/** Short state word for a pull request ("Draft", "Merged"), in English: agent prompts quote it.
+ *  Badges and tooltips show it through localizeGitHubStateLabel. */
 export function pullRequestStateLabel(
   state: PullRequestState,
   isDraft: boolean,
@@ -70,7 +72,7 @@ export function PullRequestStateGlyph({
   return (
     <span
       className={cn("flex shrink-0 items-center justify-center", SIZE_CLASS_NAME[size], className)}
-      title={pullRequestStateLabel(state, isDraft, mergeability)}
+      title={localizeGitHubStateLabel(pullRequestStateLabel(state, isDraft, mergeability))}
       role="img"
       aria-label={t(PR_STATE_LABEL_KEYS[presentation.label])}
     >

@@ -4,6 +4,7 @@
 // Exports: useTheme for mode, resolved variant, theme-pack import/export, and active theme metadata.
 
 import { useEffect, useSyncExternalStore } from "react";
+import { applyEmbedTheme, readEmbedMode } from "../embedMode";
 import { readDesktopWindowTranslucency } from "../lib/desktopWindowTranslucency";
 import {
   DEFAULT_THEME_STATE,
@@ -202,6 +203,8 @@ function applyThemeState(state: ThemeState, suppressTransitions = false) {
     }
     root.style.setProperty(name, value);
   }
+  const embedMode = readEmbedMode();
+  if (embedMode) applyEmbedTheme(embedMode);
 
   syncDesktopTheme(state.mode);
   syncDesktopWindowMaterial(cssVariableBuild.material, translucency.blur);
@@ -324,7 +327,9 @@ export function useTheme() {
     desktopBlurUnavailable: false,
   }));
   const theme = snapshot.state.mode;
-  const resolvedTheme = resolveThemeVariant(theme, snapshot.systemDark);
+  // Code/diff renderers and sidechat content must agree with the DOM palette
+  // projected by applyEmbedTheme, without changing standalone theme storage.
+  const resolvedTheme = readEmbedMode()?.theme ?? resolveThemeVariant(theme, snapshot.systemDark);
   const activeTheme = resolveThemePack(snapshot.state, resolvedTheme);
   const darkTheme = resolveThemePack(snapshot.state, "dark");
   const lightTheme = resolveThemePack(snapshot.state, "light");

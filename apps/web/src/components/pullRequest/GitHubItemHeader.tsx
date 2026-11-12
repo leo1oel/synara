@@ -7,6 +7,7 @@
 // Layer: Pull request presentation
 // Exports: GitHubItemHeader, GitHubItemHeaderItem, GitHubItemBackButton
 
+import { localizeGitHubStateLabel } from "./pullRequestStatePresentation";
 import type {
   GitHubIssueDetail,
   GitPullRequestMergeability,
@@ -34,7 +35,7 @@ import {
   resolvePrStatePresentation,
 } from "./pullRequestStatePresentation";
 import { PR_FINE_TEXT_CLASS_NAME, PR_META_TEXT_CLASS_NAME } from "./pullRequestText";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 type HeaderFields =
   | "number"
@@ -95,7 +96,9 @@ export function GitHubItemHeader({
   const state =
     item.kind === "pullRequest"
       ? {
-          word: pullRequestStateLabel(item.state, item.isDraft, item.mergeability),
+          word: localizeGitHubStateLabel(
+            pullRequestStateLabel(item.state, item.isDraft, item.mergeability),
+          ),
           colorClass: resolvePrStatePresentation(item).colorClass,
           glyph: (
             <PullRequestStateGlyph

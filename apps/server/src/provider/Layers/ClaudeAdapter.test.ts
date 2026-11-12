@@ -1,5 +1,13 @@
 import { MixedScheduler, MaxOpsBeforeYield } from "effect/Scheduler";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -42,12 +50,17 @@ import { TestClock } from "effect/testing";
 import { afterEach, beforeEach, vi } from "vitest";
 
 import { attachmentRelativePath } from "../../attachmentStore.ts";
-import { SYNARA_HARNESS_POLICY_MARKER } from "../../agentGateway/harnessPolicy.ts";
+import {
+  renderSynaraHarnessPolicy,
+  SYNARA_GATEWAY_HARNESS_POLICY,
+  SYNARA_HARNESS_POLICY_MARKER,
+} from "../../agentGateway/harnessPolicy.ts";
 import {
   AgentGatewayCredentials,
   type AgentGatewayCredentialsShape,
 } from "../../agentGateway/Services/AgentGatewayCredentials.ts";
 import { ServerConfig } from "../../config.ts";
+import { ServerSettingsService } from "../../serverSettings.ts";
 import { MINIMUM_CLAUDE_AUTO_MODE_CLI_VERSION } from "../claudeCliVersion.ts";
 import { claudeCacheForModel } from "../claudeCacheObservation.ts";
 import { ProviderAdapterRequestError, ProviderAdapterValidationError } from "../Errors.ts";
@@ -64,6 +77,10 @@ import {
   type ClaudeOwnedProcess,
 } from "./ClaudeAdapter.ts";
 import { claudeIsolatedHomePath } from "../claudeEnvironment.ts";
+import {
+  resetUnavailableModelsForTest,
+  unavailableModelsFor,
+} from "../providerModelAvailability.ts";
 
 vi.mock("effect", async (importOriginal) => {
   const actual = await importOriginal<typeof import("effect")>();
@@ -201,6 +218,16 @@ class FakeClaudeQuery implements AsyncIterable<SDKMessage> {
       {
         value: "claude-sonnet-5",
         displayName: "Claude Sonnet 5",
+        description: "Supported test model",
+        supportsEffort: true,
+        supportsAdaptiveThinking: true,
+        supportsFastMode: false,
+        supportsAutoMode: true,
+      },
+      {
+        // Synara's Claude default, which a session without a model selection checks.
+        value: "claude-sonnet-5-5",
+        displayName: "Claude Sonnet 5.5",
         description: "Default supported test model",
         supportsEffort: true,
         supportsAdaptiveThinking: true,
@@ -443,6 +470,7 @@ function makeHarness(config?: {
   readonly baseDir?: string;
   readonly workflowRuntimePollIntervalMs?: number;
   readonly onCreate?: (options: ClaudeQueryOptions) => void;
+  readonly readClaudeCliVersion?: ClaudeAdapterLiveOptions["readClaudeCliVersion"];
 }) {
   const query = new FakeClaudeQuery();
   let createInput:
@@ -473,6 +501,7 @@ function makeHarness(config?: {
           workflowRuntimePollIntervalMs: config.workflowRuntimePollIntervalMs,
         }
       : {}),
+    ...(config?.readClaudeCliVersion ? { readClaudeCliVersion: config.readClaudeCliVersion } : {}),
   };
 
   return {
@@ -743,6 +772,20 @@ describe("Claude Synara harness policy", () => {
     assert.notInclude(text, "Synara MCP control is unavailable");
   });
 
+  it("tells Claude about show_visual whenever the gateway policy does", () => {
+    const showVisual = "show_visual";
+    for (const inlineVisuals of [true, false]) {
+      const policy = renderSynaraHarnessPolicy({ gatewayControlAvailable: true, inlineVisuals });
+      const text = buildEmbeddedClaudeSystemPromptAppend(true, false, inlineVisuals);
+      assert.equal(text.includes(showVisual), policy.includes(showVisual));
+    }
+    // By default Claude follows the same server gate as the Codex policy.
+    assert.equal(
+      buildEmbeddedClaudeSystemPromptAppend(true).includes(showVisual),
+      SYNARA_GATEWAY_HARNESS_POLICY.includes(showVisual),
+    );
+  });
+
   it("stays truthful when scoped MCP credentials are absent", () => {
     const text = buildEmbeddedClaudeSystemPromptAppend(false);
     assert.include(text, SYNARA_HARNESS_POLICY_MARKER);
@@ -753,6 +796,65 @@ describe("Claude Synara harness policy", () => {
 });
 
 describe("ClaudeAdapterLive", () => {
+  it.effect("loads the enabled bundled skills into a fresh session as a skills plugin", () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "claude-skills-plugin-"));
+    const bundledDir = path.join(root, "embedded_skills");
+    const synaraBaseDir = path.join(root, "synara-home");
+    for (const name of ["authoring-presentations", "create-theme", "research-writing"]) {
+      mkdirSync(path.join(bundledDir, name), { recursive: true });
+      writeFileSync(
+        path.join(bundledDir, name, "SKILL.md"),
+        `---\nname: ${name}\ndescription: ${name} skill\n---\n# ${name}\n`,
+      );
+    }
+    const previousBundledDir = process.env.SYNARA_BUNDLED_SKILLS_DIR;
+    process.env.SYNARA_BUNDLED_SKILLS_DIR = bundledDir;
+    const harness = makeHarness({ baseDir: synaraBaseDir });
+    return Effect.gen(function* () {
+      const adapter = yield* ClaudeAdapter;
+      yield* adapter.startSession({
+        threadId: THREAD_ID,
+        provider: "claudeAgent",
+        cwd: "/tmp/repos/web",
+        runtimeMode: "full-access",
+      });
+
+      const plugins = harness.getLastCreateQueryInput()?.options.plugins ?? [];
+      assert.equal(plugins.length, 1);
+      const plugin = plugins[0]!;
+      assert.equal(plugin.type, "local");
+      assert.equal(plugin.skipMcpDiscovery, true);
+      // Synara-owned: never ~/.claude or the user's project.
+      assert.isTrue(plugin.path.startsWith(`${synaraBaseDir}${path.sep}`));
+      const manifest = JSON.parse(
+        readFileSync(path.join(plugin.path, ".claude-plugin", "plugin.json"), "utf8"),
+      ) as { name: string };
+      assert.equal(manifest.name, "lattice");
+      // research-writing is off in Settings, so Claude never lists it.
+      assert.deepEqual(readdirSync(path.join(plugin.path, "skills")).toSorted(), [
+        "authoring-presentations",
+        "create-theme",
+      ]);
+      assert.equal(
+        realpathSync(path.join(plugin.path, "skills", "authoring-presentations")),
+        realpathSync(path.join(bundledDir, "authoring-presentations")),
+      );
+    }).pipe(
+      Effect.provideService(Random.Random, makeDeterministicRandomService()),
+      Effect.provide(harness.layer),
+      Effect.provide(
+        ServerSettingsService.layerTest({ skills: { disabled: ["research-writing"] } }),
+      ),
+      Effect.ensuring(
+        Effect.sync(() => {
+          if (previousBundledDir === undefined) delete process.env.SYNARA_BUNDLED_SKILLS_DIR;
+          else process.env.SYNARA_BUNDLED_SKILLS_DIR = previousBundledDir;
+          rmSync(root, { recursive: true, force: true });
+        }),
+      ),
+    );
+  });
+
   it.effect("grants a multi-folder project's extra folders as additional directories", () => {
     const harness = makeHarness();
     return Effect.gen(function* () {
@@ -6092,6 +6194,266 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
     });
   }
 
+  describe("model the account cannot use", () => {
+    const emitTurnResult = (
+      query: FakeClaudeQuery,
+      id: string,
+      outcome: {
+        readonly error?: "model_not_found" | "rate_limit" | "authentication_failed";
+        readonly text: string;
+      },
+    ) => {
+      query.emit({
+        type: "assistant",
+        ...(outcome.error ? { error: outcome.error } : {}),
+        session_id: "sdk-session-model-availability",
+        uuid: `assistant-${id}`,
+        parent_tool_use_id: null,
+        message: { id: `assistant-message-${id}`, content: [{ type: "text", text: outcome.text }] },
+      } as unknown as SDKMessage);
+      // The SDK follows a structured assistant error with a nominal success result.
+      query.emit({
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        errors: [],
+        session_id: "sdk-session-model-availability",
+        uuid: `result-${id}`,
+      } as unknown as SDKMessage);
+    };
+
+    const runTurn = (
+      adapter: ClaudeAdapterShape,
+      query: FakeClaudeQuery,
+      id: string,
+      outcome: Parameters<typeof emitTurnResult>[2],
+      model?: string,
+    ) =>
+      Effect.gen(function* () {
+        const completed = yield* Stream.filter(
+          adapter.streamEvents,
+          (event) => event.type === "turn.completed",
+        ).pipe(Stream.runHead, Effect.forkChild);
+        yield* adapter.sendTurn({
+          threadId: THREAD_ID,
+          input: "hi",
+          attachments: [],
+          ...(model ? { modelSelection: { provider: "claudeAgent", model } } : {}),
+        });
+        emitTurnResult(query, id, outcome);
+        const event = yield* Fiber.join(completed);
+        return event._tag === "Some" && event.value.type === "turn.completed"
+          ? event.value.payload.state
+          : undefined;
+      });
+
+    const refusal = {
+      error: "model_not_found",
+      text: "There's an issue with the selected model (claude-fable-5-1). It may not exist or you may not have access to it.",
+    } as const;
+
+    beforeEach(() => resetUnavailableModelsForTest());
+    afterEach(() => resetUnavailableModelsForTest());
+
+    it.effect("records the refused model on its account and clears it after a success", () => {
+      const harness = makeHarness();
+      return Effect.gen(function* () {
+        const adapter = yield* ClaudeAdapter;
+        yield* adapter.startSession({
+          threadId: THREAD_ID,
+          provider: "claudeAgent",
+          runtimeMode: "full-access",
+          providerInstanceId: "claude_work",
+          modelSelection: { provider: "claudeAgent", model: "claude-fable-5-1" },
+        });
+
+        assert.equal(yield* runTurn(adapter, harness.query, "refused", refusal), "failed");
+        assert.deepEqual(
+          unavailableModelsFor("claude_work").map(({ model, reason }) => ({ model, reason })),
+          [
+            {
+              model: "claude-fable-5-1",
+              reason: "The selected Claude model is unavailable for this account.",
+            },
+          ],
+        );
+        assert.deepEqual(unavailableModelsFor("claudeAgent"), []);
+
+        // Another model succeeding says nothing about the refused one.
+        assert.equal(
+          yield* runTurn(adapter, harness.query, "other", { text: "ok" }, "claude-sonnet-4-6"),
+          "completed",
+        );
+        assert.equal(unavailableModelsFor("claude_work").length, 1);
+
+        assert.equal(
+          yield* runTurn(adapter, harness.query, "back", { text: "ok" }, "claude-fable-5-1"),
+          "completed",
+        );
+        assert.deepEqual(unavailableModelsFor("claude_work"), []);
+      }).pipe(
+        Effect.provideService(Random.Random, makeDeterministicRandomService()),
+        Effect.provide(harness.layer),
+      );
+    });
+
+    it.effect("tells Anthropic's 403 refusal apart from a missing sign-in", () => {
+      const harness = makeHarness();
+      return Effect.gen(function* () {
+        const adapter = yield* ClaudeAdapter;
+        const events = yield* adapter.streamEvents.pipe(
+          Stream.takeUntil((event) => event.type === "turn.completed"),
+          Stream.runCollect,
+          Effect.forkChild,
+        );
+        yield* adapter.startSession({
+          threadId: THREAD_ID,
+          provider: "claudeAgent",
+          runtimeMode: "full-access",
+        });
+        yield* adapter.sendTurn({ threadId: THREAD_ID, input: "hi", attachments: [] });
+        // What Claude Code 2.1.296 emits when the API answers 403 forbidden.
+        emitTurnResult(harness.query, "forbidden", {
+          error: "authentication_failed",
+          text: "Failed to authenticate. API Error: 403 Request not allowed",
+        });
+        const collected = Array.from(yield* Fiber.join(events));
+        const expected =
+          "Anthropic refused this Claude account or network (403 Request not allowed).";
+        const runtimeError = collected.find((event) => event.type === "runtime.error");
+        assert.equal(runtimeError?.type, "runtime.error");
+        if (runtimeError?.type === "runtime.error") {
+          assert.equal(runtimeError.payload.message, expected);
+          assert.equal(runtimeError.payload.errorCode, "claude_access_forbidden");
+        }
+        const completed = collected.find((event) => event.type === "turn.completed");
+        assert.equal(completed?.type, "turn.completed");
+        if (completed?.type === "turn.completed") {
+          assert.equal(completed.payload.state, "failed");
+          assert.equal(completed.payload.errorMessage, expected);
+          assert.equal(completed.payload.errorCode, "claude_access_forbidden");
+        }
+      }).pipe(
+        Effect.provideService(Random.Random, makeDeterministicRandomService()),
+        Effect.provide(harness.layer),
+      );
+    });
+
+    const collectRefusedTurn = (input: {
+      readonly installedVersion: string | null;
+      readonly model: string;
+    }) => {
+      let versionReads = 0;
+      const harness = makeHarness({
+        readClaudeCliVersion: async () => {
+          versionReads += 1;
+          return input.installedVersion;
+        },
+      });
+      return Effect.gen(function* () {
+        const adapter = yield* ClaudeAdapter;
+        yield* adapter.startSession({
+          threadId: THREAD_ID,
+          provider: "claudeAgent",
+          runtimeMode: "full-access",
+          providerInstanceId: "claude_work",
+          modelSelection: { provider: "claudeAgent", model: input.model },
+        });
+        const readsBeforeTurn = versionReads;
+        const events = yield* adapter.streamEvents.pipe(
+          Stream.takeUntil((event) => event.type === "turn.completed"),
+          Stream.runCollect,
+          Effect.forkChild,
+        );
+        yield* adapter.sendTurn({ threadId: THREAD_ID, input: "hi", attachments: [] });
+        emitTurnResult(harness.query, "refused", refusal);
+        const collected = Array.from(yield* Fiber.join(events));
+        const runtimeError = collected.find((event) => event.type === "runtime.error");
+        const completed = collected.find((event) => event.type === "turn.completed");
+        return {
+          error: runtimeError?.type === "runtime.error" ? runtimeError.payload : undefined,
+          completed: completed?.type === "turn.completed" ? completed.payload : undefined,
+          versionReadsDuringTurn: versionReads - readsBeforeTurn,
+        };
+      }).pipe(
+        Effect.provideService(Random.Random, makeDeterministicRandomService()),
+        Effect.provide(harness.layer),
+      );
+    };
+
+    it.effect("says which Claude Code a refused Fable 5.2 needs, not that the account can't", () =>
+      Effect.gen(function* () {
+        const { error, completed, versionReadsDuringTurn } = yield* collectRefusedTurn({
+          installedVersion: "2.1.300",
+          model: "claude-fable-5-2",
+        });
+        const expected =
+          "Claude Fable 5.2 needs Claude Code 2.1.321 or later; the installed one is 2.1.300. Run `claude update` in Terminal, then try again.";
+        assert.equal(error?.message, expected);
+        assert.equal(error?.errorCode, "claude_model_needs_newer_cli");
+        assert.equal(completed?.state, "failed");
+        assert.equal(completed?.errorMessage, expected);
+        assert.equal(completed?.errorCode, "claude_model_needs_newer_cli");
+        assert.equal(versionReadsDuringTurn, 1);
+        // No account record: the picker keeps its version label and the chat is not
+        // switched to another model with the "your account can't use" notice.
+        assert.deepEqual(unavailableModelsFor("claude_work"), []);
+      }),
+    );
+
+    it.effect("keeps the account record for a refused Fable 5.2 on a new enough CLI", () =>
+      Effect.gen(function* () {
+        const { error } = yield* collectRefusedTurn({
+          installedVersion: "2.1.321",
+          model: "claude-fable-5-2",
+        });
+        assert.notEqual(error?.errorCode, "claude_model_needs_newer_cli");
+        assert.deepEqual(
+          unavailableModelsFor("claude_work").map(({ model }) => model),
+          ["claude-fable-5-2"],
+        );
+      }),
+    );
+
+    it.effect("reads no Claude Code version for a refused model with no minimum", () =>
+      Effect.gen(function* () {
+        const { versionReadsDuringTurn } = yield* collectRefusedTurn({
+          installedVersion: "2.1.100",
+          model: "claude-fable-5-1",
+        });
+        assert.equal(versionReadsDuringTurn, 0);
+        assert.deepEqual(
+          unavailableModelsFor("claude_work").map(({ model }) => model),
+          ["claude-fable-5-1"],
+        );
+      }),
+    );
+
+    it.effect("records nothing for a failure that is not about the model", () => {
+      const harness = makeHarness();
+      return Effect.gen(function* () {
+        const adapter = yield* ClaudeAdapter;
+        yield* adapter.startSession({
+          threadId: THREAD_ID,
+          provider: "claudeAgent",
+          runtimeMode: "full-access",
+          modelSelection: { provider: "claudeAgent", model: "claude-fable-5-1" },
+        });
+        assert.equal(
+          yield* runTurn(adapter, harness.query, "limited", {
+            error: "rate_limit",
+            text: "Rate limited",
+          }),
+          "failed",
+        );
+        assert.deepEqual(unavailableModelsFor("claudeAgent"), []);
+      }).pipe(
+        Effect.provideService(Random.Random, makeDeterministicRandomService()),
+        Effect.provide(harness.layer),
+      );
+    });
+  });
+
   it.effect("suppresses Claude ede_diagnostic text emitted during a user interrupt", () => {
     const harness = makeHarness();
     return Effect.gen(function* () {
@@ -7993,6 +8355,10 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
             usedTokens: 24542,
             lastUsedTokens: 24542,
             inputTokens: 23863,
+            cacheReadInputTokens: 21144,
+            lastCacheReadInputTokens: 21144,
+            cacheWriteInputTokens: 2715,
+            lastCacheWriteInputTokens: 2715,
             outputTokens: 679,
             maxTokens: 1_000_000,
             totalProcessedTokens: 24542,
@@ -11340,6 +11706,8 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         totalProcessedTokens: 370_000,
         maxTokens: 1_000_000,
         inputTokens: 20_000,
+        cacheReadInputTokens: 19_999,
+        lastCacheReadInputTokens: 19_999,
       });
       assertTokenUsageEvent(usageEvents[1]);
       assert.equal(usageEvents[1].payload.usage.totalProcessedTokens, 400_000);

@@ -98,7 +98,6 @@ function harness(input: {
   root: string;
   projects?: OrchestrationProject[];
   providers?: ProjectImportProvider[];
-  disabled?: ProjectImportProvider;
   paths?: {
     codexBinaryPath?: string;
     codexHomePath?: string;
@@ -241,14 +240,12 @@ function harness(input: {
       ...DEFAULT_SERVER_SETTINGS.providers,
       codex: {
         ...DEFAULT_SERVER_SETTINGS.providers.codex,
-        enabled: input.disabled !== "codex",
         binaryPath:
           input.paths?.codexBinaryPath ?? DEFAULT_SERVER_SETTINGS.providers.codex.binaryPath,
         homePath: input.paths?.codexHomePath ?? DEFAULT_SERVER_SETTINGS.providers.codex.homePath,
       },
       claudeAgent: {
         ...DEFAULT_SERVER_SETTINGS.providers.claudeAgent,
-        enabled: input.disabled !== "claudeAgent",
         binaryPath:
           input.paths?.claudeBinaryPath ?? DEFAULT_SERVER_SETTINGS.providers.claudeAgent.binaryPath,
       },
@@ -919,20 +916,6 @@ describe("project import routes", () => {
         }),
       ),
     ).rejects.toThrow("does not exist");
-
-    expect(test.commands).toEqual([]);
-    expect(test.origins.size).toBe(0);
-    expect(test.importExternalThread).not.toHaveBeenCalled();
-  });
-
-  it("refuses a disabled provider before creating or importing anything", async () => {
-    const { root } = await workspace();
-    const test = harness({ root, disabled: "codex" });
-    const request = await test.request();
-
-    await expect(Effect.runPromise(test.importProject(request))).rejects.toThrow(
-      "disabled in Settings",
-    );
 
     expect(test.commands).toEqual([]);
     expect(test.origins.size).toBe(0);

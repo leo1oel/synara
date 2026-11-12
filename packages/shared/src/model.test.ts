@@ -25,6 +25,9 @@ import {
   normalizeAntigravityModelOptions,
   normalizeClaudeModelOptions,
   resolveNewestKnownClaudeFamilyModel,
+  claudeCliVersionNeededForModel,
+  getDefaultModelForClaudeCliVersion,
+  normalizeClaudeModelSlugForCliVersion,
   normalizeCursorModelOptions,
   normalizeGrokModelOptions,
   normalizeModelDisplayName,
@@ -144,7 +147,8 @@ describe("normalizeModelSlug", () => {
   });
 
   it("uses provider-specific aliases", () => {
-    expect(normalizeModelSlug("sonnet", "claudeAgent")).toBe("claude-sonnet-5");
+    expect(normalizeModelSlug("sonnet", "claudeAgent")).toBe("claude-sonnet-5-5");
+    expect(normalizeModelSlug("haiku", "claudeAgent")).toBe("claude-haiku-5-5");
     expect(normalizeModelSlug("opus", "claudeAgent")).toBe("claude-opus-5-5");
     expect(normalizeModelSlug("opus-5.5", "claudeAgent")).toBe("claude-opus-5-5");
     expect(normalizeModelSlug("claude-opus-5.5", "claudeAgent")).toBe("claude-opus-5-5");
@@ -180,8 +184,22 @@ describe("resolveModelSlug", () => {
     expect(resolveModelSlugForProvider("claudeAgent", undefined)).toBe(
       DEFAULT_MODEL_BY_PROVIDER.claudeAgent,
     );
-    expect(resolveModelSlugForProvider("claudeAgent", "sonnet")).toBe("claude-sonnet-5");
-    expect(resolveModelSlugForProvider("claudeAgent", "fable")).toBe("claude-fable-5-1");
+    expect(resolveModelSlugForProvider("claudeAgent", "sonnet")).toBe("claude-sonnet-5-5");
+    expect(resolveModelSlugForProvider("claudeAgent", "fable")).toBe("claude-fable-5-2");
+    expect(resolveModelSlugForProvider("claudeAgent", "sonnet-5.5")).toBe("claude-sonnet-5-5");
+    expect(resolveModelSlugForProvider("claudeAgent", "claude-sonnet-5.5")).toBe(
+      "claude-sonnet-5-5",
+    );
+    expect(resolveModelSlugForProvider("claudeAgent", "haiku-5.5")).toBe("claude-haiku-5-5");
+    expect(resolveModelSlugForProvider("claudeAgent", "claude-haiku-5-5[1m]")).toBe(
+      "claude-haiku-5-5",
+    );
+    expect(resolveModelSlugForProvider("claudeAgent", "haiku")).toBe("claude-haiku-5-5");
+    expect(resolveModelSlugForProvider("claudeAgent", "fable-5.2")).toBe("claude-fable-5-2");
+    expect(resolveModelSlugForProvider("claudeAgent", "claude-fable-5.2")).toBe("claude-fable-5-2");
+    expect(resolveModelSlugForProvider("claudeAgent", "claude-fable-5-2[1m]")).toBe(
+      "claude-fable-5-2",
+    );
     expect(resolveModelSlugForProvider("claudeAgent", "claude-opus-5-5[1m]")).toBe(
       "claude-opus-5-5",
     );
@@ -222,10 +240,11 @@ describe("resolveSelectableModel", () => {
     expect(
       resolveSelectableModel("claudeAgent", "sonnet", [
         { slug: "claude-opus-4-6", name: "Claude Opus 4.6" },
+        { slug: "claude-sonnet-5-5", name: "Claude Sonnet 5.5" },
         { slug: "claude-sonnet-5", name: "Claude Sonnet 5" },
         { slug: "claude-sonnet-4-6", name: "Claude Sonnet 4.6" },
       ]),
-    ).toBe("claude-sonnet-5");
+    ).toBe("claude-sonnet-5-5");
     expect(
       resolveSelectableModel("claudeAgent", "sonnet-4.6", [
         { slug: "claude-sonnet-5", name: "Claude Sonnet 5" },
@@ -407,6 +426,15 @@ describe("getDefaultEffort", () => {
     expect(getDefaultEffort(getModelCapabilities("codex", "gpt-5.5"))).toBe("medium");
     expect(getDefaultEffort(getModelCapabilities("codex", "gpt-5.4"))).toBe("high");
     expect(getDefaultEffort(getModelCapabilities("claudeAgent", "claude-opus-5"))).toBe("high");
+    // Claude Code: "Fable 5.2, Opus 5.5, Sonnet 5.5, and Haiku 5.5 default to `medium`".
+    for (const model of [
+      "claude-opus-5-5",
+      "claude-fable-5-2",
+      "claude-sonnet-5-5",
+      "claude-haiku-5-5",
+    ]) {
+      expect(getDefaultEffort(getModelCapabilities("claudeAgent", model))).toBe("medium");
+    }
     expect(getDefaultEffort(getModelCapabilities("claudeAgent", "claude-opus-4-7"))).toBe("high");
     expect(getDefaultEffort(getModelCapabilities("claudeAgent", "claude-opus-4-6"))).toBe("high");
     expect(getDefaultEffort(getModelCapabilities("claudeAgent", "claude-sonnet-5"))).toBe("high");
@@ -836,6 +864,22 @@ describe("normalizeClaudeModelOptions", () => {
     });
   });
 
+  // Synara leaves the default effort unsent, so Claude Code runs its own default. Once
+  // Medium is the default for Opus 5.5 and Fable 5.2, an explicit High must still be sent.
+  it("sends an explicit High for Opus 5.5 and Fable 5.2, and leaves their Medium unsent", () => {
+    for (const model of ["claude-opus-5-5", "claude-fable-5-2"]) {
+      expect(normalizeClaudeModelOptions(model, { effort: "high" })).toEqual({ effort: "high" });
+      expect(normalizeClaudeModelOptions(model, { effort: "medium" })).toBeUndefined();
+      expect(normalizeClaudeModelOptions(model, { effort: "medium", fastMode: true })).toEqual({
+        fastMode: true,
+      });
+    }
+    expect(normalizeClaudeModelOptions("claude-opus-5", { effort: "high" })).toBeUndefined();
+    expect(normalizeClaudeModelOptions("claude-opus-5", { effort: "medium" })).toEqual({
+      effort: "medium",
+    });
+  });
+
   it("keeps the Haiku thinking toggle and removes unsupported effort", () => {
     expect(
       normalizeClaudeModelOptions("claude-haiku-4-5", {
@@ -1148,15 +1192,52 @@ describe("getModelCapabilities Claude capability flags", () => {
     }
   });
 
+  it("gives Fable 5.2 the Fable ladder at Claude Code's medium default, plus fast mode", () => {
+    const fable52 = getModelCapabilities("claudeAgent", "claude-fable-5-2");
+    const fable51 = getModelCapabilities("claudeAgent", "claude-fable-5-1");
+    expect(fable52.reasoningEffortLevels.map((level) => level.value)).toEqual(
+      fable51.reasoningEffortLevels.map((level) => level.value),
+    );
+    expect(getDefaultEffort(fable52)).toBe("medium");
+    expect(getDefaultEffort(fable51)).toBe("high");
+    expect(fable52.supportsThinkingToggle).toBe(false);
+    expect(fable52.contextWindowTokens).toBe(1_000_000);
+    expect(fable52.supportsFastMode).toBe(true);
+    expect(fable51.supportsFastMode).toBe(false);
+    expect(getModelCapabilities("claudeAgent", "claude-fable-5-2[1m]")).toBe(fable52);
+  });
+
   it("gives uncatalogued newer Claude releases their family's newest capabilities", () => {
     const caps = (slug: string) => getModelCapabilities("claudeAgent", slug);
     expect(caps("claude-opus-6")).toBe(caps("claude-opus-5-5"));
     expect(caps("claude-opus-6[1m]")).toBe(caps("claude-opus-5-5"));
     expect(caps("claude-opus-5-6")).toBe(caps("claude-opus-5-5"));
-    expect(caps("claude-fable-6")).toBe(caps("claude-fable-5-1"));
-    expect(caps("claude-sonnet-5-1")).toBe(caps("claude-sonnet-5"));
-    expect(caps("claude-haiku-5")).toBe(caps("claude-haiku-4-5"));
+    expect(caps("claude-fable-6")).toBe(caps("claude-fable-5-2"));
+    expect(caps("claude-fable-5-3")).toBe(caps("claude-fable-5-2"));
+    expect(caps("claude-sonnet-5-6")).toBe(caps("claude-sonnet-5-5"));
+    expect(caps("claude-haiku-6")).toBe(caps("claude-haiku-5-5"));
     expect(resolveNewestKnownClaudeFamilyModel("claude-opus-6[1m]")).toBe("claude-opus-5-5");
+  });
+
+  it("gives Sonnet 5.5 and Haiku 5.5 the low..max ladder at Claude Code's medium default", () => {
+    for (const slug of ["claude-sonnet-5-5", "claude-haiku-5-5"]) {
+      const caps = getModelCapabilities("claudeAgent", slug);
+      expect(caps.reasoningEffortLevels.map((level) => level.value)).toEqual([
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+        "ultracode",
+      ]);
+      expect(caps.reasoningEffortLevels.filter((level) => level.isDefault === true)).toEqual([
+        expect.objectContaining({ value: "medium" }),
+      ]);
+      expect(caps.supportsThinkingToggle).toBe(false);
+      expect(caps.supportsFastMode).toBe(false);
+      expect(caps.contextWindowTokens).toBe(1_000_000);
+    }
+    expect(getModelCapabilities("claudeAgent", "claude-sonnet-5-1")).toBe(EMPTY_MODEL_CAPABILITIES);
   });
 
   it("keeps older or unrecognized uncatalogued Claude ids on empty capabilities", () => {
@@ -1166,6 +1247,109 @@ describe("getModelCapabilities Claude capability flags", () => {
     expect(caps("claude-3-opus")).toBe(EMPTY_MODEL_CAPABILITIES);
     expect(caps("us.anthropic.claude-opus-6-v1")).toBe(EMPTY_MODEL_CAPABILITIES);
     expect(caps("enterprise-model")).toBe(EMPTY_MODEL_CAPABILITIES);
+  });
+});
+
+describe("claudeCliVersionNeededForModel", () => {
+  it("names Anthropic's minimum Claude Code only for a known older CLI", () => {
+    expect(claudeCliVersionNeededForModel("claude-fable-5-2", "2.1.319")).toBe("2.1.321");
+    expect(claudeCliVersionNeededForModel("claude-fable-5-2[1m]", "2.0.63")).toBe("2.1.321");
+    expect(claudeCliVersionNeededForModel("claude-sonnet-5-5", "2.1.283")).toBe("2.1.284");
+    expect(claudeCliVersionNeededForModel("claude-sonnet-5-5", "2.1.284")).toBeNull();
+    expect(claudeCliVersionNeededForModel("claude-haiku-5-5", "2.1.292 (Claude Code)")).toBe(
+      "2.1.293",
+    );
+    expect(claudeCliVersionNeededForModel("claude-haiku-5-5", "2.1.293")).toBeNull();
+    expect(claudeCliVersionNeededForModel("claude-fable-5-1", "2.1.200")).toBeNull();
+    expect(claudeCliVersionNeededForModel("claude-fable-5-2", null)).toBeNull();
+    expect(claudeCliVersionNeededForModel("claude-fable-5-2", "unknown")).toBeNull();
+  });
+});
+
+describe("normalizeClaudeModelSlugForCliVersion", () => {
+  it("resolves bare fable to the newest Fable an older Claude Code can run", () => {
+    expect(normalizeClaudeModelSlugForCliVersion("fable", "2.1.300")).toBe("claude-fable-5-1");
+    expect(normalizeClaudeModelSlugForCliVersion(" Fable[1m] ", "2.1.320")).toBe(
+      "claude-fable-5-1[1m]",
+    );
+  });
+
+  it("keeps bare fable on Fable 5.2 for a new enough or unknown Claude Code", () => {
+    expect(normalizeClaudeModelSlugForCliVersion("fable", "2.1.321")).toBe("claude-fable-5-2");
+    expect(normalizeClaudeModelSlugForCliVersion("fable", "2.2.0")).toBe("claude-fable-5-2");
+    expect(normalizeClaudeModelSlugForCliVersion("fable", null)).toBe("claude-fable-5-2");
+    expect(normalizeClaudeModelSlugForCliVersion("fable", undefined)).toBe("claude-fable-5-2");
+  });
+
+  it("never moves an explicit model id, so its picker row can say what it needs", () => {
+    for (const explicit of ["claude-fable-5-2", "fable-5.2", "claude-fable-5.2"]) {
+      expect(normalizeClaudeModelSlugForCliVersion(explicit, "2.1.300")).toBe("claude-fable-5-2");
+    }
+    expect(normalizeClaudeModelSlugForCliVersion("claude-sonnet-5-5", "2.1.200")).toBe(
+      "claude-sonnet-5-5",
+    );
+  });
+
+  // Claude Code's own aliases moved in 2.1.284 (sonnet → Sonnet 5.5) and 2.1.293
+  // (haiku → Haiku 5.5); an older one runs Sonnet 5 and Haiku 4.5.
+  it("resolves bare sonnet to Sonnet 5.5 from Claude Code 2.1.284, else Sonnet 5", () => {
+    expect(normalizeClaudeModelSlugForCliVersion("sonnet", "2.1.284")).toBe("claude-sonnet-5-5");
+    expect(normalizeClaudeModelSlugForCliVersion("sonnet", "2.1.321")).toBe("claude-sonnet-5-5");
+    expect(normalizeClaudeModelSlugForCliVersion("sonnet", "2.1.283")).toBe("claude-sonnet-5");
+    expect(normalizeClaudeModelSlugForCliVersion("Sonnet[1m]", "2.1.200")).toBe(
+      "claude-sonnet-5[1m]",
+    );
+    expect(normalizeClaudeModelSlugForCliVersion("sonnet", null)).toBe("claude-sonnet-5-5");
+    expect(normalizeClaudeModelSlugForCliVersion("sonnet", undefined)).toBe("claude-sonnet-5-5");
+    expect(normalizeClaudeModelSlugForCliVersion("sonnet", "not a version")).toBe(
+      "claude-sonnet-5-5",
+    );
+  });
+
+  it("resolves bare haiku to Haiku 5.5 from Claude Code 2.1.293, else Haiku 4.5", () => {
+    expect(normalizeClaudeModelSlugForCliVersion("haiku", "2.1.293")).toBe("claude-haiku-5-5");
+    expect(normalizeClaudeModelSlugForCliVersion("haiku", "2.1.292")).toBe("claude-haiku-4-5");
+    expect(normalizeClaudeModelSlugForCliVersion("haiku", "2.1.200")).toBe("claude-haiku-4-5");
+    expect(normalizeClaudeModelSlugForCliVersion("haiku", null)).toBe("claude-haiku-5-5");
+    expect(normalizeClaudeModelSlugForCliVersion("haiku", undefined)).toBe("claude-haiku-5-5");
+  });
+
+  it("never moves explicit Sonnet or Haiku ids, old or new", () => {
+    expect(normalizeClaudeModelSlugForCliVersion("claude-sonnet-5", "2.1.321")).toBe(
+      "claude-sonnet-5",
+    );
+    expect(normalizeClaudeModelSlugForCliVersion("claude-haiku-4-5", "2.1.321")).toBe(
+      "claude-haiku-4-5",
+    );
+    expect(normalizeClaudeModelSlugForCliVersion("claude-haiku-5-5", "2.1.200")).toBe(
+      "claude-haiku-5-5",
+    );
+  });
+
+  it("leaves the opus alias where it points", () => {
+    expect(normalizeClaudeModelSlugForCliVersion("opus", "2.1.200")).toBe("claude-opus-5-5");
+    expect(normalizeClaudeModelSlugForCliVersion(null, "2.1.200")).toBeNull();
+  });
+});
+
+describe("getDefaultModelForClaudeCliVersion", () => {
+  it("defaults Claude to Sonnet 5.5 on Claude Code 2.1.284+ or an unknown version", () => {
+    expect(DEFAULT_MODEL_BY_PROVIDER.claudeAgent).toBe("claude-sonnet-5-5");
+    expect(getDefaultModelForClaudeCliVersion("claudeAgent", "2.1.284")).toBe("claude-sonnet-5-5");
+    expect(getDefaultModelForClaudeCliVersion("claudeAgent", null)).toBe("claude-sonnet-5-5");
+    expect(getDefaultModelForClaudeCliVersion("claudeAgent", undefined)).toBe("claude-sonnet-5-5");
+  });
+
+  it("steps Claude's default down to Sonnet 5 on an older Claude Code", () => {
+    expect(getDefaultModelForClaudeCliVersion("claudeAgent", "2.1.283")).toBe("claude-sonnet-5");
+    expect(getDefaultModelForClaudeCliVersion("claudeAgent", "2.1.200")).toBe("claude-sonnet-5");
+  });
+
+  it("ignores the Claude Code version for other providers", () => {
+    expect(getDefaultModelForClaudeCliVersion("codex", "2.1.200")).toBe(
+      DEFAULT_MODEL_BY_PROVIDER.codex,
+    );
+    expect(getDefaultModelForClaudeCliVersion("pi", "2.1.200")).toBeNull();
   });
 });
 

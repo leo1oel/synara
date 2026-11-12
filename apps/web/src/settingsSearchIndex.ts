@@ -5,7 +5,8 @@
 // Exports: entry type, the index, section label lookup, and the ranking helper
 
 import { rankProviderDiscoveryItems } from "~/lib/providerDiscovery";
-import { i18n, t } from "~/i18n";
+import { i18n, t } from "./i18n";
+import { isSynaraEmbedMode } from "./embedMode";
 import {
   isSettingsSectionAvailable,
   SETTINGS_NAV_ITEMS,
@@ -557,25 +558,39 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     target: null,
   },
 
-  // ── Models ────────────────────────────────────────────────────────────────────
+  // ── Models (owned by Agent providers) ─────────────────────────────────────────
+  {
+    target: null,
+    id: "models:compile-repair-model",
+    section: "providers",
+    title: "lattice:compileRepairModel",
+    keywords: "lattice:compileRepairModelKeywords",
+  },
+  {
+    target: null,
+    id: "models:proofreading-model",
+    section: "providers",
+    title: "lattice:proofreadingModel",
+    keywords: "lattice:proofreadingModelKeywords",
+  },
   {
     target: "setting-source-control-writing-style",
     id: "models:source-control-writing-style",
-    section: "models",
+    section: "providers",
     title: "settings:sourceControlWritingStyle",
     keywords: "settings:repositoryConventionsConventionalCommitsCustomInstructionsCommitMessagesPR",
   },
   {
     target: "setting-git-writing-model",
     id: "models:git-writing-model",
-    section: "models",
+    section: "providers",
     title: "settings:changed_gitWritingModel",
-    keywords: "settings:usedForGeneratedCommitMessagesPRTitlesAndBranch",
+    keywords: "lattice:usedForGeneratedCommitMessagesPRTitles",
   },
   {
     target: "setting-saved-model-slugs",
     id: "models:saved-model-slugs",
-    section: "models",
+    section: "providers",
     title: "settings:models_savedModelSlugs",
     keywords: "settings:addCustomModelSlugsForSupportedProvidersCustomModel",
   },
@@ -594,6 +609,14 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     section: "providers",
     title: "settings:keepSynaraResponsive",
     keywords: "settings:lowerAgentCPUSchedulingPriorityPerformanceLoadNiceResponsiveness",
+  },
+  {
+    target: "setting-claude-user-mcp-servers",
+    id: "providers:claude-user-mcp-servers",
+    section: "providers",
+    title: "lattice:loadMyMCPServersInClaude",
+    keywords: "lattice:loadMyMCPServersInClaudeKeywords",
+    applies: () => isSynaraEmbedMode(),
   },
   {
     target: "setting-automatic-cli-update-checks",

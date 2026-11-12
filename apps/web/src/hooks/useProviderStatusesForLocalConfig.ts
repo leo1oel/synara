@@ -20,7 +20,6 @@ const EMPTY_PROVIDER_STATUSES: ServerProviderStatus[] = [];
 export function useProviderStatusesForLocalConfig(): readonly ServerProviderStatus[] {
   const { settings } = useAppSettings();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
-  const disabledProviders = new Set(settings.disabledProviders);
 
   const confirmedCustomBinaryPaths = loadConfirmedCustomBinaryPaths();
   return (serverConfigQuery.data?.providers ?? EMPTY_PROVIDER_STATUSES)
@@ -39,7 +38,6 @@ export function useProviderStatusesForLocalConfig(): readonly ServerProviderStat
           providerInstanceId,
         ),
         confirmedCustomBinaryPath: confirmedCustomBinaryPaths[providerInstanceId],
-        disabled: disabledProviders.has(provider),
       });
     })
     .flatMap((status) => (status ? [status] : []));

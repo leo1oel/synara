@@ -23,7 +23,6 @@ import type {
 } from "../persistence/projectImportRepository";
 import { discoverClaudeProjects } from "../provider/claudeProjectImport";
 import { discoverCodexProjects } from "../provider/codexProjectImport";
-import { ensureProviderEnabled } from "../provider/enabledProviderAdapter";
 import { makeKeyedLock } from "../provider/keyedLock";
 import type { NativeProjectImportCatalog } from "../provider/projectImportTypes";
 import type { ProviderAdapterRegistryShape } from "../provider/Services/ProviderAdapterRegistry";
@@ -162,7 +161,6 @@ export function makeProjectImportHandlers(options: ProjectImportRouteOptions) {
             message: "This imported history page is unavailable.",
           });
         if (!state.pending) {
-          yield* ensureProviderEnabled(state.provider, options.serverSettings);
           const settings = yield* options.serverSettings.getSettings;
           const source = resolveProjectImportSources(settings, [state.provider], sourcePaths).find(
             (candidate) => candidate.instanceId === state!.providerInstanceId,
@@ -373,7 +371,6 @@ export function makeProjectImportHandlers(options: ProjectImportRouteOptions) {
         }
         let importSource: ProjectImportSource | undefined;
         if (source) {
-          yield* ensureProviderEnabled(source.provider, options.serverSettings);
           const settings = yield* options.serverSettings.getSettings;
           const sourceInstanceId = source.providerInstanceId ?? source.provider;
           importSource = resolveProjectImportSources(settings, [source.provider], sourcePaths).find(

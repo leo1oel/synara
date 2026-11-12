@@ -11,6 +11,11 @@ import { hasActiveComposerSend } from "~/lib/composerSendOwnership";
 import { hasActiveDraftThreadDispatch } from "~/lib/draftThreadDispatch";
 import { COMPOSER_TURN_UNCERTAIN, settlePendingComposerTurn } from "~/lib/composerTurnSettlement";
 import {
+  appendLatticeHostContextToPrompt,
+  consumeDispatchedLatticeHostSelection,
+  refreshLatticeHostContextForSend,
+} from "../../lib/latticeHostContext";
+import {
   filterPromptProviderMentionReferences,
   filterPromptSkillReferences,
 } from "~/lib/composerMentions";
@@ -869,12 +874,16 @@ export function useChatTurnSubmission({
       const outgoingTextSeed =
         messageTextForSend ||
         (composerImagesSnapshot.length > 0 ? IMAGE_ONLY_BOOTSTRAP_PROMPT : "");
-      const outgoingMessageText = formatOutgoingComposerPrompt({
-        provider: selectedProviderForSend,
-        model: selectedModelForSend,
-        effort: selectedPromptEffortForSend,
-        text: outgoingTextSeed,
-      });
+      const refreshedHostContext = await refreshLatticeHostContextForSend();
+      const outgoingMessageText = appendLatticeHostContextToPrompt(
+        formatOutgoingComposerPrompt({
+          provider: selectedProviderForSend,
+          model: selectedModelForSend,
+          effort: selectedPromptEffortForSend,
+          text: outgoingTextSeed,
+        }),
+        refreshedHostContext,
+      );
       const mentionedSkillsForSend = filterPromptSkillReferences(
         outgoingMessageText,
         selectedComposerSkillsForSend,
@@ -1032,6 +1041,7 @@ export function useChatTurnSubmission({
         composerSkillsSnapshot,
         composerMentionsSnapshot,
       });
+      if (sent) consumeDispatchedLatticeHostSelection(outgoingMessageText);
       // A message the user sends by hand (or steers from the queue) resumes a queue
       // paused by Stop; it goes first and the queue follows once its turn ends.
       if (sent) {

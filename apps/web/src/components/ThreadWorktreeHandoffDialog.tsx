@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { Input } from "./ui/input";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 interface ThreadWorktreeHandoffDialogProps {
   open: boolean;
@@ -77,7 +77,7 @@ export function ThreadWorktreeHandoffDialog({
             }}
           >
             <label className="grid gap-1.5">
-              <span className="text-ui leading-snug font-medium text-foreground">
+              <span className="text-ui-xs font-medium text-foreground">
                 {t("common:worktreeHandoff_worktreeName")}
               </span>
               <Input

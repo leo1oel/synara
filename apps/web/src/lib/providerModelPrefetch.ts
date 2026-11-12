@@ -21,6 +21,7 @@ import {
   type AppSettings,
 } from "../appSettings";
 import { isProviderKind } from "../providerOrdering";
+import { isBetaFeatureOn } from "../betaFeatures";
 import type { DraftThreadEnvMode } from "../composerDraftDomain";
 import {
   findProviderStatus,
@@ -64,7 +65,6 @@ export type ProviderModelPrefetchSettings = Pick<
       | "openCodeExperimentalWebSockets"
       | "openCodeServerUrl"
       | "providerInstances"
-      | "disabledProviders"
     >
   >;
 
@@ -325,7 +325,7 @@ export function prefetchProviderModelsForNewThread(
 ): void {
   const cwd = input.cwd ?? null;
   const providers = (input.providers ?? NEW_THREAD_MODEL_PREFETCH_PROVIDERS).filter(
-    (provider) => provider !== "droid",
+    (provider) => provider !== "droid" && isBetaFeatureOn(provider),
   );
 
   for (const provider of providers) {
@@ -447,9 +447,6 @@ export function prefetchModelsForNewThread(
     codexHomePath: input.settings.codexHomePath ?? "",
     selectedCodexAccountId: input.settings.selectedCodexAccountId ?? "default",
     providerInstances: input.settings.providerInstances ?? {},
-    ...(input.settings.disabledProviders
-      ? { disabledProviders: input.settings.disabledProviders }
-      : {}),
   };
   const configuredProviderInstances = getProviderInstanceOptions(instanceSettings);
   const resolveProviderForInstanceId = (instanceId: ProviderInstanceId): ProviderKind | null =>
@@ -513,10 +510,7 @@ export function prefetchModelsForNewThread(
   const statusesReconciled = input.statusesReconciled === true;
   const providerStatuses = input.providerStatuses ?? EMPTY_PROVIDER_STATUSES;
   const isProviderWarmable = (provider: ProviderKind): boolean => {
-    // Mirrors useProviderModelCatalog.shouldDiscoverProvider exactly:
-    // the enabled flag short-circuits even the selected provider, then the
-    // selected provider always wins, then hidden providers are skipped.
-    if (input.serverSettings?.providers[provider]?.enabled === false) {
+    if (!isBetaFeatureOn(provider)) {
       return false;
     }
     // ChatView's useProviderModelCatalog always discovers the selected provider

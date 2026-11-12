@@ -103,6 +103,16 @@ export interface AgentGatewayCredentialsShape {
   readonly listRetiredWriteAuthorities?: (
     threadId: string,
   ) => ReadonlyArray<AgentGatewayRetiredWriteAuthority>;
+  /**
+   * A panel pre-warms a provider runtime for a draft chat before its first
+   * send creates the thread. While registered, that thread's own bearer may
+   * initialize and list tools although the projection has no thread yet; tool
+   * calls still wait for the thread. Release when the warm runtime is adopted
+   * or stopped.
+   */
+  readonly registerDraftThread?: (threadId: ThreadId) => void;
+  readonly releaseDraftThread?: (threadId: ThreadId) => void;
+  readonly isDraftThread?: (threadId: string) => boolean;
   /** Revoke exactly one provider session credential. */
   readonly revokeSessionToken: (token: string) => void;
   /** Convenience bundle used when injecting MCP config into provider sessions. */

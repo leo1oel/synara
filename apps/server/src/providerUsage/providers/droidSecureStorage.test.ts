@@ -1,5 +1,6 @@
 import * as childProcess from "node:child_process";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { __resetKeychainReadsForTests, KEYCHAIN_PROMPT_TIMEOUT_MS } from "../keychainReads";
 import { readDroidSecureKey } from "./droidSecureStorage";
 
 vi.mock("node:child_process", async (importOriginal) => {
@@ -17,6 +18,7 @@ const ctx = {
   platform: "darwin" as const,
 };
 afterEach(() => {
+  __resetKeychainReadsForTests();
   vi.restoreAllMocks();
   vi.clearAllMocks();
   vi.unstubAllEnvs();
@@ -65,7 +67,7 @@ describe("bounded Droid secure storage reads", () => {
         "-w",
       ],
       expect.objectContaining({
-        timeout: 3000,
+        timeout: KEYCHAIN_PROMPT_TIMEOUT_MS,
         killSignal: "SIGKILL",
         maxBuffer: 4096,
         env: { HOME: "/fixture-home", PATH: "/usr/bin:/bin" },

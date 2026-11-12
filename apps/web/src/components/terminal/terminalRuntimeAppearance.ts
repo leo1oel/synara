@@ -5,7 +5,7 @@
 import { Terminal, type ITheme } from "@xterm/xterm";
 
 const FALLBACK_MONO_FONT_FAMILY =
-  '"JetBrains Mono", "JetBrainsMono NFM", "JetBrainsMono NF", monospace';
+  '"TX-02 Variable", "TX-02", "Berkeley Mono Variable", "Berkeley Mono", "JetBrains Mono Variable", "JetBrains Mono", "JetBrainsMono NFM", "JetBrainsMono NF", Menlo, monospace';
 const FALLBACK_TERMINAL_FONT_SIZE_PX = 12;
 const TERMINAL_FONT_WEIGHT = 300;
 const TERMINAL_BOLD_FONT_WEIGHT = 500;

@@ -98,7 +98,7 @@ describe("resolvePreferredComposerModelSelection", () => {
     expect(resolved).toEqual({
       provider: "claudeAgent",
       instanceId: "claudeAgent",
-      model: "claude-sonnet-5",
+      model: "claude-sonnet-5-5",
     });
   });
 });
@@ -262,6 +262,131 @@ describe("OMP role-era persisted selections", () => {
       selectedModel: "personal/custom",
       modelOptions: { omp: { thinkingLevel: "medium" } },
     });
+  });
+});
+
+describe("a saved bare fable", () => {
+  const customModelsByProvider = {
+    codex: [],
+    claudeAgent: [],
+    cursor: [],
+    devin: [],
+    antigravity: [],
+    grok: [],
+    droid: [],
+    opencode: [],
+    pi: [],
+    omp: [],
+  };
+  const claudeCatalog = {
+    claudeAgent: [
+      { slug: "claude-fable-5-2", name: "Claude Fable 5.2" },
+      { slug: "claude-fable-5-1", name: "Claude Fable 5.1" },
+      { slug: "claude-opus-5-5", name: "Claude Opus 5.5" },
+    ],
+  };
+  const selectedModelFor = (input: {
+    readonly saved: string;
+    readonly source: "thread" | "project";
+    readonly claudeCliVersion: string | null | undefined;
+  }) =>
+    deriveEffectiveComposerModelState({
+      draft: null,
+      selectedProvider: "claudeAgent",
+      threadModelSelection:
+        input.source === "thread" ? modelSelection("claudeAgent", input.saved) : null,
+      projectModelSelection:
+        input.source === "project" ? modelSelection("claudeAgent", input.saved) : null,
+      customModelsByProvider,
+      availableModelOptionsByProvider: claudeCatalog,
+      claudeCliVersion: input.claudeCliVersion,
+    }).selectedModel;
+
+  it.each(["thread", "project"] as const)(
+    "runs as Fable 5.1 from a %s selection when Claude Code is older than 2.1.321",
+    (source) => {
+      expect(selectedModelFor({ saved: "fable", source, claudeCliVersion: "2.1.300" })).toBe(
+        "claude-fable-5-1",
+      );
+    },
+  );
+
+  it.each(["2.1.321", "2.1.322 (Claude Code)", null, undefined])(
+    "runs as Fable 5.2 on Claude Code %s",
+    (claudeCliVersion) => {
+      expect(selectedModelFor({ saved: "fable", source: "thread", claudeCliVersion })).toBe(
+        "claude-fable-5-2",
+      );
+    },
+  );
+
+  it("leaves an explicit Fable 5.2 alone on an old Claude Code, so its row can say why", () => {
+    expect(
+      selectedModelFor({
+        saved: "claude-fable-5-2",
+        source: "thread",
+        claudeCliVersion: "2.1.300",
+      }),
+    ).toBe("claude-fable-5-2");
+  });
+});
+
+describe("a saved bare sonnet or haiku, and Claude's default", () => {
+  const customModelsByProvider = {
+    codex: [],
+    claudeAgent: [],
+    cursor: [],
+    devin: [],
+    antigravity: [],
+    grok: [],
+    droid: [],
+    opencode: [],
+    pi: [],
+    omp: [],
+  };
+  const claudeCatalog = {
+    claudeAgent: [
+      { slug: "claude-sonnet-5-5", name: "Claude Sonnet 5.5" },
+      { slug: "claude-sonnet-5", name: "Claude Sonnet 5" },
+      { slug: "claude-haiku-5-5", name: "Claude Haiku 5.5" },
+      { slug: "claude-haiku-4-5", name: "Claude Haiku 4.5" },
+    ],
+  };
+  const selectedModelFor = (saved: string | null, claudeCliVersion: string | null | undefined) =>
+    deriveEffectiveComposerModelState({
+      draft: null,
+      selectedProvider: "claudeAgent",
+      threadModelSelection: saved === null ? null : modelSelection("claudeAgent", saved),
+      projectModelSelection: null,
+      customModelsByProvider,
+      ...(saved === null ? {} : { availableModelOptionsByProvider: claudeCatalog }),
+      claudeCliVersion,
+    }).selectedModel;
+
+  it.each([
+    ["sonnet", "2.1.283", "claude-sonnet-5"],
+    ["sonnet", "2.1.284", "claude-sonnet-5-5"],
+    ["sonnet", null, "claude-sonnet-5-5"],
+    ["haiku", "2.1.292", "claude-haiku-4-5"],
+    ["haiku", "2.1.293", "claude-haiku-5-5"],
+    ["haiku", undefined, "claude-haiku-5-5"],
+  ])("runs a saved %s on Claude Code %s as %s", (saved, claudeCliVersion, expected) => {
+    expect(selectedModelFor(saved, claudeCliVersion)).toBe(expected);
+  });
+
+  it("never moves an explicit Sonnet or Haiku id", () => {
+    expect(selectedModelFor("claude-sonnet-5", "2.1.321")).toBe("claude-sonnet-5");
+    expect(selectedModelFor("claude-sonnet-5-5", "2.1.200")).toBe("claude-sonnet-5-5");
+    expect(selectedModelFor("claude-haiku-4-5", "2.1.321")).toBe("claude-haiku-4-5");
+  });
+
+  it.each([
+    ["2.1.284", "claude-sonnet-5-5"],
+    [null, "claude-sonnet-5-5"],
+    [undefined, "claude-sonnet-5-5"],
+    ["2.1.283", "claude-sonnet-5"],
+  ])("starts a chat with no saved model on Claude Code %s as %s", (claudeCliVersion, expected) => {
+    expect(selectedModelFor(null, claudeCliVersion)).toBe(expected);
   });
 });
 
@@ -575,6 +700,104 @@ describe("composerDraftStore modelSelection", () => {
         fastMode: true,
       }),
     );
+  });
+
+  it("uses the first runtime-preferred model when there is no explicit selection", () => {
+    const state = deriveEffectiveComposerModelState({
+      draft: {
+        modelSelectionByProvider: {},
+        activeProvider: null,
+      },
+      selectedProvider: "codex",
+      threadModelSelection: null,
+      projectModelSelection: null,
+      customModelsByProvider: {
+        codex: [],
+        claudeAgent: [],
+        cursor: [],
+        antigravity: [],
+        grok: [],
+        droid: [],
+        devin: [],
+        omp: [],
+        opencode: [],
+        pi: [],
+      },
+      availableModelOptionsByProvider: {
+        codex: [
+          { slug: "gpt-5.6-sol", name: "GPT-5.6 Sol" },
+          { slug: "gpt-5.5", name: "GPT-5.5" },
+        ],
+      },
+    });
+
+    expect(state.selectedModel).toBe("gpt-5.6-sol");
+  });
+
+  it("uses the static provider default when runtime discovery has no result", () => {
+    const state = deriveEffectiveComposerModelState({
+      draft: null,
+      selectedProvider: "codex",
+      threadModelSelection: null,
+      projectModelSelection: null,
+      customModelsByProvider: {
+        codex: [],
+        claudeAgent: [],
+        cursor: [],
+        antigravity: [],
+        grok: [],
+        droid: [],
+        devin: [],
+        omp: [],
+        opencode: [],
+        pi: [],
+      },
+      availableModelOptionsByProvider: { codex: [] },
+    });
+
+    expect(state.selectedModel).toBe("gpt-6-astra");
+  });
+
+  it("preserves an explicit model, reasoning effort, and fast-mode preference", () => {
+    const state = deriveEffectiveComposerModelState({
+      draft: {
+        modelSelectionByProvider: {
+          codex: modelSelection("codex", "gpt-5.5", {
+            reasoningEffort: "xhigh",
+            fastMode: true,
+          }),
+        },
+        activeProvider: "codex",
+      },
+      selectedProvider: "codex",
+      threadModelSelection: null,
+      projectModelSelection: null,
+      customModelsByProvider: {
+        codex: [],
+        claudeAgent: [],
+        cursor: [],
+        antigravity: [],
+        grok: [],
+        droid: [],
+        devin: [],
+        omp: [],
+        opencode: [],
+        pi: [],
+      },
+      availableModelOptionsByProvider: {
+        codex: [
+          { slug: "gpt-5.6-sol", name: "GPT-5.6 Sol" },
+          { slug: "gpt-5.5", name: "GPT-5.5" },
+        ],
+      },
+    });
+
+    expect(state).toEqual({
+      selectedModel: "gpt-5.5",
+      modelOptions: {
+        codex: { reasoningEffort: "xhigh", fastMode: true },
+      },
+    });
   });
 
   it("prefers the active OpenCode thread model over a stale draft default when runtime models are available", () => {

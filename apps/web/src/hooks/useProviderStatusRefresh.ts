@@ -14,6 +14,8 @@ import { useTranslation } from "~/i18n";
 
 export type RefreshProviderStatusesOptions = {
   readonly silent?: boolean;
+  /** The user's own recheck: also forgets models an account refused (server side). */
+  readonly explicit?: boolean;
 };
 
 export type RefreshProviderStatusesNow = (
@@ -39,7 +41,9 @@ export function useRefreshProviderStatusesNow(): RefreshProviderStatusesNow {
     const api = readNativeApi();
     if (!api) return null;
     try {
-      const result = await api.server.refreshProviders();
+      const result = options?.explicit
+        ? await api.server.refreshProviders({ explicit: true })
+        : await api.server.refreshProviders();
       await writeProviderStatusesToConfigCache(queryClient, result.providers);
       return result.providers;
     } catch (error) {

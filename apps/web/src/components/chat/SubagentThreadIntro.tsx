@@ -7,6 +7,7 @@
 // Exports: SubagentThreadIntro, SubagentBriefCard, SubagentDeliveredNote,
 // SubagentThreadPresentation
 
+import { t, useTranslation } from "~/i18n";
 import type { ProviderKind, ThreadId } from "@synara/contracts";
 import type { CSSProperties } from "react";
 
@@ -20,7 +21,6 @@ import { cn } from "~/lib/utils";
 import { formatClockDuration } from "../../session-logic";
 import ChatMarkdown from "../ChatMarkdown";
 import { ProviderIcon } from "../ProviderIcon";
-import { useTranslation, t } from "~/i18n";
 
 export interface SubagentThreadPresentation {
   parentThreadId: ThreadId;
@@ -164,9 +164,7 @@ export function SubagentDeliveredNote({ parentTitle }: { parentTitle: string }) 
       title={t("chat:thisAnswerWentBackTo", { value0: parentTitle })}
     >
       <BackToParentIcon className="size-3 shrink-0" />
-      <span className="truncate">
-        {t("chat:deliveredTo")} {parentTitle}
-      </span>
+      <span className="truncate">{t("lattice:deliveredTo", { title: parentTitle })}</span>
     </span>
   );
 }

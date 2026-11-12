@@ -60,6 +60,8 @@ const checkpointStoreTestLayer = Layer.succeed(CheckpointStore, {
   hasCheckpointRef: () => Effect.die("unused checkpoint store test method"),
   restoreCheckpoint: () => Effect.die("unused checkpoint store test method"),
   reverseCheckpointDiff: () => Effect.die("unused checkpoint store test method"),
+  recordHostWrites: () => Effect.die("unused checkpoint store test method"),
+  readHostWrites: () => Effect.die("unused checkpoint store test method"),
   diffCheckpoints: () => Effect.die("unused checkpoint store test method"),
   deleteCheckpointRefs: (input) => deleteCheckpointRefsImpl(input),
 } satisfies CheckpointStoreShape);

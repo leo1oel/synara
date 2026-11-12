@@ -31,8 +31,9 @@ const status: Awaited<ReturnType<NativeApi["git"]["status"]>> = {
   upstreamBranch: "origin/feature/work",
   aheadCount: 0,
   behindCount: 0,
-  pr: null,
 };
+// The fork serves the branch PR from its own query (bc54a5966).
+const branchPullRequest = vi.fn(async () => ({ branch: "feature/work", pr: null }));
 const branches: Awaited<ReturnType<NativeApi["git"]["listBranches"]>> = {
   isRepo: true,
   hasOriginRemote: true,
@@ -44,8 +45,10 @@ const branches: Awaited<ReturnType<NativeApi["git"]["listBranches"]>> = {
 
 afterEach(() => vi.restoreAllMocks());
 
+// Lattice's panel row is split (kept over upstream's whole-row menu in b369546cb): the
+// label runs the primary action and its chevron opens every Git action.
 it.each([true, false])(
-  "opens all Git actions from the panel label without running an action (local changes: %s)",
+  "opens all Git actions from the panel chevron without running an action (local changes: %s)",
   async (hasWorkingTreeChanges) => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const api = {
@@ -58,6 +61,7 @@ it.each([true, false])(
             : { files: [], insertions: 0, deletions: 0 },
         })),
         listBranches: vi.fn(async () => branches),
+        branchPullRequest,
         onActionProgress: () => () => {},
         runStackedAction: vi.fn(),
       },
@@ -78,7 +82,7 @@ it.each([true, false])(
         ),
       );
       await vi.waitFor(() => expect(api.git.listBranches).toHaveBeenCalled());
-      await page.getByRole("button", { name: /^Commit (?:&|and) [Pp]ush$/ }).click();
+      await page.getByRole("button", { name: "More Git actions" }).click();
       await expect
         .element(page.getByRole("menuitem", { name: "Commit", exact: true }))
         .toBeVisible();
@@ -106,6 +110,7 @@ it("owns failure details per action when the retained control changes workspace"
     git: {
       status: vi.fn(async () => status),
       listBranches: vi.fn(async () => branches),
+      branchPullRequest,
       onActionProgress: (listener: (event: GitActionProgressEvent) => void) => {
         listeners.add(listener);
         return () => listeners.delete(listener);

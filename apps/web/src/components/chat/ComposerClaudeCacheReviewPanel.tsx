@@ -8,7 +8,7 @@ import { cn } from "~/lib/utils";
 import { formatCacheDuration } from "./ClaudeCacheDetails";
 import { ComposerChoiceRow } from "./ComposerChoiceRow";
 import { COMPOSER_INPUT_SURFACE_CLASS_NAME } from "./composerPickerStyles";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 // "never" continues like "continue" and turns the review off, as Claude Code's
 // "Don't ask me again" does.
@@ -117,12 +117,11 @@ export function ComposerClaudeCacheReviewPanel({
         {review.status === "uncertain"
           ? t("chat:claudeMayHaveAcceptedTheRequestSendingIsPaused")
           : isCompactionRequest
-            ? t("chat:yourMessageIsSavedAndOnHoldContinuingMay", {
-                value0:
-                  contextTokens === undefined
-                    ? t("chat:theConversationSContext")
-                    : `about ${formatContextWindowTokens(contextTokens)} tokens`,
-              })
+            ? contextTokens === undefined
+              ? t("lattice:yourMessageIsSavedAndOnHold")
+              : t("lattice:yourMessageIsSavedAndOnHold2", {
+                  tokens: formatContextWindowTokens(contextTokens),
+                })
             : t("chat:resumingTheFullSessionWillConsumeASubstantialPortion")}
       </p>
       {review.error || dispatchError ? (

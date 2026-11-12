@@ -1,3 +1,4 @@
+import { ComposerEnvironmentPicker } from "./chat/ComposerEnvironmentPicker";
 // FILE: BranchToolbar.tsx
 // Purpose: Renders the chat thread's compact workspace controls, including the
 // local usage popover, inline workspace handoff actions, and runtime access toggle.
@@ -8,7 +9,7 @@ import type {
   ThreadId,
   RuntimeMode,
 } from "@synara/contracts";
-import { ChevronDownIcon, WorktreeIcon } from "~/lib/icons";
+import { CheckIcon, ChevronDownIcon, HandoffIcon, WorktreeIcon } from "~/lib/icons";
 import { HiOutlineHandRaised } from "react-icons/hi2";
 import { CentralIcon } from "~/lib/central-icons";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
@@ -45,16 +46,18 @@ import {
   ENVIRONMENT_ROW_CLASS_NAME,
   ENVIRONMENT_ROW_ICON_CLASS_NAME,
   EnvironmentRowBody,
+  EnvironmentRowChevron,
 } from "./chat/environment/EnvironmentRow";
 import type { ContextWindowSnapshot } from "../lib/contextWindow";
 import { ProviderUsagePanelContent } from "./ProviderUsagePanelContent";
 import { ComposerPickerMenuPopup } from "./chat/ComposerPickerMenuPopup";
-import { ComposerEnvironmentPicker } from "./chat/ComposerEnvironmentPicker";
 import { Button } from "./ui/button";
 import { Collapsible, CollapsiblePanel } from "./ui/collapsible";
 import { DisclosureChevron } from "./ui/DisclosureChevron";
 import {
   Menu,
+  MenuGroup,
+  MenuGroupLabel,
   MenuItem,
   MenuRadioGroup,
   MenuRadioItem,
@@ -62,10 +65,44 @@ import {
   MenuTrigger,
 } from "./ui/menu";
 import type { ThreadWorkspacePatch } from "../types";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 function WorktreeGlyph({ className }: { className?: string }) {
   return <WorktreeIcon className={className} />;
+}
+
+/** Leading glyph treatment shared by every "Continue in" menu row (16px, muted). */
+const ENV_MENU_ICON_CLASS_NAME = "size-3.5 text-muted-foreground";
+
+/**
+ * One row of the "Continue in" menu: `[glyph] [label …grows] [✓ when selected]`.
+ * Centralizes the icon/label/check treatment so the local, worktree, and handoff
+ * entries stay on one grid instead of repeating the same class strings per row.
+ */
+function ContinueInMenuItem({
+  icon,
+  label,
+  selected: selectedProp,
+  disabled: disabledProp,
+  onSelect,
+}: {
+  icon: ReactNode;
+  label: ReactNode;
+  selected?: boolean;
+  disabled?: boolean;
+  onSelect?: () => void;
+}) {
+  const selected = selectedProp ?? false;
+  const disabled = disabledProp ?? false;
+  return (
+    <MenuItem disabled={disabled} {...(onSelect ? { onClick: onSelect } : {})}>
+      {icon}
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {selected ? (
+        <CheckIcon className="size-3.5 shrink-0 text-[var(--color-text-foreground)]" />
+      ) : null}
+    </MenuItem>
+  );
 }
 
 function RuntimeModeMenuItem({
@@ -490,8 +527,16 @@ export default function BranchToolbar({
     fetchOpenUsageData: false,
   });
   const [rateLimitsOpen, setRateLimitsOpen] = useState(true);
+  const [envPickerOpen, setEnvPickerOpen] = useState(false);
 
   if (!activeThreadId || !activeProject) return null;
+
+  const envGlyph = (className: string) =>
+    environmentPresentation.mode === "local" ? (
+      <CentralIcon name="macbook-air" className={className} />
+    ) : (
+      <WorktreeGlyph className={className} />
+    );
 
   return (
     <div

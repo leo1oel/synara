@@ -15,17 +15,18 @@
  * @module agentGateway/mcpInjection
  */
 import type * as Acp from "@agentclientprotocol/sdk";
-import { SYNARA_MCP_SERVER_NAME } from "@synara/shared/mcpConnectors";
-export { SYNARA_MCP_SERVER_NAME } from "@synara/shared/mcpConnectors";
 
 import type {
   AgentGatewayMcpConnection,
   AgentGatewayStdioProxySpawn,
 } from "./Services/AgentGatewayCredentials.ts";
+import { ACTIVE_AGENT_HOST_PROFILE } from "./hostProfile.ts";
 
-export const SYNARA_AGENT_GATEWAY_TOKEN_ENV = "SYNARA_AGENT_GATEWAY_TOKEN";
-export const SYNARA_AGENT_GATEWAY_BOOTSTRAP_TOKEN_ENV = "SYNARA_AGENT_GATEWAY_BOOTSTRAP_TOKEN";
-export const SYNARA_AGENT_GATEWAY_URL_ENV = "SYNARA_AGENT_GATEWAY_URL";
+export const SYNARA_MCP_SERVER_NAME = ACTIVE_AGENT_HOST_PROFILE.mcpServerName;
+const AGENT_GATEWAY_ENV_PREFIX = ACTIVE_AGENT_HOST_PROFILE.id === "lattice" ? "LATTICE" : "SYNARA";
+export const SYNARA_AGENT_GATEWAY_TOKEN_ENV = `${AGENT_GATEWAY_ENV_PREFIX}_AGENT_GATEWAY_TOKEN`;
+export const SYNARA_AGENT_GATEWAY_BOOTSTRAP_TOKEN_ENV = `${AGENT_GATEWAY_ENV_PREFIX}_AGENT_GATEWAY_BOOTSTRAP_TOKEN`;
+export const SYNARA_AGENT_GATEWAY_URL_ENV = `${AGENT_GATEWAY_ENV_PREFIX}_AGENT_GATEWAY_URL`;
 
 function authorizationHeader(connection: AgentGatewayMcpConnection): string {
   return `Bearer ${connection.bearerToken}`;
@@ -164,18 +165,28 @@ async function postAgentGatewayJsonRpc(input: {
     ...(input.signal === undefined ? {} : { signal: input.signal }),
   });
   if (!response.ok) {
-    throw new Error(`Synara MCP request failed with HTTP ${String(response.status)}.`);
+    throw new Error(
+      `${ACTIVE_AGENT_HOST_PROFILE.displayName} MCP request failed with HTTP ${String(response.status)}.`,
+    );
   }
   const payload: unknown = await response.json();
   if (!isRecord(payload) || payload.jsonrpc !== "2.0") {
-    throw new Error("Synara MCP returned an invalid JSON-RPC response.");
+    throw new Error(
+      `${ACTIVE_AGENT_HOST_PROFILE.displayName} MCP returned an invalid JSON-RPC response.`,
+    );
   }
   if ("error" in payload) {
     const failure = isRecord(payload.error) ? payload.error : null;
-    throw new Error(failure?.message ? String(failure.message) : "Synara MCP request failed.");
+    throw new Error(
+      failure?.message
+        ? String(failure.message)
+        : `${ACTIVE_AGENT_HOST_PROFILE.displayName} MCP request failed.`,
+    );
   }
   if (payload.id !== id || !("result" in payload)) {
-    throw new Error("Synara MCP returned a mismatched JSON-RPC response.");
+    throw new Error(
+      `${ACTIVE_AGENT_HOST_PROFILE.displayName} MCP returned a mismatched JSON-RPC response.`,
+    );
   }
   return payload.result;
 }
@@ -191,7 +202,9 @@ export async function listAgentGatewayMcpTools(input: {
     method: "tools/list",
   });
   if (!isRecord(result) || !Array.isArray(result.tools)) {
-    throw new Error("Synara MCP tools/list returned an invalid tool catalog.");
+    throw new Error(
+      `${ACTIVE_AGENT_HOST_PROFILE.displayName} MCP tools/list returned an invalid tool catalog.`,
+    );
   }
   return result.tools.map((value) => {
     if (
@@ -200,7 +213,9 @@ export async function listAgentGatewayMcpTools(input: {
       typeof value.description !== "string" ||
       !isRecord(value.inputSchema)
     ) {
-      throw new Error("Synara MCP tools/list returned an invalid tool descriptor.");
+      throw new Error(
+        `${ACTIVE_AGENT_HOST_PROFILE.displayName} MCP tools/list returned an invalid tool descriptor.`,
+      );
     }
     return {
       name: value.name,
@@ -229,15 +244,45 @@ export function callAgentGatewayMcpTool(input: {
 
 export function buildClaudeMcpServers(
   connection: AgentGatewayMcpConnection,
+  options: { readonly includeConnectors?: boolean } = {},
 ): Record<string, ClaudeMcpHttpServerConfig> {
   const headers = { Authorization: authorizationHeader(connection) };
   const servers: Record<string, ClaudeMcpHttpServerConfig> = {
     [SYNARA_MCP_SERVER_NAME]: { type: "http", url: connection.url, headers },
   };
+  if (options.includeConnectors === false) return servers;
   for (const connector of connection.connectors ?? []) {
     servers[connector.name] = { type: "http", url: connector.url, headers };
   }
   return servers;
+}
+
+/**
+ * MCP options for a Claude Code session. Whenever the SDK passes `mcpServers`,
+ * Claude Code holds its first request until every MCP server the user has
+ * configured (plugins, claude.ai connectors) has connected, which measured
+ * 3.5-6 s per session start in Lattice. Lattice's panel therefore loads only its
+ * own server under `strictMcpConfig` unless the user opts back in.
+ */
+export function resolveClaudeMcpLaunchOptions(input: {
+  readonly connection: AgentGatewayMcpConnection | undefined;
+  readonly hostProfileId: "synara" | "lattice";
+  readonly loadUserMcpServers: boolean;
+}): {
+  readonly mcpServers?: Record<string, ClaudeMcpHttpServerConfig>;
+  readonly strictMcpConfig?: true;
+} {
+  const hostOnly = input.hostProfileId === "lattice" && !input.loadUserMcpServers;
+  return {
+    ...(input.connection
+      ? {
+          mcpServers: buildClaudeMcpServers(input.connection, {
+            includeConnectors: !hostOnly,
+          }),
+        }
+      : {}),
+    ...(hostOnly ? { strictMcpConfig: true as const } : {}),
+  };
 }
 
 export type AcpStdioProxySpawn = AgentGatewayStdioProxySpawn;

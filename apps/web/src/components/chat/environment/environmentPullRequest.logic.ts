@@ -20,6 +20,7 @@ import {
   type PullRequestContextDraft,
   type PullRequestContextScope,
 } from "~/lib/pullRequestContext";
+import { t } from "~/i18n";
 import { randomUUID } from "~/lib/utils";
 
 export type PullRequestChecksTone = "pending" | "success" | "failure" | "none";
@@ -44,24 +45,51 @@ export function summarizePullRequestChecks(
 ): PullRequestChecksSummary {
   const failing = checks.filter((check) => check.status === "failure").length;
   if (failing > 0) {
-    return { label: `${failing} ${pluralize(failing, "failing check")}`, tone: "failure" };
+    return {
+      label: t("lattice:failingChecks", { count: failing }),
+      tone: "failure",
+    };
   }
   const cancelled = checks.filter((check) => check.status === "cancelled").length;
   if (cancelled > 0) {
-    return { label: `${cancelled} ${pluralize(cancelled, "cancelled check")}`, tone: "failure" };
+    return {
+      label: t("lattice:cancelledChecks", { count: cancelled }),
+      tone: "failure",
+    };
   }
   const pending = checks.filter((check) => check.status === "pending").length;
   if (pending > 0) {
-    return { label: `${pending} ${pluralize(pending, "pending check")}`, tone: "pending" };
+    return {
+      label: t("lattice:pendingChecks", { count: pending }),
+      tone: "pending",
+    };
   }
   if (checks.length === 0) {
-    return { label: "No checks", tone: "none" };
+    return { label: t("git:noChecks"), tone: "none" };
   }
   const successful = checks.filter((check) => check.status === "success").length;
   if (successful === 0) {
-    return { label: "No required checks", tone: "none" };
+    return { label: t("lattice:noRequiredChecks"), tone: "none" };
   }
-  return { label: "All checks passed", tone: "success" };
+  return { label: t("lattice:allChecksPassed"), tone: "success" };
+}
+
+/** A check's status as the UI names it. Prompts keep PULL_REQUEST_CHECK_STATUS_LABELS' English. */
+export function pullRequestCheckStatusLabel(status: GitPullRequestCheck["status"]): string {
+  switch (status) {
+    case "pending":
+      return t("chat:runStatus_running_command");
+    case "success":
+      return t("lattice:succeeded");
+    case "failure":
+      return t("chat:runStatus_failed");
+    case "skipped":
+      return t("git:runStatus_skipped");
+    case "neutral":
+      return t("lattice:neutral");
+    case "cancelled":
+      return t("git:runStatus_cancelled");
+  }
 }
 
 export const PULL_REQUEST_CHECK_STATUS_LABELS: Record<GitPullRequestCheck["status"], string> = {
@@ -107,15 +135,13 @@ export function summarizePullRequestDiffStat(pr: {
   return {
     additions: pr.additions ?? 0,
     deletions: pr.deletions ?? 0,
-    filesLabel:
-      pr.changedFiles === null ? null : `${pr.changedFiles} ${pluralize(pr.changedFiles, "file")}`,
+    filesLabel: pr.changedFiles === null ? null : t("lattice:files", { count: pr.changedFiles }),
   };
 }
 
 export function summarizePullRequestComments(count: number, truncated = false): string {
-  if (count === 0) return truncated ? "Comments may exist" : "No comments";
-  const noun = pluralize(count, "comment");
-  return truncated ? `${count}+ ${noun}` : `${count} ${noun}`;
+  if (count === 0) return truncated ? t("lattice:commentsMayExist") : t("git:noComments");
+  return truncated ? t("lattice:comments2", { count }) : t("lattice:comments3", { count });
 }
 
 export interface PullRequestCommentDisplay {
@@ -783,7 +809,10 @@ export function createGitHubItemContextDraft(
     scope: "reference",
     pr: { number: item.number, url: item.url },
     title: `#${item.number} ${item.title}`,
-    subtitle: `${item.itemKind === "issue" ? "Issue" : "Pull request"} in ${item.repository}`,
+    subtitle:
+      item.itemKind === "issue"
+        ? t("lattice:issueIn", { repository: item.repository })
+        : t("lattice:pullRequestIn", { repository: item.repository }),
     // The PR URL is the reference; let the agent read current GitHub details as needed.
     // Keep the title/subtitle for the card without copying the discussion into the prompt.
     text:

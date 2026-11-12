@@ -1,13 +1,3 @@
-// FILE: PullRequestCommentCard.tsx
-// Purpose: One review/issue comment as a plain collapsible row (hairline-separated, no card
-//          chrome): avatar + author leading, timestamp + per-row collapse chevron trailing,
-//          finding-style comments elevated into a title + severity subheading, and a "Reply"
-//          affordance that always opens the comment's own GitHub URL externally (falling back
-//          to the PR URL when the comment has none) — never the in-app browser, since replying
-//          has to happen on GitHub itself.
-// Layer: Pull request presentation
-// Exports: PullRequestCommentCard
-
 import type { PullRequestComment } from "@synara/contracts";
 import { useState } from "react";
 
@@ -24,12 +14,18 @@ import { ensureNativeApi } from "~/nativeApi";
 import { PullRequestActorLabel } from "./PullRequestActorLabel";
 import { PullRequestMarkdown } from "./PullRequestMarkdown";
 import { parseFindingComment, type PullRequestCommentSeverity } from "./pullRequestComment.logic";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 function severityToneClassName(severity: PullRequestCommentSeverity): string {
   if (severity === "High") return "text-destructive";
   if (severity === "Medium") return "text-warning";
   return "text-muted-foreground";
+}
+
+function severityLabel(translate: typeof t, severity: PullRequestCommentSeverity): string {
+  if (severity === "High") return translate("lattice:highSeverity");
+  if (severity === "Medium") return translate("lattice:mediumSeverity");
+  return translate("lattice:lowSeverity");
 }
 
 export function PullRequestCommentCard({
@@ -94,13 +90,13 @@ export function PullRequestCommentCard({
                   severityToneClassName(finding.severity),
                 )}
               >
-                {finding.severity} {t("git:severity")}
+                {severityLabel(t, finding.severity)}
               </p>
             </div>
           ) : null}
           <PullRequestMarkdown
             text={finding ? finding.body : comment.body}
-            fallback="_No review body._"
+            fallback={`_${t("lattice:noReviewBody")}_`}
             cwd={workspaceRoot}
           />
           <div className="mt-2 flex justify-end">

@@ -16,4 +16,7 @@ export default defineConfig({
       },
     ],
   },
+  test: {
+    setupFiles: [path.resolve(import.meta.dirname, "./vitest.setup.ts")],
+  },
 });

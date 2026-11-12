@@ -25,6 +25,7 @@ import {
 } from "react";
 
 import { appHistory } from "../../appNavigation";
+import { openEmbeddedProviderSettings } from "../../embedMode";
 import { useComposerDraftStore } from "../../composerDraftStore";
 import { useStarredModels } from "../../hooks/useStarredModels";
 import type { ProviderModelCatalog } from "../../hooks/useProviderModelCatalog";
@@ -38,6 +39,7 @@ import { SearchIcon } from "~/lib/icons";
 import { starredModelInstanceId, starredModelSlotKey } from "~/lib/starredModels";
 import { cn, isMacNavigatorPlatform } from "~/lib/utils";
 import { ProviderAccountAvatar } from "../ProviderAccountMark";
+import { ProviderRuntimeInstallPanel } from "../ProviderRuntimeInstall";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Menu, MenuGroup, MenuGroupLabel } from "../ui/menu";
@@ -48,6 +50,9 @@ import {
   buildProviderTabRows,
   buildStarredModelOptionsPatch,
   buildStarredTabRows,
+  claudeCliVersionNeededFor,
+  CODEX_ASTRA_MINIMUM_VERSION,
+  codexNeedsUpdateForAstra,
   type ComposerModelPickerRow as PickerRow,
   type ComposerModelPickerTab,
   composerModelDisplayName,
@@ -75,6 +80,7 @@ import {
   showsComposerFastModeBadge,
 } from "./composerTraits";
 import type { FastModeNotice } from "~/lib/fastModeState";
+import { isModelUnavailable } from "~/lib/unavailableModels";
 import { MENU_NAVIGATION_KEYS } from "./PickerPanelShell";
 import {
   PICKER_PANEL_GROUP_LABEL_CLASS_NAME,
@@ -89,17 +95,23 @@ import {
   resolveProviderModelLabel,
   resolveVisibleProviderOptions,
 } from "./ProviderModelPicker";
+import { localizeModelPickerLabel } from "./modelPickerLabels";
 import { resolveRuntimeModelDescriptor } from "./runtimeModelCapabilities";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 export type ComposerModelSelectionOptions = {
   /** Provider options to commit together with the model (starred presets, row effort). */
   modelOptions?: ProviderOptions;
   /** Provider instance (account) the model is committed for. */
   instanceId?: ProviderInstanceId;
+  /** False for a commit the user did not make (a refused model's fallback): keep focus. */
+  focusComposer?: boolean;
 };
 
 type ComposerModelPickerProps = {
+  dense?: boolean;
+  /** A Claude problem in the way of the next send; the chip shows a warning mark. */
+  warning?: string | null;
   provider: ProviderKind;
   model: ModelSlug;
   lockedProvider: ProviderKind | null;
@@ -183,6 +195,7 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
   const { t } = useTranslation();
 
   const { onOpenChange, open, lockedProvider, threadId } = props;
+  const localizeLabel = (label: string) => localizeModelPickerLabel(t, label);
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const isMenuOpen = open ?? uncontrolledOpen;
   const activeProvider = lockedProvider ?? props.provider;
@@ -314,6 +327,7 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
     props.runtimeModel,
     t,
   );
+  const currentStatusLabel = resolveComposerTraitStatusLabel(currentTraitSelection);
 
   const visibleProviderOptions = resolveVisibleProviderOptions({
     provider: props.provider,
@@ -334,6 +348,7 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
       ? undefined
       : AVAILABLE_PROVIDER_OPTIONS.find((option) => option.value === activeProvider);
   const providerTabs = resolveComposerModelPickerProviderTabs({
+    translate: t,
     options:
       activeProviderOption &&
       !visibleProviderOptions.some((option) => option.value === activeProvider)
@@ -370,8 +385,23 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
   const openProviderTab = providerTabs.find((providerTab) => providerTab.instanceId === tab);
   const tabAccount = tab === STARRED_TAB ? null : (openProviderTab ?? providerTabs[0] ?? null);
   const setupMessage = tab === STARRED_TAB ? null : (tabAccount?.setupMessage ?? null);
+  const installedVersionFor = (provider: ProviderKind, instanceId: string) =>
+    findProviderStatusForInstance({ providers: props.providers, provider, instanceId })?.version;
+  const tabVersion =
+    tabAccount === null
+      ? undefined
+      : installedVersionFor(tabAccount.provider, tabAccount.instanceId);
+  // An installed Codex too old to list GPT-6 Astra leaves it out of the tab; say so.
+  const codexAstraUpdateHint =
+    setupMessage === null &&
+    tabAccount !== null &&
+    codexNeedsUpdateForAstra(tabAccount.provider, tabVersion)
+      ? t("lattice:codexUpdateForAstra", { version: CODEX_ASTRA_MINIMUM_VERSION })
+      : null;
   const openProviderSettings = () => {
     setMenuOpen(false);
+    // Inside Lattice, in-frame `/settings` would replace the Agent panel; the host opens it.
+    if (openEmbeddedProviderSettings()) return;
     appHistory.push("/settings?section=providers");
   };
 
@@ -394,6 +424,37 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
     return hasSiblingAccounts || !account.isDefault ? account.label : undefined;
   };
 
+  // A model the installed Claude Code is too old to run, or that a failed turn showed
+  // the account cannot use, stays listed, greyed out with the reason.
+  const unavailableModelLabelFor = (provider: ProviderKind, instanceId: string, model: string) => {
+    const neededVersion = claudeCliVersionNeededFor(
+      provider,
+      model,
+      installedVersionFor(provider, instanceId),
+    );
+    if (neededVersion !== null) {
+      return t("lattice:modelNeedsNewerClaudeCode", { version: neededVersion });
+    }
+    return isModelUnavailable(props.providers, provider, instanceId, model)
+      ? t("lattice:modelNotAvailableToAccount")
+      : null;
+  };
+  // The Claude tab names the first model its Claude Code is too old for, as Codex's does.
+  const claudeModelUpdateHint = (() => {
+    if (setupMessage !== null || tabAccount === null) return null;
+    for (const option of modelOptionsFor(tabAccount.provider, tabAccount.instanceId)) {
+      const neededVersion = claudeCliVersionNeededFor(tabAccount.provider, option.slug, tabVersion);
+      if (neededVersion !== null) {
+        return t("lattice:claudeCodeUpdateForModel", {
+          version: neededVersion,
+          model: composerModelDisplayName(tabAccount.provider, option.name),
+        });
+      }
+    }
+    return null;
+  })();
+  const providerUpdateHint = codexAstraUpdateHint ?? claudeModelUpdateHint;
+
   const rows =
     setupMessage !== null
       ? []
@@ -410,6 +471,8 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
               ...resolveStarredTraits(currentTraitSelection),
             },
             effortLevelsFor: (provider, model) => traitSelectionFor(provider, model).effortLevels,
+            localizeLabel,
+            unavailableModelLabelFor,
           })
         : buildProviderTabRows({
             provider: tabAccount.provider,
@@ -417,6 +480,8 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
             options: modelOptionsFor(tabAccount.provider, tabAccount.instanceId),
             query: normalizedQuery,
             selectedModel: tabAccount.instanceId === activeInstanceId ? props.model : null,
+            unavailableModelLabelFor: (model) =>
+              unavailableModelLabelFor(tabAccount.provider, tabAccount.instanceId, model),
           });
   const starredModelSlots = new Set(starredModels.map(starredModelSlotKey));
 
@@ -538,13 +603,14 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
       onOpenChange={(nextOpen) => setMenuOpen(props.disabled ? false : nextOpen)}
     >
       <ComposerModelMenuTrigger
+        dense={props.dense}
         provider={activeProvider}
         accountLabel={activeProviderTab?.name ? activeProviderTab.label : null}
         // The default account is implied; only another one is worth the room.
         accountName={activeProviderTab?.dotted ? activeProviderTab.name : null}
         accountAccentColor={activeProviderTab?.accentColor}
         modelLabel={composerModelDisplayName(activeProvider, modelLabel)}
-        statusLabel={resolveComposerTraitStatusLabel(currentTraitSelection, t)}
+        statusLabel={currentStatusLabel === null ? null : localizeLabel(currentStatusLabel)}
         contextWindowLabel={activeProvider === "claudeAgent" ? props.contextWindowLabel : null}
         showsFastBadge={showsComposerFastModeBadge(currentTraitSelection)}
         fastModeNotice={activeProvider === "claudeAgent" ? props.fastModeNotice : null}
@@ -552,8 +618,9 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
         hideStatusLabel={props.hideStatusLabel}
         disabled={props.disabled}
         isMenuOpen={isMenuOpen}
-        openPlaceholderLabel={usesEffortSlider ? "Select effort" : null}
+        openPlaceholderLabel={usesEffortSlider ? t("lattice:selectEffort") : null}
         shortcutLabel={props.shortcutLabel}
+        warning={props.warning}
       />
       <ComposerPickerMenuPopup
         align="start"
@@ -617,7 +684,22 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
                 {modelSelectionIssue}
               </div>
             ) : null}
-            {setupMessage !== null ? (
+            {setupMessage !== null && openProviderTab?.runtimeInstallStatus ? (
+              // The provider is not installed yet: install it right here, one click.
+              <div className="flex flex-col items-center gap-2 px-3 py-4 text-center">
+                <ProviderAccountAvatar
+                  provider={openProviderTab.provider}
+                  accentColor={openProviderTab.accentColor}
+                />
+                <span className="max-w-full text-ui font-medium text-foreground [overflow-wrap:anywhere]">
+                  {t("lattice:isNotInstalled", { account: openProviderTab.label })}
+                </span>
+                <ProviderRuntimeInstallPanel
+                  status={openProviderTab.runtimeInstallStatus}
+                  align="center"
+                />
+              </div>
+            ) : setupMessage !== null ? (
               <div className="flex flex-col items-center gap-2 px-3 py-4 text-center">
                 {openProviderTab ? (
                   <ProviderAccountAvatar
@@ -626,7 +708,9 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
                   />
                 ) : null}
                 <span className="text-ui font-medium text-foreground">
-                  {openProviderTab?.label ?? t("chat:thisAccount")} {t("chat:needsSetup")}
+                  {openProviderTab
+                    ? t("lattice:needsSetup", { account: openProviderTab.label })
+                    : t("lattice:thisAccountNeedsSetup")}
                 </span>
                 <span className="text-ui-sm leading-snug text-muted-foreground">
                   {setupMessage}
@@ -638,6 +722,14 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
             ) : discoveryError ? (
               <div className="px-2 py-1.5 text-ui leading-snug text-destructive">
                 {discoveryError}
+              </div>
+            ) : null}
+            {providerUpdateHint !== null ? (
+              <div
+                role="status"
+                className="px-2 py-1.5 text-ui-sm leading-snug text-muted-foreground [overflow-wrap:anywhere]"
+              >
+                {providerUpdateHint}
               </div>
             ) : null}
             {setupMessage !== null ? null : isTabLoading ? (

@@ -1,3 +1,4 @@
+import { t, useTranslation } from "~/i18n";
 // FILE: ProviderModelPicker.tsx
 // Purpose: Renders the composer provider/model menu and supports controlled opening for shortcuts.
 // Layer: Chat composer presentation
@@ -31,14 +32,13 @@ import {
 } from "../ui/menu";
 import { PROVIDER_ICON_COMPONENT_BY_PROVIDER } from "../ProviderIcon";
 import { cn } from "~/lib/utils";
-import { TriangleAlertIcon } from "~/lib/icons";
+import { ChevronLeftIcon, TriangleAlertIcon } from "~/lib/icons";
 import { PickerPanelShell } from "./PickerPanelShell";
 import { PickerTriggerButton } from "./PickerTriggerButton";
 import { ProviderModelOptionGroupList } from "./ProviderModelOptionGroupList";
 import { ComposerPickerMenuPopup, ComposerPickerMenuSubPopup } from "./ComposerPickerMenuPopup";
 import {
   COMPOSER_PICKER_MODEL_LIST_MAX_HEIGHT_CLASS_NAME,
-  COMPOSER_PICKER_MODEL_LIST_SCROLL_CLASS_NAME,
   COMPOSER_PICKER_MODEL_SUBMENU_HEIGHT_CLASS_NAME,
 } from "./composerPickerStyles";
 import { ShortcutKbd } from "../ui/kbd";
@@ -46,10 +46,10 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import {
   groupProviderModelOptions,
   groupProviderModelOptionsWithFavorites,
-  shouldUseCollapsibleModelGroups,
   type ProviderModelOption,
 } from "../../providerModelOptions";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
+import { useIsMobile } from "../../hooks/useMediaQuery";
 import {
   FAVORITE_MODEL_STORAGE_KEYS,
   favoriteModelSlugsForInstance,
@@ -66,7 +66,7 @@ import {
   providerAccountQualifiedLabel,
 } from "../../lib/providerInstancePresentation";
 import { ProviderAccountDot } from "../ProviderAccountMark";
-import { t, useTranslation } from "~/i18n";
+import { openEmbeddedProviderSettings } from "../../embedMode";
 
 function isAvailableProviderOption(option: (typeof PROVIDER_OPTIONS)[number]): option is {
   value: ProviderKind;
@@ -334,6 +334,8 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
 
   const { onAfterSelection } = props;
   const [modelSearchQuery, setModelSearchQuery] = useState("");
+  const isNarrow = useIsMobile();
+  const [expandedProvider, setExpandedProvider] = useState<ProviderKind | null>(null);
   const [cursorFavoriteModelSlugs, setCursorFavoriteModelSlugs] = useLocalStorage(
     FAVORITE_MODEL_STORAGE_KEYS.cursor,
     EMPTY_FAVORITE_MODEL_SLUGS,
@@ -597,6 +599,10 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
           : setOpenCodeFavoriteModelSlugs;
     setFavoriteModelSlugs((current) => toggleFavoriteModelKey(current, provider, instanceId, slug));
   };
+  const openProviderSettings = () => {
+    if (openEmbeddedProviderSettings()) return;
+    appHistory.push("/settings?section=providers");
+  };
 
   // `instanceId` pins the list to one account; without it the provider's selected one.
   const renderModelRadioGroup = (
@@ -712,25 +718,8 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
       );
 
     if (!shouldShowSearch) {
-      const needsScrollContainer =
-        filteredOptions.length >= SEARCHABLE_MODEL_PICKER_THRESHOLD ||
-        shouldUseCollapsibleModelGroups(groupedOptions.length, false);
-      if (needsScrollContainer) {
-        return (
-          <>
-            {discoveryErrorElement}
-            <div
-              className={cn(
-                "overflow-y-auto overscroll-contain py-0.5",
-                COMPOSER_PICKER_MODEL_LIST_SCROLL_CLASS_NAME,
-                COMPOSER_PICKER_MODEL_LIST_MAX_HEIGHT_CLASS_NAME,
-              )}
-            >
-              {content}
-            </div>
-          </>
-        );
-      }
+      // The popup body already scrolls. Nesting a capped list inside it creates
+      // a second scrollbar once the popup's padding exceeds the available height.
       return (
         <>
           {discoveryErrorElement}
@@ -764,15 +753,35 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
     });
     if (status?.enabled === false) {
       return (
-        <MenuItem onClick={() => appHistory.push("/settings?section=providers")}>
-          {t("chat:enableAProviderInSettings")}
-        </MenuItem>
+        <MenuItem onClick={openProviderSettings}>{t("chat:enableAProviderInSettings")}</MenuItem>
       );
     }
     return (
       <>
         {renderProviderInstanceRadioGroup(props.lockedProvider)}
         {renderModelRadioGroup(props.lockedProvider)}
+      </>
+    );
+  }
+
+  // Sideways hover menus overlap in the embedded panel. Drill into the same
+  // popup instead, so expanding model groups cannot expose sibling triggers.
+  if (isNarrow && expandedProvider !== null) {
+    return (
+      <>
+        <MenuItem
+          closeOnClick={false}
+          onClick={() => {
+            setExpandedProvider(null);
+            setModelSearchQuery("");
+          }}
+        >
+          <ChevronLeftIcon aria-hidden="true" className="size-3 shrink-0" />
+          {t("common:app_back")}
+        </MenuItem>
+        <MenuSeparator />
+        {renderProviderInstanceRadioGroup(expandedProvider)}
+        {renderModelRadioGroup(expandedProvider)}
       </>
     );
   }
@@ -809,11 +818,7 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
                 <MenuItem
                   key={account.instanceId}
                   disabled={!canOpenProviderSettings}
-                  onClick={
-                    canOpenProviderSettings
-                      ? () => appHistory.push("/settings?section=providers")
-                      : undefined
-                  }
+                  onClick={canOpenProviderSettings ? openProviderSettings : undefined}
                 >
                   {accountIcon}
                   <span className="truncate">{accountLabel}</span>
@@ -851,11 +856,7 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
             <MenuItem
               key={option.value}
               disabled={!canOpenProviderSettings}
-              onClick={
-                canOpenProviderSettings
-                  ? () => appHistory.push("/settings?section=providers")
-                  : undefined
-              }
+              onClick={canOpenProviderSettings ? openProviderSettings : undefined}
             >
               <OptionIcon
                 aria-hidden="true"
@@ -871,9 +872,28 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
             </MenuItem>
           );
         }
+        if (isNarrow) {
+          return (
+            <MenuItem
+              key={option.value}
+              closeOnClick={false}
+              onClick={() => setExpandedProvider(option.value)}
+            >
+              <OptionIcon
+                aria-hidden="true"
+                className={cn(
+                  "size-3 shrink-0",
+                  providerIconClassName(option.value, "text-muted-foreground/85"),
+                )}
+              />
+              {option.label}
+            </MenuItem>
+          );
+        }
         return (
           <MenuSub key={option.value}>
-            <MenuSubTrigger>
+            {/* Allow crossing lower providers on the way up from the composer. */}
+            <MenuSubTrigger delay={450}>
               <OptionIcon
                 aria-hidden="true"
                 className={cn(
@@ -914,9 +934,9 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
       visibleUnsupportedProviderInstances.length > 0 ? (
         <MenuSeparator />
       ) : null}
-      <MenuItem onClick={() => appHistory.push("/settings?section=providers")}>
+      <MenuItem onClick={openProviderSettings}>
         <PlusIcon aria-hidden="true" className="size-3 shrink-0 text-muted-foreground/85" />
-        <span>{t("chat:addProviders")}</span>
+        <span>{t("chat:addProviders2")}</span>
       </MenuItem>
     </>
   );
@@ -1067,7 +1087,7 @@ export const ProviderModelPicker = function ProviderModelPicker(props: ProviderM
       disabled={props.disabled ?? false}
       compact={props.compact ?? false}
       hideLabel={props.hideLabel ?? false}
-      className="text-[var(--color-text-foreground)]"
+      className="!border-0 bg-transparent text-[var(--color-text-foreground)] shadow-none"
       icon={
         <span className="relative flex">
           <ProviderIcon

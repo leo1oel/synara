@@ -9,9 +9,13 @@
 import {
   GitActionProgressEvent,
   GitBlameLineInput,
+  GitBlameLineResult,
+  GitConnectGitHubRemoteInput,
+  GitConnectGitHubRemoteResult,
+  GitCreateGitHubRepositoryInput,
+  GitCreateGitHubRepositoryResult,
   GitReadFileAtRevInput,
   GitReadFileAtRevResult,
-  GitBlameLineResult,
   GitHandoffThreadInput,
   GitHandoffThreadResult,
   GitPreparePullRequestThreadInput,
@@ -30,6 +34,8 @@ import {
   GitStatusResult,
   GitSummarizeDiffInput,
   GitSummarizeDiffResult,
+  GitGenerateCommitMessageInput,
+  GitGenerateCommitMessageResult,
 } from "@synara/contracts";
 import { ServiceMap } from "effect";
 import type { Effect } from "effect";
@@ -49,7 +55,22 @@ export interface GitRunStackedActionOptions {
  */
 export interface GitManagerShape {
   /**
-   * Read current repository Git status plus open PR metadata when available.
+   * Attach an existing GitHub repository as the local repository's origin.
+   */
+  readonly connectGitHubRemote: (
+    input: GitConnectGitHubRemoteInput,
+  ) => Effect.Effect<GitConnectGitHubRemoteResult, GitManagerServiceError>;
+
+  /**
+   * Create a GitHub repository for the current local repository without pushing files.
+   */
+  readonly createGitHubRepository: (
+    input: GitCreateGitHubRepositoryInput,
+  ) => Effect.Effect<GitCreateGitHubRepositoryResult, GitManagerServiceError>;
+
+  /**
+   * Read current repository Git status. Local only: the branch's pull request is
+   * resolved separately so status never waits on GitHub.
    */
   readonly status: (
     input: GitStatusInput,
@@ -94,6 +115,13 @@ export interface GitManagerShape {
   readonly summarizeDiff: (
     input: GitSummarizeDiffInput,
   ) => Effect.Effect<GitSummarizeDiffResult, GitManagerServiceError>;
+
+  /**
+   * Draft the commit message Commit would generate for these files, without committing.
+   */
+  readonly generateCommitMessage: (
+    input: GitGenerateCommitMessageInput,
+  ) => Effect.Effect<GitGenerateCommitMessageResult, GitManagerServiceError>;
 
   /**
    * Resolve a pull request by URL/number against the current repository.

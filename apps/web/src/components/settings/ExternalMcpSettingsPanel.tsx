@@ -1,3 +1,4 @@
+import { getFormatLocale, t, useTranslation } from "~/i18n";
 import {
   ProjectId,
   type ExternalMcpCapability,
@@ -24,11 +25,9 @@ import {
   externalMcpSetupAction,
 } from "./externalMcpSetup";
 import { SettingsListRow, SettingsRow, SettingsSection } from "./SettingsPanelPrimitives";
-import { t, useTranslation } from "~/i18n";
 
 const INTEGRATIONS_QUERY_KEY = ["server", "externalMcpIntegrations"] as const;
 const PROJECTS_QUERY_KEY = ["orchestration", "externalMcpProjects"] as const;
-const DEFAULT_NAME = "Coding agent";
 const CORE_CAPABILITIES: ReadonlyArray<ExternalMcpCapability> = [
   "projects:read",
   "tasks:create",
@@ -40,41 +39,42 @@ function dateMillis(value: string): number {
   return Date.parse(value);
 }
 
-function formatDate(value: string | null, translate: typeof t, formatLocale: string): string {
-  if (!value) return translate("settings:detail_never");
+function formatDate(value: string | null, locale: string, neverLabel: string): string {
+  if (!value) return neverLabel;
   const milliseconds = dateMillis(value);
-  return Number.isNaN(milliseconds)
-    ? String(value)
-    : new Date(milliseconds).toLocaleString(formatLocale);
-}
-
-function copyWithToast(value: string, title: string): void {
-  void copyTextToClipboard(value).then(
-    () => toastManager.add({ type: "success", title }),
-    (error: unknown) =>
-      toastManager.add({
-        type: "error",
-        title: t("settings:couldNotCopy"),
-        description: error instanceof Error ? error.message : t("git:clipboardAccessFailed"),
-      }),
-  );
+  return Number.isNaN(milliseconds) ? String(value) : new Date(milliseconds).toLocaleString(locale);
 }
 
 export function ExternalMcpSettingsPanel(props: { active: boolean }) {
   const { t, formatLocale } = useTranslation();
 
   const queryClient = useQueryClient();
-  const [name, setName] = useState<string>(DEFAULT_NAME);
+  const [name, setName] = useState<string>(() => t("lattice:codingAgent"));
   const [allProjects, setAllProjects] = useState(true);
   const [selectedProjects, setSelectedProjects] = useState<ReadonlySet<string>>(new Set());
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
+  const [revokedOpen, setRevokedOpen] = useState(false);
   const [allowProjectRead, setAllowProjectRead] = useState(false);
   const [allowLocal, setAllowLocal] = useState(false);
   const [allowFullAccess, setAllowFullAccess] = useState(false);
   const [allowComputerControl, setAllowComputerControl] = useState(false);
   const [setup, setSetup] = useState<ExternalMcpCreateIntegrationResult | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const displayLocale = getFormatLocale() === "zh-CN" ? "zh-CN" : "en";
+  const neverLabel = t("settings:detail_never");
+
+  const copyWithToast = (value: string, title: string): void => {
+    void copyTextToClipboard(value).then(
+      () => toastManager.add({ type: "success", title }),
+      (error: unknown) =>
+        toastManager.add({
+          type: "error",
+          title: t("settings:couldNotCopy"),
+          description: error instanceof Error ? error.message : t("git:clipboardAccessFailed"),
+        }),
+    );
+  };
 
   useEffect(() => {
     if (!props.active) return;
@@ -141,6 +141,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
       ensureNativeApi().server.revokeExternalMcpIntegration({ integrationId }),
     onSuccess: (_result, integrationId) => {
       setManualOpen(false);
+      setRevokedOpen(false);
       setSetup((current) =>
         current?.integration.integrationId === integrationId ? null : current,
       );
@@ -185,7 +186,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
       integration,
       pairingCode: "already-paired",
       pairingExpiresAt: integration.createdAt,
-      setupCommand: "Pairing already completed",
+      setupCommand: t("lattice:pairingAlreadyCompleted"),
       stdio: integration.stdio,
     });
   };
@@ -239,41 +240,114 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
         setupCommand: paired ? null : setup.setupCommand,
         stdio: setup.stdio,
         platform,
+        locale: displayLocale,
       })
     : null;
   const manualConfiguration = setup
-    ? buildExternalMcpClientConfiguration("other", setup.stdio, platform)
+    ? buildExternalMcpClientConfiguration("other", setup.stdio, platform, displayLocale)
     : null;
   const examplePrompt = setup
     ? buildExternalMcpExamplePrompt(
         setup.integration.projectScope === "all"
           ? null
           : (setup.integration.allowedProjects[0]?.title ?? null),
+        displayLocale,
       )
     : null;
+  const integrations = integrationsQuery.data ?? [];
+  const currentIntegrations = integrations.filter((integration) => integration.revokedAt === null);
+  const revokedIntegrations = integrations.filter((integration) => integration.revokedAt !== null);
+  const renderIntegrationRows = (items: typeof integrations) =>
+    items.map((integration) => {
+      const active = integration.revokedAt === null && dateMillis(integration.expiresAt) > nowMs;
+      const status = active
+        ? integration.lastUsedAt
+          ? t("chat:connected")
+          : integration.pairedAt
+            ? t("settings:externalStatus_pairedUnused")
+            : t("settings:externalStatus_waitingPairing")
+        : integration.revokedAt
+          ? t("settings:externalStatus_revoked")
+          : t("common:expired");
+      return (
+        <SettingsListRow
+          key={integration.integrationId}
+          align="start"
+          title={integration.name}
+          description={
+            <div className="space-y-1">
+              <div>{status}</div>
+              <div>
+                {t("lattice:projects", {
+                  projects: describeExternalMcpProjects(integration, displayLocale),
+                })}
+              </div>
+              <div>
+                {t("lattice:permissions", {
+                  permissions: describeExternalMcpPermissions(
+                    integration.capabilities,
+                    displayLocale,
+                  ),
+                })}
+              </div>
+              <div>
+                {t("lattice:createdLastUsedExpires", {
+                  created: formatDate(integration.createdAt, getFormatLocale(), neverLabel),
+                  lastUsed: formatDate(integration.lastUsedAt, getFormatLocale(), neverLabel),
+                  expires: formatDate(integration.expiresAt, getFormatLocale(), neverLabel),
+                })}
+              </div>
+            </div>
+          }
+          actions={
+            active ? (
+              <div className="flex items-center gap-2">
+                <Button
+                  size="xs"
+                  variant="outline"
+                  disabled={refreshPairingMutation.isPending}
+                  onClick={() => {
+                    if (integration.pairedAt) continuePairedSetup(integration);
+                    else refreshPairingMutation.mutate(integration.integrationId);
+                  }}
+                >
+                  {integration.pairedAt ? t("settings:continueSetup") : t("settings:resumePairing")}
+                </Button>
+                <Button
+                  size="xs"
+                  variant="destructive-outline"
+                  disabled={revokeMutation.isPending}
+                  onClick={() => revokeMutation.mutate(integration.integrationId)}
+                >
+                  {t("settings:revoke")}
+                </Button>
+              </div>
+            ) : null
+          }
+        />
+      );
+    });
 
   return (
     <div className="space-y-6">
       {!setup ? (
         <SettingsSection title="settings:connectACodingAgent">
           <SettingsRow
-            id="setting-name"
-            title="common:scripts_name"
-            description="settings:howThisConnectionAppearsInSynaraWorksWithCodex"
+            title={t("common:scripts_name")}
+            description={t("lattice:howThisConnectionAppearsInLatticeWorks")}
             control={
               <Input
                 className="w-full sm:w-64"
                 value={name}
                 maxLength={120}
-                placeholder={DEFAULT_NAME}
+                placeholder={t("lattice:codingAgent")}
                 onChange={(event) => setName(event.target.value)}
               />
             }
           />
           <SettingsRow
-            id="setting-access-all-of-synara"
-            title="settings:accessAllOfSynara"
-            description="settings:theAgentCanDiscoverAndWorkInEveryProject"
+            title={t("lattice:accessAllLatticeProjects")}
+            description={t("settings:theAgentCanDiscoverAndWorkInEveryProject")}
             control={<Switch checked={allProjects} onCheckedChange={setAllProjects} />}
           >
             <DisclosureRegion open={!allProjects} contentClassName="mt-3">
@@ -305,7 +379,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                   );
                 })}
                 {projects.length === 0 ? (
-                  <span className="text-ui leading-snug text-muted-foreground">
+                  <span className="text-ui-xs text-muted-foreground">
                     {t("settings:noProjectsAreAvailable")}
                   </span>
                 ) : null}
@@ -330,46 +404,59 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
           >
             <DisclosureRegion
               open={advancedOpen}
-              contentClassName="mt-3 space-y-4 border-t border-border/70 pt-3"
+              className="[overflow-anchor:none]"
+              contentClassName="mt-3 space-y-4 border-t border-border/70 pt-4"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-ui leading-snug font-medium">
+                  <div className="text-ui-xs font-medium">
                     {t("settings:readOtherProjectTasks")}
                   </div>
                   <div className="mt-0.5 text-ui-sm leading-relaxed text-muted-foreground">
                     {t("settings:withoutThisPermissionTheAgentCanReadOnlyTasks")}
                   </div>
                 </div>
-                <Switch checked={allowProjectRead} onCheckedChange={setAllowProjectRead} />
+                <Switch
+                  checked={allowProjectRead}
+                  onCheckedChange={setAllowProjectRead}
+                  aria-label={t("settings:readOtherProjectTasks")}
+                />
               </div>
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-ui leading-snug font-medium">
-                    {t("settings:useTheSharedLocalCheckout")}
+                  <div className="text-ui-xs font-medium">
+                    {t("settings:externalPermission_local")}
                   </div>
                   <div className="mt-0.5 text-ui-sm leading-relaxed text-muted-foreground">
                     {t("settings:highImpactTasksMayModifyTheCheckoutYouAre")}
                   </div>
                 </div>
-                <Switch checked={allowLocal} onCheckedChange={setAllowLocal} />
+                <Switch
+                  checked={allowLocal}
+                  onCheckedChange={setAllowLocal}
+                  aria-label={t("settings:externalPermission_local")}
+                />
               </div>
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-ui leading-snug font-medium">
-                    {t("settings:runWithoutApprovalPrompts")}
+                  <div className="text-ui-xs font-medium">
+                    {t("settings:externalPermission_fullAccess")}
                   </div>
                   <div className="mt-0.5 text-ui-sm leading-relaxed text-muted-foreground">
                     {t("settings:highImpactTheExternalAgentMayStartFullAccess")}
                   </div>
                 </div>
-                <Switch checked={allowFullAccess} onCheckedChange={setAllowFullAccess} />
+                <Switch
+                  checked={allowFullAccess}
+                  onCheckedChange={setAllowFullAccess}
+                  aria-label={t("settings:externalPermission_fullAccess")}
+                />
               </div>
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-xs font-medium">{t("settings:computerControl")}</div>
-                  <div className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
-                    {t("settings:highImpactTasksMayDriveThisMacSScreen")}
+                  <div className="text-ui-xs font-medium">{t("settings:computerControl")}</div>
+                  <div className="mt-0.5 text-ui-sm leading-relaxed text-muted-foreground">
+                    {t("lattice:computerControlHighImpact")}
                   </div>
                 </div>
                 <Switch checked={allowComputerControl} onCheckedChange={setAllowComputerControl} />
@@ -393,7 +480,6 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
 
       {setup && setupIntegration && setupPrompt && manualConfiguration && examplePrompt ? (
         <SettingsSection
-          translateTitle={false}
           title={t("settings:connectorConnectTitle", { name: setupIntegration.name })}
         >
           <SettingsRow
@@ -415,13 +501,13 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
             }
             description={
               revoked
-                ? t("settings:externalConnectionRevoked")
+                ? t("lattice:thisConnectionHasBeenRevokedAndCan")
                 : integrationExpired
-                  ? t("settings:externalConnectionExpired")
+                  ? t("lattice:thisConnectionHasExpiredAndCanNo")
                   : connected
-                    ? t("settings:externalConnectionReady")
+                    ? t("lattice:latticeReceivedARequestFromThisAgent")
                     : paired
-                      ? t("settings:externalCredentialStored")
+                      ? t("lattice:thePrivateCredentialIsStoredLocallyIf")
                       : pairingExpired
                         ? t("settings:externalPairingExpired")
                         : t("settings:externalPairingInstructions")
@@ -429,10 +515,10 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
             status={
               connected
                 ? t("settings:externalLastConnected", {
-                    date: formatDate(setupIntegration.lastUsedAt, t, formatLocale),
+                    date: formatDate(setupIntegration.lastUsedAt, getFormatLocale(), neverLabel),
                   })
                 : t("settings:externalConnectionExpires", {
-                    date: formatDate(setupIntegration.expiresAt, t, formatLocale),
+                    date: formatDate(setupIntegration.expiresAt, getFormatLocale(), neverLabel),
                   })
             }
             control={
@@ -469,14 +555,13 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
             }
           />
           <SettingsRow
-            id="setting-1-give-your-agent-this-prompt"
-            title="settings:1GiveYourAgentThisPrompt"
-            description="settings:copyThePromptAndPasteItIntoTheAgent"
+            title={t("settings:1GiveYourAgentThisPrompt")}
+            description={t("lattice:copyThePromptAndPasteItInto")}
             status={
               paired
                 ? t("settings:externalPairedPromptStatus")
                 : t("settings:externalPairingExpires", {
-                    date: formatDate(setup.pairingExpiresAt, t, formatLocale),
+                    date: formatDate(setup.pairingExpiresAt, getFormatLocale(), neverLabel),
                   })
             }
             control={
@@ -517,7 +602,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
               {!paired ? (
                 <div>
                   <div className="mb-2 flex items-center justify-between gap-3">
-                    <span className="text-ui leading-snug font-medium">
+                    <span className="text-ui-xs font-medium">
                       {t("settings:pairingCommandRunInTerminal")}
                     </span>
                     <Button
@@ -541,7 +626,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
               ) : null}
               <div>
                 <div className="mb-2 flex items-center justify-between gap-3">
-                  <span className="text-ui leading-snug font-medium">
+                  <span className="text-ui-xs font-medium">
                     {t("settings:mCPConfigurationJSON")}
                   </span>
                   <Button
@@ -570,8 +655,8 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
             description="settings:openANewChatInTheAgentYouJust"
             status={
               connected
-                ? t("settings:externalConnectionVerified")
-                : t("settings:externalFirstRequestStatus")
+                ? t("lattice:connectionVerifiedByLattice")
+                : t("lattice:latticeWillShowConnectedAfterTheAgent")
             }
             control={
               <Button
@@ -598,77 +683,36 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
       <SettingsSection title="settings:connectedAgents">
         {integrationsQuery.isLoading ? (
           <SettingsListRow title={t("settings:loadingConnections")} />
-        ) : integrationsQuery.data?.length ? (
-          integrationsQuery.data.map((integration) => {
-            const active =
-              integration.revokedAt === null && dateMillis(integration.expiresAt) > nowMs;
-            const status = active
-              ? integration.lastUsedAt
-                ? t("settings:externalStatus_connected")
-                : integration.pairedAt
-                  ? t("settings:externalStatus_pairedUnused")
-                  : t("settings:externalStatus_waitingPairing")
-              : integration.revokedAt
-                ? t("settings:externalStatus_revoked")
-                : t("settings:externalStatus_expired");
-            return (
-              <SettingsListRow
-                key={integration.integrationId}
-                align="start"
-                title={integration.name}
-                description={
-                  <div className="space-y-1">
-                    <div>{status}</div>
-                    <div>
-                      {t("settings:projects")} {describeExternalMcpProjects(integration, t)}
-                    </div>
-                    <div>
-                      {t("settings:permissions")}{" "}
-                      {describeExternalMcpPermissions(integration.capabilities, t)}
-                    </div>
-                    <div>
-                      {t("settings:created")} {formatDate(integration.createdAt, t, formatLocale)}{" "}
-                      {t("settings:lastUsed")} {formatDate(integration.lastUsedAt, t, formatLocale)}{" "}
-                      {t("settings:expires")} {formatDate(integration.expiresAt, t, formatLocale)}
-                    </div>
-                  </div>
-                }
-                actions={
-                  active ? (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="xs"
-                        variant="outline"
-                        disabled={refreshPairingMutation.isPending}
-                        onClick={() => {
-                          if (integration.pairedAt) continuePairedSetup(integration);
-                          else refreshPairingMutation.mutate(integration.integrationId);
-                        }}
-                      >
-                        {integration.pairedAt
-                          ? t("settings:continueSetup")
-                          : t("settings:resumePairing")}
-                      </Button>
-                      <Button
-                        size="xs"
-                        variant="destructive-outline"
-                        disabled={revokeMutation.isPending}
-                        onClick={() => revokeMutation.mutate(integration.integrationId)}
-                      >
-                        {t("settings:revoke")}
-                      </Button>
-                    </div>
-                  ) : null
-                }
-              />
-            );
-          })
+        ) : currentIntegrations.length ? (
+          renderIntegrationRows(currentIntegrations)
         ) : (
           <SettingsListRow
             title={t("settings:noConnectedAgents")}
-            description={t("settings:connectCodexClaudeOrAnotherLocalMCPAgentTo")}
+            description={t("lattice:connectCodexClaudeOrAnotherLocalMCP")}
           />
         )}
+        {revokedIntegrations.length > 0 ? (
+          <>
+            <SettingsListRow
+              title={t("lattice:revokedConnections", { count: revokedIntegrations.length })}
+              description={t("lattice:revokedConnectionsAreHiddenByDefaultTheir")}
+              actions={
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  aria-expanded={revokedOpen}
+                  onClick={() => setRevokedOpen((current) => !current)}
+                >
+                  {revokedOpen ? t("chat:hide") : t("chat:show")}
+                  <DisclosureChevron open={revokedOpen} className="ml-1 size-3.5" />
+                </Button>
+              }
+            />
+            <DisclosureRegion open={revokedOpen} contentClassName="divide-y divide-border/70">
+              {renderIntegrationRows(revokedIntegrations)}
+            </DisclosureRegion>
+          </>
+        ) : null}
       </SettingsSection>
     </div>
   );

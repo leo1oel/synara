@@ -2,13 +2,27 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { resolveConfiguredAccountUrl } from "@synara/shared/account";
 import { desktopFlavorFromBundleId } from "@synara/shared/betaFeatures";
+import { resolveAgentHostProfile } from "./agentGateway/hostProfile.ts";
 
 export const REMOTE_IMPORT_SUSPENSION_FILE = "remote-suspended-after-import.json";
+
+/**
+ * Lattice embeds the agent panel without a Synara account: no sign-in, Remote
+ * connections, live activity, profile or Inbox sync, whatever the environment says.
+ * Read per call, like the other gates, so tests can switch the host profile.
+ */
+export function synaraAccountUnavailableInHost(): string | undefined {
+  return resolveAgentHostProfile().id === "lattice"
+    ? "Synara accounts and Remote connections are not part of Lattice."
+    : undefined;
+}
 
 /** TLS/owner-pairing component and packaged Electron gates passed; release qualification is separate. */
 const REMOTE_V2_QUALIFIED = true;
 
 export function remoteConnectionsUnavailableReason(stateDir?: string): string | undefined {
+  const hostReason = synaraAccountUnavailableInHost();
+  if (hostReason) return hostReason;
   const flavor = desktopFlavorFromBundleId(process.env.SYNARA_DESKTOP_BUNDLE_ID);
   if (flavor === "production") {
     // Stable needs both an explicit opt-in and a configured HTTPS account origin.
@@ -35,6 +49,7 @@ export function remoteConnectionsUnavailableReason(stateDir?: string): string | 
 
 // Keep existing non-Stable reporting behavior while applying the Stable rollout policy.
 export function accountLiveActivityEnabled(stateDir?: string): boolean {
+  if (synaraAccountUnavailableInHost()) return false;
   const flavor = desktopFlavorFromBundleId(process.env.SYNARA_DESKTOP_BUNDLE_ID);
   return flavor !== "production" || remoteConnectionsUnavailableReason(stateDir) === undefined;
 }
@@ -45,6 +60,8 @@ export function requireRemoteConnections(stateDir?: string): void {
 }
 
 export function accountProfileSyncUnavailableReason(): string | undefined {
+  const hostReason = synaraAccountUnavailableInHost();
+  if (hostReason) return hostReason;
   const flavor = desktopFlavorFromBundleId(process.env.SYNARA_DESKTOP_BUNDLE_ID);
   // Stable and Remote offer account profiles on sign-in. Other hosts retain
   // operator opt-in, and an explicit opt-out is honored in every flavor.

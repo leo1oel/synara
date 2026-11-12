@@ -8,6 +8,7 @@
 import { type ReactNode, useState } from "react";
 
 import { useContainerSize } from "~/hooks/useContainerSize";
+import { getFormatLocale, t } from "~/i18n";
 import { cn } from "~/lib/utils";
 import {
   PROVIDER_SERIES_COLOR,
@@ -46,11 +47,15 @@ function amountOf(
 }
 
 function dayLabel(date: Date): string {
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return date.toLocaleDateString(getFormatLocale(), { month: "short", day: "numeric" });
 }
 
 function longDayLabel(date: Date): string {
-  return date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  return date.toLocaleDateString(getFormatLocale(), {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 /** Indexes of the days that get an x-axis label: first, last, and a few between. */
@@ -133,7 +138,10 @@ export function ChartLegend(props: {
             key={provider}
             type="button"
             aria-pressed={shown}
-            title={shown ? `Hide ${providerLabel(provider)}` : `Show ${providerLabel(provider)}`}
+            title={t(
+              shown ? "lattice:usageAnalyticsHideProvider" : "lattice:usageAnalyticsShowProvider",
+              { provider: providerLabel(provider) },
+            )}
             onClick={() => props.onToggle(provider)}
             className={cn(
               "flex h-6 items-center gap-1.5 rounded-md px-1.5 text-ui-sm transition-colors hover:bg-foreground/[0.05] focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none",
@@ -342,7 +350,10 @@ export function DailyBarChart(props: DayChartProps) {
           flip={hovered > props.days.length / 2}
           title={longDayLabel(hoveredDay.date)}
           rows={dayTooltipRows(hoveredDay, props.providers, props.metric, props.format)}
-          total={{ label: "Total", value: props.format(dayTotal(hoveredDay)) }}
+          total={{
+            label: t("lattice:usageAnalyticsTotal"),
+            value: props.format(dayTotal(hoveredDay)),
+          }}
         />
       ) : null}
     </div>
@@ -484,7 +495,11 @@ export function ProviderLineChart(props: DayChartProps) {
   );
 }
 
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+/** Short weekday names, Monday first, in the interface language (2024-01-01 was a Monday). */
+function weekdayLabels(): string[] {
+  const format = new Intl.DateTimeFormat(getFormatLocale(), { weekday: "short" });
+  return Array.from({ length: 7 }, (_, day) => format.format(new Date(2024, 0, 1 + day)));
+}
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 const RHYTHM_ROW_PX = 20;
 
@@ -494,6 +509,7 @@ export function RhythmChart(props: {
   format: Format;
 }) {
   const [hovered, setHovered] = useState<{ weekday: number; hour: number } | null>(null);
+  const weekdays = weekdayLabels();
   const max = Math.max(0, ...props.rhythm.flat());
   let peak = { weekday: -1, hour: -1 };
   props.rhythm.forEach((hours, weekday) =>
@@ -505,7 +521,7 @@ export function RhythmChart(props: {
   const hoveredValue = hovered ? (props.rhythm[hovered.weekday]?.[hovered.hour] ?? 0) : 0;
   return (
     <div className="relative" role="presentation" onMouseLeave={() => setHovered(null)}>
-      {WEEKDAYS.map((label, weekday) => {
+      {weekdays.map((label, weekday) => {
         const hours = props.rhythm[weekday] ?? [];
         return (
           <div key={label} className="flex items-center gap-2" style={{ height: RHYTHM_ROW_PX }}>
@@ -557,8 +573,14 @@ export function RhythmChart(props: {
           left={`calc(2.5rem + ${(hovered.hour + 0.5) / 24} * (100% - 2.5rem))`}
           top={(hovered.weekday + 1) * RHYTHM_ROW_PX + 4}
           flip={hovered.hour >= 12}
-          title={`${WEEKDAYS[hovered.weekday]} ${String(hovered.hour).padStart(2, "0")}:00–${String((hovered.hour + 1) % 24).padStart(2, "0")}:00`}
-          rows={[{ key: "tokens", label: "Tokens", value: props.format(hoveredValue) }]}
+          title={`${weekdays[hovered.weekday]} ${String(hovered.hour).padStart(2, "0")}:00–${String((hovered.hour + 1) % 24).padStart(2, "0")}:00`}
+          rows={[
+            {
+              key: "tokens",
+              label: t("lattice:usageAnalyticsTokens"),
+              value: props.format(hoveredValue),
+            },
+          ]}
         />
       ) : null}
     </div>

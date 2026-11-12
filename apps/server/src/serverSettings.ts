@@ -8,8 +8,8 @@
 import { isDeepStrictEqual } from "node:util";
 
 import {
-  DEFAULT_DROID_GIT_TEXT_GENERATION_MODEL,
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
+  DEFAULT_DROID_GIT_TEXT_GENERATION_MODEL,
   DEFAULT_MODEL_BY_PROVIDER,
   DEFAULT_SERVER_SETTINGS,
   type ModelSelection,
@@ -318,6 +318,36 @@ export function resolveTextGenerationProvider(settings: ServerSettings): ServerS
   };
 }
 
+/**
+ * The model Lattice proofreading runs on. The proofreading override applies
+ * while its provider instance is enabled and has a text-generation path;
+ * otherwise, including when no override was chosen, proofreading inherits the
+ * already-resolved Git writing model, so it never runs on a provider the
+ * writer turned off.
+ */
+export function resolveProofreadModelSelection(settings: ServerSettings): {
+  readonly selection: ModelSelection;
+  readonly source: "proofreading" | "git-writing";
+} {
+  const override = settings.proofreadModelSelection;
+  const instance = override ? findTextGenerationSelectionInstance(settings, override) : undefined;
+  if (override && instance?.enabled && hasDedicatedTextGenerationProvider(instance.driver)) {
+    return {
+      selection:
+        instance.driver === override.provider &&
+        instance.instanceId === resolveModelSelectionInstanceId(override)
+          ? override
+          : ({
+              provider: instance.driver,
+              instanceId: instance.instanceId,
+              model: override.model,
+            } as ModelSelection),
+      source: "proofreading",
+    };
+  }
+  return { selection: settings.textGenerationModelSelection, source: "git-writing" };
+}
+
 function findTextGenerationSelectionInstance(
   settings: ServerSettings,
   selection: ModelSelection,
@@ -328,11 +358,16 @@ function findTextGenerationSelectionInstance(
   );
 }
 
-function findFallbackTextGenerationInstance(
-  settings: ServerSettings,
-): (ResolvedProviderInstance & { readonly driver: GitTextGenerationProvider }) | null {
+function findFallbackTextGenerationInstance(settings: ServerSettings):
+  | (ResolvedProviderInstance & {
+      readonly driver: Exclude<GitTextGenerationProvider, "pi">;
+    })
+  | null {
   const instances = deriveProviderInstances(settings);
   for (const provider of GIT_TEXT_GENERATION_PROVIDER_ORDER) {
+    // Pi has no default model, so it serves Git writing only when the writer
+    // picks a Pi model; it is never a silent fallback.
+    if (provider === "pi") continue;
     const instance = instances.find(
       (candidate) => candidate.enabled && candidate.driver === provider,
     );
@@ -587,12 +622,14 @@ function normalizeSettings(
     preserveRedactedProviderInstanceEnvironment(current, patch),
   );
   const next = applyServerSettingsPatch(current, preservedPatch);
-  return Schema.decodeUnknownEffect(ServerSettings)({
-    ...next,
-    usageLimitRecoveryEpoch:
-      current.usageLimitRecoveryEpoch +
-      (current.autoResumeAfterUsageLimits && !next.autoResumeAfterUsageLimits ? 1 : 0),
-  }).pipe(
+  return Schema.decodeUnknownEffect(ServerSettings)(
+    forceAllProvidersEnabled({
+      ...next,
+      usageLimitRecoveryEpoch:
+        current.usageLimitRecoveryEpoch +
+        (current.autoResumeAfterUsageLimits && !next.autoResumeAfterUsageLimits ? 1 : 0),
+    }),
+  ).pipe(
     Effect.mapError(
       (cause) =>
         new ServerSettingsError({
@@ -636,8 +673,8 @@ function omitProviderPasswords(patch: ServerUpdateSettingsInput): ServerUpdateSe
   };
 }
 
-// Migrate only portable Kilo state. Its model/options shape and enabled flag
-// remain meaningful, but Kilo binary paths, endpoints, and credentials are not
+// Migrate only portable Kilo state. Its model/options shape remains meaningful,
+// but Kilo binary paths, endpoints, and credentials are not
 // compatible with the OpenCode process protocol and must not be copied.
 function migrateRemovedKiloSettings(settings: unknown): unknown {
   if (settings === null || typeof settings !== "object" || Array.isArray(settings)) {
@@ -694,7 +731,6 @@ function migrateRemovedKiloSettings(settings: unknown): unknown {
           ...remainingProviders,
           opencode: {
             ...existingOpenCode,
-            ...(kiloRecord.enabled === true ? { enabled: true } : {}),
             ...(portableCustomModels.length > 0 ? { customModels: portableCustomModels } : {}),
           },
         },
@@ -702,6 +738,24 @@ function migrateRemovedKiloSettings(settings: unknown): unknown {
     }
   }
   return migrated;
+}
+
+function forceAllProvidersEnabled(settings: unknown): unknown {
+  if (settings === null || typeof settings !== "object" || Array.isArray(settings)) return settings;
+  const record = settings as Record<string, unknown>;
+  if (record.providers === null || typeof record.providers !== "object") return settings;
+  const providers = record.providers as Record<string, unknown>;
+  return {
+    ...record,
+    providers: Object.fromEntries(
+      Object.entries(providers).map(([provider, value]) => [
+        provider,
+        value !== null && typeof value === "object" && !Array.isArray(value)
+          ? { ...(value as Record<string, unknown>), enabled: true }
+          : value,
+      ]),
+    ),
+  };
 }
 
 function decodeSettingsFromJson(settingsPath: string, raw: string) {
@@ -728,7 +782,7 @@ function decodeSettingsFromJson(settingsPath: string, raw: string) {
     );
     if (imports._tag === "Failure") return { _tag: "InvalidLegacyImportReceipt" as const };
     const decoded = Schema.decodeUnknownExit(ServerSettings)(
-      migrateRemovedKiloSettings(envelope?.settings ?? parsed),
+      forceAllProvidersEnabled(migrateRemovedKiloSettings(envelope?.settings ?? parsed)),
     );
     if (decoded._tag === "Failure") {
       return { _tag: "Failure" as const, error: Cause.pretty(decoded.cause) };

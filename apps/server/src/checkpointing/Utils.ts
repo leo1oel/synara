@@ -9,8 +9,9 @@ import {
   TurnId,
 } from "@synara/contracts";
 import { resolveThreadWorkspaceCwd as resolveSharedThreadWorkspaceCwd } from "@synara/shared/threadEnvironment";
+import { ACTIVE_AGENT_HOST_PROFILE } from "../agentGateway/hostProfile.ts";
 
-export const CHECKPOINT_REFS_PREFIX = "refs/synara/checkpoints";
+export const CHECKPOINT_REFS_PREFIX = `refs/${ACTIVE_AGENT_HOST_PROFILE.id}/checkpoints`;
 
 const MANAGED_CHECKPOINT_REF_PATTERN =
   /^refs\/([A-Za-z0-9._-]+)\/checkpoints\/([A-Za-z0-9_-]+)\/(turn|message-start|turn-start|turn-live|revert-rescue)\/([A-Za-z0-9_-]+)$/;
@@ -83,6 +84,20 @@ export function checkpointRefForThreadTurnStartInManagedFamily(
   if (parsed?.threadToken !== Encoding.encodeBase64Url(threadId)) return null;
   return CheckpointRef.makeUnsafe(
     `${parsed.familyPrefix}/turn-start/${Encoding.encodeBase64Url(turnId)}`,
+  );
+}
+
+// Paths the host (Lattice) wrote while this turn ran: a co-author's synced or
+// realtime edit, or the user's own save. Those edits land inside the turn's
+// diff, so file Undo refuses to reverse them. The ref points at a blob of
+// newline-separated workspace-relative paths, not a commit, and sits outside
+// the managed ref kinds so no checkpoint code mistakes it for a snapshot.
+export function checkpointRefForThreadTurnHostWrites(
+  threadId: ThreadId,
+  turnId: TurnId,
+): CheckpointRef {
+  return CheckpointRef.makeUnsafe(
+    `${CHECKPOINT_REFS_PREFIX}/${Encoding.encodeBase64Url(threadId)}/turn-host-writes/${Encoding.encodeBase64Url(turnId)}`,
   );
 }
 

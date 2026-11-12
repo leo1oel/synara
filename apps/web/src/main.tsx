@@ -3,24 +3,56 @@ import ReactDOM from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
 
 import "@fontsource-variable/jetbrains-mono";
+import "@fontsource-variable/inter";
 import "./index.css";
 
 import { appHistory } from "./appNavigation";
 import { revealHubsRailItemOnce } from "./appSettings";
 import { getRouter } from "./router";
 import { APP_DISPLAY_NAME } from "./branding";
+import { initializeEmbedMode } from "./embedMode";
+import { startLatticeAgentQualityRelay } from "./latticeAgentQualityRelay";
+import { startLatticeHostWritesRelay } from "./latticeHostWritesRelay";
+import { answerLatticeBibliographyRequest } from "./latticeBibliographyRelay";
+import { answerLatticeCanvasRequest } from "./latticeCanvasRelay";
+import { answerLatticeSpreadsheetRequest } from "./latticeSpreadsheetRelay";
+import { answerLatticeProjectDocumentRequest } from "./latticeProjectDocumentRelay";
+import { answerLatticeEditorCommentsRequest } from "./latticeEditorCommentsRelay";
+import { answerLatticePresentationRequest } from "./latticePresentationRelay";
+import { startLatticeHostToolRelay } from "./latticeHostToolRelay";
+import { startLatticeHostThemeRelay } from "./latticeHostThemeRelay";
+import { startLatticePopupDismissal } from "./latticePopupDismissal";
+import { startLatticeHostShortcuts } from "./latticeHostShortcuts";
 import { isDesktopPresentation } from "~/lib/hosts/workspacePresentation";
 import { readWorkspaceFrame } from "./lib/hosts/workspaceFrame";
 import { readDesktopWindowTranslucency } from "./lib/desktopWindowTranslucency";
 import { installGlassOverlayCutout } from "./lib/glassOverlayCutout";
 import { trackProductNavigation } from "./lib/productAnalytics";
 import { installRendererErrorDiagnostics } from "./lib/rendererErrorDiagnostics";
+import { applyHostLocale } from "./i18n";
+
+// The embed handshake carries Lattice's language, so it is applied before the first render.
+initializeEmbedMode();
+applyHostLocale();
+
 const disposeRendererDiagnostics = installRendererErrorDiagnostics();
 if (import.meta.hot) import.meta.hot.dispose(() => disposeRendererDiagnostics?.());
-
+startLatticeAgentQualityRelay();
+startLatticeHostWritesRelay();
+startLatticeHostToolRelay({
+  bibliography: answerLatticeBibliographyRequest,
+  canvas: answerLatticeCanvasRequest,
+  spreadsheet: answerLatticeSpreadsheetRequest,
+  projectDocument: answerLatticeProjectDocumentRequest,
+  editorComments: answerLatticeEditorCommentsRequest,
+  presentation: answerLatticePresentationRequest,
+});
+startLatticeHostThemeRelay();
+startLatticePopupDismissal();
+// Before the first render, so Lattice's keys are stopped ahead of every shortcut listener here.
+startLatticeHostShortcuts();
 // Before the first render: settings hooks read the stored rail on mount.
 revealHubsRailItemOnce();
-
 const router = getRouter(appHistory);
 const disposeProductNavigation = router.subscribe("onResolved", ({ toLocation, pathChanged }) => {
   if (pathChanged) trackProductNavigation(toLocation.pathname);

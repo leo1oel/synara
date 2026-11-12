@@ -1,6 +1,7 @@
 import { Effect, Exit, Layer, ManagedRuntime, Scope } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { AgentQualityTrace } from "../../agentGateway/Services/AgentQualityTrace.ts";
 import { CheckpointReactor } from "../Services/CheckpointReactor.ts";
 import { ProviderCommandReactor } from "../Services/ProviderCommandReactor.ts";
 import { ProviderRuntimeIngestionService } from "../Services/ProviderRuntimeIngestion.ts";
@@ -27,6 +28,20 @@ describe("OrchestrationReactor", () => {
 
     runtime = ManagedRuntime.make(
       Layer.effect(OrchestrationReactor, makeOrchestrationReactor).pipe(
+        Layer.provideMerge(
+          Layer.succeed(AgentQualityTrace, {
+            start: Effect.acquireRelease(
+              Effect.sync(() => {
+                started.push("agent-quality-trace");
+              }),
+              () => Effect.sync(() => stopped.push("agent-quality-trace")),
+            ),
+            prepareTurnContext: () => Effect.void,
+            bindTurnContext: () => Effect.void,
+            failTurnContext: () => Effect.void,
+            recordCompile: () => Effect.void,
+          }),
+        ),
         Layer.provideMerge(
           Layer.succeed(SidechatExpiryReactor, {
             start: Effect.acquireRelease(
@@ -66,6 +81,7 @@ describe("OrchestrationReactor", () => {
             listBlockingDeliveries: () => Effect.succeed([]),
             reconcileDelivery: () => Effect.succeed(null),
             regenerateThreadTitle: () => Effect.succeed({ status: "no-context", title: null }),
+            showPanelThread: () => Effect.succeed({ prewarm: "not-requested" as const }),
           }),
         ),
         Layer.provideMerge(
@@ -112,6 +128,7 @@ describe("OrchestrationReactor", () => {
     await Effect.runPromise(reactor.reconcileSettledOpenTurns);
 
     expect(started).toEqual([
+      "agent-quality-trace",
       "studio-output-reactor",
       "checkpoint-reactor",
       "thread-git-metadata-reactor",
@@ -129,6 +146,7 @@ describe("OrchestrationReactor", () => {
       "thread-git-metadata-reactor",
       "checkpoint-reactor",
       "studio-output-reactor",
+      "agent-quality-trace",
     ]);
   });
 });

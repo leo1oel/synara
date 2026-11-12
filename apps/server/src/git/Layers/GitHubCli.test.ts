@@ -1,7 +1,7 @@
 import { assert, it } from "@effect/vitest";
 import { Deferred, Effect, Fiber, Layer } from "effect";
 import { TestClock } from "effect/testing";
-import { afterEach, expect, vi } from "vitest";
+import { afterEach, beforeEach, expect, vi } from "vitest";
 
 vi.mock("../../processRunner", () => ({
   runProcess: vi.fn(),
@@ -27,6 +27,11 @@ const processResult = (stdout: string, overrides: { code?: number; stderr?: stri
   timedOut: false,
 });
 const layer = it.layer(GitHubCliLive);
+
+// A rate limit is checked against gh's account (isGitHubCliSignedOut); give every test one.
+beforeEach(() => {
+  vi.stubEnv("GH_TOKEN", "test-token");
+});
 
 afterEach(() => {
   mockedRunProcess.mockReset();

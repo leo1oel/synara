@@ -267,79 +267,50 @@ describe("AppSnapSettingsPanel", () => {
     await mounted.unmount();
   });
 
-  it("walks through a denied permission with the guided flow", async () => {
-    const pushedStateRef: { current: ((state: DesktopAppSnapState) => void) | null } = {
-      current: null,
-    };
-    const openPermissionSettings = vi.fn().mockResolvedValue(true);
-    const restartApp = vi.fn();
-    const showPermissionGuide = vi.fn().mockResolvedValue(undefined);
-    const hidePermissionGuide = vi.fn().mockResolvedValue(undefined);
+  // Lattice shows each macOS permission as a badge with one Recheck control (4626f08ab)
+  // instead of upstream's guided Grant flow.
+  it("shows denied permissions as badges and rechecks them", async () => {
+    const requestPermissions = vi.fn().mockResolvedValue(DENIED_STATE);
+    const setEnabled = vi.fn().mockResolvedValue(DENIED_STATE);
     setDesktopBridge({
       appSnap: {
         getState: vi.fn().mockResolvedValue(DENIED_STATE),
-        requestPermissions: vi.fn().mockResolvedValue(DENIED_STATE),
-        setEnabled: vi.fn().mockResolvedValue(DENIED_STATE),
+        requestPermissions,
+        setEnabled,
         checkShortcut: vi.fn().mockResolvedValue({ available: true, reason: null }),
         setShortcut: vi.fn().mockResolvedValue({
           state: DENIED_STATE,
           availability: { available: true, reason: null },
         }),
-        openPermissionSettings,
-        restartApp,
-        showPermissionGuide,
-        hidePermissionGuide,
-        onState: vi.fn((listener: (state: DesktopAppSnapState) => void) => {
-          pushedStateRef.current = listener;
-          return vi.fn();
-        }),
+        onState: vi.fn(() => vi.fn()),
         onPermissionGuideState: vi.fn(() => vi.fn()),
       },
     });
 
     const mounted = await render(<AppSnapActivityHarness />);
-    await expect.element(mounted.getByText("Denied").first()).toBeVisible();
+    await vi.waitFor(() => expect(mounted.getByText("Denied").elements()).toHaveLength(2));
+    expect(mounted.getByRole("button", { name: "Grant" }).elements()).toHaveLength(0);
 
-    await mounted.getByRole("button", { name: "Grant" }).first().click();
-    await expect
-      .element(mounted.getByRole("button", { name: "Open Input Monitoring settings" }))
-      .toBeVisible();
-    expect(mounted.getByText("Find Synara (Dev) in the list and turn on its toggle.")).toBeTruthy();
-
+    setEnabled.mockResolvedValue(READY_STATE);
+    await mounted.getByRole("button", { name: "Recheck permissions" }).click();
     await vi.waitFor(() => {
-      expect(openPermissionSettings).toHaveBeenCalledWith("input-monitoring");
-      expect(showPermissionGuide).toHaveBeenCalledWith("input-monitoring");
+      expect(requestPermissions).toHaveBeenCalledOnce();
+      expect(setEnabled).toHaveBeenCalledWith(harness.settings.enableAppSnap);
+      expect(mounted.getByText("Granted").elements()).toHaveLength(2);
     });
-
-    await mounted.getByRole("button", { name: "Restart Synara (Dev)" }).click();
-    await vi.waitFor(() => {
-      expect(restartApp).toHaveBeenCalledOnce();
-    });
-
-    pushedStateRef.current?.({ ...DENIED_STATE, inputMonitoringPermission: "granted" });
-    await vi.waitFor(() => {
-      expect(harness.toastAdd).toHaveBeenCalledWith(
-        expect.objectContaining({ type: "success", title: "Permission granted" }),
-      );
-      expect(hidePermissionGuide).toHaveBeenCalled();
-      expect(
-        mounted.getByRole("button", { name: "Open Input Monitoring settings" }),
-      ).not.toBeInTheDocument();
-    });
+    expect(mounted.getByText("Denied").elements()).toHaveLength(0);
 
     await mounted.unmount();
   });
 
-  it("closes the inline guide when the native coach is dismissed", async () => {
+  it("refreshes the badges when the native coach reports a granted permission", async () => {
     const pushedGuideStateRef: {
       current: ((state: DesktopAppSnapPermissionGuideState) => void) | null;
     } = { current: null };
-    const openPermissionSettings = vi.fn().mockResolvedValue(true);
-    const showPermissionGuide = vi.fn().mockResolvedValue(undefined);
-    const hidePermissionGuide = vi.fn().mockResolvedValue(undefined);
+    const getState = vi.fn().mockResolvedValue(DENIED_STATE);
     setDesktopBridge({
       appSnap: {
-        getState: vi.fn().mockResolvedValue(DENIED_STATE),
+        getState,
         requestPermissions: vi.fn().mockResolvedValue(DENIED_STATE),
         setEnabled: vi.fn().mockResolvedValue(DENIED_STATE),
         checkShortcut: vi.fn().mockResolvedValue({ available: true, reason: null }),
@@ -347,10 +318,6 @@ describe("AppSnapSettingsPanel", () => {
           state: DENIED_STATE,
           availability: { available: true, reason: null },
         }),
-        openPermissionSettings,
-        restartApp: vi.fn(),
-        showPermissionGuide,
-        hidePermissionGuide,
         onState: vi.fn(() => vi.fn()),
         onPermissionGuideState: vi.fn(
           (listener: (state: DesktopAppSnapPermissionGuideState) => void) => {
@@ -362,22 +329,13 @@ describe("AppSnapSettingsPanel", () => {
     });
 
     const mounted = await render(<AppSnapActivityHarness />);
-    await expect.element(mounted.getByText("Denied").first()).toBeVisible();
+    await vi.waitFor(() => expect(mounted.getByText("Denied").elements()).toHaveLength(2));
 
-    await mounted.getByRole("button", { name: "Grant" }).first().click();
-    await expect
-      .element(mounted.getByRole("button", { name: "Open Input Monitoring settings" }))
-      .toBeVisible();
-
+    getState.mockResolvedValue({ ...DENIED_STATE, inputMonitoringPermission: "granted" });
+    pushedGuideStateRef.current?.("granted");
     await vi.waitFor(() => {
-      expect(openPermissionSettings).toHaveBeenCalledWith("input-monitoring");
-      expect(showPermissionGuide).toHaveBeenCalledWith("input-monitoring");
-    });
-
-    pushedGuideStateRef.current?.("closed");
-    await vi.waitFor(async () => {
-      expect(hidePermissionGuide).toHaveBeenCalled();
-      await expect.element(mounted.getByRole("button", { name: "Grant" }).first()).toBeVisible();
+      expect(mounted.getByText("Granted").elements()).toHaveLength(1);
+      expect(mounted.getByText("Denied").elements()).toHaveLength(1);
     });
 
     await mounted.unmount();

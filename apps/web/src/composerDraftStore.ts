@@ -175,6 +175,7 @@ export function useEffectiveComposerModelState(input: {
   availableModelOptionsByProvider?: Partial<
     Record<ProviderKind, ReadonlyArray<{ slug: string; name: string }>>
   >;
+  claudeCliVersion?: string | null | undefined;
 }): EffectiveComposerModelState {
   const draft = useComposerThreadDraft(input.threadId);
   return deriveEffectiveComposerModelState({
@@ -187,6 +188,7 @@ export function useEffectiveComposerModelState(input: {
     ...(input.availableModelOptionsByProvider !== undefined
       ? { availableModelOptionsByProvider: input.availableModelOptionsByProvider }
       : {}),
+    claudeCliVersion: input.claudeCliVersion,
   });
 }
 

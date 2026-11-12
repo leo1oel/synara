@@ -1407,6 +1407,12 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
       pr: null,
     };
   }
+  // The fork serves the branch PR on its own RPC (bc54a5966); an unanswered lookup
+  // fails and retries with backoff, holding up every git refresh that awaits it.
+  if (tag === WS_METHODS.gitBranchPullRequest) {
+    const cwd = typeof body.cwd === "string" ? body.cwd : null;
+    return { branch: cwd ? (fixture.gitBranchByCwd[cwd] ?? "main") : "main", pr: null };
+  }
   if (tag === WS_METHODS.gitCreateWorktree) {
     const requestedBranch =
       typeof body.newBranch === "string"
@@ -2657,7 +2663,8 @@ describe("ChatView transcript geometry (full app)", () => {
         );
         const banner = page.getByRole("alert").filter({ hasText: "Rate limit reached." });
         await expect.element(banner).toBeVisible();
-        await expect.element(banner).toHaveTextContent("Resets in 2d 2h");
+        // The fork's notice rounds a reset days away to whole days (lattice catalog).
+        await expect.element(banner).toHaveTextContent("Resets in about 2 days.");
         expect(
           document.querySelector('[data-chat-composer-form="true"]')!.contains(banner.element()),
         ).toBe(true);
@@ -2682,6 +2689,70 @@ describe("ChatView transcript geometry (full app)", () => {
       }
     },
   );
+
+  // Lattice's embedded panel has no Environment panel to move quota warnings into, so
+  // an approaching limit keeps its banner above the composer there.
+  it("keeps the quota warning at the composer in Lattice's embedded chat", async () => {
+    sessionStorage.setItem(
+      "synara.poc.embed-mode",
+      JSON.stringify({
+        workspaceRoot: "/repo/project",
+        theme: "light",
+        surface: "chrome",
+        hostOrigin: window.location.origin,
+        locale: "en",
+      }),
+    );
+    onTestFinished(() => sessionStorage.removeItem("synara.poc.embed-mode"));
+    const base = createSnapshotWithInlineToolOverflow({ active: false });
+    const thread = base.threads[0]!;
+    const turnId = thread.latestTurn!.turnId;
+    const snapshot: OrchestrationReadModel = {
+      ...base,
+      threads: [
+        {
+          ...thread,
+          modelSelection: { provider: "claudeAgent", model: "claude-opus-4-7" },
+          session: thread.session ? { ...thread.session, providerName: "claudeAgent" } : null,
+          messages: [{ ...thread.messages.at(-3)!, turnId }, ...thread.messages.slice(-2)],
+          activities: [
+            ...thread.activities,
+            {
+              id: EventId.makeUnsafe("embed-usage-warning"),
+              kind: "account.rate-limits.updated",
+              summary: "Rate limits updated",
+              createdAt: isoAt(1_109),
+              tone: "info",
+              turnId,
+              payload: {
+                provider: "claudeAgent",
+                providerInstanceId: "claudeAgent",
+                status: "allowed_warning",
+                utilization: 0.91,
+              },
+            },
+          ],
+        },
+      ],
+    };
+    const mounted = await mountChatView({
+      viewport: { ...DEFAULT_VIEWPORT, width: 1_400 },
+      snapshot,
+    });
+    try {
+      await waitForComposerEditor();
+      expect(page.getByRole("button", { name: /Toggle environment panel/ }).query()).toBeNull();
+      const banner = page
+        .getByRole("alert")
+        .filter({ hasText: "Approaching rate limit (91% used)." });
+      await expect.element(banner, { timeout: 3_000 }).toBeVisible();
+      expect(
+        document.querySelector('[data-chat-composer-form="true"]')!.contains(banner.element()),
+      ).toBe(true);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 
   it.each(["project", "hub discovery pending"] as const)(
     "keeps persistent turn failure visible after reopening and admits one manual continuation (%s)",
@@ -9422,6 +9493,50 @@ describe("ChatView transcript geometry (full app)", () => {
         .toBeVisible();
       await page.getByRole("option", { name: "Plan mode Turn plan mode on", exact: true }).click();
       await expect.element(page.getByRole("button", { name: "Plan", exact: true })).toBeVisible();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  // Issue leo1oel/lattice#672: Lattice's Agent panel is often shorter than the composer's
+  // full height. The editor's fixed 200px cap let the floating composer grow out of the top
+  // of the chat column until the prompt being typed was clipped away; it now scrolls inside
+  // the editor at whatever height the column leaves it.
+  it("keeps a long draft's composer inside a short chat column", async () => {
+    const mounted = await mountChatView({
+      viewport: { name: "short", width: 640, height: 340 },
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: MessageId.makeUnsafe("msg-composer-room"),
+        targetText: "Composer room",
+      }),
+    });
+    try {
+      await waitForComposerEditor();
+      const sentence =
+        "Rewrite the related-work paragraph so each cited system is compared on the same axis. ";
+      await userEvent.fill(page.getByTestId("composer-editor"), sentence.repeat(14));
+      await waitForLayout();
+      const column = document.querySelector<HTMLElement>("[data-chat-main-content]")!;
+      const form = document.querySelector<HTMLElement>('[data-chat-composer-form="true"]')!;
+      const editor = document.querySelector<HTMLElement>('[data-testid="composer-editor"]')!;
+      await vi.waitFor(() => {
+        expect(form.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+          column.getBoundingClientRect().top,
+        );
+      });
+      expect(editor.clientHeight).toBeLessThan(200);
+      expect(editor.clientHeight).toBeGreaterThanOrEqual(44);
+      expect(editor.scrollHeight).toBeGreaterThan(editor.clientHeight);
+      expect(editor.getBoundingClientRect().bottom).toBeLessThanOrEqual(window.innerHeight);
+
+      // Given its height back, the column lets the editor grow to its own 200px cap again.
+      await mounted.setViewport({ name: "tall", width: 640, height: 1_000 });
+      await vi.waitFor(() => {
+        expect(editor.clientHeight).toBe(200);
+      });
+      expect(form.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+        column.getBoundingClientRect().top,
+      );
     } finally {
       await mounted.cleanup();
     }

@@ -8,10 +8,20 @@ import {
 } from "./rpc";
 import { COMPUTER_WS_METHODS } from "./computer";
 import { ORCHESTRATION_WS_METHODS } from "./orchestration";
-
 import { WS_METHODS } from "./ws";
 
 describe("WS RPC contracts", () => {
+  it("registers every declared WebSocket method before server handlers are installed", () => {
+    // projectAgent.* lives in its own satellite group (it would push the feature group's
+    // inferred type past the declaration emit limit); server and web register all three.
+    const registeredGroups = [WsBootstrapRpcGroup, WsFeatureRpcGroup, WsProjectAgentRpcGroup];
+    expect(
+      Object.values(WS_METHODS).filter(
+        (method) => !registeredGroups.some((group) => group.requests.has(method)),
+      ),
+    ).toEqual([]);
+  });
+
   it("exports every hosts namespace RPC", () => {
     // The property is "every declared hosts method has a request schema", not
     // a head count: a hardcoded number only fails later, when someone adds an

@@ -1,3 +1,5 @@
+import { setLanguagePreference } from "~/i18n";
+
 import {
   DEFAULT_MODEL_BY_PROVIDER,
   EventId,
@@ -6,8 +8,9 @@ import {
   type OrchestrationThreadActivity,
   type ProviderKind,
   type ServerProviderStatus,
+  ThreadId,
 } from "@synara/contracts";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { AppSettingsSchema, getProviderInstanceOptions } from "../appSettings";
 import type { Thread } from "../types";
 import {
@@ -19,7 +22,9 @@ import {
   resolveAvailableHandoffTargets,
   resolveProviderHandoffOutcome,
   resolveThreadHandoffAvailability,
+  resolveThreadHandoffBadgeLabel,
   resolveThreadHandoffModelSelection,
+  resolveThreadHandoffTitle,
 } from "./threadHandoff";
 import { appendAssistantSelectionsToPrompt } from "./assistantSelections";
 import {
@@ -27,6 +32,8 @@ import {
   extractTrailingBrowserAnnotations,
   type BrowserAnnotationDraft,
 } from "./browserAnnotations";
+
+afterEach(() => setLanguagePreference("en"));
 
 describe("threadHandoff", () => {
   it("reads a same-thread handoff outcome from the activity keyed by its command", () => {
@@ -345,6 +352,28 @@ describe("threadHandoff", () => {
         providerStatuses: [],
       }),
     ).toEqual([]);
+  });
+
+  it("preserves the source thread title for the created handoff thread", () => {
+    expect(resolveThreadHandoffTitle({ title: "General Greeting" })).toBe("General Greeting");
+    expect(resolveThreadHandoffTitle({ title: "  Debug   Grok handoff  " })).toBe(
+      "Debug Grok handoff",
+    );
+  });
+
+  it("localizes the handoff source badge in Chinese", () => {
+    setLanguagePreference("zh-CN");
+
+    expect(
+      resolveThreadHandoffBadgeLabel({
+        handoff: {
+          sourceThreadId: ThreadId.makeUnsafe("source-thread"),
+          sourceProvider: "claudeAgent",
+          importedAt: "2026-08-16T12:00:00.000Z",
+          bootstrapStatus: "completed",
+        },
+      }),
+    ).toBe("从 Claude 移交");
   });
 
   it("does not borrow a default account's health for unavailable or unchecked accounts", () => {

@@ -22,6 +22,7 @@ import {
 } from "@synara/shared/githubRepository";
 
 import type { GitHubInboxInvolvementFilter } from "~/appSettings";
+import { t } from "~/i18n";
 
 export type PullRequestListGroupKey =
   | "pinned"
@@ -37,14 +38,22 @@ export interface PullRequestListGroup<T = GitHubInboxItem> {
   entries: T[];
 }
 
-const GROUP_LABELS: Record<PullRequestListGroupKey, string> = {
-  pinned: "Pinned",
-  authored: "Authored by me",
-  reviewRequested: "Needs my review",
-  involved: "Involving me",
-  others: "Everything else",
-  all: "All",
-};
+function groupLabel(key: PullRequestListGroupKey): string {
+  switch (key) {
+    case "pinned":
+      return t("common:app_pinned");
+    case "authored":
+      return t("git:authoredByMe");
+    case "reviewRequested":
+      return t("lattice:needsMyReview");
+    case "involved":
+      return t("git:involvingMe");
+    case "others":
+      return t("lattice:everythingElse");
+    case "all":
+      return t("workspace:all");
+  }
+}
 
 const GROUP_ORDER: readonly PullRequestListGroupKey[] = [
   "pinned",
@@ -209,12 +218,12 @@ export function groupPullRequestEntriesPinnedThenAll<T extends { isPinned?: bool
   const groups: PullRequestListGroup<T>[] = [
     {
       key: "pinned",
-      label: GROUP_LABELS.pinned,
+      label: groupLabel("pinned"),
       entries: entries.filter((entry) => entry.isPinned === true),
     },
     {
       key: "all",
-      label: GROUP_LABELS.all,
+      label: groupLabel("all"),
       entries: entries.filter((entry) => entry.isPinned !== true),
     },
   ];
@@ -258,7 +267,7 @@ export function groupPullRequestEntriesByInvolvement<T extends InboxRelationSour
 
   return GROUP_ORDER.filter((key) => buckets[key].length > 0).map((key) => ({
     key,
-    label: GROUP_LABELS[key],
+    label: groupLabel(key),
     entries: buckets[key],
   }));
 }

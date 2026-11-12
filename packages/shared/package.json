@@ -132,6 +132,10 @@
       "types": "./src/executable.ts",
       "import": "./src/executable.ts"
     },
+    "./cliInstallDirectories": {
+      "types": "./src/cliInstallDirectories.ts",
+      "import": "./src/cliInstallDirectories.ts"
+    },
     "./platformProcess": {
       "types": "./src/platformProcess.ts",
       "import": "./src/platformProcess.ts"

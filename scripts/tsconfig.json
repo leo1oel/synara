@@ -27,6 +27,8 @@
     "../apps/server/src/persistence/AccountMigrationLineage.ts",
     "../apps/server/src/platform/supervisedProcessTeardown.ts",
     "../apps/server/src/platform/processTreeController.ts",
+    // The fork's process-tree controller logs host snapshot failures (Lattice's ps launcher).
+    "../apps/server/src/logger.ts",
     "../apps/server/src/platform/windowsProcessSnapshot.ts",
     "../apps/desktop/src/desktopAppIcon.ts"
   ],

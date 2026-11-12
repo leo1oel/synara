@@ -124,7 +124,9 @@ describe("Claude runtime effort default", () => {
       prompt: "",
       modelOptions: { claudeAgent: { effort: "high" } },
     });
-    expect(modelOptionsForDispatch).toBeUndefined();
+    // Lattice's fork sends the effort the picker shows (d70d722d4): Claude Code reads an
+    // omitted effort from the user's settings.json, which can differ from the label.
+    expect(modelOptionsForDispatch).toEqual({ effort: "high" });
     expect(selection(modelOptionsForDispatch).effort).toBe("high");
     expect(selection({ effort: "medium" }).effort).toBe("medium");
   });

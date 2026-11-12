@@ -1,15 +1,10 @@
-// FILE: GitHubInbox.tsx
-// Purpose: The GitHub inbox body under the route header: a resizable list column (filter bar,
-//          involvement sections of pull request and issue rows, notes) beside an inline detail pane. On a narrow
-//          window it shows the list or the detail, with a back control. Filters persist in the
-//          local app settings; URL parameters override them for one visit, and the selection
-//          lives in the URL so an open item stays linkable. The detail's floating composer feeds
-//          the route's side chat dock; Send to agent picks among the projects the item's
-//          repository belongs to.
-// Layer: GitHub inbox presentation
-// Exports: GitHubInbox
-
-import type { GitHubInboxItem, GitHubInboxListError, ProjectId, ThreadId } from "@synara/contracts";
+import type {
+  GitHubInboxItem,
+  GitHubInboxListError,
+  GitHubInboxSort,
+  ProjectId,
+  ThreadId,
+} from "@synara/contracts";
 import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   type KeyboardEvent as ReactKeyboardEvent,
@@ -71,6 +66,7 @@ import { useStore } from "~/store";
 import { formatShortTimestamp } from "~/timestampFormat";
 import { GitHubInboxFilterBar } from "./GitHubInboxFilterBar";
 import { GitHubIssueDetailPanel } from "./GitHubIssueDetailPanel";
+import { LatticePullRequestList } from "./LatticePullRequestList";
 import {
   CLEARED_GITHUB_INBOX_FILTER_SEARCH,
   CLEARED_GITHUB_INBOX_FILTER_SETTINGS,
@@ -80,7 +76,6 @@ import {
   countActiveGitHubInboxFilters,
   countInboxItemsByKind,
   countTruncatedInboxRepositories,
-  githubInboxItemNoun,
   githubInboxListState,
   githubInboxSelection,
   githubInboxSelectionForItem,
@@ -126,18 +121,57 @@ interface DraggedListWidth {
 }
 
 function rateLimitedWarningText(
+  translate: typeof t,
   error: GitHubInboxListError,
   timestampFormat: TimestampFormat,
 ): string {
   const resetTime = error.retryAt
     ? formatShortTimestamp(error.retryAt, timestampFormat, getFormatLocale())
     : null;
-  const refresh = resetTime ? `Refreshing resumes at ${resetTime}.` : "Refreshing resumes soon.";
+  const refresh = resetTime
+    ? translate("lattice:refreshingResumesAt", { time: resetTime })
+    : translate("lattice:refreshingResumesSoon");
   return error.showingCachedData
-    ? t("git:gitHubRateLimitReachedShowingTheLastLoadedItems", { value0: refresh })
-    : t("git:gitHubRateLimitReachedSomeRepositoriesCouldNotBe", {
-        value0: refresh,
-      });
+    ? translate("git:gitHubRateLimitReachedShowingTheLastLoadedItems", { value0: refresh })
+    : translate("git:gitHubRateLimitReachedSomeRepositoriesCouldNotBe", { value0: refresh });
+}
+
+/** "No pull requests found", for the kind the list is filtered to. */
+function emptyListTitle(translate: typeof t, kind: GitHubInboxKindFilter): string {
+  if (kind === "pullRequest") return translate("lattice:noPullRequestsFound");
+  if (kind === "issue") return translate("lattice:noIssuesFound");
+  return translate("lattice:noPullRequestsAndIssuesFound");
+}
+
+/** The note under a list GitHub cut short: what it shows, and how many repositories have more. */
+function truncatedListNote(
+  translate: typeof t,
+  input: {
+    state: GitHubInboxStateFilter;
+    kind: GitHubInboxKindFilter;
+    sort: GitHubInboxSort;
+    repositoryCount: number;
+  },
+): string {
+  const newest = input.sort === "created";
+  const shown =
+    input.state === "merged"
+      ? newest
+        ? translate("lattice:showingMergedPullRequestsFromThe50")
+        : translate("lattice:showingMergedPullRequestsFromThe502")
+      : input.kind === "pullRequest"
+        ? newest
+          ? translate("lattice:showingThe50NewestPullRequestsPer")
+          : translate("lattice:showingThe50MostRecentlyUpdatedPull")
+        : input.kind === "issue"
+          ? newest
+            ? translate("lattice:showingThe50NewestIssuesPerRepository")
+            : translate("lattice:showingThe50MostRecentlyUpdatedIssues")
+          : newest
+            ? translate("lattice:showingThe50NewestPullRequestsAnd")
+            : translate("lattice:showingThe50MostRecentlyUpdatedPull2");
+  const more = translate("lattice:repositoriesHaveMoreOnGitHub", { count: input.repositoryCount });
+  return `${shown} ${more}`;
 }
 
 /**
@@ -203,7 +237,7 @@ function ListColumnResizeHandle({
       aria-valuenow={percent}
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-valuetext={`List takes ${percent}% of the width`}
+      aria-valuetext={t("lattice:listTakesOfTheWidth", { percent })}
       tabIndex={0}
       onPointerDown={startResize}
       onKeyDown={handleKeyDown}
@@ -246,7 +280,9 @@ function GitHubInboxDetail({
   onBack,
   onSelectPullRequest,
   pageHost,
+  lattice,
 }: {
+  lattice: boolean;
   selection: GitHubInboxSelection;
   sendTargets: ReadonlyArray<GitHubItemSendTarget>;
   onBack: (() => void) | undefined;
@@ -273,6 +309,7 @@ function GitHubInboxDetail({
       key={key}
       input={input}
       layout="page"
+      lattice={lattice}
       onSelectPullRequest={onSelectPullRequest}
       sendTargets={sendTargets}
       pageHost={pageHost}
@@ -299,6 +336,10 @@ export function GitHubInbox({
   onSearchChange,
   sidechat,
   dockOpen: dockOpenProp,
+  embedded = false,
+  scopedProjectId,
+  bindingError,
+  workspaceRoot,
 }: {
   search: GitHubInboxSearch;
   onSearchChange: (patch: GitHubInboxSearchPatch) => void;
@@ -306,6 +347,11 @@ export function GitHubInbox({
   sidechat?: GitHubInboxSidechatHost;
   /** Whether the route's Ask dock is open; the column fractions reset when it changes. */
   dockOpen?: boolean;
+  embedded?: boolean;
+  scopedProjectId?: ProjectId | null;
+  bindingError?: string | null;
+  /** Lattice's workspace; with it the embedded page shows Lattice's pull request list. */
+  workspaceRoot?: string | null;
 }) {
   const { t } = useTranslation();
 
@@ -334,13 +380,40 @@ export function GitHubInbox({
     () => new Set(repositoryProjects.map((project) => project.id)),
     [repositoryProjects],
   );
-  const filters = resolveGitHubInboxFilters(search, settings, existingProjectIds);
+  const resolvedFilters = resolveGitHubInboxFilters(search, settings, existingProjectIds);
+  // Lattice's list reads the project's open pull requests (and its closed list for Recently
+  // merged) and groups them itself, so the standalone filters do not apply there.
+  const latticeList = embedded && Boolean(workspaceRoot);
+  const filters: typeof resolvedFilters = latticeList
+    ? {
+        kind: "pullRequest",
+        state: "open",
+        involvement: "everything",
+        labels: [],
+        projectIds: scopedProjectId ? [scopedProjectId] : [],
+      }
+    : embedded
+      ? { ...resolvedFilters, projectIds: scopedProjectId ? [scopedProjectId] : [] }
+      : resolvedFilters;
   const selection = githubInboxSelection(search);
   const listState = githubInboxListState(filters.state);
 
   // One list per state and sort; kind, project, involvement, label, and text filters apply below, so
   // switching them never reaches GitHub.
-  const listQuery = useQuery(githubInboxListQueryOptions(listState, settings.githubInboxSort));
+  const listScope =
+    embedded && scopedProjectId
+      ? {
+          projectId: scopedProjectId,
+          ...(filters.involvement === "authored" || filters.involvement === "reviewRequested"
+            ? { involvement: filters.involvement }
+            : {}),
+        }
+      : undefined;
+  const bindingPending = embedded && !scopedProjectId && !bindingError;
+  const listQuery = useQuery({
+    ...githubInboxListQueryOptions(listState, settings.githubInboxSort, listScope),
+    enabled: !embedded || Boolean(scopedProjectId),
+  });
   const refreshMutation = useMutation(pullRequestsForceRefreshMutationOptions(queryClient));
   const pinMutation = useMutation(pullRequestSetPinnedMutationOptions(queryClient));
   const activeActionCount = useIsMutating({
@@ -388,7 +461,6 @@ export function GitHubInbox({
   const unavailableErrorCount = scopedErrors.filter(
     (error) => error.reason !== "rate-limited",
   ).length;
-  const noun = githubInboxItemNoun(filters.kind);
 
   // ── Filters: a change persists and drops that filter's one-visit URL override ──
   const setKind = (kind: GitHubInboxKindFilter) => {
@@ -404,6 +476,7 @@ export function GitHubInbox({
     if (search.involvement !== undefined) onSearchChange({ involvement: undefined });
   };
   const setProjectIds = (projectIds: ProjectId[]) => {
+    if (embedded) return;
     updateSettings({ githubInboxProjectIds: projectIds });
     if (search.projectId !== undefined) onSearchChange({ projectId: undefined });
   };
@@ -435,15 +508,18 @@ export function GitHubInbox({
       });
     }
   };
-  const refreshBlockedReason = refreshMutation.isPending
-    ? "Refreshing…"
-    : activeActionCount > 0
-      ? "Wait for the pull request action to finish"
-      : null;
+  const refreshBlockedReason =
+    embedded && !scopedProjectId
+      ? (bindingError ?? t("lattice:waitingForTheLatticeProject"))
+      : refreshMutation.isPending
+        ? t("git:refreshing")
+        : activeActionCount > 0
+          ? t("lattice:waitForThePullRequestActionTo")
+          : null;
   const refresh = () => {
     if (refreshBlockedReason !== null) return;
     refreshMutation.mutate(
-      { state: listState, sort: settings.githubInboxSort },
+      { state: listState, sort: settings.githubInboxSort, ...listScope },
       {
         onError: (error) =>
           toastManager.add({
@@ -522,7 +598,7 @@ export function GitHubInbox({
           ref={columnRef}
           aria-label={t("git:codeReviewList")}
           className={cn(
-            "relative flex min-h-0 flex-col",
+            "relative flex min-h-0 min-w-0 flex-col",
             isMobile ? "min-w-0 flex-1" : "min-w-[16rem] max-w-[calc(100%-18rem)] shrink-0",
           )}
           style={
@@ -535,124 +611,156 @@ export function GitHubInbox({
                 }
           }
         >
-          <div className="shrink-0">
-            <GitHubInboxFilterBar
-              filters={filters}
-              sort={settings.githubInboxSort}
-              onSortChange={(sort) => updateSettings({ githubInboxSort: sort })}
-              query={query}
-              kindCounts={
-                listData
-                  ? countInboxItemsByKind(listData.items, filters, {
-                      viewer: listData.viewer,
-                      normalizedQuery: deferredQuery,
-                      repositoryBatches: listData.repositoryBatches,
-                    })
-                  : null
-              }
-              projectOptions={projectOptions}
-              labelOptions={labelOptions}
-              refreshing={refreshMutation.isPending}
-              refreshBlockedReason={refreshBlockedReason}
-              onQueryChange={(value) => onSearchChange({ q: value || undefined })}
-              onKindChange={setKind}
-              onStateChange={setState}
-              onInvolvementChange={setInvolvement}
-              onProjectIdsChange={setProjectIds}
-              onLabelsChange={setLabels}
-              onClearFilters={clearFilters}
-              onRefresh={refresh}
-              onPasteReference={pasteReference}
-            />
-          </div>
-          <div className="@container/list min-h-0 flex-1 overflow-y-auto px-6 pt-2 pb-8">
-            <div className="flex flex-col gap-3">
-              {listQuery.isPending ? (
-                <ListSkeleton />
-              ) : initialError ? (
+          {latticeList && workspaceRoot ? (
+            bindingError ? (
+              <div className="px-3">
                 <PullRequestsUnavailableState
-                  error={initialError}
-                  subject="Pull requests and issues"
-                  onRetry={() => void listQuery.refetch()}
+                  error={new Error(bindingError)}
+                  subject={t("lattice:latticeProject")}
                 />
-              ) : entries.length === 0 ? (
-                <Empty className="py-12">
-                  <EmptyHeader>
-                    <EmptyTitle>
-                      {repositoryProjects.length === 0
-                        ? t("common:emptyStates_noProjects")
-                        : reviewRequestsOnlyOpen
-                          ? t("git:reviewRequestsOnlyApplyToOpenPullRequests")
-                          : t("git:noFound", { value0: noun })}
-                    </EmptyTitle>
-                    <EmptyDescription>
-                      {repositoryProjects.length === 0
-                        ? t("git:codeReviewListsPullRequestsAndIssuesFromThe")
-                        : reviewRequestsOnlyOpen
-                          ? t("git:selectOpenToSeePullRequestsAwaitingYourReview")
-                          : activeFilterCount > 0
-                            ? t("git:tryAnotherFilterOrClearThem")
-                            : t("git:nothingHereInTheRepositoriesOfYourProjects")}
-                    </EmptyDescription>
-                  </EmptyHeader>
-                  {activeFilterCount > 0 ? (
-                    <EmptyContent>
-                      <Button variant="outline" size="sm" onClick={clearFilters}>
-                        {t("git:clearFilters")}
-                      </Button>
-                    </EmptyContent>
-                  ) : null}
-                </Empty>
-              ) : (
-                <PullRequestList
+              </div>
+            ) : (
+              <LatticePullRequestList
+                workspaceRoot={workspaceRoot}
+                projectId={scopedProjectId ?? ("" as ProjectId)}
+                openList={listData}
+                openPending={bindingPending || !scopedProjectId || listQuery.isPending}
+                openError={initialError}
+                onRetry={() => void listQuery.refetch()}
+                query={query}
+                onQueryChange={(value) => onSearchChange({ q: value || undefined })}
+                onPasteReference={pasteReference}
+                isSelected={(item) => isGitHubInboxItemSelected(item, selection)}
+                onSelect={selectItem}
+                loading={<ListSkeleton />}
+              />
+            )
+          ) : (
+            <>
+              <div className="shrink-0">
+                <GitHubInboxFilterBar
+                  filters={filters}
                   sort={settings.githubInboxSort}
-                  groups={groups}
-                  isSectionOpen={isSectionOpen}
-                  onToggleSection={toggleSection}
-                  isSelected={(item) => isGitHubInboxItemSelected(item, selection)}
-                  showProjectTitle={
-                    filters.projectIds.length !== 1 && repositoryProjects.length > 1
+                  onSortChange={(sort) => updateSettings({ githubInboxSort: sort })}
+                  query={query}
+                  kindCounts={
+                    listData
+                      ? countInboxItemsByKind(listData.items, filters, {
+                          viewer: listData.viewer,
+                          normalizedQuery: deferredQuery,
+                          repositoryBatches: listData.repositoryBatches,
+                        })
+                      : null
                   }
-                  projectIconFor={projectIconFor}
-                  onSelect={selectItem}
-                  onTogglePinned={togglePinned}
+                  projectOptions={
+                    embedded
+                      ? projectOptions.filter((option) => option.id === scopedProjectId)
+                      : projectOptions
+                  }
+                  projectLocked={embedded}
+                  labelOptions={labelOptions}
+                  refreshing={refreshMutation.isPending}
+                  refreshBlockedReason={refreshBlockedReason}
+                  onQueryChange={(value) => onSearchChange({ q: value || undefined })}
+                  onKindChange={setKind}
+                  onStateChange={setState}
+                  onInvolvementChange={setInvolvement}
+                  onProjectIdsChange={setProjectIds}
+                  onLabelsChange={setLabels}
+                  onClearFilters={clearFilters}
+                  onRefresh={refresh}
+                  onPasteReference={pasteReference}
                 />
-              )}
-              {truncatedRepositoryCount > 0 ? (
-                <p className={cn(PR_FINE_TEXT_CLASS_NAME, "text-muted-foreground")}>
-                  {filters.state === "merged"
-                    ? t("git:showingMergedPullRequestsFromThe50")
-                    : t("git:showingThe50")}{" "}
-                  {settings.githubInboxSort === "created"
-                    ? t("git:newest2")
-                    : t("git:mostRecentlyUpdated")}{" "}
-                  {filters.state === "merged" ? t("git:closedPullRequests") : noun}{" "}
-                  {t("git:perRepository")} {truncatedRepositoryCount}{" "}
-                  {truncatedRepositoryCount === 1
-                    ? t("git:repositoryHas")
-                    : t("git:repositoriesHave")}{" "}
-                  {t("git:moreOnGitHub")}
-                </p>
-              ) : null}
-              {rateLimitedError ? (
-                <PullRequestWarningNote shape="callout" role="status">
-                  {rateLimitedWarningText(rateLimitedError, settings.timestampFormat)}
-                </PullRequestWarningNote>
-              ) : null}
-              {unavailableErrorCount > 0 ? (
-                <PullRequestWarningNote shape="callout">
-                  {t("git:projectRepositoriesUnavailableHealthyRepositoriesAreStillShown", {
-                    count: unavailableErrorCount,
-                  })}
-                </PullRequestWarningNote>
-              ) : null}
-              {backgroundError ? (
-                <PullRequestWarningNote shape="callout" role="status">
-                  {t("git:theLatestBackgroundRefreshFailedShowingTheLastLoaded")}
-                </PullRequestWarningNote>
-              ) : null}
-            </div>
-          </div>
+              </div>
+              <div className="@container/list min-h-0 flex-1 overflow-y-auto px-6 pt-2 pb-8">
+                <div className="flex flex-col gap-3">
+                  {bindingError ? (
+                    <PullRequestsUnavailableState
+                      error={new Error(bindingError)}
+                      subject={t("lattice:latticeProject")}
+                    />
+                  ) : bindingPending || listQuery.isPending ? (
+                    <ListSkeleton />
+                  ) : initialError ? (
+                    <PullRequestsUnavailableState
+                      error={initialError}
+                      subject={t("lattice:pullRequestsAndIssues")}
+                      onRetry={() => void listQuery.refetch()}
+                    />
+                  ) : entries.length === 0 ? (
+                    <Empty className="py-12">
+                      <EmptyHeader>
+                        <EmptyTitle>
+                          {repositoryProjects.length === 0
+                            ? t("common:emptyStates_noProjects")
+                            : reviewRequestsOnlyOpen
+                              ? t("git:reviewRequestsOnlyApplyToOpenPullRequests")
+                              : emptyListTitle(t, filters.kind)}
+                        </EmptyTitle>
+                        <EmptyDescription>
+                          {repositoryProjects.length === 0
+                            ? t("git:codeReviewListsPullRequestsAndIssuesFromThe")
+                            : reviewRequestsOnlyOpen
+                              ? t("git:selectOpenToSeePullRequestsAwaitingYourReview")
+                              : activeFilterCount > 0
+                                ? t("git:tryAnotherFilterOrClearThem")
+                                : t("git:nothingHereInTheRepositoriesOfYourProjects")}
+                        </EmptyDescription>
+                      </EmptyHeader>
+                      {activeFilterCount > 0 ? (
+                        <EmptyContent>
+                          <Button variant="outline" size="sm" onClick={clearFilters}>
+                            {t("git:clearFilters")}
+                          </Button>
+                        </EmptyContent>
+                      ) : null}
+                    </Empty>
+                  ) : (
+                    <PullRequestList
+                      sort={settings.githubInboxSort}
+                      groups={groups}
+                      isSectionOpen={isSectionOpen}
+                      onToggleSection={toggleSection}
+                      isSelected={(item) => isGitHubInboxItemSelected(item, selection)}
+                      showProjectTitle={
+                        filters.projectIds.length !== 1 && repositoryProjects.length > 1
+                      }
+                      projectIconFor={projectIconFor}
+                      onSelect={selectItem}
+                      onTogglePinned={togglePinned}
+                    />
+                  )}
+                  {truncatedRepositoryCount > 0 ? (
+                    <p className={cn(PR_FINE_TEXT_CLASS_NAME, "text-muted-foreground")}>
+                      {truncatedListNote(t, {
+                        state: filters.state,
+                        kind: filters.kind,
+                        sort: settings.githubInboxSort,
+                        repositoryCount: truncatedRepositoryCount,
+                      })}
+                    </p>
+                  ) : null}
+                  {rateLimitedError ? (
+                    <PullRequestWarningNote shape="callout" role="status">
+                      {rateLimitedWarningText(t, rateLimitedError, settings.timestampFormat)}
+                    </PullRequestWarningNote>
+                  ) : null}
+                  {unavailableErrorCount > 0 ? (
+                    <PullRequestWarningNote shape="callout">
+                      {t("lattice:projectRepositoriesWereUnavailableHealthyRepositoriesAre", {
+                        count: unavailableErrorCount,
+                      })}
+                    </PullRequestWarningNote>
+                  ) : null}
+                  {backgroundError ? (
+                    <PullRequestWarningNote shape="callout" role="status">
+                      {t("git:theLatestBackgroundRefreshFailedShowingTheLastLoaded")}
+                    </PullRequestWarningNote>
+                  ) : null}
+                </div>
+              </div>
+            </>
+          )}
           {isMobile ? null : (
             <ListColumnResizeHandle
               percent={draggedListWidth?.percent ?? (dockOpen ? 50 : 32)}
@@ -670,6 +778,7 @@ export function GitHubInbox({
         >
           {selection ? (
             <GitHubInboxDetail
+              lattice={latticeList}
               selection={selection}
               sendTargets={githubInboxSendTargets(listData?.items ?? [], selection, filters)}
               pageHost={pageHost}

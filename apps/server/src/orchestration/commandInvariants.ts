@@ -63,6 +63,8 @@ export function checkpointRevertActiveTurnDetail(threadId: ThreadId): string {
 export const CHECKPOINT_REVERT_STARTED_ACTIVITY_KIND = "checkpoint.revert.started";
 export const CHECKPOINT_REVERT_SUCCEEDED_ACTIVITY_KIND = "checkpoint.revert.succeeded";
 export const CHECKPOINT_REVERT_FAILED_ACTIVITY_KIND = "checkpoint.revert.failed";
+/** An Undo that succeeded but left conflict markers where newer edits overlapped. */
+export const CHECKPOINT_REVERT_CONFLICTS_ACTIVITY_KIND = "checkpoint.revert.conflicts";
 
 const CHECKPOINT_REVERT_LIFECYCLE_ACTIVITY_KINDS = new Set([
   CHECKPOINT_REVERT_STARTED_ACTIVITY_KIND,

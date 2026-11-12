@@ -1,9 +1,4 @@
 import { localizedProviderUsageNeedsAuthDetail } from "~/lib/providerUsageDisplay";
-// FILE: ProviderUsageSettingsPanel.tsx
-// Purpose: Settings → Usage panel. One card per supported provider account showing live remaining
-// quota/credits with linear progress meters, the provider brand icon, and plan/status pills.
-// Usage is fetched read-only from each CLI's stored credentials by the server.
-
 import { DEFAULT_SERVER_SETTINGS_VIEW, type ServerProviderUsageSnapshot } from "@synara/contracts";
 import { deriveProviderInstances } from "@synara/shared/providerInstances";
 import {
@@ -37,7 +32,11 @@ import { Switch } from "~/components/ui/switch";
 import { useProviderUsageSummary } from "~/hooks/useProviderUsageSummary";
 import { readWorkspaceFrame } from "~/lib/hosts/workspaceFrame";
 import { RotateCcwIcon, TriangleAlertIcon } from "~/lib/icons";
-import { deriveProviderUsageDisplayRows } from "~/lib/providerUsageDisplay";
+import {
+  deriveProviderUsageDisplayRows,
+  localizeProviderUsageNotice,
+} from "~/lib/providerUsageDisplay";
+import { deriveAccountRateLimits, type ProviderRateLimit } from "~/lib/rateLimits";
 import {
   fetchAllProviderUsage,
   serverAllProviderUsageQueryOptions,
@@ -45,7 +44,9 @@ import {
   serverSettingsQueryOptions,
 } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
+import { isSynaraEmbedMode } from "~/embedMode";
 import { t, useTranslation } from "~/i18n";
+import { localizeProviderStatusMessage } from "~/lib/providerStatusMessages";
 
 const RAIL_USAGE_WINDOW_OPTIONS = [
   { value: "both", label: "settings:both" },
@@ -60,7 +61,10 @@ interface StatusPill {
   className: string;
 }
 
-function statusPill(status: ServerProviderUsageSnapshot["status"]): StatusPill | null {
+function statusPill(
+  translate: typeof t,
+  status: ServerProviderUsageSnapshot["status"],
+): StatusPill | null {
   switch (status) {
     case "needs-auth":
       return {
@@ -82,6 +86,41 @@ function statusPill(status: ServerProviderUsageSnapshot["status"]): StatusPill |
   }
 }
 
+function localizeUsageDetail(translate: typeof t, snapshot: ServerProviderUsageSnapshot): string {
+  const detail = snapshot.detail?.trim() ?? "";
+  const signInMatch = /^Sign in with `(.+)` to see usage\.$/u.exec(detail);
+  if (signInMatch) {
+    return translate("lattice:signInWithToSeeUsage", { command: signInMatch[1]! });
+  }
+  if (detail === "Sign in with the provider CLI to see usage.") {
+    return translate("settings:usageSignInProviderCli");
+  }
+  if (detail === "Codex API-key auth has no usage endpoint. Sign in with ChatGPT to see usage.") {
+    return translate("lattice:codexAPIKeyAuthHasNoUsage");
+  }
+  if (
+    detail === "Usage is currently unavailable." ||
+    detail === "Usage fetch failed unexpectedly."
+  ) {
+    return translate("common:usageIsCurrentlyUnavailable");
+  }
+  const requestFailedMatch = /^(.+) usage request failed \((.+)\)\.$/u.exec(detail);
+  if (requestFailedMatch) {
+    return translate("lattice:usageRequestFailed", {
+      provider: requestFailedMatch[1]!,
+      status: requestFailedMatch[2]!,
+    });
+  }
+  const unreachableMatch = /^Could not reach the (.+)\.$/u.exec(detail);
+  if (unreachableMatch) {
+    return translate("lattice:couldNotReachThe", { destination: unreachableMatch[1]! });
+  }
+  // Claude credential notices share the provider status table (Lattice catalog).
+  return detail
+    ? localizeProviderStatusMessage(translate, detail)
+    : translate("settings:usageSignInProviderCli");
+}
+
 function ProviderUsageCard({
   snapshot,
   accountLabel,
@@ -100,10 +139,11 @@ function ProviderUsageCard({
   });
   const meterRows = deriveProviderUsageDisplayRows(usageSummary.rateLimits, t);
   const usageLines = usageSummary.usageLines;
+
   const resetCredits = provider === "codex" ? snapshot.resetCredits : undefined;
   const hasResetCredits = Boolean(resetCredits && resetCredits.availableCount > 0);
   const hasUsage = meterRows.length > 0 || usageLines.length > 0 || hasResetCredits;
-  const pill = status === "ok" ? null : statusPill(snapshot.status);
+  const pill = status === "ok" ? null : statusPill(t, snapshot.status);
 
   return (
     <SettingsCard>
@@ -138,7 +178,7 @@ function ProviderUsageCard({
             {usageSummary.usageNotice ? (
               <p className="flex items-start gap-1.5 text-ui leading-relaxed text-amber-600 dark:text-amber-300/90">
                 <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-                <span>{usageSummary.usageNotice}</span>
+                <span>{localizeProviderUsageNotice(t, usageSummary.usageNotice)}</span>
               </p>
             ) : null}
             {meterRows.length > 0 ? (
@@ -162,7 +202,7 @@ function ProviderUsageCard({
           <p className="text-ui leading-relaxed text-muted-foreground">
             {status === "ok"
               ? t("settings:noUsageDataReportedYet")
-              : (snapshot.detail ?? localizedProviderUsageNeedsAuthDetail(provider, t))}
+              : localizeUsageDetail(t, snapshot)}
           </p>
         )}
       </div>
@@ -185,11 +225,7 @@ export function ProviderUsageSettingsPanel() {
       ),
     [serverSettingsQuery.data],
   );
-  const railUsageAccounts = getRailUsageAccounts(
-    [...providerInstances.values()],
-    settings.disabledProviders,
-    t,
-  );
+  const railUsageAccounts = getRailUsageAccounts([...providerInstances.values()]);
   // Disabled accounts keep their saved choice; only deleted accounts are discarded.
   const savedRailUsageInstanceIds = (
     settings.railUsageInstanceIds ?? settings.railUsageProviders
@@ -222,73 +258,77 @@ export function ProviderUsageSettingsPanel() {
         return instance?.enabled === true && instance.driver === snapshot.provider;
       })
     : (usageQuery.data ?? []);
-  const cards = selectVisibleProviderUsageSnapshots(
-    activeSnapshots.filter((snapshot) => !settings.disabledProviders.includes(snapshot.provider)),
-  );
+  const cards = selectVisibleProviderUsageSnapshots(activeSnapshots);
 
   const showInitialLoading = usageQuery.isPending && !usageQuery.data;
 
   const isRefreshing = usageQuery.isFetching || refreshMutation.isPending;
 
+  // Lattice embeds no Synara rail or sidebar, so these sidebar-only choices would
+  // change nothing there; the embed keeps the popover options, Refresh and the cards.
+  const showSidebarUsageSettings = !isSynaraEmbedMode();
+
   const appUsageSettings = (
     <>
-      <SettingsSection
-        translateTitle={false}
-        title={t("settings:sidebarUsageAccountLimit", { count: MAX_RAIL_USAGE_ACCOUNTS })}
-      >
-        {railUsageAccounts.map(({ instance, label }) => {
-          const checked = railUsageInstanceIds.includes(instance.instanceId);
-          return (
-            <SettingsListRow
-              key={instance.instanceId}
-              title={
-                <span className="flex items-center gap-2">
-                  <ProviderAccountAvatar
-                    provider={instance.driver}
-                    accentColor={instance.raw.accentColor}
-                    className="size-6"
+      {showSidebarUsageSettings ? (
+        <SettingsSection
+          translateTitle={false}
+          title={t("settings:sidebarUsageAccountLimit", { count: MAX_RAIL_USAGE_ACCOUNTS })}
+        >
+          {railUsageAccounts.map(({ instance, label }) => {
+            const checked = railUsageInstanceIds.includes(instance.instanceId);
+            return (
+              <SettingsListRow
+                key={instance.instanceId}
+                title={
+                  <span className="flex items-center gap-2">
+                    <ProviderAccountAvatar
+                      provider={instance.driver}
+                      accentColor={instance.raw.accentColor}
+                      className="size-6"
+                    />
+                    <span className="truncate">{label}</span>
+                  </span>
+                }
+                actions={
+                  <Switch
+                    checked={checked}
+                    disabled={serverSettingsQuery.isPending || (!checked && railUsageFull)}
+                    onCheckedChange={(next) =>
+                      updateSettings({
+                        railUsageInstanceIds: toggleRailUsageAccount(
+                          savedRailUsageInstanceIds,
+                          instance.instanceId,
+                          Boolean(next),
+                          railUsageAccounts,
+                        ),
+                      })
+                    }
+                    aria-label={t("settings:showUsageAtTheBottomOfTheSidebar", {
+                      value0: label,
+                    })}
                   />
-                  <span className="truncate">{label}</span>
-                </span>
-              }
-              actions={
-                <Switch
-                  checked={checked}
-                  disabled={serverSettingsQuery.isPending || (!checked && railUsageFull)}
-                  onCheckedChange={(next) =>
-                    updateSettings({
-                      railUsageInstanceIds: toggleRailUsageAccount(
-                        savedRailUsageInstanceIds,
-                        instance.instanceId,
-                        Boolean(next),
-                        railUsageAccounts,
-                      ),
-                    })
-                  }
-                  aria-label={t("settings:showUsageAtTheBottomOfTheSidebar", {
-                    value0: label,
-                  })}
-                />
-              }
-            />
-          );
-        })}
-        <SettingsListRow
-          title={t("settings:ring")}
-          description={t("settings:showBothLimitsAsTwoRingsOrASingle")}
-          actions={
-            <SettingsSegmentedControl
-              value={settings.railUsageWindow}
-              onValueChange={(value) => updateSettings({ railUsageWindow: value })}
-              ariaLabel={t("settings:sidebarUsageRing")}
-              options={RAIL_USAGE_WINDOW_OPTIONS.map((option) => ({
-                value: option.value,
-                label: t(option.label),
-              }))}
-            />
-          }
-        />
-      </SettingsSection>
+                }
+              />
+            );
+          })}
+          <SettingsListRow
+            title={t("settings:ring")}
+            description={t("settings:showBothLimitsAsTwoRingsOrASingle")}
+            actions={
+              <SettingsSegmentedControl
+                value={settings.railUsageWindow}
+                onValueChange={(value) => updateSettings({ railUsageWindow: value })}
+                ariaLabel={t("settings:sidebarUsageRing")}
+                options={RAIL_USAGE_WINDOW_OPTIONS.map((option) => ({
+                  value: option.value,
+                  label: t(option.label),
+                }))}
+              />
+            }
+          />
+        </SettingsSection>
+      ) : null}
       <SettingsSection title="settings:usagePopovers">
         <SettingsListRow
           title={t("settings:showDetailsByDefault")}
@@ -301,21 +341,19 @@ export function ProviderUsageSettingsPanel() {
             />
           }
         />
-        {!settings.disabledProviders.includes("codex") ? (
-          <SettingsListRow
-            title={t("common:bankedResets")}
-            description={t("settings:includeCodexBankedResetsInTheDetails")}
-            actions={
-              <Switch
-                checked={settings.usagePopoverShowResetCredits}
-                onCheckedChange={(next) =>
-                  updateSettings({ usagePopoverShowResetCredits: Boolean(next) })
-                }
-                aria-label={t("settings:showBankedResetsInUsagePopovers")}
-              />
-            }
-          />
-        ) : null}
+        <SettingsListRow
+          title={t("common:bankedResets")}
+          description={t("settings:includeCodexBankedResetsInTheDetails")}
+          actions={
+            <Switch
+              checked={settings.usagePopoverShowResetCredits}
+              onCheckedChange={(next) =>
+                updateSettings({ usagePopoverShowResetCredits: Boolean(next) })
+              }
+              aria-label={t("settings:showBankedResetsInUsagePopovers")}
+            />
+          }
+        />
         <SettingsListRow
           title={t("settings:creditsAndTokenTotals")}
           description={t("settings:includeCreditBalancesAndRecentTokenTotals24h7d")}

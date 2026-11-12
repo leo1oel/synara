@@ -191,6 +191,8 @@ export function useKanbanTaskComposerDiscovery(input: UseKanbanTaskComposerDisco
       cwd: selectedProjectCwd,
       query: effectiveMentionQuery,
       enabled: isMentionTrigger && !isLocalFolderBrowserOpen,
+      allowEmptyQuery: true,
+      ...(effectiveMentionQuery.length === 0 ? { kind: "file" as const } : {}),
       limit: 80,
     }),
   );

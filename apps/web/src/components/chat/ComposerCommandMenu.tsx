@@ -49,6 +49,7 @@ function humanizeProviderCommandName(command: string): string {
 }
 
 function commandMenuTitle(
+  translate: typeof t,
   item: Extract<ComposerCommandItem, { type: "slash-command" | "provider-native-command" }>,
 ): string {
   switch (item.command) {
@@ -77,23 +78,53 @@ function commandMenuTitle(
     case "subagents":
       return t("chat:subagents");
     case "feedback":
-      return t("workspace:feedbackSynara");
+      return translate("workspace:feedbackSynara");
+    case "computer-use":
+      return translate("settings:computerUse");
+    case "export":
+      return translate("lattice:export");
+    case "goal":
+      return translate("chat:goal");
+    case "rename":
+      return translate("workspace:rename");
+    case "automation":
+      return translate("lattice:automation");
+    case "mcp":
+      return translate("lattice:mCPServers");
     default:
       return humanizeProviderCommandName(item.command);
   }
 }
 
-function commandMenuTrailingMeta(item: ComposerCommandItem): string | null {
+function localizeSkillScope(translate: typeof t, scope: string | undefined): string {
+  switch (scope?.trim().toLowerCase() ?? "") {
+    case "":
+    case "personal":
+      return translate("settings:personal");
+    case "project":
+      return translate("chat:detail_project");
+    case "user":
+      return translate("lattice:user");
+    case "system":
+      return translate("common:themeOptions_system");
+    case "plugin":
+      return translate("lattice:plugin");
+    default:
+      return formatSkillScope(scope);
+  }
+}
+
+function commandMenuTrailingMeta(translate: typeof t, item: ComposerCommandItem): string | null {
   if (item.type === "agent") {
-    return "delegate task to subagent";
+    return translate("lattice:delegateTaskToSubagent");
   }
 
   if (item.type === "plugin") {
-    return "Plugin";
+    return translate("lattice:plugin");
   }
 
   if (item.type === "connector") {
-    return "Connector";
+    return translate("lattice:connector");
   }
 
   if (item.type === "thread") {
@@ -101,15 +132,15 @@ function commandMenuTrailingMeta(item: ComposerCommandItem): string | null {
   }
 
   if (item.type === "local-root") {
-    return "Local";
+    return translate("computer:worktreeMode_local");
   }
 
   if (item.type === "skill") {
-    return formatSkillScope(item.skill.scope);
+    return localizeSkillScope(translate, item.skill.scope);
   }
 
   if (item.type === "model") {
-    return "Model";
+    return translate("chat:detail_model");
   }
 
   if (item.type === "slash-command" || item.type === "provider-native-command") {
@@ -125,14 +156,64 @@ function commandMenuTrailingMeta(item: ComposerCommandItem): string | null {
   return null;
 }
 
-function commandMenuSecondaryText(item: ComposerCommandItem): string | null {
+/** Built-in command descriptions, translated here so the shared definitions stay plain data. */
+function localizedSlashCommandDescription(translate: typeof t, command: string): string | null {
+  switch (command) {
+    case "clear":
+      return translate("common:startAFreshThreadAndClearTheCurrentConversation");
+    case "compact":
+      return translate("common:compactTheCurrentThreadContextToFreeSpace");
+    case "model":
+      return translate("common:switchResponseModelForThisThread");
+    case "plan":
+      return translate("common:switchThisThreadIntoPlanMode");
+    case "debug":
+      return translate("common:switchThisThreadIntoEvidenceFirstDebugMode");
+    case "default":
+      return translate("common:switchThisThreadBackToNormalChatMode");
+    case "review":
+      return translate("common:startACodeReviewForCurrentChanges");
+    case "fork":
+      return translate("common:forkThisThreadIntoLocalOrANewWorktree");
+    case "side":
+      return translate("common:openAGuardedSideFromThisThreadOptionallyOn");
+    case "status":
+      return translate("common:showContextUsageAndRateLimitStatus");
+    case "subagents":
+      return translate("common:insertAPromptThatAsksTheAssistantToDelegate");
+    case "computer-use":
+      return translate("common:useSynaraComputerForThisRequestOnly");
+    case "fast":
+      return translate("common:turnFastModeOnOrOffForThisThread");
+    case "export":
+      return translate("common:downloadThisThreadAsAZIPArchiveThreadJson");
+    case "goal":
+      return translate("common:setEditPauseResumeOrClearThisThreadS");
+    case "rename":
+      return translate("common:regenerateThisThreadTitleOrSetAnExactTitle");
+    case "feedback":
+      return translate("common:sendFeedbackToTheSynaraTeam");
+    case "automation":
+      return translate("common:createAScheduledAutomationFromThisPrompt");
+    case "mcp":
+      return translate("lattice:showThisAgentSMCPServersSign");
+    default:
+      return null;
+  }
+}
+
+function commandMenuSecondaryText(translate: typeof t, item: ComposerCommandItem): string | null {
   // The menu is driven from the composer, so focus never reaches the warning icon:
   // the row itself has to say why the command will not work.
   if (item.type === "provider-native-command" && item.notice) {
     return item.notice.summary;
   }
 
-  if (item.type === "slash-command" || item.type === "provider-native-command") {
+  if (item.type === "slash-command") {
+    return localizedSlashCommandDescription(translate, item.command) ?? item.description;
+  }
+
+  if (item.type === "provider-native-command") {
     return item.description;
   }
 
@@ -145,7 +226,8 @@ function commandMenuSecondaryText(item: ComposerCommandItem): string | null {
     item.type === "connector" ||
     item.type === "skill" ||
     item.type === "local-root" ||
-    item.type === "thread"
+    item.type === "thread" ||
+    item.type === "paper"
   ) {
     return item.description;
   }
@@ -228,6 +310,16 @@ export type ComposerCommandItem =
     }
   | {
       id: string;
+      type: "paper";
+      arxivId: string;
+      citationKey?: string;
+      view: "blog" | "fulltext";
+      mention: ProviderMentionReference;
+      label: string;
+      description: string;
+    }
+  | {
+      id: string;
       type: "connector";
       /** Display name, also what picks the brand mark or favicon. */
       connectorName: string;
@@ -264,10 +356,12 @@ export function groupCommandItems(
   groupSlashCommandSections: boolean,
 ): ComposerCommandGroupModel[] {
   if (triggerKind === "mention") {
+    const fileItems = items.filter((item) => item.type === "path");
+    const paperItems = items.filter((item) => item.type === "paper");
     const connectorItems = items.filter((item) => item.type === "connector");
     const pluginItems = items.filter((item) => item.type === "plugin");
     const threadItems = items.filter((item) => item.type === "thread");
-    const localItems = items.filter((item) => item.type === "local-root" || item.type === "path");
+    const localItems = items.filter((item) => item.type === "local-root");
     const agentItems = items.filter((item) => item.type === "agent");
     const otherItems = items.filter(
       (item) =>
@@ -276,10 +370,17 @@ export function groupCommandItems(
         item.type !== "thread" &&
         item.type !== "local-root" &&
         item.type !== "path" &&
+        item.type !== "paper" &&
         item.type !== "agent",
     );
 
     const groups: ComposerCommandGroupModel[] = [];
+    if (fileItems.length > 0) {
+      groups.push({ id: "files", label: "Files", items: fileItems });
+    }
+    if (paperItems.length > 0) {
+      groups.push({ id: "papers", label: "Papers", items: paperItems });
+    }
     if (connectorItems.length > 0) {
       groups.push({ id: "connectors", label: "Connectors", items: connectorItems });
     }
@@ -354,6 +455,37 @@ function CommandNoticeBadge(props: { notice: string }) {
   );
 }
 
+/** Mention groups whose result count is unbounded enough to need its own viewport. */
+const BROWSABLE_MENTION_GROUP_IDS = new Set(["files", "papers"]);
+const BROWSABLE_MENTION_GROUP_ROW_CAP = 4;
+
+function localizeGroupLabel(translate: typeof t, group: ComposerCommandGroupModel): string | null {
+  switch (group.id) {
+    case "files":
+      return translate("workspace:toolCallDetails_filesSection");
+    case "papers":
+      return translate("lattice:papers");
+    case "plugins":
+      return translate("common:plugin_pluginsTab");
+    case "chats":
+      return translate("workspace:general_chats");
+    case "local":
+      return translate("computer:worktreeMode_local");
+    case "subagents":
+      return translate("chat:subagents");
+    case "built-in":
+      return translate("chat:builtIn");
+    case "provider":
+      return translate("workspace:models_customModelProvider");
+    case "skills":
+      return translate("common:plugin_skillsSection");
+    case "connectors":
+      return translate("settings:connectors");
+    default:
+      return group.label;
+  }
+}
+
 export function ComposerCommandMenu(props: {
   items: ComposerCommandItem[];
   resolvedTheme: "light" | "dark";
@@ -374,27 +506,40 @@ export function ComposerCommandMenu(props: {
   );
   const panelGroups: ComposerMenuPanelGroup[] = groups.map((group) => ({
     id: group.id,
-    label: group.label,
+    // Files and papers can each return dozens of rows; count them and cap
+    // their height so Plugins, Chats, Local, and Subagents stay in view.
+    label:
+      group.label && BROWSABLE_MENTION_GROUP_IDS.has(group.id)
+        ? `${localizeGroupLabel(t, group)} · ${group.items.length}`
+        : localizeGroupLabel(t, group),
+    ...(BROWSABLE_MENTION_GROUP_IDS.has(group.id) &&
+    group.items.length > BROWSABLE_MENTION_GROUP_ROW_CAP
+      ? { boundedViewport: true, labelTrailing: t("lattice:scrollToBrowse") }
+      : {}),
     rows: group.items.map((item) => ({
       id: item.id,
       icon: commandMenuItemGlyph(item, props.resolvedTheme),
       title:
         item.type === "slash-command" || item.type === "provider-native-command"
-          ? commandMenuTitle(item)
+          ? commandMenuTitle(t, item)
           : item.label,
-      secondary: commandMenuSecondaryText(item),
+      secondary: commandMenuSecondaryText(t, item),
       trailing:
         item.type === "provider-native-command" && item.notice ? (
           <span className="inline-flex items-center gap-1.5">
-            {commandMenuTrailingMeta(item)}
+            {commandMenuTrailingMeta(t, item)}
             <CommandNoticeBadge notice={item.notice.detail} />
           </span>
         ) : (
-          commandMenuTrailingMeta(item)
+          commandMenuTrailingMeta(t, item)
         ),
     })),
   }));
   const itemsById = new Map(props.items.map((item) => [item.id, item]));
+  // A bare `@` already lists project files, so the "type to search" hint is
+  // only an invitation while there is no Files group to read instead.
+  const showFileSearchHint =
+    props.triggerKind === "mention" && !groups.some((group) => group.id === "files");
 
   return (
     <ComposerMenuPanel
@@ -406,15 +551,10 @@ export function ComposerCommandMenu(props: {
         if (item) props.onSelect(item);
       }}
       footer={
-        props.triggerKind === "mention" ? (
+        showFileSearchHint ? (
           /* This footer is informational copy, not a selectable result group. */
           <div className="pt-0.5 pb-2">
-            <p
-              className={cn(
-                COMPOSER_MENU_PANEL_GROUP_LABEL_CLASS_NAME,
-                "px-2 py-0 font-medium text-muted-foreground text-ui leading-snug",
-              )}
-            >
+            <p className={cn(COMPOSER_MENU_PANEL_GROUP_LABEL_CLASS_NAME, "px-2 py-0")}>
               {t("workspace:toolCallDetails_filesSection")}
             </p>
             <p className="px-2 pt-0.5 text-ui-sm text-muted-foreground/55">
@@ -508,6 +648,8 @@ function commandMenuItemGlyph(item: ComposerCommandItem, theme: "light" | "dark"
       return <PluginIcon className={cls} />;
     case "thread":
       return <ProviderIcon provider={item.provider} className={cls} />;
+    case "paper":
+      return <SkillCubeIcon className={cls} />;
     case "connector":
       return <ConnectorIcon name={item.connectorName} className={cls} />;
     case "skill":

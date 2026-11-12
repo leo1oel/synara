@@ -47,7 +47,7 @@ const GitPushStepStatus = Schema.Literals([
 ]);
 const GitBranchStepStatus = Schema.Literals(["created", "skipped_not_requested"]);
 const GitPrStepStatus = Schema.Literals(["created", "opened_existing", "skipped_not_requested"]);
-const GitStatusPrState = Schema.Literals(["open", "closed", "merged"]);
+const GitBranchPullRequestState = Schema.Literals(["open", "closed", "merged"]);
 const GitPullRequestReference = TrimmedNonEmptyStringSchema;
 const GitPullRequestState = Schema.Literals(["open", "closed", "merged"]);
 // GitHub's mergeability is eventually consistent: "unknown" is a real transient state
@@ -72,6 +72,8 @@ export const GitRecentCommit = Schema.Struct({
   shortSha: TrimmedNonEmptyStringSchema,
   subject: Schema.String,
   committedAt: Schema.String,
+  // Optional so an older server's rows still decode.
+  authorName: Schema.optional(Schema.String),
 });
 export type GitRecentCommit = typeof GitRecentCommit.Type;
 
@@ -127,6 +129,7 @@ export const GitPullRequestComment = Schema.Struct({
   path: Schema.NullOr(TrimmedNonEmptyStringSchema),
   url: Schema.NullOr(Schema.String),
   createdAt: Schema.NullOr(TrimmedNonEmptyStringSchema),
+  line: Schema.optional(Schema.NullOr(Schema.Number)),
 });
 export type GitPullRequestComment = typeof GitPullRequestComment.Type;
 
@@ -136,6 +139,11 @@ export const GitStatusInput = Schema.Struct({
   cwd: TrimmedNonEmptyStringSchema,
 });
 export type GitStatusInput = typeof GitStatusInput.Type;
+
+export const GitBranchPullRequestInput = Schema.Struct({
+  cwd: TrimmedNonEmptyStringSchema,
+});
+export type GitBranchPullRequestInput = typeof GitBranchPullRequestInput.Type;
 
 export const GitHubRepositoryInput = Schema.Struct({
   cwd: TrimmedNonEmptyStringSchema,
@@ -157,7 +165,7 @@ export const GitReadWorkingTreeDiffInput = Schema.Struct({
     Schema.Literals(["workingTree", "unstaged", "staged", "branch", "ref"]),
   ).pipe(Schema.withConstructorDefault(() => Option.some("workingTree" as const))),
   compareRef: Schema.optional(GitRevisionArgumentSchema),
-  /** Limit a workingTree patch to one exact workspace-relative file. */
+  /** Limit a workingTree, staged or unstaged patch to one exact workspace-relative file. */
   filePath: Schema.optional(TrimmedNonEmptyStringSchema),
 });
 export type GitReadWorkingTreeDiffInput = typeof GitReadWorkingTreeDiffInput.Type;
@@ -204,6 +212,22 @@ export const GitReadFileAtRevResult = Schema.Struct({
   truncated: Schema.Boolean,
 });
 export type GitReadFileAtRevResult = typeof GitReadFileAtRevResult.Type;
+
+// Drafts a commit message for what Commit would include, without committing or touching the
+// index: `filePaths` are the files the commit would take (every change when omitted).
+export const GitGenerateCommitMessageInput = Schema.Struct({
+  cwd: TrimmedNonEmptyStringSchema,
+  filePaths: Schema.optional(
+    Schema.Array(TrimmedNonEmptyStringSchema).check(Schema.isMinLength(1)),
+  ),
+  codexHomePath: Schema.optional(TrimmedNonEmptyStringSchema),
+  providerOptions: Schema.optional(ProviderStartOptions),
+  textGenerationModel: Schema.optional(TrimmedNonEmptyStringSchema).pipe(
+    Schema.withConstructorDefault(() => Option.some(DEFAULT_GIT_TEXT_GENERATION_MODEL)),
+  ),
+  textGenerationModelSelection: Schema.optional(ModelSelection),
+});
+export type GitGenerateCommitMessageInput = typeof GitGenerateCommitMessageInput.Type;
 
 // Read-only diff summary requests reuse the shared git text-generation model settings.
 export const GitSummarizeDiffInput = Schema.Struct({
@@ -384,6 +408,20 @@ export const GitInitInput = Schema.Struct({
 });
 export type GitInitInput = typeof GitInitInput.Type;
 
+export const GitConnectGitHubRemoteInput = Schema.Struct({
+  cwd: TrimmedNonEmptyStringSchema,
+  url: TrimmedNonEmptyStringSchema,
+});
+export type GitConnectGitHubRemoteInput = typeof GitConnectGitHubRemoteInput.Type;
+
+export const GitCreateGitHubRepositoryInput = Schema.Struct({
+  cwd: TrimmedNonEmptyStringSchema,
+  name: TrimmedNonEmptyStringSchema,
+  description: Schema.optional(Schema.String),
+  visibility: Schema.Literals(["private", "public"]),
+});
+export type GitCreateGitHubRepositoryInput = typeof GitCreateGitHubRepositoryInput.Type;
+
 export const GitStageFilesInput = Schema.Struct({
   cwd: TrimmedNonEmptyStringSchema,
   paths: Schema.Array(TrimmedNonEmptyStringSchema).check(Schema.isMinLength(1)),
@@ -398,20 +436,23 @@ export type GitUnstageFilesInput = typeof GitUnstageFilesInput.Type;
 
 // RPC Results
 
-const GitStatusPr = Schema.Struct({
+const GitBranchPullRequest = Schema.Struct({
   number: PositiveInt,
   title: TrimmedNonEmptyStringSchema,
   url: Schema.String,
   baseBranch: TrimmedNonEmptyStringSchema,
   headBranch: TrimmedNonEmptyStringSchema,
-  state: GitStatusPrState,
+  state: GitBranchPullRequestState,
   isDraft: Schema.Boolean,
   mergeability: GitPullRequestMergeability,
   additions: Schema.NullOr(NonNegativeInt),
   deletions: Schema.NullOr(NonNegativeInt),
   changedFiles: Schema.NullOr(NonNegativeInt),
 });
+export type GitBranchPullRequest = typeof GitBranchPullRequest.Type;
 
+// Local repository state only. The current branch's pull request needs GitHub round trips,
+// so it is served separately by `git.branchPullRequest` and never delays status.
 export const GitStatusResult = Schema.Struct({
   branch: TrimmedNonEmptyStringSchema.pipe(Schema.NullOr),
   hasWorkingTreeChanges: Schema.Boolean,
@@ -431,9 +472,18 @@ export const GitStatusResult = Schema.Struct({
   configuredPrBaseBranch: Schema.optional(TrimmedNonEmptyStringSchema.pipe(Schema.NullOr)),
   aheadCount: NonNegativeInt,
   behindCount: NonNegativeInt,
-  pr: Schema.NullOr(GitStatusPr),
 });
 export type GitStatusResult = typeof GitStatusResult.Type;
+
+export const GitBranchPullRequestResult = Schema.Struct({
+  // Checkout identity, which may differ from the remote PR head on imported PR branches.
+  branch: GitStatusResult.fields.branch,
+  pr: Schema.NullOr(GitBranchPullRequest),
+});
+export type GitBranchPullRequestResult = typeof GitBranchPullRequestResult.Type;
+
+/** Client-side join of `git.status` with `git.branchPullRequest` for surfaces that need both. */
+export type GitStatusWithPullRequest = GitStatusResult & GitBranchPullRequestResult;
 
 export const GitStatusLocalResult = Schema.Struct({
   branch: TrimmedNonEmptyStringSchema.pipe(Schema.NullOr),
@@ -448,7 +498,6 @@ export const GitStatusRemoteResult = Schema.Struct({
   configuredPrBaseBranch: GitStatusResult.fields.configuredPrBaseBranch,
   aheadCount: NonNegativeInt,
   behindCount: NonNegativeInt,
-  pr: Schema.NullOr(GitStatusPr),
 });
 export type GitStatusRemoteResult = typeof GitStatusRemoteResult.Type;
 
@@ -482,9 +531,28 @@ export const GitStatusStreamEvent = Schema.Union([
 ]);
 export type GitStatusStreamEvent = typeof GitStatusStreamEvent.Type;
 
+// Paths exactly as Git stores them: read from `-z` output, so never C-quoted and never trimmed.
+const GitChangedFilePath = Schema.String.check(Schema.isNonEmpty());
+
+/** One file of a staged or unstaged scope, listed whether or not its patch fits the response. */
+export const GitChangedFile = Schema.Struct({
+  path: GitChangedFilePath,
+  /** The rename source, which must travel with `path` when the pair is staged or committed. */
+  previousPath: Schema.optional(GitChangedFilePath),
+  status: Schema.Literals(["added", "modified", "deleted", "renamed"]),
+  insertions: NonNegativeInt,
+  deletions: NonNegativeInt,
+});
+export type GitChangedFile = typeof GitChangedFile.Type;
+
 export const GitReadWorkingTreeDiffResult = Schema.Struct({
   patch: Schema.String,
   truncated: Schema.Boolean,
+  /**
+   * Every file in a staged or unstaged scope. The patch is capped and can stop partway, so this
+   * list, not the files parsed from the patch, says what changed.
+   */
+  files: Schema.optional(Schema.Array(GitChangedFile)),
 });
 export type GitReadWorkingTreeDiffResult = typeof GitReadWorkingTreeDiffResult.Type;
 
@@ -522,6 +590,16 @@ export type GitStageFilesResult = typeof GitStageFilesResult.Type;
 
 export const GitUnstageFilesResult = GitStageFilesResult;
 export type GitUnstageFilesResult = GitStageFilesResult;
+
+export const GitConnectGitHubRemoteResult = Schema.Struct({
+  remoteName: TrimmedNonEmptyStringSchema,
+  repository: TrimmedNonEmptyStringSchema,
+  url: TrimmedNonEmptyStringSchema,
+});
+export type GitConnectGitHubRemoteResult = typeof GitConnectGitHubRemoteResult.Type;
+
+export const GitCreateGitHubRepositoryResult = GitConnectGitHubRemoteResult;
+export type GitCreateGitHubRepositoryResult = GitConnectGitHubRemoteResult;
 
 export const GitListBranchesResult = Schema.Struct({
   branches: Schema.Array(GitBranch),
@@ -649,6 +727,12 @@ export const GitPullResult = Schema.Struct({
   upstreamBranch: TrimmedNonEmptyStringSchema.pipe(Schema.NullOr),
 });
 export type GitPullResult = typeof GitPullResult.Type;
+
+export const GitGenerateCommitMessageResult = Schema.Struct({
+  subject: TrimmedNonEmptyStringSchema,
+  body: Schema.String,
+});
+export type GitGenerateCommitMessageResult = typeof GitGenerateCommitMessageResult.Type;
 
 export const GitSummarizeDiffResult = Schema.Struct({
   summary: TrimmedNonEmptyStringSchema,

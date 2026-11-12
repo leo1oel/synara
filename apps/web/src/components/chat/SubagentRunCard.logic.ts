@@ -1,4 +1,3 @@
-import { t } from "~/i18n";
 // FILE: SubagentRunCard.logic.ts
 // Purpose: Folds routed subagent work into entries for its invocations, and
 // derives each transcript card's rows (identity, live state, current action,
@@ -8,8 +7,8 @@ import { t } from "~/i18n";
 // Exports: foldSubagentRunWorkEntries, deriveSubagentRunCard, scanSubagentRunCards,
 // summarizeRunningAgents, and the card model types
 
+import { t } from "~/i18n";
 import { ThreadId, type TurnId } from "@synara/contracts";
-import { pluralize } from "@synara/shared/text";
 
 import {
   deriveWorkLogEntries,
@@ -226,7 +225,7 @@ function toSubagentRunEntry(run: RunDraft): WorkLogEntry {
     createdAt: anchor.createdAt,
     ...(anchor.sequence !== undefined ? { sequence: anchor.sequence } : {}),
     ...(anchor.turnId !== undefined ? { turnId: anchor.turnId } : {}),
-    label: "Subagents",
+    label: t("chat:subagents"),
     // Not a tool call: it never folds into "Ran N tool calls" or the inline
     // tool cap, and renders in the status block of its message.
     tone: "info",
@@ -850,11 +849,11 @@ export function describeSubagentRunRow(
   const statusKind = subagentRunPhaseStatusKind(row.phase);
   switch (row.phase) {
     case "starting":
-      return { statusKind, word: "Starting", durationLabel: null, detail: null };
+      return { statusKind, word: t("chat:runStatus_starting"), durationLabel: null, detail: null };
     case "running":
       return {
         statusKind,
-        word: "Running",
+        word: t("chat:runStatus_running_command"),
         durationLabel,
         detail: row.action ? { kind: "action", action: row.action } : null,
       };
@@ -862,7 +861,10 @@ export function describeSubagentRunRow(
       const liveNested = row.nested.filter(isRowLive).length;
       return {
         statusKind,
-        word: `Waiting for its ${liveNested === 1 ? "subagent" : "subagents"}`,
+        word:
+          liveNested === 1
+            ? t("lattice:waitingForItsSubagent")
+            : t("lattice:waitingForItsSubagents"),
         durationLabel,
         detail: null,
       };
@@ -870,14 +872,14 @@ export function describeSubagentRunRow(
     case "done":
       return {
         statusKind,
-        word: "Done",
+        word: t("git:detail_done"),
         durationLabel,
         detail: row.outcomeText ? { kind: "outcome", text: row.outcomeText } : null,
       };
     case "failed":
       return {
         statusKind,
-        word: "Failed",
+        word: t("chat:runStatus_failed"),
         durationLabel,
         detail: row.outcomeText ? { kind: "outcome", text: row.outcomeText } : null,
       };
@@ -885,7 +887,7 @@ export function describeSubagentRunRow(
     case "interrupted":
       return {
         statusKind,
-        word: row.phase === "interrupted" ? "Interrupted" : "Stopped",
+        word: row.phase === "interrupted" ? t("chat:runStatus_interrupted") : t("chat:stopped"),
         durationLabel,
         detail: row.action ? { kind: "was-running", action: row.action } : null,
       };
@@ -908,21 +910,37 @@ export function describeSubagentRunHeader(
 ): SubagentRunHeaderDescription {
   const segments: Array<{ text: string; tone: "running" | "failed" | null }> = [];
   if (card.isLive) {
-    segments.push({ text: `${card.counts.running} running`, tone: "running" });
+    segments.push({
+      text: t("chat:backgroundTasksRunning", { count: card.counts.running }),
+      tone: "running",
+    });
   } else if (card.allStopped) {
-    segments.push({ text: "stopped", tone: null });
+    segments.push({ text: t("chat:stopped2"), tone: null });
   } else {
-    if (card.counts.done > 0) segments.push({ text: `${card.counts.done} done`, tone: null });
+    if (card.counts.done > 0)
+      segments.push({ text: t("chat:done2", { value0: card.counts.done }), tone: null });
     if (card.counts.failed > 0)
-      segments.push({ text: `${card.counts.failed} failed`, tone: "failed" });
+      segments.push({
+        text: t("chat:failed", { value0: card.counts.failed }),
+        tone: "failed",
+      });
     if (card.counts.stopped > 0)
-      segments.push({ text: `${card.counts.stopped} stopped`, tone: null });
+      segments.push({
+        text: t("common:stopped", { value0: card.counts.stopped }),
+        tone: null,
+      });
     if (card.counts.interrupted > 0)
-      segments.push({ text: `${card.counts.interrupted} interrupted`, tone: null });
+      segments.push({
+        text: t("lattice:interrupted", { count: card.counts.interrupted }),
+        tone: null,
+      });
   }
   return {
-    title: `${card.rows.length} ${pluralize(card.rows.length, "subagent")}`,
-    nestedLabel: card.nestedCount > 0 ? `+${card.nestedCount} nested` : null,
+    title:
+      card.rows.length === 1
+        ? t("lattice:n1Subagent")
+        : t("lattice:subagents", { count: card.rows.length }),
+    nestedLabel: card.nestedCount > 0 ? t("lattice:nested", { count: card.nestedCount }) : null,
     segments,
     durationLabel: elapsedLabel(card.startedAtMs, card.endedAtMs, card.isLive, nowMs),
   };

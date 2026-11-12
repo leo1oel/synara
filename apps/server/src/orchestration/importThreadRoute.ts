@@ -43,7 +43,6 @@ import type { ServerConfigShape } from "../config";
 import { loadClaudeAgentSdk } from "../provider/claudeAgentSdk.ts";
 import { selectClaudeHistoryPage, type ClaudeHistoryPage } from "../provider/claudeHistoryPage.ts";
 import { buildClaudeInstanceProcessEnv } from "../provider/claudeEnvironment.ts";
-import { ensureProviderEnabled } from "../provider/enabledProviderAdapter";
 import type { OrchestrationEngineShape } from "./Services/OrchestrationEngine";
 import type { ProjectionSnapshotQueryShape } from "./Services/ProjectionSnapshotQuery";
 import type { ProviderThreadSnapshot } from "../provider/Services/ProviderAdapter";
@@ -621,7 +620,13 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
     });
   });
 
-  return Effect.fnUntraced(function* (body: ImportThreadRequest) {
+  // Lattice: `continueInPlace` resumes a Codex thread instead of forking it, so a
+  // session continued from another editor keeps one native identity (Claude always
+  // resumes in place) and its folder listing can recognise it as already open.
+  return Effect.fnUntraced(function* (
+    body: ImportThreadRequest,
+    importOptions?: { readonly continueInPlace?: boolean },
+  ) {
     const threadOption = yield* options.projectionSnapshotQuery.getThreadDetailById(body.threadId);
     if (Option.isNone(threadOption)) {
       return yield* Effect.fail(importMessagesError(`Thread '${body.threadId}' was not found.`));
@@ -633,8 +638,6 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
         importMessagesError(`Thread '${body.threadId}' already has an active provider session.`),
       );
     }
-
-    yield* ensureProviderEnabled(thread.modelSelection.provider, options.serverSettings);
 
     const projectOption = yield* options.projectionSnapshotQuery.getProjectShellById(
       thread.projectId,
@@ -761,7 +764,7 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
         ? { cwd: importedProviderContext?.runtimeCwd ?? cwd }
         : {}),
       modelSelection: effectiveModelSelection,
-      ...(provider === "codex"
+      ...(provider === "codex" && importOptions?.continueInPlace !== true
         ? { forkSourceResumeCursor: importResumeCursor }
         : { resumeCursor: importResumeCursor }),
       runtimeMode: thread.runtimeMode,

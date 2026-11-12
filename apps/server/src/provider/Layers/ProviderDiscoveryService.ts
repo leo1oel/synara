@@ -5,6 +5,8 @@ import {
   type ProviderKind,
   ProviderListAgentsInput,
   ProviderListCommandsInput,
+  ProviderListMcpServersInput,
+  ProviderMcpServerActionInput,
   ProviderListModelsInput,
   type ProviderListModelsResult,
   ProviderListPluginsInput,
@@ -375,6 +377,53 @@ const make = Effect.gen(function* () {
       });
     });
 
+  const resolveMcpAdapter = <T extends ProviderListMcpServersInput>(operation: string, parsed: T) =>
+    Effect.gen(function* () {
+      const resolved = yield* resolveDiscoveryInput(parsed);
+      if (!resolved.enabled) {
+        return yield* new ProviderValidationError({
+          operation,
+          issue: `Provider instance '${resolved.instanceId}' is disabled.`,
+        });
+      }
+      const adapter = yield* registry.getByProvider(resolved.provider);
+      if (!adapter.listMcpServers || !adapter.runMcpServerAction) {
+        return yield* new ProviderValidationError({
+          operation,
+          issue: `MCP servers are not available for provider '${resolved.provider}'.`,
+        });
+      }
+      return {
+        resolved,
+        listMcpServers: adapter.listMcpServers,
+        runMcpServerAction: adapter.runMcpServerAction,
+      };
+    });
+
+  const listMcpServers: ProviderDiscoveryServiceShape["listMcpServers"] = (input) =>
+    Effect.gen(function* () {
+      const operation = "ProviderDiscoveryService.listMcpServers";
+      const parsed = yield* decodeInputOrValidationError({
+        operation,
+        schema: ProviderListMcpServersInput,
+        payload: input,
+      });
+      const { resolved, listMcpServers } = yield* resolveMcpAdapter(operation, parsed);
+      return yield* listMcpServers(resolved);
+    });
+
+  const runMcpServerAction: ProviderDiscoveryServiceShape["runMcpServerAction"] = (input) =>
+    Effect.gen(function* () {
+      const operation = "ProviderDiscoveryService.runMcpServerAction";
+      const parsed = yield* decodeInputOrValidationError({
+        operation,
+        schema: ProviderMcpServerActionInput,
+        payload: input,
+      });
+      const { resolved, runMcpServerAction } = yield* resolveMcpAdapter(operation, parsed);
+      return yield* runMcpServerAction(resolved);
+    });
+
   const listPlugins: ProviderDiscoveryServiceShape["listPlugins"] = (input) =>
     Effect.gen(function* () {
       const parsed = yield* decodeInputOrValidationError({
@@ -509,6 +558,8 @@ const make = Effect.gen(function* () {
   return {
     getComposerCapabilities,
     listCommands,
+    listMcpServers,
+    runMcpServerAction,
     listSkills,
     listPlugins,
     readPlugin,

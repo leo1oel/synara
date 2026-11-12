@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ServerProviderStatus } from "@synara/contracts";
 import {
+  findFirstUsableDefaultProvider,
   findProviderStatus,
   isProviderUsable,
   normalizeProviderStatusForLocalConfig,
@@ -30,6 +31,61 @@ const READY_STATUS: ServerProviderStatus = {
   authStatus: "authenticated",
 };
 
+describe("findFirstUsableDefaultProvider", () => {
+  it("uses the first installed and authenticated provider in the preferred order", () => {
+    expect(
+      findFirstUsableDefaultProvider(
+        [
+          { ...BASE_STATUS, provider: "codex", driver: "codex", instanceId: "codex" },
+          {
+            ...READY_STATUS,
+            provider: "claudeAgent",
+            driver: "claudeAgent",
+            instanceId: "claudeAgent",
+          },
+        ],
+        ["codex", "claudeAgent"],
+      ),
+    ).toBe("claudeAgent");
+  });
+
+  it("returns null when every checked provider requires setup", () => {
+    expect(
+      findFirstUsableDefaultProvider(
+        [
+          { ...BASE_STATUS, provider: "codex", driver: "codex", instanceId: "codex" },
+          {
+            ...BASE_STATUS,
+            provider: "claudeAgent",
+            driver: "claudeAgent",
+            instanceId: "claudeAgent",
+            authStatus: "unauthenticated",
+          },
+        ],
+        ["codex", "claudeAgent"],
+      ),
+    ).toBeNull();
+  });
+
+  it("does not treat Pi as a selectable fallback without a default model", () => {
+    expect(
+      findFirstUsableDefaultProvider(
+        [
+          { ...BASE_STATUS, provider: "codex", driver: "codex", instanceId: "codex" },
+          {
+            ...READY_STATUS,
+            provider: "pi",
+            driver: "pi",
+            instanceId: "pi",
+            authStatus: "unknown",
+          },
+        ],
+        ["codex", "pi"],
+      ),
+    ).toBeNull();
+  });
+});
+
 describe("normalizeProviderStatusForLocalConfig", () => {
   it("keeps Antigravity interactive when a custom binary path is configured locally", () => {
     expect(
@@ -47,30 +103,26 @@ describe("normalizeProviderStatusForLocalConfig", () => {
     });
   });
 
-  it("makes a disabled provider unavailable before its health status refreshes", () => {
+  it("applies the same custom-path fallback to Claude", () => {
+    const claudeStatus: ServerProviderStatus = {
+      ...BASE_STATUS,
+      provider: "claudeAgent",
+      instanceId: "claudeAgent",
+      driver: "claudeAgent",
+      message: "Claude Code CLI (`claude`) is not installed or not on PATH.",
+    };
     expect(
       normalizeProviderStatusForLocalConfig({
-        provider: "opencode",
-        status: {
-          ...READY_STATUS,
-          provider: "opencode",
-          instanceId: "opencode",
-          driver: "opencode",
-          message: "OpenCode is ready.",
-        },
-        customBinaryPath: "/custom/bin/opencode",
-        disabled: true,
+        provider: "claudeAgent",
+        status: claudeStatus,
+        customBinaryPath: "/opt/homebrew/bin/claude",
       }),
     ).toEqual({
-      provider: "opencode",
-      instanceId: "opencode",
-      driver: "opencode",
-      enabled: false,
+      ...claudeStatus,
+      available: true,
       status: "warning",
-      available: false,
-      authStatus: "unknown",
-      checkedAt: BASE_STATUS.checkedAt,
-      message: "Provider is disabled in Synara settings.",
+      message:
+        "Claude uses a custom local binary path in this app. Availability will be confirmed when you start a session.",
     });
   });
 

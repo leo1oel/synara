@@ -325,3 +325,7 @@ Unknown condition keys evaluate to `false`.
 - Rules are evaluated in array order.
 - For a key event, the last rule where both `key` matches and `when` evaluates to `true` wins.
 - That means precedence is across commands, not only within the same command.
+
+### Inside Lattice
+
+Embedded in Lattice, these bindings yield to the host's own shortcuts. Lattice sends the keys its window can run at the moment (`lattice:host-shortcuts`), and the frame stops those before any binding here sees them and hands them back (`synara:host-shortcut`, [`latticeHostShortcuts.ts`](apps/web/src/latticeHostShortcuts.ts)). So ⌘P is Lattice's quick open and ⌘1 its first workspace while the Agent panel or a Git view has focus; every key Lattice does not claim keeps its meaning here.

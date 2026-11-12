@@ -6,6 +6,12 @@ import {
   ImportProjectResult,
   ListProjectImportsInput,
   ListProjectImportsResult,
+  ListFolderSessionsInput,
+  ListFolderSessionsResult,
+  OpenFolderSessionInput,
+  OpenFolderSessionResult,
+  GetNativeSessionHandoffInput,
+  NativeSessionHandoff,
 } from "./projectImport";
 import {
   AntigravityModelOptions,
@@ -63,7 +69,11 @@ export const ORCHESTRATION_WS_METHODS = {
   listProjectImports: "orchestration.listProjectImports",
   importProject: "orchestration.importProject",
   loadProjectImportHistory: "orchestration.loadProjectImportHistory",
+  listFolderSessions: "orchestration.listFolderSessions",
+  openFolderSession: "orchestration.openFolderSession",
+  getNativeSessionHandoff: "orchestration.getNativeSessionHandoff",
   regenerateThreadTitle: "orchestration.regenerateThreadTitle",
+  showPanelThread: "orchestration.showPanelThread",
   repairState: "orchestration.repairState",
   getTurnDiff: "orchestration.getTurnDiff",
   getFullThreadDiff: "orchestration.getFullThreadDiff",
@@ -530,6 +540,7 @@ export const ThreadCreationSource = Schema.Literals([
   "external_mcp",
   "provider_native",
   "automation_run",
+  "lattice_compile_repair",
 ]);
 export type ThreadCreationSource = typeof ThreadCreationSource.Type;
 export const ProviderReviewTarget = Schema.Union([
@@ -942,6 +953,7 @@ export const OrchestrationLatestTurn = Schema.Struct({
   startedAt: Schema.NullOr(IsoDateTime),
   completedAt: Schema.NullOr(IsoDateTime),
   assistantMessageId: Schema.NullOr(MessageId),
+  pendingMessageId: Schema.optional(Schema.NullOr(MessageId)),
   sourceProposedPlan: Schema.optional(SourceProposedPlanReference),
 });
 export type OrchestrationLatestTurn = typeof OrchestrationLatestTurn.Type;
@@ -1405,6 +1417,14 @@ export const ProjectCreateCommand = Schema.Struct({
   /** Importing into an existing folder must preserve even an empty project shell. */
   preserveExistingProject: Schema.optional(Schema.Boolean),
   createWorkspaceRootIfMissing: Schema.optional(Schema.Boolean).pipe(
+    Schema.withDecodingDefault(() => false),
+  ),
+  /**
+   * Embedded clients can initialize the same workspace concurrently. When true,
+   * an existing active project for this root is treated as a duplicate to recover
+   * and reuse, even when it has no persisted threads yet.
+   */
+  reuseExistingWorkspaceRoot: Schema.optional(Schema.Boolean).pipe(
     Schema.withDecodingDefault(() => false),
   ),
   defaultModelSelection: Schema.optional(Schema.NullOr(ModelSelection)),
@@ -3264,6 +3284,31 @@ export const OrchestrationRegenerateThreadTitleResult = Schema.Union([
 export type OrchestrationRegenerateThreadTitleResult =
   typeof OrchestrationRegenerateThreadTitleResult.Type;
 
+/**
+ * An embedded panel reports the thread it shows (null for none). The shown
+ * thread's provider runtime is kept warm: exempt from the idle stop while the
+ * report is renewed, and, with `prewarm`, started now with the composer's
+ * settings so a cold start overlaps typing. `threadId` may name a draft the
+ * server has not seen yet; its first send adopts the warm runtime.
+ */
+export const OrchestrationShowPanelThreadInput = Schema.Struct({
+  panelId: TrimmedNonEmptyString.check(Schema.isMaxLength(128)),
+  threadId: Schema.NullOr(ThreadId),
+  prewarm: Schema.optional(
+    Schema.Struct({
+      projectId: ProjectId,
+      modelSelection: ModelSelection,
+      runtimeMode: RuntimeMode,
+    }),
+  ),
+});
+export type OrchestrationShowPanelThreadInput = typeof OrchestrationShowPanelThreadInput.Type;
+
+export const OrchestrationShowPanelThreadResult = Schema.Struct({
+  prewarm: Schema.Literals(["started", "running", "skipped", "not-requested"]),
+});
+export type OrchestrationShowPanelThreadResult = typeof OrchestrationShowPanelThreadResult.Type;
+
 export const OrchestrationUnsubscribeThreadInput = Schema.Struct({
   threadId: ThreadId,
 });
@@ -3304,6 +3349,9 @@ export const OrchestrationRpcSchemas = {
   },
   listProjectImports: { input: ListProjectImportsInput, output: ListProjectImportsResult },
   importProject: { input: ImportProjectInput, output: ImportProjectResult },
+  listFolderSessions: { input: ListFolderSessionsInput, output: ListFolderSessionsResult },
+  openFolderSession: { input: OpenFolderSessionInput, output: OpenFolderSessionResult },
+  getNativeSessionHandoff: { input: GetNativeSessionHandoffInput, output: NativeSessionHandoff },
   loadProjectImportHistory: {
     input: LoadProjectImportHistoryInput,
     output: LoadProjectImportHistoryResult,
@@ -3311,6 +3359,10 @@ export const OrchestrationRpcSchemas = {
   regenerateThreadTitle: {
     input: OrchestrationRegenerateThreadTitleInput,
     output: OrchestrationRegenerateThreadTitleResult,
+  },
+  showPanelThread: {
+    input: OrchestrationShowPanelThreadInput,
+    output: OrchestrationShowPanelThreadResult,
   },
   getTurnDiff: {
     input: OrchestrationGetTurnDiffInput,

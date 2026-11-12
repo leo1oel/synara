@@ -1,9 +1,3 @@
-// FILE: ComposerModelPickerRow.tsx
-// Purpose: One model row of the composer model picker — name, mod+digit hint, star toggle,
-//   and (for models with an effort ladder, in menu mode) a hover side block that picks model + effort at once.
-// Layer: Chat composer presentation
-// Depends on: composer trait resolution, starred model keys, and shared menu primitives.
-
 import { type ProviderModelDescriptor } from "@synara/contracts";
 
 import { type StarredModel, starredModelSlotKey } from "~/lib/starredModels";
@@ -28,11 +22,12 @@ import {
 import { ComposerPickerMenuSubPopup } from "./ComposerPickerMenuPopup";
 import { COMPOSER_MUTED_ACCENT_TEXT_CLASS_NAME } from "./composerPickerStyles";
 import { getComposerTraitSelection } from "./composerTraits";
+import { localizeModelPickerLabel } from "./modelPickerLabels";
 import { ModelStarButton } from "./ModelStarButton";
 import { PICKER_PANEL_ROW_SELECTED_CLASS_NAME } from "./pickerPanelStyles";
 import { getProviderIconClassName } from "./ProviderModelPicker";
 import { resolveRuntimeModelDescriptor } from "./runtimeModelCapabilities";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 // Each row resolves its own traits, so a long catalog only recomputes the rows whose
 // inputs changed instead of the whole list on every keystroke.
@@ -128,14 +123,21 @@ export function ComposerModelPickerRow(props: {
           className="h-4 min-w-4 shrink-0 text-ui-2xs"
         />
       ) : null}
-      {row.selectableModel !== null ? starButton : null}
+      {row.selectableModel !== null ? (
+        starButton
+      ) : (
+        // The star sits outside the disabled item (which takes no pointer events); keep its
+        // place in the row so a long reason truncates before it instead of running under it.
+        <span aria-hidden="true" className="size-5 shrink-0" />
+      )}
     </>
   );
 
   if (row.selectableModel === null) {
     return (
-      <div className="relative">
-        <MenuItem disabled className="pe-8" closeOnClick={false}>
+      // A narrow panel truncates the reason; hovering the row shows all of it.
+      <div className="relative" title={row.detail ?? undefined}>
+        <MenuItem disabled className="pe-1" closeOnClick={false}>
           {rowContent}
         </MenuItem>
         <div className="absolute inset-y-0 end-1 flex items-center">{starButton}</div>
@@ -186,10 +188,9 @@ export function ComposerModelPickerRow(props: {
                 value={level.value}
                 onClick={() => onSelectEffort(row, level.value)}
               >
-                {level.label}
                 {level.value === selection.defaultEffort
-                  ? t("chat:traitsPicker_defaultSuffix")
-                  : ""}
+                  ? t("lattice:default2", { option: localizeModelPickerLabel(t, level.label) })
+                  : localizeModelPickerLabel(t, level.label)}
               </MenuRadioItem>
             ))}
           </MenuRadioGroup>

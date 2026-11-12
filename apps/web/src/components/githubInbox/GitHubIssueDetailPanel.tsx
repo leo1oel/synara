@@ -1,14 +1,3 @@
-// FILE: GitHubIssueDetailPanel.tsx
-// Purpose: The inbox detail pane for an issue, in the same page shell as a pull request: a top
-//          bar (Summary and Timeline tabs; pin, copy link, open on GitHub, Send to agent), the
-//          shared GitHubItemHeader, the description and comments (with the comment composer) on
-//          the left, and Assignees, Labels, and Comments in the info column (rows under the
-//          header in a narrow pane). The question composer floats over the bottom and feeds the
-//          issue's side chat. There is no close/reopen action: the app has no RPC for changing
-//          an issue's state.
-// Layer: GitHub inbox presentation
-// Exports: GitHubIssueDetailPanel
-
 import type { GitHubIssueDetailInput } from "@synara/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -47,7 +36,7 @@ import {
   githubIssueDetailQueryOptions,
 } from "~/lib/githubInboxQueryOptions";
 import { pullRequestQueryErrorState } from "~/lib/pullRequestReactQuery";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 type IssueTab = "summary" | "timeline";
 
@@ -134,7 +123,7 @@ export function GitHubIssueDetailPanel({
           <>
             <GitHubItemPageIconActions
               url={detail.url}
-              itemLabel={`issue #${detail.number}`}
+              itemLabel={t("lattice:issue", { number: detail.number })}
               pin={host.pin}
             />
             <GitHubItemAgentActions
@@ -148,7 +137,7 @@ export function GitHubIssueDetailPanel({
       query={{
         isPending: detailQuery.isPending,
         initialError,
-        subject: "Issues",
+        subject: t("git:issues"),
         onRetry: () => void detailQuery.refetch(),
         loaded: detail !== undefined,
       }}
@@ -187,9 +176,7 @@ export function GitHubIssueDetailPanel({
               itemUrl={detail.url}
               workspaceRoot={detail.workspaceRoot}
               warning={
-                detail.commentsTruncated
-                  ? "Some comments are not shown here. Open the issue on GitHub for the full discussion."
-                  : null
+                detail.commentsTruncated ? t("lattice:someCommentsAreNotShownHereOpen") : null
               }
               target={detail}
               mutation={commentMutation}

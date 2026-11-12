@@ -56,7 +56,7 @@ import {
   resolveRightDockPaneLabel,
 } from "./rightDockPaneMeta";
 import { useDesktopTopBarWindowControlsGutterClassName } from "~/hooks/useDesktopTopBarGutter";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 // Pane kinds whose content has a natural width, opened at that size rather than
 // at the even split. The device pane frames a portrait phone, so its useful

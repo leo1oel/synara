@@ -9,7 +9,12 @@
 import { ServiceMap } from "effect";
 import type { Effect, Option, Scope } from "effect";
 
-import type { OrchestrationRegenerateThreadTitleResult, ThreadId } from "@synara/contracts";
+import type {
+  OrchestrationRegenerateThreadTitleResult,
+  OrchestrationShowPanelThreadInput,
+  OrchestrationShowPanelThreadResult,
+  ThreadId,
+} from "@synara/contracts";
 import type { ProjectionRepositoryError } from "../../persistence/Errors.ts";
 import type {
   ProviderBlockingDeliveryEvidence,
@@ -66,6 +71,11 @@ export interface ProviderCommandReactorShape {
     readonly reconciledBy: string;
     readonly note?: string | undefined;
   }) => Effect.Effect<ProviderDeliveryReconciliationResult | null, unknown>;
+
+  /** An embedded panel reports the thread it shows and may warm its runtime. */
+  readonly showPanelThread: (
+    input: OrchestrationShowPanelThreadInput,
+  ) => Effect.Effect<OrchestrationShowPanelThreadResult>;
 
   readonly regenerateThreadTitle: (input: {
     readonly threadId: ThreadId;

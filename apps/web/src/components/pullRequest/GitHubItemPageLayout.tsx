@@ -35,7 +35,7 @@ import type { GitHubItemInfoThread, GitHubItemInfoVariant } from "./GitHubItemIn
 import type { GitHubItemAgentTarget } from "./githubItemAgentContext";
 import { copyPullRequestLink } from "./PullRequestConfirmActionDialog";
 import { PullRequestsUnavailableState } from "./PullRequestsUnavailableState";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 /** What the code review page gives a detail panel beyond the item itself. */
 export interface GitHubItemPageHost {
@@ -99,7 +99,9 @@ export function GitHubItemAskComposer({
   const { onAskQuestion, onAsk } = host;
   return (
     <GitHubItemFloatingComposer
-      placeholder={t("git:askAboutThis", { value0: noun })}
+      placeholder={
+        noun === "issue" ? t("lattice:askAboutThisIssue") : t("lattice:askAboutThisPullRequest")
+      }
       projects={sendTargets}
       projectId={projectId}
       onProjectChange={setChosenProjectId}

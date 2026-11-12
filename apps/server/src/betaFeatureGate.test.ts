@@ -13,6 +13,18 @@ afterEach(() => {
   vi.resetModules();
 });
 
+// Lattice's loopback service has no bundle identity but ships the Stable boundary.
+// Upstream 1.5 has no Beta-only feature left, so the flavor itself is the contract.
+it.each(["lattice", "synara"])("applies the Stable boundary for the %s host", async (host) => {
+  vi.stubEnv("AGENT_HOST_PROFILE", host);
+  vi.stubEnv(SYNARA_DESKTOP_BUNDLE_ID_ENV, "");
+  vi.resetModules();
+  const { SERVER_DESKTOP_FLAVOR, isServerBetaFeatureEnabled } =
+    await import("./betaFeatureGate.ts");
+  expect(SERVER_DESKTOP_FLAVOR).toBe(host === "lattice" ? "production" : "unknown");
+  expect(isServerBetaFeatureEnabled("codex")).toBe(true);
+});
+
 it.each([
   [SYNARA_PRODUCTION_BUNDLE_ID, true],
   [SYNARA_BETA_BUNDLE_ID, true],

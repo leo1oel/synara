@@ -20,6 +20,7 @@ import { Effect } from "effect";
 import { toAccountWsRpcError, toSensitiveWsRpcError } from "./accountRpcErrors";
 import type { AccountSession } from "./accountSession";
 import type { OpenError } from "./open";
+import { synaraAccountUnavailableInHost } from "./remoteFeaturePolicy";
 import { requireOwnerRole } from "./wsOwnerOnly";
 
 export interface AccountRpcHandlerDeps {
@@ -36,10 +37,20 @@ export interface AccountRpcHandlerDeps {
  */
 const ownerAccountRpc = <A, E, R>(make: () => Effect.Effect<A, E, R>, fallbackMessage: string) =>
   requireOwnerRole.pipe(
+    Effect.andThen(refuseAccountInHost),
     Effect.flatMap(() =>
       make().pipe(Effect.mapError((cause) => toAccountWsRpcError(cause, fallbackMessage))),
     ),
   );
+
+/**
+ * Lattice's panel has no Synara account, so no account request (sign-in, billing,
+ * profile, recaps) may reach the network from it; status still reads "signed out".
+ */
+const refuseAccountInHost = Effect.suspend(() => {
+  const reason = synaraAccountUnavailableInHost();
+  return reason ? Effect.fail(new WsRpcError({ message: reason })) : Effect.void;
+});
 
 /**
  * {@link ownerAccountRpc} for handlers whose request carried a credential
@@ -58,6 +69,7 @@ const ownerSensitiveAccountRpc = <A, E, R>(
   fallbackMessage: string,
 ) =>
   requireOwnerRole.pipe(
+    Effect.andThen(refuseAccountInHost),
     Effect.flatMap(() =>
       make().pipe(Effect.mapError((cause) => toSensitiveWsRpcError(cause, fallbackMessage))),
     ),
@@ -65,10 +77,16 @@ const ownerSensitiveAccountRpc = <A, E, R>(
 
 export function makeAccountRpcHandlers({ accountSession, openBrowser }: AccountRpcHandlerDeps) {
   return {
+    // Reads only the local credential file, so it also answers inside Lattice.
     [WS_METHODS.accountStatus]: () =>
-      ownerSensitiveAccountRpc(
-        () => Effect.tryPromise(() => accountSession.status()),
-        "Failed to read the account session",
+      requireOwnerRole.pipe(
+        Effect.flatMap(() =>
+          Effect.tryPromise(() => accountSession.status()).pipe(
+            Effect.mapError((cause) =>
+              toSensitiveWsRpcError(cause, "Failed to read the account session"),
+            ),
+          ),
+        ),
       ),
     [WS_METHODS.accountBillingStatus]: () =>
       ownerSensitiveAccountRpc(

@@ -7,6 +7,7 @@
 
 import type { ProviderKind } from "@synara/contracts";
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { APP_BASE_NAME } from "~/branding";
 import { ProfileSetupForm } from "~/components/account/OnboardingDialog";
@@ -26,6 +27,7 @@ import { CircleCheckIcon } from "~/lib/icons";
 import { cn, isMacNavigatorPlatform } from "~/lib/utils";
 import { useProjectImportDialogStore } from "~/projectImport/projectImportDialogStore";
 import { VISIBLE_PROVIDER_DESCRIPTORS } from "../betaFeatures";
+import { serverSettingsQueryOptions } from "~/lib/serverReactQuery";
 import {
   isOnboardingSetupStep,
   nextOnboardingStep,

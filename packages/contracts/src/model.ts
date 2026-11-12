@@ -539,10 +539,44 @@ const CLAUDE_NO_FAST_XHIGH_CAPABILITIES: ModelCapabilities = {
 // ultrathink prompt mode), effort runs low..max, and there is no fast-mode lane.
 const CLAUDE_FABLE_CAPABILITIES: ModelCapabilities = CLAUDE_NO_FAST_XHIGH_CAPABILITIES;
 
-// Opus 5 and 5.5 keep the Claude 5 ladder (thinking is adaptive, so no ultrathink prompt
-// mode) but stays on the Opus fast-mode lane that Fable and Sonnet lack.
+// Claude Code runs Fable 5.2, Opus 5.5, Sonnet 5.5 and Haiku 5.5 at medium unless told
+// otherwise ("Fable 5.2, Opus 5.5, Sonnet 5.5, and Haiku 5.5 default to `medium`"), and
+// Synara sends no effort for the level marked default, so medium is the level the picker
+// must show as default for them; marking High would label a medium run "High". Sonnet 5.5
+// and Haiku 5.5 take this ladder as is (adaptive thinking that cannot be turned off,
+// low..max, 1M context, no fast mode: Anthropic's fast mode covers only Fable 5.2, Opus
+// 5.5, Opus 5 and Opus 4.8).
+const CLAUDE_MEDIUM_DEFAULT_NO_FAST_XHIGH_CAPABILITIES: ModelCapabilities = {
+  ...CLAUDE_NO_FAST_XHIGH_CAPABILITIES,
+  reasoningEffortLevels: [
+    claudeApiEffortOption("low", "Low"),
+    claudeApiEffortOption("medium", "Medium", { isDefault: true }),
+    claudeApiEffortOption("high", "High"),
+    claudeApiEffortOption("xhigh", "Extra High"),
+    claudeApiEffortOption("max", "Max"),
+    claudeCodeModeOption("ultracode", "Ultracode", "xhigh", "xhigh + workflows"),
+  ],
+};
+
+// Opus 5 keeps the Claude 5 ladder (thinking is adaptive, so no ultrathink prompt mode,
+// High the default) but stays on the Opus fast-mode lane that Fable 5/5.1 and Sonnet lack.
 const CLAUDE_OPUS_5_CAPABILITIES: ModelCapabilities = {
   ...CLAUDE_NO_FAST_XHIGH_CAPABILITIES,
+  supportsFastMode: true,
+};
+
+// Opus 5.5 is Opus 5 with Claude Code's medium default ("Opus 5.5 defaults to `medium`,
+// one level below Opus 5's default of `high`").
+const CLAUDE_OPUS_5_5_CAPABILITIES: ModelCapabilities = {
+  ...CLAUDE_MEDIUM_DEFAULT_NO_FAST_XHIGH_CAPABILITIES,
+  supportsFastMode: true,
+};
+
+// Fable 5.2 keeps the Fable ladder (adaptive thinking always on, low..max, 1M context)
+// at Claude Code's medium default, and is the first Fable on the fast-mode lane: Claude
+// Code's /fast supports it from v2.1.321, the release that added the model.
+const CLAUDE_FABLE_5_2_CAPABILITIES: ModelCapabilities = {
+  ...CLAUDE_MEDIUM_DEFAULT_NO_FAST_XHIGH_CAPABILITIES,
   supportsFastMode: true,
 };
 
@@ -657,6 +691,11 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
   ],
   claudeAgent: [
     {
+      slug: "claude-fable-5-2",
+      name: "Claude Fable 5.2",
+      capabilities: CLAUDE_FABLE_5_2_CAPABILITIES,
+    },
+    {
       slug: "claude-fable-5-1",
       name: "Claude Fable 5.1",
       capabilities: CLAUDE_FABLE_CAPABILITIES,
@@ -669,7 +708,7 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
     {
       slug: "claude-opus-5-5",
       name: "Claude Opus 5.5",
-      capabilities: CLAUDE_OPUS_5_CAPABILITIES,
+      capabilities: CLAUDE_OPUS_5_5_CAPABILITIES,
     },
     {
       slug: "claude-opus-5",
@@ -708,6 +747,11 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
       },
     },
     {
+      slug: "claude-sonnet-5-5",
+      name: "Claude Sonnet 5.5",
+      capabilities: CLAUDE_MEDIUM_DEFAULT_NO_FAST_XHIGH_CAPABILITIES,
+    },
+    {
       slug: "claude-sonnet-5",
       name: "Claude Sonnet 5",
       capabilities: CLAUDE_SONNET_5_CAPABILITIES,
@@ -716,6 +760,11 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
       slug: "claude-sonnet-4-6",
       name: "Claude Sonnet 4.6",
       capabilities: { ...CLAUDE_EXTENDED_THINKING_CAPABILITIES, supportsFastMode: false },
+    },
+    {
+      slug: "claude-haiku-5-5",
+      name: "Claude Haiku 5.5",
+      capabilities: CLAUDE_MEDIUM_DEFAULT_NO_FAST_XHIGH_CAPABILITIES,
     },
     {
       slug: "claude-haiku-4-5",
@@ -1179,7 +1228,7 @@ export type ProviderWithDefaultModel = Exclude<ProviderKind, "pi" | "omp">;
 
 export const DEFAULT_MODEL_BY_PROVIDER: Record<ProviderWithDefaultModel, ModelSlug> = {
   codex: "gpt-6-astra",
-  claudeAgent: "claude-sonnet-5",
+  claudeAgent: "claude-sonnet-5-5",
   cursor: "auto",
   devin: "adaptive",
   antigravity: "Gemini 3.5 Flash",
@@ -1196,9 +1245,15 @@ export const DEFAULT_GIT_TEXT_GENERATION_REASONING_EFFORT = "high" as const;
 /**
  * Providers with a dedicated Git text-generation backend. Keep the Settings
  * picker in sync with this list — do not add chat-only agents (Grok,
- * Antigravity, Pi, Devin). Those CLIs have no one-shot git-writing path, and
+ * Antigravity, Devin). Those CLIs have no one-shot git-writing path, and
  * driving them as coding agents for commit/PR text can run with write access
  * or violate provider terms.
+ *
+ * Pi qualifies because its backend runs the Pi SDK in-process with no tools,
+ * no extensions and an empty working directory (PiTextGeneration.ts), so it
+ * can serve writing tasks on a custom model endpoint without a CLI. It is
+ * last, and has no default model, so it is never picked automatically: it
+ * runs only when the writer selects a Pi model.
  */
 export const GIT_TEXT_GENERATION_PROVIDERS = [
   "codex",
@@ -1206,6 +1261,7 @@ export const GIT_TEXT_GENERATION_PROVIDERS = [
   "cursor",
   "opencode",
   "droid",
+  "pi",
 ] as const satisfies readonly ProviderKind[];
 export type GitTextGenerationProvider = (typeof GIT_TEXT_GENERATION_PROVIDERS)[number];
 
@@ -1224,7 +1280,10 @@ export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string,
     "gpt-5.3-spark": "gpt-5.3-codex-spark",
   },
   claudeAgent: {
-    fable: "claude-fable-5-1",
+    fable: "claude-fable-5-2",
+    "fable-5.2": "claude-fable-5-2",
+    "claude-fable-5.2": "claude-fable-5-2",
+    "claude-fable-5-2": "claude-fable-5-2",
     "fable-5.1": "claude-fable-5-1",
     "claude-fable-5.1": "claude-fable-5-1",
     "claude-fable-5-1": "claude-fable-5-1",
@@ -1248,13 +1307,19 @@ export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string,
     "opus-4.5": "claude-opus-4-5",
     "claude-opus-4.5": "claude-opus-4-5",
     "claude-opus-4-5-20250120": "claude-opus-4-5",
-    sonnet: "claude-sonnet-5",
+    sonnet: "claude-sonnet-5-5",
+    "sonnet-5.5": "claude-sonnet-5-5",
+    "claude-sonnet-5.5": "claude-sonnet-5-5",
+    "claude-sonnet-5-5": "claude-sonnet-5-5",
     "sonnet-5": "claude-sonnet-5",
     "claude-sonnet-5": "claude-sonnet-5",
     "sonnet-4.6": "claude-sonnet-4-6",
     "claude-sonnet-4.6": "claude-sonnet-4-6",
     "claude-sonnet-4-6-20251117": "claude-sonnet-4-6",
-    haiku: "claude-haiku-4-5",
+    haiku: "claude-haiku-5-5",
+    "haiku-5.5": "claude-haiku-5-5",
+    "claude-haiku-5.5": "claude-haiku-5-5",
+    "claude-haiku-5-5": "claude-haiku-5-5",
     "haiku-4.5": "claude-haiku-4-5",
     "claude-haiku-4.5": "claude-haiku-4-5",
     "claude-haiku-4-5-20251001": "claude-haiku-4-5",

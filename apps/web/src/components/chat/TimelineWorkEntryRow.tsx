@@ -3,6 +3,7 @@
 // Layer: Web chat presentation component
 // Exports: TimelineWorkEntryRow, EditedFileRowContent, prefersCompactWorkEntryRow
 
+import { t, useTranslation } from "~/i18n";
 import type { ModelSelection, TurnId } from "@synara/contracts";
 import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
 import {
@@ -23,7 +24,7 @@ import { formatTimestamp } from "../../timestampFormat";
 import {
   ArrowUpCircleIcon,
   BackgroundTrayIcon,
-  BookOpenIcon,
+  BookIcon,
   BotIcon,
   CheckIcon,
   CircleAlertIcon,
@@ -106,7 +107,6 @@ import { deriveToolFailureSummary } from "../../lib/toolCallDetails";
 import { openWorkspaceFileReference, useWorkspaceFileOpener } from "../../lib/workspaceFileOpener";
 import { DISCLOSURE_CLEANUP_BUFFER_MS, DISCLOSURE_TRANSITION_MS } from "../../lib/disclosureMotion";
 import { MUTED_LABEL_TEXT_CLASS_NAME, MUTED_LABEL_TEXT_COLOR } from "~/surfaceStyles";
-import { t, useTranslation } from "~/i18n";
 
 // Rest tone is the shared quiet-label gray (same one the composer pickers use for
 // their effort/thinking labels) so a tool row and the picker below it read as one
@@ -150,7 +150,7 @@ function workToneIcon(tone: TimelineWorkEntry["tone"]): {
   }
   // Generic tool calls with no recognizable kind read as "consulted something".
   return {
-    icon: BookOpenIcon,
+    icon: BookIcon,
     className: "text-muted-foreground/45",
   };
 }
@@ -274,7 +274,11 @@ function workEntryIcon(workEntry: TimelineWorkEntry): LucideIcon {
   if (workEntry.activityKind === "user-input.requested") return CircleQuestionIcon;
   if (workEntry.activityKind === "user-input.resolved") return ArrowUpCircleIcon;
   if (workEntry.activityKind === "context-compaction") return ContextCompactionIcon;
-  if (workEntry.activityKind === "checkpoint.baseline.skipped") return CircleAlertIcon;
+  if (
+    workEntry.activityKind === "checkpoint.baseline.skipped" ||
+    workEntry.activityKind === "checkpoint.revert.conflicts"
+  )
+    return CircleAlertIcon;
   // "Moved to background" notices read as a tray drop, not a warning check.
   if (workEntry.nativeEventType === "background_tasks_changed") return BackgroundTrayIcon;
   if (workEntry.monitorNotification)
@@ -428,18 +432,21 @@ function capitalizePhrase(value: string): string {
 function toolWorkEntryHeading(workEntry: TimelineWorkEntry, translate: typeof t): string {
   if (workEntry.displayToolTitle) return capitalizePhrase(workEntry.displayToolTitle);
   if (computerToolName(workEntry.toolName)) {
-    // Work-log projection already resolves the action and target. The generic
-    // MCP presentation would replace that with "Synara clicked the desktop".
-    const title = normalizeCompactToolLabel(workEntry.toolTitle ?? "");
-    if (title && !isGenericToolTitle(title) && !computerToolName(title))
-      return capitalizePhrase(title);
-    return describeComputerToolCall({ toolName: workEntry.toolName, args: undefined }, translate)!
-      .summary;
+    for (const candidate of [workEntry.toolTitle, workEntry.label]) {
+      const title = normalizeCompactToolLabel(candidate ?? "");
+      if (title && !isGenericToolTitle(title) && !computerToolName(title)) {
+        return capitalizePhrase(title);
+      }
+    }
+    return describeComputerToolCall({ toolName: workEntry.toolName, args: undefined })!.summary;
   }
-  // Task progress is semantic copy, not a tool lifecycle status. Preserve the
-  // trailing "completed" instead of passing it through the compact tool-label
-  // normalizer, which intentionally strips lifecycle suffixes.
-  if (workEntry.activityKind === "turn.tasks.updated" || workEntry.monitorNotification) {
+  // Task, Monitor, and checkpoint progress are semantic copy, not tool lifecycle
+  // labels. Stripping "started" / "completed" makes a revert's two outcomes identical.
+  if (
+    workEntry.activityKind === "turn.tasks.updated" ||
+    workEntry.monitorNotification ||
+    workEntry.activityKind?.startsWith("checkpoint.revert.")
+  ) {
     return capitalizePhrase(workEntry.label);
   }
   const synaraTitle = deriveSynaraMcpToolTitle(
@@ -460,17 +467,127 @@ function toolWorkEntryHeading(workEntry: TimelineWorkEntry, translate: typeof t)
   return capitalizePhrase(normalizeCompactToolLabel(workEntry.toolTitle));
 }
 
-function combineWorkEntryDisplayText(
-  heading: string,
-  preview: string | null,
-  translate: typeof t,
-): string {
-  if (!preview) {
-    return heading;
+// The app's own tool verbs ("Read", "Searched", "Ran command") are display copy; provider
+// titles and the object half of the sentence (paths, commands) stay as reported.
+// Comparisons keep using the English heading, so only the shown text is translated.
+function localizeToolHeading(heading: string): string {
+  switch (heading) {
+    case "Read":
+      return t("chat:detail_read_command");
+    case "Reading":
+      return t("chat:reading");
+    case "Edited":
+      return t("chat:timeline_edited");
+    case "Searched":
+      return t("chat:searched");
+    case "Searching":
+      return t("chat:searching");
+    case "Search":
+      return t("workspace:primaryActions_search");
+    case "Searched the web":
+      return t("chat:searchedTheWeb");
+    case "Listed":
+      return t("chat:listed");
+    case "Listing":
+      return t("chat:listing");
+    case "Ran":
+      return t("chat:ran");
+    case "Running":
+      return t("chat:runStatus_running_command");
+    case "Ran command":
+      return t("lattice:ranCommand");
+    case "Checked":
+      return t("chat:checked");
+    case "Checking":
+      return t("chat:providerModelPicker_checking_command");
+    case "Created":
+      return t("settings:created");
+    case "Creating":
+      return t("chat:creating");
+    case "Found":
+      return t("chat:found");
+    case "Finding":
+      return t("chat:finding");
+    case "Inspected":
+      return t("chat:inspected");
+    case "Inspecting":
+      return t("chat:inspecting");
+    case "Compared":
+      return t("chat:compared");
+    case "Comparing":
+      return t("chat:comparing");
+    case "Removed":
+      return t("chat:removed");
+    case "Removing":
+      return t("chat:removing");
+    case "Reviewed":
+      return t("chat:reviewed");
+    case "Reviewing":
+      return t("chat:reviewing");
+    case "Staged":
+      return t("git:gitPanel_staged");
+    case "Staging":
+      return t("chat:staging");
+    case "Committed":
+      return t("chat:committed");
+    case "Committing":
+      return t("chat:committing");
+    case "Pulled":
+      return t("chat:pulled");
+    case "Pulling":
+      return t("chat:pulling");
+    case "Pushed":
+      return t("workspace:pushed");
+    case "Pushing":
+      return t("chat:pushing");
+    case "Switched to":
+      return t("chat:switchedTo");
+    case "Switching to":
+      return t("chat:switchingTo");
+    case "Agent task":
+      return t("chat:agentTask");
+    case "Generated image":
+      return t("chat:generatedImage_generatedImage");
+    case "Viewed image":
+      return t("chat:viewedImage");
+    case "Tool":
+      return t("chat:tool");
+    case "Provider retrying":
+      return t("chat:providerRetrying");
+    default:
+      return heading;
   }
-  return normalizeToolTextForComparison(heading) === normalizeToolTextForComparison(preview)
-    ? heading
-    : translate("chat:symbol7", { value0: heading, value1: preview });
+}
+
+function combineWorkEntryDisplayText(heading: string, preview: string | null): string {
+  const shownHeading = localizeToolHeading(heading);
+  if (!preview) {
+    return shownHeading;
+  }
+  if (normalizeToolTextForComparison(heading) === normalizeToolTextForComparison(preview)) {
+    return shownHeading;
+  }
+  // Search rows read "Searched for <query> in <path>"; translate the whole sentence so the
+  // English prepositions don't stay behind in other languages.
+  if (heading === "Searched" || heading === "Searching") {
+    const running = heading === "Searching";
+    const both = /^for (.+) in (.+)$/su.exec(preview);
+    if (both) {
+      const values = { query: both[1]!, path: both[2]! };
+      return running ? t("lattice:searchingForIn", values) : t("lattice:searchedForIn", values);
+    }
+    const queryOnly = /^for (.+)$/su.exec(preview);
+    if (queryOnly) {
+      const values = { query: queryOnly[1]! };
+      return running ? t("lattice:searchingFor", values) : t("lattice:searchedFor", values);
+    }
+    const pathOnly = /^in (.+)$/su.exec(preview);
+    if (pathOnly) {
+      const values = { path: pathOnly[1]! };
+      return running ? t("lattice:searchingIn", values) : t("lattice:searchedIn", values);
+    }
+  }
+  return `${shownHeading} ${preview === "current directory" ? t("chat:currentDirectory") : preview}`;
 }
 
 // Shell command rows read "Ran <command>" with the command verbatim; a plain
@@ -568,7 +685,7 @@ export function workEntryDisplayParts(
     : (isReasoningUpdateWorkEntry(workEntry) || workEntry.activityKind === "tool.summary") &&
         preview
       ? preview
-      : combineWorkEntryDisplayText(heading, preview, translate);
+      : combineWorkEntryDisplayText(heading, preview);
   return { heading, preview, displayText, commandLiteral: null };
 }
 
@@ -768,8 +885,8 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
       : null;
   const failureMetaText = failure
     ? failure.exitCode !== null
-      ? `Failed · exit ${failure.exitCode}`
-      : "Failed"
+      ? t("lattice:failedExit", { code: failure.exitCode })
+      : t("chat:runStatus_failed")
     : null;
 
   // A computer-control denial renders as an actionable card (enable + retry)

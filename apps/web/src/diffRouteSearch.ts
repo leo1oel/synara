@@ -4,9 +4,17 @@
 
 import { TurnId } from "@synara/contracts";
 
+import { parseLatticeEmbedSearch } from "./embedMode";
+
 export type ChatRightPanel = "browser" | "diff";
 
 export interface DiffRouteSearch {
+  embed?: "1" | undefined;
+  workspaceRoot?: string | undefined;
+  theme?: "light" | "dark" | undefined;
+  surface?: "chrome" | "drawer" | undefined;
+  hostOrigin?: string | undefined;
+  locale?: "en" | "zh-CN" | undefined;
   splitViewId?: string | undefined;
   view?: "editor" | undefined;
   editorFilePath?: string | undefined;
@@ -54,6 +62,7 @@ export function stripDiffSearchParams<T extends Record<string, unknown>>(
 }
 
 export function parseDiffRouteSearch(search: Record<string, unknown>): DiffRouteSearch {
+  const embedSearch = parseLatticeEmbedSearch(search);
   const splitViewId = normalizeSearchString(search.splitViewId);
   const viewRaw = normalizeSearchString(search.view);
   const view = viewRaw === "editor" ? "editor" : undefined;
@@ -68,6 +77,7 @@ export function parseDiffRouteSearch(search: Record<string, unknown>): DiffRoute
   const diffFilePath = diff ? normalizeSearchString(search.diffFilePath) : undefined;
 
   return {
+    ...embedSearch,
     ...(splitViewId ? { splitViewId } : {}),
     ...(view ? { view } : {}),
     ...(editorFilePath ? { editorFilePath } : {}),

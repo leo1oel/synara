@@ -8,21 +8,25 @@ import {
   DEFAULT_MODEL_BY_PROVIDER,
   DEFAULT_SERVER_SETTINGS_VIEW,
   ProviderInstanceId,
+  type ProviderKind,
 } from "@synara/contracts";
 import { codexAccountInstanceId } from "@synara/shared/providerInstances";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  didProviderCommandDiscoverySettingsChange,
   AppSettingsSchema,
   buildProviderInstanceSettingsPatch,
   applyLocalAppSettingsPatch,
   appSettingsPatchToServerSettingsPatch,
   buildInitialServerSettingsMigrationPatch,
+  CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS,
   DEFAULT_CHAT_FONT_SIZE_PX,
   DEFAULT_FOLLOW_UP_BEHAVIOR,
+  DEFAULT_SIDEBAR_PROJECT_SORT_ORDER,
   DEFAULT_TERMINAL_FONT_SIZE_PX,
-  didProviderCommandDiscoverySettingsChange,
-  didProviderEnablementChange,
+  DEFAULT_SIDEBAR_THREAD_SORT_ORDER,
+  DEFAULT_TIMESTAMP_FORMAT,
   getAppModelOptions,
   getCodexProviderDiscoveryOptions,
   getCustomBinaryPathForProvider,
@@ -33,18 +37,22 @@ import {
   getManageableProviderInstances,
   getProviderInstanceOptions,
   getUnsupportedProviderInstanceOptions,
-  getServerDisabledProviders,
+  getCustomModelsForProvider,
+  getDefaultCustomModelsForProvider,
   isGitTextGenerationSettingsDirty,
   getProviderStartOptions,
   mergeProviderInstanceConfigPatch,
   mergeProviderStartOptions,
+  MODEL_PROVIDER_SETTINGS,
   normalizeChatFontSizePx,
   normalizeInitialStoredAppSettingsForServerMigration,
+  normalizeCustomModelSlugs,
   normalizeStoredAppSettings,
   normalizeTerminalFontFamily,
   normalizeTerminalFontSizePx,
   patchCustomModelsForProviderInstance,
   removeManageableProviderInstance,
+  patchCustomModels,
   resolveAppModelSelection,
   resolveFollowUpDispatchMode,
   resolveSelectableProviderInstanceId,
@@ -75,6 +83,49 @@ describe("provider process priority settings", () => {
     expect(appSettingsPatchToServerSettingsPatch({ lowerProviderProcessPriority: true })).toEqual({
       lowerProviderProcessPriority: true,
     });
+  });
+});
+
+describe("Claude MCP server setting", () => {
+  it("defaults to Lattice-only MCP and forwards the opt-in to the server", () => {
+    expect(Schema.decodeSync(AppSettingsSchema)({}).claudeLoadUserMcpServers).toBe(false);
+    expect(appSettingsPatchToServerSettingsPatch({ claudeLoadUserMcpServers: true })).toEqual({
+      providers: { claudeAgent: { loadUserMcpServers: true } },
+    });
+    expect(
+      serverSettingsToAppSettings({
+        ...DEFAULT_SERVER_SETTINGS_VIEW,
+        providers: {
+          ...DEFAULT_SERVER_SETTINGS_VIEW.providers,
+          claudeAgent: {
+            ...DEFAULT_SERVER_SETTINGS_VIEW.providers.claudeAgent,
+            loadUserMcpServers: true,
+          },
+        },
+      }).claudeLoadUserMcpServers,
+    ).toBe(true);
+  });
+});
+
+describe("default provider", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("keeps Codex as the default outside Lattice", () => {
+    expect(Schema.decodeSync(AppSettingsSchema)({}).defaultProvider).toBe("codex");
+  });
+
+  it("defaults Lattice's embedded panel to Claude and keeps a stored choice", () => {
+    vi.stubGlobal("window", {
+      name: "",
+      location: { search: "?embed=1&workspaceRoot=%2Ftmp%2Fpaper" },
+    });
+    expect(Schema.decodeSync(AppSettingsSchema)({}).defaultProvider).toBe("claudeAgent");
+    expect(AppSettingsSchema.makeUnsafe({}).defaultProvider).toBe("claudeAgent");
+    expect(Schema.decodeSync(AppSettingsSchema)({ defaultProvider: "codex" }).defaultProvider).toBe(
+      "codex",
+    );
   });
 });
 
@@ -124,117 +175,51 @@ describe("computer control defaults", () => {
   });
 });
 
-describe("server-backed provider enablement", () => {
-  it("reads disabled providers from the server settings view", () => {
+describe("compile repair model persistence patch", () => {
+  it("routes an explicit provider/model independently of Git writing", () => {
     expect(
-      getServerDisabledProviders({
-        ...DEFAULT_SERVER_SETTINGS_VIEW,
-        providers: {
-          ...DEFAULT_SERVER_SETTINGS_VIEW.providers,
-          opencode: {
-            ...DEFAULT_SERVER_SETTINGS_VIEW.providers.opencode,
-            enabled: false,
-          },
-          pi: {
-            ...DEFAULT_SERVER_SETTINGS_VIEW.providers.pi,
-            enabled: false,
-          },
-        },
+      appSettingsPatchToServerSettingsPatch({
+        compileRepairProvider: "pi",
+        compileRepairModel: "vendor/custom-model",
       }),
-    ).toEqual(["opencode", "pi"]);
+    ).toEqual({ compileRepairModelSelection: { provider: "pi", model: "vendor/custom-model" } });
   });
+});
 
-  it("keeps server-backed provider disablement out of local settings", () => {
-    const stored = AppSettingsSchema.makeUnsafe({
+describe("proofreading model persistence patch", () => {
+  it("sends a chosen model as an override and an unset one as inheriting", () => {
+    expect(
+      appSettingsPatchToServerSettingsPatch({
+        proofreadProvider: "claudeAgent",
+        proofreadProviderInstanceId: "claudeAgent",
+        proofreadModel: "claude-sonnet-4-6",
+      }),
+    ).toEqual({
+      proofreadModelSelection: {
+        provider: "claudeAgent",
+        instanceId: "claudeAgent",
+        model: "claude-sonnet-4-6",
+      },
+    });
+    expect(
+      appSettingsPatchToServerSettingsPatch({
+        proofreadProvider: undefined,
+        proofreadProviderInstanceId: undefined,
+        proofreadModel: undefined,
+      }),
+    ).toEqual({ proofreadModelSelection: null });
+  });
+});
+
+describe("removed provider enablement preference", () => {
+  it("drops a legacy local disabled list while retaining picker visibility", () => {
+    const decoded = Schema.decodeUnknownSync(AppSettingsSchema)({
       disabledProviders: ["opencode"],
       hiddenProviders: ["pi"],
     });
 
-    expect(normalizeStoredAppSettings(stored)).toMatchObject({
-      disabledProviders: [],
-      hiddenProviders: ["pi"],
-    });
-    expect(
-      applyLocalAppSettingsPatch(stored, {
-        disabledProviders: ["codex", "opencode"],
-        hiddenProviders: ["grok"],
-      }),
-    ).toMatchObject({
-      disabledProviders: [],
-      hiddenProviders: ["grok"],
-    });
-  });
-
-  it("persists disable and re-enable patches for every provider", () => {
-    const disabledPatch = appSettingsPatchToServerSettingsPatch({
-      disabledProviders: ["opencode", "pi"],
-    });
-    expect(disabledPatch.providers?.opencode?.enabled).toBe(false);
-    expect(disabledPatch.providers?.pi?.enabled).toBe(false);
-    expect(disabledPatch.providers?.codex?.enabled).toBe(true);
-
-    const reenabledPatch = appSettingsPatchToServerSettingsPatch({ disabledProviders: [] });
-    expect(reenabledPatch.providers?.opencode?.enabled).toBe(true);
-    expect(reenabledPatch.providers?.pi?.enabled).toBe(true);
-
-    const combinedPatch = appSettingsPatchToServerSettingsPatch({
-      disabledProviders: [],
-      openCodeBinaryPath: "/custom/opencode",
-    });
-    expect(combinedPatch.providers?.opencode).toMatchObject({
-      binaryPath: "/custom/opencode",
-      enabled: true,
-    });
-  });
-
-  it("sends sparse enablement patches against the latest server view", () => {
-    const currentSettings = {
-      ...DEFAULT_SERVER_SETTINGS_VIEW,
-      providers: {
-        ...DEFAULT_SERVER_SETTINGS_VIEW.providers,
-        opencode: {
-          ...DEFAULT_SERVER_SETTINGS_VIEW.providers.opencode,
-          enabled: false,
-        },
-      },
-    };
-    const patch = appSettingsPatchToServerSettingsPatch(
-      { disabledProviders: ["opencode", "pi"] },
-      currentSettings,
-    );
-
-    expect(patch.providers).toEqual({ pi: { enabled: false } });
-  });
-
-  it("omits unchanged provider defaults from a reset patch", () => {
-    const patch = appSettingsPatchToServerSettingsPatch(
-      {
-        disabledProviders: [],
-        openCodeBinaryPath: DEFAULT_SERVER_SETTINGS_VIEW.providers.opencode.binaryPath,
-      },
-      DEFAULT_SERVER_SETTINGS_VIEW,
-    );
-
-    expect(patch.providers).toBeUndefined();
-  });
-
-  it("invalidates discovery for initial and changed streamed provider settings", () => {
-    const disabledOpenCode = {
-      ...DEFAULT_SERVER_SETTINGS_VIEW,
-      providers: {
-        ...DEFAULT_SERVER_SETTINGS_VIEW.providers,
-        opencode: {
-          ...DEFAULT_SERVER_SETTINGS_VIEW.providers.opencode,
-          enabled: false,
-        },
-      },
-    };
-
-    expect(didProviderEnablementChange(undefined, disabledOpenCode)).toBe(true);
-    expect(
-      didProviderEnablementChange(DEFAULT_SERVER_SETTINGS_VIEW, DEFAULT_SERVER_SETTINGS_VIEW),
-    ).toBe(false);
-    expect(didProviderEnablementChange(DEFAULT_SERVER_SETTINGS_VIEW, disabledOpenCode)).toBe(true);
+    expect(normalizeStoredAppSettings(decoded)).toMatchObject({ hiddenProviders: ["pi"] });
+    expect(normalizeStoredAppSettings(decoded)).not.toHaveProperty("disabledProviders");
   });
 
   it("invalidates command discovery when another client toggles Claude Artifacts", () => {
@@ -255,6 +240,28 @@ describe("server-backed provider enablement", () => {
     expect(didProviderCommandDiscoverySettingsChange(artifactsOn, artifactsOn)).toBe(false);
     // The first snapshot is covered by didProviderEnablementChange.
     expect(didProviderCommandDiscoverySettingsChange(undefined, artifactsOn)).toBe(false);
+  });
+});
+
+describe("normalizeCustomModelSlugs", () => {
+  it("normalizes aliases, removes built-ins, and deduplicates values", () => {
+    expect(
+      normalizeCustomModelSlugs([
+        " custom/internal-model ",
+        "gpt-5.3-codex",
+        "5.3",
+        "custom/internal-model",
+        "",
+        null,
+      ]),
+    ).toEqual(["custom/internal-model"]);
+  });
+
+  it("normalizes provider-specific aliases for claude", () => {
+    expect(normalizeCustomModelSlugs(["sonnet"], "claudeAgent")).toEqual([]);
+    expect(normalizeCustomModelSlugs(["claude/custom-sonnet"], "claudeAgent")).toEqual([
+      "claude/custom-sonnet",
+    ]);
   });
 });
 
@@ -293,6 +300,10 @@ describe("resolveFollowUpDispatchMode", () => {
 });
 
 describe("getAppModelOptions", () => {
+  it("does not expose a hardcoded Antigravity model catalog", () => {
+    expect(getAppModelOptions("antigravity", [])).toEqual([]);
+  });
+
   it("does not expose Anthropic models in Pi before authenticated discovery", () => {
     expect(getAppModelOptions("pi", [])).toEqual([]);
   });
@@ -332,6 +343,25 @@ describe("getAppModelOptions", () => {
     expect(
       options.filter((option) => option.slug.startsWith("grok-4.5")).map((option) => option.slug),
     ).toEqual(["grok-4.5"]);
+  });
+
+  it("formats unknown GPT custom models with a readable label", () => {
+    const options = getAppModelOptions("codex", ["gpt-5.1-codex-max"]);
+
+    expect(options.at(-1)).toEqual({
+      slug: "gpt-5.1-codex-max",
+      name: "GPT-5.1 Codex Max",
+      provider: "codex",
+      isCustom: true,
+    });
+  });
+
+  it("keeps a saved custom provider model available as an exact slug option", () => {
+    const options = getAppModelOptions("claudeAgent", ["claude/custom-opus"], "claude/custom-opus");
+
+    expect(options.some((option) => option.slug === "claude/custom-opus" && option.isCustom)).toBe(
+      true,
+    );
   });
 });
 
@@ -400,9 +430,9 @@ describe("resolveAppModelSelection", () => {
           antigravity: [],
           grok: [],
           droid: [],
+          omp: [],
           opencode: [],
           pi: [],
-          omp: [],
         },
         "galapagos-alpha",
       ),
@@ -421,17 +451,90 @@ describe("resolveAppModelSelection", () => {
           antigravity: [],
           grok: [],
           droid: [],
+          omp: [],
           opencode: [],
           pi: [],
-          omp: [],
         },
         "",
       ),
     ).toBe(DEFAULT_MODEL_BY_PROVIDER.codex);
   });
+
+  it("resolves display names through the shared resolver", () => {
+    expect(
+      resolveAppModelSelection(
+        "codex",
+        {
+          codex: [],
+          claudeAgent: [],
+          cursor: [],
+          devin: [],
+          antigravity: [],
+          grok: [],
+          droid: [],
+          omp: [],
+          opencode: [],
+          pi: [],
+        },
+        "GPT-5.3 Codex",
+      ),
+    ).toBe("gpt-5.3-codex");
+  });
+
+  it("resolves aliases through the shared resolver", () => {
+    expect(
+      resolveAppModelSelection(
+        "claudeAgent",
+        {
+          codex: [],
+          claudeAgent: [],
+          cursor: [],
+          devin: [],
+          antigravity: [],
+          grok: [],
+          droid: [],
+          omp: [],
+          opencode: [],
+          pi: [],
+        },
+        "sonnet",
+      ),
+    ).toBe("claude-sonnet-5-5");
+  });
+
+  it("resolves transient selected custom models included in app model options", () => {
+    expect(
+      resolveAppModelSelection(
+        "codex",
+        {
+          codex: [],
+          claudeAgent: [],
+          cursor: [],
+          devin: [],
+          antigravity: [],
+          grok: [],
+          droid: [],
+          omp: [],
+          opencode: [],
+          pi: [],
+        },
+        "custom/selected-model",
+      ),
+    ).toBe("custom/selected-model");
+  });
+});
+
+describe("timestamp format defaults", () => {
+  it("defaults timestamp format to locale", () => {
+    expect(DEFAULT_TIMESTAMP_FORMAT).toBe("locale");
+  });
 });
 
 describe("chat font size defaults", () => {
+  it("defaults chat font size to 12px", () => {
+    expect(DEFAULT_CHAT_FONT_SIZE_PX).toBe(13);
+  });
+
   it("clamps chat font size updates into the supported range", () => {
     expect(normalizeChatFontSizePx(9)).toBe(11);
     expect(normalizeChatFontSizePx(18.4)).toBe(18);
@@ -440,6 +543,10 @@ describe("chat font size defaults", () => {
 });
 
 describe("terminal font size defaults", () => {
+  it("defaults terminal font size to 12px", () => {
+    expect(DEFAULT_TERMINAL_FONT_SIZE_PX).toBe(12);
+  });
+
   it("clamps terminal font size updates into the supported range", () => {
     expect(normalizeTerminalFontSizePx(8)).toBe(10);
     expect(normalizeTerminalFontSizePx(20.4)).toBe(20);
@@ -473,6 +580,16 @@ describe("terminal font family settings", () => {
   });
 });
 
+describe("sidebar sort defaults", () => {
+  it("defaults project sorting to manual", () => {
+    expect(DEFAULT_SIDEBAR_PROJECT_SORT_ORDER).toBe("manual");
+  });
+
+  it("defaults thread sorting to updated_at", () => {
+    expect(DEFAULT_SIDEBAR_THREAD_SORT_ORDER).toBe("updated_at");
+  });
+});
+
 describe("normalizeStoredAppSettings", () => {
   it("defaults native font smoothing by platform", () => {
     expect(getDefaultNativeFontSmoothing("MacIntel")).toBe(true);
@@ -492,13 +609,7 @@ describe("normalizeStoredAppSettings", () => {
         sidebarProjectSortOrder: "updated_at",
         chatFontSizePx: 99,
         terminalFontSizePx: 3,
-        customCodexModels: [
-          " custom/internal-model ",
-          "gpt-5.4",
-          "custom/internal-model",
-          "5.3",
-          "",
-        ],
+        customCodexModels: [" custom/internal-model ", "gpt-5.4", "custom/internal-model"],
       }),
     );
 
@@ -713,6 +824,14 @@ describe("normalizeStoredAppSettings", () => {
   });
 });
 
+describe("provider-specific custom models", () => {
+  it("includes provider-specific custom slugs in non-codex model lists", () => {
+    const claudeOptions = getAppModelOptions("claudeAgent", ["claude/custom-opus"]);
+
+    expect(claudeOptions.some((option) => option.slug === "claude/custom-opus")).toBe(true);
+  });
+});
+
 describe("getProviderStartOptions", () => {
   it("returns only populated provider overrides", () => {
     expect(
@@ -730,11 +849,11 @@ describe("getProviderStartOptions", () => {
         openCodeBinaryPath: "",
         openCodeExperimentalWebSockets: false,
         openCodeServerUrl: "",
+        ompAgentDir: "",
+        ompBinaryPath: "",
         piAgentDir: "",
         piBinaryPath: "",
         devinBinaryPath: "/usr/local/bin/devin",
-        ompBinaryPath: "",
-        ompAgentDir: "",
       }),
     ).toEqual({
       claudeAgent: {
@@ -775,11 +894,11 @@ describe("getProviderStartOptions", () => {
         openCodeBinaryPath: "",
         openCodeExperimentalWebSockets: false,
         openCodeServerUrl: "",
+        ompAgentDir: "",
+        ompBinaryPath: "",
         piAgentDir: "",
         piBinaryPath: "",
         devinBinaryPath: "",
-        ompBinaryPath: "",
-        ompAgentDir: "",
       }),
     ).toBeUndefined();
   });
@@ -1098,10 +1217,10 @@ describe("getProviderStartOptions", () => {
         openCodeBinaryPath: "opencode",
         openCodeExperimentalWebSockets: false,
         openCodeServerUrl: "",
+        ompAgentDir: "",
+        ompBinaryPath: "omp",
         piAgentDir: "",
         piBinaryPath: "pi",
-        ompBinaryPath: "",
-        ompAgentDir: "",
       }),
     ).toBeUndefined();
   });
@@ -1143,26 +1262,6 @@ describe("mergeProviderStartOptions", () => {
 });
 
 describe("getProviderInstanceOptions", () => {
-  it("disables every account of a globally disabled provider and preserves account switches", () => {
-    const settings = {
-      ...AppSettingsSchema.makeUnsafe({}),
-      disabledProviders: ["codex" as const],
-      codexAccounts: [{ id: "work", label: "Work", homePath: "", shadowHomePath: "" }],
-      providerInstances: {
-        codex_personal: { driver: "codex", enabled: true },
-        codex_off: { driver: "codex", enabled: false },
-      },
-    };
-    const options = getProviderInstanceOptions(settings);
-    expect(
-      options.filter((option) => option.provider === "codex").map((option) => option.enabled),
-    ).toEqual([false, false, false, false]);
-    expect(options.find((option) => option.provider === "claudeAgent")?.enabled).toBe(true);
-    const restored = getProviderInstanceOptions({ ...settings, disabledProviders: [] });
-    expect(restored.find((option) => option.instanceId === "codex_personal")?.enabled).toBe(true);
-    expect(restored.find((option) => option.instanceId === "codex_off")?.enabled).toBe(false);
-  });
-
   it("keeps derived Codex account instance ids schema-valid for long account ids", () => {
     const accountId = `a${"b".repeat(63)}`;
     const options = getProviderInstanceOptions({
@@ -1586,9 +1685,9 @@ describe("provider-indexed custom model settings", () => {
     customGrokModels: ["grok/custom-fast"],
     customDroidModels: ["claude-opus-4-8-custom"],
     customDevinModels: ["devin/custom-model"],
+    customOmpModels: ["omp/custom-model"],
     customOpenCodeModels: ["openrouter/gpt-oss-120b"],
     customPiModels: ["anthropic/custom-pi"],
-    customOmpModels: [],
   } as const;
 
   it("stores default-instance custom models in the provider instance map", () => {
@@ -1768,9 +1867,9 @@ describe("provider-indexed custom model settings", () => {
       grok: ["grok/custom-fast"],
       droid: ["claude-opus-4-8-custom"],
       devin: ["devin/custom-model"],
+      omp: ["omp/custom-model"],
       opencode: ["openrouter/gpt-oss-120b"],
       pi: ["anthropic/custom-pi"],
-      omp: [],
     });
   });
 
@@ -2097,8 +2196,7 @@ describe("AppSettingsSchema", () => {
     ).toMatchObject({
       claudeBinaryPath: "",
       uiDensity: "comfortable",
-      chatFontSizePx: 13,
-      terminalFontSizePx: 12,
+      chatFontSizePx: DEFAULT_CHAT_FONT_SIZE_PX,
       codexBinaryPath: "/usr/local/bin/codex",
       codexHomePath: "",
       grokBinaryPath: "",
@@ -2116,7 +2214,7 @@ describe("AppSettingsSchema", () => {
       sidebarThreadSortOrder: "updated_at",
       showGroupsSection: true,
       showAutomationRunThreads: true,
-      timestampFormat: "locale",
+      timestampFormat: DEFAULT_TIMESTAMP_FORMAT,
       customCodexModels: [],
       customClaudeModels: [],
       customCursorModels: [],
@@ -2126,6 +2224,19 @@ describe("AppSettingsSchema", () => {
       customPiModels: [],
       customOmpModels: [],
     });
+  });
+
+  it("preserves the selected desktop app icon", () => {
+    const decode = Schema.decodeSync(Schema.fromJsonString(AppSettingsSchema));
+
+    expect(decode(JSON.stringify({ desktopAppIcon: "icon" })).desktopAppIcon).toBe("icon");
+  });
+
+  it("preserves the custom title bar preference", () => {
+    const decode = Schema.decodeSync(Schema.fromJsonString(AppSettingsSchema));
+
+    expect(decode(JSON.stringify({ useCustomTitleBar: false })).useCustomTitleBar).toBe(false);
+    expect(decode(JSON.stringify({})).useCustomTitleBar).toBe(true);
   });
 
   it("migrates the former AppSnap feature flag", () => {

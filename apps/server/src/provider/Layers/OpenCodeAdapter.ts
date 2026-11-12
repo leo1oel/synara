@@ -55,6 +55,7 @@ import {
   isSynaraGatewayToolCall,
   shouldAllowSynaraComputerProviderTool,
 } from "../../agentGateway/computerToolPermission.ts";
+import { ACTIVE_AGENT_HOST_PROFILE } from "../../agentGateway/hostProfile.ts";
 import {
   buildOpenCodeConnectorMcpServers,
   buildOpenCodeMcpServer,
@@ -363,8 +364,8 @@ const installOpenCodeGatewayMcp = Effect.fn("installOpenCodeGatewayMcp")(functio
     operation: "mcp.add",
     detail:
       status?.status === "failed"
-        ? `${input.displayName} Synara MCP connection failed: ${status.error}`
-        : `${input.displayName} Synara MCP connection did not become ready.`,
+        ? `${input.displayName} ${ACTIVE_AGENT_HOST_PROFILE.displayName} MCP connection failed: ${status.error}`
+        : `${input.displayName} ${ACTIVE_AGENT_HOST_PROFILE.displayName} MCP connection did not become ready.`,
   });
 });
 
@@ -1313,11 +1314,15 @@ export function normalizeOpenCodeTokenUsage(
     ...(normalizedMaxTokens !== undefined ? { maxTokens: normalizedMaxTokens } : {}),
     inputTokens,
     cachedInputTokens,
+    cacheReadInputTokens: cacheReadTokens,
+    cacheWriteInputTokens: cacheWriteTokens,
     outputTokens,
     reasoningOutputTokens,
     lastUsedTokens: usedTokens,
     lastInputTokens: inputTokens,
     lastCachedInputTokens: cachedInputTokens,
+    lastCacheReadInputTokens: cacheReadTokens,
+    lastCacheWriteInputTokens: cacheWriteTokens,
     lastOutputTokens: outputTokens,
     lastReasoningOutputTokens: reasoningOutputTokens,
   };
@@ -3953,7 +3958,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                               : {}),
                             ...(initialAgent ? { agent: initialAgent } : {}),
                             permission: buildOpenCodePermissionRules(input.runtimeMode),
-                            title: `Synara ${input.threadId}`,
+                            title: `${ACTIVE_AGENT_HOST_PROFILE.displayName} ${input.threadId}`,
                           };
                           return client.session.create(
                             sessionCreateInput as unknown as Parameters<

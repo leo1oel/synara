@@ -4,6 +4,7 @@
 // Layer: Web settings logic (pure)
 // Exports: range windows, buildUsageAnalyticsView, provider series colors
 
+import { t } from "~/i18n";
 import {
   PROVIDER_DISPLAY_NAMES,
   type ProviderKind,
@@ -39,7 +40,9 @@ export const PROVIDER_SERIES_COLOR: Record<UsageAnalyticsProvider, string> = {
 };
 
 export function providerLabel(provider: UsageAnalyticsProvider): string {
-  return provider === "unknown" ? "Other" : PROVIDER_DISPLAY_NAMES[provider];
+  return provider === "unknown"
+    ? t("lattice:usageAnalyticsOtherProvider")
+    : PROVIDER_DISPLAY_NAMES[provider];
 }
 
 /** Local `YYYY-MM-DD` for an instant. */

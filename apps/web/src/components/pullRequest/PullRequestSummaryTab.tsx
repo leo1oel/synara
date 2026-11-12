@@ -1,18 +1,9 @@
-// FILE: PullRequestSummaryTab.tsx
-// Purpose: The Summary tab of the pull request detail surface — title + author line (unless the
-//          host shows a GitHubItemHeader), plain meta rows (branch, reviewers, comments, checks),
-//          and the Description / Checks / Comments disclosure sections. Presentation over an
-//          already-loaded detail plus the comment mutation; the detail query, actions, and tab
-//          switching stay in PullRequestDetailPanel.
-// Layer: Pull request presentation
-// Exports: PullRequestSummaryTab, PullRequestPageSummary, GitHubItemPageSummary, GitHubItemComments
-
 import type { PullRequestComment, PullRequestDetail } from "@synara/contracts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 import {
-  PULL_REQUEST_CHECK_STATUS_LABELS,
+  pullRequestCheckStatusLabel,
   summarizePullRequestChecks,
   summarizePullRequestComments,
   withStableCheckKeys,
@@ -44,7 +35,7 @@ import {
   PR_META_TEXT_CLASS_NAME,
 } from "./pullRequestText";
 import { cn } from "~/lib/utils";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 /** A branch name in the Branch meta row (head and base render identically). Plain text at the
  *  row's own size — no chip, no width cap: it gives up characters only once the row genuinely
@@ -79,7 +70,11 @@ export function GitHubItemPageSummary({
 
   return (
     <div>
-      <PullRequestMarkdown text={body} fallback="_No description provided._" cwd={workspaceRoot} />
+      <PullRequestMarkdown
+        text={body}
+        fallback={`_${t("lattice:noDescriptionProvided")}_`}
+        cwd={workspaceRoot}
+      />
       <div className="mt-6">
         <PullRequestDisclosureSection flush label={t("git:comments")} count={commentCount}>
           {children}
@@ -142,9 +137,9 @@ function PullRequestComments({ detail }: { detail: PullRequestDetail }) {
       workspaceRoot={detail.workspaceRoot}
       warning={
         detail.commentsIncomplete
-          ? "Some unresolved review comments could not be loaded. Check GitHub for the complete review."
+          ? t("lattice:someUnresolvedReviewCommentsCouldNotBe")
           : detail.commentsTruncated
-            ? "More unresolved review comments may be available on GitHub."
+            ? t("lattice:moreUnresolvedReviewCommentsMayBeAvailable")
             : null
       }
       target={detail}
@@ -229,7 +224,7 @@ export function PullRequestSummaryTab({
               icon={<PullRequestConflictIcon className="size-4" />}
               label={t("git:merge")}
             >
-              {t("git:conflictsWith")} {detail.baseBranch}
+              {t("lattice:conflictsWith", { branch: detail.baseBranch })}
             </PullRequestMetaRow>
           ) : null}
           <PullRequestMetaRow icon={<UsersIcon className="size-4" />} label={t("git:reviewers")}>
@@ -267,7 +262,7 @@ export function PullRequestSummaryTab({
       <PullRequestDisclosureSection label={t("git:description")}>
         <PullRequestMarkdown
           text={detail.body}
-          fallback="_No description provided._"
+          fallback={`_${t("lattice:noDescriptionProvided")}_`}
           cwd={detail.workspaceRoot}
         />
       </PullRequestDisclosureSection>
@@ -296,7 +291,7 @@ export function PullRequestSummaryTab({
                 <PullRequestCheckStatusIcon status={check.status} />
                 <span className="min-w-0 flex-1 truncate">{check.name}</span>
                 <span className="text-muted-foreground">
-                  {PULL_REQUEST_CHECK_STATUS_LABELS[check.status]}
+                  {pullRequestCheckStatusLabel(check.status)}
                 </span>
               </button>
             ))

@@ -2,26 +2,31 @@
 // Purpose: End-of-turn recap for threads created through the Synara MCP harness.
 // Layer: Chat transcript UI
 
+import { t, useTranslation } from "~/i18n";
 import { PROVIDER_DISPLAY_NAMES } from "@synara/contracts";
 import { formatModelDisplayName } from "@synara/shared/model";
 import { memo } from "react";
+import { GoTasklist } from "react-icons/go";
 
 import {
   readAvailableWorkspaceNavigation,
   useWorkspaceSessions,
 } from "../../lib/hosts/workspaceSessions";
 import type { WorkLogSynaraThreadCreation } from "../../session-logic";
+import { isSynaraEmbedMode } from "../../embedMode";
 import { ProviderIcon } from "../ProviderIcon";
 import { SynaraLogo } from "@synara/profile-ui/logo";
 import { Button } from "../ui/button";
-import { useTranslation } from "~/i18n";
 
 function threadMeta(
   thread: WorkLogSynaraThreadCreation["threads"][number],
   hostName: string | undefined,
 ): string {
   const model = formatModelDisplayName(thread.model) ?? thread.model;
-  const environment = thread.environment === "worktree" ? "Worktree" : "Local";
+  const environment =
+    thread.environment === "worktree"
+      ? t("common:worktreeMode_worktree")
+      : t("computer:worktreeMode_local");
   const meta = `${PROVIDER_DISPLAY_NAMES[thread.provider]} · ${model} · ${environment}`;
   return hostName ? `${meta} · on ${hostName}` : meta;
 }
@@ -54,19 +59,16 @@ export const SynaraThreadCreationCard = memo(function SynaraThreadCreationCard({
   readonly creation: WorkLogSynaraThreadCreation;
   readonly onOpenThread?: (threadId: string) => void;
 }) {
-  const { t } = useTranslation();
-
+  const latticeMode = isSynaraEmbedMode();
   const onOpenThread = useCreatedThreadOpener(creation, onOpenLocalThread);
   const singleThread = creation.threads.length === 1 ? creation.threads[0] : undefined;
+  const noun = latticeMode ? "task" : "thread";
   const title = singleThread
-    ? t("chat:threadCreated")
-    : t("chat:threadsCreated", { value0: creation.createdCount });
+    ? `${noun[0]!.toUpperCase()}${noun.slice(1)} created`
+    : `${creation.createdCount} ${noun}s created`;
   const summary = singleThread
     ? singleThread.title
-    : t("chat:requestedThreadsCreated", {
-        value0: creation.createdCount,
-        value1: creation.requestedCount,
-      });
+    : `${creation.createdCount}/${creation.requestedCount} requested ${noun}s created`;
 
   return (
     <div
@@ -75,7 +77,11 @@ export const SynaraThreadCreationCard = memo(function SynaraThreadCreationCard({
     >
       <div className="flex min-w-0 items-center gap-3 px-3 py-2.5">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[var(--color-background-elevated-secondary)] text-foreground">
-          <SynaraLogo className="h-[22px] w-auto" aria-label="Synara" />
+          {latticeMode ? (
+            <GoTasklist className="size-5" aria-label={t("lattice:latticeTasks")} />
+          ) : (
+            <SynaraLogo className="h-[22px] w-auto" aria-label={t("lattice:synara")} />
+          )}
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate font-system-ui text-ui-lg font-medium text-foreground/95">
@@ -97,7 +103,7 @@ export const SynaraThreadCreationCard = memo(function SynaraThreadCreationCard({
             className="shrink-0"
             onClick={() => onOpenThread(singleThread.threadId)}
           >
-            {t("workspace:timeline_openThread")}
+            {t("lattice:openNoun", { noun })}
           </Button>
         ) : null}
       </div>

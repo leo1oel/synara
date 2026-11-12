@@ -4,8 +4,6 @@
 
 import type { ContextMenuItem } from "@synara/contracts";
 
-const MULTI_CLICK_SELECTION_ACTION_DELAY_MS = 260;
-
 export function resolveTerminalSelectionContextMenuItems(
   hasComposerTarget: boolean,
 ): readonly ContextMenuItem<"add-to-chat">[] {
@@ -45,10 +43,6 @@ export function resolveTerminalSelectionActionPosition(options: {
     x: Math.max(8, Math.min(preferredX, Math.max(viewportWidth - 8, 8))),
     y: Math.max(8, Math.min(preferredY, Math.max(viewportHeight - 8, 8))),
   };
-}
-
-export function terminalSelectionActionDelayForClickCount(clickCount: number): number {
-  return clickCount >= 2 ? MULTI_CLICK_SELECTION_ACTION_DELAY_MS : 0;
 }
 
 export function shouldHandleTerminalSelectionMouseUp(

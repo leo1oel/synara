@@ -79,9 +79,16 @@ import { AgentGatewayOperationRepositoryLive } from "../../agentGateway/Layers/A
 import { AgentGatewayOperationRepository } from "../../agentGateway/Services/AgentGatewayOperationRepository.ts";
 import { makeAgentGatewaySessionRegistry } from "../../agentGateway/Layers/AgentGatewaySessionRegistry.ts";
 import {
+  AgentGatewayCredentials,
+  type AgentGatewayCredentialsShape,
+} from "../../agentGateway/Services/AgentGatewayCredentials.ts";
+import { AgentGatewayCredentialsLive } from "../../agentGateway/Layers/AgentGatewayCredentials.ts";
+import { makeAgentGatewayMcpTransport } from "../../agentGateway/mcpTransport.ts";
+import {
   AgentGatewaySessionRegistry,
   type AgentGatewaySessionRegistryShape,
 } from "../../agentGateway/Services/AgentGatewaySessionRegistry.ts";
+import { AgentQualityTrace } from "../../agentGateway/Services/AgentQualityTrace.ts";
 import { ComputerManager } from "../../computer/ComputerManager.ts";
 import { FakeComputerBackend } from "../../computer/FakeComputerBackend.ts";
 import {
@@ -568,6 +575,7 @@ describe("ProviderCommandReactor", () => {
     readonly gatewayOperationCompletionWaitTimeout?: Duration.Duration;
     readonly gatewayOperationCompletionNegativeCacheTtl?: Duration.Duration;
     readonly logMessages?: string[];
+    readonly setThreadName?: ProviderServiceShape["setThreadName"];
     readonly gatewayOperationId?: string;
     readonly gitWritingModelSelection?: ModelSelection;
     readonly omitStopRuntimeSession?: boolean;
@@ -576,6 +584,7 @@ describe("ProviderCommandReactor", () => {
     readonly generateThreadTitle?: TextGenerationShape["generateThreadTitle"];
     readonly computerService?: ComputerServiceShape;
     readonly gatewaySessions?: AgentGatewaySessionRegistryShape;
+    readonly gatewayCredentials?: Partial<AgentGatewayCredentialsShape> | "live";
     readonly getClaudeCacheObservation?: NonNullable<
       ProviderServiceShape["getClaudeCacheObservation"]
     >;
@@ -810,6 +819,9 @@ describe("ProviderCommandReactor", () => {
     const rollbackConversation = vi.fn<ProviderServiceShape["rollbackConversation"]>(
       () => Effect.void,
     );
+    const setThreadName = vi.fn<ProviderServiceShape["setThreadName"]>(
+      input?.setThreadName ?? (() => Effect.succeed(true)),
+    );
     const restoreCheckpoint = vi.fn<CheckpointStoreShape["restoreCheckpoint"]>(() =>
       Effect.succeed(true),
     );
@@ -823,7 +835,9 @@ describe("ProviderCommandReactor", () => {
       copyCheckpointRef: () => Effect.succeed(true),
       hasCheckpointRef: () => Effect.succeed(false),
       restoreCheckpoint,
-      reverseCheckpointDiff: () => Effect.succeed(true),
+      reverseCheckpointDiff: () => Effect.succeed({ conflictedPaths: [] }),
+      recordHostWrites: () => Effect.void,
+      readHostWrites: () => Effect.succeed([]),
       diffCheckpoints: () => Effect.succeed(""),
       deleteCheckpointRefs: () => Effect.void,
       ...input?.checkpointStore,
@@ -929,6 +943,9 @@ describe("ProviderCommandReactor", () => {
     const cancelPendingStudioOutputBaseline = vi.fn<
       HubOutputReactorShape["cancelPendingTurnBaseline"]
     >(input?.hubOutputReactor?.cancelPendingTurnBaseline ?? (() => Effect.void));
+    const prepareTurnContext = vi.fn(() => Effect.void);
+    const bindTurnContext = vi.fn(() => Effect.void);
+    const failTurnContext = vi.fn(() => Effect.void);
     const hubOutputReactor: HubOutputReactorShape = {
       captureBaselineBeforeTurn: captureStudioOutputBaseline,
       cancelPendingTurnBaseline: cancelPendingStudioOutputBaseline,
@@ -937,7 +954,15 @@ describe("ProviderCommandReactor", () => {
     };
 
     const unsupported = () => Effect.die(new Error("Unsupported provider call in test")) as never;
+    const panelVisibleThreads = new Map<string, ThreadId>();
     const service: ProviderServiceShape = {
+      setPanelVisibleThread: ({ panelId, threadId }) =>
+        Effect.sync(() => {
+          const previous = panelVisibleThreads.get(panelId) ?? null;
+          if (threadId === null) panelVisibleThreads.delete(panelId);
+          else panelVisibleThreads.set(panelId, threadId);
+          return { previousThreadId: previous !== threadId ? previous : null };
+        }),
       startSession: startSession as ProviderServiceShape["startSession"],
       startSessionWithOutcome,
       completePriorTranscriptBootstrap,
@@ -977,6 +1002,7 @@ describe("ProviderCommandReactor", () => {
         }),
       rollbackConversation,
       compactThread: () => unsupported(),
+      setThreadName,
       ...(input?.getClaudeCacheObservation
         ? { getClaudeCacheObservation: input.getClaudeCacheObservation }
         : {}),
@@ -1030,9 +1056,24 @@ describe("ProviderCommandReactor", () => {
           : Layer.empty,
       ),
       Layer.provideMerge(
-        input?.gatewaySessions
-          ? Layer.succeed(AgentGatewaySessionRegistry, input.gatewaySessions)
-          : Layer.empty,
+        Layer.mergeAll(
+          input?.gatewaySessions
+            ? Layer.succeed(AgentGatewaySessionRegistry, input.gatewaySessions)
+            : Layer.empty,
+          input?.gatewayCredentials === "live"
+            ? AgentGatewayCredentialsLive
+            : Layer.succeed(
+                AgentGatewayCredentials,
+                (input?.gatewayCredentials ?? {}) as AgentGatewayCredentialsShape,
+              ),
+          Layer.succeed(AgentQualityTrace, {
+            start: Effect.void,
+            prepareTurnContext,
+            bindTurnContext,
+            failTurnContext,
+            recordCompile: () => Effect.void,
+          }),
+        ),
       ),
       Layer.provideMerge(
         Layer.succeed(ProviderHealth, {
@@ -1231,6 +1272,7 @@ describe("ProviderCommandReactor", () => {
 
     return {
       engine,
+      gatewayCredentials: await runtime.runPromise(Effect.service(AgentGatewayCredentials)),
       runtime,
       realProviderService: await runtime.runPromise(Effect.service(ProviderService)),
       providerRuntimeRepository: Option.getOrUndefined(
@@ -1259,6 +1301,9 @@ describe("ProviderCommandReactor", () => {
       pendingPriorTranscriptBootstraps,
       listSessions,
       sendTurn,
+      prepareTurnContext,
+      bindTurnContext,
+      failTurnContext,
       steerTurn,
       startReview,
       forkThread,
@@ -1270,6 +1315,7 @@ describe("ProviderCommandReactor", () => {
       respondToRequest,
       respondToUserInput,
       rollbackConversation,
+      setThreadName,
       isGitRepository,
       captureCheckpoint,
       restoreCheckpoint,
@@ -11309,6 +11355,16 @@ describe("ProviderCommandReactor", () => {
 
     await harness.startReactor();
     await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    expect(harness.prepareTurnContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        threadId,
+        messageId,
+        messageText: "recover queued promotion",
+      }),
+    );
+    expect(harness.prepareTurnContext.mock.invocationCallOrder[0]).toBeLessThan(
+      harness.sendTurn.mock.invocationCallOrder[0]!,
+    );
     expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
       threadId,
       input: "recover queued promotion",
@@ -13154,6 +13210,18 @@ describe("ProviderCommandReactor", () => {
       async () =>
         (await readHarnessThread(harness, ThreadId.makeUnsafe("thread-retry-droid-fork")))?.session
           ?.status === "error",
+    );
+    expect(harness.prepareTurnContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        threadId: "thread-retry-droid-fork",
+        messageId: "retry-droid-fork-failed-user",
+      }),
+    );
+    expect(harness.failTurnContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        threadId: "thread-retry-droid-fork",
+        dispatchId: expect.any(String),
+      }),
     );
 
     await Effect.runPromise(
@@ -16053,67 +16121,6 @@ describe("ProviderCommandReactor", () => {
     expect(harness.listSessions).toHaveBeenCalledTimes(2);
   });
 
-  it("preserves existing threads while a provider is disabled and resumes after re-enabling", async () => {
-    const harness = await createHarness({
-      threadModelSelection: { provider: "opencode", model: "openai/gpt-5" },
-      serverSettings: { providers: { opencode: { enabled: false } } },
-    });
-    const now = new Date().toISOString();
-
-    await Effect.runPromise(
-      harness.engine.dispatch({
-        type: "thread.turn.start",
-        commandId: CommandId.makeUnsafe("cmd-turn-start-opencode-disabled"),
-        threadId: ThreadId.makeUnsafe("thread-1"),
-        message: {
-          messageId: asMessageId("user-message-opencode-disabled"),
-          role: "user",
-          text: "try while disabled",
-          attachments: [],
-        },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
-        runtimeMode: "approval-required",
-        createdAt: now,
-      }),
-    );
-
-    await waitFor(async () => (await readHarnessThread(harness))?.session?.status === "error");
-    const disabledThread = await readHarnessThread(harness);
-    expect(disabledThread).toBeDefined();
-    expect(disabledThread?.session?.lastError).toContain(
-      "OpenCode is disabled in Settings > Providers",
-    );
-    expect(harness.startSession).not.toHaveBeenCalled();
-    expect(harness.sendTurn).not.toHaveBeenCalled();
-
-    await Effect.runPromise(
-      harness.serverSettings.updateSettings({ providers: { opencode: { enabled: true } } }),
-    );
-    await Effect.runPromise(
-      harness.engine.dispatch({
-        type: "thread.turn.start",
-        commandId: CommandId.makeUnsafe("cmd-turn-start-opencode-reenabled"),
-        threadId: ThreadId.makeUnsafe("thread-1"),
-        message: {
-          messageId: asMessageId("user-message-opencode-reenabled"),
-          role: "user",
-          text: "continue after re-enable",
-          attachments: [],
-        },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
-        runtimeMode: "approval-required",
-        createdAt: now,
-      }),
-    );
-
-    await waitFor(() => harness.startSession.mock.calls.length === 1);
-    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
-    expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
-      threadId: ThreadId.makeUnsafe("thread-1"),
-    });
-    expect(harness.sendTurn.mock.calls[0]?.[0].input).toContain("continue after re-enable");
-  });
-
   it("routes subagent-thread turn starts to the parent session as steers", async () => {
     const harness = await createHarness({
       threadModelSelection: { provider: "claudeAgent", model: "claude-sonnet-4-5" },
@@ -17960,13 +17967,15 @@ describe("ProviderCommandReactor", () => {
           instanceId: "codex_removed_textgen",
           model: "gpt-5-codex",
         },
-        providers: {
-          codex: { enabled: false },
-          claudeAgent: { enabled: false },
-          cursor: { enabled: false },
-          antigravity: { enabled: false },
-          opencode: { enabled: false },
-          droid: { enabled: false },
+        // Every default account, disabled per provider instance (the fork has no
+        // driver-level switch since 7eabd821e).
+        providerInstances: {
+          codex: { driver: "codex", enabled: false },
+          claudeAgent: { driver: "claudeAgent", enabled: false },
+          cursor: { driver: "cursor", enabled: false },
+          antigravity: { driver: "antigravity", enabled: false },
+          opencode: { driver: "opencode", enabled: false },
+          droid: { driver: "droid", enabled: false },
         },
       },
     });
@@ -18238,6 +18247,66 @@ describe("ProviderCommandReactor", () => {
       associatedWorktreePath: "/tmp/provider-project/.worktrees/cb661f0d",
       associatedWorktreeBranch: "synara/app-startup-crash",
       associatedWorktreeRef: "synara/app-startup-crash",
+    });
+  });
+
+  describe("chat title push to the native thread", () => {
+    const threadId = ThreadId.makeUnsafe("thread-1");
+    const rename = (
+      harness: Awaited<ReturnType<typeof createHarness>>,
+      commandId: string,
+      title: string,
+    ) =>
+      Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.meta.update",
+          commandId: CommandId.makeUnsafe(commandId),
+          threadId,
+          title,
+        }),
+      );
+
+    it("names the provider thread after a chat title set in Synara", async () => {
+      const harness = await createHarness();
+      await rename(harness, "rename-by-writer", "Literature review for chapter 2");
+      await waitFor(() => harness.setThreadName.mock.calls.length === 1);
+      expect(harness.setThreadName).toHaveBeenCalledWith({
+        threadId,
+        name: "Literature review for chapter 2",
+      });
+    });
+
+    it("does not echo a title that came from the provider itself", async () => {
+      const harness = await createHarness();
+      await rename(harness, "provider:event-1:thread-meta-update:thread-1", "Named in Codex");
+      await rename(harness, "rename-after-echo", "Renamed in Lattice");
+      await waitFor(() => harness.setThreadName.mock.calls.length >= 1);
+      await harness.drain();
+      expect(harness.setThreadName.mock.calls.map(([call]) => call.name)).toEqual([
+        "Renamed in Lattice",
+      ]);
+    });
+
+    it("logs a failed push and keeps the chat's title and later renames working", async () => {
+      const messages: string[] = [];
+      const harness = await createHarness({
+        logMessages: messages,
+        setThreadName: () =>
+          Effect.fail(
+            new ProviderAdapterRequestError({
+              provider: "codex",
+              method: "thread/name/set",
+              detail: "thread not loaded",
+            }),
+          ),
+      });
+      await rename(harness, "rename-fails-1", "First title");
+      await waitFor(() =>
+        messages.some((message) => message.includes("could not give the provider thread")),
+      );
+      await rename(harness, "rename-fails-2", "Second title");
+      await waitFor(() => harness.setThreadName.mock.calls.length === 2);
+      await waitFor(async () => (await readHarnessThread(harness))?.title === "Second title");
     });
   });
 
@@ -18581,12 +18650,14 @@ describe("ProviderCommandReactor", () => {
         model: "claude-opus-4-8",
       },
       serverSettings: {
-        providers: {
-          codex: { enabled: false },
-          claudeAgent: { enabled: false },
-          cursor: { enabled: false },
-          opencode: { enabled: false },
-          droid: { enabled: false },
+        // Every default account, disabled per provider instance (the fork has no
+        // driver-level switch since 7eabd821e).
+        providerInstances: {
+          codex: { driver: "codex", enabled: false },
+          claudeAgent: { driver: "claudeAgent", enabled: false },
+          cursor: { driver: "cursor", enabled: false },
+          opencode: { driver: "opencode", enabled: false },
+          droid: { driver: "droid", enabled: false },
         },
       },
     });
@@ -20398,6 +20469,259 @@ describe("ProviderCommandReactor", () => {
       expect(harness.clearSessionResumeCursor).not.toHaveBeenCalled();
     },
   );
+
+  describe("panel prewarm", () => {
+    const claude = { provider: "claudeAgent", model: "claude-opus-4-7" } as const;
+    const draftId = ThreadId.makeUnsafe("thread-draft");
+    const prewarm = (
+      harness: Awaited<ReturnType<typeof createHarness>>,
+      threadId: ThreadId | null,
+      modelSelection: ModelSelection = claude,
+    ) =>
+      Effect.runPromise(
+        harness.reactor.showPanelThread({
+          panelId: "panel-1",
+          threadId,
+          ...(threadId
+            ? {
+                prewarm: {
+                  projectId: asProjectId("project-1"),
+                  modelSelection,
+                  runtimeMode: "approval-required" as const,
+                },
+              }
+            : {}),
+        }),
+      );
+    const createAndSend = async (
+      harness: Awaited<ReturnType<typeof createHarness>>,
+      modelSelection: ModelSelection = claude,
+    ) => {
+      const now = new Date().toISOString();
+      await Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.create",
+          commandId: CommandId.makeUnsafe("cmd-thread-create-draft"),
+          threadId: draftId,
+          projectId: asProjectId("project-1"),
+          title: "Draft",
+          modelSelection,
+          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          runtimeMode: "approval-required",
+          branch: null,
+          worktreePath: null,
+          createdAt: now,
+        }),
+      );
+      await Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.turn.start",
+          commandId: CommandId.makeUnsafe("cmd-turn-start-draft"),
+          threadId: draftId,
+          message: {
+            messageId: asMessageId("user-message-draft"),
+            role: "user",
+            text: "hello",
+            attachments: [],
+          },
+          modelSelection,
+          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          runtimeMode: "approval-required",
+          createdAt: now,
+        }),
+      );
+      await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    };
+
+    it("starts a draft's Claude runtime early and lets its first send reuse it", async () => {
+      const harness = await createHarness({ threadModelSelection: claude });
+      expect(await prewarm(harness, draftId)).toEqual({ prewarm: "started" });
+      expect(harness.startSession.mock.calls).toHaveLength(1);
+      expect(harness.startSession.mock.calls[0]?.[1]).toMatchObject({
+        threadId: draftId,
+        cwd: "/tmp/provider-project",
+        runtimeMode: "approval-required",
+        modelSelection: { provider: "claudeAgent", model: "claude-opus-4-7" },
+      });
+      // Focus and heartbeats repeat the report without starting anything else.
+      expect(await prewarm(harness, draftId)).toEqual({ prewarm: "running" });
+
+      await createAndSend(harness);
+      expect(harness.startSession.mock.calls).toHaveLength(1);
+      expect(harness.stopSession).not.toHaveBeenCalled();
+    });
+
+    // Claude Code connects to the lattice MCP when the warm runtime spawns,
+    // before the first send creates the thread. Unless the gateway knows the
+    // draft by then, it refuses the connection and the adopted session has no
+    // lattice tools on its first turn.
+    const draftRegistry = () => {
+      const drafts = new Set<string>();
+      return {
+        drafts,
+        credentials: {
+          registerDraftThread: (threadId: ThreadId) => void drafts.add(threadId),
+          releaseDraftThread: (threadId: ThreadId) => void drafts.delete(threadId),
+          isDraftThread: (threadId: string) => drafts.has(threadId),
+        },
+      };
+    };
+
+    it("lets a warm draft's gateway connection succeed until its first send adopts it", async () => {
+      const registry = draftRegistry();
+      const harness = await createHarness({
+        threadModelSelection: claude,
+        gatewayCredentials: registry.credentials,
+      });
+      let draftKnownAtSpawn = false;
+      const startSession = harness.startSession.getMockImplementation()!;
+      harness.startSession.mockImplementationOnce((threadId, input) => {
+        draftKnownAtSpawn = registry.drafts.has(threadId);
+        return startSession(threadId, input);
+      });
+      expect(await prewarm(harness, draftId)).toEqual({ prewarm: "started" });
+      expect(draftKnownAtSpawn).toBe(true);
+
+      await createAndSend(harness);
+      expect(harness.startSession.mock.calls).toHaveLength(1);
+      expect(registry.drafts.has(draftId)).toBe(false);
+    });
+
+    it("gives a warm draft's Claude the lattice catalog on its first turn", async () => {
+      const harness = await createHarness({
+        threadModelSelection: claude,
+        gatewayCredentials: "live",
+      });
+      const credentials = harness.gatewayCredentials;
+      const transport = makeAgentGatewayMcpTransport({
+        credentials,
+        snapshotQuery: harness.projectionSnapshotQuery,
+        tools: [
+          {
+            definition: { name: "cite", description: "Cite.", inputSchema: { type: "object" } },
+            requiredCapability: "thread:read",
+            handler: () => Effect.succeed({ content: [] }),
+          },
+        ],
+        instructions: "lattice",
+        requireThreadShell: () => Effect.die(new Error("unused")),
+      });
+      // Stands in for Claude Code: it connects to the gateway once, at spawn,
+      // and keeps that outcome for the whole session.
+      const catalogBySpawn: Array<{ threadId: string; catalog: unknown }> = [];
+      const startSession = harness.startSession.getMockImplementation()!;
+      harness.startSession.mockImplementation((threadId, input) =>
+        Effect.gen(function* () {
+          const { bearerToken } = credentials.connectionForThread(threadId, "claudeAgent");
+          const listed = yield* transport({
+            authorizationHeader: `Bearer ${bearerToken}`,
+            body: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+          });
+          catalogBySpawn.push({
+            threadId,
+            catalog:
+              listed.status === 200
+                ? (listed.body as { result: { tools: Array<{ name: string }> } }).result.tools.map(
+                    (tool) => tool.name,
+                  )
+                : `HTTP ${listed.status}`,
+          });
+          return yield* startSession(threadId, input);
+        }),
+      );
+
+      await prewarm(harness, draftId);
+      await createAndSend(harness);
+      // One spawn: the first turn ran on the warm session, with its catalog.
+      expect(catalogBySpawn).toEqual([{ threadId: draftId, catalog: ["cite"] }]);
+      expect(credentials.isDraftThread?.(draftId)).toBe(false);
+    });
+
+    it("forgets a warm draft's gateway registration when the panel moves on", async () => {
+      const registry = draftRegistry();
+      const harness = await createHarness({
+        threadModelSelection: claude,
+        gatewayCredentials: registry.credentials,
+      });
+      await prewarm(harness, draftId);
+      expect(registry.drafts.has(draftId)).toBe(true);
+      await prewarm(harness, null);
+      await waitFor(() => harness.stopSession.mock.calls.length === 1);
+      expect(registry.drafts.has(draftId)).toBe(false);
+    });
+
+    it("replaces the warm runtime when a spawn-fixed setting changed before the send", async () => {
+      const harness = await createHarness({ threadModelSelection: claude });
+      await prewarm(harness, draftId);
+      const maxEffort = { ...claude, options: { effort: "max" as const } };
+      await createAndSend(harness, maxEffort);
+      expect(harness.startSession.mock.calls).toHaveLength(2);
+      expect(harness.startSession.mock.calls[1]?.[1]).toMatchObject({
+        threadId: draftId,
+        modelSelection: { options: { effort: "max" } },
+      });
+    });
+
+    // Claude Code reads "Load my MCP servers" (and process priority) from the
+    // settings when it spawns, not from the thread's provider options.
+    it("does not adopt a warm draft spawned before a launch setting changed", async () => {
+      const harness = await createHarness({ threadModelSelection: claude });
+      await prewarm(harness, draftId);
+      await Effect.runPromise(
+        harness.serverSettings.updateSettings({
+          providers: { claudeAgent: { loadUserMcpServers: true } },
+        }),
+      );
+      await createAndSend(harness);
+      expect(harness.startSession.mock.calls).toHaveLength(2);
+      expect(harness.startSession.mock.calls[1]?.[1]).toMatchObject({ threadId: draftId });
+    });
+
+    it("re-warms a draft whose warm runtime predates a launch setting change", async () => {
+      const harness = await createHarness({ threadModelSelection: claude });
+      await prewarm(harness, draftId);
+      await Effect.runPromise(
+        harness.serverSettings.updateSettings({
+          providers: { claudeAgent: { loadUserMcpServers: true } },
+        }),
+      );
+      // The panel's next report (focus, heartbeat) replaces the stale runtime…
+      expect(await prewarm(harness, draftId)).toEqual({ prewarm: "started" });
+      expect(harness.stopSession.mock.calls[0]?.[0]).toMatchObject({ threadId: draftId });
+      expect(harness.startSession.mock.calls).toHaveLength(2);
+      // …which the first send then adopts.
+      await createAndSend(harness);
+      expect(harness.startSession.mock.calls).toHaveLength(2);
+    });
+
+    it("stops an unused warm runtime once the panel shows another thread", async () => {
+      const harness = await createHarness({ threadModelSelection: claude });
+      await prewarm(harness, draftId);
+      expect(await prewarm(harness, null)).toEqual({ prewarm: "not-requested" });
+      await waitFor(() => harness.stopSession.mock.calls.length === 1);
+      expect(harness.stopSession.mock.calls[0]?.[0]).toMatchObject({ threadId: draftId });
+    });
+
+    it("leaves Codex threads to start on send", async () => {
+      const harness = await createHarness();
+      expect(await prewarm(harness, draftId, { provider: "codex", model: "gpt-5-codex" })).toEqual({
+        prewarm: "skipped",
+      });
+      expect(harness.startSession).not.toHaveBeenCalled();
+    });
+
+    it("resumes an existing thread's stopped Claude runtime when it is shown", async () => {
+      const harness = await createHarness({ threadModelSelection: claude });
+      expect(await prewarm(harness, ThreadId.makeUnsafe("thread-1"))).toEqual({
+        prewarm: "started",
+      });
+      expect(harness.startSession.mock.calls).toHaveLength(1);
+      expect(harness.startSession.mock.calls[0]?.[1]).toMatchObject({
+        threadId: "thread-1",
+        modelSelection: { provider: "claudeAgent" },
+      });
+    });
+  });
 
   it("applies spawn-fixed Claude selection changes when the next turn starts", async () => {
     const harness = await createHarness({

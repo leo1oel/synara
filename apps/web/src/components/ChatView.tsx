@@ -1,3 +1,4 @@
+import { PULL_REQUEST_AUTO_FIX_ON } from "../betaFeatures";
 import { type LegendListRef } from "@legendapp/list/react";
 import {
   parseComputerInvocation,
@@ -70,6 +71,8 @@ import {
   gitCreateDetachedWorktreeMutationOptions,
   gitGithubRepositoryQueryOptions,
   gitStatusQueryOptions,
+  gitBranchPullRequestQueryOptions,
+  branchPullRequestForBranch,
 } from "~/lib/gitReactQuery";
 import {
   CheckboxCheckedIcon,
@@ -80,13 +83,22 @@ import {
   FolderIcon,
 } from "~/lib/icons";
 import { getLocalFolderBrowseRootPath } from "~/lib/localFolderMentions";
-import { findProviderStatus, resolveVoiceTranscriptionTarget } from "~/lib/providerAvailability";
+import {
+  findProviderStatus,
+  resolveProviderSendAvailabilityWithRefresh,
+  resolveVoiceTranscriptionTarget,
+} from "~/lib/providerAvailability";
 import { resolveProviderInstanceLabel } from "~/lib/providerInstancePresentation";
 import { holdQueuedComposerTurnsForStop } from "~/lib/queuedComposerDrain";
 import { resolveAuxiliaryTextGenerationSelection } from "~/lib/textGenerationCapabilities";
 import { resolveInheritedThreadContext } from "~/lib/threadBootstrap";
 import { cn, isMacNavigatorPlatform, newCommandId, newThreadId, randomUUID } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
+import {
+  setPanelShownByHost,
+  usePanelShownByHost,
+  usePanelThreadWarmth,
+} from "~/hooks/usePanelThreadWarmth";
 import { dispatchThreadSnoozedUntil, resolveSnoozeDeadline } from "~/lib/threadSnooze";
 import {
   ChatLinkActionsContext,
@@ -130,6 +142,28 @@ import {
 } from "../composerSlashCommands";
 import { stripDiffSearchParams } from "../diffRouteSearch";
 import { isDesktopPresentation } from "~/lib/hosts/workspacePresentation";
+import {
+  LATTICE_AGENT_PERMISSION_MODE_REQUEST,
+  LATTICE_AGENT_PERMISSION_MODE_SET,
+  buildLatticeProjectHistoryCheckpoints,
+  embedWorkspaceMatches,
+  postAgentPermissionModeToLattice,
+  postEmbedReadyToLattice,
+  postHostContextRequestToLattice,
+  postHostContextSelectionClearToLattice,
+  postPaperLibraryRequestToLattice,
+  postProjectHistoryToLattice,
+  readEmbedMode,
+  readLatticeAgentPanelOpenedMessage,
+  readLatticeAgentPanelVisibilityMessage,
+  readLatticeAgentPermissionModeMessage,
+  readLatticeCheckpointRestoreMessage,
+  readLatticeComposerFilesMessage,
+  readLatticeHostContextMessage,
+  readLatticePaperLibraryMessage,
+  type LatticePaperLibrarySnapshot,
+  openEmbeddedProviderSettings,
+} from "../embedMode";
 import { useFeatureFlags } from "../featureFlags";
 import {
   resolveThreadMentionForThreadId,
@@ -146,6 +180,17 @@ import { useClaudeContextCompaction } from "../hooks/useClaudeContextCompaction"
 import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
 import { useHandleNewThread } from "../hooks/useHandleNewThread";
+import { useLatticeComposerPrompt } from "./chat/useLatticeComposerPrompt";
+import { useLatticeTurnActivity } from "./chat/useLatticeTurnActivity";
+import { useUnavailableModelFallback } from "./chat/useUnavailableModelFallback";
+import { ComposerClaudeNotice } from "./chat/ComposerClaudeNotice";
+import {
+  type ClaudeComposerModelSwitch,
+  needsAgentCliSetup,
+  resolveClaudeComposerNotice,
+} from "./chat/claudeComposerNotice";
+import { composerModelDisplayName } from "./chat/ComposerModelPicker.logic";
+import { localizeProviderStatusMessage } from "~/lib/providerStatusMessages";
 import { useTheme } from "../hooks/useTheme";
 import { useThreadHandoff } from "../hooks/useThreadHandoff";
 import { useThreadUnblock } from "../hooks/useThreadUnblock";
@@ -161,6 +206,8 @@ import { formatShortcutLabel, shortcutLabelForCommand } from "../keybindings";
 import { isHomeChatContainerProject } from "../lib/chatProjects";
 import { isGroupContainerProject } from "../lib/groupProjects";
 import { appendComposerPromptText } from "../lib/chatReferences";
+import { deleteActiveThreadFromClient } from "../lib/activeThreadDelete";
+import { getLiveLatticeHostContext, setLiveLatticeHostContext } from "../lib/latticeHostContext";
 import { createPastedTextDraft } from "../lib/composerPastedText";
 import {
   buildComposerFileAttachmentsFromFiles,
@@ -283,6 +330,7 @@ import {
   resolveComposerHighlightedItemId,
   resolveEnvironmentPanelPreferenceUpdate,
   resolveEnvironmentPanelVisible,
+  resolveEmbeddedProjectModelPreference,
   resolveGitRepoUiState,
   resolveSettledThreadBranchMismatch,
   resolveThreadArtifactWorkspaceRoot,
@@ -320,6 +368,7 @@ import { ComposerActiveTaskListCard } from "./chat/ComposerActiveTaskListCard";
 import { ComposerBranchMismatchBanner } from "./chat/ComposerBranchMismatchBanner";
 import { ComposerCapsuleRow } from "./chat/ComposerCapsule";
 import { ComposerColumnFrame } from "./chat/ComposerColumnFrame";
+import { useComposerEditorRoom } from "./chat/composerEditorRoom";
 import { ComposerCommandItem, ComposerCommandMenu } from "./chat/ComposerCommandMenu";
 import { ComposerBlockedHandoffNotice } from "./chat/ComposerBlockedHandoffNotice";
 import { ComposerExpiredUserInputNotice } from "./chat/ComposerExpiredUserInputNotice";
@@ -328,6 +377,10 @@ import { ComposerExtrasTrigger } from "./chat/ComposerExtrasTrigger";
 import { ComposerGoalHeader } from "./chat/ComposerGoalHeader";
 import { ComposerUsageLimitRecovery } from "./chat/ComposerUsageLimitRecovery";
 import { ComposerInputBanners } from "./chat/ComposerInputBanners";
+import { ComposerLatticeContextBar } from "./chat/ComposerLatticeContextBar";
+import { clearLatticeContextSelection } from "./chat/ComposerLatticeContextBar.logic";
+import { LatticeEmptyThread } from "./chat/LatticeEmptyThread";
+import { latticeStarterDraft } from "./chat/LatticeEmptyThread.logic";
 import { ComposerTransportNotice } from "./chat/ComposerTransportNotice";
 import { ComposerLiveChangesHeader } from "./chat/ComposerLiveChangesHeader";
 import {
@@ -359,6 +412,7 @@ import { COMPOSER_STACKED_PANEL_ICON_CLASS_NAME } from "./chat/composerStackedPa
 import { ComposerPullRequestAutoFixHint } from "./chat/ComposerPullRequestAutoFixHint";
 import { ComposerReferenceAttachments } from "./chat/ComposerReferenceAttachments";
 import { ComposerSlashStatusDialog } from "./chat/ComposerSlashStatusDialog";
+import { ComposerMcpDialog } from "./chat/ComposerMcpDialog";
 import {
   scanSubagentRunCards,
   subagentRunPhaseStatusKind,
@@ -489,6 +543,7 @@ import { useComposerSingleRow } from "./chat/useComposerSingleRow";
 import { useComposerVoiceController } from "./chat/useComposerVoiceController";
 import { useThreadErrorToast } from "./chat/useThreadErrorToast";
 import { useTranscriptAssistantSelectionAction } from "./chat/useTranscriptAssistantSelectionAction";
+import { observeLatticeComposerLayout } from "./chat/latticeComposerLayout";
 import {
   composerFooterPlanForTier,
   resolveNextComposerFooterTier,
@@ -499,7 +554,7 @@ import { SidebarHeaderTrigger } from "./ui/sidebar";
 import { Skeleton } from "./ui/skeleton";
 import { toastManager } from "./ui/toast";
 import { isSidechatThread, isStandaloneSidechatThread } from "@synara/shared/sidechatThread";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 import { Translation } from "~/i18n/Translation";
 
 // The terminal panel loads xterm plus its addons (~223 KB gzip). Its mount point
@@ -554,6 +609,9 @@ function getRateLimitBannerDismissalKey(
 }
 
 const VOICE_RECORDER_ACTION_ARM_DELAY_MS = 250;
+const EMPTY_LATTICE_PAPER_MENTIONS: NonNullable<
+  Parameters<typeof useComposerCommandMenuItems>[0]["paperMentionSources"]
+> = [];
 
 function warnVoiceGuard(event: string, details?: Record<string, unknown>) {
   if (!import.meta.env.DEV) {
@@ -580,19 +638,20 @@ function ComposerControlSkeleton(props: { widthClassName: string }) {
   );
 }
 
-function ComposerModelLoadingControl(props: { widthClassName: string }) {
-  const { t } = useTranslation();
-
+function ComposerModelLoadingControl(props: { widthClassName?: string; compact?: boolean }) {
   return (
     <div
       aria-label={t("chat:providerModelPicker_loadingModels")}
       className={cn(
         "flex h-8 shrink-0 items-center gap-2 rounded-md border border-border/50 px-2 text-muted-foreground",
+        props.compact && "w-8 justify-center px-0",
         props.widthClassName,
       )}
     >
       <RefreshCwIcon aria-hidden="true" className="size-3.5 animate-spin" />
-      <span className="truncate text-ui-xs">{t("chat:providerModelPicker_loadingModels")}</span>
+      <span className={cn("truncate text-ui-xs", props.compact && "sr-only")}>
+        {t("chat:providerModelPicker_loadingModels")}
+      </span>
     </div>
   );
 }
@@ -602,7 +661,7 @@ interface ChatViewProps {
   hideHeader?: boolean;
   paneScopeId?: string;
   surfaceMode?: "single" | "split";
-  presentationMode?: "default" | "editor";
+  presentationMode?: "default" | "editor" | "embed";
   isFocusedPane?: boolean;
   panelState?: SplitViewPanePanelState;
   onToggleDiffPanel?: () => void;
@@ -696,7 +755,14 @@ export default function ChatView({
     gitCreateDetachedWorktreeMutationOptions({ queryClient }),
   );
   const isEditorRail = presentationMode === "editor";
+  const isEmbed = presentationMode === "embed";
+  const [latticePaperLibrary, setLatticePaperLibrary] =
+    useState<LatticePaperLibrarySnapshot | null>(null);
   const environmentEnabled = !isEditorRail && !hideHeader;
+  // Status warnings (quota, missing checkpoints) moved out of the chat into the
+  // Environment panel, which Lattice's embedded panel does not offer: keep them
+  // in the chat there instead of dropping them.
+  const environmentPanelReachable = environmentEnabled && !isEmbed;
   const isInactiveSplitPane = surfaceMode === "split" && !isFocusedPane;
   const {
     composerDraft,
@@ -834,13 +900,17 @@ export default function ChatView({
   const fallbackDraftProject = useStore(
     useMemo(() => createProjectSelector(fallbackDraftProjectId), [fallbackDraftProjectId]),
   );
+  const fallbackDraftProjectModelPreference = resolveEmbeddedProjectModelPreference({
+    embedded: isEmbed,
+    selection: fallbackDraftProject?.defaultModelSelection,
+  });
   const draftFallbackModelSelection = useMemo<ModelSelection>(
     () =>
       resolveDraftFallbackModelSelection({
-        projectDefault: fallbackDraftProject?.defaultModelSelection,
+        projectDefault: fallbackDraftProjectModelPreference,
         settingsDefaultProvider: settings.defaultProvider,
       }),
-    [fallbackDraftProject?.defaultModelSelection, settings.defaultProvider],
+    [fallbackDraftProjectModelPreference, settings.defaultProvider],
   );
 
   const [isDragOverComposer, setIsDragOverComposer] = useState(false);
@@ -1354,7 +1424,7 @@ export default function ChatView({
       lastKnownPr?: Thread["lastKnownPr"];
     }) => {
       if (!activeProject) {
-        throw new Error("No active project is available for this pull request.");
+        throw new Error(t("lattice:noActiveProjectIsAvailableForThis"));
       }
       const draftThreadContext = {
         branch: input.branch,
@@ -1404,6 +1474,7 @@ export default function ChatView({
       clearProjectDraftThreadId,
       getDraftThread,
       getDraftThreadByProjectId,
+      t,
       isServerThread,
       navigate,
       setDraftThreadContext,
@@ -1515,6 +1586,13 @@ export default function ChatView({
     // Same gate as the Hand off menu: a coordinator is one per-group identity.
     allowProviderHandoff: isServerThread && !isCoordinatorConversation,
   });
+  usePanelThreadWarmth({
+    enabled: isEmbed,
+    threadId: activeThreadId,
+    projectId: activeProjectId,
+    modelSelection: selectedModelSelection,
+    runtimeMode,
+  });
   useLiveThreadModelSelection({
     threadId,
     serverModelSelection: serverThread?.modelSelection,
@@ -1579,7 +1657,7 @@ export default function ChatView({
     activeThread,
     latestTurnSettled,
     latestTurnLive,
-    keepMissingCheckpointNotices: !environmentEnabled,
+    keepMissingCheckpointNotices: !environmentPanelReachable,
   });
   // The newest transcript card with subagents still at work, for the floating
   // "N running" chip that brings it back into view.
@@ -1766,12 +1844,17 @@ export default function ChatView({
   );
   const planSidebarLabel = sidebarProposedPlan ? t("chat:planDetails") : t("chat:tasks");
   const planSidebarToggleLabel = planSidebarOpen
-    ? t("chat:hide2", { value0: planSidebarLabel })
+    ? sidebarProposedPlan
+      ? t("lattice:hidePlanDetails")
+      : t("lattice:hideTasks")
     : planSidebarLabel;
-  const planSidebarToggleTitle = t("chat:sidebar", {
-    value0: planSidebarOpen ? t("chat:hide") : t("chat:show"),
-    value1: planSidebarLabel.toLowerCase(),
-  });
+  const planSidebarToggleTitle = sidebarProposedPlan
+    ? planSidebarOpen
+      ? t("lattice:hidePlanDetailsSidebar")
+      : t("lattice:showPlanDetailsSidebar")
+    : planSidebarOpen
+      ? t("lattice:hideTasksSidebar")
+      : t("lattice:showTasksSidebar");
   const activeTaskList = useMemo((): ActiveTaskListState | null => {
     if (showDebugTaskBanner) {
       return {
@@ -1866,6 +1949,7 @@ export default function ChatView({
         activeThread.session?.orchestrationStatus === "running"
           ? (activeThread.session.activeTurnId ?? null)
           : null,
+      latestTurn: activeThread.latestTurn,
     });
     return editTarget.editable ? (editTarget.messageId as MessageId) : null;
   }, [activeThread, isServerThread]);
@@ -2272,8 +2356,39 @@ export default function ChatView({
   const activeThreadIsSidechat = Boolean(activeThread && isSidechatThread(activeThread));
   // Stable identity: this element is forwarded to the memoized MessagesTimeline, so
   // building it inline in JSX would defeat its `memo()` on every keystroke.
+  // A starter fills the composer through the prompt setter declared further
+  // down; the ref keeps the empty-state element below stable across renders.
+  const latticeStarterPromptRef = useRef<((prompt: string) => void) | null>(null);
+  // The selection's context bar floats above the composer, outside its
+  // measured height; the empty thread's starters keep clear of both.
+  const [latticeContextBarHeightPx, setLatticeContextBarHeightPx] = useState(0);
+  const handleLatticeStarter = useCallback((prompt: string) => {
+    latticeStarterPromptRef.current?.(prompt);
+  }, []);
+  // A reply's suggested follow-up fills the composer the same way, through a
+  // ref so the memoized transcript keeps one stable handler.
+  const followUpPromptRef = useRef<((prompt: string) => void) | null>(null);
+  const handleSelectFollowUp = useCallback((prompt: string) => {
+    followUpPromptRef.current?.(prompt);
+  }, []);
   const transcriptEmptyStateContent = useMemo((): ReactNode => {
-    if (isEditorRail) {
+    if (
+      isEmbed &&
+      !isEditorRail &&
+      threadDetailHydration === "ready" &&
+      !hasPendingThreadWork &&
+      !activeThreadIsSidechat &&
+      !activeThread?.parentThreadId
+    ) {
+      return (
+        <LatticeEmptyThread
+          bottomInsetPx={composerTranscriptInsetPx}
+          contextBarHeightPx={latticeContextBarHeightPx}
+          onStarter={handleLatticeStarter}
+        />
+      );
+    }
+    if (isEditorRail || isEmbed) {
       return <span aria-hidden="true" />;
     }
     if (threadDetailHydration !== "ready") {
@@ -2286,10 +2401,15 @@ export default function ChatView({
     }
     return hasPendingThreadWork || activeThreadIsSidechat ? <span aria-hidden="true" /> : undefined;
   }, [
+    activeThread?.parentThreadId,
     activeThreadIsSidechat,
+    composerTranscriptInsetPx,
+    handleLatticeStarter,
+    latticeContextBarHeightPx,
     handleRetryThreadDetailSync,
     hasPendingThreadWork,
     isEditorRail,
+    isEmbed,
     threadDetailHydration,
   ]);
   // Empty top-level threads render the centered landing composer instead of the transcript pane.
@@ -2301,6 +2421,7 @@ export default function ChatView({
     !activeThread?.parentThreadId &&
     !activeThreadIsSidechat &&
     !isEditorRail &&
+    !isEmbed &&
     threadDetailHydration === "ready";
   const isEmptyChatLanding =
     isCenteredEmptyLanding && Boolean(homeDir) && isContainerLandingProject;
@@ -2311,6 +2432,72 @@ export default function ChatView({
     standaloneSidechatContext?.itemKind === "issue" ? t("settings:issue") : t("chat:pullRequest");
   const { turnDiffSummaries, inferredCheckpointTurnCountByTurnId } =
     useTurnDiffSummaries(activeThread);
+
+  useEffect(() => {
+    if (!isEmbed || !activeThread?.id || !activeProject?.cwd || !composerFormRef.current) return;
+    const config = readEmbedMode();
+    if (!config || !embedWorkspaceMatches(config, activeProject.cwd)) return;
+    // The route can mount before this deferred view. Signal from its committed
+    // composer, without waiting for paints in an iframe the host still covers.
+    postEmbedReadyToLattice(config);
+  }, [activeProject?.cwd, activeThread?.id, isEmbed]);
+
+  useEffect(() => {
+    if (!isEmbed) return;
+    const config = readEmbedMode();
+    if (!config?.hostOrigin) return;
+    const onHostMessage = (event: MessageEvent) => {
+      const context = readLatticeHostContextMessage(event, config);
+      if (context) setLiveLatticeHostContext(context);
+      const papers = readLatticePaperLibraryMessage(event, config);
+      if (papers) setLatticePaperLibrary(papers);
+      // Parsing this message here preserves the host handshake even though the
+      // upstream quote surface no longer needs a remount side effect.
+      readLatticeAgentPanelOpenedMessage(event, config);
+      const panelVisible = readLatticeAgentPanelVisibilityMessage(event, config);
+      if (panelVisible !== null) setPanelShownByHost(panelVisible);
+    };
+    postHostContextRequestToLattice(config);
+    postPaperLibraryRequestToLattice(config);
+    window.addEventListener("message", onHostMessage);
+    return () => {
+      window.removeEventListener("message", onHostMessage);
+      setLiveLatticeHostContext(null);
+      setLatticePaperLibrary(null);
+    };
+  }, [isEmbed]);
+
+  const clearLiveLatticeHostSelection = useCallback(() => {
+    if (!isEmbed) return;
+    const context = getLiveLatticeHostContext();
+    const config = readEmbedMode();
+    if (!context || !config?.hostOrigin) return;
+    setLiveLatticeHostContext(clearLatticeContextSelection(context));
+    postHostContextSelectionClearToLattice(config);
+  }, [isEmbed]);
+
+  useEffect(() => {
+    if (!isEmbed || !activeThread || !activeProject) return;
+    const config = readEmbedMode();
+    if (!config?.hostOrigin || !embedWorkspaceMatches(config, activeProject.cwd)) return;
+    postProjectHistoryToLattice(
+      config,
+      activeThread.id,
+      buildLatticeProjectHistoryCheckpoints({
+        threadId: activeThread.id,
+        threadTitle: activeThread.title,
+        messages: activeThread.messages,
+        summaries: turnDiffSummaries,
+        inferredCheckpointTurnCountByTurnId,
+      }),
+    );
+  }, [
+    activeProject,
+    activeThread,
+    inferredCheckpointTurnCountByTurnId,
+    isEmbed,
+    turnDiffSummaries,
+  ]);
   const turnDiffSummaryByAssistantMessageId = useMemo(() => {
     const messagesForDiffAnchoring: {
       id: MessageId;
@@ -2401,6 +2588,12 @@ export default function ChatView({
 
   const branchesQuery = useQuery(gitBranchesQueryOptions(gitBranchSourceCwd));
   const gitStatusQuery = useQuery(gitStatusQueryOptions(gitBranchSourceCwd));
+  const branchPullRequestQuery = useQuery(
+    gitBranchPullRequestQueryOptions(
+      gitBranchSourceCwd,
+      PULL_REQUEST_AUTO_FIX_ON && isServerThread,
+    ),
+  );
   const localFolderBrowseRootPath = getLocalFolderBrowseRootPath(
     serverConfigQuery.data?.homeDir ?? null,
     isMacNavigatorPlatform(),
@@ -2444,18 +2637,18 @@ export default function ChatView({
     );
   const claudeCompactDisabledReason = !canRequestNativeClaudeCompaction
     ? isNativeCommandDiscoveryPending
-      ? "Checking Claude's available commands..."
-      : "Compaction is unavailable for this Claude session."
+      ? t("lattice:checkingClaudeSAvailableCommands")
+      : t("lattice:compactionIsUnavailableForThisClaudeSession")
     : hasLiveTurn || isConnecting || (activeBackgroundTasks?.activeCount ?? 0) > 0
-      ? "Wait for Claude and its background tasks to finish."
+      ? t("lattice:waitForClaudeAndItsBackgroundTasks")
       : activePendingApproval || pendingUserInputs.length > 0
-        ? "Resolve the pending request before compacting."
+        ? t("lattice:resolveThePendingRequestBeforeCompacting")
         : null;
   const standaloneClaudeCompactDisabledReason =
     activeThread?.claudeCacheReview != null
-      ? "Choose how to resume the held message above."
+      ? t("lattice:chooseHowToResumeTheHeldMessage")
       : isWorking
-        ? "Wait for Claude to finish before compacting."
+        ? t("lattice:waitForClaudeToFinishBeforeCompacting")
         : claudeCompactDisabledReason;
   const { compact: onCompactClaudeContext, isSubmitting: isRequestingClaudeCompaction } =
     useClaudeContextCompaction({
@@ -2475,7 +2668,7 @@ export default function ChatView({
   const onRespondToClaudeCacheReview = useCallback(
     async (review: PendingClaudeCacheReview, decision: ClaudeCacheReviewDecision) => {
       const api = readNativeApi();
-      if (!api) throw new Error("Reconnect before choosing how to resume.");
+      if (!api) throw new Error(t("lattice:reconnectBeforeChoosingHowToResume"));
       await api.orchestration.dispatchCommand({
         type: "thread.claude-cache.respond",
         commandId: newCommandId(),
@@ -2487,7 +2680,7 @@ export default function ChatView({
       });
       if (decision === "never") updateSettings({ claudeConfirmColdCacheResume: false });
     },
-    [threadId, updateSettings],
+    [t, threadId, updateSettings],
   );
   const activeRootBranch = useMemo(
     () =>
@@ -2630,7 +2823,9 @@ export default function ChatView({
       threads: composerThreadSummaries,
       projects: composerThreadProjects,
       currentThreadId: threadId,
+      ...(isEmbed ? { scopeProjectId: activeProjectId } : {}),
     },
+    paperMentionSources: latticePaperLibrary?.papers ?? EMPTY_LATTICE_PAPER_MENTIONS,
     connectors: mentionableConnectors,
   });
   const composerMenuItems = useMemo(() => {
@@ -2661,14 +2856,14 @@ export default function ChatView({
           id: "review-target:changes",
           type: "review-target" as const,
           target: "changes" as const,
-          label: t("chat:reviewUncommittedChanges"),
+          label: t("lattice:reviewUncommittedChanges"),
           description: t("chat:reviewLocalUncommittedChanges"),
         },
         {
           id: "review-target:base-branch",
           type: "review-target" as const,
           target: "base-branch" as const,
-          label: t("chat:reviewAgainstBaseBranch"),
+          label: t("lattice:reviewAgainstBaseBranch"),
           description: t("chat:reviewTheCurrentBranchDiffAgainstItsBase"),
         },
       ];
@@ -2679,6 +2874,7 @@ export default function ChatView({
     activeThread?.envMode,
     activeThread?.worktreePath,
     composerCommandPicker,
+    t,
     normalComposerMenuItems,
     t,
   ]);
@@ -2765,7 +2961,9 @@ export default function ChatView({
   );
   const visibleActiveProviderStatus =
     activeProviderHealthBannerDismissalKey &&
-    dismissedProviderHealthBannerKeys.includes(activeProviderHealthBannerDismissalKey)
+    (dismissedProviderHealthBannerKeys ?? EMPTY_DISMISSED_PROVIDER_HEALTH_BANNERS).includes(
+      activeProviderHealthBannerDismissalKey,
+    )
       ? null
       : activeProviderStatus;
   const voiceProviderTarget = useMemo(
@@ -3187,7 +3385,7 @@ export default function ChatView({
     refreshVoiceStatus: refreshProviderStatuses,
     actionArmDelayMs: VOICE_RECORDER_ACTION_ARM_DELAY_MS,
     failureCopy: {
-      transcriptionFailedTitle: "Couldn't transcribe voice note",
+      transcriptionFailedTitle: t("lattice:couldnTTranscribeVoiceNote"),
     },
     onGuardWarning: warnVoiceGuard,
   });
@@ -4037,8 +4235,10 @@ export default function ChatView({
       selectionOptions?: ComposerModelSelectionOptions,
     ) => {
       if (!activeThread) return;
+      const keepFocus = selectionOptions?.focusComposer === false;
+      const refocusComposer = keepFocus ? () => undefined : scheduleComposerFocus;
       if (lockedProvider !== null && provider !== lockedProvider) {
-        scheduleComposerFocus();
+        refocusComposer();
         return;
       }
       const resolvedInstanceId =
@@ -4054,7 +4254,7 @@ export default function ChatView({
             selectedProviderInstanceId)
           : undefined;
       if (lockedInstanceId && resolvedInstanceId !== lockedInstanceId) {
-        scheduleComposerFocus();
+        refocusComposer();
         return;
       }
       const resolvedModel = resolveCommittedProviderModel({
@@ -4113,10 +4313,10 @@ export default function ChatView({
         },
       });
       if (!didCommitSelection) {
-        scheduleComposerFocus();
+        refocusComposer();
         return;
       }
-      scheduleComposerFocus();
+      refocusComposer();
     },
     [
       activeThread,
@@ -4147,6 +4347,78 @@ export default function ChatView({
     },
     [onProviderModelSelect, selectedModelForPickerWithCustomFallback, selectedProvider],
   );
+  // A turn that failed with "model not available to this account" greys that model
+  // in the picker; move the composer to the provider's default before the next send,
+  // and say so above the composer.
+  const [claudeModelSwitch, setClaudeModelSwitch] = useState<ClaudeComposerModelSwitch | null>(
+    null,
+  );
+  const selectedProviderCatalog =
+    modelOptionsByProviderInstance[selectedProviderInstanceId] ??
+    modelOptionsByProvider[selectedProvider];
+  const modelDisplayNameFor = (slug: string) =>
+    composerModelDisplayName(
+      selectedProvider,
+      selectedProviderCatalog?.find((option) => option.slug === slug)?.name ?? slug,
+    );
+  useUnavailableModelFallback({
+    enabled: activeThread !== undefined,
+    provider: selectedProvider,
+    instanceId: selectedProviderInstanceId,
+    model: selectedModelForPickerWithCustomFallback,
+    statuses: providerStatuses,
+    options: selectedProviderCatalog,
+    select: (provider, model, instanceId, from) => {
+      if (activeThread) {
+        setClaudeModelSwitch({
+          threadId: activeThread.id,
+          turnId: activeLatestTurn?.turnId ?? null,
+          fromName: modelDisplayNameFor(from),
+          toModel: model,
+          toName: modelDisplayNameFor(model),
+        });
+      }
+      void onProviderModelSelect(provider, model, { instanceId, focusComposer: false });
+    },
+  });
+  // The one Claude problem worth saying next to the composer (see claudeComposerNotice).
+  const latestTurnFailure = useMemo(() => {
+    if (!activeLatestTurnId) return null;
+    for (let index = workLogEntries.length - 1; index >= 0; index -= 1) {
+      const entry = workLogEntries[index];
+      if (entry?.turnFailure && entry.turnId === activeLatestTurnId) return entry.turnFailure;
+    }
+    return null;
+  }, [activeLatestTurnId, workLogEntries]);
+  // Only Lattice's panel says it: it runs the writer's own CLIs and has no onboarding.
+  const agentCliSetupNeeded = isEmbed && needsAgentCliSetup(providerStatuses);
+  const claudeComposerNotice = resolveClaudeComposerNotice({
+    agentCliSetupNeeded: agentCliSetupNeeded ? { message: t("lattice:agentSetup_title") } : null,
+    provider: selectedProvider,
+    threadId: activeThread?.id ?? null,
+    selectedModel: selectedModelForPickerWithCustomFallback,
+    latestTurnId: activeLatestTurnId,
+    latestTurnFailure,
+    providerStatus: activeProviderStatus ?? null,
+    modelSwitch: claudeModelSwitch,
+    translateStatus: (message) => localizeProviderStatusMessage(t, message),
+    describeSwitch: (from, to) => t("lattice:claudeModelSwitchedToDefault", { from, to }),
+  });
+  const [dismissedClaudeNoticeKey, setDismissedClaudeNoticeKey] = useState<string | null>(null);
+  // A CLI installed while the panel was away is found when the writer comes back to it:
+  // the server re-adds the usual install folders to PATH before every probe.
+  const panelShownByHost = usePanelShownByHost();
+  const panelWasShownRef = useRef(false);
+  useEffect(() => {
+    // Only on the panel being shown, not on every status change while it is.
+    const becameShown = panelShownByHost && !panelWasShownRef.current;
+    panelWasShownRef.current = panelShownByHost;
+    if (becameShown && agentCliSetupNeeded) void refreshProviderStatuses({ silent: true });
+  }, [agentCliSetupNeeded, panelShownByHost, refreshProviderStatuses]);
+  const visibleClaudeComposerNotice =
+    claudeComposerNotice && claudeComposerNotice.key !== dismissedClaudeNoticeKey
+      ? claudeComposerNotice
+      : null;
   const openProviderAccountSettings = useCallback(() => {
     void navigate({
       to: "/settings",
@@ -4173,6 +4445,9 @@ export default function ChatView({
   // false return leaves the chord for the native window-close role.
   const closeActiveThreadTabRef = useRef<(() => boolean) | null>(null);
   const onCloseActiveThreadTab = useStableCallback(() => {
+    // The embedding host owns Cmd/Ctrl+W (Lattice: File > Close Window), so a wide embedded
+    // panel with the tab strip mounted leaves the chord to it like a narrow one does.
+    if (isEmbed) return false;
     return closeActiveThreadTabRef.current?.() ?? false;
   });
   const onCloseDockTerminalPane = useStableCallback((paneId: string) => {
@@ -4308,6 +4583,7 @@ export default function ChatView({
     [
       activeThreadId,
       addComposerFilesToDraft,
+      t,
       isSidechatExpired,
       pendingUserInputs.length,
       setThreadError,
@@ -4327,6 +4603,60 @@ export default function ChatView({
     },
     [addComposerFiles, addComposerImages],
   );
+
+  // Native drops are intercepted by Tauri and relayed as files, not DOM drops.
+  useEffect(() => {
+    if (!isEmbed) return;
+    const config = readEmbedMode();
+    if (!config?.hostOrigin) return;
+    const receive = (event: MessageEvent) => {
+      const files = readLatticeComposerFilesMessage(event, config);
+      if (!files) return;
+      addComposerAttachments(files);
+      focusComposer();
+    };
+    window.addEventListener("message", receive);
+    return () => window.removeEventListener("message", receive);
+  }, [addComposerAttachments, focusComposer, isEmbed]);
+
+  useEffect(() => {
+    if (!isEmbed) return;
+    const config = readEmbedMode();
+    if (!config?.hostOrigin) return;
+    const autoModeAvailable = providerModelSupportsAutoRuntimeMode(
+      selectedProvider,
+      selectedRuntimeModel,
+      activeProviderStatus,
+    );
+    const publish = () => postAgentPermissionModeToLattice(config, runtimeMode, autoModeAvailable);
+    const receive = (event: MessageEvent) => {
+      const message = readLatticeAgentPermissionModeMessage(event, config);
+      if (!message) return;
+      if (message.type === LATTICE_AGENT_PERMISSION_MODE_REQUEST) {
+        publish();
+        return;
+      }
+      if (
+        message.type === LATTICE_AGENT_PERMISSION_MODE_SET &&
+        message.mode !== runtimeMode &&
+        (message.mode !== "auto" || autoModeAvailable)
+      ) {
+        handleRuntimeModeChange(message.mode);
+        return;
+      }
+      publish();
+    };
+    publish();
+    window.addEventListener("message", receive);
+    return () => window.removeEventListener("message", receive);
+  }, [
+    activeProviderStatus,
+    handleRuntimeModeChange,
+    isEmbed,
+    runtimeMode,
+    selectedProvider,
+    selectedRuntimeModel,
+  ]);
 
   const removeComposerFile = (fileId: string) => {
     discardPromptHistoryNavigationForComposerMutation();
@@ -4397,9 +4727,9 @@ export default function ChatView({
       }
       const confirmed = await api.dialogs.confirm(
         [
-          `Revert this thread to checkpoint ${turnCount}?`,
-          "This will discard newer messages and turn diffs in this thread.",
-          "This action cannot be undone.",
+          t("lattice:revertThisThreadToCheckpoint", { turnCount }),
+          t("lattice:thisWillDiscardNewerMessagesAndTurn"),
+          t("chat:checkpoint_revertConfirmWarning"),
         ].join("\n"),
       );
       if (!confirmed) {
@@ -4420,12 +4750,13 @@ export default function ChatView({
       } catch (err) {
         setThreadError(
           activeThread.id,
-          err instanceof Error ? err.message : "Failed to revert thread state.",
+          err instanceof Error ? err.message : t("lattice:failedToRevertThreadState"),
         );
       }
       setIsRevertingCheckpoint(false);
     },
     [
+      t,
       setIsRevertingCheckpoint,
       activeThread,
       hasLiveTurn,
@@ -4442,15 +4773,18 @@ export default function ChatView({
       if (!api || !activeThread || isRevertingCheckpoint || turnCounts.length === 0) return;
 
       if (hasLiveTurn || isSendBusy || isConnecting) {
-        setThreadError(activeThread.id, "Interrupt the current turn before undoing file changes.");
+        setThreadError(
+          activeThread.id,
+          t("lattice:interruptTheCurrentTurnBeforeUndoingFileChanges"),
+        );
         return;
       }
       const confirmed = await api.dialogs.confirm(
         [
-          "Undo the file changes shown in this card?",
-          "Earlier file changes will remain available to undo.",
-          "Messages and provider conversation history will be kept.",
-          "This action cannot be undone.",
+          t("lattice:undoTheFileChangesShownInThisCard"),
+          t("lattice:earlierFileChangesWillRemainAvailableToUndo"),
+          t("lattice:messagesAndProviderConversationHistoryWillBeKept"),
+          t("chat:checkpoint_revertConfirmWarning"),
         ].join("\n"),
       );
       if (!confirmed) return;
@@ -4486,11 +4820,12 @@ export default function ChatView({
         setIsRevertingCheckpoint(false);
         setThreadError(
           activeThread.id,
-          err instanceof Error ? err.message : "Failed to undo file changes.",
+          err instanceof Error ? err.message : t("lattice:failedToUndoFileChanges"),
         );
       });
     },
     [
+      t,
       setIsRevertingCheckpoint,
       setPendingFileUndo,
       activeThread,
@@ -4501,6 +4836,19 @@ export default function ChatView({
       setThreadError,
     ],
   );
+
+  useEffect(() => {
+    if (!isEmbed || !activeThread) return;
+    const config = readEmbedMode();
+    if (!config?.hostOrigin) return;
+    const receive = (event: MessageEvent) => {
+      const request = readLatticeCheckpointRestoreMessage(event, config);
+      if (!request || request.threadId !== activeThread.id) return;
+      void onUndoTurnFiles([request.turnCount]);
+    };
+    window.addEventListener("message", receive);
+    return () => window.removeEventListener("message", receive);
+  }, [activeThread, isEmbed, onUndoTurnFiles]);
 
   // Stable: it reads the whole thread, which changes with every streamed token.
   const onCreateHandoffThread = useStableCallback(async (target: ThreadHandoffTarget) => {
@@ -4534,11 +4882,11 @@ export default function ChatView({
       if (error instanceof ProviderHandoffBackgroundTasksError) return;
       toastManager.add({
         type: "error",
-        title: "Could not hand off this thread",
+        title: t("chat:couldNotHandOffThisThread"),
         description:
           error instanceof Error
             ? error.message
-            : "An error occurred while handing off the thread.",
+            : t("chat:anErrorOccurredWhileHandingOffTheThread"),
       });
     }
   });
@@ -4686,9 +5034,8 @@ export default function ChatView({
       const targetName = PROVIDER_DISPLAY_NAMES[targetProvider] ?? targetProvider;
       toastManager.add({
         type: "error",
-        title: `Cannot switch to ${targetName} yet`,
-        description:
-          "Wait for the current turn to finish and answer any pending request, then send again.",
+        title: t("common:cannotSwitchToYet", { value0: targetName }),
+        description: t("chat:waitForTheCurrentTurnToFinishAndAnswer"),
       });
       return false;
     },
@@ -4906,6 +5253,64 @@ export default function ChatView({
     },
     [promptRef, setComposerCursor, setComposerTrigger, scheduleComposerFocus, setPrompt],
   );
+  useEffect(() => {
+    latticeStarterPromptRef.current = (prompt) =>
+      setPromptFromTraits(latticeStarterDraft(promptRef.current, prompt));
+  }, [promptRef, setPromptFromTraits]);
+  useLatticeComposerPrompt({
+    enabled: isEmbed && !isInactiveSplitPane,
+    threadId,
+    projectId: activeProject?.id ?? null,
+    hasPendingApproval: activePendingApproval !== null,
+    hasPendingUserInput: pendingUserInputs.length > 0,
+    hasLiveTurn,
+    isSendBusy,
+    isConnecting,
+    queuedTurnCount: queuedComposerTurns.length,
+    turnDispatchSettings,
+    selectedProvider,
+    selectedModel,
+    selectedPromptEffort,
+    readComposerPrompt: () => composerEditorRef.current?.readSnapshot()?.value ?? promptRef.current,
+    setComposerPromptAndFocus: setPromptFromTraits,
+    isProviderUsable: async () =>
+      (
+        await resolveProviderSendAvailabilityWithRefresh({
+          provider: turnDispatchSettings.modelSelection.provider,
+          instanceId: turnDispatchSettings.modelSelection.instanceId,
+          statuses: providerStatuses,
+          refreshStatuses: () => refreshProviderStatuses({ silent: true }),
+        })
+      ).usable,
+    enqueueQueuedTurn: enqueueQueuedComposerTurn,
+    sendQueuedTurn: (turn) => submitComposerTurn(undefined, "queue", turn),
+    createThread: handleNewThread,
+  });
+  useLatticeTurnActivity({
+    enabled: isEmbed && !isInactiveSplitPane,
+    threadId: activeThreadId,
+    projectCwd: activeProject?.cwd ?? null,
+    turnId: activeLatestTurnId,
+    turnLive: latestTurnLive,
+    awaitingInput: activePendingApproval !== null || pendingUserInputs.length > 0,
+    provider: {
+      id: activeThread?.session?.provider ?? selectedProvider,
+      label: providerDisplayName,
+    },
+    workLogEntries,
+  });
+  // The prompt a follow-up chip last wrote: choosing another chip replaces it
+  // while it is untouched, and anything the user typed is kept.
+  const followUpDraftRef = useRef<string | null>(null);
+  useEffect(() => {
+    followUpPromptRef.current = (prompt) => {
+      const current = promptRef.current;
+      const typed = current.trim();
+      const replace = !typed || typed === followUpDraftRef.current;
+      followUpDraftRef.current = prompt.trim();
+      setPromptFromTraits(replace ? prompt : `${current.trimEnd()}\n\n${prompt}`);
+    };
+  }, [promptRef, setPromptFromTraits]);
   const selectedProviderModelOptions = composerModelOptions?.[selectedProvider];
   const composerTraitSelection = getComposerTraitSelection(
     selectedProvider,
@@ -4951,6 +5356,8 @@ export default function ChatView({
       if (accepted && switchKeyForSend !== null && args[2] === undefined) {
         setSubmittedClaudeSwitchKey(switchKeyForSend);
       }
+      // The next send retires the "switched models" notice above the composer.
+      if (accepted) setClaudeModelSwitch(null);
       return accepted;
     },
     [claudeSwitchKey, isNativeSubagentMessagingUnavailable, submitComposerTurn],
@@ -4965,7 +5372,9 @@ export default function ChatView({
     !isAwaitingTurnStart &&
     !activePendingApproval &&
     pendingUserInputs.length === 0 &&
-    activeThread?.claudeCacheReview == null;
+    activeThread?.claudeCacheReview == null &&
+    // The "switched models" notice already says the model changed; one notice is enough.
+    visibleClaudeComposerNotice?.kind !== "model-switched";
   const appliedContextWindowSelection = useMemo(
     () => deriveAppliedContextWindowSelection(threadActivities),
     [threadActivities],
@@ -5036,6 +5445,7 @@ export default function ChatView({
     composerContextWindowLabel,
     Boolean(runtimeUsageContextWindow),
   ].join(":");
+  const useSplitComposerPickerControls = isLocalDraftThread && !hasThreadStarted;
   useLayoutEffect(() => {
     composerFooterDemotionWidthsRef.current = [];
     composerFooterTierRef.current = 0;
@@ -5053,6 +5463,24 @@ export default function ChatView({
   useLayoutEffect(() => {
     composerFooterLayoutSyncRef.current?.();
   }, [composerFooterLayoutSyncRef, composerFooterTier]);
+  useLayoutEffect(() => {
+    if (!isEmbed) return;
+    return observeLatticeComposerLayout(
+      composerFormRef.current,
+      showComposerModelBootstrapSkeleton,
+    );
+  }, [
+    composerFormRef,
+    activeThread?.id,
+    composerFooterPlanInputsKey,
+    composerFooterTier,
+    isComposerApprovalState,
+    isEmbed,
+    shouldRenderChatPaneContent,
+    showComposerModelBootstrapSkeleton,
+  ]);
+  const composerModelPickerWidthClassName = isComposerFooterCompact ? "w-32" : "w-36 sm:w-44";
+  const composerOptionsPickerWidthClassName = isComposerFooterCompact ? "w-28" : "w-32";
   const composerModelEffortPickerWidthClassName = isComposerFooterCompact ? "w-40" : "w-44 sm:w-52";
   const handleComposerModelEffortPickerOpenChange = useCallback(
     (open: boolean) => {
@@ -5076,16 +5504,19 @@ export default function ChatView({
   // keeps those children from re-rendering (and re-registering editor commands) for it.
   const handleProviderModelChange = useStableCallback(onProviderModelSelect);
   const composerModelAndTraitsControls = showComposerModelBootstrapSkeleton ? (
-    selectedProviderRuntimeModelDiscoveryPending ? (
+    isEmbed ? (
+      <ComposerModelLoadingControl compact />
+    ) : selectedProviderRuntimeModelDiscoveryPending ? (
       <ComposerModelLoadingControl widthClassName={composerModelEffortPickerWidthClassName} />
     ) : (
       <ComposerControlSkeleton widthClassName={composerModelEffortPickerWidthClassName} />
     )
   ) : (
     <ComposerModelPicker
+      dense={isEmbed}
+      contextWindowLabel={composerContextWindowLabel}
       hideModelLabel={!composerFooterControlsPlan.showModelLabel}
       hideStatusLabel={!composerFooterControlsPlan.showTraitsLabel}
-      contextWindowLabel={composerContextWindowLabel}
       fastModeNotice={composerFastModeNotice}
       effortControl={settings.composerEffortSlider ? "slider" : "menu"}
       provider={selectedProvider}
@@ -5114,6 +5545,7 @@ export default function ChatView({
       prompt={prompt}
       onPromptChange={setPromptFromTraits}
       onProviderModelChange={handleProviderModelChange}
+      warning={claudeComposerNotice?.blocksNextSend ? claudeComposerNotice.message : null}
       onSelectionCommitted={scheduleComposerFocus}
       open={isComposerModelEffortPickerOpen}
       onOpenChange={handleComposerModelEffortPickerOpenChange}
@@ -5275,6 +5707,8 @@ export default function ChatView({
     handleReviewTargetSelection,
     isSlashStatusDialogOpen,
     setIsSlashStatusDialogOpen,
+    isMcpDialogOpen,
+    setIsMcpDialogOpen,
     handleStandaloneSlashCommand,
     handleSlashCommandSelection,
     clearThreadGoal,
@@ -5299,6 +5733,7 @@ export default function ChatView({
     providerNativeCommands,
     providerCommandDiscoveryCwd: providerModelDiscoveryCwd,
     selectedProvider,
+    selectedProviderInstanceId,
     currentProviderModelOptions,
     selectedModelSelection,
     environmentMode: envMode ?? null,
@@ -5570,6 +6005,62 @@ export default function ChatView({
       search: (previous) => ({ ...stripDiffSearchParams(previous), view: "editor" }),
     });
   }, [activeProjectIdForNewChat, handleNewThread]);
+  const onNewEmbedChat = useCallback(() => {
+    if (!activeProjectIdForNewChat) return;
+    void handleNewThread(
+      activeProjectIdForNewChat,
+      { fresh: true },
+      {
+        search: (previous) => stripDiffSearchParams(previous),
+      },
+    );
+  }, [activeProjectIdForNewChat, handleNewThread]);
+  const onDeleteEmbedChat = useCallback(
+    async (targetThreadId: ThreadId, targetThreadTitle: string) => {
+      if (!isEmbed) return;
+      const api = readNativeApi();
+      if (!api) return;
+      const confirmed = await api.dialogs.confirm(
+        [
+          t("automation:delete", { value0: targetThreadTitle }),
+          t("lattice:thisPermanentlyClearsThisConversationHistory"),
+          t("chat:checkpoint_revertConfirmWarning"),
+        ].join("\n"),
+      );
+      if (!confirmed) return;
+      try {
+        await deleteActiveThreadFromClient({
+          threadId: targetThreadId,
+          onDeleted: ({ thread }) => {
+            const draftStore = useComposerDraftStore.getState();
+            draftStore.clearDraftThread(thread.id);
+            draftStore.clearProjectDraftThreadById(thread.projectId, thread.id);
+            useTerminalStateStore.getState().clearTerminalState(thread.id);
+            removeThreadFromSplitViews(thread.id);
+            clearTemporaryThread(thread.id);
+            if (thread.id === activeThread?.id) onNewEmbedChat();
+          },
+          removeWorktree: (worktree) => api.git.removeWorktree(worktree),
+          unknownWorktreeErrorMessage: t("common:unknownError"),
+        });
+      } catch (error) {
+        toastManager.add({
+          type: "error",
+          title: t("settings:archived_couldNotDelete"),
+          description:
+            error instanceof Error ? error.message : t("lattice:theConversationCouldNotBeDeleted"),
+        });
+      }
+    },
+    [
+      activeThread?.id,
+      clearTemporaryThread,
+      t,
+      isEmbed,
+      onNewEmbedChat,
+      removeThreadFromSplitViews,
+    ],
+  );
   const onOpenEditorChat = useCallback(
     (nextThreadId: ThreadId) => {
       storeOpenChatThreadPage(nextThreadId);
@@ -5710,6 +6201,13 @@ export default function ChatView({
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
+  // The floating composer grows upward; its editor scrolls inside itself before the
+  // composer would leave this column (composerEditorRoom.ts).
+  useComposerEditorRoom({
+    enabled: shouldRenderChatPaneContent && !isCenteredEmptyLanding,
+    boundsRef: mainContentRef,
+    formRef: composerFormRef,
+  });
   const composerEffortOptionId = composerTraitSelection.primarySelectDescriptor?.id ?? "effort";
   const applyComputerControlEffortHint = useCallback(() => {
     setComposerDraftProviderModelOptions(
@@ -5849,6 +6347,8 @@ export default function ChatView({
       : null,
     isHomeChat: isChatProject,
     isEmpty: timelineEntries.length === 0,
+    genericChatTitle: t("lattice:newChat"),
+    genericThreadTitle: t("chat:sections_newThread"),
   });
 
   const handleRenameActiveThread = async (newTitle: string) => {
@@ -5949,7 +6449,7 @@ export default function ChatView({
   const renderComposerLeadingControls = (options: { iconOnly: boolean }) => (
     <>
       {composerExtrasTrigger}
-      {!isVoiceRecording && !isVoiceTranscribing ? (
+      {!isEmbed && !isVoiceRecording && !isVoiceTranscribing ? (
         <RuntimeUsageControls
           {...runtimeUsageControlsProps}
           className="shrink-0"
@@ -6242,14 +6742,10 @@ export default function ChatView({
   const environmentPanelVisibleEffective =
     environmentPanelVisible && auxiliarySurface !== "project" && auxiliarySurface !== "library";
   const environmentAppliesContentInset =
+    !isEmbed &&
     (environmentPanelVisibleEffective || projectPanelVisible || libraryPanelVisible) &&
     !environmentUsesFloatingOverlay;
   const environmentOverlayVariant = environmentUsesFloatingOverlay ? "floating" : "docked";
-
-  // Ambient preview rail: the live card sits below the Environment card and
-  // the chat frees its gutter, so it never covers the transcript. Space is
-  // reserved only for a card that actually has content (live phase + a landed
-  // frame), at its fitted width — never for an armed or waiting session.
   const environmentInsetPx = environmentAppliesContentInset
     ? ENVIRONMENT_DOCKED_CONTENT_INSET_PX
     : 0;
@@ -6258,10 +6754,11 @@ export default function ChatView({
   );
   const previewBudgetPx = computerPreviewBudgetPx({
     mainContentWidthPx: mainContentWidth,
-    environmentInsetPx: environmentInsetPx,
+    environmentInsetPx,
     caps: previewCaps,
   });
   const previewReservesInset =
+    !isEmbed &&
     environmentOverlayVariant === "docked" &&
     settings.autoOpenComputerPane &&
     previewSession?.phase === "live" &&
@@ -6272,27 +6769,30 @@ export default function ChatView({
     : 0;
   const contentInsetRightPx =
     environmentInsetPx + previewInsetPx > 0 ? environmentInsetPx + previewInsetPx : undefined;
-  const environmentHeaderState = environmentEnabled
-    ? {
-        open: environmentPanelVisibleEffective,
-        attention: enabledRateLimitStatus !== null,
-        onOpenChange: setEnvironmentFromAuxiliary,
-      }
-    : null;
-  const projectHeaderState = projectPanelEnabled
-    ? {
-        open: projectPanelVisible,
-        onOpenChange: setProjectFromAuxiliary,
-        attention:
-          activeProject === undefined ? false : projectPanelNeedsAttention.has(activeProject.id),
-      }
-    : null;
-  const libraryHeaderState = projectPanelEnabled
-    ? {
-        open: libraryPanelVisible,
-        onOpenChange: setLibraryFromAuxiliary,
-      }
-    : null;
+  const environmentHeaderState =
+    environmentEnabled && !isEmbed
+      ? {
+          open: environmentPanelVisibleEffective,
+          attention: enabledRateLimitStatus !== null,
+          onOpenChange: setEnvironmentFromAuxiliary,
+        }
+      : null;
+  const projectHeaderState =
+    projectPanelEnabled && !isEmbed
+      ? {
+          open: projectPanelVisible,
+          onOpenChange: setProjectFromAuxiliary,
+          attention:
+            activeProject === undefined ? false : projectPanelNeedsAttention.has(activeProject.id),
+        }
+      : null;
+  const libraryHeaderState =
+    projectPanelEnabled && !isEmbed
+      ? {
+          open: libraryPanelVisible,
+          onOpenChange: setLibraryFromAuxiliary,
+        }
+      : null;
   const showComposerLiveChangesHeader = latestTurnLive && activeTurnLiveDiffState.hasChanges;
   const showComposerActiveTaskListCard = Boolean(activeTaskList && !planSidebarOpen);
   const activeThreadGoalText = activeThread?.goal?.trim() ?? "";
@@ -6359,7 +6859,7 @@ export default function ChatView({
       >
         <ComposerColumnFrame>
           {visibleActiveRateLimitStatus &&
-          (visibleActiveRateLimitStatus.status === "rejected" || !environmentEnabled) ? (
+          (visibleActiveRateLimitStatus.status === "rejected" || !environmentPanelReachable) ? (
             <div className="pb-2">
               <RateLimitBanner
                 rateLimitStatus={visibleActiveRateLimitStatus}
@@ -6370,6 +6870,12 @@ export default function ChatView({
           {/* A bare wrapper keeps the normal-flow panels' -mb-px seam onto the input shell
                 via margin collapse. */}
           <div>
+            {isEmbed ? (
+              <ComposerLatticeContextBar
+                onClearSelection={clearLiveLatticeHostSelection}
+                onHeightChange={setLatticeContextBarHeightPx}
+              />
+            ) : null}
             {/* Activity above the input floats as capsules; only queued follow-ups keep
                 the stacked rail fused onto the input. */}
             <ComposerCapsuleRow>
@@ -6442,8 +6948,8 @@ export default function ChatView({
                   }
                   message={
                     selectedProvider === "claudeAgent"
-                      ? "Next reply may use more Claude allowance."
-                      : "Chat context uses the new provider’s allowance."
+                      ? t("chat:nextReplyMayUseMoreClaudeAllowance")
+                      : t("chat:chatContextUsesTheNewProviderSAllowance")
                   }
                   onDismiss={() => setDismissedClaudeSwitchKey(claudeSwitchKey)}
                   testId="composer-claude-model-switch-note"
@@ -6452,10 +6958,31 @@ export default function ChatView({
               <ComposerPullRequestAutoFixHint
                 threadId={threadId}
                 isServerThread={isServerThread}
-                pullRequest={gitStatusQuery.data?.pr ?? null}
+                pullRequest={branchPullRequestForBranch(
+                  branchPullRequestQuery.data,
+                  gitStatusQuery.data?.branch,
+                )}
                 isWorking={isWorking}
               />
             </ComposerCapsuleRow>
+            {visibleClaudeComposerNotice ? (
+              <ComposerClaudeNotice
+                notice={visibleClaudeComposerNotice}
+                onChangeModel={() => handleComposerModelEffortPickerOpenChange(true)}
+                onOpenProviderSettings={() => {
+                  // Inside Lattice the host opens Settings → Agent; in-frame routing would
+                  // replace the panel.
+                  if (!openEmbeddedProviderSettings()) openProviderAccountSettings();
+                }}
+                onSetPath={() => {
+                  if (!openEmbeddedProviderSettings(SETTINGS_TARGETS.providerBinaryPaths)) {
+                    openProviderAccountSettings();
+                  }
+                }}
+                onRecheck={() => refreshProviderStatuses({ explicit: true, silent: true })}
+                onDismiss={() => setDismissedClaudeNoticeKey(visibleClaudeComposerNotice.key)}
+              />
+            ) : null}
             {isSidechatExpired ? (
               <ExpiredSidechatNotice onStartNew={startReplacementSidechat} />
             ) : null}
@@ -6624,6 +7151,7 @@ export default function ChatView({
                   <div className={COMPOSER_COMMAND_MENU_FLOATING_WRAPPER_CLASS_NAME}>
                     {composerExtrasPanelOpen ? (
                       <ComposerExtrasPanel
+                        attachmentsOnly={isEmbed}
                         panelId={COMPOSER_EXTRAS_PANEL_ID}
                         interactionMode={interactionMode}
                         supportsFastMode={composerTraitSelection.caps.supportsFastMode}
@@ -6641,7 +7169,9 @@ export default function ChatView({
                     ) : isLocalFolderBrowserOpen ? (
                       <ComposerLocalDirectoryMenu
                         mentionQuery={mentionTriggerQuery}
-                        rootLabel={localFolderBrowseRootPath ?? "Local folders unavailable"}
+                        rootLabel={
+                          localFolderBrowseRootPath ?? t("lattice:localFoldersUnavailable")
+                        }
                         homeDir={serverConfigQuery.data?.homeDir ?? null}
                         onSelectEntry={(absolutePath) =>
                           handleSelectLocalDirectoryMention(absolutePath)
@@ -6674,8 +7204,9 @@ export default function ChatView({
                       role="status"
                     >
                       <LoaderCircleIcon className="size-3.5 animate-spin" />
-                      {t("chat:optimizing")}{" "}
-                      {pendingComposerImageCount === 1 ? t("common:image") : t("chat:images")}…
+                      {pendingComposerImageCount === 1
+                        ? t("lattice:optimizingImage")
+                        : t("lattice:optimizingImages")}
                     </div>
                   )}
                 {!isComposerApprovalState &&
@@ -6748,8 +7279,12 @@ export default function ChatView({
                               : hasLiveTurn
                                 ? t("chat:placeholder_followUp")
                                 : standaloneSidechatContext
-                                  ? t("chat:askAboutItem", { item: standaloneSidechatItemNoun })
-                                  : t("chat:doAnythingInSynara")
+                                  ? standaloneSidechatItemNoun === "issue"
+                                    ? t("lattice:askAboutThisIssue")
+                                    : t("lattice:askAboutThisPullRequest")
+                                  : isEmbed
+                                    ? t("lattice:doAnythingInLattice")
+                                    : t("chat:doAnythingInSynara")
                   }
                   disabled={isComposerEditorDisabled}
                   singleLine={composerSingleRow}
@@ -6871,7 +7406,8 @@ export default function ChatView({
           activeThreadId={activeThread.id}
           activeThreadTitle={activeThreadDisplayTitle}
           activeThreadEntryPoint={terminalState.entryPoint}
-          activeProvider={activeThread.session?.provider ?? activeThread.modelSelection.provider}
+          // A draft follows the composer's model, so the usage chip names the provider it will send to.
+          activeProvider={activeThread.session?.provider ?? selectedProvider}
           activeProjectName={isEditorRail ? undefined : activeProjectDisplayName}
           threadBreadcrumbs={threadBreadcrumbs}
           {...(isEditorRail
@@ -6895,8 +7431,13 @@ export default function ChatView({
               }
             : {})}
           isSidechat={isSidechatThread(activeThread)}
-          hideSidebarControls={isEditorRail}
+          hideSidebarControls={isEditorRail || isEmbed}
           hideHandoffControls={terminalWorkspaceTerminalTabActive || isEditorRail}
+          hideWorkspaceControls={isEmbed}
+          handoffIconOnly={isEmbed}
+          {...(isEmbed && activeProject ? { historyProjectId: activeProject.id } : {})}
+          {...(isEmbed ? { onNewChat: onNewEmbedChat } : {})}
+          {...(isEmbed ? { onDeleteChat: onDeleteEmbedChat } : {})}
           minimalChrome={isCenteredEmptyLanding}
           isGitRepo={isGitRepo}
           openInTarget={threadWorkspaceCwd}
@@ -6915,8 +7456,8 @@ export default function ChatView({
           showHeaderActions={settings.showHeaderActions}
           gitCwd={threadWorkspaceCwd}
           diffTotals={repoDiffTotals}
-          showGitActions={showGitActions && !isEditorRail}
-          showDiffToggle={!isEditorRail}
+          showGitActions={showGitActions && !isEditorRail && !isEmbed}
+          showDiffToggle={!isEditorRail && !isEmbed}
           diffOpen={resolvedDiffOpen}
           diffDisabledReason={diffDisabledReason}
           rightDockOpen={rightDockOpen}
@@ -7000,7 +7541,13 @@ export default function ChatView({
           a toast only fires for a live error on a thread that is not
           currently visible (see `useThreadErrorToast`). */}
       <ProviderHealthBanner
-        status={shouldShowProviderHealthBanner ? visibleActiveProviderStatus : null}
+        status={
+          shouldShowProviderHealthBanner &&
+          claudeComposerNotice?.kind !== "provider-status" &&
+          claudeComposerNotice?.kind !== "agent-setup"
+            ? visibleActiveProviderStatus
+            : null
+        }
         onDismiss={dismissActiveProviderHealthBanner}
       />
       {terminalWorkspaceOpen && !isEditorRail ? (
@@ -7014,7 +7561,11 @@ export default function ChatView({
         />
       ) : null}
       {/* Main content area with optional plan sidebar */}
-      <div ref={mainContentRef} className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
+      <div
+        ref={mainContentRef}
+        className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden"
+        data-chat-main-content=""
+      >
         {/* Chat column */}
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
           <div
@@ -7208,6 +7759,7 @@ export default function ChatView({
                     onStopBackgroundTask={onStopBackgroundTask}
                     computerControlEnabled={enableComputerControl}
                     onEnableComputerControl={handleEnableComputerControlFromDenial}
+                    onSelectFollowUp={handleSelectFollowUp}
                     revertTurnCountByUserMessageId={revertTurnCountByUserMessageId}
                     onRevertUserMessage={onRevertUserMessage}
                     onUndoTurnFiles={onUndoTurnFiles}
@@ -7330,7 +7882,13 @@ export default function ChatView({
                         data-chat-composer-status-row=""
                         className="@container flex min-h-9 w-full min-w-0 flex-wrap items-center gap-1 pb-1.5 pt-1"
                       >
-                        <RuntimeUsageControls {...runtimeUsageControlsProps} className="shrink-0" />
+                        {/* Lattice sets the permission mode from its own Agent header. */}
+                        {isEmbed ? null : (
+                          <RuntimeUsageControls
+                            {...runtimeUsageControlsProps}
+                            className="shrink-0"
+                          />
+                        )}
                         {showTrailingBranchToolbar ? (
                           <BranchToolbar
                             {...branchToolbarProps}
@@ -7387,7 +7945,7 @@ export default function ChatView({
           ) : null}
 
           {/* Environment overlay — always mounted so open/close can transition in lockstep with inset. */}
-          {environmentEnabled ? (
+          {environmentEnabled && !isEmbed ? (
             <EnvironmentPanel
               {...environmentPanelProps}
               open={environmentPanelVisibleEffective}
@@ -7411,7 +7969,9 @@ export default function ChatView({
               open={projectPanelVisible}
               variant={environmentOverlayVariant}
               projectId={activeProjectId}
-              projectName={activeProjectDisplayName ?? activeProject?.name ?? "Project"}
+              projectName={
+                activeProjectDisplayName ?? activeProject?.name ?? t("chat:detail_project")
+              }
               workspacePath={activeProject?.cwd ?? ""}
               // "Use default" must mean the app's default model, not whatever the
               // active thread happens to run (W14).
@@ -7480,6 +8040,14 @@ export default function ChatView({
         rateLimitStatus={activeRateLimitStatus}
         activeContextWindowLabel={contextWindowSelectionStatus.activeLabel}
         pendingContextWindowLabel={contextWindowSelectionStatus.pendingSelectedLabel}
+      />
+      <ComposerMcpDialog
+        open={isMcpDialogOpen}
+        onOpenChange={setIsMcpDialogOpen}
+        provider={selectedProvider}
+        instanceId={selectedProviderInstanceId}
+        cwd={providerModelDiscoveryCwd}
+        threadId={threadId}
       />
 
       <ThreadWorktreeHandoffDialog

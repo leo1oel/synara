@@ -1,0 +1,144 @@
+import { t } from "~/i18n";
+// FILE: ComposerExtrasMenu.tsx
+// Purpose: Hosts the composer `+` menu for file attachments.
+// Layer: Chat composer presentation
+// Depends on: shared menu primitives, icon buttons, and the caller-owned attachment callback.
+
+import { type ProviderInteractionMode } from "@synara/contracts";
+import { useId, useRef, type ChangeEvent } from "react";
+
+import { BugIcon, ListTodoIcon, MessageCircleIcon, PaperclipIcon, PlusIcon } from "~/lib/icons";
+import { cn } from "~/lib/utils";
+import { ComposerPickerMenuPopup, ComposerPickerMenuSubPopup } from "./ComposerPickerMenuPopup";
+import { Button } from "../ui/button";
+import {
+  Menu,
+  MenuItem,
+  MenuRadioGroup,
+  MenuRadioItem,
+  MenuSeparator,
+  MenuSub,
+  MenuSubTrigger,
+  MenuTrigger,
+} from "../ui/menu";
+
+export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
+  interactionMode: ProviderInteractionMode;
+  supportsFastMode: boolean;
+  fastModeEnabled: boolean;
+  onAddAttachments: (files: File[]) => void;
+  onToggleFastMode: () => void;
+  onInteractionModeChange: (mode: ProviderInteractionMode) => void;
+  attachmentsOnly?: boolean;
+  triggerClassName?: string;
+}) {
+  const inputId = useId();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Reset the hidden input so selecting the same file twice still emits a change event.
+  const handleFileInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    if (files.length > 0) {
+      props.onAddAttachments(files);
+    }
+    event.target.value = "";
+  };
+
+  return (
+    <>
+      <input
+        id={inputId}
+        ref={fileInputRef}
+        data-testid="composer-file-input"
+        type="file"
+        multiple
+        className="sr-only"
+        onChange={handleFileInputChange}
+      />
+      <Menu>
+        <MenuTrigger
+          render={
+            <Button
+              size="icon-sm"
+              variant="chrome"
+              className={cn("shrink-0 rounded-md", props.triggerClassName)}
+              aria-label={t("chat:composerExtras_extras")}
+            />
+          }
+        >
+          <PlusIcon aria-hidden="true" className="size-4" />
+        </MenuTrigger>
+        <ComposerPickerMenuPopup align="start">
+          <MenuItem
+            onClick={() => {
+              fileInputRef.current?.click();
+            }}
+          >
+            <PaperclipIcon className="size-4 shrink-0" />
+            {t("workspace:addFiles")}
+          </MenuItem>
+
+          {!props.attachmentsOnly ? <MenuSeparator /> : null}
+          {!props.attachmentsOnly ? (
+            <MenuSub>
+              <MenuSubTrigger>{t("chat:mode_label")}</MenuSubTrigger>
+              <ComposerPickerMenuSubPopup>
+                <MenuRadioGroup
+                  value={props.interactionMode}
+                  onValueChange={(value) => {
+                    if (value === "default" || value === "plan" || value === "debug") {
+                      props.onInteractionModeChange(value);
+                    }
+                  }}
+                >
+                  <MenuRadioItem value="default">
+                    <span className="inline-flex items-center gap-2">
+                      <MessageCircleIcon className="size-4 shrink-0" />
+                      {t("settings:reasoningModes_default")}
+                    </span>
+                  </MenuRadioItem>
+                  <MenuRadioItem value="plan">
+                    <span className="inline-flex items-center gap-2">
+                      <ListTodoIcon className="size-4 shrink-0" />
+                      {t("workspace:plan_badge")}
+                    </span>
+                  </MenuRadioItem>
+                  <MenuRadioItem value="debug">
+                    <span className="inline-flex items-center gap-2">
+                      <BugIcon className="size-4 shrink-0" />
+                      {t("chat:debug")}
+                    </span>
+                  </MenuRadioItem>
+                </MenuRadioGroup>
+              </ComposerPickerMenuSubPopup>
+            </MenuSub>
+          ) : null}
+
+          {!props.attachmentsOnly && props.supportsFastMode ? (
+            <>
+              <MenuSeparator />
+              <MenuSub>
+                <MenuSubTrigger>{t("chat:traitsPicker_fast")}</MenuSubTrigger>
+                <ComposerPickerMenuSubPopup>
+                  <MenuRadioGroup
+                    value={props.fastModeEnabled ? "fast" : "normal"}
+                    onValueChange={(value) => {
+                      const shouldEnableFast = value === "fast";
+                      if (shouldEnableFast === props.fastModeEnabled) return;
+                      props.onToggleFastMode();
+                    }}
+                  >
+                    <MenuRadioItem value="normal">
+                      {t("settings:reasoningModes_default")}
+                    </MenuRadioItem>
+                    <MenuRadioItem value="fast">{t("chat:traitsPicker_fast")}</MenuRadioItem>
+                  </MenuRadioGroup>
+                </ComposerPickerMenuSubPopup>
+              </MenuSub>
+            </>
+          ) : null}
+        </ComposerPickerMenuPopup>
+      </Menu>
+    </>
+  );
+};

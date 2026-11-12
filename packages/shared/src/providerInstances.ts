@@ -11,6 +11,7 @@ import type {
   ProviderInstanceId,
   ProviderKind,
   ProviderStartOptions,
+  ServerProviderStatus,
   ServerSettings,
 } from "@synara/contracts";
 import { ProviderKind as ProviderKindSchema } from "@synara/contracts";
@@ -237,6 +238,18 @@ export function resolveProviderStatusInstanceId(input: {
   readonly instanceId?: ProviderInstanceId | undefined;
 }): ProviderInstanceId {
   return input.instanceId ?? defaultInstanceIdForProvider(input.provider);
+}
+
+// Advisory warnings the health layer marks available (Pi bundled SDK, Cursor
+// model-discovery warnings, unconfirmed custom binaries) stay sendable; only
+// disabled, unavailable or unauthenticated statuses block sends. The composer and the
+// server's auxiliary model resolution share this one readiness rule.
+export function isProviderUsable(status: ServerProviderStatus | null | undefined): boolean {
+  if (!status) {
+    // Missing status means the health check has not confirmed an installed provider yet.
+    return false;
+  }
+  return status.enabled !== false && status.available && status.authStatus !== "unauthenticated";
 }
 
 function stableSlugHash(value: string): string {

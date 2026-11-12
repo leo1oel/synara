@@ -120,6 +120,7 @@ import {
   AGENT_GATEWAY_CREDENTIAL_ROTATION_REQUIRED,
   AGENT_GATEWAY_TURN_AUTHORITY_RETIRED,
 } from "../../agentGateway/sessionLease.ts";
+import { ACTIVE_AGENT_HOST_PROFILE } from "../../agentGateway/hostProfile.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import { ServerSecretStore } from "../../auth/Services/ServerSecretStore.ts";
 import {
@@ -146,6 +147,8 @@ export interface ProviderServiceLiveOptions {
   readonly canonicalEventLogPath?: string;
   readonly canonicalEventLogger?: EventNdjsonLogger;
   readonly runtimeIdleStopMs?: number;
+  /** Test override for how long a panel's visible-thread report holds. */
+  readonly panelVisibleThreadLeaseMs?: number;
   /** Test/embedding override for the lossless runtime-event fan-out budget. */
   readonly runtimeEventBufferCapacity?: number;
   /** Production journal hook. The event must be durable before this effect returns. */
@@ -160,19 +163,23 @@ export interface ProviderServiceLiveOptions {
   /** Test override for supervised event retry timing. */
   readonly runtimeEventRetryBaseDelayMs?: number;
   readonly runtimeEventRetryMaxDelayMs?: number;
-  /** Server-authoritative start gate. Omit only in isolated tests and embedded callers. */
-  readonly providerIsEnabled?: (
-    provider: ProviderKind,
-  ) => Effect.Effect<boolean, ProviderValidationError>;
 }
 
 const DEFAULT_PROVIDER_RUNTIME_IDLE_STOP_MS = 10 * 60 * 1000;
+// Writing a paper pauses far longer than coding does, and every stop makes the
+// next turn pay a full CLI cold start (5-7 s measured), so Lattice's profile
+// keeps background runtimes for an hour. The visible thread never idle-stops.
+const LATTICE_PROVIDER_RUNTIME_IDLE_STOP_MS = 60 * 60 * 1000;
+/** How long a panel's visible-thread report holds without a renewal. */
+export const PANEL_VISIBLE_THREAD_LEASE_MS = 3 * 60 * 1000;
 export const PROVIDER_RUNTIME_EVENT_BUFFER_CAPACITY = 2_048;
 export const PROVIDER_RUNTIME_QUARANTINE_CAUSE_MAX_BYTES = 16 * 1024;
 const configuredProviderRuntimeIdleStopMs = process.env.SYNARA_PROVIDER_RUNTIME_IDLE_STOP_MS;
 const PROVIDER_RUNTIME_IDLE_STOP_MS = Number.isFinite(Number(configuredProviderRuntimeIdleStopMs))
   ? Math.max(0, Number(configuredProviderRuntimeIdleStopMs))
-  : DEFAULT_PROVIDER_RUNTIME_IDLE_STOP_MS;
+  : ACTIVE_AGENT_HOST_PROFILE.id === "lattice"
+    ? LATTICE_PROVIDER_RUNTIME_IDLE_STOP_MS
+    : DEFAULT_PROVIDER_RUNTIME_IDLE_STOP_MS;
 const MAX_TARGETED_CHILD_INTERRUPT_TOMBSTONES = 16_384;
 const PROVIDER_OPTIONS_FINGERPRINT_HMAC_SECRET = "provider-options-fingerprint-hmac-key";
 
@@ -1062,21 +1069,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
             ),
         ),
       );
-    const ensureProviderEnabled = (provider: ProviderKind, operation: string) =>
-      options?.providerIsEnabled
-        ? options.providerIsEnabled(provider).pipe(
-            Effect.flatMap((enabled) =>
-              enabled
-                ? Effect.void
-                : Effect.fail(
-                    new ProviderValidationError({
-                      operation,
-                      issue: `${provider} is disabled in Settings > Providers.`,
-                    }),
-                  ),
-            ),
-          )
-        : Effect.void;
     const textBatchFlushers = new Map<ProviderKind, (threadId?: ThreadId) => Effect.Effect<void>>();
     const flushRuntimeText = (threadId?: ThreadId) =>
       Effect.suspend(() =>
@@ -1123,6 +1115,20 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
     );
     const runtimeEventProducerScope = yield* Scope.make("sequential");
     const runtimeIdleTimers = new Map<ThreadId, ReturnType<typeof setTimeout>>();
+    // Each embedded panel reports the thread it shows; that runtime is never
+    // idle-stopped while the report's lease holds.
+    const panelVisibleThreads = new Map<string, { threadId: ThreadId; expiresAt: number }>();
+    const panelVisibleThreadLeaseMs =
+      options?.panelVisibleThreadLeaseMs ?? PANEL_VISIBLE_THREAD_LEASE_MS;
+    const isThreadVisibleInPanel = (threadId: ThreadId): boolean => {
+      const now = Date.now();
+      let visible = false;
+      for (const [panelId, lease] of panelVisibleThreads) {
+        if (lease.expiresAt <= now) panelVisibleThreads.delete(panelId);
+        else if (lease.threadId === threadId) visible = true;
+      }
+      return visible;
+    };
     const liveRuntimeTaskIds = new Map<ThreadId, Set<string>>();
     const runtimeTaskSettlementWaiters = new Map<ThreadId, Set<() => void>>();
     // Fired idle callbacks outlive their timer map entry, so use generations to
@@ -1183,6 +1189,10 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
       const generation = invalidateRuntimeIdleGeneration(threadId);
       const timer = setTimeout(() => {
         runtimeIdleTimers.delete(threadId);
+        if (isThreadVisibleInPanel(threadId)) {
+          scheduleRuntimeIdleStop(threadId);
+          return;
+        }
         stopIdleRuntimeSession?.(threadId, generation);
       }, runtimeIdleStopMs);
       timer.unref();
@@ -2622,8 +2632,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
               resolved.instance.driver,
               binding.runtimeMode ?? "full-access",
             );
-            yield* ensureProviderEnabled(resolved.instance.driver, input.operation);
-
             const resumeStartInput = {
               threadId,
               provider: resolved.instance.driver,
@@ -3093,9 +3101,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           threadId,
           provider: resolvedProvider,
         };
-        // Reject disabled providers before waiting on lifecycle work, then
-        // check again immediately before spawning in case settings changed.
-        yield* ensureProviderEnabled(resolvedProvider, "ProviderService.startSession");
         // An explicit start is the recovery authority for a failed retirement,
         // but it must never interleave with one still in progress. Capture the
         // exact settled fence so this replacement cannot delete a newer fence
@@ -3139,7 +3144,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           Option.getOrUndefined(yield* directory.getBinding(threadId)),
         );
         const adapter = yield* getAdapterForInstance(initialResolved.instance);
-        yield* ensureProviderEnabled(adapter.provider, "ProviderService.startSession");
+
         yield* validateAutoRuntimeMode(
           "ProviderService.startSession",
           adapter.provider,
@@ -3302,10 +3307,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
               let replacementStarted = false;
               const startupLifecycle = new ProviderStartupLifecycle();
               const startAndPersistReplacement = Effect.gen(function* () {
-                yield* ensureProviderEnabled(
-                  resolved.instance.driver,
-                  "ProviderService.startSession",
-                );
                 yield* stopStaleSessionsForThread({
                   threadId,
                   provider: resolved.instance.driver,
@@ -3936,7 +3937,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
             "Import model and source provider must match.",
           );
         }
-        yield* ensureProviderEnabled(input.provider, operation);
         yield* validateAutoRuntimeMode(operation, input.provider, input.runtimeMode);
         yield* waitForCurrentInterruptionFence(input.threadId);
         clearRuntimeIdleTimer(input.threadId);
@@ -3960,7 +3960,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                 "The target conversation already has a different provider binding.",
               );
             }
-            yield* ensureProviderEnabled(input.provider, operation);
             const resolved = yield* resolveLaunchProviderInstance({
               operation,
               provider: input.provider,
@@ -5646,6 +5645,13 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
         );
       });
 
+    const setThreadName: ProviderServiceShape["setThreadName"] = (input) =>
+      Effect.gen(function* () {
+        // Naming is a courtesy to other clients: it never starts or recovers a session.
+        const live = yield* findLiveSession(input.threadId);
+        if (!live?.adapter.setThreadName) return false;
+        return yield* live.adapter.setThreadName(input.threadId, input.name);
+      });
     // A client opening a chat starts its stopped runtime through the same
     // recovery a turn send runs, so the first message after an idle stop finds
     // the provider and its tools already up. A live runtime only restarts its
@@ -5848,7 +5854,26 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
 
     yield* Effect.addFinalizer(() => closeRuntimeEvents);
 
+    const setPanelVisibleThread: NonNullable<ProviderServiceShape["setPanelVisibleThread"]> = (
+      input,
+    ) =>
+      Effect.sync(() => {
+        const previous = panelVisibleThreads.get(input.panelId);
+        if (input.threadId === null) panelVisibleThreads.delete(input.panelId);
+        else
+          panelVisibleThreads.set(input.panelId, {
+            threadId: input.threadId,
+            expiresAt: Date.now() + panelVisibleThreadLeaseMs,
+          });
+        const previousThreadId =
+          previous && previous.threadId !== input.threadId && previous.expiresAt > Date.now()
+            ? previous.threadId
+            : null;
+        return { previousThreadId };
+      });
+
     return {
+      setPanelVisibleThread,
       startSession,
       startSessionWithOutcome,
       getPersistedSessionProfile,
@@ -5878,6 +5903,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
       cancelClaudeCompactionDiscovery,
       rollbackConversation,
       compactThread,
+      setThreadName,
       prewarmSession,
       closeRuntimeEvents,
       getRuntimeEventPumpHealth: () => Effect.sync(runtimeEventPumpHealth.snapshot),

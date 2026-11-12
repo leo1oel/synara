@@ -41,6 +41,7 @@ import {
   threadHasProviderLockingActivity,
 } from "../ChatView.logic";
 import { getComposerProviderState } from "./composerProviderRegistry";
+import { findProviderStatusForInstance } from "./ProviderModelPicker";
 import { resolveRuntimeModelDescriptor } from "./runtimeModelCapabilities";
 const EMPTY_PROVIDER_STATUSES: ServerProviderStatus[] = [];
 interface ChatProviderModelsInput {
@@ -278,6 +279,14 @@ export function useChatProviderModels({
     projectModelSelection: activeProject?.defaultModelSelection,
     customModelsByProvider,
     availableModelOptionsByProvider: selectedInstanceModelOptionsByProvider,
+    claudeCliVersion:
+      selectedProvider === "claudeAgent"
+        ? findProviderStatusForInstance({
+            providers: localProviderStatuses,
+            provider: selectedProvider,
+            instanceId: selectedProviderInstanceId,
+          })?.version
+        : undefined,
   });
   const draftModelSelectionForSelectedProvider =
     composerDraft.modelSelectionByProvider[

@@ -1,6 +1,7 @@
 import "../../index.css";
 
 import { useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { page, userEvent } from "vitest/browser";
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
@@ -9,11 +10,35 @@ vi.mock("@tanstack/react-query", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-query")>()),
   useQuery: () => ({ data: { cwd: "/tmp" } }),
 }));
+// The panel reads the instance-keyed catalog for Git writing and proofreading,
+// and the provider-keyed catalog for Lattice's compile repair model.
 vi.mock("~/hooks/useProviderModelCatalog", () => ({
-  useProviderModelCatalog: () => ({ modelOptionsByProviderInstance: {} }),
+  useProviderModelCatalog: () => ({
+    modelOptionsByProviderInstance: {
+      codex: [
+        { slug: "gpt-5.4", name: "GPT-5.4" },
+        { slug: "gpt-5.4-mini", name: "GPT-5.4 Mini" },
+      ],
+    },
+    modelOptionsByProvider: {
+      codex: [{ slug: "discovered-model", name: "Discovered model" }],
+      claudeAgent: [],
+      cursor: [],
+      devin: [],
+      antigravity: [],
+      grok: [],
+      droid: [],
+      opencode: [],
+      pi: [],
+      omp: [],
+    },
+  }),
 }));
 
+import { PROVIDER_DISPLAY_NAMES } from "@synara/contracts";
+
 import { AppSettingsSchema, type AppSettings } from "~/appSettings";
+import { t, setLanguagePreference } from "~/i18n";
 import { ModelsSettingsPanel } from "./ModelsSettingsPanel";
 
 const defaults = AppSettingsSchema.makeUnsafe({});
@@ -21,17 +46,19 @@ const defaults = AppSettingsSchema.makeUnsafe({});
 function Harness() {
   const [settings, setSettings] = useState(defaults);
   return (
-    <div className="p-4">
-      <ModelsSettingsPanel
-        settings={settings}
-        defaults={defaults}
-        updateSettings={(patch: Partial<AppSettings>) =>
-          setSettings((current) => ({ ...current, ...patch }))
-        }
-        resetEpoch={0}
-        active
-      />
-    </div>
+    <>
+      <div className="p-4">
+        <ModelsSettingsPanel
+          settings={settings}
+          defaults={defaults}
+          updateSettings={(patch: Partial<AppSettings>) =>
+            setSettings((current) => ({ ...current, ...patch }))
+          }
+          resetEpoch={0}
+          active
+        />
+      </div>
+    </>
   );
 }
 
@@ -39,6 +66,7 @@ afterEach(cleanup);
 
 it("switches descriptions, saves custom text, preserves it across styles, and resets the row", async () => {
   await page.viewport(1280, 800);
+  setLanguagePreference("en");
   await render(<Harness />);
   const picker = page.getByRole("combobox", { name: "Source control writing style" });
   expect(document.body.textContent).toContain(
@@ -70,6 +98,7 @@ it("switches descriptions, saves custom text, preserves it across styles, and re
 
 it("supports keyboard selection and keeps the custom editor within a narrow viewport", async () => {
   await page.viewport(360, 800);
+  setLanguagePreference("en");
   await render(<Harness />);
   const picker = page.getByRole("combobox", { name: "Source control writing style" });
   (picker.element() as HTMLElement).focus();
@@ -90,41 +119,96 @@ it("supports keyboard selection and keeps the custom editor within a narrow view
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(360);
 });
 
-it("hides disabled providers and their saved models without losing configuration", async () => {
-  const settings: AppSettings = {
+it("selects discovered, custom and transient repair models independently and resets the row", async () => {
+  await page.viewport(900, 800);
+  setLanguagePreference("en");
+  const settings = {
     ...defaults,
-    customCodexModels: ["private-codex-model"],
-    customClaudeModels: ["private-claude-model"],
-    disabledProviders: ["codex"],
+    compileRepairProvider: "codex" as const,
+    compileRepairModel: "transient-model",
+    customCodexModels: ["custom-model"],
   };
-  const props = { defaults, settings, updateSettings: vi.fn(), resetEpoch: 0, active: true };
-  const screen = await render(<ModelsSettingsPanel {...props} />);
-  expect(document.body.textContent).not.toContain("private-codex-model");
-  expect(document.body.textContent).toContain("private-claude-model");
-  const picker = page.getByRole("combobox", { name: "Custom model provider", exact: true });
-  expect(picker.element().textContent).not.toContain("Codex");
-  await picker.click();
-  expect(page.getByRole("option", { name: "Codex", exact: true }).elements()).toHaveLength(0);
-  await userEvent.keyboard("{Escape}");
-  await screen.rerender(
-    <ModelsSettingsPanel {...props} settings={{ ...settings, disabledProviders: [] }} />,
+  const updateSettings = vi.fn();
+  const client = new QueryClient({ defaultOptions: { queries: { enabled: false, retry: false } } });
+  const host = document.createElement("div");
+  host.className = "app-settings-surface p-6";
+  document.body.append(host);
+  const mounted = await render(
+    <>
+      <QueryClientProvider client={client}>
+        <ModelsSettingsPanel
+          active
+          resetEpoch={0}
+          settings={settings}
+          defaults={defaults}
+          updateSettings={updateSettings}
+        />
+      </QueryClientProvider>
+    </>,
+    { container: host },
   );
-  expect(document.body.textContent).toContain("private-codex-model");
-  expect(picker.element().textContent).toContain("Codex");
+  try {
+    expect(host.textContent).toContain("Compile repair model");
+    const picker = page.getByRole("combobox", { name: "Compile repair model", exact: true });
+    expect(picker.element()).toBeDefined();
+    await picker.click();
+    await expect.element(page.getByRole("option", { name: /Transient Model/ })).toBeVisible();
+    await expect.element(page.getByRole("option", { name: /Custom Model/ })).toBeInTheDocument();
+    await page.getByRole("option", { name: /Discovered model/ }).click();
+    expect(updateSettings).toHaveBeenLastCalledWith({
+      compileRepairProvider: "codex",
+      compileRepairModel: "discovered-model",
+    });
+    await page.getByRole("button", { name: "Reset compile repair model to default" }).click();
+    expect(updateSettings).toHaveBeenLastCalledWith({
+      compileRepairProvider: defaults.compileRepairProvider,
+      compileRepairModel: defaults.compileRepairModel,
+    });
+    await page.screenshot();
+  } finally {
+    await mounted.unmount();
+    client.clear();
+    host.remove();
+  }
 });
 
-it("removes the custom model editor when all its providers are disabled", async () => {
-  await render(
-    <ModelsSettingsPanel
-      defaults={defaults}
-      settings={{ ...defaults, disabledProviders: [...defaults.providerOrder] }}
-      updateSettings={vi.fn()}
-      resetEpoch={0}
-      active
-    />,
-  );
-  expect(
-    page.getByRole("combobox", { name: "Custom model provider", exact: true }).elements(),
-  ).toHaveLength(0);
-  expect(page.getByRole("button", { name: "Add", exact: true }).elements()).toHaveLength(0);
+it("inherits the Git writing model for proofreading until a model is chosen, then resets", async () => {
+  await page.viewport(900, 800);
+  setLanguagePreference("en");
+  await render(<Harness />);
+  const picker = page.getByRole("combobox", { name: "Proofreading model", exact: true });
+  const inherited = "Same as Git writing (";
+  expect(picker.element().textContent).toContain(inherited);
+  expect(document.querySelector('[aria-label="Reset proofreading model to default"]')).toBeNull();
+
+  await picker.click();
+  await page.getByRole("option", { name: "Codex / GPT-5.4 Mini", exact: true }).click();
+  expect(picker.element().textContent).toBe("Codex / GPT-5.4 Mini");
+
+  await page.getByRole("button", { name: "Reset proofreading model to default" }).click();
+  expect(picker.element().textContent).toContain(inherited);
+
+  await picker.click();
+  await page.getByRole("option", { name: "Codex / GPT-5.4", exact: true }).click();
+  await picker.click();
+  await page.getByRole("option", { name: new RegExp(`^${inherited.replace("(", "\\(")}`) }).click();
+  expect(picker.element().textContent).toContain(inherited);
+});
+
+it("sets the provider new chats start on, and resets it, in Lattice's Providers page", async () => {
+  await page.viewport(360, 800);
+  setLanguagePreference("en");
+  await render(<Harness />);
+  const initial = PROVIDER_DISPLAY_NAMES[defaults.defaultProvider];
+  const other =
+    PROVIDER_DISPLAY_NAMES[defaults.defaultProvider === "codex" ? "claudeAgent" : "codex"];
+  const picker = page.getByRole("combobox", { name: "Default provider" });
+  expect(picker.element().textContent).toContain(initial);
+  await picker.click();
+  await page.getByRole("option", { name: other, exact: true }).click();
+  expect(picker.element().textContent).toContain(other);
+  const row = picker.element().closest('[data-slot="settings-row"]')!;
+  expect(row.getBoundingClientRect().right).toBeLessThanOrEqual(360);
+  await page.getByRole("button", { name: "Reset default provider to default" }).click();
+  expect(picker.element().textContent).toContain(initial);
 });

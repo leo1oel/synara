@@ -109,11 +109,18 @@ export interface McpTransportTestDenial {
 }
 
 function makeTransport(input: {
-  readonly tools: ReadonlyArray<ToolEntry>;
+  readonly tools?: ReadonlyArray<ToolEntry>;
+  readonly tool?: ToolEntry;
   readonly threads: ReadonlyArray<OrchestrationThreadShell>;
+  readonly deviceControlEnabled?: boolean;
   readonly leaseCapabilities?: AgentGatewayCapabilityInput;
   /** Thread ids that hold a session lease but no longer exist in the snapshot. */
   readonly ghostThreads?: ReadonlyArray<string>;
+  /**
+   * Thread ids a panel pre-warmed before their first send: they hold a session
+   * lease and a draft registration, but the snapshot has no thread yet.
+   */
+  readonly draftThreads?: ReadonlyArray<string>;
   /** Computer family names threaded to the transport (absent from tools). */
   readonly computerToolNames?: ReadonlyArray<string>;
   readonly onCapabilityDenied?: (denial: McpTransportTestDenial) => Effect.Effect<void>;
@@ -122,6 +129,9 @@ function makeTransport(input: {
   let nextSession = 0;
   let nextRandomPartIsSession = true;
   const sessionRegistry = makeAgentGatewaySessionRegistry({
+    ...(input.deviceControlEnabled === undefined
+      ? {}
+      : { deviceControlEnabled: input.deviceControlEnabled }),
     randomId: () => {
       if (nextRandomPartIsSession) {
         nextSession += 1;
@@ -133,7 +143,15 @@ function makeTransport(input: {
     },
   });
   const inFlightRequests = makeAgentGatewayInFlightRequestRegistry();
+  const draftThreadIds = new Set(input.draftThreads ?? []);
   const credentials = {
+    registerDraftThread: (threadId: ThreadId) => {
+      draftThreadIds.add(String(threadId));
+    },
+    releaseDraftThread: (threadId: ThreadId) => {
+      draftThreadIds.delete(String(threadId));
+    },
+    isDraftThread: (threadId: string) => draftThreadIds.has(threadId),
     verifySession: sessionRegistry.verify,
     bindWriteAuthority: sessionRegistry.bindWriteAuthority,
     verifyWriteAuthority: sessionRegistry.verifyWriteAuthority,
@@ -192,6 +210,9 @@ function makeTransport(input: {
   (input.ghostThreads ?? []).forEach((threadId, index) => {
     startRuntime(threadId, `token-ghost-${index + 1}`);
   });
+  (input.draftThreads ?? []).forEach((threadId, index) => {
+    startRuntime(threadId, `token-draft-${index + 1}`);
+  });
   const snapshotQuery = {
     getThreadShellById: (threadId: ThreadId) =>
       Effect.succeed(Option.fromNullishOr(threads.get(String(threadId)))),
@@ -200,7 +221,7 @@ function makeTransport(input: {
   const transport = makeAgentGatewayMcpTransport({
     credentials,
     snapshotQuery,
-    tools: input.tools,
+    tools: input.tools ?? (input.tool ? [input.tool] : []),
     instructions: "test",
     requireThreadShell: (threadId) => {
       const thread = threads.get(threadId);
@@ -215,6 +236,13 @@ function makeTransport(input: {
       : {}),
   });
   return Object.assign(transport, {
+    /** The first send's thread.create: the projection now has the thread. */
+    createThread: (thread: OrchestrationThreadShell) => {
+      threads.set(String(thread.id), thread);
+    },
+    releaseDraftThread: (threadId: string) => {
+      draftThreadIds.delete(threadId);
+    },
     resolveToken: (token: string) => tokenAliases.get(token) ?? token,
     cancelTurn: (sessionKey: string, turnId: string) =>
       inFlightRequests.cancelTurn(sessionKeyAliases.get(sessionKey) ?? sessionKey, turnId),
@@ -262,6 +290,85 @@ function makeTransport(input: {
 
 const post = (transport: ReturnType<typeof makeTransport>, token: string, body: unknown) =>
   transport({ authorizationHeader: `Bearer ${transport.resolveToken(token)}`, body });
+
+describe("makeAgentGatewayMcpTransport capabilities", () => {
+  it.effect("omits tools from tools/list when the caller lacks their capability", () =>
+    Effect.gen(function* () {
+      let handlerCalls = 0;
+      const transport = makeTransport({
+        threads: [makeThread("thread-unentitled")],
+        deviceControlEnabled: false,
+        tool: {
+          definition: {
+            name: "device_open_url",
+            description: "Open a URL on a device.",
+            inputSchema: { type: "object" },
+          },
+          requiredCapability: "device:control",
+          requiresActiveTurn: true,
+          handler: () => {
+            handlerCalls += 1;
+            return Effect.succeed({ content: [{ type: "text" as const, text: "ok" }] });
+          },
+        },
+      });
+
+      const catalog = yield* post(transport, "token-1", {
+        jsonrpc: "2.0",
+        id: "list",
+        method: "tools/list",
+      });
+      assert.deepEqual(
+        (catalog.body as { result: { tools: ReadonlyArray<unknown> } }).result.tools,
+        [],
+      );
+
+      const call = yield* post(transport, "token-1", {
+        jsonrpc: "2.0",
+        id: "call",
+        method: "tools/call",
+        params: { name: "device_open_url", arguments: {} },
+      });
+      assert.include(JSON.stringify(call.body), "capability_denied");
+      assert.equal(handlerCalls, 0);
+    }),
+  );
+
+  it.effect("lists an entitled tool without weakening the active-turn gate", () =>
+    Effect.gen(function* () {
+      const transport = makeTransport({
+        threads: [makeThread("thread-entitled")],
+        deviceControlEnabled: true,
+        tool: {
+          definition: {
+            name: "device_list",
+            description: "List devices.",
+            inputSchema: { type: "object" },
+          },
+          requiredCapability: "device:control",
+          requiresActiveTurn: true,
+          handler: () => Effect.succeed({ content: [{ type: "text" as const, text: "listed" }] }),
+        },
+      });
+
+      const catalog = yield* post(transport, "token-1", {
+        jsonrpc: "2.0",
+        id: "list",
+        method: "tools/list",
+      });
+      assert.include(JSON.stringify(catalog.body), "device_list");
+
+      transport.setThreadTurnState("thread-entitled", "completed");
+      const call = yield* post(transport, "token-1", {
+        jsonrpc: "2.0",
+        id: "call",
+        method: "tools/call",
+        params: { name: "device_list", arguments: {} },
+      });
+      assert.include(JSON.stringify(call.body), "caller_turn_inactive");
+    }),
+  );
+});
 
 describe("makeAgentGatewayMcpTransport cancellation", () => {
   it.effect(
@@ -898,6 +1005,106 @@ describe("makeAgentGatewayMcpTransport capability truth", () => {
       });
       assert.include(rpcErrorOf(mismatch).message, "Do not retry with this token");
       assert.deepEqual(denials, []);
+    }),
+  );
+});
+
+describe("makeAgentGatewayMcpTransport pre-warmed draft threads", () => {
+  // A panel pre-warms Claude for a draft chat before its first send creates the
+  // thread. Claude Code connects to the gateway at startup and marks a server
+  // that fails then as failed for the whole session, so the draft's session
+  // must be able to initialize and list tools before the thread exists.
+  const echoTool = (calls: { count: number }): ToolEntry => ({
+    definition: {
+      name: "cite",
+      description: "Insert a citation.",
+      inputSchema: { type: "object" },
+    },
+    requiredCapability: "thread:read",
+    handler: () => {
+      calls.count += 1;
+      return Effect.succeed({ content: [{ type: "text" as const, text: "cited" }] });
+    },
+  });
+
+  it.effect("serves initialize and tools/list to a pre-warmed draft's session", () =>
+    Effect.gen(function* () {
+      const calls = { count: 0 };
+      const transport = makeTransport({
+        threads: [],
+        draftThreads: ["thread-draft"],
+        tool: echoTool(calls),
+      });
+      const initialize = yield* post(transport, "token-draft-1", {
+        jsonrpc: "2.0",
+        id: "init",
+        method: "initialize",
+        params: { protocolVersion: "2025-06-18" },
+      });
+      assert.equal(initialize.status, 200);
+      const catalog = yield* post(transport, "token-draft-1", {
+        jsonrpc: "2.0",
+        id: "list",
+        method: "tools/list",
+      });
+      assert.equal(catalog.status, 200);
+      assert.deepEqual(
+        (catalog.body as { result: { tools: ReadonlyArray<{ name: string }> } }).result.tools.map(
+          (tool) => tool.name,
+        ),
+        ["cite"],
+      );
+    }),
+  );
+
+  it.effect("refuses tool calls until the first send creates the draft's thread", () =>
+    Effect.gen(function* () {
+      const calls = { count: 0 };
+      const transport = makeTransport({
+        threads: [],
+        draftThreads: ["thread-draft"],
+        tool: echoTool(calls),
+      });
+      const callBody = {
+        jsonrpc: "2.0",
+        id: "call",
+        method: "tools/call",
+        params: { name: "cite", arguments: {} },
+      };
+      const early = yield* post(transport, "token-draft-1", callBody);
+      assert.equal(early.status, 200);
+      assert.include(JSON.stringify(early.body), "caller_thread_pending");
+      assert.equal(calls.count, 0);
+
+      transport.createThread(makeThread("thread-draft"));
+      const created = yield* post(transport, "token-draft-1", callBody);
+      assert.include(JSON.stringify(created.body), "cited");
+      assert.equal(calls.count, 1);
+    }),
+  );
+
+  it.effect("keeps thread-gone for a missing thread that is not a pre-warmed draft", () =>
+    Effect.gen(function* () {
+      const calls = { count: 0 };
+      const transport = makeTransport({
+        threads: [],
+        draftThreads: ["thread-draft"],
+        ghostThreads: ["thread-ghost"],
+        tool: echoTool(calls),
+      });
+      const listBody = { jsonrpc: "2.0", id: "list", method: "tools/list" };
+      const gone = yield* post(transport, "token-ghost-1", listBody);
+      assert.equal(gone.status, 401);
+      assert.deepEqual(authorityDataOf(gone), { code: "thread-gone", retry: "do-not-retry" });
+
+      // A released draft (the panel moved on) is an ordinary missing thread.
+      transport.releaseDraftThread("thread-draft");
+      const released = yield* post(transport, "token-draft-1", listBody);
+      assert.equal(released.status, 401);
+      assert.deepEqual(authorityDataOf(released), {
+        code: "thread-gone",
+        retry: "do-not-retry",
+      });
     }),
   );
 });

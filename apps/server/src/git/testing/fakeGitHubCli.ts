@@ -36,6 +36,7 @@ export interface FakeGhScenario {
   prListSequence?: string[];
   prListByHeadSelector?: Record<string, string>;
   createdPrUrl?: string;
+  createdRepositoryUrl?: string;
   defaultBranch?: string;
   pullRequest?: {
     number: number;
@@ -139,6 +140,27 @@ export function createGitHubCliWithFakeGh(scenario: FakeGhScenario = {}): {
       return Effect.succeed({
         stdout:
           (scenario.createdPrUrl ?? "https://github.com/example-org/sample-repo/pull/101") + "\n",
+        stderr: "",
+        code: 0,
+        signal: null,
+        timedOut: false,
+      });
+    }
+
+    if (args[0] === "repo" && args[1] === "create") {
+      const requestedName = args[2] ?? "sample-repo";
+      const repositoryUrl =
+        scenario.createdRepositoryUrl ??
+        `https://github.com/${requestedName.includes("/") ? requestedName : `example-org/${requestedName}`}`;
+      const sourceIndex = args.indexOf("--source");
+      const remoteIndex = args.indexOf("--remote");
+      const source = sourceIndex >= 0 ? args[sourceIndex + 1] : input.cwd;
+      const remoteName = remoteIndex >= 0 ? args[remoteIndex + 1] : "origin";
+      if (source && remoteName) {
+        runGitSyncForFakeGh(source, ["remote", "add", remoteName, `${repositoryUrl}.git`]);
+      }
+      return Effect.succeed({
+        stdout: `${repositoryUrl}\n`,
         stderr: "",
         code: 0,
         signal: null,

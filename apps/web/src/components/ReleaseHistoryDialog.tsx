@@ -19,7 +19,7 @@ import {
   DialogPopup,
   DialogTitle,
 } from "./ui/dialog";
-import { useTranslation } from "~/i18n";
+import { useTranslation, t } from "~/i18n";
 
 export interface ReleaseHistoryDialogProps {
   readonly open: boolean;
@@ -54,7 +54,7 @@ export default function ReleaseHistoryDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPopup className="max-w-lg gap-0 p-0">
         <DialogHeader className="gap-1 p-4 pr-12">
-          <DialogTitle className="text-base">{t("common:advanced_releaseHistory")}</DialogTitle>
+          <DialogTitle className="text-ui-lg">{t("common:advanced_releaseHistory")}</DialogTitle>
           <DialogDescription className="text-ui leading-snug">
             {t("common:everyCuratedReleaseNewestFirst")}
           </DialogDescription>

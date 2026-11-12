@@ -15,6 +15,7 @@ import {
   PULL_REQUEST_AUTO_FIX_BETA_FEATURE,
 } from "@synara/shared/betaFeatures";
 import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
+import { isSynaraEmbedMode } from "./embedMode";
 
 // The desktop serves the app from its own scheme, so the protocol names the
 // host flavor (branding.ts uses the same signal for display names). A dev
@@ -27,7 +28,7 @@ const DESKTOP_FLAVOR = desktopFlavorFromProtocol(
 );
 
 export const isBetaFeatureOn = (feature: string): boolean =>
-  isBetaFeatureEnabled(feature, DESKTOP_FLAVOR);
+  isBetaFeatureEnabled(feature, isSynaraEmbedMode() ? "production" : DESKTOP_FLAVOR);
 
 /**
  * Hubs is available in Stable and Beta. The shared feature policy also controls

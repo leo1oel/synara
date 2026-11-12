@@ -9,6 +9,7 @@
  */
 import type { ServerProviderAuthStatus, ServerProviderStatusState } from "@synara/contracts";
 
+import { CLAUDE_ACCESS_FORBIDDEN_MESSAGE, isClaudeAccessForbidden } from "./claudeProcessExit";
 import {
   detailFromResult,
   extractAuthBoolean,
@@ -71,6 +72,13 @@ export function parseClaudeAuthStatusFromOutput(result: CommandResult): {
       message:
         "Claude Agent authentication status command is unavailable in this version of Claude.",
     };
+  }
+
+  // Anthropic refusing the account or network (403) is not a missing sign-in, and
+  // `claude auth login` will not fix it. Today's `auth status` reads local
+  // credentials only, so this guards a probe that ever reaches the API.
+  if (isClaudeAccessForbidden(`${result.stdout}\n${result.stderr}`)) {
+    return { status: "error", authStatus: "unknown", message: CLAUDE_ACCESS_FORBIDDEN_MESSAGE };
   }
 
   if (hasClaudeLoginRequiredText(result)) {

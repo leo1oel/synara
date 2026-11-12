@@ -2,8 +2,21 @@ import { describe, expect, it } from "vitest";
 import { groupCommandItems, type ComposerCommandItem } from "./ComposerCommandMenu";
 
 describe("groupCommandItems", () => {
-  it("groups mention suggestions as plugins, chats, local, then subagents", () => {
+  it("groups mention suggestions as files, papers, plugins, chats, local, then subagents", () => {
     const items: ComposerCommandItem[] = [
+      {
+        id: "paper:.research/papers/1706.03762/paper.md",
+        type: "paper",
+        arxivId: "1706.03762",
+        citationKey: "vaswani2017attention",
+        view: "fulltext",
+        mention: {
+          name: "Attention Is All You Need",
+          path: ".research/papers/1706.03762/paper.md",
+        },
+        label: "Attention Is All You Need",
+        description: "vaswani2017attention · Full text",
+      },
       {
         id: "agent:codex:mini",
         type: "agent",
@@ -66,31 +79,42 @@ describe("groupCommandItems", () => {
 
     expect(groupCommandItems(items, "mention", true)).toEqual([
       {
+        id: "files",
+        label: "Files",
+        items: [items[2]],
+      },
+      {
+        id: "papers",
+        label: "Papers",
+        items: [items[0]],
+      },
+      {
         id: "plugins",
         label: "Plugins",
-        items: [items[2]],
+        items: [items[3]],
       },
       {
         id: "chats",
         label: "Chats",
-        items: [items[4]],
+        items: [items[5]],
       },
       {
         id: "local",
         label: "Local",
-        items: [items[1], items[3]],
+        items: [items[4]],
       },
       {
         id: "subagents",
         label: "Subagents",
-        items: [items[0]],
+        items: [items[1]],
       },
     ]);
   });
 });
 
 describe("groupCommandItems connectors", () => {
-  it("puts connectors in their own first group", () => {
+  // Lattice keeps project files first; connectors lead the remaining groups.
+  it("puts connectors in their own group after files", () => {
     const items: ComposerCommandItem[] = [
       {
         id: "path:file:/workspace/AGENTS.md",
@@ -116,8 +140,8 @@ describe("groupCommandItems connectors", () => {
         group.items.map((item) => item.id),
       ]),
     ).toEqual([
+      ["Files", ["path:file:/workspace/AGENTS.md"]],
       ["Connectors", ["connector:mcp_conn_1"]],
-      ["Local", ["path:file:/workspace/AGENTS.md"]],
     ]);
   });
 });

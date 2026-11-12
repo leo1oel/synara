@@ -8,6 +8,7 @@ import {
   extractComposerMentionPath,
   findConnectorProviderMentionReferenceForToken,
   findThreadProviderMentionReferenceForToken,
+  isPaperProviderMentionReference,
   isPluginProviderMentionReference,
   providerMentionMatchesToken,
 } from "./lib/composerMentions";
@@ -28,7 +29,7 @@ export type ComposerPromptSegment =
   | {
       type: "mention";
       path: string;
-      kind?: "path" | "plugin" | "thread" | "connector";
+      kind?: "path" | "paper" | "plugin" | "thread" | "connector";
       threadId?: string;
       /**
        * Raw token length in the source text (`@name` vs `@"name with spaces"`).
@@ -339,6 +340,12 @@ function splitTextIntoPromptSegments(
             isPluginProviderMentionReference(mention) &&
             providerMentionMatchesToken(mention, match.value),
         ) ?? false;
+      const isPaperMention =
+        options.mentionReferences?.some(
+          (mention) =>
+            isPaperProviderMentionReference(mention) &&
+            providerMentionMatchesToken(mention, match.value),
+        ) ?? false;
       const tokenLength = match.end - match.start;
       const threadId = threadMention ? threadIdFromThreadMentionPath(threadMention.path) : null;
       const isConnectorMention =
@@ -358,7 +365,9 @@ function splitTextIntoPromptSegments(
               }
             : isPluginMention
               ? { type: "mention", path: match.value, kind: "plugin", tokenLength }
-              : { type: "mention", path: match.value, tokenLength },
+              : isPaperMention
+                ? { type: "mention", path: match.value, kind: "paper", tokenLength }
+                : { type: "mention", path: match.value, tokenLength },
       );
     } else if (match.kind === "slash-command") {
       segments.push({ type: "slash-command", command: match.command });

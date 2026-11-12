@@ -6,6 +6,7 @@ import {
   ProjectId,
   ThreadId,
   TrimmedNonEmptyString,
+  TrimmedString,
 } from "./baseSchemas";
 
 const PROJECT_SEARCH_ENTRIES_MAX_LIMIT = 200;
@@ -29,7 +30,9 @@ export type ProjectKind = typeof ProjectKind.Type;
 
 export const ProjectSearchEntriesInput = Schema.Struct({
   cwd: TrimmedNonEmptyString,
-  query: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
+  // Composer `@` opens with an empty query and shows a shallow initial file
+  // list. Content search keeps its separate non-empty/minimum-length contract.
+  query: TrimmedString.check(Schema.isMaxLength(256)),
   limit: PositiveInt.check(Schema.isLessThanOrEqualTo(PROJECT_SEARCH_ENTRIES_MAX_LIMIT)),
   kind: Schema.optional(ProjectEntryKind),
 });

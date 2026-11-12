@@ -1,3 +1,4 @@
+import { useTranslation, t } from "~/i18n";
 // FILE: ReviewFileTreePanel.tsx
 // Purpose: Compact, searchable file-tree side panel for the review/diff panel.
 //          Renders the changed files of the active diff as a nested, collapsible
@@ -23,14 +24,13 @@ import { cn } from "~/lib/utils";
 
 import { filterRenderableFilesForSearch } from "./DiffPanel.logic";
 import { FileEntryIcon } from "./chat/FileEntryIcon";
+import { FileRowsSkeleton } from "./chat/FileRowsSkeleton";
 import { fileRowClassName, fileRowIndentStyle } from "./chat/fileRowStyles";
 import { PanelStateMessage } from "./chat/PanelStateMessage";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "./ui/collapsible";
 import { DisclosureChevron } from "./ui/DisclosureChevron";
 import { IconButton } from "./ui/icon-button";
 import { SearchInput } from "./ui/search-input";
-import { Skeleton } from "./ui/skeleton";
-import { useTranslation } from "~/i18n";
 
 // Forwards its ref and spreads incoming props so directory rows can act as the
 // Collapsible trigger (Base UI injects onClick/aria/data + ref onto this element).
@@ -133,31 +133,6 @@ const ReviewFileTreeNodes = memo(function ReviewFileTreeNodes(props: {
   );
 });
 
-const REVIEW_TREE_SKELETON_ROW_WIDTHS = ["w-9/12", "w-6/12", "w-8/12", "w-5/12", "w-7/12"];
-
-function ReviewFileTreeLoadingRows() {
-  const { t } = useTranslation();
-
-  return (
-    <div
-      className="space-y-1.5 px-1 py-1.5"
-      role="status"
-      aria-label={t("workspace:diff_loadingChangedFiles")}
-    >
-      {REVIEW_TREE_SKELETON_ROW_WIDTHS.map((width, index) => (
-        <div
-          key={width}
-          className="flex h-5 items-center gap-1.5"
-          style={fileRowIndentStyle(index % 2)}
-        >
-          <Skeleton className="size-3.5 shrink-0 rounded-sm" />
-          <Skeleton className={cn("h-3 rounded-full", width)} />
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export const ReviewFileTreePanel = function ReviewFileTreePanel(props: {
   files: ReadonlyArray<FileDiffMetadata>;
   selectedFilePath: string | null;
@@ -246,7 +221,11 @@ export const ReviewFileTreePanel = function ReviewFileTreePanel(props: {
         )}
       >
         {showLoadingRows ? (
-          <ReviewFileTreeLoadingRows />
+          <FileRowsSkeleton
+            label={t("workspace:diff_loadingChangedFiles")}
+            nested
+            className="px-1 py-1.5"
+          />
         ) : !hasFiles ? (
           <PanelStateMessage density="compact" fill="flex">
             <p>{t("common:editor_noFilesInDiff")}</p>

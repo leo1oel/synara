@@ -4,6 +4,7 @@ import { readWorkspaceFrame } from "./lib/hosts/workspaceFrame";
 // Layer: Web transport
 // Exports: WsTransport plus stream-selection helpers used by tests.
 
+import { t } from "./i18n";
 import {
   ProductTurnObserver,
   productRpcActivity,
@@ -91,6 +92,7 @@ import * as Socket from "effect/unstable/socket/Socket";
 
 import { APP_VERSION } from "./branding";
 import { isRequestOutcomeUnknown } from "./lib/requestOutcome";
+import { readEmbeddedHostWsUrl } from "./embedMode";
 import {
   getUnaryRpcCapacityRetryDelayMs,
   MAX_UNARY_RPC_CAPACITY_RETRY_ATTEMPTS,
@@ -316,8 +318,8 @@ const INITIAL_RECONNECT_RETRY_MS = 500;
  */
 const DEFECT_CIRCUIT_BREAKER_THRESHOLD = 2;
 const RECOVERY_ESCALATION_LOG_MS = 20_000;
-const TRIPPED_RECOVERY_MESSAGE =
-  "Connection recovery stopped. Reload the app and check the operation's status.";
+// Read at throw time so the message follows the active locale.
+const trippedRecoveryMessage = () => t("lattice:connectionRecoveryStoppedReloadTheAppAnd");
 const MAX_RECONNECT_RETRY_MS = 5_000;
 
 /** Keeps outages gentle on the backend while still recovering promptly. */
@@ -366,12 +368,15 @@ function resolveRpcUrl(rawUrl: string, path: string): string {
 export function rawSocketUrl(explicitUrl: string | null): string {
   if (explicitUrl) return explicitUrl;
   const bridgeUrl = readWorkspaceFrame()?.controllerWsUrl ?? window.desktopBridge?.getWsUrl();
+  const embeddedHostUrl = readEmbeddedHostWsUrl();
   const envUrl = import.meta.env.VITE_WS_URL as string | undefined;
   return bridgeUrl && bridgeUrl.length > 0
     ? bridgeUrl
-    : envUrl && envUrl.length > 0
-      ? envUrl
-      : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.hostname}:${window.location.port}`;
+    : embeddedHostUrl
+      ? embeddedHostUrl
+      : envUrl && envUrl.length > 0
+        ? envUrl
+        : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.hostname}:${window.location.port}`;
 }
 
 export function makeSocketUrl(explicitUrl: string | null, path: string): string {
@@ -1465,7 +1470,7 @@ export class WsTransport {
           throw error;
         if (this.isRecoveryTripped()) {
           throw new WsTransportRequestInterruptedError({
-            message: `${this.trippedRecoveryError().message} Message delivery could not be checked. Reconnect and check the conversation before sending again.`,
+            message: `${this.trippedRecoveryError().message} ${t("lattice:messageDeliveryCouldNotBeCheckedReconnect")}`,
             code: "WS_TURN_SETTLEMENT_UNAVAILABLE",
             method: ORCHESTRATION_WS_METHODS.settleTurnDispatch,
             retryable: false,
@@ -1935,7 +1940,7 @@ export class WsTransport {
     const ref = this.recovery.episodeRef;
     return new WsTransportRpcError({
       message:
-        ref === null ? TRIPPED_RECOVERY_MESSAGE : `${TRIPPED_RECOVERY_MESSAGE} (ref: ${ref})`,
+        ref === null ? trippedRecoveryMessage() : `${trippedRecoveryMessage()} (ref: ${ref})`,
     });
   }
 

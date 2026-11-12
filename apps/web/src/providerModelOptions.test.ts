@@ -404,7 +404,8 @@ describe("mergeDynamicModelOptions", () => {
       ),
     }).map((option) => ({ slug: option.slug, name: option.name }));
 
-    expect(options.slice(0, 5)).toEqual([
+    expect(options.slice(0, 6)).toEqual([
+      { slug: "claude-fable-5-2", name: "Claude Fable 5.2" },
       { slug: "claude-fable-5-1", name: "Claude Fable 5.1" },
       { slug: "claude-fable-5", name: "Claude Fable 5" },
       { slug: "claude-opus-6", name: "Claude Opus 6" },

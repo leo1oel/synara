@@ -6,6 +6,7 @@ import { REMOTE_NATIVE_UNAVAILABLE } from "@synara/shared/remoteCapabilities";
 // Exports: NotificationsSettingsPanel, AppSnapSettingsPanel, BetaChannelSettingsPanel
 
 import {
+  type DesktopAppSnapPermission,
   type DesktopAppSnapSettingsPane,
   type DesktopAppSnapState,
   type DesktopBetaActionResult,
@@ -32,11 +33,7 @@ import {
   SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME,
   SETTINGS_CARD_ROW_TITLE_CLASS_NAME,
 } from "~/settingsPanelStyles";
-import {
-  APP_SNAP_PERMISSION_PANES,
-  AppSnapPermissionSection,
-  useAppSnapPermissionGuideBridge,
-} from "./AppSnapPermissionSection";
+import { useAppSnapPermissionGuideBridge } from "./AppSnapPermissionSection";
 import { AppSnapShortcutControl } from "./AppSnapShortcutControl";
 import { SettingResetButton } from "./SettingControls";
 import { SettingsCard, SettingsRow, SettingsSection } from "./SettingsPanelPrimitives";
@@ -59,8 +56,10 @@ import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { useTranslation, t } from "~/i18n";
 
 function appSnapStatusText(state: DesktopAppSnapState | null): string {
-  if (!state) return t("settings:availableInTheSynaraDesktopApp");
-  if (!state.supported) return state.message ?? t("settings:availableOnMacOSOnly");
+  if (!state) return "Available in the Lattice desktop app";
+  if (!state.supported) {
+    return state.message?.replaceAll("Synara", "Lattice") ?? "Available on macOS only";
+  }
   if (state.status === "ready") {
     const shortcut = state.shortcut;
     const label = shortcut
@@ -70,10 +69,37 @@ function appSnapStatusText(state: DesktopAppSnapState | null): string {
   }
   if (state.status === "disabled") return t("automation:traitsPicker_off");
   if (state.status === "starting") return t("settings:startingTheCaptureListener");
-  return state.message ?? t("settings:permissionSetupRequired");
+  return state.message?.replaceAll("Synara", "Lattice") ?? t("settings:permissionSetupRequired");
 }
 
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
+
+const APPSNAP_PERMISSION_LABELS: Record<DesktopAppSnapPermission, string> = {
+  granted: "Granted",
+  denied: "Denied",
+  "not-determined": "Not requested yet",
+  restricted: "Restricted",
+  unknown: "Unknown",
+};
+
+function AppSnapPermissionBadge({ permission }: { permission: DesktopAppSnapPermission }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-ui-xs font-medium text-muted-foreground">
+      <span
+        aria-hidden
+        className={cn(
+          "size-1.5 rounded-full",
+          permission === "granted"
+            ? "bg-emerald-500"
+            : permission === "denied" || permission === "restricted"
+              ? "bg-red-500"
+              : "bg-[color:var(--color-border)]",
+        )}
+      />
+      {APPSNAP_PERMISSION_LABELS[permission]}
+    </span>
+  );
+}
 
 export function NotificationsSettingsPanel({
   settings,
@@ -323,8 +349,8 @@ function LocalAppSnapSettingsPanel({
     if (!bridge) {
       toastManager.add({
         type: "warning",
-        title: t("settings:appSnapUnavailable"),
-        description: t("settings:appSnapRequiresTheSynaraDesktopAppOnMacOS"),
+        title: "AppSnap unavailable",
+        description: "AppSnap requires the Lattice desktop app on macOS.",
       });
       return;
     }
@@ -365,6 +391,26 @@ function LocalAppSnapSettingsPanel({
     }
   }
 
+  async function recheckAppSnapPermissions() {
+    const bridge = window.desktopBridge?.appSnap;
+    if (!bridge) return;
+    const requestGuard = appSnapRequestGuardRef.current;
+    const requestId = requestGuard.begin();
+    try {
+      await bridge.requestPermissions();
+      const state = await bridge.setEnabled(settings.enableAppSnap);
+      if (!requestGuard.isCurrent(requestId)) return;
+      setAppSnapState(state);
+    } catch (error) {
+      if (!requestGuard.isCurrent(requestId)) return;
+      toastManager.add({
+        type: "error",
+        title: "Could not check AppSnap permissions",
+        description: error instanceof Error ? error.message : "Permission check failed.",
+      });
+    }
+  }
+
   const supported = appSnapState?.supported === true;
   const enabled = supported && settings.enableAppSnap;
 
@@ -386,8 +432,9 @@ function LocalAppSnapSettingsPanel({
           {!supported ? (
             <p className={cn(SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME, "pt-0.5")}>
               {appSnapState
-                ? (appSnapState.message ?? t("settings:appSnapIsAvailableOnlyInTheMacOSDesktopApp"))
-                : t("settings:appSnapRequiresTheSynaraDesktopAppOnMacOS")}
+                ? (appSnapState.message?.replaceAll("Synara", "Lattice") ??
+                  t("settings:appSnapIsAvailableOnlyInTheMacOSDesktopApp"))
+                : t("lattice:appSnapRequiresLatticeDesktop")}
             </p>
           ) : null}
         </div>
@@ -480,15 +527,33 @@ function LocalAppSnapSettingsPanel({
         />
       </SettingsSection>
 
-      {supported && appSnapState ? (
-        <AppSnapPermissionSection
-          panes={APP_SNAP_PERMISSION_PANES}
-          feature="AppSnap"
-          state={appSnapState}
-          onStateChange={setAppSnapState}
-          guidePane={openGuidePane}
-          onGuidePaneChange={setOpenGuidePane}
-        />
+      {supported ? (
+        <SettingsSection title="settings:macOSPermissions">
+          <SettingsRow
+            title="settings:inputMonitoring"
+            description="lattice:appSnapInputMonitoringDescription"
+            control={<AppSnapPermissionBadge permission={appSnapState.inputMonitoringPermission} />}
+          />
+          <SettingsRow
+            title="settings:screenRecording"
+            description="lattice:appSnapScreenRecordingDescription"
+            control={<AppSnapPermissionBadge permission={appSnapState.screenRecordingPermission} />}
+          />
+          <SettingsRow
+            title="settings:permissionStatus"
+            description="lattice:appSnapPermissionStatusDescription"
+            control={
+              <Button
+                type="button"
+                size="xs"
+                variant="outline"
+                onClick={() => void recheckAppSnapPermissions()}
+              >
+                {t("settings:recheckPermissions")}
+              </Button>
+            }
+          />
+        </SettingsSection>
       ) : null}
     </div>
   );

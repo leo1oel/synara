@@ -23,6 +23,9 @@ import {
   parseGitHubRepositoryNameWithOwnerFromRemoteUrl,
 } from "@synara/shared/githubRepository";
 
+import { readFile } from "node:fs/promises";
+import * as nodePath from "node:path";
+
 import { runProcess } from "../../processRunner";
 import { makeKeyedSingleFlightCache } from "../../pullRequests/KeyedSingleFlightCache";
 import { GitHubCliError } from "../Errors.ts";
@@ -68,6 +71,24 @@ export function isGitHubRateLimitMessage(message: string): boolean {
     lower.includes("http 429") ||
     (lower.includes("http 403") && lower.includes("rate limit"))
   );
+}
+
+/**
+ * Whether gh has no account for github.com: no token in the environment and no github.com entry
+ * in its hosts file (gh keeps the token in the keychain but always records the host there).
+ */
+export async function isGitHubCliSignedOut(env: NodeJS.ProcessEnv): Promise<boolean> {
+  if (env.GH_TOKEN?.trim() || env.GITHUB_TOKEN?.trim()) return false;
+  const configDir =
+    env.GH_CONFIG_DIR?.trim() ||
+    (env.XDG_CONFIG_HOME?.trim() ? nodePath.join(env.XDG_CONFIG_HOME.trim(), "gh") : null) ||
+    (env.HOME?.trim() ? nodePath.join(env.HOME.trim(), ".config", "gh") : null);
+  if (!configDir) return false;
+  try {
+    return !/^github\.com:/m.test(await readFile(nodePath.join(configDir, "hosts.yml"), "utf8"));
+  } catch (error) {
+    return (error as NodeJS.ErrnoException)?.code === "ENOENT";
+  }
 }
 
 function normalizeGitHubCliError(operation: "execute" | "stdout", error: unknown): GitHubCliError {
@@ -341,6 +362,8 @@ const PULL_REQUEST_REVIEW_THREADS_QUERY = `query($owner: String!, $repo: String!
       reviewThreads(first: $first, after: $after) {
         nodes {
           isResolved
+          line
+          originalLine
           comments(first: 1) {
             nodes {
               id
@@ -417,6 +440,8 @@ const RawReviewThreadCommentSchema = Schema.Struct({
 
 const RawReviewThreadSchema = Schema.Struct({
   isResolved: Schema.optional(Schema.NullOr(Schema.Boolean)),
+  line: Schema.optional(Schema.NullOr(Schema.Number)),
+  originalLine: Schema.optional(Schema.NullOr(Schema.Number)),
   comments: Schema.optional(
     Schema.NullOr(
       Schema.Struct({
@@ -807,6 +832,13 @@ function normalizePullRequestDetail(
   };
 }
 
+function lineOf(thread: {
+  readonly line?: number | null | undefined;
+  readonly originalLine?: number | null | undefined;
+}): number | null {
+  return thread.line ?? thread.originalLine ?? null;
+}
+
 function normalizePullRequestReviewComments(
   raw: Schema.Schema.Type<typeof RawReviewThreadsResponseSchema>,
 ): GitPullRequestComment[] {
@@ -827,6 +859,8 @@ function normalizePullRequestReviewComments(
       path: rootComment.path?.trim() || null,
       url: rootComment.url ?? null,
       createdAt: rootComment.createdAt?.trim() || null,
+      // The line in the head version; an outdated thread keeps the line it was left on.
+      ...(lineOf(thread) !== null ? { line: lineOf(thread) } : {}),
     });
   }
   return comments;
@@ -965,7 +999,8 @@ fragment InboxPullRequestFields on PullRequest {
   reviewRequests(first: 20) { nodes { requestedReviewer { __typename ... on User { login } ... on Team { slug } } } }
   labels(first: 20) { nodes { name color } }
   assignees(first: 10) { nodes { login avatarUrl url name } }
-  comments { totalCount }${options.includeStacks ? "\n  stackEntry { position }\n  stack { number size baseRefName }" : ""}
+  comments { totalCount }
+  commits(last: 1) { nodes { commit { statusCheckRollup { state } } } }${options.includeStacks ? "\n  stackEntry { position }\n  stack { number size baseRefName }" : ""}
 }
 fragment InboxIssueFields on Issue {
   __typename number title url state stateReason createdAt updatedAt closedAt
@@ -1011,10 +1046,12 @@ ${githubInboxFragments(options)}`;
  */
 export function buildGitHubInboxInvolvementQuery(options: {
   readonly includeStacks: boolean;
+  readonly paginated?: boolean;
 }): string {
-  return `query($mineQuery: String!) {
+  return `query($mineQuery: String!${options.paginated ? ", $cursor: String" : ""}) {
   rateLimit { cost remaining resetAt }
-  mine: search(query: $mineQuery, type: ISSUE, first: ${GITHUB_INBOX_PAGE_SIZE}) {
+  mine: search(query: $mineQuery, type: ISSUE, first: ${GITHUB_INBOX_PAGE_SIZE}${options.paginated ? ", after: $cursor" : ""}) {
+    ${options.paginated ? "pageInfo { hasNextPage endCursor }" : ""}
     issueCount nodes { __typename ...InboxPullRequestFields ...InboxIssueFields }
   }
 }
@@ -1111,6 +1148,25 @@ const RawInboxPullRequestSchema = Schema.Struct({
   labels: Schema.optional(Schema.NullOr(rawGraphQlNodes(RawLabelSchema))),
   assignees: Schema.optional(Schema.NullOr(rawGraphQlNodes(RawActorSchema))),
   comments: Schema.optional(Schema.NullOr(RawGraphQlCountSchema)),
+  commits: Schema.optional(
+    Schema.NullOr(
+      rawGraphQlNodes(
+        Schema.Struct({
+          commit: Schema.optional(
+            Schema.NullOr(
+              Schema.Struct({
+                statusCheckRollup: Schema.optional(
+                  Schema.NullOr(
+                    Schema.Struct({ state: Schema.optional(Schema.NullOr(Schema.String)) }),
+                  ),
+                ),
+              }),
+            ),
+          ),
+        }),
+      ),
+    ),
+  ),
   stackEntry: Schema.optional(Schema.NullOr(Schema.Struct({ position: PositiveInt }))),
   stack: Schema.optional(
     Schema.NullOr(
@@ -1156,6 +1212,11 @@ const RawNodeList = Schema.optional(
     Schema.Struct({
       totalCount: Schema.optional(Schema.NullOr(Schema.Number)),
       issueCount: Schema.optional(Schema.NullOr(Schema.Number)),
+      pageInfo: Schema.optional(
+        Schema.NullOr(
+          Schema.Struct({ hasNextPage: Schema.Boolean, endCursor: Schema.NullOr(Schema.String) }),
+        ),
+      ),
       nodes: Schema.optional(Schema.NullOr(Schema.Array(Schema.Unknown))),
     }),
   ),
@@ -1287,8 +1348,29 @@ function normalizeInboxPullRequest(
           }
         : null,
     commentCount: nonNegativeCount(raw.comments?.totalCount),
+    checksState: normalizeChecksRollupState(
+      graphQlNodes(raw.commits).at(-1)?.commit?.statusCheckRollup?.state,
+    ),
     assignees: normalizeInboxActors(raw.assignees),
   };
+}
+
+/** GitHub's StatusState folded to what a row can show: running, passed or failed. */
+function normalizeChecksRollupState(
+  state: string | null | undefined,
+): "pending" | "success" | "failure" | null {
+  switch (state?.trim().toUpperCase()) {
+    case "SUCCESS":
+      return "success";
+    case "FAILURE":
+    case "ERROR":
+      return "failure";
+    case "PENDING":
+    case "EXPECTED":
+      return "pending";
+    default:
+      return null;
+  }
 }
 
 function normalizeInboxIssue(
@@ -1498,6 +1580,8 @@ export function decodeRepositoryInvolvementJson(
       return Effect.succeed({
         items,
         involvedNumbers: [...involvedNumbers],
+        totalCount: graphQlCount(data.mine.issueCount, involvedNumbers.size),
+        nextCursor: data.mine.pageInfo?.hasNextPage ? data.mine.pageInfo.endCursor : null,
         rateLimit: normalizeGraphQlRateLimit(data.rateLimit),
       } satisfies GitHubRepositoryInboxInvolvement);
     }),
@@ -1755,6 +1839,25 @@ const makeGitHubCli = Effect.gen(function* () {
   // instead of failing and retrying on every poll.
   let inboxStackFieldsSupported = true;
 
+  // With GH_HOST pinned (below), a signed-out gh does not refuse: it sends the request
+  // anonymously, and GitHub's anonymous budget (60 an hour per address) answers 403 "rate limit
+  // exceeded". A rate limit from a gh with no account is the account, not the budget.
+  const confirmRateLimit = (error: GitHubCliError): Effect.Effect<GitHubCliError> =>
+    error.reason !== "rate-limited"
+      ? Effect.succeed(error)
+      : Effect.promise(() => isGitHubCliSignedOut(process.env).catch(() => false)).pipe(
+          Effect.map((signedOut) =>
+            signedOut
+              ? new GitHubCliError({
+                  operation: error.operation,
+                  detail: "GitHub CLI is not authenticated. Run `gh auth login` and retry.",
+                  reason: "not-authenticated",
+                  cause: error,
+                })
+              : error,
+          ),
+        );
+
   const execute: GitHubCliShape["execute"] = (input) =>
     Effect.tryPromise({
       try: (signal) =>
@@ -1775,8 +1878,11 @@ const makeGitHubCli = Effect.gen(function* () {
           ...(input.onStderrChunk !== undefined ? { onStderrChunk: input.onStderrChunk } : {}),
         }),
       catch: (error) => normalizeGitHubCliError("execute", error),
+    }).pipe(
+      Effect.catch((error) => Effect.flatMap(confirmRateLimit(error), Effect.fail)),
       // Every command reports here, mutations included, so a limit hit by any of them pauses reads.
-    }).pipe(Effect.tapError((error) => Effect.sync(() => readGate.noteFailure(error))));
+      Effect.tapError((error) => Effect.sync(() => readGate.noteFailure(error))),
+    );
 
   const PULL_REQUEST_DIFF_TOO_LARGE_PATTERN = /exceeded the maximum number of files|too_large/i;
   const PULL_REQUEST_DIFF_MISSING_OBJECT_PATTERN =
@@ -2167,8 +2273,14 @@ const makeGitHubCli = Effect.gen(function* () {
           runInboxGraphQl(
             input.cwd,
             (includeStacks) => [
-              `query=${buildGitHubInboxInvolvementQuery({ includeStacks })}`,
-              ...githubInboxInvolvementQueryVariables(repository, input.state, input.sort),
+              `query=${buildGitHubInboxInvolvementQuery({ includeStacks, paginated: input.exactInvolvement !== undefined })}`,
+              ...(input.exactInvolvement
+                ? [
+                    "-f",
+                    `mineQuery=repo:${repository} is:pr is:${input.state} ${input.exactInvolvement === "authored" ? "author:@me" : "review-requested:@me"} sort:${input.sort ?? "updated"}-desc`,
+                    ...(input.cursor ? ["-f", `cursor=${input.cursor}`] : []),
+                  ]
+                : githubInboxInvolvementQueryVariables(repository, input.state, input.sort)),
             ],
             decodeRepositoryInvolvementJson,
           ),
@@ -2201,12 +2313,12 @@ const makeGitHubCli = Effect.gen(function* () {
             return Effect.succeed({ changed: true, etag });
           }
           const statusLine = status === null ? "no HTTP status" : `HTTP ${status}`;
-          return Effect.fail(
+          return confirmRateLimit(
             normalizeGitHubCliError(
               "execute",
               new Error(`gh api change probe failed (${statusLine}). ${result.stderr.trim()}`),
             ),
-          );
+          ).pipe(Effect.flatMap(Effect.fail));
         }),
       ),
     getRepositoryInboxItems: (input) =>
@@ -2505,6 +2617,9 @@ const makeGitHubCli = Effect.gen(function* () {
                 break;
               case "reopen":
                 args = ["pr", "reopen", reference, ...repoArgs];
+                break;
+              case "approve":
+                args = ["pr", "review", reference, ...repoArgs, "--approve"];
                 break;
             }
             return execute({ cwd: input.cwd, args }).pipe(

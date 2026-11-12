@@ -71,3 +71,16 @@ export function summarizeBackgroundTaskGroup(
   const head = translate("chat:backgroundTaskCount", { count: tasks.length });
   return breakdown ? `${head} · ${breakdown}` : head;
 }
+
+function backgroundTaskStatusCount(status: WorkLogBackgroundTask["status"], count: number): string {
+  switch (status) {
+    case "running":
+      return t("chat:backgroundTasksRunning", { count });
+    case "finished":
+      return t("common:finished2", { value0: count });
+    case "failed":
+      return t("chat:failed", { value0: count });
+    case "stopped":
+      return t("common:stopped", { value0: count });
+  }
+}

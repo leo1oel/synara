@@ -9,7 +9,7 @@ import { useNowMs } from "~/hooks/useNowMs";
 import { Popover, PopoverPopup, PopoverTrigger } from "../ui/popover";
 import { ClaudeCacheDetails } from "./ClaudeCacheDetails";
 import { Button } from "../ui/button";
-import { useTranslation } from "~/i18n";
+import { t, useTranslation } from "~/i18n";
 
 export function ContextWindowMeter(props: {
   usage: ContextWindowSnapshot;
@@ -50,7 +50,11 @@ export function ContextWindowMeter(props: {
           <button
             type="button"
             className="group inline-flex shrink-0 items-center justify-center rounded-full p-0.5 transition-opacity hover:opacity-80"
-            aria-label={display.ariaLabel}
+            aria-label={
+              display.usedPercentageLabel
+                ? t("lattice:contextWindowUsed", { percent: display.usedPercentageLabel })
+                : t("lattice:contextWindowTokensUsed", { tokens: display.tokenUsageLabel })
+            }
           >
             <span className="relative flex h-4 w-4 items-center justify-center">
               <svg
@@ -91,8 +95,9 @@ export function ContextWindowMeter(props: {
           </div>
           {pendingWindowLabel ? (
             <div className="text-ui leading-snug text-muted-foreground">
-              {t("chat:sessionStatus_currentSessionLabel")}{" "}
-              {activeWindowLabel ?? t("common:common_unknown")}
+              {t("lattice:currentSession", {
+                window: activeWindowLabel ?? t("common:common_unknown"),
+              })}
             </div>
           ) : null}
           {display.usedPercentageLabel ? (
@@ -113,26 +118,25 @@ export function ContextWindowMeter(props: {
             </div>
           ) : (
             <div className="text-ui leading-snug text-foreground">
-              {display.tokenUsageLabel} {t("chat:tokensUsedSoFar")}
+              {t("lattice:tokensUsedSoFar", { tokens: display.tokenUsageLabel })}
             </div>
           )}
           {usage.maxTokens !== null ? (
             <div className="text-ui leading-snug text-muted-foreground">
-              {t("chat:activeContextLimit")} {formatContextWindowTokens(usage.maxTokens)}{" "}
-              {t("chat:tokens")}
+              {t("lattice:activeContextLimitTokens", {
+                tokens: formatContextWindowTokens(usage.maxTokens),
+              })}
             </div>
           ) : null}
           {props.showClaudeCache && activeWindowLabel ? (
             <div className="max-w-72 space-y-1 text-ui leading-snug text-muted-foreground">
-              <div>
-                {t("chat:autoCompactTarget")} {activeWindowLabel}
-              </div>
+              <div>{t("lattice:autoCompactTarget", { window: activeWindowLabel })}</div>
               <p className="leading-relaxed">{t("chat:theSessionSAutoCompactTargetCanBeLower")}</p>
             </div>
           ) : null}
           {pendingWindowLabel ? (
             <div className="text-ui leading-snug text-muted-foreground">
-              {t("chat:sessionStatus_nextTurn")} {pendingWindowLabel}
+              {t("lattice:nextTurn", { window: pendingWindowLabel })}
             </div>
           ) : null}
           {(usage.totalProcessedTokens ?? null) !== null &&
@@ -151,7 +155,7 @@ export function ContextWindowMeter(props: {
           ) : null}
           {cumulativeCostUsd !== null && cumulativeCostUsd !== undefined ? (
             <div className="text-ui leading-snug text-muted-foreground">
-              {t("chat:sessionCost")} {formatCostUsd(cumulativeCostUsd)}
+              {t("lattice:sessionCost", { cost: formatCostUsd(cumulativeCostUsd) })}
             </div>
           ) : null}
           {usage.claudeCache || props.showClaudeCache ? (

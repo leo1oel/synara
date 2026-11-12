@@ -412,6 +412,7 @@ import {
   MenuTrigger,
 } from "./ui/menu";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
+import { FluidHoverSurface } from "./ui/fluid-hover-surface";
 import {
   SidebarContent,
   SidebarFooter,
@@ -791,7 +792,11 @@ type ThreadMetaChip = {
  * Priority lowest -> highest: handoff -> fork -> worktree.
  */
 function resolveThreadRowMetaChips(input: {
-  thread: Pick<Thread, "forkSourceThreadId" | "envMode" | "worktreePath" | "handoff">;
+  translate: typeof t;
+  thread: Pick<
+    Thread,
+    "forkSourceThreadId" | "sidechatSourceThreadId" | "envMode" | "worktreePath" | "handoff"
+  >;
   includeHandoffBadge: boolean;
   /**
    * When the leading provider avatar already renders the source → target handoff
@@ -3006,8 +3011,10 @@ export default function Sidebar() {
         projectCwd: project.cwd,
         draftWorktreePath: draftThread?.worktreePath ?? null,
         serverCwd,
-        // Match new-thread bootstrap: preserve existing drafts and apply project
-        // preferences only when creating a fresh one.
+        // Hover-time warm must resolve the envMode new-thread bootstrap will use so
+        // the warmed cwd keys match the thread ChatView actually mounts (local mode
+        // clears the draft worktree; worktree mode keeps it): an existing draft's,
+        // else the project's remembered choice, else the default.
         envMode:
           draftThread?.envMode ??
           useProjectEnvironmentStore.getState().envModeByProjectId[projectId] ??
@@ -3581,7 +3588,7 @@ export default function Sidebar() {
           ...continueHandoffTargets.map((target) => ({
             id: `handoff-here:${target.instanceId}`,
             label: t("workspace:inThisThread", { value0: target.label }),
-            standaloneLabel: t("workspace:handoffToInThisThread", { value0: target.label }),
+            standaloneLabel: t("lattice:handOffToInThisThread", { provider: target.label }),
             icon: THREAD_CONTEXT_MENU_ICONS.handoff,
           })),
           ...handoffTargets.map((target, index) => ({
@@ -3679,24 +3686,10 @@ export default function Sidebar() {
         : [];
       const clicked = await api.contextMenu.show(
         [
-          {
-            id: "rename",
-            label: t("workspace:contextMenu_renameThread"),
-            icon: THREAD_CONTEXT_MENU_ICONS.rename,
-          },
-          {
-            id: "toggle-pin",
-            label: pinActionLabel("thread", isPinned),
-            icon: THREAD_CONTEXT_MENU_ICONS.pin,
-          },
+          { id: "rename", label: "Rename thread" },
+          { id: "toggle-pin", label: pinActionLabel("thread", isPinned) },
           ...(threadStatus?.dismissible
-            ? [
-                {
-                  id: "clear-notification",
-                  label: t("workspace:contextMenu_clearNotification"),
-                  icon: THREAD_CONTEXT_MENU_ICONS.clearNotification,
-                },
-              ]
+            ? [{ id: "clear-notification", label: "Clear notification" }]
             : []),
           {
             id: "mark-unread",
@@ -3765,13 +3758,7 @@ export default function Sidebar() {
             ],
           ),
           ...(threadWorkspacePath
-            ? [
-                {
-                  id: "open-path-in-terminal",
-                  label: t("workspace:openPathInTerminal"),
-                  icon: THREAD_CONTEXT_MENU_ICONS.openInTerminal,
-                },
-              ]
+            ? [{ id: "open-path-in-terminal", label: "Open Path in Terminal" }]
             : []),
           ...extraItems,
           ...hubItems,
@@ -3780,18 +3767,10 @@ export default function Sidebar() {
           // no sidebar or Archived-panel row to restore it from.
           ...(thread.parentThreadId
             ? []
-            : [
-                {
-                  id: "archive",
-                  label: t("workspace:detail_archive"),
-                  icon: THREAD_CONTEXT_MENU_ICONS.archive,
-                  separatorBefore: true,
-                },
-              ]),
+            : [{ id: "archive", label: "Archive", separatorBefore: true }]),
           {
             id: "delete",
-            label: t("computer:detail_delete"),
-            icon: THREAD_CONTEXT_MENU_ICONS.delete,
+            label: "Delete",
             destructive: true,
             ...(thread.parentThreadId ? { separatorBefore: true } : {}),
           },
@@ -3974,6 +3953,7 @@ export default function Sidebar() {
       forkThread,
       groupProjectIdSet,
       handoffThread,
+      t,
       membersLoaded,
       moveThreadToGroup,
       handleMarkThreadUnread,
@@ -4007,22 +3987,9 @@ export default function Sidebar() {
 
       const clicked = await api.contextMenu.show(
         [
-          {
-            id: "mark-unread",
-            label: t("workspace:markUnread2", { value0: count }),
-            icon: THREAD_CONTEXT_MENU_ICONS.markUnread,
-          },
-          {
-            id: "archive",
-            label: t("workspace:archive", { value0: count }),
-            icon: THREAD_CONTEXT_MENU_ICONS.archive,
-          },
-          {
-            id: "delete",
-            label: t("workspace:delete", { value0: count }),
-            icon: THREAD_CONTEXT_MENU_ICONS.delete,
-            destructive: true,
-          },
+          { id: "mark-unread", label: `Mark unread (${count})` },
+          { id: "archive", label: `Archive (${count})` },
+          { id: "delete", label: `Delete (${count})`, destructive: true },
         ],
         position,
       );
@@ -4170,33 +4137,6 @@ export default function Sidebar() {
         : null;
     activateThreadFromSidebarIntent(threadId);
   };
-  // PR chip on a thread row behaves like a link: a plain click opens the PR in the thread's
-  // right dock, while cmd/ctrl/middle-click (or a non-GitHub URL) opens it on GitHub.
-  const openThreadPullRequest = useCallback(
-    (
-      event: MouseEvent<HTMLElement>,
-      thread: SidebarThreadSummary,
-      pr: OrchestrationThreadPullRequest,
-    ) => {
-      const repository = parseGitHubRepositoryNameWithOwnerFromPullRequestUrl(pr.url);
-      if (event.metaKey || event.ctrlKey || event.button === 1 || !repository) {
-        openPrLink(event, pr.url);
-        return;
-      }
-      if (event.button !== 0) return;
-      event.preventDefault();
-      event.stopPropagation();
-      activateThreadFromSidebarIntent(thread.id);
-      openRightDockPane(thread.id, {
-        kind: "pullRequest",
-        pullRequestProjectId: thread.projectId,
-        pullRequestRepository: repository,
-        pullRequestNumber: pr.number,
-        pullRequestInitialTab: "summary",
-      });
-    },
-    [activateThreadFromSidebarIntent, openPrLink, openRightDockPane],
-  );
 
   const handleCloseProjectContextMenu = useCallback(() => setProjectContextMenuState(null), []);
   const {
@@ -5673,6 +5613,31 @@ export default function Sidebar() {
     threads: visibleSidebarThreads,
     projectCwdById,
   });
+  const openThreadPullRequest = useCallback(
+    (
+      event: MouseEvent<HTMLElement>,
+      thread: SidebarThreadSummary,
+      pr: OrchestrationThreadPullRequest,
+    ) => {
+      const repository = parseGitHubRepositoryNameWithOwnerFromPullRequestUrl(pr.url);
+      if (event.metaKey || event.ctrlKey || event.button === 1 || !repository) {
+        openPrLink(event, pr.url);
+        return;
+      }
+      if (event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      activateThreadFromSidebarIntent(thread.id);
+      openRightDockPane(thread.id, {
+        kind: "pullRequest",
+        pullRequestProjectId: thread.projectId,
+        pullRequestRepository: repository,
+        pullRequestNumber: pr.number,
+        pullRequestInitialTab: "summary",
+      });
+    },
+    [activateThreadFromSidebarIntent, openPrLink, openRightDockPane],
+  );
   const isManualProjectSorting = appSettings.sidebarProjectSortOrder === "manual";
   const threadJumpCommandByThreadId = useMemo(() => {
     const mapping = new Map<string, NonNullable<ReturnType<typeof threadJumpCommandForIndex>>>();
@@ -5883,6 +5848,7 @@ export default function Sidebar() {
           <span className={SIDEBAR_SECTION_LABEL_CLASS_NAME}>{t("common:app_pinned")}</span>
         </div>
         <div className="flex flex-col gap-0.5">
+          <FluidHoverSurface selector='[data-thread-item][role="button"]' />
           {pinnedThreads.map((thread) => renderPinnedThreadRow(thread))}
           {remotePinnedThreads.map((entry) => (
             <WorkspaceThreadRow
@@ -6041,6 +6007,7 @@ export default function Sidebar() {
     const isActive = visualActiveSidebarThreadId === thread.id;
     const projectLabel = resolvePinnedThreadProjectLabel(thread.projectId);
     const rightMetaChips = resolveThreadRowMetaChips({
+      translate: t,
       thread,
       includeHandoffBadge: true,
       handoffShownInAvatar:
@@ -6184,6 +6151,7 @@ export default function Sidebar() {
       ? "text-foreground/54 dark:text-foreground/64"
       : "text-muted-foreground/34";
     const rightMetaChips = resolveThreadRowMetaChips({
+      translate: t,
       thread,
       includeHandoffBadge: !isTemporaryThread,
       handoffShownInAvatar:
@@ -8749,7 +8717,7 @@ export default function Sidebar() {
       >
         <DialogPopup className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base">
+            <DialogTitle className="flex items-center gap-2 text-ui-lg">
               <PlayIcon className="size-4 text-emerald-500" />
               {t("workspace:runDialog_startDev")}
             </DialogTitle>

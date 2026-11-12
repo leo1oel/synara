@@ -2,6 +2,7 @@ import { FLOATING_OVERLAY_SURFACE_CLASS_NAME } from "~/surfaceStyles";
 import type { ContextMenuItem } from "@synara/contracts";
 import { createCentralIconElement } from "./lib/central-icons";
 import { isInlineSvgMenuIcon } from "./lib/nativeMenuIcons";
+import { trackOpenPopup } from "./latticePopupDismissal";
 
 function createMenuIconElement(icon: string): HTMLElement | null {
   if (!isInlineSvgMenuIcon(icon)) return createCentralIconElement(icon, "opacity-60");
@@ -44,6 +45,9 @@ export function showContextMenuFallback<T extends string>(
   return new Promise<T | null>((resolve) => {
     const overlay = document.createElement("div");
     overlay.style.cssText = "position:fixed;inset:0;z-index:9999";
+    // The overlay only covers this document; a press in an embedding Lattice
+    // window reaches the menu through this instead.
+    const releaseTracking = trackOpenPopup(() => cleanup(null));
 
     // Stack of open menus: the root first, then each open submenu.
     const levels: MenuLevel<T>[] = [];
@@ -60,6 +64,7 @@ export function showContextMenuFallback<T extends string>(
       document.removeEventListener("keydown", onKeyDown);
       overlay.remove();
       for (const level of levels) level.element.remove();
+      releaseTracking();
       resolve(result);
     }
 

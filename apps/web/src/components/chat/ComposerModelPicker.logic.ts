@@ -4,7 +4,11 @@
 // Depends on: composer trait resolution and the starred model storage shape.
 
 import type { ModelSlug, ProviderInstanceId, ProviderKind } from "@synara/contracts";
-import { resolveSelectableModel } from "@synara/shared/model";
+import {
+  claudeCliVersionNeededForModel,
+  isKnownVersionBelow,
+  resolveSelectableModel,
+} from "@synara/shared/model";
 
 import { type StarredModel, starredModelInstanceId, starredModelKey } from "~/lib/starredModels";
 import {
@@ -46,6 +50,32 @@ export function composerModelDisplayName(provider: ProviderKind, name: string): 
 
 /** Marks the open picker so global mod+digit handlers (thread jump) yield to its rows. */
 export const MODEL_PICKER_POPUP_ATTRIBUTE = "data-model-picker-popup";
+
+// Codex's own catalog gates GPT-6 Astra on `minimal_client_version: 0.153.0`, so
+// an older installed Codex leaves it out of `model/list`. The picker shows Codex's
+// list as-is (an old client lacks the tool modes Astra needs), and says why instead.
+export const CODEX_ASTRA_MINIMUM_VERSION = "0.153.0";
+
+/** True only for a known Codex version below the one that can list GPT-6 Astra. */
+export function codexNeedsUpdateForAstra(
+  provider: ProviderKind,
+  version: string | null | undefined,
+): boolean {
+  return provider === "codex" && isKnownVersionBelow(version, CODEX_ASTRA_MINIMUM_VERSION);
+}
+
+/**
+ * The Claude Code version `model` needs when the installed one is known to be older;
+ * null for other providers, or when it can run the model, the version is unknown, or no
+ * minimum applies. The table lives in shared/model, beside the alias resolution.
+ */
+export function claudeCliVersionNeededFor(
+  provider: ProviderKind,
+  model: string,
+  version: string | null | undefined,
+): string | null {
+  return provider === "claudeAgent" ? claudeCliVersionNeededForModel(model, version) : null;
+}
 
 export function isModelPickerShortcutScopeActive(): boolean {
   return (
@@ -108,9 +138,11 @@ export function buildStarredModelOptionsPatch(input: {
 }
 
 // "High · Fast" style summary of a preset, labelled through the target model's ladder.
+// `localizeLabel` translates each fixed English word; the default leaves them as they are.
 export function formatStarredTraitsLabel(
   starred: Pick<StarredModel, "effort" | "fastMode" | "thinking">,
   effortLevels: ComposerTraitSelection["effortLevels"],
+  localizeLabel: (label: string) => string = (label) => label,
 ): string {
   const effortLabel =
     starred.effort !== null
@@ -124,6 +156,7 @@ export function formatStarredTraitsLabel(
     starred.fastMode ? "Fast" : null,
   ]
     .filter((part): part is string => part !== null)
+    .map(localizeLabel)
     .join(" · ");
 }
 
@@ -163,6 +196,8 @@ export function buildProviderTabRows(input: {
   options: ReadonlyArray<ProviderModelOption>;
   query: string;
   selectedModel: string | null;
+  /** Label for a model the account refused at run time; null keeps the row usable. */
+  unavailableModelLabelFor?: (model: string) => string | null;
 }): ComposerModelPickerRow[] {
   const { provider, query } = input;
   const filteredOptions =
@@ -176,23 +211,27 @@ export function buildProviderTabRows(input: {
         )
       : input.options;
   return groupProviderModelOptions(filteredOptions).flatMap((group) =>
-    group.options.map((option) => ({
-      key: `${input.instanceId ?? provider}:${option.slug}`,
-      provider,
-      ...(input.instanceId && input.instanceId !== provider
-        ? { instanceId: input.instanceId }
-        : {}),
-      model: option.slug,
-      selectableModel:
-        provider === "omp" && getOmpModelSelectionIssue(option.slug, input.options)
-          ? null
-          : option.slug,
-      name: option.name,
-      detail: null,
-      selected: option.slug === input.selectedModel,
-      groupLabel: group.label,
-      preset: null,
-    })),
+    group.options.map((option) => {
+      const unavailableLabel = input.unavailableModelLabelFor?.(option.slug) ?? null;
+      return {
+        key: `${input.instanceId ?? provider}:${option.slug}`,
+        provider,
+        ...(input.instanceId && input.instanceId !== provider
+          ? { instanceId: input.instanceId }
+          : {}),
+        model: option.slug,
+        selectableModel:
+          unavailableLabel !== null ||
+          (provider === "omp" && getOmpModelSelectionIssue(option.slug, input.options))
+            ? null
+            : option.slug,
+        name: option.name,
+        detail: unavailableLabel,
+        selected: unavailableLabel === null && option.slug === input.selectedModel,
+        groupLabel: group.label,
+        preset: null,
+      };
+    }),
   );
 }
 
@@ -214,17 +253,31 @@ export function buildStarredTabRows(input: {
     provider: ProviderKind,
     model: string,
   ) => ComposerTraitSelection["effortLevels"];
+  /** Translates the fixed English words of a row's detail (traits, "Unavailable"). */
+  localizeLabel?: (label: string) => string;
+  /** Label for a model its account refused at run time; null keeps the row usable. */
+  unavailableModelLabelFor?: (
+    provider: ProviderKind,
+    instanceId: string,
+    model: string,
+  ) => string | null;
 }): ComposerModelPickerRow[] {
+  const localizeLabel = input.localizeLabel ?? ((label: string) => label);
   return input.starredModels.flatMap((entry) => {
     const instanceId = starredModelInstanceId(entry);
     const options = input.modelOptionsFor(entry.provider, instanceId);
     const accountLabel = input.accountLabelFor?.(instanceId);
-    const selectableModel =
+    const catalogModel =
       entry.provider === "omp" && getOmpModelSelectionIssue(entry.model, options)
         ? null
         : resolveSelectableModel(entry.provider, entry.model, options);
+    const refusedLabel =
+      catalogModel === null
+        ? null
+        : (input.unavailableModelLabelFor?.(entry.provider, instanceId, catalogModel) ?? null);
+    const selectableModel = refusedLabel === null ? catalogModel : null;
     const name =
-      options.find((option) => option.slug === selectableModel)?.name ??
+      options.find((option) => option.slug === catalogModel)?.name ??
       formatProviderModelOptionName({ provider: entry.provider, slug: entry.model });
     if (
       input.query.length > 0 &&
@@ -237,6 +290,7 @@ export function buildStarredTabRows(input: {
     const traitsLabel = formatStarredTraitsLabel(
       entry,
       input.effortLevelsFor(entry.provider, entry.model),
+      localizeLabel,
     );
     return [
       {
@@ -247,9 +301,10 @@ export function buildStarredTabRows(input: {
         selectableModel,
         name,
         detail:
-          selectableModel === null
-            ? "Unavailable"
-            : [accountLabel, traitsLabel].filter(Boolean).join(" · ") || null,
+          refusedLabel ??
+          (selectableModel === null
+            ? localizeLabel("Unavailable")
+            : [accountLabel, traitsLabel].filter(Boolean).join(" · ") || null),
         selected:
           selectableModel !== null &&
           entry.provider === input.current.provider &&

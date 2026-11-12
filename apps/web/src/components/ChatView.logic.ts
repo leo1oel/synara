@@ -1,3 +1,4 @@
+import { t } from "~/i18n";
 import {
   resolveComputerControlMode,
   type ComposerComputerControlMode,
@@ -20,9 +21,14 @@ import {
   type ProviderStartOptions,
   type RuntimeMode,
   type ServerProviderAuthStatus,
+  type ServerProviderStatus,
   type ThreadId as ThreadIdType,
 } from "@synara/contracts";
-import { getDefaultModel, normalizeModelSlug } from "@synara/shared/model";
+import {
+  getDefaultModel,
+  getDefaultModelForClaudeCliVersion,
+  normalizeModelSlug,
+} from "@synara/shared/model";
 import { approvalSessionGrantWidensSessionPolicy } from "@synara/shared/approvalSessionGrant";
 import { buildSynaraBranchName } from "@synara/shared/git";
 import { isGenericChatThreadTitle } from "@synara/shared/chatThreads";
@@ -30,6 +36,7 @@ import { isGenericTerminalThreadTitle } from "@synara/shared/terminalThreads";
 import {
   type ChatMessage,
   type SessionPhase,
+  type SidebarThreadSummary,
   type Thread,
   type ThreadPrimarySurface,
   type TurnDiffSummary,
@@ -43,6 +50,7 @@ import {
   type QueuedComposerChatTurn,
   type QueuedComposerTurn,
 } from "../composerDraftStore";
+import { makeModelSelection } from "../composerDraftModels";
 import { Schema } from "effect";
 import {
   filterTerminalContextsWithText,
@@ -68,7 +76,13 @@ import {
 } from "../session-logic";
 import { localSubagentThreadId } from "./ChatView.selectors";
 import { buildModelSelection, type ProviderModelOption } from "../providerModelOptions";
+import {
+  findFirstUsableDefaultProvider,
+  findProviderStatus,
+  isProviderUsable,
+} from "../lib/providerAvailability";
 import { resolvePromptEffortFromModelSelection } from "../lib/composerSend";
+import { isProviderKind } from "../providerOrdering";
 import { autoRuntimeModeSelectionIssue } from "@synara/shared/runtimeMode";
 
 export const LAST_INVOKED_SCRIPT_BY_PROJECT_KEY = "synara:last-invoked-script-by-project";
@@ -458,14 +472,14 @@ export function shouldHandlePromptHistoryNavigationKey(input: {
 }
 
 // `expandedCursor` is a raw index into `prompt` (see PromptHistoryNavigationResult).
-function isComposerCursorOnFirstLine(prompt: string, expandedCursor: number): boolean {
+export function isComposerCursorOnFirstLine(prompt: string, expandedCursor: number): boolean {
   const boundedCursor = Math.max(0, Math.min(prompt.length, expandedCursor));
   const firstLineEnd = prompt.indexOf("\n");
   return firstLineEnd < 0 || boundedCursor <= firstLineEnd;
 }
 
 // `expandedCursor` is a raw index into `prompt` (see PromptHistoryNavigationResult).
-function isComposerCursorOnLastLine(prompt: string, expandedCursor: number): boolean {
+export function isComposerCursorOnLastLine(prompt: string, expandedCursor: number): boolean {
   const boundedCursor = Math.max(0, Math.min(prompt.length, expandedCursor));
   const lastLineStart = prompt.lastIndexOf("\n") + 1;
   return boundedCursor >= lastLineStart;
@@ -868,12 +882,16 @@ export function resolveActiveThreadTitle(input: {
   subagentTitle: string | null;
   isHomeChat: boolean;
   isEmpty: boolean;
+  genericChatTitle?: string;
+  genericThreadTitle?: string;
 }): string {
   if (input.subagentTitle) {
     return input.subagentTitle;
   }
-  if (input.isHomeChat && input.isEmpty && isGenericChatThreadTitle(input.title)) {
-    return "New Chat";
+  if (input.isEmpty && isGenericChatThreadTitle(input.title)) {
+    return input.isHomeChat
+      ? (input.genericChatTitle ?? "New Chat")
+      : (input.genericThreadTitle ?? input.title);
   }
   return input.title;
 }
@@ -1092,7 +1110,7 @@ export function describeVoiceRecordingStartError(error: unknown): string {
   const errorName = typeof error.name === "string" ? error.name : "";
 
   if (errorName === "NotAllowedError" || errorName === "PermissionDeniedError") {
-    return "Microphone access was denied. Enable it in macOS Privacy & Security > Microphone for Synara, then try again.";
+    return "Microphone access was denied. Enable it in macOS Privacy & Security > Microphone for Lattice, then try again.";
   }
   if (errorName === "NotFoundError" || errorName === "DevicesNotFoundError") {
     return "No microphone was found. Connect one and try again.";
@@ -1131,6 +1149,171 @@ export function deriveComposerVoiceState(input: {
     canStartVoiceNotes,
     showVoiceNotesControl: canRenderVoiceNotes || input.isRecording || input.isTranscribing,
   };
+}
+
+/**
+ * Older project creation persisted the static Codex fallback as though the user
+ * had selected it. In Lattice embeds that value is only bootstrap data; explicit
+ * composer choices live in the sticky draft state and must continue to win.
+ */
+export function resolveEmbeddedProjectModelPreference(input: {
+  embedded: boolean;
+  selection: ModelSelection | null | undefined;
+}): ModelSelection | null {
+  const selection = input.selection ?? null;
+  if (
+    !input.embedded ||
+    selection?.provider !== "codex" ||
+    (selection.model !== "gpt-5.5" && selection.model !== DEFAULT_MODEL_BY_PROVIDER.codex) ||
+    selection.options !== undefined
+  ) {
+    return selection;
+  }
+  return null;
+}
+
+// A new chat inherits the last reasoning level without carrying thread-scoped
+// controls such as context windows, agent variants, or Fast Mode with it.
+function keepReasoningEffort(selection: ModelSelection): ModelSelection {
+  switch (selection.provider) {
+    case "codex":
+    case "cursor":
+    case "devin":
+    case "antigravity":
+    case "grok":
+    case "droid":
+      return makeModelSelection(
+        selection.provider,
+        selection.model,
+        selection.options?.reasoningEffort
+          ? { reasoningEffort: selection.options.reasoningEffort }
+          : undefined,
+      );
+    case "claudeAgent":
+      return makeModelSelection(
+        selection.provider,
+        selection.model,
+        selection.options?.effort ? { effort: selection.options.effort } : undefined,
+        selection.supportsAutoMode,
+      );
+    case "pi":
+    case "omp":
+      return makeModelSelection(
+        selection.provider,
+        selection.model,
+        selection.options?.thinkingLevel
+          ? { thinkingLevel: selection.options.thinkingLevel }
+          : undefined,
+      );
+    case "opencode":
+      return makeModelSelection(
+        selection.provider,
+        selection.model,
+        selection.options?.variant ? { variant: selection.options.variant } : undefined,
+      );
+  }
+}
+
+export function resolveComposerDefaultModelSelection(input: {
+  embedded: boolean;
+  projectSelection: ModelSelection | null | undefined;
+  threadSummaries: ReadonlyArray<
+    Pick<
+      SidebarThreadSummary,
+      "latestUserMessageAt" | "modelSelection" | "parentThreadId" | "sidechatSourceThreadId"
+    >
+  >;
+}): ModelSelection | null {
+  const projectSelection = resolveEmbeddedProjectModelPreference({
+    embedded: input.embedded,
+    selection: input.projectSelection,
+  });
+  if (projectSelection) {
+    return projectSelection;
+  }
+
+  let latestSelection: ModelSelection | null = null;
+  let latestMessageAt = Number.NEGATIVE_INFINITY;
+  for (const thread of input.threadSummaries) {
+    if (thread.parentThreadId || thread.sidechatSourceThreadId || !thread.latestUserMessageAt) {
+      continue;
+    }
+    const messageAt = Date.parse(thread.latestUserMessageAt);
+    if (!Number.isFinite(messageAt) || messageAt <= latestMessageAt) {
+      continue;
+    }
+    latestMessageAt = messageAt;
+    latestSelection = thread.modelSelection;
+  }
+
+  if (!latestSelection) {
+    return null;
+  }
+  return keepReasoningEffort(latestSelection);
+}
+
+/**
+ * Lattice starts a new embedded chat with the last model the user actually used.
+ * A legacy project bootstrap default is ignored by the resolver above; if there
+ * is no chat history yet, start on Claude's default model, the Claude Code
+ * harness Lattice users compare the panel with (stepped down to one the installed
+ * Claude Code can run, when its status names an older version). Once provider health
+ * is authoritative, fall back to the first visible authenticated provider so a
+ * stale Codex default cannot strand the new draft on an unusable subscription.
+ */
+export function resolveEmbeddedNewThreadModelSelection(input: {
+  projectSelection: ModelSelection | null | undefined;
+  threadSummaries: ReadonlyArray<
+    Pick<
+      SidebarThreadSummary,
+      "latestUserMessageAt" | "modelSelection" | "parentThreadId" | "sidechatSourceThreadId"
+    >
+  >;
+  providerStatuses: readonly ServerProviderStatus[];
+  providerStatusesReconciled: boolean;
+  providerOrder: readonly ProviderKind[];
+  hiddenProviders: readonly ProviderKind[];
+}): ModelSelection {
+  const runnableDefaultModel = (provider: ProviderKind) =>
+    getDefaultModelForClaudeCliVersion(
+      provider,
+      provider === "claudeAgent"
+        ? findProviderStatus(input.providerStatuses, provider)?.version
+        : undefined,
+    );
+  const preferredSelection =
+    resolveComposerDefaultModelSelection({
+      embedded: true,
+      projectSelection: input.projectSelection,
+      threadSummaries: input.threadSummaries,
+    }) ??
+    makeModelSelection(
+      "claudeAgent",
+      runnableDefaultModel("claudeAgent") ?? DEFAULT_MODEL_BY_PROVIDER.claudeAgent,
+    );
+
+  if (
+    !input.providerStatusesReconciled ||
+    isProviderUsable(findProviderStatus(input.providerStatuses, preferredSelection.provider))
+  ) {
+    return preferredSelection;
+  }
+
+  const hiddenProviders = new Set(input.hiddenProviders);
+  // A status names its driver as an open slug since #1165; only known providers can
+  // be offered as a fallback.
+  const statusProviders = input.providerStatuses
+    .map((status) => status.provider)
+    .filter(isProviderKind);
+  const orderedProviders = [...new Set([...input.providerOrder, ...statusProviders])];
+  const visibleProviders = orderedProviders.filter((provider) => !hiddenProviders.has(provider));
+  const fallbackProvider =
+    findFirstUsableDefaultProvider(input.providerStatuses, visibleProviders) ??
+    findFirstUsableDefaultProvider(input.providerStatuses, orderedProviders);
+  const fallbackModel = fallbackProvider ? runnableDefaultModel(fallbackProvider) : null;
+  return fallbackProvider && fallbackModel
+    ? makeModelSelection(fallbackProvider, fallbackModel)
+    : preferredSelection;
 }
 
 export function shouldShowComposerModelBootstrapSkeleton(input: {
@@ -2051,20 +2234,20 @@ export function buildBlockedComposerSendToastCopy(reason: BlockedComposerSendRea
     case "send-in-flight":
       return {
         type: "info",
-        title: "Still sending your last message",
-        description: "Wait for it to show in the chat before sending again.",
+        title: t("lattice:stillSendingYourLastMessage"),
+        description: t("lattice:waitForItToShowInThe"),
       };
     case "session-starting":
       return {
         type: "info",
-        title: "The session is still starting",
-        description: "Send again once it is ready. Your message stays in the composer.",
+        title: t("lattice:theSessionIsStillStarting"),
+        description: t("lattice:sendAgainOnceItIsReadyYour"),
       };
     case "no-project":
       return {
         type: "warning",
-        title: "This chat has no project",
-        description: "Choose a project for this chat, then send again.",
+        title: t("lattice:thisChatHasNoProject"),
+        description: t("lattice:chooseAProjectForThisChatThen"),
       };
   }
 }
