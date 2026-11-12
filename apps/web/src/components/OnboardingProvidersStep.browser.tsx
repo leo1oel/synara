@@ -1,6 +1,10 @@
 import "../index.css";
 
-import type { ProviderKind, ServerProviderStatus } from "@synara/contracts";
+import {
+  DEFAULT_SERVER_SETTINGS,
+  type ServerProviderStatus,
+  type ServerSettings,
+} from "@synara/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { page } from "vitest/browser";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -10,25 +14,39 @@ import { ProvidersStep } from "../onboarding/steps/ProvidersStep";
 import { useProviderDetection } from "../onboarding/useProviderDetection";
 import { useProviderSetup } from "../onboarding/useProviderSetup";
 
+// The fork keeps provider enablement in server settings (`providers[kind].enabled`),
+// so the onboarding switches write there instead of to app settings.
 const mocks = vi.hoisted(() => ({
   getConfig: vi.fn(),
   refreshProviders: vi.fn(),
-  updateSettingsAndWait: vi.fn(),
-  settings: { disabledProviders: [] as ProviderKind[] },
+  getSettings: vi.fn(),
+  updateSettings: vi.fn(),
 }));
 vi.mock("../nativeApi", () => {
   const api = {
-    server: { getConfig: mocks.getConfig, refreshProviders: mocks.refreshProviders },
+    server: {
+      getConfig: mocks.getConfig,
+      refreshProviders: mocks.refreshProviders,
+      getSettings: mocks.getSettings,
+      updateSettings: mocks.updateSettings,
+    },
   };
   return { ensureNativeApi: () => api, readNativeApi: () => api };
 });
 vi.mock("../appSettings", () => {
-  const appSettings = {
-    settings: mocks.settings,
-    updateSettingsAndWait: mocks.updateSettingsAndWait,
-  };
+  const appSettings = { settings: {} };
   return { useAppSettings: () => appSettings, getCustomBinaryPathForProvider: () => null };
 });
+
+function serverSettingsWithCodex(enabled: boolean): ServerSettings {
+  return {
+    ...DEFAULT_SERVER_SETTINGS,
+    providers: {
+      ...DEFAULT_SERVER_SETTINGS.providers,
+      codex: { ...DEFAULT_SERVER_SETTINGS.providers.codex, enabled },
+    },
+  };
+}
 vi.mock("../workspacePathsStore", () => ({
   useWorkspacePathsStore: (select: (state: { homeDir: null }) => unknown) =>
     select({ homeDir: null }),
@@ -48,8 +66,8 @@ const clients: QueryClient[] = [];
 beforeEach(() => {
   mocks.getConfig.mockReset().mockResolvedValue({ providers: [] });
   mocks.refreshProviders.mockReset();
-  mocks.settings.disabledProviders = [];
-  mocks.updateSettingsAndWait.mockReset().mockResolvedValue(undefined);
+  mocks.getSettings.mockReset().mockResolvedValue(serverSettingsWithCodex(true));
+  mocks.updateSettings.mockReset().mockResolvedValue(undefined);
 });
 afterEach(() => {
   for (const client of clients.splice(0)) client.clear();
@@ -120,14 +138,15 @@ it("keeps the default agent connected while re-enabling it alongside a custom in
   const providers = [codexStatus, customCodex];
   mocks.getConfig.mockResolvedValue({ providers });
   mocks.refreshProviders.mockResolvedValue({ providers });
-  mocks.updateSettingsAndWait.mockImplementationOnce(async () => {
-    mocks.settings.disabledProviders = ["codex"];
+  mocks.updateSettings.mockImplementationOnce(async () => {
+    mocks.getSettings.mockResolvedValue(serverSettingsWithCodex(false));
   });
   await renderStep();
 
   const connected = page.getByText("1 connected · 0 need sign-in · 9 not installed");
   const disabled = page.getByText("0 connected · 0 need sign-in · 9 not installed");
-  const codexSwitch = page.getByRole("switch", { name: "Codex", exact: true });
+  // The fork's switch is named by its action ("Disable Codex" / "Enable Codex").
+  const codexSwitch = page.getByRole("switch", { name: /^(Disable|Enable) Codex$/ });
   await expect.element(connected).toBeVisible();
   await codexSwitch.click();
   await expect.element(disabled).toBeVisible();
@@ -153,7 +172,7 @@ it("keeps the default agent connected while re-enabling it alongside a custom in
   const pendingWrite = new Promise<void>((resolve) => {
     finishWrite = resolve;
   });
-  mocks.updateSettingsAndWait.mockReturnValueOnce(pendingWrite);
+  mocks.updateSettings.mockReturnValueOnce(pendingWrite);
   try {
     await codexSwitch.click();
     await expect.element(connected).toBeVisible();
