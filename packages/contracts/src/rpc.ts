@@ -446,6 +446,8 @@ import {
   StatsGetProfileTokenStatsResult,
   StatsGetRecapInput,
   StatsGetRecapResult,
+  StatsGetUsageAnalyticsInput,
+  StatsGetUsageAnalyticsResult,
 } from "./stats";
 import {
   HostsEnrollmentResult,
@@ -1708,6 +1710,12 @@ export const WsStatsGetRecapRpc = Rpc.make(WS_METHODS.statsGetRecap, {
   error: WsRpcError,
 });
 
+export const WsStatsGetUsageAnalyticsRpc = Rpc.make(WS_METHODS.statsGetUsageAnalytics, {
+  payload: StatsGetUsageAnalyticsInput,
+  success: StatsGetUsageAnalyticsResult,
+  error: WsRpcError,
+});
+
 export const WsServerGetDiagnosticsRpc = Rpc.make(WS_METHODS.serverGetDiagnostics, {
   payload: Schema.Struct({}),
   success: ServerDiagnosticsResult,
@@ -2583,6 +2591,7 @@ export type WsFeatureRpc =
   | typeof WsStatsGetProfileStatsRpc
   | typeof WsStatsGetProfileTokenStatsRpc
   | typeof WsStatsGetRecapRpc
+  | typeof WsStatsGetUsageAnalyticsRpc
   | typeof WsServerGetDiagnosticsRpc
   | typeof WsServerReadThreadDiagnosticsRpc
   | typeof WsServerPrewarmVoiceRpc
@@ -2816,6 +2825,7 @@ const wsApplicationRpcGroup = RpcGroup.make(
   WsStatsGetProfileStatsRpc,
   WsStatsGetProfileTokenStatsRpc,
   WsStatsGetRecapRpc,
+  WsStatsGetUsageAnalyticsRpc,
   WsServerGetDiagnosticsRpc,
   WsServerReadThreadDiagnosticsRpc,
   WsServerPrewarmVoiceRpc,

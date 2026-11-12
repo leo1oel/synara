@@ -30,7 +30,9 @@ import {
 } from "../lib/groupWorkerRouting";
 import {
   findProviderStatus,
+  findUsableProviderStatus,
   isProviderUsable,
+  providerStatusInstanceKey,
   resolveAvailableProviderPreference,
 } from "../lib/providerAvailability";
 import {
@@ -260,9 +262,20 @@ export function useHandleNewThread() {
         providerOrder: settings.providerOrder,
         hiddenProviders: settings.hiddenProviders,
       });
-      if (!isProviderUsable(findProviderStatus(providerStatuses, fallbackProvider))) {
-        return;
-      }
+      const fallbackInstanceId = resolveSelectableProviderInstanceId(
+        settings,
+        fallbackProvider,
+        projectDefaultModelSelection?.provider === fallbackProvider
+          ? projectDefaultModelSelection.instanceId
+          : undefined,
+      );
+      const fallbackStatus = findUsableProviderStatus(
+        providerStatuses,
+        fallbackProvider,
+        fallbackInstanceId,
+        providerInstances,
+      );
+      if (!fallbackStatus) return;
 
       setModelSelection(
         threadId,
@@ -270,7 +283,7 @@ export function useHandleNewThread() {
           draft: draft
             ? {
                 modelSelectionByProvider: draft.modelSelectionByProvider,
-                activeProvider: fallbackProvider,
+                activeProvider: providerStatusInstanceKey(fallbackStatus),
               }
             : null,
           threadModelSelection: null,

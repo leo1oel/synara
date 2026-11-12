@@ -232,6 +232,7 @@ import {
   StatsGetProfileStatsInput,
   StatsGetProfileTokenStatsInput,
   StatsGetRecapInput,
+  StatsGetUsageAnalyticsInput,
 } from "./stats";
 import {
   ProviderListCommandsInput,
@@ -421,6 +422,7 @@ export const WS_METHODS = {
   statsGetProfileStats: "stats.getProfileStats",
   statsGetProfileTokenStats: "stats.getProfileTokenStats",
   statsGetRecap: "stats.getRecap",
+  statsGetUsageAnalytics: "stats.getUsageAnalytics",
   serverGetDiagnostics: "server.getDiagnostics",
   serverReadThreadDiagnostics: "server.readThreadDiagnostics",
   serverPrewarmVoice: "server.prewarmVoice",
@@ -780,6 +782,7 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.statsGetProfileStats, StatsGetProfileStatsInput),
   tagRequestBody(WS_METHODS.statsGetProfileTokenStats, StatsGetProfileTokenStatsInput),
   tagRequestBody(WS_METHODS.statsGetRecap, StatsGetRecapInput),
+  tagRequestBody(WS_METHODS.statsGetUsageAnalytics, StatsGetUsageAnalyticsInput),
   tagRequestBody(WS_METHODS.serverGetDiagnostics, Schema.Struct({})),
   tagRequestBody(WS_METHODS.serverReadThreadDiagnostics, ServerReadThreadDiagnosticsInput),
   tagRequestBody(WS_METHODS.serverPrewarmVoice, ServerVoicePrewarmInput),

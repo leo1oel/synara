@@ -3,6 +3,14 @@ import { resolveTailUserMessageEditTarget } from "@synara/shared/conversationEdi
 import { providerSupportsNativeTurnSteering } from "@synara/shared/providerMetadata";
 import { deriveAssociatedWorktreeMetadata } from "@synara/shared/threadWorkspace";
 import { useNavigate } from "@tanstack/react-router";
+import {
+  COMPOSER_TURN_UNCERTAIN,
+  composerTurnMayHaveBeenSent,
+  dispatchOwnedComposerTurn,
+  ownsUnsettledComposerTurn,
+  settlePendingComposerTurn,
+} from "~/lib/composerTurnSettlement";
+
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import { useCallback } from "react";
 import { newCommandId, newMessageId, newThreadId, randomUUID } from "~/lib/utils";
@@ -179,6 +187,21 @@ export function useChatTurnFollowUps({
       return false;
     }
 
+    sendInFlightRef.current = true;
+    const previous = await settlePendingComposerTurn(api, activeThread.id, queuedTurn?.id).finally(
+      () => {
+        sendInFlightRef.current = false;
+      },
+    );
+    if (previous.status === "unknown") {
+      setThreadError(activeThread.id, COMPOSER_TURN_UNCERTAIN);
+      return false;
+    }
+    if (previous.status === "accepted") {
+      setThreadError(activeThread.id, null);
+      return queuedTurn !== undefined && previous.queuedTurnId === queuedTurn.id;
+    }
+
     const trimmed = text.trim();
     if (!trimmed) {
       return false;
@@ -287,20 +310,24 @@ export function useChatTurnFollowUps({
           planDispatchSettings.modelSelection.provider,
         providerOptions: planDispatchSettings.providerOptions,
       });
-      await api.orchestration.dispatchCommand({
-        type: "thread.turn.start",
-        commandId: newCommandId(),
-        threadId: threadIdForSend,
-        message: {
-          messageId: messageIdForSend,
-          role: "user",
-          text: outgoingMessageText,
-          attachments: [],
+      await dispatchOwnedComposerTurn(
+        api,
+        {
+          type: "thread.turn.start",
+          commandId: newCommandId(),
+          threadId: threadIdForSend,
+          message: {
+            messageId: messageIdForSend,
+            role: "user",
+            text: outgoingMessageText,
+            attachments: [],
+          },
+          ...turnStartDispatchFields(planDispatchSettings, dispatchMode),
+          ...(sourceProposedPlan ? { sourceProposedPlan } : {}),
+          createdAt: messageCreatedAt,
         },
-        ...turnStartDispatchFields(planDispatchSettings, dispatchMode),
-        ...(sourceProposedPlan ? { sourceProposedPlan } : {}),
-        createdAt: messageCreatedAt,
-      });
+        queuedTurn?.id,
+      );
       if (!queuedTurn && planDispatchSettings.computerControlMode === "request") {
         const draft = useComposerDraftStore.getState().draftsByThreadId[threadIdForSend];
         if (
@@ -355,9 +382,9 @@ export function useChatTurnFollowUps({
         );
       }
       sendInFlightRef.current = false;
-      // The turn RPC failed, so no server turn exists for the watchdog to
-      // recover — drop the marker armed when the dispatch began.
-      clearPendingTurnDispatch(threadIdForSend);
+      if (!ownsUnsettledComposerTurn(threadIdForSend, messageIdForSend)) {
+        clearPendingTurnDispatch(threadIdForSend);
+      }
       resetLocalDispatch();
       return false;
     }
@@ -579,6 +606,9 @@ export function useChatTurnFollowUps({
 
     const createdAt = new Date().toISOString();
     const nextThreadId = newThreadId();
+    const implementationMessageId = newMessageId();
+    let threadCreated = false;
+    let turnAccepted = false;
     const planMarkdown = activeProposedPlan.planMarkdown;
     const implementationPrompt = buildPlanImplementationPrompt(planMarkdown);
     const outgoingImplementationPrompt = appendLatticeHostContextToPrompt(
@@ -626,6 +656,7 @@ export function useChatTurnFollowUps({
         createdAt,
       })
       .then(() => {
+        threadCreated = true;
         rememberCustomBinaryPathForDispatch({
           threadId: nextThreadId,
           provider: implementationDispatchSettings.modelSelection.provider,
@@ -634,12 +665,12 @@ export function useChatTurnFollowUps({
             implementationDispatchSettings.modelSelection.provider,
           providerOptions: implementationDispatchSettings.providerOptions,
         });
-        return api.orchestration.dispatchCommand({
+        return dispatchOwnedComposerTurn(api, {
           type: "thread.turn.start",
           commandId: newCommandId(),
           threadId: nextThreadId,
           message: {
-            messageId: newMessageId(),
+            messageId: implementationMessageId,
             role: "user",
             text: outgoingImplementationPrompt,
             attachments: [],
@@ -650,6 +681,7 @@ export function useChatTurnFollowUps({
         });
       })
       .then(() => {
+        turnAccepted = true;
         if (implementationDispatchSettings.computerControlMode === "chat") {
           setComposerDraftComputerControlMode(nextThreadId, "chat", {
             generation: implementationDispatchSettings.computerControlGeneration ?? 0,
@@ -676,21 +708,23 @@ export function useChatTurnFollowUps({
         });
       })
       .catch(async (err) => {
-        const deletedOnServer = await api.orchestration
-          .dispatchCommand({
-            type: "thread.delete",
-            commandId: newCommandId(),
-            threadId: nextThreadId,
-          })
-          .then(() => true)
-          .catch(() => false);
-        if (deletedOnServer) {
-          clearPendingTurnDispatch(nextThreadId);
-          void reconcileDeletedThreadFromClient({
-            threadId: nextThreadId,
-            removeDeletedThreadFromClientState:
-              useStore.getState().removeDeletedThreadFromClientState,
-          });
+        if (threadCreated && !turnAccepted && !composerTurnMayHaveBeenSent(err)) {
+          const deletedOnServer = await api.orchestration
+            .dispatchCommand({
+              type: "thread.delete",
+              commandId: newCommandId(),
+              threadId: nextThreadId,
+            })
+            .then(() => true)
+            .catch(() => false);
+          if (deletedOnServer) {
+            clearPendingTurnDispatch(nextThreadId);
+            void reconcileDeletedThreadFromClient({
+              threadId: nextThreadId,
+              removeDeletedThreadFromClientState:
+                useStore.getState().removeDeletedThreadFromClientState,
+            });
+          }
         }
         toastManager.add({
           type: "error",

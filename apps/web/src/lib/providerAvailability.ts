@@ -5,6 +5,7 @@ import {
   type ProviderKind,
   type ServerProviderStatus,
 } from "@synara/contracts";
+import type { ProviderInstanceOption } from "../appSettings";
 import { isProviderKind } from "../providerOrdering";
 
 import { getDefaultModel } from "@synara/shared/model";
@@ -148,6 +149,31 @@ export function findFirstUsableDefaultProvider(
   return null;
 }
 
+/** Prefer the requested account when usable, then an enabled sibling of the same provider. */
+export function findUsableProviderStatus(
+  statuses: readonly ServerProviderStatus[],
+  provider: ProviderKind,
+  preferredInstanceId: ProviderInstanceId = provider,
+  configuredInstances?: readonly Pick<
+    ProviderInstanceOption,
+    "instanceId" | "provider" | "enabled"
+  >[],
+): ServerProviderStatus | null {
+  const usable = statuses.filter(
+    (status) =>
+      (status.driver ?? status.provider) === provider &&
+      isProviderUsable(status) &&
+      (!configuredInstances ||
+        configuredInstances.some(
+          (instance) =>
+            instance.enabled &&
+            instance.provider === provider &&
+            instance.instanceId === providerStatusInstanceKey(status),
+        )),
+  );
+  return findProviderStatus(usable, provider, preferredInstanceId) ?? usable[0] ?? null;
+}
+
 export function resolveAvailableProviderPreference(input: {
   readonly preferredProvider: ProviderKind;
   readonly statuses: readonly ServerProviderStatus[];
@@ -158,8 +184,7 @@ export function resolveAvailableProviderPreference(input: {
     return input.preferredProvider;
   }
 
-  const preferredStatus = findProviderStatus(input.statuses, input.preferredProvider);
-  if (isProviderUsable(preferredStatus)) {
+  if (findUsableProviderStatus(input.statuses, input.preferredProvider)) {
     return input.preferredProvider;
   }
 
@@ -180,12 +205,20 @@ export function resolveAvailableProviderPreference(input: {
   });
   const visibleInstalled = orderedStatuses.filter((status) => {
     const provider = providerForStatus(status);
-    return status.available && provider !== null && !hiddenProviders.has(provider);
+    return (
+      status.enabled !== false &&
+      status.available &&
+      provider !== null &&
+      !hiddenProviders.has(provider)
+    );
   });
   const installed =
     visibleInstalled.length > 0
       ? visibleInstalled
-      : orderedStatuses.filter((status) => status.available && providerForStatus(status) !== null);
+      : orderedStatuses.filter(
+          (status) =>
+            status.enabled !== false && status.available && providerForStatus(status) !== null,
+        );
 
   const preferredInstalled =
     installed.find((status) => status.authStatus !== "unauthenticated") ?? installed[0];

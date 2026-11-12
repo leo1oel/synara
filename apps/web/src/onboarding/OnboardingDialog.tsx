@@ -18,22 +18,21 @@ import { Dialog, DialogPopup } from "~/components/ui/dialog";
 import { isElectron } from "~/env";
 import { useAccount } from "~/hooks/useAccount";
 import { useTranslation } from "~/i18n";
-import { DESKTOP_TOP_BAR_TRAFFIC_LIGHT_GUTTER_CLASS } from "~/hooks/useDesktopTopBarGutter";
-import { useProviderStatusesForLocalConfig } from "~/hooks/useProviderStatusesForLocalConfig";
+import {
+  DESKTOP_TOP_BAR_TRAFFIC_LIGHT_GUTTER_CLASS,
+  useDesktopTopBarWindowControlsGutterClassName,
+} from "~/hooks/useDesktopTopBarGutter";
 import { readExecutionContext } from "~/lib/hosts/executionContext";
 import { CircleCheckIcon } from "~/lib/icons";
-import { findProviderStatus } from "~/lib/providerAvailability";
 import { cn, isMacNavigatorPlatform } from "~/lib/utils";
 import { useProjectImportDialogStore } from "~/projectImport/projectImportDialogStore";
 import { VISIBLE_PROVIDER_DESCRIPTORS } from "../betaFeatures";
 import { serverSettingsQueryOptions } from "~/lib/serverReactQuery";
 import {
-  classifyProviderSetup,
   isOnboardingSetupStep,
   nextOnboardingStep,
   previousOnboardingStep,
   resolveOnboardingSteps,
-  summarizeProviderSetup,
   type OnboardingStep,
 } from "./logic";
 import { OnboardingAsciiBackdrop } from "./OnboardingAsciiBackdrop";
@@ -53,6 +52,7 @@ import { PairStep } from "./steps/PairStep";
 import { ProvidersStep } from "./steps/ProvidersStep";
 import { type OnboardingReceiptRow, ReadyStep } from "./steps/ReadyStep";
 import { useProviderDetection } from "./useProviderDetection";
+import { useProviderSetup } from "./useProviderSetup";
 
 type Translate = ReturnType<typeof useTranslation>["t"];
 
@@ -74,9 +74,8 @@ function OnboardingFlow(props: {
   onProjectBusyChange: (busy: boolean) => void;
 }) {
   const account = useAccount();
-  const statuses = useProviderStatusesForLocalConfig();
-  const serverSettings = useQuery(serverSettingsQueryOptions()).data;
   const providerDetection = useProviderDetection();
+  const providerSetup = useProviderSetup(providerDetection);
   const openProjectImport = useProjectImportDialogStore((store) => store.openDialog);
   const markEngaged = useOnboardingDialogStore((store) => store.markEngaged);
   const { t, formatLocale } = useTranslation();
@@ -118,23 +117,13 @@ function OnboardingFlow(props: {
     if (isOnboardingSetupStep(step)) markEngaged();
   }, [markEngaged, step]);
 
-  const providerRows = VISIBLE_PROVIDER_DESCRIPTORS.map((descriptor) => ({
-    provider: descriptor.kind,
-    state: classifyProviderSetup({
-      status: findProviderStatus(statuses, descriptor.kind),
-      disabled: serverSettings?.providers[descriptor.kind].enabled === false,
-      detecting: providerDetection.detecting,
-      detectionFailed: providerDetection.failed,
-    }),
-  }));
-  const providerSummary = summarizeProviderSetup(providerRows);
-  const liveProviderKey = providerRows
+  const providerSummary = providerSetup.summary;
+  const connectedProviders = providerSetup.rows
     .filter((row) => row.state === "connected")
-    .map((row) => row.provider)
-    .join(",");
+    .map((row) => row.descriptor.kind);
+  const liveProviderKey = connectedProviders.join(",");
   const liveProviders = useMemo<ReadonlySet<ProviderKind>>(
-    () =>
-      new Set(providerRows.filter((row) => row.state === "connected").map((row) => row.provider)),
+    () => new Set(connectedProviders),
     // Keyed by the connected set, not the rows array rebuilt every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [liveProviderKey],
@@ -148,6 +137,7 @@ function OnboardingFlow(props: {
   }, [finishAfterProject, projectBusy, onComplete]);
 
   const onPaired = useCallback((deviceName: string) => setPairedDevice(deviceName), []);
+  const windowControlsGutterClassName = useDesktopTopBarWindowControlsGutterClassName();
 
   const header = (
     <header
@@ -155,6 +145,7 @@ function OnboardingFlow(props: {
         "drag-region relative z-20 flex shrink-0 items-center gap-2.5 border-b border-foreground/8 bg-background ps-5 pe-6",
         CHAT_SURFACE_HEADER_HEIGHT_CLASS,
         isElectron && isMacNavigatorPlatform() && DESKTOP_TOP_BAR_TRAFFIC_LIGHT_GUTTER_CLASS,
+        windowControlsGutterClassName,
       )}
     >
       <img src="/app-icons/dark.png" alt="" className="size-[26px] shrink-0" draggable={false} />
@@ -242,7 +233,7 @@ function OnboardingFlow(props: {
             secondary={{ label: t("common:app_back"), onClick: goBack }}
             primary={{ label: t("git:continue"), onClick: goNext }}
           >
-            <ProvidersStep detection={providerDetection} />
+            <ProvidersStep detection={providerDetection} setup={providerSetup} />
           </OnboardingScreen>
         );
       case "tasks":

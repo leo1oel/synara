@@ -30,6 +30,7 @@ import { SettingsSegmentedControl } from "~/components/settings/SettingControls"
 import { Button } from "~/components/ui/button";
 import { Switch } from "~/components/ui/switch";
 import { useProviderUsageSummary } from "~/hooks/useProviderUsageSummary";
+import { readWorkspaceFrame } from "~/lib/hosts/workspaceFrame";
 import { RotateCcwIcon, TriangleAlertIcon } from "~/lib/icons";
 import {
   deriveProviderUsageDisplayRows,
@@ -267,7 +268,7 @@ export function ProviderUsageSettingsPanel() {
   // change nothing there; the embed keeps the popover options, Refresh and the cards.
   const showSidebarUsageSettings = !isSynaraEmbedMode();
 
-  return (
+  const appUsageSettings = (
     <>
       {showSidebarUsageSettings ? (
         <SettingsSection
@@ -367,6 +368,13 @@ export function ProviderUsageSettingsPanel() {
           }
         />
       </SettingsSection>
+    </>
+  );
+
+  return (
+    <>
+      {/* Presentation preferences belong to the controlling app, not the selected host. */}
+      {!readWorkspaceFrame() ? appUsageSettings : null}
       <SettingsSectionShell
         title="settings:providerUsage"
         action={

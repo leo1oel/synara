@@ -391,6 +391,8 @@ import type {
 } from "./terminal";
 import type {
   ClientOrchestrationCommand,
+  OrchestrationSettleTurnDispatchInput,
+  OrchestrationSettleTurnDispatchResult,
   OrchestrationGetFullThreadDiffInput,
   OrchestrationGetFullThreadDiffResult,
   OrchestrationGetThreadDetailSnapshotInput,
@@ -463,6 +465,8 @@ import type {
   StatsGetProfileTokenStatsResult,
   StatsGetRecapInput,
   StatsGetRecapResult,
+  StatsGetUsageAnalyticsInput,
+  StatsGetUsageAnalyticsResult,
 } from "./stats";
 import type { BrowserAnnotationMethods } from "./browserAnnotations";
 import { type KeybindingCommand, MAX_KEYBINDING_VALUE_LENGTH } from "./keybindings";
@@ -1523,6 +1527,9 @@ export interface NativeApi {
       input: StatsGetProfileTokenStatsInput,
     ) => Promise<StatsGetProfileTokenStatsResult>;
     getRecap: (input: StatsGetRecapInput) => Promise<StatsGetRecapResult>;
+    getUsageAnalytics: (
+      input: StatsGetUsageAnalyticsInput,
+    ) => Promise<StatsGetUsageAnalyticsResult>;
   };
   provider: {
     getComposerCapabilities: (
@@ -1565,6 +1572,9 @@ export interface NativeApi {
       input: OrchestrationSearchThreadsInput,
     ) => Promise<OrchestrationSearchThreadsResult>;
     dispatchCommand: (command: ClientOrchestrationCommand) => Promise<{ sequence: number }>;
+    settleTurnDispatch?: (
+      input: typeof OrchestrationSettleTurnDispatchInput.Type,
+    ) => Promise<OrchestrationSettleTurnDispatchResult>;
     importThread: (
       input: OrchestrationImportThreadInput,
     ) => Promise<OrchestrationImportThreadResult>;

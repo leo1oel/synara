@@ -547,6 +547,15 @@ export function omitRoutedSubagentWorkEntries<Entry extends WorkLogEntry>(
   return kept.length === entries.length ? entries : kept;
 }
 
+/** A skipped Hub baseline can leave the Git checkpoint intact or inapplicable. */
+export function isMissingCheckpointBaselineActivity(
+  activity: OrchestrationThreadActivity,
+): boolean {
+  if (activity.kind !== "checkpoint.baseline.skipped") return false;
+  const checkpoint = asRecord(activity.payload)?.checkpointBaseline;
+  return checkpoint !== "captured" && checkpoint !== "not-applicable";
+}
+
 export function deriveWorkLogEntries(
   activities: ReadonlyArray<OrchestrationThreadActivity>,
   latestTurnId: TurnId | undefined,
@@ -557,6 +566,7 @@ export function deriveWorkLogEntries(
     latestTurnState?: OrchestrationLatestTurnState | null;
     latestTurnCompletedAt?: string | null;
     translate?: typeof t;
+    keepMissingCheckpointNotices?: boolean;
   } = {},
 ): WorkLogEntry[] {
   const translate = options.translate ?? t;
@@ -589,6 +599,15 @@ export function deriveWorkLogEntries(
     .filter((activity) => !isQuietApprovalResolutionActivity(activity))
     .filter((activity) => !isDiagnosticOnlyNativeActivity(activity))
     .filter((activity) => activity.kind !== "account.rate-limits.updated")
+    // Environment replaces quota history and missing-checkpoint notices when available.
+    .filter(
+      (activity) =>
+        (options.keepMissingCheckpointNotices || !isMissingCheckpointBaselineActivity(activity)) &&
+        !(
+          activity.kind === "account.rate-limited" &&
+          asRecord(activity.payload)?.status === "allowed_warning"
+        ),
+    )
     .filter(
       (activity) =>
         activity.kind !== "context-window.updated" && activity.kind !== "context-window.configured",
@@ -1377,9 +1396,9 @@ function shouldKeepActivityForWorkLog(
     return true;
   }
 
-  // Failed Undo and skipped baseline feedback can precede a provider turn id,
-  // or refer to a turn that Undo rolled out of view. Keep this feedback visible,
-  // and the notice of an Undo that left conflicts to resolve with it.
+  // Recovery and pre-turn preparation feedback may precede the provider turn id,
+  // or refer to a turn that Undo rolled out of view. Keep it visible, and the
+  // notice of an Undo that left conflicts to resolve with it.
   if (
     activity.kind === CHECKPOINT_REVERT_FAILED_ACTIVITY_KIND ||
     activity.kind === "checkpoint.revert.conflicts" ||

@@ -182,6 +182,48 @@ it("shows each provider's installation beside its picker switch", async () => {
   await expect.element(pickerSwitch(codex)).toBeChecked();
 });
 
+it("reports Claude as installed and visible when only a secondary account is ready", async () => {
+  harness.statuses = [
+    ...harness.statuses.filter((status) => status.provider !== "claudeAgent"),
+    {
+      provider: "claudeAgent",
+      driver: "claudeAgent",
+      instanceId: "claudeAgent",
+      enabled: false,
+      available: false,
+      authStatus: "unknown",
+      status: "warning",
+      checkedAt: "2026-09-16T21:46:18.000Z",
+    },
+    {
+      provider: "claudeAgent",
+      driver: "claudeAgent",
+      instanceId: "work_claude",
+      enabled: true,
+      available: true,
+      authStatus: "authenticated",
+      status: "ready",
+      checkedAt: "2026-09-16T21:46:18.000Z",
+    },
+  ];
+  await render(
+    <ProvidersSettingsPanel
+      {...props}
+      settings={{
+        ...props.settings,
+        providerInstances: {
+          claudeAgent: { driver: "claudeAgent", displayName: "Privat", enabled: false },
+          work_claude: { driver: "claudeAgent", displayName: "Work", enabled: true },
+        },
+      }}
+    />,
+  );
+
+  const claude = t("settings:showInTheProviderPicker", { value0: providerTitle("claudeAgent") });
+  expect(pickerRow(claude).textContent).toContain(t("settings:installed"));
+  await expect.element(pickerSwitch(claude)).toBeChecked();
+});
+
 it("does not report cached provider health as installed before reconciliation", async () => {
   harness.reconciled = false;
   await render(<ProvidersSettingsPanel {...props} />);

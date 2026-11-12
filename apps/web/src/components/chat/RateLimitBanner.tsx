@@ -1,49 +1,13 @@
 // FILE: RateLimitBanner.tsx
-// Purpose: Derives and renders provider rate-limit warnings for the active chat.
+// Purpose: Renders provider rate limits near the active chat composer.
 // Layer: Chat status presentation
-// Exports: RateLimitBanner and rate-limit derivation helpers.
+// Exports: RateLimitBanner.
 
-import type { OrchestrationThreadActivity } from "@synara/contracts";
+import type { RateLimitStatus } from "~/lib/rateLimitStatus";
 import { Alert, AlertAction, AlertDescription } from "../ui/alert";
 import { IconButton } from "../ui/icon-button";
 import { CircleAlertIcon, XIcon } from "~/lib/icons";
-import { ChatColumnBannerFrame } from "./ChatColumnBannerFrame";
 import { type t, useTranslation } from "~/i18n";
-
-export type RateLimitStatus = {
-  status: "rejected" | "allowed_warning";
-  resetsAt?: string;
-  utilization?: number;
-};
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
-}
-
-export function deriveLatestRateLimitStatus(
-  activities: ReadonlyArray<OrchestrationThreadActivity>,
-): RateLimitStatus | null {
-  const now = Date.now();
-  for (let i = activities.length - 1; i >= 0; i--) {
-    const activity = activities[i];
-    if (!activity || activity.kind !== "account.rate-limited") continue;
-    const payload = asRecord(activity.payload);
-    if (!payload) continue;
-    const status = payload.status;
-    if (status !== "rejected" && status !== "allowed_warning") continue;
-    // If resetsAt is in the past, the limit has expired — skip
-    if (typeof payload.resetsAt === "string") {
-      const resetsAtMs = Date.parse(payload.resetsAt);
-      if (!Number.isNaN(resetsAtMs) && resetsAtMs < now) continue;
-    }
-    return {
-      status,
-      ...(typeof payload.resetsAt === "string" ? { resetsAt: payload.resetsAt } : {}),
-      ...(typeof payload.utilization === "number" ? { utilization: payload.utilization } : {}),
-    };
-  }
-  return null;
-}
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -120,28 +84,26 @@ export const RateLimitBanner = function RateLimitBanner({
   const message = formatRateLimitNotice(t, rateLimitStatus, Date.now());
 
   return (
-    <ChatColumnBannerFrame>
-      <Alert variant={isRejected ? "error" : "warning"}>
-        <CircleAlertIcon />
-        <AlertDescription>{message}</AlertDescription>
-        {onDismiss ? (
-          // The shared AlertAction drops below the text under the 640px breakpoint and
-          // centers on the whole text otherwise. The embedded panel's viewport is the
-          // panel itself, so in a narrow panel the X sat alone on a row of its own.
-          // Keep it in the third column at every width, on a box one line tall, so it
-          // stays beside the first line however far the message wraps.
-          <AlertAction className="row-start-1 h-lh items-center self-start max-sm:col-start-3 max-sm:mt-0 sm:self-start">
-            <IconButton
-              className="size-6 sm:size-6"
-              label={t("chat:rateLimit_dismissStatus")}
-              title={t("chat:rateLimit_dismissStatus")}
-              onClick={onDismiss}
-            >
-              <XIcon className="size-3.5" />
-            </IconButton>
-          </AlertAction>
-        ) : null}
-      </Alert>
-    </ChatColumnBannerFrame>
+    <Alert variant={isRejected ? "error" : "warning"}>
+      <CircleAlertIcon />
+      <AlertDescription>{message}</AlertDescription>
+      {onDismiss ? (
+        // The shared AlertAction drops below the text under the 640px breakpoint and
+        // centers on the whole text otherwise. The embedded panel's viewport is the
+        // panel itself, so in a narrow panel the X sat alone on a row of its own.
+        // Keep it in the third column at every width, on a box one line tall, so it
+        // stays beside the first line however far the message wraps.
+        <AlertAction className="row-start-1 h-lh items-center self-start max-sm:col-start-3 max-sm:mt-0 sm:self-start">
+          <IconButton
+            className="size-6 sm:size-6"
+            label={t("chat:rateLimit_dismissStatus")}
+            title={t("chat:rateLimit_dismissStatus")}
+            onClick={onDismiss}
+          >
+            <XIcon className="size-3.5" />
+          </IconButton>
+        </AlertAction>
+      ) : null}
+    </Alert>
   );
 };

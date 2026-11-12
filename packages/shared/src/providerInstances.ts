@@ -242,14 +242,14 @@ export function resolveProviderStatusInstanceId(input: {
 
 // Advisory warnings the health layer marks available (Pi bundled SDK, Cursor
 // model-discovery warnings, unconfirmed custom binaries) stay sendable; only
-// unavailable or unauthenticated statuses block sends. The composer and the
+// disabled, unavailable or unauthenticated statuses block sends. The composer and the
 // server's auxiliary model resolution share this one readiness rule.
 export function isProviderUsable(status: ServerProviderStatus | null | undefined): boolean {
   if (!status) {
     // Missing status means the health check has not confirmed an installed provider yet.
     return false;
   }
-  return status.available && status.authStatus !== "unauthenticated";
+  return status.enabled !== false && status.available && status.authStatus !== "unauthenticated";
 }
 
 function stableSlugHash(value: string): string {

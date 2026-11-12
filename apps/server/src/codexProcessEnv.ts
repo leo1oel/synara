@@ -41,6 +41,8 @@ import {
   registerProviderCredentialKey,
 } from "./providerChildEnvironment.ts";
 import { SYNARA_MCP_SERVER_NAME } from "./agentGateway/mcpInjection.ts";
+import { decodeJwtClaims } from "./jwtClaims.ts";
+import { isCodexApiKeyAuthRecord } from "./provider/codexAccountIdentity.ts";
 
 const CODEX_PROCESS_SHELL_ENV_NAMES = ["PATH", "SSH_AUTH_SOCK"] as const;
 const CODEX_SQLITE_HOME_ENV_NAME = "CODEX_SQLITE_HOME";
@@ -669,17 +671,6 @@ function codexAuthSecretSafeHash(value: string): string {
   return `sha256:${createHash("sha256").update(value).digest("hex")}`;
 }
 
-function readCodexAuthJwtClaims(value: unknown): Record<string, unknown> | undefined {
-  const token = codexAuthNonEmptyString(value);
-  const payload = token?.split(".")[1];
-  if (!payload) return undefined;
-  try {
-    return asRecord(JSON.parse(Buffer.from(payload, "base64url").toString("utf8")));
-  } catch {
-    return undefined;
-  }
-}
-
 function firstCodexAuthString(
   records: readonly (Record<string, unknown> | undefined)[],
   keys: readonly string[],
@@ -712,12 +703,14 @@ function readCodexPreparedAuthIdentity(content: Buffer | undefined): CodexPrepar
       return { state: "present", authMode: "unknown", identity: contentIdentity, fallback: true };
     }
     const tokens = asRecord(auth.tokens);
-    const idTokenClaims = readCodexAuthJwtClaims(tokens?.id_token ?? tokens?.idToken);
+    const idTokenClaims = decodeJwtClaims(
+      codexAuthNonEmptyString(tokens?.id_token ?? tokens?.idToken),
+    );
     const rawMode = codexAuthNonEmptyString(auth.auth_mode ?? auth.authMode)?.toLowerCase();
     const apiKey = codexAuthNonEmptyString(
       auth.OPENAI_API_KEY ?? auth.openai_api_key ?? auth.apiKey,
     );
-    if (rawMode === "apikey" || rawMode === "api-key" || (apiKey && !tokens)) {
+    if (isCodexApiKeyAuthRecord(auth)) {
       return {
         state: "present",
         authMode: "api-key",

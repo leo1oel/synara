@@ -67,11 +67,13 @@ import {
 } from "../components/settings/KeyboardShortcutsSettingsPanel";
 import { useOnboardingDialogStore } from "../onboarding/onboardingDialogStore";
 import { ProfileSettingsPanel } from "../components/settings/ProfileSettingsPanel";
-import { BillingSettingsPanel } from "../components/settings/BillingSettingsPanel";
 import { ACCOUNT_BILLING_ENABLED } from "~/lib/accountBilling";
-import { ProviderUsageSettingsPanel } from "../components/settings/ProviderUsageSettingsPanel";
+import { UsageSettingsPanel } from "../components/settings/UsageSettingsPanel";
 import { ExternalMcpSettingsPanel } from "../components/settings/ExternalMcpSettingsPanel";
 import { ConnectionsSettingsPanel } from "../components/settings/ConnectionsSettingsPanel";
+import { SettingsComputerPicker } from "../components/hosts/ComputerPicker";
+import { useSettingsComputerRoute } from "../lib/hosts/settingsComputer";
+import { readWorkspaceFrame } from "../lib/hosts/workspaceFrame";
 import { McpConnectorsSettingsPanel } from "../components/settings/McpConnectorsSettingsPanel";
 import {
   SettingResetButton,
@@ -353,11 +355,18 @@ function settingsTargetPlace(elementId: string): HTMLElement | null {
   return element?.closest("label") ?? element;
 }
 
+function SettingsRoute() {
+  const search = useSearch({ strict: false }) as Record<string, unknown>;
+  const redirecting = useSettingsComputerRoute(normalizeSettingsSection(search.section), search);
+  return redirecting ? null : <SettingsRouteView />;
+}
+
 function SettingsRouteView() {
   // The hook's t re-renders the page when the language changes; the module t does not.
   const { t } = useTranslation();
   const isEmbed = isSynaraEmbedMode();
   const navigate = useNavigate();
+  const isController = !readWorkspaceFrame();
   const [defaultDiffRenderMode, setDefaultDiffRenderMode] = useLocalStorage(
     DIFF_RENDER_MODE_STORAGE_KEY,
     DEFAULT_DIFF_RENDER_MODE,
@@ -728,6 +737,9 @@ function SettingsRouteView() {
       : []),
     ...(settings.composerEffortSlider !== defaults.composerEffortSlider
       ? ["settings:effortSlider"]
+      : []),
+    ...(settings.showRateLimitWarnings !== defaults.showRateLimitWarnings
+      ? ["settings:rateLimitWarnings"]
       : []),
     ...(settings.messageTrailAudioSource !== defaults.messageTrailAudioSource
       ? ["settings:messageTrailSound"]
@@ -1747,6 +1759,15 @@ function SettingsRouteView() {
           ariaLabel: t("settings:showEffortSliderInTheComposer"),
         })}
 
+        {renderBooleanSettingRow({
+          id: "setting-rate-limit-warnings",
+          settingKey: "showRateLimitWarnings",
+          title: "settings:rateLimitWarnings",
+          description: t("settings:rateLimitWarningsDescription"),
+          resetLabel: t("settings:rateLimitWarnings2"),
+          ariaLabel: t("settings:showRateLimitWarnings"),
+        })}
+
         {isAudioLevelAvailable() ? (
           <SettingsRow
             id="setting-message-trail-sound"
@@ -1942,12 +1963,13 @@ function SettingsRouteView() {
         return <SkillsSettingsPanel />;
       case "usage":
         // The plan lives with usage ("Usage and billing"), never above the profile.
-        // A fragment, not a wrapper: sections space themselves as siblings.
+        // Keyed by target so a plan deep link reopens the Billing tab.
         return (
-          <>
-            {billingEnabled ? <BillingSettingsPanel /> : null}
-            <ProviderUsageSettingsPanel />
-          </>
+          <UsageSettingsPanel
+            key={settingsTarget ?? ""}
+            billingEnabled={billingEnabled && isController}
+            target={settingsTarget}
+          />
         );
       default:
         return null;
@@ -1993,13 +2015,14 @@ function SettingsRouteView() {
               className={cn(
                 "synara-settings-content",
                 "mx-auto w-full px-6 py-8",
-                activeSection === "connectors"
+                activeSection === "connectors" || activeSection === "usage"
                   ? "max-w-4xl"
                   : activeSection === "profile"
                     ? "max-w-3xl"
                     : "max-w-2xl",
               )}
             >
+              <SettingsComputerPicker section={activeSection} />
               {activeSection !== "profile" ? (
                 <div className="synara-settings-heading mb-8 flex items-start justify-between gap-4">
                   <div className="min-w-0">
@@ -2013,7 +2036,7 @@ function SettingsRouteView() {
                   {!isEmbed ? (
                     activeSection === "shortcuts" ? (
                       <KeyboardShortcutsResetButton />
-                    ) : (
+                    ) : isController ? (
                       <Button
                         size="xs"
                         variant="outline"
@@ -2024,7 +2047,7 @@ function SettingsRouteView() {
                         <ResetIcon className="size-3.5" />
                         {t("settings:advanced_restoreDefaults")}
                       </Button>
-                    )
+                    ) : null
                   ) : null}
                 </div>
               ) : null}
@@ -2098,5 +2121,5 @@ function SettingsRouteView() {
 }
 
 export const Route = createFileRoute("/_chat/settings")({
-  component: SettingsRouteView,
+  component: SettingsRoute,
 });

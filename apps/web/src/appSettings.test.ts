@@ -655,6 +655,8 @@ describe("normalizeStoredAppSettings", () => {
   it("builds the initial server migration patch from legacy plaintext before storage redaction", () => {
     const decodedSettings = Schema.decodeSync(Schema.fromJsonString(AppSettingsSchema))(
       JSON.stringify({
+        openCodeServerUrl: "http://127.0.0.1:4096",
+        openCodeServerPassword: "legacy-password-fixture",
         providerInstances: {
           grok_work: {
             driver: "grok",
@@ -668,7 +670,14 @@ describe("normalizeStoredAppSettings", () => {
       }),
     );
 
-    expect(buildInitialServerSettingsMigrationPatch(decodedSettings).providerInstances).toEqual({
+    const patch = buildInitialServerSettingsMigrationPatch(decodedSettings);
+    expect(patch).not.toHaveProperty("providerInstances");
+    expect(patch).not.toHaveProperty("providers");
+    expect(patch.legacyProviders?.opencode).toEqual({
+      serverUrl: "http://127.0.0.1:4096",
+      serverPassword: "legacy-password-fixture",
+    });
+    expect(patch.legacyProviderInstances).toEqual({
       grok_work: {
         driver: "grok",
         environment: [{ name: "XAI_API_KEY", value: "super-secret", sensitive: true }],
@@ -697,6 +706,7 @@ describe("normalizeStoredAppSettings", () => {
   it("keeps legacy provider secrets until the server migration is committed", () => {
     const decodedSettings = Schema.decodeSync(Schema.fromJsonString(AppSettingsSchema))(
       JSON.stringify({
+        openCodeServerPassword: "legacy-fixture",
         providerInstances: {
           grok_work: {
             driver: "grok",
@@ -710,6 +720,14 @@ describe("normalizeStoredAppSettings", () => {
       }),
     );
 
+    expect(
+      normalizeInitialStoredAppSettingsForServerMigration(decodedSettings, false)
+        .openCodeServerPassword,
+    ).toBe("legacy-fixture");
+    expect(
+      normalizeInitialStoredAppSettingsForServerMigration(decodedSettings, true)
+        .openCodeServerPassword,
+    ).toBe("");
     expect(
       normalizeInitialStoredAppSettingsForServerMigration(decodedSettings, false).providerInstances,
     ).toEqual({

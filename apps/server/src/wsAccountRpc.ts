@@ -81,9 +81,9 @@ export function makeAccountRpcHandlers({ accountSession, openBrowser }: AccountR
     [WS_METHODS.accountStatus]: () =>
       requireOwnerRole.pipe(
         Effect.flatMap(() =>
-          Effect.promise(() => accountSession.status()).pipe(
+          Effect.tryPromise(() => accountSession.status()).pipe(
             Effect.mapError((cause) =>
-              toAccountWsRpcError(cause, "Failed to read the account session"),
+              toSensitiveWsRpcError(cause, "Failed to read the account session"),
             ),
           ),
         ),
