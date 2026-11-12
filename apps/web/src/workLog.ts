@@ -2161,6 +2161,7 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
       payload,
       itemType,
       isFileChange: itemType === "file_change" || requestKind === "file-change",
+      completed: toolStatus === "completed",
       changedFiles,
     });
     if (images.length > 0) {

@@ -50,11 +50,63 @@ function viewedImagePath(payload: Record<string, unknown>): string | undefined {
   return imagePath(item?.path) ?? imagePath(data?.path) ?? imagePath(payload.detail);
 }
 
+const PATH_FIELDS = [
+  "path",
+  "file",
+  "file_path",
+  "filepath",
+  "filePath",
+  "relativePath",
+  "filename",
+] as const;
+
+const VACATING_CHANGE = /delet|remov|move|renam/iu;
+
+function isVacatingChange(record: Record<string, unknown>): boolean {
+  const kind = typeof record.kind === "string" ? record.kind : asRecord(record.kind)?.type;
+  if (typeof kind === "string" && VACATING_CHANGE.test(kind)) return true;
+  const kindRecord = asRecord(record.kind);
+  const movedTo = kindRecord?.move_path ?? kindRecord?.movePath ?? record.move_path;
+  if (typeof movedTo === "string" && movedTo.trim().length > 0) return true;
+  return typeof record.toolName === "string" && VACATING_CHANGE.test(record.toolName);
+}
+
+// Paths a file-change call deleted or moved away from: nothing is left there to preview.
+function collectVacatedPaths(
+  value: unknown,
+  target: Set<string>,
+  vacated: boolean,
+  depth: number,
+): void {
+  if (depth > 6) return;
+  if (Array.isArray(value)) {
+    for (const entry of value) collectVacatedPaths(entry, target, vacated, depth + 1);
+    return;
+  }
+  const record = asRecord(value);
+  if (!record) return;
+  const vacating = vacated || isVacatingChange(record);
+  if (typeof record.oldPath === "string") target.add(record.oldPath.trim());
+  if (vacating) {
+    for (const field of PATH_FIELDS) {
+      const path = record[field];
+      if (typeof path === "string") target.add(path.trim());
+    }
+  }
+  for (const nested of Object.values(record)) {
+    if (nested !== null && typeof nested === "object") {
+      collectVacatedPaths(nested, target, vacating, depth + 1);
+    }
+  }
+}
+
 export function deriveWorkEntryImages(input: {
   readonly payload: Record<string, unknown> | null | undefined;
   readonly itemType: string | undefined;
   /** Whether the call edits files; only then are its paths files it wrote. */
   readonly isFileChange: boolean;
+  /** Whether the call finished successfully, so the files it wrote exist on disk. */
+  readonly completed: boolean;
   readonly changedFiles: ReadonlyArray<string>;
 }): WorkEntryImage[] {
   const payload = input.payload;
@@ -68,11 +120,13 @@ export function deriveWorkEntryImages(input: {
   }
   // An SVG (or any image) a file-change call wrote is previewed from disk. The paths
   // other calls carry are what they read or searched; a snapshot covers an image read.
-  if (!input.isFileChange) return [];
+  if (!input.isFileChange || !input.completed) return [];
+  const vacated = new Set<string>();
+  collectVacatedPaths(payload.data, vacated, false, 0);
   return dedupe(
     input.changedFiles.flatMap((file) => {
       const path = imagePath(file);
-      return path ? [{ path, snapshot: false }] : [];
+      return path && !vacated.has(path) ? [{ path, snapshot: false }] : [];
     }),
   );
 }

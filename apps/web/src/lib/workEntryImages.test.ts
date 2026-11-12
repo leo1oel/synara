@@ -24,6 +24,7 @@ describe("deriveWorkEntryImages", () => {
         payload: { toolImages: [snapshot(SNAPSHOT), snapshot(SNAPSHOT), { path: "notes.txt" }] },
         itemType: "file_change",
         isFileChange: true,
+        completed: false,
         changedFiles: ["figure.svg"],
       }),
     ).toEqual([{ path: SNAPSHOT, snapshot: true }]);
@@ -35,6 +36,7 @@ describe("deriveWorkEntryImages", () => {
         payload: { data: { item: { type: "imageView", path: "/work/figs/plot.png" } } },
         itemType: "image_view",
         isFileChange: false,
+        completed: false,
         changedFiles: ["/work/figs/plot.png"],
       }),
     ).toEqual([{ path: "/work/figs/plot.png", snapshot: false }]);
@@ -46,6 +48,7 @@ describe("deriveWorkEntryImages", () => {
         payload: {},
         itemType: "file_change",
         isFileChange: true,
+        completed: true,
         changedFiles: ["paper.tex", "figs/diagram.svg"],
       }),
     ).toEqual([{ path: "figs/diagram.svg", snapshot: false }]);
@@ -54,6 +57,7 @@ describe("deriveWorkEntryImages", () => {
         payload: {},
         itemType: "dynamic_tool_call",
         isFileChange: false,
+        completed: true,
         changedFiles: ["figs/diagram.svg"],
       }),
     ).toEqual([]);
@@ -61,6 +65,90 @@ describe("deriveWorkEntryImages", () => {
 });
 
 describe("work log image previews", () => {
+  function writeSvg(kind: "tool.started" | "tool.completed", status: string) {
+    return makeActivity({
+      id: `write-${kind}-${status}`,
+      kind,
+      summary: "Write",
+      payload: {
+        itemType: "file_change",
+        status,
+        data: { toolName: "Write", input: { file_path: "figs/diagram.svg" } },
+      },
+    });
+  }
+
+  it("previews a written image only once the write completed", () => {
+    const [started] = deriveWorkLogEntries([writeSvg("tool.started", "inProgress")], undefined);
+    expect(started?.images).toBeUndefined();
+    const [failed] = deriveWorkLogEntries([writeSvg("tool.completed", "failed")], undefined);
+    expect(failed?.images).toBeUndefined();
+    const [completed] = deriveWorkLogEntries([writeSvg("tool.completed", "completed")], undefined);
+    expect(completed?.images).toEqual([{ path: "figs/diagram.svg", snapshot: false }]);
+  });
+
+  it("does not preview images a file change deleted or moved away", () => {
+    const [codexPatch] = deriveWorkLogEntries(
+      [
+        makeActivity({
+          kind: "tool.completed",
+          summary: "File change",
+          payload: {
+            itemType: "file_change",
+            status: "completed",
+            data: {
+              item: {
+                type: "fileChange",
+                changes: [
+                  { path: "figs/old.svg", kind: { type: "delete" } },
+                  {
+                    path: "figs/before.png",
+                    kind: { type: "update", move_path: "figs/after.png" },
+                  },
+                  { path: "figs/new.svg", kind: { type: "add" } },
+                ],
+              },
+            },
+          },
+        }),
+      ],
+      undefined,
+    );
+    expect(codexPatch?.images).toEqual([{ path: "figs/new.svg", snapshot: false }]);
+
+    const [rename] = deriveWorkLogEntries(
+      [
+        makeActivity({
+          kind: "tool.completed",
+          summary: "Rename",
+          payload: {
+            itemType: "file_change",
+            status: "completed",
+            data: { changes: [{ oldPath: "figs/a.png", newPath: "figs/b.png" }] },
+          },
+        }),
+      ],
+      undefined,
+    );
+    expect(rename?.images).toEqual([{ path: "figs/b.png", snapshot: false }]);
+
+    const [deleteTool] = deriveWorkLogEntries(
+      [
+        makeActivity({
+          kind: "tool.completed",
+          summary: "Delete",
+          payload: {
+            itemType: "file_change",
+            status: "completed",
+            data: { toolName: "Delete", input: { file_path: "figs/diagram.svg" } },
+          },
+        }),
+      ],
+      undefined,
+    );
+    expect(deleteTool?.images).toBeUndefined();
+  });
+
   it("carries snapshots from a completed tool call onto its row", () => {
     const [entry] = deriveWorkLogEntries(
       [
