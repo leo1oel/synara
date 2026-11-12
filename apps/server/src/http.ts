@@ -69,6 +69,7 @@ import {
 import { ProjectAgentRepository } from "./persistence/Services/ProjectAgentRepository";
 import { resolveCachedEditorIcon } from "./editorAppIcons";
 import { LOCAL_IMAGE_ROUTE_PATH, resolveAllowedLocalPreviewFile } from "./localImageFiles.ts";
+import { toolResultImagesRoot } from "./provider/toolResultImages.ts";
 import type { ProjectFaviconResolverShape } from "./project/Services/ProjectFaviconResolver";
 import { resolveScratchWorkspacesRoot } from "./scratchWorkspaces.ts";
 import { ProjectFaviconResolver } from "./project/Services/ProjectFaviconResolver";
@@ -1014,6 +1015,7 @@ export const localImageEffectRouteLayer = HttpRouter.add(
         cwd: url.searchParams.get("cwd"),
         codexHomePaths,
         scratchWorkspacesRoot: resolveScratchWorkspacesRoot(),
+        toolImagesRoot: toolResultImagesRoot(config.stateDir),
         allowAbsoluteLocalPreviewFile: true,
         previewGrant: url.searchParams.get("grant"),
       }).catch(() => null),

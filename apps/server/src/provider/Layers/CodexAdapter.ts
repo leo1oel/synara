@@ -85,6 +85,7 @@ import {
   isNonFatalCodexErrorMessage,
 } from "../../codexErrorClassification.ts";
 import { ServerConfig } from "../../config.ts";
+import { toolResultImagesRoot } from "../toolResultImages.ts";
 import { resolveCodexServiceTier } from "../../codexServiceTier.ts";
 import { makeRuntimeTaskListItem } from "../runtimeTaskList.ts";
 import {
@@ -2137,6 +2138,7 @@ function mapToRuntimeEvents(
 const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
   Effect.gen(function* () {
     const serverConfig = yield* Effect.service(ServerConfig);
+    const toolImagesRoot = toolResultImagesRoot(serverConfig.stateDir);
     const packagedSkillsDir = bundledSkillsDir();
     // Optional so adapter tests can run without the gateway layer; when
     // present, every session gets the synara_* MCP tools.
@@ -2884,7 +2886,8 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
             (runtimeEvent) => runtimeEvent.type === "event.unmapped",
           );
           const sizedRuntimeEvents = filterRuntimeEvents(stampedEvent, mappedRuntimeEvents).map(
-            compactProviderRuntimeEventForIngress,
+            (runtimeEvent) =>
+              compactProviderRuntimeEventForIngress(runtimeEvent, { toolImagesRoot }),
           );
           const runtimeEvents = sizedRuntimeEvents.map((item) => item.event);
           trackTurnWatchdogActivity(stampedEvent.threadId, runtimeEvents);

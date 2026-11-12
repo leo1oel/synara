@@ -49,6 +49,7 @@ import {
   type SynaraMcpToolStatus,
 } from "./lib/toolCallLabel";
 import { toolArgumentSummaryToolName } from "./lib/toolArgumentSummary";
+import { deriveWorkEntryImages, type WorkEntryImage } from "./lib/workEntryImages";
 import { computerToolName, describeComputerToolCall } from "./lib/computerToolPresentation";
 import {
   deriveWorkLogToolDetails,
@@ -180,6 +181,8 @@ export interface WorkLogEntry {
   toolStatus?: SynaraMcpToolStatus;
   liveActivity?: WorkLogLiveActivity;
   toolDetails?: WorkLogToolDetails;
+  // Images the call returned to the model or wrote, previewed under the row.
+  images?: ReadonlyArray<WorkEntryImage>;
   itemType?: ToolLifecycleItemType;
   requestKind?: WorkLogRequestKind;
   subagents?: ReadonlyArray<WorkLogSubagent>;
@@ -2153,6 +2156,17 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
   if (requestKind) {
     entry.requestKind = requestKind;
   }
+  if (activity.kind.startsWith("tool.")) {
+    const images = deriveWorkEntryImages({
+      payload,
+      itemType,
+      isFileChange: itemType === "file_change" || requestKind === "file-change",
+      changedFiles,
+    });
+    if (images.length > 0) {
+      entry.images = images;
+    }
+  }
   if (
     activity.kind === "tool.started" &&
     itemType === "command_execution" &&
@@ -2809,6 +2823,7 @@ function mergeDerivedWorkLogEntries(
     : (next.toolStatus ?? previous.toolStatus);
   const liveActivity = mergeWorkLogLiveActivity(previous.liveActivity, next.liveActivity);
   const toolDetails = mergeWorkLogToolDetails(previous.toolDetails, next.toolDetails);
+  const images = next.images ?? previous.images;
   // Keep the visual anchor below, but let the latest known turn own lifecycle
   // settlement and live composer state when a background tool spans turns.
   const turnId = next.turnId ?? previous.turnId;
@@ -2840,6 +2855,7 @@ function mergeDerivedWorkLogEntries(
     ...(toolStatus ? { toolStatus } : {}),
     ...(liveActivity ? { liveActivity } : {}),
     ...(toolDetails ? { toolDetails } : {}),
+    ...(images ? { images } : {}),
   };
 }
 

@@ -47,6 +47,7 @@ import {
   withAgentGatewayTurnCancellation,
 } from "../../agentGateway/sessionLease.ts";
 import { ServerConfig } from "../../config.ts";
+import { toolResultImagesRoot } from "../toolResultImages.ts";
 import { buildProviderChildEnvironment } from "../../providerChildEnvironment.ts";
 import {
   ProviderAdapterRequestError,
@@ -1120,6 +1121,7 @@ export interface AntigravityAdapterDependencies {
 const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {}) =>
   Effect.gen(function* () {
     const serverConfig = yield* ServerConfig;
+    const toolImagesRoot = toolResultImagesRoot(serverConfig.stateDir);
     const readCompleteLines = dependencies.readCompleteLines ?? readCompleteAntigravityLines;
     const teardownProcessTree = dependencies.teardownProcessTree ?? teardownChildProcessTree;
     const agentGatewayCredentials = Option.getOrUndefined(
@@ -1143,7 +1145,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
     );
 
     const offer = (event: ProviderRuntimeEvent) => {
-      eventIngress.offer(compactProviderRuntimeEventForIngress(event));
+      eventIngress.offer(compactProviderRuntimeEventForIngress(event, { toolImagesRoot }));
     };
 
     const base = (

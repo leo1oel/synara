@@ -1748,3 +1748,45 @@ it("keeps approaching limits as usage state without adding work-log warnings", (
   ]);
   expectSchemaValidActivities(event);
 });
+
+describe("tool result image snapshots", () => {
+  const toolImages = [
+    { path: "/state/tool-images/thread/abc.png", mimeType: "image/png", byteLength: 2048 },
+  ];
+
+  it("lifts snapshot references out of the size-bounded tool data", () => {
+    const event = runtimeEvent({
+      eventId: "tool-images-completed",
+      type: "item.completed",
+      itemId: RuntimeItemId.makeUnsafe("tool-images"),
+      payload: {
+        itemType: "mcp_tool_call",
+        status: "completed",
+        title: "Preview figure",
+        // Large enough that the data bound truncates it; the references must survive.
+        data: { result: { content: "x".repeat(40_000) }, toolImages },
+      },
+    });
+    const [activity] = projectProviderRuntimeActivities(event);
+    const payload = activity!.payload as Record<string, unknown>;
+    expect(payload.toolImages).toEqual(toolImages);
+    expect(payload.data).not.toHaveProperty("toolImages");
+    expectSchemaValidActivities(event);
+  });
+
+  it("drops malformed references and keeps payloads without snapshots unchanged", () => {
+    const [activity] = projectProviderRuntimeActivities(
+      runtimeEvent({
+        eventId: "tool-images-malformed",
+        type: "item.updated",
+        itemId: RuntimeItemId.makeUnsafe("tool-images"),
+        payload: {
+          itemType: "mcp_tool_call",
+          status: "inProgress",
+          data: { toolImages: [{ path: "" }, { path: 4 }, "x"] },
+        },
+      }),
+    );
+    expect(activity!.payload).not.toHaveProperty("toolImages");
+  });
+});

@@ -4622,6 +4622,20 @@ label:has(> select#reasoning-effort) select {
   opacity: 0;
 }
 
+/* Tool-call row previews: small enough that a run of reads stays scannable. */
+.chat-generated-image[data-size="thumbnail"] {
+  margin: 0.25rem 0 0.35rem;
+  max-width: min(176px, 100%);
+}
+
+.chat-generated-image[data-size="thumbnail"] .chat-generated-image__frame {
+  border-radius: 0.6rem;
+}
+
+.chat-generated-image[data-size="thumbnail"] .chat-generated-image__img {
+  max-height: 132px;
+}
+
 .chat-generated-image__skeleton {
   position: absolute;
   inset: 0;

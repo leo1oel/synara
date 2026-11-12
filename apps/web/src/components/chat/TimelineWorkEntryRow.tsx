@@ -72,6 +72,7 @@ import { ComputerControlDeniedCard } from "./ComputerControlDeniedCard";
 import ChatMarkdown from "../ChatMarkdown";
 import { DiffStatLabel } from "./DiffStatLabel";
 import { type ExpandedImagePreview } from "./ExpandedImagePreview";
+import { WorkEntryImageStrip } from "./WorkEntryImageStrip";
 import { LinkChipIcon } from "../LinkChipIcon";
 import { McpServerIcon } from "./McpServerIcon";
 import { normalizeCompactToolLabel } from "./MessagesTimeline.logic";
@@ -1209,6 +1210,13 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
           );
         })()
       )}
+      <WorkEntryImageStrip
+        workEntry={workEntry}
+        cwd={markdownCwd}
+        threadId={threadId}
+        compact={compact}
+        onImageExpand={onImageExpand}
+      />
     </div>
   );
 });

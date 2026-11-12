@@ -1,6 +1,7 @@
 import type { ProviderRuntimeEvent } from "@synara/contracts";
 
 import { stripDiagnosticImages } from "./stripDiagnosticImages.ts";
+import { snapshotToolResultImages } from "./toolResultImages.ts";
 
 export const PROVIDER_RUNTIME_CALLBACK_BUFFER_MAX_BYTES = 32 * 1024 * 1024;
 export const PROVIDER_RUNTIME_CALLBACK_TERMINAL_RESERVE = 64;
@@ -35,11 +36,16 @@ function providerRuntimeEventBytes(event: ProviderRuntimeEvent): number {
 /**
  * Raw provider payloads are diagnostic data. Compact them before the callback
  * ingress so one pathological native message cannot consume the whole budget.
+ * With a snapshot root, images a tool returned are first copied there (see
+ * `toolResultImages.ts`) so the transcript can still show them once stripped.
  */
 export function compactProviderRuntimeEventForIngress(
   event: ProviderRuntimeEvent,
+  options?: { readonly toolImagesRoot?: string },
 ): SizedProviderRuntimeEvent {
-  event = stripDiagnosticImages(event) as ProviderRuntimeEvent;
+  event = stripDiagnosticImages(
+    snapshotToolResultImages(event, options?.toolImagesRoot),
+  ) as ProviderRuntimeEvent;
   const originalBytes = providerRuntimeEventBytes(event);
   if (originalBytes <= PROVIDER_RUNTIME_INGRESS_EVENT_MAX_BYTES || event.raw === undefined) {
     return { event, bytes: originalBytes };
