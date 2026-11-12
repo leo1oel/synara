@@ -9,6 +9,7 @@ import { compactProviderRuntimeEventForIngress } from "./providerRuntimeEventIng
 import {
   MAX_TOOL_RESULT_IMAGES_PER_EVENT,
   snapshotToolResultImages,
+  snapshotToolResultImagesInBackground,
   toolResultImagesThreadDirectory,
 } from "./toolResultImages.ts";
 
@@ -65,7 +66,7 @@ describe("snapshotToolResultImages", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  it("writes MCP and Anthropic image blocks and records them in place of the bytes", () => {
+  it("writes MCP and Anthropic image blocks and records them in place of the bytes", async () => {
     const event = toolEvent({
       toolName: "preview_latex_figure",
       result: {
@@ -81,7 +82,7 @@ describe("snapshotToolResultImages", () => {
       },
     });
 
-    const snapshotted = snapshotToolResultImages(event, root);
+    const snapshotted = await snapshotToolResultImages(event, root);
     const images = toolImagesOf(snapshotted);
 
     expect(images.map((image) => image.mimeType)).toEqual(["image/png", "image/jpeg"]);
@@ -96,23 +97,23 @@ describe("snapshotToolResultImages", () => {
     expect(toolImagesOf(event)).toEqual([]);
   });
 
-  it("picks the extension from the bytes rather than the declared type", () => {
+  it("picks the extension from the bytes rather than the declared type", async () => {
     const event = toolEvent({
       content: [{ type: "image", data: WEBP.toString("base64"), mimeType: "image/png" }],
     });
-    const [image] = toolImagesOf(snapshotToolResultImages(event, root));
+    const [image] = toolImagesOf(await snapshotToolResultImages(event, root));
     expect(image).toMatchObject({ mimeType: "image/webp" });
     expect(image!.path.endsWith(".webp")).toBe(true);
   });
 
-  it("reads data-URL images too", () => {
+  it("reads data-URL images too", async () => {
     const event = toolEvent({
       item: { image_url: `data:image/png;base64,${PNG.toString("base64")}` },
     });
-    expect(toolImagesOf(snapshotToolResultImages(event, root))).toHaveLength(1);
+    expect(toolImagesOf(await snapshotToolResultImages(event, root))).toHaveLength(1);
   });
 
-  it("never writes bytes that are not a supported raster image", () => {
+  it("never writes bytes that are not a supported raster image", async () => {
     const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script/></svg>');
     const event = toolEvent({
       content: [
@@ -124,32 +125,32 @@ describe("snapshotToolResultImages", () => {
         },
       ],
     });
-    expect(snapshotToolResultImages(event, root)).toBe(event);
+    expect(await snapshotToolResultImages(event, root)).toBe(event);
     expect(fs.readdirSync(root)).toEqual([]);
   });
 
-  it("shares one file between the updated and completed events and an unchanged re-read", () => {
+  it("shares one file between the updated and completed events and an unchanged re-read", async () => {
     const data = {
       content: [{ type: "image", data: PNG.toString("base64"), mimeType: "image/png" }],
     };
     const updated = toolImagesOf(
-      snapshotToolResultImages(toolEvent(data, { type: "item.updated" }), root),
+      await snapshotToolResultImages(toolEvent(data, { type: "item.updated" }), root),
     );
-    const completed = toolImagesOf(snapshotToolResultImages(toolEvent(data), root));
+    const completed = toolImagesOf(await snapshotToolResultImages(toolEvent(data), root));
     expect(updated[0]!.path).toBe(completed[0]!.path);
     expect(fs.readdirSync(toolResultImagesThreadDirectory(root, "thread-1"))).toHaveLength(1);
   });
 
-  it("keeps a changed figure as a new version", () => {
+  it("keeps a changed figure as a new version", async () => {
     const first = toolImagesOf(
-      snapshotToolResultImages(
+      await snapshotToolResultImages(
         toolEvent({ content: [{ type: "image", data: PNG.toString("base64") }] }),
         root,
       ),
     );
     const changed = Buffer.concat([PNG, Buffer.from("legend moved")]);
     const second = toolImagesOf(
-      snapshotToolResultImages(
+      await snapshotToolResultImages(
         toolEvent({ content: [{ type: "image", data: changed.toString("base64") }] }),
         root,
       ),
@@ -158,54 +159,60 @@ describe("snapshotToolResultImages", () => {
     expect(fs.readFileSync(first[0]!.path)).toEqual(PNG);
   });
 
-  it("leaves non-tool events, tool events without images, and a missing root untouched", () => {
+  it("leaves non-tool events, tool events without images, and a missing root untouched", async () => {
     const imageData = { content: [{ type: "image", data: PNG.toString("base64") }] };
     const assistant = toolEvent(imageData, { itemType: "assistant_message" });
     const plain = toolEvent({ content: [{ type: "text", text: "ok" }] });
-    expect(snapshotToolResultImages(assistant, root)).toBe(assistant);
-    expect(snapshotToolResultImages(plain, root)).toBe(plain);
-    expect(snapshotToolResultImages(toolEvent(imageData), undefined)).toEqual(toolEvent(imageData));
+    expect(await snapshotToolResultImages(assistant, root)).toBe(assistant);
+    expect(await snapshotToolResultImages(plain, root)).toBe(plain);
+    expect(await snapshotToolResultImages(toolEvent(imageData), undefined)).toEqual(
+      toolEvent(imageData),
+    );
     expect(fs.readdirSync(root)).toEqual([]);
   });
 
-  it("keeps an unsafe thread id inside the snapshot root", () => {
+  it("keeps an unsafe thread id inside the snapshot root", async () => {
     const event = toolEvent(
       { content: [{ type: "image", data: PNG.toString("base64") }] },
       { threadId: "../../escape" },
     );
-    const [image] = toolImagesOf(snapshotToolResultImages(event, root));
+    const [image] = toolImagesOf(await snapshotToolResultImages(event, root));
     expect(path.relative(root, image!.path).startsWith("..")).toBe(false);
     expect(path.basename(path.dirname(image!.path))).toMatch(/^t_[0-9a-f]{32}$/);
   });
 
-  it("caps the images recorded from one result", () => {
+  it("caps the images recorded from one result", async () => {
     const content = Array.from({ length: MAX_TOOL_RESULT_IMAGES_PER_EVENT + 4 }, (_, index) => ({
       type: "image",
       data: Buffer.concat([PNG, Buffer.from(String(index))]).toString("base64"),
     }));
-    expect(toolImagesOf(snapshotToolResultImages(toolEvent({ content }), root))).toHaveLength(
+    expect(toolImagesOf(await snapshotToolResultImages(toolEvent({ content }), root))).toHaveLength(
       MAX_TOOL_RESULT_IMAGES_PER_EVENT,
     );
   });
 
-  it("returns the event unchanged when the snapshot cannot be written", () => {
+  it("returns the event unchanged when the snapshot cannot be written", async () => {
     const blocked = path.join(root, "blocked");
     fs.writeFileSync(blocked, "a file where the root directory should be");
     const event = toolEvent({ content: [{ type: "image", data: PNG.toString("base64") }] });
-    expect(snapshotToolResultImages(event, blocked)).toBe(event);
+    expect(await snapshotToolResultImages(event, blocked)).toBe(event);
   });
 
-  it("snapshots before the shared ingress strips the bytes", () => {
+  it("records references at once on the synchronous ingress and writes in the background", async () => {
     const event = toolEvent({
       content: [{ type: "image", data: PNG.toString("base64"), mimeType: "image/png" }],
     });
+    const background = snapshotToolResultImagesInBackground(event, root);
+    const [reference] = toolImagesOf(background.event);
+    await background.written;
+    expect(fs.readFileSync(reference!.path)).toEqual(PNG);
+
     const { event: ingressed } = compactProviderRuntimeEventForIngress(event, {
       toolImagesRoot: root,
     });
     const data = (ingressed as { payload: { data: { content: Array<Record<string, unknown>> } } })
       .payload.data;
     expect(data.content[0]).toMatchObject({ synaraImageOmitted: true });
-    expect(toolImagesOf(ingressed)).toHaveLength(1);
-    expect(fs.existsSync(toolImagesOf(ingressed)[0]!.path)).toBe(true);
+    expect(toolImagesOf(ingressed)).toEqual([reference]);
   });
 });

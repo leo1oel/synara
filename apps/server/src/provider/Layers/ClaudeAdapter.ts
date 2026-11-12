@@ -154,7 +154,11 @@ import {
 import { resolveProviderAttachmentPath } from "../providerAttachmentPaths.ts";
 import { settleConcurrentTeardowns } from "../settleConcurrentTeardowns.ts";
 import { stripDiagnosticImages } from "../stripDiagnosticImages.ts";
-import { snapshotToolResultImages, toolResultImagesRoot } from "../toolResultImages.ts";
+import {
+  mayCarryToolResultImages,
+  snapshotToolResultImages,
+  toolResultImagesRoot,
+} from "../toolResultImages.ts";
 import { ServerConfig } from "../../config.ts";
 import { buildFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { loadClaudeAgentSdk } from "../claudeAgentSdk.ts";
@@ -2746,7 +2750,10 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
       context: ClaudeSessionContext,
       event: ProviderRuntimeEvent,
     ): Effect.Effect<void> =>
-      Effect.sync(() => snapshotToolResultImages(event, toolImagesRoot)).pipe(
+      (mayCarryToolResultImages(event)
+        ? Effect.promise(() => snapshotToolResultImages(event, toolImagesRoot))
+        : Effect.succeed(event)
+      ).pipe(
         Effect.flatMap((snapshotted) =>
           Queue.offer(runtimeEventQueue, {
             ...(stripDiagnosticImages(snapshotted) as ProviderRuntimeEvent),
