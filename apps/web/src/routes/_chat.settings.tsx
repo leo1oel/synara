@@ -1945,7 +1945,8 @@ function SettingsRouteView() {
     </div>
   );
 
-  const billingEnabled = ACCOUNT_BILLING_ENABLED;
+  // Lattice has no Synara account, so the Alto plan never shows in its panel.
+  const billingEnabled = ACCOUNT_BILLING_ENABLED && !isEmbed;
 
   const renderRouteOwnedPanel = () => {
     switch (activeSection) {
