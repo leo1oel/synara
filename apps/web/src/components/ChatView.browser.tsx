@@ -2663,7 +2663,8 @@ describe("ChatView transcript geometry (full app)", () => {
         );
         const banner = page.getByRole("alert").filter({ hasText: "Rate limit reached." });
         await expect.element(banner).toBeVisible();
-        await expect.element(banner).toHaveTextContent("Resets in 2d 2h");
+        // The fork's notice rounds a reset days away to whole days (lattice catalog).
+        await expect.element(banner).toHaveTextContent("Resets in about 2 days.");
         expect(
           document.querySelector('[data-chat-composer-form="true"]')!.contains(banner.element()),
         ).toBe(true);
@@ -2688,6 +2689,70 @@ describe("ChatView transcript geometry (full app)", () => {
       }
     },
   );
+
+  // Lattice's embedded panel has no Environment panel to move quota warnings into, so
+  // an approaching limit keeps its banner above the composer there.
+  it("keeps the quota warning at the composer in Lattice's embedded chat", async () => {
+    sessionStorage.setItem(
+      "synara.poc.embed-mode",
+      JSON.stringify({
+        workspaceRoot: "/repo/project",
+        theme: "light",
+        surface: "chrome",
+        hostOrigin: window.location.origin,
+        locale: "en",
+      }),
+    );
+    onTestFinished(() => sessionStorage.removeItem("synara.poc.embed-mode"));
+    const base = createSnapshotWithInlineToolOverflow({ active: false });
+    const thread = base.threads[0]!;
+    const turnId = thread.latestTurn!.turnId;
+    const snapshot: OrchestrationReadModel = {
+      ...base,
+      threads: [
+        {
+          ...thread,
+          modelSelection: { provider: "claudeAgent", model: "claude-opus-4-7" },
+          session: thread.session ? { ...thread.session, providerName: "claudeAgent" } : null,
+          messages: [{ ...thread.messages.at(-3)!, turnId }, ...thread.messages.slice(-2)],
+          activities: [
+            ...thread.activities,
+            {
+              id: EventId.makeUnsafe("embed-usage-warning"),
+              kind: "account.rate-limits.updated",
+              summary: "Rate limits updated",
+              createdAt: isoAt(1_109),
+              tone: "info",
+              turnId,
+              payload: {
+                provider: "claudeAgent",
+                providerInstanceId: "claudeAgent",
+                status: "allowed_warning",
+                utilization: 0.91,
+              },
+            },
+          ],
+        },
+      ],
+    };
+    const mounted = await mountChatView({
+      viewport: { ...DEFAULT_VIEWPORT, width: 1_400 },
+      snapshot,
+    });
+    try {
+      await waitForComposerEditor();
+      expect(page.getByRole("button", { name: /Toggle environment panel/ }).query()).toBeNull();
+      const banner = page
+        .getByRole("alert")
+        .filter({ hasText: "Approaching rate limit (91% used)." });
+      await expect.element(banner, { timeout: 3_000 }).toBeVisible();
+      expect(
+        document.querySelector('[data-chat-composer-form="true"]')!.contains(banner.element()),
+      ).toBe(true);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 
   it.each(["project", "hub discovery pending"] as const)(
     "keeps persistent turn failure visible after reopening and admits one manual continuation (%s)",
