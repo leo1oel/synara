@@ -10,7 +10,8 @@ import {
 } from "@synara/shared/terminalThreads";
 import { pendingRequestInstanceKey } from "@synara/shared/threadSummary";
 import { t } from "~/i18n";
-import type { Thread, ThreadSession } from "../types";
+import { embedWorkspaceMatches, type EmbedModeConfig } from "../embedMode";
+import type { Project, Thread, ThreadSession } from "../types";
 import {
   derivePendingApprovals,
   countOutstandingBackgroundWork,
@@ -95,6 +96,32 @@ export function shouldShowThreadNotificationToast(input: {
   visibleThreadIds: ReadonlySet<Thread["id"]>;
 }): boolean {
   return !input.visibleThreadIds.has(input.threadId);
+}
+
+/**
+ * Lattice opens one embedded Synara frame per window, and every frame's store
+ * holds every project's threads. Only the frame whose workspace owns a thread
+ * may alert about it; otherwise the frontmost window raises another window's
+ * thread and its Open action navigates there. Returns the projects this frame
+ * may notify for, or null outside embed mode, where every project notifies.
+ */
+export function resolveEmbedNotificationProjectIds(
+  embedMode: EmbedModeConfig | null,
+  projects: readonly Pick<Project, "id" | "cwd">[],
+): ReadonlySet<Project["id"]> | null {
+  if (!embedMode) return null;
+  return new Set(
+    projects
+      .filter((project) => embedWorkspaceMatches(embedMode, project.cwd))
+      .map((project) => project.id),
+  );
+}
+
+export function isNotificationProjectInScope(
+  scope: ReadonlySet<Project["id"]> | null,
+  projectId: Project["id"] | undefined,
+): boolean {
+  return scope === null || (projectId !== undefined && scope.has(projectId));
 }
 
 export function shouldAttemptSystemTaskNotification(input: {

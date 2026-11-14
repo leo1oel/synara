@@ -15,7 +15,9 @@ import {
   collectInputNeededThreadCandidates,
   collectSnoozeReminderCandidates,
   completedThreadNotificationKey,
+  isNotificationProjectInScope,
   isNotificationRuntimeFreshTimestamp,
+  resolveEmbedNotificationProjectIds,
   shouldAttemptSystemTaskNotification,
   shouldShowThreadNotificationToast,
 } from "./taskCompletion.logic";
@@ -911,6 +913,33 @@ describe("collectCompletedThreadCandidates", () => {
     ];
 
     expect(collectCompletedThreadCandidates(previous, next)).toEqual([]);
+  });
+});
+
+const embedFor = (workspaceRoot: string) =>
+  ({ workspaceRoot, theme: "light", surface: "chrome", hostOrigin: null, locale: "en" }) as const;
+
+describe("resolveEmbedNotificationProjectIds", () => {
+  const alpha = { id: ProjectId.makeUnsafe("project-alpha"), cwd: "/work/alpha" };
+  const beta = { id: ProjectId.makeUnsafe("project-beta"), cwd: "/work/beta" };
+
+  it("keeps every project in scope outside embed mode", () => {
+    const scope = resolveEmbedNotificationProjectIds(null, [alpha, beta]);
+    expect(scope).toBeNull();
+    expect(isNotificationProjectInScope(scope, beta.id)).toBe(true);
+    expect(isNotificationProjectInScope(scope, undefined)).toBe(true);
+  });
+
+  it("scopes an embed to the project of its normalized workspace root", () => {
+    const scope = resolveEmbedNotificationProjectIds(embedFor("/work/alpha/"), [alpha, beta]);
+    expect(isNotificationProjectInScope(scope, alpha.id)).toBe(true);
+    expect(isNotificationProjectInScope(scope, beta.id)).toBe(false);
+    expect(isNotificationProjectInScope(scope, undefined)).toBe(false);
+  });
+
+  it("notifies for nothing until the embedded workspace project is known", () => {
+    const scope = resolveEmbedNotificationProjectIds(embedFor("/work/gamma"), [alpha, beta]);
+    expect(isNotificationProjectInScope(scope, alpha.id)).toBe(false);
   });
 });
 

@@ -9,6 +9,7 @@ import { useMemo, useEffect, useRef, useState } from "react";
 import { toastManager } from "../components/ui/toast";
 import { resolveVisibleToastThreadIds } from "../components/ui/toastRouteVisibility";
 import { useAppSettings } from "../appSettings";
+import { readEmbedMode } from "../embedMode";
 import { isElectron } from "../env";
 import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
 import { selectSplitView, useSplitViewStore } from "../splitViewStore";
@@ -32,7 +33,9 @@ import {
   collectInputNeededThreadCandidates,
   collectTerminalAttentionCandidates,
   collectSnoozeReminderCandidates,
+  isNotificationProjectInScope,
   isNotificationRuntimeFreshTimestamp,
+  resolveEmbedNotificationProjectIds,
   shouldAttemptSystemTaskNotification,
   shouldShowThreadNotificationToast,
 } from "./taskCompletion.logic";
@@ -180,6 +183,12 @@ export function TaskCompletionNotifications() {
     [sidebarSummaries],
   );
   const threadsHydrated = useStore((store) => store.threadsHydrated);
+  const [embedMode] = useState(() => readEmbedMode());
+  const projects = useStore((store) => store.projects);
+  const notificationProjectIds = useMemo(
+    () => resolveEmbedNotificationProjectIds(embedMode, projects),
+    [embedMode, projects],
+  );
   const terminalStateByThreadId = useTerminalStateStore((store) => store.terminalStateByThreadId);
   const visibleThreadIds = resolveVisibleToastThreadIds({
     activeThreadId,
@@ -236,7 +245,19 @@ export function TaskCompletionNotifications() {
         enabled: settings.enableSystemTaskCompletionNotifications,
         isWindowForeground: isWindowForeground(),
       });
+      const projectIdByThreadId = new Map(
+        sidebarSummaries.map((summary) => [summary.id, summary.projectId] as const),
+      );
       for (const reminder of collectSnoozeReminderCandidates(sidebarSummaries)) {
+        // Leave another workspace's reminder unclaimed for the frame that owns it.
+        if (
+          !isNotificationProjectInScope(
+            notificationProjectIds,
+            projectIdByThreadId.get(reminder.threadId),
+          )
+        ) {
+          continue;
+        }
         const key = `${reminder.threadId}:${reminder.reminderAt}`;
         if (notifiedSnoozeKeysRef.current.has(key)) continue;
         notifiedSnoozeKeysRef.current.add(key);
@@ -258,6 +279,7 @@ export function TaskCompletionNotifications() {
     };
   }, [
     navigate,
+    notificationProjectIds,
     settings.enableSystemTaskCompletionNotifications,
     settings.enableTaskCompletionToasts,
     sidebarSummaries,
@@ -276,10 +298,18 @@ export function TaskCompletionNotifications() {
       return;
     }
 
+    // Standalone Synara notifies for every project; only an embed pays for the lookup.
+    const projectIdByThreadId = notificationProjectIds
+      ? new Map(threads.map((thread) => [thread.id, thread.projectId] as const))
+      : null;
+    const inScope = (threadId: Thread["id"]) =>
+      !projectIdByThreadId ||
+      isNotificationProjectInScope(notificationProjectIds, projectIdByThreadId.get(threadId));
     const completions = collectCompletedThreadCandidates(previousThreadsRef.current, threads, {
       waitForSubagents: settings.notifyAfterSubagentsFinish,
     }).filter(
       (candidate) =>
+        inScope(candidate.threadId) &&
         isNotificationRuntimeFreshTimestamp(candidate.completedAt, runtimeStartedAtMs) &&
         !snoozedThreadIds.has(candidate.threadId) &&
         !notifiedCompletionKeysRef.current.has(completedThreadNotificationKey(candidate)),
@@ -287,19 +317,24 @@ export function TaskCompletionNotifications() {
     const terminalCompletions = collectCompletedTerminalCandidates(
       previousTerminalStateRef.current,
       terminalStateByThreadId,
-    ).filter((candidate) => !snoozedThreadIds.has(candidate.threadId));
+    ).filter(
+      (candidate) => inScope(candidate.threadId) && !snoozedThreadIds.has(candidate.threadId),
+    );
     const inputNeededCandidates = collectInputNeededThreadCandidates(
       previousThreadsRef.current,
       threads,
     ).filter(
       (candidate) =>
+        inScope(candidate.threadId) &&
         isNotificationRuntimeFreshTimestamp(candidate.createdAt, runtimeStartedAtMs) &&
         !snoozedThreadIds.has(candidate.threadId),
     );
     const terminalAttentionCandidates = collectTerminalAttentionCandidates(
       previousTerminalStateRef.current,
       terminalStateByThreadId,
-    ).filter((candidate) => !snoozedThreadIds.has(candidate.threadId));
+    ).filter(
+      (candidate) => inScope(candidate.threadId) && !snoozedThreadIds.has(candidate.threadId),
+    );
     previousThreadsRef.current = threads;
     previousTerminalStateRef.current = terminalStateByThreadId;
 
@@ -387,6 +422,7 @@ export function TaskCompletionNotifications() {
     }
   }, [
     navigate,
+    notificationProjectIds,
     settings.enableSystemTaskCompletionNotifications,
     settings.enableTaskCompletionToasts,
     settings.notifyAfterSubagentsFinish,
