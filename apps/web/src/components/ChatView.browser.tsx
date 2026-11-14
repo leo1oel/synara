@@ -2805,15 +2805,15 @@ describe("ChatView transcript geometry (full app)", () => {
       }),
     );
     onTestFinished(() => sessionStorage.removeItem("synara.poc.embed-mode"));
-    // Stand in for Lattice's parent frame so host hand-offs are observable.
+    // Record host hand-offs on the real parent frame; the browser runner reads
+    // window.parent.document, so the parent itself must stay in place.
     const postedToHost: unknown[] = [];
-    Object.defineProperty(window, "parent", {
-      configurable: true,
-      value: { postMessage: (message: unknown) => postedToHost.push(message) },
-    });
-    onTestFinished(() => {
-      delete (window as { parent?: unknown }).parent;
-    });
+    const hostPostMessage = vi
+      .spyOn(window.parent, "postMessage")
+      .mockImplementation((message: unknown) => {
+        postedToHost.push(message);
+      });
+    onTestFinished(() => hostPostMessage.mockRestore());
     const readActivity = (id: string, detail: string, offsetSeconds: number) => ({
       id: EventId.makeUnsafe(id),
       createdAt: isoAt(offsetSeconds),
