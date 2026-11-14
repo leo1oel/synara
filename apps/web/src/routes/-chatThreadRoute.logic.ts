@@ -1,7 +1,8 @@
 // FILE: chatThreadRoute.logic.ts
 // Purpose: Keep route-level chat panel state transitions and fallbacks deterministic.
 // Layer: Route UI logic helpers.
-// Exports: thread title fallback, deep-link bootstrap replay handling, and panel toggle helpers.
+// Exports: thread title fallback, deep-link bootstrap replay handling, panel toggle helpers, and
+//          the embedded frame's foreign-thread redirect decision.
 
 import type {
   ProjectId,
@@ -84,6 +85,87 @@ export function resolveEmbeddedDraftProjectRebind(input: {
     return null;
   }
   return input.embeddedProjectId;
+}
+
+/**
+ * What an embedded frame's thread route should do with the thread it is on. Lattice binds each
+ * frame to one workspace project, and the route renders only that project's threads.
+ * - `idle`: nothing to decide yet (not embedded, project not bound, or the thread is unknown).
+ * - `own`: the thread or draft belongs to the frame's project; a draft of another project is
+ *   moved onto it first.
+ * - `leave`: a thread of another project, seen for the first time on this visit.
+ * - `left`: the frame already tried to leave this thread on this visit.
+ */
+export type EmbeddedThreadRouteDecision =
+  | { readonly kind: "idle"; readonly redirectedFromThreadId: ThreadId | null }
+  | {
+      readonly kind: "own";
+      readonly rebindDraftToProjectId: ProjectId | null;
+      readonly redirectedFromThreadId: null;
+    }
+  | { readonly kind: "leave"; readonly redirectedFromThreadId: ThreadId }
+  | { readonly kind: "left"; readonly redirectedFromThreadId: ThreadId };
+
+/**
+ * The route component stays mounted while `$threadId` changes, so the "already redirected" guard
+ * lives across visits. It holds the foreign thread the frame last left, and any own-project
+ * route clears it: the next foreign thread, even the same one again, is left again.
+ */
+export function resolveEmbeddedThreadRoute(input: {
+  readonly embeddedProjectId: ProjectId | null;
+  readonly threadsHydrated: boolean;
+  readonly threadId: ThreadId;
+  /** The server thread's project, or null while the thread is not in the store. */
+  readonly threadProjectId: ProjectId | null;
+  /** The route's draft, or null when there is none. */
+  readonly draft: { readonly projectId: ProjectId | null } | null;
+  readonly redirectedFromThreadId: ThreadId | null;
+}): EmbeddedThreadRouteDecision {
+  const { embeddedProjectId, redirectedFromThreadId } = input;
+  if (embeddedProjectId === null) {
+    return { kind: "idle", redirectedFromThreadId };
+  }
+  if (input.threadProjectId === null) {
+    if (input.draft === null) {
+      // Not loaded yet, or gone: the missing-thread recovery owns this route.
+      return { kind: "idle", redirectedFromThreadId };
+    }
+    return {
+      kind: "own",
+      rebindDraftToProjectId: resolveEmbeddedDraftProjectRebind({
+        draftProjectId: input.draft.projectId,
+        embeddedProjectId,
+      }),
+      redirectedFromThreadId: null,
+    };
+  }
+  if (input.threadProjectId === embeddedProjectId) {
+    return { kind: "own", rebindDraftToProjectId: null, redirectedFromThreadId: null };
+  }
+  if (!input.threadsHydrated) {
+    return { kind: "idle", redirectedFromThreadId };
+  }
+  return redirectedFromThreadId === input.threadId
+    ? { kind: "left", redirectedFromThreadId }
+    : { kind: "leave", redirectedFromThreadId: input.threadId };
+}
+
+/**
+ * Where an embedded frame goes when it leaves another project's thread: back to the last thread of
+ * its own project it showed, else that project's most recent thread. Null means there is neither,
+ * and the caller opens the project's chat draft (reused, never a fresh one).
+ */
+export function resolveEmbeddedForeignThreadReturnTarget(input: {
+  readonly lastOwnThreadId: ThreadId | null;
+  /** The frame project's threads and drafts that can still be opened. */
+  readonly isOpenableOwnThread: (threadId: ThreadId) => boolean;
+  /** The frame project's threads, most recent first. */
+  readonly recentOwnThreadIds: readonly ThreadId[];
+}): ThreadId | null {
+  if (input.lastOwnThreadId !== null && input.isOpenableOwnThread(input.lastOwnThreadId)) {
+    return input.lastOwnThreadId;
+  }
+  return input.recentOwnThreadIds[0] ?? null;
 }
 
 export function normalizeSingleSearchFromPane(

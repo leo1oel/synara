@@ -207,6 +207,7 @@ import { isHomeChatContainerProject } from "../lib/chatProjects";
 import { isGroupContainerProject } from "../lib/groupProjects";
 import { appendComposerPromptText } from "../lib/chatReferences";
 import { deleteActiveThreadFromClient } from "../lib/activeThreadDelete";
+import { isForeignEmbeddedThread } from "../lib/embedThreadScope";
 import { getLiveLatticeHostContext, setLiveLatticeHostContext } from "../lib/latticeHostContext";
 import { createPastedTextDraft } from "../lib/composerPastedText";
 import {
@@ -5922,17 +5923,28 @@ export default function ChatView({
     }
     onOpenTurnDiff(activeTurnLiveDiffState.turnId);
   }, [activeTurnLiveDiffState.turnId, onOpenTurnDiff]);
+  // Every thread link in this chat (task cards, the fork source, subagent and workflow runs)
+  // opens through here. A Lattice frame shows only its own project's threads, so it refuses
+  // another project's thread here instead of navigating there.
   const onNavigateToThread = useCallback(
-    (nextThreadId: ThreadId) =>
-      navigate({
+    (nextThreadId: ThreadId) => {
+      if (isForeignEmbeddedThread(useStore.getState(), readEmbedMode(), nextThreadId)) {
+        toastManager.add({
+          type: "info",
+          title: t("lattice:thisConversationBelongsToAnotherProject"),
+        });
+        return Promise.resolve();
+      }
+      return navigate({
         to: "/$threadId",
         params: { threadId: nextThreadId },
         search: (previous) =>
           isEditorRail
             ? { ...stripDiffSearchParams(previous), view: "editor" }
             : stripDiffSearchParams(previous),
-      }),
-    [isEditorRail, navigate],
+      });
+    },
+    [isEditorRail, navigate, t],
   );
   // What the transcript's subagent cards read from this chat. Stop and
   // background go through the same per-row dispatches the keyboard uses.
