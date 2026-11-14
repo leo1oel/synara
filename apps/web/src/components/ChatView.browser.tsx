@@ -189,6 +189,10 @@ interface TestFixture {
   projectAgentOverviews: Record<string, unknown>;
   projectAgentSummariesPending?: boolean;
   connectorProposals: McpConnectorProposal[];
+  // Answered for server.getEnvironment when set; the neutral fixture leaves the platform unknown.
+  serverEnvironment?: ExecutionEnvironmentDescriptor;
+  // Issues local preview grants when set; otherwise grant requests fail as malformed.
+  issueLocalPreviewGrants?: boolean;
 }
 
 let fixture: TestFixture;
@@ -583,6 +587,28 @@ function findThreadDetailFromFixtureSnapshot(
   threadId: ThreadId,
 ): OrchestrationReadModel["threads"][number] | null {
   return fixture.snapshot.threads.find((entry) => entry.id === threadId) ?? null;
+}
+
+/**
+ * The right dock's sidebar state. The dock stays mounted while collapsed (it slides
+ * offcanvas), so "collapsed" also proves the surface rendered a dock at all.
+ */
+function rightDockState(): string | null {
+  return (
+    document
+      .querySelector("[data-right-dock-content]")
+      ?.closest('[data-side="right"][data-state]')
+      ?.getAttribute("data-state") ?? null
+  );
+}
+
+/** The transcript row button for a read of `fileName`, or null when it renders none. */
+function readRow(fileName: string): HTMLElement | null {
+  return (
+    Array.from(document.querySelectorAll<HTMLElement>("button")).find(
+      (element) => element.textContent?.trim() === `Read ${fileName}`,
+    ) ?? null
+  );
 }
 
 /** The rows of the open fallback context menu. */
@@ -1344,6 +1370,16 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
   }
   if (tag === WS_METHODS.serverGetConfig) {
     return fixture.serverConfig;
+  }
+  if (tag === WS_METHODS.serverGetEnvironment && fixture.serverEnvironment) {
+    return fixture.serverEnvironment;
+  }
+  if (tag === WS_METHODS.projectsCreateLocalFilePreviewGrant && fixture.issueLocalPreviewGrants) {
+    return {
+      grant: "browser-test-preview-grant",
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      ...(typeof body.path === "string" ? { canonicalPath: body.path } : {}),
+    };
   }
   if (tag === WS_METHODS.providerListModels) {
     // Keep the full-app fixture contract-valid and neutral. Returning the
@@ -2749,6 +2785,114 @@ describe("ChatView transcript geometry (full app)", () => {
       expect(
         document.querySelector('[data-chat-composer-form="true"]')!.contains(banner.element()),
       ).toBe(true);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  // Lattice's embedded dock holds only the simulator. A figure render the agent read
+  // outside the project used to open a hidden file pane there, which left the dock
+  // open with nothing in it but the "iOS Simulator" launcher.
+  it("previews out-of-workspace figure renders without opening the embedded dock", async () => {
+    sessionStorage.setItem(
+      "synara.poc.embed-mode",
+      JSON.stringify({
+        workspaceRoot: "/repo/project",
+        theme: "light",
+        surface: "chrome",
+        hostOrigin: window.location.origin,
+        locale: "en",
+      }),
+    );
+    onTestFinished(() => sessionStorage.removeItem("synara.poc.embed-mode"));
+    // Stand in for Lattice's parent frame so host hand-offs are observable.
+    const postedToHost: unknown[] = [];
+    Object.defineProperty(window, "parent", {
+      configurable: true,
+      value: { postMessage: (message: unknown) => postedToHost.push(message) },
+    });
+    onTestFinished(() => {
+      delete (window as { parent?: unknown }).parent;
+    });
+    const readActivity = (id: string, detail: string, offsetSeconds: number) => ({
+      id: EventId.makeUnsafe(id),
+      createdAt: isoAt(offsetSeconds),
+      kind: "tool.completed" as const,
+      summary: "Read",
+      tone: "tool" as const,
+      turnId: null,
+      payload: { requestKind: "file-read", title: "Read", detail },
+    });
+    const base = createIssue550Snapshot({ messageCount: 6, activityCount: 0 });
+    // Messages land every two seconds; one read between each pair keeps every row visible.
+    const snapshot: OrchestrationReadModel = {
+      ...base,
+      threads: base.threads.map((thread) =>
+        thread.id === THREAD_ID
+          ? {
+              ...thread,
+              activities: [
+                readActivity("read-tmp-render", "/var/folders/x/T/tmp.abc/p-1.png", 1),
+                readActivity("read-tmp-log", "/var/folders/x/T/tmp.abc/main.log", 5),
+                readActivity("read-project-source", "/repo/project/main.tex", 9),
+              ],
+            }
+          : thread,
+      ),
+    };
+    const mounted = await mountChatView({
+      viewport: { ...DEFAULT_VIEWPORT, width: 1_400 },
+      snapshot,
+      configureFixture: (next) => {
+        next.serverEnvironment = {
+          environmentId: "environment-embed-dock",
+          label: "Test Mac",
+          platform: { os: "darwin", arch: "arm64" },
+          serverVersion: "0.0.38",
+          capabilities: { repositoryIdentity: false, deviceControl: true },
+        } as ExecutionEnvironmentDescriptor;
+        next.issueLocalPreviewGrants = true;
+      },
+    });
+    try {
+      // Earlier turns fold their reads under "Worked for"; open them so every row is reachable.
+      await expect.poll(() => readRow("main.tex"), { timeout: 5_000 }).not.toBeNull();
+      for (const summary of Array.from(document.querySelectorAll<HTMLElement>("button")).filter(
+        (element) => element.textContent?.trim().startsWith("Worked for"),
+      )) {
+        summary.click();
+      }
+      await expect.poll(() => readRow("p-1.png"), { timeout: 5_000 }).not.toBeNull();
+      readRow("p-1.png")!.click();
+      await expect
+        .element(page.getByRole("dialog", { name: "Expanded image preview" }))
+        .toBeVisible();
+      expect(rightDockState()).toBe("collapsed");
+      expect(useRightDockStore.getState().dockStateByThreadId[THREAD_ID]?.open ?? false).toBe(
+        false,
+      );
+      await userEvent.keyboard("{Escape}");
+      await expect
+        .element(page.getByRole("dialog", { name: "Expanded image preview" }))
+        .not.toBeInTheDocument();
+
+      // Nothing in-app can show an out-of-workspace log, so its row only discloses the
+      // tool details instead of handing the file to an external app.
+      const logRow = readRow("main.log")!;
+      expect(logRow.dataset.toolDetailTrigger).toBe("true");
+      logRow.click();
+      expect(postedToHost).not.toContainEqual(
+        expect.objectContaining({ type: "synara:open-file" }),
+      );
+      expect(wsRequests.some((request) => request._tag === WS_METHODS.shellOpenInEditor)).toBe(
+        false,
+      );
+      expect(rightDockState()).toBe("collapsed");
+
+      // Project files still go to Lattice's editor.
+      readRow("main.tex")!.click();
+      expect(postedToHost).toContainEqual({ type: "synara:open-file", filePath: "main.tex" });
+      expect(rightDockState()).toBe("collapsed");
     } finally {
       await mounted.cleanup();
     }

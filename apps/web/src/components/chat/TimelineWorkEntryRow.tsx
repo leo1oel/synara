@@ -105,7 +105,11 @@ import {
   useLiveActivityNow,
 } from "../../lib/liveActivityPresentation";
 import { deriveToolFailureSummary } from "../../lib/toolCallDetails";
-import { openWorkspaceFileReference, useWorkspaceFileOpener } from "../../lib/workspaceFileOpener";
+import {
+  canOpenWorkspaceFileReference,
+  openWorkspaceFileReference,
+  useWorkspaceFileOpener,
+} from "../../lib/workspaceFileOpener";
 import { DISCLOSURE_CLEANUP_BUFFER_MS, DISCLOSURE_TRANSITION_MS } from "../../lib/disclosureMotion";
 import { MUTED_LABEL_TEXT_CLASS_NAME, MUTED_LABEL_TEXT_COLOR } from "~/surfaceStyles";
 
@@ -954,12 +958,16 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
     );
   }
 
-  const readFilePath =
+  const readDetailPath =
     opener !== null &&
     !canOpenAgentActivity &&
     workEntry.detail &&
     (workEntry.requestKind === "file-read" || isFileReadToolEntry(workEntry))
       ? extractFilePathFromDetail(workEntry.detail)
+      : null;
+  const readFilePath =
+    readDetailPath !== null && canOpenWorkspaceFileReference(opener, readDetailPath)
+      ? readDetailPath
       : null;
   const canOpenReadFile = readFilePath !== null;
   const canOpenToolDetails =

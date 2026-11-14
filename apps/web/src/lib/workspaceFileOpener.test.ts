@@ -6,7 +6,9 @@ import {
 } from "../markdown-links";
 
 import {
+  canOpenWorkspaceFileReference,
   resolveDockFileOpenTarget,
+  resolveEmbeddedFileOpenTarget,
   resolveScratchPreviewFileOpenTarget,
   resolveWorkspaceDirectoryOpenTarget,
   resolveWorkspaceFileOpenTarget,
@@ -157,5 +159,51 @@ describe("resolveDockFileOpenTarget", () => {
     expect(resolveDockFileOpenTarget("/Users/dev/Downloads/report.txt:4", "/repo/app")).toBe(
       "/Users/dev/Downloads/report.txt",
     );
+  });
+});
+
+describe("resolveEmbeddedFileOpenTarget", () => {
+  it("hands workspace files to the host by their relative path", () => {
+    expect(resolveEmbeddedFileOpenTarget("/repo/paper/main.tex:12", "/repo/paper")).toEqual({
+      kind: "host",
+      relativePath: "main.tex",
+    });
+    expect(resolveEmbeddedFileOpenTarget("figures/loss.png", "/repo/paper")).toEqual({
+      kind: "host",
+      relativePath: "figures/loss.png",
+    });
+  });
+
+  it("previews an image outside the workspace in the image viewer", () => {
+    expect(
+      resolveEmbeddedFileOpenTarget("/var/folders/x/T/tmp.abc/p-1.png", "/repo/paper"),
+    ).toEqual({ kind: "image", path: "/var/folders/x/T/tmp.abc/p-1.png" });
+    expect(resolveEmbeddedFileOpenTarget("/tmp/render/q-2.png", null)).toEqual({
+      kind: "image",
+      path: "/tmp/render/q-2.png",
+    });
+  });
+
+  it("offers no destination for other files outside the workspace", () => {
+    expect(resolveEmbeddedFileOpenTarget("/var/folders/x/T/tmp.abc/main.log", "/repo/paper")).toBe(
+      null,
+    );
+    expect(resolveEmbeddedFileOpenTarget("/var/folders/x/T/tmp.abc/main.pdf", "/repo/paper")).toBe(
+      null,
+    );
+    expect(resolveEmbeddedFileOpenTarget("main.tex", null)).toBeNull();
+  });
+});
+
+describe("canOpenWorkspaceFileReference", () => {
+  it("treats an opener without a gate as able to open every reference", () => {
+    expect(canOpenWorkspaceFileReference({ openFile: () => true }, "/tmp/a.log")).toBe(true);
+    expect(canOpenWorkspaceFileReference(null, "/tmp/a.log")).toBe(true);
+  });
+
+  it("follows the opener's gate when it has one", () => {
+    const opener = { openFile: () => true, canOpenFile: (path: string) => path.endsWith(".png") };
+    expect(canOpenWorkspaceFileReference(opener, "/tmp/a.png")).toBe(true);
+    expect(canOpenWorkspaceFileReference(opener, "/tmp/a.log")).toBe(false);
   });
 });

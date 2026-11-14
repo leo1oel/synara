@@ -41,15 +41,26 @@ describe("restrictRightDockStateToKinds", () => {
     expect(restricted.activePaneId).toBe("device-1");
   });
 
-  it("retains an open empty launcher when every persisted pane is forbidden", () => {
+  it("closes the dock when every pane is forbidden", () => {
+    // An out-of-workspace file opened from an embedded chat persisted this state; presenting
+    // it open would show an empty dock whose only content is the simulator launcher.
     const withFile = openPaneInState(createDefaultRightDockState(), {
       paneId: "file-1",
       kind: "file",
-      filePath: "src/page.tsx",
+      filePath: "/var/folders/x/T/tmp.abc/p-1.png",
     });
     const restricted = restrictRightDockStateToKinds(withFile, new Set(["device"]));
 
-    expect(restricted).toMatchObject({ open: true, panes: [], activePaneId: null });
+    expect(restricted).toMatchObject({ open: false, panes: [], activePaneId: null });
+  });
+
+  it("closes an open dock that holds no pane at all", () => {
+    const restricted = restrictRightDockStateToKinds(
+      { ...createDefaultRightDockState(), open: true },
+      new Set(["device"]),
+    );
+
+    expect(restricted).toMatchObject({ open: false, panes: [], activePaneId: null });
   });
 });
 
