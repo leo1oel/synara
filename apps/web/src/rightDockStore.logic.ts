@@ -82,14 +82,18 @@ export function createDefaultRightDockState(): RightDockThreadState {
 
 /**
  * Project persisted dock state onto the pane kinds a host is allowed to show.
- * The open flag survives an empty projection so the dock can render its
- * permitted launcher instead of reviving a hidden persisted pane.
+ * With no permitted pane left the dock presents closed: an open empty dock
+ * would show only the launcher, which the host never asked for. Applying this
+ * at presentation time also heals state persisted open with forbidden panes.
  */
 export function restrictRightDockStateToKinds(
   state: RightDockThreadState,
   allowedKinds: ReadonlySet<RightDockPaneKind>,
 ): RightDockThreadState {
   const panes = state.panes.filter((pane) => allowedKinds.has(pane.kind));
+  if (panes.length === 0) {
+    return state.open || state.panes.length > 0 ? createDefaultRightDockState() : state;
+  }
   if (panes.length === state.panes.length) return state;
   const activePaneId = panes.some((pane) => pane.id === state.activePaneId)
     ? state.activePaneId

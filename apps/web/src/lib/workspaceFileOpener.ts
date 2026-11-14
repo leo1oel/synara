@@ -6,10 +6,14 @@
 // Layer: Web UI helpers
 // Exports: WorkspaceFileOpenerContext, useWorkspaceFileOpener,
 //          resolveWorkspaceFileOpenTarget, resolveScratchPreviewFileOpenTarget,
-//          resolveDockFileOpenTarget,
-//          openWorkspaceFileReference, prefetchWorkspaceFile
+//          resolveDockFileOpenTarget, resolveEmbeddedFileOpenTarget,
+//          canOpenWorkspaceFileReference, openWorkspaceFileReference,
+//          prefetchWorkspaceFile
 
-import { isSupportedLocalPreviewFilePath } from "@synara/shared/localPreviewFiles";
+import {
+  isSupportedLocalImagePath,
+  isSupportedLocalPreviewFilePath,
+} from "@synara/shared/localPreviewFiles";
 import {
   isLocalAbsolutePath,
   isWorkspaceRelativePathSafe,
@@ -34,6 +38,12 @@ export interface WorkspaceFileOpener {
    * it when saving fails or another navigation supersedes this one.
    */
   openFile: (path: string, beforeOpen?: () => void) => boolean;
+  /**
+   * Optional gate for surfaces that cannot show every reference: false means the
+   * reference has no destination there, so it renders without a click instead of
+   * falling back to an external app. Absent means every reference is openable.
+   */
+  canOpenFile?: (path: string) => boolean;
   /** Optional hover warm-up for the file contents + syntax highlighter. */
   prefetchFile?: (path: string) => void;
 }
@@ -42,6 +52,14 @@ export const WorkspaceFileOpenerContext = createContext<WorkspaceFileOpener | nu
 
 export function useWorkspaceFileOpener(): WorkspaceFileOpener | null {
   return useContext(WorkspaceFileOpenerContext);
+}
+
+/** False when the surface's opener says a reference has nowhere to open there. */
+export function canOpenWorkspaceFileReference(
+  opener: WorkspaceFileOpener | null,
+  path: string,
+): boolean {
+  return opener?.canOpenFile?.(path) ?? true;
 }
 
 // Trailing `:line` / `:line:col` suffix carried by resolved markdown file links.
@@ -173,6 +191,33 @@ export function resolveDockFileOpenTarget(
     return withoutPosition;
   }
   return resolveScratchPreviewFileOpenTarget(rawPath);
+}
+
+export type EmbeddedFileOpenTarget =
+  | { readonly kind: "host"; readonly relativePath: string }
+  | { readonly kind: "image"; readonly path: string };
+
+/**
+ * Where a file reference opens in Lattice's embedded chat, whose dock holds only
+ * the simulator: workspace files go to the host's editor, and an image outside
+ * the workspace (such as a figure render in a temp build directory) opens in the
+ * chat's image viewer. Anything else has no in-app destination there.
+ */
+export function resolveEmbeddedFileOpenTarget(
+  rawPath: string,
+  workspaceRoot: string | null,
+): EmbeddedFileOpenTarget | null {
+  const relativePath = workspaceRoot
+    ? resolveWorkspaceFileOpenTarget(rawPath, workspaceRoot)
+    : null;
+  if (relativePath) {
+    return { kind: "host", relativePath };
+  }
+  const withoutPosition = rawPath.trim().replace(FILE_POSITION_SUFFIX_PATTERN, "");
+  if (isLocalAbsolutePath(withoutPosition) && isSupportedLocalImagePath(withoutPosition)) {
+    return { kind: "image", path: withoutPosition };
+  }
+  return null;
 }
 
 /**

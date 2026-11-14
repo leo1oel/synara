@@ -12,7 +12,11 @@
 import { type MouseEvent, type ReactNode } from "react";
 import type { ProviderMentionReference } from "@synara/contracts";
 import { basenameOfPath, pathLooksLikeKnownFile } from "~/file-icons";
-import { openWorkspaceFileReference, useWorkspaceFileOpener } from "~/lib/workspaceFileOpener";
+import {
+  canOpenWorkspaceFileReference,
+  openWorkspaceFileReference,
+  useWorkspaceFileOpener,
+} from "~/lib/workspaceFileOpener";
 import {
   COMPOSER_INLINE_MENTION_CHIP_CLASS_NAME,
   COMPOSER_INLINE_MENTION_CHIP_INTERACTIVE_CLASS_NAME,
@@ -69,7 +73,8 @@ export function InlineMentionChip(props: InlineMentionChipProps) {
     props.onActivate === undefined &&
     opener !== null &&
     (props.kind === undefined || props.kind === "path") &&
-    pathLooksLikeKnownFile(props.path);
+    pathLooksLikeKnownFile(props.path) &&
+    canOpenWorkspaceFileReference(opener, props.path);
 
   if (props.href !== undefined || props.onActivate || contextOpenable) {
     const href = props.href ?? (contextOpenable ? props.path : undefined);

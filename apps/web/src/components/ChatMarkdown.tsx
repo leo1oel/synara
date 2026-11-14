@@ -66,7 +66,11 @@ import { useTheme } from "../hooks/useTheme";
 import { useSmoothStreamedText } from "../hooks/useSmoothStreamedText";
 import { useStableValue } from "../hooks/useStableValue";
 import { useThrottledStreamingValue } from "../hooks/useThrottledStreamingValue";
-import { openWorkspaceFileReference, useWorkspaceFileOpener } from "../lib/workspaceFileOpener";
+import {
+  canOpenWorkspaceFileReference,
+  openWorkspaceFileReference,
+  useWorkspaceFileOpener,
+} from "../lib/workspaceFileOpener";
 import { useQuery } from "@tanstack/react-query";
 import { projectResolveWorkspaceFileReferenceQueryOptions } from "../lib/projectReactQuery";
 import {
@@ -1282,6 +1286,17 @@ function OpenableFileChip(props: {
   const opener = useWorkspaceFileOpener();
   const chipPath = props.targetPath.replace(MARKDOWN_LINK_POSITION_SUFFIX_PATTERN, "");
   const revealPath = isLocalAbsolutePath(chipPath) ? chipPath : undefined;
+  // A surface that can show only some references (Lattice's embed) renders the
+  // rest as a plain chip rather than handing the click to an external app.
+  if (!canOpenWorkspaceFileReference(opener, props.targetPath)) {
+    return (
+      <InlineMentionChip
+        path={chipPath}
+        theme={props.theme}
+        {...(props.label !== undefined ? { label: props.label } : {})}
+      />
+    );
+  }
   return (
     <InlineMentionChip
       path={chipPath}

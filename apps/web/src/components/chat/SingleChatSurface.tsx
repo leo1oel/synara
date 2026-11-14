@@ -46,7 +46,11 @@ import type { DockPaneRuntimeMode } from "../../lib/dockPaneActivation";
 import type { FileCommentSelection } from "../../lib/fileComments";
 import { gitBranchesQueryOptions } from "../../lib/gitReactQuery";
 import { canComposerHandlePanelWidth } from "../../lib/panelResize";
-import { projectListDirectoriesQueryOptions } from "../../lib/projectReactQuery";
+import {
+  fetchGrantedLocalImageUrl,
+  projectListDirectoriesQueryOptions,
+} from "../../lib/projectReactQuery";
+import { localImageFileName } from "../../lib/localImageUrls";
 import { serverConfigQueryOptions } from "../../lib/serverReactQuery";
 import { useSidechatShortcut } from "./useSidechatShortcut";
 import { waitForSidechatCreator } from "../../lib/sidechatCreatorRegistry";
@@ -54,6 +58,7 @@ import { requestComposerFocus } from "../../composerFocusRequestStore";
 import {
   prefetchWorkspaceFile,
   resolveDockFileOpenTarget,
+  resolveEmbeddedFileOpenTarget,
   resolveWorkspaceDirectoryOpenTarget,
   resolveWorkspaceFileOpenTarget,
   WorkspaceFileOpenerContext,
@@ -118,6 +123,8 @@ import {
 } from "../pullRequest/pullRequestDetail.logic";
 import { usePullRequestPaneStateIcon } from "../pullRequest/usePullRequestPaneStateIcon";
 import { ChatPaneBody, KeptChatPane } from "./ChatPaneKeepAlive";
+import { ExpandedImageOverlay } from "./ExpandedImageOverlay";
+import { useExpandedImagePreview } from "./useExpandedImagePreview";
 import { SidebarInset } from "../ui/sidebar";
 import { toastManager } from "../ui/toast";
 import { WorkspaceSearchPalette, type WorkspaceSearchPaletteMode } from "../WorkspaceSearchPalette";
@@ -209,8 +216,25 @@ export function SingleChatSurface(props: {
   const dockState = useRightDockStore(
     useMemo(() => selectRightDockState(props.threadId), [props.threadId]),
   );
-  const openPane = useRightDockStore((store) => store.openPane);
-  const toggleSingletonPane = useRightDockStore((store) => store.toggleSingletonPane);
+  const storeOpenPane = useRightDockStore((store) => store.openPane);
+  const storeToggleSingletonPane = useRightDockStore((store) => store.toggleSingletonPane);
+  // The embedded dock presents only the simulator pane, so opening any other kind
+  // there would persist a pane it never shows. Standalone Synara opens every kind.
+  const embedMode = props.embedMode === true;
+  const openPane = useCallback<typeof storeOpenPane>(
+    (threadId, input) => {
+      if (embedMode && !EMBEDDED_DOCK_PANE_KINDS.has(input.kind)) return;
+      storeOpenPane(threadId, input);
+    },
+    [embedMode, storeOpenPane],
+  );
+  const toggleSingletonPane = useCallback<typeof storeToggleSingletonPane>(
+    (threadId, input) => {
+      if (embedMode && !EMBEDDED_DOCK_PANE_KINDS.has(input.kind)) return;
+      storeToggleSingletonPane(threadId, input);
+    },
+    [embedMode, storeToggleSingletonPane],
+  );
   const closePane = useRightDockStore((store) => store.closePane);
   const movePane = useRightDockStore((store) => store.movePane);
   const setActivePane = useRightDockStore((store) => store.setActivePane);
@@ -631,17 +655,60 @@ export function SingleChatSurface(props: {
       prefetchWorkspaceFile(queryClient, workspaceRoot, relativePath);
     }
   };
+  const {
+    expandedImage: embeddedExpandedImage,
+    setExpandedImage: setEmbeddedExpandedImage,
+    closeExpandedImage: closeEmbeddedExpandedImage,
+    navigateExpandedImage: navigateEmbeddedExpandedImage,
+  } = useExpandedImagePreview();
+  const openEmbeddedImagePreview = (path: string) => {
+    void fetchGrantedLocalImageUrl(queryClient, {
+      src: path,
+      cwd: workspaceRoot ?? undefined,
+      threadId: props.threadId,
+    })
+      .then((src) => {
+        setEmbeddedExpandedImage({ images: [{ src, name: localImageFileName(path) }], index: 0 });
+      })
+      .catch((error: unknown) => {
+        toastManager.add({
+          type: "error",
+          title: t("chat:couldNotOpenGeneratedImage"),
+          description: error instanceof Error ? error.message : t("chat:theFileMayBeUnavailable"),
+        });
+      });
+  };
+  // Lattice's embedded dock holds only the simulator, so a reference never opens
+  // a dock pane there: workspace files (directories included) go to the host's
+  // editor, an image outside the workspace opens in the image viewer, and any
+  // other reference renders without a click.
+  const embeddedFileOpener: WorkspaceFileOpener = {
+    openFile: (path, beforeOpen) => {
+      const target = resolveEmbeddedFileOpenTarget(path, workspaceRoot);
+      if (target?.kind === "host") {
+        if (!postOpenFileToLattice(readEmbedMode(), target.relativePath)) {
+          return false;
+        }
+        beforeOpen?.();
+        return true;
+      }
+      if (target?.kind === "image") {
+        beforeOpen?.();
+        openEmbeddedImagePreview(target.path);
+        return true;
+      }
+      return false;
+    },
+    canOpenFile: (path) => resolveEmbeddedFileOpenTarget(path, workspaceRoot) !== null,
+    prefetchFile: prefetchOpenerFile,
+  };
   // Chat surface: file references open in the right-dock file pane, while the
   // workspace root and explicit directory references open in Explorer.
   // Other references retain the existing dock file preview and external-editor
   // fallback behavior.
-  const dockFileOpener: WorkspaceFileOpener = {
+  const standaloneDockFileOpener: WorkspaceFileOpener = {
     openFile: (path, beforeOpen) => {
-      // Lattice's embedded dock holds only the simulator, so directories stay
-      // with the host there like any other path.
-      const directoryPath = props.embedMode
-        ? null
-        : resolveWorkspaceDirectoryOpenTarget(path, workspaceRoot);
+      const directoryPath = resolveWorkspaceDirectoryOpenTarget(path, workspaceRoot);
       if (directoryPath !== null) {
         beforeOpen?.();
         requestImmediateDockHydration("explorer");
@@ -656,15 +723,6 @@ export function SingleChatSurface(props: {
       if (!targetPath) {
         return false;
       }
-      // The embedded dock is reserved for the simulator. Lattice already has
-      // the editor, so hand workspace files to the host instead.
-      if (props.embedMode && workspaceRoot) {
-        const relativePath = resolveWorkspaceFileOpenTarget(path, workspaceRoot);
-        if (relativePath && postOpenFileToLattice(readEmbedMode(), relativePath)) {
-          beforeOpen?.();
-          return true;
-        }
-      }
       beforeOpen?.();
       requestImmediateDockHydration("file");
       openPane(props.threadId, { kind: "file", filePath: targetPath });
@@ -672,6 +730,7 @@ export function SingleChatSurface(props: {
     },
     prefetchFile: prefetchOpenerFile,
   };
+  const dockFileOpener = props.embedMode ? embeddedFileOpener : standaloneDockFileOpener;
   // Editor surface: the center file pane is already the file viewer, so file
   // references select into it instead of opening a dock pane.
   const editorFileOpener: WorkspaceFileOpener = {
@@ -1323,6 +1382,13 @@ export function SingleChatSurface(props: {
           onOpenFile={handleOpenWorkspaceSearchFile}
           onOpenDirectory={handleOpenWorkspaceSearchDirectory}
         />
+        {props.embedMode ? (
+          <ExpandedImageOverlay
+            expandedImage={embeddedExpandedImage}
+            onClose={closeEmbeddedExpandedImage}
+            onNavigate={navigateEmbeddedExpandedImage}
+          />
+        ) : null}
       </div>
     </WorkspaceFileOpenerContext.Provider>
   );
