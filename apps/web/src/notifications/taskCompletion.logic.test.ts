@@ -916,11 +916,12 @@ describe("collectCompletedThreadCandidates", () => {
   });
 });
 
+const embedFor = (workspaceRoot: string) =>
+  ({ workspaceRoot, theme: "light", surface: "chrome", hostOrigin: null, locale: "en" }) as const;
+
 describe("resolveEmbedNotificationProjectIds", () => {
   const alpha = { id: ProjectId.makeUnsafe("project-alpha"), cwd: "/work/alpha" };
   const beta = { id: ProjectId.makeUnsafe("project-beta"), cwd: "/work/beta" };
-  const embedFor = (workspaceRoot: string) =>
-    ({ workspaceRoot, theme: "light", surface: "chrome", hostOrigin: null, locale: "en" }) as const;
 
   it("keeps every project in scope outside embed mode", () => {
     const scope = resolveEmbedNotificationProjectIds(null, [alpha, beta]);
