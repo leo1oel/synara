@@ -207,6 +207,8 @@ function ChatThreadRouteContent() {
   ]);
 
   useEffect(() => {
+    // StrictMode replays mount after a cleanup; without this the ref stays false for good.
+    mountedRef.current = true;
     return () => {
       mountedRef.current = false;
     };

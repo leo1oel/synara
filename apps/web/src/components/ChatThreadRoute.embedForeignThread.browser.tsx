@@ -21,6 +21,7 @@ import {
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
 import { http, HttpResponse, ws } from "msw";
 import { setupWorker } from "msw/browser";
+import { StrictMode } from "react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
@@ -251,10 +252,14 @@ function panelText(host: HTMLElement): string {
   return host.innerText.trim();
 }
 
-async function mountEmbeddedPanel(initialThreadId: ThreadId) {
+async function mountEmbeddedPanel(initialThreadId: ThreadId, options?: { strict?: boolean }) {
   const host = createFullscreenTestHost();
   const router = getRouter(createMemoryHistory({ initialEntries: [`/${initialThreadId}`] }));
-  const screen = await render(<RouterProvider router={router} />, { container: host });
+  const app = <RouterProvider router={router} />;
+  // main.tsx mounts the app in StrictMode, which replays every effect's mount after its cleanup.
+  const screen = await render(options?.strict ? <StrictMode>{app}</StrictMode> : app, {
+    container: host,
+  });
   return {
     host,
     router,
@@ -420,8 +425,13 @@ describe("embedded thread route on another project's thread", () => {
     }
   });
 
-  it("shows a way back instead of an empty panel when leaving is blocked", async () => {
-    const panel = await mountEmbeddedPanel(ALPHA_THREAD_ID);
+  it.each([
+    { name: "plain", strict: false },
+    { name: "StrictMode, as main.tsx mounts it", strict: true },
+  ])("shows a way back instead of an empty panel when leaving is blocked ($name)", async ({
+    strict,
+  }) => {
+    const panel = await mountEmbeddedPanel(ALPHA_THREAD_ID, { strict });
     let unblock: (() => void) | null = null;
     try {
       await expectComposerOnOwnThread(panel, ALPHA_THREAD_ID);
