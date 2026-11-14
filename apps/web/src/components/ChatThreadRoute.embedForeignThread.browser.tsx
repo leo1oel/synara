@@ -428,38 +428,39 @@ describe("embedded thread route on another project's thread", () => {
   it.each([
     { name: "plain", strict: false },
     { name: "StrictMode, as main.tsx mounts it", strict: true },
-  ])("shows a way back instead of an empty panel when leaving is blocked ($name)", async ({
-    strict,
-  }) => {
-    const panel = await mountEmbeddedPanel(ALPHA_THREAD_ID, { strict });
-    let unblock: (() => void) | null = null;
-    try {
-      await expectComposerOnOwnThread(panel, ALPHA_THREAD_ID);
-      // A route blocker (an unsaved editor whose save failed) refuses to leave the thread.
-      unblock = panel.router.history.block({
-        // True blocks the navigation.
-        blockerFn: ({ currentLocation }) => currentLocation.pathname.startsWith("/thread-beta"),
-      });
-      await openThread(panel, BETA_THREAD_1);
-      await vi.waitFor(
-        () => {
-          expect(routeThreadId(panel.router)).toBe(BETA_THREAD_1);
-          expect(panelText(panel.host)).toContain(FOREIGN_FALLBACK_TEXT);
-        },
-        { timeout: 20_000, interval: 16 },
-      );
-      unblock?.();
-      const back = Array.from(panel.host.querySelectorAll("button")).find(
-        (button) => button.textContent?.trim() === "Back",
-      );
-      expect(back, "the fallback has no Back button").toBeDefined();
-      back!.click();
-      await expectComposerOnOwnThread(panel, ALPHA_THREAD_ID);
-    } finally {
-      unblock?.();
-      await panel.cleanup();
-    }
-  });
+  ])(
+    "shows a way back instead of an empty panel when leaving is blocked ($name)",
+    async ({ strict }) => {
+      const panel = await mountEmbeddedPanel(ALPHA_THREAD_ID, { strict });
+      let unblock: (() => void) | null = null;
+      try {
+        await expectComposerOnOwnThread(panel, ALPHA_THREAD_ID);
+        // A route blocker (an unsaved editor whose save failed) refuses to leave the thread.
+        unblock = panel.router.history.block({
+          // True blocks the navigation.
+          blockerFn: ({ currentLocation }) => currentLocation.pathname.startsWith("/thread-beta"),
+        });
+        await openThread(panel, BETA_THREAD_1);
+        await vi.waitFor(
+          () => {
+            expect(routeThreadId(panel.router)).toBe(BETA_THREAD_1);
+            expect(panelText(panel.host)).toContain(FOREIGN_FALLBACK_TEXT);
+          },
+          { timeout: 20_000, interval: 16 },
+        );
+        unblock?.();
+        const back = Array.from(panel.host.querySelectorAll("button")).find(
+          (button) => button.textContent?.trim() === "Back",
+        );
+        expect(back, "the fallback has no Back button").toBeDefined();
+        back!.click();
+        await expectComposerOnOwnThread(panel, ALPHA_THREAD_ID);
+      } finally {
+        unblock?.();
+        await panel.cleanup();
+      }
+    },
+  );
 
   // create_task can target another project; the card's Open must not take the frame there.
   it("refuses to open another project's task from the transcript", async () => {
