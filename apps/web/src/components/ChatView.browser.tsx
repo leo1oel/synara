@@ -4940,7 +4940,29 @@ describe("ChatView transcript geometry (full app)", () => {
         summary: { state: "open", path: "/", projects, threads: [] },
       });
       confirm.mockResolvedValue(true);
+      const dumpDialogs = (label: string) =>
+        console.log(
+          "PROBE " + label,
+          JSON.stringify(
+            Array.from(
+              document.querySelectorAll<HTMLElement>(
+                '[role="dialog"], [role="alertdialog"], [data-slot^="dialog"], [data-base-ui-portal]',
+              ),
+            ).map((element) => ({
+              id: element.id,
+              role: element.getAttribute("role"),
+              slot: element.dataset.slot ?? null,
+              open: element.hasAttribute("data-open"),
+              closed: element.hasAttribute("data-closed"),
+              label: element.getAttribute("aria-label") ?? element.getAttribute("aria-labelledby"),
+              text: (element.textContent ?? "").replace(/\s+/g, " ").slice(0, 300),
+            })),
+          ),
+        );
+      dumpDialogs("before-actions");
       await actions.click();
+      dumpDialogs("after-actions");
+      setTimeout(() => dumpDialogs("after-actions+3s"), 3_000);
       await remove.click();
       await expect.poll(() => removeEmptyProject.mock.calls.length).toBe(1);
       expect(removeEmptyProject).toHaveBeenCalledWith(projectId);
