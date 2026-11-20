@@ -6421,15 +6421,8 @@ export default function ChatView({
 
   // Open-thread tabs belong to the single chat on desktop; split panes, the editor rail,
   // phone-width headers, and users who turned tabs off keep the plain thread title.
-  // Lattice's embed keeps the title too: its chat history menu (`historyProjectId`) lives
-  // only in the title row, and the panel's width is the iframe's viewport, so tabs at
-  // 768px and wider hid every thread a closed tab left behind (lattice#1195).
   const showOpenThreadTabs =
-    settings.showOpenThreadTabs &&
-    !isMobileViewport &&
-    surfaceMode === "single" &&
-    !isEditorRail &&
-    !isEmbed;
+    settings.showOpenThreadTabs && !isMobileViewport && surfaceMode === "single" && !isEditorRail;
 
   const activeThreadDisplayTitle = resolveActiveThreadTitle({
     title: isCoordinatorConversation
