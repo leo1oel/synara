@@ -5025,7 +5025,29 @@ describe("ChatView transcript geometry (full app)", () => {
           ),
         );
       dumpDialogs("before-actions");
-      await actions.click();
+      const probeStart = performance.now();
+      try {
+        await actions.click({ timeout: 8_000 });
+      } catch (error) {
+        throw new Error(
+          "PROBE after " +
+            Math.round(performance.now() - probeStart) +
+            "ms, test clock " +
+            Math.round(performance.now()) +
+            "ms: " +
+            JSON.stringify(
+              Array.from(
+                document.querySelectorAll<HTMLElement>('[data-slot="dialog-viewport"]'),
+              ).map((element) => ({
+                portal: element.parentElement?.id ?? null,
+                open: element.hasAttribute("data-open"),
+                text: (element.textContent ?? "").replace(/\s+/g, " ").slice(0, 600),
+                html: element.innerHTML.slice(0, 1500),
+              })),
+            ),
+          { cause: error },
+        );
+      }
       dumpDialogs("after-actions");
       setTimeout(() => dumpDialogs("after-actions+3s"), 3_000);
       await remove.click();
