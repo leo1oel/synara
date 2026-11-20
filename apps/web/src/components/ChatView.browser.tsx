@@ -4913,6 +4913,17 @@ describe("ChatView transcript geometry (full app)", () => {
       const actions = page.getByRole("button", {
         name: `Project actions for ${projectName} on Remote test computer`,
       });
+      const openDialogs = Array.from(
+        document.querySelectorAll<HTMLElement>('[data-slot="dialog-viewport"][data-open]'),
+      ).map((element) => ({
+        portal: element.parentElement?.id ?? null,
+        labelledBy: element.querySelector("[aria-labelledby]")?.getAttribute("aria-labelledby"),
+        text: (element.textContent ?? "").replace(/\s+/g, " ").slice(0, 600),
+        html: element.innerHTML.slice(0, 1200),
+      }));
+      if (openDialogs.length > 0) {
+        throw new Error("PROBE open dialogs: " + JSON.stringify(openDialogs));
+      }
       const remove = page.getByRole("menuitem", { name: "Remove project", exact: true });
       await actions.click();
       await remove.click();
