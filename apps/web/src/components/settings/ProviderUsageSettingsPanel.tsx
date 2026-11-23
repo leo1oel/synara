@@ -40,8 +40,8 @@ import { deriveAccountRateLimits, type ProviderRateLimit } from "~/lib/rateLimit
 import {
   fetchAllProviderUsage,
   serverAllProviderUsageQueryOptions,
-  serverQueryKeys,
   serverSettingsQueryOptions,
+  setProviderUsageQueryData,
 } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
 import { isSynaraEmbedMode } from "~/embedMode";
@@ -263,10 +263,7 @@ export function ProviderUsageSettingsPanel() {
     onSuccess: (data) => {
       // The batch owns account membership. Keeping omitted previous snapshots
       // would restore accounts that were removed or disabled since the last fetch.
-      queryClient.setQueryData<readonly ServerProviderUsageSnapshot[]>(
-        serverQueryKeys.allProviderUsage(),
-        data,
-      );
+      setProviderUsageQueryData(queryClient, data);
     },
   });
 
