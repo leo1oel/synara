@@ -41,9 +41,18 @@ const CLAUDE_TRANSCRIPT_READ_CHUNK_BYTES = 64 * 1024;
 const CLAUDE_USAGE_KEY_BYTES = Buffer.from('"usage"');
 // Usage samples kept across refreshes in the per-transcript cache. A sample plus its
 // dedupe key costs roughly 200 bytes, so this bounds the cache near 20 MB. Newest
-// transcripts are retained first; transcripts past the cap are re-read on every
-// refresh instead of retained, which only costs time, never correctness.
+// transcripts are retained first.
 const MAX_CACHED_CLAUDE_USAGE_SAMPLES = 100_000;
+// Transcripts past that cap keep only their samples, packed at 24 bytes each, so this
+// bounds them near 24 MB. Re-reading them on every refresh instead kept a heavy user's
+// backend busy: a month of 2,400 transcripts (3 GB, 360,000 samples) cost about 2 s of
+// CPU at over 100% on each 30 s usage poll (lattice#1247). Transcripts past both caps
+// are still re-read on every refresh, which only costs time, never correctness.
+const MAX_PACKED_CLAUDE_USAGE_SAMPLES = 1_000_000;
+const CLAUDE_USAGE_CACHE_BUDGET: ClaudeUsageCacheBudget = {
+  samples: MAX_CACHED_CLAUDE_USAGE_SAMPLES,
+  packedSamples: MAX_PACKED_CLAUDE_USAGE_SAMPLES,
+};
 
 type UsageSnapshot = Exclude<ServerGetProviderUsageSnapshotResult, null>;
 
@@ -91,9 +100,29 @@ interface ClaudeTranscriptCacheEntry {
   readonly seenKeys: ReadonlySet<string>;
 }
 
+/**
+ * An unchanged transcript's samples without the dedupe keys and resume point an append
+ * needs: any change to the file re-reads it from the start. Two numbers (timestamp,
+ * tokens) and two indexes into `strings` (session id, model) per sample.
+ */
+interface PackedClaudeTranscript {
+  readonly ino: number;
+  readonly size: number;
+  readonly mtimeMs: number;
+  readonly strings: ReadonlyArray<string | null>;
+  readonly numbers: Float64Array;
+  readonly refs: Uint32Array;
+}
+
+export interface ClaudeUsageCacheBudget {
+  readonly samples: number;
+  readonly packedSamples: number;
+}
+
 const usageSnapshotCache = new Map<string, CachedUsageSnapshot>();
 // Entries are replaced, never mutated, so overlapping refreshes cannot corrupt them.
 const claudeTranscriptCache = new Map<string, ClaudeTranscriptCacheEntry>();
+const packedClaudeTranscripts = new Map<string, PackedClaudeTranscript>();
 const EMPTY_KEYS: ReadonlySet<string> = new Set();
 // Archive reads are plain promises that outlive the request that started them. A first
 // snapshot on a heavy user's machine reads for several seconds, and those reads kept a
@@ -816,6 +845,52 @@ function cachedClaudeSamples(entry: ClaudeTranscriptCacheEntry): ReadonlyArray<C
   return entry.tailSamples.length === 0 ? entry.samples : entry.samples.concat(entry.tailSamples);
 }
 
+function sameTranscript(
+  entry: { readonly ino: number; readonly size: number; readonly mtimeMs: number },
+  file: ClaudeTranscriptFile,
+): boolean {
+  return entry.ino === file.ino && entry.size === file.size && entry.mtimeMs === file.mtimeMs;
+}
+
+// The samples of a final record without its newline are packed too: the newline changes
+// the file, and a changed file is read again from the start.
+function packClaudeTranscript(entry: ClaudeTranscriptCacheEntry): PackedClaudeTranscript {
+  const samples = cachedClaudeSamples(entry);
+  const strings: Array<string | null> = [];
+  const indexes = new Map<string | null, number>();
+  const indexOf = (value: string | null): number => {
+    let index = indexes.get(value);
+    if (index === undefined) {
+      index = strings.length;
+      strings.push(value);
+      indexes.set(value, index);
+    }
+    return index;
+  };
+  const numbers = new Float64Array(samples.length * 2);
+  const refs = new Uint32Array(samples.length * 2);
+  samples.forEach((sample, index) => {
+    numbers[index * 2] = sample.timestampMs;
+    numbers[index * 2 + 1] = sample.totalTokens;
+    refs[index * 2] = indexOf(sample.sessionId);
+    refs[index * 2 + 1] = indexOf(sample.model);
+  });
+  return { ino: entry.ino, size: entry.size, mtimeMs: entry.mtimeMs, strings, numbers, refs };
+}
+
+function unpackClaudeTranscript(packed: PackedClaudeTranscript): ReadonlyArray<ClaudeUsageSample> {
+  const samples: ClaudeUsageSample[] = [];
+  for (let index = 0; index < packed.refs.length; index += 2) {
+    samples.push({
+      sessionId: packed.strings[packed.refs[index]!]!,
+      timestampMs: packed.numbers[index]!,
+      totalTokens: packed.numbers[index + 1]!,
+      model: packed.strings[packed.refs[index + 1]!]!,
+    });
+  }
+  return samples;
+}
+
 // Growth and inode identity cannot distinguish append from an in-place rewrite.
 // Verify the committed prefix in bounded chunks before reusing parsed samples;
 // unchanged transcripts still take the metadata-only cache path below.
@@ -878,13 +953,12 @@ async function readCachedClaudeUsageSamples(
   file: ClaudeTranscriptFile,
   signal?: AbortSignal,
 ): Promise<ReadonlyArray<ClaudeUsageSample>> {
+  const packed = packedClaudeTranscripts.get(file.path);
+  if (packed && sameTranscript(packed, file)) {
+    return unpackClaudeTranscript(packed);
+  }
   const cached = claudeTranscriptCache.get(file.path);
-  if (
-    cached &&
-    cached.ino === file.ino &&
-    cached.size === file.size &&
-    cached.mtimeMs === file.mtimeMs
-  ) {
+  if (cached && sameTranscript(cached, file)) {
     return cachedClaudeSamples(cached);
   }
 
@@ -952,25 +1026,46 @@ async function readCachedClaudeUsageSamples(
 }
 
 // Drops transcripts that fell out of the listing, then keeps the newest transcripts
-// until MAX_CACHED_CLAUDE_USAGE_SAMPLES is reached.
-function pruneClaudeTranscriptCache(files: ReadonlyArray<ClaudeTranscriptFile>): void {
+// until `budget.samples` is reached, and packs the next ones until
+// `budget.packedSamples` is reached. A transcript read again since it was packed has a
+// fresh entry, which replaces its packed samples.
+function pruneClaudeTranscriptCache(
+  files: ReadonlyArray<ClaudeTranscriptFile>,
+  budget: ClaudeUsageCacheBudget,
+): void {
   const retainedPaths = new Set<string>();
+  const packedPaths = new Set<string>();
   let retainedSamples = 0;
+  let packedSamples = 0;
   for (const file of files) {
     const entry = claudeTranscriptCache.get(file.path);
-    if (!entry) {
-      continue;
+    const packed = packedClaudeTranscripts.get(file.path);
+    if (entry) {
+      const sampleCount = entry.samples.length + entry.tailSamples.length;
+      if (retainedSamples + sampleCount <= budget.samples) {
+        retainedSamples += sampleCount;
+        retainedPaths.add(file.path);
+      } else if (packedSamples + sampleCount <= budget.packedSamples) {
+        packedSamples += sampleCount;
+        packedPaths.add(file.path);
+        packedClaudeTranscripts.set(file.path, packClaudeTranscript(entry));
+      }
+    } else if (packed && sameTranscript(packed, file)) {
+      const sampleCount = packed.refs.length / 2;
+      if (packedSamples + sampleCount <= budget.packedSamples) {
+        packedSamples += sampleCount;
+        packedPaths.add(file.path);
+      }
     }
-    const sampleCount = entry.samples.length + entry.tailSamples.length;
-    if (retainedSamples + sampleCount > MAX_CACHED_CLAUDE_USAGE_SAMPLES) {
-      continue;
-    }
-    retainedSamples += sampleCount;
-    retainedPaths.add(file.path);
   }
   for (const path of claudeTranscriptCache.keys()) {
     if (!retainedPaths.has(path)) {
       claudeTranscriptCache.delete(path);
+    }
+  }
+  for (const path of packedClaudeTranscripts.keys()) {
+    if (!packedPaths.has(path)) {
+      packedClaudeTranscripts.delete(path);
     }
   }
 }
@@ -980,6 +1075,7 @@ export async function readRecentClaudeUsageSamples(
   projectsRoot: string,
   nowMs: number = Date.now(),
   signal?: AbortSignal,
+  budget: ClaudeUsageCacheBudget = CLAUDE_USAGE_CACHE_BUDGET,
 ): Promise<ReadonlyArray<ClaudeUsageSample>> {
   const transcriptFiles = await listRecentClaudeTranscriptFiles(projectsRoot, nowMs, signal);
   const samplesByFile = await mapWithConcurrency(
@@ -990,7 +1086,7 @@ export async function readRecentClaudeUsageSamples(
   );
   // A cancelled read is partial: report nothing rather than undercount.
   signal?.throwIfAborted();
-  pruneClaudeTranscriptCache(transcriptFiles);
+  pruneClaudeTranscriptCache(transcriptFiles, budget);
   return samplesByFile.flat();
 }
 
