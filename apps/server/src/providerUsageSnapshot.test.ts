@@ -290,6 +290,10 @@ async function touchLater(file: string): Promise<void> {
   await fs.utimes(file, later, later);
 }
 
+function hoursAgo(hours: number): Date {
+  return new Date(Date.now() - hours * 3_600_000);
+}
+
 describe("readRecentClaudeUsageSamples", () => {
   it("does not reopen unchanged transcripts on a later pass", async () => {
     const { root, projectDir } = await makeProjectsRoot();
@@ -387,6 +391,79 @@ describe("readRecentClaudeUsageSamples", () => {
     await fs.appendFile(file, pending.slice(splitAt));
     await touchLater(file);
     expect(totalTokens(await readRecentClaudeUsageSamples(root))).toBe(100);
+  });
+
+  it("keeps transcripts past the sample cap packed instead of reopening them", async () => {
+    const { root, projectDir } = await makeProjectsRoot();
+    const newest = path.join(projectDir, "newest.jsonl");
+    const older = path.join(projectDir, "older.jsonl");
+    const oldest = path.join(projectDir, "oldest.jsonl");
+    await fs.writeFile(oldest, line(5, 1, "m1"));
+    await fs.writeFile(older, line(4, 10, "m2") + line(3, 20, "m3"));
+    await fs.writeFile(newest, line(2, 100, "m4"));
+    const at = (file: string, hoursAgo: number) =>
+      fs.utimes(
+        file,
+        new Date(Date.now() - hoursAgo * 3_600_000),
+        new Date(Date.now() - hoursAgo * 3_600_000),
+      );
+    await at(oldest, 3);
+    await at(older, 2);
+    await at(newest, 1);
+    // newest fits the full cache, older the packed one, and oldest neither.
+    const budget = { samples: 1, packedSamples: 2 };
+
+    const first = await readRecentClaudeUsageSamples(root, Date.now(), undefined, budget);
+    expect(totalTokens(first)).toBe(131);
+
+    const open = vi.spyOn(fs, "open");
+    const second = await readRecentClaudeUsageSamples(root, Date.now(), undefined, budget);
+    expect(open.mock.calls.map(([file]) => path.basename(String(file)))).toEqual(["oldest.jsonl"]);
+    expect(second.toSorted((left, right) => left.timestampMs - right.timestampMs)).toEqual(
+      first.toSorted((left, right) => left.timestampMs - right.timestampMs),
+    );
+
+    // A packed transcript that changes is read again from the start.
+    vi.restoreAllMocks();
+    await fs.appendFile(older, line(1, 7, "m5"));
+    await touchLater(older);
+    const reopen = vi.spyOn(fs, "open");
+    expect(
+      totalTokens(await readRecentClaudeUsageSamples(root, Date.now(), undefined, budget)),
+    ).toBe(138);
+    expect(reopen.mock.calls.map(([file]) => path.basename(String(file))).toSorted()).toEqual([
+      "older.jsonl",
+      "oldest.jsonl",
+    ]);
+  });
+
+  it("packs an unfinished final record and counts it once its newline arrives", async () => {
+    const { root, projectDir } = await makeProjectsRoot();
+    const newest = path.join(projectDir, "newest.jsonl");
+    const older = path.join(projectDir, "older.jsonl");
+    const pending = line(3, 20, "m2");
+    const splitAt = Math.floor(pending.length / 2);
+    await fs.writeFile(older, line(4, 10, "m1") + pending.slice(0, splitAt));
+    await fs.writeFile(newest, line(2, 100, "m3"));
+    await fs.utimes(older, hoursAgo(2), hoursAgo(2));
+    await fs.utimes(newest, hoursAgo(1), hoursAgo(1));
+    const budget = { samples: 1, packedSamples: 10 };
+
+    expect(
+      totalTokens(await readRecentClaudeUsageSamples(root, Date.now(), undefined, budget)),
+    ).toBe(110);
+    const open = vi.spyOn(fs, "open");
+    expect(
+      totalTokens(await readRecentClaudeUsageSamples(root, Date.now(), undefined, budget)),
+    ).toBe(110);
+    expect(open).not.toHaveBeenCalled();
+
+    vi.restoreAllMocks();
+    await fs.appendFile(older, pending.slice(splitAt));
+    await touchLater(older);
+    expect(
+      totalTokens(await readRecentClaudeUsageSamples(root, Date.now(), undefined, budget)),
+    ).toBe(130);
   });
 
   it("skips transcripts last written more than 30 days ago without opening them", async () => {
