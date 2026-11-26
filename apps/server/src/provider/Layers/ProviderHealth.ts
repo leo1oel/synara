@@ -3202,9 +3202,13 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
           ).pipe(Effect.provideService(FileSystem.FileSystem, fileSystem)),
         { concurrency: "unbounded" },
       ).pipe(
+        // Only a cached ready status is served before this run's first probe. A saved
+        // warning or error may describe another process (a cwd since deleted, a
+        // signed-out shell) and would show as a current banner until the probe lands;
+        // leaving it out reads as "not checked yet", exactly like a first launch.
         Effect.map((statuses) =>
           orderProviderStatuses(
-            statuses.filter((status): status is ServerProviderStatus => status !== undefined),
+            statuses.filter((status): status is ServerProviderStatus => status?.status === "ready"),
           ),
         ),
       );

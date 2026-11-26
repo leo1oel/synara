@@ -9,6 +9,7 @@
  * redacted reason plus a stable error code the web maps to a next step.
  */
 import { redactDiagnosticText } from "@synara/shared/diagnosticsRedaction";
+import { stripAnsi } from "./providerCliOutput";
 
 /** Error codes the web maps to a localized next step (see workLog). */
 export const CLAUDE_FAILURE_ERROR_CODES = {
@@ -112,13 +113,10 @@ const NODE_NOISE = /^\(node:\d+\)|^\(Use `node --trace-/;
 const REASON_LINE =
   /error|invalid|unknown|corrupt|requires|denied|not found|no such|failed|cannot|can't|unable|not logged|login|expired|unsupported|not available|in use/i;
 const OPTION_NAME = /--[a-z][a-z0-9-]*/g;
-// eslint-disable-next-line no-control-regex -- stripping terminal colour codes is the point
-const ANSI = /\u001b\[[0-9;]*[A-Za-z]/g;
 
 /** The most telling stderr line: the first that names a problem, else the last. */
 export function claudeStderrReason(stderr: string, homeDir?: string): string | undefined {
-  const lines = stderr
-    .replace(ANSI, "")
+  const lines = stripAnsi(stderr)
     .split(/\r?\n/u)
     .map((line) => line.trim())
     .filter((line) => line.length > 0 && !STACK_FRAME.test(line) && !NODE_NOISE.test(line));

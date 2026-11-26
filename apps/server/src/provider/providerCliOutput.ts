@@ -28,13 +28,23 @@ export function isCommandMissingCause(error: unknown): boolean {
   return COMMAND_MISSING_MARKERS.some((marker) => lower.includes(marker));
 }
 
+// CSI sequences (colours, cursor moves) and OSC sequences (hyperlinks, titles). CLIs
+// colour their stderr when FORCE_COLOR is set, even into a pipe, and that text ends up
+// verbatim in provider status messages.
+// eslint-disable-next-line no-control-regex -- stripping terminal escape codes is the point
+const ANSI_ESCAPE = /\u001b\[[0-?]*[ -/]*[@-~]|\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g;
+
+export function stripAnsi(value: string): string {
+  return value.replace(ANSI_ESCAPE, "");
+}
+
 export function detailFromResult(
   result: CommandResult & { readonly timedOut?: boolean },
 ): string | undefined {
   if (result.timedOut) return PROVIDER_COMMAND_TIMEOUT_DETAIL;
-  const stderr = nonEmptyTrimmed(result.stderr);
+  const stderr = nonEmptyTrimmed(stripAnsi(result.stderr));
   if (stderr) return stderr;
-  const stdout = nonEmptyTrimmed(result.stdout);
+  const stdout = nonEmptyTrimmed(stripAnsi(result.stdout));
   if (stdout) return stdout;
   if (result.code !== 0) {
     return `Command exited with code ${result.code}.`;

@@ -1260,6 +1260,57 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         assert.strictEqual(spawnCount, 0);
       }),
     );
+
+    it.effect("serves only cached ready statuses before the first fresh probe", () =>
+      Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const baseDir = yield* fileSystem.makeTempDirectoryScoped({
+          prefix: "provider-health-stale-cache-",
+        });
+        const stateDir = path.join(baseDir, "userdata");
+        yield* writeProviderStatusCache({
+          filePath: resolveProviderStatusCachePath({ stateDir, provider: "codex" }),
+          provider: cachedReadyCodexStatus,
+        });
+        yield* writeProviderStatusCache({
+          filePath: resolveProviderStatusCachePath({ stateDir, provider: "claudeAgent" }),
+          provider: {
+            provider: "claudeAgent",
+            instanceId: "claudeAgent" as ProviderInstanceId,
+            driver: "claudeAgent",
+            status: "warning",
+            available: true,
+            authStatus: "unknown",
+            checkedAt: "2026-06-16T12:00:00.000Z",
+            message:
+              "Could not verify Claude authentication status. Error: ENOENT: no such file or directory, uv_cwd",
+          },
+        });
+        let spawnCount = 0;
+        const layer = ProviderHealthLive.pipe(
+          Layer.provideMerge(ServerSettingsService.layerTest(DEFAULT_SERVER_SETTINGS)),
+          Layer.provideMerge(ServerConfig.layerTest(process.cwd(), baseDir)),
+          Layer.provideMerge(
+            mockSpawnerLayer(() => {
+              spawnCount += 1;
+              return { stdout: "", stderr: "", code: 0 };
+            }),
+          ),
+        );
+
+        const statuses = yield* Effect.gen(function* () {
+          const providerHealth = yield* ProviderHealth;
+          return yield* providerHealth.getStatuses;
+        }).pipe(Effect.provide(layer));
+
+        assert.deepStrictEqual(
+          statuses.map((status) => [status.provider, status.status]),
+          [["codex", "ready"]],
+        );
+        assert.strictEqual(spawnCount, 0);
+      }),
+    );
   });
 
   describe("stabilizeProviderStatusesAgainstTransientTimeouts", () => {
