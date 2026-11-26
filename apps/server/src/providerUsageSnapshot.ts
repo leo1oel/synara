@@ -43,8 +43,8 @@ const CLAUDE_USAGE_KEY_BYTES = Buffer.from('"usage"');
 // dedupe key costs roughly 200 bytes, so this bounds the cache near 20 MB. Newest
 // transcripts are retained first.
 const MAX_CACHED_CLAUDE_USAGE_SAMPLES = 100_000;
-// Transcripts past that cap keep only their samples, packed at 24 bytes each, so this
-// bounds them near 24 MB. Re-reading them on every refresh instead kept a heavy user's
+// Transcripts past that cap keep only their samples, packed at 24 bytes each (a
+// transcript's session ids and models are shared), so this bounds them near 24 MB. Re-reading them on every refresh instead kept a heavy user's
 // backend busy: a month of 2,400 transcripts (3 GB, 360,000 samples) cost about 2 s of
 // CPU at over 100% on each 30 s usage poll (lattice#1247). Transcripts past both caps
 // are still re-read on every refresh, which only costs time, never correctness.
