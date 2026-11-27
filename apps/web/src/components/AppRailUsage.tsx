@@ -221,7 +221,18 @@ export function AppRailUsage({ onOpenUsageSettings }: { onOpenUsageSettings: () 
       deriveProviderInstances(settingsQuery.data ?? DEFAULT_SERVER_SETTINGS_VIEW),
     ),
   );
-  const usageQuery = useQuery(serverAllProviderUsageQueryOptions({ enabled: accounts.length > 0 }));
+  const otherUsage = useQuery(
+    serverAllProviderUsageQueryOptions({
+      enabled: accounts.some(({ instance }) => instance.driver !== "antigravity"),
+      scope: "other",
+    }),
+  );
+  const antigravityUsage = useQuery(
+    serverAllProviderUsageQueryOptions({
+      enabled: accounts.some(({ instance }) => instance.driver === "antigravity"),
+      scope: "antigravity",
+    }),
+  );
 
   if (accounts.length === 0) {
     return null;
@@ -233,7 +244,10 @@ export function AppRailUsage({ onOpenUsageSettings }: { onOpenUsageSettings: () 
         <AppRailUsageRing
           key={account.instance.instanceId}
           account={account}
-          snapshot={(usageQuery.data ?? []).find(
+          snapshot={(account.instance.driver === "antigravity"
+            ? antigravityUsage.data
+            : otherUsage.data
+          )?.find(
             (entry) =>
               entry.provider === account.instance.driver &&
               (entry.instanceId ?? entry.provider) === account.instance.instanceId,

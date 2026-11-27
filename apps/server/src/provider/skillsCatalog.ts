@@ -9,6 +9,7 @@
 //          mergeSkillsIntoCatalog, filterDisabledSkills, ensureSynaraSkillsDir
 
 import * as fs from "node:fs/promises";
+import { createRequire } from "node:module";
 import * as nodePath from "node:path";
 import { randomUUID } from "node:crypto";
 
@@ -25,8 +26,18 @@ import type {
   ProviderSaveManagedSkillResult,
   ProviderSkillDescriptor,
 } from "@synara/contracts";
-import YAML from "yaml";
 import { discoverClaudePluginSkillRoots } from "./claudePluginSkills.ts";
+
+let cachedYaml: typeof import("yaml") | undefined;
+function loadYamlSync(): typeof import("yaml") {
+  if (!cachedYaml) {
+    const mod = createRequire(import.meta.url)("yaml") as
+      | typeof import("yaml")
+      | { readonly default: typeof import("yaml") };
+    cachedYaml = "parse" in mod ? mod : mod.default;
+  }
+  return cachedYaml;
+}
 
 type FrontmatterValue = string | boolean;
 
@@ -130,7 +141,7 @@ export function parseSkillFrontmatter(markdown: string): Record<string, Frontmat
   try {
     // Skill files can come from untrusted repositories: `uniqueKeys: false` skips the quadratic
     // duplicate-key check, and `logLevel: "error"` keeps unusual tags from printing process warnings.
-    const parsed: unknown = YAML.parse(block, { uniqueKeys: false, logLevel: "error" });
+    const parsed: unknown = loadYamlSync().parse(block, { uniqueKeys: false, logLevel: "error" });
     if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
       const record: Record<string, FrontmatterValue> = {};
       for (const [key, value] of Object.entries(parsed)) {

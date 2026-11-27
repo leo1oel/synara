@@ -11,6 +11,7 @@ import { makeActivity } from "../../storeTestFixtures";
 import { deriveWorkLogEntries, type WorkLogEntry } from "../../workLog";
 import { FolderIcon, TerminalIcon } from "~/lib/icons";
 import { COLLAPSED_USER_MESSAGE_MAX_CHARS } from "./userMessageCollapse";
+import type { TimelineEntry } from "../../session-logic";
 
 const TOOLTIP_TRIGGER_MARKER = 'data-base-ui-tooltip-trigger=""';
 // Folder and terminal chips draw Hugeicons glyphs (cc355dc65) rather than masked
@@ -162,6 +163,28 @@ beforeAll(() => {
 beforeAll(async () => {
   await import("./MessagesTimeline");
 }, 120_000);
+
+const liveCommandEntry = (
+  id: string,
+  command: string,
+  overrides: Partial<WorkLogEntry> = {},
+): TimelineEntry => ({
+  id: `entry-${id}`,
+  kind: "work",
+  createdAt: "2026-03-17T19:12:28.100Z",
+  entry: {
+    id,
+    createdAt: "2026-03-17T19:12:28.100Z",
+    label: "Ran command",
+    tone: "tool",
+    itemType: "command_execution",
+    toolStatus: "completed",
+    command,
+    ...overrides,
+  },
+});
+const workingIndicatorMarkup = (markup: string): string =>
+  markup.slice(markup.indexOf('data-timeline-row-kind="working"'));
 
 describe("MessagesTimeline", () => {
   it("opts user and assistant transcript markdown into automatic direction mode", async () => {
@@ -1758,10 +1781,11 @@ describe("MessagesTimeline", () => {
 
   it("keeps a Claude agent task to one plain line without rendering its Markdown", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
+    // No working row: the task stays a transcript row instead of the indicator's claim.
     const markup = renderToStaticMarkup(
       <MessagesTimeline
         {...makeTimelineBaseProps()}
-        isWorking
+        isWorking={false}
         activeTurnInProgress
         activeTurnStartedAt="2026-05-09T16:31:20.000Z"
         timelineEntries={[
@@ -1909,98 +1933,6 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain("+2 more tool calls");
   });
 
-  it("folds a live run to its latest status description while Thinking remains live", async () => {
-    const { MessagesTimeline } = await import("./MessagesTimeline");
-    const activeTurnId = TurnId.makeUnsafe("turn-reasoning-live");
-    const markup = renderToStaticMarkup(
-      <MessagesTimeline
-        hasMessages
-        isWorking
-        activeTurnInProgress
-        activeTurnId={activeTurnId}
-        activeTurnStartedAt="2026-03-17T19:12:28.000Z"
-        timelineEntries={[
-          {
-            id: "entry-reasoning-trace",
-            kind: "work",
-            createdAt: "2026-03-17T19:12:28.100Z",
-            entry: {
-              id: "reasoning-trace",
-              createdAt: "2026-03-17T19:12:28.100Z",
-              turnId: activeTurnId,
-              label: "Reasoning trace",
-              toolTitle: "Reasoning trace",
-              detail: "**Inspecting apps/web/src/store.ts**\n\n<!-- -->",
-              tone: "tool",
-            },
-          },
-          {
-            id: "entry-mcp-tool",
-            kind: "work",
-            createdAt: "2026-03-17T19:12:28.200Z",
-            entry: {
-              id: "mcp-tool",
-              createdAt: "2026-03-17T19:12:28.200Z",
-              turnId: activeTurnId,
-              label: "MCP tool call",
-              toolTitle: "MCP tool call",
-              toolName: "mcp__docs__search",
-              itemType: "mcp_tool_call",
-              tone: "tool",
-            },
-          },
-          {
-            id: "entry-reasoning-summary",
-            kind: "work",
-            createdAt: "2026-03-17T19:12:28.300Z",
-            entry: {
-              id: "reasoning-summary",
-              createdAt: "2026-03-17T19:12:28.300Z",
-              turnId: activeTurnId,
-              label: "Reasoning summary",
-              toolTitle: "Reasoning summary",
-              preview: "Updating the adapter",
-              tone: "tool",
-            },
-          },
-          {
-            id: "entry-command-execution",
-            kind: "work",
-            createdAt: "2026-03-17T19:12:28.400Z",
-            entry: {
-              id: "command-execution",
-              createdAt: "2026-03-17T19:12:28.400Z",
-              turnId: activeTurnId,
-              label: "Ran command",
-              toolTitle: "Ran command",
-              itemType: "command_execution",
-              preview: "Running the focused tests",
-              tone: "tool",
-            },
-          },
-        ]}
-        turnDiffSummaryByAssistantMessageId={new Map()}
-        expandedWorkGroups={{}}
-        onToggleWorkGroup={() => {}}
-        onOpenTurnDiff={() => {}}
-        revertTurnCountByUserMessageId={new Map()}
-        onRevertUserMessage={() => {}}
-        isRevertingCheckpoint={false}
-        onImageExpand={() => {}}
-        markdownCwd={undefined}
-        resolvedTheme="light"
-        timestampFormat="locale"
-        workspaceRoot={undefined}
-      />,
-    );
-
-    expect(markup.match(/data-tool-group-live="true"/g) ?? []).toHaveLength(1);
-    expect(markup).toContain("Running the focused tests");
-    expect(markup).not.toContain("MCP tool call");
-    expect(markup).not.toContain('data-codex-status-row="true"');
-    expect(markup).toContain(">Thinking<");
-  });
-
   it.each([
     {
       provider: "Anti-Gravity",
@@ -2047,31 +1979,186 @@ describe("MessagesTimeline", () => {
         },
       }),
     },
-  ])("renders $provider tool activity beside live Thinking", async ({ activity, expectedText }) => {
+  ])(
+    "renders $provider tool activity in the working indicator instead of Thinking",
+    async ({ activity, expectedText }) => {
+      const { MessagesTimeline } = await import("./MessagesTimeline");
+      const activeTurnId = TurnId.makeUnsafe("turn-provider-live-tool");
+      const markup = renderToStaticMarkup(
+        <MessagesTimeline
+          {...makeTimelineBaseProps()}
+          isWorking
+          activeTurnInProgress
+          activeTurnId={activeTurnId}
+          activeTurnStartedAt="2026-03-17T19:12:28.000Z"
+          timelineEntries={deriveWorkLogEntries([activity], activeTurnId).map((entry) => ({
+            id: entry.id,
+            kind: "work" as const,
+            createdAt: entry.createdAt,
+            entry,
+          }))}
+        />,
+      );
+
+      // The call of the moment leaves the transcript for the working indicator,
+      // which wears it in place of "Thinking", once.
+      expect(markup).not.toContain('data-work-entry-display-text="true"');
+      expect(markup).toContain('data-working-tool-call="true"');
+      expect(markup.split(expectedText)).toHaveLength(2);
+      // A running tool call carries no timing tail; it reads like any tool call.
+      expect(markup).not.toContain('data-live-activity-meta="true"');
+      expect(markup).not.toContain(">Thinking<");
+    },
+  );
+
+  it.each(["Loading", "Waiting for approval", "Waiting for your answer"] as const)(
+    "keeps the live run in history, settled, while the indicator reads %s",
+    async (workingLabel) => {
+      const { MessagesTimeline } = await import("./MessagesTimeline");
+      const markup = renderToStaticMarkup(
+        <MessagesTimeline
+          {...makeTimelineBaseProps()}
+          isWorking
+          workingLabel={workingLabel}
+          activeTurnInProgress
+          activeTurnStartedAt="2026-03-17T19:12:28.000Z"
+          timelineEntries={[
+            liveCommandEntry("w1", "git status"),
+            liveCommandEntry("w2", "git diff", { toolStatus: "running" }),
+          ]}
+        />,
+      );
+
+      // The indicator claims nothing: the run folds to its settled summary.
+      expect(markup).not.toContain('data-working-tool-call="true"');
+      expect(markup).toContain("Ran 2 commands");
+      expect(markup).toContain('data-tool-group-running="true">1 running<');
+      expect(markup).toContain(`<span>${workingLabel}</span>`);
+    },
+  );
+
+  it("shows Loading with its icon and shimmer", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
-    const activeTurnId = TurnId.makeUnsafe("turn-provider-live-tool");
+    const markup = renderToStaticMarkup(
+      <MessagesTimeline
+        {...makeTimelineBaseProps()}
+        isWorking
+        workingLabel="Loading"
+        activeTurnInProgress
+        activeTurnStartedAt="2026-03-17T19:12:28.000Z"
+        timelineEntries={[]}
+      />,
+    );
+    const indicator = workingIndicatorMarkup(markup);
+    expect(indicator).toContain('data-working-state="label"');
+    expect(indicator).toContain("shimmer-group");
+    expect(indicator).toMatch(/data-working-state="label"><span aria-hidden="true"[^>]*><svg/);
+  });
+
+  it.each(["Waiting for approval", "Waiting for your answer"] as const)(
+    "shows %s still and without an icon",
+    async (workingLabel) => {
+      const { MessagesTimeline } = await import("./MessagesTimeline");
+      const markup = renderToStaticMarkup(
+        <MessagesTimeline
+          {...makeTimelineBaseProps()}
+          isWorking
+          workingLabel={workingLabel}
+          activeTurnInProgress
+          activeTurnStartedAt="2026-03-17T19:12:28.000Z"
+          timelineEntries={[]}
+        />,
+      );
+      const indicator = workingIndicatorMarkup(markup);
+      expect(indicator).toContain('data-working-state="waiting"');
+      expect(indicator).not.toContain("shimmer-group");
+      expect(indicator).toMatch(
+        new RegExp(`data-working-state="waiting"><span>${workingLabel}</span></div>`),
+      );
+    },
+  );
+
+  it("reads Thinking without an icon when no tool call is live", async () => {
+    const { MessagesTimeline } = await import("./MessagesTimeline");
     const markup = renderToStaticMarkup(
       <MessagesTimeline
         {...makeTimelineBaseProps()}
         isWorking
         activeTurnInProgress
-        activeTurnId={activeTurnId}
         activeTurnStartedAt="2026-03-17T19:12:28.000Z"
-        timelineEntries={deriveWorkLogEntries([activity], activeTurnId).map((entry) => ({
-          id: entry.id,
-          kind: "work" as const,
-          createdAt: entry.createdAt,
-          entry,
-        }))}
+        timelineEntries={[]}
       />,
     );
 
-    expect(markup).toContain('data-timeline-row-kind="work"');
-    expect(markup).toContain('data-work-entry-display-text="true"');
-    // A running tool call carries no timing tail; it reads like any tool call.
-    expect(markup).not.toContain('data-live-activity-meta="true"');
-    expect(markup).toContain(">Thinking<");
-    expect(markup).toContain(expectedText);
+    expect(markup).toMatch(/data-working-state="thinking"><span>Thinking<\/span><\/div>/);
+    expect(workingIndicatorMarkup(markup)).toContain("shimmer-group");
+  });
+
+  it("reads Thinking between calls and keeps the finished run behind its summary", async () => {
+    const { MessagesTimeline } = await import("./MessagesTimeline");
+    const markup = renderToStaticMarkup(
+      <MessagesTimeline
+        {...makeTimelineBaseProps()}
+        isWorking
+        activeTurnInProgress
+        activeTurnStartedAt="2026-03-17T19:12:28.000Z"
+        timelineEntries={[liveCommandEntry("w1", "git status"), liveCommandEntry("w2", "git diff")]}
+      />,
+    );
+
+    expect(markup).toContain('data-working-state="thinking"');
+    // The run is one click away in the transcript, not unmounted while it runs.
+    expect(markup).toContain("Ran 2 commands");
+    expect(markup).toContain('aria-expanded="false"');
+    expect(markup).not.toContain("git status");
+    expect(markup).not.toContain("git diff");
+  });
+
+  it("shows a failed newest call in the failure tone, still", async () => {
+    const { MessagesTimeline } = await import("./MessagesTimeline");
+    const markup = renderToStaticMarkup(
+      <MessagesTimeline
+        {...makeTimelineBaseProps()}
+        isWorking
+        activeTurnInProgress
+        activeTurnStartedAt="2026-03-17T19:12:28.000Z"
+        timelineEntries={[
+          liveCommandEntry("w1", "git status"),
+          liveCommandEntry("w2", "bun run lint", {
+            toolStatus: "failed",
+            toolDetails: { kind: "command", title: "Ran command", output: { exitCode: 2 } },
+          }),
+        ]}
+      />,
+    );
+    const indicator = workingIndicatorMarkup(markup);
+
+    expect(indicator).toContain('data-working-state="tool-call-failed"');
+    expect(indicator).toContain("text-destructive");
+    expect(indicator).not.toContain("shimmer-group");
+    expect(indicator).toContain("bun run lint");
+    expect(indicator).toContain('data-tool-failure-meta="true">Failed · exit 2<');
+  });
+
+  it("renders every run settled when there is no working row", async () => {
+    const { MessagesTimeline } = await import("./MessagesTimeline");
+    const markup = renderToStaticMarkup(
+      <MessagesTimeline
+        {...makeTimelineBaseProps()}
+        isWorking={false}
+        activeTurnInProgress
+        activeTurnStartedAt="2026-03-17T19:12:28.000Z"
+        timelineEntries={[
+          liveCommandEntry("w1", "git status", { toolStatus: "running" }),
+          liveCommandEntry("w2", "git diff"),
+        ]}
+      />,
+    );
+
+    expect(markup).not.toContain('data-timeline-row-kind="working"');
+    expect(markup).toContain("Ran 2 commands");
+    expect(markup).toContain('data-tool-group-running="true">1 running<');
+    expect(markup).not.toContain("git status");
   });
 
   it("shows Loading when a new local send has no server turn id yet", async () => {
@@ -2210,108 +2297,6 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain("Tool 1");
     expect(markup).not.toContain("Tool 2");
     expect(markup).not.toContain('data-timeline-row-kind="work"');
-  });
-
-  it("folds live inline tool calls to one line wearing the newest call", async () => {
-    const { MessagesTimeline } = await import("./MessagesTimeline");
-    const markup = renderToStaticMarkup(
-      <MessagesTimeline
-        hasMessages
-        isWorking
-        activeTurnInProgress
-        activeTurnStartedAt="2026-03-17T19:12:28.000Z"
-        timelineEntries={[
-          // The message comes first so the tools are the turn's live inline
-          // tail: the run renders as one line for its newest call, uncapped.
-          {
-            id: "entry-assistant-inline-tools-expanded",
-            kind: "message",
-            createdAt: "2026-03-17T19:12:27.000Z",
-            message: {
-              id: MessageId.makeUnsafe("message-assistant-inline-tools-expanded"),
-              role: "assistant",
-              text: "done",
-              createdAt: "2026-03-17T19:12:27.000Z",
-              streaming: true,
-            },
-          },
-          {
-            id: "entry-inline-tools-expanded",
-            kind: "work",
-            createdAt: "2026-03-17T19:12:28.000Z",
-            entry: {
-              id: "work-inline-expanded-1",
-              createdAt: "2026-03-17T19:12:28.000Z",
-              label: "tool 1",
-              tone: "tool",
-            },
-          },
-          {
-            id: "entry-inline-tools-expanded-2",
-            kind: "work",
-            createdAt: "2026-03-17T19:12:28.100Z",
-            entry: {
-              id: "work-inline-expanded-2",
-              createdAt: "2026-03-17T19:12:28.100Z",
-              label: "tool 2",
-              tone: "tool",
-            },
-          },
-          {
-            id: "entry-inline-tools-expanded-3",
-            kind: "work",
-            createdAt: "2026-03-17T19:12:28.200Z",
-            entry: {
-              id: "work-inline-expanded-3",
-              createdAt: "2026-03-17T19:12:28.200Z",
-              label: "tool 3",
-              tone: "tool",
-            },
-          },
-          {
-            id: "entry-inline-tools-expanded-4",
-            kind: "work",
-            createdAt: "2026-03-17T19:12:28.300Z",
-            entry: {
-              id: "work-inline-expanded-4",
-              createdAt: "2026-03-17T19:12:28.300Z",
-              label: "tool 4",
-              tone: "tool",
-            },
-          },
-          {
-            id: "entry-inline-tools-expanded-5",
-            kind: "work",
-            createdAt: "2026-03-17T19:12:28.400Z",
-            entry: {
-              id: "work-inline-expanded-5",
-              createdAt: "2026-03-17T19:12:28.400Z",
-              label: "tool 5",
-              tone: "tool",
-            },
-          },
-        ]}
-        turnDiffSummaryByAssistantMessageId={new Map()}
-        nowIso="2026-03-17T19:12:30.000Z"
-        expandedWorkGroups={{ "entry-inline-tools-expanded": true }}
-        onToggleWorkGroup={() => {}}
-        onOpenTurnDiff={() => {}}
-        revertTurnCountByUserMessageId={new Map()}
-        onRevertUserMessage={() => {}}
-        isRevertingCheckpoint={false}
-        onImageExpand={() => {}}
-        markdownCwd={undefined}
-        resolvedTheme="light"
-        timestampFormat="locale"
-        workspaceRoot={undefined}
-      />,
-    );
-
-    expect(markup.match(/data-tool-group-live="true"/g) ?? []).toHaveLength(1);
-    expect(markup).toContain("Tool 5");
-    expect(markup).not.toContain("Tool 4");
-    expect(markup).not.toContain("Show less");
-    expect(markup).not.toContain("more tool calls");
   });
 
   it("renders inline file-change tool calls as edited rows with diff stats", async () => {
@@ -3062,7 +3047,9 @@ describe("MessagesTimeline", () => {
         timelineEntries={[...workEntries]}
       />,
     );
-    expect(liveMarkup).toContain("Synara created threads");
+    // Mid-turn the finished call waits in the working row's claim until text
+    // settles it; the recap card is reserved for the end of the turn.
+    expect(liveMarkup).toContain('data-working-state="thinking"');
     expect(liveMarkup).not.toContain('data-synara-thread-creation-card="true"');
 
     const markup = renderToStaticMarkup(

@@ -1,9 +1,9 @@
 // FILE: UsageAnalyticsPanel.tsx
 // Purpose: The Usage Analytics tab: cost and tokens by day, provider, model, and
 //          project, plus cache use, turn origin, and weekly rhythm. "In Synara" uses
-//          Synara's own records; "This Mac" also reads Claude Code and Codex session
-//          files. Cost is at API rates: the provider's own figure when it reports
-//          one, else the tokens at API list prices.
+//          Synara's own records; "This Mac" / "This Device" also reads Claude Code and
+//          Codex session files. Cost is at API rates: the provider's own figure when it
+//          reports one, else the tokens at API list prices.
 // Layer: Web settings feature
 // Exports: UsageAnalyticsPanel
 
@@ -133,12 +133,16 @@ function percentOf(part: number, total: number): number {
   return total > 0 ? Math.round((part / total) * 1000) / 10 : 0;
 }
 
-export function UsageAnalyticsPanel() {
+export function UsageAnalyticsPanel({
+  initialScope = "synara",
+}: {
+  initialScope?: StatsUsageAnalyticsScope;
+} = {}) {
   const { t } = useTranslation();
   const app = analyticsAppName();
   const [range, setRange] = useState<UsageAnalyticsRange>("30d");
   const [metricChoice, setMetricChoice] = useState<UsageAnalyticsMetric | null>(null);
-  const [scope, setScope] = useState<StatsUsageAnalyticsScope>("synara");
+  const [scope, setScope] = useState<StatsUsageAnalyticsScope>(initialScope);
   const todayKey = localDayKey(new Date());
   // Recomputed once a day so the query keys stay stable within a day.
   const windows = useMemo(() => {

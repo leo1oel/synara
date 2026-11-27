@@ -3,6 +3,7 @@
 // Layer: Chat presentation helpers
 // Exports: agent activity detection, formatting, and timeline compaction
 
+import type { ProviderKind } from "@synara/contracts";
 import { t } from "~/i18n";
 import { normalizeCompactToolLabel } from "../../lib/toolCallLabel";
 import type { WorkLogEntry } from "../../session-logic";
@@ -148,6 +149,7 @@ export function formatAgentActivityEntrySummary(entry: WorkLogEntry): string | n
 
 export function deriveAgentActivityTimelineState(
   entries: ReadonlyArray<WorkLogEntry>,
+  provider?: ProviderKind,
 ): AgentActivityTimelineState {
   const timelineWorkEntries: WorkLogEntry[] = [];
   const detailById = new Map<string, AgentActivityDetail>();
@@ -273,6 +275,7 @@ export function deriveAgentActivityTimelineState(
           toolTitle: "Reasoning trace",
           preview: reasoningPreview,
           tone: "tool" as const,
+          ...(provider === "codex" ? { codexReasoning: true as const } : {}),
         }
       : entry;
     timelineWorkEntries.push(displayEntry);

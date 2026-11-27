@@ -7,6 +7,7 @@ import { i18n, t } from "~/i18n";
 import { type MessageId, type ThreadId, type TurnId } from "@synara/contracts";
 import { type LegendListRef } from "@legendapp/list/react";
 import {
+  memo,
   useCallback,
   useEffect,
   useMemo,
@@ -165,7 +166,7 @@ interface ChatTranscriptPaneProps {
   findHighlightStore?: ThreadFindHighlightStore | null;
 }
 
-export function ChatTranscriptPane({
+export const ChatTranscriptPane = memo(function ChatTranscriptPane({
   activeThreadId,
   activeTurnId,
   activeTurnInProgress,
@@ -610,4 +611,4 @@ export function ChatTranscriptPane({
       </div>
     </div>
   );
-}
+});

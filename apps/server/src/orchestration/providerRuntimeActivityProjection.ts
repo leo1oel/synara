@@ -696,10 +696,6 @@ function requestedMcpToolCallPresentation(
   };
 }
 
-function boundActivityDataOrUndefined(value: unknown): unknown {
-  return value === undefined ? undefined : boundActivityData(value);
-}
-
 export function projectProviderRuntimeActivities(
   event: ProviderRuntimeEvent,
   sessionSequence?: number,

@@ -633,6 +633,7 @@ export function ComposerModelPicker(props: ComposerModelPickerProps) {
         statusLabel={currentStatusLabel === null ? null : localizeLabel(currentStatusLabel)}
         contextWindowLabel={activeProvider === "claudeAgent" ? props.contextWindowLabel : null}
         showsFastBadge={showsComposerFastModeBadge(currentTraitSelection)}
+        showsUltrafastBadge={currentTraitSelection.ultrafastModeEnabled}
         fastModeNotice={activeProvider === "claudeAgent" ? props.fastModeNotice : null}
         hideModelLabel={props.hideModelLabel}
         hideStatusLabel={props.hideStatusLabel}
