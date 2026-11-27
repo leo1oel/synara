@@ -2892,6 +2892,17 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
       }),
     );
 
+    it.effect("adds no footer under the Lattice profile, whatever the setting says", () =>
+      Effect.gen(function* () {
+        vi.stubEnv("AGENT_HOST_PROFILE", "lattice");
+        const { prBody } = yield* runCommitPushPr({
+          branch: "feature/attribution-lattice",
+          settings: { gitAttributionEnabled: true },
+        });
+        expect(prBody).toBe(GENERATED_PR_BODY);
+      }).pipe(Effect.ensuring(Effect.sync(() => vi.unstubAllEnvs()))),
+    );
+
     it.effect("treats an unreadable setting as off without failing the action", () =>
       Effect.gen(function* () {
         const failingSettingsLayer = Layer.effect(

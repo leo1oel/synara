@@ -27,6 +27,16 @@ export function composerPredictionsUnavailableInHost(): string | undefined {
     : undefined;
 }
 
+/**
+ * The "Created with Synara" pull request footer names an app the writer never installed,
+ * and the embed has no Git settings page to turn it off, so Lattice never adds it.
+ */
+export function pullRequestAttributionUnavailableInHost(): string | undefined {
+  return resolveAgentHostProfile().id === "lattice"
+    ? "Synara attribution is not part of Lattice."
+    : undefined;
+}
+
 /** TLS/owner-pairing component and packaged Electron gates passed; release qualification is separate. */
 const REMOTE_V2_QUALIFIED = true;
 

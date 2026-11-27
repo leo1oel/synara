@@ -37,6 +37,7 @@ import { buildGitTextGenerationCallInput } from "../textGenerationSelection.ts";
 import { reportBetaOperationalIssue } from "../../betaOperationalIssue.ts";
 import { diagnosticIssueReason } from "@synara/shared/diagnosticIssue";
 import { ServerConfig } from "../../config.ts";
+import { pullRequestAttributionUnavailableInHost } from "../../remoteFeaturePolicy.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import { appendPullRequestAttribution } from "../gitAttribution.ts";
 
@@ -2794,7 +2795,10 @@ The local stash entry was kept for recovery.`,
   // The server setting decides whether a new pull request gets the "Created with Synara"
   // footer. It never blocks a git action, so an unreadable setting is logged and treated as off.
   const resolvePullRequestAttribution = serverSettings.getSettings.pipe(
-    Effect.map((settings) => settings.gitAttributionEnabled),
+    Effect.map(
+      (settings) =>
+        settings.gitAttributionEnabled && pullRequestAttributionUnavailableInHost() === undefined,
+    ),
     Effect.catch((error) =>
       Effect.logWarning("Failed to read the git attribution setting; skipping attribution.", {
         error: error.message,
