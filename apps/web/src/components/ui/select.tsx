@@ -26,6 +26,11 @@ import {
 } from "../chat/composerPickerStyles";
 import { observeHostDismissiblePopup } from "~/latticePopupDismissal";
 import { isSynaraEmbedMode } from "~/embedMode";
+import {
+  getHostVisibleRect,
+  subscribeHostVisibleRect,
+  type VisibleRect,
+} from "~/lib/embeddedSettingsViewport";
 
 const Select = SelectPrimitive.Root;
 
@@ -134,26 +139,26 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
   );
 }
 
-type VisibleRect = { x: number; y: number; width: number; height: number };
-
 // Every percent of the frame scrolled in or out of view, so the boundary
 // follows Lattice scrolling the frame while a popup is open.
 const VISIBLE_RECT_THRESHOLDS = Array.from({ length: 101 }, (_, index) => index / 100);
 
 /**
  * The part of this document the user can see, while a settings popup is open in
- * Lattice: `null` until first measured, then the visible rect, or `undefined`
+ * Lattice: `null` until first known, then the visible rect, or `undefined`
  * when none of the frame shows. Lattice sizes the embedded Settings frame to the
  * whole page and scrolls it inside a shorter sheet, so the frame's own viewport
  * runs past the sheet's edges and a popup placed against it can open below the
- * visible bottom. An IntersectionObserver reports the frame's visible part,
- * clipped by Lattice's sheet, in this document's coordinates (WKWebView does
- * clip it).
+ * visible bottom. Lattice posts the visible part (embeddedSettingsViewport).
+ * Until it has, an IntersectionObserver stands in: WKWebView clips its rect by
+ * the window but not by the sheet, so it only keeps popups inside the window.
  */
 function useEmbeddedVisibleRect(enabled: boolean): VisibleRect | null | undefined {
+  const hostRect = React.useSyncExternalStore(subscribeHostVisibleRect, getHostVisibleRect);
   const [rect, setRect] = React.useState<VisibleRect | null | undefined>(null);
+  const followsHost = hostRect !== undefined;
   React.useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || followsHost) return;
     const observer = new IntersectionObserver(
       (entries) => {
         const visible = entries.at(-1)?.intersectionRect;
@@ -167,8 +172,10 @@ function useEmbeddedVisibleRect(enabled: boolean): VisibleRect | null | undefine
     );
     observer.observe(document.documentElement);
     return () => observer.disconnect();
-  }, [enabled]);
-  return enabled ? rect : undefined;
+  }, [enabled, followsHost]);
+  if (!enabled) return undefined;
+  if (hostRect) return hostRect.height > 0 ? hostRect : undefined;
+  return rect;
 }
 
 /**

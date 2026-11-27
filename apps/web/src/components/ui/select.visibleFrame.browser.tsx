@@ -112,3 +112,28 @@ it("follows the visible part as Lattice scrolls the frame under an open list", a
   await expect.poll(() => popupRect()?.top).toBeGreaterThanOrEqual(100);
   await expect.poll(() => popupRect()?.bottom).toBeGreaterThan(360);
 });
+
+function postFromHost(data: unknown, source: MessageEventSource | null = window.parent) {
+  window.dispatchEvent(new MessageEvent("message", { data, source }));
+}
+
+// Runs last: once Lattice has posted, its viewport stays authoritative.
+it("follows the viewport Lattice posts instead of the observer once it arrives", async () => {
+  await openPicker();
+  reportVisible?.(0, 360);
+  await expect.poll(() => popupRect()?.bottom).toBeLessThanOrEqual(360);
+
+  // Only the parent window speaks for the sheet.
+  postFromHost({ type: "lattice:settings-viewport", top: 100, height: 1000 }, window);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  expect(popupRect()?.bottom).toBeLessThanOrEqual(360);
+
+  postFromHost({ type: "lattice:settings-viewport", top: 100, height: 1000 });
+  await expect.poll(() => popupRect()?.bottom).toBeGreaterThan(360);
+  expect(popupRect()?.top).toBeGreaterThanOrEqual(100);
+
+  // The observer no longer moves it.
+  reportVisible?.(0, 360);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  expect(popupRect()?.bottom).toBeGreaterThan(360);
+});
