@@ -25,6 +25,7 @@ import {
   COMPOSER_SURFACE_SHADOW_CLASS_NAME,
 } from "../chat/composerPickerStyles";
 import { observeHostDismissiblePopup } from "~/latticePopupDismissal";
+import { isSynaraEmbedMode } from "~/embedMode";
 
 const Select = SelectPrimitive.Root;
 
@@ -133,6 +134,45 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
   );
 }
 
+type VisibleRect = { x: number; y: number; width: number; height: number };
+
+/**
+ * The part of this document the user can see, while a settings popup is open in
+ * Lattice. Lattice sizes the embedded Settings frame to the whole page and
+ * scrolls it inside a shorter sheet, so the frame's own viewport runs past the
+ * sheet's edges and a popup placed against it can open below the visible
+ * bottom. An IntersectionObserver reports the frame's visible part, clipped by
+ * Lattice's sheet, in this document's coordinates.
+ */
+function useEmbeddedVisibleRect(enabled: boolean): VisibleRect | undefined {
+  const [rect, setRect] = React.useState<VisibleRect>();
+  React.useEffect(() => {
+    if (!enabled) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      const visible = entry?.intersectionRect;
+      if (!visible || visible.height <= 0) return;
+      setRect({ x: visible.x, y: visible.y, width: visible.width, height: visible.height });
+    });
+    observer.observe(document.documentElement);
+    return () => observer.disconnect();
+  }, [enabled]);
+  return rect;
+}
+
+/** Mounts with each open popup, so the visible part is measured as it opens. */
+function SelectPositioner({
+  clipToVisibleFrame,
+  ...props
+}: SelectPrimitive.Positioner.Props & { clipToVisibleFrame: boolean }) {
+  const visibleRect = useEmbeddedVisibleRect(clipToVisibleFrame);
+  return (
+    <SelectPrimitive.Positioner
+      {...props}
+      {...(visibleRect ? { collisionBoundary: visibleRect } : {})}
+    />
+  );
+}
+
 function SelectPopup({
   className,
   shellClassName,
@@ -186,7 +226,8 @@ function SelectPopup({
   return (
     <SelectPopupSurfaceContext.Provider value={surface}>
       <SelectPrimitive.Portal>
-        <SelectPrimitive.Positioner
+        <SelectPositioner
+          clipToVisibleFrame={surface === "settings" && isSynaraEmbedMode()}
           ref={observeHostDismissiblePopup}
           align={align}
           alignItemWithTrigger={alignItemWithTrigger}
@@ -235,7 +276,7 @@ function SelectPopup({
               <ChevronDownIcon className="relative size-4.5 sm:size-4" />
             </SelectPrimitive.ScrollDownArrow>
           </SelectPrimitive.Popup>
-        </SelectPrimitive.Positioner>
+        </SelectPositioner>
       </SelectPrimitive.Portal>
     </SelectPopupSurfaceContext.Provider>
   );
