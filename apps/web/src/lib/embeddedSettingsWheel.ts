@@ -55,12 +55,28 @@ export function wheelBelongsToInnerScroller(
 }
 
 /**
+ * A wheel gesture ends after this long without a wheel event. Trackpad and
+ * momentum gestures send events every frame, so a gap this long is a new one.
+ */
+export const WHEEL_GESTURE_GAP_MS = 100;
+
+/**
  * Hands every wheel the page does not scroll itself to `forward` and cancels
  * it here, so the frame never scrolls on its own. Returns the cleanup.
+ *
+ * The choice is made once per gesture, at its first event, the way a browser
+ * latches a scroll gesture to one scroller: a gesture that starts on the page
+ * keeps scrolling the page when an open list slides under the pointer, and one
+ * that starts on a list stays with it when the pointer leaves the list.
  */
 export function listenForEmbeddedSettingsWheel(forward: (event: WheelEvent) => void): () => void {
+  let gesture: { inner: boolean; lastAt: number } | null = null;
   const onWheel = (event: WheelEvent) => {
-    if (wheelBelongsToInnerScroller(event)) return;
+    if (!gesture || event.timeStamp - gesture.lastAt > WHEEL_GESTURE_GAP_MS) {
+      gesture = { inner: wheelBelongsToInnerScroller(event), lastAt: event.timeStamp };
+    }
+    gesture.lastAt = event.timeStamp;
+    if (gesture.inner) return;
     forward(event);
     event.preventDefault();
   };

@@ -6,7 +6,7 @@ import { render } from "vitest-browser-react";
 
 import { SettingsSelectControl } from "../components/settings/SettingControls";
 import { SelectItem } from "../components/ui/select";
-import { listenForEmbeddedSettingsWheel } from "./embeddedSettingsWheel";
+import { listenForEmbeddedSettingsWheel, WHEEL_GESTURE_GAP_MS } from "./embeddedSettingsWheel";
 
 const MODELS = Array.from({ length: 40 }, (_, index) => `Model ${index + 1}`);
 
@@ -73,4 +73,38 @@ it("scrolls an open model list with the wheel instead of forwarding it", async (
     delta: { y: 120 },
   });
   expect(forwarded).not.toHaveBeenCalled();
+});
+
+function sendWheel(target: Element): WheelEvent {
+  const event = new WheelEvent("wheel", { deltaY: 40, bubbles: true, cancelable: true });
+  target.dispatchEvent(event);
+  return event;
+}
+
+function waitForNextGesture(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, WHEEL_GESTURE_GAP_MS * 2));
+}
+
+it("keeps a wheel gesture on the page or the list it started on", async () => {
+  const forwarded = await renderModelPicker();
+  await page.getByRole("combobox", { name: "Proofreading model" }).click();
+  await expect.element(page.getByRole("option", { name: "Model 1", exact: true })).toBeVisible();
+  const text = page.getByTestId("settings-text").element();
+  const option = page.getByRole("option", { name: "Model 2", exact: true }).element();
+
+  // Started on the page: the list sliding under the pointer mid-gesture does
+  // not take the rest of it.
+  expect(sendWheel(text).defaultPrevented).toBe(true);
+  expect(sendWheel(option).defaultPrevented).toBe(true);
+  expect(forwarded).toHaveBeenCalledTimes(2);
+
+  // A pause ends the gesture, so the next one over the list scrolls the list.
+  await waitForNextGesture();
+  expect(sendWheel(option).defaultPrevented).toBe(false);
+  expect(sendWheel(text).defaultPrevented).toBe(false);
+  expect(forwarded).toHaveBeenCalledTimes(2);
+
+  await waitForNextGesture();
+  expect(sendWheel(text).defaultPrevented).toBe(true);
+  expect(forwarded).toHaveBeenCalledTimes(3);
 });
