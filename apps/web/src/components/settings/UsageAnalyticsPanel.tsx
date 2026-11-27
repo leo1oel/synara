@@ -16,7 +16,7 @@ import { type ReactNode, useMemo, useState } from "react";
 import { isSynaraEmbedMode } from "~/embedMode";
 import { type t as translateFn, useTranslation } from "~/i18n";
 import { serverUsageAnalyticsQueryOptions } from "~/lib/serverReactQuery";
-import { cn } from "~/lib/utils";
+import { cn, getNavigatorPlatform, isMacPlatform } from "~/lib/utils";
 import { SegmentedPicker } from "../SegmentedPicker";
 import { ProviderIcon } from "../ProviderIcon";
 import { Button } from "../ui/button";
@@ -85,6 +85,11 @@ function SectionTitle(props: { title: string; detail?: ReactNode; action?: React
 /** The app the "In …" scope counts: Lattice's panel, or Synara on its own. */
 function analyticsAppName(): string {
   return isSynaraEmbedMode() ? "Lattice" : "Synara";
+}
+
+/** Session files are read on this computer, which is a Mac only on macOS. */
+function onMac(): boolean {
+  return isMacPlatform(getNavigatorPlatform());
 }
 
 /** "A, B" for a provider list; Chinese lists take the enumeration comma "、". */
@@ -205,7 +210,12 @@ export function UsageAnalyticsPanel({
           onValueChange={setScope}
           options={[
             { value: "synara", label: t("lattice:usageAnalyticsScopeInApp", { app }) },
-            { value: "mac", label: t("lattice:usageAnalyticsScopeThisMac") },
+            {
+              value: "mac",
+              label: onMac()
+                ? t("lattice:usageAnalyticsScopeThisMac")
+                : t("lattice:usageAnalyticsScopeThisDevice"),
+            },
           ]}
         />
       </div>
@@ -230,7 +240,9 @@ export function UsageAnalyticsPanel({
             title={t("lattice:usageAnalyticsEmptyTitle")}
             description={
               scope === "mac"
-                ? t("lattice:usageAnalyticsEmptyMac", { app })
+                ? onMac()
+                  ? t("lattice:usageAnalyticsEmptyMac", { app })
+                  : t("lattice:usageAnalyticsEmptyDevice", { app })
                 : t("lattice:usageAnalyticsEmptyApp", { app })
             }
           />
@@ -658,10 +670,15 @@ function aboutTheseNumbers(input: {
   }
   notes.push(
     view.scope === "mac" && view.sessionFileProviders.length > 0
-      ? t("lattice:usageAnalyticsNoteSessionFiles", {
-          providers: names(view.sessionFileProviders.map((provider) => providerLabel(provider))),
-          app,
-        })
+      ? t(
+          onMac()
+            ? "lattice:usageAnalyticsNoteSessionFiles"
+            : "lattice:usageAnalyticsNoteSessionFilesDevice",
+          {
+            providers: names(view.sessionFileProviders.map((provider) => providerLabel(provider))),
+            app,
+          },
+        )
       : t("lattice:usageAnalyticsNoteAppOnly", { app }),
   );
   if (view.scope === "mac" && view.sessionFileProviders.includes("claudeAgent")) {
