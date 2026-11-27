@@ -28,8 +28,8 @@ import {
 
 import { COMPOSER_PREDICTION_CONTEXT_BUDGET } from "../git/textGenerationShared.ts";
 import {
-  hasDedicatedTextGenerationProvider,
   resolveTextGenerationInputForSelection,
+  servesChatTextGeneration,
   type TextGenerationProviderInput,
 } from "../git/textGenerationSelection.ts";
 
@@ -198,6 +198,7 @@ const EFFORT_OPTION_KEY: Readonly<Record<GitTextGenerationProvider, string>> = {
   droid: "reasoningEffort",
   opencode: "variant",
   pi: "thinkingLevel",
+  antigravity: "reasoningEffort",
 };
 
 /** Ladder order across providers; a level outside it ranks after every known one. */
@@ -301,7 +302,7 @@ export function resolveComposerPredictionRouting(input: {
   const instance = resolveProviderInstance(input.settings, { instanceId: chatInstanceId });
   if (!instance || !instance.enabled) return null;
   const driver = instance.driver;
-  if (!hasDedicatedTextGenerationProvider(driver) || driver !== chatSelection.provider) return null;
+  if (!servesChatTextGeneration(driver) || driver !== chatSelection.provider) return null;
 
   const configured = input.settings.textGenerationModelSelection;
   const useConfigured =

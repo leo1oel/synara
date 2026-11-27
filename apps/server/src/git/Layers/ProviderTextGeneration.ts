@@ -40,6 +40,7 @@ const makeProviderTextGeneration = Effect.gen(function* () {
   const droidTextGeneration = yield* TextGen.DroidTextGeneration;
   const openCodeTextGeneration = yield* TextGen.OpenCodeTextGeneration;
   const piTextGeneration = yield* TextGen.PiTextGeneration;
+  const antigravityTextGeneration = yield* TextGen.AntigravityTextGeneration;
   const serverSettings = yield* ServerSettingsService;
   const gitCore = yield* GitCore;
   const gitHubCli = yield* GitHubCli;
@@ -96,6 +97,7 @@ const makeProviderTextGeneration = Effect.gen(function* () {
     droid: droidTextGeneration,
     opencode: openCodeTextGeneration,
     pi: piTextGeneration,
+    antigravity: antigravityTextGeneration,
   } satisfies Record<Selection.GitTextGenerationProvider, TextGen.TextGenerationShape>;
 
   const implementationForDriver = (

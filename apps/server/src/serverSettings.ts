@@ -13,7 +13,6 @@ import {
   DEFAULT_MODEL_BY_PROVIDER,
   DEFAULT_SERVER_SETTINGS,
   type ModelSelection,
-  type GitTextGenerationProvider,
   type ProviderInstanceConfig,
   type ProviderInstanceEnvironmentVariable,
   ServerSettings,
@@ -58,6 +57,8 @@ import { ServerConfig } from "./config";
 import {
   GIT_TEXT_GENERATION_PROVIDER_ORDER,
   hasDedicatedTextGenerationProvider,
+  isTextGenerationFallbackProvider,
+  type TextGenerationFallbackProvider,
 } from "./git/textGenerationSelection";
 import {
   ProviderCredentials,
@@ -360,14 +361,12 @@ function findTextGenerationSelectionInstance(
 
 function findFallbackTextGenerationInstance(settings: ServerSettings):
   | (ResolvedProviderInstance & {
-      readonly driver: Exclude<GitTextGenerationProvider, "pi">;
+      readonly driver: TextGenerationFallbackProvider;
     })
   | null {
   const instances = deriveProviderInstances(settings);
   for (const provider of GIT_TEXT_GENERATION_PROVIDER_ORDER) {
-    // Pi has no default model, so it serves Git writing only when the writer
-    // picks a Pi model; it is never a silent fallback.
-    if (provider === "pi") continue;
+    if (!isTextGenerationFallbackProvider(provider)) continue;
     const instance = instances.find(
       (candidate) => candidate.enabled && candidate.driver === provider,
     );

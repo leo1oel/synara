@@ -87,6 +87,44 @@ describe("resolveRunnableModelSelection", () => {
     ).toBe("unavailable");
   });
 
+  it("runs text on a chosen Antigravity model but never falls back to Antigravity", () => {
+    const antigravityModel: ModelSelection = {
+      provider: "antigravity",
+      model: "Gemini 3.5 Flash",
+    };
+
+    expect(
+      resolveRunnableModelSelection({
+        settings,
+        preferences: [antigravityModel, codexDefault],
+        statuses: [status("codex"), status("antigravity")],
+        purpose: "text-generation",
+      }),
+    ).toEqual({ kind: "selected", preference: 0, selection: antigravityModel });
+    // Signed out, the choice is skipped for a ready provider the writer has.
+    expect(
+      resolveRunnableModelSelection({
+        settings,
+        preferences: [antigravityModel],
+        statuses: [status("codex"), status("antigravity", "signed-out")],
+        purpose: "text-generation",
+      }),
+    ).toMatchObject({ kind: "fallback", selection: { provider: "codex" } });
+    // A ready Antigravity is never picked on its own, though it has a default model.
+    expect(
+      resolveRunnableModelSelection({
+        settings,
+        preferences: [codexDefault],
+        statuses: [
+          status("codex", "missing"),
+          status("claudeAgent", "missing"),
+          status("antigravity"),
+        ],
+        purpose: "text-generation",
+      }).kind,
+    ).toBe("unavailable");
+  });
+
   it("keeps a ready Settings choice even when an earlier provider is also ready", () => {
     expect(
       resolveRunnableModelSelection({
@@ -170,7 +208,7 @@ describe("resolveRunnableModelSelection", () => {
     ).toEqual({
       kind: "unavailable",
       message:
-        "No AI provider is connected. Connect Codex, Claude, Cursor, OpenCode, Droid or Pi in the Agent panel → Settings → Providers.",
+        "No AI provider is connected. Connect Codex, Claude, Cursor, OpenCode, Droid, Pi or Antigravity in the Agent panel → Settings → Providers.",
     });
   });
 });

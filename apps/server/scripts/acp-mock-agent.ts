@@ -51,6 +51,11 @@ const rejectForkDuringLoadReplay = process.env.SYNARA_ACP_REJECT_FORK_DURING_LOA
 const loadReplayModeId = process.env.SYNARA_ACP_LOAD_REPLAY_MODE_ID?.trim();
 const loadReplayAvailableCommands = process.env.SYNARA_ACP_LOAD_REPLAY_AVAILABLE_COMMANDS === "1";
 const modeConfigId = process.env.SYNARA_ACP_MODE_CONFIG_ID || "mode";
+// Mode and model as config options for every client, as `agy acp` reports them.
+const configOptionPicker = process.env.SYNARA_ACP_CONFIG_OPTION_PICKER === "1";
+const offerPlanMode = process.env.SYNARA_ACP_PLAN_MODE === "1";
+// Refuse session/new until authenticated, with the error a signed-out `agy acp` returns.
+const rejectUnauthenticatedSession = process.env.SYNARA_ACP_REJECT_UNAUTHENTICATED_SESSION === "1";
 const mainSessionId = "mock-session-1";
 const probeSessionId = "mock-session-probe";
 let sessionId = mainSessionId;
@@ -234,6 +239,9 @@ const availableModes: Array<AcpSchema.SessionMode> = [
     name: "Code",
     description: "Write and modify code with full tool access",
   },
+  ...(offerPlanMode
+    ? [{ id: "plan", name: "Plan", description: "Plan and answer without making changes" }]
+    : []),
 ];
 
 function modeState(): AcpSchema.SessionModeState {
@@ -341,9 +349,10 @@ app.onRequest(OfficialAcp.methods.agent.initialize, ({ params: request }) =>
   runEffect(
     Effect.sync(() => {
       parameterizedModelPicker =
-        request.clientCapabilities?._meta !== null &&
-        request.clientCapabilities?._meta !== undefined &&
-        "parameterizedModelPicker" in request.clientCapabilities._meta;
+        configOptionPicker ||
+        (request.clientCapabilities?._meta !== null &&
+          request.clientCapabilities?._meta !== undefined &&
+          "parameterizedModelPicker" in request.clientCapabilities._meta);
       return {
         protocolVersion: 1,
         agentCapabilities: {
@@ -375,6 +384,9 @@ app.onRequest(OfficialAcp.methods.agent.authenticate, () =>
 
 app.onRequest(OfficialAcp.methods.agent.session.new, ({ client: context }) => {
   sessionNewAttempts += 1;
+  if (rejectUnauthenticatedSession && !authenticated) {
+    throw new OfficialAcp.RequestError(-32000, "Authentication required");
+  }
   if (failSessionNewOnce && sessionNewAttempts === 1) {
     throw new OfficialAcp.RequestError(-32603, "Path not found.", {
       code: "FS_NOT_FOUND",

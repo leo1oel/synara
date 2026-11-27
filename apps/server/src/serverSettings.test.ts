@@ -517,7 +517,7 @@ describe("ServerSettingsService", () => {
           provider: "antigravity" as const,
           model: DEFAULT_MODEL_BY_PROVIDER.antigravity,
         },
-        providers: { antigravity: { enabled: false } },
+        providerInstances: { antigravity: { driver: "antigravity", enabled: false } },
       },
       expectedProvider: "codex" as const,
     },
@@ -541,8 +541,8 @@ describe("ServerSettingsService", () => {
       name: "normalizes enabled but unsupported Git text generation selections",
       overrides: {
         textGenerationModelSelection: {
-          provider: "antigravity" as const,
-          model: DEFAULT_MODEL_BY_PROVIDER.antigravity,
+          provider: "grok" as const,
+          model: DEFAULT_MODEL_BY_PROVIDER.grok,
         },
       },
       expectedProvider: "codex" as const,

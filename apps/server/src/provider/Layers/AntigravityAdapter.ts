@@ -127,7 +127,8 @@ import {
   makeAntigravityAcpRuntime,
   readAntigravityAcpModels,
   readAntigravityConfigModels,
-  resolveAntigravityAcpModelId,
+  resolveAntigravityConfigModel,
+  resolveAntigravityThoughtLevel,
   setAntigravityAcpModel,
   withAntigravityToolSummary,
 } from "../acp/AntigravityAcpSupport.ts";
@@ -528,53 +529,14 @@ export function makeAntigravityAdapter(dependencies: AntigravityAdapterDependenc
         const configOptions = yield* ctx.acp.getConfigOptions.pipe(Effect.mapError(configError));
         const modelConfig = antigravityModelConfig(configOptions);
         if (modelConfig) {
-          const { availableModels, currentModelId } = readAntigravityConfigModels(modelConfig);
-          const parsed = parseAntigravityCliModelLabel(selection.model);
-          const bareOrchestrator = parsed?.model.toLowerCase() === "orchestrator";
-          const effort = selection.reasoningEffort ?? parsed?.effort;
-          const savedLabel = resolveAntigravityCliModelLabel(
-            selection.model,
-            effort ? { reasoningEffort: effort } : undefined,
-          );
-          const baseMatches = availableModels.filter(
-            (model) =>
-              parseAntigravityCliModelLabel(model.name)?.model.toLowerCase() ===
-              parsed?.model.toLowerCase(),
-          );
-          const savedAlias =
-            !bareOrchestrator &&
-            parsed?.effort &&
-            (parsed.effort === "low" ||
-              parsed.effort === "medium" ||
-              parsed.effort === "high" ||
-              parsed.effort === "thinking")
-              ? resolveAntigravityAcpModelId(availableModels, parsed.model)
-              : undefined;
-          const legacyPlanner =
-            bareOrchestrator && !effort
-              ? (baseMatches.find((model) => model.modelId === currentModelId)?.modelId ??
-                (baseMatches.length === 1 ? baseMatches[0]?.modelId : undefined))
-              : undefined;
-          const exactId =
-            bareOrchestrator && effort
-              ? undefined
-              : availableModels.find((model) => model.modelId === selection.model)?.modelId;
-          const variant = effort
-            ? resolveAntigravityAcpModelId(availableModels, savedLabel)
-            : undefined;
-          const modelId =
-            exactId ??
-            variant ??
-            (!(bareOrchestrator && effort)
-              ? resolveAntigravityAcpModelId(availableModels, selection.model)
-              : undefined) ??
-            savedAlias ??
-            legacyPlanner;
+          const { currentModelId } = readAntigravityConfigModels(modelConfig);
+          const choice = resolveAntigravityConfigModel(modelConfig, selection);
+          const { modelId } = choice;
           if (!modelId) {
             return yield* new ProviderAdapterValidationError({
               provider: PROVIDER,
               operation: "session/set_config_option",
-              issue: `Antigravity does not offer the model '${effort ? savedLabel : selection.model}'. Refresh the model list and pick an available model.`,
+              issue: `Antigravity does not offer the model '${choice.label}'. Refresh the model list and pick an available model.`,
             });
           }
           yield* Effect.gen(function* () {
@@ -582,24 +544,15 @@ export function makeAntigravityAdapter(dependencies: AntigravityAdapterDependenc
               modelId === currentModelId
                 ? configOptions
                 : (yield* setConfig(modelConfig.id, modelId)).configOptions;
-            if (!effort || (bareOrchestrator && variant === modelId)) return;
             // A model switch replaces the thought-level choices. Validate the new model's menu.
-            const thoughtLevel = antigravityThoughtLevelConfig(selectedConfig);
-            const levelOptions = thoughtLevel ? flattenConfigOptions(thoughtLevel.options) : [];
-            const byLabel = levelOptions.filter(
-              (option) => option.name.toLowerCase() === effort.toLowerCase(),
-            );
-            const level =
-              levelOptions.find((option) => option.value === effort) ??
-              (byLabel.length === 1 ? byLabel[0] : undefined);
-            if (thoughtLevel && level) {
-              if (level.value !== thoughtLevel.currentValue)
-                yield* setConfig(thoughtLevel.id, level.value);
-            } else if (variant !== modelId || thoughtLevel) {
+            const thoughtLevel = resolveAntigravityThoughtLevel(selectedConfig, choice);
+            if (thoughtLevel.kind === "set") {
+              yield* setConfig(thoughtLevel.configId, thoughtLevel.value);
+            } else if (thoughtLevel.kind === "unsupported") {
               return yield* new ProviderAdapterValidationError({
                 provider: PROVIDER,
                 operation: "session/set_config_option",
-                issue: `Antigravity model '${selection.model}' does not offer '${effort}' as a thinking level.`,
+                issue: `Antigravity model '${selection.model}' does not offer '${thoughtLevel.effort}' as a thinking level.`,
               });
             }
           }).pipe(

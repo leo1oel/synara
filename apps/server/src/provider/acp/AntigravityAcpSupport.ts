@@ -16,7 +16,10 @@ import { resolveExecutionWorkspacePath } from "@synara/shared/wslBridge";
 
 import { buildProviderChildEnvironment } from "../../providerChildEnvironment.ts";
 import * as AcpErrors from "./AcpErrors.ts";
-import { parseAntigravityCliModelLabel } from "../antigravityCli.ts";
+import {
+  parseAntigravityCliModelLabel,
+  resolveAntigravityCliModelLabel,
+} from "../antigravityCli.ts";
 import {
   availableAuthMethodIds,
   findSelectConfig,
@@ -67,6 +70,106 @@ export function readAntigravityConfigModels(
       name: option.name,
     })),
   };
+}
+
+/** The model a saved selection names in the session's `model` config option. */
+export interface AntigravityConfigModelChoice {
+  /** The option value to select; undefined when the session offers no match. */
+  readonly modelId: string | undefined;
+  /** The thinking level the selection asks for, from its options or its label. */
+  readonly effort: string | undefined;
+  /** The model id whose label already names that thinking level, if any. */
+  readonly variant: string | undefined;
+  readonly bareOrchestrator: boolean;
+  /** What an error names: the label with its thinking level when one was asked for. */
+  readonly label: string;
+}
+
+/**
+ * Matches a saved selection against the session's model config option: an exact
+ * id, the label with its thinking level, the bare label, an older saved alias,
+ * or the Orchestrator planner the session already runs.
+ */
+export function resolveAntigravityConfigModel(
+  config: NonNullable<ReturnType<typeof antigravityModelConfig>>,
+  selection: { readonly model: string; readonly reasoningEffort?: string | undefined },
+): AntigravityConfigModelChoice {
+  const { availableModels, currentModelId } = readAntigravityConfigModels(config);
+  const parsed = parseAntigravityCliModelLabel(selection.model);
+  const bareOrchestrator = parsed?.model.toLowerCase() === "orchestrator";
+  const effort = selection.reasoningEffort ?? parsed?.effort;
+  const savedLabel = resolveAntigravityCliModelLabel(
+    selection.model,
+    effort ? { reasoningEffort: effort } : undefined,
+  );
+  const baseMatches = availableModels.filter(
+    (model) =>
+      parseAntigravityCliModelLabel(model.name)?.model.toLowerCase() ===
+      parsed?.model.toLowerCase(),
+  );
+  const savedAlias =
+    !bareOrchestrator &&
+    parsed?.effort &&
+    (parsed.effort === "low" ||
+      parsed.effort === "medium" ||
+      parsed.effort === "high" ||
+      parsed.effort === "thinking")
+      ? resolveAntigravityAcpModelId(availableModels, parsed.model)
+      : undefined;
+  const legacyPlanner =
+    bareOrchestrator && !effort
+      ? (baseMatches.find((model) => model.modelId === currentModelId)?.modelId ??
+        (baseMatches.length === 1 ? baseMatches[0]?.modelId : undefined))
+      : undefined;
+  const exactId =
+    bareOrchestrator && effort
+      ? undefined
+      : availableModels.find((model) => model.modelId === selection.model)?.modelId;
+  const variant = effort ? resolveAntigravityAcpModelId(availableModels, savedLabel) : undefined;
+  const modelId =
+    exactId ??
+    variant ??
+    (!(bareOrchestrator && effort)
+      ? resolveAntigravityAcpModelId(availableModels, selection.model)
+      : undefined) ??
+    savedAlias ??
+    legacyPlanner;
+  return {
+    modelId,
+    effort,
+    variant,
+    bareOrchestrator,
+    label: effort ? savedLabel : selection.model,
+  };
+}
+
+/**
+ * The thinking level to set once `choice.modelId` is selected, read from the
+ * config options that selection returned (a model switch replaces them).
+ */
+export function resolveAntigravityThoughtLevel(
+  configOptions: ReadonlyArray<Acp.SessionConfigOption>,
+  choice: AntigravityConfigModelChoice,
+):
+  | { readonly kind: "none" }
+  | { readonly kind: "set"; readonly configId: string; readonly value: string }
+  | { readonly kind: "unsupported"; readonly effort: string } {
+  const { effort, modelId, variant } = choice;
+  if (!effort || (choice.bareOrchestrator && variant === modelId)) return { kind: "none" };
+  const thoughtLevel = antigravityThoughtLevelConfig(configOptions);
+  const levelOptions = thoughtLevel ? flattenConfigOptions(thoughtLevel.options) : [];
+  const byLabel = levelOptions.filter(
+    (option) => option.name.toLowerCase() === effort.toLowerCase(),
+  );
+  const level =
+    levelOptions.find((option) => option.value === effort) ??
+    (byLabel.length === 1 ? byLabel[0] : undefined);
+  if (thoughtLevel && level) {
+    return level.value === thoughtLevel.currentValue
+      ? { kind: "none" }
+      : { kind: "set", configId: thoughtLevel.id, value: level.value };
+  }
+  return variant !== modelId || thoughtLevel ? { kind: "unsupported", effort } : { kind: "none" };
 }
 
 const ANTIGRAVITY_API_KEY_AUTH_METHOD_ID = "gemini-api-key";

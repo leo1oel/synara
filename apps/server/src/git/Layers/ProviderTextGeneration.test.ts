@@ -2,6 +2,7 @@ import { Effect, Layer } from "effect";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  AntigravityTextGeneration,
   ClaudeTextGeneration,
   CodexTextGeneration,
   CursorTextGeneration,
@@ -124,6 +125,7 @@ function makeProviderTextGenerationTestLayer(
   const droid = createTextGenerationDouble("droid");
   const opencode = createTextGenerationDouble("opencode");
   const pi = createTextGenerationDouble("pi");
+  const antigravity = createTextGenerationDouble("antigravity");
   const listRecentCommits = vi.fn<GitCoreShape["listRecentCommits"]>(() =>
     Effect.succeed({
       commits: [{ sha: "abc", shortSha: "abc", subject: "feat: add settings", committedAt: "" }],
@@ -145,6 +147,7 @@ function makeProviderTextGenerationTestLayer(
     Layer.provide(Layer.succeed(DroidTextGeneration, droid.service)),
     Layer.provide(Layer.succeed(OpenCodeTextGeneration, opencode.service)),
     Layer.provide(Layer.succeed(PiTextGeneration, pi.service)),
+    Layer.provide(Layer.succeed(AntigravityTextGeneration, antigravity.service)),
     Layer.provide(ServerSettingsService.layerTest(settingsOverrides)),
     Layer.provide(Layer.succeed(GitCore, { listRecentCommits } as unknown as GitCoreShape)),
     Layer.provide(
@@ -155,7 +158,18 @@ function makeProviderTextGenerationTestLayer(
     ),
   );
 
-  return { layer, claude, codex, cursor, droid, opencode, pi, listRecentCommits, execute };
+  return {
+    layer,
+    claude,
+    codex,
+    cursor,
+    droid,
+    opencode,
+    pi,
+    antigravity,
+    listRecentCommits,
+    execute,
+  };
 }
 
 describe("ProviderTextGenerationLive", () => {
@@ -304,8 +318,8 @@ describe("ProviderTextGenerationLive", () => {
         yield* textGeneration.generateDiffSummary({
           cwd: "/repo",
           patch: "diff --git a/file.ts b/file.ts",
-          model: "Gemini 3.5 Flash",
-          modelSelection: { provider: "antigravity", model: "Gemini 3.5 Flash" },
+          model: "grok-4.6",
+          modelSelection: { provider: "grok", model: "grok-4.6" },
         });
       }).pipe(Effect.provide(layer)),
     );
@@ -629,6 +643,45 @@ describe("ProviderTextGenerationLive", () => {
     expect(codex.generateTextTask).not.toHaveBeenCalled();
   });
 
+  it("routes host text tasks on an Antigravity model to the Antigravity backend", async () => {
+    const { layer, antigravity, codex } = makeProviderTextGenerationTestLayer({
+      providers: { antigravity: { enabled: true, binaryPath: "/opt/agy/bin/agy" } },
+    });
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const textGeneration = yield* TextGeneration;
+        return yield* textGeneration.generateTextTask({
+          cwd: "/paper",
+          prompt: "Proofread this.",
+          modelSelection: {
+            provider: "antigravity",
+            instanceId: "antigravity",
+            model: "Gemini 3.5 Flash",
+            options: { reasoningEffort: "high" },
+          },
+        });
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result.text).toBe("antigravity text");
+    expect(antigravity.generateTextTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: "Proofread this.",
+        modelSelection: {
+          provider: "antigravity",
+          instanceId: "antigravity",
+          model: "Gemini 3.5 Flash",
+          options: { reasoningEffort: "high" },
+        },
+        providerOptions: expect.objectContaining({
+          antigravity: expect.objectContaining({ binaryPath: "/opt/agy/bin/agy" }),
+        }),
+      }),
+    );
+    expect(codex.generateTextTask).not.toHaveBeenCalled();
+  });
+
   it("routes text generation by exact provider instance and merges its provider options", async () => {
     const { layer, claude, codex } = makeProviderTextGenerationTestLayer({
       providerInstances: {
@@ -763,7 +816,7 @@ describe("ProviderTextGenerationLive", () => {
           return yield* textGeneration.generateComposerPrediction({
             cwd: "/repo",
             conversation: "User: Continue\n\nAssistant: Done with step one.",
-            modelSelection: { provider: "antigravity", model: "Gemini 3.5 Flash" },
+            modelSelection: { provider: "grok", model: "grok-4.6" },
           });
         }).pipe(Effect.provide(layer)),
       ),
