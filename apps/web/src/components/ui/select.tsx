@@ -136,38 +136,55 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
 
 type VisibleRect = { x: number; y: number; width: number; height: number };
 
+// Every percent of the frame scrolled in or out of view, so the boundary
+// follows Lattice scrolling the frame while a popup is open.
+const VISIBLE_RECT_THRESHOLDS = Array.from({ length: 101 }, (_, index) => index / 100);
+
 /**
  * The part of this document the user can see, while a settings popup is open in
- * Lattice. Lattice sizes the embedded Settings frame to the whole page and
- * scrolls it inside a shorter sheet, so the frame's own viewport runs past the
- * sheet's edges and a popup placed against it can open below the visible
- * bottom. An IntersectionObserver reports the frame's visible part, clipped by
- * Lattice's sheet, in this document's coordinates.
+ * Lattice: `null` until first measured, then the visible rect, or `undefined`
+ * when none of the frame shows. Lattice sizes the embedded Settings frame to the
+ * whole page and scrolls it inside a shorter sheet, so the frame's own viewport
+ * runs past the sheet's edges and a popup placed against it can open below the
+ * visible bottom. An IntersectionObserver reports the frame's visible part,
+ * clipped by Lattice's sheet, in this document's coordinates (WKWebView does
+ * clip it).
  */
-function useEmbeddedVisibleRect(enabled: boolean): VisibleRect | undefined {
-  const [rect, setRect] = React.useState<VisibleRect>();
+function useEmbeddedVisibleRect(enabled: boolean): VisibleRect | null | undefined {
+  const [rect, setRect] = React.useState<VisibleRect | null | undefined>(null);
   React.useEffect(() => {
     if (!enabled) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      const visible = entry?.intersectionRect;
-      if (!visible || visible.height <= 0) return;
-      setRect({ x: visible.x, y: visible.y, width: visible.width, height: visible.height });
-    });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.at(-1)?.intersectionRect;
+        setRect(
+          visible && visible.height > 0
+            ? { x: visible.x, y: visible.y, width: visible.width, height: visible.height }
+            : undefined,
+        );
+      },
+      { threshold: VISIBLE_RECT_THRESHOLDS },
+    );
     observer.observe(document.documentElement);
     return () => observer.disconnect();
   }, [enabled]);
-  return rect;
+  return enabled ? rect : undefined;
 }
 
-/** Mounts with each open popup, so the visible part is measured as it opens. */
+/**
+ * Mounts with each open popup, so the visible part is measured as it opens. The
+ * popup stays hidden until that first measurement, instead of painting once
+ * against the whole frame and then jumping.
+ */
 function SelectPositioner({
   clipToVisibleFrame,
   ...props
-}: SelectPrimitive.Positioner.Props & { clipToVisibleFrame: boolean }) {
+}: Omit<SelectPrimitive.Positioner.Props, "style"> & { clipToVisibleFrame: boolean }) {
   const visibleRect = useEmbeddedVisibleRect(clipToVisibleFrame);
   return (
     <SelectPrimitive.Positioner
       {...props}
+      {...(visibleRect === null ? { style: { visibility: "hidden" } } : {})}
       {...(visibleRect ? { collisionBoundary: visibleRect } : {})}
     />
   );
