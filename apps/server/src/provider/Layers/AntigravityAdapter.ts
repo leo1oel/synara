@@ -44,6 +44,7 @@ import { ChildProcessSpawner } from "effect/unstable/process";
 import type * as Acp from "@agentclientprotocol/sdk";
 
 import { buildAcpSynaraMcpServers } from "../../agentGateway/mcpInjection.ts";
+import { ACTIVE_AGENT_HOST_PROFILE } from "../../agentGateway/hostProfile.ts";
 import {
   type SynaraHarnessPolicyDeliveryState,
   takeSynaraHarnessPolicyTextPartForProviderSession,
@@ -928,7 +929,7 @@ export function makeAntigravityAdapter(dependencies: AntigravityAdapterDependenc
             // Antigravity asks clarifying questions as ACP form elicitations when
             // the client supports them, and as plain chat text otherwise.
             clientCapabilities: { elicitation: { form: {} } },
-            clientInfo: { name: "Synara", version: "0.0.0" },
+            clientInfo: { name: ACTIVE_AGENT_HOST_PROFILE.displayName, version: "0.0.0" },
             ...(agentGatewayCredentials && gatewaySessionLease
               ? {
                   // The Synara gateway plus every connector granted to this
@@ -2044,7 +2045,7 @@ export function makeAntigravityAdapter(dependencies: AntigravityAdapterDependenc
                 NO_BROWSER: "true",
               },
             },
-            clientInfo: { name: "Synara", version: "0.0.0" },
+            clientInfo: { name: ACTIVE_AGENT_HOST_PROFILE.displayName, version: "0.0.0" },
           });
           yield* acp.handleRequestPermission(() =>
             Effect.succeed({ outcome: { outcome: "cancelled" } }),
