@@ -31,20 +31,24 @@ function hasRoomToScroll(element: Element, axis: Axis, delta: number): boolean {
 
 /**
  * Whether an element between the wheel's target and the document scrolls with
- * this wheel, or is an overflowing scroller that keeps its overscroll to itself
- * (`overscroll-behavior: contain`, as every select list does). The browser
- * then handles the wheel natively and Lattice must not scroll as well.
+ * this wheel on either axis it moves, or is an overflowing scroller that keeps
+ * its overscroll to itself (`overscroll-behavior: contain`, as every select
+ * list does). The browser then handles the wheel natively and Lattice must not
+ * scroll as well. Both axes count, since a trackpad's first event of a vertical
+ * gesture can carry more sideways noise than vertical movement.
  */
 export function wheelBelongsToInnerScroller(
   event: Pick<WheelEvent, "deltaX" | "deltaY" | "target">,
 ): boolean {
-  const axis: Axis = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? "x" : "y";
-  const delta = axis === "y" ? event.deltaY : event.deltaX;
-  if (delta === 0) return false;
+  const moves: Array<[Axis, number]> = [
+    ["y", event.deltaY],
+    ["x", event.deltaX],
+  ];
   let element = event.target instanceof Element ? event.target : null;
   while (element && element !== document.scrollingElement && element !== document.body) {
     const style = getComputedStyle(element);
-    if (scrollsOnAxis(style, axis) && overflowsOnAxis(element, axis)) {
+    for (const [axis, delta] of moves) {
+      if (delta === 0 || !scrollsOnAxis(style, axis) || !overflowsOnAxis(element, axis)) continue;
       if (hasRoomToScroll(element, axis, delta)) return true;
       const overscroll = axis === "y" ? style.overscrollBehaviorY : style.overscrollBehaviorX;
       if (overscroll === "contain" || overscroll === "none") return true;
@@ -72,9 +76,17 @@ export const WHEEL_GESTURE_GAP_MS = 100;
 export function listenForEmbeddedSettingsWheel(forward: (event: WheelEvent) => void): () => void {
   let gesture: { inner: boolean; lastAt: number } | null = null;
   const onWheel = (event: WheelEvent) => {
-    if (!gesture || event.timeStamp - gesture.lastAt > WHEEL_GESTURE_GAP_MS) {
-      gesture = { inner: wheelBelongsToInnerScroller(event), lastAt: event.timeStamp };
+    const current =
+      gesture && event.timeStamp - gesture.lastAt <= WHEEL_GESTURE_GAP_MS ? gesture : null;
+    // An event that moves nothing says nothing about where the gesture goes,
+    // so it neither starts nor extends one.
+    if (event.deltaX === 0 && event.deltaY === 0) {
+      if (current?.inner) return;
+      forward(event);
+      event.preventDefault();
+      return;
     }
+    gesture = current ?? { inner: wheelBelongsToInnerScroller(event), lastAt: event.timeStamp };
     gesture.lastAt = event.timeStamp;
     if (gesture.inner) return;
     forward(event);

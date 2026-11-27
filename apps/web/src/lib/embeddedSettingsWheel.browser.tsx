@@ -75,8 +75,13 @@ it("scrolls an open model list with the wheel instead of forwarding it", async (
   expect(forwarded).not.toHaveBeenCalled();
 });
 
-function sendWheel(target: Element): WheelEvent {
-  const event = new WheelEvent("wheel", { deltaY: 40, bubbles: true, cancelable: true });
+function sendWheel(target: Element, delta: { x?: number; y?: number } = { y: 40 }): WheelEvent {
+  const event = new WheelEvent("wheel", {
+    deltaX: delta.x ?? 0,
+    deltaY: delta.y ?? 0,
+    bubbles: true,
+    cancelable: true,
+  });
   target.dispatchEvent(event);
   return event;
 }
@@ -107,4 +112,18 @@ it("keeps a wheel gesture on the page or the list it started on", async () => {
   await waitForNextGesture();
   expect(sendWheel(text).defaultPrevented).toBe(true);
   expect(forwarded).toHaveBeenCalledTimes(3);
+});
+
+it("lets a list take a gesture whose first event is mostly sideways noise or empty", async () => {
+  const forwarded = await renderModelPicker();
+  await page.getByRole("combobox", { name: "Proofreading model" }).click();
+  await expect.element(page.getByRole("option", { name: "Model 1", exact: true })).toBeVisible();
+  const option = page.getByRole("option", { name: "Model 2", exact: true }).element();
+
+  // A trackpad's first event can be empty, or carry more sideways noise than
+  // vertical movement. The list still takes the gesture.
+  sendWheel(option, {});
+  expect(sendWheel(option, { x: 3, y: 1 }).defaultPrevented).toBe(false);
+  expect(sendWheel(option, { y: 40 }).defaultPrevented).toBe(false);
+  expect(forwarded.mock.calls.filter(([event]) => event.deltaY !== 0)).toHaveLength(0);
 });
