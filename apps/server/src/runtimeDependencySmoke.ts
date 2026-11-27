@@ -10,7 +10,6 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import { Effect } from "effect";
-import { createOpencodeClient } from "@opencode-ai/sdk/v2";
 import { parseCheckpointFilesFromUnifiedDiff } from "./checkpointing/Diffs.ts";
 import { withOpenCodeV2Client } from "./provider/openCodeV2Client.ts";
 import { runProcess } from "./processRunner.ts";
@@ -255,7 +254,9 @@ assert.equal(checkpointFiles[0]?.path, "smoke.txt");
 
 // Exercise the bundled OpenCode V2 client offline inside app.asar without
 // relying on @opencode/{protocol,schema} or a nested Effect copy in node_modules.
-{
+// Its legacy SDK is an optional runtime here too, so a slim host skips this.
+if (providerRuntimeAvailability("opencode") !== "missing") {
+  const { createOpencodeClient } = await loadProviderRuntimeModule("@opencode-ai/sdk/v2");
   const syntheticFetch: typeof fetch = Object.assign(
     async (resource: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
       const url = new URL(
