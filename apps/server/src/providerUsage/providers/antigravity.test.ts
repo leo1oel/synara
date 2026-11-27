@@ -14,6 +14,13 @@ const run = vi.mocked(runAntigravityHelperProcess);
 const ctx = { homeDir: "/unused", env: {}, platform: process.platform, nowMs: 0 };
 
 const supportedVersion = { code: 0, stderr: "", stdout: "agy 1.1.11" };
+const signedIn = { code: 0, stderr: "", stdout: "Gemini 3.5 Flash\n" };
+const signedOut = {
+  code: 1,
+  stderr: "",
+  stdout:
+    "Fetching available models...\nError: Please sign in to view available models. Launch the CLI without arguments to sign in.\n",
+};
 
 function nativeOutput(groups: unknown[], numTurns = 0) {
   return JSON.stringify({
@@ -30,35 +37,38 @@ afterEach(() => {
 
 describe("Antigravity live limits", () => {
   it("renders the CLI buckets for Gemini, third-party models, and plan-specific groups", async () => {
-    run.mockResolvedValueOnce(supportedVersion).mockResolvedValueOnce({
-      code: 0,
-      stderr: "",
-      stdout: nativeOutput([
-        {
-          name: "Gemini Models",
-          buckets: [
-            {
-              id: "gemini-5h",
-              window: "5h",
-              remaining_fraction: 0,
-              reset_time: "2026-11-23T18:00:00Z",
-            },
-            { id: "gemini-weekly", window: "weekly", remaining_fraction: 0.75 },
-          ],
-        },
-        {
-          name: "Claude and GPT models",
-          buckets: [
-            { id: "3p-weekly", window: "weekly", remaining_fraction: 1 },
-            { id: "3p-5h", window: "5h", remaining_fraction: 1, disabled: true },
-          ],
-        },
-        {
-          name: "Gemini 4 Argon",
-          buckets: [{ id: "gemini-argon-wtu-weekly", window: "weekly", remaining_fraction: 0.5 }],
-        },
-      ]),
-    });
+    run
+      .mockResolvedValueOnce(supportedVersion)
+      .mockResolvedValueOnce(signedIn)
+      .mockResolvedValueOnce({
+        code: 0,
+        stderr: "",
+        stdout: nativeOutput([
+          {
+            name: "Gemini Models",
+            buckets: [
+              {
+                id: "gemini-5h",
+                window: "5h",
+                remaining_fraction: 0,
+                reset_time: "2026-11-23T18:00:00Z",
+              },
+              { id: "gemini-weekly", window: "weekly", remaining_fraction: 0.75 },
+            ],
+          },
+          {
+            name: "Claude and GPT models",
+            buckets: [
+              { id: "3p-weekly", window: "weekly", remaining_fraction: 1 },
+              { id: "3p-5h", window: "5h", remaining_fraction: 1, disabled: true },
+            ],
+          },
+          {
+            name: "Gemini 4 Argon",
+            buckets: [{ id: "gemini-argon-wtu-weekly", window: "weekly", remaining_fraction: 0.5 }],
+          },
+        ]),
+      });
 
     const snapshot = await antigravityUsageFetcher.fetch(ctx);
     expect(snapshot.status).toBe("ok");
@@ -80,18 +90,15 @@ describe("Antigravity live limits", () => {
       Promise.withResolvers<Awaited<ReturnType<typeof runAntigravityHelperProcess>>>();
     run
       .mockResolvedValueOnce(supportedVersion)
+      .mockResolvedValueOnce(signedIn)
       .mockReturnValueOnce(initial.promise)
       .mockResolvedValueOnce(supportedVersion)
-      .mockResolvedValueOnce({
-        code: 1,
-        stderr: "Authentication required. Please visit the URL to log in",
-        stdout: "",
-      });
+      .mockResolvedValueOnce(signedOut);
     const selectedProfile = { ...ctx, instanceId: defaultInstanceIdForProvider("antigravity") };
     const query = { provider: "antigravity" } as const;
     const first = collectProviderUsageSnapshots(selectedProfile, query);
     const concurrent = collectProviderUsageSnapshots(selectedProfile, query);
-    await vi.waitFor(() => expect(run).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(run).toHaveBeenCalledTimes(3));
     initial.resolve({
       code: 0,
       stderr: "",
@@ -104,17 +111,17 @@ describe("Antigravity live limits", () => {
     });
     const snapshots = await first;
     expect(await concurrent).toEqual(snapshots);
-    expect(run).toHaveBeenCalledTimes(2);
+    expect(run).toHaveBeenCalledTimes(3);
     expect(snapshots).toMatchObject([
       { status: "ok", limits: [{ window: "5h", usedPercent: 50 }] },
     ]);
 
-    const signedOut = await collectProviderUsageSnapshots(
+    const signedOutSnapshots = await collectProviderUsageSnapshots(
       { ...selectedProfile, nowMs: 1_000 },
       query,
     );
-    expect(run).toHaveBeenCalledTimes(4);
-    expect(signedOut).toMatchObject([{ status: "needs-auth", limits: [] }]);
+    expect(run).toHaveBeenCalledTimes(5);
+    expect(signedOutSnapshots).toMatchObject([{ status: "needs-auth", limits: [] }]);
   });
 
   it.each(["agy 1.1.10", "version unavailable"])(
@@ -129,6 +136,26 @@ describe("Antigravity live limits", () => {
       expect(run.mock.calls[0]?.[1]).toEqual(["--version"]);
     },
   );
+
+  it("never runs /usage, which opens a sign-in page, while agy is signed out", async () => {
+    run.mockResolvedValueOnce(supportedVersion).mockResolvedValueOnce(signedOut);
+
+    const snapshot = await antigravityUsageFetcher.fetch(ctx);
+
+    expect(snapshot).toMatchObject({ status: "needs-auth", limits: [] });
+    expect(run.mock.calls.map((call) => call[1])).toEqual([["--version"], ["models"]]);
+  });
+
+  it("reports an error without running /usage when the sign-in check fails", async () => {
+    run
+      .mockResolvedValueOnce(supportedVersion)
+      .mockResolvedValueOnce({ code: 1, stderr: "network down", stdout: "" });
+
+    const snapshot = await antigravityUsageFetcher.fetch(ctx);
+
+    expect(snapshot.status).toBe("error");
+    expect(run).toHaveBeenCalledTimes(2);
+  });
 
   it.each([
     {
@@ -155,7 +182,10 @@ describe("Antigravity live limits", () => {
     },
     { name: "a model turn", code: 0, stdout: nativeOutput([], 1), stderr: "", status: "error" },
   ])("handles $name without leaking native output", async ({ status, ...result }) => {
-    run.mockResolvedValueOnce(supportedVersion).mockResolvedValueOnce(result);
+    run
+      .mockResolvedValueOnce(supportedVersion)
+      .mockResolvedValueOnce(signedIn)
+      .mockResolvedValueOnce(result);
     const snapshot = await antigravityUsageFetcher.fetch(ctx);
     expect(snapshot).toMatchObject({ status, limits: [] });
     expect(snapshot.detail ?? "").not.toMatch(

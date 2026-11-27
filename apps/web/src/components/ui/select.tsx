@@ -25,6 +25,12 @@ import {
   COMPOSER_SURFACE_SHADOW_CLASS_NAME,
 } from "../chat/composerPickerStyles";
 import { observeHostDismissiblePopup } from "~/latticePopupDismissal";
+import { isSynaraEmbedMode } from "~/embedMode";
+import {
+  getHostVisibleRect,
+  subscribeHostVisibleRect,
+  type VisibleRect,
+} from "~/lib/embeddedSettingsViewport";
 
 const Select = SelectPrimitive.Root;
 
@@ -133,6 +139,64 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
   );
 }
 
+// Every percent of the frame scrolled in or out of view, so the boundary
+// follows Lattice scrolling the frame while a popup is open.
+const VISIBLE_RECT_THRESHOLDS = Array.from({ length: 101 }, (_, index) => index / 100);
+
+/**
+ * The part of this document the user can see, while a settings popup is open in
+ * Lattice: `null` until first known, then the visible rect, or `undefined`
+ * when none of the frame shows. Lattice sizes the embedded Settings frame to the
+ * whole page and scrolls it inside a shorter sheet, so the frame's own viewport
+ * runs past the sheet's edges and a popup placed against it can open below the
+ * visible bottom. Lattice posts the visible part (embeddedSettingsViewport).
+ * Until it has, an IntersectionObserver stands in: WKWebView clips its rect by
+ * the window but not by the sheet, so it only keeps popups inside the window.
+ */
+function useEmbeddedVisibleRect(enabled: boolean): VisibleRect | null | undefined {
+  const hostRect = React.useSyncExternalStore(subscribeHostVisibleRect, getHostVisibleRect);
+  const [rect, setRect] = React.useState<VisibleRect | null | undefined>(null);
+  const followsHost = hostRect !== undefined;
+  React.useEffect(() => {
+    if (!enabled || followsHost) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.at(-1)?.intersectionRect;
+        setRect(
+          visible && visible.height > 0
+            ? { x: visible.x, y: visible.y, width: visible.width, height: visible.height }
+            : undefined,
+        );
+      },
+      { threshold: VISIBLE_RECT_THRESHOLDS },
+    );
+    observer.observe(document.documentElement);
+    return () => observer.disconnect();
+  }, [enabled, followsHost]);
+  if (!enabled) return undefined;
+  if (hostRect) return hostRect.height > 0 ? hostRect : undefined;
+  return rect;
+}
+
+/**
+ * Mounts with each open popup, so the visible part is measured as it opens. The
+ * popup stays hidden until that first measurement, instead of painting once
+ * against the whole frame and then jumping.
+ */
+function SelectPositioner({
+  clipToVisibleFrame,
+  ...props
+}: Omit<SelectPrimitive.Positioner.Props, "style"> & { clipToVisibleFrame: boolean }) {
+  const visibleRect = useEmbeddedVisibleRect(clipToVisibleFrame);
+  return (
+    <SelectPrimitive.Positioner
+      {...props}
+      {...(visibleRect === null ? { style: { visibility: "hidden" } } : {})}
+      {...(visibleRect ? { collisionBoundary: visibleRect } : {})}
+    />
+  );
+}
+
 function SelectPopup({
   className,
   shellClassName,
@@ -186,7 +250,8 @@ function SelectPopup({
   return (
     <SelectPopupSurfaceContext.Provider value={surface}>
       <SelectPrimitive.Portal>
-        <SelectPrimitive.Positioner
+        <SelectPositioner
+          clipToVisibleFrame={surface === "settings" && isSynaraEmbedMode()}
           ref={observeHostDismissiblePopup}
           align={align}
           alignItemWithTrigger={alignItemWithTrigger}
@@ -235,7 +300,7 @@ function SelectPopup({
               <ChevronDownIcon className="relative size-4.5 sm:size-4" />
             </SelectPrimitive.ScrollDownArrow>
           </SelectPrimitive.Popup>
-        </SelectPrimitive.Positioner>
+        </SelectPositioner>
       </SelectPrimitive.Portal>
     </SelectPopupSurfaceContext.Provider>
   );

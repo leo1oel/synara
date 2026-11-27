@@ -25,6 +25,7 @@ const SOURCE = "antigravity-cli";
 // Earlier versions may send /usage to the model as a regular prompt in print mode.
 const MINIMUM_NATIVE_USAGE_VERSION = "1.1.11";
 const VERSION_PROBE_TIMEOUT_MS = 3_000;
+const SIGN_IN_CHECK_TIMEOUT_MS = 10_000;
 const SIGN_IN_PROMPT = "Authentication required. Please visit the URL to log in";
 const WINDOW_MINUTES = { "5h": 300, weekly: 10_080 } as const;
 
@@ -110,6 +111,20 @@ export const antigravityUsageFetcher: ProviderUsageFetcher = {
       ) {
         return unavailable();
       }
+
+      // Signed out, `agy --print` opens Google's sign-in page in the default
+      // browser, and NO_BROWSER does not stop it. `agy models` only prints
+      // "Please sign in to view available models.", so check it first, as the
+      // Providers page does.
+      const signInCheck = await runAntigravityHelperProcess(binaryPath, ["models"], {
+        cwd,
+        baseEnvironment,
+        timeoutMs: SIGN_IN_CHECK_TIMEOUT_MS,
+      });
+      if (/\bsign in\b/i.test(`${signInCheck.stdout}\n${signInCheck.stderr}`)) {
+        return needsAuthSnapshot(PROVIDER, ctx.nowMs, SOURCE);
+      }
+      if (signInCheck.code !== 0) return unavailable();
 
       const result = await runAntigravityHelperProcess(
         binaryPath,
