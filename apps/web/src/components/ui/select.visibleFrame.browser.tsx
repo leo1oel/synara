@@ -18,10 +18,10 @@ const MODELS = Array.from({ length: 40 }, (_, index) => `Model ${index + 1}`);
 // sheet that shows it. This observer reports what the sheet shows, and lets a
 // test report a new visible part, as when Lattice scrolls the frame.
 let reportVisible: ((top: number, height: number) => void) | undefined;
-let frameObserver: SheetClippedIntersectionObserver | undefined;
 let observedThresholds: ReadonlyArray<number> = [];
 
 class SheetClippedIntersectionObserver {
+  private observesFrame = false;
   constructor(
     private readonly callback: IntersectionObserverCallback,
     private readonly options?: IntersectionObserverInit,
@@ -29,7 +29,7 @@ class SheetClippedIntersectionObserver {
   observe(target: Element) {
     // Other components observe their own elements; only the frame's root matters.
     if (target !== document.documentElement) return;
-    frameObserver = this;
+    this.observesFrame = true;
     observedThresholds = [this.options?.threshold ?? 0].flat();
     reportVisible = (top, height) =>
       this.callback(
@@ -44,7 +44,7 @@ class SheetClippedIntersectionObserver {
       );
   }
   disconnect() {
-    if (frameObserver === this) reportVisible = undefined;
+    if (this.observesFrame) reportVisible = undefined;
   }
   unobserve() {}
   takeRecords() {
