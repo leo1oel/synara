@@ -58,10 +58,7 @@ import {
   withAgentGatewayTurnCancellation,
 } from "../../agentGateway/sessionLease.ts";
 import { ServerConfig, type ServerConfigShape } from "../../config.ts";
-import {
-  snapshotToolResultImagesInBackground,
-  toolResultImagesRoot,
-} from "../toolResultImages.ts";
+import { snapshotToolResultImagesInBackground, toolResultImagesRoot } from "../toolResultImages.ts";
 import {
   ProviderAdapterRequestError,
   ProviderAdapterSessionNotFoundError,
