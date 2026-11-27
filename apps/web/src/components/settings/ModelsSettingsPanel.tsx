@@ -26,6 +26,7 @@ import {
   isGitTextGenerationSettingsDirty,
   patchCustomModels,
 } from "~/appSettings";
+import { isSynaraEmbedMode } from "~/embedMode";
 import { useProviderModelCatalog } from "~/hooks/useProviderModelCatalog";
 import { PlusIcon, XIcon } from "~/lib/icons";
 import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
@@ -416,17 +417,20 @@ export function ModelsSettingsPanel({
             />
           </DisclosureRegion>
         </SettingsRow>
-        <BooleanSettingRow
-          settings={settings}
-          defaults={defaults}
-          updateSettings={updateSettings}
-          id="setting-synara-attribution"
-          settingKey="gitAttributionEnabled"
-          title="settings:addSynaraAttribution"
-          description="settings:addsCreatedWithSynaraToTheEndOfPullRequests"
-          resetLabel="settings:addSynaraAttribution2"
-          ariaLabel="settings:addSynaraAttributionToPullRequests"
-        />
+        {/* Lattice never adds the footer (pullRequestAttributionUnavailableInHost). */}
+        {isSynaraEmbedMode() ? null : (
+          <BooleanSettingRow
+            settings={settings}
+            defaults={defaults}
+            updateSettings={updateSettings}
+            id="setting-synara-attribution"
+            settingKey="gitAttributionEnabled"
+            title="settings:addSynaraAttribution"
+            description="settings:addsCreatedWithSynaraToTheEndOfPullRequests"
+            resetLabel="settings:addSynaraAttribution2"
+            ariaLabel="settings:addSynaraAttributionToPullRequests"
+          />
+        )}
         <SettingsRow
           id="setting-git-writing-model"
           title="settings:changed_gitWritingModel"
