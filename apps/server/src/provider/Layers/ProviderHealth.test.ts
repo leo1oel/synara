@@ -2983,6 +2983,34 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
     );
   });
 
+  describe("checkAntigravityProviderStatus sign-in", () => {
+    it.effect("reports a signed-out Antigravity CLI as unauthenticated", () =>
+      Effect.gen(function* () {
+        const status = yield* checkAntigravityProviderStatus("/custom/bin/agy");
+        assert.strictEqual(status.status, "error");
+        assert.strictEqual(status.available, true);
+        assert.strictEqual(status.authStatus, "unauthenticated");
+        assert.strictEqual(status.version, "1.5.18");
+      }).pipe(
+        Effect.provide(
+          mockSpawnerLayer((args) => {
+            const joined = args.join(" ");
+            if (joined === "--version") return { stdout: "1.5.18\n", stderr: "", code: 0 };
+            if (joined === "models") {
+              return {
+                stderr:
+                  "Fetching available models...\nError: Please sign in to view available models. Launch the CLI without arguments to sign in.\n",
+                stdout: "",
+                code: 1,
+              };
+            }
+            throw new Error(`Unexpected args: ${joined}`);
+          }),
+        ),
+      ),
+    );
+  });
+
   describe("checkOpenCodeProviderStatus", () => {
     it.effect("expands a tilde opencode binary path for the version probe", () =>
       Effect.gen(function* () {
