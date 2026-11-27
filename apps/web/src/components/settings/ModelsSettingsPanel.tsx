@@ -4,6 +4,7 @@
 
 import {
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
+  DEFAULT_MODEL_BY_PROVIDER,
   GIT_TEXT_GENERATION_PROVIDERS,
   PROVIDER_DISPLAY_NAMES,
   MAX_SOURCE_CONTROL_CUSTOM_INSTRUCTIONS_LENGTH,
@@ -74,6 +75,17 @@ const SOURCE_CONTROL_WRITING_OPTIONS: readonly {
 // Picker values are "instance:provider:model"; this one has no colon, so it
 // never collides with a model choice.
 const PROOFREAD_INHERIT_VALUE = "inherit";
+
+// A signed-out agy lists no models and Antigravity has no built-in list, so
+// offer its default model; a task run on it then says how to sign in.
+function listedGitWritingOptions<Option extends { slug: string; name: string }>(
+  provider: ProviderKind,
+  options: readonly Option[],
+): ReadonlyArray<Option | { slug: string; name: string }> {
+  if (provider !== "antigravity" || options.length > 0) return options;
+  const model = DEFAULT_MODEL_BY_PROVIDER.antigravity;
+  return [{ slug: model, name: model }];
+}
 
 type CustomModelValidationResult =
   | { readonly model: string; readonly error?: never }
@@ -166,7 +178,10 @@ export function ModelsSettingsPanel({
       providerInstanceOptions.flatMap((instance) =>
         (instance.enabled || instance.instanceId === currentGitTextGenerationInstanceId) &&
         GIT_TEXT_GENERATION_PROVIDERS.includes(instance.provider as GitTextGenerationProvider)
-          ? (gitWritingCatalogOptionsByInstance[instance.instanceId] ?? []).map((option) => ({
+          ? listedGitWritingOptions(
+              instance.provider,
+              gitWritingCatalogOptionsByInstance[instance.instanceId] ?? [],
+            ).map((option) => ({
               key: `${instance.instanceId}:${instance.provider}:${option.slug}`,
               value: `${instance.instanceId}:${instance.provider}:${option.slug}`,
               instance,

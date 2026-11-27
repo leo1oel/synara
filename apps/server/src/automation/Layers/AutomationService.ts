@@ -52,6 +52,7 @@ import { GitCore } from "../../git/Services/GitCore.ts";
 import { TextGeneration } from "../../git/Services/TextGeneration.ts";
 import {
   hasDedicatedTextGenerationProvider,
+  resolveChatTextGenerationInputForSelection,
   resolveTextGenerationInputForSelection,
 } from "../../git/textGenerationSelection.ts";
 import { OrchestrationEngineService } from "../../orchestration/Services/OrchestrationEngine.ts";
@@ -194,7 +195,7 @@ export function resolveAutomationCompletionTextGenerationInputForSettings(
     settings,
   );
   const directInput = selectionInstance
-    ? resolveTextGenerationInputForSelection(
+    ? resolveChatTextGenerationInputForSelection(
         definition.modelSelection,
         directProviderOptions,
         selectionInstance.driver,
@@ -809,7 +810,7 @@ export const AutomationServiceLive = Layer.effect(
               })
             : null;
           const directInput = directInstance
-            ? resolveTextGenerationInputForSelection(
+            ? resolveChatTextGenerationInputForSelection(
                 definition.modelSelection,
                 providerStartOptionsFromInstance(directInstance),
                 directInstance.driver,

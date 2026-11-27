@@ -373,6 +373,14 @@ export class DroidTextGeneration extends ServiceMap.Service<
 >()("synara/git/Services/TextGeneration/DroidTextGeneration") {}
 
 /**
+ * AntigravityTextGeneration - Provider-specific Antigravity ACP implementation for git text generation.
+ */
+export class AntigravityTextGeneration extends ServiceMap.Service<
+  AntigravityTextGeneration,
+  TextGenerationShape
+>()("synara/git/Services/TextGeneration/AntigravityTextGeneration") {}
+
+/**
  * PiTextGeneration - Provider-specific Pi SDK implementation for git text generation.
  */
 export class PiTextGeneration extends ServiceMap.Service<PiTextGeneration, TextGenerationShape>()(

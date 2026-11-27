@@ -195,6 +195,16 @@ it("inherits the Git writing model for proofreading until a model is chosen, the
   expect(picker.element().textContent).toContain(inherited);
 });
 
+it("offers Antigravity's default model for proofreading while agy lists no models", async () => {
+  await page.viewport(900, 800);
+  setLanguagePreference("en");
+  await render(<Harness />);
+  const picker = page.getByRole("combobox", { name: "Proofreading model", exact: true });
+  await picker.click();
+  await page.getByRole("option", { name: "Antigravity / Gemini 3.5 Flash", exact: true }).click();
+  expect(picker.element().textContent).toBe("Antigravity / Gemini 3.5 Flash");
+});
+
 it("sets the provider new chats start on, and resets it, in Lattice's Providers page", async () => {
   await page.viewport(360, 800);
   setLanguagePreference("en");

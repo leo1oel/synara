@@ -1245,16 +1245,22 @@ export const DEFAULT_GIT_TEXT_GENERATION_REASONING_EFFORT = "high" as const;
 
 /**
  * Providers with a dedicated Git text-generation backend. Keep the Settings
- * picker in sync with this list — do not add chat-only agents (Grok,
- * Antigravity, Devin). Those CLIs have no one-shot git-writing path, and
- * driving them as coding agents for commit/PR text can run with write access
- * or violate provider terms.
+ * picker in sync with this list — do not add chat-only agents (Grok, Devin).
+ * Those CLIs have no one-shot git-writing path, and driving them as coding
+ * agents for commit/PR text can run with write access or violate provider
+ * terms.
  *
  * Pi qualifies because its backend runs the Pi SDK in-process with no tools,
  * no extensions and an empty working directory (PiTextGeneration.ts), so it
  * can serve writing tasks on a custom model endpoint without a CLI. It is
  * last, and has no default model, so it is never picked automatically: it
  * runs only when the writer selects a Pi model.
+ *
+ * Antigravity qualifies because its backend (AntigravityTextGeneration.ts)
+ * runs `agy acp` read-only: no MCP servers or client file system, Plan mode,
+ * and every permission request declined, so it can neither edit nor run
+ * commands. Like Pi, it runs only on a chosen Antigravity model and is never
+ * a fallback (textGenerationSelection.ts).
  */
 export const GIT_TEXT_GENERATION_PROVIDERS = [
   "codex",
@@ -1263,8 +1269,21 @@ export const GIT_TEXT_GENERATION_PROVIDERS = [
   "opencode",
   "droid",
   "pi",
+  "antigravity",
 ] as const satisfies readonly ProviderKind[];
 export type GitTextGenerationProvider = (typeof GIT_TEXT_GENERATION_PROVIDERS)[number];
+
+/**
+ * Text-generation providers that run only on a model chosen in Settings (Git
+ * writing, Proofreading). The settings fallback never picks them, and their
+ * chats don't use their own model for titles, recaps, composer predictions or
+ * automation intent. An Antigravity chat starts background `agy` sessions only
+ * when the writer chose an Antigravity model for Git writing in Settings, since
+ * those tasks then route to it.
+ */
+export const SETTINGS_ONLY_TEXT_GENERATION_PROVIDERS = [
+  "antigravity",
+] as const satisfies readonly GitTextGenerationProvider[];
 
 export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string, ModelSlug>> = {
   codex: {

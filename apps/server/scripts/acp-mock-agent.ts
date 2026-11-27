@@ -51,6 +51,15 @@ const rejectForkDuringLoadReplay = process.env.SYNARA_ACP_REJECT_FORK_DURING_LOA
 const loadReplayModeId = process.env.SYNARA_ACP_LOAD_REPLAY_MODE_ID?.trim();
 const loadReplayAvailableCommands = process.env.SYNARA_ACP_LOAD_REPLAY_AVAILABLE_COMMANDS === "1";
 const modeConfigId = process.env.SYNARA_ACP_MODE_CONFIG_ID || "mode";
+// Mode and model as config options for every client, as `agy acp` reports them.
+const configOptionPicker = process.env.SYNARA_ACP_CONFIG_OPTION_PICKER === "1";
+const offerPlanMode = process.env.SYNARA_ACP_PLAN_MODE === "1";
+// Refuse session/new until authenticated, with the error a signed-out `agy acp` returns.
+const rejectUnauthenticatedSession = process.env.SYNARA_ACP_REJECT_UNAUTHENTICATED_SESSION === "1";
+// Report no modes at all: no legacy mode state and no mode config option.
+const noModes = process.env.SYNARA_ACP_NO_MODES === "1";
+// Accept a switch to Plan mode without leaving the current mode.
+const ignorePlanMode = process.env.SYNARA_ACP_IGNORE_PLAN_MODE === "1";
 const mainSessionId = "mock-session-1";
 const probeSessionId = "mock-session-probe";
 let sessionId = mainSessionId;
@@ -88,6 +97,11 @@ process.once("exit", (code) => {
 });
 
 function configOptions(): Array<AcpSchema.SessionConfigOption> {
+  const options = allConfigOptions();
+  return noModes ? options.filter((option) => option.category !== "mode") : options;
+}
+
+function allConfigOptions(): Array<AcpSchema.SessionConfigOption> {
   if (parameterizedModelPicker) {
     const baseOptions: Array<AcpSchema.SessionConfigOption> = [
       {
@@ -234,6 +248,9 @@ const availableModes: Array<AcpSchema.SessionMode> = [
     name: "Code",
     description: "Write and modify code with full tool access",
   },
+  ...(offerPlanMode
+    ? [{ id: "plan", name: "Plan", description: "Plan and answer without making changes" }]
+    : []),
 ];
 
 function modeState(): AcpSchema.SessionModeState {
@@ -341,9 +358,10 @@ app.onRequest(OfficialAcp.methods.agent.initialize, ({ params: request }) =>
   runEffect(
     Effect.sync(() => {
       parameterizedModelPicker =
-        request.clientCapabilities?._meta !== null &&
-        request.clientCapabilities?._meta !== undefined &&
-        "parameterizedModelPicker" in request.clientCapabilities._meta;
+        configOptionPicker ||
+        (request.clientCapabilities?._meta !== null &&
+          request.clientCapabilities?._meta !== undefined &&
+          "parameterizedModelPicker" in request.clientCapabilities._meta);
       return {
         protocolVersion: 1,
         agentCapabilities: {
@@ -375,6 +393,9 @@ app.onRequest(OfficialAcp.methods.agent.authenticate, () =>
 
 app.onRequest(OfficialAcp.methods.agent.session.new, ({ client: context }) => {
   sessionNewAttempts += 1;
+  if (rejectUnauthenticatedSession && !authenticated) {
+    throw new OfficialAcp.RequestError(-32000, "Authentication required");
+  }
   if (failSessionNewOnce && sessionNewAttempts === 1) {
     throw new OfficialAcp.RequestError(-32603, "Path not found.", {
       code: "FS_NOT_FOUND",
@@ -425,7 +446,7 @@ app.onRequest(OfficialAcp.methods.agent.session.new, ({ client: context }) => {
       }
       return {
         sessionId,
-        modes: modeState(),
+        ...(noModes ? {} : { modes: modeState() }),
         configOptions: configOptionsForSession,
       };
     }),
@@ -568,7 +589,11 @@ app.onRequest(OfficialAcp.methods.agent.session.setConfigOption, ({ params: requ
           process.exit(7);
         });
       }
-      if (request.configId === modeConfigId && typeof request.value === "string") {
+      if (
+        request.configId === modeConfigId &&
+        typeof request.value === "string" &&
+        !(ignorePlanMode && request.value === "plan")
+      ) {
         currentModeId = request.value;
       }
       if (request.configId === "model" && typeof request.value === "string") {

@@ -163,7 +163,10 @@ import {
   type ThreadTitleGenerationInput,
 } from "../../git/Services/TextGeneration.ts";
 import { TextGenerationError } from "../../git/Errors.ts";
-import { resolveTextGenerationInputForSelection } from "../../git/textGenerationSelection.ts";
+import {
+  resolveChatTextGenerationInputForSelection,
+  resolveTextGenerationInputForSelection,
+} from "../../git/textGenerationSelection.ts";
 import {
   ProviderService,
   type ProviderRuntimeSessionStopTarget,
@@ -1925,7 +1928,7 @@ const make = Effect.gen(function* () {
         }
       }
     }
-    const threadTextGenerationInput = resolveTextGenerationInputForSelection(
+    const threadTextGenerationInput = resolveChatTextGenerationInputForSelection(
       modelSelection,
       selectionProviderOptions,
     );

@@ -6,9 +6,16 @@ import {
   GIT_TEXT_GENERATION_PROVIDERS,
   type ModelSelection,
   type ProviderKind,
+  SETTINGS_ONLY_TEXT_GENERATION_PROVIDERS,
 } from "@synara/contracts";
 
-const TEXT_GENERATION_PROVIDERS = new Set<ProviderKind>(GIT_TEXT_GENERATION_PROVIDERS);
+// Settings-only providers (Antigravity) never run a chat's auxiliary tasks.
+const TEXT_GENERATION_PROVIDERS = new Set<ProviderKind>(
+  GIT_TEXT_GENERATION_PROVIDERS.filter(
+    (provider) =>
+      !(SETTINGS_ONLY_TEXT_GENERATION_PROVIDERS as ReadonlyArray<ProviderKind>).includes(provider),
+  ),
+);
 
 export function supportsTextGeneration(provider: ProviderKind): boolean {
   return TEXT_GENERATION_PROVIDERS.has(provider);

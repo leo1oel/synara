@@ -17,7 +17,10 @@ import {
 
 import { Duration, Effect, Option } from "effect";
 
-import { GIT_TEXT_GENERATION_PROVIDER_ORDER } from "../git/textGenerationSelection.ts";
+import {
+  GIT_TEXT_GENERATION_PROVIDER_ORDER,
+  isTextGenerationFallbackProvider,
+} from "../git/textGenerationSelection.ts";
 import { commandExistsOnPath } from "./providerBinaryResolution.ts";
 import type { ProviderHealthShape } from "./Services/ProviderHealth.ts";
 
@@ -137,6 +140,7 @@ export function resolveRunnableModelSelection(input: {
     statusForInstance(statuses, instance) === undefined && cliFound?.(instance) === true;
   for (const canRun of [isConfirmedReady, isUnprobedWithCli]) {
     for (const driver of order) {
+      if (purpose === "text-generation" && !isTextGenerationFallbackProvider(driver)) continue;
       for (const instance of instances) {
         if (!instance.enabled || instance.driver !== driver || !canRun(instance)) continue;
         const model = defaultModelFor(purpose, driver, statusForInstance(statuses, instance));
