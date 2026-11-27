@@ -82,6 +82,7 @@ import {
   measureEmbeddedSettingsHeight,
 } from "../embeddedSettingsHeight";
 import { watchEmbeddedSettingsSectionReady } from "../embeddedSettingsSectionReady";
+import { listenForEmbeddedSettingsWheel } from "../lib/embeddedSettingsWheel";
 import { isProviderKind } from "../providerOrdering";
 import {
   normalizeSettingsSection,
@@ -326,7 +327,7 @@ function SettingsRouteView() {
     if (!isEmbed) return;
     const embedConfig = readEmbedMode();
     if (!embedConfig) return;
-    const forwardWheel = (event: WheelEvent) => {
+    return listenForEmbeddedSettingsWheel((event) => {
       // Include the current height in the wheel message itself. Sending height
       // and wheel as separate postMessage tasks let the host clamp the first
       // gesture against the previous section's stale scroll range.
@@ -336,10 +337,7 @@ function SettingsRouteView() {
         event,
         height === null || height === undefined ? undefined : { height, section: activeSection },
       );
-      event.preventDefault();
-    };
-    window.addEventListener("wheel", forwardWheel, { capture: true, passive: false });
-    return () => window.removeEventListener("wheel", forwardWheel, { capture: true });
+    });
   }, [activeSection, isEmbed]);
 
   // Deep links and sidebar search targets all resolve to stable DOM ids in the active panel.
