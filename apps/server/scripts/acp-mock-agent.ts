@@ -56,6 +56,10 @@ const configOptionPicker = process.env.SYNARA_ACP_CONFIG_OPTION_PICKER === "1";
 const offerPlanMode = process.env.SYNARA_ACP_PLAN_MODE === "1";
 // Refuse session/new until authenticated, with the error a signed-out `agy acp` returns.
 const rejectUnauthenticatedSession = process.env.SYNARA_ACP_REJECT_UNAUTHENTICATED_SESSION === "1";
+// Report no modes at all: no legacy mode state and no mode config option.
+const noModes = process.env.SYNARA_ACP_NO_MODES === "1";
+// Accept a switch to Plan mode without leaving the current mode.
+const ignorePlanMode = process.env.SYNARA_ACP_IGNORE_PLAN_MODE === "1";
 const mainSessionId = "mock-session-1";
 const probeSessionId = "mock-session-probe";
 let sessionId = mainSessionId;
@@ -93,6 +97,11 @@ process.once("exit", (code) => {
 });
 
 function configOptions(): Array<AcpSchema.SessionConfigOption> {
+  const options = allConfigOptions();
+  return noModes ? options.filter((option) => option.category !== "mode") : options;
+}
+
+function allConfigOptions(): Array<AcpSchema.SessionConfigOption> {
   if (parameterizedModelPicker) {
     const baseOptions: Array<AcpSchema.SessionConfigOption> = [
       {
@@ -437,7 +446,7 @@ app.onRequest(OfficialAcp.methods.agent.session.new, ({ client: context }) => {
       }
       return {
         sessionId,
-        modes: modeState(),
+        ...(noModes ? {} : { modes: modeState() }),
         configOptions: configOptionsForSession,
       };
     }),
@@ -580,7 +589,11 @@ app.onRequest(OfficialAcp.methods.agent.session.setConfigOption, ({ params: requ
           process.exit(7);
         });
       }
-      if (request.configId === modeConfigId && typeof request.value === "string") {
+      if (
+        request.configId === modeConfigId &&
+        typeof request.value === "string" &&
+        !(ignorePlanMode && request.value === "plan")
+      ) {
         currentModeId = request.value;
       }
       if (request.configId === "model" && typeof request.value === "string") {

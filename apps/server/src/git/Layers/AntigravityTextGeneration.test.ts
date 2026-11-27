@@ -220,6 +220,46 @@ it.layer(AntigravityTextGenerationTestLayer)("AntigravityTextGenerationLive", (i
     ),
   );
 
+  it.effect("refuses to run when the session reports no modes", () =>
+    withFakeAgy(
+      {
+        SYNARA_ACP_CONFIG_OPTION_PICKER: "1",
+        SYNARA_ACP_NO_MODES: "1",
+        SYNARA_ACP_PROMPT_RESPONSE_TEXT: "unused",
+      },
+      ({ agyPath, readRequests }) =>
+        Effect.gen(function* () {
+          const result = yield* textTask(agyPath).pipe(Effect.result);
+          expect(Result.isFailure(result)).toBe(true);
+          if (Result.isFailure(result)) {
+            expect(result.failure.detail).toBe("Antigravity offers no read-only Plan mode.");
+          }
+          expect(readRequests().some((request) => request.method === "session/prompt")).toBe(false);
+        }),
+    ),
+  );
+
+  it.effect("refuses to run when the switch to Plan mode does not take", () =>
+    withFakeAgy(
+      {
+        ...AGY_LIKE_ENV,
+        SYNARA_ACP_IGNORE_PLAN_MODE: "1",
+        SYNARA_ACP_PROMPT_RESPONSE_TEXT: "unused",
+      },
+      ({ agyPath, readRequests }) =>
+        Effect.gen(function* () {
+          const result = yield* textTask(agyPath).pipe(Effect.result);
+          expect(Result.isFailure(result)).toBe(true);
+          if (Result.isFailure(result)) {
+            expect(result.failure.detail).toBe(
+              "Antigravity did not confirm its read-only Plan mode.",
+            );
+          }
+          expect(readRequests().some((request) => request.method === "session/prompt")).toBe(false);
+        }),
+    ),
+  );
+
   it.effect("reports a signed-out agy without starting a sign-in", () =>
     withFakeAgy(
       { ...AGY_LIKE_ENV, SYNARA_ACP_REJECT_UNAUTHENTICATED_SESSION: "1" },
@@ -228,7 +268,9 @@ it.layer(AntigravityTextGenerationTestLayer)("AntigravityTextGenerationLive", (i
           const result = yield* textTask(agyPath).pipe(Effect.result);
           expect(Result.isFailure(result)).toBe(true);
           if (Result.isFailure(result)) {
-            expect(JSON.stringify(result.failure.cause)).toContain("Antigravity is not signed in.");
+            expect(result.failure.detail).toBe(
+              "Antigravity is not signed in. Run `agy` in a terminal (or `agy acp --login` over SSH) and sign in with Google, or set GEMINI_API_KEY.",
+            );
           }
           const requests = readRequests();
           expect(requests.some((request) => request.method === "authenticate")).toBe(false);

@@ -1275,9 +1275,11 @@ export type GitTextGenerationProvider = (typeof GIT_TEXT_GENERATION_PROVIDERS)[n
 
 /**
  * Text-generation providers that run only on a model chosen in Settings (Git
- * writing, Proofreading). Their chats keep the configured model for titles,
- * recaps, composer predictions and automation intent, so an Antigravity chat
- * never starts extra `agy` sessions in the background.
+ * writing, Proofreading). The settings fallback never picks them, and their
+ * chats don't use their own model for titles, recaps, composer predictions or
+ * automation intent. An Antigravity chat starts background `agy` sessions only
+ * when the writer chose an Antigravity model for Git writing in Settings, since
+ * those tasks then route to it.
  */
 export const SETTINGS_ONLY_TEXT_GENERATION_PROVIDERS = [
   "antigravity",

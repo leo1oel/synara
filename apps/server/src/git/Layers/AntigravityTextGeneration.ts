@@ -111,9 +111,9 @@ export function declineAntigravityPermission(
 }
 
 /**
- * Puts the session in Plan mode before the prompt. A session that advertises
- * modes but not Plan, or does not confirm the switch, fails the task rather
- * than run it in a mode that may edit.
+ * Puts the session in Plan mode before the prompt. A session that reports no
+ * modes, offers no Plan mode, or does not confirm the switch fails the task
+ * rather than run it in a mode that may edit.
  */
 const enterReadOnlyMode = (
   runtime: AcpSessionRuntimeShape,
@@ -144,11 +144,15 @@ const enterReadOnlyMode = (
       return;
     }
     const legacyModes = yield* runtime.getModeState;
-    if (!legacyModes || legacyModes.currentModeId === ANTIGRAVITY_READ_ONLY_MODE) return;
-    if (!legacyModes.availableModes.some((mode) => mode.id === ANTIGRAVITY_READ_ONLY_MODE)) {
+    if (legacyModes?.currentModeId === ANTIGRAVITY_READ_ONLY_MODE) return;
+    if (!legacyModes?.availableModes.some((mode) => mode.id === ANTIGRAVITY_READ_ONLY_MODE)) {
       return yield* mapErrorForOperation("Antigravity offers no read-only Plan mode.");
     }
     yield* runtime.setMode(ANTIGRAVITY_READ_ONLY_MODE, { legacy: true });
+    const confirmed = yield* runtime.getModeState;
+    if (confirmed?.currentModeId !== ANTIGRAVITY_READ_ONLY_MODE) {
+      return yield* mapErrorForOperation("Antigravity did not confirm its read-only Plan mode.");
+    }
   });
 
 /** Selects the chosen model and its thinking level in the session's config options. */
@@ -211,11 +215,23 @@ const antigravityAcpConfig: AcpTextGenerationConfig<
       yield* applyModelSelection(runtime, modelSelection, mapErrorForOperation);
       yield* enterReadOnlyMode(runtime, mapErrorForOperation);
     }).pipe(
-      Effect.mapError((cause) =>
-        isTextGenerationError(cause)
-          ? cause
-          : mapErrorForOperation("Antigravity ACP request failed.", cause),
-      ),
+      Effect.mapError((cause) => {
+        if (isTextGenerationError(cause)) return cause;
+        if (cause._tag !== "AcpRequestError") {
+          return mapErrorForOperation("Antigravity ACP request failed.", cause);
+        }
+        // Lattice shows only the detail, so it carries the agent's own message
+        // and its hint, such as how to sign in when agy is signed out.
+        const hint =
+          typeof cause.data === "object" &&
+          cause.data !== null &&
+          "detail" in cause.data &&
+          typeof cause.data.detail === "string"
+            ? cause.data.detail.trim()
+            : "";
+        const detail = [cause.message.trim(), hint].filter(Boolean).join(" ");
+        return mapErrorForOperation(detail || "Antigravity ACP request failed.", cause);
+      }),
     ),
   mapError,
 };
