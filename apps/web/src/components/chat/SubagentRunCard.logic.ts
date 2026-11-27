@@ -860,7 +860,7 @@ export function describeSubagentRunRow(
     case "unreported":
       return {
         statusKind,
-        word: "Status unknown",
+        word: t("chat:runStatus_unknown"),
         durationLabel: null,
         detail: row.outcomeText ? { kind: "outcome", text: row.outcomeText } : null,
       };

@@ -56,6 +56,7 @@
   "providerModelPicker_checking": "检查中",
   "timeline_rawCall": "原始调用",
   "runStatus_starting": "启动中",
+  "runStatus_unknown": "状态未知",
   "timeline_thinking": "思考中",
   "timeline_failed": " — 失败",
   "rightDock_addPanel": "添加面板",

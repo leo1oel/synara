@@ -150,6 +150,7 @@
   "sidechat": "Sidechat",
   "standard": "Standard",
   "runStatus_starting": "Starting",
+  "runStatus_unknown": "Status unknown",
   "stopAll": "Stop all",
   "subagent": "Subagent",
   "timeline_thinking": "Thinking",
