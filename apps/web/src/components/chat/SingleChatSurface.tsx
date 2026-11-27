@@ -118,10 +118,7 @@ import {
   selectFloatingBrowserRequested,
   useFloatingBrowserRequestStore,
 } from "./floatingBrowserRequestStore";
-import {
-  pullRequestDetailInputFromPane,
-  pullRequestPaneTabLabel,
-} from "../pullRequest/pullRequestDetail.logic";
+import { pullRequestDetailInputFromPane } from "../pullRequest/pullRequestDetail.logic";
 import { usePullRequestPaneStateIcon } from "../pullRequest/usePullRequestPaneStateIcon";
 import { ChatPaneBody, KeptChatPane } from "./ChatPaneKeepAlive";
 import { ExpandedImageOverlay } from "./ExpandedImageOverlay";

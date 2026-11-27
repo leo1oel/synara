@@ -56,6 +56,7 @@
   "providerModelPicker_checking": "检查中",
   "timeline_rawCall": "原始调用",
   "runStatus_starting": "启动中",
+  "runStatus_unknown": "状态未知",
   "timeline_thinking": "思考中",
   "timeline_failed": " — 失败",
   "rightDock_addPanel": "添加面板",
@@ -1103,5 +1104,11 @@
   "usageLimit_alwaysResume": "达到限额后总是继续",
   "usageLimit_alwaysResumeDescription": "这台电脑上所有聊天的默认设置",
   "usageLimit_pausedAt": "因 {{provider}} 用量限额暂停 · {{time}}",
-  "usageLimit_pausedAtNoProvider": "因用量限额暂停 · {{time}}"
+  "usageLimit_pausedAtNoProvider": "因用量限额暂停 · {{time}}",
+  "searchedTheWebOnce": "搜索了 1 次网页",
+  "searchedTheWebTimes": "搜索了 {{value0}} 次网页",
+  "searchedTheWebTwice": "搜索了 2 次网页",
+  "toolsRunning": "{{value0}} 个正在运行",
+  "toolsRunning_one": "{{value0}} 个正在运行",
+  "toolsRunning_other": "{{value0}} 个正在运行"
 }

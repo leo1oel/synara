@@ -1,9 +1,9 @@
 // FILE: UsageAnalyticsPanel.tsx
 // Purpose: The Usage Analytics tab: cost and tokens by day, provider, model, and
 //          project, plus cache use, turn origin, and weekly rhythm. "In Synara" uses
-//          Synara's own records; "This Mac" also reads Claude Code and Codex session
-//          files. Cost is at API rates: the provider's own figure when it reports
-//          one, else the tokens at API list prices.
+//          Synara's own records; "This Mac" / "This Device" also reads Claude Code and
+//          Codex session files. Cost is at API rates: the provider's own figure when it
+//          reports one, else the tokens at API list prices.
 // Layer: Web settings feature
 // Exports: UsageAnalyticsPanel
 
@@ -16,7 +16,7 @@ import { type ReactNode, useMemo, useState } from "react";
 import { isSynaraEmbedMode } from "~/embedMode";
 import { type t as translateFn, useTranslation } from "~/i18n";
 import { serverUsageAnalyticsQueryOptions } from "~/lib/serverReactQuery";
-import { cn } from "~/lib/utils";
+import { cn, getNavigatorPlatform, isMacPlatform } from "~/lib/utils";
 import { SegmentedPicker } from "../SegmentedPicker";
 import { ProviderIcon } from "../ProviderIcon";
 import { Button } from "../ui/button";
@@ -87,6 +87,11 @@ function analyticsAppName(): string {
   return isSynaraEmbedMode() ? "Lattice" : "Synara";
 }
 
+/** Session files are read on this computer, which is a Mac only on macOS. */
+function onMac(): boolean {
+  return isMacPlatform(getNavigatorPlatform());
+}
+
 /** "A, B" for a provider list; Chinese lists take the enumeration comma "、". */
 function joinNames(names: ReadonlyArray<string>, formatLocale: string): string {
   return names.join(formatLocale.toLowerCase().startsWith("zh") ? "、" : ", ");
@@ -133,12 +138,16 @@ function percentOf(part: number, total: number): number {
   return total > 0 ? Math.round((part / total) * 1000) / 10 : 0;
 }
 
-export function UsageAnalyticsPanel() {
+export function UsageAnalyticsPanel({
+  initialScope = "synara",
+}: {
+  initialScope?: StatsUsageAnalyticsScope;
+} = {}) {
   const { t } = useTranslation();
   const app = analyticsAppName();
   const [range, setRange] = useState<UsageAnalyticsRange>("30d");
   const [metricChoice, setMetricChoice] = useState<UsageAnalyticsMetric | null>(null);
-  const [scope, setScope] = useState<StatsUsageAnalyticsScope>("synara");
+  const [scope, setScope] = useState<StatsUsageAnalyticsScope>(initialScope);
   const todayKey = localDayKey(new Date());
   // Recomputed once a day so the query keys stay stable within a day.
   const windows = useMemo(() => {
@@ -201,7 +210,12 @@ export function UsageAnalyticsPanel() {
           onValueChange={setScope}
           options={[
             { value: "synara", label: t("lattice:usageAnalyticsScopeInApp", { app }) },
-            { value: "mac", label: t("lattice:usageAnalyticsScopeThisMac") },
+            {
+              value: "mac",
+              label: onMac()
+                ? t("lattice:usageAnalyticsScopeThisMac")
+                : t("lattice:usageAnalyticsScopeThisDevice"),
+            },
           ]}
         />
       </div>
@@ -226,7 +240,9 @@ export function UsageAnalyticsPanel() {
             title={t("lattice:usageAnalyticsEmptyTitle")}
             description={
               scope === "mac"
-                ? t("lattice:usageAnalyticsEmptyMac", { app })
+                ? onMac()
+                  ? t("lattice:usageAnalyticsEmptyMac", { app })
+                  : t("lattice:usageAnalyticsEmptyDevice", { app })
                 : t("lattice:usageAnalyticsEmptyApp", { app })
             }
           />
@@ -654,10 +670,15 @@ function aboutTheseNumbers(input: {
   }
   notes.push(
     view.scope === "mac" && view.sessionFileProviders.length > 0
-      ? t("lattice:usageAnalyticsNoteSessionFiles", {
-          providers: names(view.sessionFileProviders.map((provider) => providerLabel(provider))),
-          app,
-        })
+      ? t(
+          onMac()
+            ? "lattice:usageAnalyticsNoteSessionFiles"
+            : "lattice:usageAnalyticsNoteSessionFilesDevice",
+          {
+            providers: names(view.sessionFileProviders.map((provider) => providerLabel(provider))),
+            app,
+          },
+        )
       : t("lattice:usageAnalyticsNoteAppOnly", { app }),
   );
   if (view.scope === "mac" && view.sessionFileProviders.includes("claudeAgent")) {

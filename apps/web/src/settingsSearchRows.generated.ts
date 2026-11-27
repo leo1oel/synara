@@ -469,6 +469,12 @@ export const GENERATED_SETTINGS_SEARCH_ROWS: readonly GeneratedSettingsSearchRow
     description: "",
   },
   {
+    target: "setting-synara-attribution",
+    section: "providers",
+    title: "settings:addSynaraAttribution",
+    description: "settings:addsCreatedWithSynaraToTheEndOfPullRequests",
+  },
+  {
     target: "setting-git-writing-model",
     section: "providers",
     title: "settings:changed_gitWritingModel",

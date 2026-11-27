@@ -179,8 +179,6 @@ export function useChatTurnExecution({
   runProjectScript,
   persistThreadSettingsForNextTurn,
   rememberCustomBinaryPathForDispatch,
-  computerControlChangeSequence,
-  setComposerDraftComputerControlMode,
   setSettledThreadBranchWarningDismissedThreadId,
   armLocalDispatchAckFallback,
   setQueuedSteerGate,
@@ -241,7 +239,6 @@ export function useChatTurnExecution({
         messageCreatedAt,
         turnAttachmentsPromise,
         messageIdForSend,
-        providerOptionsForDispatchForSend,
         outgoingMessageText,
         mentionedSkillsForSend,
         mentionedPluginMentionsForSend,
@@ -251,7 +248,6 @@ export function useChatTurnExecution({
         currentActiveGitBranchForSend,
         queuedChatTurn,
         turnDispatchSettings: preparedTurnDispatchSettings,
-        computerControlSequenceForSend,
         promptForSend,
         composerImagesSnapshot,
         composerFilesSnapshot,
@@ -714,7 +710,10 @@ export function useChatTurnExecution({
           activeThread?.session?.provider ?? selectedModelSelectionForSend.provider;
         if (
           dispatchMode === "steer" &&
-          !providerSupportsNativeTurnSteering(liveProviderForSteerGate)
+          !providerSupportsNativeTurnSteering(
+            liveProviderForSteerGate,
+            activeThread?.session?.supportsNativeTurnSteering,
+          )
         ) {
           const nextSteerGate = {
             sawInterruptGap: false,

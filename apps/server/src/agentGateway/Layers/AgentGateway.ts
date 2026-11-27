@@ -526,6 +526,11 @@ export const makeAgentGateway = Effect.gen(function* () {
             maxLength: 256,
             description: "Stable id for this exact user-requested creation plan.",
           },
+          resumeCreatorOnComplete: {
+            type: "boolean",
+            description:
+              "Resume this same local thread once all initial runs finish, if the creating turn still owns it. Use only when the user asks for asynchronous continuation.",
+          },
           threads: {
             type: "array",
             minItems: 1,
@@ -590,6 +595,11 @@ export const makeAgentGateway = Effect.gen(function* () {
         type: "object",
         properties: {
           requestId: { type: "string", maxLength: 256 },
+          resumeCreatorOnComplete: {
+            type: "boolean",
+            description:
+              "Resume this same local thread once the initial run finishes. Use only when the user asks for asynchronous continuation.",
+          },
           notifyCreatorOnComplete: {
             type: "boolean",
             description:
@@ -669,6 +679,9 @@ export const makeAgentGateway = Effect.gen(function* () {
         return createWithHubQueue(
           decodeCreateThreadsInput({
             requestId: readStringArg(args, "requestId", { required: true }),
+            ...(args.resumeCreatorOnComplete === undefined
+              ? {}
+              : { resumeCreatorOnComplete: args.resumeCreatorOnComplete }),
             threads: [spec],
           }),
           context,

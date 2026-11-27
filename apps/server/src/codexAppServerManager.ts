@@ -893,8 +893,12 @@ function spawnCodexAppServer(input: {
     "--config",
     "thread_unload_delay_secs=0",
   ];
+  // Lattice's own bibliography sandbox (LATTICE_BIBLIOGRAPHY_SANDBOX=1) already covers
+  // Codex, and a nested sandbox-exec can fail before Codex starts on older macOS.
   const latticeBibGuard =
-    ACTIVE_AGENT_HOST_PROFILE.id === "lattice" && process.platform === "darwin";
+    ACTIVE_AGENT_HOST_PROFILE.id === "lattice" &&
+    process.platform === "darwin" &&
+    process.env.LATTICE_BIBLIOGRAPHY_SANDBOX !== "1";
   const command = latticeBibGuard ? "/usr/bin/sandbox-exec" : input.binaryPath;
   const args = latticeBibGuard
     ? [
@@ -4479,15 +4483,21 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       delete context.detachStdout;
     };
 
+    // Classified stderr is logged even after teardown began, so a Codex that dies
+    // during stdout EOF still leaves its reason in the provider log.
     context.child.stderr.on("data", (chunk: Buffer) => {
-      if (context.stopping) {
-        return;
-      }
       const raw = chunk.toString();
       const lines = raw.split(/\r?\n/g);
       for (const rawLine of lines) {
         const classified = classifyCodexStderrLine(rawLine, context.authTracking?.sourceConfigPath);
         if (!classified) {
+          continue;
+        }
+        log.warn("codex app-server stderr", {
+          threadId: context.session.threadId,
+          message: classified.message,
+        });
+        if (context.stopping) {
           continue;
         }
 
@@ -4512,6 +4522,12 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     context.child.on("error", (error) => this.handleTransportFailure(context, error));
 
     context.child.on("exit", (code, signal) => {
+      log.info("codex app-server exit", {
+        threadId: context.session.threadId,
+        code,
+        signal,
+        stopping: context.stopping,
+      });
       if (context.stopping && context.failureStopping !== true) {
         return;
       }
